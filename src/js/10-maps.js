@@ -70,6 +70,8 @@ const partyBonus = n => [0, 0, 0.1, 0.2, 0.3, 0.3, 0.3][n] || 0, partyCap = n =>
 let ACC_FROM_BUILDER = null; // set by "Use this in Where to train"; cleared when class or level is changed here
 const accFor = (cls, L) => classAcc(MAGIC.has(cls) ? "Magician" : cls, L);
 // seconds to kill one monster (HP / damage after hit chance, defense, level penalty, element) + 1 s walking and aiming
+// mesos one kill drops: community reports on meowdb (D.meso), else D.mesok × level (the reported monsters' median, ~2 per level)
+const mesoKill = id => D.meso?.[id]?.[0] ?? (D.mesok || 0) * (D.mobs[id]?.[1] || 0);
 function mobKill(m, cls, L, dps, acc){
   const [nm, lv, hp, ex, eva, pdd, mdd, el] = m, magic = MAGIC.has(cls), els = ELEMS[cls] || [];
   const diff = lv - L, hit = hitProb(acc, eva, diff);
@@ -104,19 +106,19 @@ function mapRates(cls, L, dps, acc, floor = 12, aoe = null, party = 1){
   const rows = [];
   for (const [mid, [name, open, spawns]] of Object.entries(D.maps)){
     if (!open) continue;
-    let exp = 0, time = 0, walk = 0, n = 0, lvSum = 0, hitSum = 0, ok = true, names = new Set();
+    let exp = 0, mes = 0, time = 0, walk = 0, n = 0, lvSum = 0, hitSum = 0, ok = true, names = new Set();
     const hits = aoe ? aoeHits(mid, aoe.t, aoe.r, AOE_FALL[aoe.n] || 0) : 1;
     for (const [id, c] of spawns){
       const m = D.mobs[id]; if (!m) continue;
       const k = mobKill(m, cls, L, dps, acc);
       if (k.hit < 0.05){ ok = false; break }
-      exp += m[3] * c; time += k.sec * c / hits; walk += c / hits; n += c; lvSum += m[1] * c; hitSum += k.hit * c; names.add(m[0]);
+      exp += m[3] * c; mes += mesoKill(id) * c; time += k.sec * c / hits; walk += c / hits; n += c; lvSum += m[1] * c; hitSum += k.hit * c; names.add(m[0]);
     }
     if (!ok || !n) continue;
     const avg = lvSum / n; if (avg < L - floor) continue;
     const raw = Math.min(party * exp / time, exp * partyCap(party) / 7.56) / party, rate = raw * (1 + partyBonus(party));
     // att = share of the time you're attacking (not walking, not waiting for respawns): for potion/ammo upkeep
-    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate, cyc: exp, hits, att: Math.min(1, raw * time / exp) * (time - walk) / time});   // kills/s of a mob = count × rate / cyc
+    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate, cyc: exp, hits, meso: rate * mes / exp, att: Math.min(1, raw * time / exp) * (time - walk) / time});   // kills/s of a mob = count × rate / cyc
   }
   return rows.sort((a,b) => b.rate - a.rate);
 }
@@ -148,8 +150,9 @@ function rankMaps(){
     <td>${dangerPill(mapDanger(r.id, L, def))}</td><td class="sub">${esc(potsText(r.id))}</td>
     <td><span class="bar"><i style="width:${Math.round(100*r.rate/best)}%"></i></span><span class="mono">${Math.round(100*r.rate/best)}</span></td>
     <td class="num">${fmt(r.rate*3600)}</td>
+    <td class="num">${fmt(r.meso*3600)}${COST_FROM_BUILDER ? `<div class="sub">net ${fmt(r.meso*3600 - COST_FROM_BUILDER.mesoHr * (r.att ?? 1))}</div>` : ""}</td>
     <td class="num">${need ? (need/(r.rate*3600)).toFixed(1) : "–"}</td></tr>`).join("")
-    : `<tr><td colspan="11" class="empty">No map fits this level and class. Try a different level.</td></tr>`;
+    : `<tr><td colspan="12" class="empty">No map fits this level and class. Try a different level.</td></tr>`;
   $("#mapnote").innerHTML = (ACC_FROM_BUILDER != null ? `Accuracy <b>${Math.round(acc)}</b> from your Character Builder setup.`
     : `Assumed accuracy at level ${L}: <b>${Math.round(acc)}</b> (all AP in your main stat, secondary stat equal to your level, no accuracy gear${cls==="Warrior"&&L>=15?", Precise Strikes maxed":cls==="Thief"&&L>=15?", Nimble Body maxed":""}).`)
     + (need ? ` Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP.` : "") + (L > EXP_SURE && need ? ` EXP needed above level ${EXP_SURE} is meowdb's historical table (not yet confirmed in Classic).` : "")
@@ -157,7 +160,8 @@ function rankMaps(){
       : $("#aoe").value ? ` ${esc(cls)} has no area attack at level ${L}, so this is single target.` : ` Single target.`)
     + (party > 1 ? ` Party of ${party}: your share of the EXP plus the ${Math.round(partyBonus(party) * 100)}% party bonus, map spawns at ${Math.round(partyCap(party) * 100)}% (assumes equal players splitting kills).` : "")
     + ` Danger: one touch from the map's hardest hitter as a share of ${DEF_FROM_BUILDER ? "your" : "a typical"} Max HP (${fmt(def.hp)}), before armor.`
-    + (COST_FROM_BUILDER ? ` Your build's potions and ammo: up to ${fmt(COST_FROM_BUILDER.mesoHr)} mesos/hr while attacking nonstop; on the top map you attack about ${Math.round((top[0]?.att ?? 1) * 100)}% of the time, so about ${fmt(COST_FROM_BUILDER.mesoHr * (top[0]?.att ?? 1))}/hr.` : "")
+    + ` Mesos/hr = monster meso drops: player reports on meowdb for ${Object.keys(D.meso || {}).length} monsters, the rest estimated at ${D.mesok} mesos per monster level (what the reported ones average). Loot sold to NPCs isn't counted.`
+    + (COST_FROM_BUILDER ? ` Your build's potions and ammo: up to ${fmt(COST_FROM_BUILDER.mesoHr)} mesos/hr while attacking nonstop; on the top map you attack about ${Math.round((top[0]?.att ?? 1) * 100)}% of the time, so about ${fmt(COST_FROM_BUILDER.mesoHr * (top[0]?.att ?? 1))}/hr. "net" = mesos/hr minus that.` : "")
     + ` EXP/hr is a model estimate${party > 1 ? "" : ", solo"}.`
     + (far ? ` <b>No map has monsters within 12 levels of you</b> (Victoria Island tops out around level 60-75), so these are the best of the rest.` : "");
 }

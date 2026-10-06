@@ -18,6 +18,9 @@ const path = require("path");
   // EXP table: 1-49 confirmed, 50 and 99 from the formula (meowdb EXP guide)
   const exp = await p.evaluate(() => [D.exp[10], D.exp[49], D.exp[50], D.exp[99]]);
   check(exp.join() === [1716, 655200, 709716, 9692044].join(), "EXP to next at 10 / 49 / 50 / 99", exp);
+  // monster mesos: Ribbon Pig 18-23 per kill (meowdb player report), unreported ones ~2 per level
+  const ms = await p.evaluate(() => [mesoKill("10"), D.mesok]);
+  check(ms[0] === 20.5 && ms[1] === 2, "mesos per kill: Ribbon Pig 20.5, estimate 2 per level", ms);
   // portals to the nearest potion NPC (meowdb class guides)
   const pots = await p.evaluate(() => { const id = n => Object.keys(D.maps).find(k => D.maps[k][0].trim() === n && D.maps[k][1]);
     return ["Line 1 <Area 1>", "Transfer Area", "Tree Dungeon, Forest Up North IV", "Ant Tunnel III"].map(n => POTS[id(n)]?.[0]) });

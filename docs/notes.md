@@ -145,7 +145,17 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   Check: Fighter 70 = 83 PS/min × 12 MP ≈ 60k MP/hr (meowdb "6.6 Lemons a minute").
 - mapRates row.att = share of time attacking (respawn-capped share × (time − 1 s walk per kill) / time); planner upkeep per grind
   step = cost/hr × model hours × att. Budget = weapons at cheapest meowdb shop price (free/crafted/quest/drop = 0) + upkeep;
-  income = quest mesos only (monster meso drops aren't in the files).
+  income = quest mesos + quest potions (D.potval, "get" rewards at cheapest meowdb shop price, capped at the upkeep they replace)
+  + monster mesos.
+- Monster mesos (2026-10-06): drop tables are server-side (not in the export; maplestory.quest has none). meowdb monster pages
+  collect player reports: API `meowdb.com/msclassic/api/mesos-reports?monsterId=<id>` (meowdb ids = game mob ids; Cloudflare,
+  so fetch from inside a headless-Chromium page). Saved to data/sources/meowdb_mesos.json (19 monsters, 1-2 trusted reports
+  each, all say 100% drop chance). D.meso {mobId: [median (min+max)/2 × chance, reports]}; D.mesok = median mesos/level over
+  reported monsters = 2.0 (Pig 7 → 13, Horny Mushroom 22 → 44, Lupin 37 → 74.5): the estimate for the rest. mapRates row.meso
+  = rate × Σ count·meso / Σ count·EXP (mesos/s); planner drops = grind EXP ÷ rate × row.meso + quest kills (r.kl) × meso.
+  If the real drop chance is under 100%, income scales down with it. Re-pull the reports as players add more.
+- Hits-to-kill check (2026-10-06): on at-level monsters every class's main skill kills in about half the swings of a basic
+  attack, so "skill on every attack" stays the upkeep assumption (it's what the plan's speed needs).
 - Incoming hit chance (meowdb damage formula) shown with danger: A = mobACC×100/(5(G+51)), E = EVA/(1+EVA/80)/(1+G/40),
   f = 0.15+0.2/(1+e^((A−E)/12)), far out of reach 2-3%, then the 8% minimum-hit rescue. Shield Guard not counted.
 - Armor (D.armor, 997 pieces): builder slots; stats add to total STR/DEX/INT/LUK (damage, accuracy, avoid, weapon requirements),

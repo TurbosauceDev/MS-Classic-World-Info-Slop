@@ -158,7 +158,7 @@
           <li>Quests more than 5 levels under your current level count as already done or skipped. Quests with no EXP are skipped unless a later quest needs them.</li>
           <li>It stays on its current map unless another one is more than 10% better, so you don't hop maps every level.</li>
           <li>Grind rows show the map's <b>danger</b> for your character (one hit as a share of Max HP, no armor, and how often it lands) and the <b>portals to potions</b>.</li>
-          <li><b>Mesos:</b> weapons at NPC shop prices plus potions and ammo while grinding, against quest mesos. Monster meso drops aren't in the game files, so the real balance is better than shown.</li>
+          <li><b>Mesos:</b> monster meso drops (player reports on meowdb, ~2 per monster level where nobody has reported) and quest mesos, against weapons at NPC shop prices and potions and ammo while grinding. The potion bill assumes skills on every attack; quest potions are taken off it. Selling loot isn't counted.</li>
           <li><b>Copy link</b> makes a link that opens this exact plan.</li>
           <li><b>Party:</b> grinding uses your share of the map plus the party EXP bonus (see Where to train). Quests stay solo. The Kerning Party Quest shows up at 21 as an optional step.</li>
           <li>Goes up to the level-100 cap with 2nd job (3rd job isn't at launch). EXP per level above 49 is meowdb's historical table, not yet confirmed in Classic.</li>
@@ -233,6 +233,7 @@
           <li><b>Area attacks by default:</b> Slash Blast, Arrow Bomb, Thunder Bolt, Poison Breath (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, 75% alive: an estimate. Iron Arrow loses 20% per extra monster. Double Shot and Holy Arrow split a fixed number of arrows, so they count as single target. Thieves, 1st job Bowmen and 1st job Magicians have no area attack.</li>
           <li><b>Danger:</b> one hit from the map's hardest hitter as a share of your Max HP: its touch against your W.DEF, or for Tauromacis and Taurospear (the only launch monsters with a magic attack) the magic attack against your M.DEF (meowdb's labels: under 10% Safe, 10–24% Caution, 25–49% Danger, 50%+ Lethal). Armor isn't counted, so it reads a little high. "Hits you" is the chance its attack lands against your avoid (meowdb's formula).</li>
           <li><b>To potions:</b> portals to the nearest NPC selling potions (meowdb's shop list). A far refill eats into the real EXP/hr.</li>
+          <li><b>Mesos/hr:</b> monster meso drops at that kill speed. Per-kill amounts are player reports on meowdb (17 monsters so far); the rest are estimated at 2 mesos per monster level, which is what the reported ones average. With a Character Builder setup, "net" takes off your potions and ammo.</li>
           <li><b>Party:</b> your share of the map plus the measured party bonus (+10/20/30% at 2/3/4+). Spawns grow 5% per extra player up to 100% at 6 (meowdb: not fully confirmed). Assumes equal players.</li>
         </ul>
       </div>
@@ -247,7 +248,7 @@
       <div>
         <h4>Left out</h4>
         <ul>
-          <li>Map layout and climbing, drops and mesos, crowding. EXP needed above level 49 is meowdb's historical table.</li>
+          <li>Map layout and climbing, item drops and selling loot, crowding. EXP needed above level 49 is meowdb's historical table.</li>
           <li>EXP/hr is an estimate. Use it to shortlist maps, then pick the one that feels best.</li>
         </ul>
       </div>
@@ -264,7 +265,7 @@
   </div>
   <p class="note" id="mapnote"></p>
   <div class="tblwrap"><table>
-    <thead><tr><th>#</th><th>Map</th><th>Monsters</th><th class="num">Mobs</th><th class="num">Avg lvl</th><th class="num">Hit</th><th>Danger</th><th>To potions</th><th>Relative</th><th class="num">Est. EXP/hr</th><th class="num">Hrs / level</th></tr></thead>
+    <thead><tr><th>#</th><th>Map</th><th>Monsters</th><th class="num">Mobs</th><th class="num">Avg lvl</th><th class="num">Hit</th><th>Danger</th><th>To potions</th><th>Relative</th><th class="num">Est. EXP/hr</th><th class="num">Mesos/hr</th><th class="num">Hrs / level</th></tr></thead>
     <tbody id="maprows"></tbody>
   </table></div>
   <h2>Bosses and timed spawns</h2>
@@ -451,7 +452,7 @@
         <li><b>Class guides, levels 1-30:</b> <a href="https://meowdb.com/msclassic/guides/beginners-guide-first-steps-in-maple-world" target="_blank" rel="noopener">Beginner</a>, <a href="https://meowdb.com/msclassic/guides/warrior-class-guide" target="_blank" rel="noopener">Warrior</a>, <a href="https://meowdb.com/msclassic/guides/magician-class-guide" target="_blank" rel="noopener">Magician</a>, <a href="https://meowdb.com/msclassic/guides/bowman-class-guide" target="_blank" rel="noopener">Bowman</a>, <a href="https://meowdb.com/msclassic/guides/thief-class-guide" target="_blank" rel="noopener">Thief</a>. These set the Path Planner's skill and stat order, weapons, gear and training maps.</li>
         <li><b>2nd-job guides, levels 30-70:</b> <a href="https://meowdb.com/msclassic/guides/fighter-class-guide" target="_blank" rel="noopener">Fighter</a>, <a href="https://meowdb.com/msclassic/guides/page-class-guide" target="_blank" rel="noopener">Page</a>, <a href="https://meowdb.com/msclassic/guides/spearman-class-guide" target="_blank" rel="noopener">Spearman</a>, <a href="https://meowdb.com/msclassic/guides/hunter-class-guide" target="_blank" rel="noopener">Hunter</a>, <a href="https://meowdb.com/msclassic/guides/crossbowman-class-guide" target="_blank" rel="noopener">Crossbowman</a>, <a href="https://meowdb.com/msclassic/guides/assassin-class-guide" target="_blank" rel="noopener">Assassin</a>, <a href="https://meowdb.com/msclassic/guides/bandit-class-guide" target="_blank" rel="noopener">Bandit</a>, <a href="https://meowdb.com/msclassic/guides/fp-wizard-class-guide" target="_blank" rel="noopener">F/P Wizard</a>, <a href="https://meowdb.com/msclassic/guides/il-wizard-class-guide" target="_blank" rel="noopener">I/L Wizard</a>, <a href="https://meowdb.com/msclassic/guides/cleric-class-guide" target="_blank" rel="noopener">Cleric</a>.</li>
         <li><b>Mechanics:</b> <a href="https://meowdb.com/msclassic/guides/explaining-the-damage-formula" target="_blank" rel="noopener">damage formula</a>, <a href="https://meowdb.com/msclassic/guides/attack-speed-and-animation-times" target="_blank" rel="noopener">attack speed</a>, <a href="https://meowdb.com/msclassic/guides/hp-mp-gain-explained" target="_blank" rel="noopener">HP/MP gain</a>, <a href="https://meowdb.com/msclassic/guides/exp-table-level-1-to-100" target="_blank" rel="noopener">EXP table</a>, <a href="https://meowdb.com/msclassic/guides/spawn-engine-respawn-and-map-capacity" target="_blank" rel="noopener">spawn engine</a>, <a href="https://meowdb.com/msclassic/guides/best-grind-maps-every-level" target="_blank" rel="noopener">best grind maps</a>, <a href="https://meowdb.com/msclassic/guides/class-dps-rankings" target="_blank" rel="noopener">class DPS rankings</a>, <a href="https://meowdb.com/msclassic/guides/speed-jump-and-movement" target="_blank" rel="noopener">movement speed</a>, <a href="https://meowdb.com/msclassic/guides/weapon-reach" target="_blank" rel="noopener">weapon reach</a>, <a href="https://meowdb.com/msclassic/guides/kerning-city-party-quest-kpq-guide" target="_blank" rel="noopener">KPQ</a>, <a href="https://meowdb.com/msclassic/guides/maplestory-classic-glossary" target="_blank" rel="noopener">glossary</a>, <a href="https://meowdb.com/msclassic/guides/maplestory-classic-worlds-release-date" target="_blank" rel="noopener">release date / launch scope</a>. These drive the damage model, attack times, HP/MP, the level cap, party bonus and boss timers, and the reference tests.</li>
-        <li><b>Lists:</b> <a href="https://meowdb.com/msclassic/npc-shops" target="_blank" rel="noopener">NPC shops</a> (prices, potion shops, upkeep), weapon and material drops, and <a href="https://meowdb.com/msclassic/citizenship" target="_blank" rel="noopener">citizenship</a> grades and shops.</li>
+        <li><b>Lists:</b> <a href="https://meowdb.com/msclassic/npc-shops" target="_blank" rel="noopener">NPC shops</a> (prices, potion shops, upkeep), weapon and material drops, player reports of mesos per kill, and <a href="https://meowdb.com/msclassic/citizenship" target="_blank" rel="noopener">citizenship</a> grades and shops.</li>
       </ul></div>
 
     <div class="card"><div class="cardhead"><h3>3. maplestory.quest</h3><span class="pill p-hot">client data</span></div>

@@ -364,6 +364,21 @@ def step_extras(D):
         for nm, price, _ in s["items"]:
             if nm in want and price and nm in byname and (byname[nm] not in sell or price < sell[byname[nm]][2]): sell[byname[nm]] = [s["npc"], s["map"], price]
     D["shopsell"] = sell
+    # meso {mobId: [mesos per kill, reports]}: community reports on meowdb monster pages (median min/max × drop chance, trusted
+    # reports only). mesok = mesos per kill per monster level, the median over reported non-boss monsters: estimate for the rest.
+    rep = json.load(open(ROOT / "data" / "sources" / "meowdb_mesos.json"))["monsters"]
+    D["meso"] = {k: [round((v["summary"]["medianMin"] + v["summary"]["medianMax"]) / 2 * v["summary"]["medianDropChancePct"] / 100, 1), v["summary"]["trustedCount"]]
+                 for k, v in rep.items() if k in D["mobs"] and v["summary"]["trustedCount"]}
+    ratios = sorted(v[0] / D["mobs"][k][1] for k, v in D["meso"].items() if D["mobs"][k][1] > 1)
+    D["mesok"] = round(ratios[len(ratios) // 2], 2)
+    # potval {itemId: cheapest meowdb shop price} for HP/MP consumables a quest hands out (counted as potions you don't buy)
+    price = {}
+    for s_ in json.load(open(ROOT / "data" / "sources" / "meowdb_shops.json"))["shops"]:
+        if "\t" in s_["npc"]: continue
+        for nm, pr, _ in s_["items"]:
+            if pr and (nm not in price or pr < price[nm]): price[nm] = pr
+    heal = {str(i["id"]): i["name"] for i in ALL_ITEMS if (i.get("spec") or {}).get("hp") or (i.get("spec") or {}).get("mp")}
+    D["potval"] = {k: price[n] for k, n in heal.items() if n in price and any(k == str(x[0]) for r in D["quests"] for g in r.get("ri") or [] if g["k"] == "get" for x in g["it"])}
     # timed spawns on launch maps (bosses and anything with a respawn timer over 60 s, which the map ranking leaves out):
     # [mobId, name, level, hp, exp, mapId, mapName, count, timer s, boss]
     rows = []

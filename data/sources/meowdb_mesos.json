@@ -1,0 +1,382 @@
+{
+ "source": "https://meowdb.com/msclassic/api/mesos-reports?monsterId=<meowdb id> (community 'Mesos per kill' on meowdb monster pages)",
+ "read": "2026-10-06",
+ "note": "name = meowdb monster list text; summary = meowdb's median of trusted reports",
+ "monsters": {
+  "2": {
+   "name": "Snail",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 2,
+    "medianMax": 2,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 2,
+     "maxMesos": 2,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-07-30 15:54:55"
+    }
+   ]
+  },
+  "6": {
+   "name": "Stump",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 1,
+    "medianMax": 49,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 1,
+     "maxMesos": 49,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-08-04 19:34:37"
+    }
+   ]
+  },
+  "8": {
+   "name": "Pig",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 12,
+    "medianMax": 14,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 12,
+     "maxMesos": 14,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-07-24 17:20:58"
+    }
+   ]
+  },
+  "10": {
+   "name": "Ribbon Pig",
+   "summary": {
+    "count": 2,
+    "trustedCount": 2,
+    "medianMin": 18,
+    "medianMax": 23,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 18,
+     "maxMesos": 23,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-07-24 17:21:27"
+    },
+    {
+     "minMesos": 18,
+     "maxMesos": 23,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-07-24 17:21:36"
+    }
+   ]
+  },
+  "11": {
+   "name": "Dark Stump",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 19,
+    "medianMax": 23,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 19,
+     "maxMesos": 23,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-08-19 19:49:52"
+    }
+   ]
+  },
+  "12": {
+   "name": "Octopus",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 24,
+    "medianMax": 25,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 24,
+     "maxMesos": 25,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-09-10 14:23:33"
+    }
+   ]
+  },
+  "13": {
+   "name": "Green Mushroom",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 25,
+    "medianMax": 30,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 25,
+     "maxMesos": 30,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-08-05 19:38:29"
+    }
+   ]
+  },
+  "15": {
+   "name": "Axe Stump",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 30,
+    "medianMax": 35,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 30,
+     "maxMesos": 35,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-08-06 12:14:25"
+    }
+   ]
+  },
+  "16": {
+   "name": "Blue Mushroom",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 36,
+    "medianMax": 44,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 36,
+     "maxMesos": 44,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-08-06 08:24:00"
+    }
+   ]
+  },
+  "19": {
+   "name": "Horny Mushroom",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 40,
+    "medianMax": 48,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 40,
+     "maxMesos": 48,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-08-06 10:48:57"
+    }
+   ]
+  },
+  "20": {
+   "name": "Dark Axe Stump",
+   "summary": {
+    "count": 2,
+    "trustedCount": 2,
+    "medianMin": 33,
+    "medianMax": 50,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 50,
+     "maxMesos": 50,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-08-07 18:18:12"
+    },
+    {
+     "minMesos": 15,
+     "maxMesos": 49,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-08-17 04:53:34"
+    }
+   ]
+  },
+  "24": {
+   "name": "Iron Hog",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 48,
+    "medianMax": 57,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 48,
+     "maxMesos": 57,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-08-08 16:15:26"
+    }
+   ]
+  },
+  "32": {
+   "name": "Jr. Wraith",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 61,
+    "medianMax": 74,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 61,
+     "maxMesos": 74,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-09-11 13:32:10"
+    }
+   ]
+  },
+  "35": {
+   "name": "Lupin",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 68,
+    "medianMax": 81,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 68,
+     "maxMesos": 81,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-09-10 15:40:23"
+    }
+   ]
+  },
+  "38": {
+   "name": "Zombie Lupin",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 74,
+    "medianMax": 92,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 74,
+     "maxMesos": 92,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-09-10 15:38:20"
+    }
+   ]
+  },
+  "62": {
+   "name": "Rotten Mushroom",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 100,
+    "medianMax": 120,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 100,
+     "maxMesos": 120,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-09-10 18:08:26"
+    }
+   ]
+  },
+  "63": {
+   "name": "Sporewood",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 110,
+    "medianMax": 130,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 110,
+     "maxMesos": 130,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-09-10 18:09:36"
+    }
+   ]
+  },
+  "700000": {
+   "name": "Mushmom",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 1800,
+    "medianMax": 2200,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 1800,
+     "maxMesos": 2200,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-09-27 17:30:49"
+    }
+   ]
+  },
+  "700002": {
+   "name": "Zombie Mushmom",
+   "summary": {
+    "count": 1,
+    "trustedCount": 1,
+    "medianMin": 2250,
+    "medianMax": 2750,
+    "medianDropChancePct": 100
+   },
+   "reports": [
+    {
+     "minMesos": 2250,
+     "maxMesos": 2750,
+     "dropChancePct": 100,
+     "score": 1,
+     "createdAt": "2026-09-27 18:00:06"
+    }
+   ]
+  }
+ }
+}
