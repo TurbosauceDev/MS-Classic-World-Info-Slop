@@ -79,7 +79,15 @@ function attackInfo(s, l){
   if (!AI_CACHE.has(k)) AI_CACHE.set(k, attackInfo0(s, l));
   return AI_CACHE.get(k);
 }
+// the export gives Lucky Seven and Double Shot 1 hit; both throw/fire 2 (skill text, and meowdb's Thief and Bowman guides:
+// Lucky Seven "two 140% lines", Double Shot "two 120% arrows" that hit one mob twice or two mobs once each, so its total
+// damage doesn't grow with targets)
+const HITS_FIX = {"Lucky Seven": {hits: 2}, "Double Shot": {hits: 2, targets: 1}};
 function attackInfo0(s, l){
+  const r = attackInfo1(s, l);
+  return r && HITS_FIX[s.n] ? Object.assign(r, HITS_FIX[s.n]) : r;
+}
+function attackInfo1(s, l){
   if (s.id === "basic") return {kind:"phys", pct:100, hits:1, targets:1};
   const t = stat(s, l) || s.st[0];
   if (!["attack","action_hitbox","weapon_projectile","magic_projectile"].includes(s.k)) return null;
@@ -176,7 +184,7 @@ function calc(sp){
   } else if (ai && w){
     const ammo = (AMMO[w.type] || []).find(a => a[0] === S.ammo)?.[1] || 0;
     const watk = w.pad + ammo;
-    const prim = ap[PRIMARY[cls]], sec = ap[SECONDARY[cls]];
+    const prim = ap[PRIMARY[cls]], sec = cls === "Thief" ? ap.STR + ap.DEX : ap[SECONDARY[cls]];   // Thief: STR and DEX share the secondary term (meowdb Thief guide)
     const ranged = ["Bow","Crossbow","Claw"].includes(w.type);
     const wm = WMULT[w.type];
     let wmult;
@@ -206,9 +214,9 @@ function calc(sp){
 }
 
 /* greedy auto-build: keep buying the next 1-5 points that add the most real damage per SP */
-function autoSP(){
+function autoSP(seed = {}){   // seed: points already fixed (the class guide's first-job build)
   const list = jobSkills();
-  const sp = {};
+  const sp = Object.assign({}, seed);
   const raiseTo = (o, s, target) => { // copy of o with s at target and its prerequisites met
     const n = Object.assign({}, o);
     const raise = (sk, t) => {
@@ -278,12 +286,39 @@ function beginnerAt(cls, L){
   const critF = 0.95 + 0.05 * 1.2, interval = 0.42 + 0.06 * w.spd;
   return {dps: (min + max) / 2 * critF / interval, acc: (ap.DEX * 1.2 + L * 2 + ap.LUK * 0.6) / 2.5 + 10, branch: "Beginner", weapon: w.name, wid: w.id, skill: "Basic attack"};
 }
+// class guide build (16-guides.js): first-job SP in the guide's order (kept above 30, 2nd-job SP auto), and up to 30 the
+// guide's AP and weapons; the attack is whichever of the skilled ones does most (AoE build: as if ~3 monsters are in reach)
+function guideBuild(){
+  const g = GUIDE[S.cls], L = S.lvl, list = jobSkills(), seed = {};
+  for (const [n, v] of Object.entries(guideSP(S.cls, Math.min(L, 30)))){ const s = byName(n, list); if (s) seed[s.id] = v }
+  S.sp = autoSP(seed);
+  if (L > 30) return;
+  S.ap = guideAP(S.cls, L, S.fam);
+  const c = guideAt(g.weapons, L), types = branchInfo()[2];
+  let cand = (c ? g.weapons[c] : []).map(n => W.find(w => w.name === n)).filter(w => w && types.includes(w.type) && famOK(w.type));
+  if (!cand.length) cand = weaponsFor().filter(w => D.wsrc[w.name]?.shop).slice(0, 4);   // no guide weapon for this family: shop weapons
+  let best = null;
+  for (const w of cand){
+    S.weapon = w.name;
+    const am = AMMO[w.type];
+    S.ammo = am ? (g.ammo && L >= g.ammo.from && g.ammo[w.type]) || am[0][0] : null;
+    for (const sk of attackSkills(w).filter(x => x.id !== "basic" && !["Rush", "Steal", "Power Knockback"].includes(x.n))){
+      S.skill = sk.id; const r = calc(S.sp); if (!r.ai) continue;
+      const v = r.eff * (S.aoe ? Math.min(r.ai.targets || 1, 3) : 1);
+      if (!best || v > best.v) best = {v, w: w.name, sk: sk.id, ammo: S.ammo};
+    }
+  }
+  if (best){ S.weapon = best.w; S.skill = best.sk; S.ammo = best.ammo }
+}
 // default character at a level (best weapon, auto AP, auto skill build), for the Path Planner. Leaves the builder untouched.
-buildAt = (cls, branch, fam, lvl, aoe = false, obt = false) => {
+// guide = follow the meowdb class guides (16-guides.js); future Bandits level with a claw before 30, as the Thief guide says.
+buildAt = (cls, branch, fam, lvl, aoe = false, obt = false, guide = false) => {
   if (lvl < 10) return beginnerAt(cls, lvl);
   const keep = S;
+  if (guide && GUIDE[cls].claw && lvl < 30) fam = "Claw";
   S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe, obt};
-  try { applyDefaults(); S.sp = autoSP(); const r = calc(S.sp); return {dps: r.dps, acc: r.acc, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg} }
+  try { applyDefaults(); if (guide) guideBuild(); else S.sp = autoSP(); const r = calc(S.sp);
+    return {dps: r.dps, acc: r.acc, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo} }
   finally { S = keep }
 };
 function fillControls(){

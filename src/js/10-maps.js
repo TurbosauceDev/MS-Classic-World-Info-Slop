@@ -68,11 +68,12 @@ function mapRates(cls, L, dps, acc, floor = 12, aoe = null){
   return rows.sort((a,b) => b.rate - a.rate);
 }
 // each class's area attack at a level ([job, skill]); Thieves and 1st job Magicians have no damaging one
-const AOE_SKILL = {Warrior: () => ["Warrior", "Slash Blast"], Bowman: L => L >= 30 ? ["Hunter", "Arrow Bomb: Bow"] : ["Archer", "Double Shot"],
+// (Double Shot isn't one: its 2 arrows split between targets, so total damage stays the same)
+const AOE_SKILL = {Warrior: () => ["Warrior", "Slash Blast"], Bowman: L => L >= 30 ? ["Hunter", "Arrow Bomb: Bow"] : null,
   "I/L Wizard": () => ["I/L Wizard", "Thunder Bolt"], "F/P Wizard": () => ["F/P Wizard", "Poison Breath"], Cleric: () => ["Cleric", "Holy Arrow"]};
 function classAoe(cls, L){
-  const f = AOE_SKILL[cls]; if (!f || L < 10) return null;
-  const [job, name] = f(L), s = (D.skills[job] || []).find(x => x.n === name); if (!s || !s.rg) return null;
+  const f = AOE_SKILL[cls], js = f && L >= 10 && f(L); if (!js) return null;
+  const [job, name] = js, s = (D.skills[job] || []).find(x => x.n === name); if (!s || !s.rg) return null;
   return {t: Array.isArray(s.mob) ? Math.max(...s.mob) : s.mob, r: s.rg, n: name};
 }
 let AOE_FROM_BUILDER = null;   // the builder's own attack {t, r, n}; cleared with ACC_FROM_BUILDER

@@ -246,6 +246,7 @@ ul.crq li{margin-bottom:6px}
 .crfind:hover{color:var(--accent)}
 .crfind:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
 #crlevels th{white-space:nowrap}
+.ups{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:3px}
 
 </style>
 
@@ -368,6 +369,13 @@ ul.crq li{margin-bottom:6px}
         <ul>
           <li>Goes level by level from your level to your goal and builds a list to follow: where to train, which quests to do, how long each takes.</li>
           <li>Your character at each level is the Character Builder's default: best weapon you can use, AP and SP spent by the Auto buttons.</li>
+          <li><b>Class guides</b> (default: build + training maps, levels 1–30): uses meowdb's <a href="https://meowdb.com/msclassic/guides/warrior-class-guide" target="_blank" rel="noopener">Warrior</a>, <a href="https://meowdb.com/msclassic/guides/magician-class-guide" target="_blank" rel="noopener">Magician</a>, <a href="https://meowdb.com/msclassic/guides/bowman-class-guide" target="_blank" rel="noopener">Bowman</a>, <a href="https://meowdb.com/msclassic/guides/thief-class-guide" target="_blank" rel="noopener">Thief</a> and <a href="https://meowdb.com/msclassic/guides/beginners-guide-first-steps-in-maple-world" target="_blank" rel="noopener">beginner</a> guides instead:
+            <ul>
+              <li>their SP order and AP per level (each level-up is listed under the step it happens in), their shop weapons and gear, free advancement weapons (Beginner's Garnier), Arrow Blow over Double Shot;</li>
+              <li>their Training Advisor maps for each level band (checked for sure hits, 2-hit kills, danger and the walk to town, which this model doesn't check), with the model's fastest map shown when it differs. "Build only" keeps the build but lets the model pick maps;</li>
+              <li>citizenship town at 12, and Wolbi stars or Bronze arrows from 25 (they unlock at citizenship grade 3: level 22 plus 2,000 contribution; reaching it by 25 is an assumption);</li>
+              <li>future Bandits level with a claw and Lucky Seven until 30. First-job skills stay as the guide leaves them at 30; 2nd-job SP is still auto.</li>
+            </ul></li>
           <li><b>Quests + grinding:</b> does each quest as it unlocks and grinds in between. Each quest shows how its EXP per hour compares with grinding; tick "Only quests faster than grinding" to keep just those.</li>
           <li><b>Most rewards:</b> every quest that pays mesos or items, Must do picks first, then lowest level and highest reward value. Items with no known source aren't timed ("+ other items").</li>
           <li><b>Reward value</b> = quest mesos + what its items sell to NPCs (pick-one: the best; random: the average). That's a floor; rated items sell for far more to players.</li>
@@ -386,7 +394,7 @@ ul.crq li{margin-bottom:6px}
           <li><b>Average player</b> takes 1.5× the model time, <b>Relaxed</b> 2×: crowded maps, potions, breaks. These multipliers are a guess; pick what fits you.</li>
           <li><b>Travel counts:</b> every move between maps is its own step with the route (walk, cab), so you can tick it off. The plan knows where you are. A quest means walking to its NPC, to the closest good map for each monster it needs, and back. Grinding maps far from you lose points for the walk. Crossing one map ≈ 30 s, a cab between towns (Lith Harbor, Henesys, Ellinia, Kerning City, Perion, Sleepywood) ≈ 45 s, talking to an NPC ≈ 1 min (30 s for the same NPC again). All guesses.</li>
           <li>Quest kills also wait on the map's respawns: few of a monster on a map means slower kills there. Kill EXP from quests counts.</li>
-          <li><b>AoE build</b> (default): each level's character uses its best multi-target attack when the job has one: Slash Blast, Double Shot, Arrow Bomb, Iron Arrow, Thunder Bolt, Poison Breath, Holy Arrow (Power Knockback is skipped: it pushes monsters away). Thieves and 1st job Magicians have none, so they stay single target. How many monsters a cast hits comes from each map's spawn points on the same platform within the skill's reach (75% alive), capped at its target count: an estimate shown as "hits ~2.4 per cast".</li>
+          <li><b>AoE build</b> (default): each level's character uses its best multi-target attack when the job has one: Slash Blast, Arrow Bomb, Iron Arrow, Thunder Bolt, Poison Breath, Holy Arrow (Power Knockback is skipped: it pushes monsters away). Thieves, 1st job Bowmen and 1st job Magicians have none, so they stay single target (Double Shot's 2 arrows split between targets, so it does the same total damage either way). How many monsters a cast hits comes from each map's spawn points on the same platform within the skill's reach (75% alive), capped at its target count: an estimate shown as "hits ~2.4 per cast".</li>
           <li><b>Weapons:</b> when the plan's character gets a better weapon, a step says where to get it: NPC shop and price (meowdb's shop list), crafting recipe (game files), quest reward, or monster drops (meowdb: player reports, else the old MapleSEA drop list it says Classic likely shares). The plan only picks weapons you can get at launch this way.</li>
           <li>Below level 10 you're a Beginner: basic attack with the Wooden Club, the Razor from level 5, and all AP in your future job's main stat, as meowdb's beginner guide recommends.</li>
           <li><b>Maple Island</b> runs first in every mode: every island quest in order, island maps when a quest needs a higher level, then Shanks' ship to Lith Harbor at level 7+ (300 mesos, one way). meowdb: the island quests take you to about level 8. Untick "Still on Maple Island" if you've left.</li>
@@ -414,6 +422,7 @@ ul.crq li{margin-bottom:6px}
     <label class="chk" id="xislandwrap"><input type="checkbox" id="xisland"> Still on Maple Island</label>
     <label class="chk" id="xvalwrap"><input type="checkbox" id="xval"> Valuable quests</label>
     <label class="chk" id="xfastwrap"><input type="checkbox" id="xfast"> Only quests faster than grinding</label>
+    <label>Class guides (1–30)<select id="xguide"><option value="all">Build + training maps</option><option value="build">Build only</option><option value="">Off</option></select></label>
     <label>Build<select id="xaoe"><option value="1">Area attacks (AoE)</option><option value="">Single target</option></select></label>
     <label id="xdropwrap">Drop rate <b id="xdropout">30%</b><input id="xdrop" type="range" min="10" max="35" step="1" value="30"></label>
     <label>Pace<select id="xpace"><option value="1">Perfect play (model)</option><option value="1.5">Average player (1.5×)</option><option value="2">Relaxed (2×)</option></select></label>
@@ -442,7 +451,7 @@ ul.crq li{margin-bottom:6px}
           <li>Each kill costs the monster's HP ÷ your damage, after hit chance, defense, level penalty and element, plus 1 second of walking and aiming.</li>
           <li>Score = map EXP ÷ total time, capped at what one player can kill per 7.56-second respawn with 75% of spawns alive.</li>
           <li>Maps need 8+ monsters; bosses are left out. Hit below 90% is flagged.</li>
-          <li><b>Area attacks by default:</b> Slash Blast, Double Shot then Arrow Bomb, Thunder Bolt, Poison Breath, Holy Arrow (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, 75% alive: an estimate. Thieves and 1st job Magicians have no area attack.</li>
+          <li><b>Area attacks by default:</b> Slash Blast, Arrow Bomb, Thunder Bolt, Poison Breath, Holy Arrow (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, 75% alive: an estimate. Thieves, 1st job Bowmen and 1st job Magicians have no area attack.</li>
         </ul>
       </div>
       <div>
@@ -756,11 +765,12 @@ function mapRates(cls, L, dps, acc, floor = 12, aoe = null){
   return rows.sort((a,b) => b.rate - a.rate);
 }
 // each class's area attack at a level ([job, skill]); Thieves and 1st job Magicians have no damaging one
-const AOE_SKILL = {Warrior: () => ["Warrior", "Slash Blast"], Bowman: L => L >= 30 ? ["Hunter", "Arrow Bomb: Bow"] : ["Archer", "Double Shot"],
+// (Double Shot isn't one: its 2 arrows split between targets, so total damage stays the same)
+const AOE_SKILL = {Warrior: () => ["Warrior", "Slash Blast"], Bowman: L => L >= 30 ? ["Hunter", "Arrow Bomb: Bow"] : null,
   "I/L Wizard": () => ["I/L Wizard", "Thunder Bolt"], "F/P Wizard": () => ["F/P Wizard", "Poison Breath"], Cleric: () => ["Cleric", "Holy Arrow"]};
 function classAoe(cls, L){
-  const f = AOE_SKILL[cls]; if (!f || L < 10) return null;
-  const [job, name] = f(L), s = (D.skills[job] || []).find(x => x.n === name); if (!s || !s.rg) return null;
+  const f = AOE_SKILL[cls], js = f && L >= 10 && f(L); if (!js) return null;
+  const [job, name] = js, s = (D.skills[job] || []).find(x => x.n === name); if (!s || !s.rg) return null;
   return {t: Array.isArray(s.mob) ? Math.max(...s.mob) : s.mob, r: s.rg, n: name};
 }
 let AOE_FROM_BUILDER = null;   // the builder's own attack {t, r, n}; cleared with ACC_FROM_BUILDER
@@ -851,6 +861,118 @@ const VICON = {"10317": "10321"};
 const chainStart = r => r.chain ? D.quests.filter(x => x.chain === r.chain).sort((a, b) => a.lvl - b.lvl || a.id - b.id)[0] : r;
 const vPill = id => { const v = VALUE[id]; return v ? `<span class="pill ${VTIER[v[0]][1]}">${VTIER[v[0]][0]}</span>` : "" };
 const vSrc = v => v[4].map(k => `<a href="${VSRC[k][1]}" target="_blank" rel="noopener">${esc(VSRC[k][0].split(" ")[0])}</a>`).join(", ");
+
+/* meowdb class guides, levels 1-30 (read 2026-10-06 with headless Chromium). What the Path Planner follows when
+   "Follow class guides" is on: SP order, AP per level, weapons, gear, ammo, citizenship town and Training Advisor maps.
+   Every value below is from the guide named in GUIDE_SRC; map ids are the export's ids for the maps the guides name. */
+const GUIDE_SRC = {
+  Warrior: "https://meowdb.com/msclassic/guides/warrior-class-guide",
+  Magician: "https://meowdb.com/msclassic/guides/magician-class-guide",
+  Bowman: "https://meowdb.com/msclassic/guides/bowman-class-guide",
+  Thief: "https://meowdb.com/msclassic/guides/thief-class-guide",
+  Beginner: "https://meowdb.com/msclassic/guides/beginners-guide-first-steps-in-maple-world"
+};
+// {level: {skill: points added}} for levels a..b
+const gRange = (a, b, o) => Object.fromEntries(Array.from({length: b - a + 1}, (_, i) => [a + i, o]));
+const GM = {rain: "10001070", garden: "10001021", sf1: "10002031", lith: "10000010", fun4: "10002075", sf3: "10002033", sf4: "10002034",
+  fun1: "10002072", line1: "10003061", transfer: "10003062", hillw: "10001020", damp: "10005031", steam: "10005065"};
+const GUIDE = {
+  Warrior: {
+    start: {STR: 12, DEX: 5},
+    sp: {10: {"Power Strike": 1}, 11: {"Power Strike": 2, "Slash Blast": 1}, 12: {"Power Strike": 1, "Slash Blast": 2},
+      13: {"Slash Blast": 1, "Precise Strikes": 2}, 14: {"Precise Strikes": 3}, ...gRange(15, 19, {"Power Strike": 3}),
+      20: {"Power Strike": 1, "Slash Blast": 2}, ...gRange(21, 24, {"Slash Blast": 3}), 25: {"Slash Blast": 2, "Precise Strikes": 1},
+      ...gRange(26, 28, {"Precise Strikes": 3}), 29: {"Improved HP Recovery": 3}, 30: {"Max HP Increase": 3}},
+    ap: [[11, 12, {STR: 4, DEX: 1}], [13, 14, {STR: 3, DEX: 2}], [15, 19, {STR: 4, DEX: 1}], [20, 20, {STR: 3, DEX: 2}], [21, 29, {STR: 4, DEX: 1}], [30, 30, {STR: 5}]],
+    weapons: {10: ["Wooden Sword", "Metal Axe", "Long Sword"], 15: ["Sabre", "Battle Axe"], 20: ["Two-Handed Sword", "Viking Sword", "Iron Axe"],
+      25: ["Broadsword", "Mithril Axe", "Two-Handed Axe"], 30: ["Scimitar", "Blue Axe", "Gladius", "Fireman's Axe"]},
+    gear: {10: "Metal Koif (+1 DEX, +2 ACC; Smithing Lv 1 craft), Juno (+1 ACC; Stump drop or Smithing Lv 2). River in Perion sells the weapons.",
+      15: "Steel Fitted Mail (+2 STR, +1 DEX; female characters only until the Kendo Robes at 20). River and Harry in Perion.",
+      20: "Red Kendo Robe (+4 STR; Harry), Iron Viking Helm (+2 DEX, +3 ACC; Smithing Lv 4). The guide's DEX counts the helmet's +2 for 20-DEX weapons.",
+      25: "White Fingerless Gloves (+2 ACC, +1% crit; Smithing Lv 5).",
+      30: "Jousting Helmet (+3 DEX, +3 ACC; Harry), Red Cross Shield (River), Steel Missel (+3 STR; Smithing Lv 6). The helmet's DEX gets you to 30 for Blue Axe or Scimitar."},
+    maps: {10: [GM.rain, GM.garden], 15: [GM.sf1, GM.lith], 20: [GM.fun4, GM.sf3], 25: [GM.fun4, GM.sf3], 30: [GM.line1, GM.fun4]},
+    town: ["Henesys", "Arthur in Henesys Town Hall", "Raymond sells Supreme Sniper Potion (+7 ACC); later grades add Overall STR and Gloves Attack scrolls."],
+    skills: "Power Strike first for sure kills, then Slash Blast (use it on 3+ monsters) and Precise Strikes; 3 each in Improved HP Recovery and Max HP Increase at 29-30."
+  },
+  Magician: {
+    start: {INT: 12, LUK: 5},
+    sp: {10: {"Energy Bolt": 1}, 11: {"Energy Bolt": 2, "Improved MP Recovery": 1}, ...gRange(12, 16, {"Energy Bolt": 3}),
+      17: {"Energy Bolt": 2, "Magic Guard": 1}, 18: {"Magic Guard": 2, "Improved MP Recovery": 1}, 19: {"Improved MP Recovery": 1, "Max MP Increase": 2},
+      ...gRange(20, 25, {"Magic Armor": 3}), 26: {"Magic Armor": 2, "Max MP Increase": 1}, ...gRange(27, 30, {"Max MP Increase": 3})},
+    ap: [[11, 19, {INT: 5}], [20, 20, {LUK: 5}], [21, 24, {INT: 5}], [25, 25, {LUK: 5}], [26, 29, {INT: 5}], [30, 30, {LUK: 5}]],
+    weapons: {10: ["Wooden Wand"], 15: ["Hardwood Wand"], 20: ["Metal Wand"], 25: ["Ice Wand"], 30: ["Mithril Wand"]},
+    gear: {10: "You get a free Beginner's Wooden Wand (26 M.ATK) at advancement; the shop Wooden Wand has 27. Brown Apprentice Hat. Always wear a shield: Stolen Fence (Silver, Lith Harbor) or Pan Lid (Green Mushroom drop).",
+      15: "Blue Plain Robe (+3 INT, male) or Yellow Arianne + skirt (+1 INT each, female). Flora the Fairy (wands) and Serabi the Fairy (armor) in Ellinia.",
+      20: "Blue Morrican (+2 INT, +1% crit). Mystic Shield at 22 (needs 34 INT, 12 LUK).",
+      25: "Blue Doros Robe (+5 INT, male) or Brown Doroness Robe (+5 INT, female).",
+      30: "Blue Wizard Robe (+6 INT, male) or Blue Fairy Top + Skirt (+3 INT each, female)."},
+    maps: {10: [GM.rain, GM.hillw], 15: [GM.rain, GM.hillw], 20: [GM.transfer, GM.fun1], 25: [GM.line1, GM.fun4], 30: [GM.transfer, GM.sf4]},
+    town: ["Kerning City", "Roxy in the Kerning City Civic Center", "The scroll shop later unlocks Overall Armor INT and Gloves Magic Attack scrolls."],
+    skills: "Max Energy Bolt by 17 (same damage as Magic Claw for less MP), Magic Guard 3 to open Magic Armor, Armor to 20, then Max MP Increase."
+  },
+  Bowman: {
+    start: {DEX: 12, STR: 5},
+    sp: {10: {"Arrow Blow": 1}, 11: {"Arrow Blow": 3}, 12: {"Arrow Blow": 2, "The Eye of Amazon": 1}, ...gRange(13, 14, {"Arrow Blow": 3}),
+      15: {"Arrow Blow": 1, "The Eye of Amazon": 2}, ...gRange(16, 17, {"Arrow Blow": 3}), 18: {"Arrow Blow": 1, "Critical Shot": 2},
+      ...gRange(19, 22, {"Critical Shot": 3}), 23: {"Critical Shot": 1, "The Eye of Amazon": 2}, ...gRange(24, 26, {"The Eye of Amazon": 3}),
+      27: {"The Eye of Amazon": 1, "Focus": 2}, ...gRange(28, 29, {"Focus": 3}), 30: {"Focus": 2, "Power Knockback": 1}},
+    ap: [[11, 15, {STR: 2, DEX: 3}], [16, 30, {STR: 1, DEX: 4}]],
+    apXbow: [[11, 15, {DEX: 5}], [16, 30, {STR: 1, DEX: 4}]],   // crossbows need less STR
+    weapons: {10: ["War Bow", "Crossbow"], 15: ["Composite Bow", "Battle Crossbow"], 20: ["Hunter's Bow", "Balanche"], 25: ["Battle Bow", "Mountain Crossbow"], 30: ["Ryden", "Eagle Crow"]},
+    gear: {10: "Green Winter Hat, Green Archer Top. Karl sells the bows and crossbows in Henesys, Sam the armor.",
+      15: "Green Feather Hat, Basic Archer Gloves (gloves are Leatherworking Lv 3-6 crafts).", 20: "Green Robin Hat, Blue Diros.",
+      25: "Green Hunter, Blue Savata.", 30: "Green Hawkeye, Green Marker. Any class can wear a Sauna Robe at 30 (+1 all stats, 10 slots)."},
+    ammo: {from: 25, Bow: "Bronze Arrows for Bows", Crossbow: "Bronze Arrows for Crossbows",
+      txt: "Bronze arrows (+1 ATK, 2 mesos each) from Raymond in Henesys once your citizenship reaches Helpful Stranger (grade 3: level 22 and 2,000 contribution). The plan assumes you get there by 25."},
+    maps: {15: [GM.sf1, GM.garden], 20: [GM.fun4, GM.sf3], 25: [GM.fun4, GM.sf3], 30: [GM.transfer, GM.line1]},
+    town: ["Henesys", "Arthur in Henesys Town Hall", "Raymond sells Supreme Sniper Potion (+7 ACC) and, at grade 3, Bronze arrows."],
+    skills: "Arrow Blow (less MP, one arrow, 50 px more range than Double Shot) with Eye of Amazon 1 at 12 and 3 at 15, Arrow Blow max at 18, then Critical Shot, Eye, Focus."
+  },
+  Thief: {
+    start: {LUK: 12, DEX: 5},
+    sp: {10: {"Lucky Seven": 1}, 11: {"Nimble Body": 3}, 12: {"Keen Eyes": 1, "Lucky Seven": 2}, ...gRange(13, 17, {"Lucky Seven": 3}),
+      18: {"Lucky Seven": 2, "Keen Eyes": 1}, ...gRange(19, 22, {"Keen Eyes": 3}), 23: {"Keen Eyes": 1, "Nimble Body": 2},
+      ...gRange(24, 26, {"Nimble Body": 3}), 27: {"Nimble Body": 1, "Disorder": 2}, 28: {"Disorder": 1, "Dark Sight": 2}, ...gRange(29, 30, {"Dark Sight": 3})},
+    ap: [[11, 13, {LUK: 5}], [14, 15, {DEX: 5}], [16, 19, {LUK: 5}], [20, 20, {DEX: 5}], [21, 24, {LUK: 5}], [25, 25, {DEX: 5}], [26, 29, {LUK: 5}], [30, 30, {DEX: 5}]],
+    weapons: {10: ["Beginner's Garnier"], 15: ["Steel Titans"], 20: ["Steel Igor"], 25: ["Meba"], 30: ["Adamantium Guards"]},
+    claw: true,   // future Bandits level as a "Sindit": claw + Lucky Seven through 1st job
+    gear: {10: "Beginner's Garnier comes free when you become a Rogue; Subi stars from Dr. Faymus, Black Ghetto Beanie (+1 LUK) from Don Hwang, Kerning City.",
+      15: "Black Duo (+1 LUK). Cutthroat Manny sells the claws.", 20: "Black Loosecap (+2 LUK; Don Hwang).",
+      25: "Dark Wolfskin (+2 LUK). Meba is the only Speed 3 claw before 30.", 30: "Dark Guise (+3 LUK; Don Hwang), Steel Sylvia, Sauna Robe from Mr. Wetbottom's chain in Sleepywood."},
+    ammo: {from: 25, Claw: "Wolbi Throwing Stars",
+      txt: "Wolbi stars (+17 ATK vs Subi's +15, 1,000 mesos) from Max in the Kerning City Civic Center once your citizenship reaches Helpful Stranger (grade 3: level 22 and 2,000 contribution, about two weeks of dailies). The plan assumes you get there by 25."},
+    maps: {10: [GM.rain, GM.sf1], 15: [GM.fun4, GM.sf3], 20: [GM.transfer, GM.damp], 25: [GM.transfer, GM.steam], 30: [GM.transfer, GM.steam]},
+    town: ["Kerning City", "Roxy in the Kerning City Civic Center", "Max sells Wolbi stars at grade 3; later grades add Overall LUK and Gloves Attack scrolls."],
+    skills: "Lucky Seven for every Thief (future Bandits too), Keen Eyes 1 at 12 for +50 range, Lucky Seven max at 18, then Keen Eyes, Nimble Body, Disorder 3 and Dark Sight."
+  }
+};
+const GUIDE_FREE = {"Beginner's Garnier": "Given free when you become a Rogue (meowdb Thief guide).", "Beginner's Wooden Wand": "Given free when you become a Magician (meowdb Magician guide)."};
+// checkpoint level of a guide table at level L (the highest key <= L), or null
+const guideAt = (tbl, L) => { const ks = Object.keys(tbl || {}).map(Number).filter(k => k <= L); return ks.length ? Math.max(...ks) : null };
+// base AP at level L following the guide (creation stats, all level 2-10 AP in the main stat, then the guide's table)
+function guideAP(cls, L, fam){
+  const g = GUIDE[cls], ap = {STR: 4, DEX: 4, INT: 4, LUK: 4};
+  Object.assign(ap, g.start);
+  const main = Object.keys(g.start)[0];
+  ap[main] += 5 * (Math.min(L, 10) - 1);
+  for (const [a, b, o] of (fam === "Crossbow" && g.apXbow) || g.ap) for (let l = a; l <= Math.min(b, L); l++) for (const k in o) ap[k] += o[k];
+  return ap;
+}
+// first-job skill points by name at level L (levels above 30 keep the level-30 result)
+function guideSP(cls, L){
+  const out = {};
+  for (const [l, o] of Object.entries(GUIDE[cls].sp)) if (+l <= L) for (const k in o) out[k] = (out[k] || 0) + o[k];
+  return out;
+}
+// "Power Strike +2, Slash Blast +1 · STR +4, DEX +1" for one level-up
+function guideLevelText(cls, L, fam){
+  const g = GUIDE[cls], sp = Object.entries(g.sp[L] || {}).map(([k, v]) => `${k} +${v}`);
+  if (L <= 10) sp.push(`${L <= 4 ? "Nimble Feet" : L <= 7 ? "Three Snails" : "Recovery"} +1`);   // beginner guide order
+  const ap = {}; if (L <= 10) ap[Object.keys(g.start)[0]] = 5;
+  for (const [a, b, o] of (fam === "Crossbow" && g.apXbow) || g.ap) if (L >= a && L <= b) Object.assign(ap, o);
+  return [sp.join(", "), Object.entries(ap).map(([k, v]) => `${k} +${v}`).join(", ")].filter(Boolean).join(" · ");
+}
 
 /* quests: launch content only (Orbis, El Nath and Forgotten Hollow aren't open at launch) */
 const QLAUNCH = D.quests.filter(r => !["El Nath","Orbis","Forgotten Hollow"].includes(r.region));
@@ -1348,7 +1470,15 @@ function attackInfo(s, l){
   if (!AI_CACHE.has(k)) AI_CACHE.set(k, attackInfo0(s, l));
   return AI_CACHE.get(k);
 }
+// the export gives Lucky Seven and Double Shot 1 hit; both throw/fire 2 (skill text, and meowdb's Thief and Bowman guides:
+// Lucky Seven "two 140% lines", Double Shot "two 120% arrows" that hit one mob twice or two mobs once each, so its total
+// damage doesn't grow with targets)
+const HITS_FIX = {"Lucky Seven": {hits: 2}, "Double Shot": {hits: 2, targets: 1}};
 function attackInfo0(s, l){
+  const r = attackInfo1(s, l);
+  return r && HITS_FIX[s.n] ? Object.assign(r, HITS_FIX[s.n]) : r;
+}
+function attackInfo1(s, l){
   if (s.id === "basic") return {kind:"phys", pct:100, hits:1, targets:1};
   const t = stat(s, l) || s.st[0];
   if (!["attack","action_hitbox","weapon_projectile","magic_projectile"].includes(s.k)) return null;
@@ -1445,7 +1575,7 @@ function calc(sp){
   } else if (ai && w){
     const ammo = (AMMO[w.type] || []).find(a => a[0] === S.ammo)?.[1] || 0;
     const watk = w.pad + ammo;
-    const prim = ap[PRIMARY[cls]], sec = ap[SECONDARY[cls]];
+    const prim = ap[PRIMARY[cls]], sec = cls === "Thief" ? ap.STR + ap.DEX : ap[SECONDARY[cls]];   // Thief: STR and DEX share the secondary term (meowdb Thief guide)
     const ranged = ["Bow","Crossbow","Claw"].includes(w.type);
     const wm = WMULT[w.type];
     let wmult;
@@ -1475,9 +1605,9 @@ function calc(sp){
 }
 
 /* greedy auto-build: keep buying the next 1-5 points that add the most real damage per SP */
-function autoSP(){
+function autoSP(seed = {}){   // seed: points already fixed (the class guide's first-job build)
   const list = jobSkills();
-  const sp = {};
+  const sp = Object.assign({}, seed);
   const raiseTo = (o, s, target) => { // copy of o with s at target and its prerequisites met
     const n = Object.assign({}, o);
     const raise = (sk, t) => {
@@ -1547,12 +1677,39 @@ function beginnerAt(cls, L){
   const critF = 0.95 + 0.05 * 1.2, interval = 0.42 + 0.06 * w.spd;
   return {dps: (min + max) / 2 * critF / interval, acc: (ap.DEX * 1.2 + L * 2 + ap.LUK * 0.6) / 2.5 + 10, branch: "Beginner", weapon: w.name, wid: w.id, skill: "Basic attack"};
 }
+// class guide build (16-guides.js): first-job SP in the guide's order (kept above 30, 2nd-job SP auto), and up to 30 the
+// guide's AP and weapons; the attack is whichever of the skilled ones does most (AoE build: as if ~3 monsters are in reach)
+function guideBuild(){
+  const g = GUIDE[S.cls], L = S.lvl, list = jobSkills(), seed = {};
+  for (const [n, v] of Object.entries(guideSP(S.cls, Math.min(L, 30)))){ const s = byName(n, list); if (s) seed[s.id] = v }
+  S.sp = autoSP(seed);
+  if (L > 30) return;
+  S.ap = guideAP(S.cls, L, S.fam);
+  const c = guideAt(g.weapons, L), types = branchInfo()[2];
+  let cand = (c ? g.weapons[c] : []).map(n => W.find(w => w.name === n)).filter(w => w && types.includes(w.type) && famOK(w.type));
+  if (!cand.length) cand = weaponsFor().filter(w => D.wsrc[w.name]?.shop).slice(0, 4);   // no guide weapon for this family: shop weapons
+  let best = null;
+  for (const w of cand){
+    S.weapon = w.name;
+    const am = AMMO[w.type];
+    S.ammo = am ? (g.ammo && L >= g.ammo.from && g.ammo[w.type]) || am[0][0] : null;
+    for (const sk of attackSkills(w).filter(x => x.id !== "basic" && !["Rush", "Steal", "Power Knockback"].includes(x.n))){
+      S.skill = sk.id; const r = calc(S.sp); if (!r.ai) continue;
+      const v = r.eff * (S.aoe ? Math.min(r.ai.targets || 1, 3) : 1);
+      if (!best || v > best.v) best = {v, w: w.name, sk: sk.id, ammo: S.ammo};
+    }
+  }
+  if (best){ S.weapon = best.w; S.skill = best.sk; S.ammo = best.ammo }
+}
 // default character at a level (best weapon, auto AP, auto skill build), for the Path Planner. Leaves the builder untouched.
-buildAt = (cls, branch, fam, lvl, aoe = false, obt = false) => {
+// guide = follow the meowdb class guides (16-guides.js); future Bandits level with a claw before 30, as the Thief guide says.
+buildAt = (cls, branch, fam, lvl, aoe = false, obt = false, guide = false) => {
   if (lvl < 10) return beginnerAt(cls, lvl);
   const keep = S;
+  if (guide && GUIDE[cls].claw && lvl < 30) fam = "Claw";
   S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe, obt};
-  try { applyDefaults(); S.sp = autoSP(); const r = calc(S.sp); return {dps: r.dps, acc: r.acc, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg} }
+  try { applyDefaults(); if (guide) guideBuild(); else S.sp = autoSP(); const r = calc(S.sp);
+    return {dps: r.dps, acc: r.acc, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo} }
   finally { S = keep }
 };
 function fillControls(){
@@ -1717,9 +1874,10 @@ const RESPAWN = 7.56, SOLO_ALIVE = 0.75;   // respawn timer and share of spawns 
 const STICK = 0.9;       // keep the current map while it's within 10% of the best
 const MAXL = 70;         // EXP table ends at 70
 
-let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true, drop:0.3, aoe:true};
+let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true, drop:0.3, aoe:true, guide:"all"};
 const BELOW = 5;          // quests more than 5 levels under your starting level count as done or skipped
 try { const s = JSON.parse(localStorage.getItem("path") || "null"); if (s && s.cls) X = Object.assign(X, s) } catch(e) {}
+if (typeof X.guide !== "string") X.guide = "all";   // class guides: "all" = build + maps, "build", "" = off
 
 // area attack of the character at a level, for mapRates / aoeHits (null = single target)
 const aoeOf = ch => ch.targets > 1 && ch.reach ? {t: ch.targets, r: ch.reach} : null;
@@ -1727,10 +1885,12 @@ const aoeOf = ch => ch.targets > 1 && ch.reach ? {t: ch.targets, r: ch.reach} : 
 const mcls = L => L < 10 ? "Warrior" : X.cls === "Magician" ? (L >= 30 ? X.branch : "Magician") : X.cls;
 const BC = {};
 function charAt(L){
-  const br = L >= 30 ? X.branch : FIRST[X.cls], k = [X.cls, br, X.fam, L, X.aoe].join("|");
-  if (!BC[k]){ const b = buildAt(X.cls, br, X.fam, L, X.aoe, true); BC[k] = b.dps > 0 ? b : {dps: 20 * L, acc: b.acc, est: true} }
+  const br = L >= 30 ? X.branch : FIRST[X.cls], k = [X.cls, br, X.fam, L, X.aoe, X.guide].join("|");
+  if (!BC[k]){ const b = buildAt(X.cls, br, X.fam, L, X.aoe, true, !!X.guide); BC[k] = b.dps > 0 ? b : {dps: 20 * L, acc: b.acc, est: true} }
   return BC[k];
 }
+// the class guide's Training Advisor maps for this level's checkpoint (levels 10-30), or null
+const guideMaps = L => { if (X.guide !== "all" || L > 30) return null; const g = GUIDE[X.cls], c = guideAt(g.maps, L); return c ? g.maps[c] : null };
 const WHERE = {};
 // open map with the most of this monster: [mapId, name] or null
 const whereMob = id => WHERE[id] !== undefined ? WHERE[id] : (WHERE[id] = Object.entries(D.maps).filter(([, m]) => m[1]).map(([mid, m]) => [mid, m[0], (m[2].find(s => String(s[0]) === id) || [0, 0])[1]])
@@ -1839,6 +1999,7 @@ function plan(mode = X.mode){
     Q = Q.filter(r => want.includes(r) || pre.has(r.id));
   }
   let L = X.cur, exp = 0, t = 0, cur = null, qExp = 0, gExp = 0, j1 = X.cur >= 10, j2 = X.cur >= 30, npc = null, here = null;
+  let gCit = false, gKit = null, gAmmo = false;   // class guide steps already shown
   const bag = new Map();   // quest drops collected while grinding, by item name
   const needed = new Set(Q.flatMap(r => r.pre));   // quests another quest needs first
   // community-picked valuable quests, shown as side tasks when their chain starts (their items can't be timed)
@@ -1869,10 +2030,11 @@ function plan(mode = X.mode){
     const legs = c.legs || [], first = legs[0]?.why === "npc" ? legs[0] : null;
     if (first) pushTravel(first);
     const sec = (c.sec - (c.travel || 0)) * X.pace; t += sec; exp += c.exp; qExp += c.exp;
-    steps.push({k:"quest", L, r, c, sec, t, vs});
+    const st = {k:"quest", L, r, c, sec, t, vs}; steps.push(st);
     for (const lg of legs) if (lg !== first) pushTravel(lg);
+    return st;
   };
-  const grindOne = (rows, ch) => {
+  const grindOne = (rows, ch, alt = null) => {
     if (!rows.length) return false;
     const W = wanted(), E = D.exp[L] - exp, G = rows[0].rate;
     const score = m => {
@@ -1896,7 +2058,7 @@ function plan(mode = X.mode){
     const last = steps[steps.length - 1];
     let st = last;
     if (last && last.k === "grind" && last.map.id === best.m.id){ last.to = L + 1; last.sec += sec; last.t = t }
-    else steps.push(st = {k:"grind", from:L, to:L + 1, map:best.m, sec, t, rate:best.m.rate, ch:charAt(L), got: new Map()});
+    else steps.push(st = {k:"grind", from:L, to:L + 1, map:best.m, sec, t, rate:best.m.rate, ch:charAt(L), got: new Map(), guide: !!alt, alt: alt && alt.id !== best.m.id ? alt : null});
     for (const [name, n, q] of best.got){ const g = st.got.get(name) || {n: 0, q}; g.n += n; st.got.set(name, g) }
     cur = best.m; here = best.m.id; L++; return true;
   };
@@ -1904,14 +2066,15 @@ function plan(mode = X.mode){
   // Maple Island comes first and is the same in every mode: every island quest, island maps in between, then the ship out
   if (X.cur < 10 && X.island){
     const IQ = D.quests.filter(r => r.region === "Maple Island").sort((a, b) => a.lvl - b.lvl || a.id - b.id);
-    steps.push({k:"job", L, txt:"Maple Island: hand in every quest before you leave. Pio's quest gives The Green Relaxer chair, which you can't get anywhere else (his screws and boards come from boxes; if they're camped, Mina in Lith Harbor sells the Sky-blue Wooden Chair for 1,000 mesos). Switch to the Razor at level 5."});
+    steps.push({k:"job", L, txt:"Maple Island: hand in every quest before you leave. Pio's quest gives The Green Relaxer chair, which you can't get anywhere else (his screws and boards come from boxes; if they're camped, Mina in Lith Harbor sells the Sky-blue Wooden Chair for 1,000 mesos). Switch to the Razor at level 5." +
+      (X.guide ? ` All AP into ${Object.keys(GUIDE[X.cls].start)[0]}; there's no stat requirement for 1st job and AP doesn't reset. Beginner SP: Nimble Feet first, then Three Snails, then Recovery (3 each by 10).` : "")});
     for (let g = 0; g < 500 && L < X.goal; g++){
       gearCheck();
       const left = IQ.filter(r => !done.has(r.id)); if (!left.length && L >= SHIP_LV) break;
       const r = left.find(r => Math.max(1, r.lvl) <= L && r.pre.every(id => done.has(id))), ch = charAt(L);
       if (r){
         const c = questCost(r, L, ch, npc, bag, here, true) || {sec: QUEST_SEC, exp: r.exp, kills: [], items: []}; npc = r.npc; if (c.end) here = c.end;
-        done.add(r.id); finish(r, c); pushQuest(r, c, null); levelUp(); continue;
+        done.add(r.id); finish(r, c); const L0 = L, st = pushQuest(r, c, null); levelUp(); if (L > L0) st.ups = [L0 + 1, L]; continue;
       }
       // a quest needs a higher level, or the ship needs level 7: grind on the island
       if (!grindOne(mapRates(mcls(L), L, ch.dps, ch.acc, Infinity, aoeOf(ch)).filter(m => ISLAND(m.id)), ch)){ steps.push({k:"nomap", L}); break }
@@ -1922,13 +2085,26 @@ function plan(mode = X.mode){
   for (let guard = 0; L < X.goal && guard < 3000; guard++){
     // job advancements: go to the instructor first (their room in the job town), then advance
     const toInstructor = () => { const to = npcSpot(INSTRUCTOR[X.cls]); if (to){ const s = tripSec(here, to); if (s) pushTravel({from: here, to, sec: s, why: "npc", npc: INSTRUCTOR[X.cls]}); here = to; cur = null } };
-    if (!j1 && L >= 10){ j1 = true; toInstructor(); steps.push({k:"job", L, txt:`1st job: talk to ${INSTRUCTOR[X.cls]} in ${JOBTOWN[X.cls]} to become a ${FIRST[X.cls]}. Cabs are 90% off while you're a Beginner.`}) }
+    if (!j1 && L >= 10){ j1 = true; toInstructor(); steps.push({k:"job", L, txt:`1st job: talk to ${INSTRUCTOR[X.cls]} in ${JOBTOWN[X.cls]} to become a ${FIRST[X.cls]}. Cabs are 90% off while you're a Beginner.` +
+      (X.guide ? ` Skill plan (meowdb ${X.cls} guide): ${GUIDE[X.cls].skills} Level-up rows list each level's SP and AP.` : "")}) }
+    if (X.guide && L <= 30){
+      const g = GUIDE[X.cls];
+      if (!gCit && L >= 12){ gCit = true; steps.push({k:"job", id:"cit", L, txt:`Citizenship (level 12+): the ${X.cls} guide recommends ${g.town[0]}. Sign up with ${g.town[1]}. ${g.town[2]} Daily and weekly town quests raise your grade; see the Citizenship tab.`}) }
+      const c = guideAt(g.gear, L);
+      if (c != null && c !== gKit){ gKit = c; steps.push({k:"kit", L, c, t}) }
+      const am = g.ammo, fam = X.cls === "Bowman" ? (X.fam || "Bow") : "Claw";
+      if (am && !gAmmo && L >= am.from){ gAmmo = true; steps.push({k:"job", id:"ammo", L, txt:`Ammo upgrade: ${am[fam]}. ${am.txt}`}) }
+    }
     while (vi < VL.length && Math.max(1, VL[vi].s.lvl) <= L){ steps.push({k:"value", L, ...VL[vi], t}); vi++ }
     if (!j2 && L >= 30){ j2 = true; toInstructor(); steps.push({k:"job", L, txt:`2nd job: back to ${INSTRUCTOR[X.cls]} in ${JOBTOWN[X.cls]} to become a ${X.branch}.`}) }
     gearCheck();
     const ch = charAt(L);
-    let rates = mapRates(mcls(L), L, ch.dps, ch.acc, 12, aoeOf(ch)).filter(m => !ISLAND(m.id));
+    let rates = mapRates(mcls(L), L, ch.dps, ch.acc, 12, aoeOf(ch)).filter(m => !ISLAND(m.id)), alt = null;
     if (!rates.length) rates = mapRates(mcls(L), L, ch.dps, ch.acc, Infinity, aoeOf(ch)).filter(m => !ISLAND(m.id));   // nothing near your level: best of the rest
+    // class guide on: train on the guide's maps for this level (its Training Advisor also checks sure hits, 2-hit kills,
+    // danger and the walk to town, which this model doesn't); the model's own pick is kept to show next to it
+    const gm = guideMaps(L);
+    if (gm){ const gr = mapRates(mcls(L), L, ch.dps, ch.acc, Infinity, aoeOf(ch)).filter(m => gm.includes(m.id)); if (gr.length){ alt = rates[0]; rates = gr } }
     let best = rates[0];
     if (cur && best){ const c = rates.find(r => r.id === cur.id); if (c && c.rate >= STICK * best.rate) best = c }
     const G = best ? best.rate : 0;
@@ -1949,12 +2125,12 @@ function plan(mode = X.mode){
     }
     if (pick){
       done.add(pick.r.id); finish(pick.r, pick.c); npc = pick.r.npc; if (pick.c.end) here = pick.c.end;
-      pushQuest(pick.r, pick.c, G && !RW ? pick.rate / G : null);
-      levelUp();
+      const L0 = L, st = pushQuest(pick.r, pick.c, G && !RW ? pick.rate / G : null);
+      levelUp(); if (L > L0) st.ups = [L0 + 1, L];
       continue;
     }
     if (mode === "quests"){ steps.push({k:"stop", L, exp}); break }
-    if (!grindOne(rates, ch)){ steps.push({k:"nomap", L}); break }
+    if (!grindOne(rates, ch, alt)){ steps.push({k:"nomap", L}); break }
     npc = null;
   }
   const mesos = steps.filter(s => s.k === "quest").reduce((a, s) => a + s.r.mesos, 0), items = steps.filter(s => s.k === "quest").reduce((a, s) => a + itemValue(s.r), 0);
@@ -1980,7 +2156,7 @@ function fill(){
   $("#xisland").checked = X.island; $("#xislandwrap").hidden = X.cur >= 10;
   $("#xval").checked = X.val;
   $("#xdrop").value = Math.round(X.drop * 100); $("#xdropout").textContent = Math.round(X.drop * 100) + "%"; $("#xdropwrap").hidden = X.mode === "grind";
-  $("#xaoe").value = X.aoe ? "1" : "";
+  $("#xaoe").value = X.aoe ? "1" : ""; $("#xguide").value = X.guide;
   $("#xfast").checked = X.fast; $("#xfastwrap").hidden = X.mode !== "mix"; $("#xvalwrap").hidden = X.mode === "rewards";
   $("#xcur").value = X.cur; $("#xgoal").value = X.goal; $("#xpace").value = String(X.pace);
 }
@@ -2005,11 +2181,16 @@ function render(){
   ].map(([h, p]) => `<div class="fact"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join("");
   let n = 0;
   // tick-off boxes: a step's key survives replanning when it's the same quest / job advancement / map and levels
-  const key = s => s.k === "gear" ? `w${s.weapon}:${s.L}` : s.k === "quest" || s.k === "value" ? "q" + s.r.id : s.k === "grind" ? `g${s.map.id}:${s.from}-${s.to}` : s.k === "travel" ? `t${s.from}>${s.to}:${s.L}` : `j${X.cls}:${s.L}`;
+  const key = s => s.k === "gear" ? `w${s.weapon}:${s.L}` : s.k === "quest" || s.k === "value" ? "q" + s.r.id : s.k === "grind" ? `g${s.map.id}:${s.from}-${s.to}` : s.k === "travel" ? `t${s.from}>${s.to}:${s.L}` : s.k === "kit" ? `k${X.cls}:${s.c}` : `j${X.cls}:${s.L}${s.id ? ":" + s.id : ""}`;
+  // class guide: what to spend each level's SP and AP on, for the levels a step takes you through
+  const ups = (a, b) => !X.guide || a > 30 ? "" : `<div class="sub ups">${Array.from({length: Math.min(b, 30) - a + 1}, (_, i) => a + i)
+    .map(l => `<span>Lv ${l}: ${esc(guideLevelText(X.cls, l, X.fam))}</span>`).join("")}</div>`;
   const tr = (s, cls = "") => `<tr class="${cls}${DONE.has(key(s)) ? " done" : ""}" data-k="${key(s)}">`;
   const chk = (s, label) => `<label class="stepchk"><input type="checkbox"${DONE.has(key(s)) ? " checked" : ""} aria-label="Step ${label || ""} done">${label}</label>`;
   $("#xrows").innerHTML = S.map(s => {
     if (s.k === "job") return `${tr(s, "branch")}<td class="num">${chk(s, "")}</td><td class="num">${s.L}</td><td colspan="5">${esc(s.txt)}</td></tr>`;
+    if (s.k === "kit"){ const g = GUIDE[X.cls];
+      return `${tr(s, "grow")}<td class="num">${chk(s, "")}</td><td class="num">${s.L}</td><td colspan="5"><b>Class guide gear from level ${s.c}:</b> ${g.weapons[s.c].map(esc).join(" or ")}. ${esc(g.gear[s.c])} <a class="sub" href="${GUIDE_SRC[X.cls]}" target="_blank" rel="noopener">meowdb ${esc(X.cls)} guide</a></td></tr>` }
     if (s.k === "stop") return `<tr><td></td><td class="num">${s.L}</td><td colspan="5" class="sub">No more quests to do at this level. Grind or switch to "Quests + grinding".</td></tr>`;
     if (s.k === "nomap") return `<tr><td></td><td class="num">${s.L}</td><td colspan="5" class="sub">No training map fits this level.</td></tr>`;
     n++;
@@ -2020,6 +2201,7 @@ function render(){
       if (src.quest) how.push(`Quest reward: ${src.quest.map(id => { const r = D.quests.find(x => x.id === id); return r ? qlink(r) : "" }).filter(Boolean).join(", ")}`);
       const ld = (src.drops || []).filter(([m]) => MOBID[m] && !D.latermobs.includes(MOBID[m]));
       if (ld.length) how.push(`Drops from ${ld.slice(0, 5).map(([m, lv]) => `${mobLink(m)} <span class="sub">Lv ${lv}</span>`).join(", ")}${src.dropsFrom === "msea" ? ` <span class="sub">(old MapleSEA drop list, likely in Classic; meowdb)</span>` : ` <span class="sub">(reported by players on meowdb)</span>`}`);
+      if (GUIDE_FREE[s.weapon]) how.push(esc(GUIDE_FREE[s.weapon]));
       if (!how.length) how.push(`No known source yet (not sold, crafted, a quest reward or a reported drop). Keep your current weapon until you find one.`);
       return `${tr(s, "grow")}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>
       <td><div class="gear">${s.wid ? itemIcon(s.wid, 1, true) : ""}<b>${s.first ? "Weapon" : "New weapon"}: ${esc(s.weapon)}</b></div><div class="sub how">${how.join("<br>")}</div></td>
@@ -2037,13 +2219,13 @@ function render(){
         <div class="sub">${s.s !== s.r ? `Start with ${qlink(s.s)} (Lv ${s.s.lvl}), ${s.r.cn}-quest chain · ` : ""}needs ${reqHTML(s.r, true)}</div></td>
       <td class="sub">${npcLink(s.s.npc)} · ${esc(s.s.region || "")}</td>${rvCell(s.r)}<td class="num sub">not timed</td><td class="num">${hm(s.t)}</td></tr>`;
     if (s.k === "quest") return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>
-      <td>Quest: ${qlink(s.r)} ${vPill(s.r.id)}${s.vs != null ? ` <span class="pill ${s.vs >= 1 ? "p-good" : "p-warn"}" title="Quest EXP per hour compared with grinding at this level">${s.vs >= 1 ? "faster than grinding" : Math.round(s.vs * 100) + "% of grinding speed"}</span>` : ""}${s.r.ri?.length ? `<div class="ricons">${rewardIcons(s.r)}</div>` : ""}<div class="sub">+${fmt(s.c.exp)} EXP${s.c.kills.some(k => k[1] > 0) ? " incl. kills" : ""}${s.r.req !== "talk / deliver only" ? " · " + reqHTML(s.r, true) : " · talk / deliver"}</div>${(s.c.items || []).length ? `<div class="sub drops">${s.c.items.map(([name, n, have, src, k]) => `${esc(name)}: ${have ? `<b>${fmt(have)} saved from grinding</b>` : "none saved"}${k ? `, ~${fmt(k)} ${mobLink(src)} kills for the rest` : ""}`).join("<br>")}</div>` : ""}</td>
+      <td>Quest: ${qlink(s.r)} ${vPill(s.r.id)}${s.vs != null ? ` <span class="pill ${s.vs >= 1 ? "p-good" : "p-warn"}" title="Quest EXP per hour compared with grinding at this level">${s.vs >= 1 ? "faster than grinding" : Math.round(s.vs * 100) + "% of grinding speed"}</span>` : ""}${s.r.ri?.length ? `<div class="ricons">${rewardIcons(s.r)}</div>` : ""}<div class="sub">+${fmt(s.c.exp)} EXP${s.c.kills.some(k => k[1] > 0) ? " incl. kills" : ""}${s.r.req !== "talk / deliver only" ? " · " + reqHTML(s.r, true) : " · talk / deliver"}</div>${s.ups ? ups(...s.ups) : ""}${(s.c.items || []).length ? `<div class="sub drops">${s.c.items.map(([name, n, have, src, k]) => `${esc(name)}: ${have ? `<b>${fmt(have)} saved from grinding</b>` : "none saved"}${k ? `, ~${fmt(k)} ${mobLink(src)} kills for the rest` : ""}`).join("<br>")}</div>` : ""}</td>
       <td class="sub">${npcLink(s.r.npc)} · ${esc(s.r.region || "")}${s.c.kills.filter(k => k[1] > 0).map(([m, c, w]) => w ? `<br>${mobLink(m)} ×${fmt(c)}: ${mapLink(w[0], w[1])}` : "").join("")}</td>
       ${rvCell(s.r)}<td class="num">${hm(s.sec)}${s.c.unknown ? `<div class="sub" title="Some items have no known drop source">+ other items</div>` : ""}</td><td class="num">${hm(s.t)}</td></tr>`;
     return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.from}→${s.to}</td>
       <td><b>Grind to level ${s.to}</b><div class="sub gear">${s.ch.wid ? itemIcon(s.ch.wid, 1, true) : ""}${s.ch.sid && D.icons[s.ch.sid] ? `<img class="sk" src="data:image/png;base64,${D.icons[s.ch.sid]}" alt="" title="${esc(s.ch.skill)}">` : ""}
-        <span>~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.map.hits > 1.05 ? ` · hits ~${s.map.hits.toFixed(1)} per cast` : ""}${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</span></div></td>
-      <td>${mapLink(s.map.id, s.map.name)}<div class="sub">${mobList(s.map.mobs)}</div>${s.got?.size ? `<div class="sub farm">Collects on the way: ${[...s.got].filter(([, g]) => g.n >= 1).map(([name, g]) => `${fmt(g.n)} ${esc(name)} <span title="${esc(g.q.name)}, Lv ${g.q.lvl}">(${esc(g.q.name)}${g.q.lvl > s.to ? `, Lv ${g.q.lvl}` : ""})</span>`).join(", ")}</div>` : ""}</td><td class="num">–</td>
+        <span>~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.map.hits > 1.05 ? ` · hits ~${s.map.hits.toFixed(1)} per cast` : ""}${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</span></div>${ups(s.from + 1, s.to)}</td>
+      <td>${mapLink(s.map.id, s.map.name)}${s.guide ? ` <span class="pill p-good" title="meowdb ${esc(X.cls)} guide's Training Advisor pick for this level">guide map</span>` : ""}${s.alt && s.alt.rate > s.rate * 1.02 ? `<div class="sub">Model's fastest: ${mapLink(s.alt.id, s.alt.name)} ~${fmt(s.alt.rate * 3600 / X.pace)} EXP/hr (not a guide pick)</div>` : ""}<div class="sub">${mobList(s.map.mobs)}</div>${s.got?.size ? `<div class="sub farm">Collects on the way: ${[...s.got].filter(([, g]) => g.n >= 1).map(([name, g]) => `${fmt(g.n)} ${esc(name)} <span title="${esc(g.q.name)}, Lv ${g.q.lvl}">(${esc(g.q.name)}${g.q.lvl > s.to ? `, Lv ${g.q.lvl}` : ""})</span>`).join(", ")}</div>` : ""}</td><td class="num">–</td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
   }).join("") || `<tr><td colspan="7" class="empty">You're already at your goal.</td></tr>`;
   saveDone();
@@ -2074,6 +2256,7 @@ $("#xfam").addEventListener("change", () => { X.fam = $("#xfam").value; render()
 $("#xisland").addEventListener("change", () => { X.island = $("#xisland").checked; render() });
 $("#xval").addEventListener("change", () => { X.val = $("#xval").checked; render() });
 $("#xaoe").addEventListener("change", () => { X.aoe = !!$("#xaoe").value; render() });
+$("#xguide").addEventListener("change", () => { X.guide = $("#xguide").value; render() });
 $("#xfast").addEventListener("change", () => { X.fast = $("#xfast").checked; render() });
 $("#xdrop").addEventListener("input", () => { X.drop = +$("#xdrop").value / 100; $("#xdropout").textContent = $("#xdrop").value + "%"; later() });
 $("#xpace").addEventListener("change", () => { X.pace = +$("#xpace").value; render() });

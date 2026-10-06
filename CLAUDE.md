@@ -34,6 +34,7 @@ src/styles.css        all CSS; theme tokens on :root, dark mode via prefers-colo
 src/js/00-core.js     const D = __DATA__ (replaced at build), $, fmt, esc, tab switching
 src/js/10-maps.js     client formulas (hitProb, lvlPen, classAcc), mobKill, mapRates + "Where to train" table (rankMaps)
 src/js/15-valuable.js  VALUE: community-picked valuable quests (tier, reward, why, sources) — not game data
+src/js/16-guides.js   GUIDE: meowdb class guides 1-30 (SP/AP per level, weapons, gear, maps, citizenship) used by buildAt + Path Planner
 src/js/20-quests.js   Quest Database: filters, header sorting, questline filter, quest + item tooltips (#qtip), rewardCell()
 src/js/40-citizenship.js  Citizenship tab (GRADES + SHOPS consts are from meowdb, not the export)
 src/js/45-crafting.js  Crafting tab: masters + profession quests, craft levels (CRAFT_LV from OSMS dashboard), recipes, raw materials

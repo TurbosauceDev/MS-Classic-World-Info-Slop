@@ -12,6 +12,7 @@
 | Maple Island sequence, beginner gear/AP, job instructors | meowdb beginner guide (updated 2026-10-02) and Roxie's new player guide, read with headless Chromium (plain fetches get a Cloudflare 403) |
 | Valuable quests (tiers, reasons) | metaroad.gg "Must-Do Quests & Valuable Rewards" (Jota, upd. 2026-09-19), maplestory.quest "Valuable quest rewards worth the detour" (Chief Stan), meowdb beginner guide. Read with headless Chromium (WebFetch blocked; metaroad hides level tabs, so hidden panels were forced visible). Reddit blocked from the cloud env. Forgotten Hollow picks (Road Back Home, Matters of the Heart, Heart of Stillness) left out |
 | Crafting | export `crafting.json` (348 recipes, 6 professions) + Crafting-region quests. Craft EXP per level and the character-level gate (5 × craft level) from the OSMS dashboard's `tabs/crafting.js` (CRAFT_LEVELS_COT2, read from the COT2 client), not a data file. Dye/helmet prices: meowdb shop list |
+| Class guides 1–30 (Path Planner) | meowdb Warrior/Magician/Bowman/Thief class guides + beginner guide (read 2026-10-06 with headless Chromium): SP order, AP per level, weapons, gear, ammo, citizenship town, Training Advisor maps → src/js/16-guides.js |
 | Launch scope | meowdb release-date guide (no Orbis/El Nath/3rd job at launch); meowdb news 2026-10-03 (level cap 100, Forgotten Hollow later) |
 
 No drop tables exist in the export, so nothing depends on drop rates ("source n/a" on quest items).
@@ -34,7 +35,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 
 ## Estimates the page makes (flagged in its "How" boxes)
 - **Attack interval** = 0.42 + 0.06 × speed stage; booster −2 stages. Not from the client — DPS is approximate.
-- **Ammo attack** (stars, arrows) uses old-game values; the export has none.
+- **Ammo attack** (stars, arrows): old-game values; Subi +15, Wolbi +17, Bronze arrows +1 confirmed by the meowdb class guides.
 - **Map ranking**: time per kill = effective HP / DPS + 1.0 s; rate = min(map EXP / time, map EXP × 0.75 / 7.56 s respawn).
   Default DPS = 20 × level. Accuracy assumes all AP in the main stat, secondary = level, Precise Strikes (+20) / Nimble Body (+15)
   maxed from level 15. "Use this in Where to train" sends the builder's DPS and real accuracy instead (cleared when class/level is edited there). Maps need ≥8 mobs; bosses and mob_time > 60 excluded.
@@ -106,6 +107,23 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   Fragment of Magic, Dragon Skin, Stiff Feather, Moon Rock, ...).
 - Not in the files: success rates, catalyst odds, material drop rates.
 
+## Class guides in the Path Planner (src/js/16-guides.js)
+- "Class guides" select (localStorage `path.guide`): "all" (default) = guide build + guide maps, "build", "" = off.
+- Build (buildAt guide=true): first-job SP from the guide's per-level table (kept at its Lv 30 result above 30; 2nd-job SP
+  greedy), AP per the guide's table (Bowman crossbow variant), weapons = the guide's list for the level's checkpoint
+  (10/15/20/25/30) that fit the weapon family, best by modeled DPS; no guide weapon for the family (Blunt, Spear, Polearm)
+  → best shop-sold weapon. Free Beginner's Garnier for Thieves. Future Bandits use a claw before 30 ("Sindit").
+  Attack = best of the skilled attacks (AoE: weighs up to 3 targets). Ammo: Wolbi / Bronze arrows from 25 (unlock at
+  citizenship grade 3 = level 22 + 2,000 contribution; "by 25" is our assumption, said on the page).
+- Guide warrior DEX assumes +DEX helmets for 20/25/30 weapons; the build doesn't enforce weapon stat requirements.
+- Maps: grinding at 10–30 picks among the guide's Training Advisor maps for the checkpoint (score as usual: EXP, travel,
+  drop credit); the model's fastest map is shown when it's >2% faster. Bowman has no level-10 picks → model.
+- Steps: guide gear row at each checkpoint, citizenship town at 12, ammo upgrade at 25, per-level SP/AP notes under the
+  step a level-up happens in (Beginner: Nimble Feet 2–4, Three Snails 5–7, Recovery 8–10, from the beginner guide's order).
+- Model check, 1→30 grinding at 1.5× pace (2026-10-06): guide build ≈ greedy build (13–14 h); guide maps slower in this model
+  for Warrior (17 h vs 13), Magician (16 vs 14), Bowman (19 vs 13), faster for Thief (12 vs 13). The guides' maps require
+  100% hit and guaranteed 2-hit kills and weigh danger/refill walks; this model ranks by average EXP/hr only.
+
 ## Valuable quests (src/js/15-valuable.js)
 - Hand-curated VALUE map, quest id -> tier (Must do / Recommended / Worth doing / Situational / Skip), reward, why, class-only, sources.
   Tier = what the guides say; where they differ, the more cautious label + the caveat in "why" (e.g. Pia's Gift: S in
@@ -115,7 +133,9 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   hidden for other classes; timed valuable quests stay in the plan even with "only faster than grinding".
 
 ## Suspicious data to double-check
-- Lucky Seven `attack_count` = 1 and Double Shot = 2 targets × 1 hit in the export (old game: 2 stars / 2 hits).
+- Lucky Seven `attack_count` = 1 and Double Shot = 2 targets × 1 hit in the export. Resolved (meowdb class guides + skill text):
+  Lucky Seven = 2 lines, Double Shot = 2 arrows split over 1–2 targets (fixed total) → HITS_FIX in 50-builder.js. The Thief
+  guide's Lv 30 example (366–622 per cast) matches the damage formula exactly with 2 hits and STR + DEX as Thief secondary.
 - Precise Strikes +20 acc in the skill table vs a +50 note in an earlier formula audit — page uses the skill table.
 - "Event" region quests are included; unknown if they run at launch.
 

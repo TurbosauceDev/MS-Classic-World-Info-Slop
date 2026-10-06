@@ -28,6 +28,12 @@ const path = require("path");
   await p.click("#xrows .stepchk input >> nth=0");
   check(await p.$eval("#xrows tr[data-k]", r => r.classList.contains("done")), "planner step tick fades the row");
   await p.click("#xrows .stepchk input >> nth=0");
+  for (const g of ["all", "build", ""]) {
+    await p.selectOption("#xguide", g);
+    check((await p.$$eval("#xrows tr", r => r.length)) > 0 && !/NaN|undefined/.test(await p.textContent("#path")), `class guides "${g || "off"}" plan renders`);
+  }
+  await p.selectOption("#xguide", "all"); await p.fill("#xcur", "10"); await p.fill("#xgoal", "30"); await p.waitForTimeout(400);
+  check(/guide map/.test(await p.textContent("#xrows")) && /Lv 1\d: /.test(await p.textContent("#xrows")), "guide maps and level-up notes shown");
   // Where to train
   await p.click("#t-maps"); check(await p.$$eval("#maps tbody tr", r => r.length) > 0, "map ranking renders");
   // Quest Database

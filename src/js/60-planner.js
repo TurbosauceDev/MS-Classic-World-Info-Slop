@@ -16,9 +16,10 @@ const RESPAWN = 7.56, SOLO_ALIVE = 0.75;   // respawn timer and share of spawns 
 const STICK = 0.9;       // keep the current map while it's within 10% of the best
 const MAXL = 70;         // EXP table ends at 70
 
-let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true, drop:0.3, aoe:true};
+let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true, drop:0.3, aoe:true, guide:"all"};
 const BELOW = 5;          // quests more than 5 levels under your starting level count as done or skipped
 try { const s = JSON.parse(localStorage.getItem("path") || "null"); if (s && s.cls) X = Object.assign(X, s) } catch(e) {}
+if (typeof X.guide !== "string") X.guide = "all";   // class guides: "all" = build + maps, "build", "" = off
 
 // area attack of the character at a level, for mapRates / aoeHits (null = single target)
 const aoeOf = ch => ch.targets > 1 && ch.reach ? {t: ch.targets, r: ch.reach} : null;
@@ -26,10 +27,12 @@ const aoeOf = ch => ch.targets > 1 && ch.reach ? {t: ch.targets, r: ch.reach} : 
 const mcls = L => L < 10 ? "Warrior" : X.cls === "Magician" ? (L >= 30 ? X.branch : "Magician") : X.cls;
 const BC = {};
 function charAt(L){
-  const br = L >= 30 ? X.branch : FIRST[X.cls], k = [X.cls, br, X.fam, L, X.aoe].join("|");
-  if (!BC[k]){ const b = buildAt(X.cls, br, X.fam, L, X.aoe, true); BC[k] = b.dps > 0 ? b : {dps: 20 * L, acc: b.acc, est: true} }
+  const br = L >= 30 ? X.branch : FIRST[X.cls], k = [X.cls, br, X.fam, L, X.aoe, X.guide].join("|");
+  if (!BC[k]){ const b = buildAt(X.cls, br, X.fam, L, X.aoe, true, !!X.guide); BC[k] = b.dps > 0 ? b : {dps: 20 * L, acc: b.acc, est: true} }
   return BC[k];
 }
+// the class guide's Training Advisor maps for this level's checkpoint (levels 10-30), or null
+const guideMaps = L => { if (X.guide !== "all" || L > 30) return null; const g = GUIDE[X.cls], c = guideAt(g.maps, L); return c ? g.maps[c] : null };
 const WHERE = {};
 // open map with the most of this monster: [mapId, name] or null
 const whereMob = id => WHERE[id] !== undefined ? WHERE[id] : (WHERE[id] = Object.entries(D.maps).filter(([, m]) => m[1]).map(([mid, m]) => [mid, m[0], (m[2].find(s => String(s[0]) === id) || [0, 0])[1]])
@@ -138,6 +141,7 @@ function plan(mode = X.mode){
     Q = Q.filter(r => want.includes(r) || pre.has(r.id));
   }
   let L = X.cur, exp = 0, t = 0, cur = null, qExp = 0, gExp = 0, j1 = X.cur >= 10, j2 = X.cur >= 30, npc = null, here = null;
+  let gCit = false, gKit = null, gAmmo = false;   // class guide steps already shown
   const bag = new Map();   // quest drops collected while grinding, by item name
   const needed = new Set(Q.flatMap(r => r.pre));   // quests another quest needs first
   // community-picked valuable quests, shown as side tasks when their chain starts (their items can't be timed)
@@ -168,10 +172,11 @@ function plan(mode = X.mode){
     const legs = c.legs || [], first = legs[0]?.why === "npc" ? legs[0] : null;
     if (first) pushTravel(first);
     const sec = (c.sec - (c.travel || 0)) * X.pace; t += sec; exp += c.exp; qExp += c.exp;
-    steps.push({k:"quest", L, r, c, sec, t, vs});
+    const st = {k:"quest", L, r, c, sec, t, vs}; steps.push(st);
     for (const lg of legs) if (lg !== first) pushTravel(lg);
+    return st;
   };
-  const grindOne = (rows, ch) => {
+  const grindOne = (rows, ch, alt = null) => {
     if (!rows.length) return false;
     const W = wanted(), E = D.exp[L] - exp, G = rows[0].rate;
     const score = m => {
@@ -195,7 +200,7 @@ function plan(mode = X.mode){
     const last = steps[steps.length - 1];
     let st = last;
     if (last && last.k === "grind" && last.map.id === best.m.id){ last.to = L + 1; last.sec += sec; last.t = t }
-    else steps.push(st = {k:"grind", from:L, to:L + 1, map:best.m, sec, t, rate:best.m.rate, ch:charAt(L), got: new Map()});
+    else steps.push(st = {k:"grind", from:L, to:L + 1, map:best.m, sec, t, rate:best.m.rate, ch:charAt(L), got: new Map(), guide: !!alt, alt: alt && alt.id !== best.m.id ? alt : null});
     for (const [name, n, q] of best.got){ const g = st.got.get(name) || {n: 0, q}; g.n += n; st.got.set(name, g) }
     cur = best.m; here = best.m.id; L++; return true;
   };
@@ -203,14 +208,15 @@ function plan(mode = X.mode){
   // Maple Island comes first and is the same in every mode: every island quest, island maps in between, then the ship out
   if (X.cur < 10 && X.island){
     const IQ = D.quests.filter(r => r.region === "Maple Island").sort((a, b) => a.lvl - b.lvl || a.id - b.id);
-    steps.push({k:"job", L, txt:"Maple Island: hand in every quest before you leave. Pio's quest gives The Green Relaxer chair, which you can't get anywhere else (his screws and boards come from boxes; if they're camped, Mina in Lith Harbor sells the Sky-blue Wooden Chair for 1,000 mesos). Switch to the Razor at level 5."});
+    steps.push({k:"job", L, txt:"Maple Island: hand in every quest before you leave. Pio's quest gives The Green Relaxer chair, which you can't get anywhere else (his screws and boards come from boxes; if they're camped, Mina in Lith Harbor sells the Sky-blue Wooden Chair for 1,000 mesos). Switch to the Razor at level 5." +
+      (X.guide ? ` All AP into ${Object.keys(GUIDE[X.cls].start)[0]}; there's no stat requirement for 1st job and AP doesn't reset. Beginner SP: Nimble Feet first, then Three Snails, then Recovery (3 each by 10).` : "")});
     for (let g = 0; g < 500 && L < X.goal; g++){
       gearCheck();
       const left = IQ.filter(r => !done.has(r.id)); if (!left.length && L >= SHIP_LV) break;
       const r = left.find(r => Math.max(1, r.lvl) <= L && r.pre.every(id => done.has(id))), ch = charAt(L);
       if (r){
         const c = questCost(r, L, ch, npc, bag, here, true) || {sec: QUEST_SEC, exp: r.exp, kills: [], items: []}; npc = r.npc; if (c.end) here = c.end;
-        done.add(r.id); finish(r, c); pushQuest(r, c, null); levelUp(); continue;
+        done.add(r.id); finish(r, c); const L0 = L, st = pushQuest(r, c, null); levelUp(); if (L > L0) st.ups = [L0 + 1, L]; continue;
       }
       // a quest needs a higher level, or the ship needs level 7: grind on the island
       if (!grindOne(mapRates(mcls(L), L, ch.dps, ch.acc, Infinity, aoeOf(ch)).filter(m => ISLAND(m.id)), ch)){ steps.push({k:"nomap", L}); break }
@@ -221,13 +227,26 @@ function plan(mode = X.mode){
   for (let guard = 0; L < X.goal && guard < 3000; guard++){
     // job advancements: go to the instructor first (their room in the job town), then advance
     const toInstructor = () => { const to = npcSpot(INSTRUCTOR[X.cls]); if (to){ const s = tripSec(here, to); if (s) pushTravel({from: here, to, sec: s, why: "npc", npc: INSTRUCTOR[X.cls]}); here = to; cur = null } };
-    if (!j1 && L >= 10){ j1 = true; toInstructor(); steps.push({k:"job", L, txt:`1st job: talk to ${INSTRUCTOR[X.cls]} in ${JOBTOWN[X.cls]} to become a ${FIRST[X.cls]}. Cabs are 90% off while you're a Beginner.`}) }
+    if (!j1 && L >= 10){ j1 = true; toInstructor(); steps.push({k:"job", L, txt:`1st job: talk to ${INSTRUCTOR[X.cls]} in ${JOBTOWN[X.cls]} to become a ${FIRST[X.cls]}. Cabs are 90% off while you're a Beginner.` +
+      (X.guide ? ` Skill plan (meowdb ${X.cls} guide): ${GUIDE[X.cls].skills} Level-up rows list each level's SP and AP.` : "")}) }
+    if (X.guide && L <= 30){
+      const g = GUIDE[X.cls];
+      if (!gCit && L >= 12){ gCit = true; steps.push({k:"job", id:"cit", L, txt:`Citizenship (level 12+): the ${X.cls} guide recommends ${g.town[0]}. Sign up with ${g.town[1]}. ${g.town[2]} Daily and weekly town quests raise your grade; see the Citizenship tab.`}) }
+      const c = guideAt(g.gear, L);
+      if (c != null && c !== gKit){ gKit = c; steps.push({k:"kit", L, c, t}) }
+      const am = g.ammo, fam = X.cls === "Bowman" ? (X.fam || "Bow") : "Claw";
+      if (am && !gAmmo && L >= am.from){ gAmmo = true; steps.push({k:"job", id:"ammo", L, txt:`Ammo upgrade: ${am[fam]}. ${am.txt}`}) }
+    }
     while (vi < VL.length && Math.max(1, VL[vi].s.lvl) <= L){ steps.push({k:"value", L, ...VL[vi], t}); vi++ }
     if (!j2 && L >= 30){ j2 = true; toInstructor(); steps.push({k:"job", L, txt:`2nd job: back to ${INSTRUCTOR[X.cls]} in ${JOBTOWN[X.cls]} to become a ${X.branch}.`}) }
     gearCheck();
     const ch = charAt(L);
-    let rates = mapRates(mcls(L), L, ch.dps, ch.acc, 12, aoeOf(ch)).filter(m => !ISLAND(m.id));
+    let rates = mapRates(mcls(L), L, ch.dps, ch.acc, 12, aoeOf(ch)).filter(m => !ISLAND(m.id)), alt = null;
     if (!rates.length) rates = mapRates(mcls(L), L, ch.dps, ch.acc, Infinity, aoeOf(ch)).filter(m => !ISLAND(m.id));   // nothing near your level: best of the rest
+    // class guide on: train on the guide's maps for this level (its Training Advisor also checks sure hits, 2-hit kills,
+    // danger and the walk to town, which this model doesn't); the model's own pick is kept to show next to it
+    const gm = guideMaps(L);
+    if (gm){ const gr = mapRates(mcls(L), L, ch.dps, ch.acc, Infinity, aoeOf(ch)).filter(m => gm.includes(m.id)); if (gr.length){ alt = rates[0]; rates = gr } }
     let best = rates[0];
     if (cur && best){ const c = rates.find(r => r.id === cur.id); if (c && c.rate >= STICK * best.rate) best = c }
     const G = best ? best.rate : 0;
@@ -248,12 +267,12 @@ function plan(mode = X.mode){
     }
     if (pick){
       done.add(pick.r.id); finish(pick.r, pick.c); npc = pick.r.npc; if (pick.c.end) here = pick.c.end;
-      pushQuest(pick.r, pick.c, G && !RW ? pick.rate / G : null);
-      levelUp();
+      const L0 = L, st = pushQuest(pick.r, pick.c, G && !RW ? pick.rate / G : null);
+      levelUp(); if (L > L0) st.ups = [L0 + 1, L];
       continue;
     }
     if (mode === "quests"){ steps.push({k:"stop", L, exp}); break }
-    if (!grindOne(rates, ch)){ steps.push({k:"nomap", L}); break }
+    if (!grindOne(rates, ch, alt)){ steps.push({k:"nomap", L}); break }
     npc = null;
   }
   const mesos = steps.filter(s => s.k === "quest").reduce((a, s) => a + s.r.mesos, 0), items = steps.filter(s => s.k === "quest").reduce((a, s) => a + itemValue(s.r), 0);
@@ -279,7 +298,7 @@ function fill(){
   $("#xisland").checked = X.island; $("#xislandwrap").hidden = X.cur >= 10;
   $("#xval").checked = X.val;
   $("#xdrop").value = Math.round(X.drop * 100); $("#xdropout").textContent = Math.round(X.drop * 100) + "%"; $("#xdropwrap").hidden = X.mode === "grind";
-  $("#xaoe").value = X.aoe ? "1" : "";
+  $("#xaoe").value = X.aoe ? "1" : ""; $("#xguide").value = X.guide;
   $("#xfast").checked = X.fast; $("#xfastwrap").hidden = X.mode !== "mix"; $("#xvalwrap").hidden = X.mode === "rewards";
   $("#xcur").value = X.cur; $("#xgoal").value = X.goal; $("#xpace").value = String(X.pace);
 }
@@ -304,11 +323,16 @@ function render(){
   ].map(([h, p]) => `<div class="fact"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join("");
   let n = 0;
   // tick-off boxes: a step's key survives replanning when it's the same quest / job advancement / map and levels
-  const key = s => s.k === "gear" ? `w${s.weapon}:${s.L}` : s.k === "quest" || s.k === "value" ? "q" + s.r.id : s.k === "grind" ? `g${s.map.id}:${s.from}-${s.to}` : s.k === "travel" ? `t${s.from}>${s.to}:${s.L}` : `j${X.cls}:${s.L}`;
+  const key = s => s.k === "gear" ? `w${s.weapon}:${s.L}` : s.k === "quest" || s.k === "value" ? "q" + s.r.id : s.k === "grind" ? `g${s.map.id}:${s.from}-${s.to}` : s.k === "travel" ? `t${s.from}>${s.to}:${s.L}` : s.k === "kit" ? `k${X.cls}:${s.c}` : `j${X.cls}:${s.L}${s.id ? ":" + s.id : ""}`;
+  // class guide: what to spend each level's SP and AP on, for the levels a step takes you through
+  const ups = (a, b) => !X.guide || a > 30 ? "" : `<div class="sub ups">${Array.from({length: Math.min(b, 30) - a + 1}, (_, i) => a + i)
+    .map(l => `<span>Lv ${l}: ${esc(guideLevelText(X.cls, l, X.fam))}</span>`).join("")}</div>`;
   const tr = (s, cls = "") => `<tr class="${cls}${DONE.has(key(s)) ? " done" : ""}" data-k="${key(s)}">`;
   const chk = (s, label) => `<label class="stepchk"><input type="checkbox"${DONE.has(key(s)) ? " checked" : ""} aria-label="Step ${label || ""} done">${label}</label>`;
   $("#xrows").innerHTML = S.map(s => {
     if (s.k === "job") return `${tr(s, "branch")}<td class="num">${chk(s, "")}</td><td class="num">${s.L}</td><td colspan="5">${esc(s.txt)}</td></tr>`;
+    if (s.k === "kit"){ const g = GUIDE[X.cls];
+      return `${tr(s, "grow")}<td class="num">${chk(s, "")}</td><td class="num">${s.L}</td><td colspan="5"><b>Class guide gear from level ${s.c}:</b> ${g.weapons[s.c].map(esc).join(" or ")}. ${esc(g.gear[s.c])} <a class="sub" href="${GUIDE_SRC[X.cls]}" target="_blank" rel="noopener">meowdb ${esc(X.cls)} guide</a></td></tr>` }
     if (s.k === "stop") return `<tr><td></td><td class="num">${s.L}</td><td colspan="5" class="sub">No more quests to do at this level. Grind or switch to "Quests + grinding".</td></tr>`;
     if (s.k === "nomap") return `<tr><td></td><td class="num">${s.L}</td><td colspan="5" class="sub">No training map fits this level.</td></tr>`;
     n++;
@@ -319,6 +343,7 @@ function render(){
       if (src.quest) how.push(`Quest reward: ${src.quest.map(id => { const r = D.quests.find(x => x.id === id); return r ? qlink(r) : "" }).filter(Boolean).join(", ")}`);
       const ld = (src.drops || []).filter(([m]) => MOBID[m] && !D.latermobs.includes(MOBID[m]));
       if (ld.length) how.push(`Drops from ${ld.slice(0, 5).map(([m, lv]) => `${mobLink(m)} <span class="sub">Lv ${lv}</span>`).join(", ")}${src.dropsFrom === "msea" ? ` <span class="sub">(old MapleSEA drop list, likely in Classic; meowdb)</span>` : ` <span class="sub">(reported by players on meowdb)</span>`}`);
+      if (GUIDE_FREE[s.weapon]) how.push(esc(GUIDE_FREE[s.weapon]));
       if (!how.length) how.push(`No known source yet (not sold, crafted, a quest reward or a reported drop). Keep your current weapon until you find one.`);
       return `${tr(s, "grow")}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>
       <td><div class="gear">${s.wid ? itemIcon(s.wid, 1, true) : ""}<b>${s.first ? "Weapon" : "New weapon"}: ${esc(s.weapon)}</b></div><div class="sub how">${how.join("<br>")}</div></td>
@@ -336,13 +361,13 @@ function render(){
         <div class="sub">${s.s !== s.r ? `Start with ${qlink(s.s)} (Lv ${s.s.lvl}), ${s.r.cn}-quest chain · ` : ""}needs ${reqHTML(s.r, true)}</div></td>
       <td class="sub">${npcLink(s.s.npc)} · ${esc(s.s.region || "")}</td>${rvCell(s.r)}<td class="num sub">not timed</td><td class="num">${hm(s.t)}</td></tr>`;
     if (s.k === "quest") return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>
-      <td>Quest: ${qlink(s.r)} ${vPill(s.r.id)}${s.vs != null ? ` <span class="pill ${s.vs >= 1 ? "p-good" : "p-warn"}" title="Quest EXP per hour compared with grinding at this level">${s.vs >= 1 ? "faster than grinding" : Math.round(s.vs * 100) + "% of grinding speed"}</span>` : ""}${s.r.ri?.length ? `<div class="ricons">${rewardIcons(s.r)}</div>` : ""}<div class="sub">+${fmt(s.c.exp)} EXP${s.c.kills.some(k => k[1] > 0) ? " incl. kills" : ""}${s.r.req !== "talk / deliver only" ? " · " + reqHTML(s.r, true) : " · talk / deliver"}</div>${(s.c.items || []).length ? `<div class="sub drops">${s.c.items.map(([name, n, have, src, k]) => `${esc(name)}: ${have ? `<b>${fmt(have)} saved from grinding</b>` : "none saved"}${k ? `, ~${fmt(k)} ${mobLink(src)} kills for the rest` : ""}`).join("<br>")}</div>` : ""}</td>
+      <td>Quest: ${qlink(s.r)} ${vPill(s.r.id)}${s.vs != null ? ` <span class="pill ${s.vs >= 1 ? "p-good" : "p-warn"}" title="Quest EXP per hour compared with grinding at this level">${s.vs >= 1 ? "faster than grinding" : Math.round(s.vs * 100) + "% of grinding speed"}</span>` : ""}${s.r.ri?.length ? `<div class="ricons">${rewardIcons(s.r)}</div>` : ""}<div class="sub">+${fmt(s.c.exp)} EXP${s.c.kills.some(k => k[1] > 0) ? " incl. kills" : ""}${s.r.req !== "talk / deliver only" ? " · " + reqHTML(s.r, true) : " · talk / deliver"}</div>${s.ups ? ups(...s.ups) : ""}${(s.c.items || []).length ? `<div class="sub drops">${s.c.items.map(([name, n, have, src, k]) => `${esc(name)}: ${have ? `<b>${fmt(have)} saved from grinding</b>` : "none saved"}${k ? `, ~${fmt(k)} ${mobLink(src)} kills for the rest` : ""}`).join("<br>")}</div>` : ""}</td>
       <td class="sub">${npcLink(s.r.npc)} · ${esc(s.r.region || "")}${s.c.kills.filter(k => k[1] > 0).map(([m, c, w]) => w ? `<br>${mobLink(m)} ×${fmt(c)}: ${mapLink(w[0], w[1])}` : "").join("")}</td>
       ${rvCell(s.r)}<td class="num">${hm(s.sec)}${s.c.unknown ? `<div class="sub" title="Some items have no known drop source">+ other items</div>` : ""}</td><td class="num">${hm(s.t)}</td></tr>`;
     return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.from}→${s.to}</td>
       <td><b>Grind to level ${s.to}</b><div class="sub gear">${s.ch.wid ? itemIcon(s.ch.wid, 1, true) : ""}${s.ch.sid && D.icons[s.ch.sid] ? `<img class="sk" src="data:image/png;base64,${D.icons[s.ch.sid]}" alt="" title="${esc(s.ch.skill)}">` : ""}
-        <span>~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.map.hits > 1.05 ? ` · hits ~${s.map.hits.toFixed(1)} per cast` : ""}${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</span></div></td>
-      <td>${mapLink(s.map.id, s.map.name)}<div class="sub">${mobList(s.map.mobs)}</div>${s.got?.size ? `<div class="sub farm">Collects on the way: ${[...s.got].filter(([, g]) => g.n >= 1).map(([name, g]) => `${fmt(g.n)} ${esc(name)} <span title="${esc(g.q.name)}, Lv ${g.q.lvl}">(${esc(g.q.name)}${g.q.lvl > s.to ? `, Lv ${g.q.lvl}` : ""})</span>`).join(", ")}</div>` : ""}</td><td class="num">–</td>
+        <span>~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.map.hits > 1.05 ? ` · hits ~${s.map.hits.toFixed(1)} per cast` : ""}${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</span></div>${ups(s.from + 1, s.to)}</td>
+      <td>${mapLink(s.map.id, s.map.name)}${s.guide ? ` <span class="pill p-good" title="meowdb ${esc(X.cls)} guide's Training Advisor pick for this level">guide map</span>` : ""}${s.alt && s.alt.rate > s.rate * 1.02 ? `<div class="sub">Model's fastest: ${mapLink(s.alt.id, s.alt.name)} ~${fmt(s.alt.rate * 3600 / X.pace)} EXP/hr (not a guide pick)</div>` : ""}<div class="sub">${mobList(s.map.mobs)}</div>${s.got?.size ? `<div class="sub farm">Collects on the way: ${[...s.got].filter(([, g]) => g.n >= 1).map(([name, g]) => `${fmt(g.n)} ${esc(name)} <span title="${esc(g.q.name)}, Lv ${g.q.lvl}">(${esc(g.q.name)}${g.q.lvl > s.to ? `, Lv ${g.q.lvl}` : ""})</span>`).join(", ")}</div>` : ""}</td><td class="num">–</td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
   }).join("") || `<tr><td colspan="7" class="empty">You're already at your goal.</td></tr>`;
   saveDone();
@@ -373,6 +398,7 @@ $("#xfam").addEventListener("change", () => { X.fam = $("#xfam").value; render()
 $("#xisland").addEventListener("change", () => { X.island = $("#xisland").checked; render() });
 $("#xval").addEventListener("change", () => { X.val = $("#xval").checked; render() });
 $("#xaoe").addEventListener("change", () => { X.aoe = !!$("#xaoe").value; render() });
+$("#xguide").addEventListener("change", () => { X.guide = $("#xguide").value; render() });
 $("#xfast").addEventListener("change", () => { X.fast = $("#xfast").checked; render() });
 $("#xdrop").addEventListener("input", () => { X.drop = +$("#xdrop").value / 100; $("#xdropout").textContent = $("#xdrop").value + "%"; later() });
 $("#xpace").addEventListener("change", () => { X.pace = +$("#xpace").value; render() });

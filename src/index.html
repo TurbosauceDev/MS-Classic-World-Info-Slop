@@ -124,6 +124,13 @@
         <ul>
           <li>Goes level by level from your level to your goal and builds a list to follow: where to train, which quests to do, how long each takes.</li>
           <li>Your character at each level is the Character Builder's default: best weapon you can use, AP and SP spent by the Auto buttons.</li>
+          <li><b>Class guides</b> (default: build + training maps, levels 1–30): uses meowdb's <a href="https://meowdb.com/msclassic/guides/warrior-class-guide" target="_blank" rel="noopener">Warrior</a>, <a href="https://meowdb.com/msclassic/guides/magician-class-guide" target="_blank" rel="noopener">Magician</a>, <a href="https://meowdb.com/msclassic/guides/bowman-class-guide" target="_blank" rel="noopener">Bowman</a>, <a href="https://meowdb.com/msclassic/guides/thief-class-guide" target="_blank" rel="noopener">Thief</a> and <a href="https://meowdb.com/msclassic/guides/beginners-guide-first-steps-in-maple-world" target="_blank" rel="noopener">beginner</a> guides instead:
+            <ul>
+              <li>their SP order and AP per level (each level-up is listed under the step it happens in), their shop weapons and gear, free advancement weapons (Beginner's Garnier), Arrow Blow over Double Shot;</li>
+              <li>their Training Advisor maps for each level band (checked for sure hits, 2-hit kills, danger and the walk to town, which this model doesn't check), with the model's fastest map shown when it differs. "Build only" keeps the build but lets the model pick maps;</li>
+              <li>citizenship town at 12, and Wolbi stars or Bronze arrows from 25 (they unlock at citizenship grade 3: level 22 plus 2,000 contribution; reaching it by 25 is an assumption);</li>
+              <li>future Bandits level with a claw and Lucky Seven until 30. First-job skills stay as the guide leaves them at 30; 2nd-job SP is still auto.</li>
+            </ul></li>
           <li><b>Quests + grinding:</b> does each quest as it unlocks and grinds in between. Each quest shows how its EXP per hour compares with grinding; tick "Only quests faster than grinding" to keep just those.</li>
           <li><b>Most rewards:</b> every quest that pays mesos or items, Must do picks first, then lowest level and highest reward value. Items with no known source aren't timed ("+ other items").</li>
           <li><b>Reward value</b> = quest mesos + what its items sell to NPCs (pick-one: the best; random: the average). That's a floor; rated items sell for far more to players.</li>
@@ -142,7 +149,7 @@
           <li><b>Average player</b> takes 1.5× the model time, <b>Relaxed</b> 2×: crowded maps, potions, breaks. These multipliers are a guess; pick what fits you.</li>
           <li><b>Travel counts:</b> every move between maps is its own step with the route (walk, cab), so you can tick it off. The plan knows where you are. A quest means walking to its NPC, to the closest good map for each monster it needs, and back. Grinding maps far from you lose points for the walk. Crossing one map ≈ 30 s, a cab between towns (Lith Harbor, Henesys, Ellinia, Kerning City, Perion, Sleepywood) ≈ 45 s, talking to an NPC ≈ 1 min (30 s for the same NPC again). All guesses.</li>
           <li>Quest kills also wait on the map's respawns: few of a monster on a map means slower kills there. Kill EXP from quests counts.</li>
-          <li><b>AoE build</b> (default): each level's character uses its best multi-target attack when the job has one: Slash Blast, Double Shot, Arrow Bomb, Iron Arrow, Thunder Bolt, Poison Breath, Holy Arrow (Power Knockback is skipped: it pushes monsters away). Thieves and 1st job Magicians have none, so they stay single target. How many monsters a cast hits comes from each map's spawn points on the same platform within the skill's reach (75% alive), capped at its target count: an estimate shown as "hits ~2.4 per cast".</li>
+          <li><b>AoE build</b> (default): each level's character uses its best multi-target attack when the job has one: Slash Blast, Arrow Bomb, Iron Arrow, Thunder Bolt, Poison Breath, Holy Arrow (Power Knockback is skipped: it pushes monsters away). Thieves, 1st job Bowmen and 1st job Magicians have none, so they stay single target (Double Shot's 2 arrows split between targets, so it does the same total damage either way). How many monsters a cast hits comes from each map's spawn points on the same platform within the skill's reach (75% alive), capped at its target count: an estimate shown as "hits ~2.4 per cast".</li>
           <li><b>Weapons:</b> when the plan's character gets a better weapon, a step says where to get it: NPC shop and price (meowdb's shop list), crafting recipe (game files), quest reward, or monster drops (meowdb: player reports, else the old MapleSEA drop list it says Classic likely shares). The plan only picks weapons you can get at launch this way.</li>
           <li>Below level 10 you're a Beginner: basic attack with the Wooden Club, the Razor from level 5, and all AP in your future job's main stat, as meowdb's beginner guide recommends.</li>
           <li><b>Maple Island</b> runs first in every mode: every island quest in order, island maps when a quest needs a higher level, then Shanks' ship to Lith Harbor at level 7+ (300 mesos, one way). meowdb: the island quests take you to about level 8. Untick "Still on Maple Island" if you've left.</li>
@@ -170,6 +177,7 @@
     <label class="chk" id="xislandwrap"><input type="checkbox" id="xisland"> Still on Maple Island</label>
     <label class="chk" id="xvalwrap"><input type="checkbox" id="xval"> Valuable quests</label>
     <label class="chk" id="xfastwrap"><input type="checkbox" id="xfast"> Only quests faster than grinding</label>
+    <label>Class guides (1–30)<select id="xguide"><option value="all">Build + training maps</option><option value="build">Build only</option><option value="">Off</option></select></label>
     <label>Build<select id="xaoe"><option value="1">Area attacks (AoE)</option><option value="">Single target</option></select></label>
     <label id="xdropwrap">Drop rate <b id="xdropout">30%</b><input id="xdrop" type="range" min="10" max="35" step="1" value="30"></label>
     <label>Pace<select id="xpace"><option value="1">Perfect play (model)</option><option value="1.5">Average player (1.5×)</option><option value="2">Relaxed (2×)</option></select></label>
@@ -198,7 +206,7 @@
           <li>Each kill costs the monster's HP ÷ your damage, after hit chance, defense, level penalty and element, plus 1 second of walking and aiming.</li>
           <li>Score = map EXP ÷ total time, capped at what one player can kill per 7.56-second respawn with 75% of spawns alive.</li>
           <li>Maps need 8+ monsters; bosses are left out. Hit below 90% is flagged.</li>
-          <li><b>Area attacks by default:</b> Slash Blast, Double Shot then Arrow Bomb, Thunder Bolt, Poison Breath, Holy Arrow (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, 75% alive: an estimate. Thieves and 1st job Magicians have no area attack.</li>
+          <li><b>Area attacks by default:</b> Slash Blast, Arrow Bomb, Thunder Bolt, Poison Breath, Holy Arrow (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, 75% alive: an estimate. Thieves, 1st job Bowmen and 1st job Magicians have no area attack.</li>
         </ul>
       </div>
       <div>
