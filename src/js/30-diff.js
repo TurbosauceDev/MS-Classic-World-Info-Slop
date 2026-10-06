@@ -24,10 +24,10 @@ document.querySelectorAll("#classseg button").forEach(b => {
 function renderDiff(){
   const s = $("#dsearch").value.trim().toLowerCase();
   const md = D.mobdiff.filter(r => !D.latermobnames.includes(r[0]) && (!s || r[0].toLowerCase().includes(s)));
-  $("#mrows").innerHTML = md.map(([nm, lv, d]) => d ? `<tr><td class="name">${esc(nm)}</td>
+  $("#mrows").innerHTML = md.map(([nm, lv, d]) => d ? `<tr><td class="name">${mobLink(nm)}</td>
     <td class="num">${cell(d.level)}</td><td class="num">${cell(d.hp)}</td><td class="num">${cell(d.exp, true)}</td>
     <td class="num">${cell(d.acc)}</td><td class="num">${cell(d.eva, false)}</td><td class="num">${cell(d.PDDamage, false)}</td><td class="num">${cell(d.MDDamage, false)}</td></tr>`
-    : `<tr><td class="name">${esc(nm)} <span class="pill p-hot">new</span></td><td class="num">${lv}</td><td colspan="6" class="sub">Not in the 2008 client</td></tr>`).join("");
+    : `<tr><td class="name">${mobLink(nm)} <span class="pill p-hot">new</span></td><td class="num">${lv}</td><td colspan="6" class="sub">Not in the 2008 client</td></tr>`).join("");
   const mon = currentClass === "monsters";
   $("#skillsec").hidden = mon; $("#monsec").hidden = !mon; $("#donlywrap").hidden = mon;
   if (mon) return;

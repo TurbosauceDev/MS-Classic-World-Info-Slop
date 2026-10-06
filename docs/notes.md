@@ -117,6 +117,8 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   `mapnames` {mapId: name} for portal destinations. Portal x/y in portals.json are pixels of the dashboard's full map
   renders; render sizes come from 64-byte range reads of each render (cached in vendor/render_dims.json). Per-axis stretch
   onto the minimap put 92% of monster spawn points on drawn platforms (uniform-scale variants: 86-91%).
+- `npcs` {npcId: [name, [[mapId, x, y]]]} (x/y minimap fractions), `npcid` {name: npcId}, `npcimg` {npcId: png}, `npcmaps`
+  [mapIds with quest NPCs; their minimaps/portals are included even if they have no monsters]; `mobimg` {mobId: png thumbnail}
 - `latermobs` [mobId], `latermobnames` [name]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2
   (Someone Else's House) and Fairy 3 (Tree Dungeon, Forest Up North VI/VII): they ARE at launch, just not in the ranking.
 

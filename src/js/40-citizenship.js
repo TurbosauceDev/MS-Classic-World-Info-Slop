@@ -53,7 +53,7 @@ function render(){
   }).join("");
 
   $("#cstory").innerHTML = story.sort((a, b) => a.grade - b.grade || a.id - b.id).map(r => `<tr>
-    <td class="num">${r.lvl}</td><td class="num">${r.grade}</td><td>${qn(r)}<div class="sub">${esc(r.npc || "")}</div></td>
+    <td class="num">${r.lvl}</td><td class="num">${r.grade}</td><td>${qn(r)}<div class="sub">${npcLink(r.npc)}</div></td>
     <td class="sub">${esc(clean(r.req))}</td><td class="num">${fmt(r.exp)}</td><td class="num">${fmt(r.mesos)}</td>
     <td class="num">${fmt(r.contrib)}</td><td>${rewardCell(r)}</td></tr>`).join("");
 

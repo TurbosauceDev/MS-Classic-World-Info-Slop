@@ -371,7 +371,7 @@ function render(){
 
   $("#phits").innerHTML = r.near.length ? `<table class="mini"><tbody>${r.near.map(m => {
     const pct = Math.round(hitProb(r.acc, m[4], m[1] - L) * 100);
-    return `<tr><td>${esc(m[0])}</td><td class="num sub">Lv ${m[1]}</td><td class="num"><span class="pill ${pct >= 95 ? "p-good" : pct >= 70 ? "p-warn" : "p-bad"}">${pct}%</span></td></tr>`;
+    return `<tr><td>${mobLink(m[0])}</td><td class="num sub">Lv ${m[1]}</td><td class="num"><span class="pill ${pct >= 95 ? "p-good" : pct >= 70 ? "p-warn" : "p-bad"}">${pct}%</span></td></tr>`;
   }).join("")}</tbody></table>` : `<p class="tiny">No monsters near this level in the launch areas.</p>`;
   try { localStorage.setItem("planner", JSON.stringify(S)) } catch(e) {}
 }

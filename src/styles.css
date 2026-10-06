@@ -191,9 +191,9 @@ table.mini td,table.mini th{padding:6px 8px}
 .gear{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px}
 .gear .sk{width:24px;height:24px;image-rendering:pixelated;border-radius:6px;background:var(--bg);border:1px solid var(--line);padding:1px}
 #psicon{display:flex;gap:6px;align-items:center}
-.mname{cursor:help;text-decoration:underline dotted var(--muted);text-underline-offset:3px}
-.mname:hover,.mname:focus{color:var(--accent);outline:none}
-.mname:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.mname,.nname,.mobname{cursor:help;text-decoration:underline dotted var(--muted);text-underline-offset:3px}
+.mname:hover,.mname:focus,.nname:hover,.nname:focus,.mobname:hover,.mobname:focus{color:var(--accent);outline:none}
+.mname:focus-visible,.nname:focus-visible,.mobname:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
 #qtip.maptip{width:min(400px,calc(100vw - 16px))}
 #qtip .mmwrap{position:relative;margin:8px auto 0;max-width:100%}
 #qtip .mm{display:block;width:100%;height:100%;border-radius:6px;background:#0d0b14}
@@ -208,11 +208,24 @@ table.mini td,table.mini th{padding:6px 8px}
 #qtip .mmobs span{opacity:.65;font-size:12px}
 .stepchk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font:inherit}
 .stepchk input{width:16px;height:16px;accent-color:var(--accent);margin:0;cursor:pointer}
-#xrows tr.done td{opacity:.42;transition:opacity .2s}
+#xrows tr.done td{opacity:.42;transition:opacity .2s;padding-top:4px;padding-bottom:4px}
 #xrows tr.done td:first-child{opacity:.8}
+/* ticked steps collapse to one line: number, level and title; unticking restores them */
+#xrows tr.done td:nth-child(3) :is(.vwhy,.ricons,.sub,.drops,.gear,.farm,.pill,br){display:none}
+#xrows tr.done td:nth-child(n+4):not(:last-child){font-size:0}
+#xrows tr.done td:nth-child(n+4):not(:last-child) *{display:none}
 #xrows tr.done .name,#xrows tr.done b{text-decoration:line-through;text-decoration-color:var(--muted)}
 #xdonenote .btn{padding:3px 10px;font-size:12.5px;margin-left:6px}
 .rv{white-space:nowrap}
 .farm{color:var(--leaf)}
 .drops{color:var(--ink);opacity:.8;margin-top:2px}
 .drops b{font-weight:600;color:var(--leaf)}
+#qtip .spritehead{display:flex;gap:12px;align-items:center}
+#qtip .sprite{flex-shrink:0;max-width:96px;max-height:110px;min-height:40px;object-fit:contain;image-rendering:pixelated;background:rgba(255,255,255,.08);border-radius:8px;padding:4px}
+#qtip .npcstar{position:absolute;transform:translate(-50%,-60%);color:#ff6b9a;font-size:20px;line-height:1;text-shadow:0 0 3px #000,0 0 6px #000}
+#qtip .mstats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:10px 0 0}
+#qtip .mstats dt{font:600 10px var(--f-body);text-transform:uppercase;letter-spacing:.05em;opacity:.65}
+#qtip .mstats dd{margin:1px 0 0;font:600 13px var(--f-mono)}
+#qtip .mels{display:flex;flex-wrap:wrap;gap:4px}
+#xdropwrap input{width:150px}
+#xdropwrap b{font:600 13px var(--f-mono);color:var(--ink);text-transform:none;letter-spacing:0}

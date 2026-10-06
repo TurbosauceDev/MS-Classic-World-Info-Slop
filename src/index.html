@@ -128,7 +128,7 @@
           <li><b>Most rewards:</b> every quest that pays mesos or items, Must do picks first, then lowest level and highest reward value. Items with no known source aren't timed ("+ other items").</li>
           <li><b>Reward value</b> = quest mesos + what its items sell to NPCs (pick-one: the best; random: the average). That's a floor; rated items sell for far more to players.</li>
           <li><b>Quests only:</b> every quest it can time, lowest level first, until they run out. <b>Grinding only:</b> maps only.</li>
-          <li><b>Item drops:</b> drop rates aren't in the game files, so the plan assumes 30% per kill (15% if you pick cautious). A quest needing 20 Octopus Legs costs about 67 Octopus kills.</li>
+          <li><b>Item drops:</b> drop rates aren't in the game files, so the plan assumes 30% per kill by default; slide it from 10% to 35% to test better or worse luck. At 30%, a quest needing 20 Octopus Legs costs about 67 Octopus kills.</li>
           <li><b>Collecting ahead:</b> while grinding, drops for quests up to 5 levels ahead go in your bag, even before you accept the quest (assuming these drop without the quest, as guides advise saving them). Maps get credit for the farming those drops save later, so the plan may pick a map a bit lower in EXP/hr when its drops pay off. Grind steps list what you collect; quest steps show how many are already saved.</li>
           <li><b>Valuable quests</b> (Sauna Robe, Icarus Cape, Work Gloves...) are marked with their rating and why players rate it. The ones the plan can't time (items with no known source, or skipped by your mode) appear as side tasks at the level their chain starts. Picks come from community guides; see the Quest Database.</li>
           <li>Quests more than 5 levels under your current level count as already done or skipped. Quests with no EXP are skipped unless a later quest needs them.</li>
@@ -167,7 +167,7 @@
     <label class="chk" id="xislandwrap"><input type="checkbox" id="xisland"> Still on Maple Island</label>
     <label class="chk" id="xvalwrap"><input type="checkbox" id="xval"> Valuable quests</label>
     <label class="chk" id="xfastwrap"><input type="checkbox" id="xfast"> Only quests faster than grinding</label>
-    <label id="xdropwrap">Drop rate<select id="xdrop"><option value="0.3">30% (typical)</option><option value="0.15">15% (cautious)</option></select></label>
+    <label id="xdropwrap">Drop rate <b id="xdropout">30%</b><input id="xdrop" type="range" min="10" max="35" step="1" value="30"></label>
     <label>Pace<select id="xpace"><option value="1">Perfect play (model)</option><option value="1.5">Average player (1.5×)</option><option value="2">Relaxed (2×)</option></select></label>
   </div>
   <div class="grid2" id="xsum"></div>

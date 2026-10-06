@@ -55,7 +55,7 @@ function rankMaps(){
   $("#maprows").innerHTML = top.length ? top.map((r,i) => `<tr>
     <td class="num">${i+1}</td>
     <td>${mapLink(r.id, r.name)}${r.open ? "" : ' <span class="pill p-warn">opens later</span>'}</td>
-    <td class="sub">${esc(r.mobs)}</td>
+    <td class="sub">${mobList(r.mobs)}</td>
     <td class="num">${r.n}</td><td class="num">${r.avg.toFixed(1)}</td>
     <td class="num">${r.hit < .9 ? `<span class="pill p-warn">${Math.round(r.hit*100)}%</span>` : Math.round(r.hit*100) + "%"}</td>
     <td><span class="bar"><i style="width:${Math.round(100*r.rate/best)}%"></i></span><span class="mono">${Math.round(100*r.rate/best)}</span></td>

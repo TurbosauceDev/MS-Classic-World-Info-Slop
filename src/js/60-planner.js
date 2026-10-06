@@ -195,7 +195,7 @@ function fill(){
   X.cur = Math.min(69, Math.max(1, Math.round(X.cur) || 1)); X.goal = Math.min(MAXL, Math.max(X.cur + 1, Math.round(X.goal) || X.cur + 1));
   $("#xisland").checked = X.island; $("#xislandwrap").hidden = X.cur >= 10;
   $("#xval").checked = X.val;
-  $("#xdrop").value = String(X.drop); $("#xdropwrap").hidden = X.mode === "grind";
+  $("#xdrop").value = Math.round(X.drop * 100); $("#xdropout").textContent = Math.round(X.drop * 100) + "%"; $("#xdropwrap").hidden = X.mode === "grind";
   $("#xfast").checked = X.fast; $("#xfastwrap").hidden = X.mode !== "mix"; $("#xvalwrap").hidden = X.mode === "rewards";
   $("#xcur").value = X.cur; $("#xgoal").value = X.goal; $("#xpace").value = String(X.pace);
 }
@@ -232,20 +232,20 @@ function render(){
       <td>${vPill(s.r.id)} ${qlink(s.r)}<div class="vwhy"><b>${esc(s.v[1])}</b> · ${esc(s.v[2])}</div>
         <div class="ricons">${rewardIcons(VICON[s.r.id] ? D.quests.find(x => x.id === VICON[s.r.id]) : s.r)}</div>
         <div class="sub">${s.s !== s.r ? `Start with ${qlink(s.s)} (Lv ${s.s.lvl}), ${s.r.cn}-quest chain · ` : ""}needs ${esc(s.r.req.replace(/ \(source n\/a\)/g, ""))}</div></td>
-      <td class="sub">${esc(s.s.npc || "")} · ${esc(s.s.region || "")}</td>${rvCell(s.r)}<td class="num sub">not timed</td><td class="num">${hm(s.t)}</td></tr>`;
+      <td class="sub">${npcLink(s.s.npc)} · ${esc(s.s.region || "")}</td>${rvCell(s.r)}<td class="num sub">not timed</td><td class="num">${hm(s.t)}</td></tr>`;
     if (s.k === "quest") return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>
       <td>Quest: ${qlink(s.r)} ${vPill(s.r.id)}${s.vs != null ? ` <span class="pill ${s.vs >= 1 ? "p-good" : "p-warn"}" title="Quest EXP per hour compared with grinding at this level">${s.vs >= 1 ? "faster than grinding" : Math.round(s.vs * 100) + "% of grinding speed"}</span>` : ""}${s.r.ri?.length ? `<div class="ricons">${rewardIcons(s.r)}</div>` : ""}<div class="sub">+${fmt(s.c.exp)} EXP${s.c.kills.some(k => k[1] > 0) ? " incl. kills" : ""}${s.r.req !== "talk / deliver only" ? " · " + esc(s.r.req.replace(/ \(source n\/a\)/g, "")) : " · talk / deliver"}</div>${(s.c.items || []).length ? `<div class="sub drops">${s.c.items.map(([name, n, have, src, k]) => `${esc(name)}: ${have ? `<b>${fmt(have)} saved from grinding</b>` : "none saved"}${k ? `, ~${fmt(k)} ${esc(D.mobs[src][0])} kills for the rest` : ""}`).join("<br>")}</div>` : ""}</td>
-      <td class="sub">${esc(s.r.npc || "")} · ${esc(s.r.region || "")}${s.c.kills.filter(k => k[1] > 0).map(([m, c, w]) => w ? `<br>${esc(m)} ×${fmt(c)}: ${mapLink(w[0], w[1])}` : "").join("")}</td>
+      <td class="sub">${npcLink(s.r.npc)} · ${esc(s.r.region || "")}${s.c.kills.filter(k => k[1] > 0).map(([m, c, w]) => w ? `<br>${mobLink(m)} ×${fmt(c)}: ${mapLink(w[0], w[1])}` : "").join("")}</td>
       ${rvCell(s.r)}<td class="num">${hm(s.sec)}${s.c.unknown ? `<div class="sub" title="Some items have no known drop source">+ other items</div>` : ""}</td><td class="num">${hm(s.t)}</td></tr>`;
     return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.from}→${s.to}</td>
       <td><b>Grind to level ${s.to}</b><div class="sub gear">${s.ch.wid ? itemIcon(s.ch.wid, 1, true) : ""}${s.ch.sid && D.icons[s.ch.sid] ? `<img class="sk" src="data:image/png;base64,${D.icons[s.ch.sid]}" alt="" title="${esc(s.ch.skill)}">` : ""}
         <span>~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</span></div></td>
-      <td>${mapLink(s.map.id, s.map.name)}<div class="sub">${esc(s.map.mobs)}</div>${s.got?.size ? `<div class="sub farm">Collects on the way: ${[...s.got].filter(([, g]) => g.n >= 1).map(([name, g]) => `${fmt(g.n)} ${esc(name)} <span title="${esc(g.q.name)}, Lv ${g.q.lvl}">(${esc(g.q.name)}${g.q.lvl > s.to ? `, Lv ${g.q.lvl}` : ""})</span>`).join(", ")}</div>` : ""}</td><td class="num">–</td>
+      <td>${mapLink(s.map.id, s.map.name)}<div class="sub">${mobList(s.map.mobs)}</div>${s.got?.size ? `<div class="sub farm">Collects on the way: ${[...s.got].filter(([, g]) => g.n >= 1).map(([name, g]) => `${fmt(g.n)} ${esc(name)} <span title="${esc(g.q.name)}, Lv ${g.q.lvl}">(${esc(g.q.name)}${g.q.lvl > s.to ? `, Lv ${g.q.lvl}` : ""})</span>`).join(", ")}</div>` : ""}</td><td class="num">–</td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
   }).join("") || `<tr><td colspan="7" class="empty">You're already at your goal.</td></tr>`;
   saveDone();
   const ex = pool().filter(r => !timed(r) && !P.done.has(r.id) && r.lvl <= X.goal && r.lvl >= Math.max(1, X.cur - 5)).sort((a, b) => a.lvl - b.lvl || b.exp - a.exp);
-  $("#xextra").innerHTML = ex.map(r => `<tr><td class="num">${r.lvl}</td><td>${qlink(r)}<div class="sub">${esc(r.npc || "")} · ${esc(r.region || "")}</div></td>
+  $("#xextra").innerHTML = ex.map(r => `<tr><td class="num">${r.lvl}</td><td>${qlink(r)}<div class="sub">${npcLink(r.npc)} · ${esc(r.region || "")}</div></td>
     <td class="sub">${esc(r.req.replace(/ \(source n\/a\)/g, ""))}</td><td class="num">${fmt(r.exp)}</td></tr>`).join("") || `<tr><td colspan="4" class="empty">None in this level range.</td></tr>`;
 }
 let timer = null, shown = false;
@@ -271,7 +271,7 @@ $("#xfam").addEventListener("change", () => { X.fam = $("#xfam").value; render()
 $("#xisland").addEventListener("change", () => { X.island = $("#xisland").checked; render() });
 $("#xval").addEventListener("change", () => { X.val = $("#xval").checked; render() });
 $("#xfast").addEventListener("change", () => { X.fast = $("#xfast").checked; render() });
-$("#xdrop").addEventListener("change", () => { X.drop = +$("#xdrop").value; render() });
+$("#xdrop").addEventListener("input", () => { X.drop = +$("#xdrop").value / 100; $("#xdropout").textContent = $("#xdrop").value + "%"; later() });
 $("#xpace").addEventListener("change", () => { X.pace = +$("#xpace").value; render() });
 $("#xcur").addEventListener("input", () => { X.cur = +$("#xcur").value || 1; if (X.goal <= X.cur) X.goal = Math.min(MAXL, X.cur + 1); later() });
 $("#xgoal").addEventListener("input", () => { X.goal = +$("#xgoal").value || X.cur + 1; later() });

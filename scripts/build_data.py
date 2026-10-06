@@ -178,6 +178,42 @@ def step_rewards(D):
         if os.path.exists(p): icons[iid] = b64(p)
     D["items"], D["iicons"] = info, icons
 
+def step_npcs(D):
+    """npcs {npcId: [name, [[mapId, x, y], ...]]} for every NPC named by a quest, x/y as minimap fractions (filled in by
+    step_portals once render sizes are known), npcid {name: npcId}, npcimg {npcId: base64 png}. npcmaps = launch maps
+    they stand on (towns aren't in `maps`, so their minimaps are added too)."""
+    names = {r["npc"] for r in D["quests"] + D["citq"] if r.get("npc")}
+    look = json.load(open(C + "lookups.json"))["npc_names"]
+    at = collections.defaultdict(list)
+    for r in a.mapsj["regions"]:
+        for m in r["maps"]:
+            if a.launch_status(m["id"]) != "Open at launch": continue
+            for p in m.get("npc_positions") or []: at[str(p["id"])].append([str(m["id"]), p["x"], p["y"]])
+    ids = {}
+    for i, n in look.items():
+        if n in names and (n not in ids or (at.get(i) and not at.get(ids[n]))): ids[n] = i   # same name twice: prefer one placed at launch
+    D["npcid"] = ids
+    D["npcs"] = {i: [n, at.get(i, [])] for n, i in ids.items()}
+    D["npcimg"] = {i: b64(C + f"images/npcs/{int(i):07d}.png") for i in ids.values() if os.path.exists(C + f"images/npcs/{int(i):07d}.png")}
+    D["npcmaps"] = sorted({loc[0] for v in D["npcs"].values() for loc in v[1]})
+
+def step_mobimg(D):
+    """mobimg {mobId: base64 png}: the export's thumbnail of each launch monster (~150 KB total), fetched one file at a time
+    by URL (the clone is blob-filtered) and cached in vendor/mob_thumbs/."""
+    import subprocess
+    mon = {str(m["id"]): m for m in a.monsters}
+    ref = os.environ.get("OSMS_REF") or subprocess.run(["git", "-C", str(ROOT / "vendor" / "osms_datamine_dashboard"), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    cache = ROOT / "vendor" / "mob_thumbs"; cache.mkdir(exist_ok=True)
+    out = {}
+    for mid in D["mobs"]:
+        mid = str(mid); h = mon.get(mid, {}).get("thumbnail")
+        if not h: continue
+        f = cache / f"{h}.png"
+        if not f.exists():
+            subprocess.run(["curl", "-sSf", "--max-time", "30", "-o", str(f), f"https://raw.githubusercontent.com/ohmi69/osms_datamine_dashboard/{ref}/data/images/monsters/{h}.png"])
+        if f.exists() and f.stat().st_size: out[mid] = base64.b64encode(f.read_bytes()).decode()
+    D["mobimg"] = out
+
 def step_minimaps(D):
     """mmaps {mapId: base64}: minimap of every open map, for the map hover card. WebP q80 (~1 MB for 177 maps) when
     Pillow is installed (pip install pillow), else the original PNGs (~1.9 MB). mmapType says which."""
@@ -187,9 +223,10 @@ def step_minimaps(D):
     except ImportError:
         Image = None; print("Pillow not installed: minimaps stay PNG (bigger page)")
     out, dim = {}, {}
-    for mid, m in D["maps"].items():
+    want = [mid for mid, m in D["maps"].items() if m[1]] + [m for m in D.get("npcmaps", []) if m not in D["maps"]]
+    for mid in want:
         p = C + f"images/maps/{int(mid):09d}.png"
-        if not m[1] or not os.path.exists(p): continue
+        if not os.path.exists(p): continue
         if Image:
             im = Image.open(p); dim[str(mid)] = list(im.size)
             buf = io.BytesIO(); im.convert("RGBA").save(buf, "WEBP", quality=80, method=6)
@@ -241,6 +278,9 @@ def step_portals(D):
             dest.add(int(dm))
         if L: out[mid] = L
     D["portals"] = out
+    for i, (n, locs) in D.get("npcs", {}).items():
+        D["npcs"][i][1] = [[mid, round(x / dims[mid][0], 3), round(y / dims[mid][1], 3)] for mid, x, y in locs if mid in dims]
+    dest |= {int(mid) for mid in D["mmdim"]}
     D["mapnames"] = {str(i): names.get(i, "") for i in sorted(dest)}
 
 def step_launch(D):
@@ -253,7 +293,7 @@ def step_launch(D):
 
 if __name__ == "__main__":
     D = step_base()
-    step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_minimaps(D)
+    step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D)
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees
     (ROOT / "data").mkdir(exist_ok=True)
     s = json.dumps(D, separators=(",", ":"))

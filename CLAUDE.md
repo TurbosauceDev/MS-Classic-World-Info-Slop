@@ -23,7 +23,8 @@ Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Dat
 - Don't re-run `fetch_osms.sh` / `build_data.py` unless data logic or the export changed. Pipe test/build output through `tail`.
 - **Never `git clone` a repo in full or download anything big without checking its size first** (GitHub API `size`, `du`, a dry run).
   The OSMS repo is 8.6 GB with history; `fetch_osms.sh` is shallow + sparse + blob-filtered (~100 MB). Keep it that way.
-  Anything over ~200 MB: ask Danny first.
+  Anything over ~200 MB: ask Danny first. The vendor clone is blob-filtered: `git ls-tree -l`, `git log -p`, `git show` of
+  many files etc. silently download the blobs. Use `ls-tree --name-only`, or fetch single files with an HTTP range/raw URL.
 - Screenshots only when layout changed. Ask Danny before anything expensive: data rebuilds, big refactors, web research, subagents.
 
 ## Layout
@@ -65,6 +66,6 @@ so committing a rebuilt dist/index.html and pushing updates the site (~1 min). T
 - Use the existing CSS tokens (--bg, --panel, --ink, --muted, --line, --accent, --accent-soft, --leaf, --warn, --bad).
   Palette is lavender/purple/grey; keep it. Both light and dark must work; no horizontal scroll at 390px.
 - Explanatory text goes in a collapsible `<details class="howto">` box at the top of a tab, as short bullet lists.
-- Tooltips: one floating `#qtip`; elements with `.qname` (quests), `.ri` (items) or `.mname` (maps, via `mapLink()`) get it via delegated listeners.
+- Tooltips: one floating `#qtip`; elements with `.qname` (quests), `.ri` (items), `.mname` (maps, `mapLink()`), `.nname` (NPCs, `npcLink()`) or `.mobname` (monsters, `mobLink()`) get it via delegated listeners.
 - Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, cls-seg).
 - Plain, game-player language on the page. Say when a number is estimated.

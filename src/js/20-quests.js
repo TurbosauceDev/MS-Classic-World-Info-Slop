@@ -26,7 +26,7 @@ function renderQuests(){
   $("#qcount").textContent = `${q.length} of ${QLAUNCH.length} quests`;
   $("#qrows").innerHTML = q.map(r => `<tr>
     <td class="num">${r.lvl}</td>
-    <td><span class="name qname" tabindex="0" data-src="q" data-i="${D.quests.indexOf(r)}">${esc(r.name)}</span> ${vPill(r.id)}${VALUE[r.id] ? `<div class="vwhy"><b>${esc(VALUE[r.id][1])}</b>${VALUE[r.id][3] ? ` · ${esc(VALUE[r.id][3])} only` : ""} · ${esc(VALUE[r.id][2])} <span class="sub">(${vSrc(VALUE[r.id])})</span></div>` : ""}<div class="sub">${esc(r.npc || "")} · ${esc(r.region || "")}${r.rep ? ` · <span class="pill p-warn">${r.rep}</span>` : ""}${r.region === "El Nath" || r.region === "Orbis" ? ` · <span class="pill p-bad">not in launch</span>` : r.region === "Forgotten Hollow" ? ` · <span class="pill p-warn">opens later</span>` : ""}</div></td>
+    <td><span class="name qname" tabindex="0" data-src="q" data-i="${D.quests.indexOf(r)}">${esc(r.name)}</span> ${vPill(r.id)}${VALUE[r.id] ? `<div class="vwhy"><b>${esc(VALUE[r.id][1])}</b>${VALUE[r.id][3] ? ` · ${esc(VALUE[r.id][3])} only` : ""} · ${esc(VALUE[r.id][2])} <span class="sub">(${vSrc(VALUE[r.id])})</span></div>` : ""}<div class="sub">${npcLink(r.npc)} · ${esc(r.region || "")}${r.rep ? ` · <span class="pill p-warn">${r.rep}</span>` : ""}${r.region === "El Nath" || r.region === "Orbis" ? ` · <span class="pill p-bad">not in launch</span>` : r.region === "Forgotten Hollow" ? ` · <span class="pill p-warn">opens later</span>` : ""}</div></td>
     <td>${r.chain ? `<button class="chainbtn" data-chain="${esc(r.chain)}" title="Show the ${esc(r.chain)} questline">Yes</button><div class="sub">${r.cpos} of ${r.cn}</div>` : `<span class="sub">No</span>`}</td>
     <td class="sub">${esc(r.req)}</td>
     <td class="num">${fmt(r.exp)}</td>
@@ -92,25 +92,52 @@ function itemTip(el){
     ${it.d ? `<div class="it-desc">${esc(it.d).replace(/\n/g, "<br>")}</div>` : ""}
     ${odds || it.p ? `<div class="it-foot">${odds}${odds && it.p ? " · " : ""}${it.p ? `Sells for ${fmt(it.p)} mesos` : ""}</div>` : ""}`;
 }
-function mapTip(id){
-  const m = D.maps[id]; if (!m) return "";
-  const mm = D.mmaps[id], mobs = m[2].filter(([mid]) => D.mobs[mid]).sort((a, b) => b[1] - a[1])
-    .map(([mid, n]) => `<li>${esc(D.mobs[mid][0])} <span>Lv ${D.mobs[mid][1]} · ×${n}</span></li>`).join("");
-  // exits: one number per destination, left to right; hidden passages dashed
+// minimap with numbered exits; `star` = [x, y] marks an NPC; returns [minimap html, exits list html]
+function minimap(id, star){
+  const mm = D.mmaps[id], name = D.maps[id]?.[0] || D.mapnames[id] || "";
   const P = (D.portals[id] || []).slice().sort((a, b) => a[0] - b[0]), num = {}, dests = [];
   for (const p of P) if (!(p[2] in num)){ num[p[2]] = dests.length + 1; dests.push(p[2]) }
   const [w0, h0] = D.mmdim[id] || [0, 0], k = w0 ? Math.min(372 / w0, 330 / h0, 3) : 1, w = Math.round(w0 * k), h = Math.round(h0 * k);
-  const marks = P.map(([x, y, d, hid]) => `<span class="pt${hid ? " hid" : ""}" style="left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%">${num[d]}</span>`).join("");
+  const pos = (x, y) => `left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%`;
+  const marks = P.map(([x, y, d, hid]) => `<span class="pt${hid ? " hid" : ""}" style="${pos(x, y)}">${num[d]}</span>`).join("")
+    + (star ? `<span class="npcstar" style="${pos(star[0], star[1])}">★</span>` : "");
   const exits = dests.map(d => { const all = P.filter(p => p[2] === d), hid = all.every(p => p[3]), later = D.maps[d] && !D.maps[d][1];
     return `<li><b class="ptn${hid ? " hid" : ""}">${num[d]}</b>${esc(D.mapnames[d] || D.maps[d]?.[0] || "map " + d)}${hid ? " <span>hidden</span>" : ""}${later ? " <span>not at launch</span>" : ""}</li>` }).join("");
-  return `<div class="qt-h"><b>${esc(m[0])}</b></div>
-    ${mm ? `<div class="mmwrap"${w ? ` style="width:${w}px;height:${h}px"` : ""}><img class="mm" src="data:image/${D.mmapType};base64,${mm}" alt="Minimap of ${esc(m[0])}"${w ? ` width="${w}" height="${h}"` : ""}>${marks}</div>` : `<p>No minimap in the game files.</p>`}
-    ${exits ? `<h5>Exits</h5><ul class="mexits">${exits}</ul>` : ""}
-    ${mobs ? `<h5>Monsters (spawn points)</h5><ul class="mmobs">${mobs}</ul>` : ""}`;
+  return [mm ? `<div class="mmwrap"${w ? ` style="width:${w}px;height:${h}px"` : ""}><img class="mm" src="data:image/${D.mmapType};base64,${mm}" alt="Minimap of ${esc(name)}"${w ? ` width="${w}" height="${h}"` : ""}>${marks}</div>` : `<p>No minimap in the game files.</p>`,
+    exits ? `<h5>Exits</h5><ul class="mexits">${exits}</ul>` : ""];
+}
+function mapTip(id){
+  const m = D.maps[id] || [D.mapnames[id] || "", 1, []];
+  const mobs = m[2].filter(([mid]) => D.mobs[mid]).sort((a, b) => b[1] - a[1])
+    .map(([mid, n]) => `<li>${esc(D.mobs[mid][0])} <span>Lv ${D.mobs[mid][1]} · ×${n}</span></li>`).join("");
+  const [mm, exits] = minimap(id);
+  return `<div class="qt-h"><b>${esc(m[0])}</b></div>${mm}${exits}${mobs ? `<h5>Monsters (spawn points)</h5><ul class="mmobs">${mobs}</ul>` : ""}`;
+}
+function npcTip(id){
+  const [name, locs] = D.npcs[id] || ["", []], img = D.npcimg[id], here = locs[0];
+  const [mm] = here ? minimap(here[0], [here[1], here[2]]) : [""];
+  const mapName = l => D.maps[l[0]]?.[0] || D.mapnames[l[0]] || "map " + l[0];
+  return `<div class="spritehead">${img ? `<img class="sprite" src="data:image/png;base64,${img}" alt="">` : ""}<div class="qt-h"><b>${esc(name)}</b>
+      <span>${here ? `Stands in ${esc(mapName(here))}${locs.length > 1 ? ` and ${locs.slice(1).map(l => esc(mapName(l))).join(", ")}` : ""}` : "Not on a launch map (Orbis, El Nath, Forgotten Hollow or an event)"}</span></div></div>
+    ${here ? mm + `<p class="sub">★ is where ${esc(name)} stands.</p>` : ""}`;
+}
+function mobTip(id){
+  const m = D.mobs[id]; if (!m) return "";
+  const [name, lv, hp, ex, eva, pdd, mdd, el, undead] = m, img = D.mobimg[id];
+  const els = Object.entries(el || {}).map(([e, v]) => `<span class="pill ${v === "Weak" ? "p-good" : v === "Immune" ? "p-bad" : "p-warn"}">${esc(v === "Weak" ? "weak to " : v === "Immune" ? "immune to " : "resists ")}${esc(e)}</span>`).join(" ");
+  const where = Object.entries(D.maps).filter(([, mp]) => mp[1]).map(([mid, mp]) => [mp[0], (mp[2].find(s => String(s[0]) === id) || [0, 0])[1]])
+    .filter(x => x[1]).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const row = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
+  return `<div class="spritehead">${img ? `<img class="sprite" src="data:image/png;base64,${img}" alt="">` : ""}<div class="qt-h"><b>${esc(name)}</b><span>Level ${lv}${undead ? " · undead" : ""}${D.latermobs.includes(id) ? " · not at launch" : ""}</span></div></div>
+    <dl class="mstats">${row("HP", fmt(hp))}${row("EXP", fmt(ex))}${row("Avoid", eva)}${row("W.DEF", pdd)}${row("M.DEF", mdd)}</dl>
+    ${els ? `<p class="mels">${els}</p>` : ""}
+    ${where.length ? `<h5>Most spawns</h5><ul class="mmobs">${where.map(([n, c]) => `<li>${esc(n)} <span>×${c}</span></li>`).join("")}</ul>` : ""}`;
 }
 function showQtip(el){
   if (el.dataset.item){ qtip.innerHTML = itemTip(el); qtip.className = "itemtip" }
   else if (el.dataset.map){ qtip.innerHTML = mapTip(el.dataset.map); qtip.className = "maptip" }
+  else if (el.dataset.npc){ qtip.innerHTML = npcTip(el.dataset.npc); qtip.className = "maptip" }
+  else if (el.dataset.mob){ qtip.innerHTML = mobTip(el.dataset.mob); qtip.className = "maptip" }
   else { const r = (el.dataset.src === "cit" ? D.citq : D.quests)[+el.dataset.i]; if (!r) return; qtip.innerHTML = questTip(r); qtip.className = "" }
   qtip.hidden = false;
   placeQtip(el);
@@ -125,9 +152,9 @@ function placeQtip(el){
   qtip.style.left = x + "px"; qtip.style.top = y + "px";
 }
 const hideQtip = () => { qtip.hidden = true };
-document.addEventListener("mouseover", e => { const el = e.target.closest && e.target.closest(".qname, .ri, .mname"); if (el) showQtip(el) });
-document.addEventListener("mouseout", e => { if (e.target.closest && e.target.closest(".qname, .ri, .mname")) hideQtip() });
-document.addEventListener("focusin", e => { const el = e.target.closest && e.target.closest(".qname, .ri, .mname"); if (el) showQtip(el) });
+document.addEventListener("mouseover", e => { const el = e.target.closest && e.target.closest(".qname, .ri, .mname, .nname, .mobname"); if (el) showQtip(el) });
+document.addEventListener("mouseout", e => { if (e.target.closest && e.target.closest(".qname, .ri, .mname, .nname, .mobname")) hideQtip() });
+document.addEventListener("focusin", e => { const el = e.target.closest && e.target.closest(".qname, .ri, .mname, .nname, .mobname"); if (el) showQtip(el) });
 document.addEventListener("focusout", hideQtip);
 document.querySelectorAll(".tblwrap").forEach(w => w.addEventListener("scroll", hideQtip, {passive:true}));
 addEventListener("scroll", hideQtip, {passive:true});
