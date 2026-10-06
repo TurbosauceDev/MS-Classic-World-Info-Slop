@@ -54,7 +54,7 @@ function render(){
 
   $("#cstory").innerHTML = story.sort((a, b) => a.grade - b.grade || a.id - b.id).map(r => `<tr>
     <td class="num">${r.lvl}</td><td class="num">${r.grade}</td><td>${qn(r)}<div class="sub">${npcLink(r.npc)}</div></td>
-    <td class="sub">${esc(clean(r.req))}</td><td class="num">${fmt(r.exp)}</td><td class="num">${fmt(r.mesos)}</td>
+    <td class="sub">${reqHTML(r, true)}</td><td class="num">${fmt(r.exp)}</td><td class="num">${fmt(r.mesos)}</td>
     <td class="num">${fmt(r.contrib)}</td><td>${rewardCell(r)}</td></tr>`).join("");
 
   const pairs = {};
@@ -65,7 +65,7 @@ function render(){
   $("#cdailynote").textContent = `Meet each resident once, then their "Asking After" quest becomes a repeatable daily. The board offers 1 daily a day from this pool of ${daily.length}. Contribution per daily depends on your grade (see the table above), not on the quest.`;
 
   $("#cweekly").innerHTML = weekly.sort((a, b) => a.grade - b.grade || a.contrib - b.contrib).map(r => `<tr>
-    <td class="num">${r.grade}</td><td>${qn(r)}<div class="sub">${esc(clean(r.req))}</div></td><td class="num">${fmt(r.exp)}</td>
+    <td class="num">${r.grade}</td><td>${qn(r)}<div class="sub">${reqHTML(r, true)}</div></td><td class="num">${fmt(r.exp)}</td>
     <td class="num">${fmt(r.mesos)}</td><td class="num">${fmt(r.contrib)}</td><td>${rewardCell(r)}</td></tr>`).join("");
 
   $("#cshops").innerHTML = shops.map(([shop, npc, items]) => `<div class="fact"><h3>${esc(shop)} <span class="sub">· ${esc(npc)}</span></h3>
