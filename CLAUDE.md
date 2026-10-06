@@ -40,7 +40,8 @@ python3 scripts/build_data.py           # only when data logic or the export cha
 python3 scripts/build.py                # after any src/ change
 node tests/smoke.js                     # needs: npm i -D playwright (or global)
 ```
-Open `dist/index.html` directly in a browser — no server needed. The page must stay one self-contained file
+Open `dist/index.html` directly in a browser — no server needed. Published artifact (republish `dist/index.html` to this URL after
+every change): https://claude.ai/artifact/Facfj1DVkTNyQyrbHHFQcH The page must stay one self-contained file
 (it's also published as a claude.ai artifact): no external requests except Google Fonts.
 
 ## Conventions
