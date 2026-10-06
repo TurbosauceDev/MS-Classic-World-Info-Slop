@@ -301,7 +301,7 @@ table.mini td,table.mini th{padding:6px 8px}
     <label>Class<select id="cls">
       <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
       <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
-    <label>Your level<input id="lvl" type="number" min="10" max="70" value="25"></label>
+    <label>Your level<input id="lvl" type="number" min="10" max="100" value="25"></label>
     <label>Damage per second<input id="dps" type="number" min="50" max="20000" step="50" value="500"></label>
   </div>
   <p class="note" id="mapnote"></p>
@@ -454,15 +454,16 @@ const ELEMS = {"I/L Wizard":["Ice","Lightning"],"F/P Wizard":["Fire","Poison"],"
 const EMULT = {Weak:1.25, Strong:0.75, Immune:0};
 function classAcc(cls, L){
   const prim = 5*L + 20 - L - 8, sec = L;
-  if (cls === "Warrior") return (sec*1.2 + L*2 + 2.4)/2.5 + 10 + (L >= 15 ? 50 : 0);
+  if (cls === "Warrior") return (sec*1.2 + L*2 + 2.4)/2.5 + 10 + (L >= 15 ? 20 : 0);
   if (cls === "Bowman")  return (prim*1.2 + L*2 + 2.4)/4.8 + 20;
-  if (cls === "Thief")   return (sec*1.2 + L*2 + prim*0.6)/4 + 15 + (L >= 15 ? 20 : 0);
+  if (cls === "Thief")   return (sec*1.2 + L*2 + prim*0.6)/4 + 15 + (L >= 15 ? 15 : 0);
   return (prim*1.2 + L*2 + sec*0.6)/5.1 + 20;
 }
 
+let ACC_FROM_BUILDER = null; // set by "Use this in Where to train"; cleared when class or level is changed here
 function rankMaps(){
   let cls = $("#cls").value, L = +$("#lvl").value || 25, dps = +$("#dps").value || 20*L;
-  const magic = MAGIC.has(cls), acc = classAcc(magic ? "Magician" : cls, L), els = ELEMS[cls] || [];
+  const magic = MAGIC.has(cls), acc = ACC_FROM_BUILDER ?? classAcc(magic ? "Magician" : cls, L), els = ELEMS[cls] || [];
   const rows = [];
   for (const [mid, [name, open, spawns]] of Object.entries(D.maps)){
     if (!open) continue;
@@ -494,9 +495,13 @@ function rankMaps(){
     <td class="num">${fmt(r.rate*3600)}</td>
     <td class="num">${need ? (need/(r.rate*3600)).toFixed(1) : "–"}</td></tr>`).join("")
     : `<tr><td colspan="9" class="empty">No map fits this level and class. Try a different level.</td></tr>`;
-  $("#mapnote").innerHTML = `Assumed accuracy at level ${L}: <b>${Math.round(acc)}</b> (all AP in your main stat, secondary stat equal to your level, no accuracy gear${cls==="Warrior"&&L>=15?", Precise Strikes maxed":cls==="Thief"&&L>=15?", Nimble Body maxed":""}). Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP. EXP/hr is a model estimate, solo, single-target.`;
+  $("#mapnote").innerHTML = (ACC_FROM_BUILDER != null ? `Accuracy <b>${Math.round(acc)}</b> from your Character Builder setup.`
+    : `Assumed accuracy at level ${L}: <b>${Math.round(acc)}</b> (all AP in your main stat, secondary stat equal to your level, no accuracy gear${cls==="Warrior"&&L>=15?", Precise Strikes maxed":cls==="Thief"&&L>=15?", Nimble Body maxed":""}).`)
+    + (need ? ` Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP.` : ` The EXP table we have stops at level 70, so hours per level are blank above it.`)
+    + ` EXP/hr is a model estimate, solo, single-target.`;
 }
-["#cls","#lvl","#dps"].forEach(s => $(s).addEventListener("input", rankMaps));
+["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; rankMaps() }));
+$("#dps").addEventListener("input", rankMaps);
 $("#lvl").addEventListener("change", () => { $("#dps").value = Math.max(50, 20 * (+$("#lvl").value || 25)); rankMaps() });
 $("#dps").value = 20 * +$("#lvl").value;
 rankMaps();
@@ -517,7 +522,7 @@ function renderQuests(){
   const val = {lvl: r => r.lvl, name: r => r.name.toLowerCase(), exp: r => r.exp, pct: r => r.pct_level, mult: r => r.mult, kills: r => r.eq_kills, reward: r => (r.reward && r.reward.trim()) ? 1 : 0, chain: r => r.chain ? 1 : 0, cpos: r => r.cpos}[k];
   q.sort((a,b) => {
     const x = val(a), y = val(b);
-    if (x == null || y == null) return (x == null) - (y == null); // blanks always last
+    if (x == null || y == null) return (x == null) - (y == null) || b.exp - a.exp; // blanks always last
     const c = typeof x === "string" ? x.localeCompare(y) : x - y;
     return c * dir || b.exp - a.exp;
   });
@@ -621,9 +626,9 @@ document.querySelectorAll("#qhead th[data-k] button").forEach(b => b.addEventLis
   try { localStorage.setItem("qsort", JSON.stringify(QSORT)) } catch(e) {}
   renderQuests();
 }));
-["#qmin","#qmax","#qsearch"].forEach(s => $(s).addEventListener("input", renderQuests));
+["#qmin","#qmax","#qsearch"].forEach(s => $(s).addEventListener("input", () => { QCHAIN = null; renderQuests() }));
 $("#qeq").addEventListener("click", () => {
-  const on = $("#qeq").getAttribute("aria-pressed") !== "true";
+  const on = $("#qeq").getAttribute("aria-pressed") !== "true"; QCHAIN = null;
   $("#qeq").setAttribute("aria-pressed", on);
   try { localStorage.setItem("qeq", on ? "1" : "") } catch(e) {}
   renderQuests();
@@ -699,7 +704,7 @@ renderDiff();
   const facts = [
     [`${ch} of ${sk.length} skills changed`, `${nw} are new to their job compared with 2008, including mobility skills like Rush and moved skills.`],
     [`${expUp} monsters give more EXP, ${expDown} give less`, `Out of ${withOld.length} launch-area monsters that also exist in the 2008 client.`],
-    [`${accUp} monsters hit more accurately`, `Monster accuracy went up across the board, so evasion builds are weaker than you remember.`],
+    [`${accUp} monsters hit more accurately`, `${accUp} of ${withOld.length} gained accuracy and ${withOld.filter(r => r[2].acc[1] < r[2].acc[0]).length} lost some, so evasion builds are mostly weaker than you remember.`],
     [`${newM} monsters are new`, `Monsters in the launch areas with no 2008 counterpart.`]
   ];
   $("#difffacts").innerHTML = facts.map(([h,p]) => `<div class="fact"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join("");
@@ -741,7 +746,7 @@ function render(){
 
   $("#cfacts").innerHTML = [
     ["How to join", `At level 12, sign up with ${JOIN[town]}. The intro quest gives ${esc(intro ? intro.reward.replace(/;/g, ",") : "potions")}.`],
-    ["Daily board", `${daily.length / 2} residents to meet. Each daily gives ${fmt(byGrade[0])} contribution at grade 1, rising 50 per grade to ${fmt(byGrade[9])}. VIP residents unlock at grade 5 and give much more EXP.`],
+    ["Daily board", `${new Set(daily.map(r => r.name.replace(/^(First Greeting with|Asking After) /, "").split(",")[0].replace(/\.$/, "").trim())).size} residents to meet. Each daily gives ${fmt(byGrade[0])} contribution at grade 1, rising 50 per grade to ${fmt(byGrade[9])}. VIP residents unlock at grade 5 and give much more EXP.`],
     ["Weekly donation", `Bring 100 of a monster drop for ${fmt(Math.min(...weekly.map(r => r.contrib)))}–${fmt(Math.max(...weekly.map(r => r.contrib)))} contribution plus up to ${fmt(Math.max(...weekly.map(r => r.exp)))} EXP.`],
     ["Top reward", `${earring} at Citizen of Honor: level 57, M.DEF +42, Avoid +2, Crit damage +2%, 5 slots. Plus 25% off shops and Elixirs for 3,000 mesos.`]
   ].map(([h, p]) => `<div class="fact"><h3>${esc(h)}</h3><p>${p}</p></div>`).join("");
@@ -816,6 +821,7 @@ const AMMO = {Claw:[["Subi Throwing Stars",15],["Wolbi Throwing Stars",17],["Mok
 const HIDDEN_WEAPON = w => /Wizet|GM\b/.test(w[0]) || (w[11] === 1 && /Tube$/.test(w[0]));
 const W = D.weapons.filter(w => !HIDDEN_WEAPON(w)).map(w => ({name:w[0], type:w[1], lvl:w[2], STR:w[3], DEX:w[4], INT:w[5], LUK:w[6], pad:w[7], mad:w[8], spd:w[9], job:w[10]}));
 const SK = D.skills; // job name -> skills from the COT2 export
+const OPEN_MOBS = new Set(Object.values(D.maps).filter(m => m[1]).flatMap(m => m[2].map(([id]) => String(id))));
 const BASIC = {id:"basic", n:"Basic attack", max:0};
 
 let S = {cls:"Warrior", lvl:30, branch:"Fighter", weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true};
@@ -963,7 +969,7 @@ function calc(sp){
   const interval = 0.42 + 0.06 * stage;
   const dps = perCast / interval;
 
-  const near = Object.entries(D.mobs).filter(([id]) => !D.latermobs.includes(id)).map(([, m]) => m).filter(m => m[1] >= L - 3 && m[1] <= L + 6)
+  const near = Object.entries(D.mobs).filter(([id]) => OPEN_MOBS.has(id)).map(([, m]) => m).filter(m => m[1] >= L - 3 && m[1] <= L + 6)
     .filter((m, i, arr) => arr.findIndex(x => x[0] === m[0]) === i).sort((a,b) => a[1] - b[1]).slice(0, 10);
   const even = near.filter(m => Math.abs(m[1] - L) <= 3);
   const hitAvg = even.length ? even.reduce((a, m) => a + hitProb(acc, m[4], m[1] - L), 0) / even.length : 1;
@@ -1087,7 +1093,7 @@ function renderSkills(){
 function render(){
   const L = S.lvl, ap = S.ap, cls = S.cls, br = S.branch;
   const r = calc(S.sp), w = r.w;
-  S.dps = Math.round(r.dps);
+  S.dps = Math.round(r.dps); S.acc = r.acc;
   const left = apTotal(L) - (ap.STR + ap.DEX + ap.INT + ap.LUK);
   $("#papleft").textContent = left === 0 ? "All AP spent" : left > 0 ? `${left} AP unspent` : `${-left} AP over budget`;
   $("#papleft").className = "pill " + (left === 0 ? "p-good" : "p-warn");
@@ -1159,8 +1165,9 @@ $("#psend").addEventListener("click", () => {
   const map = {Magician:"Magician","F/P Wizard":"F/P Wizard","I/L Wizard":"I/L Wizard",Cleric:"Cleric"};
   const mcls = S.cls === "Magician" ? (map[S.branch] || "Magician") : S.cls;
   $("#cls").value = (S.cls === "Magician" && S.lvl < 30) ? "Magician" : mcls;
-  $("#lvl").value = Math.min(70, S.lvl);
+  $("#lvl").value = S.lvl;
   $("#dps").value = Math.max(50, S.dps || 50);
+  ACC_FROM_BUILDER = S.acc ?? null;
   document.querySelector('[data-tab="maps"]').click();
   rankMaps();
 });

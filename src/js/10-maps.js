@@ -12,15 +12,16 @@ const ELEMS = {"I/L Wizard":["Ice","Lightning"],"F/P Wizard":["Fire","Poison"],"
 const EMULT = {Weak:1.25, Strong:0.75, Immune:0};
 function classAcc(cls, L){
   const prim = 5*L + 20 - L - 8, sec = L;
-  if (cls === "Warrior") return (sec*1.2 + L*2 + 2.4)/2.5 + 10 + (L >= 15 ? 50 : 0);
+  if (cls === "Warrior") return (sec*1.2 + L*2 + 2.4)/2.5 + 10 + (L >= 15 ? 20 : 0);
   if (cls === "Bowman")  return (prim*1.2 + L*2 + 2.4)/4.8 + 20;
-  if (cls === "Thief")   return (sec*1.2 + L*2 + prim*0.6)/4 + 15 + (L >= 15 ? 20 : 0);
+  if (cls === "Thief")   return (sec*1.2 + L*2 + prim*0.6)/4 + 15 + (L >= 15 ? 15 : 0);
   return (prim*1.2 + L*2 + sec*0.6)/5.1 + 20;
 }
 
+let ACC_FROM_BUILDER = null; // set by "Use this in Where to train"; cleared when class or level is changed here
 function rankMaps(){
   let cls = $("#cls").value, L = +$("#lvl").value || 25, dps = +$("#dps").value || 20*L;
-  const magic = MAGIC.has(cls), acc = classAcc(magic ? "Magician" : cls, L), els = ELEMS[cls] || [];
+  const magic = MAGIC.has(cls), acc = ACC_FROM_BUILDER ?? classAcc(magic ? "Magician" : cls, L), els = ELEMS[cls] || [];
   const rows = [];
   for (const [mid, [name, open, spawns]] of Object.entries(D.maps)){
     if (!open) continue;
@@ -52,9 +53,13 @@ function rankMaps(){
     <td class="num">${fmt(r.rate*3600)}</td>
     <td class="num">${need ? (need/(r.rate*3600)).toFixed(1) : "–"}</td></tr>`).join("")
     : `<tr><td colspan="9" class="empty">No map fits this level and class. Try a different level.</td></tr>`;
-  $("#mapnote").innerHTML = `Assumed accuracy at level ${L}: <b>${Math.round(acc)}</b> (all AP in your main stat, secondary stat equal to your level, no accuracy gear${cls==="Warrior"&&L>=15?", Precise Strikes maxed":cls==="Thief"&&L>=15?", Nimble Body maxed":""}). Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP. EXP/hr is a model estimate, solo, single-target.`;
+  $("#mapnote").innerHTML = (ACC_FROM_BUILDER != null ? `Accuracy <b>${Math.round(acc)}</b> from your Character Builder setup.`
+    : `Assumed accuracy at level ${L}: <b>${Math.round(acc)}</b> (all AP in your main stat, secondary stat equal to your level, no accuracy gear${cls==="Warrior"&&L>=15?", Precise Strikes maxed":cls==="Thief"&&L>=15?", Nimble Body maxed":""}).`)
+    + (need ? ` Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP.` : ` The EXP table we have stops at level 70, so hours per level are blank above it.`)
+    + ` EXP/hr is a model estimate, solo, single-target.`;
 }
-["#cls","#lvl","#dps"].forEach(s => $(s).addEventListener("input", rankMaps));
+["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; rankMaps() }));
+$("#dps").addEventListener("input", rankMaps);
 $("#lvl").addEventListener("change", () => { $("#dps").value = Math.max(50, 20 * (+$("#lvl").value || 25)); rankMaps() });
 $("#dps").value = 20 * +$("#lvl").value;
 rankMaps();

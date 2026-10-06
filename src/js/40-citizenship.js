@@ -33,7 +33,7 @@ function render(){
 
   $("#cfacts").innerHTML = [
     ["How to join", `At level 12, sign up with ${JOIN[town]}. The intro quest gives ${esc(intro ? intro.reward.replace(/;/g, ",") : "potions")}.`],
-    ["Daily board", `${daily.length / 2} residents to meet. Each daily gives ${fmt(byGrade[0])} contribution at grade 1, rising 50 per grade to ${fmt(byGrade[9])}. VIP residents unlock at grade 5 and give much more EXP.`],
+    ["Daily board", `${new Set(daily.map(r => r.name.replace(/^(First Greeting with|Asking After) /, "").split(",")[0].replace(/\.$/, "").trim())).size} residents to meet. Each daily gives ${fmt(byGrade[0])} contribution at grade 1, rising 50 per grade to ${fmt(byGrade[9])}. VIP residents unlock at grade 5 and give much more EXP.`],
     ["Weekly donation", `Bring 100 of a monster drop for ${fmt(Math.min(...weekly.map(r => r.contrib)))}–${fmt(Math.max(...weekly.map(r => r.contrib)))} contribution plus up to ${fmt(Math.max(...weekly.map(r => r.exp)))} EXP.`],
     ["Top reward", `${earring} at Citizen of Honor: level 57, M.DEF +42, Avoid +2, Crit damage +2%, 5 slots. Plus 25% off shops and Elixirs for 3,000 mesos.`]
   ].map(([h, p]) => `<div class="fact"><h3>${esc(h)}</h3><p>${p}</p></div>`).join("");

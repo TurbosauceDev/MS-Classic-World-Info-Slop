@@ -13,7 +13,7 @@ function renderQuests(){
   const val = {lvl: r => r.lvl, name: r => r.name.toLowerCase(), exp: r => r.exp, pct: r => r.pct_level, mult: r => r.mult, kills: r => r.eq_kills, reward: r => (r.reward && r.reward.trim()) ? 1 : 0, chain: r => r.chain ? 1 : 0, cpos: r => r.cpos}[k];
   q.sort((a,b) => {
     const x = val(a), y = val(b);
-    if (x == null || y == null) return (x == null) - (y == null); // blanks always last
+    if (x == null || y == null) return (x == null) - (y == null) || b.exp - a.exp; // blanks always last
     const c = typeof x === "string" ? x.localeCompare(y) : x - y;
     return c * dir || b.exp - a.exp;
   });
@@ -117,9 +117,9 @@ document.querySelectorAll("#qhead th[data-k] button").forEach(b => b.addEventLis
   try { localStorage.setItem("qsort", JSON.stringify(QSORT)) } catch(e) {}
   renderQuests();
 }));
-["#qmin","#qmax","#qsearch"].forEach(s => $(s).addEventListener("input", renderQuests));
+["#qmin","#qmax","#qsearch"].forEach(s => $(s).addEventListener("input", () => { QCHAIN = null; renderQuests() }));
 $("#qeq").addEventListener("click", () => {
-  const on = $("#qeq").getAttribute("aria-pressed") !== "true";
+  const on = $("#qeq").getAttribute("aria-pressed") !== "true"; QCHAIN = null;
   $("#qeq").setAttribute("aria-pressed", on);
   try { localStorage.setItem("qeq", on ? "1" : "") } catch(e) {}
   renderQuests();

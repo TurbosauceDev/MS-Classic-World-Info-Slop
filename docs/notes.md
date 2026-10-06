@@ -33,7 +33,8 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - **Attack interval** = 0.42 + 0.06 × speed stage; booster −2 stages. Not from the client — DPS is approximate.
 - **Ammo attack** (stars, arrows) uses old-game values; the export has none.
 - **Map ranking**: time per kill = effective HP / DPS + 1.0 s; rate = min(map EXP / time, map EXP × 0.75 / 7.56 s respawn).
-  Default DPS = 20 × level (the builder can send its own). Maps need ≥8 mobs; bosses and mob_time > 60 excluded.
+  Default DPS = 20 × level. Accuracy assumes all AP in the main stat, secondary = level, Precise Strikes (+20) / Nimble Body (+15)
+  maxed from level 15. "Use this in Where to train" sends the builder's DPS and real accuracy instead (cleared when class/level is edited there). Maps need ≥8 mobs; bosses and mob_time > 60 excluded.
   meowdb's "max EXP/hr" ceiling = full-clear EXP × 0.75 × 3600 / 7.56 (verified exactly).
 - **SP**: 1 at each job advancement + 3/level. 1st job = 61 (levels 10–30) and can only go into 1st job skills;
   2nd job = 1 + 3×(L−30). Spare SP shows once every visible 2nd-job skill is maxed (3rd job not in launch).
@@ -67,7 +68,8 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   eq_mob, pct_level, reward, rep (daily/weekly), id, grade, contrib, contrib_by_grade, town, pool, one_time,
   chain, cpos, cn, ri (reward groups {k: get|pick|rand, job, it: [[itemId, count, chance%]]}), info (tooltip: d, req, mesos, items, start, prev, next, chain, rep, contrib, eq)
 - `items` {itemId: {n, c category, s sub, st stats, job, p price, d desc, wt weapon type, spd, sp spec}}; `iicons` {itemId: base64}
-- `latermobs` [mobId], `latermobnames` [name]
+- `latermobs` [mobId], `latermobnames` [name] (from monsters.json map lists; Fairy 2 slips through because its only spawn in
+  `maps` is Forgotten Hollow, so the builder filters by open-map spawns instead)
 
 ## Ideas not done yet
 - Hide/show toggle for quest columns on phones; Citizenship grade-progress estimator (needs confirmed daily limits).

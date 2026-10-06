@@ -65,7 +65,7 @@ renderDiff();
   const facts = [
     [`${ch} of ${sk.length} skills changed`, `${nw} are new to their job compared with 2008, including mobility skills like Rush and moved skills.`],
     [`${expUp} monsters give more EXP, ${expDown} give less`, `Out of ${withOld.length} launch-area monsters that also exist in the 2008 client.`],
-    [`${accUp} monsters hit more accurately`, `Monster accuracy went up across the board, so evasion builds are weaker than you remember.`],
+    [`${accUp} monsters hit more accurately`, `${accUp} of ${withOld.length} gained accuracy and ${withOld.filter(r => r[2].acc[1] < r[2].acc[0]).length} lost some, so evasion builds are mostly weaker than you remember.`],
     [`${newM} monsters are new`, `Monsters in the launch areas with no 2008 counterpart.`]
   ];
   $("#difffacts").innerHTML = facts.map(([h,p]) => `<div class="fact"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join("");

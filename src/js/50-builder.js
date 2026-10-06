@@ -29,6 +29,7 @@ const AMMO = {Claw:[["Subi Throwing Stars",15],["Wolbi Throwing Stars",17],["Mok
 const HIDDEN_WEAPON = w => /Wizet|GM\b/.test(w[0]) || (w[11] === 1 && /Tube$/.test(w[0]));
 const W = D.weapons.filter(w => !HIDDEN_WEAPON(w)).map(w => ({name:w[0], type:w[1], lvl:w[2], STR:w[3], DEX:w[4], INT:w[5], LUK:w[6], pad:w[7], mad:w[8], spd:w[9], job:w[10]}));
 const SK = D.skills; // job name -> skills from the COT2 export
+const OPEN_MOBS = new Set(Object.values(D.maps).filter(m => m[1]).flatMap(m => m[2].map(([id]) => String(id))));
 const BASIC = {id:"basic", n:"Basic attack", max:0};
 
 let S = {cls:"Warrior", lvl:30, branch:"Fighter", weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true};
@@ -176,7 +177,7 @@ function calc(sp){
   const interval = 0.42 + 0.06 * stage;
   const dps = perCast / interval;
 
-  const near = Object.entries(D.mobs).filter(([id]) => !D.latermobs.includes(id)).map(([, m]) => m).filter(m => m[1] >= L - 3 && m[1] <= L + 6)
+  const near = Object.entries(D.mobs).filter(([id]) => OPEN_MOBS.has(id)).map(([, m]) => m).filter(m => m[1] >= L - 3 && m[1] <= L + 6)
     .filter((m, i, arr) => arr.findIndex(x => x[0] === m[0]) === i).sort((a,b) => a[1] - b[1]).slice(0, 10);
   const even = near.filter(m => Math.abs(m[1] - L) <= 3);
   const hitAvg = even.length ? even.reduce((a, m) => a + hitProb(acc, m[4], m[1] - L), 0) / even.length : 1;
@@ -300,7 +301,7 @@ function renderSkills(){
 function render(){
   const L = S.lvl, ap = S.ap, cls = S.cls, br = S.branch;
   const r = calc(S.sp), w = r.w;
-  S.dps = Math.round(r.dps);
+  S.dps = Math.round(r.dps); S.acc = r.acc;
   const left = apTotal(L) - (ap.STR + ap.DEX + ap.INT + ap.LUK);
   $("#papleft").textContent = left === 0 ? "All AP spent" : left > 0 ? `${left} AP unspent` : `${-left} AP over budget`;
   $("#papleft").className = "pill " + (left === 0 ? "p-good" : "p-warn");
@@ -372,8 +373,9 @@ $("#psend").addEventListener("click", () => {
   const map = {Magician:"Magician","F/P Wizard":"F/P Wizard","I/L Wizard":"I/L Wizard",Cleric:"Cleric"};
   const mcls = S.cls === "Magician" ? (map[S.branch] || "Magician") : S.cls;
   $("#cls").value = (S.cls === "Magician" && S.lvl < 30) ? "Magician" : mcls;
-  $("#lvl").value = Math.min(70, S.lvl);
+  $("#lvl").value = S.lvl;
   $("#dps").value = Math.max(50, S.dps || 50);
+  ACC_FROM_BUILDER = S.acc ?? null;
   document.querySelector('[data-tab="maps"]').click();
   rankMaps();
 });
