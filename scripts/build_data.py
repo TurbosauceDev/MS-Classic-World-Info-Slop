@@ -1,4 +1,4 @@
-"""Build data/data.json (everything the page embeds) from the OSMS Data Explorer COT2 export.
+"""Build data/data.json (everything the page embeds) from the OSMS Data Explorer export (Public Release, Oct 6 2026; was COT2).
 
 Run:  python3 scripts/build_data.py      (then python3 scripts/build.py)
 Needs the export at vendor/osms_datamine_dashboard (scripts/fetch_osms.sh) or OSMS_DATA=/path/to/data/.
@@ -67,7 +67,7 @@ def step_skills(D):
     for gs in src.values():
         if not isinstance(gs, list): continue
         for g in gs:
-            if g["class_name"] not in JOBS: continue
+            if not isinstance(g, dict) or g["class_name"] not in JOBS: continue
             L = []
             for s in g["skills"]:
                 req = []
@@ -502,7 +502,9 @@ if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.arg
 
 if __name__ == "__main__":
     D = step_base()
-    step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D); step_crafting(D); step_extras(D)
+    step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D)
+    D = json.loads(json.dumps(D))  # str keys, as in the partial rebuild path (crafting/extras look mobs up by str id)
+    step_crafting(D); step_extras(D)
     for k in ("mobdiff", "skilldiff", "latermobnames"): D.pop(k, None)   # only the removed "What changed since 2008" tab used these
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees
     (ROOT / "data").mkdir(exist_ok=True)
