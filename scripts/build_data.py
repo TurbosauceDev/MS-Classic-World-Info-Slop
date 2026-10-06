@@ -214,6 +214,23 @@ def step_mobimg(D):
         if f.exists() and f.stat().st_size: out[mid] = base64.b64encode(f.read_bytes()).decode()
     D["mobimg"] = out
 
+def step_nav(D):
+    """nav {mapId: [neighbour mapIds]}: walkable links between launch maps (map exits, made two-way); cabs [town mapIds with
+    a Regular/VIP Cab or Phil] for taxi hops. Names of every nav map go into mapnames."""
+    look = json.load(open(C + "lookups.json"))["npc_names"]
+    cabnpc = {i for i, n in look.items() if n in ("Regular Cab", "VIP Cab", "Phil")}
+    nav, cabs = collections.defaultdict(set), set()
+    for r in a.mapsj["regions"]:
+        for m in r["maps"]:
+            if a.launch_status(m["id"]) != "Open at launch": continue
+            k = str(m["id"]); nav[k]
+            for e in m.get("exits") or []:
+                if a.launch_status(e) == "Open at launch": nav[k].add(str(e)); nav[str(e)].add(k)
+            if any(str(n) in cabnpc for n in m.get("npcs") or []): cabs.add(k)
+    D["nav"] = {k: sorted(v) for k, v in nav.items()}
+    D["cabs"] = sorted(cabs)
+    D["mapnames"].update({k: a.map_name.get(int(k), "") for k in nav})
+
 def step_minimaps(D):
     """mmaps {mapId: base64}: minimap of every open map, for the map hover card. WebP q80 (~1 MB for 177 maps) when
     Pillow is installed (pip install pillow), else the original PNGs (~1.9 MB). mmapType says which."""
@@ -293,7 +310,7 @@ def step_launch(D):
 
 if __name__ == "__main__":
     D = step_base()
-    step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D)
+    step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D)
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees
     (ROOT / "data").mkdir(exist_ok=True)
     s = json.dumps(D, separators=(",", ":"))

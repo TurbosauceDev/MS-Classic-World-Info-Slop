@@ -69,6 +69,11 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   not market value.
 - Item drops (Danny's assumption, 2026-10-06): 30% per kill, or 15% "cautious". Quest cost = kill reqs + ceil(missing / rate)
   kills of the source monster, overlapping per monster. Items with no known source (NPC-made, boxes) stay untimed.
+- Travel (estimates): walk 30 s per map crossed, cab 45 s between the 6 cab towns, NPC talk 60 s (30 s same NPC again; 180 s
+  all-in when the NPC has no launch spot). Dijkstra over `nav` + cab links. A quest = walk to its NPC, each kill monster at
+  the map minimising travel + kill time (kill time = max(n × kill time, n / (count × 0.75 / 7.56 s respawn))), then back.
+  Grind maps: score = (level EXP + drop credit) / (grind time + travel from where you are). Position starts in Lith Harbor
+  after the ship, unknown (no first-leg cost) when starting at 10+. Drop credit values saved kills at the quest's level.
 - Collecting ahead: while grinding, wanted drops (quests within 5 levels, accepted or not; assumes monster-named ETC items
   drop without the quest, as the guides advise saving them) go in a bag at kills/s = count × rate / cycle EXP × drop rate.
   Map score = (level EXP + credit) / time, credit per saved item = (kill time × best EXP/s − kill EXP) / drop rate,
@@ -119,6 +124,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   onto the minimap put 92% of monster spawn points on drawn platforms (uniform-scale variants: 86-91%).
 - `npcs` {npcId: [name, [[mapId, x, y]]]} (x/y minimap fractions), `npcid` {name: npcId}, `npcimg` {npcId: png}, `npcmaps`
   [mapIds with quest NPCs; their minimaps/portals are included even if they have no monsters]; `mobimg` {mobId: png thumbnail}
+- `nav` {mapId: [neighbour mapIds]} walkable launch-map graph from map exits (two-way); `cabs` [town mapIds with a cab NPC]
 - `latermobs` [mobId], `latermobnames` [name]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2
   (Someone Else's House) and Fairy 3 (Tree Dungeon, Forest Up North VI/VII): they ARE at launch, just not in the ranking.
 
