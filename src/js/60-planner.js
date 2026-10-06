@@ -44,13 +44,29 @@ function questCost(r, L, ch, lastNpc){
   return {sec, exp, kills};
 }
 
+// what a quest pays: mesos + NPC sell value of its items (guaranteed: all; pick 1: the best; random: expected value)
+const itemValue = r => (r.ri || []).reduce((a, g) => {
+  const v = g.it.map(([id, n, ch]) => (D.items[id]?.p || 0) * n * (ch != null ? ch / 100 : 1));
+  return a + (g.k === "get" ? v.reduce((x, y) => x + y, 0) : g.k === "pick" ? Math.max(0, ...v)
+    : g.it.some(i => i[2] != null) ? v.reduce((x, y) => x + y, 0) : v.reduce((x, y) => x + y, 0) / (v.length || 1));
+}, 0);
+const hasReward = r => r.mesos > 0 || (r.ri || []).length > 0;
+const vTier = r => VALUE[r.id]?.[0] || 9;
+const vClassOK = r => !VALUE[r.id]?.[3] || VALUE[r.id][3] === X.cls;
+const REWARD_MAP_FLOOR = 0.5;   // rewards mode: farm a map with the monsters your quests need if it's at least half the best EXP/hr (a judgment call)
+
 function plan(mode = X.mode){
   const steps = [], cut = X.cur - BELOW, done = new Set(D.quests.filter(r => r.lvl < cut).map(r => r.id));
-  const Q = pool().filter(r => timed(r) && r.lvl >= cut);
+  const RW = mode === "rewards";
+  let Q = pool().filter(r => (RW || timed(r)) && r.lvl >= cut);
+  if (RW){   // every quest that pays something (minus "Skip" and other classes' picks), plus whatever they need first
+    const want = Q.filter(r => hasReward(r) && vTier(r) !== 5 && vClassOK(r)), pre = new Set(want.flatMap(r => r.pre));
+    Q = Q.filter(r => want.includes(r) || pre.has(r.id));
+  }
   let L = X.cur, exp = 0, t = 0, cur = null, qExp = 0, gExp = 0, j1 = X.cur >= 10, j2 = X.cur >= 30, npc = null;
   const needed = new Set(Q.flatMap(r => r.pre));   // quests another quest needs first
   // community-picked valuable quests, shown as side tasks when their chain starts (their items can't be timed)
-  const VL = !X.val ? [] : Object.entries(VALUE).map(([id, v]) => { const r = D.quests.find(x => x.id === id); return r && {r, v, s: chainStart(r)} })
+  const VL = !X.val || RW ? [] : Object.entries(VALUE).map(([id, v]) => { const r = D.quests.find(x => x.id === id); return r && {r, v, s: chainStart(r)} })
     .filter(o => o && !SKIP.includes(o.r.region) && (!o.v[3] || o.v[3] === X.cls) && o.r.lvl >= cut && !(mode !== "grind" && Q.includes(o.r)))
     .sort((a, b) => a.s.lvl - b.s.lvl || a.r.lvl - b.r.lvl);
   let vi = 0;
@@ -97,27 +113,44 @@ function plan(mode = X.mode){
     let pick = null;
     if (mode !== "grind") for (const r of Q){
       if (done.has(r.id) || Math.max(1, r.lvl) > L || !r.pre.every(id => done.has(id))) continue;
-      if (!r.exp && !r.kl.length && !needed.has(r.id)) continue;   // no EXP and nothing depends on it
+      if (!r.exp && !r.kl.length && !needed.has(r.id) && !(RW && hasReward(r))) continue;   // no EXP, no reward, nothing needs it
       const c = questCost(r, L, ch, npc); if (!c) continue;
       const rate = c.exp / c.sec;
       if (mode === "mix" && X.fast && rate < G && !VALUE[r.id]) continue;
+      if (RW){   // best-rated first, then lowest level, then most mesos + item value
+        const val = r.mesos + itemValue(r);
+        if (!pick || (vTier(r) - vTier(pick.r) || r.lvl - pick.r.lvl || pick.val - val) < 0) pick = {r, c, rate, val};
+        continue;
+      }
       // lowest level first (the order they unlock), then fastest
       if (!pick || (r.lvl - pick.r.lvl || pick.rate - rate) < 0) pick = {r, c, rate};
     }
     if (pick){
       done.add(pick.r.id); npc = pick.r.npc; const sec = pick.c.sec * X.pace; t += sec; exp += pick.c.exp; qExp += pick.c.exp;
-      steps.push({k:"quest", L, r:pick.r, c:pick.c, sec, t, vs: G ? pick.rate / G : null});
+      steps.push({k:"quest", L, r:pick.r, c:pick.c, sec, t, vs: G && !RW ? pick.rate / G : null, drops: pick.r.il.length > 0});
       levelUp();
       continue;
     }
     if (mode === "quests"){ steps.push({k:"stop", L, exp}); break }
-    if (!grindOne(rates)){ steps.push({k:"nomap", L}); break }
+    let rows = rates, farm = [];
+    if (RW && rates.length){   // farm where the monsters for open or soon-open reward quests live
+      const need = new Map();
+      for (const r of Q) if (!done.has(r.id) && r.lvl <= L + 3) for (const [mid] of [...r.kl, ...r.il.filter(i => i[2]).map(i => [i[2]])]) if (D.mobs[mid]) need.set(String(mid), r);
+      const fav = rates.filter(m => m.rate >= REWARD_MAP_FLOOR * rates[0].rate && D.maps[m.id][2].some(([mid]) => need.has(String(mid))));
+      if (fav.length){ rows = fav; farm = need }
+    }
+    if (!grindOne(rows)){ steps.push({k:"nomap", L}); break }
+    const gs = steps[steps.length - 1];
+    if (farm.size) gs.farm = [...new Set(D.maps[gs.map.id][2].filter(([mid]) => farm.has(String(mid))).map(([mid]) => `${D.mobs[mid][0]} (${farm.get(String(mid)).name})`))];
     npc = null;
   }
-  return {steps, L, t, qExp, gExp, done};
+  const mesos = steps.filter(s => s.k === "quest").reduce((a, s) => a + s.r.mesos, 0), items = steps.filter(s => s.k === "quest").reduce((a, s) => a + itemValue(s.r), 0);
+  return {steps, L, t, qExp, gExp, done, mesos, items};
 }
 
 const hm = s => s < 3600 ? `${Math.max(1, Math.round(s / 60))} min` : `${(s / 3600).toFixed(s < 36000 ? 1 : 0)} h`;
+const rvCell = r => { const iv = itemValue(r);
+  return `<td class="num rv">${r.mesos ? `${fmt(r.mesos)} <span class="sub">mesos</span>` : ""}${iv ? `<div class="sub">items ≈ ${fmt(iv)}</div>` : ""}${!r.mesos && !iv ? "–" : ""}</td>` };
 const qlink = r => `<span class="name qname" tabindex="0" data-src="q" data-i="${qIndex.get(r)}">${esc(r.name)}</span>`;
 
 function fill(){
@@ -133,7 +166,7 @@ function fill(){
   X.cur = Math.min(69, Math.max(1, Math.round(X.cur) || 1)); X.goal = Math.min(MAXL, Math.max(X.cur + 1, Math.round(X.goal) || X.cur + 1));
   $("#xisland").checked = X.island; $("#xislandwrap").hidden = X.cur >= 10;
   $("#xval").checked = X.val;
-  $("#xfast").checked = X.fast; $("#xfastwrap").hidden = X.mode !== "mix";
+  $("#xfast").checked = X.fast; $("#xfastwrap").hidden = X.mode !== "mix"; $("#xvalwrap").hidden = X.mode === "rewards";
   $("#xcur").value = X.cur; $("#xgoal").value = X.goal; $("#xpace").value = String(X.pace);
 }
 
@@ -149,6 +182,7 @@ function render(){
     [stop ? `Stops at level ${stop.L}` : `About ${hm(P.t)} to level ${X.goal}`,
       stop ? (stop.k === "stop" ? `Quests that can be timed run out at level ${stop.L}${X.goal > stop.L ? `, ${X.goal - stop.L} short of your goal. Switch to "Quests + grinding" to finish.` : "."}` : `No training map fits level ${stop.L}.`)
            : `From level ${X.cur} at ${X.pace === 1 ? "perfect-play" : X.pace === 2 ? "relaxed" : "average"} pace. Estimate.`],
+    ...(X.mode === "rewards" ? [[`${fmt(P.mesos)} mesos + items worth ≈ ${fmt(P.items)} to NPCs`, `From ${nq} quests, ${S.filter(s => s.k === "quest" && vTier(s.r) === 1).length} of them rated Must do. NPC sell value is a floor: rated items (Sauna Robe, scrolls) sell for far more to players.`]] : []),
     [`${nq} quests · ${maps} training map${maps === 1 ? "" : "s"}${nv ? ` · ${nv} valuable side quests` : ""}`, tot ? `${Math.round(100 * P.qExp / tot)}% of the EXP from quests (including the kills they ask for), ${Math.round(100 * P.gExp / tot)}% from grinding.` : ""],
     ...(G && !stop && !G.steps.some(s => s.k === "nomap") && nq ? [[`Grinding only: ${hm(G.t)}`, P.t > G.t
       ? `The quests cost about ${hm(P.t - G.t)} more than pure grinding, in exchange for their item rewards. Tick "Only quests faster than grinding" to drop the slow ones.`
@@ -160,25 +194,25 @@ function render(){
   const tr = (s, cls = "") => `<tr class="${cls}${DONE.has(key(s)) ? " done" : ""}" data-k="${key(s)}">`;
   const chk = (s, label) => `<label class="stepchk"><input type="checkbox"${DONE.has(key(s)) ? " checked" : ""} aria-label="Step ${label || ""} done">${label}</label>`;
   $("#xrows").innerHTML = S.map(s => {
-    if (s.k === "job") return `${tr(s, "branch")}<td class="num">${chk(s, "")}</td><td class="num">${s.L}</td><td colspan="4">${esc(s.txt)}</td></tr>`;
-    if (s.k === "stop") return `<tr><td></td><td class="num">${s.L}</td><td colspan="4" class="sub">No more quests to do at this level. Grind or switch to "Quests + grinding".</td></tr>`;
-    if (s.k === "nomap") return `<tr><td></td><td class="num">${s.L}</td><td colspan="4" class="sub">No training map fits this level.</td></tr>`;
+    if (s.k === "job") return `${tr(s, "branch")}<td class="num">${chk(s, "")}</td><td class="num">${s.L}</td><td colspan="5">${esc(s.txt)}</td></tr>`;
+    if (s.k === "stop") return `<tr><td></td><td class="num">${s.L}</td><td colspan="5" class="sub">No more quests to do at this level. Grind or switch to "Quests + grinding".</td></tr>`;
+    if (s.k === "nomap") return `<tr><td></td><td class="num">${s.L}</td><td colspan="5" class="sub">No training map fits this level.</td></tr>`;
     n++;
     if (s.k === "value") return `${tr(s, "vrow")}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>
       <td>${vPill(s.r.id)} ${qlink(s.r)}<div class="vwhy"><b>${esc(s.v[1])}</b> · ${esc(s.v[2])}</div>
         <div class="ricons">${rewardIcons(VICON[s.r.id] ? D.quests.find(x => x.id === VICON[s.r.id]) : s.r)}</div>
         <div class="sub">${s.s !== s.r ? `Start with ${qlink(s.s)} (Lv ${s.s.lvl}), ${s.r.cn}-quest chain · ` : ""}needs ${esc(s.r.req.replace(/ \(source n\/a\)/g, ""))}</div></td>
-      <td class="sub">${esc(s.s.npc || "")} · ${esc(s.s.region || "")}</td><td class="num sub">not timed</td><td class="num">${hm(s.t)}</td></tr>`;
+      <td class="sub">${esc(s.s.npc || "")} · ${esc(s.s.region || "")}</td>${rvCell(s.r)}<td class="num sub">not timed</td><td class="num">${hm(s.t)}</td></tr>`;
     if (s.k === "quest") return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>
       <td>Quest: ${qlink(s.r)} ${vPill(s.r.id)}${s.vs != null ? ` <span class="pill ${s.vs >= 1 ? "p-good" : "p-warn"}" title="Quest EXP per hour compared with grinding at this level">${s.vs >= 1 ? "faster than grinding" : Math.round(s.vs * 100) + "% of grinding speed"}</span>` : ""}${s.r.ri?.length ? `<div class="ricons">${rewardIcons(s.r)}</div>` : ""}<div class="sub">+${fmt(s.c.exp)} EXP${s.c.kills.length ? " incl. kills" : ""}${s.drops?.length ? ` · plus drops: ${esc(s.drops.join(", "))} (not timed)` : ""}${s.r.req !== "talk / deliver only" ? " · " + esc(s.r.req) : " · talk / deliver"}</div></td>
-      <td class="sub">${esc(s.r.npc || "")} · ${esc(s.r.region || "")}${s.c.kills.map(([m, c, w]) => w ? `<br>${esc(m)}: ${mapLink(w[0], w[1])}` : "").join("")}</td>
-      <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
+      <td class="sub">${esc(s.r.npc || "")} · ${esc(s.r.region || "")}${s.c.kills.map(([m, c, w]) => w ? `<br>${esc(m)}: ${mapLink(w[0], w[1])}` : "").join("")}${s.drops ? s.r.il.filter(i => D.mobs[i[2]]).map(([n, k, src]) => { const w = whereMob(src); return `<br>${esc(n)}: ${esc(D.mobs[src][0])}${w ? " at " + mapLink(w[0], w[1]) : ""}` }).join("") : ""}</td>
+      ${rvCell(s.r)}<td class="num">${hm(s.sec)}${s.drops ? `<div class="sub">+ drops</div>` : ""}</td><td class="num">${hm(s.t)}</td></tr>`;
     return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.from}→${s.to}</td>
       <td><b>Grind to level ${s.to}</b><div class="sub gear">${s.ch.wid ? itemIcon(s.ch.wid, 1, true) : ""}${s.ch.sid && D.icons[s.ch.sid] ? `<img class="sk" src="data:image/png;base64,${D.icons[s.ch.sid]}" alt="" title="${esc(s.ch.skill)}">` : ""}
         <span>~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</span></div></td>
-      <td>${mapLink(s.map.id, s.map.name)}<div class="sub">${esc(s.map.mobs)}</div></td>
+      <td>${mapLink(s.map.id, s.map.name)}<div class="sub">${esc(s.map.mobs)}</div>${s.farm?.length ? `<div class="sub farm">Farms for quests: ${esc(s.farm.join(", "))}</div>` : ""}</td><td class="num">–</td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
-  }).join("") || `<tr><td colspan="6" class="empty">You're already at your goal.</td></tr>`;
+  }).join("") || `<tr><td colspan="7" class="empty">You're already at your goal.</td></tr>`;
   saveDone();
   const ex = pool().filter(r => !timed(r) && !P.done.has(r.id) && r.lvl <= X.goal && r.lvl >= Math.max(1, X.cur - 5)).sort((a, b) => a.lvl - b.lvl || b.exp - a.exp);
   $("#xextra").innerHTML = ex.map(r => `<tr><td class="num">${r.lvl}</td><td>${qlink(r)}<div class="sub">${esc(r.npc || "")} · ${esc(r.region || "")}</div></td>

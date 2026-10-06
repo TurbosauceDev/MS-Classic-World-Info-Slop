@@ -65,6 +65,11 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - Mix = each quest as it unlocks (lowest level first) + grind between; optional "only faster than grinding". At the model's
   grinding speed almost no quest beats grinding on EXP/hr (e.g. lv 40: ~140k/h grinding vs 50–105k/h for the best quests).
 - Pace multipliers 1 / 1.5 / 2 on all times are guesses (crowding, potions, breaks).
+- Reward value column = quest mesos + NPC sell price of its items (get: all; pick: best; random: expected/average). A floor,
+  not market value.
+- "Most rewards" mode: every quest with mesos or items (timed or not, minus "Skip" and other classes' class-only picks) plus
+  their prerequisites; order = community tier, then level, then reward value. Grinding prefers maps holding monsters that
+  open/soon-open (≤ L+3) reward quests need, if the map is ≥ 50% of the best EXP/hr (judgment call). Item drops not timed.
 
 ## Valuable quests (src/js/15-valuable.js)
 - Hand-curated VALUE map, quest id -> tier (Must do / Recommended / Worth doing / Situational / Skip), reward, why, class-only, sources.

@@ -125,6 +125,8 @@
           <li>Goes level by level from your level to your goal and builds a list to follow: where to train, which quests to do, how long each takes.</li>
           <li>Your character at each level is the Character Builder's default: best weapon you can use, AP and SP spent by the Auto buttons.</li>
           <li><b>Quests + grinding:</b> does each quest as it unlocks and grinds in between. Each quest shows how its EXP per hour compares with grinding; tick "Only quests faster than grinding" to keep just those.</li>
+          <li><b>Most rewards:</b> every quest that pays mesos or items (including item quests), Must do picks first, and grinding on maps with the monsters those quests need, as long as the map gives at least half the best EXP/hr. Item drop time isn't counted ("+ drops").</li>
+          <li><b>Reward value</b> = quest mesos + what its items sell to NPCs (pick-one: the best; random: the average). That's a floor; rated items sell for far more to players.</li>
           <li><b>Quests only:</b> every quest it can time, lowest level first, until they run out. <b>Grinding only:</b> maps only.</li>
           <li><b>Valuable quests</b> (Sauna Robe, Icarus Cape, Work Gloves...) appear as side tasks at the level their chain starts, with the reward and why players rate it. Most need item drops, so their time isn't counted. Picks come from community guides; see the Quest Database.</li>
           <li>Quests more than 5 levels under your current level count as already done or skipped. Quests with no EXP are skipped unless a later quest needs them.</li>
@@ -159,16 +161,16 @@
     <label>Current level<input id="xcur" type="number" min="1" max="69" value="10"></label>
     <label>Goal level<input id="xgoal" type="number" min="2" max="70" value="30"></label>
     <div class="lab">Plan<div class="seg small" id="xmode">
-      <button data-v="mix">Quests + grinding</button><button data-v="quests">Quests only</button><button data-v="grind">Grinding only</button></div></div>
+      <button data-v="mix">Quests + grinding</button><button data-v="quests">Quests only</button><button data-v="grind">Grinding only</button><button data-v="rewards">Most rewards</button></div></div>
     <label class="chk" id="xislandwrap"><input type="checkbox" id="xisland"> Still on Maple Island</label>
-    <label class="chk"><input type="checkbox" id="xval"> Valuable quests</label>
+    <label class="chk" id="xvalwrap"><input type="checkbox" id="xval"> Valuable quests</label>
     <label class="chk" id="xfastwrap"><input type="checkbox" id="xfast"> Only quests faster than grinding</label>
     <label>Pace<select id="xpace"><option value="1">Perfect play (model)</option><option value="1.5">Average player (1.5×)</option><option value="2">Relaxed (2×)</option></select></label>
   </div>
   <div class="grid2" id="xsum"></div>
   <p class="note" id="xdonenote"></p>
   <div class="tblwrap"><table>
-    <thead><tr><th class="num">#</th><th class="num">Level</th><th>What to do</th><th>Where</th><th class="num">Time</th><th class="num">Total</th></tr></thead>
+    <thead><tr><th class="num">#</th><th class="num">Level</th><th>What to do</th><th>Where</th><th class="num">Reward value</th><th class="num">Time</th><th class="num">Total</th></tr></thead>
     <tbody id="xrows"></tbody>
   </table></div>
   <h2>Quests that need item drops</h2>

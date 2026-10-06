@@ -21,7 +21,7 @@ const path = require("path");
   await p.click("#ppath");
   await p.waitForTimeout(300);
   check(!(await p.isHidden("#path")), "builder opens Path Planner");
-  for (const m of ["mix", "quests", "grind"]) {
+  for (const m of ["mix", "quests", "grind", "rewards"]) {
     await p.click(`#xmode button[data-v="${m}"]`);
     check((await p.$$eval("#xrows tr", r => r.length)) > 0 && !/NaN|undefined/.test(await p.textContent("#path")), `path plan (${m}) renders`);
   }
