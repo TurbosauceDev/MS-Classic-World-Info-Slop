@@ -114,11 +114,39 @@
 </section>
 
 <section id="maps" hidden>
+  <details class="howto" open>
+    <summary>How the ranking works</summary>
+    <div class="howgrid">
+      <div>
+        <h4>The score</h4>
+        <ul>
+          <li>Each kill costs the monster's HP ÷ your damage, after hit chance, defense, level penalty and element, plus 1 second of walking and aiming.</li>
+          <li>Score = map EXP ÷ total time, capped at what one player can kill per 7.56-second respawn with 75% of spawns alive.</li>
+          <li>Maps need 8+ monsters; bosses are left out. Hit below 90% is flagged.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Set your real damage</h4>
+        <ul>
+          <li>Default is 20 × your level, a rough guess. Better: build your character in the <b>Character Builder</b> and press "Use this in Where to train" (sends your damage and accuracy).</li>
+          <li>Or count hits to kill a known monster in game and enter the number.</li>
+          <li>Weak, low-level mobs win when you hit softly; tankier at-level mobs win once you hit hard.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Left out</h4>
+        <ul>
+          <li>Multi-target attacks (most hit several monsters), map layout and climbing, drops and mesos, crowding.</li>
+          <li>EXP/hr is an estimate. Use it to shortlist maps, then pick the one that feels best.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
   <div class="controls">
     <label>Class<select id="cls">
       <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
       <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
-    <label>Your level<input id="lvl" type="number" min="10" max="100" value="25"></label>
+    <label>Your level<input id="lvl" type="number" min="10" max="70" value="25"></label>
     <label>Damage per second<input id="dps" type="number" min="50" max="20000" step="50" value="500"></label>
   </div>
   <p class="note" id="mapnote"></p>
@@ -126,11 +154,6 @@
     <thead><tr><th>#</th><th>Map</th><th>Monsters</th><th class="num">Mobs</th><th class="num">Avg lvl</th><th class="num">Hit</th><th>Relative</th><th class="num">Est. EXP/hr</th><th class="num">Hrs / level</th></tr></thead>
     <tbody id="maprows"></tbody>
   </table></div>
-  <div class="grid2">
-    <div class="fact"><h3>How the score works</h3><p>Each kill costs (monster HP ÷ your damage after hit chance, defense, level penalty and element) plus 1 second of walking and aiming. The score is map EXP ÷ total time, capped at what a solo player can kill per 7.56-second respawn with 75% of spawns alive.</p></div>
-    <div class="fact"><h3>Set your real damage</h3><p>Default is 20 × your level, a rough guess. Once you're playing, count hits to kill a known monster and enter the number. Rankings shift a lot with damage: weak, low-level mobs win when you hit softly, tankier at-level mobs win once you hit hard.</p></div>
-    <div class="fact"><h3>What it leaves out</h3><p>Multi-target attacks (most hit 4 monsters), map layout and climbing, drops and mesos, and how crowded a map is. Use it to shortlist maps, then pick the one that feels best.</p></div>
-  </div>
 </section>
 
 <section id="quests" hidden>
@@ -201,6 +224,45 @@
 </section>
 
 <section id="cit" hidden>
+  <details class="howto" open>
+    <summary>How Citizenship works</summary>
+    <div class="howgrid">
+      <div>
+        <h4>Joining</h4>
+        <ul>
+          <li>At level 12, sign up in Henesys (Arthur, Town Hall) or Kerning City (Roxy, Civic Center). The intro quest makes you a grade 1 Traveler.</li>
+          <li>Each town has its own grades, quests and shop. Pick a town above to see it.</li>
+        </ul>
+        <h4>Earning contribution</h4>
+        <ul>
+          <li><b>Daily board:</b> meet each resident once, then their "Asking After" quest repeats daily. Contribution per daily goes up with your grade, not the quest.</li>
+          <li><b>Weekly donation:</b> bring 100 of one monster drop. Higher grades unlock bigger donations worth more.</li>
+          <li><b>Story quests:</b> one-time quests that open at grade 2 and 4.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Ranking up</h4>
+        <ul>
+          <li>Each grade needs a minimum level and a total amount of contribution (see Grades).</li>
+          <li>Grade 5 adds VIP residents to the daily board, worth much more EXP.</li>
+        </ul>
+        <h4>What you get</h4>
+        <ul>
+          <li>Cheaper shops (5% → 25% off) and storage (95 → 50 mesos).</li>
+          <li>Civic shop items, a resident's chair and 100% scrolls unlocked by grade.</li>
+          <li>The town's earrings at grade 10.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Where the numbers come from</h4>
+        <ul>
+          <li><b>Game files (COT2):</b> quests, EXP, mesos, contribution per quest and item rewards.</li>
+          <li><b>meowdb's Citizenship page:</b> grade levels and totals, discounts, storage fees, how to join, shop lists.</li>
+          <li>meowdb says its info is from the second closed test. Housing, daily contribution limits and reactivation fees aren't confirmed yet.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
   <div class="seg" role="radiogroup" aria-label="Town" id="ctown">
     <button role="radio" aria-checked="true" data-t="Henesys">Henesys</button>
     <button role="radio" aria-checked="false" data-t="Kerning City">Kerning City</button>
@@ -236,8 +298,8 @@
   </table></div>
 
   <h2>Civic center shops</h2>
+  <p class="note">Each town's civic center sells food, potions, a resident's chair and 100% scrolls. Your grade unlocks more items and lowers prices by your shop discount.</p>
   <div class="grid2" id="cshops"></div>
-  <p class="note">Shop lists, grade table, how to join and the storage fees are from <b>meowdb's Citizenship page</b>, which says everything is from the second closed test and that housing, daily contribution limits and reactivation fees are still being confirmed. Quest, contribution and earring numbers are from the COT2 game files.</p>
 </section>
 
 </div>

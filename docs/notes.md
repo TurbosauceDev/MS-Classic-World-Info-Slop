@@ -68,8 +68,8 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   eq_mob, pct_level, reward, rep (daily/weekly), id, grade, contrib, contrib_by_grade, town, pool, one_time,
   chain, cpos, cn, ri (reward groups {k: get|pick|rand, job, it: [[itemId, count, chance%]]}), info (tooltip: d, req, mesos, items, start, prev, next, chain, rep, contrib, eq)
 - `items` {itemId: {n, c category, s sub, st stats, job, p price, d desc, wt weapon type, spd, sp spec}}; `iicons` {itemId: base64}
-- `latermobs` [mobId], `latermobnames` [name] (from monsters.json map lists; Fairy 2 slips through because its only spawn in
-  `maps` is Forgotten Hollow, so the builder filters by open-map spawns instead)
+- `latermobs` [mobId], `latermobnames` [name]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2
+  (Someone Else's House) and Fairy 3 (Tree Dungeon, Forest Up North VI/VII): they ARE at launch, just not in the ranking.
 
 ## Ideas not done yet
 - Hide/show toggle for quest columns on phones; Citizenship grade-progress estimator (needs confirmed daily limits).

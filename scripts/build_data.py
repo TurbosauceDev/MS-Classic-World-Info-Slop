@@ -157,6 +157,7 @@ def step_rewards(D):
         r["ri"] = reward_groups(qby[r["id"]])
         for g in r["ri"]:
             for x in g["it"]: need.add(x[0])
+    need |= {"1032021", "1032022"}  # Henesys / Kerning City Earrings (grade 10 Citizenship reward, shown on that tab)
     info, icons = {}, {}
     for iid in sorted(need):   # sorted so rebuilds are byte-identical
         i = ITEM[iid]

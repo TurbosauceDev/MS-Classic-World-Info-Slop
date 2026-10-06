@@ -30,12 +30,14 @@ function render(){
   const byGrade = (daily.find(r => r.contrib_by_grade) || {}).contrib_by_grade || [];
   const bestWeekly = g => Math.max(0, ...weekly.filter(r => r.grade <= g).map(r => r.contrib || 0));
   const earring = town === "Henesys" ? "Henesys Earrings" : "Kerning City Earrings";
+  const eid = town === "Henesys" ? "1032021" : "1032022", ei = D.items[eid], es = ei.st;
+  const eicon = `<span class="ri" tabindex="0" data-item="${eid}" data-n="1" style="float:right;margin-left:8px">${D.iicons[eid] ? `<img src="data:image/png;base64,${D.iicons[eid]}" alt="${esc(ei.n)}">` : ""}</span>`;
 
   $("#cfacts").innerHTML = [
     ["How to join", `At level 12, sign up with ${JOIN[town]}. The intro quest gives ${esc(intro ? intro.reward.replace(/;/g, ",") : "potions")}.`],
     ["Daily board", `${new Set(daily.map(r => r.name.replace(/^(First Greeting with|Asking After) /, "").split(",")[0].replace(/\.$/, "").trim())).size} residents to meet. Each daily gives ${fmt(byGrade[0])} contribution at grade 1, rising 50 per grade to ${fmt(byGrade[9])}. VIP residents unlock at grade 5 and give much more EXP.`],
     ["Weekly donation", `Bring 100 of a monster drop for ${fmt(Math.min(...weekly.map(r => r.contrib)))}–${fmt(Math.max(...weekly.map(r => r.contrib)))} contribution plus up to ${fmt(Math.max(...weekly.map(r => r.exp)))} EXP.`],
-    ["Top reward", `${earring} at Citizen of Honor: level 57, M.DEF +42, Avoid +2, Crit damage +2%, 5 slots. Plus 25% off shops and Elixirs for 3,000 mesos.`]
+    ["Top reward", `${eicon}${earring} at grade 10 (Citizen of Honor): level ${es.reqLevel}, M.DEF +${es.incMDD}, Avoid +${es.incEVA}, Crit damage +${es.incCRD}%, ${es.tuc} upgrade slots. Hover the icon for the full item. Plus ${GRADES[9][3]}% off shops and Elixirs for 3,000 mesos.`]
   ].map(([h, p]) => `<div class="fact"><h3>${esc(h)}</h3><p>${p}</p></div>`).join("");
 
   const shops = SHOPS[town];
