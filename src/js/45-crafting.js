@@ -117,7 +117,7 @@ $("#crmats").innerHTML = Object.entries(USE).sort((a, b) => b[1].size - a[1].siz
   const s = C.src[id] || {}, it = D.items[id], qs = QREW[id] || [], where = [];
   for (const [npc, mid, map, price] of s.shop || []) where.push(`Shop: ${npcLink(npc)} (${mid ? mapLink(mid, map) : esc(map)}), ${fmt(price)} mesos`);
   if (qs.length) where.push(`Quest reward: ${qs.slice(0, 3).map(qn).join(", ")}${qs.length > 3 ? ` +${qs.length - 3} more` : ""}`);
-  for (const m of s.mob || []) where.push(`Monster: ${D.mobs[m] ? mobLink(m) : esc(m)} <span class="sub">(${s.why === "name" ? "named after it" : "named in the item description"}${D.latermobs.includes(m) ? ", not at launch" : ""})</span>`);
+  for (const m of s.mob || []) where.push(`Monster: ${D.mobs[m] ? mobLink(m) : esc(m)} <span class="sub">(${(s.meow || []).includes(m) ? "meowdb grind guide" : s.why === "name" ? "named after it" : "named in the item description"}${D.latermobs.includes(m) ? ", not at launch" : ""})</span>`);
   const discs = [...new Set([...rs].map(r => DISC[r.d]))];
   return `<tr><td><span class="ing">${itemIcon(id, 1)}<span><button class="crfind" data-q="${esc(it.n)}">${esc(it.n)}</button><div class="sub">${esc(it.c === "Equipment" ? eqLine(it) : it.s || it.c || "")}</div></span></span></td>
     <td class="num">${rs.size}</td><td class="sub">${discs.map(esc).join(", ")}</td>

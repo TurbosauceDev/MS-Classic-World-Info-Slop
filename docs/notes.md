@@ -13,6 +13,8 @@
 | Valuable quests (tiers, reasons) | metaroad.gg "Must-Do Quests & Valuable Rewards" (Jota, upd. 2026-09-19), maplestory.quest "Valuable quest rewards worth the detour" (Chief Stan), meowdb beginner guide. Read with headless Chromium (WebFetch blocked; metaroad hides level tabs, so hidden panels were forced visible). Reddit blocked from the cloud env. Forgotten Hollow picks (Road Back Home, Matters of the Heart, Heart of Stillness) left out |
 | Crafting | export `crafting.json` (348 recipes, 6 professions) + Crafting-region quests. Craft EXP per level and the character-level gate (5 × craft level) from the OSMS dashboard's `tabs/crafting.js` (CRAFT_LEVELS_COT2, read from the COT2 client), not a data file. Dye/helmet prices: meowdb shop list |
 | Class guides 1–30 (Path Planner) | meowdb Warrior/Magician/Bowman/Thief class guides + beginner guide (read 2026-10-06 with headless Chromium): SP order, AP per level, weapons, gear, ammo, citizenship town, Training Advisor maps → src/js/16-guides.js |
+| Mechanics (meowdb guides, read 2026-10-06) | attack-speed ladder, damage/hit/incoming-damage formulas, HP/MP gains, EXP table to 100 (51+ historical), party bonus, spawn capacity per player, crafting material drops (grind-maps guide), KPQ |
+| 2nd-job guides 30–70 | meowdb Fighter/Page/Spearman/Hunter/Crossbowman/Assassin/Bandit/F-P/I-L/Cleric guides → GUIDE2 in src/js/16-guides.js |
 | Launch scope | meowdb release-date guide (no Orbis/El Nath/3rd job at launch); meowdb news 2026-10-03 (level cap 100, Forgotten Hollow later) |
 
 No drop tables exist in the export, so nothing depends on drop rates ("source n/a" on quest items).
@@ -31,10 +33,33 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - Magic: MAGIC = floor(INT/2) + MATK; MIN = BA/100×MAGIC×(INT×Mastery/100+1); MAX = BA/100×MAGIC×(INT/100+1).
 - Defense: dmg×100/(def+100). Level penalty: d<10: 1/(d²×0.005+1); d≥10: 1/(d×0.05+1).
   Elements: weak 1.25 / strong 0.75 / immune 0 (1.5 only for 3rd-job Element Composition). Crit base 5% for +20%. Damage cap 99,999.
-- Party EXP (COT2): +10/20/30% for 2/3/4+ players; spawns 75% solo → 100% at 6. Sources disagree on party numbers — not used.
+- Party EXP: +10/20/30% for 2/3/4+ players (meowdb, measured in COT2); map capacity 75% solo +5%/player to 100% at 6 (meowdb:
+  not fully confirmed). Party option (Where to train, planner grinding): per-player rate = min(N × kill rate, map EXP ×
+  capacity / 7.56 s) / N × (1 + bonus); assumes equal players splitting kills and EXP. Quests stay solo.
+- Attack time: meowdb's measured ladder per speed tier 0-10 (swing / spear-polearm stab / crossbow columns), SPEED_MS in
+  50-builder.js. Spells always tier 6 (810 ms). Savage Blow = 30 × ceil(960 × (10 + tier) / 16 / 30). Spears and polearms
+  60% swing + 40% stab. Spell Booster is 3rd job (not modeled).
+- Final Attack: kept on only if it raises DPS; each proc adds 0.88 × the weapon's attack time (fits meowdb's −12% for a
+  single-target Lv 70 Fighter). Hunter's Final Attack: Bow fires 3 arrows (data: "90% to up to 3 enemies"; meowdb: three
+  90% arrows, all on a lone mob) → ×3 payload; crossbow and melee Final Attacks hit once.
+- Axe Mastery bleed: uptime 1 − (1 − p)^(hits × 3 s / interval), payload X% of a plain hit over 3 s (meowdb: +5.5% for its
+  Lv 70 Fighter; ours ~+6%). Poison Breath DoT: BA/100 × Magic × (INT/125 + 1) over 5 s, full uptime per target.
+  Steal (Bandit, buffs on): +AP × success chance, minus 2 Steal casts a minute.
+- Holy Arrow = 3 hits split over targets (fixed total, like Double Shot) → single target. Iron Arrow pierces at
+  100/80/60/40% (AOE_FALL) → n targets count n − 0.1 n (n − 1).
+- HP/MP (meowdb, COT2-measured): 50/5 at Lv 1, Beginner +16/+12 a level, class gain per level after 10 (Warrior 28/12,
+  Bowman and Thief 22/17, Magician 16/22), +500 split by class at 1st and 2nd job (W 350/150, B/T 250/250, M 150/350),
+  × Max HP / MP Increase. Checked: Lv 10 Beginner 194/113, Lv 11 Warrior 572/275, Lv 30 Thief 1,134/953.
+- Danger = one touch from the map's hardest hitter / Max HP: Raw = PADamage × 1.3, taken = Raw × (1 − DEF / (DEF +
+  5 × (L + 40) + 1.2 × Raw)); DEF = floor(STR/4) + skills (Magic Armor, Iron Will, Sword Mastery, Iron Body %, − Rage),
+  × (1 − Invincible) × (1 − Magic Guard share). No armor. Labels from meowdb (<10 Safe, 10-24 Caution, 25-49 Danger, 50+ Lethal).
+  Checked: Fighter 35 Ant Tunnel II 8% (meowdb 7% with gear), Magician 20 Transfer Area Caution (meowdb Caution).
+- Portals to potions: BFS over `nav` from `potshops` (meowdb shops selling HP/MP potions, civic shops included). Matches the
+  guides' counts (Line 1 <Area 1> 3, Transfer Area 4, FUN IV 5, Ant Tunnel III 5). Shown only, not scored.
+- Level cap 100: D.exp 71-99 = previous × 1.0548 (meowdb; matches our table for 51-70 exactly); EXP_SURE = 49 is the last
+  level meowdb says is confirmed. Where to train falls back to the best map of the rest when nothing is within 12 levels.
 
 ## Estimates the page makes (flagged in its "How" boxes)
-- **Attack interval** = 0.42 + 0.06 × speed stage; booster −2 stages. Not from the client — DPS is approximate.
 - **Ammo attack** (stars, arrows): old-game values; Subi +15, Wolbi +17, Bronze arrows +1 confirmed by the meowdb class guides.
 - **Map ranking**: time per kill = effective HP / DPS + 1.0 s; rate = min(map EXP / time, map EXP × 0.75 / 7.56 s respawn).
   Default DPS = 20 × level. Accuracy assumes all AP in the main stat, secondary = level, Precise Strikes (+20) / Nimble Body (+15)
@@ -120,6 +145,13 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   drop credit); the model's fastest map is shown when it's >2% faster. Bowman has no level-10 picks → model.
 - Steps: guide gear row at each checkpoint, citizenship town at 12, ammo upgrade at 25, per-level SP/AP notes under the
   step a level-up happens in (Beginner: Nimble Feet 2–4, Three Snails 5–7, Recovery 8–10, from the beginner guide's order).
+- 30-70 (GUIDE2, per branch): 2nd-job SP table ({W} = weapon family; Bandit "__reset" at 40 with the reset first-job
+  build), AP rules (last rule continues past 70), weapons per checkpoint (candidates filtered by family; Page sword uses the
+  Fighter guide's swords; above 70 the model's best weapon competes), maps by name → open launch map ids (Forgotten Hollow
+  picks drop out). Bandit: claw + Lucky Seven until 40, reset step in the plan. Cleric: solo order.
+- Planner side steps: KPQ at 21 (Proof of Companionship, 10311), citizenship, gear rows per checkpoint up to 70, SP reset.
+- Calibration (2026-10-06, after these changes, guide build, mix, 1.5×): 10→20 3.2-4.5 h, 20→30 8.9-10 h; meowdb reports COT2
+  testers at 3-4 h and 8-9 h.
 - Model check, 1→30 grinding at 1.5× pace (2026-10-06): guide build ≈ greedy build (13–14 h); guide maps slower in this model
   for Warrior (17 h vs 13), Magician (16 vs 14), Bowman (19 vs 13), faster for Thief (12 vs 13). The guides' maps require
   100% hit and guaranteed 2-hit kills and weigh danger/refill walks; this model ranks by average EXP/hr only.
@@ -171,6 +203,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - `craft` {disc: [[name, skillId, master NPC, apprentice qId, weekly qId, Lv 5 qId]], rec: [[disc index, output type,
   craft Lv, itemId, batch, craft EXP, mesos, [[itemId, n]]]], src: {raw itemId: {mob: [mobId], why: name|desc, shop: [[npc, mapId, map, price]]}}};
   every recipe item, catalyst and kit is in `items`/`iicons`
+- `mobatk` {mobId: [touch attack, accuracy]}; `potshops` [[npc, mapId, mapName]] (step_extras, `build_data.py extras`)
 - `latermobs` [mobId]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2
   (Someone Else's House) and Fairy 3 (Tree Dungeon, Forest Up North VI/VII): they ARE at launch, just not in the ranking.
 

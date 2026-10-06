@@ -1,5 +1,9 @@
 const D = __DATA__;
 const $ = s => document.querySelector(s);
+// level cap is 100 at launch (Nexon's Founder's Access notes, via meowdb). The EXP table we embed stops at 70; meowdb's EXP
+// guide gives the rest: every level from 51 costs 5.48% more than the one before (historical reference; confirmed to 49).
+const EXP_SURE = 49, MAX_LEVEL = 100;
+for (let l = 71; l < MAX_LEVEL; l++) if (D.exp[l] == null) D.exp[l] = Math.trunc(D.exp[l - 1] * 1.0548);
 const fmt = n => n == null ? "–" : Math.round(n).toLocaleString();
 // map name with the minimap hover card (card itself is built in 20-quests.js)
 const mapLink = (id, name) => `<span class="name mname" tabindex="0" data-map="${id}">${esc(name)}</span>`;

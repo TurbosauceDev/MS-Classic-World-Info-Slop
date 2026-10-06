@@ -32,9 +32,9 @@ Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Dat
 src/index.html        markup; /*@CSS*/ and /*@JS*/ placeholders
 src/styles.css        all CSS; theme tokens on :root, dark mode via prefers-color-scheme + [data-theme]
 src/js/00-core.js     const D = __DATA__ (replaced at build), $, fmt, esc, tab switching
-src/js/10-maps.js     client formulas (hitProb, lvlPen, classAcc), mobKill, mapRates + "Where to train" table (rankMaps)
+src/js/10-maps.js     client formulas (hitProb, lvlPen, classAcc), HP/MP (hpmpAt), danger (touchPct), portals to potions (POTS), party, mobKill, mapRates + "Where to train" (rankMaps)
 src/js/15-valuable.js  VALUE: community-picked valuable quests (tier, reward, why, sources) — not game data
-src/js/16-guides.js   GUIDE: meowdb class guides 1-30 (SP/AP per level, weapons, gear, maps, citizenship) used by buildAt + Path Planner
+src/js/16-guides.js   GUIDE (1-30) + GUIDE2 (2nd-job branches 30-70): meowdb class guides (SP/AP per level, weapons, gear, maps) used by buildAt + Path Planner
 src/js/20-quests.js   Quest Database: filters, header sorting, questline filter, quest + item tooltips (#qtip), rewardCell()
 src/js/40-citizenship.js  Citizenship tab (GRADES + SHOPS consts are from meowdb, not the export)
 src/js/45-crafting.js  Crafting tab: masters + profession quests, craft levels (CRAFT_LV from OSMS dashboard), recipes, raw materials
@@ -54,7 +54,7 @@ JS files are concatenated in filename order into ONE `<script>`, so they share t
 ```
 ./scripts/fetch_osms.sh                 # once (or OSMS_DATA=/path/to/osms/data)
 python3 scripts/build_data.py           # only when data logic or the export changes
-python3 scripts/build_data.py crafting  # cheap: re-runs only the crafting step on the existing data.json
+python3 scripts/build_data.py crafting extras  # cheap: re-runs only these steps (crafting; mobatk + potshops) on the existing data.json
 python3 scripts/build.py                # after any src/ change
 node tests/smoke.js                     # needs: npm i -D playwright (or global)
 ```

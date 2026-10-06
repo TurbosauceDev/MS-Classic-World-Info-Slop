@@ -34,8 +34,18 @@ const path = require("path");
   }
   await p.selectOption("#xguide", "all"); await p.fill("#xcur", "10"); await p.fill("#xgoal", "30"); await p.waitForTimeout(400);
   check(/guide map/.test(await p.textContent("#xrows")) && /Lv 1\d: /.test(await p.textContent("#xrows")), "guide maps and level-up notes shown");
+  for (const [br, n] of [["Bandit", "reset"], ["Hunter", "Hunter guide weapons"]]) {
+    await p.click(`#xcls button[data-v="${br === "Bandit" ? "Thief" : "Bowman"}"]`); await p.selectOption("#xbranch", br);
+    await p.fill("#xcur", "30"); await p.fill("#xgoal", "100"); await p.waitForTimeout(800);
+    check((await p.textContent("#xrows")).includes(n) && /to level 100/.test(await p.textContent("#xsum")), `${br} 30-100 plan with ${n}`);
+  }
+  await p.selectOption("#xparty", "4"); await p.fill("#xcur", "15"); await p.fill("#xgoal", "30"); await p.waitForTimeout(500);
+  check(/Kerning Party Quest/.test(await p.textContent("#xrows")) && /Safe|Caution|Danger/.test(await p.textContent("#xrows")), "party, KPQ and danger in the plan");
+  await p.selectOption("#xparty", "1");
   // Where to train
   await p.click("#t-maps"); check(await p.$$eval("#maps tbody tr", r => r.length) > 0, "map ranking renders");
+  await p.selectOption("#party", "3"); await p.fill("#lvl", "85"); await p.dispatchEvent("#lvl", "input");
+  check(await p.$$eval("#maprows tr", r => r.length) > 0 && /portals to/.test(await p.textContent("#maprows")) && !/NaN|undefined/.test(await p.textContent("#maps")), "Where to train: level 85, party, danger, potions");
   // Quest Database
   await p.click("#t-quests");
   check((await p.textContent("#qcount")).includes("quests"), "quest table renders");

@@ -30,18 +30,20 @@
         <ul>
           <li>Damage, accuracy and crit use the COT2 client formulas and per-level skill tables.</li>
           <li><b>SP:</b> 1 at each job advancement plus 3 per level. 1st job gets 61 (levels 10–30) and those stay in 1st job skills; 2nd job SP can't go back into them (per meowdb).</li>
-          <li><b>Count buffs</b> adds Rage, Meditation, Focus, Bless and your booster if they have points.</li>
+          <li><b>Count buffs</b> adds Rage, Meditation, Focus, Bless, Steal's Attack Power (Bandit), Magic Armor / Iron Body / Iron Will defense and your booster if they have points.</li>
+          <li><b>Attack speed:</b> meowdb's measured times per weapon speed (e.g. speed 6 = 810 ms, 4 = 720 ms); every Magician spell takes 810 ms whatever the weapon. Booster moves your weapon 2 speeds.</li>
+          <li><b>Final Attack</b> is counted only when it helps: each proc plays its own attack (~0.6 s), so on one monster it can cost damage. Hunter's fires 3 arrows. Axe Mastery's bleed and Poison Breath's poison add their damage over time.</li>
+          <li><b>HP and MP</b> follow meowdb's measured gains per level and per job advancement, plus Max HP / Max MP Increase.</li>
           <li><b>Auto build</b> spends every point: first where it adds the most damage after misses, then passives, then buffs. Skills follow the game's prerequisites.</li>
         </ul>
       </div>
       <div>
         <h4>Not counted or estimated</h4>
         <ul>
-          <li>No armor, scrolls or party buffs.</li>
+          <li>No armor, scrolls or party buffs. W.DEF is your STR's share plus skills only.</li>
           <li>3rd job skills, since 3rd job isn't in the launch. Once every 2nd job skill is maxed, extra SP shows as spare.</li>
           
-          <li>HP and MP: the growth formula isn't in the game files.</li>
-          <li>Star and arrow attack use old-game values. Attack speed is an estimate.</li>
+          <li>Final Attack's own attack time is fitted to meowdb's Fighter numbers (0.88 × your weapon's attack time).</li>
         </ul>
       </div>
     </div>
@@ -124,12 +126,13 @@
         <ul>
           <li>Goes level by level from your level to your goal and builds a list to follow: where to train, which quests to do, how long each takes.</li>
           <li>Your character at each level is the Character Builder's default: best weapon you can use, AP and SP spent by the Auto buttons.</li>
-          <li><b>Class guides</b> (default: build + training maps, levels 1–30): uses meowdb's <a href="https://meowdb.com/msclassic/guides/warrior-class-guide" target="_blank" rel="noopener">Warrior</a>, <a href="https://meowdb.com/msclassic/guides/magician-class-guide" target="_blank" rel="noopener">Magician</a>, <a href="https://meowdb.com/msclassic/guides/bowman-class-guide" target="_blank" rel="noopener">Bowman</a>, <a href="https://meowdb.com/msclassic/guides/thief-class-guide" target="_blank" rel="noopener">Thief</a> and <a href="https://meowdb.com/msclassic/guides/beginners-guide-first-steps-in-maple-world" target="_blank" rel="noopener">beginner</a> guides instead:
+          <li><b>Class guides</b> (default: build + training maps, levels 1–70): uses meowdb's <a href="https://meowdb.com/msclassic/guides/warrior-class-guide" target="_blank" rel="noopener">Warrior</a>, <a href="https://meowdb.com/msclassic/guides/magician-class-guide" target="_blank" rel="noopener">Magician</a>, <a href="https://meowdb.com/msclassic/guides/bowman-class-guide" target="_blank" rel="noopener">Bowman</a>, <a href="https://meowdb.com/msclassic/guides/thief-class-guide" target="_blank" rel="noopener">Thief</a> and <a href="https://meowdb.com/msclassic/guides/beginners-guide-first-steps-in-maple-world" target="_blank" rel="noopener">beginner</a> guides instead:
             <ul>
               <li>their SP order and AP per level (each level-up is listed under the step it happens in), their shop weapons and gear, free advancement weapons (Beginner's Garnier), Arrow Blow over Double Shot;</li>
               <li>their Training Advisor maps for each level band (checked for sure hits, 2-hit kills, danger and the walk to town, which this model doesn't check), with the model's fastest map shown when it differs. "Build only" keeps the build but lets the model pick maps;</li>
               <li>citizenship town at 12, and Wolbi stars or Bronze arrows from 25 (they unlock at citizenship grade 3: level 22 plus 2,000 contribution; reaching it by 25 is an assumption);</li>
-              <li>future Bandits level with a claw and Lucky Seven until 30. First-job skills stay as the guide leaves them at 30; 2nd-job SP is still auto.</li>
+              <li>future Bandits level with a claw and Lucky Seven ("Sindit") and reset their SP at 40 (Cash Shop, 7,000 NX) to switch to daggers, as the Bandit guide does;</li>
+              <li>levels 30–70: each 2nd-job guide's SP order, AP rules, weapons every 10 levels and Training Advisor maps every 5 levels. Their Forgotten Hollow picks are skipped (not at launch). Above 70 the leftover SP and the weapon are picked by the model.</li>
             </ul></li>
           <li><b>Quests + grinding:</b> does each quest as it unlocks and grinds in between. Each quest shows how its EXP per hour compares with grinding; tick "Only quests faster than grinding" to keep just those.</li>
           <li><b>Most rewards:</b> every quest that pays mesos or items, Must do picks first, then lowest level and highest reward value. Items with no known source aren't timed ("+ other items").</li>
@@ -140,16 +143,19 @@
           <li><b>Valuable quests</b> (Sauna Robe, Icarus Cape, Work Gloves...) are marked with their rating and why players rate it. The ones the plan can't time (items with no known source, or skipped by your mode) appear as side tasks at the level their chain starts. Picks come from community guides; see the Quest Database.</li>
           <li>Quests more than 5 levels under your current level count as already done or skipped. Quests with no EXP are skipped unless a later quest needs them.</li>
           <li>It stays on its current map unless another one is more than 10% better, so you don't hop maps every level.</li>
+          <li>Grind rows show the map's <b>danger</b> for your character (one touch as a share of Max HP, no armor) and the <b>portals to potions</b>.</li>
+          <li><b>Party:</b> grinding uses your share of the map plus the party EXP bonus (see Where to train). Quests stay solo. The Kerning Party Quest shows up at 21 as an optional step.</li>
+          <li>Goes up to the level-100 cap with 2nd job (3rd job isn't at launch). EXP per level above 49 is meowdb's historical table, not yet confirmed in Classic.</li>
         </ul>
       </div>
       <div>
         <h4>Times are estimates</h4>
         <ul>
-          <li>Grinding times come from the "Where to train" model (single target, solo).</li>
-          <li><b>Average player</b> takes 1.5× the model time, <b>Relaxed</b> 2×: crowded maps, potions, breaks. These multipliers are a guess; pick what fits you.</li>
+          <li>Grinding times come from the "Where to train" model (solo unless you pick a party).</li>
+          <li><b>Average player</b> takes 1.5× the model time, <b>Relaxed</b> 2×: crowded maps, potions, breaks. Check: at 1.5× the plan takes about 3–4.5 h for 10→20 and 9–10 h for 20→30; meowdb reports COT2 testers took 3–4 h and 8–9 h.</li>
           <li><b>Travel counts:</b> every move between maps is its own step with the route (walk, cab), so you can tick it off. The plan knows where you are. A quest means walking to its NPC, to the closest good map for each monster it needs, and back. Grinding maps far from you lose points for the walk. Crossing one map ≈ 30 s, a cab between towns (Lith Harbor, Henesys, Ellinia, Kerning City, Perion, Sleepywood) ≈ 45 s, talking to an NPC ≈ 1 min (30 s for the same NPC again). All guesses.</li>
           <li>Quest kills also wait on the map's respawns: few of a monster on a map means slower kills there. Kill EXP from quests counts.</li>
-          <li><b>AoE build</b> (default): each level's character uses its best multi-target attack when the job has one: Slash Blast, Arrow Bomb, Iron Arrow, Thunder Bolt, Poison Breath, Holy Arrow (Power Knockback is skipped: it pushes monsters away). Thieves, 1st job Bowmen and 1st job Magicians have none, so they stay single target (Double Shot's 2 arrows split between targets, so it does the same total damage either way). How many monsters a cast hits comes from each map's spawn points on the same platform within the skill's reach (75% alive), capped at its target count: an estimate shown as "hits ~2.4 per cast".</li>
+          <li><b>AoE build</b> (default): each level's character uses its best multi-target attack when the job has one: Slash Blast, Arrow Bomb, Iron Arrow, Thunder Bolt, Poison Breath (Power Knockback is skipped: it pushes monsters away). Thieves, 1st job Bowmen and 1st job Magicians have none, so they stay single target (Double Shot's 2 arrows split between targets, so it does the same total damage either way). How many monsters a cast hits comes from each map's spawn points on the same platform within the skill's reach (75% alive), capped at its target count: an estimate shown as "hits ~2.4 per cast".</li>
           <li><b>Weapons:</b> when the plan's character gets a better weapon, a step says where to get it: NPC shop and price (meowdb's shop list), crafting recipe (game files), quest reward, or monster drops (meowdb: player reports, else the old MapleSEA drop list it says Classic likely shares). The plan only picks weapons you can get at launch this way.</li>
           <li>Below level 10 you're a Beginner: basic attack with the Wooden Club, the Razor from level 5, and all AP in your future job's main stat, as meowdb's beginner guide recommends.</li>
           <li><b>Maple Island</b> runs first in every mode: every island quest in order, island maps when a quest needs a higher level, then Shanks' ship to Lith Harbor at level 7+ (300 mesos, one way). meowdb: the island quests take you to about level 8. Untick "Still on Maple Island" if you've left.</li>
@@ -160,7 +166,7 @@
         <ul>
           <li>Quests needing items with no known drop source (NPC-made or unclear). They're listed under the plan, and quests that come after them in a chain are skipped too.</li>
           <li>Event, crafting, repeatable and Citizenship quests; Casey's Omok and Match Cards sets (very rare drops); Orbis, El Nath and Forgotten Hollow.</li>
-          <li>Party play, multi-target attacks, buying gear. Levels above 70 (the EXP table stops there).</li>
+          <li>Buying gear. 3rd job (not at launch): the plan keeps 2nd job up to the level-100 cap. EXP per level above 49 is meowdb's historical table, not yet confirmed in Classic.</li>
         </ul>
       </div>
     </div>
@@ -170,14 +176,15 @@
       <button data-v="Warrior">Warrior</button><button data-v="Magician">Magician</button><button data-v="Bowman">Bowman</button><button data-v="Thief">Thief</button></div></div>
     <label>2nd job<select id="xbranch"></select></label>
     <label id="xfamwrap">Weapon type<select id="xfam"></select></label>
-    <label>Current level<input id="xcur" type="number" min="1" max="69" value="10"></label>
-    <label>Goal level<input id="xgoal" type="number" min="2" max="70" value="30"></label>
+    <label>Current level<input id="xcur" type="number" min="1" max="99" value="10"></label>
+    <label>Goal level<input id="xgoal" type="number" min="2" max="100" value="30"></label>
     <div class="lab">Plan<div class="seg small" id="xmode">
       <button data-v="mix">Quests + grinding</button><button data-v="quests">Quests only</button><button data-v="grind">Grinding only</button><button data-v="rewards">Most rewards</button></div></div>
     <label class="chk" id="xislandwrap"><input type="checkbox" id="xisland"> Still on Maple Island</label>
     <label class="chk" id="xvalwrap"><input type="checkbox" id="xval"> Valuable quests</label>
     <label class="chk" id="xfastwrap"><input type="checkbox" id="xfast"> Only quests faster than grinding</label>
-    <label>Class guides (1–30)<select id="xguide"><option value="all">Build + training maps</option><option value="build">Build only</option><option value="">Off</option></select></label>
+    <label>Class guides (1–70)<select id="xguide"><option value="all">Build + training maps</option><option value="build">Build only</option><option value="">Off</option></select></label>
+    <label>Party<select id="xparty"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
     <label>Build<select id="xaoe"><option value="1">Area attacks (AoE)</option><option value="">Single target</option></select></label>
     <label id="xdropwrap">Drop rate <b id="xdropout">30%</b><input id="xdrop" type="range" min="10" max="35" step="1" value="30"></label>
     <label>Pace<select id="xpace"><option value="1">Perfect play (model)</option><option value="1.5">Average player (1.5×)</option><option value="2">Relaxed (2×)</option></select></label>
@@ -206,7 +213,10 @@
           <li>Each kill costs the monster's HP ÷ your damage, after hit chance, defense, level penalty and element, plus 1 second of walking and aiming.</li>
           <li>Score = map EXP ÷ total time, capped at what one player can kill per 7.56-second respawn with 75% of spawns alive.</li>
           <li>Maps need 8+ monsters; bosses are left out. Hit below 90% is flagged.</li>
-          <li><b>Area attacks by default:</b> Slash Blast, Arrow Bomb, Thunder Bolt, Poison Breath, Holy Arrow (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, 75% alive: an estimate. Thieves, 1st job Bowmen and 1st job Magicians have no area attack.</li>
+          <li><b>Area attacks by default:</b> Slash Blast, Arrow Bomb, Thunder Bolt, Poison Breath (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, 75% alive: an estimate. Iron Arrow loses 20% per extra monster. Double Shot and Holy Arrow split a fixed number of arrows, so they count as single target. Thieves, 1st job Bowmen and 1st job Magicians have no area attack.</li>
+          <li><b>Danger:</b> one touch from the map's hardest hitter as a share of your Max HP (meowdb's labels: under 10% Safe, 10–24% Caution, 25–49% Danger, 50%+ Lethal). Armor isn't counted, so it reads a little high.</li>
+          <li><b>To potions:</b> portals to the nearest NPC selling potions (meowdb's shop list). A far refill eats into the real EXP/hr.</li>
+          <li><b>Party:</b> your share of the map plus the measured party bonus (+10/20/30% at 2/3/4+). Spawns grow 5% per extra player up to 100% at 6 (meowdb: not fully confirmed). Assumes equal players.</li>
         </ul>
       </div>
       <div>
@@ -220,7 +230,7 @@
       <div>
         <h4>Left out</h4>
         <ul>
-          <li>Map layout and climbing, drops and mesos, crowding.</li>
+          <li>Map layout and climbing, drops and mesos, crowding. EXP needed above level 49 is meowdb's historical table.</li>
           <li>EXP/hr is an estimate. Use it to shortlist maps, then pick the one that feels best.</li>
         </ul>
       </div>
@@ -230,13 +240,14 @@
     <label>Class<select id="cls">
       <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
       <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
-    <label>Your level<input id="lvl" type="number" min="10" max="70" value="25"></label>
+    <label>Your level<input id="lvl" type="number" min="10" max="100" value="25"></label>
     <label>Attack<select id="aoe"><option value="1">Area attack (AoE)</option><option value="">Single target</option></select></label>
+    <label>Party<select id="party"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
     <label>Damage per second<input id="dps" type="number" min="50" max="20000" step="50" value="500"></label>
   </div>
   <p class="note" id="mapnote"></p>
   <div class="tblwrap"><table>
-    <thead><tr><th>#</th><th>Map</th><th>Monsters</th><th class="num">Mobs</th><th class="num">Avg lvl</th><th class="num">Hit</th><th>Relative</th><th class="num">Est. EXP/hr</th><th class="num">Hrs / level</th></tr></thead>
+    <thead><tr><th>#</th><th>Map</th><th>Monsters</th><th class="num">Mobs</th><th class="num">Avg lvl</th><th class="num">Hit</th><th>Danger</th><th>To potions</th><th>Relative</th><th class="num">Est. EXP/hr</th><th class="num">Hrs / level</th></tr></thead>
     <tbody id="maprows"></tbody>
   </table></div>
 </section>
@@ -387,7 +398,7 @@
           <li><b>Game files (COT2):</b> recipes, craft levels, mesos, craft EXP, quests, item stats.</li>
           <li><b>OSMS Data Explorer crafting tab:</b> craft EXP per level and the character-level gate (read from the COT2 client).</li>
           <li><b>meowdb shop list:</b> dye and helmet prices.</li>
-          <li>Not in the files: where ores, Leather, Fragment of Magic and other materials drop, drop rates, success rates. A "Monster" source is a guess from the item's name or description.</li>
+          <li>Not in the files: drop rates, success rates, and where most ores and Fragment of Magic drop. A "Monster" source is meowdb's grind-maps guide (Leather, Stiff Feather, Animal Fur Bundle, Dragon Skin, Diamond Ore) or a guess from the item's name or description.</li>
         </ul>
       </div>
     </div>

@@ -82,7 +82,12 @@ function attackInfo(s, l){
 // the export gives Lucky Seven and Double Shot 1 hit; both throw/fire 2 (skill text, and meowdb's Thief and Bowman guides:
 // Lucky Seven "two 140% lines", Double Shot "two 120% arrows" that hit one mob twice or two mobs once each, so its total
 // damage doesn't grow with targets)
-const HITS_FIX = {"Lucky Seven": {hits: 2}, "Double Shot": {hits: 2, targets: 1}};
+// Holy Arrow is the same: 3 arrows split over up to 3 targets, a fixed total (meowdb DPS rankings)
+const HITS_FIX = {"Lucky Seven": {hits: 2}, "Double Shot": {hits: 2, targets: 1}, "Holy Arrow": {hits: 3, targets: 1}};
+// attack time (ms) per speed tier 0-10: [swing, spear/polearm stab, crossbow] (meowdb attack speed guide, COT2 frames).
+// Every Magician spell is tier 6 (810 ms) whatever the weapon; Booster moves a matching weapon 2 tiers.
+const SPEED_MS = [[510,480,540],[570,540,570],[600,570,630],[660,630,690],[720,660,720],[750,720,780],[810,750,840],[870,810,870],[900,870,930],[960,900,990],[1020,960,1050]];
+const tierMs = (t, col = 0) => SPEED_MS[Math.max(0, Math.min(10, t))][col];
 function attackInfo0(s, l){
   const r = attackInfo1(s, l);
   return r && HITS_FIX[s.n] ? Object.assign(r, HITS_FIX[s.n]) : r;
@@ -155,8 +160,11 @@ function calc(sp){
            + (wk === "Dagger" ? num(T("Dagger Mastery"), /Critical Rate \+(\d+)%/) : 0);
   let critDmg = 20 + num(T("Critical Shot"), /Critical Damage \+(\d+)%/) + num(T("Critical Throw"), /Critical Damage \+(\d+)%/);
   let atkB = wk === "Claw" ? num(T("Claw Mastery"), /Attack Power \+(\d+)/) : 0;
-  let matkB = 0, booster = false;
+  let matkB = 0, booster = false, steal = 0;
   if (buffs){
+    // Bandit: Steal on success gives +N Attack Power for 30 s; kept up by recasting (meowdb DPS rankings: 2 casts/min)
+    const st = wk === "Dagger" && S.skill !== byName("Steal", list)?.id ? T("Steal") : "";
+    if (st){ steal = num(st, /(\d+)% chance to steal/) / 100; atkB += num(st, /\+(\d+) Attack Power/) * steal }
     accB += num(T("Focus"), /Accuracy \+(\d+)/) + num(T("Bless"), /Accuracy \+(\d+)/);
     evaB += num(T("Focus"), /Evasion \+(\d+)/) + num(T("Bless"), /Evasion \+(\d+)/);
     atkB += num(T("Rage"), /Attack Power \+(\d+)/);
@@ -203,14 +211,43 @@ function calc(sp){
   const avg = (min + max) / 2;
   const critF = 1 - crit/100 + crit/100 * (100 + critDmg)/100;
   let perCast = avg * critF * (ai?.hits || 0);
-  if (faRate && ai) perCast += faRate/100 * (avg / (ai.pct/100)) * faPct/100 * critF;
-  const stage = Math.max(2, (w?.spd ?? 6) - (booster && ai?.kind === "phys" ? 2 : 0));
-  const interval = 0.42 + 0.06 * stage;
-  const dps = perCast / interval;
+  // attack time from the speed ladder: spells 810 ms; Savage Blow has its own 960 ms base action scaled by tier;
+  // crossbows use their own column; spears and polearms mix swings (60%) and stabs
+  const magicK = ai?.kind === "magic";
+  const stage = magicK ? 6 : Math.max(0, (w?.spd ?? 6) - (booster ? 2 : 0));
+  let ms = tierMs(stage);
+  if (!magicK && sk?.n === "Savage Blow") ms = 30 * Math.ceil(960 * (10 + stage) / 16 / 30);
+  else if (!magicK && w?.type === "Crossbow") ms = tierMs(stage, 2);
+  else if (!magicK && ["Spear", "Polearm"].includes(w?.type)) ms = 0.6 * tierMs(stage) + 0.4 * tierMs(stage, 1);
+  let interval = ms / 1000;
+  // Final Attack is a toggle and each proc plays its own attack (~0.6 s with Booster), so it only helps when its damage
+  // outweighs that time; it stays on only if it raises DPS. 0.88 × the weapon's attack time = 636 ms at speed 4, which
+  // reproduces meowdb's "12% less damage on one mob" for a max-Final-Attack Lv 70 Fighter.
+  let faOn = false;
+  if (faRate && ai){
+    // Hunter's Final Attack: Bow fires 3 arrows that all hit a lone target (meowdb Hunter guide); the others hit once
+    const add = faRate / 100 * (avg / (ai.pct / 100)) * faPct / 100 * critF * (wk === "Bow" ? 3 : 1), t = faRate / 100 * 0.88 * tierMs(stage);
+    if ((perCast + add) / (interval + t / 1000) > perCast / interval){ perCast += add; interval += t / 1000; faOn = true }
+  }
+  let dps = perCast / interval * (steal ? 1 - 2 * interval / 60 : 1);
+  // Axe Mastery bleed: each hit has p% to start a non-stacking 3 s bleed worth X% of a plain hit; uptime = chance at least
+  // one hit in the last 3 s procced. (meowdb's Lv 70 Fighter: +5.5% DPM; this gives about +6%.)
+  const bleed = wk === "Axe" && ai && !magicK ? T("Axe Mastery") : "";
+  if (bleed){ const p = num(bleed, /(\d+)% chance to inflict bleed/) / 100, x = num(bleed, /dealing (\d+)% total damage/) / 100;
+    const up = 1 - Math.pow(1 - p, (ai.hits || 1) * 3 / interval); dps += up * x * (avg / (ai.pct / 100)) / 3 }
+  // Poison Breath poison: DoT core = BA/100 × Magic × (INT/125 + 1) over its duration, kept up on every target it hits
+  // (meowdb damage formula; ignores defense)
+  if (sk?.n === "Poison Breath" && ai){ const t = stat(sk, sl), ba = num(t, /deals (\d+) Basic Attack over/), sec = num(t, /over (\d+) sec/) || 5;
+    dps += ba / 100 * (Math.floor(ap.INT / 2) + (w?.mad || 0) + matkB) * (ap.INT / 125 + 1) / sec }
 
+  // HP, MP and physical defense (no armor: we don't model it) for the danger estimate
+  const [hp, mp] = hpmpAt(cls, L, num(T("Max HP Increase"), /Max HP \+(\d+)%/), num(T("Max MP Increase"), /Max MP \+(\d+)%/), isSecond());
+  const defFlat = (wk === "Sword" ? num(T("Sword Mastery"), /Weapon Def\. \+(\d+)/) : 0) + (buffs ? num(T("Magic Armor"), /Weapon Def\. \+(\d+),/) + num(T("Iron Will"), /Weapon Def\. \+(\d+),/) - num(T("Rage"), /Weapon Def\. -(\d+)/) : 0);
+  const wdef = Math.max(0, defFlat + Math.trunc((1 + (buffs ? num(T("Iron Body"), /Weapon Def\. \+(\d+)%/) : 0) / 100) * Math.floor(ap.STR / 4)));
+  const hpMult = buffs ? (1 - num(T("Invincible"), /Physical damage -(\d+)%/) / 100) * (1 - num(T("Magic Guard"), /Replace (\d+)% of HP damage/) / 100) : 1;
   const {near, even} = nearMobs(L);
   const hitAvg = even.length ? even.reduce((a, m) => a + hitProb(acc, m[4], m[1] - L), 0) / even.length : 1;
-  return {w, sk, sl, ai, min, max, avg, crit, critDmg, perCast, stage, interval, dps, acc, avoid, booster, mast, faRate, faPct, atkB, matkB, near, hitAvg, eff: dps * hitAvg};
+  return {hp, mp, wdef, hpMult, w, sk, sl, ai, min, max, avg, crit, critDmg, perCast, stage, interval, dps, acc, avoid, booster, mast, faRate: faOn ? faRate : 0, faPct, atkB, matkB, near, hitAvg, eff: dps * hitAvg};
 }
 
 /* greedy auto-build: keep buying the next 1-5 points that add the most real damage per SP */
@@ -288,14 +325,20 @@ function beginnerAt(cls, L){
 }
 // class guide build (16-guides.js): first-job SP in the guide's order (kept above 30, 2nd-job SP auto), and up to 30 the
 // guide's AP and weapons; the attack is whichever of the skilled ones does most (AoE build: as if ~3 monsters are in reach)
+// Past 30 the branch's 30-70 guide (GUIDE2) adds its 2nd-job SP order, AP rules and weapons; above 70 the SP left over is auto
+// and the best known weapon also competes.
 function guideBuild(){
-  const g = GUIDE[S.cls], L = S.lvl, list = jobSkills(), seed = {};
-  for (const [n, v] of Object.entries(guideSP(S.cls, Math.min(L, 30)))){ const s = byName(n, list); if (s) seed[s.id] = v }
+  const g = GUIDE[S.cls], L = S.lvl, g2 = L >= 30 && isSecond() ? GUIDE2[S.branch] : null, list = jobSkills(), seed = {};
+  const first = g2?.reset && L >= g2.reset.at ? g2.reset.first : guideSP(S.cls, Math.min(L, 30));
+  const fam = S.fam || kindOf(branchInfo()[2][0]);
+  for (const [n, v] of Object.entries(first).concat(g2 ? Object.entries(guideSP2(S.branch, Math.min(L, 70), fam)) : [])){ const s = byName(n, list); if (s) seed[s.id] = v }
   S.sp = autoSP(seed);
-  if (L > 30) return;
-  S.ap = guideAP(S.cls, L, S.fam);
-  const c = guideAt(g.weapons, L), types = branchInfo()[2];
-  let cand = (c ? g.weapons[c] : []).map(n => W.find(w => w.name === n)).filter(w => w && types.includes(w.type) && famOK(w.type));
+  if (L > 30 && !g2) return;
+  S.ap = g2 ? guideAP2(S.cls, S.branch, L, S.fam) : guideAP(S.cls, L, S.fam);
+  const tbl = g2 ? g2.weapons : g.weapons, c = guideAt(tbl, L);
+  const types = branchInfo()[2].concat(g2?.reset && L < g2.reset.at ? ["Claw"] : []);   // a Sindit keeps the claw until the reset
+  let cand = (c ? tbl[c] : []).map(n => W.find(w => w.name === n)).filter(w => w && types.includes(w.type) && (w.type === "Claw" || famOK(w.type)));
+  if (L > 70) cand = cand.concat(weaponsFor().slice(0, 4));
   if (!cand.length) cand = weaponsFor().filter(w => D.wsrc[w.name]?.shop).slice(0, 4);   // no guide weapon for this family: shop weapons
   let best = null;
   for (const w of cand){
@@ -315,10 +358,10 @@ function guideBuild(){
 buildAt = (cls, branch, fam, lvl, aoe = false, obt = false, guide = false) => {
   if (lvl < 10) return beginnerAt(cls, lvl);
   const keep = S;
-  if (guide && GUIDE[cls].claw && lvl < 30) fam = "Claw";
+  if (guide && GUIDE[cls].claw && lvl < (GUIDE2[branch]?.reset?.at || 30)) fam = lvl < 30 ? "Claw" : fam;
   S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe, obt};
   try { applyDefaults(); if (guide) guideBuild(); else S.sp = autoSP(); const r = calc(S.sp);
-    return {dps: r.dps, acc: r.acc, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo} }
+    return {dps: r.dps, acc: r.acc, hp: r.hp, wdef: r.wdef, mult: r.hpMult, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo} }
   finally { S = keep }
 };
 function fillControls(){
@@ -381,7 +424,7 @@ function renderSkills(){
 function render(){
   const L = S.lvl, ap = S.ap, cls = S.cls, br = S.branch;
   const r = calc(S.sp), w = r.w;
-  S.dps = Math.round(r.dps); S.acc = r.acc; S.area = r.ai && r.sk?.rg ? {t: r.ai.targets || 1, r: r.sk.rg, n: r.sk.n} : null;
+  S.dps = Math.round(r.dps); S.acc = r.acc; S.def = {hp: r.hp, wdef: r.wdef, mult: r.hpMult}; S.area = r.ai && r.sk?.rg ? {t: r.ai.targets || 1, r: r.sk.rg, n: r.sk.n} : null;
   const left = apTotal(L) - (ap.STR + ap.DEX + ap.INT + ap.LUK);
   $("#papleft").textContent = left === 0 ? "All AP spent" : left > 0 ? `${left} AP unspent` : `${-left} AP over budget`;
   $("#papleft").className = "pill " + (left === 0 ? "p-good" : "p-warn");
@@ -411,6 +454,7 @@ function render(){
     row("STR / DEX", `${ap.STR} / ${ap.DEX}`), row("INT / LUK", `${ap.INT} / ${ap.LUK}`),
     row("Accuracy", Math.round(r.acc)), row("Avoid", r.avoid),
     cls === "Magician" ? row("Magic", Math.floor(ap.INT/2) + (w?.mad || 0) + r.matkB) : row("Weapon attack", w ? w.pad + (r.atkB ? ` +${r.atkB}` : "") : "–"),
+    row("HP / MP", `${fmt(r.hp)} / ${fmt(r.mp)}`), row("W.DEF", `${r.wdef} <span class="sub">no armor</span>`),
     row("AP / SP", `${apTotal(L)} / ${spTotal(L)}`)
   ].join("");
 
@@ -454,9 +498,9 @@ $("#psend").addEventListener("click", () => {
   const map = {Magician:"Magician","F/P Wizard":"F/P Wizard","I/L Wizard":"I/L Wizard",Cleric:"Cleric"};
   const mcls = S.cls === "Magician" ? (map[S.branch] || "Magician") : S.cls;
   $("#cls").value = (S.cls === "Magician" && S.lvl < 30) ? "Magician" : mcls;
-  $("#lvl").value = Math.min(70, S.lvl);
+  $("#lvl").value = Math.min(MAX_LEVEL, S.lvl);
   $("#dps").value = Math.max(50, S.dps || 50);
-  ACC_FROM_BUILDER = S.acc ?? null; AOE_FROM_BUILDER = S.area?.t > 1 ? S.area : null;
+  ACC_FROM_BUILDER = S.acc ?? null; AOE_FROM_BUILDER = S.area?.t > 1 ? S.area : null; DEF_FROM_BUILDER = S.def || null;
   document.querySelector('[data-tab="maps"]').click();
   rankMaps();
 });
