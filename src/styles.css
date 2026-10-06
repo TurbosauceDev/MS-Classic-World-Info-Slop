@@ -214,3 +214,5 @@ table.mini td,table.mini th{padding:6px 8px}
 #xdonenote .btn{padding:3px 10px;font-size:12.5px;margin-left:6px}
 .rv{white-space:nowrap}
 .farm{color:var(--leaf)}
+.drops{color:var(--ink);opacity:.8;margin-top:2px}
+.drops b{font-weight:600;color:var(--leaf)}

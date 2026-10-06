@@ -67,6 +67,12 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - Pace multipliers 1 / 1.5 / 2 on all times are guesses (crowding, potions, breaks).
 - Reward value column = quest mesos + NPC sell price of its items (get: all; pick: best; random: expected/average). A floor,
   not market value.
+- Item drops (Danny's assumption, 2026-10-06): 30% per kill, or 15% "cautious". Quest cost = kill reqs + ceil(missing / rate)
+  kills of the source monster, overlapping per monster. Items with no known source (NPC-made, boxes) stay untimed.
+- Collecting ahead: while grinding, wanted drops (quests within 5 levels, accepted or not; assumes monster-named ETC items
+  drop without the quest, as the guides advise saving them) go in a bag at kills/s = count × rate / cycle EXP × drop rate.
+  Map score = (level EXP + credit) / time, credit per saved item = (kill time × best EXP/s − kill EXP) / drop rate,
+  i.e. the dedicated farming it saves. Replaces the old "≥ 50% of best EXP/hr" rewards-mode heuristic.
 - "Most rewards" mode: every quest with mesos or items (timed or not, minus "Skip" and other classes' class-only picks) plus
   their prerequisites; order = community tier, then level, then reward value. Grinding prefers maps holding monsters that
   open/soon-open (≤ L+3) reward quests need, if the map is ≥ 50% of the best EXP/hr (judgment call). Item drops not timed.

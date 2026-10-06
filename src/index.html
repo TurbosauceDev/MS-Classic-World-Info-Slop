@@ -125,10 +125,12 @@
           <li>Goes level by level from your level to your goal and builds a list to follow: where to train, which quests to do, how long each takes.</li>
           <li>Your character at each level is the Character Builder's default: best weapon you can use, AP and SP spent by the Auto buttons.</li>
           <li><b>Quests + grinding:</b> does each quest as it unlocks and grinds in between. Each quest shows how its EXP per hour compares with grinding; tick "Only quests faster than grinding" to keep just those.</li>
-          <li><b>Most rewards:</b> every quest that pays mesos or items (including item quests), Must do picks first, and grinding on maps with the monsters those quests need, as long as the map gives at least half the best EXP/hr. Item drop time isn't counted ("+ drops").</li>
+          <li><b>Most rewards:</b> every quest that pays mesos or items, Must do picks first, then lowest level and highest reward value. Items with no known source aren't timed ("+ other items").</li>
           <li><b>Reward value</b> = quest mesos + what its items sell to NPCs (pick-one: the best; random: the average). That's a floor; rated items sell for far more to players.</li>
           <li><b>Quests only:</b> every quest it can time, lowest level first, until they run out. <b>Grinding only:</b> maps only.</li>
-          <li><b>Valuable quests</b> (Sauna Robe, Icarus Cape, Work Gloves...) appear as side tasks at the level their chain starts, with the reward and why players rate it. Most need item drops, so their time isn't counted. Picks come from community guides; see the Quest Database.</li>
+          <li><b>Item drops:</b> drop rates aren't in the game files, so the plan assumes 30% per kill (15% if you pick cautious). A quest needing 20 Octopus Legs costs about 67 Octopus kills.</li>
+          <li><b>Collecting ahead:</b> while grinding, drops for quests up to 5 levels ahead go in your bag, even before you accept the quest (assuming these drop without the quest, as guides advise saving them). Maps get credit for the farming those drops save later, so the plan may pick a map a bit lower in EXP/hr when its drops pay off. Grind steps list what you collect; quest steps show how many are already saved.</li>
+          <li><b>Valuable quests</b> (Sauna Robe, Icarus Cape, Work Gloves...) are marked with their rating and why players rate it. The ones the plan can't time (items with no known source, or skipped by your mode) appear as side tasks at the level their chain starts. Picks come from community guides; see the Quest Database.</li>
           <li>Quests more than 5 levels under your current level count as already done or skipped. Quests with no EXP are skipped unless a later quest needs them.</li>
           <li>It stays on its current map unless another one is more than 10% better, so you don't hop maps every level.</li>
         </ul>
@@ -146,7 +148,7 @@
       <div>
         <h4>Left out</h4>
         <ul>
-          <li>Quests that need item drops: drop rates aren't in the game files, so they can't be timed. They're listed under the plan, and quests that come after them in a chain are skipped too.</li>
+          <li>Quests needing items with no known drop source (NPC-made or unclear). They're listed under the plan, and quests that come after them in a chain are skipped too.</li>
           <li>Event, crafting, repeatable and Citizenship quests; Orbis, El Nath and Forgotten Hollow.</li>
           <li>Party play, multi-target attacks, buying gear. Levels above 70 (the EXP table stops there).</li>
         </ul>
@@ -165,6 +167,7 @@
     <label class="chk" id="xislandwrap"><input type="checkbox" id="xisland"> Still on Maple Island</label>
     <label class="chk" id="xvalwrap"><input type="checkbox" id="xval"> Valuable quests</label>
     <label class="chk" id="xfastwrap"><input type="checkbox" id="xfast"> Only quests faster than grinding</label>
+    <label id="xdropwrap">Drop rate<select id="xdrop"><option value="0.3">30% (typical)</option><option value="0.15">15% (cautious)</option></select></label>
     <label>Pace<select id="xpace"><option value="1">Perfect play (model)</option><option value="1.5">Average player (1.5×)</option><option value="2">Relaxed (2×)</option></select></label>
   </div>
   <div class="grid2" id="xsum"></div>
@@ -173,8 +176,8 @@
     <thead><tr><th class="num">#</th><th class="num">Level</th><th>What to do</th><th>Where</th><th class="num">Reward value</th><th class="num">Time</th><th class="num">Total</th></tr></thead>
     <tbody id="xrows"></tbody>
   </table></div>
-  <h2>Quests that need item drops</h2>
-  <p class="note">Not in the plan because drop rates aren't in the game files. Worth picking up if you're already hunting the monster that drops the item.</p>
+  <h2>Quests with items of unknown source</h2>
+  <p class="note">Not in the plan: at least one item they ask for has no known monster drop in the game files (NPC-made, boxes, or unclear).</p>
   <div class="tblwrap"><table>
     <thead><tr><th class="num">Lv</th><th>Quest</th><th>Asks for</th><th class="num">EXP</th></tr></thead>
     <tbody id="xextra"></tbody>

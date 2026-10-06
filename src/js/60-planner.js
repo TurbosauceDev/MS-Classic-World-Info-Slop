@@ -13,7 +13,7 @@ const QUEST_SEC = 180, SAME_NPC_SEC = 60;   // walking + talking per quest (1 mi
 const STICK = 0.9;       // keep the current map while it's within 10% of the best
 const MAXL = 70;         // EXP table ends at 70
 
-let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true};
+let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true, drop:0.3};
 const BELOW = 5;          // quests more than 5 levels under your starting level count as done or skipped
 try { const s = JSON.parse(localStorage.getItem("path") || "null"); if (s && s.cls) X = Object.assign(X, s) } catch(e) {}
 
@@ -31,17 +31,28 @@ const whereMob = id => WHERE[id] !== undefined ? WHERE[id] : (WHERE[id] = Object
   .sort((a, b) => b[2] - a[2]).find(m => m[2] > 0) || null);
 const qIndex = new Map(D.quests.map((r, i) => [r, i]));
 const pool = () => D.quests.filter(r => !SKIP.includes(r.region) && !r.rep && (!CLASSREG.includes(r.region) || r.region === X.cls));
-const timed = r => !r.il.length && r.kl.every(([id]) => D.mobs[id] && !D.latermobs.includes(id));
-
-function questCost(r, L, ch, lastNpc){
-  let sec = r.npc && r.npc === lastNpc ? SAME_NPC_SEC : QUEST_SEC, exp = r.exp; const kills = [];
-  for (const [id, n] of r.kl){
-    const m = D.mobs[id]; if (!m) continue;   // tutorial-only monsters aren't in the export's monster list
-    const k = mobKill(m, mcls(L), L, ch.dps, ch.acc);
-    if (k.hit < 0.05) return null;
-    sec += k.sec * n; exp += m[3] * n; kills.push([m[0], n, whereMob(id)]);
+// item requirements with a known dropping monster at launch; anything else (NPC-given, unknown source) can't be timed
+const okMob = id => D.mobs[id] && !D.latermobs.includes(String(id));
+const dropItems = r => r.il.filter(i => okMob(i[2]));
+const timed = r => r.kl.every(([id]) => okMob(id)) && r.il.every(i => okMob(i[2]));
+const LOOK = 5;   // collect drops for quests up to 5 levels ahead, before they're accepted
+// time and EXP to finish a quest now: its kill requirements, plus the kills still missing for its item drops after
+// what's already in the bag (each kill of the source monster drops the item with chance X.drop). Kills overlap per monster.
+function questCost(r, L, ch, lastNpc, bag = new Map()){
+  let sec = r.npc && r.npc === lastNpc ? SAME_NPC_SEC : QUEST_SEC, exp = r.exp;
+  const need = new Map(), items = [];
+  for (const [id, n] of r.kl) if (D.mobs[id]) need.set(String(id), Math.max(need.get(String(id)) || 0, n));   // tutorial-only monsters aren't in the export
+  for (const [name, n, src] of dropItems(r)){
+    const have = Math.min(n, bag.get(name) || 0), k = Math.ceil((n - have) / X.drop);
+    need.set(String(src), Math.max(need.get(String(src)) || 0, k)); items.push([name, n, have, src, k]);
   }
-  return {sec, exp, kills};
+  const kills = [];
+  for (const [id, k] of need){
+    const m = D.mobs[id], c = mobKill(m, mcls(L), L, ch.dps, ch.acc);
+    if (c.hit < 0.05) return null;
+    sec += c.sec * k; exp += m[3] * k; kills.push([m[0], k, whereMob(id)]);
+  }
+  return {sec, exp, kills, items, unknown: r.il.some(i => !okMob(i[2]))};
 }
 
 // what a quest pays: mesos + NPC sell value of its items (guaranteed: all; pick 1: the best; random: expected value)
@@ -53,7 +64,6 @@ const itemValue = r => (r.ri || []).reduce((a, g) => {
 const hasReward = r => r.mesos > 0 || (r.ri || []).length > 0;
 const vTier = r => VALUE[r.id]?.[0] || 9;
 const vClassOK = r => !VALUE[r.id]?.[3] || VALUE[r.id][3] === X.cls;
-const REWARD_MAP_FLOOR = 0.5;   // rewards mode: farm a map with the monsters your quests need if it's at least half the best EXP/hr (a judgment call)
 
 function plan(mode = X.mode){
   const steps = [], cut = X.cur - BELOW, done = new Set(D.quests.filter(r => r.lvl < cut).map(r => r.id));
@@ -64,6 +74,7 @@ function plan(mode = X.mode){
     Q = Q.filter(r => want.includes(r) || pre.has(r.id));
   }
   let L = X.cur, exp = 0, t = 0, cur = null, qExp = 0, gExp = 0, j1 = X.cur >= 10, j2 = X.cur >= 30, npc = null;
+  const bag = new Map();   // quest drops collected while grinding, by item name
   const needed = new Set(Q.flatMap(r => r.pre));   // quests another quest needs first
   // community-picked valuable quests, shown as side tasks when their chain starts (their items can't be timed)
   const VL = !X.val || RW ? [] : Object.entries(VALUE).map(([id, v]) => { const r = D.quests.find(x => x.id === id); return r && {r, v, s: chainStart(r)} })
@@ -71,16 +82,44 @@ function plan(mode = X.mode){
     .sort((a, b) => a.s.lvl - b.s.lvl || a.r.lvl - b.r.lvl);
   let vi = 0;
   const levelUp = () => { while (L < MAXL && exp >= D.exp[L]){ exp -= D.exp[L]; L++ } };
-  const grindOne = rows => {   // grind to the next level on the best map (sticky), merging with the previous grind step
-    let best = rows[0];
-    if (cur && best){ const c = rows.find(r => r.id === cur.id); if (c && c.rate >= STICK * best.rate) best = c }
-    if (!best) return false;
-    const sec = (D.exp[L] - exp) / best.rate * X.pace; t += sec; gExp += D.exp[L] - exp; exp = 0;
-    const last = steps[steps.length - 1];
-    if (last && last.k === "grind" && last.map.id === best.id){ last.to = L + 1; last.sec += sec; last.t = t }
-    else steps.push({k:"grind", from:L, to:L + 1, map:best, sec, t, rate:best.rate, ch:charAt(L)});
-    cur = best; L++; return true;
+  // drops still wanted by quests within LOOK levels (accepted or not): item -> {left, src, q: first quest needing it}
+  const wanted = () => {
+    const w = new Map();
+    if (mode === "grind") return w;
+    for (const r of Q) if (!done.has(r.id) && r.lvl <= L + LOOK) for (const [name, n, src] of dropItems(r)){
+      const o = w.get(name) || {need: 0, src: String(src), q: r}; o.need += n; w.set(name, o);
+    }
+    for (const [name, o] of w){ o.left = Math.max(0, o.need - (bag.get(name) || 0)); if (!o.left) w.delete(name) }
+    return w;
   };
+  // grind to the next level. Maps are scored by EXP plus the farming time their drops will save later: each wanted item
+  // collected here saves 1/drop kills of its monster, worth (that kill time × best EXP/s − the kill's own EXP).
+  const grindOne = (rows, ch) => {
+    if (!rows.length) return false;
+    const W = wanted(), E = D.exp[L] - exp, G = rows[0].rate;
+    const score = m => {
+      const T = E / m.rate; let credit = 0; const got = [];
+      for (const [name, o] of W){
+        const c = (D.maps[m.id][2].find(sp => String(sp[0]) === o.src) || [0, 0])[1]; if (!c) continue;
+        const mob = D.mobs[o.src], items = Math.min(o.left, T * c * m.rate / m.cyc * X.drop);
+        credit += items / X.drop * Math.max(0, mobKill(mob, mcls(L), L, ch.dps, ch.acc).sec * G - mob[3]);
+        got.push([name, items, o.q]);
+      }
+      return {m, eff: (E + credit) / T, got};
+    };
+    const S = rows.slice(0, 40).map(score).sort((a, b) => b.eff - a.eff);
+    let best = S[0];
+    if (cur){ const c = S.find(x => x.m.id === cur.id); if (c && c.eff >= STICK * best.eff) best = c }
+    const sec = E / best.m.rate * X.pace; t += sec; gExp += E; exp = 0;
+    for (const [name, n] of best.got) bag.set(name, (bag.get(name) || 0) + n);
+    const last = steps[steps.length - 1];
+    let st = last;
+    if (last && last.k === "grind" && last.map.id === best.m.id){ last.to = L + 1; last.sec += sec; last.t = t }
+    else steps.push(st = {k:"grind", from:L, to:L + 1, map:best.m, sec, t, rate:best.m.rate, ch:charAt(L), got: new Map()});
+    for (const [name, n, q] of best.got){ const g = st.got.get(name) || {n: 0, q}; g.n += n; st.got.set(name, g) }
+    cur = best.m; L++; return true;
+  };
+  const finish = (r, c) => { for (const [name, n, have] of c.items || []) bag.set(name, (bag.get(name) || 0) - have) };
   // Maple Island comes first and is the same in every mode: every island quest, island maps in between, then the ship out
   if (X.cur < 10 && X.island){
     const IQ = D.quests.filter(r => r.region === "Maple Island").sort((a, b) => a.lvl - b.lvl || a.id - b.id);
@@ -89,13 +128,12 @@ function plan(mode = X.mode){
       const left = IQ.filter(r => !done.has(r.id)); if (!left.length && L >= SHIP_LV) break;
       const r = left.find(r => Math.max(1, r.lvl) <= L && r.pre.every(id => done.has(id))), ch = charAt(L);
       if (r){
-        const c = questCost(r, L, ch, npc) || {sec: QUEST_SEC, exp: r.exp, kills: []}; npc = r.npc;
-        const drops = r.il.filter(i => D.mobs[i[2]]).map(([n, k, src]) => `${k} ${n} (${D.mobs[src][0]})`);
-        done.add(r.id); const sec = c.sec * X.pace; t += sec; exp += c.exp; qExp += c.exp;
-        steps.push({k:"quest", L, r, c, sec, t, vs:null, drops}); levelUp(); continue;
+        const c = questCost(r, L, ch, npc, bag) || {sec: QUEST_SEC, exp: r.exp, kills: [], items: []}; npc = r.npc;
+        done.add(r.id); finish(r, c); const sec = c.sec * X.pace; t += sec; exp += c.exp; qExp += c.exp;
+        steps.push({k:"quest", L, r, c, sec, t, vs:null}); levelUp(); continue;
       }
       // a quest needs a higher level, or the ship needs level 7: grind on the island
-      if (!grindOne(mapRates(mcls(L), L, ch.dps, ch.acc, Infinity).filter(m => ISLAND(m.id)))){ steps.push({k:"nomap", L}); break }
+      if (!grindOne(mapRates(mcls(L), L, ch.dps, ch.acc, Infinity).filter(m => ISLAND(m.id)), ch)){ steps.push({k:"nomap", L}); break }
     }
     if (IQ.every(r => done.has(r.id)) && L >= SHIP_LV) steps.push({k:"job", L, txt:"Leave Maple Island: Shanks at the Southperry dock sails to Lith Harbor (level 7+, 300 mesos, which Mai's and Pio's quests cover). One way, you can't come back. Then do the Lith Harbor quests until 10."});
     cur = null;
@@ -114,7 +152,7 @@ function plan(mode = X.mode){
     if (mode !== "grind") for (const r of Q){
       if (done.has(r.id) || Math.max(1, r.lvl) > L || !r.pre.every(id => done.has(id))) continue;
       if (!r.exp && !r.kl.length && !needed.has(r.id) && !(RW && hasReward(r))) continue;   // no EXP, no reward, nothing needs it
-      const c = questCost(r, L, ch, npc); if (!c) continue;
+      const c = questCost(r, L, ch, npc, bag); if (!c) continue;
       const rate = c.exp / c.sec;
       if (mode === "mix" && X.fast && rate < G && !VALUE[r.id]) continue;
       if (RW){   // best-rated first, then lowest level, then most mesos + item value
@@ -126,22 +164,13 @@ function plan(mode = X.mode){
       if (!pick || (r.lvl - pick.r.lvl || pick.rate - rate) < 0) pick = {r, c, rate};
     }
     if (pick){
-      done.add(pick.r.id); npc = pick.r.npc; const sec = pick.c.sec * X.pace; t += sec; exp += pick.c.exp; qExp += pick.c.exp;
-      steps.push({k:"quest", L, r:pick.r, c:pick.c, sec, t, vs: G && !RW ? pick.rate / G : null, drops: pick.r.il.length > 0});
+      done.add(pick.r.id); finish(pick.r, pick.c); npc = pick.r.npc; const sec = pick.c.sec * X.pace; t += sec; exp += pick.c.exp; qExp += pick.c.exp;
+      steps.push({k:"quest", L, r:pick.r, c:pick.c, sec, t, vs: G && !RW ? pick.rate / G : null});
       levelUp();
       continue;
     }
     if (mode === "quests"){ steps.push({k:"stop", L, exp}); break }
-    let rows = rates, farm = [];
-    if (RW && rates.length){   // farm where the monsters for open or soon-open reward quests live
-      const need = new Map();
-      for (const r of Q) if (!done.has(r.id) && r.lvl <= L + 3) for (const [mid] of [...r.kl, ...r.il.filter(i => i[2]).map(i => [i[2]])]) if (D.mobs[mid]) need.set(String(mid), r);
-      const fav = rates.filter(m => m.rate >= REWARD_MAP_FLOOR * rates[0].rate && D.maps[m.id][2].some(([mid]) => need.has(String(mid))));
-      if (fav.length){ rows = fav; farm = need }
-    }
-    if (!grindOne(rows)){ steps.push({k:"nomap", L}); break }
-    const gs = steps[steps.length - 1];
-    if (farm.size) gs.farm = [...new Set(D.maps[gs.map.id][2].filter(([mid]) => farm.has(String(mid))).map(([mid]) => `${D.mobs[mid][0]} (${farm.get(String(mid)).name})`))];
+    if (!grindOne(rates, ch)){ steps.push({k:"nomap", L}); break }
     npc = null;
   }
   const mesos = steps.filter(s => s.k === "quest").reduce((a, s) => a + s.r.mesos, 0), items = steps.filter(s => s.k === "quest").reduce((a, s) => a + itemValue(s.r), 0);
@@ -166,6 +195,7 @@ function fill(){
   X.cur = Math.min(69, Math.max(1, Math.round(X.cur) || 1)); X.goal = Math.min(MAXL, Math.max(X.cur + 1, Math.round(X.goal) || X.cur + 1));
   $("#xisland").checked = X.island; $("#xislandwrap").hidden = X.cur >= 10;
   $("#xval").checked = X.val;
+  $("#xdrop").value = String(X.drop); $("#xdropwrap").hidden = X.mode === "grind";
   $("#xfast").checked = X.fast; $("#xfastwrap").hidden = X.mode !== "mix"; $("#xvalwrap").hidden = X.mode === "rewards";
   $("#xcur").value = X.cur; $("#xgoal").value = X.goal; $("#xpace").value = String(X.pace);
 }
@@ -204,13 +234,13 @@ function render(){
         <div class="sub">${s.s !== s.r ? `Start with ${qlink(s.s)} (Lv ${s.s.lvl}), ${s.r.cn}-quest chain · ` : ""}needs ${esc(s.r.req.replace(/ \(source n\/a\)/g, ""))}</div></td>
       <td class="sub">${esc(s.s.npc || "")} · ${esc(s.s.region || "")}</td>${rvCell(s.r)}<td class="num sub">not timed</td><td class="num">${hm(s.t)}</td></tr>`;
     if (s.k === "quest") return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>
-      <td>Quest: ${qlink(s.r)} ${vPill(s.r.id)}${s.vs != null ? ` <span class="pill ${s.vs >= 1 ? "p-good" : "p-warn"}" title="Quest EXP per hour compared with grinding at this level">${s.vs >= 1 ? "faster than grinding" : Math.round(s.vs * 100) + "% of grinding speed"}</span>` : ""}${s.r.ri?.length ? `<div class="ricons">${rewardIcons(s.r)}</div>` : ""}<div class="sub">+${fmt(s.c.exp)} EXP${s.c.kills.length ? " incl. kills" : ""}${s.drops?.length ? ` · plus drops: ${esc(s.drops.join(", "))} (not timed)` : ""}${s.r.req !== "talk / deliver only" ? " · " + esc(s.r.req) : " · talk / deliver"}</div></td>
-      <td class="sub">${esc(s.r.npc || "")} · ${esc(s.r.region || "")}${s.c.kills.map(([m, c, w]) => w ? `<br>${esc(m)}: ${mapLink(w[0], w[1])}` : "").join("")}${s.drops ? s.r.il.filter(i => D.mobs[i[2]]).map(([n, k, src]) => { const w = whereMob(src); return `<br>${esc(n)}: ${esc(D.mobs[src][0])}${w ? " at " + mapLink(w[0], w[1]) : ""}` }).join("") : ""}</td>
-      ${rvCell(s.r)}<td class="num">${hm(s.sec)}${s.drops ? `<div class="sub">+ drops</div>` : ""}</td><td class="num">${hm(s.t)}</td></tr>`;
+      <td>Quest: ${qlink(s.r)} ${vPill(s.r.id)}${s.vs != null ? ` <span class="pill ${s.vs >= 1 ? "p-good" : "p-warn"}" title="Quest EXP per hour compared with grinding at this level">${s.vs >= 1 ? "faster than grinding" : Math.round(s.vs * 100) + "% of grinding speed"}</span>` : ""}${s.r.ri?.length ? `<div class="ricons">${rewardIcons(s.r)}</div>` : ""}<div class="sub">+${fmt(s.c.exp)} EXP${s.c.kills.some(k => k[1] > 0) ? " incl. kills" : ""}${s.r.req !== "talk / deliver only" ? " · " + esc(s.r.req.replace(/ \(source n\/a\)/g, "")) : " · talk / deliver"}</div>${(s.c.items || []).length ? `<div class="sub drops">${s.c.items.map(([name, n, have, src, k]) => `${esc(name)}: ${have ? `<b>${fmt(have)} saved from grinding</b>` : "none saved"}${k ? `, ~${fmt(k)} ${esc(D.mobs[src][0])} kills for the rest` : ""}`).join("<br>")}</div>` : ""}</td>
+      <td class="sub">${esc(s.r.npc || "")} · ${esc(s.r.region || "")}${s.c.kills.filter(k => k[1] > 0).map(([m, c, w]) => w ? `<br>${esc(m)} ×${fmt(c)}: ${mapLink(w[0], w[1])}` : "").join("")}</td>
+      ${rvCell(s.r)}<td class="num">${hm(s.sec)}${s.c.unknown ? `<div class="sub" title="Some items have no known drop source">+ other items</div>` : ""}</td><td class="num">${hm(s.t)}</td></tr>`;
     return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.from}→${s.to}</td>
       <td><b>Grind to level ${s.to}</b><div class="sub gear">${s.ch.wid ? itemIcon(s.ch.wid, 1, true) : ""}${s.ch.sid && D.icons[s.ch.sid] ? `<img class="sk" src="data:image/png;base64,${D.icons[s.ch.sid]}" alt="" title="${esc(s.ch.skill)}">` : ""}
         <span>~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</span></div></td>
-      <td>${mapLink(s.map.id, s.map.name)}<div class="sub">${esc(s.map.mobs)}</div>${s.farm?.length ? `<div class="sub farm">Farms for quests: ${esc(s.farm.join(", "))}</div>` : ""}</td><td class="num">–</td>
+      <td>${mapLink(s.map.id, s.map.name)}<div class="sub">${esc(s.map.mobs)}</div>${s.got?.size ? `<div class="sub farm">Collects on the way: ${[...s.got].filter(([, g]) => g.n >= 1).map(([name, g]) => `${fmt(g.n)} ${esc(name)} <span title="${esc(g.q.name)}, Lv ${g.q.lvl}">(${esc(g.q.name)}${g.q.lvl > s.to ? `, Lv ${g.q.lvl}` : ""})</span>`).join(", ")}</div>` : ""}</td><td class="num">–</td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
   }).join("") || `<tr><td colspan="7" class="empty">You're already at your goal.</td></tr>`;
   saveDone();
@@ -241,6 +271,7 @@ $("#xfam").addEventListener("change", () => { X.fam = $("#xfam").value; render()
 $("#xisland").addEventListener("change", () => { X.island = $("#xisland").checked; render() });
 $("#xval").addEventListener("change", () => { X.val = $("#xval").checked; render() });
 $("#xfast").addEventListener("change", () => { X.fast = $("#xfast").checked; render() });
+$("#xdrop").addEventListener("change", () => { X.drop = +$("#xdrop").value; render() });
 $("#xpace").addEventListener("change", () => { X.pace = +$("#xpace").value; render() });
 $("#xcur").addEventListener("input", () => { X.cur = +$("#xcur").value || 1; if (X.goal <= X.cur) X.goal = Math.min(MAXL, X.cur + 1); later() });
 $("#xgoal").addEventListener("input", () => { X.goal = +$("#xgoal").value || X.cur + 1; later() });

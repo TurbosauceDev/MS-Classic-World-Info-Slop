@@ -43,7 +43,7 @@ function mapRates(cls, L, dps, acc, floor = 12){
     if (!ok || !n) continue;
     const avg = lvSum / n; if (avg < L - floor) continue;
     const rate = Math.min(exp / time, exp * 0.75 / 7.56);
-    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate});
+    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate, cyc: exp});   // kills/s of a mob = count × rate / cyc
   }
   return rows.sort((a,b) => b.rate - a.rate);
 }
