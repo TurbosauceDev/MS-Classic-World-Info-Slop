@@ -94,7 +94,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - `exp` {level: exp to next}
 - `mobdiff` [[name, level, null | {level,hp,exp,acc,eva,PADamage,PDDamage,MDDamage: [old, new]}]]
 - `skilldiff` [[class, job, name, oldText, newText, oldMaxLv, newMaxLv, changed]]
-- `weapons` [[name, type, reqLv, STR, DEX, INT, LUK, ATK, MATK, speed, jobLabel, price]]
+- `weapons` [[name, type, reqLv, STR, DEX, INT, LUK, ATK, MATK, speed, jobLabel, price, itemId]] (every weapon is also in `items`/`iicons`)
 - `skills` {job: [{id, n, max, req:[[name,lv]], k kind, att, mob (number or per-level array), st per-level text[], d desc}]}; `icons` {skillId: base64 png}
 - `quests` (non-Citizenship) / `citq` (Citizenship) rows: name, lvl, npc, region, exp, mesos, req, kills, mult (Bonus), eq_kills,
   eq_mob, pct_level, reward, rep (daily/weekly), id, grade, contrib, contrib_by_grade, town, pool, one_time,

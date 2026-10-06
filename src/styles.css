@@ -184,3 +184,10 @@ table.mini td,table.mini th{padding:6px 8px}
 .vwhy{font-size:12.5px;line-height:1.4;margin:3px 0 2px;max-width:46ch;color:var(--ink)}
 .vwhy a{color:var(--accent)}
 .vrow td{background:color-mix(in srgb,var(--accent-soft) 45%,transparent)}
+.ri.sm{width:26px;height:26px;border-radius:6px}
+.ri.sm img{max-width:22px;max-height:22px}
+.ri.sm b{font-size:9px}
+.ricons{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0 2px}
+.gear{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px}
+.gear .sk{width:24px;height:24px;image-rendering:pixelated;border-radius:6px;background:var(--bg);border:1px solid var(--line);padding:1px}
+#psicon{display:flex;gap:6px;align-items:center}

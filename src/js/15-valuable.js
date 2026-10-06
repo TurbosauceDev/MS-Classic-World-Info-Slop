@@ -48,6 +48,8 @@ const VALUE = {
   "10413": [2, "60% cape stat scroll of your choice", "You pick the stat, so check market prices first. More farming than part 1.", "", ["mq","mr"]],
   "10404": [4, "Hero's Gladius or Skull Earrings", "Iconic, but the inputs (Star Rock, Piece of Ice, Ancient Scroll, Flaming Feather) are costly.", "", ["mq","mr"]]
 };
+// chain starters whose icons should show the chain's final reward
+const VICON = {"10317": "10321"};
 // the quest a chain starts with (the level you should start working on it)
 const chainStart = r => r.chain ? D.quests.filter(x => x.chain === r.chain).sort((a, b) => a.lvl - b.lvl || a.id - b.id)[0] : r;
 const vPill = id => { const v = VALUE[id]; return v ? `<span class="pill ${VTIER[v[0]][1]}">${VTIER[v[0]][0]}</span>` : "" };

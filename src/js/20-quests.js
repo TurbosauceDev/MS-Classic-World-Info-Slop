@@ -61,6 +61,10 @@ function rewardCell(r){
       `<span class="ri" tabindex="0" data-item="${id}" data-n="${n}"${ch != null ? ` data-ch="${ch}"` : ""}${job ? ` data-job="${esc(job)}"` : ""}>${D.iicons[id] ? `<img src="data:image/png;base64,${D.iicons[id]}" alt="${esc(D.items[id]?.n || "")}">` : `<i></i>`}${n > 1 ? `<b>${n}</b>` : ""}</span>`).join("")}</div>`;
   }).join("");
 }
+// one item icon with the item tooltip; small = inline size for plan rows
+const itemIcon = (id, n = 1, small = false, extra = "") => D.items[id] ? `<span class="ri${small ? " sm" : ""}" tabindex="0" data-item="${id}" data-n="${n}"${extra}>${D.iicons[id] ? `<img src="data:image/png;base64,${D.iicons[id]}" alt="${esc(D.items[id].n)}">` : "<i></i>"}${n > 1 ? `<b>${n}</b>` : ""}</span>` : "";
+// every reward item of a quest as small inline icons
+const rewardIcons = r => (r.ri || []).flatMap(g => g.it.map(([id, n, ch]) => itemIcon(id, n, true, (ch != null ? ` data-ch="${ch}"` : "") + (g.job && g.job !== "Any Class" ? ` data-job="${esc(g.job)}"` : "")))).join("");
 const STATNAME = {incSTR:"STR",incDEX:"DEX",incINT:"INT",incLUK:"LUK",incMHP:"MaxHP",incMMP:"MaxMP",incPAD:"Weapon Attack",incMAD:"Magic Attack",
   incPDD:"Weapon Defense",incMDD:"Magic Defense",incACC:"Accuracy",incEVA:"Avoidability",incSpeed:"Speed",incJump:"Jump",incCRD:"Critical Damage %",incCR:"Critical Rate %"};
 const SPEC = {hp:"Restores {} HP",mp:"Restores {} MP",hpR:"Restores {}% HP",mpR:"Restores {}% MP",pad:"Weapon Attack +{}",mad:"Magic Attack +{}",acc:"Accuracy +{}",eva:"Avoidability +{}",speed:"Speed +{}"};

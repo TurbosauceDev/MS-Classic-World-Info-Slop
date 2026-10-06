@@ -46,7 +46,7 @@ def step_weapons(D):
         if i.get("sub_category") != "Weapon": continue
         s = i.get("stats", {})
         W.append([i["name"], i["weapon_type"], s.get("reqLevel", 0), s.get("reqSTR", 0), s.get("reqDEX", 0), s.get("reqINT", 0),
-                  s.get("reqLUK", 0), s.get("incPAD", 0), s.get("incMAD", 0), s.get("attackSpeed", 6), i.get("req_job_label") or "All", i.get("price")])
+                  s.get("reqLUK", 0), s.get("incPAD", 0), s.get("incMAD", 0), s.get("attackSpeed", 6), i.get("req_job_label") or "All", i.get("price"), str(i["id"])])
     D["weapons"] = W
 
 JOBS = {"Warrior", "Fighter", "Page", "Spearman", "Magician", "F/P Wizard", "I/L Wizard", "Cleric",
@@ -164,6 +164,7 @@ def step_rewards(D):
         r["ri"] = reward_groups(qby[r["id"]])
         for g in r["ri"]:
             for x in g["it"]: need.add(x[0])
+    need |= {w[12] for w in D["weapons"]}   # weapon icons + tooltips for the builder and planner
     need |= {"1032021", "1032022"}  # Henesys / Kerning City Earrings (grade 10 Citizenship reward, shown on that tab)
     info, icons = {}, {}
     for iid in sorted(need):   # sorted so rebuilds are byte-identical

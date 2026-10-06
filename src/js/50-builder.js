@@ -28,7 +28,7 @@ const AMMO = {Claw:[["Subi Throwing Stars",15],["Wolbi Throwing Stars",17],["Mok
   Crossbow:[["Arrows for Crossbows",0],["Bronze Arrows for Crossbows",1],["Iron Arrows for Crossbows",2],["Mithril Arrows for Crossbows",3]]};
 // event and GM weapons: the Wizet staff item and the summer-event tubes (all sell for 1 meso)
 const HIDDEN_WEAPON = w => /Wizet|GM\b/.test(w[0]) || (w[11] === 1 && /Tube$/.test(w[0]));
-const W = D.weapons.filter(w => !HIDDEN_WEAPON(w)).map(w => ({name:w[0], type:w[1], lvl:w[2], STR:w[3], DEX:w[4], INT:w[5], LUK:w[6], pad:w[7], mad:w[8], spd:w[9], job:w[10]}));
+const W = D.weapons.filter(w => !HIDDEN_WEAPON(w)).map(w => ({name:w[0], type:w[1], lvl:w[2], STR:w[3], DEX:w[4], INT:w[5], LUK:w[6], pad:w[7], mad:w[8], spd:w[9], job:w[10], id:w[12]}));
 const SK = D.skills; // job name -> skills from the COT2 export
 const BASIC = {id:"basic", n:"Basic attack", max:0};
 
@@ -266,14 +266,14 @@ function beginnerAt(cls, L){
   const wmult = wm[0] * sw + wm[1] * (1 - sw), mast = 0.08;
   const min = (0.8 + (ap.STR * wmult * mast + ap.DEX) / 100) * w.pad, max = (1 + (ap.STR * wmult + ap.DEX) / 100) * w.pad;
   const critF = 0.95 + 0.05 * 1.2, interval = 0.42 + 0.06 * w.spd;
-  return {dps: (min + max) / 2 * critF / interval, acc: (ap.DEX * 1.2 + L * 2 + ap.LUK * 0.6) / 2.5 + 10, branch: "Beginner", weapon: w.name, skill: "Basic attack"};
+  return {dps: (min + max) / 2 * critF / interval, acc: (ap.DEX * 1.2 + L * 2 + ap.LUK * 0.6) / 2.5 + 10, branch: "Beginner", weapon: w.name, wid: w.id, skill: "Basic attack"};
 }
 // default character at a level (best weapon, auto AP, auto skill build), for the Path Planner. Leaves the builder untouched.
 buildAt = (cls, branch, fam, lvl) => {
   if (lvl < 10) return beginnerAt(cls, lvl);
   const keep = S;
   S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true};
-  try { applyDefaults(); S.sp = autoSP(); const r = calc(S.sp); return {dps: r.dps, acc: r.acc, branch: S.branch, weapon: r.w?.name, skill: r.sk?.n} }
+  try { applyDefaults(); S.sp = autoSP(); const r = calc(S.sp); return {dps: r.dps, acc: r.acc, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id} }
   finally { S = keep }
 };
 function fillControls(){
@@ -347,7 +347,7 @@ function render(){
   renderSkills();
 
   const skName = r.sk ? r.sk.n : "no attack";
-  $("#psicon").innerHTML = r.sk && D.icons[r.sk.id] ? `<img src="data:image/png;base64,${D.icons[r.sk.id]}" alt="" width="32" height="32">` : "";
+  $("#psicon").innerHTML = (w ? itemIcon(w.id) : "") + (r.sk && D.icons[r.sk.id] ? `<img src="data:image/png;base64,${D.icons[r.sk.id]}" alt="" width="32" height="32">` : "");
   $("#psummary").textContent = `Level ${L} ${br} · ${w ? w.name : "no weapon"} · ${skName}${r.sk && r.sk.id !== "basic" ? " " + r.sl : ""}`;
   $("#pdps").textContent = r.ai ? fmt(r.dps) : "0";
   $("#pdpsnote").textContent = !r.ai ? `Put at least 1 point into ${skName} (and its prerequisites) to use it.` :
