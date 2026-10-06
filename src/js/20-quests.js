@@ -96,8 +96,16 @@ function mapTip(id){
   const m = D.maps[id]; if (!m) return "";
   const mm = D.mmaps[id], mobs = m[2].filter(([mid]) => D.mobs[mid]).sort((a, b) => b[1] - a[1])
     .map(([mid, n]) => `<li>${esc(D.mobs[mid][0])} <span>Lv ${D.mobs[mid][1]} · ×${n}</span></li>`).join("");
+  // exits: one number per destination, left to right; hidden passages dashed
+  const P = (D.portals[id] || []).slice().sort((a, b) => a[0] - b[0]), num = {}, dests = [];
+  for (const p of P) if (!(p[2] in num)){ num[p[2]] = dests.length + 1; dests.push(p[2]) }
+  const [w0, h0] = D.mmdim[id] || [0, 0], k = w0 ? Math.min(372 / w0, 330 / h0, 3) : 1, w = Math.round(w0 * k), h = Math.round(h0 * k);
+  const marks = P.map(([x, y, d, hid]) => `<span class="pt${hid ? " hid" : ""}" style="left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%">${num[d]}</span>`).join("");
+  const exits = dests.map(d => { const all = P.filter(p => p[2] === d), hid = all.every(p => p[3]), later = D.maps[d] && !D.maps[d][1];
+    return `<li><b class="ptn${hid ? " hid" : ""}">${num[d]}</b>${esc(D.mapnames[d] || D.maps[d]?.[0] || "map " + d)}${hid ? " <span>hidden</span>" : ""}${later ? " <span>not at launch</span>" : ""}</li>` }).join("");
   return `<div class="qt-h"><b>${esc(m[0])}</b></div>
-    ${mm ? `<img class="mm" src="data:image/${D.mmapType};base64,${mm}" alt="Minimap of ${esc(m[0])}">` : `<p>No minimap in the game files.</p>`}
+    ${mm ? `<div class="mmwrap"${w ? ` style="width:${w}px;height:${h}px"` : ""}><img class="mm" src="data:image/${D.mmapType};base64,${mm}" alt="Minimap of ${esc(m[0])}"${w ? ` width="${w}" height="${h}"` : ""}>${marks}</div>` : `<p>No minimap in the game files.</p>`}
+    ${exits ? `<h5>Exits</h5><ul class="mexits">${exits}</ul>` : ""}
     ${mobs ? `<h5>Monsters (spawn points)</h5><ul class="mmobs">${mobs}</ul>` : ""}`;
 }
 function showQtip(el){

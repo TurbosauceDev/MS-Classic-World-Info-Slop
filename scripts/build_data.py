@@ -186,16 +186,62 @@ def step_minimaps(D):
         import io
     except ImportError:
         Image = None; print("Pillow not installed: minimaps stay PNG (bigger page)")
-    out = {}
+    out, dim = {}, {}
     for mid, m in D["maps"].items():
         p = C + f"images/maps/{int(mid):09d}.png"
         if not m[1] or not os.path.exists(p): continue
         if Image:
-            buf = io.BytesIO(); Image.open(p).convert("RGBA").save(buf, "WEBP", quality=80, method=6)
+            im = Image.open(p); dim[str(mid)] = list(im.size)
+            buf = io.BytesIO(); im.convert("RGBA").save(buf, "WEBP", quality=80, method=6)
             out[str(mid)] = base64.b64encode(buf.getvalue()).decode()
         else:
             out[str(mid)] = b64(p)
-    D["mmaps"], D["mmapType"] = out, "webp" if Image else "png"
+    D["mmaps"], D["mmapType"], D["mmdim"] = out, "webp" if Image else "png", dim
+    step_portals(D)
+
+def render_dims(ids):
+    """Width/height of the dashboard's full map renders (portal x/y are in render pixels). Reads only the first 64 bytes
+    of each WebP (HTTP range request, ~11 KB for all open maps) instead of the ~900 MB of renders. Cached in vendor/."""
+    import subprocess, concurrent.futures as cf
+    cache = ROOT / "vendor" / "render_dims.json"
+    got = json.loads(cache.read_text()) if cache.exists() else {}
+    man = json.load(open(C + "map_manifest.json"))
+    ref = os.environ.get("OSMS_REF") or subprocess.run(["git", "-C", str(ROOT / "vendor" / "osms_datamine_dashboard"), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    def head(mid):
+        h = man.get(f"{int(mid):09d}")
+        if not h: return mid, None
+        b = subprocess.run(["curl", "-sS", "--max-time", "20", "-r", "0-63", f"https://raw.githubusercontent.com/ohmi69/osms_datamine_dashboard/{ref}/data/maps/{h}.webp"], capture_output=True).stdout
+        if b[:4] != b"RIFF" or b[8:12] != b"WEBP": return mid, None
+        t = b[12:16]
+        if t == b"VP8X": return mid, [int.from_bytes(b[24:27], "little") + 1, int.from_bytes(b[27:30], "little") + 1]
+        if t == b"VP8L": v = int.from_bytes(b[21:25], "little"); return mid, [(v & 0x3FFF) + 1, ((v >> 14) & 0x3FFF) + 1]
+        return mid, [int.from_bytes(b[26:28], "little") & 0x3FFF, int.from_bytes(b[28:30], "little") & 0x3FFF]
+    todo = [i for i in ids if i not in got]
+    if todo:
+        with cf.ThreadPoolExecutor(12) as ex:
+            for mid, dm in ex.map(head, todo):
+                if dm: got[mid] = dm
+        cache.write_text(json.dumps(got))
+    return got
+
+def step_portals(D):
+    """portals {mapId: [[x, y, destId, hidden]]}: exits to other maps as fractions of the minimap (render pixels stretched
+    per axis: 92% of monster spawn points then land on drawn platforms). mapnames {id: name} for every destination."""
+    P = json.load(open(C + "portals.json"))
+    dims = render_dims([k for k in D["mmdim"]])
+    names = {m["id"]: m["name"] for r in a.mapsj["regions"] for m in r["maps"]}
+    out, dest = {}, set()
+    for mid in D["mmdim"]:
+        if mid not in dims: continue
+        rw, rh = dims[mid]; L = []
+        for p in P.get(f"{int(mid):09d}", []):
+            dm = p.get("dest_map")
+            if not dm or dm == "999999999" or int(dm) == int(mid) or p["type"] not in (1, 2, 3): continue
+            L.append([round(min(max(p["x"] / rw, 0), 1), 3), round(min(max(p["y"] / rh, 0), 1), 3), str(int(dm)), 1 if p["type"] == 1 else 0])
+            dest.add(int(dm))
+        if L: out[mid] = L
+    D["portals"] = out
+    D["mapnames"] = {str(i): names.get(i, "") for i in sorted(dest)}
 
 def step_launch(D):
     mob = {str(m["id"]): m for m in a.monsters}

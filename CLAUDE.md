@@ -64,5 +64,5 @@ every change): https://claude.ai/artifact/Facfj1DVkTNyQyrbHHFQcH The page must s
   Palette is lavender/purple/grey; keep it. Both light and dark must work; no horizontal scroll at 390px.
 - Explanatory text goes in a collapsible `<details class="howto">` box at the top of a tab, as short bullet lists.
 - Tooltips: one floating `#qtip`; elements with `.qname` (quests), `.ri` (items) or `.mname` (maps, via `mapLink()`) get it via delegated listeners.
-- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, qsort, qeq, qval, ctown, cls-seg).
+- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, cls-seg).
 - Plain, game-player language on the page. Say when a number is estimated.

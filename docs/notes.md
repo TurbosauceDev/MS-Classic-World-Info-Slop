@@ -102,6 +102,10 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   chain, cpos, cn, ri (reward groups {k: get|pick|rand, job, it: [[itemId, count, chance%]]}), info (tooltip: d, req, mesos, items, start, prev, next, chain, rep, contrib, eq)
 - `items` {itemId: {n, c category, s sub, st stats, job, p price, d desc, wt weapon type, spd, sp spec}}; `iicons` {itemId: base64}
 - `mmaps` {mapId: base64 minimap, open maps only}, `mmapType` "webp" | "png" (WebP needs Pillow at data-build time)
+- `mmdim` {mapId: [w, h]} minimap pixels; `portals` {mapId: [[x, y, destMapId, hidden]]} x/y as 0-1 fractions of the minimap;
+  `mapnames` {mapId: name} for portal destinations. Portal x/y in portals.json are pixels of the dashboard's full map
+  renders; render sizes come from 64-byte range reads of each render (cached in vendor/render_dims.json). Per-axis stretch
+  onto the minimap put 92% of monster spawn points on drawn platforms (uniform-scale variants: 86-91%).
 - `latermobs` [mobId], `latermobnames` [name]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2
   (Someone Else's House) and Fairy 3 (Tree Dungeon, Forest Up North VI/VII): they ARE at launch, just not in the ranking.
 

@@ -25,6 +25,9 @@ const path = require("path");
     await p.click(`#xmode button[data-v="${m}"]`);
     check((await p.$$eval("#xrows tr", r => r.length)) > 0 && !/NaN|undefined/.test(await p.textContent("#path")), `path plan (${m}) renders`);
   }
+  await p.click("#xrows .stepchk input >> nth=0");
+  check(await p.$eval("#xrows tr[data-k]", r => r.classList.contains("done")), "planner step tick fades the row");
+  await p.click("#xrows .stepchk input >> nth=0");
   // Where to train
   await p.click("#t-maps"); check(await p.$$eval("#maps tbody tr", r => r.length) > 0, "map ranking renders");
   // Quest Database

@@ -155,31 +155,50 @@ function render(){
       : `The quests save about ${hm(G.t - P.t)} over pure grinding.`]] : [])
   ].map(([h, p]) => `<div class="fact"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join("");
   let n = 0;
+  // tick-off boxes: a step's key survives replanning when it's the same quest / job advancement / map and levels
+  const key = s => s.k === "quest" || s.k === "value" ? "q" + s.r.id : s.k === "grind" ? `g${s.map.id}:${s.from}-${s.to}` : `j${X.cls}:${s.L}`;
+  const tr = (s, cls = "") => `<tr class="${cls}${DONE.has(key(s)) ? " done" : ""}" data-k="${key(s)}">`;
+  const chk = (s, label) => `<label class="stepchk"><input type="checkbox"${DONE.has(key(s)) ? " checked" : ""} aria-label="Step ${label || ""} done">${label}</label>`;
   $("#xrows").innerHTML = S.map(s => {
-    if (s.k === "job") return `<tr class="branch"><td></td><td class="num">${s.L}</td><td colspan="4">${esc(s.txt)}</td></tr>`;
+    if (s.k === "job") return `${tr(s, "branch")}<td class="num">${chk(s, "")}</td><td class="num">${s.L}</td><td colspan="4">${esc(s.txt)}</td></tr>`;
     if (s.k === "stop") return `<tr><td></td><td class="num">${s.L}</td><td colspan="4" class="sub">No more quests to do at this level. Grind or switch to "Quests + grinding".</td></tr>`;
     if (s.k === "nomap") return `<tr><td></td><td class="num">${s.L}</td><td colspan="4" class="sub">No training map fits this level.</td></tr>`;
     n++;
-    if (s.k === "value") return `<tr class="vrow"><td class="num">${n}</td><td class="num">${s.L}</td>
+    if (s.k === "value") return `${tr(s, "vrow")}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>
       <td>${vPill(s.r.id)} ${qlink(s.r)}<div class="vwhy"><b>${esc(s.v[1])}</b> · ${esc(s.v[2])}</div>
         <div class="ricons">${rewardIcons(VICON[s.r.id] ? D.quests.find(x => x.id === VICON[s.r.id]) : s.r)}</div>
         <div class="sub">${s.s !== s.r ? `Start with ${qlink(s.s)} (Lv ${s.s.lvl}), ${s.r.cn}-quest chain · ` : ""}needs ${esc(s.r.req.replace(/ \(source n\/a\)/g, ""))}</div></td>
       <td class="sub">${esc(s.s.npc || "")} · ${esc(s.s.region || "")}</td><td class="num sub">not timed</td><td class="num">${hm(s.t)}</td></tr>`;
-    if (s.k === "quest") return `<tr><td class="num">${n}</td><td class="num">${s.L}</td>
+    if (s.k === "quest") return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>
       <td>Quest: ${qlink(s.r)} ${vPill(s.r.id)}${s.vs != null ? ` <span class="pill ${s.vs >= 1 ? "p-good" : "p-warn"}" title="Quest EXP per hour compared with grinding at this level">${s.vs >= 1 ? "faster than grinding" : Math.round(s.vs * 100) + "% of grinding speed"}</span>` : ""}${s.r.ri?.length ? `<div class="ricons">${rewardIcons(s.r)}</div>` : ""}<div class="sub">+${fmt(s.c.exp)} EXP${s.c.kills.length ? " incl. kills" : ""}${s.drops?.length ? ` · plus drops: ${esc(s.drops.join(", "))} (not timed)` : ""}${s.r.req !== "talk / deliver only" ? " · " + esc(s.r.req) : " · talk / deliver"}</div></td>
       <td class="sub">${esc(s.r.npc || "")} · ${esc(s.r.region || "")}${s.c.kills.map(([m, c, w]) => w ? `<br>${esc(m)}: ${mapLink(w[0], w[1])}` : "").join("")}</td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
-    return `<tr><td class="num">${n}</td><td class="num">${s.from}→${s.to}</td>
+    return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.from}→${s.to}</td>
       <td><b>Grind to level ${s.to}</b><div class="sub gear">${s.ch.wid ? itemIcon(s.ch.wid, 1, true) : ""}${s.ch.sid && D.icons[s.ch.sid] ? `<img class="sk" src="data:image/png;base64,${D.icons[s.ch.sid]}" alt="" title="${esc(s.ch.skill)}">` : ""}
         <span>~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</span></div></td>
       <td>${mapLink(s.map.id, s.map.name)}<div class="sub">${esc(s.map.mobs)}</div></td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
   }).join("") || `<tr><td colspan="6" class="empty">You're already at your goal.</td></tr>`;
+  saveDone();
   const ex = pool().filter(r => !timed(r) && !P.done.has(r.id) && r.lvl <= X.goal && r.lvl >= Math.max(1, X.cur - 5)).sort((a, b) => a.lvl - b.lvl || b.exp - a.exp);
   $("#xextra").innerHTML = ex.map(r => `<tr><td class="num">${r.lvl}</td><td>${qlink(r)}<div class="sub">${esc(r.npc || "")} · ${esc(r.region || "")}</div></td>
     <td class="sub">${esc(r.req.replace(/ \(source n\/a\)/g, ""))}</td><td class="num">${fmt(r.exp)}</td></tr>`).join("") || `<tr><td colspan="4" class="empty">None in this level range.</td></tr>`;
 }
 let timer = null, shown = false;
+const DONE = new Set();
+try { JSON.parse(localStorage.getItem("pathdone") || "[]").forEach(k => DONE.add(k)) } catch(e) {}
+const saveDone = () => { try { localStorage.setItem("pathdone", JSON.stringify([...DONE])) } catch(e) {}
+  const all = [...document.querySelectorAll("#xrows tr[data-k]")], d = all.filter(r => r.classList.contains("done")).length;
+  $("#xdonenote").innerHTML = d ? `${d} of ${all.length} steps ticked off. <button class="btn" id="xclear">Untick all</button>` : "Tick a step's box when you've done it.";
+};
+$("#xrows").addEventListener("change", e => {
+  const b = e.target.closest(".stepchk input"); if (!b) return;
+  const row = b.closest("tr"), k = row.dataset.k;
+  if (b.checked) DONE.add(k); else DONE.delete(k);
+  row.classList.toggle("done", b.checked); saveDone();
+});
+$("#xdonenote").addEventListener("click", e => { if (e.target.id !== "xclear") return; DONE.clear();
+  document.querySelectorAll("#xrows tr.done").forEach(r => { r.classList.remove("done"); r.querySelector("input").checked = false }); saveDone() });
 const later = () => { clearTimeout(timer); timer = setTimeout(render, 150) };
 $("#xcls").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (!b) return; X.cls = b.dataset.v; X.branch = XB[X.cls][0]; X.fam = null; render() });
 $("#xmode").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (!b) return; X.mode = b.dataset.v; render() });
