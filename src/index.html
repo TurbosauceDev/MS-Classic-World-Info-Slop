@@ -126,7 +126,7 @@
           <li>Your character at each level is the Character Builder's default: best weapon you can use, AP and SP spent by the Auto buttons.</li>
           <li><b>Quests + grinding:</b> does each quest as it unlocks and grinds in between. Each quest shows how its EXP per hour compares with grinding; tick "Only quests faster than grinding" to keep just those.</li>
           <li><b>Quests only:</b> every quest it can time, lowest level first, until they run out. <b>Grinding only:</b> maps only.</li>
-          <li>Quests more than 5 levels under your current level count as already done or skipped. Maple Island quests stop at level 10.</li>
+          <li>Quests more than 5 levels under your current level count as already done or skipped. Quests with no EXP are skipped unless a later quest needs them.</li>
           <li>It stays on its current map unless another one is more than 10% better, so you don't hop maps every level.</li>
         </ul>
       </div>
@@ -135,8 +135,9 @@
         <ul>
           <li>Grinding times come from the "Where to train" model (single target, solo).</li>
           <li><b>Average player</b> takes 1.5× the model time, <b>Relaxed</b> 2×: crowded maps, potions, breaks. These multipliers are a guess; pick what fits you.</li>
-          <li>Each quest adds 3 minutes for walking and talking (also a guess), plus the time to kill what it asks for. Kill EXP from quests counts.</li>
+          <li>Each quest adds 3 minutes for walking and talking, 1 minute when it's the same NPC as the quest before (also guesses), plus the time to kill what it asks for. Kill EXP from quests counts.</li>
           <li>Below level 10 there's no job, so damage is a rough 20 × level.</li>
+          <li><b>Maple Island</b> runs first in every mode: every island quest in order, island maps when a quest needs a higher level, then Shanks' ship to Lith Harbor (meowdb: the quests take you to about level 8, and you can't come back). Untick "Still on Maple Island" if you've left.</li>
         </ul>
       </div>
       <div>
@@ -158,6 +159,7 @@
     <label>Goal level<input id="xgoal" type="number" min="2" max="70" value="30"></label>
     <div class="lab">Plan<div class="seg small" id="xmode">
       <button data-v="mix">Quests + grinding</button><button data-v="quests">Quests only</button><button data-v="grind">Grinding only</button></div></div>
+    <label class="chk" id="xislandwrap"><input type="checkbox" id="xisland"> Still on Maple Island</label>
     <label class="chk" id="xfastwrap"><input type="checkbox" id="xfast"> Only quests faster than grinding</label>
     <label>Pace<select id="xpace"><option value="1">Perfect play (model)</option><option value="1.5">Average player (1.5×)</option><option value="2">Relaxed (2×)</option></select></label>
   </div>

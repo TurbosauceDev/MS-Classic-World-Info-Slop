@@ -9,6 +9,7 @@
 | Accuracy / hit / damage / defense formulas | COT2 client audit published on maplestory.quest / OSMS `tabs/formulas.js` |
 | SP rules | meowdb guides (glossary; Warrior 1–30; Page 30–70) |
 | Citizenship grades, discounts, storage fees, civic shops, how to join | meowdb.com/msclassic/citizenship (says: COT2; housing, daily limits, reactivation fees unconfirmed). Read through a summarising fetch — every shop item name was checked to exist in the export, prices/grades were not verifiable |
+| Maple Island sequence | meowdb beginner guide + new player guide (via search snippets; meowdb.com blocked in the cloud env) |
 | Launch scope | meowdb release-date guide (no Orbis/El Nath/3rd job at launch); meowdb news 2026-10-03 (level cap 100, Forgotten Hollow later) |
 
 No drop tables exist in the export, so nothing depends on drop rates ("source n/a" on quest items).
@@ -46,7 +47,13 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - Character at each level = builder defaults via `buildAt` (best weapon, auto AP/SP, buffs on), cached per class/job/weapon/level.
   Below 10: damage 20 × level. 1st job used below 30, chosen 2nd job from 30.
 - Grinding: best `mapRates` map; stays on the current map while it's within 10% of the best. No map near the level → best of the rest.
-- Quest time = 3 min walking/talking (guess) + kills × `mobKill` time; quest EXP includes the kills' EXP.
+- Maple Island phase (start < 10 and "Still on Maple Island"): runs first in every mode. All 20 island quests in level/id order,
+  island maps (id < 10,000,000) only when a quest needs a higher level, then Shanks' ship Southperry → Lith Harbor, no return.
+  Source: meowdb beginner guide (quests bring you to ~lv 8, can't return, chair you can't get later), read via search
+  snippets because meowdb.com is blocked by this environment's network policy. Plan reaches ~lv 7 off the island.
+  Item-quest items with no drop source count as handed out by an NPC; drop items are shown "not timed".
+- Quest time = 3 min walking/talking (1 min if same NPC as the previous quest; guesses) + kills × `mobKill` time;
+  quest EXP includes the kills' EXP. 0-EXP quests are skipped unless another quest needs them.
   Only quests with no item requirements are timed (no drop rates); item quests are listed under the plan, and their chain
   successors are blocked. Skipped: Event, Crafting, repeatable, Citizenship, other classes' job quests, Maple Island from 10.
   Quests >5 levels under the starting level count as done.
