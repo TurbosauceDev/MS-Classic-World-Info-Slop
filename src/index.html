@@ -159,6 +159,7 @@
           <li>Quests more than 5 levels under your current level count as already done or skipped. Quests with no EXP are skipped unless a later quest needs them.</li>
           <li>It stays on its current map unless another one is more than 10% better, so you don't hop maps every level.</li>
           <li>Grind rows show the map's <b>danger</b> for your character (one hit as a share of Max HP, no armor, and how often it lands) and the <b>portals to potions</b>.</li>
+          <li><b>If it's crowded:</b> each grind row lists up to 2 backup maps whose monsters average within 5 levels of the pick and give at least 60% of its EXP/hr (same model, from the game files). The percentage is their EXP/hr against the pick; a backup can be faster when the pick is a guide map or wins on quest drops or a shorter walk. With class guides on, backups can be maps the guide didn't pick.</li>
           <li><b>Mesos:</b> monster meso drops (player reports on meowdb, ~2 per monster level where nobody has reported) and quest mesos, against weapons at NPC shop prices and potions and ammo while grinding. The potion bill assumes skills on every attack; quest potions are taken off it. Selling loot isn't counted.</li>
           <li><b>Copy link</b> makes a link that opens this exact plan.</li>
           <li><b>Party:</b> grinding uses your share of the map plus the party EXP bonus (see Where to train). Quests stay solo. The Kerning Party Quest shows up at 21 as an optional step.</li>
@@ -440,6 +441,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 6, 2026 · Backup grind maps</h3><span class="pill p-hot">planner</span></div>
+      <p>Path Planner grind steps now list up to 2 backup maps for when the pick is crowded: monsters within 5 levels on average and at least 60% of the EXP/hr, with the percentage shown.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 6, 2026 · Launch game data</h3><span class="pill p-hot">data</span></div>
       <p>Every tab now uses the OSMS <b>Public Release</b> export (Oct 6) instead of Closed Online Test 2.</p>
       <ul>

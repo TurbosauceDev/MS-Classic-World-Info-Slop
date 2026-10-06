@@ -14,6 +14,7 @@ const SKIP = ["El Nath","Orbis","Forgotten Hollow","Event","Crafting","Maple Isl
 const QUEST_SEC = 60, SAME_NPC_SEC = 30, NO_SPOT_SEC = 180, WALK_SEC = 30, TAXI_SEC = 45;
 const RESPAWN = 7.56, SOLO_ALIVE = 0.75;   // respawn timer and share of spawns a solo player keeps alive (same as Where to train)
 const STICK = 0.9;       // keep the current map while it's within 10% of the best
+const BACKUP_LV = 5, BACKUP_RATE = 0.6;   // backup maps: monsters within 5 levels on average, at least 60% of the EXP/hr
 const MAXL = MAX_LEVEL;   // level cap (EXP above 49 is meowdb's historical reference, see 00-core.js)
 
 let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true, drop:0.3, aoe:true, guide:"all", party:1};
@@ -193,7 +194,9 @@ function plan(mode = X.mode){
     for (const lg of legs) if (lg !== first) pushTravel(lg);
     return st;
   };
-  const grindOne = (rows, ch, alt = null) => {
+  // backup maps if the pick is crowded: similar monster level (within BACKUP_LV) and at least BACKUP_RATE of its EXP/hr
+  const backups = (m, all) => all.filter(x => x.id !== m.id && Math.abs(x.avg - m.avg) <= BACKUP_LV && x.rate >= BACKUP_RATE * m.rate).slice(0, 2);
+  const grindOne = (rows, ch, alt = null, all = rows) => {
     if (!rows.length) return false;
     const W = wanted(), E = D.exp[L] - exp, G = rows[0].rate;
     const score = m => {
@@ -218,7 +221,7 @@ function plan(mode = X.mode){
     const last = steps[steps.length - 1];
     let st = last;
     if (last && last.k === "grind" && last.map.id === best.m.id){ last.to = L + 1; last.sec += sec; last.t = t }
-    else steps.push(st = {k:"grind", from:L, to:L + 1, map:best.m, sec, t, rate:best.m.rate, ch:charAt(L), got: new Map(), guide: !!alt, alt: alt && alt.id !== best.m.id ? alt : null});
+    else steps.push(st = {k:"grind", from:L, to:L + 1, map:best.m, sec, t, rate:best.m.rate, ch:charAt(L), got: new Map(), guide: !!alt, alt: alt && alt.id !== best.m.id ? alt : null, backup: backups(best.m, all.filter(x => x.id !== alt?.id))});
     for (const [name, n, q] of best.got){ const g = st.got.get(name) || {n: 0, q}; g.n += n; st.got.set(name, g) }
     cur = best.m; here = best.m.id; L++; return true;
   };
@@ -263,12 +266,13 @@ function plan(mode = X.mode){
     }
     gearCheck();
     const ch = charAt(L);
-    let rates = mapRates(mcls(L), L, ch.dps, ch.acc, 12, aoeOf(ch), X.party).filter(m => !ISLAND(m.id)), alt = null;
-    if (!rates.length) rates = mapRates(mcls(L), L, ch.dps, ch.acc, Infinity, aoeOf(ch), X.party).filter(m => !ISLAND(m.id));   // nothing near your level: best of the rest
+    const all = mapRates(mcls(L), L, ch.dps, ch.acc, Infinity, aoeOf(ch), X.party).filter(m => !ISLAND(m.id));
+    let rates = all.filter(m => m.avg >= L - 12), alt = null;
+    if (!rates.length) rates = all;   // nothing near your level: best of the rest
     // class guide on: train on the guide's maps for this level (its Training Advisor also checks sure hits, 2-hit kills,
     // danger and the walk to town, which this model doesn't); the model's own pick is kept to show next to it
     const gm = guideMaps(L);
-    if (gm){ const gr = mapRates(mcls(L), L, ch.dps, ch.acc, Infinity, aoeOf(ch), X.party).filter(m => gm.includes(m.id)); if (gr.length){ alt = rates[0]; rates = gr } }
+    if (gm){ const gr = all.filter(m => gm.includes(m.id)); if (gr.length){ alt = rates[0]; rates = gr } }
     let best = rates[0];
     if (cur && best){ const c = rates.find(r => r.id === cur.id); if (c && c.rate >= STICK * best.rate) best = c }
     const G = best ? best.rate : 0;
@@ -294,7 +298,7 @@ function plan(mode = X.mode){
       continue;
     }
     if (mode === "quests"){ steps.push({k:"stop", L, exp}); break }
-    if (!grindOne(rates, ch, alt)){ steps.push({k:"nomap", L}); break }
+    if (!grindOne(rates, ch, alt, all)){ steps.push({k:"nomap", L}); break }
     npc = null;
   }
   const mesos = steps.filter(s => s.k === "quest").reduce((a, s) => a + s.r.mesos, 0), items = steps.filter(s => s.k === "quest").reduce((a, s) => a + itemValue(s.r), 0);
@@ -396,7 +400,7 @@ function render(){
     return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.from}→${s.to}</td>
       <td><b>Grind to level ${s.to}</b><div class="sub gear">${s.ch.wid ? itemIcon(s.ch.wid, 1, true) : ""}${s.ch.sid && D.icons[s.ch.sid] ? `<img class="sk" src="data:image/png;base64,${D.icons[s.ch.sid]}" alt="" title="${esc(s.ch.skill)}">` : ""}
         <span>~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.map.hits > 1.05 ? ` · hits ~${s.map.hits.toFixed(1)} per cast` : ""}${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</span></div>${ups(s.from + 1, s.to)}</td>
-      <td>${mapLink(s.map.id, s.map.name)} ${dangerPill(mapDanger(s.map.id, s.from, s.ch.hp ? s.ch : defaultDef(mcls(s.from), s.from)))}${POTS[s.map.id] ? `<div class="sub">${esc(potsText(s.map.id))}</div>` : ""}${s.guide ? ` <span class="pill p-good" title="meowdb ${esc(X.cls)} guide's Training Advisor pick for this level">guide map</span>` : ""}${s.alt && s.alt.rate > s.rate * 1.02 ? `<div class="sub">Model's fastest: ${mapLink(s.alt.id, s.alt.name)} ~${fmt(s.alt.rate * 3600 / X.pace)} EXP/hr (not a guide pick)</div>` : ""}<div class="sub">${mobList(s.map.mobs)}</div>${s.got?.size ? `<div class="sub farm">Collects on the way: ${[...s.got].filter(([, g]) => g.n >= 1).map(([name, g]) => `${fmt(g.n)} ${esc(name)} <span title="${esc(g.q.name)}, Lv ${g.q.lvl}">(${esc(g.q.name)}${g.q.lvl > s.to ? `, Lv ${g.q.lvl}` : ""})</span>`).join(", ")}</div>` : ""}</td><td class="num">–</td>
+      <td>${mapLink(s.map.id, s.map.name)} ${dangerPill(mapDanger(s.map.id, s.from, s.ch.hp ? s.ch : defaultDef(mcls(s.from), s.from)))}${POTS[s.map.id] ? `<div class="sub">${esc(potsText(s.map.id))}</div>` : ""}${s.guide ? ` <span class="pill p-good" title="meowdb ${esc(X.cls)} guide's Training Advisor pick for this level">guide map</span>` : ""}${s.alt && s.alt.rate > s.rate * 1.02 ? `<div class="sub">Model's fastest: ${mapLink(s.alt.id, s.alt.name)} ~${fmt(s.alt.rate * 3600 / X.pace)} EXP/hr (not a guide pick)</div>` : ""}${s.backup?.length ? `<div class="sub">If it's crowded: ${s.backup.map(b => `${mapLink(b.id, b.name)} (Lv ${Math.round(b.avg)}, ${(d => d >= 0 ? "+" + d : "−" + -d)(Math.round(100 * b.rate / s.rate) - 100)}% EXP/hr)`).join(", ")}</div>` : ""}<div class="sub">${mobList(s.map.mobs)}</div>${s.got?.size ? `<div class="sub farm">Collects on the way: ${[...s.got].filter(([, g]) => g.n >= 1).map(([name, g]) => `${fmt(g.n)} ${esc(name)} <span title="${esc(g.q.name)}, Lv ${g.q.lvl}">(${esc(g.q.name)}${g.q.lvl > s.to ? `, Lv ${g.q.lvl}` : ""})</span>`).join(", ")}</div>` : ""}</td><td class="num">–</td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
   }).join("") || `<tr><td colspan="7" class="empty">You're already at your goal.</td></tr>`;
   saveDone();
