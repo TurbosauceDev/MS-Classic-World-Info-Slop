@@ -1,0 +1,247 @@
+<title>MS Classic World Data Slop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/*@CSS*/
+</style>
+
+<div class="wrap">
+<header>
+  <h1>MS Classic World Data Slop</h1>
+  <p>Training-map rankings, quest value and changes since the 2008 client, all computed from the Closed Online Test 2 game files. Rankings use the client's own accuracy, defense, level-penalty and element formulas. Drop rates are not in the client, so nothing here depends on them.</p>
+  <div class="src">Data: OSMS Data Explorer COT2 export · EXP table: maplestory.quest · formulas: COT2 client audit · old client: GMS v49 (Jan 2008)</div>
+</header>
+
+<nav role="tablist">
+  <button role="tab" id="t-plan" aria-selected="true" data-tab="plan">Character Builder</button>
+  <button role="tab" id="t-maps" aria-selected="false" data-tab="maps">Where to train</button>
+  <button role="tab" id="t-quests" aria-selected="false" data-tab="quests">Quest Database</button>
+  <button role="tab" id="t-diff" aria-selected="false" data-tab="diff">What changed since 2008</button>
+  <button role="tab" id="t-cit" aria-selected="false" data-tab="cit">Citizenship</button>
+</nav>
+
+<section id="plan">
+  <details class="howto" open>
+    <summary>How the numbers work</summary>
+    <div class="howgrid">
+      <div>
+        <h4>What's counted</h4>
+        <ul>
+          <li>Damage, accuracy and crit use the COT2 client formulas and per-level skill tables.</li>
+          <li><b>SP:</b> 1 at each job advancement plus 3 per level. 1st job gets 61 (levels 10–30) and those stay in 1st job skills; 2nd job SP can't go back into them (per meowdb).</li>
+          <li><b>Count buffs</b> adds Rage, Meditation, Focus, Bless and your booster if they have points.</li>
+          <li><b>Auto build</b> spends every point: first where it adds the most damage after misses, then passives, then buffs. Skills follow the game's prerequisites.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Not counted or estimated</h4>
+        <ul>
+          <li>No armor, scrolls or party buffs.</li>
+          <li>3rd job skills, since 3rd job isn't in the launch. Once every 2nd job skill is maxed, extra SP shows as spare.</li>
+          
+          <li>HP and MP: the growth formula isn't in the game files.</li>
+          <li>Star and arrow attack use old-game values. Attack speed is an estimate.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+  <div class="plan">
+    <div class="pcol">
+      <div class="card">
+        <div class="seg small" id="pclass">
+          <button data-v="Warrior">Warrior</button><button data-v="Magician">Magician</button>
+          <button data-v="Bowman">Bowman</button><button data-v="Thief">Thief</button>
+        </div>
+        <div class="row2">
+          <label class="lab">Level <b id="plvlout">30</b>
+            <input id="plvl" type="range" min="10" max="100" value="30"></label>
+          <label class="lab">Job<select id="pbranch"></select></label>
+        </div>
+        <div class="lab" id="pfamwrap" style="margin-top:12px">Weapon type<div class="seg small" id="pfam"></div></div>
+        <div class="row2">
+          <label class="lab">Weapon<select id="pweapon"></select></label>
+          <label class="lab">Attack skill<select id="pskill"></select></label>
+        </div>
+        <label class="lab" id="pammowrap">Ammo<select id="pammo"></select></label>
+      </div>
+
+      <div class="card">
+        <div class="cardhead"><h3>Ability points</h3><span id="papleft" class="pill p-good"></span></div>
+        <div class="apgrid">
+          <label class="lab">STR<input id="pSTR" type="number" min="4"></label>
+          <label class="lab">DEX<input id="pDEX" type="number" min="4"></label>
+          <label class="lab">INT<input id="pINT" type="number" min="4"></label>
+          <label class="lab">LUK<input id="pLUK" type="number" min="4"></label>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="pauto">Auto: meet weapon needs, rest into main stat</button>
+        </div>
+        <p class="tiny" id="preqnote"></p>
+      </div>
+
+      <div class="card">
+        <div class="cardhead"><h3>Skill build</h3><span id="pspleft" class="pill p-good"></span></div>
+        <div class="btnrow" style="margin-top:0">
+          <button class="btn" id="pspauto">Auto: most damage for this attack</button>
+          <button class="btn" id="pspreset">Reset</button>
+          <label class="chk"><input type="checkbox" id="pbuffs"> Count buffs</label>
+        </div>
+        <div id="pskills"></div>
+      </div>
+    </div>
+
+    <div class="pcol">
+      <div class="card hero">
+        <div class="psum"><span id="psicon"></span><div class="tiny" id="psummary"></div></div>
+        <div class="big"><span id="pdps">–</span><small> damage / sec</small></div>
+        <div class="tiny" id="pdpsnote"></div>
+        <button class="btn primary" id="psend">Use this in "Where to train"</button>
+      </div>
+      <div class="card">
+        <h3>Per attack</h3>
+        <dl class="stats" id="pattack"></dl>
+      </div>
+      <div class="card">
+        <h3>Character stats</h3>
+        <dl class="stats" id="pstats"></dl>
+      </div>
+      <div class="card">
+        <h3>Can you hit them?</h3>
+        <div id="phits"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="maps" hidden>
+  <div class="controls">
+    <label>Class<select id="cls">
+      <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
+      <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
+    <label>Your level<input id="lvl" type="number" min="10" max="70" value="25"></label>
+    <label>Damage per second<input id="dps" type="number" min="50" max="20000" step="50" value="500"></label>
+  </div>
+  <p class="note" id="mapnote"></p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>#</th><th>Map</th><th>Monsters</th><th class="num">Mobs</th><th class="num">Avg lvl</th><th class="num">Hit</th><th>Relative</th><th class="num">Est. EXP/hr</th><th class="num">Hrs / level</th></tr></thead>
+    <tbody id="maprows"></tbody>
+  </table></div>
+  <div class="grid2">
+    <div class="fact"><h3>How the score works</h3><p>Each kill costs (monster HP ÷ your damage after hit chance, defense, level penalty and element) plus 1 second of walking and aiming. The score is map EXP ÷ total time, capped at what a solo player can kill per 7.56-second respawn with 75% of spawns alive.</p></div>
+    <div class="fact"><h3>Set your real damage</h3><p>Default is 20 × your level, a rough guess. Once you're playing, count hits to kill a known monster and enter the number. Rankings shift a lot with damage: weak, low-level mobs win when you hit softly, tankier at-level mobs win once you hit hard.</p></div>
+    <div class="fact"><h3>What it leaves out</h3><p>Multi-target attacks (most hit 4 monsters), map layout and climbing, drops and mesos, and how crowded a map is. Use it to shortlist maps, then pick the one that feels best.</p></div>
+  </div>
+</section>
+
+<section id="quests" hidden>
+  <details class="howto" open>
+    <summary>How to read this table</summary>
+    <div class="howgrid">
+      <div>
+        <h4>Columns</h4>
+        <ul>
+          <li><b>Bonus:</b> how much the quest multiplies the EXP of the kills it asks for. 3× means the quest triples what those kills were worth.</li>
+          <li><b>Equals:</b> the quest's EXP as kills of its target monster. If the items take fewer kills than that, the quest beats grinding it.</li>
+          <li><b>Chain:</b> click "Yes" to see the whole questline in order.</li>
+          <li>Hover a quest name for its story, requirements and full rewards, or a reward icon for the item's stats.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>What's included</h4>
+        <ul>
+          <li>Every quest you can do at launch, except Citizenship quests (they have their own tab).</li>
+          <li>Orbis, El Nath and Forgotten Hollow quests are hidden until those areas open.</li>
+          <li>Item-only quests show no Bonus, since drop rates aren't known yet.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+  <div class="controls">
+    <label>From level<input id="qmin" type="number" min="0" max="100" value="0"></label>
+    <label>To level<input id="qmax" type="number" min="0" max="100" value="100"></label>
+    <label>Search<input id="qsearch" type="search" placeholder="quest, NPC or item"></label>
+    <button class="btn tgl" id="qeq" aria-pressed="false">Equipment rewards only</button>
+    <span class="pill p-hot" id="qcount" style="align-self:center"></span>
+  </div>
+  <div class="chainbar" id="qchainbar" hidden></div>
+  <div class="tblwrap"><table>
+    <thead id="qhead"><tr><th class="num" data-k="lvl"><button>Lv</button></th><th data-k="name"><button>Quest</button></th><th data-k="chain"><button>Chain</button></th><th>Asks for</th><th class="num" data-k="exp"><button>EXP</button></th><th class="num" data-k="pct"><button>% of level</button></th><th class="num" data-k="mult"><button>Bonus</button></th><th data-k="kills"><button>Equals</button></th><th data-k="reward"><button>Item reward</button></th></tr></thead>
+    <tbody id="qrows"></tbody>
+  </table></div>
+</section>
+
+<section id="diff" hidden>
+  <div class="seg" role="radiogroup" aria-label="Class" id="classseg">
+    <button role="radio" aria-checked="true" data-c="all">All classes</button>
+    <button role="radio" aria-checked="false" data-c="Warrior">Warrior</button>
+    <button role="radio" aria-checked="false" data-c="Magician">Magician</button>
+    <button role="radio" aria-checked="false" data-c="Bowman">Bowman</button>
+    <button role="radio" aria-checked="false" data-c="Thief">Thief</button>
+    <button role="radio" aria-checked="false" data-c="Beginner">Beginner</button>
+    <button role="radio" aria-checked="false" data-c="monsters">Monsters</button>
+  </div>
+  <div class="controls">
+    <label>Search<input id="dsearch" type="search" placeholder="skill or monster"></label>
+    <label class="chk" id="donlywrap"><input id="donly" type="checkbox" checked> Changed skills only</label>
+  </div>
+  <div class="grid2" id="difffacts"></div>
+  <div id="skillsec">
+  <h2 id="skillhead">Skills</h2>
+  <p class="note">Max-level text from each client, side by side. Wording changes count as changes, so read both columns rather than trusting the flag alone.</p>
+  <div id="skillgroups"></div>
+  </div>
+  <div id="monsec" hidden>
+  <h2>Monsters</h2>
+  <p class="note">Old value → Classic value, for every monster in the launch areas. HP went up on low-level monsters because the new damage formula adds a flat base to every hit, so compare EXP and level changes directly and treat HP changes as rescaled. Defense now divides damage instead of subtracting, so high defense matters less than it did.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Monster</th><th class="num">Level</th><th class="num">HP</th><th class="num">EXP</th><th class="num">Accuracy</th><th class="num">Evasion</th><th class="num">Weapon def</th><th class="num">Magic def</th></tr></thead>
+    <tbody id="mrows"></tbody>
+  </table></div>
+  </div>
+</section>
+
+<section id="cit" hidden>
+  <div class="seg" role="radiogroup" aria-label="Town" id="ctown">
+    <button role="radio" aria-checked="true" data-t="Henesys">Henesys</button>
+    <button role="radio" aria-checked="false" data-t="Kerning City">Kerning City</button>
+  </div>
+  <div class="grid2" id="cfacts"></div>
+
+  <h2>Grades</h2>
+  <p class="note">Contribution is the total you need for that grade. Daily and weekly amounts come from the game files; level, contribution and discounts come from meowdb's COT2 notes.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th class="num">#</th><th>Grade</th><th class="num">Level</th><th class="num">Contribution</th><th class="num">Shop discount</th><th class="num">Storage</th><th class="num">Per daily</th><th class="num">Best weekly</th><th>Unlocks</th></tr></thead>
+    <tbody id="cgrades"></tbody>
+  </table></div>
+
+  <h2>Town story quests</h2>
+  <p class="note">One-time quests that unlock at grade 2 and grade 4. Hover a name for the full quest.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th class="num">Lv</th><th class="num">Grade</th><th>Quest</th><th>Asks for</th><th class="num">EXP</th><th class="num">Mesos</th><th class="num">Contribution</th><th>Item reward</th></tr></thead>
+    <tbody id="cstory"></tbody>
+  </table></div>
+
+  <h2>Daily board</h2>
+  <p class="note" id="cdailynote"></p>
+  <div class="tblwrap"><table>
+    <thead><tr><th class="num">Grade</th><th>Resident</th><th>First time</th><th>Repeat (daily)</th></tr></thead>
+    <tbody id="cdaily"></tbody>
+  </table></div>
+
+  <h2>Weekly donations</h2>
+  <p class="note">Bring 100 of one monster drop. Higher grades unlock bigger donations. The board offers one per week from the pool your grade can do.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th class="num">Grade</th><th>Donate</th><th class="num">EXP</th><th class="num">Mesos</th><th class="num">Contribution</th><th>Item reward</th></tr></thead>
+    <tbody id="cweekly"></tbody>
+  </table></div>
+
+  <h2>Civic center shops</h2>
+  <div class="grid2" id="cshops"></div>
+  <p class="note">Shop lists, grade table, how to join and the storage fees are from <b>meowdb's Citizenship page</b>, which says everything is from the second closed test and that housing, daily contribution limits and reactivation fees are still being confirmed. Quest, contribution and earring numbers are from the COT2 game files.</p>
+</section>
+
+</div>
+
+<script>
+/*@JS*/
+</script>
