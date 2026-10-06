@@ -258,8 +258,19 @@ function applyDefaults(){
   if (!S.ap || Object.values(S.ap).reduce((a,b) => a+b, 0) > apTotal(S.lvl)) S.ap = autoAP(w);
   return {bl, fams, wl, w, al, am};
 }
+// Beginner (below 10): basic attack, Wooden Club then Razor from level 5, creation + level AP all in the future main stat
+// (meowdb beginner guide). STR/DEX drive a Beginner's basic attack; accuracy uses the Warrior formula (Beginner's isn't known).
+function beginnerAt(cls, L){
+  const ap = {STR:4, DEX:4, INT:4, LUK:4}; ap[PRIMARY[cls]] += apTotal(L) - 16;
+  const w = W.find(x => x.name === (L >= 5 ? "Razor" : "Wooden Club")), wm = WMULT[w.type], sw = SWING_SHARE[w.type] ?? 0.6;
+  const wmult = wm[0] * sw + wm[1] * (1 - sw), mast = 0.08;
+  const min = (0.8 + (ap.STR * wmult * mast + ap.DEX) / 100) * w.pad, max = (1 + (ap.STR * wmult + ap.DEX) / 100) * w.pad;
+  const critF = 0.95 + 0.05 * 1.2, interval = 0.42 + 0.06 * w.spd;
+  return {dps: (min + max) / 2 * critF / interval, acc: (ap.DEX * 1.2 + L * 2 + ap.LUK * 0.6) / 2.5 + 10, branch: "Beginner", weapon: w.name, skill: "Basic attack"};
+}
 // default character at a level (best weapon, auto AP, auto skill build), for the Path Planner. Leaves the builder untouched.
 buildAt = (cls, branch, fam, lvl) => {
+  if (lvl < 10) return beginnerAt(cls, lvl);
   const keep = S;
   S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true};
   try { applyDefaults(); S.sp = autoSP(); const r = calc(S.sp); return {dps: r.dps, acc: r.acc, branch: S.branch, weapon: r.w?.name, skill: r.sk?.n} }

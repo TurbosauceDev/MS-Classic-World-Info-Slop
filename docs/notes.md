@@ -9,7 +9,7 @@
 | Accuracy / hit / damage / defense formulas | COT2 client audit published on maplestory.quest / OSMS `tabs/formulas.js` |
 | SP rules | meowdb guides (glossary; Warrior 1–30; Page 30–70) |
 | Citizenship grades, discounts, storage fees, civic shops, how to join | meowdb.com/msclassic/citizenship (says: COT2; housing, daily limits, reactivation fees unconfirmed). Read through a summarising fetch — every shop item name was checked to exist in the export, prices/grades were not verifiable |
-| Maple Island sequence | meowdb beginner guide + new player guide (via search snippets; meowdb.com blocked in the cloud env) |
+| Maple Island sequence, beginner gear/AP, job instructors | meowdb beginner guide (updated 2026-10-02) and Roxie's new player guide, read with headless Chromium (plain fetches get a Cloudflare 403) |
 | Launch scope | meowdb release-date guide (no Orbis/El Nath/3rd job at launch); meowdb news 2026-10-03 (level cap 100, Forgotten Hollow later) |
 
 No drop tables exist in the export, so nothing depends on drop rates ("source n/a" on quest items).
@@ -48,10 +48,14 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   Below 10: damage 20 × level. 1st job used below 30, chosen 2nd job from 30.
 - Grinding: best `mapRates` map; stays on the current map while it's within 10% of the best. No map near the level → best of the rest.
 - Maple Island phase (start < 10 and "Still on Maple Island"): runs first in every mode. All 20 island quests in level/id order,
-  island maps (id < 10,000,000) only when a quest needs a higher level, then Shanks' ship Southperry → Lith Harbor, no return.
-  Source: meowdb beginner guide (quests bring you to ~lv 8, can't return, chair you can't get later), read via search
-  snippets because meowdb.com is blocked by this environment's network policy. Plan reaches ~lv 7 off the island.
-  Item-quest items with no drop source count as handed out by an NPC; drop items are shown "not timed".
+  island maps (id < 10,000,000) when a quest needs a higher level or until level 7, then Shanks (Southperry, lv 7+, 300 mesos,
+  one way) to Lith Harbor, Lith Harbor quests, Phil's taxi (90% off as Beginner) to the job town at 10.
+  Source: meowdb beginner guide (2026-10-02) + Roxie's new player guide: quests bring you to ~lv 8, Green Relaxer chair from Pio
+  only on the island, Wooden Club (19 ATK) at creation then Razor at 5, 9 creation AP + 5/level all in the future main stat.
+  Item-quest items with no drop source count as handed out (Pio's come from island boxes); drop items are shown "not timed".
+- Beginner damage (below 10): basic attack, STR primary / DEX secondary, mastery 0.08, swing/stab 60/40. Checked against
+  meowdb's table (13 STR, level 1 Snail, 45 HP): Club 3/3/2 hits min/avg/max, Sword and Hand Axe 4/3/3, matching exactly.
+  Beginner accuracy uses the Warrior formula (Beginner's is unknown); island monsters have 0 avoid so it doesn't matter there.
 - Quest time = 3 min walking/talking (1 min if same NPC as the previous quest; guesses) + kills × `mobKill` time;
   quest EXP includes the kills' EXP. 0-EXP quests are skipped unless another quest needs them.
   Only quests with no item requirements are timed (no drop rates); item quests are listed under the plan, and their chain

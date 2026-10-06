@@ -4,6 +4,8 @@ let pathFrom; // (cls, branch, fam, level): fill the planner from the Character 
 const XB = {Warrior:["Fighter","Page","Spearman"], Magician:["F/P Wizard","I/L Wizard","Cleric"], Bowman:["Hunter","Crossbowman"], Thief:["Assassin","Bandit"]};
 const FIRST = {Warrior:"Warrior", Magician:"Magician", Bowman:"Archer", Thief:"Rogue"};
 const JOBTOWN = {Warrior:"Perion", Magician:"Ellinia", Bowman:"Henesys", Thief:"Kerning City"};   // meowdb beginner guide
+const INSTRUCTOR = {Warrior:"Dances with Balrog", Magician:"Grendel the Really Old", Bowman:"Athena Pierce", Thief:"Dark Lord"};
+const SHIP_LV = 7;   // Shanks sails to Lith Harbor from level 7 for 300 mesos (meowdb)
 const ISLAND = id => +id < 10000000;   // Maple Island map ids
 const XFAM = {Fighter:["Sword","Axe"], Page:["Sword","Blunt Weapon"], Spearman:["Spear","Polearm"], Hunter:["Bow"], Crossbowman:["Crossbow"], Assassin:["Claw"], Bandit:["Dagger"]};
 const SKIP = ["El Nath","Orbis","Forgotten Hollow","Event","Crafting","Maple Island"], CLASSREG = ["Warrior","Magician","Bowman","Thief"];
@@ -15,10 +17,10 @@ let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mi
 const BELOW = 5;          // quests more than 5 levels under your starting level count as done or skipped
 try { const s = JSON.parse(localStorage.getItem("path") || "null"); if (s && s.cls) X = Object.assign(X, s) } catch(e) {}
 
-const mcls = L => X.cls === "Magician" ? (L >= 30 ? X.branch : "Magician") : X.cls;   // class names "Where to train" uses
+// class names "Where to train" uses; Beginners hit physically, like a Warrior
+const mcls = L => L < 10 ? "Warrior" : X.cls === "Magician" ? (L >= 30 ? X.branch : "Magician") : X.cls;
 const BC = {};
 function charAt(L){
-  if (L < 10) return {dps: 20 * L, acc: accFor(mcls(L), L), est: true};
   const br = L >= 30 ? X.branch : FIRST[X.cls], k = [X.cls, br, X.fam, L].join("|");
   if (!BC[k]){ const b = buildAt(X.cls, br, X.fam, L); BC[k] = b.dps > 0 ? b : {dps: 20 * L, acc: b.acc, est: true} }
   return BC[k];
@@ -60,9 +62,9 @@ function plan(mode = X.mode){
   // Maple Island comes first and is the same in every mode: every island quest, island maps in between, then the ship out
   if (X.cur < 10 && X.island){
     const IQ = D.quests.filter(r => r.region === "Maple Island").sort((a, b) => a.lvl - b.lvl || a.id - b.id);
-    steps.push({k:"job", L, txt:"Maple Island: do every quest here before you leave (one gives a chair you can't get later)."});
+    steps.push({k:"job", L, txt:"Maple Island: hand in every quest before you leave. Pio's quest gives The Green Relaxer chair, which you can't get anywhere else (his screws and boards come from boxes; if they're camped, Mina in Lith Harbor sells the Sky-blue Wooden Chair for 1,000 mesos). Switch to the Razor at level 5."});
     for (let g = 0; g < 500 && L < X.goal; g++){
-      const left = IQ.filter(r => !done.has(r.id)); if (!left.length) break;
+      const left = IQ.filter(r => !done.has(r.id)); if (!left.length && L >= SHIP_LV) break;
       const r = left.find(r => Math.max(1, r.lvl) <= L && r.pre.every(id => done.has(id))), ch = charAt(L);
       if (r){
         const c = questCost(r, L, ch, npc) || {sec: QUEST_SEC, exp: r.exp, kills: []}; npc = r.npc;
@@ -70,14 +72,15 @@ function plan(mode = X.mode){
         done.add(r.id); const sec = c.sec * X.pace; t += sec; exp += c.exp; qExp += c.exp;
         steps.push({k:"quest", L, r, c, sec, t, vs:null, drops}); levelUp(); continue;
       }
+      // a quest needs a higher level, or the ship needs level 7: grind on the island
       if (!grindOne(mapRates(mcls(L), L, ch.dps, ch.acc, Infinity).filter(m => ISLAND(m.id)))){ steps.push({k:"nomap", L}); break }
     }
-    if (IQ.every(r => done.has(r.id))) steps.push({k:"job", L, txt:"Leave Maple Island: take Shanks' ship from Southperry to Lith Harbor. You can't come back."});
+    if (IQ.every(r => done.has(r.id)) && L >= SHIP_LV) steps.push({k:"job", L, txt:"Leave Maple Island: Shanks at the Southperry dock sails to Lith Harbor (level 7+, 300 mesos, which Mai's and Pio's quests cover). One way, you can't come back. Then do the Lith Harbor quests until 10."});
     cur = null;
   }
   for (let guard = 0; L < X.goal && guard < 3000; guard++){
-    if (!j1 && L >= 10){ j1 = true; steps.push({k:"job", L, txt:`1st job advancement in ${JOBTOWN[X.cls]}: become a ${FIRST[X.cls]}`}) }
-    if (!j2 && L >= 30){ j2 = true; steps.push({k:"job", L, txt:`2nd job advancement: become a ${X.branch}`}) }
+    if (!j1 && L >= 10){ j1 = true; steps.push({k:"job", L, txt:`1st job: ride Phil's taxi from Lith Harbor to ${JOBTOWN[X.cls]} (90% off as a Beginner) and talk to ${INSTRUCTOR[X.cls]} to become a ${FIRST[X.cls]}.`}) }
+    if (!j2 && L >= 30){ j2 = true; steps.push({k:"job", L, txt:`2nd job: back to ${INSTRUCTOR[X.cls]} in ${JOBTOWN[X.cls]} to become a ${X.branch}.`}) }
     const ch = charAt(L);
     let rates = mapRates(mcls(L), L, ch.dps, ch.acc).filter(m => !ISLAND(m.id));
     if (!rates.length) rates = mapRates(mcls(L), L, ch.dps, ch.acc, Infinity).filter(m => !ISLAND(m.id));   // nothing near your level: best of the rest
@@ -153,7 +156,7 @@ function render(){
       <td class="sub">${esc(s.r.npc || "")} · ${esc(s.r.region || "")}${s.c.kills.map(([m, c, w]) => w ? `<br>${esc(m)}: ${esc(w)}` : "").join("")}</td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
     return `<tr><td class="num">${n}</td><td class="num">${s.from}→${s.to}</td>
-      <td><b>Grind to level ${s.to}</b><div class="sub">~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : s.ch.est ? " · damage guessed" : ""}</div></td>
+      <td><b>Grind to level ${s.to}</b><div class="sub">~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</div></td>
       <td><span class="name">${esc(s.map.name)}</span><div class="sub">${esc(s.map.mobs)}</div></td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
   }).join("") || `<tr><td colspan="6" class="empty">You're already at your goal.</td></tr>`;
