@@ -26,8 +26,9 @@ function charAt(L){
   return BC[k];
 }
 const WHERE = {};
-const whereMob = id => WHERE[id] ?? (WHERE[id] = Object.values(D.maps).filter(m => m[1]).map(m => [m[0], (m[2].find(s => String(s[0]) === id) || [0, 0])[1]])
-  .sort((a, b) => b[1] - a[1]).find(m => m[1] > 0)?.[0] || "");
+// open map with the most of this monster: [mapId, name] or null
+const whereMob = id => WHERE[id] !== undefined ? WHERE[id] : (WHERE[id] = Object.entries(D.maps).filter(([, m]) => m[1]).map(([mid, m]) => [mid, m[0], (m[2].find(s => String(s[0]) === id) || [0, 0])[1]])
+  .sort((a, b) => b[2] - a[2]).find(m => m[2] > 0) || null);
 const qIndex = new Map(D.quests.map((r, i) => [r, i]));
 const pool = () => D.quests.filter(r => !SKIP.includes(r.region) && !r.rep && (!CLASSREG.includes(r.region) || r.region === X.cls));
 const timed = r => !r.il.length && r.kl.every(([id]) => D.mobs[id] && !D.latermobs.includes(id));
@@ -166,12 +167,12 @@ function render(){
       <td class="sub">${esc(s.s.npc || "")} · ${esc(s.s.region || "")}</td><td class="num sub">not timed</td><td class="num">${hm(s.t)}</td></tr>`;
     if (s.k === "quest") return `<tr><td class="num">${n}</td><td class="num">${s.L}</td>
       <td>Quest: ${qlink(s.r)} ${vPill(s.r.id)}${s.vs != null ? ` <span class="pill ${s.vs >= 1 ? "p-good" : "p-warn"}" title="Quest EXP per hour compared with grinding at this level">${s.vs >= 1 ? "faster than grinding" : Math.round(s.vs * 100) + "% of grinding speed"}</span>` : ""}${s.r.ri?.length ? `<div class="ricons">${rewardIcons(s.r)}</div>` : ""}<div class="sub">+${fmt(s.c.exp)} EXP${s.c.kills.length ? " incl. kills" : ""}${s.drops?.length ? ` · plus drops: ${esc(s.drops.join(", "))} (not timed)` : ""}${s.r.req !== "talk / deliver only" ? " · " + esc(s.r.req) : " · talk / deliver"}</div></td>
-      <td class="sub">${esc(s.r.npc || "")} · ${esc(s.r.region || "")}${s.c.kills.map(([m, c, w]) => w ? `<br>${esc(m)}: ${esc(w)}` : "").join("")}</td>
+      <td class="sub">${esc(s.r.npc || "")} · ${esc(s.r.region || "")}${s.c.kills.map(([m, c, w]) => w ? `<br>${esc(m)}: ${mapLink(w[0], w[1])}` : "").join("")}</td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
     return `<tr><td class="num">${n}</td><td class="num">${s.from}→${s.to}</td>
       <td><b>Grind to level ${s.to}</b><div class="sub gear">${s.ch.wid ? itemIcon(s.ch.wid, 1, true) : ""}${s.ch.sid && D.icons[s.ch.sid] ? `<img class="sk" src="data:image/png;base64,${D.icons[s.ch.sid]}" alt="" title="${esc(s.ch.skill)}">` : ""}
         <span>~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</span></div></td>
-      <td><span class="name">${esc(s.map.name)}</span><div class="sub">${esc(s.map.mobs)}</div></td>
+      <td>${mapLink(s.map.id, s.map.name)}<div class="sub">${esc(s.map.mobs)}</div></td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
   }).join("") || `<tr><td colspan="6" class="empty">You're already at your goal.</td></tr>`;
   const ex = pool().filter(r => !timed(r) && !P.done.has(r.id) && r.lvl <= X.goal && r.lvl >= Math.max(1, X.cur - 5)).sort((a, b) => a.lvl - b.lvl || b.exp - a.exp);

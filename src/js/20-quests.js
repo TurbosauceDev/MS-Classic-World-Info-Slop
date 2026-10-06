@@ -92,10 +92,24 @@ function itemTip(el){
     ${it.d ? `<div class="it-desc">${esc(it.d).replace(/\n/g, "<br>")}</div>` : ""}
     ${odds || it.p ? `<div class="it-foot">${odds}${odds && it.p ? " · " : ""}${it.p ? `Sells for ${fmt(it.p)} mesos` : ""}</div>` : ""}`;
 }
+function mapTip(id){
+  const m = D.maps[id]; if (!m) return "";
+  const mm = D.mmaps[id], mobs = m[2].filter(([mid]) => D.mobs[mid]).sort((a, b) => b[1] - a[1])
+    .map(([mid, n]) => `<li>${esc(D.mobs[mid][0])} <span>Lv ${D.mobs[mid][1]} · ×${n}</span></li>`).join("");
+  return `<div class="qt-h"><b>${esc(m[0])}</b></div>
+    ${mm ? `<img class="mm" src="data:image/${D.mmapType};base64,${mm}" alt="Minimap of ${esc(m[0])}">` : `<p>No minimap in the game files.</p>`}
+    ${mobs ? `<h5>Monsters (spawn points)</h5><ul class="mmobs">${mobs}</ul>` : ""}`;
+}
 function showQtip(el){
   if (el.dataset.item){ qtip.innerHTML = itemTip(el); qtip.className = "itemtip" }
+  else if (el.dataset.map){ qtip.innerHTML = mapTip(el.dataset.map); qtip.className = "maptip" }
   else { const r = (el.dataset.src === "cit" ? D.citq : D.quests)[+el.dataset.i]; if (!r) return; qtip.innerHTML = questTip(r); qtip.className = "" }
   qtip.hidden = false;
+  placeQtip(el);
+  const img = qtip.querySelector("img.mm");   // minimap size is only known once it has decoded
+  if (img && !img.complete) img.addEventListener("load", () => { if (!qtip.hidden) placeQtip(el) }, {once: true});
+}
+function placeQtip(el){
   const a = el.getBoundingClientRect(), w = qtip.offsetWidth, h = qtip.offsetHeight, vw = innerWidth, vh = innerHeight;
   let x = Math.min(Math.max(8, a.left), vw - w - 8);
   let y = a.bottom + 8;
@@ -103,9 +117,9 @@ function showQtip(el){
   qtip.style.left = x + "px"; qtip.style.top = y + "px";
 }
 const hideQtip = () => { qtip.hidden = true };
-document.addEventListener("mouseover", e => { const el = e.target.closest && e.target.closest(".qname, .ri"); if (el) showQtip(el) });
-document.addEventListener("mouseout", e => { if (e.target.closest && e.target.closest(".qname, .ri")) hideQtip() });
-document.addEventListener("focusin", e => { const el = e.target.closest && e.target.closest(".qname, .ri"); if (el) showQtip(el) });
+document.addEventListener("mouseover", e => { const el = e.target.closest && e.target.closest(".qname, .ri, .mname"); if (el) showQtip(el) });
+document.addEventListener("mouseout", e => { if (e.target.closest && e.target.closest(".qname, .ri, .mname")) hideQtip() });
+document.addEventListener("focusin", e => { const el = e.target.closest && e.target.closest(".qname, .ri, .mname"); if (el) showQtip(el) });
 document.addEventListener("focusout", hideQtip);
 document.querySelectorAll(".tblwrap").forEach(w => w.addEventListener("scroll", hideQtip, {passive:true}));
 addEventListener("scroll", hideQtip, {passive:true});

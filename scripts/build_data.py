@@ -178,6 +178,25 @@ def step_rewards(D):
         if os.path.exists(p): icons[iid] = b64(p)
     D["items"], D["iicons"] = info, icons
 
+def step_minimaps(D):
+    """mmaps {mapId: base64}: minimap of every open map, for the map hover card. WebP q80 (~1 MB for 177 maps) when
+    Pillow is installed (pip install pillow), else the original PNGs (~1.9 MB). mmapType says which."""
+    try:
+        from PIL import Image
+        import io
+    except ImportError:
+        Image = None; print("Pillow not installed: minimaps stay PNG (bigger page)")
+    out = {}
+    for mid, m in D["maps"].items():
+        p = C + f"images/maps/{int(mid):09d}.png"
+        if not m[1] or not os.path.exists(p): continue
+        if Image:
+            buf = io.BytesIO(); Image.open(p).convert("RGBA").save(buf, "WEBP", quality=80, method=6)
+            out[str(mid)] = base64.b64encode(buf.getvalue()).decode()
+        else:
+            out[str(mid)] = b64(p)
+    D["mmaps"], D["mmapType"] = out, "webp" if Image else "png"
+
 def step_launch(D):
     mob = {str(m["id"]): m for m in a.monsters}
     openm = lambda m: any(a.launch_status(x["id"]) == "Open at launch" for x in (m.get("maps") or []))
@@ -188,7 +207,7 @@ def step_launch(D):
 
 if __name__ == "__main__":
     D = step_base()
-    step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D)
+    step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_minimaps(D)
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees
     (ROOT / "data").mkdir(exist_ok=True)
     s = json.dumps(D, separators=(",", ":"))
