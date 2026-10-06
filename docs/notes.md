@@ -55,7 +55,9 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   × Max HP / MP Increase. Checked: Lv 10 Beginner 194/113, Lv 11 Warrior 572/275, Lv 30 Thief 1,134/953.
 - Danger = one touch from the map's hardest hitter / Max HP: Raw = PADamage × 1.3, taken = Raw × (1 − DEF / (DEF +
   5 × (L + 40) + 1.2 × Raw)); DEF = floor(STR/4) + skills (Magic Armor, Iron Will, Sword Mastery, Iron Body %, − Rage),
-  × (1 − Invincible) × (1 − Magic Guard share). No armor. Labels from meowdb (<10 Safe, 10-24 Caution, 25-49 Danger, 50+ Lethal).
+  × (1 − Invincible) × (1 − Magic Guard share). Magic: monsters with an attackN/info/magic = 1 attack (maplestory.quest raw
+  client, data/sources/mq_mob_magic.json: only Tauromacis 386 and Taurospear 410 MADamage at launch) also hit with MADamage
+  vs M.DEF = floor(INT/4) + Magic Armor, × Magic Guard share; the worse hit counts. No armor. Labels from meowdb (<10 Safe, 10-24 Caution, 25-49 Danger, 50+ Lethal).
   Checked: Fighter 35 Ant Tunnel II 8% (meowdb 7% with gear), Magician 20 Transfer Area Caution (meowdb Caution).
 - Portals to potions: BFS over `nav` from `potshops` (meowdb shops selling HP/MP potions, civic shops included). Matches the
   guides' counts (Line 1 <Area 1> 3, Transfer Area 4, FUN IV 5, Ant Tunnel III 5). Shown only, not scored.

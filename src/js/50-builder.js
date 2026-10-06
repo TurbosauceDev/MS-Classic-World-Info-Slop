@@ -244,10 +244,12 @@ function calc(sp){
   const [hp, mp] = hpmpAt(cls, L, num(T("Max HP Increase"), /Max HP \+(\d+)%/), num(T("Max MP Increase"), /Max MP \+(\d+)%/), isSecond());
   const defFlat = (wk === "Sword" ? num(T("Sword Mastery"), /Weapon Def\. \+(\d+)/) : 0) + (buffs ? num(T("Magic Armor"), /Weapon Def\. \+(\d+),/) + num(T("Iron Will"), /Weapon Def\. \+(\d+),/) - num(T("Rage"), /Weapon Def\. -(\d+)/) : 0);
   const wdef = Math.max(0, defFlat + Math.trunc((1 + (buffs ? num(T("Iron Body"), /Weapon Def\. \+(\d+)%/) : 0) / 100) * Math.floor(ap.STR / 4)));
-  const hpMult = buffs ? (1 - num(T("Invincible"), /Physical damage -(\d+)%/) / 100) * (1 - num(T("Magic Guard"), /Replace (\d+)% of HP damage/) / 100) : 1;
+  const mdef = Math.floor(ap.INT / 4) + (buffs ? num(T("Magic Armor"), /Magic Def\. \+(\d+)/) : 0);
+  const guard = buffs ? 1 - num(T("Magic Guard"), /Replace (\d+)% of HP damage/) / 100 : 1;
+  const hpMult = guard * (buffs ? 1 - num(T("Invincible"), /Physical damage -(\d+)%/) / 100 : 1);
   const {near, even} = nearMobs(L);
   const hitAvg = even.length ? even.reduce((a, m) => a + hitProb(acc, m[4], m[1] - L), 0) / even.length : 1;
-  return {hp, mp, wdef, hpMult, w, sk, sl, ai, min, max, avg, crit, critDmg, perCast, stage, interval, dps, acc, avoid, booster, mast, faRate: faOn ? faRate : 0, faPct, atkB, matkB, near, hitAvg, eff: dps * hitAvg};
+  return {hp, mp, wdef, mdef, hpMult, mpMult: guard, w, sk, sl, ai, min, max, avg, crit, critDmg, perCast, stage, interval, dps, acc, avoid, booster, mast, faRate: faOn ? faRate : 0, faPct, atkB, matkB, near, hitAvg, eff: dps * hitAvg};
 }
 
 /* greedy auto-build: keep buying the next 1-5 points that add the most real damage per SP */
@@ -361,7 +363,7 @@ buildAt = (cls, branch, fam, lvl, aoe = false, obt = false, guide = false) => {
   if (guide && GUIDE[cls].claw && lvl < (GUIDE2[branch]?.reset?.at || 30)) fam = lvl < 30 ? "Claw" : fam;
   S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe, obt};
   try { applyDefaults(); if (guide) guideBuild(); else S.sp = autoSP(); const r = calc(S.sp);
-    return {dps: r.dps, acc: r.acc, hp: r.hp, wdef: r.wdef, mult: r.hpMult, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo} }
+    return {dps: r.dps, acc: r.acc, hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo} }
   finally { S = keep }
 };
 function fillControls(){
@@ -424,7 +426,7 @@ function renderSkills(){
 function render(){
   const L = S.lvl, ap = S.ap, cls = S.cls, br = S.branch;
   const r = calc(S.sp), w = r.w;
-  S.dps = Math.round(r.dps); S.acc = r.acc; S.def = {hp: r.hp, wdef: r.wdef, mult: r.hpMult}; S.area = r.ai && r.sk?.rg ? {t: r.ai.targets || 1, r: r.sk.rg, n: r.sk.n} : null;
+  S.dps = Math.round(r.dps); S.acc = r.acc; S.def = {hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult}; S.area = r.ai && r.sk?.rg ? {t: r.ai.targets || 1, r: r.sk.rg, n: r.sk.n} : null;
   const left = apTotal(L) - (ap.STR + ap.DEX + ap.INT + ap.LUK);
   $("#papleft").textContent = left === 0 ? "All AP spent" : left > 0 ? `${left} AP unspent` : `${-left} AP over budget`;
   $("#papleft").className = "pill " + (left === 0 ? "p-good" : "p-warn");
@@ -454,7 +456,7 @@ function render(){
     row("STR / DEX", `${ap.STR} / ${ap.DEX}`), row("INT / LUK", `${ap.INT} / ${ap.LUK}`),
     row("Accuracy", Math.round(r.acc)), row("Avoid", r.avoid),
     cls === "Magician" ? row("Magic", Math.floor(ap.INT/2) + (w?.mad || 0) + r.matkB) : row("Weapon attack", w ? w.pad + (r.atkB ? ` +${r.atkB}` : "") : "–"),
-    row("HP / MP", `${fmt(r.hp)} / ${fmt(r.mp)}`), row("W.DEF", `${r.wdef} <span class="sub">no armor</span>`),
+    row("HP / MP", `${fmt(r.hp)} / ${fmt(r.mp)}`), row("W.DEF / M.DEF", `${r.wdef} / ${r.mdef} <span class="sub">no armor</span>`),
     row("AP / SP", `${apTotal(L)} / ${spTotal(L)}`)
   ].join("");
 

@@ -340,10 +340,12 @@ def step_crafting(D):
 
 POTIONS = {"Red Potion", "Orange Potion", "White Potion", "Blue Potion", "Lemon", "Meat", "Orange", "Fried Chicken"}
 def step_extras(D):
-    """mobatk {mobId: [touch attack (PADamage), accuracy]} for the danger estimate; potshops [[npc, mapId, mapName]] = meowdb
+    """mobatk {mobId: [touch attack (PADamage), accuracy, (magic attack MADamage, 1) when it has a magic attack]} for danger; potshops [[npc, mapId, mapName]] = meowdb
     NPC shops that sell HP/MP potions, for "portals to potions" (refill walk)."""
     mob = {str(m["id"]): m for m in a.monsters}
-    D["mobatk"] = {k: [mob[k].get("PADamage") or 0, mob[k].get("acc") or 0] for k in D["mobs"] if k in mob}
+    mq = json.load(open(ROOT / "data" / "sources" / "mq_mob_magic.json"))["mobs"]   # maplestory.quest raw client: magic attack
+    D["mobatk"] = {k: [mob[k].get("PADamage") or 0, mob[k].get("acc") or 0] + (mq[k][:1] + mq[k][2:3] if k in mq and mq[k][2] else [])
+                   for k in D["mobs"] if k in mob}
     mapid = {}
     for k, v in a.map_name.items(): mapid.setdefault(v, str(k))
     out = []

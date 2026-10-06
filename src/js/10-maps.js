@@ -27,18 +27,22 @@ function hpmpAt(cls, L, hpPct = 0, mpPct = 0, second = L >= 30){
   return [Math.floor((50 + 16 * b + h * c + ah * adv) * (1 + hpPct / 100)), Math.floor((5 + 12 * b + m * c + am * adv) * (1 + mpPct / 100))];
 }
 // one monster touch as a share of your Max HP (meowdb damage formula): Raw = attack × 1.3 (midpoint of the 1.1-1.5 roll),
-// taken = Raw × (1 − DEF / (DEF + 5 × (level + 40) + 1.2 × Raw)); `mult` = Invincible / Magic Guard share left on HP.
+// taken = Raw × (1 − DEF / (DEF + 5 × (level + 40) + 1.2 × Raw)); `mult` / `mmult` = share of a physical / magic hit left on HP
+// (Invincible cuts physical only; Magic Guard both). Monsters with a magic attack (maplestory.quest raw client: only
+// Tauromacis and Taurospear at launch) also hit with Magic Attack against M.DEF; the worse of the two counts.
 // Armor isn't counted (we don't model it), so real danger is lower. meowdb labels: <10% Safe, 10-24% Caution, 25-49% Danger, 50%+ Lethal.
-function touchPct(mobId, L, hp, wdef, mult = 1){
-  const a = D.mobatk?.[mobId]; if (!a || !hp) return 0;
-  const raw = a[0] * 1.3, taken = raw * (1 - wdef / (wdef + 5 * (L + 40) + 1.2 * raw));
-  return Math.max(1, Math.trunc(taken)) * mult / hp;
+const hitTaken = (atk, def, L) => { const raw = atk * 1.3; return Math.max(1, Math.trunc(raw * (1 - def / (def + 5 * (L + 40) + 1.2 * raw)))) };
+function touchPct(mobId, L, d){
+  const a = D.mobatk?.[mobId]; if (!a || !d.hp) return 0;
+  const phys = hitTaken(a[0], d.wdef, L) * (d.mult ?? 1), mag = a[3] ? hitTaken(a[2], d.mdef || 0, L) * (d.mmult ?? d.mult ?? 1) : 0;
+  return Math.max(phys, mag) / d.hp;
 }
 const DANGER = [[0.5, "Lethal", "p-bad"], [0.25, "Danger", "p-bad"], [0.1, "Caution", "p-warn"], [0, "Safe", "p-good"]];
-const dangerPill = f => { const d = DANGER.find(x => f >= x[0]); return `<span class="pill ${d[2]}" title="One touch from its hardest hitter takes about ${Math.round(f * 100)}% of your Max HP (no armor counted)">${d[1]} ${Math.round(f * 100)}%</span>` };
+const dangerPill = f => { const d = DANGER.find(x => f >= x[0]); return `<span class="pill ${d[2]}" title="One hit from its hardest hitter takes about ${Math.round(f * 100)}% of your Max HP (no armor counted)">${d[1]} ${Math.round(f * 100)}%</span>` };
 // a character's defensive numbers when only class and level are known (Where to train): no skills, no armor, AP as classAcc assumes
-const defaultDef = (cls, L) => { const prim = 5 * L + 20 - L - 8; return {hp: hpmpAt(cls, L)[0], wdef: Math.floor((cls === "Warrior" ? prim : cls === "Bowman" ? L : 4) / 4), mult: 1} };
-const mapDanger = (mid, L, def) => Math.max(0, ...(D.maps[mid]?.[2] || []).map(([id]) => touchPct(String(id), L, def.hp, def.wdef, def.mult)));
+const defaultDef = (cls, L) => { const prim = 5 * L + 20 - L - 8;
+  return {hp: hpmpAt(cls, L)[0], wdef: Math.floor((cls === "Warrior" ? prim : cls === "Bowman" ? L : 4) / 4), mdef: Math.floor((MAGIC.has(cls) ? prim : 4) / 4), mult: 1, mmult: 1} };
+const mapDanger = (mid, L, def) => Math.max(0, ...(D.maps[mid]?.[2] || []).map(([id]) => touchPct(String(id), L, def)));
 // portals from each map to the nearest NPC selling HP/MP potions (meowdb shop list), walking only: [portals, npc, shopMapId]
 const POTS = (() => { const out = {}, q = [];
   for (const [npc, mid] of D.potshops || []) if (D.nav[mid] && !out[mid]){ out[mid] = [0, npc, mid]; q.push(mid) }
