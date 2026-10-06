@@ -8,7 +8,8 @@ Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Dat
 ## Ground rules (from Danny)
 - **Classic World only.** Never use modern/retail MapleStory info. 2008-era info only if confirmed to still hold in Classic.
 - **Launch content only.** Orbis, El Nath, Forgotten Hollow and 3rd job are hidden (not in the launch). Don't add them back unless asked.
-- **No made-up numbers.** Every value comes from the OSMS export or a cited source (meowdb, maplestory.quest). If something is
+- **No made-up numbers.** Every value comes from the OSMS export or a cited source (meowdb, maplestory.quest — Danny has the owner's
+  permission to use all maplestory.quest data; its raw API is listed in docs/notes.md). If something is
   estimated, say so on the page. Put sources in replies.
 - Keep replies short and direct, no filler. Push back when something is wrong.
 - Batch related changes; only take screenshots when layout/visuals actually changed.

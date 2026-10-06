@@ -15,6 +15,9 @@
 | Class guides 1–30 (Path Planner) | meowdb Warrior/Magician/Bowman/Thief class guides + beginner guide (read 2026-10-06 with headless Chromium): SP order, AP per level, weapons, gear, ammo, citizenship town, Training Advisor maps → src/js/16-guides.js |
 | Mechanics (meowdb guides, read 2026-10-06) | attack-speed ladder, damage/hit/incoming-damage formulas, HP/MP gains, EXP table to 100 (51+ historical), party bonus, spawn capacity per player, crafting material drops (grind-maps guide), KPQ |
 | 2nd-job guides 30–70 | meowdb Fighter/Page/Spearman/Hunter/Crossbowman/Assassin/Bandit/F-P/I-L/Cleric guides → GUIDE2 in src/js/16-guides.js |
+| maplestory.quest (permission from the owner to use all its data, per Danny 2026-10-06) | raw COT2 client JSON API: `/api/raw/overview?v=COT2`, `/api/raw/category?v=COT2&key=<mob|item|skill|quest|map|craft|...>&page=N&page_size=50`, files under `/api/raw/file/COT2/wz/...` (sprites). Same client as OSMS; adds mob Magic Attack, mob skills, NPC dialogue, hidden skill rows. No drop tables or shop stock (server-side); its monster pages take player drop reports |
+| maplestory.io | WZ API with an `MCW` region (versions `1`, `CBT2`): item/mob/NPC images and data, e.g. `/api/MCW/CBT2/item/{id}`. Usable at build time only (page must stay self-contained) |
+| Not usable | nexon.com game-build API (401, launcher auth; build manifests, not game data) |
 | Launch scope | meowdb release-date guide (no Orbis/El Nath/3rd job at launch); meowdb news 2026-10-03 (level cap 100, Forgotten Hollow later) |
 
 No drop tables exist in the export, so nothing depends on drop rates ("source n/a" on quest items).
