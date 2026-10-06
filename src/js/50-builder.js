@@ -338,7 +338,7 @@ function renderSkills(){
 function render(){
   const L = S.lvl, ap = S.ap, cls = S.cls, br = S.branch;
   const r = calc(S.sp), w = r.w;
-  S.dps = Math.round(r.dps); S.acc = r.acc;
+  S.dps = Math.round(r.dps); S.acc = r.acc; S.area = r.ai && r.sk?.rg ? {t: r.ai.targets || 1, r: r.sk.rg, n: r.sk.n} : null;
   const left = apTotal(L) - (ap.STR + ap.DEX + ap.INT + ap.LUK);
   $("#papleft").textContent = left === 0 ? "All AP spent" : left > 0 ? `${left} AP unspent` : `${-left} AP over budget`;
   $("#papleft").className = "pill " + (left === 0 ? "p-good" : "p-warn");
@@ -413,7 +413,7 @@ $("#psend").addEventListener("click", () => {
   $("#cls").value = (S.cls === "Magician" && S.lvl < 30) ? "Magician" : mcls;
   $("#lvl").value = Math.min(70, S.lvl);
   $("#dps").value = Math.max(50, S.dps || 50);
-  ACC_FROM_BUILDER = S.acc ?? null;
+  ACC_FROM_BUILDER = S.acc ?? null; AOE_FROM_BUILDER = S.area?.t > 1 ? S.area : null;
   document.querySelector('[data-tab="maps"]').click();
   rankMaps();
 });

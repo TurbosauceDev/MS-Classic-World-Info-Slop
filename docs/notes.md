@@ -78,7 +78,8 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - AoE build (planner default): default skill weighs targets as if ~3 are in reach (Rush, Steal, Power Knockback excluded).
   Hits per cast per map = average over spawn points of min(targets, 1 + 0.75 × spawn points on the same platform
   (|dy| ≤ 60 px) within reach, busier facing). Reach = skill `range`, Thunder Bolt's ±170 px box, or 300 px projectile
-  corridor. Kill time per monster ÷ hits; respawn cap unchanged. Where to train stays single target.
+  corridor. Kill time per monster ÷ hits; respawn cap unchanged. Where to train uses the same model by default (class area
+  attack via AOE_SKILL, or the builder skill if it hits several), with a single-target option.
 - Collecting ahead: while grinding, wanted drops (quests within 5 levels, accepted or not; assumes monster-named ETC items
   drop without the quest, as the guides advise saving them) go in a bag at kills/s = count × rate / cycle EXP × drop rate.
   Map score = (level EXP + credit) / time, credit per saved item = (kill time × best EXP/s − kill EXP) / drop rate,

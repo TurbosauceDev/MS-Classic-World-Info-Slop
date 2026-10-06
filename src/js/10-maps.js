@@ -67,14 +67,24 @@ function mapRates(cls, L, dps, acc, floor = 12, aoe = null){
   }
   return rows.sort((a,b) => b.rate - a.rate);
 }
+// each class's area attack at a level ([job, skill]); Thieves and 1st job Magicians have no damaging one
+const AOE_SKILL = {Warrior: () => ["Warrior", "Slash Blast"], Bowman: L => L >= 30 ? ["Hunter", "Arrow Bomb: Bow"] : ["Archer", "Double Shot"],
+  "I/L Wizard": () => ["I/L Wizard", "Thunder Bolt"], "F/P Wizard": () => ["F/P Wizard", "Poison Breath"], Cleric: () => ["Cleric", "Holy Arrow"]};
+function classAoe(cls, L){
+  const f = AOE_SKILL[cls]; if (!f || L < 10) return null;
+  const [job, name] = f(L), s = (D.skills[job] || []).find(x => x.n === name); if (!s || !s.rg) return null;
+  return {t: Array.isArray(s.mob) ? Math.max(...s.mob) : s.mob, r: s.rg, n: name};
+}
+let AOE_FROM_BUILDER = null;   // the builder's own attack {t, r, n}; cleared with ACC_FROM_BUILDER
 function rankMaps(){
   let cls = $("#cls").value, L = +$("#lvl").value || 25, dps = +$("#dps").value || 20*L;
   const acc = ACC_FROM_BUILDER ?? accFor(cls, L);
-  const rows = mapRates(cls, L, dps, acc);
+  const aoe = $("#aoe").value ? (AOE_FROM_BUILDER || classAoe(cls, L)) : null, area = aoe && aoe.t > 1 ? aoe : null;
+  const rows = mapRates(cls, L, dps, acc, 12, area);
   const top = rows.slice(0, 15), best = top[0]?.rate || 1, need = D.exp[L];
   $("#maprows").innerHTML = top.length ? top.map((r,i) => `<tr>
     <td class="num">${i+1}</td>
-    <td>${mapLink(r.id, r.name)}${r.open ? "" : ' <span class="pill p-warn">opens later</span>'}</td>
+    <td>${mapLink(r.id, r.name)}${r.open ? "" : ' <span class="pill p-warn">opens later</span>'}${area ? `<div class="sub">hits ~${r.hits.toFixed(1)} per cast</div>` : ""}</td>
     <td class="sub">${mobList(r.mobs)}</td>
     <td class="num">${r.n}</td><td class="num">${r.avg.toFixed(1)}</td>
     <td class="num">${r.hit < .9 ? `<span class="pill p-warn">${Math.round(r.hit*100)}%</span>` : Math.round(r.hit*100) + "%"}</td>
@@ -85,9 +95,12 @@ function rankMaps(){
   $("#mapnote").innerHTML = (ACC_FROM_BUILDER != null ? `Accuracy <b>${Math.round(acc)}</b> from your Character Builder setup.`
     : `Assumed accuracy at level ${L}: <b>${Math.round(acc)}</b> (all AP in your main stat, secondary stat equal to your level, no accuracy gear${cls==="Warrior"&&L>=15?", Precise Strikes maxed":cls==="Thief"&&L>=15?", Nimble Body maxed":""}).`)
     + (need ? ` Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP.` : ` The EXP table we have stops at level 70, so hours per level are blank above it.`)
-    + ` EXP/hr is a model estimate, solo, single-target.`;
+    + (area ? ` Attack: <b>${esc(area.n)}</b>, up to ${area.t} monsters within ${area.r[0]}${area.r[1] ? ` / ${area.r[1]}` : ""} px; hits per cast are estimated from each map's spawn points.`
+      : $("#aoe").value ? ` ${esc(cls)} has no area attack at level ${L}, so this is single target.` : ` Single target.`)
+    + ` EXP/hr is a model estimate, solo.`;
 }
-["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; rankMaps() }));
+["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; AOE_FROM_BUILDER = null; rankMaps() }));
+$("#aoe").addEventListener("change", rankMaps);
 $("#dps").addEventListener("input", rankMaps);
 $("#lvl").addEventListener("change", () => { $("#dps").value = Math.max(50, 20 * (+$("#lvl").value || 25)); rankMaps() });
 $("#dps").value = 20 * +$("#lvl").value;

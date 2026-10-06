@@ -197,6 +197,7 @@
           <li>Each kill costs the monster's HP ÷ your damage, after hit chance, defense, level penalty and element, plus 1 second of walking and aiming.</li>
           <li>Score = map EXP ÷ total time, capped at what one player can kill per 7.56-second respawn with 75% of spawns alive.</li>
           <li>Maps need 8+ monsters; bosses are left out. Hit below 90% is flagged.</li>
+          <li><b>Area attacks by default:</b> Slash Blast, Double Shot then Arrow Bomb, Thunder Bolt, Poison Breath, Holy Arrow (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, 75% alive: an estimate. Thieves and 1st job Magicians have no area attack.</li>
         </ul>
       </div>
       <div>
@@ -210,7 +211,7 @@
       <div>
         <h4>Left out</h4>
         <ul>
-          <li>Multi-target attacks (most hit several monsters), map layout and climbing, drops and mesos, crowding.</li>
+          <li>Map layout and climbing, drops and mesos, crowding.</li>
           <li>EXP/hr is an estimate. Use it to shortlist maps, then pick the one that feels best.</li>
         </ul>
       </div>
@@ -221,6 +222,7 @@
       <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
       <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
     <label>Your level<input id="lvl" type="number" min="10" max="70" value="25"></label>
+    <label>Attack<select id="aoe"><option value="1">Area attack (AoE)</option><option value="">Single target</option></select></label>
     <label>Damage per second<input id="dps" type="number" min="50" max="20000" step="50" value="500"></label>
   </div>
   <p class="note" id="mapnote"></p>
