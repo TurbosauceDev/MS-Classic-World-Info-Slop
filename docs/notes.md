@@ -73,7 +73,8 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   all-in when the NPC has no launch spot). Dijkstra over `nav` + cab links. A quest = walk to its NPC, each kill monster at
   the map minimising travel + kill time (kill time = max(n × kill time, n / (count × 0.75 / 7.56 s respawn))), then back.
   Grind maps: score = (level EXP + drop credit) / (grind time + travel from where you are). Position starts in Lith Harbor
-  after the ship, unknown (no first-leg cost) when starting at 10+. Drop credit values saved kills at the quest's level.
+  after the ship, unknown (no first-leg cost) when starting at 10+. Each leg is its own "travel" step (route text rebuilt
+  from Dijkstra prev pointers); quest rows show talk + kill time only. Drop credit values saved kills at the quest's level.
 - Collecting ahead: while grinding, wanted drops (quests within 5 levels, accepted or not; assumes monster-named ETC items
   drop without the quest, as the guides advise saving them) go in a bag at kills/s = count × rate / cycle EXP × drop rate.
   Map score = (level EXP + credit) / time, credit per saved item = (kill time × best EXP/s − kill EXP) / drop rate,

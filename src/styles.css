@@ -229,3 +229,4 @@ table.mini td,table.mini th{padding:6px 8px}
 #qtip .mels{display:flex;flex-wrap:wrap;gap:4px}
 #xdropwrap input{width:150px}
 #xdropwrap b{font:600 13px var(--f-mono);color:var(--ink);text-transform:none;letter-spacing:0}
+#xrows tr.trow td{background:color-mix(in srgb,var(--line) 22%,transparent)}
