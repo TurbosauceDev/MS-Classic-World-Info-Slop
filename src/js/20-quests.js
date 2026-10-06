@@ -5,6 +5,7 @@ function renderQuests(){
   let q = QLAUNCH.filter(r => r.lvl >= lo && r.lvl <= hi);
   if (s) q = q.filter(r => (r.name + r.npc + r.req + r.reward).toLowerCase().includes(s));
   if ($("#qeq").getAttribute("aria-pressed") === "true") q = q.filter(r => r.info && r.info.eq);
+  if ($("#qval").getAttribute("aria-pressed") === "true") q = q.filter(r => VALUE[r.id]);
   // questline filter overrides the other filters and shows the chain in order
   if (QCHAIN) q = QLAUNCH.filter(r => r.chain === QCHAIN);
   $("#qchainbar").hidden = !QCHAIN;
@@ -25,7 +26,7 @@ function renderQuests(){
   $("#qcount").textContent = `${q.length} of ${QLAUNCH.length} quests`;
   $("#qrows").innerHTML = q.map(r => `<tr>
     <td class="num">${r.lvl}</td>
-    <td><span class="name qname" tabindex="0" data-src="q" data-i="${D.quests.indexOf(r)}">${esc(r.name)}</span><div class="sub">${esc(r.npc || "")} · ${esc(r.region || "")}${r.rep ? ` · <span class="pill p-warn">${r.rep}</span>` : ""}${r.region === "El Nath" || r.region === "Orbis" ? ` · <span class="pill p-bad">not in launch</span>` : r.region === "Forgotten Hollow" ? ` · <span class="pill p-warn">opens later</span>` : ""}</div></td>
+    <td><span class="name qname" tabindex="0" data-src="q" data-i="${D.quests.indexOf(r)}">${esc(r.name)}</span> ${vPill(r.id)}${VALUE[r.id] ? `<div class="vwhy"><b>${esc(VALUE[r.id][1])}</b>${VALUE[r.id][3] ? ` · ${esc(VALUE[r.id][3])} only` : ""} · ${esc(VALUE[r.id][2])} <span class="sub">(${vSrc(VALUE[r.id])})</span></div>` : ""}<div class="sub">${esc(r.npc || "")} · ${esc(r.region || "")}${r.rep ? ` · <span class="pill p-warn">${r.rep}</span>` : ""}${r.region === "El Nath" || r.region === "Orbis" ? ` · <span class="pill p-bad">not in launch</span>` : r.region === "Forgotten Hollow" ? ` · <span class="pill p-warn">opens later</span>` : ""}</div></td>
     <td>${r.chain ? `<button class="chainbtn" data-chain="${esc(r.chain)}" title="Show the ${esc(r.chain)} questline">Yes</button><div class="sub">${r.cpos} of ${r.cn}</div>` : `<span class="sub">No</span>`}</td>
     <td class="sub">${esc(r.req)}</td>
     <td class="num">${fmt(r.exp)}</td>
@@ -47,6 +48,7 @@ function questTip(r){
     ${i.req && i.req.length ? `<h5>Needs</h5><ul>${li(i.req)}</ul>` : ""}
     ${i.start && i.start.length ? `<h5>You're given</h5><ul>${li(i.start)}</ul>` : ""}
     <h5>Rewards</h5><ul>${li(rewards)}${li(i.items || [])}</ul>
+    ${VALUE[r.id] ? `<h5>Why players do it · ${VTIER[VALUE[r.id][0]][0]}</h5><p>${esc(VALUE[r.id][2])} <span style="opacity:.7">(${VALUE[r.id][4].map(k => esc(VSRC[k][0])).join("; ")})</span></p>` : ""}
     ${i.prev || i.next ? `<h5>Quest chain${i.chain ? ": " + esc(i.chain) : ""}</h5><ul>${i.prev ? `<li>After: ${esc(i.prev)}</li>` : ""}${i.next ? `<li>Leads to: ${esc(i.next)}</li>` : ""}</ul>` : ""}`;
 }
 /* item rewards: icons with in-game style tooltips */
@@ -118,6 +120,13 @@ document.querySelectorAll("#qhead th[data-k] button").forEach(b => b.addEventLis
   renderQuests();
 }));
 ["#qmin","#qmax","#qsearch"].forEach(s => $(s).addEventListener("input", () => { QCHAIN = null; renderQuests() }));
+$("#qval").addEventListener("click", () => {
+  const on = $("#qval").getAttribute("aria-pressed") !== "true"; QCHAIN = null;
+  $("#qval").setAttribute("aria-pressed", on);
+  try { localStorage.setItem("qval", on ? "1" : "") } catch(e) {}
+  renderQuests();
+});
+try { if (localStorage.getItem("qval")) $("#qval").setAttribute("aria-pressed", "true") } catch(e) {}
 $("#qeq").addEventListener("click", () => {
   const on = $("#qeq").getAttribute("aria-pressed") !== "true"; QCHAIN = null;
   $("#qeq").setAttribute("aria-pressed", on);

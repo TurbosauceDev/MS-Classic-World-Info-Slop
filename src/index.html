@@ -126,6 +126,7 @@
           <li>Your character at each level is the Character Builder's default: best weapon you can use, AP and SP spent by the Auto buttons.</li>
           <li><b>Quests + grinding:</b> does each quest as it unlocks and grinds in between. Each quest shows how its EXP per hour compares with grinding; tick "Only quests faster than grinding" to keep just those.</li>
           <li><b>Quests only:</b> every quest it can time, lowest level first, until they run out. <b>Grinding only:</b> maps only.</li>
+          <li><b>Valuable quests</b> (Sauna Robe, Icarus Cape, Work Gloves...) appear as side tasks at the level their chain starts, with the reward and why players rate it. Most need item drops, so their time isn't counted. Picks come from community guides; see the Quest Database.</li>
           <li>Quests more than 5 levels under your current level count as already done or skipped. Quests with no EXP are skipped unless a later quest needs them.</li>
           <li>It stays on its current map unless another one is more than 10% better, so you don't hop maps every level.</li>
         </ul>
@@ -160,6 +161,7 @@
     <div class="lab">Plan<div class="seg small" id="xmode">
       <button data-v="mix">Quests + grinding</button><button data-v="quests">Quests only</button><button data-v="grind">Grinding only</button></div></div>
     <label class="chk" id="xislandwrap"><input type="checkbox" id="xisland"> Still on Maple Island</label>
+    <label class="chk"><input type="checkbox" id="xval"> Valuable quests</label>
     <label class="chk" id="xfastwrap"><input type="checkbox" id="xfast"> Only quests faster than grinding</label>
     <label>Pace<select id="xpace"><option value="1">Perfect play (model)</option><option value="1.5">Average player (1.5×)</option><option value="2">Relaxed (2×)</option></select></label>
   </div>
@@ -230,6 +232,7 @@
           <li><b>Equals:</b> the quest's EXP as kills of its target monster. If the items take fewer kills than that, the quest beats grinding it.</li>
           <li><b>Chain:</b> click "Yes" to see the whole questline in order.</li>
           <li>Hover a quest name for its story, requirements and full rewards, or a reward icon for the item's stats.</li>
+          <li><b>Must do / Recommended / Worth doing / Situational / Skip:</b> what the community guides say about the reward (metaroad.gg, maplestory.quest, meowdb), with the reason under the name. "Valuable quests only" shows just those.</li>
         </ul>
       </div>
       <div>
@@ -247,6 +250,7 @@
     <label>To level<input id="qmax" type="number" min="0" max="100" value="100"></label>
     <label>Search<input id="qsearch" type="search" placeholder="quest, NPC or item"></label>
     <button class="btn tgl" id="qeq" aria-pressed="false">Equipment rewards only</button>
+    <button class="btn tgl" id="qval" aria-pressed="false">Valuable quests only</button>
     <span class="pill p-hot" id="qcount" style="align-self:center"></span>
   </div>
   <div class="chainbar" id="qchainbar" hidden></div>

@@ -185,6 +185,9 @@ table.mini td,table.mini th{padding:6px 8px}
 .btn.tgl{align-self:flex-end;border-radius:999px}
 .btn.tgl[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--panel)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+.vwhy{font-size:12.5px;line-height:1.4;margin:3px 0 2px;max-width:46ch;color:var(--ink)}
+.vwhy a{color:var(--accent)}
+.vrow td{background:color-mix(in srgb,var(--accent-soft) 45%,transparent)}
 
 </style>
 
@@ -309,6 +312,7 @@ table.mini td,table.mini th{padding:6px 8px}
           <li>Your character at each level is the Character Builder's default: best weapon you can use, AP and SP spent by the Auto buttons.</li>
           <li><b>Quests + grinding:</b> does each quest as it unlocks and grinds in between. Each quest shows how its EXP per hour compares with grinding; tick "Only quests faster than grinding" to keep just those.</li>
           <li><b>Quests only:</b> every quest it can time, lowest level first, until they run out. <b>Grinding only:</b> maps only.</li>
+          <li><b>Valuable quests</b> (Sauna Robe, Icarus Cape, Work Gloves...) appear as side tasks at the level their chain starts, with the reward and why players rate it. Most need item drops, so their time isn't counted. Picks come from community guides; see the Quest Database.</li>
           <li>Quests more than 5 levels under your current level count as already done or skipped. Quests with no EXP are skipped unless a later quest needs them.</li>
           <li>It stays on its current map unless another one is more than 10% better, so you don't hop maps every level.</li>
         </ul>
@@ -343,6 +347,7 @@ table.mini td,table.mini th{padding:6px 8px}
     <div class="lab">Plan<div class="seg small" id="xmode">
       <button data-v="mix">Quests + grinding</button><button data-v="quests">Quests only</button><button data-v="grind">Grinding only</button></div></div>
     <label class="chk" id="xislandwrap"><input type="checkbox" id="xisland"> Still on Maple Island</label>
+    <label class="chk"><input type="checkbox" id="xval"> Valuable quests</label>
     <label class="chk" id="xfastwrap"><input type="checkbox" id="xfast"> Only quests faster than grinding</label>
     <label>Pace<select id="xpace"><option value="1">Perfect play (model)</option><option value="1.5">Average player (1.5×)</option><option value="2">Relaxed (2×)</option></select></label>
   </div>
@@ -413,6 +418,7 @@ table.mini td,table.mini th{padding:6px 8px}
           <li><b>Equals:</b> the quest's EXP as kills of its target monster. If the items take fewer kills than that, the quest beats grinding it.</li>
           <li><b>Chain:</b> click "Yes" to see the whole questline in order.</li>
           <li>Hover a quest name for its story, requirements and full rewards, or a reward icon for the item's stats.</li>
+          <li><b>Must do / Recommended / Worth doing / Situational / Skip:</b> what the community guides say about the reward (metaroad.gg, maplestory.quest, meowdb), with the reason under the name. "Valuable quests only" shows just those.</li>
         </ul>
       </div>
       <div>
@@ -430,6 +436,7 @@ table.mini td,table.mini th{padding:6px 8px}
     <label>To level<input id="qmax" type="number" min="0" max="100" value="100"></label>
     <label>Search<input id="qsearch" type="search" placeholder="quest, NPC or item"></label>
     <button class="btn tgl" id="qeq" aria-pressed="false">Equipment rewards only</button>
+    <button class="btn tgl" id="qval" aria-pressed="false">Valuable quests only</button>
     <span class="pill p-hot" id="qcount" style="align-self:center"></span>
   </div>
   <div class="chainbar" id="qchainbar" hidden></div>
@@ -641,6 +648,61 @@ $("#dps").value = 20 * +$("#lvl").value;
 rankMaps();
 
 
+/* ---------------- valuable quests ----------------
+   Community picks, not game data: tiers and reasons from the guides in VSRC (read 2026-10-06). Reddit was not reachable.
+   quest id -> [tier 1-5, reward, why, class only (or ""), sources]. Forgotten Hollow picks are left out (not at launch). */
+const VSRC = {
+  mr: ["metaroad.gg Must-Do Quests guide (Jota, Sep 2026)", "https://metaroad.gg/maplestory-classic/archives/must-do-quests-valuable-rewards-guide"],
+  mq: ["maplestory.quest Valuable quest rewards (Chief Stan)", "https://maplestory.quest/guides/valuable-quest-rewards"],
+  mdb: ["meowdb Beginner's Guide (Oct 2026)", "https://meowdb.com/msclassic/guides/beginners-guide-first-steps-in-maple-world"]
+};
+const VTIER = {1:["Must do","p-hot"], 2:["Recommended","p-good"], 3:["Worth doing","p-good"], 4:["Situational","p-warn"], 5:["Skip","p-bad"]};
+const VALUE = {
+  "1012":  [1, "The Green Relaxer chair", "Untradeable chair you can only get on Maple Island. Do it before boarding the ship.", "", ["mr","mdb"]],
+  "10305": [2, "Work Gloves", "All-class gloves with 5 slots: an early scrolling base without buying one. Nella charges 1,000 mesos to start the chain.", "", ["mr","mdb"]],
+  "10400": [4, "Wooden Buckler (90%) / Steel Shield (10%)", "Only for shield users (Warrior-only shields). Easy if you're training around Perion anyway.", "Warrior", ["mr"]],
+  "10104": [3, "Random Hat Accuracy scroll", "Accuracy matters in Classic. Save your Green and Blue Mushroom Caps.", "", ["mr"]],
+  "10302": [3, "Weighted Earrings or Yellow Square", "End of Alex's chain: 3,701 EXP, 10 Blue Potions and earrings. Nice, not mandatory.", "", ["mr","mdb"]],
+  "10113": [3, "Random refined gem", "Gems feed crafting. Easy if you're already killing Jr. Neckis and Stirges.", "", ["mr"]],
+  "10002": [2, "Random Intermediate weapon scroll", "First quest where the item is worth more than the EXP. Check the scroll's price even if it's for another class.", "", ["mr","mdb"]],
+  "10112": [3, "Brown Bamboo Hat", "Lv 25 hat: 24 W.DEF, +1 ACC, +10 HP, 7 slots. Long 7-quest chain (14,693 EXP total), so good but not mandatory.", "", ["mr"]],
+  "10311": [2, "+1 Fame, random Earring stat scroll (60%)", "Have it active before you kill King Slime in Kerning PQ. Free scroll for a boss you'd kill anyway.", "", ["mr"]],
+  "10308": [3, "Class shoes", "End of Nella's level 22 set (6,918 EXP total). Easy side goal while grinding Evil Eyes.", "", ["mr"]],
+  "10310": [2, "Old Raggedy Cape", "Early cape with 5 slots. The guide says the chain deserves priority.", "", ["mr","mdb"]],
+  "10105": [4, "30% Pig Illustrated, else 30 Cakes", "Lv 25 weapon lottery. Easy, but don't count on the weapon.", "", ["mq","mr"]],
+  "10510": [3, "Star Rock, +2 Fame, free Forest of Patience entry", "Keep the Star Rock: Manji's Old Gladius at 50 needs it. Jump quest.", "", ["mr"]],
+  "10509": [4, "Random Overall DEF scroll, +1 Fame", "DEF scrolls sell poorly. Do it for the jump quest or because it unlocks Anti-Aging Medicine.", "", ["mq","mr"]],
+  "80009": [1, "Smithing catalyst", "Profession step at crafting Lv 5. Mandatory if you craft, useless if you don't.", "", ["mq","mr"]],
+  "80012": [1, "Weaponcrafting catalyst", "Profession step at crafting Lv 5. Mandatory if you craft.", "", ["mq","mr"]],
+  "80015": [1, "Tailoring catalyst", "Profession step at crafting Lv 5. Mandatory if you craft.", "", ["mq","mr"]],
+  "80018": [1, "Carpentry catalyst", "Profession step at crafting Lv 5. Mandatory if you craft.", "", ["mq","mr"]],
+  "80021": [1, "Leatherworking catalyst", "Profession step at crafting Lv 5. Mandatory if you craft.", "", ["mq","mr"]],
+  "80024": [1, "Arcforging catalyst", "Profession step at crafting Lv 5. Mandatory if you craft.", "", ["mq","mr"]],
+  "10200": [4, "Piece of Ice or Fairy Wing (repeatable)", "Piece of Ice is needed for the Old Gladius at 50. Keep any Arwen's Glass Shoe from Fire Boars.", "", ["mq","mr"]],
+  "10317": [2, "Starts the Icarus chain", "Start at 31: it's the first step toward the Icarus Cape at 46. Save Stirge Wings, Stiff Feathers, Processed Wood.", "", ["mr"]],
+  "10508": [1, "Sauna Robe (Blue male / Red female)", "All-class overall with 10 slots, tradeable. Both guides call it a must. Don't sell it to an NPC.", "", ["mq","mr"]],
+  "10314": [3, "10,000 mesos, +3 Fame, 30 Mana Elixirs", "Best if you're fine with jump quests. Whole chain is 12,046 mesos and +6 Fame.", "", ["mr","mdb"]],
+  "10204": [2, "Gloves ATT or M.ATT scroll (60%)", "Rowen's 150-doll step. Save Cursed Dolls from Zombie Lupins instead of selling them.", "", ["mr"]],
+  "10205": [3, "Lv 40 class hat", "End of Rowen's chain. Do it while training on Zombie Lupins.", "", ["mq","mr"]],
+  "10703": [3, "Free Florina Beach travel for good, +2 Fame", "Convenience: the 4-part chain removes the travel fee.", "", ["mr"]],
+  "10209": [3, "Shoes Speed scroll (60% or 10%)", "Worth it if you're farming Drakes. Don't overpay for the Diamond.", "", ["mq"]],
+  "10122": [4, "Random Greater cape stat scroll", "Excellent reward, expensive inputs (Black Crystal, Ancient Scroll, 30 Weird Vibes Medicine...). Price it before buying materials.", "", ["mq","mr"]],
+  "10005": [1, "Gloves ATT or M.ATT scroll (60% or 10%)", "Every outcome is offensive. One of the best launch quests. Don't overpay for the Moon Rock.", "", ["mq","mr"]],
+  "10007": [4, "Class gloves", "Jump quest. Worth it if you're good at them; 30 Screws from the step before are useful for crafting.", "", ["mq","mr"]],
+  "10008": [4, "Pansy Earrings", "Jump quest finale. Good earrings, but the time cost is the jump quests.", "", ["mq","mr"]],
+  "10321": [1, "Icarus Cape (+2 DEX, +2 Speed or +2 INT)", "All-class tradeable cape, 5 slots, +3 ACC. Keep it even if it's not your color.", "", ["mq","mr"]],
+  "10114": [4, "Bronze Crusader Helm", "Warrior-only helmet for expensive crafting materials. Non-Warriors should skip it; Warriors only if they want the helm.", "Warrior", ["mq","mr"]],
+  "10118": [4, "Green Napoleon cape", "Lv 50 DEX/ACC cape, mainly for Bowmen. Needs 100 Golem rubble and a Diamond.", "", ["mr"]],
+  "10401": [1, "Greater weapon scroll of your choice", "Needs 10 Fame. Pick by market price if selling. Screws and Processed Wood have crafting value too.", "", ["mq","mr"]],
+  "10412": [1, "Greater weapon scroll of your choice", "Maybe the best reward for the effort: just Ligator, Jr. Necki kills and 20 skins.", "", ["mq","mr"]],
+  "10413": [2, "60% cape stat scroll of your choice", "You pick the stat, so check market prices first. More farming than part 1.", "", ["mq","mr"]],
+  "10404": [4, "Hero's Gladius or Skull Earrings", "Iconic, but the inputs (Star Rock, Piece of Ice, Ancient Scroll, Flaming Feather) are costly.", "", ["mq","mr"]]
+};
+// the quest a chain starts with (the level you should start working on it)
+const chainStart = r => r.chain ? D.quests.filter(x => x.chain === r.chain).sort((a, b) => a.lvl - b.lvl || a.id - b.id)[0] : r;
+const vPill = id => { const v = VALUE[id]; return v ? `<span class="pill ${VTIER[v[0]][1]}">${VTIER[v[0]][0]}</span>` : "" };
+const vSrc = v => v[4].map(k => `<a href="${VSRC[k][1]}" target="_blank" rel="noopener">${esc(VSRC[k][0].split(" ")[0])}</a>`).join(", ");
+
 /* quests: launch content only (Orbis, El Nath and Forgotten Hollow aren't open at launch) */
 const QLAUNCH = D.quests.filter(r => !["El Nath","Orbis","Forgotten Hollow"].includes(r.region));
 function renderQuests(){
@@ -648,6 +710,7 @@ function renderQuests(){
   let q = QLAUNCH.filter(r => r.lvl >= lo && r.lvl <= hi);
   if (s) q = q.filter(r => (r.name + r.npc + r.req + r.reward).toLowerCase().includes(s));
   if ($("#qeq").getAttribute("aria-pressed") === "true") q = q.filter(r => r.info && r.info.eq);
+  if ($("#qval").getAttribute("aria-pressed") === "true") q = q.filter(r => VALUE[r.id]);
   // questline filter overrides the other filters and shows the chain in order
   if (QCHAIN) q = QLAUNCH.filter(r => r.chain === QCHAIN);
   $("#qchainbar").hidden = !QCHAIN;
@@ -668,7 +731,7 @@ function renderQuests(){
   $("#qcount").textContent = `${q.length} of ${QLAUNCH.length} quests`;
   $("#qrows").innerHTML = q.map(r => `<tr>
     <td class="num">${r.lvl}</td>
-    <td><span class="name qname" tabindex="0" data-src="q" data-i="${D.quests.indexOf(r)}">${esc(r.name)}</span><div class="sub">${esc(r.npc || "")} · ${esc(r.region || "")}${r.rep ? ` · <span class="pill p-warn">${r.rep}</span>` : ""}${r.region === "El Nath" || r.region === "Orbis" ? ` · <span class="pill p-bad">not in launch</span>` : r.region === "Forgotten Hollow" ? ` · <span class="pill p-warn">opens later</span>` : ""}</div></td>
+    <td><span class="name qname" tabindex="0" data-src="q" data-i="${D.quests.indexOf(r)}">${esc(r.name)}</span> ${vPill(r.id)}${VALUE[r.id] ? `<div class="vwhy"><b>${esc(VALUE[r.id][1])}</b>${VALUE[r.id][3] ? ` · ${esc(VALUE[r.id][3])} only` : ""} · ${esc(VALUE[r.id][2])} <span class="sub">(${vSrc(VALUE[r.id])})</span></div>` : ""}<div class="sub">${esc(r.npc || "")} · ${esc(r.region || "")}${r.rep ? ` · <span class="pill p-warn">${r.rep}</span>` : ""}${r.region === "El Nath" || r.region === "Orbis" ? ` · <span class="pill p-bad">not in launch</span>` : r.region === "Forgotten Hollow" ? ` · <span class="pill p-warn">opens later</span>` : ""}</div></td>
     <td>${r.chain ? `<button class="chainbtn" data-chain="${esc(r.chain)}" title="Show the ${esc(r.chain)} questline">Yes</button><div class="sub">${r.cpos} of ${r.cn}</div>` : `<span class="sub">No</span>`}</td>
     <td class="sub">${esc(r.req)}</td>
     <td class="num">${fmt(r.exp)}</td>
@@ -690,6 +753,7 @@ function questTip(r){
     ${i.req && i.req.length ? `<h5>Needs</h5><ul>${li(i.req)}</ul>` : ""}
     ${i.start && i.start.length ? `<h5>You're given</h5><ul>${li(i.start)}</ul>` : ""}
     <h5>Rewards</h5><ul>${li(rewards)}${li(i.items || [])}</ul>
+    ${VALUE[r.id] ? `<h5>Why players do it · ${VTIER[VALUE[r.id][0]][0]}</h5><p>${esc(VALUE[r.id][2])} <span style="opacity:.7">(${VALUE[r.id][4].map(k => esc(VSRC[k][0])).join("; ")})</span></p>` : ""}
     ${i.prev || i.next ? `<h5>Quest chain${i.chain ? ": " + esc(i.chain) : ""}</h5><ul>${i.prev ? `<li>After: ${esc(i.prev)}</li>` : ""}${i.next ? `<li>Leads to: ${esc(i.next)}</li>` : ""}</ul>` : ""}`;
 }
 /* item rewards: icons with in-game style tooltips */
@@ -761,6 +825,13 @@ document.querySelectorAll("#qhead th[data-k] button").forEach(b => b.addEventLis
   renderQuests();
 }));
 ["#qmin","#qmax","#qsearch"].forEach(s => $(s).addEventListener("input", () => { QCHAIN = null; renderQuests() }));
+$("#qval").addEventListener("click", () => {
+  const on = $("#qval").getAttribute("aria-pressed") !== "true"; QCHAIN = null;
+  $("#qval").setAttribute("aria-pressed", on);
+  try { localStorage.setItem("qval", on ? "1" : "") } catch(e) {}
+  renderQuests();
+});
+try { if (localStorage.getItem("qval")) $("#qval").setAttribute("aria-pressed", "true") } catch(e) {}
 $("#qeq").addEventListener("click", () => {
   const on = $("#qeq").getAttribute("aria-pressed") !== "true"; QCHAIN = null;
   $("#qeq").setAttribute("aria-pressed", on);
@@ -1363,7 +1434,7 @@ const QUEST_SEC = 180, SAME_NPC_SEC = 60;   // walking + talking per quest (1 mi
 const STICK = 0.9;       // keep the current map while it's within 10% of the best
 const MAXL = 70;         // EXP table ends at 70
 
-let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true};
+let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true};
 const BELOW = 5;          // quests more than 5 levels under your starting level count as done or skipped
 try { const s = JSON.parse(localStorage.getItem("path") || "null"); if (s && s.cls) X = Object.assign(X, s) } catch(e) {}
 
@@ -1398,6 +1469,11 @@ function plan(mode = X.mode){
   const Q = pool().filter(r => timed(r) && r.lvl >= cut);
   let L = X.cur, exp = 0, t = 0, cur = null, qExp = 0, gExp = 0, j1 = X.cur >= 10, j2 = X.cur >= 30, npc = null;
   const needed = new Set(Q.flatMap(r => r.pre));   // quests another quest needs first
+  // community-picked valuable quests, shown as side tasks when their chain starts (their items can't be timed)
+  const VL = !X.val ? [] : Object.entries(VALUE).map(([id, v]) => { const r = D.quests.find(x => x.id === id); return r && {r, v, s: chainStart(r)} })
+    .filter(o => o && !SKIP.includes(o.r.region) && (!o.v[3] || o.v[3] === X.cls) && o.r.lvl >= cut && !(mode !== "grind" && Q.includes(o.r)))
+    .sort((a, b) => a.s.lvl - b.s.lvl || a.r.lvl - b.r.lvl);
+  let vi = 0;
   const levelUp = () => { while (L < MAXL && exp >= D.exp[L]){ exp -= D.exp[L]; L++ } };
   const grindOne = rows => {   // grind to the next level on the best map (sticky), merging with the previous grind step
     let best = rows[0];
@@ -1430,6 +1506,7 @@ function plan(mode = X.mode){
   }
   for (let guard = 0; L < X.goal && guard < 3000; guard++){
     if (!j1 && L >= 10){ j1 = true; steps.push({k:"job", L, txt:`1st job: ride Phil's taxi from Lith Harbor to ${JOBTOWN[X.cls]} (90% off as a Beginner) and talk to ${INSTRUCTOR[X.cls]} to become a ${FIRST[X.cls]}.`}) }
+    while (vi < VL.length && Math.max(1, VL[vi].s.lvl) <= L){ steps.push({k:"value", L, ...VL[vi], t}); vi++ }
     if (!j2 && L >= 30){ j2 = true; steps.push({k:"job", L, txt:`2nd job: back to ${INSTRUCTOR[X.cls]} in ${JOBTOWN[X.cls]} to become a ${X.branch}.`}) }
     const ch = charAt(L);
     let rates = mapRates(mcls(L), L, ch.dps, ch.acc).filter(m => !ISLAND(m.id));
@@ -1443,7 +1520,7 @@ function plan(mode = X.mode){
       if (!r.exp && !r.kl.length && !needed.has(r.id)) continue;   // no EXP and nothing depends on it
       const c = questCost(r, L, ch, npc); if (!c) continue;
       const rate = c.exp / c.sec;
-      if (mode === "mix" && X.fast && rate < G) continue;
+      if (mode === "mix" && X.fast && rate < G && !VALUE[r.id]) continue;
       // lowest level first (the order they unlock), then fastest
       if (!pick || (r.lvl - pick.r.lvl || pick.rate - rate) < 0) pick = {r, c, rate};
     }
@@ -1475,6 +1552,7 @@ function fill(){
   $("#xfam").innerHTML = fams.map(f => `<option${f === X.fam ? " selected" : ""}>${esc(f)}</option>`).join("");
   X.cur = Math.min(69, Math.max(1, Math.round(X.cur) || 1)); X.goal = Math.min(MAXL, Math.max(X.cur + 1, Math.round(X.goal) || X.cur + 1));
   $("#xisland").checked = X.island; $("#xislandwrap").hidden = X.cur >= 10;
+  $("#xval").checked = X.val;
   $("#xfast").checked = X.fast; $("#xfastwrap").hidden = X.mode !== "mix";
   $("#xcur").value = X.cur; $("#xgoal").value = X.goal; $("#xpace").value = String(X.pace);
 }
@@ -1483,6 +1561,7 @@ function render(){
   fill();
   try { localStorage.setItem("path", JSON.stringify(X)) } catch(e) {}
   const P = plan(), S = P.steps, G = X.mode === "grind" ? null : plan("grind");
+  const nv = S.filter(s => s.k === "value").length;
   const maps = new Set(S.filter(s => s.k === "grind").map(s => s.map.id)).size, nq = S.filter(s => s.k === "quest").length;
   const stop = S.find(s => s.k === "stop" || s.k === "nomap");
   const tot = P.qExp + P.gExp;
@@ -1490,7 +1569,7 @@ function render(){
     [stop ? `Stops at level ${stop.L}` : `About ${hm(P.t)} to level ${X.goal}`,
       stop ? (stop.k === "stop" ? `Quests that can be timed run out at level ${stop.L}${X.goal > stop.L ? `, ${X.goal - stop.L} short of your goal. Switch to "Quests + grinding" to finish.` : "."}` : `No training map fits level ${stop.L}.`)
            : `From level ${X.cur} at ${X.pace === 1 ? "perfect-play" : X.pace === 2 ? "relaxed" : "average"} pace. Estimate.`],
-    [`${nq} quests · ${maps} training map${maps === 1 ? "" : "s"}`, tot ? `${Math.round(100 * P.qExp / tot)}% of the EXP from quests (including the kills they ask for), ${Math.round(100 * P.gExp / tot)}% from grinding.` : ""],
+    [`${nq} quests · ${maps} training map${maps === 1 ? "" : "s"}${nv ? ` · ${nv} valuable side quests` : ""}`, tot ? `${Math.round(100 * P.qExp / tot)}% of the EXP from quests (including the kills they ask for), ${Math.round(100 * P.gExp / tot)}% from grinding.` : ""],
     ...(G && !stop && !G.steps.some(s => s.k === "nomap") && nq ? [[`Grinding only: ${hm(G.t)}`, P.t > G.t
       ? `The quests cost about ${hm(P.t - G.t)} more than pure grinding, in exchange for their item rewards. Tick "Only quests faster than grinding" to drop the slow ones.`
       : `The quests save about ${hm(G.t - P.t)} over pure grinding.`]] : [])
@@ -1501,8 +1580,12 @@ function render(){
     if (s.k === "stop") return `<tr><td></td><td class="num">${s.L}</td><td colspan="4" class="sub">No more quests to do at this level. Grind or switch to "Quests + grinding".</td></tr>`;
     if (s.k === "nomap") return `<tr><td></td><td class="num">${s.L}</td><td colspan="4" class="sub">No training map fits this level.</td></tr>`;
     n++;
+    if (s.k === "value") return `<tr class="vrow"><td class="num">${n}</td><td class="num">${s.L}</td>
+      <td>${vPill(s.r.id)} ${qlink(s.r)}<div class="vwhy"><b>${esc(s.v[1])}</b> · ${esc(s.v[2])}</div>
+        <div class="sub">${s.s !== s.r ? `Start with ${qlink(s.s)} (Lv ${s.s.lvl}), ${s.r.cn}-quest chain · ` : ""}needs ${esc(s.r.req.replace(/ \(source n\/a\)/g, ""))}</div></td>
+      <td class="sub">${esc(s.s.npc || "")} · ${esc(s.s.region || "")}</td><td class="num sub">not timed</td><td class="num">${hm(s.t)}</td></tr>`;
     if (s.k === "quest") return `<tr><td class="num">${n}</td><td class="num">${s.L}</td>
-      <td>Quest: ${qlink(s.r)}${s.vs != null ? ` <span class="pill ${s.vs >= 1 ? "p-good" : "p-warn"}" title="Quest EXP per hour compared with grinding at this level">${s.vs >= 1 ? "faster than grinding" : Math.round(s.vs * 100) + "% of grinding speed"}</span>` : ""}<div class="sub">+${fmt(s.c.exp)} EXP${s.c.kills.length ? " incl. kills" : ""}${s.drops?.length ? ` · plus drops: ${esc(s.drops.join(", "))} (not timed)` : ""}${s.r.req !== "talk / deliver only" ? " · " + esc(s.r.req) : " · talk / deliver"}</div></td>
+      <td>Quest: ${qlink(s.r)} ${vPill(s.r.id)}${s.vs != null ? ` <span class="pill ${s.vs >= 1 ? "p-good" : "p-warn"}" title="Quest EXP per hour compared with grinding at this level">${s.vs >= 1 ? "faster than grinding" : Math.round(s.vs * 100) + "% of grinding speed"}</span>` : ""}<div class="sub">+${fmt(s.c.exp)} EXP${s.c.kills.length ? " incl. kills" : ""}${s.drops?.length ? ` · plus drops: ${esc(s.drops.join(", "))} (not timed)` : ""}${s.r.req !== "talk / deliver only" ? " · " + esc(s.r.req) : " · talk / deliver"}</div></td>
       <td class="sub">${esc(s.r.npc || "")} · ${esc(s.r.region || "")}${s.c.kills.map(([m, c, w]) => w ? `<br>${esc(m)}: ${esc(w)}` : "").join("")}</td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
     return `<tr><td class="num">${n}</td><td class="num">${s.from}→${s.to}</td>
@@ -1521,6 +1604,7 @@ $("#xmode").addEventListener("click", e => { const b = e.target.closest("button[
 $("#xbranch").addEventListener("change", () => { X.branch = $("#xbranch").value; X.fam = null; render() });
 $("#xfam").addEventListener("change", () => { X.fam = $("#xfam").value; render() });
 $("#xisland").addEventListener("change", () => { X.island = $("#xisland").checked; render() });
+$("#xval").addEventListener("change", () => { X.val = $("#xval").checked; render() });
 $("#xfast").addEventListener("change", () => { X.fast = $("#xfast").checked; render() });
 $("#xpace").addEventListener("change", () => { X.pace = +$("#xpace").value; render() });
 $("#xcur").addEventListener("input", () => { X.cur = +$("#xcur").value || 1; if (X.goal <= X.cur) X.goal = Math.min(MAXL, X.cur + 1); later() });

@@ -181,3 +181,6 @@ table.mini td,table.mini th{padding:6px 8px}
 .btn.tgl{align-self:flex-end;border-radius:999px}
 .btn.tgl[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--panel)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+.vwhy{font-size:12.5px;line-height:1.4;margin:3px 0 2px;max-width:46ch;color:var(--ink)}
+.vwhy a{color:var(--accent)}
+.vrow td{background:color-mix(in srgb,var(--accent-soft) 45%,transparent)}

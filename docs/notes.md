@@ -10,6 +10,7 @@
 | SP rules | meowdb guides (glossary; Warrior 1–30; Page 30–70) |
 | Citizenship grades, discounts, storage fees, civic shops, how to join | meowdb.com/msclassic/citizenship (says: COT2; housing, daily limits, reactivation fees unconfirmed). Read through a summarising fetch — every shop item name was checked to exist in the export, prices/grades were not verifiable |
 | Maple Island sequence, beginner gear/AP, job instructors | meowdb beginner guide (updated 2026-10-02) and Roxie's new player guide, read with headless Chromium (plain fetches get a Cloudflare 403) |
+| Valuable quests (tiers, reasons) | metaroad.gg "Must-Do Quests & Valuable Rewards" (Jota, upd. 2026-09-19), maplestory.quest "Valuable quest rewards worth the detour" (Chief Stan), meowdb beginner guide. Read with headless Chromium (WebFetch blocked; metaroad hides level tabs, so hidden panels were forced visible). Reddit blocked from the cloud env. Forgotten Hollow picks (Road Back Home, Matters of the Heart, Heart of Stillness) left out |
 | Launch scope | meowdb release-date guide (no Orbis/El Nath/3rd job at launch); meowdb news 2026-10-03 (level cap 100, Forgotten Hollow later) |
 
 No drop tables exist in the export, so nothing depends on drop rates ("source n/a" on quest items).
@@ -64,6 +65,14 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - Mix = each quest as it unlocks (lowest level first) + grind between; optional "only faster than grinding". At the model's
   grinding speed almost no quest beats grinding on EXP/hr (e.g. lv 40: ~140k/h grinding vs 50–105k/h for the best quests).
 - Pace multipliers 1 / 1.5 / 2 on all times are guesses (crowding, potions, breaks).
+
+## Valuable quests (src/js/15-valuable.js)
+- Hand-curated VALUE map, quest id -> tier (Must do / Recommended / Worth doing / Situational / Skip), reward, why, class-only, sources.
+  Tier = what the guides say; where they differ, the more cautious label + the caveat in "why" (e.g. Pia's Gift: S in
+  maplestory.quest, Situational in metaroad because of input cost).
+- Quest Database: pill + reason under the name, "Valuable quests only" toggle (localStorage qval), "Why players do it" in the tooltip.
+- Path Planner: shown as untimed side-task rows at the level the quest's chain starts (checkbox, default on); class-only picks
+  hidden for other classes; timed valuable quests stay in the plan even with "only faster than grinding".
 
 ## Suspicious data to double-check
 - Lucky Seven `attack_count` = 1 and Double Shot = 2 targets × 1 hit in the export (old game: 2 stars / 2 hits).
