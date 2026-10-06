@@ -8,7 +8,7 @@
 <div class="wrap">
 <header>
   <h1>MS Classic World Data Slop</h1>
-  <p>Character builder, leveling path, training maps, quest database, citizenship, crafting and a keep-or-sell list, computed from the Closed Online Test 2 game files with the client's own accuracy, defense, level-penalty and element formulas. Drop rates aren't in the game files; where the planner needs them it uses an assumption you can adjust.</p>
+  <p>Character builder, leveling path, training maps, quest database, citizenship, crafting and a keep-or-sell list, computed from the launch game files with the client's own accuracy, defense, level-penalty and element formulas. Drop rates aren't in the game files; where the planner needs them it uses an assumption you can adjust.</p>
   <div class="src">Data: OSMS Data Explorer launch export (Oct 6) · guides and mechanics: meowdb · client data: maplestory.quest · <a href="#credits" id="srclink">all sources and thanks</a></div>
 </header>
 
@@ -20,6 +20,7 @@
   <button role="tab" id="t-cit" aria-selected="false" data-tab="cit">Citizenship</button>
   <button role="tab" id="t-craft" aria-selected="false" data-tab="craft">Crafting</button>
   <button role="tab" id="t-keep" aria-selected="false" data-tab="keep">Keep or sell</button>
+  <button role="tab" id="t-log" aria-selected="false" data-tab="log">Changelog</button>
   <button role="tab" id="t-credits" aria-selected="false" data-tab="credits">Credits</button>
 </nav>
 
@@ -429,6 +430,30 @@
   </table></div>
 </section>
 
+<section id="log" hidden>
+  <details class="howto">
+    <summary>About this page</summary>
+    <ul>
+      <li>What changed in this tool and why, newest first.</li>
+      <li>Game changes come from the OSMS Data Explorer patch notes (COT2 → Public Release) and our own rebuild.</li>
+    </ul>
+  </details>
+
+  <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 6, 2026 · Launch game data</h3><span class="pill p-hot">data</span></div>
+      <p>Every tab now uses the OSMS <b>Public Release</b> export (Oct 6) instead of Closed Online Test 2.</p>
+      <ul>
+        <li><b>Quests:</b> EXP changed on 158 quests and mesos on 130. Examples: Jane's three Challenges 6,300 → 9,940 EXP; John's Deep Forest baskets 6,581 → 25,900; Jane and the Mushroom 2,021 → 1,610; Olaf's and Teo's early quests 84 → 124.</li>
+        <li><b>New quests:</b> 6 Ellinia level 28 quests (The Filing Error, Chief Stan's Signature, Repairing the Book, The Faded Ink, The Dark Lord's Signature, We Hold Your Place) and 12 event quests (Halloween, Founder's First Step, The Marks We Leave Behind). 35 more citizenship quests.</li>
+        <li><b>Removed quests:</b> 59, nearly all El Nath, Forgotten Hollow and Orbis. These were already hidden here as not in the launch.</li>
+        <li><b>Monsters:</b> 23 changed. Most level 20-40 monsters give 5-10% less EXP and have 1-2 more avoid (Lupin 82 → 75, Croco 155 → 146, Wraith 132 → 122, Drake 142 → 133). Tauromacis 300 → 337 and Taurospear 350 → 429 EXP. Green Mushroom is no longer undead. Fairy 2 is gone.</li>
+        <li><b>Maps:</b> The Murky Swamp is new and open.</li>
+        <li>Training spots, path plans, quest EXP and the keep-or-sell list all recalculate from the new numbers. Guides and mechanics from meowdb and maplestory.quest are still from COT2.</li>
+        <li>Added this Changelog tab.</li>
+      </ul></div>
+  </div>
+</section>
+
 <section id="credits" hidden>
   <details class="howto" open>
     <summary>About this page</summary>
@@ -448,7 +473,7 @@
     <div class="card"><div class="cardhead"><h3>1. OSMS Data Explorer</h3><span class="pill p-hot">core data</span></div>
       <p>By <b>ohmi69</b>. <a href="https://osmsdataexplorer.com/" target="_blank" rel="noopener">osmsdataexplorer.com</a> · <a href="https://github.com/ohmi69/osms_datamine_dashboard" target="_blank" rel="noopener">GitHub</a></p>
       <ul>
-        <li>The Closed Online Test 2 game-file export behind almost every tab: monsters, maps, spawns, portals, quests, items, skills, icons, minimaps and crafting recipes.</li>
+        <li>The game-file export behind almost every tab (launch export since Oct 6, 2026; Closed Online Test 2 before that): monsters, maps, spawns, portals, quests, items, skills, icons, minimaps and crafting recipes.</li>
         <li>The client formulas (accuracy, hit chance, damage, defense), the craft-level EXP table and the COT1 → COT2 patch notes.</li>
       </ul></div>
 

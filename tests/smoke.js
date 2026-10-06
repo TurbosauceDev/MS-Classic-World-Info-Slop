@@ -76,6 +76,7 @@ const path = require("path");
     await (await tr.$(".khave")).fill(""); }
   await p.selectOption("#kby", "c"); await p.selectOption("#kdisc", { index: 1 }); check(await p.$$eval("#krows tr", r => r.length) > 0, "keep list: crafting + profession filter");
   await p.selectOption("#kby", ""); await p.selectOption("#kdisc", "");
+  await p.click("#t-log"); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
   await p.click("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 6, "credits tab renders");
   await p.click("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to craft Lv 10/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 10, "crafting leveling plan");
   await p.click("#t-maps"); check(await p.$$eval("#timedrows tr", r => r.length) > 10 && /Mushmom/.test(await p.textContent("#timedrows")), "bosses and timed spawns");

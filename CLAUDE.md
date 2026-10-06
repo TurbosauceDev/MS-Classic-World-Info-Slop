@@ -3,7 +3,7 @@
 A single-page planner for **MapleStory Classic World** (Founder's Access Oct 6 2026, Grand Launch Oct 21 2026),
 built from the Closed Online Test 2 (COT2) game-file export. Owner: Danny.
 
-Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Citizenship** · **Crafting** · **Keep or sell** · **Credits**.
+Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Citizenship** · **Crafting** · **Keep or sell** · **Changelog** · **Credits**.
 
 ## Ground rules (from Danny)
 - **Classic World only.** Never use modern/retail MapleStory info. 2008-era info only if confirmed to still hold in Classic.
@@ -76,3 +76,4 @@ Danny's OK, fast-forward that branch to it (`git push origin HEAD:claude/trustin
 - Tooltips: one floating `#qtip`; elements with `.qname` (quests), `.ri` (items), `.mname` (maps, `mapLink()`), `.nname` (NPCs, `npcLink()`) or `.mobname` (monsters, `mobLink()`) get it via delegated listeners.
 - Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, craft, craftlv, qcompact, keep, keephave).
 - Plain, game-player language on the page. Say when a number is estimated.
+- Add a dated entry to the Changelog tab (`#log` in src/index.html, newest first) for every user-visible change.
