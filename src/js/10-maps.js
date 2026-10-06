@@ -28,22 +28,42 @@ function mobKill(m, cls, L, dps, acc){
   const eff = hp / (hit * lvlPen(diff) * em * 100 / ((magic ? mdd : pdd) + 100));
   return {hit, sec: eff / dps + 1};
 }
+// how many monsters one cast of an area attack hits on a map (estimate from spawn points): from each spawn point, count
+// the others on the same platform (within 60 px up/down) inside the attack's reach, facing the busier side; 75% of
+// spawns are alive solo; capped at the skill's target count. reach = [front, back] px.
+const AOE = {};
+function aoeHits(mid, targets, reach){
+  if (!targets || targets <= 1 || !reach) return 1;
+  const key = `${mid}|${targets}|${reach}`; if (AOE[key]) return AOE[key];
+  const P = D.mpos[mid] || []; if (P.length < 2) return AOE[key] = 1;
+  let sum = 0;
+  P.forEach(([x, y], i) => {
+    let r = 0, l = 0, rb = 0, lb = 0;
+    P.forEach(([x2, y2], j) => { if (i === j || Math.abs(y2 - y) > 60) return; const dx = x2 - x;
+      if (dx >= 0 && dx <= reach[0]) r++; if (dx <= 0 && -dx <= reach[0]) l++;
+      if (dx < 0 && -dx <= reach[1]) rb++; if (dx > 0 && dx <= reach[1]) lb++; });
+    sum += Math.min(targets, 1 + 0.75 * Math.max(r + rb, l + lb));
+  });
+  return AOE[key] = sum / P.length;
+}
 // every open map that fits, best EXP/s first. Shared by "Where to train" and the Path Planner.
-function mapRates(cls, L, dps, acc, floor = 12){
+// aoe = {t: targets, r: reach} spreads each cast over the monsters it reaches on that map.
+function mapRates(cls, L, dps, acc, floor = 12, aoe = null){
   const rows = [];
   for (const [mid, [name, open, spawns]] of Object.entries(D.maps)){
     if (!open) continue;
     let exp = 0, time = 0, n = 0, lvSum = 0, hitSum = 0, ok = true, names = new Set();
+    const hits = aoe ? aoeHits(mid, aoe.t, aoe.r) : 1;
     for (const [id, c] of spawns){
       const m = D.mobs[id]; if (!m) continue;
       const k = mobKill(m, cls, L, dps, acc);
       if (k.hit < 0.05){ ok = false; break }
-      exp += m[3] * c; time += k.sec * c; n += c; lvSum += m[1] * c; hitSum += k.hit * c; names.add(m[0]);
+      exp += m[3] * c; time += k.sec * c / hits; n += c; lvSum += m[1] * c; hitSum += k.hit * c; names.add(m[0]);
     }
     if (!ok || !n) continue;
     const avg = lvSum / n; if (avg < L - floor) continue;
     const rate = Math.min(exp / time, exp * 0.75 / 7.56);
-    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate, cyc: exp});   // kills/s of a mob = count × rate / cyc
+    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate, cyc: exp, hits});   // kills/s of a mob = count × rate / cyc
   }
   return rows.sort((a,b) => b.rate - a.rate);
 }

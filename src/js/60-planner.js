@@ -16,16 +16,18 @@ const RESPAWN = 7.56, SOLO_ALIVE = 0.75;   // respawn timer and share of spawns 
 const STICK = 0.9;       // keep the current map while it's within 10% of the best
 const MAXL = 70;         // EXP table ends at 70
 
-let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true, drop:0.3};
+let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true, drop:0.3, aoe:true};
 const BELOW = 5;          // quests more than 5 levels under your starting level count as done or skipped
 try { const s = JSON.parse(localStorage.getItem("path") || "null"); if (s && s.cls) X = Object.assign(X, s) } catch(e) {}
 
+// area attack of the character at a level, for mapRates / aoeHits (null = single target)
+const aoeOf = ch => ch.targets > 1 && ch.reach ? {t: ch.targets, r: ch.reach} : null;
 // class names "Where to train" uses; Beginners hit physically, like a Warrior
 const mcls = L => L < 10 ? "Warrior" : X.cls === "Magician" ? (L >= 30 ? X.branch : "Magician") : X.cls;
 const BC = {};
 function charAt(L){
-  const br = L >= 30 ? X.branch : FIRST[X.cls], k = [X.cls, br, X.fam, L].join("|");
-  if (!BC[k]){ const b = buildAt(X.cls, br, X.fam, L); BC[k] = b.dps > 0 ? b : {dps: 20 * L, acc: b.acc, est: true} }
+  const br = L >= 30 ? X.branch : FIRST[X.cls], k = [X.cls, br, X.fam, L, X.aoe].join("|");
+  if (!BC[k]){ const b = buildAt(X.cls, br, X.fam, L, X.aoe); BC[k] = b.dps > 0 ? b : {dps: 20 * L, acc: b.acc, est: true} }
   return BC[k];
 }
 const WHERE = {};
@@ -87,7 +89,7 @@ function killSpot(id, n, from, L, ch, island){
   for (const [mid, mp] of Object.entries(D.maps)){
     if (!mp[1] || ISLAND(mid) !== !!island) continue;
     const c = (mp[2].find(s => String(s[0]) === id) || [0, 0])[1]; if (!c) continue;
-    const kill = Math.max(n * k.sec, n / (c * SOLO_ALIVE / RESPAWN)), tr = tripSec(from, mid), tot = kill + tr;
+    const a = aoeOf(ch), kill = Math.max(n * k.sec / (a ? aoeHits(mid, a.t, a.r) : 1), n / (c * SOLO_ALIVE / RESPAWN)), tr = tripSec(from, mid), tot = kill + tr;
     if (!best || tot < best.tot) best = {map: [mid, mp[0]], kill, tr, tot};
   }
   return best;
@@ -207,7 +209,7 @@ function plan(mode = X.mode){
         done.add(r.id); finish(r, c); pushQuest(r, c, null); levelUp(); continue;
       }
       // a quest needs a higher level, or the ship needs level 7: grind on the island
-      if (!grindOne(mapRates(mcls(L), L, ch.dps, ch.acc, Infinity).filter(m => ISLAND(m.id)), ch)){ steps.push({k:"nomap", L}); break }
+      if (!grindOne(mapRates(mcls(L), L, ch.dps, ch.acc, Infinity, aoeOf(ch)).filter(m => ISLAND(m.id)), ch)){ steps.push({k:"nomap", L}); break }
     }
     if (IQ.every(r => done.has(r.id)) && L >= SHIP_LV) steps.push({k:"job", L, txt:"Leave Maple Island: Shanks at the Southperry dock sails to Lith Harbor (level 7+, 300 mesos, which Mai's and Pio's quests cover). One way, you can't come back. Then do the Lith Harbor quests until 10."});
     cur = null; here = "10000000";   // the ship lands in Lith Harbor
@@ -219,8 +221,8 @@ function plan(mode = X.mode){
     while (vi < VL.length && Math.max(1, VL[vi].s.lvl) <= L){ steps.push({k:"value", L, ...VL[vi], t}); vi++ }
     if (!j2 && L >= 30){ j2 = true; toInstructor(); steps.push({k:"job", L, txt:`2nd job: back to ${INSTRUCTOR[X.cls]} in ${JOBTOWN[X.cls]} to become a ${X.branch}.`}) }
     const ch = charAt(L);
-    let rates = mapRates(mcls(L), L, ch.dps, ch.acc).filter(m => !ISLAND(m.id));
-    if (!rates.length) rates = mapRates(mcls(L), L, ch.dps, ch.acc, Infinity).filter(m => !ISLAND(m.id));   // nothing near your level: best of the rest
+    let rates = mapRates(mcls(L), L, ch.dps, ch.acc, 12, aoeOf(ch)).filter(m => !ISLAND(m.id));
+    if (!rates.length) rates = mapRates(mcls(L), L, ch.dps, ch.acc, Infinity, aoeOf(ch)).filter(m => !ISLAND(m.id));   // nothing near your level: best of the rest
     let best = rates[0];
     if (cur && best){ const c = rates.find(r => r.id === cur.id); if (c && c.rate >= STICK * best.rate) best = c }
     const G = best ? best.rate : 0;
@@ -272,6 +274,7 @@ function fill(){
   $("#xisland").checked = X.island; $("#xislandwrap").hidden = X.cur >= 10;
   $("#xval").checked = X.val;
   $("#xdrop").value = Math.round(X.drop * 100); $("#xdropout").textContent = Math.round(X.drop * 100) + "%"; $("#xdropwrap").hidden = X.mode === "grind";
+  $("#xaoe").value = X.aoe ? "1" : "";
   $("#xfast").checked = X.fast; $("#xfastwrap").hidden = X.mode !== "mix"; $("#xvalwrap").hidden = X.mode === "rewards";
   $("#xcur").value = X.cur; $("#xgoal").value = X.goal; $("#xpace").value = String(X.pace);
 }
@@ -321,7 +324,7 @@ function render(){
       ${rvCell(s.r)}<td class="num">${hm(s.sec)}${s.c.unknown ? `<div class="sub" title="Some items have no known drop source">+ other items</div>` : ""}</td><td class="num">${hm(s.t)}</td></tr>`;
     return `${tr(s)}<td class="num">${chk(s, n)}</td><td class="num">${s.from}→${s.to}</td>
       <td><b>Grind to level ${s.to}</b><div class="sub gear">${s.ch.wid ? itemIcon(s.ch.wid, 1, true) : ""}${s.ch.sid && D.icons[s.ch.sid] ? `<img class="sk" src="data:image/png;base64,${D.icons[s.ch.sid]}" alt="" title="${esc(s.ch.skill)}">` : ""}
-        <span>~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</span></div></td>
+        <span>~${fmt(s.rate * 3600 / X.pace)} EXP/hr${s.map.hits > 1.05 ? ` · hits ~${s.map.hits.toFixed(1)} per cast` : ""}${s.ch.weapon ? ` · ${esc(s.ch.weapon)}, ${esc(s.ch.skill || "")}` : ""}</span></div></td>
       <td>${mapLink(s.map.id, s.map.name)}<div class="sub">${mobList(s.map.mobs)}</div>${s.got?.size ? `<div class="sub farm">Collects on the way: ${[...s.got].filter(([, g]) => g.n >= 1).map(([name, g]) => `${fmt(g.n)} ${esc(name)} <span title="${esc(g.q.name)}, Lv ${g.q.lvl}">(${esc(g.q.name)}${g.q.lvl > s.to ? `, Lv ${g.q.lvl}` : ""})</span>`).join(", ")}</div>` : ""}</td><td class="num">–</td>
       <td class="num">${hm(s.sec)}</td><td class="num">${hm(s.t)}</td></tr>`;
   }).join("") || `<tr><td colspan="7" class="empty">You're already at your goal.</td></tr>`;
@@ -352,6 +355,7 @@ $("#xbranch").addEventListener("change", () => { X.branch = $("#xbranch").value;
 $("#xfam").addEventListener("change", () => { X.fam = $("#xfam").value; render() });
 $("#xisland").addEventListener("change", () => { X.island = $("#xisland").checked; render() });
 $("#xval").addEventListener("change", () => { X.val = $("#xval").checked; render() });
+$("#xaoe").addEventListener("change", () => { X.aoe = !!$("#xaoe").value; render() });
 $("#xfast").addEventListener("change", () => { X.fast = $("#xfast").checked; render() });
 $("#xdrop").addEventListener("input", () => { X.drop = +$("#xdrop").value / 100; $("#xdropout").textContent = $("#xdrop").value + "%"; later() });
 $("#xpace").addEventListener("change", () => { X.pace = +$("#xpace").value; render() });

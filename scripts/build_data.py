@@ -51,6 +51,15 @@ def step_weapons(D):
 
 JOBS = {"Warrior", "Fighter", "Page", "Spearman", "Magician", "F/P Wizard", "I/L Wizard", "Cleric",
         "Archer", "Hunter", "Crossbowman", "Rogue", "Assassin", "Bandit"}   # 1st + 2nd job only (no 3rd job at launch)
+def reach(s):
+    """[front, back] px an attack reaches at max level: hitbox range, a centred attack rectangle (Thunder Bolt), or the
+    300 px corridor/pierce of projectiles (client default / weapon base, before The Eye of Amazon)."""
+    rv = s.get("range_visual") or {}
+    if s.get("range"): r = s["range"]; return [r[-1] if isinstance(r, list) else r, 0]
+    if rv.get("family") == "fixed_rectangle" and rv.get("levels"): b = rv["levels"][-1]; return [b["rb"]["x"], -b["lt"]["x"]]
+    if (rv.get("attack_range") or {}).get("base"): return [rv["attack_range"]["base"], 0]
+    return None
+
 def step_skills(D):
     src = json.load(open(C + "skills.json")); out, icons = {}, {}
     for gs in src.values():
@@ -65,7 +74,7 @@ def step_skills(D):
                     if m: req.append([m.group(1), int(m.group(2))])
                 L.append({"id": s["id"], "n": s["name"], "max": s["max_level"], "req": req,
                           "k": (s.get("mechanics") or {}).get("kind") or ("passive" if s.get("passive") else ""),
-                          "att": s.get("attack_count", 1), "mob": s.get("mob_count", 1), "st": s["all_level_stats"],
+                          "att": s.get("attack_count", 1), "mob": s.get("mob_count", 1), "rg": reach(s), "st": s["all_level_stats"],
                           "d": re.sub(r"^\[Master Level: \d+\]\s*", "", s.get("description", "")).strip()})
                 p = C + f"images/skills/{s['id']}.png"
                 if os.path.exists(p): icons[s["id"]] = b64(p)
@@ -231,6 +240,13 @@ def step_nav(D):
                 if a.launch_status(e) == "Open at launch": nav[k].add(str(e)); nav[str(e)].add(k)
             if any(str(n) in cabnpc for n in m.get("npcs") or []): cabs.add(k)
     D["nav"] = {k: sorted(v) for k, v in nav.items()}
+    # monster spawn points per open map (map pixels), for how many monsters an area attack reaches
+    pos, openids, mobids = {}, {int(k) for k, v in D["maps"].items() if v[1]}, {str(k) for k in D["mobs"]}
+    for r in a.mapsj["regions"]:
+        for m in r["maps"]:
+            if m["id"] in openids:
+                pos[str(m["id"])] = [[p["x"], p["y"]] for p in m.get("mob_positions") or [] if str(p["id"]) in mobids]
+    D["mpos"] = pos
     D["cabs"] = sorted(cabs)
     D["mapnames"].update({k: a.map_name.get(int(k), "") for k in nav})
 

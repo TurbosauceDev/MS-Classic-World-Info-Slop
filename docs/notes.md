@@ -75,6 +75,10 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   Grind maps: score = (level EXP + drop credit) / (grind time + travel from where you are). Position starts in Lith Harbor
   after the ship, unknown (no first-leg cost) when starting at 10+. Each leg is its own "travel" step (route text rebuilt
   from Dijkstra prev pointers); quest rows show talk + kill time only. Drop credit values saved kills at the quest's level.
+- AoE build (planner default): default skill weighs targets as if ~3 are in reach (Rush, Steal, Power Knockback excluded).
+  Hits per cast per map = average over spawn points of min(targets, 1 + 0.75 × spawn points on the same platform
+  (|dy| ≤ 60 px) within reach, busier facing). Reach = skill `range`, Thunder Bolt's ±170 px box, or 300 px projectile
+  corridor. Kill time per monster ÷ hits; respawn cap unchanged. Where to train stays single target.
 - Collecting ahead: while grinding, wanted drops (quests within 5 levels, accepted or not; assumes monster-named ETC items
   drop without the quest, as the guides advise saving them) go in a bag at kills/s = count × rate / cycle EXP × drop rate.
   Map score = (level EXP + credit) / time, credit per saved item = (kill time × best EXP/s − kill EXP) / drop rate,
@@ -126,6 +130,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - `npcs` {npcId: [name, [[mapId, x, y]]]} (x/y minimap fractions), `npcid` {name: npcId}, `npcimg` {npcId: png}, `npcmaps`
   [mapIds with quest NPCs; their minimaps/portals are included even if they have no monsters]; `mobimg` {mobId: png thumbnail}
 - `nav` {mapId: [neighbour mapIds]} walkable launch-map graph from map exits (two-way); `cabs` [town mapIds with a cab NPC]
+- `mpos` {mapId: [[x, y]]} monster spawn points (map pixels) of open maps; skills carry `rg` (range px per level)
 - `latermobs` [mobId], `latermobnames` [name]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2
   (Someone Else's House) and Fairy 3 (Tree Dungeon, Forest Up North VI/VII): they ARE at launch, just not in the ranking.
 

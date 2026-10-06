@@ -249,8 +249,10 @@ function applyDefaults(){
   if (!wl.some(w => w.name === S.weapon)) S.weapon = bestWeapon()?.name || null;
   const w = W.find(x => x.name === S.weapon), al = attackSkills(w);
   if (!al.some(s => s.id === S.skill)){
-    // default to the strongest single-target skill of the newest job
-    const pick = al.filter(s => s.id !== "basic").map(s => [s, attackInfo(s, s.max)]).sort((a,b) => (b[1].pct*b[1].hits) - (a[1].pct*a[1].hits))[0];
+    // default to the strongest single-target skill of the newest job; an AoE build (Path Planner) weighs targets too,
+    // as if ~3 monsters are in reach (Rush, Steal and Power Knockback move or push monsters; not grinding attacks)
+    const val = i => i.pct * i.hits * (S.aoe ? Math.min(i.targets || 1, 3) : 1);
+    const pick = al.filter(s => s.id !== "basic" && !(S.aoe && ["Rush", "Steal", "Power Knockback"].includes(s.n))).map(s => [s, attackInfo(s, s.max)]).sort((a,b) => val(b[1]) - val(a[1]))[0];
     S.skill = (pick ? pick[0] : al[0])?.id;
   }
   const am = w && AMMO[w.type];
@@ -269,11 +271,11 @@ function beginnerAt(cls, L){
   return {dps: (min + max) / 2 * critF / interval, acc: (ap.DEX * 1.2 + L * 2 + ap.LUK * 0.6) / 2.5 + 10, branch: "Beginner", weapon: w.name, wid: w.id, skill: "Basic attack"};
 }
 // default character at a level (best weapon, auto AP, auto skill build), for the Path Planner. Leaves the builder untouched.
-buildAt = (cls, branch, fam, lvl) => {
+buildAt = (cls, branch, fam, lvl, aoe = false) => {
   if (lvl < 10) return beginnerAt(cls, lvl);
   const keep = S;
-  S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true};
-  try { applyDefaults(); S.sp = autoSP(); const r = calc(S.sp); return {dps: r.dps, acc: r.acc, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id} }
+  S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe};
+  try { applyDefaults(); S.sp = autoSP(); const r = calc(S.sp); return {dps: r.dps, acc: r.acc, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg} }
   finally { S = keep }
 };
 function fillControls(){
