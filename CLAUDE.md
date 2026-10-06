@@ -13,6 +13,16 @@ Tabs: **Character Builder** · Where to train · **Quest Database** · What chan
 - Keep replies short and direct, no filler. Push back when something is wrong.
 - Batch related changes; only take screenshots when layout/visuals actually changed.
 
+## Token budget (read first)
+- **Never Read/cat/grep `data/data.json` or `dist/index.html`**: each is ~900 KB, mostly on one line. `.rgignore` keeps Grep out of them.
+  Query data with a short script that prints only what's needed, e.g.
+  `python3 -c "import json;d=json.load(open('data/data.json'));print(d['mobs']['22'])"`.
+- Source is small (~1.6k lines). Read only the file/section being changed; `grep -n "^function\|^const" src/js/*.js` gives a symbol index.
+- Don't read the live artifact back or diff it against dist. Publish dist straight to the URL below. In a new session the first
+  publish may be refused and hand back the live page; that costs ~20 KB of context, so do it once.
+- Don't re-run `fetch_osms.sh` / `build_data.py` unless data logic or the export changed. Pipe test/build output through `tail`.
+- Screenshots only when layout changed. Ask Danny before anything expensive: data rebuilds, big refactors, web research, subagents.
+
 ## Layout
 ```
 src/index.html        markup; /*@CSS*/ and /*@JS*/ placeholders
