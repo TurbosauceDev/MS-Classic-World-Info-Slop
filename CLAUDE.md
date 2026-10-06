@@ -64,8 +64,9 @@ python3 scripts/launch_diff.py <ver>    # a maplestory.io MCW client vs our COT2
 ```
 Open `dist/index.html` directly in a browser — no server needed. Published artifact (republish `dist/index.html` to this URL after
 every change): https://claude.ai/artifact/Facfj1DVkTNyQyrbHHFQcH
-GitHub Pages: https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/ serves this branch; root index.html forwards to dist/,
-so committing a rebuilt dist/index.html and pushing updates the site (~1 min). The page must stay one self-contained file
+GitHub Pages: https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/ builds from branch `claude/trusting-bell-fqgar6`
+(not the session branch); root index.html forwards to dist/. To update the site, commit a rebuilt dist/index.html and, with
+Danny's OK, fast-forward that branch to it (`git push origin HEAD:claude/trusting-bell-fqgar6`, ~1 min to deploy). The page must stay one self-contained file
 (it's also published as a claude.ai artifact): no external requests except Google Fonts.
 
 ## Conventions
