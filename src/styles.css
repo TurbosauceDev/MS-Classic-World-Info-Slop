@@ -230,3 +230,5 @@ table.mini td,table.mini th{padding:6px 8px}
 #xdropwrap input{width:150px}
 #xdropwrap b{font:600 13px var(--f-mono);color:var(--ink);text-transform:none;letter-spacing:0}
 #xrows tr.trow td{background:color-mix(in srgb,var(--line) 22%,transparent)}
+#xrows tr.grow td{background:color-mix(in srgb,var(--leaf-soft) 55%,transparent)}
+.how{line-height:1.55;margin-top:3px}

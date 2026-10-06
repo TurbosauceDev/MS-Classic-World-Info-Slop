@@ -1,0 +1,3855 @@
+{
+ "source": "https://meowdb.com/msclassic/npc-shops",
+ "read": "2026-10-06",
+ "shops": [
+  {
+   "npc": "Lucy",
+   "kind": "Grocer",
+   "prices": "COT2 prices",
+   "map": "Amherst Department Store",
+   "items": [
+    [
+     "Red Potion",
+     50,
+     null
+    ],
+    [
+     "Orange Potion",
+     150,
+     null
+    ],
+    [
+     "Apple",
+     20,
+     null
+    ],
+    [
+     "Egg",
+     30,
+     null
+    ],
+    [
+     "Orange",
+     50,
+     null
+    ],
+    [
+     "Pet Food",
+     35,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Pan",
+   "kind": "Armor Seller",
+   "prices": "COT2 prices",
+   "map": "Southperry Armor Store",
+   "items": [
+    [
+     "White Undershirt",
+     50,
+     null
+    ],
+    [
+     "Grey T-Shirt",
+     50,
+     null
+    ],
+    [
+     "Undershirt",
+     50,
+     null
+    ],
+    [
+     "White Tube Top",
+     50,
+     null
+    ],
+    [
+     "Yellow T-Shirt",
+     50,
+     null
+    ],
+    [
+     "Green T-Shirt",
+     50,
+     null
+    ],
+    [
+     "Red-Striped top",
+     50,
+     null
+    ],
+    [
+     "Blue Jeans Shorts",
+     50,
+     null
+    ],
+    [
+     "Brown Cotton Shorts",
+     50,
+     null
+    ],
+    [
+     "Red Miniskirt",
+     50,
+     null
+    ],
+    [
+     "Indigo Miniskirt",
+     50,
+     null
+    ],
+    [
+     "Leather Sandals",
+     50,
+     null
+    ],
+    [
+     "Red Rubber Boots",
+     50,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Sid",
+   "kind": "Weapon Seller",
+   "prices": "COT2 prices",
+   "map": "Amherst Weapon Store",
+   "items": [
+    [
+     "Sword",
+     50,
+     null
+    ],
+    [
+     "Hand Axe",
+     50,
+     null
+    ],
+    [
+     "Wooden Club",
+     50,
+     null
+    ],
+    [
+     "Razor",
+     500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Razor\t500mesos",
+   "kind": "Lith Harbor",
+   "prices": "Jane",
+   "map": "Lith Harbor",
+   "items": [
+    [
+     "White Potion",
+     0,
+     null
+    ],
+    [
+     "Unagi",
+     0,
+     null
+    ],
+    [
+     "Pure Water",
+     0,
+     null
+    ],
+    [
+     "Watermelon",
+     0,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Mina",
+   "kind": "Grocer",
+   "prices": "COT2 prices",
+   "map": "Lith Harbor Department Store",
+   "items": [
+    [
+     "Sky-blue Wooden Chair",
+     1000,
+     null
+    ],
+    [
+     "Red Potion",
+     50,
+     null
+    ],
+    [
+     "Orange Potion",
+     150,
+     null
+    ],
+    [
+     "White Potion",
+     350,
+     null
+    ],
+    [
+     "Blue Potion",
+     220,
+     null
+    ],
+    [
+     "Warrior Potion",
+     500,
+     null
+    ],
+    [
+     "Speed Potion",
+     500,
+     null
+    ],
+    [
+     "Apple",
+     20,
+     null
+    ],
+    [
+     "Egg",
+     30,
+     null
+    ],
+    [
+     "Meat",
+     80,
+     null
+    ],
+    [
+     "Orange",
+     50,
+     null
+    ],
+    [
+     "Lemon",
+     150,
+     null
+    ],
+    [
+     "Pet Food",
+     35,
+     null
+    ],
+    [
+     "Return Scroll - Nearest Town",
+     400,
+     null
+    ],
+    [
+     "Return Scroll to Lith Harbor",
+     500,
+     null
+    ],
+    [
+     "Arrow for Bow",
+     1,
+     null
+    ],
+    [
+     "Arrow for Crossbow",
+     1,
+     null
+    ],
+    [
+     "Subi Throwing-Stars",
+     500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Natasha",
+   "kind": "Armor Seller",
+   "prices": "COT2 prices",
+   "map": "Lith Harbor Armor Shop",
+   "items": [
+    [
+     "Brown Skullcap",
+     600,
+     null
+    ],
+    [
+     "Red Headband",
+     600,
+     null
+    ],
+    [
+     "Black Headband",
+     600,
+     null
+    ],
+    [
+     "Green Headband",
+     600,
+     null
+    ],
+    [
+     "Yellow Headband",
+     600,
+     null
+    ],
+    [
+     "Blue Headband",
+     600,
+     null
+    ],
+    [
+     "Black Swimming Cap",
+     900,
+     null
+    ],
+    [
+     "Blue Swimming Cap",
+     900,
+     null
+    ],
+    [
+     "Red Swimming Cap",
+     900,
+     null
+    ],
+    [
+     "White Bandana",
+     1200,
+     null
+    ],
+    [
+     "Metal Gear",
+     1800,
+     null
+    ],
+    [
+     "Blue One-lined T-Shirt (M)",
+     2400,
+     null
+    ],
+    [
+     "Orange Sporty T-Shirt (M)",
+     2400,
+     null
+    ],
+    [
+     "Pink Starry Shirt (F)",
+     2400,
+     null
+    ],
+    [
+     "Red-Striped T-Shirt (F)",
+     2400,
+     null
+    ],
+    [
+     "Jean Capris",
+     800,
+     null
+    ],
+    [
+     "Grey Thick Sweat Pants (M)",
+     1920,
+     null
+    ],
+    [
+     "Red Rubber Boots",
+     50,
+     null
+    ],
+    [
+     "Yellow Rubber Boots",
+     50,
+     null
+    ],
+    [
+     "Blue Rubber Boots",
+     50,
+     null
+    ],
+    [
+     "Leather Sandals",
+     50,
+     null
+    ],
+    [
+     "Bronze Aroa Boots",
+     1920,
+     null
+    ],
+    [
+     "Brown Aroa Boots",
+     1920,
+     null
+    ],
+    [
+     "Green Aroa Boots",
+     1920,
+     null
+    ],
+    [
+     "Blue Ankle-strap Sandals",
+     3780,
+     null
+    ],
+    [
+     "Red Ankle-strap Sandals",
+     3780,
+     null
+    ],
+    [
+     "Brown Ankle-strap Sandals",
+     3780,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Silver",
+   "kind": "Weapon Seller",
+   "prices": "COT2 prices",
+   "map": "Lith Harbor Weapon Shop",
+   "items": [
+    [
+     "Stolen Fence",
+     2000,
+     null
+    ],
+    [
+     "Wooden Buckler",
+     4000,
+     null
+    ],
+    [
+     "Sword",
+     50,
+     null
+    ],
+    [
+     "Long Sword",
+     3000,
+     null
+    ],
+    [
+     "Hand Axe",
+     50,
+     null
+    ],
+    [
+     "Double Axe",
+     3000,
+     null
+    ],
+    [
+     "Wooden Club",
+     50,
+     null
+    ],
+    [
+     "Steel Pipe",
+     3000,
+     null
+    ],
+    [
+     "Fruit Knife",
+     1500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Doofus",
+   "kind": "Pet Food Merchant",
+   "prices": "COT2 prices",
+   "map": "Henesys Market",
+   "items": [
+    [
+     "Pet Food",
+     30,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Flint",
+   "kind": "Town Scroll Shop",
+   "prices": "COT2 prices",
+   "map": "Henesys Town Hall",
+   "items": [
+    [
+     "Topwear DEF Scroll: Lesser",
+     25000,
+     "Town Resident"
+    ],
+    [
+     "Bottomwear DEF Scroll: Lesser",
+     25000,
+     "Town Resident"
+    ],
+    [
+     "Overall Armor DEX Scroll: Lesser",
+     35000,
+     "Distinguished Citizen"
+    ],
+    [
+     "Overall Armor STR Scroll: Lesser",
+     35000,
+     "Distinguished Citizen"
+    ],
+    [
+     "Earring Crit. Damage Scroll: Lesser",
+     50000,
+     "Helpful Stranger"
+    ],
+    [
+     "Gloves Attack Scroll: Lesser",
+     50000,
+     "Guardian of the Village"
+    ],
+    [
+     "Gloves Magic Attack Scroll: Lesser",
+     50000,
+     "Guardian of the Village"
+    ]
+   ]
+  },
+  {
+   "npc": "Karl",
+   "kind": "Weapon Seller",
+   "prices": "COT2 prices",
+   "map": "Henesys Weapon Store",
+   "items": [
+    [
+     "War Bow",
+     5000,
+     null
+    ],
+    [
+     "Composite Bow",
+     7000,
+     null
+    ],
+    [
+     "Hunter's Bow",
+     13500,
+     null
+    ],
+    [
+     "Battle Bow",
+     16500,
+     null
+    ],
+    [
+     "Ryden",
+     26000,
+     null
+    ],
+    [
+     "Crossbow",
+     5000,
+     null
+    ],
+    [
+     "Battle Crossbow",
+     7000,
+     null
+    ],
+    [
+     "Balanche",
+     13500,
+     null
+    ],
+    [
+     "Mountain Crossbow",
+     16500,
+     null
+    ],
+    [
+     "Eagle Crow",
+     26000,
+     null
+    ],
+    [
+     "Sword",
+     50,
+     null
+    ],
+    [
+     "Leather Purse",
+     3800,
+     null
+    ],
+    [
+     "Red Brick",
+     5000,
+     null
+    ],
+    [
+     "Hard Briefcase",
+     10500,
+     null
+    ],
+    [
+     "Plunger",
+     13500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Luna",
+   "kind": "Grocer",
+   "prices": "COT2 prices",
+   "map": "Henesys Department Store",
+   "items": [
+    [
+     "Red Potion",
+     50,
+     null
+    ],
+    [
+     "Orange Potion",
+     150,
+     null
+    ],
+    [
+     "White Potion",
+     350,
+     null
+    ],
+    [
+     "Blue Potion",
+     220,
+     null
+    ],
+    [
+     "Sniper Potion",
+     500,
+     null
+    ],
+    [
+     "Dexterity Potion",
+     500,
+     null
+    ],
+    [
+     "Speed Potion",
+     500,
+     null
+    ],
+    [
+     "Apple",
+     20,
+     null
+    ],
+    [
+     "Egg",
+     30,
+     null
+    ],
+    [
+     "Meat",
+     80,
+     null
+    ],
+    [
+     "Orange",
+     50,
+     null
+    ],
+    [
+     "Lemon",
+     150,
+     null
+    ],
+    [
+     "Pet Food",
+     35,
+     null
+    ],
+    [
+     "Black Dye",
+     1000,
+     null
+    ],
+    [
+     "White Dye",
+     1000,
+     null
+    ],
+    [
+     "Red Dye",
+     1000,
+     null
+    ],
+    [
+     "Yellow Dye",
+     1000,
+     null
+    ],
+    [
+     "Blue Dye",
+     1000,
+     null
+    ],
+    [
+     "Return Scroll - Nearest Town",
+     400,
+     null
+    ],
+    [
+     "Return Scroll to Henesys",
+     500,
+     null
+    ],
+    [
+     "Arrow for Bow",
+     1,
+     null
+    ],
+    [
+     "Arrow for Crossbow",
+     1,
+     null
+    ],
+    [
+     "Subi Throwing-Star",
+     500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Oak",
+   "kind": "Town Furnishings",
+   "prices": "COT2 prices",
+   "map": "Henesys Town Hall",
+   "items": [
+    [
+     "Henesys Resident's Chair",
+     10000,
+     "Visitor"
+    ]
+   ]
+  },
+  {
+   "npc": "Raymond",
+   "kind": "Town General Store",
+   "prices": "COT2 prices",
+   "map": "Henesys Town Hall",
+   "items": [
+    [
+     "Bronze Arrows for Bows",
+     2,
+     "Helpful Stranger"
+    ],
+    [
+     "Bronze Arrows for Crossbows",
+     2,
+     "Helpful Stranger"
+    ],
+    [
+     "Fried Chicken",
+     60,
+     null
+    ],
+    [
+     "Hot Dog",
+     180,
+     null
+    ],
+    [
+     "Salad",
+     220,
+     "Visitor"
+    ],
+    [
+     "Pizza",
+     252,
+     "Recognized Guest"
+    ],
+    [
+     "Hamburger",
+     350,
+     "Town Resident"
+    ],
+    [
+     "Mrs. Ming Ming's Stew",
+     480,
+     "Trusted Neighbor"
+    ],
+    [
+     "Orange Mushroom Daydream",
+     500,
+     "Citizen of Honor"
+    ],
+    [
+     "Orange Juice",
+     540,
+     "Trusted Neighbor"
+    ],
+    [
+     "Supreme Sniper Potion",
+     600,
+     null
+    ],
+    [
+     "Sharpness Potion",
+     750,
+     "Helpful Stranger"
+    ],
+    [
+     "Fat Sausage",
+     800,
+     "Distinguished Citizen"
+    ],
+    [
+     "Unagi",
+     1000,
+     "Town Patron"
+    ],
+    [
+     "Grape Juice",
+     1260,
+     "Guardian of the Village"
+    ],
+    [
+     "Elixir",
+     3000,
+     "Citizen of Honor"
+    ]
+   ]
+  },
+  {
+   "npc": "Sam",
+   "kind": "Armor Seller",
+   "prices": "COT2 prices",
+   "map": "Henesys Weapon Store",
+   "items": [
+    [
+     "Single Earring",
+     4500,
+     null
+    ],
+    [
+     "Amethyst Earrings",
+     4500,
+     null
+    ],
+    [
+     "Brown Skullcap",
+     600,
+     null
+    ],
+    [
+     "Old Wisconsin",
+     2000,
+     null
+    ],
+    [
+     "Red Baseball Cap",
+     3900,
+     null
+    ],
+    [
+     "Black Baseball Cap",
+     3900,
+     null
+    ],
+    [
+     "Yellow Baseball Cap",
+     3900,
+     null
+    ],
+    [
+     "Brown Baseball Cap",
+     3900,
+     null
+    ],
+    [
+     "Blue Baseball Cap",
+     3900,
+     null
+    ],
+    [
+     "Brown Winter Hat",
+     1200,
+     null
+    ],
+    [
+     "Green Winter Hat",
+     1200,
+     null
+    ],
+    [
+     "Green Feather Hat",
+     1800,
+     null
+    ],
+    [
+     "Brown Feather Hat",
+     1800,
+     null
+    ],
+    [
+     "Blue Feather Hat",
+     1800,
+     null
+    ],
+    [
+     "Red Feather Hat",
+     1800,
+     null
+    ],
+    [
+     "Black Feather Hat",
+     1800,
+     null
+    ],
+    [
+     "Green Robin Hat",
+     3600,
+     null
+    ],
+    [
+     "Brown Robin Hat",
+     3600,
+     null
+    ],
+    [
+     "Red Robin Hat",
+     3600,
+     null
+    ],
+    [
+     "Blue Robin Hat",
+     3600,
+     null
+    ],
+    [
+     "Black Robin Hat",
+     3600,
+     null
+    ],
+    [
+     "Green Hunter",
+     4500,
+     null
+    ],
+    [
+     "Brown Hunter",
+     4500,
+     null
+    ],
+    [
+     "Red Hunter",
+     4500,
+     null
+    ],
+    [
+     "Blue Hunter",
+     4500,
+     null
+    ],
+    [
+     "Black Hunter",
+     4500,
+     null
+    ],
+    [
+     "Green Hawkeye",
+     7200,
+     null
+    ],
+    [
+     "Dark Hawkeye",
+     7200,
+     null
+    ],
+    [
+     "Green Archer Top (M)",
+     2000,
+     null
+    ],
+    [
+     "Brown Archer Top (M)",
+     2000,
+     null
+    ],
+    [
+     "Green Leather Hoodwear (M)",
+     3000,
+     null
+    ],
+    [
+     "Silver Leather Hoodwear (M)",
+     3000,
+     null
+    ],
+    [
+     "Brown Hard Leather Top (M)",
+     6000,
+     null
+    ],
+    [
+     "Green Bennis Chainmail (M)",
+     7500,
+     null
+    ],
+    [
+     "Blue Bennis Chainmail (M)",
+     7500,
+     null
+    ],
+    [
+     "Red Bennis Chainmail (M)",
+     7500,
+     null
+    ],
+    [
+     "Black Bennis Chainmail (M)",
+     7500,
+     null
+    ],
+    [
+     "Green Hunter's Armor (M)",
+     12000,
+     null
+    ],
+    [
+     "Dark Hunter's Armor (M)",
+     12000,
+     null
+    ],
+    [
+     "Green Avelin (F)",
+     2000,
+     null
+    ],
+    [
+     "Yellow Avelin (F)",
+     2000,
+     null
+    ],
+    [
+     "Green Able Armor (F)",
+     3000,
+     null
+    ],
+    [
+     "Yellow Able Armor (F)",
+     3000,
+     null
+    ],
+    [
+     "Grey Able Armor (F)",
+     3000,
+     null
+    ],
+    [
+     "Green Shivermail (F)",
+     6000,
+     null
+    ],
+    [
+     "Red Shivermail (F)",
+     6000,
+     null
+    ],
+    [
+     "Purple Shivermail (F)",
+     6000,
+     null
+    ],
+    [
+     "Green Bennis Chainmail (F)",
+     7500,
+     null
+    ],
+    [
+     "Blue Bennis Chainmail (F)",
+     7500,
+     null
+    ],
+    [
+     "Red Bennis Chainmail (F)",
+     7500,
+     null
+    ],
+    [
+     "Yellow Bennis Chainmail (F)",
+     7500,
+     null
+    ],
+    [
+     "Green Huntress Armor (F)",
+     12000,
+     null
+    ],
+    [
+     "Black Huntress Armor (F)",
+     12000,
+     null
+    ],
+    [
+     "Archer Pants (M)",
+     1600,
+     null
+    ],
+    [
+     "Brown Hard Leather Pants",
+     4800,
+     null
+    ],
+    [
+     "Bennis Chain Pants",
+     6000,
+     null
+    ],
+    [
+     "Green Hunter's Pants",
+     9600,
+     null
+    ],
+    [
+     "Dark Hunter's Pants",
+     9600,
+     null
+    ],
+    [
+     "Green Avelin Skirt (F)",
+     1600,
+     null
+    ],
+    [
+     "Yellow Avelin Skirt (F)",
+     1600,
+     null
+    ],
+    [
+     "Green Able Armor Skirt (F)",
+     2400,
+     null
+    ],
+    [
+     "Brown Able Skirt (F)",
+     2400,
+     null
+    ],
+    [
+     "Grey Able Skirt (F)",
+     2400,
+     null
+    ],
+    [
+     "Green Shivermail Skirt (F)",
+     4800,
+     null
+    ],
+    [
+     "Red Shivermail Skirt (F)",
+     4800,
+     null
+    ],
+    [
+     "Purple Shivermail Skirt (F)",
+     4800,
+     null
+    ],
+    [
+     "Green Huntress Pants (F)",
+     9600,
+     null
+    ],
+    [
+     "Black Huntress Pants (F)",
+     9600,
+     null
+    ],
+    [
+     "Green Hard Leather Boots",
+     1200,
+     null
+    ],
+    [
+     "Brown Hard Leather Boots",
+     1200,
+     null
+    ],
+    [
+     "Green Woodsman Boots",
+     1800,
+     null
+    ],
+    [
+     "Brown Woodsman Boots",
+     1800,
+     null
+    ],
+    [
+     "Blue Woodsman Boots",
+     1800,
+     null
+    ],
+    [
+     "Deer Huntertop",
+     3600,
+     null
+    ],
+    [
+     "Rabbit Huntertop",
+     3600,
+     null
+    ],
+    [
+     "Bear Huntertop",
+     3600,
+     null
+    ],
+    [
+     "Lion Huntertop",
+     3600,
+     null
+    ],
+    [
+     "Red Whitebottom Boots",
+     4680,
+     null
+    ],
+    [
+     "Orange Whitebottom Boots",
+     4680,
+     null
+    ],
+    [
+     "Pink Whitebottom Boots",
+     4680,
+     null
+    ],
+    [
+     "Blue Whitebottom Boots",
+     4680,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Blue Whitebottom Boots\t4,680mesos",
+   "kind": "Ellinia",
+   "prices": "Arwen the Fairy",
+   "map": "Ellinia",
+   "items": [
+    [
+     "Moon Rock",
+     0,
+     null
+    ],
+    [
+     "Star Rock",
+     0,
+     null
+    ],
+    [
+     "Black Feather",
+     0,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Flora the Fairy",
+   "kind": "Weapon Seller",
+   "prices": "COT2 prices",
+   "map": "Ellinia Weapon Store",
+   "items": [
+    [
+     "Wooden Wand",
+     3000,
+     null
+    ],
+    [
+     "Hardwood Wand",
+     5000,
+     null
+    ],
+    [
+     "Metal Wand",
+     10500,
+     null
+    ],
+    [
+     "Ice Wand",
+     13500,
+     null
+    ],
+    [
+     "Mithril Wand",
+     22000,
+     null
+    ],
+    [
+     "Wooden Staff",
+     3000,
+     null
+    ],
+    [
+     "Sapphire Staff",
+     5000,
+     null
+    ],
+    [
+     "Emerald Staff",
+     5000,
+     null
+    ],
+    [
+     "Old Wooden Staff",
+     10500,
+     null
+    ],
+    [
+     "Wizard Staff",
+     13500,
+     null
+    ],
+    [
+     "Mace",
+     5000,
+     null
+    ],
+    [
+     "Iron Mace",
+     10500,
+     null
+    ],
+    [
+     "Fusion Mace",
+     13500,
+     null
+    ],
+    [
+     "Sky Blue Umbrella",
+     14700,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Len the Fairy",
+   "kind": "Grocer",
+   "prices": "COT2 prices",
+   "map": "Ellinia Department Store",
+   "items": [
+    [
+     "Red Potion",
+     50,
+     null
+    ],
+    [
+     "Orange Potion",
+     150,
+     null
+    ],
+    [
+     "White Potion",
+     350,
+     null
+    ],
+    [
+     "Blue Potion",
+     220,
+     null
+    ],
+    [
+     "Magic Potion",
+     500,
+     null
+    ],
+    [
+     "Speed Potion",
+     500,
+     null
+    ],
+    [
+     "Apple",
+     20,
+     null
+    ],
+    [
+     "Egg",
+     30,
+     null
+    ],
+    [
+     "Meat",
+     80,
+     null
+    ],
+    [
+     "Orange",
+     50,
+     null
+    ],
+    [
+     "Lemon",
+     150,
+     null
+    ],
+    [
+     "Pet Food",
+     35,
+     null
+    ],
+    [
+     "Black Dye",
+     1000,
+     null
+    ],
+    [
+     "White Dye",
+     1000,
+     null
+    ],
+    [
+     "Red Dye",
+     1000,
+     null
+    ],
+    [
+     "Yellow Dye",
+     1000,
+     null
+    ],
+    [
+     "Blue Dye",
+     1000,
+     null
+    ],
+    [
+     "Return Scroll - Nearest Town",
+     400,
+     null
+    ],
+    [
+     "Return Scroll to Ellinia",
+     500,
+     null
+    ],
+    [
+     "Arrow for Bow",
+     1,
+     null
+    ],
+    [
+     "Arrow for Crossbow",
+     1,
+     null
+    ],
+    [
+     "Subi Throwing-Star",
+     500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Serabi the Fairy",
+   "kind": "Armor Seller",
+   "prices": "COT2 prices",
+   "map": "Ellinia Weapon Store",
+   "items": [
+    [
+     "Weighted Earrings",
+     9000,
+     null
+    ],
+    [
+     "Yellow Square",
+     9000,
+     null
+    ],
+    [
+     "Gold Earrings",
+     11250,
+     null
+    ],
+    [
+     "Brown Apprentice Hat",
+     1200,
+     null
+    ],
+    [
+     "Blue Apprentice Hat",
+     1200,
+     null
+    ],
+    [
+     "Red Apprentice Hat",
+     1200,
+     null
+    ],
+    [
+     "Blue Moon Conehat",
+     1800,
+     null
+    ],
+    [
+     "Pink Moon Conehat",
+     1800,
+     null
+    ],
+    [
+     "Green Moon Conehat",
+     1800,
+     null
+    ],
+    [
+     "Dark Moon Conehat",
+     1800,
+     null
+    ],
+    [
+     "Brown Moon Conehat",
+     1800,
+     null
+    ],
+    [
+     "Blue Wizardry Hat",
+     3600,
+     null
+    ],
+    [
+     "Red Wizardry Hat",
+     3600,
+     null
+    ],
+    [
+     "Green Wizardry Hat",
+     3600,
+     null
+    ],
+    [
+     "Blue Jester",
+     7200,
+     null
+    ],
+    [
+     "Green Jester",
+     7200,
+     null
+    ],
+    [
+     "Blue Training Shirt",
+     2000,
+     null
+    ],
+    [
+     "Brown Training Shirt",
+     2000,
+     null
+    ],
+    [
+     "Blue Split Piece",
+     6000,
+     null
+    ],
+    [
+     "Orange Split Piece",
+     6000,
+     null
+    ],
+    [
+     "Black Split Piece",
+     6000,
+     null
+    ],
+    [
+     "Black Armine",
+     2000,
+     null
+    ],
+    [
+     "Green Armine",
+     2000,
+     null
+    ],
+    [
+     "Purple Arianne",
+     3000,
+     null
+    ],
+    [
+     "Green Arianne",
+     3000,
+     null
+    ],
+    [
+     "Pink Arianne",
+     3000,
+     null
+    ],
+    [
+     "Yellow Arianne",
+     3000,
+     null
+    ],
+    [
+     "Purple Split",
+     6000,
+     null
+    ],
+    [
+     "Red Split",
+     6000,
+     null
+    ],
+    [
+     "Black Split",
+     6000,
+     null
+    ],
+    [
+     "Blue Fairy Top",
+     12000,
+     null
+    ],
+    [
+     "Green Fairy Top",
+     12000,
+     null
+    ],
+    [
+     "Beige Plain Robe",
+     5400,
+     null
+    ],
+    [
+     "Blue Plain Robe",
+     5400,
+     null
+    ],
+    [
+     "Green Plain Robe",
+     5400,
+     null
+    ],
+    [
+     "Brown Doros Robe",
+     13500,
+     null
+    ],
+    [
+     "Blue Doros Robe",
+     13500,
+     null
+    ],
+    [
+     "Yellow Doros Robe",
+     13500,
+     null
+    ],
+    [
+     "White Doros Robe",
+     13500,
+     null
+    ],
+    [
+     "Blue Wizard Robe",
+     21600,
+     null
+    ],
+    [
+     "Green Wizard Robe",
+     21600,
+     null
+    ],
+    [
+     "Brown Doroness Robe",
+     13500,
+     null
+    ],
+    [
+     "Purple Doroness Robe",
+     13500,
+     null
+    ],
+    [
+     "Red Doroness Robe",
+     13500,
+     null
+    ],
+    [
+     "Blue Training Pants",
+     1600,
+     null
+    ],
+    [
+     "Brown Training Pants",
+     1600,
+     null
+    ],
+    [
+     "White Split Pants",
+     4800,
+     null
+    ],
+    [
+     "Black Split Pants",
+     4800,
+     null
+    ],
+    [
+     "Black Armine Skirt",
+     1600,
+     null
+    ],
+    [
+     "Green Armine Skirt",
+     1600,
+     null
+    ],
+    [
+     "Purple Arianne Skirt",
+     2400,
+     null
+    ],
+    [
+     "Green Arianne Skirt",
+     2400,
+     null
+    ],
+    [
+     "Pink Arianne Skirt",
+     2400,
+     null
+    ],
+    [
+     "Yellow Arianne Skirt",
+     2400,
+     null
+    ],
+    [
+     "White Split Skirt",
+     4800,
+     null
+    ],
+    [
+     "Black Split Skirt",
+     4800,
+     null
+    ],
+    [
+     "Blue Fairy Skirt",
+     9600,
+     null
+    ],
+    [
+     "Green Fairy Skirt",
+     9600,
+     null
+    ],
+    [
+     "Brown Basic Boots",
+     1200,
+     null
+    ],
+    [
+     "Yellow Basic Boots",
+     1200,
+     null
+    ],
+    [
+     "Blue Basic Boots",
+     1200,
+     null
+    ],
+    [
+     "Beige Nitty",
+     1800,
+     null
+    ],
+    [
+     "Black Nitty",
+     1800,
+     null
+    ],
+    [
+     "Blue Jewelry Boots",
+     3600,
+     null
+    ],
+    [
+     "Purple Jewelry Boots",
+     3600,
+     null
+    ],
+    [
+     "Red Jewelry Boots",
+     3600,
+     null
+    ],
+    [
+     "Silver Wind Shoes",
+     4500,
+     null
+    ],
+    [
+     "Yellow Wind Shoes",
+     4500,
+     null
+    ],
+    [
+     "Black Wind Shoes",
+     4500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Arturo",
+   "kind": "Grocer",
+   "prices": "COT2 prices",
+   "map": "Perion Department Store",
+   "items": [
+    [
+     "Red Potion",
+     50,
+     null
+    ],
+    [
+     "Orange Potion",
+     150,
+     null
+    ],
+    [
+     "White Potion",
+     350,
+     null
+    ],
+    [
+     "Blue Potion",
+     220,
+     null
+    ],
+    [
+     "Warrior Potion",
+     500,
+     null
+    ],
+    [
+     "Sniper Potion",
+     500,
+     null
+    ],
+    [
+     "Speed Potion",
+     500,
+     null
+    ],
+    [
+     "Apple",
+     20,
+     null
+    ],
+    [
+     "Egg",
+     30,
+     null
+    ],
+    [
+     "Meat",
+     80,
+     null
+    ],
+    [
+     "Orange",
+     50,
+     null
+    ],
+    [
+     "Lemon",
+     150,
+     null
+    ],
+    [
+     "Pet Food",
+     35,
+     null
+    ],
+    [
+     "Black Dye",
+     1000,
+     null
+    ],
+    [
+     "White Dye",
+     1000,
+     null
+    ],
+    [
+     "Red Dye",
+     1000,
+     null
+    ],
+    [
+     "Yellow Dye",
+     1000,
+     null
+    ],
+    [
+     "Blue Dye",
+     1000,
+     null
+    ],
+    [
+     "Return Scroll - Nearest Town",
+     400,
+     null
+    ],
+    [
+     "Return Scroll to Perion",
+     500,
+     null
+    ],
+    [
+     "Arrow for Bow",
+     1,
+     null
+    ],
+    [
+     "Arrow for Crossbow",
+     1,
+     null
+    ],
+    [
+     "Subi Throwing-Star",
+     500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Harry",
+   "kind": "Armor Seller",
+   "prices": "COT2 prices",
+   "map": "Perion Weapon Store",
+   "items": [
+    [
+     "Bronze Koif",
+     1200,
+     null
+    ],
+    [
+     "Bronze Helmet",
+     1400,
+     null
+    ],
+    [
+     "Bronze Full Helm",
+     1800,
+     null
+    ],
+    [
+     "Bronze Football Helmet",
+     3600,
+     null
+    ],
+    [
+     "Bronze Viking Helm",
+     3600,
+     null
+    ],
+    [
+     "Steel Sharp Helm",
+     3900,
+     null
+    ],
+    [
+     "Iron Burgernet Helm",
+     4500,
+     null
+    ],
+    [
+     "Jousting Helmet",
+     7200,
+     null
+    ],
+    [
+     "Brown Lolico Armor (M)",
+     2000,
+     null
+    ],
+    [
+     "Blue Lolico Armor (M)",
+     2000,
+     null
+    ],
+    [
+     "Brown Corporal (M)",
+     3000,
+     null
+    ],
+    [
+     "Steel Corporal (M)",
+     3000,
+     null
+    ],
+    [
+     "Blue Sergeant (M)",
+     6000,
+     null
+    ],
+    [
+     "Red Sergeant (M)",
+     6000,
+     null
+    ],
+    [
+     "Silver Master Sergeant (M)",
+     7500,
+     null
+    ],
+    [
+     "Orihalcon Master Sergeant (M)",
+     7500,
+     null
+    ],
+    [
+     "Dark Master Sergeant (M)",
+     7500,
+     null
+    ],
+    [
+     "Red Hwarang Shirt (M)",
+     12000,
+     null
+    ],
+    [
+     "Green Hwarang Shirt (M)",
+     12000,
+     null
+    ],
+    [
+     "Orange Lolica Armor (F)",
+     2000,
+     null
+    ],
+    [
+     "Blueberry Lolica Armor (F)",
+     2000,
+     null
+    ],
+    [
+     "Red Lamelle (F)",
+     6000,
+     null
+    ],
+    [
+     "Green Lamelle (F)",
+     6000,
+     null
+    ],
+    [
+     "Brown Lamelle (F)",
+     6000,
+     null
+    ],
+    [
+     "Blue Shark (F)",
+     7500,
+     null
+    ],
+    [
+     "Sky Shark (F)",
+     7500,
+     null
+    ],
+    [
+     "Red Shark (F)",
+     7500,
+     null
+    ],
+    [
+     "Blue Kendo Robe (M)",
+     10800,
+     null
+    ],
+    [
+     "Red Kendo Robe (M)",
+     10800,
+     null
+    ],
+    [
+     "White Kendo Robe (M)",
+     10800,
+     null
+    ],
+    [
+     "Black Dragon Robe (M)",
+     21600,
+     null
+    ],
+    [
+     "Steel Fitted Mail (F)",
+     5400,
+     null
+    ],
+    [
+     "Dark Engrit (F)",
+     21600,
+     null
+    ],
+    [
+     "Red Engrit (F)",
+     21600,
+     null
+    ],
+    [
+     "Blue Engrit (F)",
+     21600,
+     null
+    ],
+    [
+     "Yellow Engrit (F)",
+     21600,
+     null
+    ],
+    [
+     "Brown Lolico Pants (M)",
+     1600,
+     null
+    ],
+    [
+     "Blue Lolico Pants (M)",
+     1600,
+     null
+    ],
+    [
+     "Brown Corporal Pants (M)",
+     2400,
+     null
+    ],
+    [
+     "Steel Corporal Pants (M)",
+     2400,
+     null
+    ],
+    [
+     "Steel Sergeant Kilt (M)",
+     4800,
+     null
+    ],
+    [
+     "Red Sergeant Kilt (M)",
+     4800,
+     null
+    ],
+    [
+     "Silver Master Sergeant Kilt (M)",
+     6000,
+     null
+    ],
+    [
+     "Orihalcon Master Sergeant Kilt (M)",
+     6000,
+     null
+    ],
+    [
+     "Dark Master Sergeant Kilt (M)",
+     6000,
+     null
+    ],
+    [
+     "Red Martial Arts Pants (M)",
+     9600,
+     null
+    ],
+    [
+     "Brown Martial Arts Pants (M)",
+     9600,
+     null
+    ],
+    [
+     "Black Martial Arts Pants (M)",
+     9600,
+     null
+    ],
+    [
+     "White Martial Arts Pants (M)",
+     9600,
+     null
+    ],
+    [
+     "Rookie Pants (F)",
+     1600,
+     null
+    ],
+    [
+     "Sophia Pants (F)",
+     1600,
+     null
+    ],
+    [
+     "Red Ramel Skirt (F)",
+     4800,
+     null
+    ],
+    [
+     "Green Ramel Skirt (F)",
+     4800,
+     null
+    ],
+    [
+     "Brown Ramel Skirt (F)",
+     4800,
+     null
+    ],
+    [
+     "Blue Shark Skirt (F)",
+     6000,
+     null
+    ],
+    [
+     "Sky Shark Skirt (F)",
+     6000,
+     null
+    ],
+    [
+     "Red Shark Skirt (F)",
+     6000,
+     null
+    ],
+    [
+     "Bronze Grieves",
+     1800,
+     null
+    ],
+    [
+     "Steel Grieves",
+     1800,
+     null
+    ],
+    [
+     "Brown High Boots",
+     3600,
+     null
+    ],
+    [
+     "Orange High Boots",
+     3600,
+     null
+    ],
+    [
+     "Blue High Boots",
+     3600,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "River",
+   "kind": "Weapon Seller",
+   "prices": "COT2 prices",
+   "map": "Perion Weapon Store",
+   "items": [
+    [
+     "Long Sword",
+     3000,
+     null
+    ],
+    [
+     "Sabre",
+     5000,
+     null
+    ],
+    [
+     "Viking Sword",
+     10500,
+     null
+    ],
+    [
+     "Machete",
+     10500,
+     null
+    ],
+    [
+     "Eloon",
+     13500,
+     null
+    ],
+    [
+     "Gladius",
+     22000,
+     null
+    ],
+    [
+     "Field Dagger",
+     5000,
+     null
+    ],
+    [
+     "Coconut Knife",
+     10500,
+     null
+    ],
+    [
+     "Iron Dagger",
+     13500,
+     null
+    ],
+    [
+     "Cass",
+     22000,
+     null
+    ],
+    [
+     "Battle Axe",
+     5000,
+     null
+    ],
+    [
+     "Mithril Axe",
+     13500,
+     null
+    ],
+    [
+     "Fireman's Axe",
+     22000,
+     null
+    ],
+    [
+     "Mace",
+     5000,
+     null
+    ],
+    [
+     "Iron Mace",
+     10500,
+     null
+    ],
+    [
+     "Fusion Mace",
+     13500,
+     null
+    ],
+    [
+     "War Hammer",
+     22000,
+     null
+    ],
+    [
+     "Wooden Sword",
+     5000,
+     null
+    ],
+    [
+     "Two-Handed Sword",
+     13500,
+     null
+    ],
+    [
+     "Broadsword",
+     16500,
+     null
+    ],
+    [
+     "Scimitar",
+     26000,
+     null
+    ],
+    [
+     "Metal Axe",
+     5000,
+     null
+    ],
+    [
+     "Iron Axe",
+     13500,
+     null
+    ],
+    [
+     "Two-Handed Axe",
+     16500,
+     null
+    ],
+    [
+     "Blue Axe",
+     26000,
+     null
+    ],
+    [
+     "Wooden Mallet",
+     5000,
+     null
+    ],
+    [
+     "Heavy Mace",
+     16500,
+     null
+    ],
+    [
+     "Square Hammer",
+     13500,
+     null
+    ],
+    [
+     "Mithril Maul",
+     26000,
+     null
+    ],
+    [
+     "Spear",
+     5000,
+     null
+    ],
+    [
+     "Fork on a Stick",
+     7000,
+     null
+    ],
+    [
+     "Forked Spear",
+     26000,
+     null
+    ],
+    [
+     "Pole Arm",
+     5000,
+     null
+    ],
+    [
+     "Iron Ball",
+     7000,
+     null
+    ],
+    [
+     "Studded Polearm",
+     13500,
+     null
+    ],
+    [
+     "Mithril Pole Arm",
+     26000,
+     null
+    ],
+    [
+     "Wooden Buckler",
+     4000,
+     null
+    ],
+    [
+     "Steel Shield",
+     6000,
+     null
+    ],
+    [
+     "Mithril Buckler",
+     12000,
+     null
+    ],
+    [
+     "Red Triangular Shield",
+     15000,
+     null
+    ],
+    [
+     "Red Cross Shield",
+     24000,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Ben",
+   "kind": "City Scroll Shop",
+   "prices": "COT2 prices",
+   "map": "Kerning City Civic Center",
+   "items": [
+    [
+     "Earring Evasion Scroll: Lesser",
+     25000,
+     "Helpful Stranger"
+    ],
+    [
+     "Topwear DEF Scroll: Lesser",
+     25000,
+     "Town Resident"
+    ],
+    [
+     "Bottomwear DEF Scroll: Lesser",
+     25000,
+     "Town Resident"
+    ],
+    [
+     "Overall Armor LUK Scroll: Lesser",
+     35000,
+     "Distinguished Citizen"
+    ],
+    [
+     "Overall Armor INT Scroll: Lesser",
+     35000,
+     "Distinguished Citizen"
+    ],
+    [
+     "Gloves Attack Scroll: Lesser",
+     50000,
+     "Guardian of the Village"
+    ],
+    [
+     "Gloves Magic Attack Scroll: Lesser",
+     50000,
+     "Guardian of the Village"
+    ]
+   ]
+  },
+  {
+   "npc": "Cutthroat Manny",
+   "kind": "Weapon Seller",
+   "prices": "COT2 prices",
+   "map": "Kerning City Self-Defence Item Store",
+   "items": [
+    [
+     "Long Sword",
+     3000,
+     null
+    ],
+    [
+     "Square Shovel",
+     6200,
+     null
+    ],
+    [
+     "Pointed Shovel",
+     11700,
+     null
+    ],
+    [
+     "Triangular Zamadar",
+     3000,
+     null
+    ],
+    [
+     "Field Dagger",
+     5000,
+     null
+    ],
+    [
+     "Triple-Tipped Zamadar",
+     5800,
+     null
+    ],
+    [
+     "Coconut Knife",
+     10500,
+     null
+    ],
+    [
+     "Stinger",
+     11700,
+     null
+    ],
+    [
+     "Iron Dagger",
+     13500,
+     null
+    ],
+    [
+     "Forked Dagger",
+     14700,
+     null
+    ],
+    [
+     "Reef Claw",
+     22000,
+     null
+    ],
+    [
+     "Wooden Sword",
+     5000,
+     null
+    ],
+    [
+     "Metal Axe",
+     5000,
+     null
+    ],
+    [
+     "Wooden Mallet",
+     5000,
+     null
+    ],
+    [
+     "Spear",
+     5000,
+     null
+    ],
+    [
+     "Fork on a Stick",
+     7000,
+     null
+    ],
+    [
+     "Pole Arm",
+     5000,
+     null
+    ],
+    [
+     "Garnier",
+     5000,
+     null
+    ],
+    [
+     "Steel Titans",
+     7000,
+     null
+    ],
+    [
+     "Steel Igor",
+     14100,
+     null
+    ],
+    [
+     "Meba",
+     16500,
+     null
+    ],
+    [
+     "Adamantium Guards",
+     27600,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Don Hwang",
+   "kind": "Armor Seller",
+   "prices": "COT2 prices",
+   "map": "Kerning City Self-Defence Item Store",
+   "items": [
+    [
+     "White Bandana",
+     1200,
+     null
+    ],
+    [
+     "Red Bandana",
+     1200,
+     null
+    ],
+    [
+     "Blue Bandana",
+     1200,
+     null
+    ],
+    [
+     "Yellow Bandana",
+     1200,
+     null
+    ],
+    [
+     "Black Bandana",
+     1200,
+     null
+    ],
+    [
+     "Red Ghetto Beanie",
+     1200,
+     null
+    ],
+    [
+     "Blue Ghetto Beanie",
+     1200,
+     null
+    ],
+    [
+     "Brown Ghetto Beanie",
+     1200,
+     null
+    ],
+    [
+     "Black Ghetto Beanie",
+     1200,
+     null
+    ],
+    [
+     "Green Ghetto Beanie",
+     1200,
+     null
+    ],
+    [
+     "Yellow Metal Gear",
+     1900,
+     null
+    ],
+    [
+     "Red Thief Hood",
+     1900,
+     null
+    ],
+    [
+     "Green Thief Hood",
+     1900,
+     null
+    ],
+    [
+     "Blue Thief Hood",
+     1900,
+     null
+    ],
+    [
+     "Yellow Thief Hood",
+     1900,
+     null
+    ],
+    [
+     "Black Thief Hood",
+     1900,
+     null
+    ],
+    [
+     "Red Loosecap",
+     3600,
+     null
+    ],
+    [
+     "Black Loosecap",
+     3600,
+     null
+    ],
+    [
+     "Blue Loosecap",
+     3600,
+     null
+    ],
+    [
+     "Brown Loosecap",
+     3600,
+     null
+    ],
+    [
+     "Green Loosecap",
+     3600,
+     null
+    ],
+    [
+     "Red Tiberian",
+     4500,
+     null
+    ],
+    [
+     "Dark Tiberian",
+     4500,
+     null
+    ],
+    [
+     "Blue Tiberian",
+     4500,
+     null
+    ],
+    [
+     "Brown Tiberian",
+     4500,
+     null
+    ],
+    [
+     "Green Tiberian",
+     4500,
+     null
+    ],
+    [
+     "Red Guise",
+     7200,
+     null
+    ],
+    [
+     "Dark Guise",
+     7200,
+     null
+    ],
+    [
+     "Red Cloth Vest",
+     2000,
+     null
+    ],
+    [
+     "Blue Cloth Vest",
+     2000,
+     null
+    ],
+    [
+     "Black Cloth Vest",
+     2000,
+     null
+    ],
+    [
+     "Blue Nightshift",
+     3000,
+     null
+    ],
+    [
+     "Dark Nightshift",
+     3000,
+     null
+    ],
+    [
+     "Red Pao",
+     6000,
+     null
+    ],
+    [
+     "Blue Pao",
+     6000,
+     null
+    ],
+    [
+     "Black Pao",
+     6000,
+     null
+    ],
+    [
+     "Brown Sneak",
+     7500,
+     null
+    ],
+    [
+     "Blue Sneak",
+     7500,
+     null
+    ],
+    [
+     "Black Sneak",
+     7500,
+     null
+    ],
+    [
+     "Dark Silver Stealer",
+     12000,
+     null
+    ],
+    [
+     "Red Gold Stealer",
+     12000,
+     null
+    ],
+    [
+     "Red Cloth Vest",
+     2000,
+     null
+    ],
+    [
+     "Blue Cloth Vest",
+     2000,
+     null
+    ],
+    [
+     "Black Cloth Vest",
+     2000,
+     null
+    ],
+    [
+     "Red Nightshift",
+     3000,
+     null
+    ],
+    [
+     "Brown Nightshift",
+     3000,
+     null
+    ],
+    [
+     "Red Qi Pao",
+     6000,
+     null
+    ],
+    [
+     "Pink Qi Pao",
+     6000,
+     null
+    ],
+    [
+     "Blue Qi Pao",
+     6000,
+     null
+    ],
+    [
+     "Blood Sneak",
+     7500,
+     null
+    ],
+    [
+     "Sky Sneak",
+     7500,
+     null
+    ],
+    [
+     "Gold Sneak",
+     7500,
+     null
+    ],
+    [
+     "Dark Sneak",
+     7500,
+     null
+    ],
+    [
+     "Red Steal",
+     12000,
+     null
+    ],
+    [
+     "Black Steal",
+     12000,
+     null
+    ],
+    [
+     "Red Cloth Pants",
+     1600,
+     null
+    ],
+    [
+     "Blue Cloth Pants",
+     1600,
+     null
+    ],
+    [
+     "Black Cloth Pants",
+     1600,
+     null
+    ],
+    [
+     "Blue Nightshift Pants",
+     2400,
+     null
+    ],
+    [
+     "Dark Nightshift Pants",
+     2400,
+     null
+    ],
+    [
+     "Red Pao Bottom",
+     4800,
+     null
+    ],
+    [
+     "Blue Pao Bottom",
+     4800,
+     null
+    ],
+    [
+     "Black Pao Bottom",
+     4800,
+     null
+    ],
+    [
+     "Brown Sneak Pants",
+     6000,
+     null
+    ],
+    [
+     "Dark Brown Sneak Pants",
+     6000,
+     null
+    ],
+    [
+     "Black Sneak Pants",
+     6000,
+     null
+    ],
+    [
+     "Warfare Pants",
+     6240,
+     null
+    ],
+    [
+     "Red / Gold Stealer Pants",
+     9600,
+     null
+    ],
+    [
+     "Silver / Black Stealer Pants",
+     9600,
+     null
+    ],
+    [
+     "Red Cloth Pants",
+     1600,
+     null
+    ],
+    [
+     "Blue Cloth Pants",
+     1600,
+     null
+    ],
+    [
+     "Black Cloth Pants",
+     1600,
+     null
+    ],
+    [
+     "Red Nightshift Pants",
+     2400,
+     null
+    ],
+    [
+     "Brown Nightshift Pants",
+     2400,
+     null
+    ],
+    [
+     "Red Qi Pao Pants",
+     4800,
+     null
+    ],
+    [
+     "Blue Qi Pao Pants",
+     4800,
+     null
+    ],
+    [
+     "Purple Qi Pao Pants",
+     4800,
+     null
+    ],
+    [
+     "Red Qi Pao Skirt",
+     5280,
+     null
+    ],
+    [
+     "Blue Qi Pao Skirt",
+     5280,
+     null
+    ],
+    [
+     "Purple Qi Pao Skirt",
+     5280,
+     null
+    ],
+    [
+     "Blood Sneak Pants",
+     6000,
+     null
+    ],
+    [
+     "Sky Sneak Pants",
+     6000,
+     null
+    ],
+    [
+     "Gold Sneak Pants",
+     6000,
+     null
+    ],
+    [
+     "Dark Sneak Pants",
+     6000,
+     null
+    ],
+    [
+     "Red Steal Pants",
+     9600,
+     null
+    ],
+    [
+     "Black Steal Pants",
+     9600,
+     null
+    ],
+    [
+     "White Gomushin",
+     1980,
+     null
+    ],
+    [
+     "Black Gomushin",
+     1980,
+     null
+    ],
+    [
+     "Smelly Gomushin",
+     1980,
+     null
+    ],
+    [
+     "Blue Gidder Shoes",
+     1200,
+     null
+    ],
+    [
+     "Brown Gidder Shoes",
+     1200,
+     null
+    ],
+    [
+     "Red Ninja Sandals",
+     1800,
+     null
+    ],
+    [
+     "Yellow Ninja Sandals",
+     1800,
+     null
+    ],
+    [
+     "Blue Ninja Sandals",
+     1800,
+     null
+    ],
+    [
+     "White Ninja Sandals",
+     1800,
+     null
+    ],
+    [
+     "Red Enamel Boots",
+     3600,
+     null
+    ],
+    [
+     "Blue Enamel Boots",
+     3600,
+     null
+    ],
+    [
+     "Black Enamel Boots",
+     3600,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Dr. Faymus",
+   "kind": "Grocer",
+   "prices": "COT2 prices",
+   "map": "Kerning City Pharmacy",
+   "items": [
+    [
+     "Red Potion",
+     50,
+     null
+    ],
+    [
+     "Orange Potion",
+     150,
+     null
+    ],
+    [
+     "White Potion",
+     350,
+     null
+    ],
+    [
+     "Blue Potion",
+     220,
+     null
+    ],
+    [
+     "Warrior Potion",
+     500,
+     null
+    ],
+    [
+     "Dexterity Potion",
+     500,
+     null
+    ],
+    [
+     "Speed Potion",
+     500,
+     null
+    ],
+    [
+     "Apple",
+     20,
+     null
+    ],
+    [
+     "Egg",
+     30,
+     null
+    ],
+    [
+     "Meat",
+     80,
+     null
+    ],
+    [
+     "Orange",
+     50,
+     null
+    ],
+    [
+     "Lemon",
+     150,
+     null
+    ],
+    [
+     "Pet Food",
+     35,
+     null
+    ],
+    [
+     "Black Dye",
+     1000,
+     null
+    ],
+    [
+     "White Dye",
+     1000,
+     null
+    ],
+    [
+     "Red Dye",
+     1000,
+     null
+    ],
+    [
+     "Yellow Dye",
+     1000,
+     null
+    ],
+    [
+     "Blue Dye",
+     1000,
+     null
+    ],
+    [
+     "Return Scroll - Nearest Town",
+     400,
+     null
+    ],
+    [
+     "Return Scroll to Kerning City",
+     500,
+     null
+    ],
+    [
+     "Arrow for Bow",
+     1,
+     null
+    ],
+    [
+     "Arrow for Crossbow",
+     1,
+     null
+    ],
+    [
+     "Subi Throwing-Star",
+     500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Max",
+   "kind": "City General Store",
+   "prices": "COT2 prices",
+   "map": "Kerning City Civic Center",
+   "items": [
+    [
+     "Fried Chicken",
+     60,
+     null
+    ],
+    [
+     "Dried Squid",
+     180,
+     null
+    ],
+    [
+     "Salad",
+     220,
+     "Visitor"
+    ],
+    [
+     "Pizza",
+     252,
+     "Recognized Guest"
+    ],
+    [
+     "Hamburger",
+     350,
+     "Town Resident"
+    ],
+    [
+     "Andre's Seafood Soup",
+     480,
+     "Trusted Neighbor"
+    ],
+    [
+     "Ribbon Pig Daydream",
+     500,
+     "Citizen of Honor"
+    ],
+    [
+     "Orange Juice",
+     540,
+     "Trusted Neighbor"
+    ],
+    [
+     "Supreme Dexterity Potion",
+     600,
+     null
+    ],
+    [
+     "Destructive Potion",
+     750,
+     "Helpful Stranger"
+    ],
+    [
+     "Fat Sausage",
+     800,
+     "Distinguished Citizen"
+    ],
+    [
+     "Wolbi Throwing Stars",
+     1000,
+     "Helpful Stranger"
+    ],
+    [
+     "Unagi",
+     1000,
+     "Town Patron"
+    ],
+    [
+     "Grape Juice",
+     1260,
+     "Guardian of the Village"
+    ],
+    [
+     "Elixir",
+     3000,
+     "Citizen of Honor"
+    ]
+   ]
+  },
+  {
+   "npc": "Weston",
+   "kind": "City Furnishings",
+   "prices": "COT2 prices",
+   "map": "Kerning City Civic Center",
+   "items": [
+    [
+     "Kerning City Resident's Chair",
+     10000,
+     "Visitor"
+    ]
+   ]
+  },
+  {
+   "npc": "Valen",
+   "kind": "Grocer",
+   "prices": "COT2 prices",
+   "map": "Florina Beach",
+   "items": [
+    [
+     "Red Potion",
+     50,
+     null
+    ],
+    [
+     "Orange Potion",
+     150,
+     null
+    ],
+    [
+     "White Potion",
+     350,
+     null
+    ],
+    [
+     "Blue Potion",
+     220,
+     null
+    ],
+    [
+     "Apple",
+     20,
+     null
+    ],
+    [
+     "Egg",
+     30,
+     null
+    ],
+    [
+     "Fried Chicken",
+     60,
+     null
+    ],
+    [
+     "Meat",
+     80,
+     null
+    ],
+    [
+     "Hot Dog",
+     180,
+     null
+    ],
+    [
+     "Pizza",
+     252,
+     null
+    ],
+    [
+     "Hamburger",
+     350,
+     null
+    ],
+    [
+     "Hot Dog Supreme",
+     480,
+     null
+    ],
+    [
+     "Unagi",
+     1000,
+     null
+    ],
+    [
+     "Ice Cream Pop",
+     1500,
+     null
+    ],
+    [
+     "Orange",
+     50,
+     null
+    ],
+    [
+     "Lemon",
+     150,
+     null
+    ],
+    [
+     "Salad",
+     220,
+     null
+    ],
+    [
+     "Pure Water",
+     1120,
+     null
+    ],
+    [
+     "Red Bean Sundae",
+     2250,
+     null
+    ],
+    [
+     "Cake",
+     150,
+     null
+    ],
+    [
+     "Watermelon",
+     1920,
+     null
+    ],
+    [
+     "Pet Food",
+     40,
+     null
+    ],
+    [
+     "Arrow for Bow",
+     1,
+     null
+    ],
+    [
+     "Arrow for Crossbow",
+     1,
+     null
+    ],
+    [
+     "Subi Throwing-Stars",
+     500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Mr. Sweatbottom",
+   "kind": "Sauna Manager",
+   "prices": "COT2 prices",
+   "map": "Regular Sauna",
+   "items": [
+    [
+     "Red Potion",
+     50,
+     null
+    ],
+    [
+     "Orange Potion",
+     150,
+     null
+    ],
+    [
+     "White Potion",
+     350,
+     null
+    ],
+    [
+     "Blue Potion",
+     220,
+     null
+    ],
+    [
+     "Apple",
+     20,
+     null
+    ],
+    [
+     "Egg",
+     30,
+     null
+    ],
+    [
+     "Meat",
+     80,
+     null
+    ],
+    [
+     "Orange",
+     50,
+     null
+    ],
+    [
+     "Lemon",
+     150,
+     null
+    ],
+    [
+     "Pure Water",
+     1120,
+     null
+    ],
+    [
+     "Unagi",
+     1000,
+     null
+    ],
+    [
+     "Return Scroll - Nearest Town",
+     400,
+     null
+    ],
+    [
+     "Return Scroll to Sleepywood",
+     600,
+     null
+    ],
+    [
+     "Arrow for Bow",
+     1,
+     null
+    ],
+    [
+     "Arrow for Crossbow",
+     1,
+     null
+    ],
+    [
+     "Subi Throwing-Stars",
+     500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "24 Hr Mobile Store",
+   "kind": "Mobile Store",
+   "prices": "COT2 prices",
+   "map": "Ant Tunnel Park",
+   "items": [
+    [
+     "Fried Chicken",
+     60,
+     null
+    ],
+    [
+     "Hot Dog",
+     180,
+     null
+    ],
+    [
+     "Pizza",
+     252,
+     null
+    ],
+    [
+     "Hamburger",
+     350,
+     null
+    ],
+    [
+     "Hot Dog Supreme",
+     480,
+     null
+    ],
+    [
+     "Unagi",
+     1000,
+     null
+    ],
+    [
+     "Salad",
+     220,
+     null
+    ],
+    [
+     "Pure Water",
+     1120,
+     null
+    ],
+    [
+     "Cake",
+     150,
+     null
+    ],
+    [
+     "Return Scroll - Nearest Town",
+     400,
+     null
+    ],
+    [
+     "Arrow for Bow",
+     2,
+     null
+    ],
+    [
+     "Arrow for Crossbow",
+     2,
+     null
+    ],
+    [
+     "Subi Throwing Stars",
+     500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Luma",
+   "kind": "Grocer",
+   "prices": "COT2 prices",
+   "map": "Cave Fairy Department Store",
+   "items": [
+    [
+     "Red Potion",
+     50,
+     null
+    ],
+    [
+     "Orange Potion",
+     150,
+     null
+    ],
+    [
+     "White Potion",
+     350,
+     null
+    ],
+    [
+     "Blue Potion",
+     220,
+     null
+    ],
+    [
+     "Lemon",
+     150,
+     null
+    ],
+    [
+     "Unagi",
+     1000,
+     null
+    ],
+    [
+     "Orange Juice",
+     540,
+     null
+    ],
+    [
+     "Grape Juice",
+     1260,
+     null
+    ],
+    [
+     "Return Scroll - Nearest Town",
+     400,
+     null
+    ],
+    [
+     "Return Scroll to Forgotten Hollow",
+     800,
+     null
+    ],
+    [
+     "Arrow for Bow",
+     1,
+     null
+    ],
+    [
+     "Arrow for Crossbow",
+     1,
+     null
+    ],
+    [
+     "Subi Throwing-Stars",
+     500,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "Tulcus",
+   "kind": "Scroll Seller",
+   "prices": "COT2 prices",
+   "map": "The Swamp of Despair II",
+   "items": [
+    [
+     "Hat Accuracy Scroll: Lesser",
+     15000,
+     null
+    ],
+    [
+     "Hat HP Scroll: Lesser",
+     15000,
+     null
+    ],
+    [
+     "Hat MP Scroll: Lesser",
+     15000,
+     null
+    ],
+    [
+     "Topwear DEF Scroll: Lesser",
+     15000,
+     null
+    ],
+    [
+     "Overall Armor DEF Scroll: Lesser",
+     15000,
+     null
+    ],
+    [
+     "Bottomwear DEF Scroll: Lesser",
+     15000,
+     null
+    ],
+    [
+     "Shoes Evasion Scroll: Lesser",
+     15000,
+     null
+    ],
+    [
+     "Shield DEF Scroll: Lesser",
+     15000,
+     null
+    ],
+    [
+     "Cape Weapon Def. Scroll: Lesser",
+     15000,
+     null
+    ],
+    [
+     "Cape Magic Def. Scroll: Lesser",
+     15000,
+     null
+    ],
+    [
+     "Cape Accuracy Scroll: Lesser",
+     15000,
+     null
+    ]
+   ]
+  },
+  {
+   "npc": "El Moth",
+   "kind": "Scroll Seller",
+   "prices": "COT2 prices",
+   "map": "The Tree That Grew III",
+   "items": [
+    [
+     "One-Handed Sword Attack Scroll: Lesser",
+     25000,
+     null
+    ],
+    [
+     "One-Handed Axe Attack Scroll: Lesser",
+     25000,
+     null
+    ],
+    [
+     "One-Handed Blunt Weapon Attack Scroll: Lesser",
+     25000,
+     null
+    ],
+    [
+     "Dagger Attack Scroll: Lesser",
+     25000,
+     null
+    ],
+    [
+     "Wand Magic Attack Scroll: Lesser",
+     25000,
+     null
+    ],
+    [
+     "Staff Magic Attack Scroll: Lesser",
+     25000,
+     null
+    ],
+    [
+     "Two-handed Sword Attack Scroll: Lesser",
+     50000,
+     null
+    ],
+    [
+     "Two-handed Axe Attack Scroll: Lesser",
+     50000,
+     null
+    ],
+    [
+     "Two-handed Blunt Weapon Attack Scroll: Lesser",
+     50000,
+     null
+    ],
+    [
+     "Spear Attack Scroll: Lesser",
+     50000,
+     null
+    ],
+    [
+     "Polearm Attack Scroll: Lesser",
+     50000,
+     null
+    ],
+    [
+     "Bow Attack Scroll: Lesser",
+     50000,
+     null
+    ],
+    [
+     "Crossbow Attack Scroll: Lesser",
+     50000,
+     null
+    ],
+    [
+     "Claw Attack Scroll: Lesser",
+     50000,
+     null
+    ]
+   ]
+  }
+ ]
+}

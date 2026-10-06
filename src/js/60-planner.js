@@ -27,7 +27,7 @@ const mcls = L => L < 10 ? "Warrior" : X.cls === "Magician" ? (L >= 30 ? X.branc
 const BC = {};
 function charAt(L){
   const br = L >= 30 ? X.branch : FIRST[X.cls], k = [X.cls, br, X.fam, L, X.aoe].join("|");
-  if (!BC[k]){ const b = buildAt(X.cls, br, X.fam, L, X.aoe); BC[k] = b.dps > 0 ? b : {dps: 20 * L, acc: b.acc, est: true} }
+  if (!BC[k]){ const b = buildAt(X.cls, br, X.fam, L, X.aoe, true); BC[k] = b.dps > 0 ? b : {dps: 20 * L, acc: b.acc, est: true} }
   return BC[k];
 }
 const WHERE = {};
@@ -158,6 +158,9 @@ function plan(mode = X.mode){
   };
   // grind to the next level. Maps are scored by EXP plus the farming time their drops will save later: each wanted item
   // collected here saves 1/drop kills of its monster, worth (that kill time × best EXP/s − the kill's own EXP).
+  // a new weapon (the default character's best weapon changes): its own step with where to get it
+  let wpn = null;
+  const gearCheck = () => { const c = charAt(L); if (c.weapon && c.weapon !== wpn){ steps.push({k:"gear", L, weapon: c.weapon, wid: c.wid, first: !wpn, t}); wpn = c.weapon } };
   // moving between maps is its own step, like job advancements
   const pushTravel = lg => { const s = lg.sec * X.pace; t += s; steps.push({k:"travel", L, ...lg, sec: s, t}) };
   // a quest: travel to its giver, the quest itself (talk + kills), then travel to the kill maps and back to turn it in
@@ -202,6 +205,7 @@ function plan(mode = X.mode){
     const IQ = D.quests.filter(r => r.region === "Maple Island").sort((a, b) => a.lvl - b.lvl || a.id - b.id);
     steps.push({k:"job", L, txt:"Maple Island: hand in every quest before you leave. Pio's quest gives The Green Relaxer chair, which you can't get anywhere else (his screws and boards come from boxes; if they're camped, Mina in Lith Harbor sells the Sky-blue Wooden Chair for 1,000 mesos). Switch to the Razor at level 5."});
     for (let g = 0; g < 500 && L < X.goal; g++){
+      gearCheck();
       const left = IQ.filter(r => !done.has(r.id)); if (!left.length && L >= SHIP_LV) break;
       const r = left.find(r => Math.max(1, r.lvl) <= L && r.pre.every(id => done.has(id))), ch = charAt(L);
       if (r){
@@ -220,6 +224,7 @@ function plan(mode = X.mode){
     if (!j1 && L >= 10){ j1 = true; toInstructor(); steps.push({k:"job", L, txt:`1st job: talk to ${INSTRUCTOR[X.cls]} in ${JOBTOWN[X.cls]} to become a ${FIRST[X.cls]}. Cabs are 90% off while you're a Beginner.`}) }
     while (vi < VL.length && Math.max(1, VL[vi].s.lvl) <= L){ steps.push({k:"value", L, ...VL[vi], t}); vi++ }
     if (!j2 && L >= 30){ j2 = true; toInstructor(); steps.push({k:"job", L, txt:`2nd job: back to ${INSTRUCTOR[X.cls]} in ${JOBTOWN[X.cls]} to become a ${X.branch}.`}) }
+    gearCheck();
     const ch = charAt(L);
     let rates = mapRates(mcls(L), L, ch.dps, ch.acc, 12, aoeOf(ch)).filter(m => !ISLAND(m.id));
     if (!rates.length) rates = mapRates(mcls(L), L, ch.dps, ch.acc, Infinity, aoeOf(ch)).filter(m => !ISLAND(m.id));   // nothing near your level: best of the rest
@@ -299,7 +304,7 @@ function render(){
   ].map(([h, p]) => `<div class="fact"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join("");
   let n = 0;
   // tick-off boxes: a step's key survives replanning when it's the same quest / job advancement / map and levels
-  const key = s => s.k === "quest" || s.k === "value" ? "q" + s.r.id : s.k === "grind" ? `g${s.map.id}:${s.from}-${s.to}` : s.k === "travel" ? `t${s.from}>${s.to}:${s.L}` : `j${X.cls}:${s.L}`;
+  const key = s => s.k === "gear" ? `w${s.weapon}:${s.L}` : s.k === "quest" || s.k === "value" ? "q" + s.r.id : s.k === "grind" ? `g${s.map.id}:${s.from}-${s.to}` : s.k === "travel" ? `t${s.from}>${s.to}:${s.L}` : `j${X.cls}:${s.L}`;
   const tr = (s, cls = "") => `<tr class="${cls}${DONE.has(key(s)) ? " done" : ""}" data-k="${key(s)}">`;
   const chk = (s, label) => `<label class="stepchk"><input type="checkbox"${DONE.has(key(s)) ? " checked" : ""} aria-label="Step ${label || ""} done">${label}</label>`;
   $("#xrows").innerHTML = S.map(s => {
@@ -307,6 +312,18 @@ function render(){
     if (s.k === "stop") return `<tr><td></td><td class="num">${s.L}</td><td colspan="5" class="sub">No more quests to do at this level. Grind or switch to "Quests + grinding".</td></tr>`;
     if (s.k === "nomap") return `<tr><td></td><td class="num">${s.L}</td><td colspan="5" class="sub">No training map fits this level.</td></tr>`;
     n++;
+    if (s.k === "gear"){
+      const src = D.wsrc[s.weapon] || {}, how = [];
+      if (src.shop) how.push(`Buy from ${src.shop.slice(0, 2).map(([npc, mid, mname, price]) => `${esc(npc)} at ${mid ? mapLink(mid, mname) : esc(mname)} for ${fmt(price)} mesos`).join(", or ")}`);
+      if (src.craft) how.push(`Craft with ${esc(src.craft[0])} Lv ${src.craft[1]}: ${src.craft[3].map(([i, k]) => `${k} ${esc(i)}`).join(", ")} + ${fmt(src.craft[2])} mesos`);
+      if (src.quest) how.push(`Quest reward: ${src.quest.map(id => { const r = D.quests.find(x => x.id === id); return r ? qlink(r) : "" }).filter(Boolean).join(", ")}`);
+      const ld = (src.drops || []).filter(([m]) => MOBID[m] && !D.latermobs.includes(MOBID[m]));
+      if (ld.length) how.push(`Drops from ${ld.slice(0, 5).map(([m, lv]) => `${mobLink(m)} <span class="sub">Lv ${lv}</span>`).join(", ")}${src.dropsFrom === "msea" ? ` <span class="sub">(old MapleSEA drop list, likely in Classic; meowdb)</span>` : ` <span class="sub">(reported by players on meowdb)</span>`}`);
+      if (!how.length) how.push(`No known source yet (not sold, crafted, a quest reward or a reported drop). Keep your current weapon until you find one.`);
+      return `${tr(s, "grow")}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>
+      <td><div class="gear">${s.wid ? itemIcon(s.wid, 1, true) : ""}<b>${s.first ? "Weapon" : "New weapon"}: ${esc(s.weapon)}</b></div><div class="sub how">${how.join("<br>")}</div></td>
+      <td class="sub">${src.shop ? `${esc(src.shop[0][0])} · ${src.shop[0][1] ? mapLink(src.shop[0][1], src.shop[0][2]) : esc(src.shop[0][2])}` : ""}</td><td class="num">–</td><td class="num sub">not timed</td><td class="num">${hm(s.t)}</td></tr>`;
+    }
     if (s.k === "travel"){
       const why = s.why === "npc" ? ` to see ${npcLink(s.npc)}` : s.why === "back" ? ` to turn in to ${npcLink(s.npc)}` : s.why === "kill" && s.mobs.length ? ` to kill ${s.mobs.map(([m, k]) => `${mobLink(m)} ×${fmt(k)}`).join(", ")}` : s.why === "grind" ? " to grind" : "";
       return `${tr(s, "trow")}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>

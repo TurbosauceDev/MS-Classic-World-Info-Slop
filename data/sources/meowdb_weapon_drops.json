@@ -1,0 +1,454 @@
+{
+ "source": "meowdb item pages (Dropped By: community reports; MSEA Reference Drops: pre-Big-Bang MapleSEA, which meowdb says Classic appears to share)",
+ "read": "2026-10-06",
+ "weapons": {
+  "Cutlus": {
+   "from": null,
+   "drops": []
+  },
+  "Traus": {
+   "from": "msea",
+   "drops": [
+    [
+     "Tick-Tock",
+     40
+    ],
+    [
+     "Croco",
+     52
+    ],
+    [
+     "Dark Yeti",
+     68
+    ],
+    [
+     "Separated Dark Yeti",
+     68
+    ],
+    [
+     "Transformed Dark Yeti",
+     68
+    ]
+   ]
+  },
+  "Hero's Gladius": {
+   "from": null,
+   "drops": []
+  },
+  "Lion's Fang": {
+   "from": "msea",
+   "drops": [
+    [
+     "Separated Yeti",
+     65
+    ],
+    [
+     "Transformed Yeti",
+     65
+    ],
+    [
+     "Yeti",
+     65
+    ]
+   ]
+  },
+  "Sparta": {
+   "from": "msea",
+   "drops": [
+    [
+     "Klock",
+     71
+    ],
+    [
+     "Taurospear",
+     75
+    ],
+    [
+     "Yeti and Pepe",
+     78
+    ]
+   ]
+  },
+  "Doombringer": {
+   "from": "msea",
+   "drops": [
+    [
+     "Yeti and Pepe",
+     78
+    ],
+    [
+     "Jr. Balrog",
+     80
+    ],
+    [
+     "Grim Phantom Watch",
+     99
+    ]
+   ]
+  },
+  "Dankke": {
+   "from": "msea",
+   "drops": [
+    [
+     "Ribbon Pig",
+     10
+    ]
+   ]
+  },
+  "The Shining": {
+   "from": null,
+   "drops": []
+  },
+  "Chrono": {
+   "from": "msea",
+   "drops": [
+    [
+     "Jr. Balrog",
+     80
+    ]
+   ]
+  },
+  "The Blessing": {
+   "from": "msea",
+   "drops": [
+    [
+     "Soul Teddy",
+     63
+    ],
+    [
+     "Separated Yeti",
+     65
+    ],
+    [
+     "Transformed Yeti",
+     65
+    ],
+    [
+     "Yeti",
+     65
+    ],
+    [
+     "Taurospear",
+     75
+    ],
+    [
+     "Yeti and Pepe",
+     78
+    ],
+    [
+     "Ghost Pirate",
+     83
+    ]
+   ]
+  },
+  "Gigantic Sledge": {
+   "from": null,
+   "drops": []
+  },
+  "Nakamaki": {
+   "from": "msea",
+   "drops": [
+    [
+     "Zombie Mushroom",
+     24
+    ],
+    [
+     "Pink Teddy",
+     32
+    ]
+   ]
+  },
+  "Zeco": {
+   "from": "msea",
+   "drops": [
+    [
+     "Green Mushroom",
+     14
+    ],
+    [
+     "Horny Mushroom",
+     22
+    ],
+    [
+     "Toy Trojan",
+     39
+    ]
+   ]
+  },
+  "Serpent's Tongue": {
+   "from": "msea",
+   "drops": [
+    [
+     "Plateon",
+     44
+    ],
+    [
+     "Tauromacis",
+     70
+    ]
+   ]
+  },
+  "Holy Spear": {
+   "from": "msea",
+   "drops": [
+    [
+     "Dark Yeti",
+     68
+    ],
+    [
+     "Separated Dark Yeti",
+     68
+    ],
+    [
+     "Transformed Dark Yeti",
+     68
+    ],
+    [
+     "Taurospear",
+     75
+    ],
+    [
+     "Deep Buffoon",
+     77
+    ]
+   ]
+  },
+  "Redemption": {
+   "from": "msea",
+   "drops": [
+    [
+     "Jr. Balrog",
+     80
+    ],
+    [
+     "Dark Yeti and Pepe",
+     82
+    ],
+    [
+     "Death Teddy",
+     85
+    ],
+    [
+     "Phantom Watch",
+     95
+    ]
+   ]
+  },
+  "Skylar": {
+   "from": "msea",
+   "drops": [
+    [
+     "Wild Kargo",
+     62
+    ],
+    [
+     "Taurospear",
+     75
+    ],
+    [
+     "Yeti and Pepe",
+     78
+    ],
+    [
+     "Phantom Watch",
+     95
+    ]
+   ]
+  },
+  "The Gold Dragon": {
+   "from": "msea",
+   "drops": [
+    [
+     "Buffy",
+     62
+    ],
+    [
+     "Werewolf",
+     75
+    ],
+    [
+     "Jr. Balrog",
+     80
+    ]
+   ]
+  },
+  "Thorns": {
+   "from": "msea",
+   "drops": [
+    [
+     "Mecateon",
+     48
+    ],
+    [
+     "Taurospear",
+     75
+    ],
+    [
+     "Yeti and Pepe",
+     78
+    ],
+    [
+     "Jr. Balrog",
+     80
+    ]
+   ]
+  },
+  "Evil Tale": {
+   "from": null,
+   "drops": []
+  },
+  "Evil Wings": {
+   "from": "msea",
+   "drops": [
+    [
+     "Werewolf",
+     75
+    ],
+    [
+     "Jr. Balrog",
+     80
+    ]
+   ]
+  },
+  "Angel Wings": {
+   "from": null,
+   "drops": []
+  },
+  "Asianic Bow": {
+   "from": "msea",
+   "drops": [
+    [
+     "Dark Yeti",
+     68
+    ],
+    [
+     "Separated Dark Yeti",
+     68
+    ],
+    [
+     "Transformed Dark Yeti",
+     68
+    ],
+    [
+     "Taurospear",
+     75
+    ]
+   ]
+  },
+  "Red Hinkel": {
+   "from": "msea",
+   "drops": [
+    [
+     "Dark Klock",
+     76
+    ],
+    [
+     "Jr. Balrog",
+     80
+    ]
+   ]
+  },
+  "Golden Crow": {
+   "from": "msea",
+   "drops": [
+    [
+     "Taurospear",
+     75
+    ]
+   ]
+  },
+  "Gross Jaeger": {
+   "from": "msea",
+   "drops": [
+    [
+     "Jr. Balrog",
+     80
+    ],
+    [
+     "Dark Yeti and Pepe",
+     82
+    ]
+   ]
+  },
+  "Blood Gigantic": {
+   "from": null,
+   "drops": []
+  },
+  "Green Scarab": {
+   "from": "msea",
+   "drops": [
+    [
+     "Dark Yeti",
+     68
+    ],
+    [
+     "Separated Dark Yeti",
+     68
+    ],
+    [
+     "Transformed Dark Yeti",
+     68
+    ]
+   ]
+  },
+  "Bazlud": {
+   "from": "msea",
+   "drops": [
+    [
+     "Star Pixie",
+     35
+    ],
+    [
+     "Lupin",
+     37
+    ],
+    [
+     "King Bloctopus",
+     38
+    ]
+   ]
+  },
+  "Shinkita": {
+   "from": null,
+   "drops": []
+  },
+  "Deadly Fin": {
+   "from": "msea",
+   "drops": [
+    [
+     "Yeti and Pepe",
+     78
+    ],
+    [
+     "Jr. Balrog",
+     80
+    ]
+   ]
+  },
+  "Kandine": {
+   "from": "msea",
+   "drops": [
+    [
+     "Lucida",
+     73
+    ],
+    [
+     "Jr. Balrog",
+     80
+    ],
+    [
+     "Lycanthrope",
+     80
+    ],
+    [
+     "Ghost Pirate",
+     83
+    ],
+    [
+     "Thanatos",
+     108
+    ]
+   ]
+  }
+ }
+}

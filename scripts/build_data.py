@@ -250,6 +250,39 @@ def step_nav(D):
     D["cabs"] = sorted(cabs)
     D["mapnames"].update({k: a.map_name.get(int(k), "") for k in nav})
 
+def step_weapon_sources(D):
+    """wsrc {weapon name: {shop: [[npc, mapId, mapName, price]], craft: [discipline, level, mesos, [[item, n]]],
+    quest: [questId], drops: [[monster, level]], dropsFrom: "community" | "msea"}} for every weapon.
+    Shops: meowdb NPC shop list (data/sources/meowdb_shops.json). Craft: the export's crafting.json. Quest: our reward data.
+    Drops: meowdb item pages (data/sources/meowdb_weapon_drops.json): community reports, else meowdb's pre-Big-Bang
+    MapleSEA reference list (flagged on the page as likely, not confirmed)."""
+    src = ROOT / "data" / "sources"
+    names = {w[0] for w in D["weapons"]}
+    byname = {}
+    for k, v in a.map_name.items(): byname.setdefault(v, str(k))
+    out = {n: {} for n in names}
+    shops = json.load(open(src / "meowdb_shops.json"))["shops"]
+    for s in shops:
+        for nm, price, tag in s["items"]:
+            if nm in out: out[nm].setdefault("shop", []).append([s["npc"], byname.get(s["map"], ""), s["map"], price])
+    cr = json.load(open(C + "crafting.json"))
+    for d in cr["disciplines"]:
+        for ot in d["output_types"]:
+            for lv in ot["levels"]:
+                for r in lv["recipes"]:
+                    if r["result_item_name"] in out:
+                        out[r["result_item_name"]]["craft"] = [d["discipline"], r["req_level"], r["meso_cost"], [[i["item_name"], i["count"]] for i in r["ingredients"]]]
+    wid = {w[12]: w[0] for w in D["weapons"]}
+    for q in D["quests"] + D["citq"]:
+        for g in q.get("ri") or []:
+            for it in g["it"]:
+                if it[0] in wid: out[wid[it[0]]].setdefault("quest", []).append(q["id"])
+    f = src / "meowdb_weapon_drops.json"
+    if f.exists():
+        for nm, v in json.load(open(f))["weapons"].items():
+            if nm in out and v.get("drops"): out[nm]["drops"], out[nm]["dropsFrom"] = v["drops"], v["from"]
+    D["wsrc"] = {k: v for k, v in out.items() if v}
+
 def step_minimaps(D):
     """mmaps {mapId: base64}: minimap of every open map, for the map hover card. WebP q80 (~1 MB for 177 maps) when
     Pillow is installed (pip install pillow), else the original PNGs (~1.9 MB). mmapType says which."""
@@ -330,7 +363,7 @@ def step_launch(D):
 
 if __name__ == "__main__":
     D = step_base()
-    step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D)
+    step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D)
     for k in ("mobdiff", "skilldiff", "latermobnames"): D.pop(k, None)   # only the removed "What changed since 2008" tab used these
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees
     (ROOT / "data").mkdir(exist_ok=True)

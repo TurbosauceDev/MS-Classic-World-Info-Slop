@@ -92,9 +92,17 @@ function attackInfo0(s, l){
   return {kind:"phys", pct, hits:at(s.att, l), targets:num(t, /knockback (\d+) enemies/) || at(s.mob, l)};
 }
 
+// weapons you can get at launch: sold, craftable, a launch quest reward, or dropped by a launch monster (D.wsrc)
+// value = the level you can get it from (quest-only weapons wait for the quest's level)
+const LAUNCH_Q = new Map(D.quests.filter(r => !["El Nath","Orbis","Forgotten Hollow"].includes(r.region)).map(r => [r.id, r.lvl]));
+const OBTAINABLE = new Map();
+for (const [n, s] of Object.entries(D.wsrc || {})){
+  if (s.shop || s.craft || (s.drops || []).some(([m]) => MOBID[m] && !D.latermobs.includes(MOBID[m]))) OBTAINABLE.set(n, 0);
+  else { const q = (s.quest || []).filter(id => LAUNCH_Q.has(id)).map(id => LAUNCH_Q.get(id)); if (q.length) OBTAINABLE.set(n, Math.min(...q)) }
+}
 const weaponsFor = () => {
   const types = branchInfo()[2];
-  return W.filter(w => types.includes(w.type) && famOK(w.type) && w.lvl <= S.lvl && (w.job === "All" || w.job.includes(JOBLABEL[S.cls])))
+  return W.filter(w => types.includes(w.type) && famOK(w.type) && w.lvl <= S.lvl && (w.job === "All" || w.job.includes(JOBLABEL[S.cls])) && (!S.obt || (OBTAINABLE.has(w.name) && OBTAINABLE.get(w.name) <= S.lvl)))
           .sort((a,b) => (S.cls === "Magician" ? b.mad - a.mad : b.pad - a.pad) || b.lvl - a.lvl);
 };
 const attackSkills = w => {
@@ -271,10 +279,10 @@ function beginnerAt(cls, L){
   return {dps: (min + max) / 2 * critF / interval, acc: (ap.DEX * 1.2 + L * 2 + ap.LUK * 0.6) / 2.5 + 10, branch: "Beginner", weapon: w.name, wid: w.id, skill: "Basic attack"};
 }
 // default character at a level (best weapon, auto AP, auto skill build), for the Path Planner. Leaves the builder untouched.
-buildAt = (cls, branch, fam, lvl, aoe = false) => {
+buildAt = (cls, branch, fam, lvl, aoe = false, obt = false) => {
   if (lvl < 10) return beginnerAt(cls, lvl);
   const keep = S;
-  S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe};
+  S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe, obt};
   try { applyDefaults(); S.sp = autoSP(); const r = calc(S.sp); return {dps: r.dps, acc: r.acc, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg} }
   finally { S = keep }
 };
