@@ -16,7 +16,7 @@
 | Mechanics (meowdb guides, read 2026-10-06) | attack-speed ladder, damage/hit/incoming-damage formulas, HP/MP gains, EXP table to 100 (51+ historical), party bonus, spawn capacity per player, crafting material drops (grind-maps guide), KPQ |
 | 2nd-job guides 30–70 | meowdb Fighter/Page/Spearman/Hunter/Crossbowman/Assassin/Bandit/F-P/I-L/Cleric guides → GUIDE2 in src/js/16-guides.js |
 | maplestory.quest (permission from the owner to use all its data, per Danny 2026-10-06) | raw COT2 client JSON API: `/api/raw/overview?v=COT2`, `/api/raw/category?v=COT2&key=<mob|item|skill|quest|map|craft|...>&page=N&page_size=50`, files under `/api/raw/file/COT2/wz/...` (sprites). Same client as OSMS; adds mob Magic Attack, mob skills, NPC dialogue, hidden skill rows. No drop tables or shop stock (server-side); its monster pages take player drop reports |
-| maplestory.io | WZ API with an `MCW` region (versions `1`, `CBT2`): item/mob/NPC images and data, e.g. `/api/MCW/CBT2/item/{id}`. Usable at build time only (page must stay self-contained) |
+| maplestory.io | WZ API with an `MCW` region (versions `1` = COT1, `CBT2` = our COT2): item/mob/NPC images and data, e.g. `/api/MCW/CBT2/item/{id}`. Usable at build time only (page must stay self-contained) |
 | Not usable | nexon.com game-build API (401, launcher auth; build manifests, not game data) |
 | Launch scope | meowdb release-date guide (no Orbis/El Nath/3rd job at launch); meowdb news 2026-10-03 (level cap 100, Forgotten Hollow later) |
 
@@ -137,6 +137,31 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   Fragment of Magic, Dragon Skin, Stiff Feather, Moon Rock, ...).
 - Not in the files: success rates, catalyst odds, material drop rates.
 
+## Upkeep, budget, armor, keep list (2026-10-06)
+- Upkeep (builder calc → cost): attack MP/HP per cast × casts/hr + buffs kept up (MP/HP ÷ duration) + ammo (hits per cast, +3 per
+  Hunter FA proc, × (1 − Claw Mastery return), 0 with Soul Arrow) at 1 meso/MP, 0.5/HP (Lemon / Red Potion), arrows 1, Bronze 2,
+  star recharge 0.3-0.9 (meowdb Assassin guide). Crafted arrows have no price. "Up to" = attacking nonstop; getting hit not counted.
+  Check: Fighter 70 = 83 PS/min × 12 MP ≈ 60k MP/hr (meowdb "6.6 Lemons a minute").
+- mapRates row.att = share of time attacking (respawn-capped share × (time − 1 s walk per kill) / time); planner upkeep per grind
+  step = cost/hr × model hours × att. Budget = weapons at cheapest meowdb shop price (free/crafted/quest/drop = 0) + upkeep;
+  income = quest mesos only (monster meso drops aren't in the files).
+- Incoming hit chance (meowdb damage formula) shown with danger: A = mobACC×100/(5(G+51)), E = EVA/(1+EVA/80)/(1+G/40),
+  f = 0.15+0.2/(1+e^((A−E)/12)), far out of reach 2-3%, then the 8% minimum-hit rescue. Shield Guard not counted.
+- Armor (D.armor, 997 pieces): builder slots; stats add to total STR/DEX/INT/LUK (damage, accuracy, avoid, weapon requirements),
+  W.DEF/M.DEF (base DEF before Iron Body %), HP/MP (after Max HP/MP Increase), crit. Shield ignored with 2H/bow/crossbow/claw/
+  spear/polearm; overall replaces top + bottom. Planner/Where to train default characters wear none.
+- Keep or sell tab: items launch quests (minus Event) or recipes ask for; quest-handed items (info.start) and unsellable items
+  (no NPC price) left out unless a recipe uses them. Sources: quest data monster, crafting src, meowdb shops (shopsell), quest
+  rewards, recipes.
+- Crafting leveling plan: per craft level, min (scratch fees + raw × NPC price) / craft EXP among recipes ≤ that level; crafts =
+  ceil(level EXP / recipe EXP). Unpriced raws count 0 (flagged). Whether low recipes keep full EXP isn't known.
+- Share links: #b= (builder S subset) / #p= (planner X) base64url JSON override localStorage; outside http(s) or inside the
+  claude.ai artifact, links point at GitHub Pages (root index.html keeps the hash when forwarding).
+- Bosses and timed spawns (D.timed): spawns with mob_time > 60 s or is_boss on launch maps. Mushmom: 60 min in data, players ~90.
+- tests/golden.js: reference numbers (HP/MP, EXP, portals, Lucky Seven 366-622, 720 ms, Fighter upkeep, 10→20 pace).
+- scripts/launch_diff.py <version>: a maplestory.io MCW version vs our COT2 data → docs/launch_diff.md. On 2026-10-06 "1" = COT1 (its values
+  are the "before" side of OSMS's COT1→COT2 patch notes) and "CBT2" = our data, so no launch client yet; rerun when a new version appears.
+
 ## Class guides in the Path Planner (src/js/16-guides.js)
 - "Class guides" select (localStorage `path.guide`): "all" (default) = guide build + guide maps, "build", "" = off.
 - Build (buildAt guide=true): first-job SP from the guide's per-level table (kept at its Lv 30 result above 30; 2nd-job SP
@@ -173,8 +198,9 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - Lucky Seven `attack_count` = 1 and Double Shot = 2 targets × 1 hit in the export. Resolved (meowdb class guides + skill text):
   Lucky Seven = 2 lines, Double Shot = 2 arrows split over 1–2 targets (fixed total) → HITS_FIX in 50-builder.js. The Thief
   guide's Lv 30 example (366–622 per cast) matches the damage formula exactly with 2 hits and STR + DEX as Thief secondary.
-- Precise Strikes +20 acc in the skill table vs a +50 note in an earlier formula audit — page uses the skill table.
-- "Event" region quests are included; unknown if they run at launch.
+- Precise Strikes: +20 ACC at max. Settled 2026-10-06: the skill table and meowdb's Warrior guide both say +20 (an earlier audit note said +50).
+- "Event" region quests (7, "[Event] ..." leaf quests) are included; unknown if they run at launch. maplestory.quest's Founder's
+  Access release notes page would say, but returned 404 / timed out on 2026-10-06. Re-check.
 
 ## Decisions
 - Hidden weapons: names with "Wizet"/"GM", and the 1-meso summer-event tubes (Old Gladius kept).
@@ -208,6 +234,8 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - `craft` {disc: [[name, skillId, master NPC, apprentice qId, weekly qId, Lv 5 qId]], rec: [[disc index, output type,
   craft Lv, itemId, batch, craft EXP, mesos, [[itemId, n]]]], src: {raw itemId: {mob: [mobId], why: name|desc, shop: [[npc, mapId, map, price]]}}};
   every recipe item, catalyst and kit is in `items`/`iicons`
+- `shopsell` {itemId: [npc, map, price]} (quest items sold by meowdb NPCs); `timed` [[mobId, name, lv, hp, exp, mapId, mapName, count,
+  timer s, boss]]; `armor` [[id, name, slot, reqLv, job, gender, [reqSTR, DEX, INT, LUK], {stat: n}, shop price]]
 - `mobatk` {mobId: [touch attack, accuracy]}; `potshops` [[npc, mapId, mapName]] (step_extras, `build_data.py extras`)
 - `latermobs` [mobId]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2
   (Someone Else's House) and Fairy 3 (Tree Dungeon, Forest Up North VI/VII): they ARE at launch, just not in the ranking.

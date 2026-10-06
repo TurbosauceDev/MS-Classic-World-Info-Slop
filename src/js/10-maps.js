@@ -37,12 +37,27 @@ function touchPct(mobId, L, d){
   const phys = hitTaken(a[0], d.wdef, L) * (d.mult ?? 1), mag = a[3] ? hitTaken(a[2], d.mdef || 0, L) * (d.mmult ?? d.mult ?? 1) : 0;
   return Math.max(phys, mag) / d.hp;
 }
+// chance a monster's attack lands on you (meowdb damage formula, incoming hits): A = mobACC×100/(5(G+51)),
+// E = EVA/(1+EVA/80)/(1+G/40) with G = max(0, your level − its level); spread f = 0.15 + 0.2/(1+e^((A−E)/12));
+// far out of reach it's 2-3%; then an 8% minimum-hit rescue. Shield Guard isn't counted (no armor).
+function mobHits(mobId, L, eva){
+  const a = D.mobatk?.[mobId], m = D.mobs[mobId]; if (!a || !m) return 1;
+  const G = Math.max(0, L - m[1]), A = a[1] * 100 / (5 * (G + 51)), E = eva / (1 + eva / 80) / (1 + G / 40);
+  const f = 0.15 + 0.2 / (1 + Math.exp((A - E) / 12));
+  const cand = E > A * (1 + f) ? Math.min(0.03, Math.max(0.02, Math.exp((A - E) / 18) * 0.03)) : Math.max(0, Math.min(1, (1 + f - E / A) / (2 * f)));
+  return cand + (1 - cand) * 0.08;
+}
 const DANGER = [[0.5, "Lethal", "p-bad"], [0.25, "Danger", "p-bad"], [0.1, "Caution", "p-warn"], [0, "Safe", "p-good"]];
-const dangerPill = f => { const d = DANGER.find(x => f >= x[0]); return `<span class="pill ${d[2]}" title="One hit from its hardest hitter takes about ${Math.round(f * 100)}% of your Max HP (no armor counted)">${d[1]} ${Math.round(f * 100)}%</span>` };
+const dangerPill = o => { const f = o.f ?? o, d = DANGER.find(x => f >= x[0]), h = o.hit != null ? ` · hits you ${Math.round(o.hit * 100)}%` : "";
+  return `<span class="pill ${d[2]}" title="One hit from its hardest hitter takes about ${Math.round(f * 100)}% of your Max HP (no armor counted)${o.hit != null ? `; it lands about ${Math.round(o.hit * 100)}% of the time against your avoid` : ""}">${d[1]} ${Math.round(f * 100)}%${h}</span>` };
 // a character's defensive numbers when only class and level are known (Where to train): no skills, no armor, AP as classAcc assumes
-const defaultDef = (cls, L) => { const prim = 5 * L + 20 - L - 8;
-  return {hp: hpmpAt(cls, L)[0], wdef: Math.floor((cls === "Warrior" ? prim : cls === "Bowman" ? L : 4) / 4), mdef: Math.floor((MAGIC.has(cls) ? prim : 4) / 4), mult: 1, mmult: 1} };
-const mapDanger = (mid, L, def) => Math.max(0, ...(D.maps[mid]?.[2] || []).map(([id]) => touchPct(String(id), L, def)));
+const defaultDef = (cls, L) => { const prim = 5 * L + 20 - L - 8, luk = cls === "Thief" ? prim : MAGIC.has(cls) ? L : 4, dex = cls === "Bowman" ? prim : cls === "Magician" || MAGIC.has(cls) ? 4 : L;
+  return {hp: hpmpAt(cls, L)[0], wdef: Math.floor((cls === "Warrior" ? prim : cls === "Bowman" ? L : 4) / 4), mdef: Math.floor((MAGIC.has(cls) ? prim : 4) / 4), mult: 1, mmult: 1,
+    avoid: Math.trunc(luk / 3) + Math.trunc(dex / 6) + 5} };
+// the map's hardest hitter: {f: share of Max HP per hit, hit: chance it lands}
+const mapDanger = (mid, L, def) => { let best = {f: 0, hit: null};
+  for (const [id] of D.maps[mid]?.[2] || []){ const f = touchPct(String(id), L, def); if (f > best.f) best = {f, hit: def.avoid != null ? mobHits(String(id), L, def.avoid) : null} }
+  return best };
 // portals from each map to the nearest NPC selling HP/MP potions (meowdb shop list), walking only: [portals, npc, shopMapId]
 const POTS = (() => { const out = {}, q = [];
   for (const [npc, mid] of D.potshops || []) if (D.nav[mid] && !out[mid]){ out[mid] = [0, npc, mid]; q.push(mid) }
@@ -89,18 +104,19 @@ function mapRates(cls, L, dps, acc, floor = 12, aoe = null, party = 1){
   const rows = [];
   for (const [mid, [name, open, spawns]] of Object.entries(D.maps)){
     if (!open) continue;
-    let exp = 0, time = 0, n = 0, lvSum = 0, hitSum = 0, ok = true, names = new Set();
+    let exp = 0, time = 0, walk = 0, n = 0, lvSum = 0, hitSum = 0, ok = true, names = new Set();
     const hits = aoe ? aoeHits(mid, aoe.t, aoe.r, AOE_FALL[aoe.n] || 0) : 1;
     for (const [id, c] of spawns){
       const m = D.mobs[id]; if (!m) continue;
       const k = mobKill(m, cls, L, dps, acc);
       if (k.hit < 0.05){ ok = false; break }
-      exp += m[3] * c; time += k.sec * c / hits; n += c; lvSum += m[1] * c; hitSum += k.hit * c; names.add(m[0]);
+      exp += m[3] * c; time += k.sec * c / hits; walk += c / hits; n += c; lvSum += m[1] * c; hitSum += k.hit * c; names.add(m[0]);
     }
     if (!ok || !n) continue;
     const avg = lvSum / n; if (avg < L - floor) continue;
-    const rate = Math.min(party * exp / time, exp * partyCap(party) / 7.56) / party * (1 + partyBonus(party));
-    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate, cyc: exp, hits});   // kills/s of a mob = count × rate / cyc
+    const raw = Math.min(party * exp / time, exp * partyCap(party) / 7.56) / party, rate = raw * (1 + partyBonus(party));
+    // att = share of the time you're attacking (not walking, not waiting for respawns): for potion/ammo upkeep
+    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate, cyc: exp, hits, att: Math.min(1, raw * time / exp) * (time - walk) / time});   // kills/s of a mob = count × rate / cyc
   }
   return rows.sort((a,b) => b.rate - a.rate);
 }
@@ -114,7 +130,7 @@ function classAoe(cls, L){
   return {t: Array.isArray(s.mob) ? Math.max(...s.mob) : s.mob, r: s.rg, n: name};
 }
 let AOE_FROM_BUILDER = null;   // the builder's own attack {t, r, n}; cleared with ACC_FROM_BUILDER
-let DEF_FROM_BUILDER = null;   // the builder's {hp, wdef, mult} for the danger column; cleared with ACC_FROM_BUILDER
+let DEF_FROM_BUILDER = null, COST_FROM_BUILDER = null;   // the builder's upkeep {mesoHr, ...}   // the builder's {hp, wdef, mult} for the danger column; cleared with ACC_FROM_BUILDER
 function rankMaps(){
   let cls = $("#cls").value, L = +$("#lvl").value || 25, dps = +$("#dps").value || 20*L;
   const acc = ACC_FROM_BUILDER ?? accFor(cls, L);
@@ -141,10 +157,11 @@ function rankMaps(){
       : $("#aoe").value ? ` ${esc(cls)} has no area attack at level ${L}, so this is single target.` : ` Single target.`)
     + (party > 1 ? ` Party of ${party}: your share of the EXP plus the ${Math.round(partyBonus(party) * 100)}% party bonus, map spawns at ${Math.round(partyCap(party) * 100)}% (assumes equal players splitting kills).` : "")
     + ` Danger: one touch from the map's hardest hitter as a share of ${DEF_FROM_BUILDER ? "your" : "a typical"} Max HP (${fmt(def.hp)}), before armor.`
+    + (COST_FROM_BUILDER ? ` Your build's potions and ammo: up to ${fmt(COST_FROM_BUILDER.mesoHr)} mesos/hr while attacking nonstop; on the top map you attack about ${Math.round((top[0]?.att ?? 1) * 100)}% of the time, so about ${fmt(COST_FROM_BUILDER.mesoHr * (top[0]?.att ?? 1))}/hr.` : "")
     + ` EXP/hr is a model estimate${party > 1 ? "" : ", solo"}.`
     + (far ? ` <b>No map has monsters within 12 levels of you</b> (Victoria Island tops out around level 60-75), so these are the best of the rest.` : "");
 }
-["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; AOE_FROM_BUILDER = null; DEF_FROM_BUILDER = null; rankMaps() }));
+["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; AOE_FROM_BUILDER = null; DEF_FROM_BUILDER = null; COST_FROM_BUILDER = null; rankMaps() }));
 $("#party").addEventListener("change", rankMaps);
 $("#aoe").addEventListener("change", rankMaps);
 $("#dps").addEventListener("input", rankMaps);
@@ -152,3 +169,9 @@ $("#lvl").addEventListener("change", () => { $("#dps").value = Math.max(50, 20 *
 $("#dps").value = 20 * +$("#lvl").value;
 rankMaps();
 
+
+// bosses and timed spawns (D.timed from the export's spawn timers)
+const dur = s => s >= 3600 ? `${+(s / 3600).toFixed(1)} h` : s >= 60 ? `${Math.round(s / 60)} min` : `${Math.round(s)} s`;
+$("#timedrows").innerHTML = (D.timed || []).map(([id, name, lv, hp, exp, mid, mname, n, t, boss]) => `<tr${boss ? ' class="vrow"' : ""}>
+  <td>${D.mobs[id] ? mobLink(id) : `<b>${esc(name)}</b>`}${boss ? ' <span class="pill p-hot">boss</span>' : ""}</td><td class="num">${lv}</td><td class="num">${fmt(hp)}</td><td class="num">${fmt(exp)}</td>
+  <td>${mapLink(mid, mname)}</td><td class="num">${n}</td><td class="num">${dur(t)}${name === "Mushmom" ? ' <span class="sub">(players: ~90 min)</span>' : ""}</td></tr>`).join("");

@@ -201,3 +201,9 @@ $("#qeq").addEventListener("click", () => {
 try { if (localStorage.getItem("qeq")) $("#qeq").setAttribute("aria-pressed", "true") } catch(e) {}
 renderQuests();
 
+
+// "Fewer columns" (default on narrow screens): hides Chain, % of level, Bonus and Equals in the quest table
+(() => { const b = $("#qcompact"), table = $("#qrows").closest("table");
+  let on = innerWidth < 700; try { const v = localStorage.getItem("qcompact"); if (v !== null) on = v === "1" } catch(e) {}
+  const set = v => { on = v; b.setAttribute("aria-pressed", on); table.classList.toggle("qcompact", on); try { localStorage.setItem("qcompact", on ? "1" : "0") } catch(e) {} };
+  b.addEventListener("click", () => set(!on)); set(on) })();

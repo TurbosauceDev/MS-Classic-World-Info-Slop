@@ -16,11 +16,30 @@ const mobLink = idOrName => { const id = D.mobs[idOrName] ? String(idOrName) : M
 const mobList = names => names.split(", ").map(mobLink).join(", ");
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
+/* shareable links: #b=<build> or #p=<plan> (base64url JSON) open with those settings instead of the saved ones.
+   Inside the claude.ai artifact the page's own URL isn't shareable, so links point at the GitHub Pages copy. */
+const SHARE_BASE = "https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/";
+const HASH = (() => { const o = {}; try { for (const part of location.hash.slice(1).split("&")){ const [k, v] = part.split("=");
+  if (v) o[k] = JSON.parse(decodeURIComponent(escape(atob(v.replace(/-/g, "+").replace(/_/g, "/"))))) } } catch(e) {} return o })();
+const shareUrl = (k, obj) => {
+  const enc = btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const own = /^https?:$/.test(location.protocol) && !/claude|usercontent|anthropic/.test(location.hostname);
+  return `${own ? location.origin + location.pathname : SHARE_BASE}#${k}=${enc}`;
+};
+// copy to the clipboard; where that's blocked (sandboxed frames), show the link in a box to copy by hand
+async function copyShare(btn, url){
+  const old = btn.dataset.label || (btn.dataset.label = btn.textContent);
+  try { await navigator.clipboard.writeText(url); btn.textContent = "Link copied" }
+  catch(e){ let box = btn.nextElementSibling; if (!box || !box.classList.contains("sharebox")){ box = document.createElement("input"); box.className = "sharebox"; box.readOnly = true; btn.after(box) }
+    box.value = url; box.select(); btn.textContent = "Copy the link from the box" }
+  setTimeout(() => { btn.textContent = old }, 2500);
+}
+
 /* tabs */
 document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
-  ["plan","path","maps","quests","cit","craft"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
+  ["plan","path","maps","quests","cit","craft","keep"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
 }));
-try { const t = localStorage.getItem("tab"); if (t) document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
+try { const t = HASH.p ? "path" : HASH.b ? "plan" : localStorage.getItem("tab"); if (t) document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 

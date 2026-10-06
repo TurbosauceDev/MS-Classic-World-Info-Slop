@@ -32,8 +32,25 @@ const W = D.weapons.filter(w => !HIDDEN_WEAPON(w)).map(w => ({name:w[0], type:w[
 const SK = D.skills; // job name -> skills from the COT2 export
 const BASIC = {id:"basic", n:"Basic attack", max:0};
 
-let S = {cls:"Warrior", lvl:30, branch:"Fighter", weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true};
+let S = {cls:"Warrior", lvl:30, branch:"Fighter", weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, gear:{}, gender:""};
+// armor (D.armor rows: [id, name, slot, reqLevel, job, gender, [reqSTR, DEX, INT, LUK], {stat: n}, shop price])
+const ARMOR = Object.fromEntries((D.armor || []).map(a => [a[0], a]));
+const SLOTS = [["Hat", "Hat"], ["Overall", "Overall"], ["Top", "Top"], ["Bottom", "Bottom"], ["Glove", "Gloves"], ["Shoes", "Shoes"], ["Shield", "Shield"], ["Cape", "Cape"], ["Earring", "Earrings"]];
+const TWO_HANDED = t => /^2H |^(Bow|Crossbow|Claw|Spear|Polearm)$/.test(t || "");
+// total gear stats; a shield doesn't count with a two-handed weapon, top/bottom don't count under an overall
+function gearTotals(){
+  const g = {STR:0, DEX:0, INT:0, LUK:0, PDD:0, MDD:0, MHP:0, MMP:0, ACC:0, EVA:0, CRT:0, CRD:0, Speed:0, Jump:0};
+  const w = W.find(x => x.name === S.weapon), gear = S.gear || {};
+  for (const [slot, id] of Object.entries(gear)){
+    const a = ARMOR[id]; if (!a || a[3] > S.lvl) continue;
+    if (slot === "Shield" && TWO_HANDED(w?.type)) continue;
+    if ((slot === "Top" || slot === "Bottom") && gear.Overall) continue;
+    for (const [k, v] of Object.entries(a[7])) g[k] = (g[k] || 0) + v;
+  }
+  return g;
+}
 try { const saved = JSON.parse(localStorage.getItem("planner") || "null"); if (saved && saved.cls) S = Object.assign(S, saved) } catch(e) {}
+if (HASH.b && HASH.b.cls) S = Object.assign(S, HASH.b);   // shared link
 if (!S.sp) S.sp = {};
 
 const apTotal = L => 5 * L + 20;
@@ -87,6 +104,12 @@ const HITS_FIX = {"Lucky Seven": {hits: 2}, "Double Shot": {hits: 2, targets: 1}
 // attack time (ms) per speed tier 0-10: [swing, spear/polearm stab, crossbow] (meowdb attack speed guide, COT2 frames).
 // Every Magician spell is tier 6 (810 ms) whatever the weapon; Booster moves a matching weapon 2 tiers.
 const SPEED_MS = [[510,480,540],[570,540,570],[600,570,630],[660,630,690],[720,660,720],[750,720,780],[810,750,840],[870,810,870],[900,870,930],[960,900,990],[1020,960,1050]];
+// upkeep prices (meowdb): MP 1 meso (Lemon 150 for 150 MP), HP 0.5 meso (Red Potion 50 for 100 HP); arrows 1 meso, Bronze 2
+// (Raymond); star recharge per star from the Assassin guide. Iron/Mithril/Adamantium arrows are crafted only: no price.
+const MESO_MP = 1, MESO_HP = 0.5;
+const AMMO_COST = {"Arrows for Bows": 1, "Arrows for Crossbows": 1, "Bronze Arrows for Bows": 2, "Bronze Arrows for Crossbows": 2,
+  "Subi Throwing Stars": 0.3, "Wolbi Throwing Stars": 0.4, "Mokbi Throwing Stars": 0.5, "Kumbi Throwing Stars": 0.6, "Tobi Throwing Stars": 0.7,
+  "Steely Throwing Knives": 0.8, "Ilbi Throwing Stars": 0.9};
 const tierMs = (t, col = 0) => SPEED_MS[Math.max(0, Math.min(10, t))][col];
 function attackInfo0(s, l){
   const r = attackInfo1(s, l);
@@ -146,19 +169,20 @@ const nearMobs = L => NEAR[L] || (NEAR[L] = (() => {
 function calc(sp){
   const w = W.find(x => x.name === S.weapon) || null;
   const list = jobSkills();
-  const L = S.lvl, ap = S.ap, cls = S.cls;
+  // ap = base AP + armor stats (damage, accuracy, avoid and defense all use total stats)
+  const L = S.lvl, cls = S.cls, gear = gearTotals(), ap = Object.fromEntries(["STR","DEX","INT","LUK"].map(k => [k, S.ap[k] + gear[k]]));
   const L_ = n => { const s = byName(n, list); return s ? lv(s, sp, list) : 0 };
   const T = n => { const s = byName(n, list); const l = s ? lv(s, sp, list) : 0; return l ? stat(s, l) : "" };
   const buffs = S.buffs;
   const wk = w ? kindOf(w.type) : "";
 
-  let accB = num(T("Precise Strikes"), /Accuracy \+(\d+)/) + num(T("Nimble Body"), /Accuracy \+(\d+)/);
-  let evaB = num(T("Nimble Body"), /Evasion \+(\d+)/) + (wk === "Bow" ? num(T("Bow Mastery"), /Evasion \+(\d+)/) : 0);
-  let crit = 5 + num(T("Precise Strikes"), /Critical Rate \+(\d+)%/) + num(T("Critical Shot"), /Critical Rate \+(\d+)%/)
+  let accB = gear.ACC + num(T("Precise Strikes"), /Accuracy \+(\d+)/) + num(T("Nimble Body"), /Accuracy \+(\d+)/);
+  let evaB = gear.EVA + num(T("Nimble Body"), /Evasion \+(\d+)/) + (wk === "Bow" ? num(T("Bow Mastery"), /Evasion \+(\d+)/) : 0);
+  let crit = 5 + gear.CRT + num(T("Precise Strikes"), /Critical Rate \+(\d+)%/) + num(T("Critical Shot"), /Critical Rate \+(\d+)%/)
            + num(T("Critical Throw"), /Critical Rate \+(\d+)%/)
            + (wk === "Spear" ? num(T("Spear Mastery"), /Critical Rate \+(\d+)%/) : 0)
            + (wk === "Dagger" ? num(T("Dagger Mastery"), /Critical Rate \+(\d+)%/) : 0);
-  let critDmg = 20 + num(T("Critical Shot"), /Critical Damage \+(\d+)%/) + num(T("Critical Throw"), /Critical Damage \+(\d+)%/);
+  let critDmg = 20 + gear.CRD + num(T("Critical Shot"), /Critical Damage \+(\d+)%/) + num(T("Critical Throw"), /Critical Damage \+(\d+)%/);
   let atkB = wk === "Claw" ? num(T("Claw Mastery"), /Attack Power \+(\d+)/) : 0;
   let matkB = 0, booster = false, steal = 0;
   if (buffs){
@@ -240,16 +264,27 @@ function calc(sp){
   if (sk?.n === "Poison Breath" && ai){ const t = stat(sk, sl), ba = num(t, /deals (\d+) Basic Attack over/), sec = num(t, /over (\d+) sec/) || 5;
     dps += ba / 100 * (Math.floor(ap.INT / 2) + (w?.mad || 0) + matkB) * (ap.INT / 125 + 1) / sec }
 
+  // upkeep while attacking nonstop: attack MP/HP, buffs kept up (MP and HP per second of their duration), ammo used
+  let mpHr = 0, hpHr = 0, ammoHr = 0;
+  if (ai && sk && sk.id !== "basic"){ const t = stat(sk, sl); mpHr += num(t, /MP -\s?(\d+)/) * 3600 / interval; hpHr += num(t, /HP -(\d+)/) * 3600 / interval }
+  if (buffs) for (const s of list) if (["self_buff", "party_support"].includes(s.k) && lv(s, sp, list) > 0){
+    const t = stat(s, lv(s, sp, list)), d = num(t, /for (\d+) sec/); if (d){ mpHr += num(t, /MP -?\s?(\d+)/) * 3600 / d; hpHr += num(t, /HP -(\d+)/) * 3600 / d } }
+  const ammoName = w && AMMO[w.type] && ai && !magicK && ["Bow", "Crossbow", "Claw"].includes(w.type) ? S.ammo : null;
+  const soul = buffs && ["Bow", "Crossbow"].includes(w?.type) && L_("Soul Arrow: " + w.type) > 0;
+  if (ammoName && !soul) ammoHr = ((ai.hits || 1) + (faOn && wk === "Bow" ? faRate / 100 * 3 : 0)) * 3600 / interval
+    * (wk === "Claw" ? 1 - num(T("Claw Mastery"), /(\d+)% chance to retrieve/) / 100 : 1);
+  const cost = {mpHr, hpHr, ammoHr, ammoName, ammoPrice: AMMO_COST[ammoName], mesoHr: mpHr * MESO_MP + hpHr * MESO_HP + ammoHr * (AMMO_COST[ammoName] || 0)};
   // HP, MP and physical defense (no armor: we don't model it) for the danger estimate
-  const [hp, mp] = hpmpAt(cls, L, num(T("Max HP Increase"), /Max HP \+(\d+)%/), num(T("Max MP Increase"), /Max MP \+(\d+)%/), isSecond());
+  const [hp0, mp0] = hpmpAt(cls, L, num(T("Max HP Increase"), /Max HP \+(\d+)%/), num(T("Max MP Increase"), /Max MP \+(\d+)%/), isSecond());
+  const hp = hp0 + gear.MHP, mp = mp0 + gear.MMP;
   const defFlat = (wk === "Sword" ? num(T("Sword Mastery"), /Weapon Def\. \+(\d+)/) : 0) + (buffs ? num(T("Magic Armor"), /Weapon Def\. \+(\d+),/) + num(T("Iron Will"), /Weapon Def\. \+(\d+),/) - num(T("Rage"), /Weapon Def\. -(\d+)/) : 0);
-  const wdef = Math.max(0, defFlat + Math.trunc((1 + (buffs ? num(T("Iron Body"), /Weapon Def\. \+(\d+)%/) : 0) / 100) * Math.floor(ap.STR / 4)));
-  const mdef = Math.floor(ap.INT / 4) + (buffs ? num(T("Magic Armor"), /Magic Def\. \+(\d+)/) : 0);
+  const wdef = Math.max(0, defFlat + Math.trunc((1 + (buffs ? num(T("Iron Body"), /Weapon Def\. \+(\d+)%/) : 0) / 100) * (Math.floor(ap.STR / 4) + gear.PDD)));
+  const mdef = Math.floor(ap.INT / 4) + gear.MDD + (buffs ? num(T("Magic Armor"), /Magic Def\. \+(\d+)/) : 0);
   const guard = buffs ? 1 - num(T("Magic Guard"), /Replace (\d+)% of HP damage/) / 100 : 1;
   const hpMult = guard * (buffs ? 1 - num(T("Invincible"), /Physical damage -(\d+)%/) / 100 : 1);
   const {near, even} = nearMobs(L);
   const hitAvg = even.length ? even.reduce((a, m) => a + hitProb(acc, m[4], m[1] - L), 0) / even.length : 1;
-  return {hp, mp, wdef, mdef, hpMult, mpMult: guard, w, sk, sl, ai, min, max, avg, crit, critDmg, perCast, stage, interval, dps, acc, avoid, booster, mast, faRate: faOn ? faRate : 0, faPct, atkB, matkB, near, hitAvg, eff: dps * hitAvg};
+  return {cost, hp, mp, wdef, mdef, hpMult, mpMult: guard, w, sk, sl, ai, min, max, avg, crit, critDmg, perCast, stage, interval, dps, acc, avoid, booster, mast, faRate: faOn ? faRate : 0, faPct, atkB, matkB, near, hitAvg, eff: dps * hitAvg};
 }
 
 /* greedy auto-build: keep buying the next 1-5 points that add the most real damage per SP */
@@ -361,9 +396,9 @@ buildAt = (cls, branch, fam, lvl, aoe = false, obt = false, guide = false) => {
   if (lvl < 10) return beginnerAt(cls, lvl);
   const keep = S;
   if (guide && GUIDE[cls].claw && lvl < (GUIDE2[branch]?.reset?.at || 30)) fam = lvl < 30 ? "Claw" : fam;
-  S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe, obt};
+  S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe, obt, gear:{}};
   try { applyDefaults(); if (guide) guideBuild(); else S.sp = autoSP(); const r = calc(S.sp);
-    return {dps: r.dps, acc: r.acc, hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo} }
+    return {dps: r.dps, acc: r.acc, hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid, cost: r.cost, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo} }
   finally { S = keep }
 };
 function fillControls(){
@@ -389,8 +424,28 @@ function fillControls(){
   const ids = new Set(jobSkills().map(s => s.id));
   for (const id of Object.keys(S.sp)) if (!ids.has(id)) delete S.sp[id];
   if (wantAuto) S.sp = autoSP();
+  fillGear();
 }
 
+// armor selects: pieces your class can wear at this level (and gender, if set), best level first
+const CRAFTED = new Set((D.craft?.rec || []).map(r => r[3]));
+const QREWARD = new Set([...D.quests, ...D.citq].flatMap(r => (r.ri || []).flatMap(g => g.it.map(x => x[0]))));
+const STAT_SHORT = {STR:"STR", DEX:"DEX", INT:"INT", LUK:"LUK", PDD:"W.DEF", MDD:"M.DEF", MHP:"HP", MMP:"MP", ACC:"ACC", EVA:"Avoid", CRT:"Crit %", CRD:"Crit dmg %", Speed:"Speed", Jump:"Jump"};
+const armorSrc = a => a[8] ? `shop ${fmt(a[8])}` : CRAFTED.has(a[0]) ? "craft" : QREWARD.has(a[0]) ? "quest" : "drop / FM";
+function fillGear(){
+  const w = W.find(x => x.name === S.weapon), gear = S.gear || (S.gear = {});
+  $("#pgender").value = S.gender || "";
+  $("#pgear").innerHTML = SLOTS.map(([slot, label]) => {
+    if (slot === "Shield" && TWO_HANDED(w?.type)) return "";
+    const list = (D.armor || []).filter(a => a[2] === slot && a[3] <= S.lvl && (a[4] === "All" || a[4].includes(JOBLABEL[S.cls])) && (!S.gender || !a[5] || a[5] === S.gender))
+      .sort((a, b) => b[3] - a[3] || a[1].localeCompare(b[1]));
+    const off = (slot === "Top" || slot === "Bottom") && gear.Overall;
+    return `<label class="lab">${label}<select data-slot="${slot}"${off ? " disabled" : ""}><option value="">${off ? "(overall)" : "none"}</option>${list.map(a =>
+      `<option value="${a[0]}"${gear[slot] === a[0] ? " selected" : ""}>${esc(a[1])} · Lv ${a[3]} · ${Object.entries(a[7]).filter(([k]) => k !== "PDD" && k !== "MDD").map(([k, v]) => `+${v} ${STAT_SHORT[k]}`).join(" ") || `${a[7].PDD || 0} W.DEF`} · ${armorSrc(a)}</option>`).join("")}</select></label>`;
+  }).join("");
+  const n = Object.keys(gear).filter(k => gear[k]).length;
+  $("#pgearsum").textContent = n ? `${n} piece${n === 1 ? "" : "s"}` : "none";
+}
 function renderSkills(){
   const list = jobSkills();
   const cap = t => list.filter(s => tierOf(s) === t).reduce((a, s) => a + s.max, 0);
@@ -426,20 +481,22 @@ function renderSkills(){
 function render(){
   const L = S.lvl, ap = S.ap, cls = S.cls, br = S.branch;
   const r = calc(S.sp), w = r.w;
-  S.dps = Math.round(r.dps); S.acc = r.acc; S.def = {hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult}; S.area = r.ai && r.sk?.rg ? {t: r.ai.targets || 1, r: r.sk.rg, n: r.sk.n} : null;
+  S.dps = Math.round(r.dps); S.acc = r.acc; S.def = {hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid}; S.cost = r.cost; S.area = r.ai && r.sk?.rg ? {t: r.ai.targets || 1, r: r.sk.rg, n: r.sk.n} : null;
   const left = apTotal(L) - (ap.STR + ap.DEX + ap.INT + ap.LUK);
   $("#papleft").textContent = left === 0 ? "All AP spent" : left > 0 ? `${left} AP unspent` : `${-left} AP over budget`;
   $("#papleft").className = "pill " + (left === 0 ? "p-good" : "p-warn");
-  const unmet = w ? ["STR","DEX","INT","LUK"].filter(k => (w[k] || 0) > ap[k]) : [];
+  const gt = gearTotals(), unmet = w ? ["STR","DEX","INT","LUK"].filter(k => (w[k] || 0) > ap[k] + gt[k]) : [];
   $("#preqnote").innerHTML = !w ? "No weapon available for this job at this level." :
     unmet.length ? `<span class="down">Can't equip ${esc(w.name)}: needs ${unmet.map(k => `${w[k]} ${k}`).join(", ")}.</span>` :
-    `${esc(w.name)} needs ${["STR","DEX","INT","LUK"].filter(k => w[k]).map(k => `${w[k]} ${k}`).join(", ") || "no stats"} at level ${w.lvl}. Armor requirements aren't included.`;
+    `${esc(w.name)} needs ${["STR","DEX","INT","LUK"].filter(k => w[k]).map(k => `${w[k]} ${k}`).join(", ") || "no stats"} at level ${w.lvl}. Stats from the armor you pick count toward it; the armor's own requirements aren't checked.`;
   renderSkills();
 
   const skName = r.sk ? r.sk.n : "no attack";
   $("#psicon").innerHTML = (w ? itemIcon(w.id) : "") + (r.sk && D.icons[r.sk.id] ? `<img src="data:image/png;base64,${D.icons[r.sk.id]}" alt="" width="32" height="32">` : "");
   $("#psummary").textContent = `Level ${L} ${br} · ${w ? w.name : "no weapon"} · ${skName}${r.sk && r.sk.id !== "basic" ? " " + r.sl : ""}`;
   $("#pdps").textContent = r.ai ? fmt(r.dps) : "0";
+  const c = r.cost;
+  $("#pcost").innerHTML = r.ai ? `<b>Upkeep:</b> up to ~${fmt(c.mesoHr)} mesos/hr while attacking nonstop: ${fmt(c.mpHr)} MP (${fmt(c.mpHr / 150)} Lemons)${c.hpHr ? `, ${fmt(c.hpHr)} HP` : ""}${c.ammoHr ? `, ${fmt(c.ammoHr)} ${esc(c.ammoName)}${c.ammoPrice ? "" : " (crafted, no price)"}` : ""}, attacks and buffs included. Getting hit and walking aren't counted.` : "";
   $("#pdpsnote").textContent = !r.ai ? `Put at least 1 point into ${skName} (and its prerequisites) to use it.` :
     `${fmt(r.perCast)} per cast every ~${r.interval.toFixed(2)} s (attack speed ${r.stage}${r.booster && r.ai.kind === "phys" ? ", booster on" : ""}). About ${fmt(r.eff)} after misses against monsters within 3 levels of you. Single target, before monster defense.`;
   const row = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
@@ -453,10 +510,10 @@ function render(){
     ...(r.faRate ? [row("Final Attack", `${r.faRate}% for ${r.faPct}%`)] : [])
   ].join("") : `<p class="tiny">No damage until the attack skill has points.</p>`;
   $("#pstats").innerHTML = [
-    row("STR / DEX", `${ap.STR} / ${ap.DEX}`), row("INT / LUK", `${ap.INT} / ${ap.LUK}`),
+    row("STR / DEX", `${ap.STR + gt.STR} / ${ap.DEX + gt.DEX}`), row("INT / LUK", `${ap.INT + gt.INT} / ${ap.LUK + gt.LUK}`),
     row("Accuracy", Math.round(r.acc)), row("Avoid", r.avoid),
     cls === "Magician" ? row("Magic", Math.floor(ap.INT/2) + (w?.mad || 0) + r.matkB) : row("Weapon attack", w ? w.pad + (r.atkB ? ` +${r.atkB}` : "") : "–"),
-    row("HP / MP", `${fmt(r.hp)} / ${fmt(r.mp)}`), row("W.DEF / M.DEF", `${r.wdef} / ${r.mdef} <span class="sub">no armor</span>`),
+    row("HP / MP", `${fmt(r.hp)} / ${fmt(r.mp)}`), row("W.DEF / M.DEF", `${r.wdef} / ${r.mdef}${Object.keys(S.gear || {}).length ? "" : ' <span class="sub">no armor</span>'}`),
     row("AP / SP", `${apTotal(L)} / ${spTotal(L)}`)
   ].join("");
 
@@ -482,6 +539,10 @@ $("#pbranch").addEventListener("change", () => { S.branch = $("#pbranch").value;
 $("#pweapon").addEventListener("change", () => { S.weapon = $("#pweapon").value; S.ap = autoAP(W.find(x => x.name === S.weapon)); refresh() });
 $("#pskill").addEventListener("change", () => { S.skill = $("#pskill").value; refresh() });
 $("#pammo").addEventListener("change", () => { S.ammo = $("#pammo").selectedOptions[0].text.replace(/ \(\+\d+\)$/, ""); refresh() });
+$("#pgear").addEventListener("change", e => { const sl = e.target.dataset.slot; if (!sl) return; if (e.target.value) S.gear[sl] = e.target.value; else delete S.gear[sl];
+  if (sl === "Overall" && S.gear.Overall){ delete S.gear.Top; delete S.gear.Bottom } fillGear(); render() });
+$("#pgender").addEventListener("change", () => { S.gender = $("#pgender").value; for (const [k, id] of Object.entries(S.gear)) if (ARMOR[id]?.[5] && S.gender && ARMOR[id][5] !== S.gender) delete S.gear[k]; fillGear(); render() });
+$("#pgearclear").addEventListener("click", () => { S.gear = {}; fillGear(); render() });
 $("#pbuffs").addEventListener("change", () => { S.buffs = $("#pbuffs").checked; render() });
 for (const k of ["STR","DEX","INT","LUK"]) $("#p" + k).addEventListener("input", () => { S.ap[k] = Math.max(4, +$("#p" + k).value || 4); render() });
 $("#pauto").addEventListener("click", () => { S.ap = autoAP(W.find(x => x.name === S.weapon)); refresh() });
@@ -495,6 +556,7 @@ $("#pskills").addEventListener("click", e => {
   if (n) S.sp[id] = n; else delete S.sp[id];
   render();
 });
+$("#pshare").addEventListener("click", () => copyShare($("#pshare"), shareUrl("b", Object.fromEntries(["cls","lvl","branch","fam","weapon","skill","ammo","ap","sp","buffs","gear","gender"].map(k => [k, S[k]])))));
 $("#ppath").addEventListener("click", () => pathFrom(S.cls, S.branch, S.fam, S.lvl));
 $("#psend").addEventListener("click", () => {
   const map = {Magician:"Magician","F/P Wizard":"F/P Wizard","I/L Wizard":"I/L Wizard",Cleric:"Cleric"};
@@ -502,7 +564,7 @@ $("#psend").addEventListener("click", () => {
   $("#cls").value = (S.cls === "Magician" && S.lvl < 30) ? "Magician" : mcls;
   $("#lvl").value = Math.min(MAX_LEVEL, S.lvl);
   $("#dps").value = Math.max(50, S.dps || 50);
-  ACC_FROM_BUILDER = S.acc ?? null; AOE_FROM_BUILDER = S.area?.t > 1 ? S.area : null; DEF_FROM_BUILDER = S.def || null;
+  ACC_FROM_BUILDER = S.acc ?? null; AOE_FROM_BUILDER = S.area?.t > 1 ? S.area : null; DEF_FROM_BUILDER = S.def || null; COST_FROM_BUILDER = S.cost || null;
   document.querySelector('[data-tab="maps"]').click();
   rankMaps();
 });

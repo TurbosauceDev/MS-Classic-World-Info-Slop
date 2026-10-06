@@ -3,7 +3,7 @@
 A single-page planner for **MapleStory Classic World** (Founder's Access Oct 6 2026, Grand Launch Oct 21 2026),
 built from the Closed Online Test 2 (COT2) game-file export. Owner: Danny.
 
-Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Citizenship** · **Crafting**.
+Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Citizenship** · **Crafting** · **Keep or sell**.
 
 ## Ground rules (from Danny)
 - **Classic World only.** Never use modern/retail MapleStory info. 2008-era info only if confirmed to still hold in Classic.
@@ -38,7 +38,8 @@ src/js/15-valuable.js  VALUE: community-picked valuable quests (tier, reward, wh
 src/js/16-guides.js   GUIDE (1-30) + GUIDE2 (2nd-job branches 30-70): meowdb class guides (SP/AP per level, weapons, gear, maps) used by buildAt + Path Planner
 src/js/20-quests.js   Quest Database: filters, header sorting, questline filter, quest + item tooltips (#qtip), rewardCell()
 src/js/40-citizenship.js  Citizenship tab (GRADES + SHOPS consts are from meowdb, not the export)
-src/js/45-crafting.js  Crafting tab: masters + profession quests, craft levels (CRAFT_LV from OSMS dashboard), recipes, raw materials
+src/js/45-crafting.js  Crafting tab: masters + profession quests, craft levels (CRAFT_LV from OSMS dashboard), cheapest leveling, recipes, raw materials
+src/js/47-keep.js     Keep or sell tab: items quests/recipes ask for, with sources
 src/js/50-builder.js  Character Builder: AP, skill build with per-job SP pools, damage calc, greedy auto-build; buildAt() = headless default build
 src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill
 scripts/fetch_osms.sh pin + clone the OSMS export into vendor/
@@ -58,6 +59,8 @@ python3 scripts/build_data.py           # only when data logic or the export cha
 python3 scripts/build_data.py crafting extras  # cheap: re-runs only these steps (crafting; mobatk + potshops) on the existing data.json
 python3 scripts/build.py                # after any src/ change
 node tests/smoke.js                     # needs: npm i -D playwright (or global)
+node tests/golden.js                    # reference numbers (meowdb-published values); run after model changes
+python3 scripts/launch_diff.py <ver>    # a maplestory.io MCW client vs our COT2 data -> docs/launch_diff.md ("1" = COT1, "CBT2" = ours; use it when a launch version appears)
 ```
 Open `dist/index.html` directly in a browser — no server needed. Published artifact (republish `dist/index.html` to this URL after
 every change): https://claude.ai/artifact/Facfj1DVkTNyQyrbHHFQcH
@@ -70,5 +73,5 @@ so committing a rebuilt dist/index.html and pushing updates the site (~1 min). T
   Palette is lavender/purple/grey; keep it. Both light and dark must work; no horizontal scroll at 390px.
 - Explanatory text goes in a collapsible `<details class="howto">` box at the top of a tab, as short bullet lists.
 - Tooltips: one floating `#qtip`; elements with `.qname` (quests), `.ri` (items), `.mname` (maps, `mapLink()`), `.nname` (NPCs, `npcLink()`) or `.mobname` (monsters, `mobLink()`) get it via delegated listeners.
-- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, craft).
+- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, craft, craftlv, qcompact).
 - Plain, game-player language on the page. Say when a number is estimated.

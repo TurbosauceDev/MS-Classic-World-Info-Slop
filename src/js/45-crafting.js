@@ -71,6 +71,31 @@ $("#crlevels").innerHTML = `<thead><tr><th></th>${CRAFT_LV.map((_, i) => `<th cl
   <tr><th>Total craft EXP to reach</th>${cum.map(t => `<td class="num">${fmt(t)}</td>`).join("")}</tr>
   <tr><th>New recipes</th>${CRAFT_LV.map((_, i) => `<td class="num">${R.filter(r => r.lvl === i + 1).length}</td>`).join("")}</tr></tbody>`;
 
+/* cheapest leveling: per craft level, the recipe with the lowest (fees + raw materials at NPC price) per craft EXP */
+$("#crlvdisc").innerHTML = DISC.map((n, i) => `<option value="${i}">${esc(n)}</option>`).join("");
+try { $("#crlvdisc").value = localStorage.getItem("craftlv") || "0" } catch(e) {}
+function renderLeveling(){
+  const di = +$("#crlvdisc").value; try { localStorage.setItem("craftlv", String(di)) } catch(e) {}
+  let total = 0;
+  $("#crlvrows").innerHTML = CRAFT_LV.map(([need, charLv], i) => {
+    const L = i + 1;
+    const opts = R.filter(r => r.d === di && r.lvl <= L && r.exp > 0).map(r => {
+      const s = scratch(r), unpriced = [...s.need.keys()].filter(x => !D.items[x]?.p);
+      const cost = s.mesos + [...s.need].reduce((a, [x, n]) => a + (D.items[x]?.p || 0) * n, 0);
+      return {r, s, cost, per: cost / r.exp, unpriced};
+    }).sort((a, b) => a.per - b.per);
+    const b = opts[0]; if (!b) return `<tr><td class="num">${L}</td><td colspan="4" class="sub">No recipe at this level.</td></tr>`;
+    const k = Math.ceil(need / b.r.exp); total += k * b.cost;
+    return `<tr><td class="num">${L}<div class="sub">char ${charLv ?? "quest"}</div></td>
+      <td><span class="ing">${itemIcon(b.r.id, 1, true)}<span><b>${esc(b.r.it.n)}</b>${b.r.n > 1 ? ` ×${b.r.n}` : ""}<div class="sub">${fmt(b.r.exp)} EXP · ${fmt(b.cost)} mesos each${b.unpriced.length ? ` · <span class="pill p-warn">${b.unpriced.length} unpriced</span>` : ""}</div></span></span></td>
+      <td class="num">${fmt(k)}</td><td class="num">${fmt(k * b.cost)}</td>
+      <td><div class="ings">${[...b.s.need].map(([x, n]) => itemIcon(x, n * k, true)).join("")}</div>${b.s.parts.length ? `<div class="sub">also craft ${b.s.parts.map(([p, m]) => `${fmt(m * k)}× ${esc(p.it.n)}`).join(", ")}</div>` : ""}</td></tr>`;
+  }).join("");
+  $("#crlvtot").textContent = `≈ ${fmt(total)} mesos to craft Lv 10`;
+}
+$("#crlvdisc").addEventListener("change", renderLeveling);
+renderLeveling();
+
 /* recipes */
 const S = {d: -1, type: "", cls: "", max: 10, q: "", sort: "lvl", dir: 1};
 try { Object.assign(S, JSON.parse(localStorage.getItem("craft") || "{}")) } catch(e) {}

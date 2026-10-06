@@ -353,6 +353,43 @@ def step_extras(D):
         if "\t" in s["npc"] or not any(nm in POTIONS for nm, price, _ in s["items"] if price): continue
         if mapid.get(s["map"]): out.append([s["npc"], mapid[s["map"]], s["map"]])
     D["potshops"] = out
+    # every item a quest asks for gets tooltip info + icon (Keep list, quest tooltips)
+    byname = {}
+    for i in ALL_ITEMS: byname.setdefault(i["name"], str(i["id"]))
+    add_items(D, {byname[n] for r in D["quests"] + D["citq"] for n, *_ in r["il"] if n in byname})
+    # shopsell {itemId: [npc, mapName, price]}: cheapest meowdb NPC shop for every item a quest asks for (Keep list)
+    want, sell = {n for r in D["quests"] + D["citq"] for n, *_ in r["il"]}, {}
+    for s in json.load(open(ROOT / "data" / "sources" / "meowdb_shops.json"))["shops"]:
+        if "\t" in s["npc"]: continue
+        for nm, price, _ in s["items"]:
+            if nm in want and price and nm in byname and (byname[nm] not in sell or price < sell[byname[nm]][2]): sell[byname[nm]] = [s["npc"], s["map"], price]
+    D["shopsell"] = sell
+    # timed spawns on launch maps (bosses and anything with a respawn timer over 60 s, which the map ranking leaves out):
+    # [mobId, name, level, hp, exp, mapId, mapName, count, timer s, boss]
+    rows = []
+    for m in a.monsters:
+        for sp in m.get("maps") or []:
+            try: t = float(sp.get("mob_time") or 0)
+            except Exception: t = 0
+            if (t > 60 or m.get("is_boss")) and a.launch_status(sp["id"]) == "Open at launch":
+                rows.append([str(m["id"]), m["name"], m["level"], m["hp"], m["exp"], str(sp["id"]), a.map_name.get(sp["id"], ""), sp.get("count", 1), t, 1 if m.get("is_boss") else 0])
+    D["timed"] = sorted(rows, key=lambda r: (-r[9], r[2], r[1]))
+    # armor for the Character Builder: [id, name, slot, reqLevel, job label, gender, [reqSTR, DEX, INT, LUK], {stat: +n}, shop price]
+    # (stats: STR DEX INT LUK PDD MDD MHP MMP ACC EVA CRT CRD Speed Jump; shop price from meowdb's list, 0 = not sold)
+    price = {}
+    for s in json.load(open(ROOT / "data" / "sources" / "meowdb_shops.json"))["shops"]:
+        if "\t" in s["npc"]: continue
+        for nm, p, _ in s["items"]:
+            if p and (nm not in price or p < price[nm]): price[nm] = p
+    KEEP_ST = {"incSTR": "STR", "incDEX": "DEX", "incINT": "INT", "incLUK": "LUK", "incPDD": "PDD", "incMDD": "MDD", "incMHP": "MHP", "incMMP": "MMP",
+               "incACC": "ACC", "incEVA": "EVA", "incCRT": "CRT", "incCRD": "CRD", "incSpeed": "Speed", "incJump": "Jump"}
+    arm = []
+    for i in ALL_ITEMS:
+        if i.get("category") != "Equipment" or i.get("sub_category") in (None, "Weapon"): continue
+        st = i.get("stats") or {}
+        arm.append([str(i["id"]), i["name"], i["sub_category"], st.get("reqLevel", 0), i.get("req_job_label") or "All", i.get("gender"),
+                    [st.get(k, 0) for k in ("reqSTR", "reqDEX", "reqINT", "reqLUK")], {v: st[k] for k, v in KEEP_ST.items() if st.get(k)}, price.get(i["name"], 0)])
+    D["armor"] = sorted(arm, key=lambda r: (r[2], r[3], r[1]))
 
 def step_minimaps(D):
     """mmaps {mapId: base64}: minimap of every open map, for the map hover card. WebP q80 (~1 MB for 177 maps) when
@@ -432,7 +469,7 @@ def step_launch(D):
     D["latermobs"] = [str(k) for k in later]
     D["latermobnames"] = sorted({mob[str(k)]["name"] for k in later} - ok)
 
-PARTIAL = {"crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D))}
+PARTIAL = {"crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)

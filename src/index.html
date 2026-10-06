@@ -8,7 +8,7 @@
 <div class="wrap">
 <header>
   <h1>MS Classic World Data Slop</h1>
-  <p>Character builder, leveling path, training maps, quest database, citizenship and crafting, computed from the Closed Online Test 2 game files with the client's own accuracy, defense, level-penalty and element formulas. Drop rates aren't in the game files; where the planner needs them it uses an assumption you can adjust.</p>
+  <p>Character builder, leveling path, training maps, quest database, citizenship, crafting and a keep-or-sell list, computed from the Closed Online Test 2 game files with the client's own accuracy, defense, level-penalty and element formulas. Drop rates aren't in the game files; where the planner needs them it uses an assumption you can adjust.</p>
   <div class="src">Data: OSMS Data Explorer COT2 export · EXP table: maplestory.quest · formulas: COT2 client audit</div>
 </header>
 
@@ -19,6 +19,7 @@
   <button role="tab" id="t-quests" aria-selected="false" data-tab="quests">Quest Database</button>
   <button role="tab" id="t-cit" aria-selected="false" data-tab="cit">Citizenship</button>
   <button role="tab" id="t-craft" aria-selected="false" data-tab="craft">Crafting</button>
+  <button role="tab" id="t-keep" aria-selected="false" data-tab="keep">Keep or sell</button>
 </nav>
 
 <section id="plan">
@@ -34,13 +35,15 @@
           <li><b>Attack speed:</b> meowdb's measured times per weapon speed (e.g. speed 6 = 810 ms, 4 = 720 ms); every Magician spell takes 810 ms whatever the weapon. Booster moves your weapon 2 speeds.</li>
           <li><b>Final Attack</b> is counted only when it helps: each proc plays its own attack (~0.6 s), so on one monster it can cost damage. Hunter's fires 3 arrows. Axe Mastery's bleed and Poison Breath's poison add their damage over time.</li>
           <li><b>HP and MP</b> follow meowdb's measured gains per level and per job advancement, plus Max HP / Max MP Increase.</li>
+          <li><b>Armor</b> (optional): pick pieces per slot; their stats count everywhere on this tab. <b>Upkeep</b> = potions and ammo per hour while attacking nonstop, at shop prices.</li>
+          <li><b>Copy link</b> makes a link that opens this exact build.</li>
           <li><b>Auto build</b> spends every point: first where it adds the most damage after misses, then passives, then buffs. Skills follow the game's prerequisites.</li>
         </ul>
       </div>
       <div>
         <h4>Not counted or estimated</h4>
         <ul>
-          <li>No armor, scrolls or party buffs. W.DEF is your STR's share plus skills only.</li>
+          <li>Scrolls and party buffs. Without armor picked, W.DEF is your STR's share plus skills only.</li>
           <li>3rd job skills, since 3rd job isn't in the launch. Once every 2nd job skill is maxed, extra SP shows as spare.</li>
           
           <li>Final Attack's own attack time is fitted to meowdb's Fighter numbers (0.88 × your weapon's attack time).</li>
@@ -83,6 +86,14 @@
       </div>
 
       <div class="card">
+        <div class="cardhead"><h3>Armor</h3><span id="pgearsum" class="pill p-hot"></span></div>
+        <div class="row2"><label class="lab">Character<select id="pgender"><option value="">Any gender</option><option value="male">Male</option><option value="female">Female</option></select></label>
+          <div class="lab"><span>&nbsp;</span><button class="btn" id="pgearclear">Remove all armor</button></div></div>
+        <div class="geargrid" id="pgear"></div>
+        <p class="tiny">Armor stats count toward damage, accuracy, avoid, defense, HP/MP and weapon requirements. Where to get it: shop price (meowdb), craft, quest reward, or drop / Free Market. The Path Planner's character wears none.</p>
+      </div>
+
+      <div class="card">
         <div class="cardhead"><h3>Skill build</h3><span id="pspleft" class="pill p-good"></span></div>
         <div class="btnrow" style="margin-top:0">
           <button class="btn" id="pspauto">Auto: most damage for this attack</button>
@@ -98,8 +109,10 @@
         <div class="psum"><span id="psicon"></span><div class="tiny" id="psummary"></div></div>
         <div class="big"><span id="pdps">–</span><small> damage / sec</small></div>
         <div class="tiny" id="pdpsnote"></div>
+        <div class="tiny" id="pcost"></div>
         <div class="btnrow"><button class="btn primary" id="psend">Use this in "Where to train"</button>
-          <button class="btn primary" id="ppath">Plan a path for this character</button></div>
+          <button class="btn primary" id="ppath">Plan a path for this character</button>
+          <button class="btn" id="pshare">Copy link to this build</button></div>
       </div>
       <div class="card">
         <h3>Per attack</h3>
@@ -143,7 +156,9 @@
           <li><b>Valuable quests</b> (Sauna Robe, Icarus Cape, Work Gloves...) are marked with their rating and why players rate it. The ones the plan can't time (items with no known source, or skipped by your mode) appear as side tasks at the level their chain starts. Picks come from community guides; see the Quest Database.</li>
           <li>Quests more than 5 levels under your current level count as already done or skipped. Quests with no EXP are skipped unless a later quest needs them.</li>
           <li>It stays on its current map unless another one is more than 10% better, so you don't hop maps every level.</li>
-          <li>Grind rows show the map's <b>danger</b> for your character (one touch as a share of Max HP, no armor) and the <b>portals to potions</b>.</li>
+          <li>Grind rows show the map's <b>danger</b> for your character (one hit as a share of Max HP, no armor, and how often it lands) and the <b>portals to potions</b>.</li>
+          <li><b>Mesos:</b> weapons at NPC shop prices plus potions and ammo while grinding, against quest mesos. Monster meso drops aren't in the game files, so the real balance is better than shown.</li>
+          <li><b>Copy link</b> makes a link that opens this exact plan.</li>
           <li><b>Party:</b> grinding uses your share of the map plus the party EXP bonus (see Where to train). Quests stay solo. The Kerning Party Quest shows up at 21 as an optional step.</li>
           <li>Goes up to the level-100 cap with 2nd job (3rd job isn't at launch). EXP per level above 49 is meowdb's historical table, not yet confirmed in Classic.</li>
         </ul>
@@ -190,6 +205,7 @@
     <label>Pace<select id="xpace"><option value="1">Perfect play (model)</option><option value="1.5">Average player (1.5×)</option><option value="2">Relaxed (2×)</option></select></label>
   </div>
   <div class="grid2" id="xsum"></div>
+  <div class="btnrow"><button class="btn" id="xshare">Copy link to this plan</button></div>
   <p class="note" id="xdonenote"></p>
   <div class="tblwrap"><table>
     <thead><tr><th class="num">#</th><th class="num">Level</th><th>What to do</th><th>Where</th><th class="num">Reward value</th><th class="num">Time</th><th class="num">Total</th></tr></thead>
@@ -214,7 +230,7 @@
           <li>Score = map EXP ÷ total time, capped at what one player can kill per 7.56-second respawn with 75% of spawns alive.</li>
           <li>Maps need 8+ monsters; bosses are left out. Hit below 90% is flagged.</li>
           <li><b>Area attacks by default:</b> Slash Blast, Arrow Bomb, Thunder Bolt, Poison Breath (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, 75% alive: an estimate. Iron Arrow loses 20% per extra monster. Double Shot and Holy Arrow split a fixed number of arrows, so they count as single target. Thieves, 1st job Bowmen and 1st job Magicians have no area attack.</li>
-          <li><b>Danger:</b> one hit from the map's hardest hitter as a share of your Max HP: its touch against your W.DEF, or for Tauromacis and Taurospear (the only launch monsters with a magic attack) the magic attack against your M.DEF (meowdb's labels: under 10% Safe, 10–24% Caution, 25–49% Danger, 50%+ Lethal). Armor isn't counted, so it reads a little high.</li>
+          <li><b>Danger:</b> one hit from the map's hardest hitter as a share of your Max HP: its touch against your W.DEF, or for Tauromacis and Taurospear (the only launch monsters with a magic attack) the magic attack against your M.DEF (meowdb's labels: under 10% Safe, 10–24% Caution, 25–49% Danger, 50%+ Lethal). Armor isn't counted, so it reads a little high. "Hits you" is the chance its attack lands against your avoid (meowdb's formula).</li>
           <li><b>To potions:</b> portals to the nearest NPC selling potions (meowdb's shop list). A far refill eats into the real EXP/hr.</li>
           <li><b>Party:</b> your share of the map plus the measured party bonus (+10/20/30% at 2/3/4+). Spawns grow 5% per extra player up to 100% at 6 (meowdb: not fully confirmed). Assumes equal players.</li>
         </ul>
@@ -250,6 +266,12 @@
     <thead><tr><th>#</th><th>Map</th><th>Monsters</th><th class="num">Mobs</th><th class="num">Avg lvl</th><th class="num">Hit</th><th>Danger</th><th>To potions</th><th>Relative</th><th class="num">Est. EXP/hr</th><th class="num">Hrs / level</th></tr></thead>
     <tbody id="maprows"></tbody>
   </table></div>
+  <h2>Bosses and timed spawns</h2>
+  <p class="note">Monsters on a respawn timer instead of the normal 7.56 s cycle, on maps open at launch. The ranking above leaves them out. A timer starts when the monster dies and the spawn waits for the next 7.56 s tick (meowdb spawn guide). Mushmom's map data says 60 minutes, but two player reports put it near 90 (meowdb). Crimson Balrog has no spawn on a launch map, King Slime is only in the Kerning Party Quest and Rotten Mushmom is in Forgotten Hollow.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Monster</th><th class="num">Lv</th><th class="num">HP</th><th class="num">EXP</th><th>Map</th><th class="num">Count</th><th class="num">Respawn</th></tr></thead>
+    <tbody id="timedrows"></tbody>
+  </table></div>
 </section>
 
 <section id="quests" hidden>
@@ -282,6 +304,7 @@
     <label>Search<input id="qsearch" type="search" placeholder="quest, NPC or item"></label>
     <button class="btn tgl" id="qeq" aria-pressed="false">Equipment rewards only</button>
     <button class="btn tgl" id="qval" aria-pressed="false">Valuable quests only</button>
+    <button class="btn tgl" id="qcompact" aria-pressed="false">Fewer columns</button>
     <span class="pill p-hot" id="qcount" style="align-self:center"></span>
   </div>
   <div class="chainbar" id="qchainbar" hidden></div>
@@ -370,6 +393,34 @@
   <div class="grid2" id="cshops"></div>
 </section>
 
+<section id="keep" hidden>
+  <details class="howto" open>
+    <summary>What to keep</summary>
+    <div class="howgrid">
+      <div><h4>The list</h4><ul>
+        <li>Every item a launch quest (Citizenship included) or a crafting recipe asks for, so you don't vendor it by accident.</li>
+        <li><b>Keep</b> = how many one-time quests want in total; repeatable (weekly) asks are counted separately. Recipes vary, so they're listed, not counted.</li>
+        <li><b>From level</b> = the lowest quest level that asks for it.</li>
+        <li>Quest items an NPC won't buy (letters, quest-only drops) are left out: you can't vendor them anyway.</li>
+      </ul></div>
+      <div><h4>Where another comes from</h4><ul>
+        <li>Monster sources come from the quest data, item names and meowdb's grind-maps guide; shop prices from meowdb's shop list; recipes from the game files.</li>
+        <li><b>No known source</b> items are listed first: hard to replace, so keep them. Drop tables aren't in the game files.</li>
+        <li><b>NPC pays</b> is the sell price. Players often pay more for quest and crafting items.</li>
+      </ul></div>
+    </div>
+  </details>
+  <div class="controls">
+    <label>Search<input id="ksearch" type="search" placeholder="item"></label>
+    <button class="btn tgl" id="konly" aria-pressed="false">No known source only</button>
+    <span class="pill p-hot" id="kcount" style="align-self:center"></span>
+  </div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Item</th><th class="num">Keep</th><th>Wanted by</th><th class="num">From level</th><th class="num">NPC pays</th><th>Where to get more</th></tr></thead>
+    <tbody id="krows"></tbody>
+  </table></div>
+</section>
+
 <section id="craft" hidden>
   <details class="howto" open>
     <summary>How crafting works</summary>
@@ -411,6 +462,14 @@
   <h2>Craft levels</h2>
   <p class="note">Same table for every profession. Lv 1 comes from the apprentice quest.</p>
   <div class="tblwrap"><table class="mini" id="crlevels"></table></div>
+
+  <h2>Cheapest way to level a profession</h2>
+  <p class="note">For each craft level, the recipe with the lowest cost per craft EXP: its fee plus the fees of parts you make on the way, plus raw materials at what an NPC pays for them (what you give up by not selling them; an estimate). Materials with no NPC price count as free and are flagged. Crafts needed = craft EXP for that level ÷ the recipe's EXP. Whether low recipes keep giving full EXP at higher craft levels isn't in the game files.</p>
+  <div class="controls" style="margin-top:12px"><label>Profession<select id="crlvdisc"></select></label><span class="pill p-hot" id="crlvtot" style="align-self:center"></span></div>
+  <div class="tblwrap"><table>
+    <thead><tr><th class="num">Craft Lv</th><th>Craft this</th><th class="num">Crafts</th><th class="num">Mesos</th><th>Materials (from scratch)</th></tr></thead>
+    <tbody id="crlvrows"></tbody>
+  </table></div>
 
   <h2 id="crrecipes">Recipes</h2>
   <p class="note">"From scratch" breaks crafted parts down to raw materials and adds their mesos. Parts with several recipes use the lowest-level one.</p>

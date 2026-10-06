@@ -67,6 +67,16 @@ const path = require("path");
   check(await p.$$eval("#crrows tr", r => r.length) > 0, "Leatherworking Thief filter");
   await p.click("#crmats .crfind >> nth=0");
   check(await p.$$eval("#crrows tr", r => r.length) > 0 && !/NaN|undefined/.test(await p.textContent("#craft")), "material click filters recipes");
+  // Keep or sell, armor, share links, crafting leveling, bosses, quest compact toggle
+  await p.click("#t-keep"); check(/items/.test(await p.textContent("#kcount")) && await p.$$eval("#krows tr", r => r.length) > 50, "keep list renders");
+  await p.click("#konly"); check(await p.$$eval("#krows tr", r => r.length) > 0, "keep list: no-source filter");
+  await p.click("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to craft Lv 10/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 10, "crafting leveling plan");
+  await p.click("#t-maps"); check(await p.$$eval("#timedrows tr", r => r.length) > 10 && /Mushmom/.test(await p.textContent("#timedrows")), "bosses and timed spawns");
+  await p.click("#t-quests"); await p.click("#qcompact"); await p.click("#qcompact"); check(await p.$$eval("#qrows tr", r => r.length) > 0, "quest compact toggle");
+  await p.click("#t-plan"); const opt = await p.$eval('#pgear select[data-slot="Hat"]', s => s.options[1]?.value);
+  if (opt) { await p.selectOption('#pgear select[data-slot="Hat"]', opt); check(/1 piece/.test(await p.textContent("#pgearsum")), "armor slot equips"); await p.click("#pgearclear") }
+  check(/mesos\/hr/.test(await p.textContent("#pcost")), "builder upkeep shown");
+  await p.click("#pshare"); await p.waitForTimeout(200); check(!/NaN|undefined/.test(await p.textContent("#plan")), "copy build link");
   console.log(errs.length ? "\n" + errs.join("\n") : "\nall good");
   await b.close();
   process.exit(errs.length ? 1 : 0);

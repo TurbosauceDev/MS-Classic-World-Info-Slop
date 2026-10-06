@@ -19,6 +19,7 @@ const MAXL = MAX_LEVEL;   // level cap (EXP above 49 is meowdb's historical refe
 let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true, drop:0.3, aoe:true, guide:"all", party:1};
 const BELOW = 5;          // quests more than 5 levels under your starting level count as done or skipped
 try { const s = JSON.parse(localStorage.getItem("path") || "null"); if (s && s.cls) X = Object.assign(X, s) } catch(e) {}
+if (HASH.p && HASH.p.cls) X = Object.assign(X, HASH.p);   // shared link
 if (typeof X.guide !== "string") X.guide = "all";   // class guides: "all" = build + maps, "build", "" = off
 
 // area attack of the character at a level, for mapRates / aoeHits (null = single target)
@@ -172,7 +173,13 @@ function plan(mode = X.mode){
   // collected here saves 1/drop kills of its monster, worth (that kill time × best EXP/s − the kill's own EXP).
   // a new weapon (the default character's best weapon changes): its own step with where to get it
   let wpn = null;
-  const gearCheck = () => { const c = charAt(L); if (c.weapon && c.weapon !== wpn){ steps.push({k:"gear", L, weapon: c.weapon, wid: c.wid, first: !wpn, t}); wpn = c.weapon } };
+  // meso budget: weapons bought (cheapest NPC shop price; free, crafted, quest and dropped weapons count 0), potion and ammo
+  // upkeep while grinding (the character's cost/hr × the map's attacking share), and quest mesos earned. Monster meso drops
+  // aren't in the game files, so they're not counted.
+  let spend = 0, upkeep = 0, earned = 0;
+  const gearCheck = () => { const c = charAt(L); if (c.weapon && c.weapon !== wpn){
+    const shop = D.wsrc[c.weapon]?.shop, price = GUIDE_FREE[c.weapon] || !shop ? 0 : Math.min(...shop.map(x => x[3]));
+    spend += price; steps.push({k:"gear", L, weapon: c.weapon, wid: c.wid, first: !wpn, t, price, spent: spend + upkeep, earned}); wpn = c.weapon } };
   // moving between maps is its own step, like job advancements
   const pushTravel = lg => { const s = lg.sec * X.pace; t += s; steps.push({k:"travel", L, ...lg, sec: s, t}) };
   // a quest: travel to its giver, the quest itself (talk + kills), then travel to the kill maps and back to turn it in
@@ -180,7 +187,7 @@ function plan(mode = X.mode){
     const legs = c.legs || [], first = legs[0]?.why === "npc" ? legs[0] : null;
     if (first) pushTravel(first);
     const sec = (c.sec - (c.travel || 0)) * X.pace; t += sec; exp += c.exp; qExp += c.exp;
-    const st = {k:"quest", L, r, c, sec, t, vs}; steps.push(st);
+    const st = {k:"quest", L, r, c, sec, t, vs}; steps.push(st); earned += r.mesos || 0;
     for (const lg of legs) if (lg !== first) pushTravel(lg);
     return st;
   };
@@ -204,6 +211,7 @@ function plan(mode = X.mode){
     if (cur){ const c = S.find(x => x.m.id === cur.id); if (c && c.eff >= STICK * best.eff) best = c }
     if (best.tr?.sec) pushTravel({from: here, to: best.m.id, sec: best.tr.sec, why: "grind"});
     const sec = E / best.m.rate * X.pace; t += sec; gExp += E; exp = 0;
+    upkeep += (ch.cost?.mesoHr || 0) * E / best.m.rate * (best.m.att ?? 1) / 3600;
     for (const [name, n] of best.got) bag.set(name, (bag.get(name) || 0) + n);
     const last = steps[steps.length - 1];
     let st = last;
@@ -288,7 +296,7 @@ function plan(mode = X.mode){
     npc = null;
   }
   const mesos = steps.filter(s => s.k === "quest").reduce((a, s) => a + s.r.mesos, 0), items = steps.filter(s => s.k === "quest").reduce((a, s) => a + itemValue(s.r), 0);
-  return {steps, L, t, qExp, gExp, done, mesos, items};
+  return {steps, L, t, qExp, gExp, done, mesos, items, spend, upkeep};
 }
 
 const hm = s => s < 3600 ? `${Math.max(1, Math.round(s / 60))} min` : `${(s / 3600).toFixed(s < 36000 ? 1 : 0)} h`;
@@ -327,6 +335,7 @@ function render(){
     [stop ? `Stops at level ${stop.L}` : `About ${hm(P.t)} to level ${X.goal}`,
       stop ? (stop.k === "stop" ? `Quests that can be timed run out at level ${stop.L}${X.goal > stop.L ? `, ${X.goal - stop.L} short of your goal. Switch to "Quests + grinding" to finish.` : "."}` : `No training map fits level ${stop.L}.`)
            : `From level ${X.cur} at ${X.pace === 1 ? "perfect-play" : X.pace === 2 ? "relaxed" : "average"} pace. Estimate.`],
+    [`Mesos: about ${fmt(P.spend + P.upkeep)} spent, ${fmt(P.mesos)} from quests`, `${fmt(P.spend)} on weapons (NPC shop prices) and up to ${fmt(P.upkeep)} on potions and ammo while grinding (MP, buffs and arrows/stars at shop prices; getting hit isn't counted). Monster meso drops and selling loot aren't in the game files, so they're not counted.`],
     ...(X.mode === "rewards" ? [[`${fmt(P.mesos)} mesos + items worth ≈ ${fmt(P.items)} to NPCs`, `From ${nq} quests, ${S.filter(s => s.k === "quest" && vTier(s.r) === 1).length} of them rated Must do. NPC sell value is a floor: rated items (Sauna Robe, scrolls) sell for far more to players.`]] : []),
     [`${nq} quests · ${maps} training map${maps === 1 ? "" : "s"}${nv ? ` · ${nv} valuable side quests` : ""}`, tot ? `${Math.round(100 * P.qExp / tot)}% of the EXP from quests (including the kills they ask for), ${Math.round(100 * P.gExp / tot)}% from grinding.` : ""],
     ...(G && !stop && !G.steps.some(s => s.k === "nomap") && nq ? [[`Grinding only: ${hm(G.t)}`, P.t > G.t
@@ -361,6 +370,7 @@ function render(){
       const ld = (src.drops || []).filter(([m]) => MOBID[m] && !D.latermobs.includes(MOBID[m]));
       if (ld.length) how.push(`Drops from ${ld.slice(0, 5).map(([m, lv]) => `${mobLink(m)} <span class="sub">Lv ${lv}</span>`).join(", ")}${src.dropsFrom === "msea" ? ` <span class="sub">(old MapleSEA drop list, likely in Classic; meowdb)</span>` : ` <span class="sub">(reported by players on meowdb)</span>`}`);
       if (GUIDE_FREE[s.weapon]) how.push(esc(GUIDE_FREE[s.weapon]));
+      how.push(`<span class="budget">${s.price ? `Costs ${fmt(s.price)} mesos. ` : ""}By now: about ${fmt(s.spent)} mesos spent on weapons, potions and ammo; ${fmt(s.earned)} earned from quests (monster drops not counted).</span>`);
       if (!how.length) how.push(`No known source yet (not sold, crafted, a quest reward or a reported drop). Keep your current weapon until you find one.`);
       return `${tr(s, "grow")}<td class="num">${chk(s, n)}</td><td class="num">${s.L}</td>
       <td><div class="gear">${s.wid ? itemIcon(s.wid, 1, true) : ""}<b>${s.first ? "Weapon" : "New weapon"}: ${esc(s.weapon)}</b></div><div class="sub how">${how.join("<br>")}</div></td>
@@ -415,6 +425,7 @@ $("#xfam").addEventListener("change", () => { X.fam = $("#xfam").value; render()
 $("#xisland").addEventListener("change", () => { X.island = $("#xisland").checked; render() });
 $("#xval").addEventListener("change", () => { X.val = $("#xval").checked; render() });
 $("#xaoe").addEventListener("change", () => { X.aoe = !!$("#xaoe").value; render() });
+$("#xshare").addEventListener("click", () => copyShare($("#xshare"), shareUrl("p", X)));
 $("#xparty").addEventListener("change", () => { X.party = +$("#xparty").value || 1; render() });
 $("#xguide").addEventListener("change", () => { X.guide = $("#xguide").value; render() });
 $("#xfast").addEventListener("change", () => { X.fast = $("#xfast").checked; render() });
