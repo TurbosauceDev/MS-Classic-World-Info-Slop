@@ -69,7 +69,13 @@ const path = require("path");
   check(await p.$$eval("#crrows tr", r => r.length) > 0 && !/NaN|undefined/.test(await p.textContent("#craft")), "material click filters recipes");
   // Keep or sell, armor, share links, crafting leveling, bosses, quest compact toggle
   await p.click("#t-keep"); check(/items/.test(await p.textContent("#kcount")) && await p.$$eval("#krows tr", r => r.length) > 50, "keep list renders");
-  await p.click("#konly"); check(await p.$$eval("#krows tr", r => r.length) > 0, "keep list: no-source filter");
+  await p.click("#konly"); check(await p.$$eval("#krows tr", r => r.length) > 0, "keep list: no-source filter"); await p.click("#konly");
+  { const tr = await p.$("#krows tr:has(td:nth-child(2) .p-hot)"); const before = await tr.$eval("td:nth-child(2)", e => e.textContent);
+    await (await tr.$(".khave")).fill("999"); const after = await tr.$eval("td:nth-child(2)", e => e.textContent);
+    check(/Keep \d/.test(before) && /Enough|Repeatable|If you craft/.test(after), "keep list: have count changes the verdict", [before, after]);
+    await (await tr.$(".khave")).fill(""); }
+  await p.selectOption("#kby", "c"); await p.selectOption("#kdisc", { index: 1 }); check(await p.$$eval("#krows tr", r => r.length) > 0, "keep list: crafting + profession filter");
+  await p.selectOption("#kby", ""); await p.selectOption("#kdisc", "");
   await p.click("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 6, "credits tab renders");
   await p.click("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to craft Lv 10/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 10, "crafting leveling plan");
   await p.click("#t-maps"); check(await p.$$eval("#timedrows tr", r => r.length) > 10 && /Mushmom/.test(await p.textContent("#timedrows")), "bosses and timed spawns");

@@ -371,6 +371,14 @@ def step_extras(D):
                  for k, v in rep.items() if k in D["mobs"] and v["summary"]["trustedCount"]}
     ratios = sorted(v[0] / D["mobs"][k][1] for k, v in D["meso"].items() if D["mobs"][k][1] > 1)
     D["mesok"] = round(ratios[len(ratios) // 2], 2)
+    # drops {itemId: [[mobId, net votes], ...]}: items players report and confirm on meowdb monster pages (net votes >= 1),
+    # launch and later monsters alike (the page marks later ones). Drop rates are server-side, so there are no rates.
+    dr = {}
+    for mid, rows in json.load(open(ROOT / "data" / "sources" / "meowdb_drops.json"))["mobs"].items():
+        if mid not in D["mobs"]: continue
+        for iid, _, up, down in rows:
+            if up - down >= 1: dr.setdefault(str(iid), []).append([mid, up - down])
+    D["drops"] = {k: sorted(v, key=lambda x: -x[1]) for k, v in dr.items()}
     # potval {itemId: cheapest meowdb shop price} for HP/MP consumables a quest hands out (counted as potions you don't buy)
     price = {}
     for s_ in json.load(open(ROOT / "data" / "sources" / "meowdb_shops.json"))["shops"]:

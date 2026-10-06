@@ -163,7 +163,12 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   spear/polearm; overall replaces top + bottom. Planner/Where to train default characters wear none.
 - Keep or sell tab: items launch quests (minus Event) or recipes ask for; quest-handed items (info.start) and unsellable items
   (no NPC price) left out unless a recipe uses them. Sources: quest data monster, crafting src, meowdb shops (shopsell), quest
-  rewards, recipes.
+  rewards, recipes, and D.drops (2026-10-06): meowdb community drop lists, `meowdb.com/msclassic/api/drops?monsterId=<game mob
+  id>` (headless Chromium, Cloudflare), saved in data/sources/meowdb_drops.json; kept when upvotes − downvotes ≥ 1 (votes shown
+  as "N players"). Also used by Crafting raw materials. Verdict per item: Keep all (no known source) > Keep N (one-time quests
+  still open − "have"; Must do/Recommended quest first) > If you craft (recipes only) > Repeatable (weekly asks only) > Enough
+  (have ≥ wanted) > Sell (wanting quests all done). "Have" = localStorage keephave {item id: n}; UI state = keep. Done quests =
+  the Path Planner's pathdone "q<id>" ticks (Citizenship quests aren't in the planner, so they always count).
 - Crafting leveling plan: per craft level, min (scratch fees + raw × NPC price) / craft EXP among recipes ≤ that level; crafts =
   ceil(level EXP / recipe EXP). Unpriced raws count 0 (flagged). Whether low recipes keep full EXP isn't known.
 - Share links: #b= (builder S subset) / #p= (planner X) base64url JSON override localStorage; outside http(s) or inside the

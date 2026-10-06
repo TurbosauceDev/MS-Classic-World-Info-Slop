@@ -401,24 +401,30 @@
     <div class="howgrid">
       <div><h4>The list</h4><ul>
         <li>Every item a launch quest (Citizenship included) or a crafting recipe asks for, so you don't vendor it by accident.</li>
-        <li><b>Keep</b> = how many one-time quests want in total; repeatable (weekly) asks are counted separately. Recipes vary, so they're listed, not counted.</li>
-        <li><b>From level</b> = the lowest quest level that asks for it.</li>
+        <li><b>Verdict:</b> <b>Keep all</b> = nothing known drops or sells it, so you can't easily replace it. <b>Keep N</b> = what the one-time quests still want, minus what you have. <b>Enough</b> = you have what quests want; sell extras unless you craft. <b>Repeatable</b> = only weekly quests want it. <b>If you craft</b> = only recipes use it.</li>
+        <li><b>Have:</b> type how many you're holding; it's saved in this browser. Quests you tick done in the Path Planner stop counting.</li>
+        <li>A quest rated Must do or Recommended is marked: keep its items first.</li>
         <li>Quest items an NPC won't buy (letters, quest-only drops) are left out: you can't vendor them anyway.</li>
       </ul></div>
       <div><h4>Where another comes from</h4><ul>
-        <li>Monster sources come from the quest data, item names and meowdb's grind-maps guide; shop prices from meowdb's shop list; recipes from the game files.</li>
-        <li><b>No known source</b> items are listed first: hard to replace, so keep them. Drop tables aren't in the game files.</li>
+        <li><b>Drops:</b> the monster a quest names, monsters players report and confirm on meowdb (votes shown), and meowdb's grind guide. Drop rates aren't known: the server decides them.</li>
+        <li><b>Shop</b> prices from meowdb's shop list, <b>quest rewards</b> and <b>crafting</b> recipes from the game files.</li>
         <li><b>NPC pays</b> is the sell price. Players often pay more for quest and crafting items.</li>
       </ul></div>
     </div>
   </details>
   <div class="controls">
     <label>Search<input id="ksearch" type="search" placeholder="item"></label>
+    <label>Wanted by<select id="kby"><option value="">Quests and crafting</option><option value="q">Quests</option><option value="c">Crafting</option></select></label>
+    <label>Profession<select id="kdisc"><option value="">Any</option></select></label>
+    <label>Sort<select id="ksort"><option value="">What to keep first</option><option value="lvl">Quest level</option><option value="price">NPC price</option><option value="name">Name</option></select></label>
+    <button class="btn tgl" id="kneed" aria-pressed="false">Still needed only</button>
     <button class="btn tgl" id="konly" aria-pressed="false">No known source only</button>
+    <button class="btn tgl" id="kdone" aria-pressed="true">Skip quests I've done</button>
     <span class="pill p-hot" id="kcount" style="align-self:center"></span>
   </div>
   <div class="tblwrap"><table>
-    <thead><tr><th>Item</th><th class="num">Keep</th><th>Wanted by</th><th class="num">From level</th><th class="num">NPC pays</th><th>Where to get more</th></tr></thead>
+    <thead><tr><th>Item</th><th>Verdict</th><th class="num">Have</th><th>Wanted by</th><th class="num">From level</th><th class="num">NPC pays</th><th>Where to get more</th></tr></thead>
     <tbody id="krows"></tbody>
   </table></div>
 </section>
@@ -452,7 +458,7 @@
         <li><b>Class guides, levels 1-30:</b> <a href="https://meowdb.com/msclassic/guides/beginners-guide-first-steps-in-maple-world" target="_blank" rel="noopener">Beginner</a>, <a href="https://meowdb.com/msclassic/guides/warrior-class-guide" target="_blank" rel="noopener">Warrior</a>, <a href="https://meowdb.com/msclassic/guides/magician-class-guide" target="_blank" rel="noopener">Magician</a>, <a href="https://meowdb.com/msclassic/guides/bowman-class-guide" target="_blank" rel="noopener">Bowman</a>, <a href="https://meowdb.com/msclassic/guides/thief-class-guide" target="_blank" rel="noopener">Thief</a>. These set the Path Planner's skill and stat order, weapons, gear and training maps.</li>
         <li><b>2nd-job guides, levels 30-70:</b> <a href="https://meowdb.com/msclassic/guides/fighter-class-guide" target="_blank" rel="noopener">Fighter</a>, <a href="https://meowdb.com/msclassic/guides/page-class-guide" target="_blank" rel="noopener">Page</a>, <a href="https://meowdb.com/msclassic/guides/spearman-class-guide" target="_blank" rel="noopener">Spearman</a>, <a href="https://meowdb.com/msclassic/guides/hunter-class-guide" target="_blank" rel="noopener">Hunter</a>, <a href="https://meowdb.com/msclassic/guides/crossbowman-class-guide" target="_blank" rel="noopener">Crossbowman</a>, <a href="https://meowdb.com/msclassic/guides/assassin-class-guide" target="_blank" rel="noopener">Assassin</a>, <a href="https://meowdb.com/msclassic/guides/bandit-class-guide" target="_blank" rel="noopener">Bandit</a>, <a href="https://meowdb.com/msclassic/guides/fp-wizard-class-guide" target="_blank" rel="noopener">F/P Wizard</a>, <a href="https://meowdb.com/msclassic/guides/il-wizard-class-guide" target="_blank" rel="noopener">I/L Wizard</a>, <a href="https://meowdb.com/msclassic/guides/cleric-class-guide" target="_blank" rel="noopener">Cleric</a>.</li>
         <li><b>Mechanics:</b> <a href="https://meowdb.com/msclassic/guides/explaining-the-damage-formula" target="_blank" rel="noopener">damage formula</a>, <a href="https://meowdb.com/msclassic/guides/attack-speed-and-animation-times" target="_blank" rel="noopener">attack speed</a>, <a href="https://meowdb.com/msclassic/guides/hp-mp-gain-explained" target="_blank" rel="noopener">HP/MP gain</a>, <a href="https://meowdb.com/msclassic/guides/exp-table-level-1-to-100" target="_blank" rel="noopener">EXP table</a>, <a href="https://meowdb.com/msclassic/guides/spawn-engine-respawn-and-map-capacity" target="_blank" rel="noopener">spawn engine</a>, <a href="https://meowdb.com/msclassic/guides/best-grind-maps-every-level" target="_blank" rel="noopener">best grind maps</a>, <a href="https://meowdb.com/msclassic/guides/class-dps-rankings" target="_blank" rel="noopener">class DPS rankings</a>, <a href="https://meowdb.com/msclassic/guides/speed-jump-and-movement" target="_blank" rel="noopener">movement speed</a>, <a href="https://meowdb.com/msclassic/guides/weapon-reach" target="_blank" rel="noopener">weapon reach</a>, <a href="https://meowdb.com/msclassic/guides/kerning-city-party-quest-kpq-guide" target="_blank" rel="noopener">KPQ</a>, <a href="https://meowdb.com/msclassic/guides/maplestory-classic-glossary" target="_blank" rel="noopener">glossary</a>, <a href="https://meowdb.com/msclassic/guides/maplestory-classic-worlds-release-date" target="_blank" rel="noopener">release date / launch scope</a>. These drive the damage model, attack times, HP/MP, the level cap, party bonus and boss timers, and the reference tests.</li>
-        <li><b>Lists:</b> <a href="https://meowdb.com/msclassic/npc-shops" target="_blank" rel="noopener">NPC shops</a> (prices, potion shops, upkeep), weapon and material drops, player reports of mesos per kill, and <a href="https://meowdb.com/msclassic/citizenship" target="_blank" rel="noopener">citizenship</a> grades and shops.</li>
+        <li><b>Lists:</b> <a href="https://meowdb.com/msclassic/npc-shops" target="_blank" rel="noopener">NPC shops</a> (prices, potion shops, upkeep), weapon and material drops, player-confirmed monster drops and mesos per kill, and <a href="https://meowdb.com/msclassic/citizenship" target="_blank" rel="noopener">citizenship</a> grades and shops.</li>
       </ul></div>
 
     <div class="card"><div class="cardhead"><h3>3. maplestory.quest</h3><span class="pill p-hot">client data</span></div>
