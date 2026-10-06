@@ -3,7 +3,7 @@
 A single-page planner for **MapleStory Classic World** (Founder's Access Oct 6 2026, Grand Launch Oct 21 2026),
 built from the Closed Online Test 2 (COT2) game-file export. Owner: Danny.
 
-Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Citizenship**.
+Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Citizenship** · **Crafting**.
 
 ## Ground rules (from Danny)
 - **Classic World only.** Never use modern/retail MapleStory info. 2008-era info only if confirmed to still hold in Classic.
@@ -36,6 +36,7 @@ src/js/10-maps.js     client formulas (hitProb, lvlPen, classAcc), mobKill, mapR
 src/js/15-valuable.js  VALUE: community-picked valuable quests (tier, reward, why, sources) — not game data
 src/js/20-quests.js   Quest Database: filters, header sorting, questline filter, quest + item tooltips (#qtip), rewardCell()
 src/js/40-citizenship.js  Citizenship tab (GRADES + SHOPS consts are from meowdb, not the export)
+src/js/45-crafting.js  Crafting tab: masters + profession quests, craft levels (CRAFT_LV from OSMS dashboard), recipes, raw materials
 src/js/50-builder.js  Character Builder: AP, skill build with per-job SP pools, damage calc, greedy auto-build; buildAt() = headless default build
 src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill
 scripts/fetch_osms.sh pin + clone the OSMS export into vendor/
@@ -52,6 +53,7 @@ JS files are concatenated in filename order into ONE `<script>`, so they share t
 ```
 ./scripts/fetch_osms.sh                 # once (or OSMS_DATA=/path/to/osms/data)
 python3 scripts/build_data.py           # only when data logic or the export changes
+python3 scripts/build_data.py crafting  # cheap: re-runs only the crafting step on the existing data.json
 python3 scripts/build.py                # after any src/ change
 node tests/smoke.js                     # needs: npm i -D playwright (or global)
 ```
@@ -66,5 +68,5 @@ so committing a rebuilt dist/index.html and pushing updates the site (~1 min). T
   Palette is lavender/purple/grey; keep it. Both light and dark must work; no horizontal scroll at 390px.
 - Explanatory text goes in a collapsible `<details class="howto">` box at the top of a tab, as short bullet lists.
 - Tooltips: one floating `#qtip`; elements with `.qname` (quests), `.ri` (items), `.mname` (maps, `mapLink()`), `.nname` (NPCs, `npcLink()`) or `.mobname` (monsters, `mobLink()`) get it via delegated listeners.
-- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown).
+- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, craft).
 - Plain, game-player language on the page. Say when a number is estimated.

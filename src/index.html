@@ -8,7 +8,7 @@
 <div class="wrap">
 <header>
   <h1>MS Classic World Data Slop</h1>
-  <p>Character builder, leveling path, training maps, quest database and citizenship, computed from the Closed Online Test 2 game files with the client's own accuracy, defense, level-penalty and element formulas. Drop rates aren't in the game files; where the planner needs them it uses an assumption you can adjust.</p>
+  <p>Character builder, leveling path, training maps, quest database, citizenship and crafting, computed from the Closed Online Test 2 game files with the client's own accuracy, defense, level-penalty and element formulas. Drop rates aren't in the game files; where the planner needs them it uses an assumption you can adjust.</p>
   <div class="src">Data: OSMS Data Explorer COT2 export · EXP table: maplestory.quest · formulas: COT2 client audit</div>
 </header>
 
@@ -18,6 +18,7 @@
   <button role="tab" id="t-maps" aria-selected="false" data-tab="maps">Where to train</button>
   <button role="tab" id="t-quests" aria-selected="false" data-tab="quests">Quest Database</button>
   <button role="tab" id="t-cit" aria-selected="false" data-tab="cit">Citizenship</button>
+  <button role="tab" id="t-craft" aria-selected="false" data-tab="craft">Crafting</button>
 </nav>
 
 <section id="plan">
@@ -348,6 +349,71 @@
   <h2>Civic center shops</h2>
   <p class="note">Each town's civic center sells food, potions, a resident's chair and 100% scrolls. Your grade unlocks more items and lowers prices by your shop discount.</p>
   <div class="grid2" id="cshops"></div>
+</section>
+
+<section id="craft" hidden>
+  <details class="howto" open>
+    <summary>How crafting works</summary>
+    <div class="howgrid">
+      <div>
+        <h4>Getting started</h4>
+        <ul>
+          <li>Six professions, each taught by a master NPC (cards below). From character level 10, finish the master's apprentice quest to learn it at craft Lv 1.</li>
+          <li>Weaponcrafting's apprentice quest needs Smithing's apprentice quest done first, plus a Bronze and an Iron Ingot (Smithing).</li>
+          <li>Professions feed each other: arrows need Smithing ingots, the Red Chair needs Tailoring cloth and Weaponcrafting screws. The "From scratch" column lists every part.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Leveling a profession</h4>
+        <ul>
+          <li>Every craft costs mesos and gives craft EXP (columns below). Craft levels go 1 to 10.</li>
+          <li>Each craft level also needs a character level: 5 × the craft level (Lv 2 at 10, Lv 10 at 50).</li>
+          <li><b>Kits</b> (weekly "in Need of Help" quests, craft Lv 2+): +10% craft EXP for 15 min.</li>
+          <li><b>Catalysts</b> (craft Lv 5 quests): use while crafting for a chance to change a weapon's or armor's bonus stats, or to turn a Lesser scroll into an Intermediate, Greater or Chaos one. The odds aren't in the game files.</li>
+          <li>The six weekly help quests share one pool: 1 is offered per week.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Where the numbers come from</h4>
+        <ul>
+          <li><b>Game files (COT2):</b> recipes, craft levels, mesos, craft EXP, quests, item stats.</li>
+          <li><b>OSMS Data Explorer crafting tab:</b> craft EXP per level and the character-level gate (read from the COT2 client).</li>
+          <li><b>meowdb shop list:</b> dye and helmet prices.</li>
+          <li>Not in the files: where ores, Leather, Fragment of Magic and other materials drop, drop rates, success rates. A "Monster" source is a guess from the item's name or description.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+
+  <h2>Masters and profession quests</h2>
+  <p class="note">Hover names for the quest, NPC or item. Quest items marked with a profession are crafted.</p>
+  <div class="grid2" id="crmasters"></div>
+
+  <h2>Craft levels</h2>
+  <p class="note">Same table for every profession. Lv 1 comes from the apprentice quest.</p>
+  <div class="tblwrap"><table class="mini" id="crlevels"></table></div>
+
+  <h2 id="crrecipes">Recipes</h2>
+  <p class="note">"From scratch" breaks crafted parts down to raw materials and adds their mesos. Parts with several recipes use the lowest-level one.</p>
+  <div class="seg small" role="radiogroup" aria-label="Profession" id="crdisc" style="margin-top:12px"></div>
+  <div class="controls" style="margin-top:12px">
+    <label>Type<select id="crtype"></select></label>
+    <label>Equipment for<select id="crcls"><option value="">Any class</option><option>Warrior</option><option>Magician</option><option>Bowman</option><option>Thief</option></select></label>
+    <label>Up to craft Lv<input id="crmax" type="number" min="1" max="10" value="10"></label>
+    <label>Search<input id="crsearch" type="search" placeholder="item or material"></label>
+    <span class="pill p-hot" id="crcount" style="align-self:center"></span>
+  </div>
+  <div class="tblwrap"><table>
+    <thead id="crhead"><tr><th class="num" data-k="lvl"><button>Craft Lv</button></th><th data-k="name"><button>Makes</button></th><th>Ingredients</th><th class="num" data-k="mesos"><button>Mesos</button></th><th class="num" data-k="exp"><button>Craft EXP</button></th><th>From scratch</th></tr></thead>
+    <tbody id="crrows"></tbody>
+  </table></div>
+
+  <h2>Raw materials</h2>
+  <p class="note">Everything recipes use that no recipe makes. Click a name to see the recipes that use it. "Sells for" is the NPC sell price.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Material</th><th class="num">Recipes</th><th>Used by</th><th>Where to get</th><th class="num">Sells for</th></tr></thead>
+    <tbody id="crmats"></tbody>
+  </table></div>
 </section>
 
 </div>

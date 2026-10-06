@@ -10,6 +10,7 @@ Steps, in order (each adds keys to the data dict):
   quests    quests, citq (+ info, chain, cpos, cn)        <- quests.json
   rewards   ri on every quest row, items, iicons          <- quests.json + items.json + images/items
   launch    latermobs, latermobnames                      <- monsters.json + maps (Forgotten Hollow / not-at-launch)
+  crafting  craft (+ items)                               <- crafting.json + Crafting quests (`build_data.py crafting` = this step only)
 """
 import base64, collections, json, os, pathlib, re, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -175,17 +176,20 @@ def step_rewards(D):
             for x in g["it"]: need.add(x[0])
     need |= {w[12] for w in D["weapons"]}   # weapon icons + tooltips for the builder and planner
     need |= {"1032021", "1032022"}  # Henesys / Kerning City Earrings (grade 10 Citizenship reward, shown on that tab)
-    info, icons = {}, {}
-    for iid in sorted(need):   # sorted so rebuilds are byte-identical
+    D["items"], D["iicons"] = {}, {}
+    add_items(D, need)
+
+def add_items(D, ids):
+    """items {itemId: tooltip info} + iicons {itemId: base64 png} for every id not there yet."""
+    for iid in sorted(set(ids) - set(D["items"])):   # sorted so rebuilds are byte-identical
         i = ITEM[iid]
         st = {k: v for k, v in (i.get("stats") or {}).items() if k in KEEP}
-        info[iid] = {"n": i["name"], "c": i.get("category") or ("Scroll" if i.get("stat_type") or "Scroll" in i["name"] else ""),
+        D["items"][iid] = {"n": i["name"], "c": i.get("category") or ("Scroll" if i.get("stat_type") or "Scroll" in i["name"] else ""),
                      "s": i.get("sub_category") or i.get("equip_slot") or "", "st": st, "job": i.get("req_job_label"),
                      "p": i.get("price") or st.get("price"), "d": (i.get("description") or "").strip(),
                      "wt": i.get("weapon_type"), "spd": i.get("attack_speed_label"), "sp": i.get("spec")}
         p = C + f"images/items/{int(iid):08d}.png"
-        if os.path.exists(p): icons[iid] = b64(p)
-    D["items"], D["iicons"] = info, icons
+        if os.path.exists(p): D["iicons"][iid] = b64(p)
 
 def step_npcs(D):
     """npcs {npcId: [name, [[mapId, x, y], ...]]} for every NPC named by a quest, x/y as minimap fractions (filled in by
@@ -283,6 +287,52 @@ def step_weapon_sources(D):
             if nm in out and v.get("drops"): out[nm]["drops"], out[nm]["dropsFrom"] = v["drops"], v["from"]
     D["wsrc"] = {k: v for k, v in out.items() if v}
 
+def step_crafting(D):
+    """craft {disc: [[name, skillId, master NPC, apprentice quest, weekly quest, Lv 5 quest]],
+    rec: [[disc index, output type, craft level, itemId, count, craft EXP, mesos, [[itemId, n]]]],
+    src: {itemId: {mob: [mobId], why: "name"|"desc", shop: [[npc, mapId, mapName, price]]}} for raw materials}
+    from the export's crafting.json + the Crafting quests. Monster = the item is named after it ("Jr. Necki Skin") or its
+    description names it ("firewood from an Axe Stump"); the export has no drop tables. Shops: meowdb NPC shop list."""
+    cr = json.load(open(C + "crafting.json"))
+    byname = {}
+    for i in ALL_ITEMS: byname.setdefault(i["name"], str(i["id"]))
+    disc, rec, made = [], [], set()
+    for di, d in enumerate(cr["disciplines"]):
+        qs = [q for q in QUESTS if q.get("region") == "Crafting" and any(x.get("id") == d["skill_id"] for x in q.get("requirements_list") or [])]
+        npc = qs[0]["npc_name"] if qs else None
+        mine = sorted([q for q in QUESTS if q.get("region") == "Crafting" and q.get("npc_name") == npc], key=lambda q: int(q["id"]))
+        app = next((q["id"] for q in mine if not any(x.get("is_crafting") for x in q.get("requirements_list") or [])), None)
+        wk = next((q["id"] for q in mine if q.get("is_weekly")), None)
+        own = next((q["id"] for q in mine if q["id"] not in (app, wk)), None)
+        disc.append([d["discipline"], d["skill_id"], npc, app, wk, own])
+        for ot in d["output_types"]:
+            for lv in ot["levels"]:
+                for r in lv["recipes"]:
+                    oid = str(r["output_id"]); made.add(oid)
+                    rec.append([di, ot["output_type"], r["req_level"], oid, r["result_count"], r["craft_exp"], r["meso_cost"],
+                                [[byname[i["item_name"]], i["count"]] for i in r["ingredients"]]])
+    raw = sorted({i for r in rec for i, _ in r[7]} - made, key=int)
+    shops = json.load(open(ROOT / "data" / "sources" / "meowdb_shops.json"))["shops"]
+    mapid = {}
+    for k, v in a.map_name.items(): mapid.setdefault(v, str(k))
+    src = {}
+    for iid in raw:
+        it, o = ITEM[iid], {}
+        m = a.item_source(it["name"])
+        if m: o["mob"], o["why"] = [str(m["id"])], "name"
+        else:
+            desc = it.get("description") or ""
+            hit = next((n for n in a.mob_names_sorted if re.search(r"\b" + re.escape(n) + r"\b", desc)), None)
+            if hit: o["mob"], o["why"] = [str(m["id"]) for m in a.monsters if m["name"] == hit][:1], "desc"
+        for s in shops:
+            if "\t" in s["npc"]: continue   # two mis-parsed meowdb rows (Jane, Arwen the Fairy): no NPC name or price
+            for nm, price, _ in s["items"]:
+                if nm == it["name"] and price: o.setdefault("shop", []).append([s["npc"], mapid.get(s["map"], ""), s["map"], price])
+        if o: src[iid] = o
+    D["craft"] = {"disc": disc, "rec": rec, "src": src}
+    add_items(D, {r[3] for r in rec} | {i for r in rec for i, _ in r[7]} | {"4130000", "4130001", "4130002", "4130003"} |
+              {str(x) for x in range(2002005, 2002011)})
+
 def step_minimaps(D):
     """mmaps {mapId: base64}: minimap of every open map, for the map hover card. WebP q80 (~1 MB for 177 maps) when
     Pillow is installed (pip install pillow), else the original PNGs (~1.9 MB). mmapType says which."""
@@ -361,9 +411,16 @@ def step_launch(D):
     D["latermobs"] = [str(k) for k in later]
     D["latermobnames"] = sorted({mob[str(k)]["name"] for k in later} - ok)
 
+if __name__ == "__main__" and sys.argv[1:] == ["crafting"]:   # cheap partial rebuild: only the crafting step
+    D = json.load(open(ROOT / "data" / "data.json")); D.pop("craft", None)
+    step_crafting(D)
+    D = json.loads(json.dumps(D)); s = json.dumps(D, separators=(",", ":"))
+    (ROOT / "data" / "data.json").write_text(s)
+    print(f"data/data.json {len(s)/1024:.0f} KB · {len(D['craft']['rec'])} recipes"); sys.exit()
+
 if __name__ == "__main__":
     D = step_base()
-    step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D)
+    step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D); step_crafting(D)
     for k in ("mobdiff", "skilldiff", "latermobnames"): D.pop(k, None)   # only the removed "What changed since 2008" tab used these
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees
     (ROOT / "data").mkdir(exist_ok=True)

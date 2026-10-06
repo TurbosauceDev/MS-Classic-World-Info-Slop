@@ -43,6 +43,14 @@ const path = require("path");
     await p.click(`#ctown button[data-t="${t}"]`);
     check(await p.$$eval("#cgrades tr", r => r.length) === 10, `${t} grades table`);
   }
+  // Crafting
+  await p.click("#t-craft");
+  check(await p.$$eval("#crmasters .fact", r => r.length) === 6, "six profession masters");
+  check(/^348 /.test(await p.textContent("#crcount")), "all 348 recipes listed");
+  await p.click('#crdisc button[data-d="4"]'); await p.selectOption("#crcls", "Thief");
+  check(await p.$$eval("#crrows tr", r => r.length) > 0, "Leatherworking Thief filter");
+  await p.click("#crmats .crfind >> nth=0");
+  check(await p.$$eval("#crrows tr", r => r.length) > 0 && !/NaN|undefined/.test(await p.textContent("#craft")), "material click filters recipes");
   console.log(errs.length ? "\n" + errs.join("\n") : "\nall good");
   await b.close();
   process.exit(errs.length ? 1 : 0);

@@ -11,6 +11,7 @@
 | Citizenship grades, discounts, storage fees, civic shops, how to join | meowdb.com/msclassic/citizenship (says: COT2; housing, daily limits, reactivation fees unconfirmed). Read through a summarising fetch — every shop item name was checked to exist in the export, prices/grades were not verifiable |
 | Maple Island sequence, beginner gear/AP, job instructors | meowdb beginner guide (updated 2026-10-02) and Roxie's new player guide, read with headless Chromium (plain fetches get a Cloudflare 403) |
 | Valuable quests (tiers, reasons) | metaroad.gg "Must-Do Quests & Valuable Rewards" (Jota, upd. 2026-09-19), maplestory.quest "Valuable quest rewards worth the detour" (Chief Stan), meowdb beginner guide. Read with headless Chromium (WebFetch blocked; metaroad hides level tabs, so hidden panels were forced visible). Reddit blocked from the cloud env. Forgotten Hollow picks (Road Back Home, Matters of the Heart, Heart of Stillness) left out |
+| Crafting | export `crafting.json` (348 recipes, 6 professions) + Crafting-region quests. Craft EXP per level and the character-level gate (5 × craft level) from the OSMS dashboard's `tabs/crafting.js` (CRAFT_LEVELS_COT2, read from the COT2 client), not a data file. Dye/helmet prices: meowdb shop list |
 | Launch scope | meowdb release-date guide (no Orbis/El Nath/3rd job at launch); meowdb news 2026-10-03 (level cap 100, Forgotten Hollow later) |
 
 No drop tables exist in the export, so nothing depends on drop rates ("source n/a" on quest items).
@@ -93,6 +94,18 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   their prerequisites; order = community tier, then level, then reward value. Grinding prefers maps holding monsters that
   open/soon-open (≤ L+3) reward quests need, if the map is ≥ 50% of the best EXP/hr (judgment call). Item drops not timed.
 
+## Crafting (src/js/45-crafting.js)
+- Masters/quests per profession found from the Crafting quests: apprentice = no craft-level requirement, weekly = is_weekly
+  (one pool of 6, 1 offered per week), the other = craft Lv 5 test (catalyst reward).
+- "From scratch": crafted parts expanded to raw materials in whole batches (ceil(need / batch)), deepest parts last so shared
+  parts aren't rounded twice. A part with several recipes uses the lowest craft level, then the biggest batch (skips the
+  10 → 5 arrow swaps). Arrow swap recipes are listed as the export has them (Adamantium/Mithril pair looks crossed).
+- Raw material sources: meowdb shops (two mis-parsed rows skipped: Jane, Arwen the Fairy), launch/citizenship quest rewards,
+  monster = item named after it (`item_source`) or a monster named in its description (Firewood → Axe Stump, Tablecloth →
+  Jr. Wraith, Cursed Doll → Zombie Lupin). A guess, said on the page. 13 materials have no known source (Leather,
+  Fragment of Magic, Dragon Skin, Stiff Feather, Moon Rock, ...).
+- Not in the files: success rates, catalyst odds, material drop rates.
+
 ## Valuable quests (src/js/15-valuable.js)
 - Hand-curated VALUE map, quest id -> tier (Must do / Recommended / Worth doing / Situational / Skip), reward, why, class-only, sources.
   Tier = what the guides say; where they differ, the more cautious label + the caveat in "why" (e.g. Pia's Gift: S in
@@ -135,6 +148,9 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   [mapIds with quest NPCs; their minimaps/portals are included even if they have no monsters]; `mobimg` {mobId: png thumbnail}
 - `nav` {mapId: [neighbour mapIds]} walkable launch-map graph from map exits (two-way); `cabs` [town mapIds with a cab NPC]
 - `mpos` {mapId: [[x, y]]} monster spawn points (map pixels) of open maps; skills carry `rg` (range px per level)
+- `craft` {disc: [[name, skillId, master NPC, apprentice qId, weekly qId, Lv 5 qId]], rec: [[disc index, output type,
+  craft Lv, itemId, batch, craft EXP, mesos, [[itemId, n]]]], src: {raw itemId: {mob: [mobId], why: name|desc, shop: [[npc, mapId, map, price]]}}};
+  every recipe item, catalyst and kit is in `items`/`iicons`
 - `latermobs` [mobId]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2
   (Someone Else's House) and Fairy 3 (Tree Dungeon, Forest Up North VI/VII): they ARE at launch, just not in the ranking.
 
