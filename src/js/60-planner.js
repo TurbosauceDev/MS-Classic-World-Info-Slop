@@ -33,7 +33,9 @@ const WHERE = {};
 const whereMob = id => WHERE[id] !== undefined ? WHERE[id] : (WHERE[id] = Object.entries(D.maps).filter(([, m]) => m[1]).map(([mid, m]) => [mid, m[0], (m[2].find(s => String(s[0]) === id) || [0, 0])[1]])
   .sort((a, b) => b[2] - a[2]).find(m => m[2] > 0) || null);
 const qIndex = new Map(D.quests.map((r, i) => [r, i]));
-const pool = () => D.quests.filter(r => !SKIP.includes(r.region) && !r.rep && (!CLASSREG.includes(r.region) || r.region === X.cls));
+// Casey's Omok / Match Cards sets: the pieces and cards are very rare drops, never worth planning around (Danny)
+const NOT_PLANNED = r => r.npc === "Casey";
+const pool = () => D.quests.filter(r => !SKIP.includes(r.region) && !r.rep && !NOT_PLANNED(r) && (!CLASSREG.includes(r.region) || r.region === X.cls));
 // item requirements with a known dropping monster at launch; anything else (NPC-given, unknown source) can't be timed
 const okMob = id => D.mobs[id] && !D.latermobs.includes(String(id));
 const dropItems = r => r.il.filter(i => okMob(i[2]));
