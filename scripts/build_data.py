@@ -188,7 +188,10 @@ def step_npcs(D):
     for r in a.mapsj["regions"]:
         for m in r["maps"]:
             if a.launch_status(m["id"]) != "Open at launch": continue
-            for p in m.get("npc_positions") or []: at[str(p["id"])].append([str(m["id"]), p["x"], p["y"]])
+            placed = set()
+            for p in m.get("npc_positions") or []: at[str(p["id"])].append([str(m["id"]), p["x"], p["y"]]); placed.add(p["id"])
+            for n in m.get("npcs") or []:   # listed on the map without a position (e.g. Dances with Balrog)
+                if n not in placed: at[str(n)].append([str(m["id"]), None, None])
     ids = {}
     for i, n in look.items():
         if n in names and (n not in ids or (at.get(i) and not at.get(ids[n]))): ids[n] = i   # same name twice: prefer one placed at launch
@@ -296,7 +299,8 @@ def step_portals(D):
         if L: out[mid] = L
     D["portals"] = out
     for i, (n, locs) in D.get("npcs", {}).items():
-        D["npcs"][i][1] = [[mid, round(x / dims[mid][0], 3), round(y / dims[mid][1], 3)] for mid, x, y in locs if mid in dims]
+        # keep every map they're on; x/y only when the minimap can place them
+        D["npcs"][i][1] = [[mid, round(x / dims[mid][0], 3), round(y / dims[mid][1], 3)] if mid in dims and x is not None else [mid, None, None] for mid, x, y in locs]
     dest |= {int(mid) for mid in D["mmdim"]}
     D["mapnames"] = {str(i): names.get(i, "") for i in sorted(dest)}
 

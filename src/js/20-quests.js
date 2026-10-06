@@ -127,11 +127,11 @@ function mapTip(id){
 }
 function npcTip(id){
   const [name, locs] = D.npcs[id] || ["", []], img = D.npcimg[id], here = locs[0];
-  const [mm] = here ? minimap(here[0], [here[1], here[2]]) : [""];
+  const [mm] = here ? minimap(here[0], here[1] != null ? [here[1], here[2]] : null) : [""];
   const mapName = l => D.maps[l[0]]?.[0] || D.mapnames[l[0]] || "map " + l[0];
   return `<div class="spritehead">${img ? `<img class="sprite" src="data:image/png;base64,${img}" alt="">` : ""}<div class="qt-h"><b>${esc(name)}</b>
       <span>${here ? `Stands in ${esc(mapName(here))}${locs.length > 1 ? ` and ${locs.slice(1).map(l => esc(mapName(l))).join(", ")}` : ""}` : "Not on a launch map (Orbis, El Nath, Forgotten Hollow or an event)"}</span></div></div>
-    ${here ? mm + `<p class="sub">★ is where ${esc(name)} stands.</p>` : ""}`;
+    ${here ? mm + (here[1] != null ? `<p class="sub">★ is where ${esc(name)} stands.</p>` : "") : ""}`;
 }
 function mobTip(id){
   const m = D.mobs[id]; if (!m) return "";
