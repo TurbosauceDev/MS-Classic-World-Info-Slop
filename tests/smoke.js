@@ -17,6 +17,14 @@ const path = require("path");
     check((await p.textContent("#pspleft")).includes("spent") || (await p.textContent("#pspleft")).includes("spare"), `${c} 45 auto-build spends all SP`);
     check(+(await p.textContent("#pdps")).replace(/,/g, "") > 0, `${c} 45 has damage`);
   }
+  // Path Planner (opened from the builder)
+  await p.click("#ppath");
+  await p.waitForTimeout(300);
+  check(!(await p.isHidden("#path")), "builder opens Path Planner");
+  for (const m of ["mix", "quests", "grind"]) {
+    await p.click(`#xmode button[data-v="${m}"]`);
+    check((await p.$$eval("#xrows tr", r => r.length)) > 0 && !/NaN|undefined/.test(await p.textContent("#path")), `path plan (${m}) renders`);
+  }
   // Where to train
   await p.click("#t-maps"); check(await p.$$eval("#maps tbody tr", r => r.length) > 0, "map ranking renders");
   // Quest Database

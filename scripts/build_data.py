@@ -120,6 +120,13 @@ def quest_row(q, prev):
 def step_quests(D):
     prev = {i["next_quest"]: i["name"] for i in QUESTS if i.get("next_quest")}
     rows = [quest_row(q, prev) for q in QUESTS]
+    # structured requirements for the Path Planner: kl [[mobId, n]], il [[item, n, sourceMobId|None]], pre [questId]
+    byid = {q["id"]: q for q in QUESTS}
+    for r in rows:
+        reqs = byid[r["id"]].get("requirements_list") or []
+        r["kl"] = [[str(x["id"]), x["count"]] for x in reqs if x["type"] == "mob"]
+        r["il"] = [[x["name"], x["count"], (lambda s: str(s["id"]) if s else None)(a.item_source(x["name"]))] for x in reqs if x["type"] == "item"]
+        r["pre"] = [str(x["id"]) for x in reqs if x["type"] == "quest"]
     D["quests"] = [r for r in rows if r["region"] != "Citizenship"]
     D["citq"] = [r for r in rows if r["region"] == "Citizenship"]
     # questlines: grouped by the export's "parent" name, ordered by level then quest id

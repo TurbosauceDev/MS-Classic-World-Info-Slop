@@ -1,4 +1,5 @@
 /* character planner */
+let buildAt; // set inside the builder; used by the Path Planner
 /* ---------------- character planner ---------------- */
 (() => {
 const WMULT = { // [swing, stab, shoot] from the client damage routine
@@ -55,7 +56,9 @@ const famSkillOK = s => {
   if (NEEDS_WEAPON[s.n] && !NEEDS_WEAPON[s.n].some(famOK)) return false;
   return !families().filter(f => f !== S.fam).some(f => new RegExp("\\b" + f + "\\b").test(s.n));
 };
-const jobSkills = () => jobs().flatMap(j => (SK[j] || []).map(s => Object.assign({job:j}, s))).filter(famSkillOK);
+const JS_CACHE = {};
+const jobSkills = () => { const k = `${S.cls}|${S.branch}|${S.fam}|${isSecond()}`;
+  return JS_CACHE[k] || (JS_CACHE[k] = jobs().flatMap(j => (SK[j] || []).map(s => Object.assign({job:j}, s))).filter(famSkillOK)) };
 const byName = (n, list) => list.find(s => s.n === n);
 const at = (v, lv) => Array.isArray(v) ? v[Math.max(0, lv - 1)] : v;
 const num = (str, re) => { const m = str && str.match(re); return m ? +m[1] : 0 };
@@ -70,7 +73,13 @@ function lv(s, sp, list){
 }
 const stat = (s, l) => l > 0 ? s.st[l - 1] : "";
 
+const AI_CACHE = new Map();
 function attackInfo(s, l){
+  const k = s.id + "|" + l;
+  if (!AI_CACHE.has(k)) AI_CACHE.set(k, attackInfo0(s, l));
+  return AI_CACHE.get(k);
+}
+function attackInfo0(s, l){
   if (s.id === "basic") return {kind:"phys", pct:100, hits:1, targets:1};
   const t = stat(s, l) || s.st[0];
   if (!["attack","action_hitbox","weapon_projectile","magic_projectile"].includes(s.k)) return null;
@@ -105,6 +114,13 @@ function bestWeapon(){
   return list.find(w => (Math.max(4,w.STR)+Math.max(4,w.DEX)+Math.max(4,w.INT)+Math.max(4,w.LUK)) <= apTotal(S.lvl)) || list[0] || null;
 }
 
+// launch monsters from 3 below to 6 above the level (cached: calc runs thousands of times in the auto-build)
+const NEAR = {};
+const nearMobs = L => NEAR[L] || (NEAR[L] = (() => {
+  const near = Object.entries(D.mobs).filter(([id]) => !D.latermobs.includes(id)).map(([, m]) => m).filter(m => m[1] >= L - 3 && m[1] <= L + 6)
+    .filter((m, i, arr) => arr.findIndex(x => x[0] === m[0]) === i).sort((a,b) => a[1] - b[1]).slice(0, 10);
+  return {near, even: near.filter(m => Math.abs(m[1] - L) <= 3)};
+})());
 /* the whole calculation as a pure function of the build, so the auto-build can try options */
 function calc(sp){
   const w = W.find(x => x.name === S.weapon) || null;
@@ -176,9 +192,7 @@ function calc(sp){
   const interval = 0.42 + 0.06 * stage;
   const dps = perCast / interval;
 
-  const near = Object.entries(D.mobs).filter(([id]) => !D.latermobs.includes(id)).map(([, m]) => m).filter(m => m[1] >= L - 3 && m[1] <= L + 6)
-    .filter((m, i, arr) => arr.findIndex(x => x[0] === m[0]) === i).sort((a,b) => a[1] - b[1]).slice(0, 10);
-  const even = near.filter(m => Math.abs(m[1] - L) <= 3);
+  const {near, even} = nearMobs(L);
   const hitAvg = even.length ? even.reduce((a, m) => a + hitProb(acc, m[4], m[1] - L), 0) / even.length : 1;
   return {w, sk, sl, ai, min, max, avg, crit, critDmg, perCast, stage, interval, dps, acc, avoid, booster, mast, faRate, faPct, atkB, matkB, near, hitAvg, eff: dps * hitAvg};
 }
@@ -225,37 +239,48 @@ function autoSP(){
   return sp;
 }
 
-function fillControls(){
-  document.querySelectorAll("#pclass button").forEach(b => b.setAttribute("aria-checked", b.dataset.v === S.cls));
-  $("#plvl").value = S.lvl; $("#plvlout").textContent = S.lvl;
+// fill in any missing choice (job, weapon type, weapon, attack, ammo, AP) with the default; no DOM
+function applyDefaults(){
   const bl = branchList();
   if (!bl.some(b => b[0] === S.branch)) S.branch = (bl.find(b => b[1] >= 30) || bl[0])[0];
-  $("#pbranch").innerHTML = bl.map(b => `<option${b[0] === S.branch ? " selected" : ""}>${esc(b[0])}</option>`).join("");
   const fams = families();
   if (famActive() && !fams.includes(S.fam)) S.fam = fams[0];
-  $("#pfamwrap").hidden = !famActive();
-  $("#pfam").innerHTML = famActive() ? fams.map(f => `<button data-v="${esc(f)}" aria-checked="${f === S.fam}">${esc(f === "Blunt Weapon" ? "Blunt" : f)}</button>`).join("") : "";
   const wl = weaponsFor();
   if (!wl.some(w => w.name === S.weapon)) S.weapon = bestWeapon()?.name || null;
-  const opt = w => `<option value="${esc(w.name)}"${w.name === S.weapon ? " selected" : ""}>${esc(w.name)} · Lv ${w.lvl} · ${S.cls === "Magician" ? w.mad + " M.ATK" : w.pad + " ATK"}</option>`;
-  $("#pweapon").innerHTML = branchInfo()[2].filter(t => wl.some(w => w.type === t))
-    .map(t => `<optgroup label="${esc(t)}">${wl.filter(w => w.type === t).map(opt).join("")}</optgroup>`).join("");
-  const w = W.find(x => x.name === S.weapon);
-  const al = attackSkills(w);
+  const w = W.find(x => x.name === S.weapon), al = attackSkills(w);
   if (!al.some(s => s.id === S.skill)){
     // default to the strongest single-target skill of the newest job
     const pick = al.filter(s => s.id !== "basic").map(s => [s, attackInfo(s, s.max)]).sort((a,b) => (b[1].pct*b[1].hits) - (a[1].pct*a[1].hits))[0];
     S.skill = (pick ? pick[0] : al[0])?.id;
   }
-  $("#pskill").innerHTML = al.map(s => `<option value="${s.id}"${s.id === S.skill ? " selected" : ""}>${esc(s.n)}</option>`).join("");
   const am = w && AMMO[w.type];
+  if (am && !am.some(a => a[0] === S.ammo)) S.ammo = am[0][0];
+  if (!S.ap || Object.values(S.ap).reduce((a,b) => a+b, 0) > apTotal(S.lvl)) S.ap = autoAP(w);
+  return {bl, fams, wl, w, al, am};
+}
+// default character at a level (best weapon, auto AP, auto skill build), for the Path Planner. Leaves the builder untouched.
+buildAt = (cls, branch, fam, lvl) => {
+  const keep = S;
+  S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true};
+  try { applyDefaults(); S.sp = autoSP(); const r = calc(S.sp); return {dps: r.dps, acc: r.acc, branch: S.branch, weapon: r.w?.name, skill: r.sk?.n} }
+  finally { S = keep }
+};
+function fillControls(){
+  document.querySelectorAll("#pclass button").forEach(b => b.setAttribute("aria-checked", b.dataset.v === S.cls));
+  $("#plvl").value = S.lvl; $("#plvlout").textContent = S.lvl;
+  const {bl, fams, wl, w, al, am} = applyDefaults();
+  $("#pbranch").innerHTML = bl.map(b => `<option${b[0] === S.branch ? " selected" : ""}>${esc(b[0])}</option>`).join("");
+  $("#pfamwrap").hidden = !famActive();
+  $("#pfam").innerHTML = famActive() ? fams.map(f => `<button data-v="${esc(f)}" aria-checked="${f === S.fam}">${esc(f === "Blunt Weapon" ? "Blunt" : f)}</button>`).join("") : "";
+  const opt = w => `<option value="${esc(w.name)}"${w.name === S.weapon ? " selected" : ""}>${esc(w.name)} · Lv ${w.lvl} · ${S.cls === "Magician" ? w.mad + " M.ATK" : w.pad + " ATK"}</option>`;
+  $("#pweapon").innerHTML = branchInfo()[2].filter(t => wl.some(w => w.type === t))
+    .map(t => `<optgroup label="${esc(t)}">${wl.filter(w => w.type === t).map(opt).join("")}</optgroup>`).join("");
+  $("#pskill").innerHTML = al.map(s => `<option value="${s.id}"${s.id === S.skill ? " selected" : ""}>${esc(s.n)}</option>`).join("");
   $("#pammowrap").hidden = !am;
   if (am){
-    if (!am.some(a => a[0] === S.ammo)) S.ammo = am[0][0];
     $("#pammo").innerHTML = am.map(a => `<option${a[0] === S.ammo ? " selected" : ""}>${esc(a[0])} (+${a[1]})</option>`).join("");
     $("#pammo").value = [...$("#pammo").options].find(o => o.text.startsWith(S.ammo))?.value;
   }
-  if (!S.ap || Object.values(S.ap).reduce((a,b) => a+b, 0) > apTotal(S.lvl)) S.ap = autoAP(w);
   for (const k of ["STR","DEX","INT","LUK"]) $("#p" + k).value = S.ap[k];
   $("#pbuffs").checked = S.buffs;
   const wantAuto = !!S.sp.__auto; delete S.sp.__auto;
@@ -368,6 +393,7 @@ $("#pskills").addEventListener("click", e => {
   if (n) S.sp[id] = n; else delete S.sp[id];
   render();
 });
+$("#ppath").addEventListener("click", () => pathFrom(S.cls, S.branch, S.fam, S.lvl));
 $("#psend").addEventListener("click", () => {
   const map = {Magician:"Magician","F/P Wizard":"F/P Wizard","I/L Wizard":"I/L Wizard",Cleric:"Cleric"};
   const mcls = S.cls === "Magician" ? (map[S.branch] || "Magician") : S.cls;

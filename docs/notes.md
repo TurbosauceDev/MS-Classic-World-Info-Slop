@@ -42,6 +42,18 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   monsters within ±3 levels) gain per SP, then dumps leftovers into passives → buffs → rest.
 - **Questline order** = level, then quest id (export gives the chain name, not step order).
 
+## Path Planner (estimates, all said on the page)
+- Character at each level = builder defaults via `buildAt` (best weapon, auto AP/SP, buffs on), cached per class/job/weapon/level.
+  Below 10: damage 20 × level. 1st job used below 30, chosen 2nd job from 30.
+- Grinding: best `mapRates` map; stays on the current map while it's within 10% of the best. No map near the level → best of the rest.
+- Quest time = 3 min walking/talking (guess) + kills × `mobKill` time; quest EXP includes the kills' EXP.
+  Only quests with no item requirements are timed (no drop rates); item quests are listed under the plan, and their chain
+  successors are blocked. Skipped: Event, Crafting, repeatable, Citizenship, other classes' job quests, Maple Island from 10.
+  Quests >5 levels under the starting level count as done.
+- Mix = each quest as it unlocks (lowest level first) + grind between; optional "only faster than grinding". At the model's
+  grinding speed almost no quest beats grinding on EXP/hr (e.g. lv 40: ~140k/h grinding vs 50–105k/h for the best quests).
+- Pace multipliers 1 / 1.5 / 2 on all times are guesses (crowding, potions, breaks).
+
 ## Suspicious data to double-check
 - Lucky Seven `attack_count` = 1 and Double Shot = 2 targets × 1 hit in the export (old game: 2 stars / 2 hits).
 - Precise Strikes +20 acc in the skill table vs a +50 note in an earlier formula audit — page uses the skill table.
@@ -66,6 +78,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - `skills` {job: [{id, n, max, req:[[name,lv]], k kind, att, mob (number or per-level array), st per-level text[], d desc}]}; `icons` {skillId: base64 png}
 - `quests` (non-Citizenship) / `citq` (Citizenship) rows: name, lvl, npc, region, exp, mesos, req, kills, mult (Bonus), eq_kills,
   eq_mob, pct_level, reward, rep (daily/weekly), id, grade, contrib, contrib_by_grade, town, pool, one_time,
+  kl [[mobId, n]], il [[item, n, sourceMobId|null]], pre [questId],
   chain, cpos, cn, ri (reward groups {k: get|pick|rand, job, it: [[itemId, count, chance%]]}), info (tooltip: d, req, mesos, items, start, prev, next, chain, rep, contrib, eq)
 - `items` {itemId: {n, c category, s sub, st stats, job, p price, d desc, wt weapon type, spd, sp spec}}; `iicons` {itemId: base64}
 - `latermobs` [mobId], `latermobnames` [name]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2

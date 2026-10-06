@@ -19,29 +19,38 @@ function classAcc(cls, L){
 }
 
 let ACC_FROM_BUILDER = null; // set by "Use this in Where to train"; cleared when class or level is changed here
-function rankMaps(){
-  let cls = $("#cls").value, L = +$("#lvl").value || 25, dps = +$("#dps").value || 20*L;
-  const magic = MAGIC.has(cls), acc = ACC_FROM_BUILDER ?? classAcc(magic ? "Magician" : cls, L), els = ELEMS[cls] || [];
+const accFor = (cls, L) => classAcc(MAGIC.has(cls) ? "Magician" : cls, L);
+// seconds to kill one monster (HP / damage after hit chance, defense, level penalty, element) + 1 s walking and aiming
+function mobKill(m, cls, L, dps, acc){
+  const [nm, lv, hp, ex, eva, pdd, mdd, el] = m, magic = MAGIC.has(cls), els = ELEMS[cls] || [];
+  const diff = lv - L, hit = hitProb(acc, eva, diff);
+  let em = 1; if (els.length){ em = Math.max(...els.map(e => EMULT[el[e]] ?? 1)); if (em === 0) em = 1 }
+  const eff = hp / (hit * lvlPen(diff) * em * 100 / ((magic ? mdd : pdd) + 100));
+  return {hit, sec: eff / dps + 1};
+}
+// every open map that fits, best EXP/s first. Shared by "Where to train" and the Path Planner.
+function mapRates(cls, L, dps, acc, floor = 12){
   const rows = [];
   for (const [mid, [name, open, spawns]] of Object.entries(D.maps)){
     if (!open) continue;
     let exp = 0, time = 0, n = 0, lvSum = 0, hitSum = 0, ok = true, names = new Set();
     for (const [id, c] of spawns){
       const m = D.mobs[id]; if (!m) continue;
-      const [nm, lv, hp, ex, eva, pdd, mdd, el] = m;
-      const diff = lv - L, hit = hitProb(acc, eva, diff);
-      if (hit < 0.05){ ok = false; break }
-      let em = 1; if (els.length){ em = Math.max(...els.map(e => EMULT[el[e]] ?? 1)); if (em === 0) em = 1 }
-      const df = magic ? mdd : pdd;
-      const eff = hp / (hit * lvlPen(diff) * em * 100 / (df + 100));
-      exp += ex * c; time += (eff / dps + 1) * c; n += c; lvSum += lv * c; hitSum += hit * c; names.add(nm);
+      const k = mobKill(m, cls, L, dps, acc);
+      if (k.hit < 0.05){ ok = false; break }
+      exp += m[3] * c; time += k.sec * c; n += c; lvSum += m[1] * c; hitSum += k.hit * c; names.add(m[0]);
     }
     if (!ok || !n) continue;
-    const avg = lvSum / n; if (avg < L - 12) continue;
+    const avg = lvSum / n; if (avg < L - floor) continue;
     const rate = Math.min(exp / time, exp * 0.75 / 7.56);
-    rows.push({name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate});
+    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate});
   }
-  rows.sort((a,b) => b.rate - a.rate);
+  return rows.sort((a,b) => b.rate - a.rate);
+}
+function rankMaps(){
+  let cls = $("#cls").value, L = +$("#lvl").value || 25, dps = +$("#dps").value || 20*L;
+  const acc = ACC_FROM_BUILDER ?? accFor(cls, L);
+  const rows = mapRates(cls, L, dps, acc);
   const top = rows.slice(0, 15), best = top[0]?.rate || 1, need = D.exp[L];
   $("#maprows").innerHTML = top.length ? top.map((r,i) => `<tr>
     <td class="num">${i+1}</td>

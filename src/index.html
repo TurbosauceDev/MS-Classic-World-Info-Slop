@@ -14,6 +14,7 @@
 
 <nav role="tablist">
   <button role="tab" id="t-plan" aria-selected="true" data-tab="plan">Character Builder</button>
+  <button role="tab" id="t-path" aria-selected="false" data-tab="path">Path Planner</button>
   <button role="tab" id="t-maps" aria-selected="false" data-tab="maps">Where to train</button>
   <button role="tab" id="t-quests" aria-selected="false" data-tab="quests">Quest Database</button>
   <button role="tab" id="t-diff" aria-selected="false" data-tab="diff">What changed since 2008</button>
@@ -95,7 +96,8 @@
         <div class="psum"><span id="psicon"></span><div class="tiny" id="psummary"></div></div>
         <div class="big"><span id="pdps">–</span><small> damage / sec</small></div>
         <div class="tiny" id="pdpsnote"></div>
-        <button class="btn primary" id="psend">Use this in "Where to train"</button>
+        <div class="btnrow"><button class="btn primary" id="psend">Use this in "Where to train"</button>
+          <button class="btn primary" id="ppath">Plan a path for this character</button></div>
       </div>
       <div class="card">
         <h3>Per attack</h3>
@@ -111,6 +113,65 @@
       </div>
     </div>
   </div>
+</section>
+
+<section id="path" hidden>
+  <details class="howto" open>
+    <summary>How the path is planned</summary>
+    <div class="howgrid">
+      <div>
+        <h4>What it does</h4>
+        <ul>
+          <li>Goes level by level from your level to your goal and builds a list to follow: where to train, which quests to do, how long each takes.</li>
+          <li>Your character at each level is the Character Builder's default: best weapon you can use, AP and SP spent by the Auto buttons.</li>
+          <li><b>Quests + grinding:</b> does each quest as it unlocks and grinds in between. Each quest shows how its EXP per hour compares with grinding; tick "Only quests faster than grinding" to keep just those.</li>
+          <li><b>Quests only:</b> every quest it can time, lowest level first, until they run out. <b>Grinding only:</b> maps only.</li>
+          <li>Quests more than 5 levels under your current level count as already done or skipped. Maple Island quests stop at level 10.</li>
+          <li>It stays on its current map unless another one is more than 10% better, so you don't hop maps every level.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Times are estimates</h4>
+        <ul>
+          <li>Grinding times come from the "Where to train" model (single target, solo).</li>
+          <li><b>Average player</b> takes 1.5× the model time, <b>Relaxed</b> 2×: crowded maps, potions, breaks. These multipliers are a guess; pick what fits you.</li>
+          <li>Each quest adds 3 minutes for walking and talking (also a guess), plus the time to kill what it asks for. Kill EXP from quests counts.</li>
+          <li>Below level 10 there's no job, so damage is a rough 20 × level.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Left out</h4>
+        <ul>
+          <li>Quests that need item drops: drop rates aren't in the game files, so they can't be timed. They're listed under the plan, and quests that come after them in a chain are skipped too.</li>
+          <li>Event, crafting, repeatable and Citizenship quests; Orbis, El Nath and Forgotten Hollow.</li>
+          <li>Party play, multi-target attacks, buying gear. Levels above 70 (the EXP table stops there).</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+  <div class="controls">
+    <div class="lab">Class<div class="seg small" id="xcls">
+      <button data-v="Warrior">Warrior</button><button data-v="Magician">Magician</button><button data-v="Bowman">Bowman</button><button data-v="Thief">Thief</button></div></div>
+    <label>2nd job<select id="xbranch"></select></label>
+    <label id="xfamwrap">Weapon type<select id="xfam"></select></label>
+    <label>Current level<input id="xcur" type="number" min="1" max="69" value="10"></label>
+    <label>Goal level<input id="xgoal" type="number" min="2" max="70" value="30"></label>
+    <div class="lab">Plan<div class="seg small" id="xmode">
+      <button data-v="mix">Quests + grinding</button><button data-v="quests">Quests only</button><button data-v="grind">Grinding only</button></div></div>
+    <label class="chk" id="xfastwrap"><input type="checkbox" id="xfast"> Only quests faster than grinding</label>
+    <label>Pace<select id="xpace"><option value="1">Perfect play (model)</option><option value="1.5">Average player (1.5×)</option><option value="2">Relaxed (2×)</option></select></label>
+  </div>
+  <div class="grid2" id="xsum"></div>
+  <div class="tblwrap"><table>
+    <thead><tr><th class="num">#</th><th class="num">Level</th><th>What to do</th><th>Where</th><th class="num">Time</th><th class="num">Total</th></tr></thead>
+    <tbody id="xrows"></tbody>
+  </table></div>
+  <h2>Quests that need item drops</h2>
+  <p class="note">Not in the plan because drop rates aren't in the game files. Worth picking up if you're already hunting the monster that drops the item.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th class="num">Lv</th><th>Quest</th><th>Asks for</th><th class="num">EXP</th></tr></thead>
+    <tbody id="xextra"></tbody>
+  </table></div>
 </section>
 
 <section id="maps" hidden>
