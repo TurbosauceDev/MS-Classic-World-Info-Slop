@@ -37,8 +37,6 @@ const path = require("path");
   await (await p.$(".chainbtn")).click(); check(!(await p.isHidden("#qchainbar")), "questline filter");
   await p.click("#qchainclear");
   await p.click("#qeq"); check(await p.$$eval("#qrows tr", r => r.length) > 0, "equipment filter"); await p.click("#qeq");
-  // What changed since 2008
-  await p.click("#t-diff"); check((await p.textContent("#difffacts")).length > 0, "diff facts");
   // Citizenship
   await p.click("#t-cit");
   for (const t of ["Henesys", "Kerning City"]) {

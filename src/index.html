@@ -8,8 +8,8 @@
 <div class="wrap">
 <header>
   <h1>MS Classic World Data Slop</h1>
-  <p>Training-map rankings, quest value and changes since the 2008 client, all computed from the Closed Online Test 2 game files. Rankings use the client's own accuracy, defense, level-penalty and element formulas. Drop rates are not in the client, so nothing here depends on them.</p>
-  <div class="src">Data: OSMS Data Explorer COT2 export · EXP table: maplestory.quest · formulas: COT2 client audit · old client: GMS v49 (Jan 2008)</div>
+  <p>Character builder, leveling path, training maps, quest database and citizenship, computed from the Closed Online Test 2 game files with the client's own accuracy, defense, level-penalty and element formulas. Drop rates aren't in the game files; where the planner needs them it uses an assumption you can adjust.</p>
+  <div class="src">Data: OSMS Data Explorer COT2 export · EXP table: maplestory.quest · formulas: COT2 client audit</div>
 </header>
 
 <nav role="tablist">
@@ -17,7 +17,6 @@
   <button role="tab" id="t-path" aria-selected="false" data-tab="path">Path Planner</button>
   <button role="tab" id="t-maps" aria-selected="false" data-tab="maps">Where to train</button>
   <button role="tab" id="t-quests" aria-selected="false" data-tab="quests">Quest Database</button>
-  <button role="tab" id="t-diff" aria-selected="false" data-tab="diff">What changed since 2008</button>
   <button role="tab" id="t-cit" aria-selected="false" data-tab="cit">Citizenship</button>
 </nav>
 
@@ -269,36 +268,6 @@
     <thead id="qhead"><tr><th class="num" data-k="lvl"><button>Lv</button></th><th data-k="name"><button>Quest</button></th><th data-k="chain"><button>Chain</button></th><th>Asks for</th><th class="num" data-k="exp"><button>EXP</button></th><th class="num" data-k="pct"><button>% of level</button></th><th class="num" data-k="mult"><button>Bonus</button></th><th data-k="kills"><button>Equals</button></th><th data-k="reward"><button>Item reward</button></th></tr></thead>
     <tbody id="qrows"></tbody>
   </table></div>
-</section>
-
-<section id="diff" hidden>
-  <div class="seg" role="radiogroup" aria-label="Class" id="classseg">
-    <button role="radio" aria-checked="true" data-c="all">All classes</button>
-    <button role="radio" aria-checked="false" data-c="Warrior">Warrior</button>
-    <button role="radio" aria-checked="false" data-c="Magician">Magician</button>
-    <button role="radio" aria-checked="false" data-c="Bowman">Bowman</button>
-    <button role="radio" aria-checked="false" data-c="Thief">Thief</button>
-    <button role="radio" aria-checked="false" data-c="Beginner">Beginner</button>
-    <button role="radio" aria-checked="false" data-c="monsters">Monsters</button>
-  </div>
-  <div class="controls">
-    <label>Search<input id="dsearch" type="search" placeholder="skill or monster"></label>
-    <label class="chk" id="donlywrap"><input id="donly" type="checkbox" checked> Changed skills only</label>
-  </div>
-  <div class="grid2" id="difffacts"></div>
-  <div id="skillsec">
-  <h2 id="skillhead">Skills</h2>
-  <p class="note">Max-level text from each client, side by side. Wording changes count as changes, so read both columns rather than trusting the flag alone.</p>
-  <div id="skillgroups"></div>
-  </div>
-  <div id="monsec" hidden>
-  <h2>Monsters</h2>
-  <p class="note">Old value → Classic value, for every monster in the launch areas. HP went up on low-level monsters because the new damage formula adds a flat base to every hit, so compare EXP and level changes directly and treat HP changes as rescaled. Defense now divides damage instead of subtracting, so high defense matters less than it did.</p>
-  <div class="tblwrap"><table>
-    <thead><tr><th>Monster</th><th class="num">Level</th><th class="num">HP</th><th class="num">EXP</th><th class="num">Accuracy</th><th class="num">Evasion</th><th class="num">Weapon def</th><th class="num">Magic def</th></tr></thead>
-    <tbody id="mrows"></tbody>
-  </table></div>
-  </div>
 </section>
 
 <section id="cit" hidden>

@@ -4,7 +4,7 @@
 | What | Source |
 |---|---|
 | Monsters, maps, spawns, quests, items, skills, icons, citizenship quests | OSMS Data Explorer COT2 export — github.com/ohmi69/osms_datamine_dashboard (pinned in scripts/fetch_osms.sh) |
-| 2008 comparison | same repo, `data/patches/v49` (GMS v49, Jan 2008) |
+| 2008 comparison (tab removed 2026-10-06) | same repo, `data/patches/v49`; analyze.py still computes mob/skill diffs, build_data drops them |
 | EXP table 1–70 | maplestory.quest (checked: 10→30 = 545,290; 30→40 = 1,713,976) |
 | Accuracy / hit / damage / defense formulas | COT2 client audit published on maplestory.quest / OSMS `tabs/formulas.js` |
 | SP rules | meowdb guides (glossary; Warrior 1–30; Page 30–70) |
@@ -114,8 +114,6 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - `mobs` {id: [name, level, hp, exp, eva, PDD, MDD, elements{}, undead]}
 - `maps` {id: [name, openAtLaunch 1/0, [[mobId, count], ...]]}
 - `exp` {level: exp to next}
-- `mobdiff` [[name, level, null | {level,hp,exp,acc,eva,PADamage,PDDamage,MDDamage: [old, new]}]]
-- `skilldiff` [[class, job, name, oldText, newText, oldMaxLv, newMaxLv, changed]]
 - `weapons` [[name, type, reqLv, STR, DEX, INT, LUK, ATK, MATK, speed, jobLabel, price, itemId]] (every weapon is also in `items`/`iicons`)
 - `skills` {job: [{id, n, max, req:[[name,lv]], k kind, att, mob (number or per-level array), st per-level text[], d desc}]}; `icons` {skillId: base64 png}
 - `quests` (non-Citizenship) / `citq` (Citizenship) rows: name, lvl, npc, region, exp, mesos, req, kills, mult (Bonus), eq_kills,
@@ -132,7 +130,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   [mapIds with quest NPCs; their minimaps/portals are included even if they have no monsters]; `mobimg` {mobId: png thumbnail}
 - `nav` {mapId: [neighbour mapIds]} walkable launch-map graph from map exits (two-way); `cabs` [town mapIds with a cab NPC]
 - `mpos` {mapId: [[x, y]]} monster spawn points (map pixels) of open maps; skills carry `rg` (range px per level)
-- `latermobs` [mobId], `latermobnames` [name]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2
+- `latermobs` [mobId]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2
   (Someone Else's House) and Fairy 3 (Tree Dungeon, Forest Up North VI/VII): they ARE at launch, just not in the ranking.
 
 ## Ideas not done yet

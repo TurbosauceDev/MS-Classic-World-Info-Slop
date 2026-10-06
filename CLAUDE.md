@@ -3,7 +3,7 @@
 A single-page planner for **MapleStory Classic World** (Founder's Access Oct 6 2026, Grand Launch Oct 21 2026),
 built from the Closed Online Test 2 (COT2) game-file export. Owner: Danny.
 
-Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · What changed since 2008 · **Citizenship**.
+Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Citizenship**.
 
 ## Ground rules (from Danny)
 - **Classic World only.** Never use modern/retail MapleStory info. 2008-era info only if confirmed to still hold in Classic.
@@ -35,7 +35,6 @@ src/js/00-core.js     const D = __DATA__ (replaced at build), $, fmt, esc, tab s
 src/js/10-maps.js     client formulas (hitProb, lvlPen, classAcc), mobKill, mapRates + "Where to train" table (rankMaps)
 src/js/15-valuable.js  VALUE: community-picked valuable quests (tier, reward, why, sources) — not game data
 src/js/20-quests.js   Quest Database: filters, header sorting, questline filter, quest + item tooltips (#qtip), rewardCell()
-src/js/30-diff.js     "What changed since 2008"
 src/js/40-citizenship.js  Citizenship tab (GRADES + SHOPS consts are from meowdb, not the export)
 src/js/50-builder.js  Character Builder: AP, skill build with per-job SP pools, damage calc, greedy auto-build; buildAt() = headless default build
 src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill
@@ -67,5 +66,5 @@ so committing a rebuilt dist/index.html and pushing updates the site (~1 min). T
   Palette is lavender/purple/grey; keep it. Both light and dark must work; no horizontal scroll at 390px.
 - Explanatory text goes in a collapsible `<details class="howto">` box at the top of a tab, as short bullet lists.
 - Tooltips: one floating `#qtip`; elements with `.qname` (quests), `.ri` (items), `.mname` (maps, `mapLink()`), `.nname` (NPCs, `npcLink()`) or `.mobname` (monsters, `mobLink()`) get it via delegated listeners.
-- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, cls-seg).
+- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown).
 - Plain, game-player language on the page. Say when a number is estimated.
