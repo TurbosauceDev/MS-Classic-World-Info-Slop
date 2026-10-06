@@ -1402,7 +1402,7 @@ function applyDefaults(){
     // default to the strongest single-target skill of the newest job; an AoE build (Path Planner) weighs targets too,
     // as if ~3 monsters are in reach (Rush, Steal and Power Knockback move or push monsters; not grinding attacks)
     const val = i => i.pct * i.hits * (S.aoe ? Math.min(i.targets || 1, 3) : 1);
-    const pick = al.filter(s => s.id !== "basic" && !(S.aoe && ["Rush", "Steal", "Power Knockback"].includes(s.n))).map(s => [s, attackInfo(s, s.max)]).sort((a,b) => val(b[1]) - val(a[1]))[0];
+    const pick = al.filter(s => s.id !== "basic" && !(S.aoe && ["Rush", "Steal", "Power Knockback"].includes(s.n))).map(s => [s, attackInfo(s, s.max)]).sort((a,b) => val(b[1]) - val(a[1]) || (S.aoe ? (b[1].targets || 1) - (a[1].targets || 1) : 0))[0];
     S.skill = (pick ? pick[0] : al[0])?.id;
   }
   const am = w && AMMO[w.type];
