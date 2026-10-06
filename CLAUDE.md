@@ -3,7 +3,7 @@
 A single-page planner for **MapleStory Classic World** (Founder's Access Oct 6 2026, Grand Launch Oct 21 2026),
 built from the Closed Online Test 2 (COT2) game-file export. Owner: Danny.
 
-Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Citizenship** · **Crafting** · **Keep or sell**.
+Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Citizenship** · **Crafting** · **Keep or sell** · **Credits**.
 
 ## Ground rules (from Danny)
 - **Classic World only.** Never use modern/retail MapleStory info. 2008-era info only if confirmed to still hold in Classic.

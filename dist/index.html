@@ -253,13 +253,20 @@ ul.crq li{margin-bottom:6px}
 table.qcompact th:nth-child(3),table.qcompact td:nth-child(3),table.qcompact th:nth-child(6),table.qcompact td:nth-child(6),
 table.qcompact th:nth-child(7),table.qcompact td:nth-child(7),table.qcompact th:nth-child(8),table.qcompact td:nth-child(8){display:none}
 
+/* credits tab */
+.credits{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px;margin-top:16px}
+.credits p{margin:0 0 8px;font-size:14px}
+.credits ul{margin:0;padding-left:18px;font-size:14px;line-height:1.5}
+.credits li{margin:3px 0}
+.credits a,#srclink{color:var(--accent);overflow-wrap:anywhere}
+
 </style>
 
 <div class="wrap">
 <header>
   <h1>MS Classic World Data Slop</h1>
   <p>Character builder, leveling path, training maps, quest database, citizenship, crafting and a keep-or-sell list, computed from the Closed Online Test 2 game files with the client's own accuracy, defense, level-penalty and element formulas. Drop rates aren't in the game files; where the planner needs them it uses an assumption you can adjust.</p>
-  <div class="src">Data: OSMS Data Explorer COT2 export · EXP table: maplestory.quest · formulas: COT2 client audit</div>
+  <div class="src">Data: OSMS Data Explorer COT2 export · guides and mechanics: meowdb · client data: maplestory.quest · <a href="#credits" id="srclink">all sources and thanks</a></div>
 </header>
 
 <nav role="tablist">
@@ -270,6 +277,7 @@ table.qcompact th:nth-child(7),table.qcompact td:nth-child(7),table.qcompact th:
   <button role="tab" id="t-cit" aria-selected="false" data-tab="cit">Citizenship</button>
   <button role="tab" id="t-craft" aria-selected="false" data-tab="craft">Crafting</button>
   <button role="tab" id="t-keep" aria-selected="false" data-tab="keep">Keep or sell</button>
+  <button role="tab" id="t-credits" aria-selected="false" data-tab="credits">Credits</button>
 </nav>
 
 <section id="plan">
@@ -671,6 +679,60 @@ table.qcompact th:nth-child(7),table.qcompact td:nth-child(7),table.qcompact th:
   </table></div>
 </section>
 
+<section id="credits" hidden>
+  <details class="howto" open>
+    <summary>About this page</summary>
+    <div class="howgrid">
+      <div><h4>Thank you</h4><ul>
+        <li>This tool exists because these people dug through the game files, tested in the Closed Online Tests and wrote it all up for free. Go visit their sites.</li>
+        <li>Ranked by how much of this tool relies on them.</li>
+      </ul></div>
+      <div><h4>Rules this tool follows</h4><ul>
+        <li>Every number comes from the game files or one of the sources below. Estimates are marked as estimates on the page.</li>
+        <li>Unofficial fan tool. MapleStory is a trademark of NEXON; all game data and art belong to NEXON.</li>
+      </ul></div>
+    </div>
+  </details>
+
+  <div class="credits">
+    <div class="card"><div class="cardhead"><h3>1. OSMS Data Explorer</h3><span class="pill p-hot">core data</span></div>
+      <p>By <b>ohmi69</b>. <a href="https://osmsdataexplorer.com/" target="_blank" rel="noopener">osmsdataexplorer.com</a> · <a href="https://github.com/ohmi69/osms_datamine_dashboard" target="_blank" rel="noopener">GitHub</a></p>
+      <ul>
+        <li>The Closed Online Test 2 game-file export behind almost every tab: monsters, maps, spawns, portals, quests, items, skills, icons, minimaps and crafting recipes.</li>
+        <li>The client formulas (accuracy, hit chance, damage, defense), the craft-level EXP table and the COT1 → COT2 patch notes.</li>
+      </ul></div>
+
+    <div class="card"><div class="cardhead"><h3>2. meowdb (NiaMeowDB)</h3><span class="pill p-hot">guides &amp; mechanics</span></div>
+      <p><a href="https://meowdb.com/msclassic/guides/" target="_blank" rel="noopener">meowdb.com/msclassic</a></p>
+      <ul>
+        <li><b>Class guides, levels 1-30:</b> <a href="https://meowdb.com/msclassic/guides/beginners-guide-first-steps-in-maple-world" target="_blank" rel="noopener">Beginner</a>, <a href="https://meowdb.com/msclassic/guides/warrior-class-guide" target="_blank" rel="noopener">Warrior</a>, <a href="https://meowdb.com/msclassic/guides/magician-class-guide" target="_blank" rel="noopener">Magician</a>, <a href="https://meowdb.com/msclassic/guides/bowman-class-guide" target="_blank" rel="noopener">Bowman</a>, <a href="https://meowdb.com/msclassic/guides/thief-class-guide" target="_blank" rel="noopener">Thief</a>. These set the Path Planner's skill and stat order, weapons, gear and training maps.</li>
+        <li><b>2nd-job guides, levels 30-70:</b> <a href="https://meowdb.com/msclassic/guides/fighter-class-guide" target="_blank" rel="noopener">Fighter</a>, <a href="https://meowdb.com/msclassic/guides/page-class-guide" target="_blank" rel="noopener">Page</a>, <a href="https://meowdb.com/msclassic/guides/spearman-class-guide" target="_blank" rel="noopener">Spearman</a>, <a href="https://meowdb.com/msclassic/guides/hunter-class-guide" target="_blank" rel="noopener">Hunter</a>, <a href="https://meowdb.com/msclassic/guides/crossbowman-class-guide" target="_blank" rel="noopener">Crossbowman</a>, <a href="https://meowdb.com/msclassic/guides/assassin-class-guide" target="_blank" rel="noopener">Assassin</a>, <a href="https://meowdb.com/msclassic/guides/bandit-class-guide" target="_blank" rel="noopener">Bandit</a>, <a href="https://meowdb.com/msclassic/guides/fp-wizard-class-guide" target="_blank" rel="noopener">F/P Wizard</a>, <a href="https://meowdb.com/msclassic/guides/il-wizard-class-guide" target="_blank" rel="noopener">I/L Wizard</a>, <a href="https://meowdb.com/msclassic/guides/cleric-class-guide" target="_blank" rel="noopener">Cleric</a>.</li>
+        <li><b>Mechanics:</b> <a href="https://meowdb.com/msclassic/guides/explaining-the-damage-formula" target="_blank" rel="noopener">damage formula</a>, <a href="https://meowdb.com/msclassic/guides/attack-speed-and-animation-times" target="_blank" rel="noopener">attack speed</a>, <a href="https://meowdb.com/msclassic/guides/hp-mp-gain-explained" target="_blank" rel="noopener">HP/MP gain</a>, <a href="https://meowdb.com/msclassic/guides/exp-table-level-1-to-100" target="_blank" rel="noopener">EXP table</a>, <a href="https://meowdb.com/msclassic/guides/spawn-engine-respawn-and-map-capacity" target="_blank" rel="noopener">spawn engine</a>, <a href="https://meowdb.com/msclassic/guides/best-grind-maps-every-level" target="_blank" rel="noopener">best grind maps</a>, <a href="https://meowdb.com/msclassic/guides/class-dps-rankings" target="_blank" rel="noopener">class DPS rankings</a>, <a href="https://meowdb.com/msclassic/guides/speed-jump-and-movement" target="_blank" rel="noopener">movement speed</a>, <a href="https://meowdb.com/msclassic/guides/weapon-reach" target="_blank" rel="noopener">weapon reach</a>, <a href="https://meowdb.com/msclassic/guides/kerning-city-party-quest-kpq-guide" target="_blank" rel="noopener">KPQ</a>, <a href="https://meowdb.com/msclassic/guides/maplestory-classic-glossary" target="_blank" rel="noopener">glossary</a>, <a href="https://meowdb.com/msclassic/guides/maplestory-classic-worlds-release-date" target="_blank" rel="noopener">release date / launch scope</a>. These drive the damage model, attack times, HP/MP, the level cap, party bonus and boss timers, and the reference tests.</li>
+        <li><b>Lists:</b> <a href="https://meowdb.com/msclassic/npc-shops" target="_blank" rel="noopener">NPC shops</a> (prices, potion shops, upkeep), weapon and material drops, and <a href="https://meowdb.com/msclassic/citizenship" target="_blank" rel="noopener">citizenship</a> grades and shops.</li>
+      </ul></div>
+
+    <div class="card"><div class="cardhead"><h3>3. maplestory.quest</h3><span class="pill p-hot">client data</span></div>
+      <p>By <b>Chief Stan</b>, whose data is used with permission. <a href="https://maplestory.quest/raw#/COT2/overview" target="_blank" rel="noopener">Raw COT2 data</a></p>
+      <ul>
+        <li>The raw COT2 client data (monster magic attack, used for the Danger column), and the EXP table and formula checks.</li>
+        <li><a href="https://maplestory.quest/guides/valuable-quest-rewards" target="_blank" rel="noopener">Valuable quest rewards worth the detour</a>, used for the valuable-quest picks.</li>
+      </ul></div>
+
+    <div class="card"><div class="cardhead"><h3>4. metaroad.gg</h3><span class="pill p-hot">quest picks</span></div>
+      <p>By <b>Jota</b>. <a href="https://metaroad.gg/maplestory-classic/archives/must-do-quests-valuable-rewards-guide" target="_blank" rel="noopener">Must-Do Quests &amp; Valuable Rewards</a></p>
+      <ul><li>Tiers and reasons for the valuable quests in the Quest Database and Path Planner.</li></ul></div>
+
+    <div class="card"><div class="cardhead"><h3>5. maplestory.io</h3><span class="pill p-hot">version check</span></div>
+      <p><a href="https://maplestory.io/" target="_blank" rel="noopener">maplestory.io</a></p>
+      <ul><li>Its Classic World API is used to compare client versions, so the numbers here can be checked against the launch client when it appears.</li></ul></div>
+
+    <div class="card"><div class="cardhead"><h3>6. Roxie's new player guide</h3><span class="pill p-hot">Maple Island</span></div>
+      <ul><li>The Maple Island quest order and the beginner's route to level 10, together with meowdb's beginner guide.</li></ul></div>
+  </div>
+
+  <p class="note">Also checked but no data used yet: the Maple Community API (api.maple.community). Built by Danny with help from Claude. If you made one of these and want something changed or removed, let Danny know.</p>
+</section>
+
 <section id="craft" hidden>
   <details class="howto" open>
     <summary>How crafting works</summary>
@@ -787,11 +849,12 @@ async function copyShare(btn, url){
 /* tabs */
 document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
-  ["plan","path","maps","quests","cit","craft","keep"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
+  ["plan","path","maps","quests","cit","craft","keep","credits"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
 }));
 try { const t = HASH.p ? "path" : HASH.b ? "plan" : localStorage.getItem("tab"); if (t) document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
+$("#srclink").addEventListener("click", e => { e.preventDefault(); $("#t-credits").click(); $("#credits").scrollIntoView() });
 
 /* client formulas */
 function hitProb(acc, avoid, diff){

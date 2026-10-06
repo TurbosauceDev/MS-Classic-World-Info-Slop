@@ -248,3 +248,10 @@ ul.crq li{margin-bottom:6px}
 .geargrid select{width:100%;font-size:13px}
 table.qcompact th:nth-child(3),table.qcompact td:nth-child(3),table.qcompact th:nth-child(6),table.qcompact td:nth-child(6),
 table.qcompact th:nth-child(7),table.qcompact td:nth-child(7),table.qcompact th:nth-child(8),table.qcompact td:nth-child(8){display:none}
+
+/* credits tab */
+.credits{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px;margin-top:16px}
+.credits p{margin:0 0 8px;font-size:14px}
+.credits ul{margin:0;padding-left:18px;font-size:14px;line-height:1.5}
+.credits li{margin:3px 0}
+.credits a,#srclink{color:var(--accent);overflow-wrap:anywhere}

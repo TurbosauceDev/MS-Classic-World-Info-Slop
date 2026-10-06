@@ -1,6 +1,7 @@
 # Notes: formulas, data, sources, decisions
 
 ## Sources
+Credited on the page in the Credits tab (src/index.html #credits); add new sources there too.
 | What | Source |
 |---|---|
 | Monsters, maps, spawns, quests, items, skills, icons, citizenship quests | OSMS Data Explorer COT2 export — github.com/ohmi69/osms_datamine_dashboard (pinned in scripts/fetch_osms.sh) |
