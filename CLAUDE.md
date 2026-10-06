@@ -56,7 +56,9 @@ python3 scripts/build.py                # after any src/ change
 node tests/smoke.js                     # needs: npm i -D playwright (or global)
 ```
 Open `dist/index.html` directly in a browser — no server needed. Published artifact (republish `dist/index.html` to this URL after
-every change): https://claude.ai/artifact/Facfj1DVkTNyQyrbHHFQcH The page must stay one self-contained file
+every change): https://claude.ai/artifact/Facfj1DVkTNyQyrbHHFQcH
+GitHub Pages: https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/ serves this branch; root index.html forwards to dist/,
+so committing a rebuilt dist/index.html and pushing updates the site (~1 min). The page must stay one self-contained file
 (it's also published as a claude.ai artifact): no external requests except Google Fonts.
 
 ## Conventions
