@@ -41,6 +41,6 @@ document.querySelectorAll("nav button").forEach(b => b.addEventListener("click",
   ["plan","path","maps","quests","mobs","cit","craft","keep","log","credits"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
 }));
-try { const t = HASH.p ? "path" : HASH.b ? "plan" : localStorage.getItem("tab"); if (t) document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
+try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : localStorage.getItem("tab"); if (t) document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
 $("#srclink").addEventListener("click", e => { e.preventDefault(); $("#t-credits").click(); $("#credits").scrollIntoView() });

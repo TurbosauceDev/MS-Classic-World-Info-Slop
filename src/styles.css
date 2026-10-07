@@ -195,14 +195,14 @@ table.mini td,table.mini th{padding:6px 8px}
 .mname:hover,.mname:focus,.nname:hover,.nname:focus,.mobname:hover,.mobname:focus{color:var(--accent);outline:none}
 .mname:focus-visible,.nname:focus-visible,.mobname:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
 #qtip.maptip{width:min(400px,calc(100vw - 16px))}
-#qtip .mmwrap{position:relative;margin:8px auto 0;max-width:100%}
-#qtip .mm{display:block;width:100%;height:100%;border-radius:6px;background:#0d0b14}
-#qtip .pt{position:absolute;transform:translate(-50%,-50%);min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;border-radius:999px;background:#ffd24a;color:#1b1530;border:1.5px solid #1b1530;font:700 10px/13px var(--f-mono);text-align:center;box-shadow:0 0 0 2px rgba(255,210,74,.35)}
-#qtip .pt.hid{background:#1b1530;color:#ffd24a;border:1.5px dashed #ffd24a;box-shadow:none}
-#qtip .mexits{list-style:none;padding:0;columns:2;column-gap:14px}
-#qtip .mexits li{display:flex;gap:6px;align-items:baseline;break-inside:avoid}
-#qtip .mexits span{opacity:.65;font-size:11.5px}
-#qtip .ptn{flex-shrink:0;min-width:16px;height:16px;border-radius:999px;background:#ffd24a;color:#1b1530;font:700 10px/16px var(--f-mono);text-align:center}
+:is(#qtip,.mpage) .mmwrap{position:relative;margin:8px auto 0;max-width:100%}
+:is(#qtip,.mpage) .mm{display:block;width:100%;height:100%;border-radius:6px;background:#0d0b14}
+:is(#qtip,.mpage) .pt{position:absolute;transform:translate(-50%,-50%);min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;border-radius:999px;background:#ffd24a;color:#1b1530;border:1.5px solid #1b1530;font:700 10px/13px var(--f-mono);text-align:center;box-shadow:0 0 0 2px rgba(255,210,74,.35)}
+:is(#qtip,.mpage) .pt.hid{background:#1b1530;color:#ffd24a;border:1.5px dashed #ffd24a;box-shadow:none}
+:is(#qtip,.mpage) .mexits{list-style:none;padding:0;columns:2;column-gap:14px}
+:is(#qtip,.mpage) .mexits li{display:flex;gap:6px;align-items:baseline;break-inside:avoid}
+:is(#qtip,.mpage) .mexits span{opacity:.65;font-size:11.5px}
+:is(#qtip,.mpage) .ptn{flex-shrink:0;min-width:16px;height:16px;border-radius:999px;background:#ffd24a;color:#1b1530;font:700 10px/16px var(--f-mono);text-align:center}
 #qtip .ptn.hid{background:transparent;color:#ffd24a;border:1px dashed #ffd24a;line-height:14px}
 #qtip .mmobs{columns:2;column-gap:16px;padding-left:16px}
 #qtip .mmobs span{opacity:.65;font-size:12px}
@@ -268,10 +268,24 @@ input.khave{width:64px;text-align:right}
 .mbtn .sub{flex-basis:100%}
 .mbtn:hover b,.mbtn:focus-visible b{color:var(--accent)}
 .mbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
-tr.mrow.open td{background:var(--accent-soft)}
-tr.mdetail td{padding:0}
-.mcard{box-sizing:border-box;padding:14px 16px;background:var(--panel);border-left:3px solid var(--accent);max-width:min(1100px,calc(100vw - 52px));position:sticky;left:0}
-.mtop{display:flex;gap:14px;align-items:center;margin-bottom:12px}
+.mpage{margin-top:4px}
+.mpbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.mtop{display:flex;gap:16px;align-items:center;margin-bottom:16px}
+.mtop h2{font:800 clamp(26px,5vw,36px)/1.1 var(--f-display);margin:0 0 4px}
+.mtop .sub{margin:0 0 8px;font-size:14px}
+.msec{font:700 16px var(--f-display);margin:22px 0 10px}
+.mfarm .controls.inline{background:none;border:0;padding:0 0 12px}
+.mfgrid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.mfgrid{grid-template-columns:minmax(0,1fr)}}
+.mfrow{cursor:pointer}
+#mfall{margin-top:8px}
+@media (max-width:600px){.mfarm .bar{display:none}.mfarm td:first-child{min-width:120px}}
+.mfrow:hover td,.mfrow.sel td{background:var(--accent-soft)}
+.mfrow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.mfmap .mmwrap{margin:0 auto}
+.mfmap .mexits{list-style:none;padding:0;columns:2;column-gap:14px;font-size:12.5px;margin:8px 0 0}
+.mfmap h5{font:600 11px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 4px}
+.mspot{position:absolute;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;background:#ff6b9a;border:1.5px solid #1b1530;box-shadow:0 0 0 2px rgba(255,107,154,.4)}
 .mtop .sprite{max-width:110px;max-height:110px;object-fit:contain;image-rendering:pixelated;background:var(--bg);border-radius:8px;padding:6px}
 .mtop h3{font:700 18px var(--f-display);margin:0 0 6px}
 .mflags{display:flex;flex-wrap:wrap;gap:5px;margin:0}

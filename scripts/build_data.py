@@ -496,7 +496,7 @@ def step_launch(D):
 def step_mobdb(D):
     """mobdb {mobId: export fields}: every monster you can meet at launch (open launch maps, KPQ, 2nd-job test maps) for the
     Monsters tab, with spawn maps [[mapId, name, count, respawn s ("7.56" or "min-max [avg]"), kind]], meowdb drop reports dr [[itemId, name, net votes]]
-    and meowdb mesos [per kill, reports, min, max, drop %]. Adds missing thumbnails to mobimg and mob skill icons to mskill."""
+    meowdb mesos [per kill, reports, min, max, drop %] and sp {mapId: [[x, y]]} spawn points as minimap fractions. Adds missing thumbnails to mobimg and mob skill icons to mskill."""
     import subprocess
     ref = os.environ.get("OSMS_REF") or subprocess.run(["git", "-C", str(ROOT / "vendor" / "osms_datamine_dashboard"), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     raw = f"https://raw.githubusercontent.com/ohmi69/osms_datamine_dashboard/{ref}/data/"
@@ -512,12 +512,22 @@ def step_mobdb(D):
     SKIP = {"gif", "gifs", "thumbnail", "maps", "id"}
     out, cache = {}, ROOT / "vendor" / "mob_thumbs"; cache.mkdir(exist_ok=True)
     D.setdefault("mskill", {})
+    # spawn points per monster on each map with a minimap, as minimap fractions (same per-axis stretch as portals)
+    dims, spots = render_dims([k for k in D["mmdim"]]), collections.defaultdict(dict)
+    for r in a.mapsj["regions"]:
+        for mp in r["maps"]:
+            k = str(mp["id"])
+            if k not in dims: continue
+            rw, rh = dims[k]
+            for p in mp.get("mob_positions") or []:
+                spots[str(p["id"])].setdefault(k, []).append([round(min(max(p["x"] / rw, 0), 1), 3), round(min(max(p["y"] / rh, 0), 1), 3)])
     for m in a.monsters:
         maps = [[x["id"], a.map_name.get(x["id"], x.get("name") or "").strip(), x.get("count") or 0, str(x.get("mob_time") or ""), kind(x["id"])]
                 for x in m.get("maps") or [] if kind(x["id"]) is not None]
         if not maps: continue
         k = str(m["id"]); o = {f: v for f, v in m.items() if f not in SKIP and v not in (None, [], {})}
         o["maps"] = sorted(maps, key=lambda x: (x[4] != "", -x[2]))
+        o["sp"] = spots.get(k, {})
         o["dr"] = sorted(([i, n, up - dn] for i, n, up, dn in drops.get(k, []) if up - dn >= 0), key=lambda x: -x[2])
         sm = mesos.get(k, {}).get("summary") or {}
         if sm.get("trustedCount"):

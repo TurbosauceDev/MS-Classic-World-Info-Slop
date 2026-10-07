@@ -78,10 +78,15 @@ const path = require("path");
   await p.selectOption("#kby", ""); await p.selectOption("#kdisc", "");
   await p.click("#t-mobs"); check(/^71 /.test(await p.textContent("#mbcount")), "monster database lists 71 monsters");
   await p.fill("#mbsearch", "balrog"); await p.click("#mbrows .mbtn");
-  check(/Cursed Sanctuary/.test(await p.textContent("#mbrows .mcard")) && !/NaN|undefined/.test(await p.textContent("#mobs")), "monster card: Jr. Balrog");
+  check(/Cursed Sanctuary/.test(await p.textContent("#mbpage")) && !/NaN|undefined/.test(await p.textContent("#mobs")), "monster page: Jr. Balrog");
+  await p.click("#mbback"); await p.fill("#mbsearch", "green mushroom"); await p.click("#mbrows .mbtn");
+  check(await p.$$eval("#mfarm .mfrow", r => r.length) > 3 && await p.$$eval("#mfarm .mspot", r => r.length) > 0 && !/NaN|undefined/.test(await p.textContent("#mbpage")), "monster page: farming maps + spawn dots");
+  await p.fill("#mflvl", "60"); check(/level 60/.test(await p.textContent("#mfarm")), "monster page: level changes the estimate");
+  await p.click("#mbback");
   await p.fill("#mbsearch", "snail shell"); check(await p.$$eval("#mbrows tr.mrow", r => r.length) > 0, "monster search by drop");
   await p.fill("#mbsearch", ""); await p.selectOption("#mbkind", "kpq"); check(await p.$$eval("#mbrows tr.mrow", r => r.length) === 4, "monster type filter: KPQ");
   await p.selectOption("#mbkind", "");
+  await p.click("#t-quests"); const mn = await p.$("#qrows .mobname"); if (mn) { await mn.click(); check(!(await p.isHidden("#mbpage")), "monster name in quests opens its page"); await p.click("#mbback") }
   await p.click("#t-log"); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
   await p.click("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 6, "credits tab renders");
   await p.click("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to craft Lv 10/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 10, "crafting leveling plan");

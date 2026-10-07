@@ -325,7 +325,8 @@
     <div class="howgrid">
       <div><h4>The list</h4><ul>
         <li>Every monster you can meet at launch: field monsters, bosses, jump quests, KPQ and the 2nd job test maps. Orbis, El Nath and Forgotten Hollow monsters are left out.</li>
-        <li>Search by monster, map or drop. Click a column to sort, click a monster for its full card.</li>
+        <li>Search by monster, map or drop. Click a column to sort. Click a monster (here or anywhere on the site) to open its page.</li>
+        <li><b>Best maps to farm it:</b> every regular map it spawns on, ranked by how many of it you'd kill per hour at your class and level (estimate, same model as Where to train). The minimap shows where it spawns.</li>
         <li><b>EXP/100 HP</b> = EXP per 100 HP of damage: higher is a more efficient kill.</li>
         <li>Stats, attacks, skills and spawns come straight from the launch game files.</li>
       </ul></div>
@@ -336,6 +337,7 @@
       </ul></div>
     </div>
   </details>
+  <div id="mblist">
   <div class="controls">
     <label>Search<input id="mbsearch" type="search" placeholder="monster, map or drop"></label>
     <label>Type<select id="mbkind"><option value="">All</option><option value="field">Field monsters</option><option value="boss">Bosses</option><option value="jq">Jump quests</option><option value="kpq">KPQ</option><option value="job">2nd job test</option></select></label>
@@ -345,6 +347,8 @@
     <thead id="mbhead"><tr><th data-k="name"><button>Monster</button></th><th class="num" data-k="level"><button>Lv</button></th><th class="num" data-k="hp"><button>HP</button></th><th class="num" data-k="exp"><button>EXP</button></th><th class="num" data-k="ratio"><button>EXP/100 HP</button></th><th class="num" data-k="eva"><button>Avoid</button></th><th class="num" data-k="pdd"><button>W.DEF</button></th><th class="num" data-k="mdd"><button>M.DEF</button></th><th class="num" data-k="atk"><button>Touch ATK</button></th><th class="num" data-k="acc"><button>ACC</button></th></tr></thead>
     <tbody id="mbrows"></tbody>
   </table></div>
+  </div>
+  <div id="mbpage" hidden></div>
 </section>
 
 <section id="cit" hidden>
@@ -470,6 +474,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Monster pages</h3><span class="pill p-hot">monsters</span></div>
+      <p>Clicking a monster (in the Monsters tab or any monster name on the site) now opens its own page: stats, every spawn place, drops, mesos, attacks and quests, plus <b>Best maps to farm it</b>: the maps it spawns on, ranked by how many you'd kill per hour at your class and level (estimate), with danger, EXP/hr and a minimap showing where it spawns. Each page has a shareable link.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Monster database</h3><span class="pill p-hot">new tab</span></div>
       <p>New <b>Monsters</b> tab: all 71 monsters you can meet at launch (field monsters, bosses, jump quests, KPQ, 2nd job test), searchable by name, map or drop. Each card shows every stat in the launch game files (HP, MP, EXP, attack, defense, accuracy, avoid, speed, knockback, regen, elements), its attacks and skills, every spawn map with respawn time, meowdb player drop and meso reports, and the quests and recipes that want it.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 6, 2026 · Backup grind maps</h3><span class="pill p-hot">planner</span></div>

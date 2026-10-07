@@ -40,7 +40,7 @@ src/js/20-quests.js   Quest Database: filters, header sorting, questline filter,
 src/js/40-citizenship.js  Citizenship tab (GRADES + SHOPS consts are from meowdb, not the export)
 src/js/45-crafting.js  Crafting tab: masters + profession quests, craft levels (CRAFT_LV from OSMS dashboard), cheapest leveling, recipes, raw materials
 src/js/47-keep.js     Keep or sell tab: items quests/recipes ask for, verdict + have counts, sources (incl. meowdb player drop reports)
-src/js/48-monsters.js  Monsters tab: searchable list of D.mobdb (every launch monster: export stats, attacks, skills, spawns, meowdb drops/mesos)
+src/js/48-monsters.js  Monsters tab: searchable list of D.mobdb + a page per monster (stats, spawns with minimap dots, drops, best farming maps via mapRates/buildAt)
 src/js/50-builder.js  Character Builder: AP, skill build with per-job SP pools, damage calc, greedy auto-build; buildAt() = headless default build
 src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill
 scripts/fetch_osms.sh pin + clone the OSMS export into vendor/
