@@ -316,3 +316,31 @@ input.khave{width:64px;text-align:right}
 .navmm summary{cursor:pointer;color:var(--muted);font-size:12.5px;margin-top:4px}
 .navmm .mfmap{max-width:400px;margin-top:6px}
 #navi .controls input[type=search]{min-width:min(260px,70vw)}
+/* world map */
+.wmgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;margin-top:14px;align-items:start}
+@media (max-width:900px){.wmgrid{grid-template-columns:minmax(0,1fr)}}
+#wmmap{position:relative;width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#0d0b14}
+#wmmap img{display:block;width:100%;height:100%}
+.wmdot{position:absolute;transform:translate(-50%,-50%);width:13px;height:13px;padding:0;border-radius:999px;cursor:pointer;
+  background:color-mix(in srgb,#ffd24a var(--heat,0%),#c9c2e0);border:2px solid #1b1530;box-shadow:0 0 0 2px rgba(255,255,255,.55);font:700 9px/9px var(--f-mono);color:#1b1530}
+.wmdot::before{content:"";position:absolute;inset:-7px;border-radius:999px}
+.wmdot.k0{width:18px;height:18px;background:var(--accent);box-shadow:0 0 0 2px #fff}
+.wmdot.k2{border-radius:3px}
+.wmdot.off{background:#7d788c;opacity:.65}
+.wmdot b{position:absolute;top:-15px;left:50%;transform:translateX(-50%);background:#1b1530;color:#ffd24a;border-radius:999px;padding:2px 4px}
+.wmdot:hover,.wmdot.on,.wmdot:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent),0 0 10px 2px #fff;z-index:2}
+.wmdot.pin{box-shadow:0 0 0 3px #ffd24a,0 0 0 5px #1b1530;z-index:2}
+#wmlabel{position:absolute;transform:translate(14px,-50%);background:#1b1530;color:#fff;font:600 12.5px var(--f-body);padding:4px 8px;border-radius:6px;pointer-events:none;white-space:nowrap;z-index:3}
+#wmlabel.left{transform:translate(calc(-100% - 14px),-50%)}
+#wmcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+#wmcard .qt-h b{display:block;font:700 17px var(--f-display)}
+#wmcard .qt-h span{color:var(--muted);font-size:13px}
+#wmcard h5{font:600 11px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 4px}
+#wmcard .mmobs{padding-left:16px;margin:0;font-size:13.5px}
+#wmcard .mmobs span{color:var(--muted);font-size:12px}
+#wmcard .wmnpcs{margin:0;font-size:13.5px}
+.wmact{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:10px 0}
+.wmrow{cursor:pointer}
+.wmrow:hover td,.wmrow.sel td{background:var(--accent-soft)}
+#wmisl button{text-transform:none;letter-spacing:0}
+@media (max-width:600px){.wmdot{width:9px;height:9px;border-width:1.5px;box-shadow:0 0 0 1px rgba(255,255,255,.55)}.wmdot.k0{width:12px;height:12px}.wmdot::before{inset:-5px}.wmdot b{top:-13px;font-size:8px;padding:1px 3px}}

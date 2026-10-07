@@ -95,6 +95,18 @@ const path = require("path");
   await p.check("#navnocab"); check(!/cab ride/.test(await p.textContent("#navout")) && /maps? on foot/.test(await p.textContent("#navout")), "navigator: no taxi walks the whole way"); await p.uncheck("#navnocab");
   await p.click('#navtowns button[data-id="60"]'); await p.fill("#navto", "Ant Tunnel I"); await p.dispatchEvent("#navto", "change");
   check(/Shanks/.test(await p.textContent("#navout")) && await p.$$eval("#navout .pt.on", r => r.length) > 0 && !/NaN|undefined/.test(await p.textContent("#navi")), "navigator: Maple Island route via Shanks with highlighted exits");
+  // World Map: hover a dot fills the card, click pins it, Route here opens the navigator
+  await p.click("#t-wmap");
+  await p.click('#wmisl button[data-i="1"]');
+  check(await p.$$eval("#wmmap .wmdot", r => r.length) > 40, "world map: Victoria Island dots");
+  await p.hover('#wmmap .wmdot.k0 >> nth=1');
+  check(/Town/.test(await p.textContent("#wmcard")) && await p.$$eval("#wmcard .wmrow", r => r.length) > 0 && !/NaN|undefined/.test(await p.textContent("#wmcard")), "world map: hovering a town fills the card");
+  await p.mouse.move(0, 0); await p.fill("#wmfind", "Henesys Hunting Ground I"); await p.dispatchEvent("#wmfind", "change");
+  check(/Henesys Hunting Ground I/.test(await p.textContent("#wmcard")) && /EXP/.test(await p.textContent("#wmcard")) && await p.$$eval("#wmmap .wmdot.pin", r => r.length) === 1, "world map: find a map pins its dot with monsters");
+  await p.click('#wmisl button[data-i="0"]'); await p.hover('#wmmap .wmdot >> nth=3');
+  check(!/NaN|undefined/.test(await p.textContent("#wmcard")) && (await p.textContent("#wmcard")).length > 20, "world map: Maple Island card");
+  await p.click('#wmcard [data-route]');
+  check(!(await p.isHidden("#navi")) && (await p.inputValue("#navto")) !== "", "world map: Route here opens the navigator");
   await p.click("#t-kslist"); check(/EllieFlower/.test(await p.textContent("#ksrows")), "the list renders");
   await p.click("#t-log"); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
   await p.click("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 6, "credits tab renders");

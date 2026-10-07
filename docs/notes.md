@@ -262,6 +262,9 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   revives), maps [[mapId, name, count, respawn s string, kind ""|KPQ|2nd job test]], dr [[itemId, name, net votes ≥ 0]] (meowdb),
   meso [per kill, reports, min, max, drop %] (meowdb), sp {mapId: [[x, y]]} spawn points as minimap fractions}: launch-reachable monsters (71) incl. bosses/KPQ/job test; `mskill`
   {mobSkillId: png}. Built by `build_data.py mobdb`; mobimg also gets thumbnails for these.
+- `wmap` [[WorldMap key, island, w, h, base64 WebP, [[x, y, type, [mapIds]]]]]: client world maps 000 (Maple Island) and 001
+  (Victoria) from maplestory.io MCW/CBT2 (`build_data.py worldmap`, cached in vendor/worldmap/). x/y = fraction of the image (origin +
+  spot); type 0 town, 1/3 field, 2 dungeon. Ossyria (002/003) left out. Some spots list ids not in the launch export (shown grey).
 - `latermobs` [mobId]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2
   (Someone Else's House) and Fairy 3 (Tree Dungeon, Forest Up North VI/VII): they ARE at launch, just not in the ranking.
 

@@ -12,6 +12,7 @@ Steps, in order (each adds keys to the data dict):
   launch    latermobs, latermobnames                      <- monsters.json + maps (Forgotten Hollow / not-at-launch)
   extras    mobatk, potshops                              <- monsters.json + meowdb shops (`build_data.py extras`)
   mobdb     mobdb, mskill (+ mobimg)                     <- monsters.json + meowdb drops/mesos (`build_data.py mobdb`)
+  worldmap  wmap                                          <- maplestory.io MCW CBT2 WorldMap000/001 (`build_data.py worldmap`)
   crafting  craft (+ items)                               <- crafting.json + Crafting quests (`build_data.py crafting` = this step only)
 """
 import base64, collections, json, os, pathlib, re, sys
@@ -543,7 +544,27 @@ def step_mobdb(D):
         out[k] = o
     D["mobdb"] = out
 
-PARTIAL = {"crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D))}   # (key it owns, step)
+def step_worldmap(D):
+    """wmap [[key, island, w, h, base64 webp, [[x, y, type, [mapIds]]]]]: the client's world maps (WorldMap.wz) for Maple
+    Island (WorldMap000) and Victoria Island (WorldMap001), from maplestory.io's Classic World client (region MCW, version
+    CBT2 = COT2; no newer MCW client there yet). x/y = spot as a fraction of the image; type = the client's marker
+    (0 town, 1/3 field, 2 dungeon). Ossyria (002/003) is left out: not in the launch. Cached in vendor/worldmap/."""
+    import io, subprocess
+    from PIL import Image
+    cache = ROOT / "vendor" / "worldmap"; cache.mkdir(parents=True, exist_ok=True)
+    out = []
+    for key, island in (("WorldMap000", "Maple Island"), ("WorldMap001", "Victoria Island")):
+        f = cache / f"{key}.json"
+        if not f.exists():   # curl: maplestory.io answers Python's default client with 403
+            subprocess.run(["curl", "-sSf", "-m", "120", "-o", str(f), f"https://maplestory.io/api/MCW/CBT2/map/worldmap/{key}"], check=True)
+        w = json.load(open(f)); base = w["baseImage"][0]; ox, oy = base["origin"]["x"], base["origin"]["y"]
+        im = Image.open(io.BytesIO(base64.b64decode(base["image"]))); W, H = im.size
+        buf = io.BytesIO(); im.convert("RGBA").save(buf, "WEBP", quality=80, method=6)
+        spots = [[round((ox + m["spot"]["x"]) / W, 4), round((oy + m["spot"]["y"]) / H, 4), m["type"], [str(i) for i in m["mapNumbers"]]] for m in w["maps"]]
+        out.append([key, island, W, H, base64.b64encode(buf.getvalue()).decode(), spots])
+    D["wmap"] = out
+
+PARTIAL = {"crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)
@@ -555,7 +576,7 @@ if __name__ == "__main__":
     D = step_base()
     step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D)
     D = json.loads(json.dumps(D))  # str keys, as in the partial rebuild path (crafting/extras look mobs up by str id)
-    step_crafting(D); step_extras(D); step_mobdb(D)
+    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D)
     for k in ("mobdiff", "skilldiff", "latermobnames"): D.pop(k, None)   # only the removed "What changed since 2008" tab used these
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees
     (ROOT / "data").mkdir(exist_ok=True)
