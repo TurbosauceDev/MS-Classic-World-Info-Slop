@@ -44,6 +44,7 @@ src/js/48-monsters.js  Monsters tab: searchable list of D.mobdb + a page per mon
 src/js/50-builder.js  Character Builder: AP, skill build with per-job SP pools, damage calc, greedy auto-build; buildAt() = headless default build
 src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill; exports TRAVEL (travel model)
 src/js/65-navigator.js Map Navigator: route between two maps (TRAVEL + Shanks' ship), exit numbers on minimaps; any .mname click opens it
+src/js/70-thelist.js  The List: KSERS array of known kill-stealers (add new entries at the top)
 scripts/fetch_osms.sh pin + clone the OSMS export into vendor/
 scripts/analyze.py    step 1: map ranking, quest rows, 2008 diffs -> build/analysis.json
 scripts/build_data.py all data steps -> data/data.json (embedded in the page)

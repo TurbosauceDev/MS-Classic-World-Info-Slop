@@ -22,6 +22,7 @@
   <button role="tab" id="t-cit" aria-selected="false" data-tab="cit">Citizenship</button>
   <button role="tab" id="t-craft" aria-selected="false" data-tab="craft">Crafting</button>
   <button role="tab" id="t-keep" aria-selected="false" data-tab="keep">Keep or sell</button>
+  <button role="tab" id="t-kslist" aria-selected="false" data-tab="kslist">The List</button>
   <button role="tab" id="t-log" aria-selected="false" data-tab="log">Changelog</button>
   <button role="tab" id="t-credits" aria-selected="false" data-tab="credits">Credits</button>
 </nav>
@@ -487,6 +488,24 @@
   </table></div>
 </section>
 
+<section id="kslist" hidden>
+  <details class="howto" open>
+    <summary>What this is</summary>
+    <ul>
+      <li>Known kill-stealers (KSers) seen in-game: characters who steal other players' kills on purpose.</li>
+      <li>Level, job, guild and fame are as seen on their Character Info when reported; they change over time.</li>
+    </ul>
+  </details>
+  <div class="controls">
+    <label>Search<input id="kssearch" type="search" placeholder="name, job, guild"></label>
+    <span class="pill p-hot" id="kscount" style="align-self:center"></span>
+  </div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Name</th><th class="num">Level</th><th>Job</th><th>Guild</th><th class="num">Fame</th><th>What they do</th><th>Added</th></tr></thead>
+    <tbody id="ksrows"></tbody>
+  </table></div>
+</section>
+
 <section id="log" hidden>
   <details class="howto">
     <summary>About this page</summary>
@@ -497,6 +516,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · The List</h3><span class="pill p-hot">new tab</span></div>
+      <p>New <b>The List</b> tab: known kill-stealers, searchable. First entry: EllieFlower (Lv 18 Magician).</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Navigator: no taxi</h3><span class="pill p-hot">navigator</span></div>
       <p>Map Navigator has a <b>No taxi</b> box: tick it to get a walking-only route (fewest maps) instead of cab rides between towns.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Map navigator</h3><span class="pill p-hot">new tab</span></div>

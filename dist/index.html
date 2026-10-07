@@ -340,6 +340,7 @@ input.khave{width:64px;text-align:right}
   <button role="tab" id="t-cit" aria-selected="false" data-tab="cit">Citizenship</button>
   <button role="tab" id="t-craft" aria-selected="false" data-tab="craft">Crafting</button>
   <button role="tab" id="t-keep" aria-selected="false" data-tab="keep">Keep or sell</button>
+  <button role="tab" id="t-kslist" aria-selected="false" data-tab="kslist">The List</button>
   <button role="tab" id="t-log" aria-selected="false" data-tab="log">Changelog</button>
   <button role="tab" id="t-credits" aria-selected="false" data-tab="credits">Credits</button>
 </nav>
@@ -805,6 +806,24 @@ input.khave{width:64px;text-align:right}
   </table></div>
 </section>
 
+<section id="kslist" hidden>
+  <details class="howto" open>
+    <summary>What this is</summary>
+    <ul>
+      <li>Known kill-stealers (KSers) seen in-game: characters who steal other players' kills on purpose.</li>
+      <li>Level, job, guild and fame are as seen on their Character Info when reported; they change over time.</li>
+    </ul>
+  </details>
+  <div class="controls">
+    <label>Search<input id="kssearch" type="search" placeholder="name, job, guild"></label>
+    <span class="pill p-hot" id="kscount" style="align-self:center"></span>
+  </div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Name</th><th class="num">Level</th><th>Job</th><th>Guild</th><th class="num">Fame</th><th>What they do</th><th>Added</th></tr></thead>
+    <tbody id="ksrows"></tbody>
+  </table></div>
+</section>
+
 <section id="log" hidden>
   <details class="howto">
     <summary>About this page</summary>
@@ -815,6 +834,8 @@ input.khave{width:64px;text-align:right}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · The List</h3><span class="pill p-hot">new tab</span></div>
+      <p>New <b>The List</b> tab: known kill-stealers, searchable. First entry: EllieFlower (Lv 18 Magician).</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Navigator: no taxi</h3><span class="pill p-hot">navigator</span></div>
       <p>Map Navigator has a <b>No taxi</b> box: tick it to get a walking-only route (fewest maps) instead of cab rides between towns.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Map navigator</h3><span class="pill p-hot">new tab</span></div>
@@ -1009,7 +1030,7 @@ async function copyShare(btn, url){
 /* tabs */
 document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
-  ["plan","path","maps","quests","mobs","navi","cit","craft","keep","log","credits"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
+  ["plan","path","maps","quests","mobs","navi","cit","craft","keep","kslist","log","credits"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
 }));
 try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : localStorage.getItem("tab"); if (t) document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
@@ -3335,5 +3356,22 @@ document.addEventListener("click", e => { const el = e.target.closest && e.targe
   hideQtip(); S.to = String(el.dataset.map); save(); $("#t-navi").click(); render(); $("#navi").scrollIntoView({block: "start"}) });
 render();
 })();
+
+/* The List: known kill-stealers, as reported by Danny. Add new entries to the top of KSERS.
+   Fields: name, level, job, guild ("" = none), fame, note, added (YYYY-MM-DD). Only what was seen in-game. */
+const KSERS = [
+  {name: "EllieFlower", level: 18, job: "Magician", guild: "", fame: 0, note: "Intentionally camps melee classes to steal their kills.", added: "2026-10-07"},
+];
+
+const renderKs = () => {
+  const q = $("#kssearch").value.trim().toLowerCase();
+  const rows = KSERS.filter(k => !q || [k.name, k.job, k.guild, k.note].join(" ").toLowerCase().includes(q));
+  $("#ksrows").innerHTML = rows.map(k => `<tr><td><b>${esc(k.name)}</b></td><td class="num">${k.level ?? "?"}</td><td>${esc(k.job || "?")}</td>
+    <td>${k.guild ? esc(k.guild) : "none"}</td><td class="num">${k.fame ?? "?"}</td><td>${esc(k.note)}</td><td>${esc(k.added)}</td></tr>`).join("")
+    || `<tr><td colspan="7">No match.</td></tr>`;
+  $("#kscount").textContent = `${rows.length} of ${KSERS.length}`;
+};
+$("#kssearch").addEventListener("input", renderKs);
+renderKs();
 
 </script>

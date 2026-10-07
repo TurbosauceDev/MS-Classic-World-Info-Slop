@@ -95,6 +95,7 @@ const path = require("path");
   await p.check("#navnocab"); check(!/cab ride/.test(await p.textContent("#navout")) && /maps? on foot/.test(await p.textContent("#navout")), "navigator: no taxi walks the whole way"); await p.uncheck("#navnocab");
   await p.click('#navtowns button[data-id="60"]'); await p.fill("#navto", "Ant Tunnel I"); await p.dispatchEvent("#navto", "change");
   check(/Shanks/.test(await p.textContent("#navout")) && await p.$$eval("#navout .pt.on", r => r.length) > 0 && !/NaN|undefined/.test(await p.textContent("#navi")), "navigator: Maple Island route via Shanks with highlighted exits");
+  await p.click("#t-kslist"); check(/EllieFlower/.test(await p.textContent("#ksrows")), "the list renders");
   await p.click("#t-log"); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
   await p.click("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 6, "credits tab renders");
   await p.click("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to craft Lv 10/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 10, "crafting leveling plan");
