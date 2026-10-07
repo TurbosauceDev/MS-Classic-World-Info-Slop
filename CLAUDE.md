@@ -3,7 +3,7 @@
 A single-page planner for **MapleStory Classic World** (Founder's Access Oct 6 2026, Grand Launch Oct 21 2026),
 built from the Closed Online Test 2 (COT2) game-file export. Owner: Danny.
 
-Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Monsters** · **World Map** · **Map Navigator** · **Citizenship** · **Crafting** · **Keep or sell** · **Changelog** · **Credits**.
+Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Monsters** · **Items** · **World Map** · **Map Navigator** · **Citizenship** · **Crafting** · **Keep or sell** · **Changelog** · **Credits**.
 
 ## Ground rules (from Danny)
 - **Classic World only.** Never use modern/retail MapleStory info. 2008-era info only if confirmed to still hold in Classic.
@@ -41,6 +41,7 @@ src/js/40-citizenship.js  Citizenship tab (GRADES + SHOPS consts are from meowdb
 src/js/45-crafting.js  Crafting tab: masters + profession quests, craft levels (CRAFT_LV from OSMS dashboard), cheapest leveling, recipes, raw materials
 src/js/47-keep.js     Keep or sell tab: items quests/recipes ask for, verdict + have counts, sources (incl. meowdb player drop reports)
 src/js/48-monsters.js  Monsters tab: searchable list of D.mobdb + a page per monster (stats, spawns with minimap dots, drops, best farming maps via mapRates/buildAt)
+src/js/49-items.js    Items tab: every item (D.items) + a page per item (stats, drops, shops via D.ishop, recipes, quest rewards, quests/recipes that want it); any .ri icon or .itname click opens it
 src/js/50-builder.js  Character Builder: AP, skill build with per-job SP pools, damage calc, greedy auto-build; buildAt() = headless default build
 src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill; exports TRAVEL (travel model)
 src/js/65-navigator.js Map Navigator: route between two maps (TRAVEL + Shanks' ship), exit numbers on minimaps; any .mname click opens it
@@ -77,7 +78,7 @@ Danny's OK, fast-forward that branch to it (`git push origin HEAD:claude/trustin
 - Use the existing CSS tokens (--bg, --panel, --ink, --muted, --line, --accent, --accent-soft, --leaf, --warn, --bad).
   Palette is lavender/purple/grey; keep it. Both light and dark must work; no horizontal scroll at 390px.
 - Explanatory text goes in a collapsible `<details class="howto">` box at the top of a tab, as short bullet lists.
-- Tooltips: one floating `#qtip`; elements with `.qname` (quests), `.ri` (items), `.mname` (maps, `mapLink()`; a click opens the Map Navigator), `.nname` (NPCs, `npcLink()`) or `.mobname` (monsters, `mobLink()`) get it via delegated listeners.
-- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, craft, craftlv, qcompact, keep, keephave, mobs, navi, wmap).
+- Tooltips: one floating `#qtip`; elements with `.qname` (quests), `.ri` (items), `.mname` (maps, `mapLink()`; a click opens the Map Navigator), `.nname` (NPCs, `npcLink()`) or `.mobname` (monsters, `mobLink()`) or `.itname` (item names; a click on it or a `.ri` icon opens the item page) get it via delegated listeners.
+- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, craft, craftlv, qcompact, keep, keephave, mobs, items, navi, wmap).
 - Plain, game-player language on the page. Say when a number is estimated.
 - Add a dated entry to the Changelog tab (`#log` in src/index.html, newest first) for every user-visible change.

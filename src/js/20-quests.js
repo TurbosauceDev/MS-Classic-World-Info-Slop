@@ -135,7 +135,7 @@ function npcTip(id){
     ${here ? mm + (here[1] != null ? `<p class="sub">★ is where ${esc(name)} stands.</p>` : "") : ""}`;
 }
 function mobTip(id){
-  const m = D.mobs[id]; if (!m) return "";
+  const b = D.mobdb[id], m = D.mobs[id] || b && [b.name, +b.level, +b.hp, +b.exp, b.eva || 0, b.PDDamage || 0, b.MDDamage || 0, b.elements, b.undead]; if (!m) return "";
   const [name, lv, hp, ex, eva, pdd, mdd, el, undead] = m, img = D.mobimg[id];
   const els = Object.entries(el || {}).map(([e, v]) => `<span class="pill ${v === "Weak" ? "p-good" : v === "Immune" ? "p-bad" : "p-warn"}">${esc(v === "Weak" ? "weak to " : v === "Immune" ? "immune to " : "resists ")}${esc(e)}</span>`).join(" ");
   const where = Object.entries(D.maps).filter(([, mp]) => mp[1]).map(([mid, mp]) => [mp[0], (mp[2].find(s => String(s[0]) === id) || [0, 0])[1]])
@@ -165,9 +165,9 @@ function placeQtip(el){
   qtip.style.left = x + "px"; qtip.style.top = y + "px";
 }
 const hideQtip = () => { qtip.hidden = true };
-document.addEventListener("mouseover", e => { const el = e.target.closest && e.target.closest(".qname, .ri, .mname, .nname, .mobname"); if (el) showQtip(el) });
-document.addEventListener("mouseout", e => { if (e.target.closest && e.target.closest(".qname, .ri, .mname, .nname, .mobname")) hideQtip() });
-document.addEventListener("focusin", e => { const el = e.target.closest && e.target.closest(".qname, .ri, .mname, .nname, .mobname"); if (el) showQtip(el) });
+document.addEventListener("mouseover", e => { const el = e.target.closest && e.target.closest(".qname, .ri, .itname, .mname, .nname, .mobname"); if (el) showQtip(el) });
+document.addEventListener("mouseout", e => { if (e.target.closest && e.target.closest(".qname, .ri, .itname, .mname, .nname, .mobname")) hideQtip() });
+document.addEventListener("focusin", e => { const el = e.target.closest && e.target.closest(".qname, .ri, .itname, .mname, .nname, .mobname"); if (el) showQtip(el) });
 document.addEventListener("focusout", hideQtip);
 document.querySelectorAll(".tblwrap").forEach(w => w.addEventListener("scroll", hideQtip, {passive:true}));
 addEventListener("scroll", hideQtip, {passive:true});

@@ -14,6 +14,7 @@ Steps, in order (each adds keys to the data dict):
   mobdb     mobdb, mskill (+ mobimg)                     <- monsters.json + meowdb drops/mesos (`build_data.py mobdb`)
   worldmap  wmap                                          <- maplestory.io MCW CBT2 WorldMap000/001 (`build_data.py worldmap`)
   crafting  craft (+ items)                               <- crafting.json + Crafting quests (`build_data.py crafting` = this step only)
+  itemdb    items/iicons for every item, ishop             <- items.json + meowdb shops (`build_data.py itemdb`)
 """
 import base64, collections, json, os, pathlib, re, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -564,7 +565,27 @@ def step_worldmap(D):
         out.append([key, island, W, H, base64.b64encode(buf.getvalue()).decode(), spots])
     D["wmap"] = out
 
-PARTIAL = {"crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D))}   # (key it owns, step)
+def step_itemdb(D):
+    """Item database: every item in the export (items + scrolls) gets a D.items entry and icon (add_items), g = gender
+    for gender-locked equipment, and ishop {itemId: [[npc, mapId, mapName, price]]} = every meowdb NPC shop that sells it."""
+    add_items(D, ITEM)
+    for iid, i in ITEM.items():
+        if i.get("gender"): D["items"][iid]["g"] = i["gender"]
+    byname = collections.defaultdict(list)
+    for iid, i in ITEM.items(): byname[i["name"]].append(iid)
+    mapid = {}
+    for k, v in a.map_name.items(): mapid.setdefault(v, str(k))
+    out = {}
+    for s in json.load(open(ROOT / "data" / "sources" / "meowdb_shops.json"))["shops"]:
+        if "\t" in s["npc"]: continue   # two mis-parsed meowdb rows (see step_crafting)
+        for nm, price, _ in s["items"]:
+            ids = byname.get(nm, [])
+            if len(ids) > 1 and not all(ITEM[i].get("gender") for i in ids):   # same name: male + female versions both sold; else the sellable one
+                ids = [i for i in ids if (ITEM[i].get("price") or 0) > 0][:1] or ids[:1]
+            for iid in ids: out.setdefault(iid, []).append([s["npc"], mapid.get(s["map"], ""), s["map"], price])
+    D["ishop"] = out
+
+PARTIAL = {"itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)
@@ -576,7 +597,7 @@ if __name__ == "__main__":
     D = step_base()
     step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D)
     D = json.loads(json.dumps(D))  # str keys, as in the partial rebuild path (crafting/extras look mobs up by str id)
-    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D)
+    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D); step_itemdb(D)
     for k in ("mobdiff", "skilldiff", "latermobnames"): D.pop(k, None)   # only the removed "What changed since 2008" tab used these
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees
     (ROOT / "data").mkdir(exist_ok=True)

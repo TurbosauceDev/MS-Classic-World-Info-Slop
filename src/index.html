@@ -18,6 +18,7 @@
   <button role="tab" id="t-maps" aria-selected="false" data-tab="maps">Where to train</button>
   <button role="tab" id="t-quests" aria-selected="false" data-tab="quests">Quest Database</button>
   <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs">Monsters</button>
+  <button role="tab" id="t-items" aria-selected="false" data-tab="items">Items</button>
   <button role="tab" id="t-wmap" aria-selected="false" data-tab="wmap">World Map</button>
   <button role="tab" id="t-navi" aria-selected="false" data-tab="navi">Map Navigator</button>
   <button role="tab" id="t-cit" aria-selected="false" data-tab="cit">Citizenship</button>
@@ -354,6 +355,41 @@
   <div id="mbpage" hidden></div>
 </section>
 
+<section id="items" hidden>
+  <details class="howto">
+    <summary>How to use the item database</summary>
+    <div class="howgrid">
+      <div><h4>The list</h4><ul>
+        <li>Every item in the launch game files: equipment, use items, etc items, setup items and scrolls.</li>
+        <li>Search by item name or by a monster that drops it. Filter by type, equipment slot and job. Click a column to sort.</li>
+        <li>Click an item (here, or any item icon or item name anywhere on the site) to open its page.</li>
+        <li><b>Has a known source</b> (on by default) hides items nothing is known to drop, sell, craft or give (event, cash and unused items are mostly these).</li>
+      </ul></div>
+      <div><h4>Item pages</h4><ul>
+        <li>Stats, requirements, description and sell price come straight from the launch game files.</li>
+        <li>Drop tables aren't in the game files. Drops are meowdb player reports (+ = net confirmations); a few weapons also list meowdb's old MapleSEA drop list, marked "likely".</li>
+        <li>Shops are meowdb's NPC shop list. Recipes and quest rewards are from the game files.</li>
+      </ul></div>
+    </div>
+  </details>
+  <div id="itlist">
+  <div class="controls">
+    <label>Search<input id="itsearch" type="search" placeholder="item or monster"></label>
+    <label>Type<select id="itcat"><option value="">All</option><option value="Equip">Equipment</option><option value="Use">Use</option><option value="Etc">Etc</option><option value="Setup">Setup</option><option value="Scroll">Scrolls</option></select></label>
+    <label>Slot<select id="itslot"><option value="">Any</option></select></label>
+    <label>Job<select id="itjob"><option value="">Any</option><option>Beginner</option><option>Warrior</option><option value="Mage">Magician</option><option>Bowman</option><option>Thief</option></select></label>
+    <label class="chk"><input type="checkbox" id="itsrc"> Has a known source</label>
+    <span class="pill p-hot" id="itcount" style="align-self:center"></span>
+  </div>
+  <div class="tblwrap"><table>
+    <thead id="ithead"><tr><th data-k="name"><button>Item</button></th><th data-k="type"><button>Type</button></th><th class="num" data-k="lv"><button>Lv</button></th><th>Job</th><th>Stats</th><th class="num" data-k="price"><button>Sells for</button></th><th>Get it from</th></tr></thead>
+    <tbody id="itrows"></tbody>
+  </table></div>
+  <button class="btn" id="itmore" hidden></button>
+  </div>
+  <div id="itpage" hidden></div>
+</section>
+
 <section id="wmap" hidden>
   <details class="howto">
     <summary>How to use the world map</summary>
@@ -545,6 +581,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Item database</h3><span class="pill p-hot">new</span></div>
+      <p>New <b>Items</b> tab: all 2,220 items in the launch game files, searchable by name or by a monster that drops it, with type, slot, job and "has a known source" filters. Click any item (or any item icon or name anywhere on the site) for its page: stats, description, monsters that drop it, NPC shops, recipes, quest rewards, quests and recipes that want it, sell price and similar gear. Monster pages link their drops to item pages, and item pages link back to monster pages.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map monster search</h3><span class="pill p-hot">update</span></div>
       <p>World Map has a <b>Find a monster</b> box: type a monster and every place it spawns lights up (other dots dim), with a count per island. Hovering a lit dot opens the minimap of the map where it spawns most.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map spawns</h3><span class="pill p-hot">update</span></div>

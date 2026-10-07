@@ -45,7 +45,7 @@ function page(o){
   const rev = (m.revives || []).map(r => `${r.count} × ${D.mobdb[r.id] ? `<button class="linkbtn" data-open="${r.id}">${esc(r.name)}</button>` : esc(r.name)}`).join(", ");
   const maps = m.maps.map(([mid, name, n, t, k]) => `<li>${D.mapnames[mid] != null || D.maps[mid] ? mapLink(mid, name) : esc(name)}${k ? ` <span class="pill p-hot">${esc(k)}</span>` : ""} <span class="sub">×${n}${t ? ` · respawn ${esc(secs(t))}${/\[/.test(t) ? " (varies by spot)" : ""}` : ""}</span></li>`).join("");
   const sure = m.dr.filter(x => x[2] >= 1), maybe = m.dr.filter(x => x[2] < 1);
-  const drop = x => D.items[x[0]] ? `<span class="mdrop">${icon(x[0])}<span>${esc(x[1])}${x[2] >= 1 ? ` <span class="sub">+${x[2]}</span>` : ""}</span></span>` : `<span class="mdrop"><span>${esc(x[1])}${x[2] >= 1 ? ` <span class="sub">+${x[2]}</span>` : ""}</span></span>`;
+  const drop = x => D.items[x[0]] ? `<span class="mdrop">${icon(x[0])}<span><span class="itname" tabindex="0" data-item="${x[0]}">${esc(x[1])}</span>${x[2] >= 1 ? ` <span class="sub">+${x[2]}</span>` : ""}</span></span>` : `<span class="mdrop"><span>${esc(x[1])}${x[2] >= 1 ? ` <span class="sub">+${x[2]}</span>` : ""}</span></span>`;
   const qk = QK[o.id] || [], qi = QI[o.id] || [], mats = MAT[o.id] || [];
   const quests = [...qk.map(x => `<li>${qn(x)} <span class="sub">hunt ${fmt(x[2])}</span></li>`), ...qi.map(x => `<li>${qn(x)} <span class="sub">${esc(x[3])} ×${fmt(x[2])}</span></li>`)].join("");
   const meso = m.meso ? `${fmt(m.meso[0])} <span class="sub">avg per kill (${m.meso[2]}–${m.meso[3]} mesos, ${m.meso[4]}% of kills, ${m.meso[1]} report${m.meso[1] > 1 ? "s" : ""})</span>` : `<span class="sub">no player reports yet</span>`;

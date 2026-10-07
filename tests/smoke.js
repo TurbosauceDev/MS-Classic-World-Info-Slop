@@ -86,6 +86,19 @@ const path = require("path");
   await p.fill("#mbsearch", "snail shell"); check(await p.$$eval("#mbrows tr.mrow", r => r.length) > 0, "monster search by drop");
   await p.fill("#mbsearch", ""); await p.selectOption("#mbkind", "kpq"); check(await p.$$eval("#mbrows tr.mrow", r => r.length) === 4, "monster type filter: KPQ");
   await p.selectOption("#mbkind", "");
+  // Item database: list, filters, item page, cross-links with monster pages
+  await p.click("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); check(/^2,220 /.test(await p.textContent("#itcount")), "item database lists 2,220 items");
+  await p.click("#itsrc"); check(/^[\d,]+ /.test(await p.textContent("#itcount")) && !/^2,220/.test(await p.textContent("#itcount")), "item list: known-source filter");
+  await p.selectOption("#itcat", "Equip"); await p.selectOption("#itjob", "Warrior"); check(await p.$$eval("#itrows tr[data-id]", r => r.length) > 50, "item filters: warrior equipment");
+  await p.selectOption("#itcat", ""); await p.selectOption("#itjob", "");
+  await p.fill("#itsearch", "snail shell"); await p.click("#itrows .ibtn");
+  check(/Snail/.test(await p.textContent("#itpage .mlist")) && !/NaN|undefined/.test(await p.textContent("#items")), "item page: snail shell drops");
+  await p.click("#itpage .mobname"); check(!(await p.isHidden("#mbpage")), "item page monster link opens the monster page");
+  await p.click("#mbpage .itname"); check(!(await p.isHidden("#itpage")) && !/NaN|undefined/.test(await p.textContent("#itpage")), "monster drop opens the item page");
+  await p.click("#itback"); await p.fill("#itsearch", "");
+  await p.fill("#itsearch", "red potion"); await p.click("#itrows .ibtn"); check(/Lucy in Amherst/.test(await p.textContent("#itpage")), "item page: shops");
+  await p.click("#itback"); await p.fill("#itsearch", "");
+  await p.click("#t-quests"); { const ri = await p.$("#qrows .ri"); if (ri) { await ri.click(); check(!(await p.isHidden("#itpage")), "item icon in quests opens its page"); await p.click("#itback") } }
   await p.click("#t-quests"); const mn = await p.$("#qrows .mobname"); if (mn) { await mn.click(); check(!(await p.isHidden("#mbpage")), "monster name in quests opens its page"); await p.click("#mbback") }
   // Map Navigator: a map name opens it as the destination
   await p.click("#t-maps"); await p.click("#maprows .mname >> nth=0");
