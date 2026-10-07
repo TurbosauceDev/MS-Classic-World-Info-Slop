@@ -315,4 +315,4 @@ input.khave{width:64px;text-align:right}
 .navsteps .ptn{display:inline-block;vertical-align:1px}
 .navmm summary{cursor:pointer;color:var(--muted);font-size:12.5px;margin-top:4px}
 .navmm .mfmap{max-width:400px;margin-top:6px}
-#navi .controls input{min-width:min(260px,70vw)}
+#navi .controls input[type=search]{min-width:min(260px,70vw)}

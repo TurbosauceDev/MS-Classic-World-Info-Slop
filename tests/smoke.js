@@ -92,6 +92,7 @@ const path = require("path");
   check(!(await p.isHidden("#navi")) && (await p.inputValue("#navto")) !== "" && (await p.textContent("#navout")).length > 20, "map name opens the navigator as the destination");
   await p.click('#navtowns button[data-id="10001000"]'); await p.fill("#navto", "Perion"); await p.dispatchEvent("#navto", "change");
   check(await p.$$eval("#navout .navsteps li", r => r.length) > 0 && /cab ride/.test(await p.textContent("#navout")), "navigator: Henesys to Perion by cab");
+  await p.check("#navnocab"); check(!/cab ride/.test(await p.textContent("#navout")) && /maps? on foot/.test(await p.textContent("#navout")), "navigator: no taxi walks the whole way"); await p.uncheck("#navnocab");
   await p.click('#navtowns button[data-id="60"]'); await p.fill("#navto", "Ant Tunnel I"); await p.dispatchEvent("#navto", "change");
   check(/Shanks/.test(await p.textContent("#navout")) && await p.$$eval("#navout .pt.on", r => r.length) > 0 && !/NaN|undefined/.test(await p.textContent("#navi")), "navigator: Maple Island route via Shanks with highlighted exits");
   await p.click("#t-log"); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");

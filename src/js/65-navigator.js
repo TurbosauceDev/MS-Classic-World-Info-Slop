@@ -16,16 +16,25 @@ for (const id of IDS.slice().sort((a, b) => mapName(a).localeCompare(mapName(b))
 $("#navmaps").innerHTML = Object.values(LABEL).map(l => `<option value="${esc(l)}">`).join("");
 $("#navtowns").innerHTML = [SOUTHPERRY, ...D.cabs].map(id => `<button type="button" data-id="${id}" aria-checked="false">${esc(mapName(id))}</button>`).join("");
 
-let S = {from: LITH, to: null};
+let S = {from: LITH, to: null, nocab: false};
 try { Object.assign(S, JSON.parse(localStorage.getItem("navi") || "{}")) } catch(e) {}
 const save = () => { try { localStorage.setItem("navi", JSON.stringify(S)) } catch(e) {} };
 
 // map-by-map hops of the planner's shortest trip: [[from, to, byCab], ...]; null when there's no walking/cab route
 function hops(a, b){
   if (a === b) return [];
+  if (S.nocab) return walkHops(a, b);
   if (!travel(a, b)) return null;
   const out = [], P = DIST[a];
   for (let v = b; v !== a; v = P.get(v).prev) out.unshift([P.get(v).prev, v, P.get(v).cab]);
+  return out;
+}
+// "No taxi": fewest maps on foot (every map costs the same, so a breadth-first search)
+function walkHops(a, b){
+  const prev = {[a]: null}, q = [a];
+  for (let i = 0; i < q.length && !(b in prev); i++) for (const v of D.nav[q[i]] || []) if (!(v in prev)){ prev[v] = q[i]; q.push(v) }
+  if (!(b in prev)) return null;
+  const out = []; for (let v = b; v !== a; v = prev[v]) out.unshift([prev[v], v, false]);
   return out;
 }
 function route(a, b){
@@ -68,6 +77,8 @@ const pick = (k, v) => { const id = BYLABEL[String(v).trim().toLowerCase()]; if 
 $("#navfrom").addEventListener("change", e => pick("from", e.target.value));
 $("#navto").addEventListener("change", e => pick("to", e.target.value));
 $("#navtowns").addEventListener("click", e => { const b = e.target.closest("button"); if (b){ S.from = b.dataset.id; save(); render() } });
+$("#navnocab").checked = !!S.nocab;
+$("#navnocab").addEventListener("change", e => { S.nocab = e.target.checked; save(); render() });
 $("#navswap").addEventListener("click", () => { if (S.to && D.nav[S.to]){ [S.from, S.to] = [S.to, S.from]; save(); render() } });
 // a map name anywhere on the page opens the navigator with it as the destination
 document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".mname"); if (!el) return;

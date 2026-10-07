@@ -110,7 +110,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   from Dijkstra prev pointers); quest rows show talk + kill time only. Drop credit values saved kills at the quest's level.
 - Map Navigator (65-navigator.js): same Dijkstra (`TRAVEL` from 60-planner.js), hops from its prev pointers. Maple Island
   -> Victoria = route to Southperry (60), Shanks' ship (one way, level 7+, 300 mesos), route from Lith Harbor. Victoria -> island:
-  no route. Exit number per hop = the destination's number in minimap() (portals sorted by x). Maps not in `nav` (JQ, KPQ,
+  no route. Exit number per hop = the destination's number in minimap() (portals sorted by x). "No taxi" (`navi.nocab`) = BFS over `nav` only (fewest maps). Maps not in `nav` (JQ, KPQ,
   Florina Beach, subway, Orbis...) have no route.
 - AoE build (planner default): default skill weighs targets as if ~3 are in reach (Rush, Steal, Power Knockback excluded).
   Hits per cast per map = average over spawn points of min(targets, 1 + 0.75 × spawn points on the same platform

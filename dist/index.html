@@ -319,7 +319,7 @@ input.khave{width:64px;text-align:right}
 .navsteps .ptn{display:inline-block;vertical-align:1px}
 .navmm summary{cursor:pointer;color:var(--muted);font-size:12.5px;margin-top:4px}
 .navmm .mfmap{max-width:400px;margin-top:6px}
-#navi .controls input{min-width:min(260px,70vw)}
+#navi .controls input[type=search]{min-width:min(260px,70vw)}
 
 </style>
 
@@ -676,7 +676,7 @@ input.khave{width:64px;text-align:right}
     <ul>
       <li>Click any map name on the site (quests, planner, Where to train, monster pages) to open it here as the destination, or type one in.</li>
       <li>Pick where you're starting: type a map or tap a town.</li>
-      <li>The route is the quickest one by our travel estimate (30 s per map walked, 45 s per cab ride between Lith Harbor, Henesys, Ellinia, Kerning City, Perion and Sleepywood), the same model the Path Planner uses.</li>
+      <li>The route is the quickest one by our travel estimate (30 s per map walked, 45 s per cab ride between Lith Harbor, Henesys, Ellinia, Kerning City, Perion and Sleepywood), the same model the Path Planner uses. Tick <b>No taxi</b> to walk the whole way (fewest maps).</li>
       <li>Each step says which numbered exit to take; open <b>Minimap</b> to see where it is (highlighted). Dashed numbers are hidden portals.</li>
       <li>Portals come from the launch game files. Maps you only reach through an NPC (jump quests, KPQ, job tests) have no route.</li>
     </ul>
@@ -685,6 +685,7 @@ input.khave{width:64px;text-align:right}
     <label>From<input id="navfrom" type="search" list="navmaps" placeholder="starting map"></label>
     <button class="btn" id="navswap" type="button" style="align-self:flex-end">Swap</button>
     <label>To<input id="navto" type="search" list="navmaps" placeholder="destination map"></label>
+    <label class="chk" style="align-self:center"><input id="navnocab" type="checkbox"> No taxi</label>
     <datalist id="navmaps"></datalist>
   </div>
   <div class="seg small" id="navtowns" role="radiogroup" aria-label="Start from a town" style="margin:10px 0 14px"></div>
@@ -814,6 +815,8 @@ input.khave{width:64px;text-align:right}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Navigator: no taxi</h3><span class="pill p-hot">navigator</span></div>
+      <p>Map Navigator has a <b>No taxi</b> box: tick it to get a walking-only route (fewest maps) instead of cab rides between towns.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Map navigator</h3><span class="pill p-hot">new tab</span></div>
       <p>New <b>Map Navigator</b> tab. Clicking any map name on the site now opens it as your destination: pick where you're starting (any map or a town) and it shows the quickest route map by map, with which numbered exit to take on each minimap, cab rides between towns and Shanks' ship off Maple Island. Travel time is an estimate (30 s a map, 45 s a cab), same as the Path Planner.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Monster pages</h3><span class="pill p-hot">monsters</span></div>
@@ -3263,16 +3266,25 @@ for (const id of IDS.slice().sort((a, b) => mapName(a).localeCompare(mapName(b))
 $("#navmaps").innerHTML = Object.values(LABEL).map(l => `<option value="${esc(l)}">`).join("");
 $("#navtowns").innerHTML = [SOUTHPERRY, ...D.cabs].map(id => `<button type="button" data-id="${id}" aria-checked="false">${esc(mapName(id))}</button>`).join("");
 
-let S = {from: LITH, to: null};
+let S = {from: LITH, to: null, nocab: false};
 try { Object.assign(S, JSON.parse(localStorage.getItem("navi") || "{}")) } catch(e) {}
 const save = () => { try { localStorage.setItem("navi", JSON.stringify(S)) } catch(e) {} };
 
 // map-by-map hops of the planner's shortest trip: [[from, to, byCab], ...]; null when there's no walking/cab route
 function hops(a, b){
   if (a === b) return [];
+  if (S.nocab) return walkHops(a, b);
   if (!travel(a, b)) return null;
   const out = [], P = DIST[a];
   for (let v = b; v !== a; v = P.get(v).prev) out.unshift([P.get(v).prev, v, P.get(v).cab]);
+  return out;
+}
+// "No taxi": fewest maps on foot (every map costs the same, so a breadth-first search)
+function walkHops(a, b){
+  const prev = {[a]: null}, q = [a];
+  for (let i = 0; i < q.length && !(b in prev); i++) for (const v of D.nav[q[i]] || []) if (!(v in prev)){ prev[v] = q[i]; q.push(v) }
+  if (!(b in prev)) return null;
+  const out = []; for (let v = b; v !== a; v = prev[v]) out.unshift([prev[v], v, false]);
   return out;
 }
 function route(a, b){
@@ -3315,6 +3327,8 @@ const pick = (k, v) => { const id = BYLABEL[String(v).trim().toLowerCase()]; if 
 $("#navfrom").addEventListener("change", e => pick("from", e.target.value));
 $("#navto").addEventListener("change", e => pick("to", e.target.value));
 $("#navtowns").addEventListener("click", e => { const b = e.target.closest("button"); if (b){ S.from = b.dataset.id; save(); render() } });
+$("#navnocab").checked = !!S.nocab;
+$("#navnocab").addEventListener("change", e => { S.nocab = e.target.checked; save(); render() });
 $("#navswap").addEventListener("click", () => { if (S.to && D.nav[S.to]){ [S.from, S.to] = [S.to, S.from]; save(); render() } });
 // a map name anywhere on the page opens the navigator with it as the destination
 document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".mname"); if (!el) return;
