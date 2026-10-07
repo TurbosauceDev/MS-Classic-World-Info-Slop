@@ -355,6 +355,11 @@ input.khave{width:64px;text-align:right}
 .wmleg li{display:flex;align-items:center;gap:6px}
 .wmleg i.mspot{position:static;transform:none;display:inline-block;flex-shrink:0}
 .wmleg span{color:var(--muted);font-size:12px}
+.wmdot.dim{opacity:.28}
+.wmdot.hit{background:#ff4d4d;box-shadow:0 0 0 3px #fff,0 0 12px 4px #ff4d4d;z-index:1;animation:wmpulse 1.6s ease-in-out infinite}
+@keyframes wmpulse{50%{box-shadow:0 0 0 3px #fff,0 0 4px 1px #ff4d4d}}
+@media (prefers-reduced-motion:reduce){.wmdot.hit{animation:none}}
+.wmleg li.me{font-weight:700}
 
 </style>
 
@@ -713,6 +718,7 @@ input.khave{width:64px;text-align:right}
     <ul>
       <li>Hover a dot (tap on a phone) to see that place: its maps, monsters with level, HP and EXP, danger and EXP/hr at your class and level, NPCs, the quests they give, cab and potion shop, and a minimap with each monster's spawn points (one color per monster). Click a map row to switch the minimap.</li>
       <li>Click a dot to pin it, so the card stays while you move the mouse. Click a map name or <b>Route here</b> to get directions in the Map Navigator.</li>
+      <li><b>Find a monster</b> lights up every dot where it spawns and dims the rest; the card's minimap jumps to the map with the most of it.</li>
       <li>Big dots are towns, square dots dungeons. Brighter dots = more EXP/hr for you (estimate); 1-3 mark the best three on the island. Grey dots are maps the client shows that aren't open at launch.</li>
       <li>The world map pictures and dot positions are the Classic World client's own (Closed Online Test 2 client via maplestory.io); everything in the card is from the launch game files. Orbis and El Nath aren't in the launch, so Ossyria is left out.</li>
     </ul>
@@ -723,7 +729,11 @@ input.khave{width:64px;text-align:right}
     <label>Your level<input id="wmlv" type="number" min="1" max="100" value="10"></label>
     <label>Find a map<input id="wmfind" type="search" list="wmlist" placeholder="map name"></label>
     <datalist id="wmlist"></datalist>
+    <label>Find a monster<input id="wmmob" type="search" list="wmmoblist" placeholder="monster name"></label>
+    <datalist id="wmmoblist"></datalist>
+    <button class="btn" id="wmmobclr" type="button" hidden style="align-self:flex-end">Clear monster</button>
   </div>
+  <p class="sub" id="wmmobnote" aria-live="polite" style="margin:10px 0 0"></p>
   <div class="wmgrid">
     <div><div id="wmmap"></div><p class="tiny" id="wmnote"></p></div>
     <div id="wmcard" class="mpage" aria-live="polite"></div>
@@ -893,6 +903,8 @@ input.khave{width:64px;text-align:right}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map monster search</h3><span class="pill p-hot">update</span></div>
+      <p>World Map has a <b>Find a monster</b> box: type a monster and every place it spawns lights up (other dots dim), with a count per island. Hovering a lit dot opens the minimap of the map where it spawns most.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map spawns</h3><span class="pill p-hot">update</span></div>
       <p>The World Map card's minimap now shows where each monster spawns, one color per monster, with a legend. It sits right under the map list.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map</h3><span class="pill p-hot">new tab</span></div>
@@ -3436,10 +3448,13 @@ for (const [src, rows] of [["q", D.quests], ["cit", D.citq]]) for (const r of ro
 const POT = Object.fromEntries(D.potshops.map(([npc, mid]) => [String(mid), npc]));
 const qn = ([src, r]) => `<span class="name qname" tabindex="0" data-src="${src}" data-i="${(src === "cit" ? D.citq : D.quests).indexOf(r)}">${esc(r.name)}</span>`;
 
-let S = {isl: 1, cls: "Warrior", lv: 10, pin: null, mm: null};
+let S = {isl: 1, cls: "Warrior", lv: 10, pin: null, mm: null, mob: null};
 try { Object.assign(S, JSON.parse(localStorage.getItem("wmap") || "{}")) } catch(e) {}
-const save = () => { try { localStorage.setItem("wmap", JSON.stringify({isl: S.isl, cls: S.cls, lv: S.lv})) } catch(e) {} };
-S.pin = null;
+const save = () => { try { localStorage.setItem("wmap", JSON.stringify({isl: S.isl, cls: S.cls, lv: S.lv, mob: S.mob})) } catch(e) {} };
+S.pin = null; if (!D.mobdb[S.mob]) S.mob = null;
+// spawn count of the searched monster in each map (export spawn list: every launch map, incl. bosses, KPQ, job test)
+const mobAt = id => S.mob ? (D.mobdb[S.mob].maps.filter(m => String(m[0]) === id).reduce((a, m) => a + (m[2] || 0), 0) || (D.mobdb[S.mob].maps.some(m => String(m[0]) === id) ? 1 : 0)) : 0;
+const spotMob = sp => sp[3].reduce((a, id) => a + mobAt(id), 0);
 
 // EXP/hr per map for the chosen class and level: the Character Builder's default build, solo, single target (as on monster pages)
 let R = {}, DEF = null, RL = "";
@@ -3465,9 +3480,9 @@ function renderMap(){
   $("#wmmap").style.aspectRatio = `${w} / ${h}`;
   $("#wmmap").innerHTML = `<img src="data:image/webp;base64,${img}" alt="World map of ${esc(island)}" width="${w}" height="${h}">` + spots.map((sp, i) => {
     const [x, y, t, ids] = sp, open = ids.some(known), r = spotRate(sp), k = rank.indexOf(i);
-    const heat = r ? Math.round(100 * r / best) : 0;
-    return `<button type="button" class="wmdot k${t}${open ? "" : " off"}${S.pin === i ? " pin" : ""}" data-i="${i}" style="left:${(x * 100).toFixed(2)}%;top:${(y * 100).toFixed(2)}%${r ? `;--heat:${heat}%` : ""}"
-      aria-label="${esc(mapName(ids.find(known)) || "Not open at launch")}">${k >= 0 ? `<b>${k + 1}</b>` : ""}</button>`;
+    const heat = r ? Math.round(100 * r / best) : 0, hit = S.mob ? spotMob(sp) : 0;
+    return `<button type="button" class="wmdot k${t}${open ? "" : " off"}${S.pin === i ? " pin" : ""}${S.mob ? (hit ? " hit" : " dim") : ""}" data-i="${i}" style="left:${(x * 100).toFixed(2)}%;top:${(y * 100).toFixed(2)}%${r ? `;--heat:${heat}%` : ""}"
+      aria-label="${esc(mapName(ids.find(known)) || "Not open at launch")}">${S.mob ? "" : k >= 0 ? `<b>${k + 1}</b>` : ""}</button>`;
   }).join("") + `<span id="wmlabel" hidden></span>`;
 }
 
@@ -3481,13 +3496,14 @@ function card(i){
   const npcs = [...new Set(open.flatMap(id => NPCAT[id] || []))];
   const qs = npcs.flatMap(n => QBY[n] || []).sort((a, b) => a[1].lvl - b[1].lvl);
   const pots = open.filter(id => POT[id]), cab = open.some(id => D.cabs.includes(id));
-  const mmId = open.includes(S.mm) ? S.mm : (fights[0] || main);
+  const mobBest = S.mob ? open.filter(mobAt).sort((a, b) => mobAt(b) - mobAt(a))[0] : null;
+  const mmId = open.includes(S.mm) ? S.mm : (mobBest || fights[0] || main);
   // minimap with each monster's spawn points (export spawn data, D.mobdb[].sp), one color per monster
   const here = (D.maps[mmId]?.[2] || []).filter(([m]) => D.mobs[m]).sort((a, b) => D.mobs[a[0]][1] - D.mobs[b[0]][1]);
   const dots = here.map(([m], k) => (D.mobdb[m]?.sp?.[mmId] || []).map(([x, y]) => `<span class="mspot c${k % 8}" style="left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%"></span>`).join("")).join("");
   let [mm, exits] = minimap(mmId);
   if (dots && mm.includes('class="mmwrap"')) mm = mm.replace(/<\/div>$/, dots + "</div>");
-  const legend = here.length ? `<ul class="wmleg">${here.map(([m, c], k) => `<li><i class="mspot c${k % 8}"></i>${mobLink(m)} <span>Lv ${D.mobs[m][1]} · ×${c}</span></li>`).join("")}</ul>` : "";
+  const legend = here.length ? `<ul class="wmleg">${here.map(([m, c], k) => `<li${String(m) === S.mob ? ' class="me"' : ""}><i class="mspot c${k % 8}"></i>${mobLink(m)} <span>Lv ${D.mobs[m][1]} · ×${c}</span></li>`).join("")}</ul>` : "";
   const rest = open.filter(id => !fights.includes(id));
   const rows = fights.map(id => { const r = R[id], mp = D.maps[id], dg = mp?.[2]?.length && DEF ? mapDanger(id, +S.lv || 10, DEF) : null;
     return `<tr class="wmrow${id === mmId ? " sel" : ""}" data-map="${id}"><td>${mapLink(id, mapName(id))}${mp && !mp[1] ? ' <span class="pill p-warn">not at launch</span>' : ""}<div class="sub">${mobRange([id])}</div></td>
@@ -3513,8 +3529,16 @@ function show(i){
   shown = i; $("#wmcard").innerHTML = card(i);
   document.querySelectorAll(".wmdot").forEach(d => d.classList.toggle("on", +d.dataset.i === i));
 }
+function mobNote(){
+  const o = S.mob && D.mobdb[S.mob]; $("#wmmobclr").hidden = !o;
+  if (!o){ $("#wmmobnote").textContent = ""; return }
+  const per = D.wmap.map(([, isl, , , , spots]) => [isl, spots.filter(sp => spotMob(sp)).length]);
+  const maps = o.maps.length, here = per[S.isl][1], other = per.filter((x, i) => i !== S.isl && x[1]);
+  $("#wmmobnote").innerHTML = `<b>${esc(o.name)}</b> (Lv ${o.level}) spawns on ${maps} map${maps === 1 ? "" : "s"}: ${here ? `${here} place${here === 1 ? "" : "s"} lit up on ${esc(per[S.isl][0])}` : `none on ${esc(per[S.isl][0])}`}${other.map(([n, c]) => `, ${c} on ${esc(n)}`).join("")}.`
+    + (here ? "" : " Some of its maps (jump quests, KPQ, job test) have no dot on the world map.");
+}
 function render(){
-  rates(); renderMap(); show(S.pin);
+  rates(); renderMap(); show(S.pin); mobNote();
   $("#wmnote").textContent = `Dot color and EXP/hr: estimate for a ${RL} with the Character Builder's default build, solo, single target (same model as Where to train). Numbers 1-3 = best EXP/hr on this island.`;
 }
 
@@ -3530,6 +3554,16 @@ D.wmap.forEach(([, , , , , spots], isl) => spots.forEach(([, , , ids], i) => ids
 $("#wmlist").innerHTML = Object.values(FIND).map(f => `<option value="${esc(f[3])}">`).join("");
 $("#wmfind").addEventListener("change", e => { const f = FIND[e.target.value.trim().toLowerCase()]; if (!f) return;
   S.isl = f[0]; S.pin = f[1]; save(); render(); S.mm = f[2]; show(f[1]) });
+
+// find a monster: light up the dots where it spawns (switches island if it isn't on this one)
+const MOBS = {}; for (const [id, o] of Object.entries(D.mobdb)) if (!(o.name.toLowerCase() in MOBS)) MOBS[o.name.toLowerCase()] = id;
+$("#wmmoblist").innerHTML = Object.entries(D.mobdb).sort((a, b) => a[1].level - b[1].level).map(([, o]) => `<option value="${esc(o.name)}">Lv ${o.level}</option>`).join("");
+$("#wmmob").value = S.mob ? D.mobdb[S.mob].name : "";
+const setMob = id => { S.mob = id; S.pin = null; S.mm = null;
+  if (id){ const n = D.wmap.map(([, , , , , spots]) => spots.filter(sp => spotMob(sp)).length); if (!n[S.isl] && n.some(Boolean)) S.isl = n.findIndex(Boolean) }
+  save(); render() };
+$("#wmmob").addEventListener("change", e => { const v = e.target.value.trim().toLowerCase(); if (!v) return setMob(null); if (MOBS[v]) setMob(MOBS[v]) });
+$("#wmmobclr").addEventListener("click", () => { $("#wmmob").value = ""; setMob(null) });
 
 const map = $("#wmmap"), label = () => $("#wmlabel");
 map.addEventListener("mouseover", e => { const d = e.target.closest(".wmdot"); if (!d) return; const i = +d.dataset.i;

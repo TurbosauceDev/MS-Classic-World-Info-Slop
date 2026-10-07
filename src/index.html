@@ -360,6 +360,7 @@
     <ul>
       <li>Hover a dot (tap on a phone) to see that place: its maps, monsters with level, HP and EXP, danger and EXP/hr at your class and level, NPCs, the quests they give, cab and potion shop, and a minimap with each monster's spawn points (one color per monster). Click a map row to switch the minimap.</li>
       <li>Click a dot to pin it, so the card stays while you move the mouse. Click a map name or <b>Route here</b> to get directions in the Map Navigator.</li>
+      <li><b>Find a monster</b> lights up every dot where it spawns and dims the rest; the card's minimap jumps to the map with the most of it.</li>
       <li>Big dots are towns, square dots dungeons. Brighter dots = more EXP/hr for you (estimate); 1-3 mark the best three on the island. Grey dots are maps the client shows that aren't open at launch.</li>
       <li>The world map pictures and dot positions are the Classic World client's own (Closed Online Test 2 client via maplestory.io); everything in the card is from the launch game files. Orbis and El Nath aren't in the launch, so Ossyria is left out.</li>
     </ul>
@@ -370,7 +371,11 @@
     <label>Your level<input id="wmlv" type="number" min="1" max="100" value="10"></label>
     <label>Find a map<input id="wmfind" type="search" list="wmlist" placeholder="map name"></label>
     <datalist id="wmlist"></datalist>
+    <label>Find a monster<input id="wmmob" type="search" list="wmmoblist" placeholder="monster name"></label>
+    <datalist id="wmmoblist"></datalist>
+    <button class="btn" id="wmmobclr" type="button" hidden style="align-self:flex-end">Clear monster</button>
   </div>
+  <p class="sub" id="wmmobnote" aria-live="polite" style="margin:10px 0 0"></p>
   <div class="wmgrid">
     <div><div id="wmmap"></div><p class="tiny" id="wmnote"></p></div>
     <div id="wmcard" class="mpage" aria-live="polite"></div>
@@ -540,6 +545,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map monster search</h3><span class="pill p-hot">update</span></div>
+      <p>World Map has a <b>Find a monster</b> box: type a monster and every place it spawns lights up (other dots dim), with a count per island. Hovering a lit dot opens the minimap of the map where it spawns most.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map spawns</h3><span class="pill p-hot">update</span></div>
       <p>The World Map card's minimap now shows where each monster spawns, one color per monster, with a legend. It sits right under the map list.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map</h3><span class="pill p-hot">new tab</span></div>

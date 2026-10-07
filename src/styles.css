@@ -351,3 +351,8 @@ input.khave{width:64px;text-align:right}
 .wmleg li{display:flex;align-items:center;gap:6px}
 .wmleg i.mspot{position:static;transform:none;display:inline-block;flex-shrink:0}
 .wmleg span{color:var(--muted);font-size:12px}
+.wmdot.dim{opacity:.28}
+.wmdot.hit{background:#ff4d4d;box-shadow:0 0 0 3px #fff,0 0 12px 4px #ff4d4d;z-index:1;animation:wmpulse 1.6s ease-in-out infinite}
+@keyframes wmpulse{50%{box-shadow:0 0 0 3px #fff,0 0 4px 1px #ff4d4d}}
+@media (prefers-reduced-motion:reduce){.wmdot.hit{animation:none}}
+.wmleg li.me{font-weight:700}
