@@ -1,5 +1,6 @@
 /* ---------------- path planner ---------------- */
 let pathFrom; // (cls, branch, fam, level): fill the planner from the Character Builder and open it
+let TRAVEL;   // the travel model, shared with the Map Navigator (65-navigator.js)
 (() => {
 const XB = {Warrior:["Fighter","Page","Spearman"], Magician:["F/P Wizard","I/L Wizard","Cleric"], Bowman:["Hunter","Crossbowman"], Thief:["Assassin","Bandit"]};
 const FIRST = {Warrior:"Warrior", Magician:"Magician", Bowman:"Archer", Thief:"Rogue"};
@@ -79,6 +80,7 @@ function travel(a, b){
   }
   return DIST[a].get(b) || null;
 }
+TRAVEL = {travel, DIST, ISLAND, SHIP_LV, WALK_SEC, TAXI_SEC};
 const tripSec = (a, b) => travel(a, b)?.sec || 0;
 const mapName = id => D.maps[id]?.[0] || D.mapnames[id] || "map " + id;
 // "walk 2 maps, cab to Perion, walk 3 maps"

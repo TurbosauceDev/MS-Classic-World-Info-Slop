@@ -307,6 +307,20 @@ input.khave{width:64px;text-align:right}
 .mdrop{display:inline-flex;gap:6px;align-items:center;font-size:13.5px}
 .linkbtn{all:unset;cursor:pointer;color:var(--accent);text-decoration:underline}
 
+/* map navigator */
+:is(#qtip,.mpage) .pt.on{background:var(--accent);color:#fff;border-color:#fff;box-shadow:0 0 0 3px rgba(167,139,250,.55);z-index:1;transform:translate(-50%,-50%) scale(1.25)}
+.mpage .mexits li.on{font-weight:700;color:var(--accent)}
+:is(#qtip,.mpage) .mexits li.on .ptn,:is(#qtip,.mpage) .ptn.on{background:var(--accent);color:#fff}
+.navsum{font-size:15px;margin:0 0 12px}
+.navsteps{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.navsteps>li{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.5}
+.navsteps>li>div{min-width:0;flex:1}
+.navno{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:700 12px/24px var(--f-mono);text-align:center}
+.navsteps .ptn{display:inline-block;vertical-align:1px}
+.navmm summary{cursor:pointer;color:var(--muted);font-size:12.5px;margin-top:4px}
+.navmm .mfmap{max-width:400px;margin-top:6px}
+#navi .controls input{min-width:min(260px,70vw)}
+
 </style>
 
 <div class="wrap">
@@ -322,6 +336,7 @@ input.khave{width:64px;text-align:right}
   <button role="tab" id="t-maps" aria-selected="false" data-tab="maps">Where to train</button>
   <button role="tab" id="t-quests" aria-selected="false" data-tab="quests">Quest Database</button>
   <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs">Monsters</button>
+  <button role="tab" id="t-navi" aria-selected="false" data-tab="navi">Map Navigator</button>
   <button role="tab" id="t-cit" aria-selected="false" data-tab="cit">Citizenship</button>
   <button role="tab" id="t-craft" aria-selected="false" data-tab="craft">Crafting</button>
   <button role="tab" id="t-keep" aria-selected="false" data-tab="keep">Keep or sell</button>
@@ -655,6 +670,27 @@ input.khave{width:64px;text-align:right}
   <div id="mbpage" hidden></div>
 </section>
 
+<section id="navi" hidden>
+  <details class="howto">
+    <summary>How to use the map navigator</summary>
+    <ul>
+      <li>Click any map name on the site (quests, planner, Where to train, monster pages) to open it here as the destination, or type one in.</li>
+      <li>Pick where you're starting: type a map or tap a town.</li>
+      <li>The route is the quickest one by our travel estimate (30 s per map walked, 45 s per cab ride between Lith Harbor, Henesys, Ellinia, Kerning City, Perion and Sleepywood), the same model the Path Planner uses.</li>
+      <li>Each step says which numbered exit to take; open <b>Minimap</b> to see where it is (highlighted). Dashed numbers are hidden portals.</li>
+      <li>Portals come from the launch game files. Maps you only reach through an NPC (jump quests, KPQ, job tests) have no route.</li>
+    </ul>
+  </details>
+  <div class="controls">
+    <label>From<input id="navfrom" type="search" list="navmaps" placeholder="starting map"></label>
+    <button class="btn" id="navswap" type="button" style="align-self:flex-end">Swap</button>
+    <label>To<input id="navto" type="search" list="navmaps" placeholder="destination map"></label>
+    <datalist id="navmaps"></datalist>
+  </div>
+  <div class="seg small" id="navtowns" role="radiogroup" aria-label="Start from a town" style="margin:10px 0 14px"></div>
+  <div id="navout" class="mpage"></div>
+</section>
+
 <section id="cit" hidden>
   <details class="howto" open>
     <summary>How Citizenship works</summary>
@@ -778,6 +814,8 @@ input.khave{width:64px;text-align:right}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Map navigator</h3><span class="pill p-hot">new tab</span></div>
+      <p>New <b>Map Navigator</b> tab. Clicking any map name on the site now opens it as your destination: pick where you're starting (any map or a town) and it shows the quickest route map by map, with which numbered exit to take on each minimap, cab rides between towns and Shanks' ship off Maple Island. Travel time is an estimate (30 s a map, 45 s a cab), same as the Path Planner.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Monster pages</h3><span class="pill p-hot">monsters</span></div>
       <p>Clicking a monster (in the Monsters tab or any monster name on the site) now opens its own page: stats, every spawn place, drops, mesos, attacks and quests, plus <b>Best maps to farm it</b>: the maps it spawns on, ranked by how many you'd kill per hour at your class and level (estimate), with danger, EXP/hr and a minimap showing where it spawns. Each page has a shareable link.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Monster database</h3><span class="pill p-hot">new tab</span></div>
@@ -968,7 +1006,7 @@ async function copyShare(btn, url){
 /* tabs */
 document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
-  ["plan","path","maps","quests","mobs","cit","craft","keep","log","credits"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
+  ["plan","path","maps","quests","mobs","navi","cit","craft","keep","log","credits"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
 }));
 try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : localStorage.getItem("tab"); if (t) document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
@@ -1553,17 +1591,18 @@ function itemTip(el){
     ${it.d ? `<div class="it-desc">${esc(it.d).replace(/\n/g, "<br>")}</div>` : ""}
     ${odds || it.p ? `<div class="it-foot">${odds}${odds && it.p ? " · " : ""}${it.p ? `Sells for ${fmt(it.p)} mesos` : ""}</div>` : ""}`;
 }
-// minimap with numbered exits; `star` = [x, y] marks an NPC; returns [minimap html, exits list html]
-function minimap(id, star){
+// minimap with numbered exits; `star` = [x, y] marks an NPC; `hi` = a destination map id whose exit is highlighted;
+// returns [minimap html, exits list html]
+function minimap(id, star, hi){
   const mm = D.mmaps[id], name = D.maps[id]?.[0] || D.mapnames[id] || "";
   const P = (D.portals[id] || []).slice().sort((a, b) => a[0] - b[0]), num = {}, dests = [];
   for (const p of P) if (!(p[2] in num)){ num[p[2]] = dests.length + 1; dests.push(p[2]) }
   const [w0, h0] = D.mmdim[id] || [0, 0], k = w0 ? Math.min(372 / w0, 330 / h0, 3) : 1, w = Math.round(w0 * k), h = Math.round(h0 * k);
   const pos = (x, y) => `left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%`;
-  const marks = P.map(([x, y, d, hid]) => `<span class="pt${hid ? " hid" : ""}" style="${pos(x, y)}">${num[d]}</span>`).join("")
+  const marks = P.map(([x, y, d, hid]) => `<span class="pt${hid ? " hid" : ""}${String(d) === String(hi) ? " on" : ""}" style="${pos(x, y)}">${num[d]}</span>`).join("")
     + (star ? `<span class="npcstar" style="${pos(star[0], star[1])}">★</span>` : "");
   const exits = dests.map(d => { const all = P.filter(p => p[2] === d), hid = all.every(p => p[3]), later = D.maps[d] && !D.maps[d][1];
-    return `<li><b class="ptn${hid ? " hid" : ""}">${num[d]}</b>${esc(D.mapnames[d] || D.maps[d]?.[0] || "map " + d)}${hid ? " <span>hidden</span>" : ""}${later ? " <span>not at launch</span>" : ""}</li>` }).join("");
+    return `<li${String(d) === String(hi) ? ' class="on"' : ""}><b class="ptn${hid ? " hid" : ""}">${num[d]}</b>${esc(D.mapnames[d] || D.maps[d]?.[0] || "map " + d)}${hid ? " <span>hidden</span>" : ""}${later ? " <span>not at launch</span>" : ""}</li>` }).join("");
   return [mm ? `<div class="mmwrap"${w ? ` style="width:${w}px;height:${h}px"` : ""}><img class="mm" src="data:image/${D.mmapType};base64,${mm}" alt="Minimap of ${esc(name)}"${w ? ` width="${w}" height="${h}"` : ""}>${marks}</div>` : `<p>No minimap in the game files.</p>`,
     exits ? `<h5>Exits</h5><ul class="mexits">${exits}</ul>` : ""];
 }
@@ -2749,6 +2788,7 @@ refresh();
 
 /* ---------------- path planner ---------------- */
 let pathFrom; // (cls, branch, fam, level): fill the planner from the Character Builder and open it
+let TRAVEL;   // the travel model, shared with the Map Navigator (65-navigator.js)
 (() => {
 const XB = {Warrior:["Fighter","Page","Spearman"], Magician:["F/P Wizard","I/L Wizard","Cleric"], Bowman:["Hunter","Crossbowman"], Thief:["Assassin","Bandit"]};
 const FIRST = {Warrior:"Warrior", Magician:"Magician", Bowman:"Archer", Thief:"Rogue"};
@@ -2828,6 +2868,7 @@ function travel(a, b){
   }
   return DIST[a].get(b) || null;
 }
+TRAVEL = {travel, DIST, ISLAND, SHIP_LV, WALK_SEC, TAXI_SEC};
 const tripSec = (a, b) => travel(a, b)?.sec || 0;
 const mapName = id => D.maps[id]?.[0] || D.mapnames[id] || "map " + id;
 // "walk 2 maps, cab to Perion, walk 3 maps"
@@ -3202,6 +3243,83 @@ pathFrom = (cls, branch, fam, lvl) => {
 const show = () => { if (!shown && !$("#path").hidden){ shown = true; render() } };
 document.querySelector('[data-tab="path"]').addEventListener("click", show);
 show();
+})();
+
+/* ---------------- map navigator ---------------- */
+(() => {
+// pick a start and a destination; shows the quickest route (same travel model as the Path Planner: walk 30 s a map,
+// cab 45 s between cab towns, both estimates) map by map, with the exit to take on each minimap. A map name anywhere
+// on the page opens this tab with that map as the destination. Maple Island -> Victoria goes through Shanks (one way).
+const {travel, DIST, ISLAND, SHIP_LV, WALK_SEC, TAXI_SEC} = TRAVEL, SOUTHPERRY = "60", LITH = "10000000";
+const mapName = id => D.maps[id]?.[0] || D.mapnames[id] || "map " + id;
+const IDS = Object.keys(D.nav);
+// one unique label per walkable map, for the search boxes
+const LABEL = {}, BYLABEL = {}, seen = {};
+for (const id of IDS.slice().sort((a, b) => mapName(a).localeCompare(mapName(b)) || a - b)){
+  let l = mapName(id) + (ISLAND(id) ? " (Maple Island)" : "");
+  seen[l] = (seen[l] || 0) + 1; if (seen[l] > 1) l += ` #${seen[l]}`;
+  LABEL[id] = l; BYLABEL[l.toLowerCase()] = id;
+}
+$("#navmaps").innerHTML = Object.values(LABEL).map(l => `<option value="${esc(l)}">`).join("");
+$("#navtowns").innerHTML = [SOUTHPERRY, ...D.cabs].map(id => `<button type="button" data-id="${id}" aria-checked="false">${esc(mapName(id))}</button>`).join("");
+
+let S = {from: LITH, to: null};
+try { Object.assign(S, JSON.parse(localStorage.getItem("navi") || "{}")) } catch(e) {}
+const save = () => { try { localStorage.setItem("navi", JSON.stringify(S)) } catch(e) {} };
+
+// map-by-map hops of the planner's shortest trip: [[from, to, byCab], ...]; null when there's no walking/cab route
+function hops(a, b){
+  if (a === b) return [];
+  if (!travel(a, b)) return null;
+  const out = [], P = DIST[a];
+  for (let v = b; v !== a; v = P.get(v).prev) out.unshift([P.get(v).prev, v, P.get(v).cab]);
+  return out;
+}
+function route(a, b){
+  if (!D.nav[a] || !D.nav[b]) return null;
+  if (ISLAND(a) && !ISLAND(b)){   // Shanks' ship, then on to the destination
+    const h1 = hops(a, SOUTHPERRY), h2 = hops(LITH, b);
+    return h1 && h2 ? [...h1, [SOUTHPERRY, LITH, false, true], ...h2] : null;
+  }
+  if (!ISLAND(a) && ISLAND(b)) return "oneway";
+  return hops(a, b);
+}
+const exitNo = (u, v) => { const ds = []; for (const p of (D.portals[u] || []).slice().sort((x, y) => x[0] - y[0])) if (!ds.includes(String(p[2]))) ds.push(String(p[2]));
+  const i = ds.indexOf(String(v)); return i < 0 ? null : i + 1 };
+
+function render(){
+  $("#navfrom").value = LABEL[S.from] || ""; $("#navto").value = S.to ? LABEL[S.to] || mapName(S.to) : "";
+  document.querySelectorAll("#navtowns button").forEach(b => b.setAttribute("aria-checked", b.dataset.id === S.from));
+  const out = $("#navout");
+  if (!S.to){ out.innerHTML = `<p class="sub">Pick where you're going, or click any map name on the site.</p>`; return }
+  if (!S.from){ out.innerHTML = `<p class="sub">Pick where you're starting from.</p>`; return }
+  if (!D.nav[S.to]){ out.innerHTML = `<p class="sub"><b>${esc(mapName(S.to))}</b> isn't joined to the launch maps by portals in the game files: you get there through an NPC (a jump quest, party quest or job test entrance), or it isn't open at launch.</p>`; return }
+  const r = route(S.from, S.to);
+  if (r === "oneway"){ out.innerHTML = `<p class="sub">You can't get back to Maple Island: Shanks' ship from Southperry to Lith Harbor is one way.</p>`; return }
+  if (!r){ out.innerHTML = `<p class="sub">No walking or cab route between these maps in the game files: one of them is only reached through an NPC.</p>`; return }
+  if (!r.length){ out.innerHTML = `<p class="sub">You're already there.</p>`; return }
+  const walk = r.filter(h => !h[2] && !h[3]).length, cabs = r.filter(h => h[2]).length, ship = r.some(h => h[3]);
+  const sec = walk * WALK_SEC + cabs * TAXI_SEC;
+  const steps = r.map(([u, v, cab, boat], i) => {
+    const n = !cab && !boat ? exitNo(u, v) : null, [mm, exits] = n ? minimap(u, null, v) : ["", ""];
+    const what = boat ? `Take Shanks' ship from ${mapLink(u, mapName(u))} to ${mapLink(v, mapName(v))} <span class="sub">(level ${SHIP_LV}+, 300 mesos, one way)</span>`
+      : cab ? `Take the cab from ${mapLink(u, mapName(u))} to ${mapLink(v, mapName(v))}`
+      : `${mapLink(u, mapName(u))}: ${n ? `take exit <b class="ptn on">${n}</b>` : "go"} to ${mapLink(v, mapName(v))}`;
+    return `<li><span class="navno">${i + 1}</span><div>${what}${mm ? `<details class="navmm"><summary>Minimap</summary><div class="mfmap">${mm}${exits}</div></details>` : ""}</div></li>`;
+  }).join("");
+  out.innerHTML = `<p class="navsum"><b>${esc(mapName(S.from))}</b> to <b>${esc(mapName(S.to))}</b>: ${[walk ? `${walk} map${walk === 1 ? "" : "s"} on foot` : "", cabs ? `${cabs} cab ride${cabs === 1 ? "" : "s"}` : "", ship ? "Shanks' ship" : ""].filter(Boolean).join(", ")}
+      · about ${dur(sec)}${ship ? " plus the boat ride" : ""} <span class="sub">(estimate)</span></p>
+    <ol class="navsteps">${steps}</ol>`;
+}
+const pick = (k, v) => { const id = BYLABEL[String(v).trim().toLowerCase()]; if (id && id !== S[k]){ S[k] = id; save(); render() } };
+$("#navfrom").addEventListener("change", e => pick("from", e.target.value));
+$("#navto").addEventListener("change", e => pick("to", e.target.value));
+$("#navtowns").addEventListener("click", e => { const b = e.target.closest("button"); if (b){ S.from = b.dataset.id; save(); render() } });
+$("#navswap").addEventListener("click", () => { if (S.to && D.nav[S.to]){ [S.from, S.to] = [S.to, S.from]; save(); render() } });
+// a map name anywhere on the page opens the navigator with it as the destination
+document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".mname"); if (!el) return;
+  hideQtip(); S.to = String(el.dataset.map); save(); $("#t-navi").click(); render(); $("#navi").scrollIntoView({block: "start"}) });
+render();
 })();
 
 </script>

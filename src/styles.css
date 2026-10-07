@@ -302,3 +302,17 @@ input.khave{width:64px;text-align:right}
 .mdrops.dim{opacity:.6}
 .mdrop{display:inline-flex;gap:6px;align-items:center;font-size:13.5px}
 .linkbtn{all:unset;cursor:pointer;color:var(--accent);text-decoration:underline}
+
+/* map navigator */
+:is(#qtip,.mpage) .pt.on{background:var(--accent);color:#fff;border-color:#fff;box-shadow:0 0 0 3px rgba(167,139,250,.55);z-index:1;transform:translate(-50%,-50%) scale(1.25)}
+.mpage .mexits li.on{font-weight:700;color:var(--accent)}
+:is(#qtip,.mpage) .mexits li.on .ptn,:is(#qtip,.mpage) .ptn.on{background:var(--accent);color:#fff}
+.navsum{font-size:15px;margin:0 0 12px}
+.navsteps{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.navsteps>li{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.5}
+.navsteps>li>div{min-width:0;flex:1}
+.navno{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:700 12px/24px var(--f-mono);text-align:center}
+.navsteps .ptn{display:inline-block;vertical-align:1px}
+.navmm summary{cursor:pointer;color:var(--muted);font-size:12.5px;margin-top:4px}
+.navmm .mfmap{max-width:400px;margin-top:6px}
+#navi .controls input{min-width:min(260px,70vw)}
