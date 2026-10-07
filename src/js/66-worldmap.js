@@ -59,7 +59,12 @@ function card(i){
   const qs = npcs.flatMap(n => QBY[n] || []).sort((a, b) => a[1].lvl - b[1].lvl);
   const pots = open.filter(id => POT[id]), cab = open.some(id => D.cabs.includes(id));
   const mmId = open.includes(S.mm) ? S.mm : (fights[0] || main);
-  const [mm, exits] = minimap(mmId);
+  // minimap with each monster's spawn points (export spawn data, D.mobdb[].sp), one color per monster
+  const here = (D.maps[mmId]?.[2] || []).filter(([m]) => D.mobs[m]).sort((a, b) => D.mobs[a[0]][1] - D.mobs[b[0]][1]);
+  const dots = here.map(([m], k) => (D.mobdb[m]?.sp?.[mmId] || []).map(([x, y]) => `<span class="mspot c${k % 8}" style="left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%"></span>`).join("")).join("");
+  let [mm, exits] = minimap(mmId);
+  if (dots && mm.includes('class="mmwrap"')) mm = mm.replace(/<\/div>$/, dots + "</div>");
+  const legend = here.length ? `<ul class="wmleg">${here.map(([m, c], k) => `<li><i class="mspot c${k % 8}"></i>${mobLink(m)} <span>Lv ${D.mobs[m][1]} · ×${c}</span></li>`).join("")}</ul>` : "";
   const rest = open.filter(id => !fights.includes(id));
   const rows = fights.map(id => { const r = R[id], mp = D.maps[id], dg = mp?.[2]?.length && DEF ? mapDanger(id, +S.lv || 10, DEF) : null;
     return `<tr class="wmrow${id === mmId ? " sel" : ""}" data-map="${id}"><td>${mapLink(id, mapName(id))}${mp && !mp[1] ? ' <span class="pill p-warn">not at launch</span>' : ""}<div class="sub">${mobRange([id])}</div></td>
@@ -71,11 +76,12 @@ function card(i){
     <div class="wmact"><button type="button" class="btn" data-route="${main}">Route here</button>${svc.length ? `<span class="sub">${svc.join(" · ")}</span>` : ""}</div>
     ${rows ? `<div class="tblwrap"><table class="mini"><thead><tr><th>Map</th><th>Danger</th><th class="num">EXP/hr</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}
     ${rest.length ? `<h5>${fights.length ? "Other maps here" : "Maps here"}</h5><p class="wmnpcs">${rest.map(id => mapLink(id, mapName(id))).join(", ")}</p>` : ""}
+    <h5>Minimap: ${esc(mapName(mmId))}</h5><div class="mfmap">${mm}${legend}${exits}</div>
     ${ids.length > open.length ? `<p class="tiny">+${ids.length - open.length} more map${ids.length - open.length === 1 ? "" : "s"} the client lists here that aren't in the launch files.</p>` : ""}
     ${mobRows ? `<h5>Monsters (spawn points)</h5><ul class="mmobs">${mobRows}</ul>` : ""}
     ${npcs.length ? `<h5>NPCs</h5><p class="wmnpcs">${npcs.map(npcLink).join(", ")}</p>` : ""}
     ${qs.length ? `<h5>Quests from NPCs here (${qs.length})</h5><ul class="mmobs">${qs.map(q => `<li>${qn(q)} <span>Lv ${q[1].lvl}${q[0] === "cit" ? " · Citizenship" : ""} · ${esc(q[1].npc)}</span></li>`).join("")}</ul>` : ""}
-    <h5>Minimap: ${esc(mapName(mmId))}</h5><div class="mfmap">${mm}${exits}</div>`;
+    `;
 }
 let shown = null;
 function show(i){

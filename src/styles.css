@@ -344,3 +344,10 @@ input.khave{width:64px;text-align:right}
 .wmrow:hover td,.wmrow.sel td{background:var(--accent-soft)}
 #wmisl button{text-transform:none;letter-spacing:0}
 @media (max-width:600px){.wmdot{width:9px;height:9px;border-width:1.5px;box-shadow:0 0 0 1px rgba(255,255,255,.55)}.wmdot.k0{width:12px;height:12px}.wmdot::before{inset:-5px}.wmdot b{top:-13px;font-size:8px;padding:1px 3px}}
+#wmcard .mspot{width:8px;height:8px;box-shadow:none}
+.mspot.c0{background:#ff6b9a}.mspot.c1{background:#4fd1c5}.mspot.c2{background:#ff4d4d}.mspot.c3{background:#8f7cff}
+.mspot.c4{background:#ff9f43}.mspot.c5{background:#7bd88f}.mspot.c6{background:#5ab0ff}.mspot.c7{background:#f2f2f2}
+.wmleg{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px}
+.wmleg li{display:flex;align-items:center;gap:6px}
+.wmleg i.mspot{position:static;transform:none;display:inline-block;flex-shrink:0}
+.wmleg span{color:var(--muted);font-size:12px}

@@ -103,6 +103,7 @@ const path = require("path");
   check(/Town/.test(await p.textContent("#wmcard")) && await p.$$eval("#wmcard .wmrow", r => r.length) > 0 && !/NaN|undefined/.test(await p.textContent("#wmcard")), "world map: hovering a town fills the card");
   await p.mouse.move(0, 0); await p.fill("#wmfind", "Henesys Hunting Ground I"); await p.dispatchEvent("#wmfind", "change");
   check(/Henesys Hunting Ground I/.test(await p.textContent("#wmcard")) && /EXP/.test(await p.textContent("#wmcard")) && await p.$$eval("#wmmap .wmdot.pin", r => r.length) === 1, "world map: find a map pins its dot with monsters");
+  check(await p.$$eval("#wmcard .mmwrap .mspot", r => r.length) >= 38 && await p.$$eval("#wmcard .wmleg li", r => r.length) === 7, "world map: minimap shows monster spawn points with legend");
   await p.click('#wmisl button[data-i="0"]'); await p.hover('#wmmap .wmdot >> nth=3');
   check(!/NaN|undefined/.test(await p.textContent("#wmcard")) && (await p.textContent("#wmcard")).length > 20, "world map: Maple Island card");
   await p.click('#wmcard [data-route]');
