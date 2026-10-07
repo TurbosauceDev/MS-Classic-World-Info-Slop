@@ -76,6 +76,12 @@ const path = require("path");
     await (await tr.$(".khave")).fill(""); }
   await p.selectOption("#kby", "c"); await p.selectOption("#kdisc", { index: 1 }); check(await p.$$eval("#krows tr", r => r.length) > 0, "keep list: crafting + profession filter");
   await p.selectOption("#kby", ""); await p.selectOption("#kdisc", "");
+  await p.click("#t-mobs"); check(/^71 /.test(await p.textContent("#mbcount")), "monster database lists 71 monsters");
+  await p.fill("#mbsearch", "balrog"); await p.click("#mbrows .mbtn");
+  check(/Cursed Sanctuary/.test(await p.textContent("#mbrows .mcard")) && !/NaN|undefined/.test(await p.textContent("#mobs")), "monster card: Jr. Balrog");
+  await p.fill("#mbsearch", "snail shell"); check(await p.$$eval("#mbrows tr.mrow", r => r.length) > 0, "monster search by drop");
+  await p.fill("#mbsearch", ""); await p.selectOption("#mbkind", "kpq"); check(await p.$$eval("#mbrows tr.mrow", r => r.length) === 4, "monster type filter: KPQ");
+  await p.selectOption("#mbkind", "");
   await p.click("#t-log"); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
   await p.click("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 6, "credits tab renders");
   await p.click("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to craft Lv 10/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 10, "crafting leveling plan");

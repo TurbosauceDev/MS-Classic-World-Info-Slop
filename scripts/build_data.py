@@ -11,6 +11,7 @@ Steps, in order (each adds keys to the data dict):
   rewards   ri on every quest row, items, iicons          <- quests.json + items.json + images/items
   launch    latermobs, latermobnames                      <- monsters.json + maps (Forgotten Hollow / not-at-launch)
   extras    mobatk, potshops                              <- monsters.json + meowdb shops (`build_data.py extras`)
+  mobdb     mobdb, mskill (+ mobimg)                     <- monsters.json + meowdb drops/mesos (`build_data.py mobdb`)
   crafting  craft (+ items)                               <- crafting.json + Crafting quests (`build_data.py crafting` = this step only)
 """
 import base64, collections, json, os, pathlib, re, sys
@@ -492,7 +493,47 @@ def step_launch(D):
     D["latermobs"] = [str(k) for k in later]
     D["latermobnames"] = sorted({mob[str(k)]["name"] for k in later} - ok)
 
-PARTIAL = {"crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D))}   # (key it owns, step)
+def step_mobdb(D):
+    """mobdb {mobId: export fields}: every monster you can meet at launch (open launch maps, KPQ, 2nd-job test maps) for the
+    Monsters tab, with spawn maps [[mapId, name, count, respawn s ("7.56" or "min-max [avg]"), kind]], meowdb drop reports dr [[itemId, name, net votes]]
+    and meowdb mesos [per kill, reports, min, max, drop %]. Adds missing thumbnails to mobimg and mob skill icons to mskill."""
+    import subprocess
+    ref = os.environ.get("OSMS_REF") or subprocess.run(["git", "-C", str(ROOT / "vendor" / "osms_datamine_dashboard"), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    raw = f"https://raw.githubusercontent.com/ohmi69/osms_datamine_dashboard/{ref}/data/"
+    def fetch(path, f):
+        if not f.exists(): subprocess.run(["curl", "-sSf", "--max-time", "30", "-o", str(f), raw + path])
+        return base64.b64encode(f.read_bytes()).decode() if f.exists() and f.stat().st_size else None
+    def kind(mid):
+        if a.launch_status(mid) == "Open at launch": return ""
+        if 80000000 <= mid < 80001000: return "KPQ"
+        if 80001000 <= mid < 80002000: return "2nd job test"
+    drops = json.load(open(ROOT / "data" / "sources" / "meowdb_drops.json"))["mobs"]
+    mesos = json.load(open(ROOT / "data" / "sources" / "meowdb_mesos.json"))["monsters"]
+    SKIP = {"gif", "gifs", "thumbnail", "maps", "id"}
+    out, cache = {}, ROOT / "vendor" / "mob_thumbs"; cache.mkdir(exist_ok=True)
+    D.setdefault("mskill", {})
+    for m in a.monsters:
+        maps = [[x["id"], a.map_name.get(x["id"], x.get("name") or "").strip(), x.get("count") or 0, str(x.get("mob_time") or ""), kind(x["id"])]
+                for x in m.get("maps") or [] if kind(x["id"]) is not None]
+        if not maps: continue
+        k = str(m["id"]); o = {f: v for f, v in m.items() if f not in SKIP and v not in (None, [], {})}
+        o["maps"] = sorted(maps, key=lambda x: (x[4] != "", -x[2]))
+        o["dr"] = sorted(([i, n, up - dn] for i, n, up, dn in drops.get(k, []) if up - dn >= 0), key=lambda x: -x[2])
+        sm = mesos.get(k, {}).get("summary") or {}
+        if sm.get("trustedCount"):
+            o["meso"] = [round((sm["medianMin"] + sm["medianMax"]) / 2 * sm["medianDropChancePct"] / 100, 1), sm["trustedCount"], sm["medianMin"], sm["medianMax"], sm["medianDropChancePct"]]
+        for sk in (o.get("self_buffs") or []) + (o.get("debuffs") or []):
+            ic = sk.pop("icon", None); sid = str(sk["id"])
+            if ic and sid not in D["mskill"]:
+                b = fetch("current/" + ic, cache / f"skill_{sid}.png")
+                if b: D["mskill"][sid] = b
+        if k not in D["mobimg"] and m.get("thumbnail"):
+            b = fetch(f"images/monsters/{m['thumbnail']}.png", cache / f"{m['thumbnail']}.png")
+            if b: D["mobimg"][k] = b
+        out[k] = o
+    D["mobdb"] = out
+
+PARTIAL = {"crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)
@@ -504,7 +545,7 @@ if __name__ == "__main__":
     D = step_base()
     step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D)
     D = json.loads(json.dumps(D))  # str keys, as in the partial rebuild path (crafting/extras look mobs up by str id)
-    step_crafting(D); step_extras(D)
+    step_crafting(D); step_extras(D); step_mobdb(D)
     for k in ("mobdiff", "skilldiff", "latermobnames"): D.pop(k, None)   # only the removed "What changed since 2008" tab used these
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees
     (ROOT / "data").mkdir(exist_ok=True)

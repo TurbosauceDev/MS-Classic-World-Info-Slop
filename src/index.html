@@ -8,7 +8,7 @@
 <div class="wrap">
 <header>
   <h1>MS Classic World Data Slop</h1>
-  <p>Character builder, leveling path, training maps, quest database, citizenship, crafting and a keep-or-sell list, computed from the launch game files with the client's own accuracy, defense, level-penalty and element formulas. Drop rates aren't in the game files; where the planner needs them it uses an assumption you can adjust.</p>
+  <p>Character builder, leveling path, training maps, quest and monster databases, citizenship, crafting and a keep-or-sell list, computed from the launch game files with the client's own accuracy, defense, level-penalty and element formulas. Drop rates aren't in the game files; where the planner needs them it uses an assumption you can adjust.</p>
   <div class="src">Data: OSMS Data Explorer launch export (Oct 6) · guides and mechanics: meowdb · client data: maplestory.quest · <a href="#credits" id="srclink">all sources and thanks</a></div>
 </header>
 
@@ -17,6 +17,7 @@
   <button role="tab" id="t-path" aria-selected="false" data-tab="path">Path Planner</button>
   <button role="tab" id="t-maps" aria-selected="false" data-tab="maps">Where to train</button>
   <button role="tab" id="t-quests" aria-selected="false" data-tab="quests">Quest Database</button>
+  <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs">Monsters</button>
   <button role="tab" id="t-cit" aria-selected="false" data-tab="cit">Citizenship</button>
   <button role="tab" id="t-craft" aria-selected="false" data-tab="craft">Crafting</button>
   <button role="tab" id="t-keep" aria-selected="false" data-tab="keep">Keep or sell</button>
@@ -318,6 +319,34 @@
   </table></div>
 </section>
 
+<section id="mobs" hidden>
+  <details class="howto">
+    <summary>How to use the monster database</summary>
+    <div class="howgrid">
+      <div><h4>The list</h4><ul>
+        <li>Every monster you can meet at launch: field monsters, bosses, jump quests, KPQ and the 2nd job test maps. Orbis, El Nath and Forgotten Hollow monsters are left out.</li>
+        <li>Search by monster, map or drop. Click a column to sort, click a monster for its full card.</li>
+        <li><b>EXP/100 HP</b> = EXP per 100 HP of damage: higher is a more efficient kill.</li>
+        <li>Stats, attacks, skills and spawns come straight from the launch game files.</li>
+      </ul></div>
+      <div><h4>Drops and mesos</h4><ul>
+        <li>Drop tables aren't in the game files (the server decides them). Drops shown are what players report on meowdb; + is how many more players confirmed it than disputed it. Unconfirmed reports are shown faded.</li>
+        <li>Mesos are the median of trusted meowdb player reports, times how often it drops mesos.</li>
+        <li>Skill names the game files leave blank show as "Self buff #id".</li>
+      </ul></div>
+    </div>
+  </details>
+  <div class="controls">
+    <label>Search<input id="mbsearch" type="search" placeholder="monster, map or drop"></label>
+    <label>Type<select id="mbkind"><option value="">All</option><option value="field">Field monsters</option><option value="boss">Bosses</option><option value="jq">Jump quests</option><option value="kpq">KPQ</option><option value="job">2nd job test</option></select></label>
+    <span class="pill p-hot" id="mbcount" style="align-self:center"></span>
+  </div>
+  <div class="tblwrap"><table>
+    <thead id="mbhead"><tr><th data-k="name"><button>Monster</button></th><th class="num" data-k="level"><button>Lv</button></th><th class="num" data-k="hp"><button>HP</button></th><th class="num" data-k="exp"><button>EXP</button></th><th class="num" data-k="ratio"><button>EXP/100 HP</button></th><th class="num" data-k="eva"><button>Avoid</button></th><th class="num" data-k="pdd"><button>W.DEF</button></th><th class="num" data-k="mdd"><button>M.DEF</button></th><th class="num" data-k="atk"><button>Touch ATK</button></th><th class="num" data-k="acc"><button>ACC</button></th></tr></thead>
+    <tbody id="mbrows"></tbody>
+  </table></div>
+</section>
+
 <section id="cit" hidden>
   <details class="howto" open>
     <summary>How Citizenship works</summary>
@@ -441,6 +470,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Monster database</h3><span class="pill p-hot">new tab</span></div>
+      <p>New <b>Monsters</b> tab: all 71 monsters you can meet at launch (field monsters, bosses, jump quests, KPQ, 2nd job test), searchable by name, map or drop. Each card shows every stat in the launch game files (HP, MP, EXP, attack, defense, accuracy, avoid, speed, knockback, regen, elements), its attacks and skills, every spawn map with respawn time, meowdb player drop and meso reports, and the quests and recipes that want it.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 6, 2026 · Backup grind maps</h3><span class="pill p-hot">planner</span></div>
       <p>Path Planner grind steps now list up to 2 backup maps for when the pick is crowded: monsters within 5 levels on average and at least 60% of the EXP/hr, with the percentage shown.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 6, 2026 · Launch game data</h3><span class="pill p-hot">data</span></div>

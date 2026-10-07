@@ -38,7 +38,7 @@ async function copyShare(btn, url){
 /* tabs */
 document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
-  ["plan","path","maps","quests","cit","craft","keep","log","credits"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
+  ["plan","path","maps","quests","mobs","cit","craft","keep","log","credits"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
 }));
 try { const t = HASH.p ? "path" : HASH.b ? "plan" : localStorage.getItem("tab"); if (t) document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}

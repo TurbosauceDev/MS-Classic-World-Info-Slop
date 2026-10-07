@@ -138,11 +138,11 @@ table.mini td,table.mini th{padding:6px 8px}
 @media (min-width:1350px){.wrap{zoom:1.06;max-width:1240px}}
 @media (min-width:1600px){.wrap{zoom:1.12;max-width:1280px}}
 @media (min-width:1900px){.wrap{zoom:1.2;max-width:1300px}}
-#qhead th button,#crhead th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center;color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit}
-#qhead th button::after,#crhead th button::after{content:attr(data-arrow);color:var(--accent);font-size:10px}
-#qhead th button:hover,#crhead th button:hover{color:var(--ink)}
-#qhead th button:focus-visible,#crhead th button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
-#qhead th[aria-sort="ascending"],#qhead th[aria-sort="descending"],#crhead th[aria-sort="ascending"],#crhead th[aria-sort="descending"]{color:var(--ink)}
+#mbhead th button,#qhead th button,#crhead th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center;color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit}
+#mbhead th button::after,#qhead th button::after,#crhead th button::after{content:attr(data-arrow);color:var(--accent);font-size:10px}
+#mbhead th button:hover,#qhead th button:hover,#crhead th button:hover{color:var(--ink)}
+#mbhead th button:focus-visible,#qhead th button:focus-visible,#crhead th button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+#mbhead th[aria-sort="ascending"],#mbhead th[aria-sort="descending"],#qhead th[aria-sort="ascending"],#qhead th[aria-sort="descending"],#crhead th[aria-sort="ascending"],#crhead th[aria-sort="descending"]{color:var(--ink)}
 .qname{cursor:help;text-decoration:underline dotted var(--muted);text-underline-offset:3px}
 .qname:hover,.qname:focus{color:var(--accent);outline:none}
 .qname:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
@@ -260,3 +260,31 @@ input.khave{width:64px;text-align:right}
 .changelog p{margin:0 0 8px;font-size:14px}
 .changelog ul{margin:0;padding-left:18px;font-size:14px;line-height:1.5}
 .changelog li{margin:3px 0}
+
+/* monsters tab */
+.mbtn{all:unset;cursor:pointer;display:flex;gap:10px;align-items:center;min-width:180px}
+.mbtn img,.mbtn i{width:40px;height:40px;object-fit:contain;image-rendering:pixelated;flex-shrink:0}
+.mbtn span{display:flex;flex-wrap:wrap;gap:2px 6px;align-items:center}
+.mbtn .sub{flex-basis:100%}
+.mbtn:hover b,.mbtn:focus-visible b{color:var(--accent)}
+.mbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+tr.mrow.open td{background:var(--accent-soft)}
+tr.mdetail td{padding:0}
+.mcard{box-sizing:border-box;padding:14px 16px;background:var(--panel);border-left:3px solid var(--accent);max-width:min(1100px,calc(100vw - 52px));position:sticky;left:0}
+.mtop{display:flex;gap:14px;align-items:center;margin-bottom:12px}
+.mtop .sprite{max-width:110px;max-height:110px;object-fit:contain;image-rendering:pixelated;background:var(--bg);border-radius:8px;padding:6px}
+.mtop h3{font:700 18px var(--f-display);margin:0 0 6px}
+.mflags{display:flex;flex-wrap:wrap;gap:5px;margin:0}
+.mgrid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));margin-bottom:14px}
+.mgrid dd{font-size:15px}
+.mcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px 20px}
+.mcols h4{font:600 12px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 6px}
+.mcols h4 .sub{text-transform:none;letter-spacing:0;font-weight:500}
+.mcols p{margin:4px 0 10px;font-size:13.5px}
+.mlist{margin:0 0 10px;padding-left:18px;font-size:13.5px;line-height:1.55}
+.mlist li{white-space:normal}
+.mskill{width:20px;height:20px;vertical-align:middle;margin-right:5px;image-rendering:pixelated}
+.mdrops{display:flex;flex-wrap:wrap;gap:6px 12px;margin:0 0 10px}
+.mdrops.dim{opacity:.6}
+.mdrop{display:inline-flex;gap:6px;align-items:center;font-size:13.5px}
+.linkbtn{all:unset;cursor:pointer;color:var(--accent);text-decoration:underline}

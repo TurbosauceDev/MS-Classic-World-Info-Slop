@@ -253,6 +253,11 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - `shopsell` {itemId: [npc, map, price]} (quest items sold by meowdb NPCs); `timed` [[mobId, name, lv, hp, exp, mapId, mapName, count,
   timer s, boss]]; `armor` [[id, name, slot, reqLv, job, gender, [reqSTR, DEX, INT, LUK], {stat: n}, shop price]]
 - `mobatk` {mobId: [touch attack, accuracy]}; `potshops` [[npc, mapId, mapName]] (step_extras, `build_data.py extras`)
+- `mobdb` {mobId: export monster fields (name, level, hp, mp, exp, PADamage, MADamage, PDDamage, MDDamage, acc, eva, speed,
+  pushed, stagger, hp/mp_recovery, elements, undead, is_boss, aggro, invincible, passive, special, attacks, self_buffs, debuffs,
+  revives), maps [[mapId, name, count, respawn s string, kind ""|KPQ|2nd job test]], dr [[itemId, name, net votes ≥ 0]] (meowdb),
+  meso [per kill, reports, min, max, drop %] (meowdb)}: launch-reachable monsters (71) incl. bosses/KPQ/job test; `mskill`
+  {mobSkillId: png}. Built by `build_data.py mobdb`; mobimg also gets thumbnails for these.
 - `latermobs` [mobId]. Note `maps` spawn lists drop long-respawn spawns (mob_time > 60), e.g. Fairy 2
   (Someone Else's House) and Fairy 3 (Tree Dungeon, Forest Up North VI/VII): they ARE at launch, just not in the ranking.
 
