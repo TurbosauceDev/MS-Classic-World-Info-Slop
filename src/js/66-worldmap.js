@@ -41,7 +41,9 @@ const mobRange = ids => { const lv = ids.flatMap(id => (D.maps[id]?.[2] || []).m
 // launch portals), grey nodes = maps outside the spot it joins. Layout is a plain spring layout, not the game's geography.
 const DRILL = sp => sp[2] === 2 && sp[3].filter(id => D.nav[id]).length >= 5;
 const LAYOUT = {};
-const SW = 634, SH = 600;   // sub-map drawing size (px); labels ~5.6 px a letter at this size
+const areaName = sp => mapName(sp[3].find(id => D.cabs.includes(id)) || sp[3].find(known));
+const openArea = (i, pin = null) => { S.sub = i; S.subPin = pin; S.pin = i; const l = $("#wmlabel"); if (l) l.hidden = true; save(); render(); $("#wmap").scrollIntoView({block: "start"}) };
+const SW = 820, SH = 720;   // sub-map drawing size (px); labels ~5.6 px a letter at this size
 function subGraph(isl, i){
   const key = isl + ":" + i; if (LAYOUT[key]) return LAYOUT[key];
   const ids = D.wmap[isl][5][i][3].filter(id => D.nav[id] || known(id)), inside = new Set(ids), out = new Set(), E = [], seen = new Set();
@@ -99,7 +101,8 @@ function renderSub(){
 }
 function renderMap(){
   $("#wmmap").classList.remove("sub");
-  if (S.sub != null) return renderSub();
+  document.querySelector(".wmgrid").classList.toggle("subon", S.sub != null);
+  if (S.sub != null){ $("#wmareas").innerHTML = ""; return renderSub() }
   const W = D.wmap[S.isl], [, island, w, h, img, spots] = W;
   const best = Math.max(1, ...spots.map(spotRate));
   // top 3 spots for your level on this island
@@ -111,7 +114,9 @@ function renderMap(){
     const heat = r ? Math.round(100 * r / best) : 0, hit = S.mob ? spotMob(sp) : 0;
     return `<button type="button" class="wmdot k${t}${open ? "" : " off"}${S.pin === i ? " pin" : ""}${S.mob ? (hit ? " hit" : " dim") : ""}" data-i="${i}" style="left:${(x * 100).toFixed(2)}%;top:${(y * 100).toFixed(2)}%${r ? `;--heat:${heat}%` : ""}"
       aria-label="${esc(mapName(ids.find(known)) || "Not open at launch")}">${S.mob ? "" : k >= 0 ? `<b>${k + 1}</b>` : ""}</button>`;
-  }).join("") + `<span id="wmlabel" hidden></span>`;
+  }).join("") + spots.map((sp, i) => DRILL(sp) ? `<button type="button" class="wmdrill" data-drill="${i}" style="left:${(sp[0] * 100).toFixed(2)}%;top:${(sp[1] * 100).toFixed(2)}%">Open ${esc(areaName(sp))} map</button>` : "").join("")
+    + `<span id="wmlabel" hidden></span>`;
+  $("#wmareas").innerHTML = spots.map((sp, i) => DRILL(sp) ? `<button type="button" class="btn" data-drill="${i}">${esc(areaName(sp))} area map (${sp[3].filter(known).length} maps)</button>` : "").join("");
 }
 
 // `lone` = one map id: the same card for that map alone (spot i, if any, gives its island and kind)
@@ -142,7 +147,7 @@ function card(i, lone){
     return `<li>${mobLink(m)} <span>Lv ${x[1]} · ${fmt(x[2])} HP · ${fmt(x[3])} EXP · ×${c}</span></li>` }).join("");
   const svc = [cab ? "Cab" : "", ...pots.map(id => `Potions: ${npcLink(POT[id])} (${esc(mapName(id))})`)].filter(Boolean);
   return `<div class="qt-h"><b>${esc(mapName(main))}</b><span>${esc(island)}${t != null ? " · " + KIND[t] : ""}${mobRange(open) ? " · monsters " + mobRange(open) : ""}${open.length > 1 ? ` · ${open.length} maps` : ""}</span></div>
-    <div class="wmact"><button type="button" class="btn" data-route="${main}">Route here</button>${svc.length ? `<span class="sub">${svc.join(" · ")}</span>` : ""}</div>
+    <div class="wmact">${sp && !lone && DRILL(sp) && S.sub == null ? `<button type="button" class="btn primary" style="margin:0" data-drill="${i}">Open ${esc(areaName(sp))} map</button>` : ""}<button type="button" class="btn" data-route="${main}">Route here</button>${svc.length ? `<span class="sub">${svc.join(" · ")}</span>` : ""}</div>
     ${rows ? `<div class="tblwrap"><table class="mini"><thead><tr><th>Map</th><th>Danger</th><th class="num">EXP/hr</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}
     ${rest.length ? `<h5>${fights.length ? "Other maps here" : "Maps here"}</h5><p class="wmnpcs">${rest.map(id => mapLink(id, mapName(id))).join(", ")}</p>` : ""}
     <h5>Minimap: ${esc(mapName(mmId))}</h5><div class="mfmap">${mm}${legend}${exits}</div>
@@ -179,6 +184,7 @@ function render(){
 
 $("#wmisl").innerHTML = D.wmap.map((w, i) => `<button type="button" data-i="${i}" aria-checked="false">${esc(w[1])}</button>`).join("");
 $("#wmcls").value = S.cls; $("#wmlv").value = S.lv;
+$("#wmareas").addEventListener("click", e => { const b = e.target.closest("[data-drill]"); if (b) openArea(+b.dataset.drill) });
 $("#wmisl").addEventListener("click", e => { const b = e.target.closest("button"); if (b){ S.isl = +b.dataset.i; S.pin = null; S.sub = null; save(); render() } });
 $("#wmcls").addEventListener("change", e => { S.cls = e.target.value; save(); render() });
 $("#wmlv").addEventListener("change", e => { S.lv = Math.max(1, Math.min(100, +e.target.value || 10)); save(); render() });
@@ -214,15 +220,17 @@ map.addEventListener("mouseleave", () => { label().hidden = true;
   else if (S.pin != null && shown !== S.pin) show(S.pin) });
 map.addEventListener("focusin", e => { const d = e.target.closest(".wmdot"); if (d) d.dataset.map ? showMap(d.dataset.map) : show(+d.dataset.i) });
 map.addEventListener("click", e => {
+  const dr = e.target.closest("[data-drill]"); if (dr) return openArea(+dr.dataset.drill);
   if (e.target.closest(".wmback")){ S.pin = S.sub; S.sub = null; S.subPin = null; return render() }
   const d = e.target.closest(".wmdot"); if (!d) return;
   if (d.dataset.map){ const id = d.dataset.map;
     if (d.classList.contains("ext")){ const f = SPOT[id]; S.sub = null; S.subPin = null; if (f){ S.isl = f[0]; S.pin = f[1] } render(); return f && show(f[1]) }
     S.subPin = S.subPin === id ? null : id; document.querySelectorAll(".wmnode").forEach(x => x.classList.toggle("pin", x.dataset.map === S.subPin)); return showMap(id) }
   const i = +d.dataset.i;
-  if (DRILL(D.wmap[S.isl][5][i])){ S.sub = i; S.subPin = null; S.pin = i; label().hidden = true; return render() }
+  if (DRILL(D.wmap[S.isl][5][i])) return openArea(i);
   S.pin = S.pin === i ? null : i; document.querySelectorAll(".wmdot").forEach(x => x.classList.toggle("pin", +x.dataset.i === S.pin)); show(i) });
 $("#wmcard").addEventListener("click", e => {
+  const dr = e.target.closest("[data-drill]"); if (dr) return openArea(+dr.dataset.drill);
   const r = e.target.closest("[data-route]"); if (r) return navTo(r.dataset.route);
   const row = e.target.closest(".wmrow"); if (row && !e.target.closest(".mname")){ S.mm = row.dataset.map; if (typeof shown === "number") show(shown) } });
 // a map name anywhere on the page opens a card for that map here, with its world map spot pinned (clicking the dot shows the whole spot)

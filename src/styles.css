@@ -385,3 +385,7 @@ input.khave{width:64px;text-align:right}
 @media (max-width:600px){.wmnode span{font-size:8px;display:none}.wmnode.k0 span,.wmnode.on span,.wmnode.pin span,.wmstrip{display:block;font-size:9px}.wmsubt{display:none}}
 .wmstrip{position:absolute;left:12px;top:84.5%;white-space:nowrap;font:600 11px var(--f-body);color:#a9a3bb;font-style:italic}
 .wmnode.k0 span{font-weight:800;font-size:12px;color:#fff}
+.wmdrill{position:absolute;transform:translate(-50%,14px);z-index:3;font:700 11.5px var(--f-body);color:#1b1530;background:#ffd24a;border:2px solid #1b1530;border-radius:999px;padding:3px 9px;cursor:pointer;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.wmdrill:hover,.wmdrill:focus-visible{background:#fff;outline:none}
+@media (max-width:600px){.wmdrill{font-size:9.5px;padding:2px 6px;transform:translate(-50%,9px)}}
+@media (min-width:901px){.wmgrid.subon{grid-template-columns:minmax(0,2.2fr) minmax(0,1fr)}}

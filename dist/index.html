@@ -390,6 +390,10 @@ input.khave{width:64px;text-align:right}
 @media (max-width:600px){.wmnode span{font-size:8px;display:none}.wmnode.k0 span,.wmnode.on span,.wmnode.pin span,.wmstrip{display:block;font-size:9px}.wmsubt{display:none}}
 .wmstrip{position:absolute;left:12px;top:84.5%;white-space:nowrap;font:600 11px var(--f-body);color:#a9a3bb;font-style:italic}
 .wmnode.k0 span{font-weight:800;font-size:12px;color:#fff}
+.wmdrill{position:absolute;transform:translate(-50%,14px);z-index:3;font:700 11.5px var(--f-body);color:#1b1530;background:#ffd24a;border:2px solid #1b1530;border-radius:999px;padding:3px 9px;cursor:pointer;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.wmdrill:hover,.wmdrill:focus-visible{background:#fff;outline:none}
+@media (max-width:600px){.wmdrill{font-size:9.5px;padding:2px 6px;transform:translate(-50%,9px)}}
+@media (min-width:901px){.wmgrid.subon{grid-template-columns:minmax(0,2.2fr) minmax(0,1fr)}}
 
 </style>
 
@@ -790,7 +794,7 @@ input.khave{width:64px;text-align:right}
     <ul>
       <li>Hover a dot (tap on a phone) to see that place: its maps, monsters with level, HP and EXP, danger and EXP/hr at your class and level, NPCs, the quests they give, cab and potion shop, and a minimap with each monster's spawn points (one color per monster). Click a map row to switch the minimap.</li>
       <li>Click a dot to pin it, so the card stays while you move the mouse. Clicking a map name anywhere on the site opens its card here. <b>Route here</b> gets directions in the Map Navigator.</li>
-      <li>Click <b>Sleepywood</b> (the square dot in the middle of Victoria) to open a map of the whole Sleepywood area: every map as a dot, lines are the walkable exits between them (dashed grey = maps outside the area it leads to). Hover or tap a dot for its card; <b>← Victoria Island</b> goes back. The layout is drawn to fit, not the game's geography.</li>
+      <li>Click <b>Sleepywood area map</b> above the map (or the Sleepywood label on it) to open a map of the whole Sleepywood area: every map as a dot, lines are the walkable exits between them (dashed grey = maps outside the area it leads to). Hover or tap a dot for its card; <b>← Victoria Island</b> goes back. The layout is drawn to fit, not the game's geography.</li>
       <li><b>Find a monster</b> lights up every dot where it spawns and dims the rest; the card's minimap jumps to the map with the most of it.</li>
       <li>Big dots are towns, square dots dungeons. Brighter dots = more EXP/hr for you (estimate); 1-3 mark the best three on the island. Grey dots are maps the client shows that aren't open at launch.</li>
       <li>The world map pictures and dot positions are the Classic World client's own (Closed Online Test 2 client via maplestory.io); everything in the card is from the launch game files. Orbis and El Nath aren't in the launch, so Ossyria is left out.</li>
@@ -808,7 +812,7 @@ input.khave{width:64px;text-align:right}
   </div>
   <p class="sub" id="wmmobnote" aria-live="polite" style="margin:10px 0 0"></p>
   <div class="wmgrid">
-    <div><div id="wmmap"></div><p class="tiny" id="wmnote"></p></div>
+    <div><div class="btnrow" id="wmareas" style="margin:0 0 10px"></div><div id="wmmap"></div><p class="tiny" id="wmnote"></p></div>
     <div id="wmcard" class="mpage" aria-live="polite"></div>
   </div>
 </section>
@@ -976,6 +980,8 @@ input.khave{width:64px;text-align:right}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Sleepywood map easier to find</h3><span class="pill p-hot">fix</span></div>
+      <p>The Sleepywood area map now has a <b>Sleepywood area map</b> button above the World Map, an <b>Open Sleepywood map</b> label on the map itself and a button in Sleepywood's card, and it opens wider so the map names don't overlap. Before, it only opened by clicking the small square dot.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Sleepywood map</h3><span class="pill p-hot">update</span></div>
       <p>On the World Map, clicking Sleepywood opens a map of the Sleepywood area: all its maps (dungeons, Ant Tunnel, Evil Eye caves, Sanctuary, Deep Forest of Patience) joined by their walkable exits, each with the usual hover card. Monster search lights up dots there too.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Map names open map info</h3><span class="pill p-hot">maps</span></div>
@@ -3713,7 +3719,9 @@ const mobRange = ids => { const lv = ids.flatMap(id => (D.maps[id]?.[2] || []).m
 // launch portals), grey nodes = maps outside the spot it joins. Layout is a plain spring layout, not the game's geography.
 const DRILL = sp => sp[2] === 2 && sp[3].filter(id => D.nav[id]).length >= 5;
 const LAYOUT = {};
-const SW = 634, SH = 600;   // sub-map drawing size (px); labels ~5.6 px a letter at this size
+const areaName = sp => mapName(sp[3].find(id => D.cabs.includes(id)) || sp[3].find(known));
+const openArea = (i, pin = null) => { S.sub = i; S.subPin = pin; S.pin = i; const l = $("#wmlabel"); if (l) l.hidden = true; save(); render(); $("#wmap").scrollIntoView({block: "start"}) };
+const SW = 820, SH = 720;   // sub-map drawing size (px); labels ~5.6 px a letter at this size
 function subGraph(isl, i){
   const key = isl + ":" + i; if (LAYOUT[key]) return LAYOUT[key];
   const ids = D.wmap[isl][5][i][3].filter(id => D.nav[id] || known(id)), inside = new Set(ids), out = new Set(), E = [], seen = new Set();
@@ -3771,7 +3779,8 @@ function renderSub(){
 }
 function renderMap(){
   $("#wmmap").classList.remove("sub");
-  if (S.sub != null) return renderSub();
+  document.querySelector(".wmgrid").classList.toggle("subon", S.sub != null);
+  if (S.sub != null){ $("#wmareas").innerHTML = ""; return renderSub() }
   const W = D.wmap[S.isl], [, island, w, h, img, spots] = W;
   const best = Math.max(1, ...spots.map(spotRate));
   // top 3 spots for your level on this island
@@ -3783,7 +3792,9 @@ function renderMap(){
     const heat = r ? Math.round(100 * r / best) : 0, hit = S.mob ? spotMob(sp) : 0;
     return `<button type="button" class="wmdot k${t}${open ? "" : " off"}${S.pin === i ? " pin" : ""}${S.mob ? (hit ? " hit" : " dim") : ""}" data-i="${i}" style="left:${(x * 100).toFixed(2)}%;top:${(y * 100).toFixed(2)}%${r ? `;--heat:${heat}%` : ""}"
       aria-label="${esc(mapName(ids.find(known)) || "Not open at launch")}">${S.mob ? "" : k >= 0 ? `<b>${k + 1}</b>` : ""}</button>`;
-  }).join("") + `<span id="wmlabel" hidden></span>`;
+  }).join("") + spots.map((sp, i) => DRILL(sp) ? `<button type="button" class="wmdrill" data-drill="${i}" style="left:${(sp[0] * 100).toFixed(2)}%;top:${(sp[1] * 100).toFixed(2)}%">Open ${esc(areaName(sp))} map</button>` : "").join("")
+    + `<span id="wmlabel" hidden></span>`;
+  $("#wmareas").innerHTML = spots.map((sp, i) => DRILL(sp) ? `<button type="button" class="btn" data-drill="${i}">${esc(areaName(sp))} area map (${sp[3].filter(known).length} maps)</button>` : "").join("");
 }
 
 // `lone` = one map id: the same card for that map alone (spot i, if any, gives its island and kind)
@@ -3814,7 +3825,7 @@ function card(i, lone){
     return `<li>${mobLink(m)} <span>Lv ${x[1]} · ${fmt(x[2])} HP · ${fmt(x[3])} EXP · ×${c}</span></li>` }).join("");
   const svc = [cab ? "Cab" : "", ...pots.map(id => `Potions: ${npcLink(POT[id])} (${esc(mapName(id))})`)].filter(Boolean);
   return `<div class="qt-h"><b>${esc(mapName(main))}</b><span>${esc(island)}${t != null ? " · " + KIND[t] : ""}${mobRange(open) ? " · monsters " + mobRange(open) : ""}${open.length > 1 ? ` · ${open.length} maps` : ""}</span></div>
-    <div class="wmact"><button type="button" class="btn" data-route="${main}">Route here</button>${svc.length ? `<span class="sub">${svc.join(" · ")}</span>` : ""}</div>
+    <div class="wmact">${sp && !lone && DRILL(sp) && S.sub == null ? `<button type="button" class="btn primary" style="margin:0" data-drill="${i}">Open ${esc(areaName(sp))} map</button>` : ""}<button type="button" class="btn" data-route="${main}">Route here</button>${svc.length ? `<span class="sub">${svc.join(" · ")}</span>` : ""}</div>
     ${rows ? `<div class="tblwrap"><table class="mini"><thead><tr><th>Map</th><th>Danger</th><th class="num">EXP/hr</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}
     ${rest.length ? `<h5>${fights.length ? "Other maps here" : "Maps here"}</h5><p class="wmnpcs">${rest.map(id => mapLink(id, mapName(id))).join(", ")}</p>` : ""}
     <h5>Minimap: ${esc(mapName(mmId))}</h5><div class="mfmap">${mm}${legend}${exits}</div>
@@ -3851,6 +3862,7 @@ function render(){
 
 $("#wmisl").innerHTML = D.wmap.map((w, i) => `<button type="button" data-i="${i}" aria-checked="false">${esc(w[1])}</button>`).join("");
 $("#wmcls").value = S.cls; $("#wmlv").value = S.lv;
+$("#wmareas").addEventListener("click", e => { const b = e.target.closest("[data-drill]"); if (b) openArea(+b.dataset.drill) });
 $("#wmisl").addEventListener("click", e => { const b = e.target.closest("button"); if (b){ S.isl = +b.dataset.i; S.pin = null; S.sub = null; save(); render() } });
 $("#wmcls").addEventListener("change", e => { S.cls = e.target.value; save(); render() });
 $("#wmlv").addEventListener("change", e => { S.lv = Math.max(1, Math.min(100, +e.target.value || 10)); save(); render() });
@@ -3886,15 +3898,17 @@ map.addEventListener("mouseleave", () => { label().hidden = true;
   else if (S.pin != null && shown !== S.pin) show(S.pin) });
 map.addEventListener("focusin", e => { const d = e.target.closest(".wmdot"); if (d) d.dataset.map ? showMap(d.dataset.map) : show(+d.dataset.i) });
 map.addEventListener("click", e => {
+  const dr = e.target.closest("[data-drill]"); if (dr) return openArea(+dr.dataset.drill);
   if (e.target.closest(".wmback")){ S.pin = S.sub; S.sub = null; S.subPin = null; return render() }
   const d = e.target.closest(".wmdot"); if (!d) return;
   if (d.dataset.map){ const id = d.dataset.map;
     if (d.classList.contains("ext")){ const f = SPOT[id]; S.sub = null; S.subPin = null; if (f){ S.isl = f[0]; S.pin = f[1] } render(); return f && show(f[1]) }
     S.subPin = S.subPin === id ? null : id; document.querySelectorAll(".wmnode").forEach(x => x.classList.toggle("pin", x.dataset.map === S.subPin)); return showMap(id) }
   const i = +d.dataset.i;
-  if (DRILL(D.wmap[S.isl][5][i])){ S.sub = i; S.subPin = null; S.pin = i; label().hidden = true; return render() }
+  if (DRILL(D.wmap[S.isl][5][i])) return openArea(i);
   S.pin = S.pin === i ? null : i; document.querySelectorAll(".wmdot").forEach(x => x.classList.toggle("pin", +x.dataset.i === S.pin)); show(i) });
 $("#wmcard").addEventListener("click", e => {
+  const dr = e.target.closest("[data-drill]"); if (dr) return openArea(+dr.dataset.drill);
   const r = e.target.closest("[data-route]"); if (r) return navTo(r.dataset.route);
   const row = e.target.closest(".wmrow"); if (row && !e.target.closest(".mname")){ S.mm = row.dataset.map; if (typeof shown === "number") show(shown) } });
 // a map name anywhere on the page opens a card for that map here, with its world map spot pinned (clicking the dot shows the whole spot)
