@@ -17,6 +17,9 @@ const wantsOf = (id, it) => { const ids = BYNAME[it.n]; return ids.length > 1 &&
 const WSRC_BY_ID = {}; for (const w of D.weapons) if (D.wsrc[w[0]]) WSRC_BY_ID[w[12]] = D.wsrc[w[0]];
 const mobId = name => Object.keys(D.mobdb).find(k => D.mobdb[k].name === name);
 
+// quest items: the client's quest-item ID block (403xxxx: letters, proofs, quest pieces), plus anything a quest hands you at its start
+const GIVEN = new Set([...D.quests, ...D.citq].flatMap(r => (r.info?.start || []).map(x => x.replace(/ x\d+$/, ""))));
+const QITEM = (id, it) => (+id >= 4031000 && +id < 4033000) || GIVEN.has(it.n);
 const I = Object.entries(D.items).map(([id, it]) => {
   const drops = (D.drops[id] || []).filter(([m]) => D.mobdb[m]), named = (D.craft.src[id]?.mob || []).filter(m => D.mobdb[m] && !drops.some(x => x[0] === m));
   const wdrop = (WSRC_BY_ID[id]?.drops || []).map(([n, lv]) => [mobId(n), n, lv]);
@@ -24,17 +27,18 @@ const I = Object.entries(D.items).map(([id, it]) => {
   const o = {id, it, cat: CAT[it.c] || it.c || "Other", lv: it.st?.reqLevel || 0, drops, named, wdrop, shop, make: MAKE[id] || [], rew: REW[id] || []};
   o.src = [drops.length || named.length || wdrop.length ? "drop" : "", shop.length ? "shop" : "", o.make.length ? "craft" : "", o.rew.length ? "quest" : ""].filter(Boolean);
   o.hay = [it.n, it.wt || it.s, ...drops.map(([m]) => D.mobdb[m].name), ...named.map(m => D.mobdb[m].name), ...wdrop.map(x => x[1])].join("|").toLowerCase();
+  o.quest = QITEM(id, it);
   return o;
 });
 const OPEN = {}; for (const o of I) OPEN[o.id] = o;
 const SLOTS = [...new Set(I.filter(o => o.it.c === "Equipment").map(o => o.it.s === "Weapon" ? o.it.wt : o.it.s))].sort();
 $("#itslot").innerHTML += SLOTS.map(s => `<option>${esc(s)}</option>`).join("");
 
-let S = {q: "", cat: "", slot: "", job: "", src: true, sort: "name", dir: 1, open: null, all: false};
+let S = {q: "", cat: "", slot: "", job: "", src: true, noq: true, sort: "name", dir: 1, open: null, all: false};
 try { Object.assign(S, JSON.parse(localStorage.getItem("items") || "{}"), {q: "", open: null, all: false}) } catch(e) {}
 const save = () => { try { localStorage.setItem("items", JSON.stringify(S)) } catch(e) {} };
 for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"]]) $(el).value = S[k];
-$("#itsrc").checked = S.src;
+$("#itsrc").checked = S.src; $("#itnoq").checked = S.noq;
 
 const qn = ([src, r]) => `<span class="name qname" tabindex="0" data-src="${src}" data-i="${(src === "cit" ? D.citq : D.quests).indexOf(r)}">${esc(r.name)}</span>`;
 const mob = id => `<span class="mobname" tabindex="0" data-mob="${id}">${esc(D.mobdb[id].name)}</span> <span class="sub">Lv ${D.mobdb[id].level}</span>`;
@@ -52,7 +56,7 @@ const SRCPILL = {drop: ["drops", "p-warn"], shop: ["shop", "p-good"], craft: ["c
 function page(o){
   const it = o.it, s = it.st || {}, st = (k, v, t) => v == null || v === "" ? "" : `<div${t ? ` title="${esc(t)}"` : ""}><dt>${k}</dt><dd>${v}</dd></div>`;
   const isEq = it.c === "Equipment";
-  const flags = [`<span class="pill p-hot">${esc(typeOf(it))}</span>`, isEq && it.job && it.job !== "All" && `<span class="pill p-warn">${esc(it.job)} only</span>`,
+  const flags = [`<span class="pill p-hot">${esc(typeOf(it))}</span>`, o.quest && `<span class="pill p-warn" title="Quest item: only used for a quest">quest item</span>`, isEq && it.job && it.job !== "All" && `<span class="pill p-warn">${esc(it.job)} only</span>`,
     isEq && (!it.job || it.job === "All") && `<span class="pill p-good">any job</span>`, it.g && `<span class="pill p-warn">${esc(it.g)} only</span>`,
     !o.src.length && `<span class="pill p-bad" title="No drop report, shop, recipe or quest reward we know of">no known source</span>`].filter(Boolean).join(" ");
   const stats = isEq ? [st("Required level", s.reqLevel ?? 0), ...["STR", "DEX", "INT", "LUK"].map(k => st("Req " + k, s["req" + k] || null)),
@@ -103,7 +107,7 @@ const srcPills = o => o.src.map(k => `<span class="pill ${SRCPILL[k][1]}">${SRCP
 const COLS = {name: o => o.it.n, type: o => typeOf(o.it), lv: o => o.lv, price: o => o.it.p || 0};
 function render(){
   const q = S.q.trim().toLowerCase(), f = COLS[S.sort] || COLS.name;
-  const rows = I.filter(o => (!S.cat || o.cat === S.cat) && (!S.slot || typeOf(o.it) === S.slot) && jobOk(o.it, S.job) && (!S.src || o.src.length) && (!q || o.hay.includes(q)))
+  const rows = I.filter(o => (!S.cat || o.cat === S.cat) && (!S.slot || typeOf(o.it) === S.slot) && jobOk(o.it, S.job) && (!S.src || o.src.length) && (!S.noq || !o.quest) && (!q || o.hay.includes(q)))
     .sort((a, b) => { const x = f(a), y = f(b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * S.dir || a.it.n.localeCompare(b.it.n) });
   document.querySelectorAll("#ithead th[data-k]").forEach(th => { const on = th.dataset.k === S.sort;
     th.setAttribute("aria-sort", on ? (S.dir > 0 ? "ascending" : "descending") : "none");
@@ -126,6 +130,7 @@ function openItem(id, scroll = true){ S.open = String(id); save(); show(); if (s
 $("#itsearch").addEventListener("input", e => { S.q = e.target.value; S.all = false; render() });
 for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"]]) $(el).addEventListener("change", e => { S[k] = e.target.value; S.all = false; save(); render() });
 $("#itsrc").addEventListener("change", e => { S.src = e.target.checked; save(); render() });
+$("#itnoq").addEventListener("change", e => { S.noq = e.target.checked; save(); render() });
 $("#itmore").addEventListener("click", () => { S.all = true; render() });
 document.querySelectorAll("#ithead th[data-k] button").forEach(b => b.addEventListener("click", () => {
   const k = b.parentElement.dataset.k; S.dir = S.sort === k ? -S.dir : (k === "name" || k === "type" ? 1 : -1); S.sort = k; save(); render();

@@ -87,8 +87,10 @@ const path = require("path");
   await p.fill("#mbsearch", ""); await p.selectOption("#mbkind", "kpq"); check(await p.$$eval("#mbrows tr.mrow", r => r.length) === 4, "monster type filter: KPQ");
   await p.selectOption("#mbkind", "");
   // Item database: list, filters, item page, cross-links with monster pages
-  await p.click("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); check(/^2,220 /.test(await p.textContent("#itcount")), "item database lists 2,220 items");
+  await p.click("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); if (await p.isChecked("#itnoq")) await p.click("#itnoq"); check(/^2,220 /.test(await p.textContent("#itcount")), "item database lists 2,220 items");
   await p.click("#itsrc"); check(/^[\d,]+ /.test(await p.textContent("#itcount")) && !/^2,220/.test(await p.textContent("#itcount")), "item list: known-source filter");
+  { const n = await p.textContent("#itcount"); await p.click("#itnoq"); await p.fill("#itsearch", "letter");
+    check(!/Maria's Letter/.test(await p.textContent("#itrows")) && n !== await p.textContent("#itcount"), "item list: hide quest items"); await p.fill("#itsearch", "") }
   await p.selectOption("#itcat", "Equip"); await p.selectOption("#itjob", "Warrior"); check(await p.$$eval("#itrows tr[data-id]", r => r.length) > 50, "item filters: warrior equipment");
   await p.selectOption("#itcat", ""); await p.selectOption("#itjob", "");
   await p.fill("#itsearch", "snail shell"); await p.click("#itrows .ibtn");
