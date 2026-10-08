@@ -249,6 +249,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   `mapnames` {mapId: name} for portal destinations. Portal x/y in portals.json are pixels of the dashboard's full map
   renders; render sizes come from 64-byte range reads of each render (cached in vendor/render_dims.json). Per-axis stretch
   onto the minimap put 92% of monster spawn points on drawn platforms (uniform-scale variants: 86-91%).
+- `kpq` [{id, name, mm (webp b64), dim, rate, npc [[npcId, x, y]], mob [[mobId, x, y]]}]: KPQ maps 80000000-80000600 for the KPQ tab (step_kpq; `build_data.py kpq` reruns it). Stage puzzles/Cloto questions/box contents are server-side: from meowdb's KPQ guide (read 2026-10-08).
 - `npcs` {npcId: [name, [[mapId, x, y]]]} (x/y minimap fractions), `npcid` {name: npcId}, `npcimg` {npcId: png}, `npcmaps`
   [mapIds with quest NPCs; their minimaps/portals are included even if they have no monsters]; `mobimg` {mobId: png thumbnail}
 - `nav` {mapId: [neighbour mapIds]} walkable launch-map graph from map exits (two-way); `cabs` [town mapIds with a cab NPC]

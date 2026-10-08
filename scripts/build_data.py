@@ -587,7 +587,34 @@ def step_itemdb(D):
             for iid in ids: out.setdefault(iid, []).append([s["npc"], mapid.get(s["map"], ""), s["map"], price])
     D["ishop"] = out
 
-PARTIAL = {"itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D))}   # (key it owns, step)
+def step_kpq(D):
+    """kpq [{id, name, mm (webp base64), dim [w, h], rate (mob rate), npc [[npcId, x, y]], mob [[mobId, x, y]]}]: the KPQ maps
+    (1st Accompaniment, 80000000-80000600) for the KPQ tab, x/y as minimap fractions. Adds Cloto/Nella thumbnails to npcimg."""
+    from PIL import Image
+    import io
+    ids = [str(i) for i in range(80000000, 80000700, 100)]
+    dims, out = render_dims(ids), []
+    for r in a.mapsj["regions"]:
+        for m in r["maps"]:
+            k = str(m["id"])
+            if k not in ids: continue
+            rw, rh = dims.get(k) or (0, 0)
+            fr = lambda p: [round(min(max(p["x"] / rw, 0), 1), 3), round(min(max(p["y"] / rh, 0), 1), 3)] if rw else [None, None]
+            o = {"id": k, "name": m["name"], "rate": m.get("mob_rate"),
+                 "npc": [[str(p["id"])] + fr(p) for p in m.get("npc_positions") or []],
+                 "mob": [[str(p["id"])] + fr(p) for p in m.get("mob_positions") or []]}
+            f = C + f"images/maps/{int(k):09d}.png"
+            if os.path.exists(f):
+                im = Image.open(f); o["dim"] = list(im.size)
+                buf = io.BytesIO(); im.convert("RGBA").save(buf, "WEBP", quality=80, method=6)
+                o["mm"] = base64.b64encode(buf.getvalue()).decode()
+            out.append(o)
+            for n in o["npc"]:
+                f = C + f"images/npcs/{int(n[0]):07d}.png"
+                if n[0] not in D["npcimg"] and os.path.exists(f): D["npcimg"][n[0]] = b64(f)
+    D["kpq"] = sorted(out, key=lambda o: int(o["id"]))
+
+PARTIAL = {"itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)
@@ -599,7 +626,7 @@ if __name__ == "__main__":
     D = step_base()
     step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D)
     D = json.loads(json.dumps(D))  # str keys, as in the partial rebuild path (crafting/extras look mobs up by str id)
-    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D); step_itemdb(D)
+    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D); step_itemdb(D); step_kpq(D)
     for k in ("mobdiff", "skilldiff", "latermobnames"): D.pop(k, None)   # only the removed "What changed since 2008" tab used these
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees
     (ROOT / "data").mkdir(exist_ok=True)

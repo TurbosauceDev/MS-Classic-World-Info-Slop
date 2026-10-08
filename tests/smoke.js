@@ -54,6 +54,11 @@ const path = require("path");
   await p.click("#qchainclear");
   await p.click("#qeq"); check(await p.$$eval("#qrows tr", r => r.length) > 0, "equipment filter"); await p.click("#qeq");
   // Citizenship
+  // KPQ guide
+  await p.click("#t-kpq");
+  check(await p.$$eval("#kpq .kpqstage", r => r.length) === 6, "KPQ stages render");
+  check(await p.$$eval("#kpq img.mm", r => r.length) === 6, "KPQ minimaps");
+  check(await p.$$eval("#kpq .kpqtry", t => t.map(x => x.tBodies[0].rows.length).join()) === "4,10,20", "KPQ combination tables");
   await p.click("#t-cit");
   for (const t of ["Henesys", "Kerning City"]) {
     await p.click(`#ctown button[data-t="${t}"]`);

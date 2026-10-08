@@ -3,7 +3,7 @@
 A single-page planner for **MapleStory Classic World** (Founder's Access Oct 6 2026, Grand Launch Oct 21 2026),
 built from the Closed Online Test 2 (COT2) game-file export. Owner: Danny.
 
-Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Monsters** · **Items** · **World Map** · **Map Navigator** · **Citizenship** · **Crafting** · **Keep or sell** · **Changelog** · **Credits**.
+Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Monsters** · **Items** · **World Map** · **Map Navigator** · **KPQ** · **Citizenship** · **Crafting** · **Keep or sell** · **Changelog** · **Credits**.
 
 ## Ground rules (from Danny)
 - **Classic World only.** Never use modern/retail MapleStory info. 2008-era info only if confirmed to still hold in Classic.
@@ -46,6 +46,7 @@ src/js/50-builder.js  Character Builder: AP, skill build with per-job SP pools, 
 src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill; exports TRAVEL (travel model)
 src/js/65-navigator.js Map Navigator: route between two maps (TRAVEL + Shanks' ship), exit numbers on minimaps; navTo(id) opens it
 src/js/66-worldmap.js  World Map: client world map (D.wmap) with a dot per spot; hover = card (maps, mobs, EXP/hr via mapRates, NPCs, quests, minimap); dungeon spots (Sleepywood) open a spring-layout sub-map of D.nav exits
+src/js/67-kpq.js     KPQ guide: stages with minimaps (D.kpq), Cloto's questions, puzzle combos, King Slime, box contents (meowdb KPQ guide)
 src/js/70-thelist.js  The List: KSERS array of known kill-stealers (add new entries at the top)
 scripts/fetch_osms.sh pin + clone the OSMS export into vendor/
 scripts/analyze.py    step 1: map ranking, quest rows, 2008 diffs -> build/analysis.json
