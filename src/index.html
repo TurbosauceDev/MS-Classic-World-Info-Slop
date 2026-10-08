@@ -289,6 +289,7 @@
         <h4>Set your real damage</h4>
         <ul>
           <li>Copy the second row from your in-game stat window: <b>Attack</b> range (e.g. 43-200), Accuracy, Evasion, Max HP, Weapon Def. Magicians: Magic and INT instead of Attack.</li>
+          <li><b>Basic attack (no skills)</b> under Attack: 100% damage, one hit per swing at your weapon's speed, no MP. Bows and claws still use an arrow or star per attack.</li>
           <li>Empty boxes use the grey number in them: the Character Builder's default build for your class and level.</li>
           <li>Damage per second = your Attack range × that build's main skill, crit and weapon speed (named under the controls). Or build your character in the <b>Character Builder</b> and press "Use this in Where to train".</li>
           <li>Weak, low-level mobs win when you hit softly; tankier at-level mobs win once you hit hard.</li>
@@ -299,7 +300,7 @@
         <ul>
           <li>For when mesos are tight: shows only maps where meso drops beat what you spend, fastest EXP first.</li>
           <li>Spending = potions for your skills and buffs plus ammo (the Character Builder's numbers if you sent them, else a default build for your class and level) and Red Potions for damage taken.</li>
-          <li>Damage taken is an estimate: every monster you kill swings at you once, landing at its hit chance against your avoid. No armor counted, so it leans careful.</li>
+          <li>Damage taken is an estimate. <b>Monsters that hit you</b> (default 1 in 4, your pick) sets how many of the monsters you kill get one swing at you first; each lands at its hit chance against your Evasion. Ranged classes can go lower, melee higher.</li>
           <li>Maps rated Danger or Lethal are left out. Selling loot isn't counted, so you'll do a bit better than "net".</li>
         </ul>
       </div>
@@ -317,8 +318,9 @@
       <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
       <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
     <label>Your level<input id="lvl" type="number" min="10" max="100" value="25"></label>
-    <label>Attack<select id="aoe"><option value="1">Area attack (AoE)</option><option value="">Single target</option></select></label>
+    <label>Attack<select id="aoe"><option value="1">Area attack (AoE)</option><option value="">Single target</option><option value="basic">Basic attack (no skills)</option></select></label>
     <label>Mode<select id="tmode"><option value="">Fastest EXP</option><option value="frugal">Frugal (meso positive)</option></select></label>
+    <label hidden title="Share of the monsters you kill that get a hit on you first. Your pick, not game data.">Monsters that hit you<select id="hitsh"><option value="0.1">1 in 10</option><option value="0.25" selected>1 in 4</option><option value="0.5">Half</option><option value="1">Every one</option></select></label>
     <label>Party<select id="party"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
   </div>
   <div class="controls" style="margin-top:8px" title="From the in-game stat window. Leave a box empty to use the number shown in it.">
@@ -661,6 +663,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Basic attacks, gentler hit costs</h3><span class="pill p-hot">new</span></div>
+      <p>Where to train: <b>Basic attack (no skills)</b> under Attack ranks maps with plain hits (no MP; arrows and stars still cost). Frugal mode has a <b>Monsters that hit you</b> setting (default 1 in 4, was every one), so damage taken is less harsh.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Where to train uses your stat window</h3><span class="pill p-hot">new</span></div>
       <p>The damage-per-second box is gone. Type what your in-game stat window shows instead: Attack range, Accuracy, Evasion, Max HP and Weapon Def (Magicians: Magic and INT). Empty boxes fall back to the Character Builder's default build for your level, which is also better than the old 20 × level guess.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Frugal mode in Where to train</h3><span class="pill p-hot">new</span></div>

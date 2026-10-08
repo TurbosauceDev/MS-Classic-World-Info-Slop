@@ -723,6 +723,7 @@ header h1{cursor:pointer}
         <h4>Set your real damage</h4>
         <ul>
           <li>Copy the second row from your in-game stat window: <b>Attack</b> range (e.g. 43-200), Accuracy, Evasion, Max HP, Weapon Def. Magicians: Magic and INT instead of Attack.</li>
+          <li><b>Basic attack (no skills)</b> under Attack: 100% damage, one hit per swing at your weapon's speed, no MP. Bows and claws still use an arrow or star per attack.</li>
           <li>Empty boxes use the grey number in them: the Character Builder's default build for your class and level.</li>
           <li>Damage per second = your Attack range × that build's main skill, crit and weapon speed (named under the controls). Or build your character in the <b>Character Builder</b> and press "Use this in Where to train".</li>
           <li>Weak, low-level mobs win when you hit softly; tankier at-level mobs win once you hit hard.</li>
@@ -733,7 +734,7 @@ header h1{cursor:pointer}
         <ul>
           <li>For when mesos are tight: shows only maps where meso drops beat what you spend, fastest EXP first.</li>
           <li>Spending = potions for your skills and buffs plus ammo (the Character Builder's numbers if you sent them, else a default build for your class and level) and Red Potions for damage taken.</li>
-          <li>Damage taken is an estimate: every monster you kill swings at you once, landing at its hit chance against your avoid. No armor counted, so it leans careful.</li>
+          <li>Damage taken is an estimate. <b>Monsters that hit you</b> (default 1 in 4, your pick) sets how many of the monsters you kill get one swing at you first; each lands at its hit chance against your Evasion. Ranged classes can go lower, melee higher.</li>
           <li>Maps rated Danger or Lethal are left out. Selling loot isn't counted, so you'll do a bit better than "net".</li>
         </ul>
       </div>
@@ -751,8 +752,9 @@ header h1{cursor:pointer}
       <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
       <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
     <label>Your level<input id="lvl" type="number" min="10" max="100" value="25"></label>
-    <label>Attack<select id="aoe"><option value="1">Area attack (AoE)</option><option value="">Single target</option></select></label>
+    <label>Attack<select id="aoe"><option value="1">Area attack (AoE)</option><option value="">Single target</option><option value="basic">Basic attack (no skills)</option></select></label>
     <label>Mode<select id="tmode"><option value="">Fastest EXP</option><option value="frugal">Frugal (meso positive)</option></select></label>
+    <label hidden title="Share of the monsters you kill that get a hit on you first. Your pick, not game data.">Monsters that hit you<select id="hitsh"><option value="0.1">1 in 10</option><option value="0.25" selected>1 in 4</option><option value="0.5">Half</option><option value="1">Every one</option></select></label>
     <label>Party<select id="party"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
   </div>
   <div class="controls" style="margin-top:8px" title="From the in-game stat window. Leave a box empty to use the number shown in it.">
@@ -1095,6 +1097,8 @@ header h1{cursor:pointer}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Basic attacks, gentler hit costs</h3><span class="pill p-hot">new</span></div>
+      <p>Where to train: <b>Basic attack (no skills)</b> under Attack ranks maps with plain hits (no MP; arrows and stars still cost). Frugal mode has a <b>Monsters that hit you</b> setting (default 1 in 4, was every one), so damage taken is less harsh.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Where to train uses your stat window</h3><span class="pill p-hot">new</span></div>
       <p>The damage-per-second box is gone. Type what your in-game stat window shows instead: Attack range, Accuracy, Evasion, Max HP and Weapon Def (Magicians: Magic and INT). Empty boxes fall back to the Character Builder's default build for your level, which is also better than the old 20 × level guess.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Frugal mode in Where to train</h3><span class="pill p-hot">new</span></div>
@@ -1499,41 +1503,49 @@ function setTrainStats(S){   // from "Use this in Where to train"
   DPS_FROM_BUILDER = S.dps || null;
 }
 // damage per second: stat-window ATTACK range (or Magic + INT for spells) × the default build's skill %, hits, crit and attack time
-function trainDps(cls, L, b){
-  const pm = (b.pct || 100) / 100, hits = b.hits || 1, iv = b.interval || 0.81, crit = b.crit || 0;
+// basic = no skills: 100% × 1 hit at the weapon's own speed (buildAt's basicIv), whatever the class
+const basicIv = b => b.basicIv || 0.81;
+function trainDps(cls, L, b, basic){
+  const pm = basic ? 1 : (b.pct || 100) / 100, hits = basic ? 1 : b.hits || 1, iv = basic ? basicIv(b) : b.interval || 0.81, crit = b.crit || 0;
   const critF = 1 - crit / 100 + crit / 100 * (100 + (b.critDmg || 0)) / 100, per = avg => avg * pm * hits * critF / iv;
+  if (basic){ const m = $("#atk").value.match(/(\d+)\D+(\d+)/), p0 = (b.pct || 100) / 100;
+    if (m) return {dps: per((+m[1] + +m[2]) / 2), src: "you"};
+    return b.max && !b.magic ? {dps: per((b.min + b.max) / 2 / p0), src: "default"} : {dps: 20 * L, src: "guess"} }
   if (DPS_FROM_BUILDER) return {dps: DPS_FROM_BUILDER, src: "builder"};
   if (b.magic){ const mag = statNum("#umag"), int = statNum("#uint");
     if (mag && int != null) return {dps: per(mag * (int * (b.mast || 0) / 100 + 1 + int / 100 + 1) / 2), src: "you"} }
   else { const m = $("#atk").value.match(/(\d+)\D+(\d+)/); if (m) return {dps: per((+m[1] + +m[2]) / 2), src: "you"} }
   return b.dps > 0 ? {dps: b.dps, src: "default"} : {dps: 20 * L, src: "guess"};
 }
-// HP potions for getting hit (estimate): every monster you kill gets one attack at you, landing at its hit chance vs your
+// HP potions for getting hit (estimate): `share` of the monsters you kill (your pick, #hitsh) get one attack at you, landing at its hit chance vs your
 // avoid (mobHits), for hitTaken damage, healed at MESO_HP. mesos/hr.
-function hitCostHr(r, L, def){
+function hitCostHr(r, L, def, share = 1){
   let hp = 0;
   for (const [id, c] of D.maps[r.id]?.[2] || []){ const a = D.mobatk?.[id]; if (!a || !D.mobs[id]) continue;
     const dmg = Math.max(hitTaken(a[0], def.wdef, L) * (def.mult ?? 1), a[3] ? hitTaken(a[2], def.mdef || 0, L) * (def.mmult ?? def.mult ?? 1) : 0);
     hp += c * r.rate / r.cyc * mobHits(String(id), L, def.avoid ?? 0) * dmg }
-  return hp * 3600 * 0.5;   // Red Potion: 50 mesos for 100 HP
+  return hp * share * 3600 * 0.5;   // Red Potion: 50 mesos for 100 HP
 }
 function rankMaps(){
   let cls = $("#cls").value, L = +$("#lvl").value || 25;
-  const fb = trainBuild(cls, L), {dps, src} = trainDps(cls, L, fb), frugal = $("#tmode").value === "frugal", pm = (fb.pct || 100) / 100;
+  const basic = $("#aoe").value === "basic", fb = trainBuild(cls, L), {dps, src} = trainDps(cls, L, fb, basic), frugal = $("#tmode").value === "frugal", pm = (fb.pct || 100) / 100;
   // placeholders = the numbers assumed when a box is empty
   const d0 = DEF_FROM_BUILDER || defaultDef(cls, L), acc0 = ACC_FROM_BUILDER ?? accFor(cls, L);
   $("#atk").placeholder = fb.max && !fb.magic ? `${Math.round(fb.min / pm)}-${Math.round(fb.max / pm)}` : "";
-  document.querySelectorAll(".magin").forEach(e => e.hidden = !fb.magic); $("#atk").closest("label").hidden = !!fb.magic;
+  const magIn = fb.magic && !basic; document.querySelectorAll(".magin").forEach(e => e.hidden = !magIn); $("#atk").closest("label").hidden = magIn;
+  $("#hitsh").closest("label").hidden = !frugal;
   $("#uacc").placeholder = Math.round(acc0); $("#uavo").placeholder = d0.avoid ?? ""; $("#uhp").placeholder = d0.hp; $("#uwdef").placeholder = d0.wdef;
   const acc = statNum("#uacc") ?? acc0, def = {...d0};
   for (const [k, s] of [["avoid", "#uavo"], ["hp", "#uhp"], ["wdef", "#uwdef"]]){ const v = statNum(s); if (v != null) def[k] = v }
-  const aoe = $("#aoe").value ? (AOE_FROM_BUILDER || classAoe(cls, L)) : null, area = aoe && aoe.t > 1 ? aoe : null;
-  const party = +$("#party").value || 1, cost = COST_FROM_BUILDER || (frugal ? fb.cost : null);
+  const aoe = $("#aoe").value === "1" ? (AOE_FROM_BUILDER || classAoe(cls, L)) : null, area = aoe && aoe.t > 1 ? aoe : null;
+  // basic attacks: no skill MP, no buffs; bows, crossbows and claws still use an arrow or star per attack (none retrieved)
+  const ammoP = basic ? fb.ammoPrice || 0 : 0;
+  const party = +$("#party").value || 1, hitsh = +$("#hitsh").value, cost = basic ? {mesoHr: ammoP * 3600 / basicIv(fb)} : COST_FROM_BUILDER || (frugal ? fb.cost : null);
   let rows = mapRates(cls, L, dps, acc, 12, area, party), far = false;
   if (!rows.length){ rows = mapRates(cls, L, dps, acc, Infinity, area, party); far = rows.length > 0 }   // nothing near your level: best of the rest
   let loss = false;
   if (frugal){
-    for (const r of rows){ r.dng = mapDanger(r.id, L, def); r.up = (cost?.mesoHr || 0) * (r.att ?? 1); r.hitc = hitCostHr(r, L, def); r.net = r.meso * 3600 - r.up - r.hitc }
+    for (const r of rows){ r.dng = mapDanger(r.id, L, def); r.up = (cost?.mesoHr || 0) * (r.att ?? 1); r.hitc = hitCostHr(r, L, def, hitsh); r.net = r.meso * 3600 - r.up - r.hitc }
     const ok = rows.filter(r => r.net > 0 && r.dng.f < 0.25);
     if (ok.length) rows = ok; else { rows.sort((a, b) => b.net - a.net); loss = rows.length > 0 }
   }
@@ -1550,16 +1562,18 @@ function rankMaps(){
     <td class="num">${fmt(r.meso*3600)}${frugal ? `<div class="sub" title="Upkeep ${fmt(r.up)} + getting hit ${fmt(r.hitc)} mesos/hr">net <b${r.net > 0 ? "" : ' style="color:var(--bad)"'}>${r.net > 0 ? "+" : ""}${fmt(r.net)}</b></div>` : cost ? `<div class="sub">net ${fmt(r.meso*3600 - cost.mesoHr * (r.att ?? 1))}</div>` : ""}</td>
     <td class="num">${need ? (need/(r.rate*3600)).toFixed(1) : "–"}</td></tr>`).join("")
     : `<tr><td colspan="12" class="empty">No map fits this level and class. Try a different level.</td></tr>`;
-  $("#mapnote").innerHTML = `Damage: <b>${fmt(Math.round(dps))}</b>/s ${src === "builder" ? "from your Character Builder setup" : src === "you" ? `from your ${fb.magic ? "Magic and INT" : "Attack range"} with ${esc(fb.skill || "a basic attack")}${fb.pct && fb.pct !== 100 ? ` (${fb.pct}%${fb.hits > 1 ? ` × ${fb.hits}` : ""})` : ""}, ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${fb.magic ? "spell speed" : `its weapon's speed (${esc(fb.weapon || "?")})`}, the default build at your level` : src === "default" ? `from the Character Builder's default build at level ${L} (${esc(fb.weapon || "")}, ${esc(fb.skill || "")}); type your stat-window ${fb.magic ? "Magic and INT" : "Attack range"} for your own` : "a rough guess (20 × level)"}. `
+  const how = basic ? `basic attacks (100%, one hit), ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${esc(fb.weapon || "a default weapon")}'s speed`
+    : `${esc(fb.skill || "a basic attack")}${fb.pct && fb.pct !== 100 ? ` (${fb.pct}%${fb.hits > 1 ? ` × ${fb.hits}` : ""})` : ""}, ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${fb.magic ? "spell speed" : `its weapon's speed (${esc(fb.weapon || "?")})`}`;
+  $("#mapnote").innerHTML = `Damage: <b>${fmt(Math.round(dps))}</b>/s ${src === "builder" ? "from your Character Builder setup" : src === "you" ? `from your ${magIn ? "Magic and INT" : "Attack range"} with ${how}, from the default build at your level` : src === "default" ? `from the Character Builder's default build at level ${L} (${esc(fb.weapon || "")}, ${basic ? "basic attacks" : esc(fb.skill || "")}); type your stat-window ${magIn ? "Magic and INT" : "Attack range"} for your own` : `a rough guess (20 × level)${basic && fb.magic ? "; type your stat-window Attack range for wand or staff hits" : ""}`}. `
     + (statNum("#uacc") != null ? `Accuracy <b>${Math.round(acc)}</b> as typed.` : ACC_FROM_BUILDER != null ? `Accuracy <b>${Math.round(acc)}</b> from your Character Builder setup.`
     : `Assumed accuracy at level ${L}: <b>${Math.round(acc)}</b> (all AP in your main stat, secondary stat equal to your level, no accuracy gear${cls==="Warrior"&&L>=15?", Precise Strikes maxed":cls==="Thief"&&L>=15?", Nimble Body maxed":""}).`)
     + (need ? ` Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP.` : "") + (L > EXP_SURE && need ? ` EXP needed above level ${EXP_SURE} is meowdb's historical table (not yet confirmed in Classic).` : "")
     + (area ? ` Attack: <b>${esc(area.n)}</b>, up to ${area.t} monsters within ${area.r[0]}${area.r[1] ? ` / ${area.r[1]}` : ""} px; hits per cast are estimated from each map's spawn points.`
-      : $("#aoe").value ? ` ${esc(cls)} has no area attack at level ${L}, so this is single target.` : ` Single target.`)
+      : basic ? ` Basic attacks only (100%, one hit${fb.weapon ? `, ${esc(fb.weapon)} speed` : ""}).` : $("#aoe").value ? ` ${esc(cls)} has no area attack at level ${L}, so this is single target.` : ` Single target.`)
     + (party > 1 ? ` Party of ${party}: your share of the EXP plus the ${Math.round(partyBonus(party) * 100)}% party bonus, map spawns at ${Math.round(partyCap(party) * 100)}% (assumes equal players splitting kills).` : "")
     + ` Danger: one touch from the map's hardest hitter as a share of ${DEF_FROM_BUILDER || statNum("#uhp") != null ? "your" : "a typical"} Max HP (${fmt(def.hp)}), before armor.`
     + ` Mesos/hr = monster meso drops: player reports on meowdb for ${Object.keys(D.meso || {}).length} monsters, the rest estimated at ${D.mesok} mesos per monster level (what the reported ones average). Loot sold to NPCs isn't counted.`
-    + (frugal ? ` <b>Frugal:</b> only maps that pay for themselves and aren't Danger/Lethal, fastest EXP first. Net = mesos/hr minus ${COST_FROM_BUILDER ? "your build's" : `a default ${esc(cls)} build's`} skill potions and ammo (${fmt(cost?.mesoHr || 0)}/hr attacking nonstop, times the time spent attacking) minus Red Potions for getting hit (estimate: every monster you kill attacks you once, at its hit chance against your avoid, no armor). Loot sold to NPCs isn't counted, so real profit is higher.`
+    + (frugal ? ` <b>Frugal:</b> only maps that pay for themselves and aren't Danger/Lethal, fastest EXP first. Net = mesos/hr minus ${basic ? (ammoP ? `ammo for basic attacks` : "nothing for basic attacks") : COST_FROM_BUILDER ? "your build's skill potions and ammo" : `a default ${esc(cls)} build's skill potions and ammo`} (${fmt(cost?.mesoHr || 0)}/hr attacking nonstop, times the time spent attacking) minus Red Potions for getting hit (estimate: ${({"0.1": "1 in 10", "0.25": "1 in 4", "0.5": "half", "1": "every one"})[$("#hitsh").value]} of the monsters you kill attack${hitsh === 1 ? "s" : ""} you once, at their hit chance against your avoid, no armor). Loot sold to NPCs isn't counted, so real profit is higher.`
       + (loss ? ` <b>No map comes out meso positive at this level and damage</b>; these lose the least.` : "") : "")
     + (!frugal && COST_FROM_BUILDER ? ` Your build's potions and ammo: up to ${fmt(COST_FROM_BUILDER.mesoHr)} mesos/hr while attacking nonstop; on the top map you attack about ${Math.round((top[0]?.att ?? 1) * 100)}% of the time, so about ${fmt(COST_FROM_BUILDER.mesoHr * (top[0]?.att ?? 1))}/hr. "net" = mesos/hr minus that.` : "")
     + ` EXP/hr is a model estimate${party > 1 ? "" : ", solo"}.`
@@ -1569,6 +1583,7 @@ function rankMaps(){
 $("#cls").addEventListener("change", () => { STAT_IN.forEach(s => $(s).value = ""); rankMaps() });   // another class's stats don't carry over
 $("#party").addEventListener("change", rankMaps);
 $("#tmode").addEventListener("change", rankMaps);
+$("#hitsh").addEventListener("change", rankMaps);
 $("#aoe").addEventListener("change", rankMaps);
 STAT_IN.forEach(s => $(s).addEventListener("input", () => { DPS_FROM_BUILDER = null; rankMaps() }));
 $("#lvl").addEventListener("change", rankMaps);
@@ -3151,7 +3166,8 @@ buildAt = (cls, branch, fam, lvl, aoe = false, obt = false, guide = false) => {
   S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe, obt, gear:{}};
   try { applyDefaults(); if (guide) guideBuild(); else S.sp = autoSP(); const r = calc(S.sp);
     return {dps: r.dps, acc: r.acc, hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid, cost: r.cost, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo,
-      min: r.min, max: r.max, pct: r.ai?.pct, hits: r.ai?.hits, interval: r.interval, crit: r.crit, critDmg: r.critDmg, mast: r.mast, magic: r.ai?.kind === "magic"} }
+      min: r.min, max: r.max, pct: r.ai?.pct, hits: r.ai?.hits, interval: r.interval, crit: r.crit, critDmg: r.critDmg, mast: r.mast, magic: r.ai?.kind === "magic",
+      basicIv: tierMs(r.w?.spd ?? 6, r.w?.type === "Crossbow" ? 2 : 0) / 1000, ammoPrice: AMMO_COST[S.ammo] || 0} }
   finally { S = keep }
 };
 function fillControls(){

@@ -399,7 +399,8 @@ buildAt = (cls, branch, fam, lvl, aoe = false, obt = false, guide = false) => {
   S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe, obt, gear:{}};
   try { applyDefaults(); if (guide) guideBuild(); else S.sp = autoSP(); const r = calc(S.sp);
     return {dps: r.dps, acc: r.acc, hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid, cost: r.cost, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo,
-      min: r.min, max: r.max, pct: r.ai?.pct, hits: r.ai?.hits, interval: r.interval, crit: r.crit, critDmg: r.critDmg, mast: r.mast, magic: r.ai?.kind === "magic"} }
+      min: r.min, max: r.max, pct: r.ai?.pct, hits: r.ai?.hits, interval: r.interval, crit: r.crit, critDmg: r.critDmg, mast: r.mast, magic: r.ai?.kind === "magic",
+      basicIv: tierMs(r.w?.spd ?? 6, r.w?.type === "Crossbow" ? 2 : 0) / 1000, ammoPrice: AMMO_COST[S.ammo] || 0} }
   finally { S = keep }
 };
 function fillControls(){
