@@ -133,24 +133,47 @@ function classAoe(cls, L){
 }
 let AOE_FROM_BUILDER = null;   // the builder's own attack {t, r, n}; cleared with ACC_FROM_BUILDER
 let DEF_FROM_BUILDER = null, COST_FROM_BUILDER = null;   // the builder's upkeep {mesoHr, ...}   // the builder's {hp, wdef, mult} for the danger column; cleared with ACC_FROM_BUILDER
+// Frugal mode: the default build's upkeep (buildAt: potions for skills and buffs, ammo) when the builder sent none
+const FRUGAL_JOB = {Warrior: ["Warrior", "Fighter"], Magician: ["Magician", "F/P Wizard"], Bowman: ["Archer", "Hunter"], Thief: ["Rogue", "Assassin"]};
+function frugalBuild(cls, L){
+  const base = baseClass(cls), branch = L >= 30 ? (MAGIC.has(cls) && cls !== "Magician" ? cls : FRUGAL_JOB[base][1]) : FRUGAL_JOB[base][0];
+  try { return buildAt(base, branch, null, L) } catch (e){ return {} }
+}
+// HP potions for getting hit (estimate): every monster you kill gets one attack at you, landing at its hit chance vs your
+// avoid (mobHits), for hitTaken damage, healed at MESO_HP. mesos/hr.
+function hitCostHr(r, L, def){
+  let hp = 0;
+  for (const [id, c] of D.maps[r.id]?.[2] || []){ const a = D.mobatk?.[id]; if (!a || !D.mobs[id]) continue;
+    const dmg = Math.max(hitTaken(a[0], def.wdef, L) * (def.mult ?? 1), a[3] ? hitTaken(a[2], def.mdef || 0, L) * (def.mmult ?? def.mult ?? 1) : 0);
+    hp += c * r.rate / r.cyc * mobHits(String(id), L, def.avoid ?? 0) * dmg }
+  return hp * 3600 * 0.5;   // Red Potion: 50 mesos for 100 HP
+}
 function rankMaps(){
   let cls = $("#cls").value, L = +$("#lvl").value || 25, dps = +$("#dps").value || 20*L;
-  const acc = ACC_FROM_BUILDER ?? accFor(cls, L);
+  const acc = ACC_FROM_BUILDER ?? accFor(cls, L), frugal = $("#tmode").value === "frugal";
   const aoe = $("#aoe").value ? (AOE_FROM_BUILDER || classAoe(cls, L)) : null, area = aoe && aoe.t > 1 ? aoe : null;
-  const party = +$("#party").value || 1, def = DEF_FROM_BUILDER || defaultDef(cls, L);
+  const fb = frugal && !(DEF_FROM_BUILDER && COST_FROM_BUILDER) ? frugalBuild(cls, L) : {};
+  const party = +$("#party").value || 1, def = DEF_FROM_BUILDER || (fb.hp ? fb : defaultDef(cls, L));
+  const cost = COST_FROM_BUILDER || (frugal ? fb.cost : null);
   let rows = mapRates(cls, L, dps, acc, 12, area, party), far = false;
   if (!rows.length){ rows = mapRates(cls, L, dps, acc, Infinity, area, party); far = rows.length > 0 }   // nothing near your level: best of the rest
-  const top = rows.slice(0, 15), best = top[0]?.rate || 1, need = D.exp[L];
+  let loss = false;
+  if (frugal){
+    for (const r of rows){ r.dng = mapDanger(r.id, L, def); r.up = (cost?.mesoHr || 0) * (r.att ?? 1); r.hitc = hitCostHr(r, L, def); r.net = r.meso * 3600 - r.up - r.hitc }
+    const ok = rows.filter(r => r.net > 0 && r.dng.f < 0.25);
+    if (ok.length) rows = ok; else { rows.sort((a, b) => b.net - a.net); loss = rows.length > 0 }
+  }
+  const top = rows.slice(0, 15), best = Math.max(...top.map(r => r.rate), 1e-9), need = D.exp[L];
   $("#maprows").innerHTML = top.length ? top.map((r,i) => `<tr>
     <td class="num">${i+1}</td>
     <td>${mapLink(r.id, r.name)}${r.open ? "" : ' <span class="pill p-warn">opens later</span>'}${area ? `<div class="sub">hits ~${r.hits.toFixed(1)} per cast</div>` : ""}</td>
     <td class="sub">${mobList(r.mobs)}</td>
     <td class="num">${r.n}</td><td class="num">${r.avg.toFixed(1)}</td>
     <td class="num">${r.hit < .9 ? `<span class="pill p-warn">${Math.round(r.hit*100)}%</span>` : Math.round(r.hit*100) + "%"}</td>
-    <td>${dangerPill(mapDanger(r.id, L, def))}</td><td class="sub">${esc(potsText(r.id))}</td>
+    <td>${dangerPill(r.dng || mapDanger(r.id, L, def))}</td><td class="sub">${esc(potsText(r.id))}</td>
     <td><span class="bar"><i style="width:${Math.round(100*r.rate/best)}%"></i></span><span class="mono">${Math.round(100*r.rate/best)}</span></td>
     <td class="num">${fmt(r.rate*3600)}</td>
-    <td class="num">${fmt(r.meso*3600)}${COST_FROM_BUILDER ? `<div class="sub">net ${fmt(r.meso*3600 - COST_FROM_BUILDER.mesoHr * (r.att ?? 1))}</div>` : ""}</td>
+    <td class="num">${fmt(r.meso*3600)}${frugal ? `<div class="sub" title="Upkeep ${fmt(r.up)} + getting hit ${fmt(r.hitc)} mesos/hr">net <b${r.net > 0 ? "" : ' style="color:var(--bad)"'}>${r.net > 0 ? "+" : ""}${fmt(r.net)}</b></div>` : cost ? `<div class="sub">net ${fmt(r.meso*3600 - cost.mesoHr * (r.att ?? 1))}</div>` : ""}</td>
     <td class="num">${need ? (need/(r.rate*3600)).toFixed(1) : "–"}</td></tr>`).join("")
     : `<tr><td colspan="12" class="empty">No map fits this level and class. Try a different level.</td></tr>`;
   $("#mapnote").innerHTML = (ACC_FROM_BUILDER != null ? `Accuracy <b>${Math.round(acc)}</b> from your Character Builder setup.`
@@ -161,12 +184,15 @@ function rankMaps(){
     + (party > 1 ? ` Party of ${party}: your share of the EXP plus the ${Math.round(partyBonus(party) * 100)}% party bonus, map spawns at ${Math.round(partyCap(party) * 100)}% (assumes equal players splitting kills).` : "")
     + ` Danger: one touch from the map's hardest hitter as a share of ${DEF_FROM_BUILDER ? "your" : "a typical"} Max HP (${fmt(def.hp)}), before armor.`
     + ` Mesos/hr = monster meso drops: player reports on meowdb for ${Object.keys(D.meso || {}).length} monsters, the rest estimated at ${D.mesok} mesos per monster level (what the reported ones average). Loot sold to NPCs isn't counted.`
-    + (COST_FROM_BUILDER ? ` Your build's potions and ammo: up to ${fmt(COST_FROM_BUILDER.mesoHr)} mesos/hr while attacking nonstop; on the top map you attack about ${Math.round((top[0]?.att ?? 1) * 100)}% of the time, so about ${fmt(COST_FROM_BUILDER.mesoHr * (top[0]?.att ?? 1))}/hr. "net" = mesos/hr minus that.` : "")
+    + (frugal ? ` <b>Frugal:</b> only maps that pay for themselves and aren't Danger/Lethal, fastest EXP first. Net = mesos/hr minus ${COST_FROM_BUILDER ? "your build's" : `a default ${esc(cls)} build's`} skill potions and ammo (${fmt(cost?.mesoHr || 0)}/hr attacking nonstop, times the time spent attacking) minus Red Potions for getting hit (estimate: every monster you kill attacks you once, at its hit chance against your avoid, no armor). Loot sold to NPCs isn't counted, so real profit is higher.`
+      + (loss ? ` <b>No map comes out meso positive at this level and damage</b>; these lose the least.` : "") : "")
+    + (!frugal && COST_FROM_BUILDER ? ` Your build's potions and ammo: up to ${fmt(COST_FROM_BUILDER.mesoHr)} mesos/hr while attacking nonstop; on the top map you attack about ${Math.round((top[0]?.att ?? 1) * 100)}% of the time, so about ${fmt(COST_FROM_BUILDER.mesoHr * (top[0]?.att ?? 1))}/hr. "net" = mesos/hr minus that.` : "")
     + ` EXP/hr is a model estimate${party > 1 ? "" : ", solo"}.`
     + (far ? ` <b>No map has monsters within 12 levels of you</b> (Victoria Island tops out around level 60-75), so these are the best of the rest.` : "");
 }
 ["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; AOE_FROM_BUILDER = null; DEF_FROM_BUILDER = null; COST_FROM_BUILDER = null; rankMaps() }));
 $("#party").addEventListener("change", rankMaps);
+$("#tmode").addEventListener("change", rankMaps);
 $("#aoe").addEventListener("change", rankMaps);
 $("#dps").addEventListener("input", rankMaps);
 $("#lvl").addEventListener("change", () => { $("#dps").value = Math.max(50, 20 * (+$("#lvl").value || 25)); rankMaps() });

@@ -294,6 +294,15 @@
         </ul>
       </div>
       <div>
+        <h4>Frugal mode</h4>
+        <ul>
+          <li>For when mesos are tight: shows only maps where meso drops beat what you spend, fastest EXP first.</li>
+          <li>Spending = potions for your skills and buffs plus ammo (the Character Builder's numbers if you sent them, else a default build for your class and level) and Red Potions for damage taken.</li>
+          <li>Damage taken is an estimate: every monster you kill swings at you once, landing at its hit chance against your avoid. No armor counted, so it leans careful.</li>
+          <li>Maps rated Danger or Lethal are left out. Selling loot isn't counted, so you'll do a bit better than "net".</li>
+        </ul>
+      </div>
+      <div>
         <h4>Left out</h4>
         <ul>
           <li>Map layout and climbing, item drops and selling loot, crowding. EXP needed above level 49 is meowdb's historical table.</li>
@@ -308,6 +317,7 @@
       <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
     <label>Your level<input id="lvl" type="number" min="10" max="100" value="25"></label>
     <label>Attack<select id="aoe"><option value="1">Area attack (AoE)</option><option value="">Single target</option></select></label>
+    <label>Mode<select id="tmode"><option value="">Fastest EXP</option><option value="frugal">Frugal (meso positive)</option></select></label>
     <label>Party<select id="party"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
     <label>Damage per second<input id="dps" type="number" min="50" max="20000" step="50" value="500"></label>
   </div>
@@ -642,6 +652,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Frugal mode in Where to train</h3><span class="pill p-hot">new</span></div>
+      <p>Where to train has a <b>Mode</b> picker. <b>Frugal (meso positive)</b> shows only maps where monster mesos cover your potions and ammo, skips Danger/Lethal maps, and ranks what's left by EXP. Each map shows its net mesos per hour. Damage taken is an estimate; see the how-to box.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Shorter intro, closed how-to boxes</h3></div>
       <p>The text under the title is now one line. The how-to boxes at the top of each page start closed; click one to open it.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Home page and sections</h3><span class="pill p-hot">new</span></div>
