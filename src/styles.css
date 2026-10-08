@@ -366,3 +366,22 @@ input.khave{width:64px;text-align:right}
 .ibtn img,.ibtn i{width:32px;height:32px}
 #itmore{margin-top:10px}
 #items .tblwrap td.sub{max-width:280px;white-space:normal}
+/* world map: dungeon sub-map (Sleepywood) */
+#wmmap.sub{background:radial-gradient(circle at 50% 45%,#2a2342,#0d0b14)}
+.wmsvg{position:absolute;inset:0;width:100%;height:100%}
+.wmsvg line{stroke:#b9b0d6;stroke-width:2;stroke-opacity:.55}
+.wmsvg line.ext{stroke-dasharray:4 4;stroke-opacity:.35}
+.wmnode span{position:absolute;white-space:nowrap;font:600 10.5px var(--f-body);color:#ece8f7;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:none}
+.wmnode span.sb{left:50%;top:calc(100% + 2px);transform:translateX(-50%)}
+.wmnode span.st{left:50%;bottom:calc(100% + 2px);transform:translateX(-50%)}
+.wmnode span.sr{left:calc(100% + 4px);top:50%;transform:translateY(-50%)}
+.wmnode span.sl{right:calc(100% + 4px);top:50%;transform:translateY(-50%)}
+.wmnode{width:11px;height:11px}
+.wmnode.ext{background:#7d788c;border-style:dashed}
+.wmnode.ext span{color:#a9a3bb;font-style:italic}
+.wmnode:hover span,.wmnode.on span,.wmnode.pin span{color:#ffd24a;z-index:4}
+.wmback{position:absolute;left:10px;top:10px;z-index:5;padding:5px 10px;font-size:13px}
+.wmsubt{position:absolute;right:12px;top:14px;z-index:5;font:600 12px var(--f-body);color:#d8d2ec}
+@media (max-width:600px){.wmnode span{font-size:8px;display:none}.wmnode.k0 span,.wmnode.on span,.wmnode.pin span,.wmstrip{display:block;font-size:9px}.wmsubt{display:none}}
+.wmstrip{position:absolute;left:12px;top:84.5%;white-space:nowrap;font:600 11px var(--f-body);color:#a9a3bb;font-style:italic}
+.wmnode.k0 span{font-weight:800;font-size:12px;color:#fff}
