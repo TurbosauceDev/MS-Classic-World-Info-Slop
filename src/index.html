@@ -364,6 +364,7 @@
         <li>Search by item name or by a monster that drops it. Filter by type, equipment slot and job. Click a column to sort.</li>
         <li>Click an item (here, or any item icon or item name anywhere on the site) to open its page.</li>
         <li><b>Has a known source</b> (on by default) hides items nothing is known to drop, sell, craft or give (event, cash and unused items are mostly these).</li>
+        <li><b>Get it from</b> keeps only items with that source, e.g. Monster drops = something is reported to drop it.</li>
         <li><b>Hide quest items</b> (on by default) hides letters, proofs and other items that only exist for a quest: the game's quest-item ID range, plus items a quest hands you.</li>
       </ul></div>
       <div><h4>Item pages</h4><ul>
@@ -379,6 +380,7 @@
     <label>Type<select id="itcat"><option value="">All</option><option value="Equip">Equipment</option><option value="Use">Use</option><option value="Etc">Etc</option><option value="Setup">Setup</option><option value="Scroll">Scrolls</option></select></label>
     <label>Slot<select id="itslot"><option value="">Any</option></select></label>
     <label>Job<select id="itjob"><option value="">Any</option><option>Beginner</option><option>Warrior</option><option value="Mage">Magician</option><option>Bowman</option><option>Thief</option></select></label>
+    <label>Get it from<select id="itfrom"><option value="">Anywhere</option><option value="drop">Monster drops</option><option value="shop">NPC shops</option><option value="craft">Crafting</option><option value="quest">Quest rewards</option></select></label>
     <label class="chk"><input type="checkbox" id="itsrc"> Has a known source</label>
     <label class="chk"><input type="checkbox" id="itnoq"> Hide quest items</label>
     <span class="pill p-hot" id="itcount" style="align-self:center"></span>
@@ -583,8 +585,8 @@
   </details>
 
   <div class="changelog">
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Items: hide quest items</h3><span class="pill p-hot">update</span></div>
-      <p>Items tab has a <b>Hide quest items</b> filter (on by default) for letters, proofs and other quest-only items. Their item pages are tagged "quest item".</p></div>
+    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Items: new filters</h3><span class="pill p-hot">update</span></div>
+      <p>Items tab has a <b>Get it from</b> filter (monster drops, NPC shops, crafting or quest rewards) and a <b>Hide quest items</b> filter (on by default) for letters, proofs and other quest-only items. Quest item pages are tagged "quest item".</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Item database</h3><span class="pill p-hot">new</span></div>
       <p>New <b>Items</b> tab: all 2,220 items in the launch game files, searchable by name or by a monster that drops it, with type, slot, job and "has a known source" filters. Click any item (or any item icon or name anywhere on the site) for its page: stats, description, monsters that drop it, NPC shops, recipes, quest rewards, quests and recipes that want it, sell price and similar gear. Monster pages link their drops to item pages, and item pages link back to monster pages.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map monster search</h3><span class="pill p-hot">update</span></div>
