@@ -133,11 +133,34 @@ function classAoe(cls, L){
 }
 let AOE_FROM_BUILDER = null;   // the builder's own attack {t, r, n}; cleared with ACC_FROM_BUILDER
 let DEF_FROM_BUILDER = null, COST_FROM_BUILDER = null;   // the builder's upkeep {mesoHr, ...}   // the builder's {hp, wdef, mult} for the danger column; cleared with ACC_FROM_BUILDER
-// Frugal mode: the default build's upkeep (buildAt: potions for skills and buffs, ammo) when the builder sent none
-const FRUGAL_JOB = {Warrior: ["Warrior", "Fighter"], Magician: ["Magician", "F/P Wizard"], Bowman: ["Archer", "Hunter"], Thief: ["Rogue", "Assassin"]};
-function frugalBuild(cls, L){
-  const base = baseClass(cls), branch = L >= 30 ? (MAGIC.has(cls) && cls !== "Magician" ? cls : FRUGAL_JOB[base][1]) : FRUGAL_JOB[base][0];
-  try { return buildAt(base, branch, null, L) } catch (e){ return {} }
+// the Character Builder's default build for a Where to train class and level (buildAt): damage when you typed none,
+// and its attack skill, speed and crit to turn a stat-window damage range into damage per second; Frugal mode's upkeep
+const TRAIN_JOB = {Warrior: ["Warrior", "Fighter"], Magician: ["Magician", "F/P Wizard"], Bowman: ["Archer", "Hunter"], Thief: ["Rogue", "Assassin"]};
+const TB = {};
+function trainBuild(cls, L){
+  const base = baseClass(cls), branch = L >= 30 ? (MAGIC.has(cls) && cls !== "Magician" ? cls : TRAIN_JOB[base][1]) : TRAIN_JOB[base][0];
+  const k = cls + "|" + L; if (TB[k]) return TB[k];
+  try { return TB[k] = buildAt(base, branch, null, L) } catch (e){ return {} }
+}
+let DPS_FROM_BUILDER = null;   // the builder's exact damage (Final Attack, bleed etc.) while its numbers sit in the stat boxes
+const STAT_IN = ["#atk", "#umag", "#uint", "#uacc", "#uavo", "#uhp", "#uwdef"];
+const statNum = s => { const v = $(s).value.trim(); return v === "" ? null : +v };
+function setTrainStats(S){   // from "Use this in Where to train"
+  const w = S.win || {}, pm = (w.pct || 100) / 100;
+  $("#atk").value = w.max ? `${Math.round(w.min / pm)}-${Math.round(w.max / pm)}` : "";
+  $("#umag").value = w.magic || ""; $("#uint").value = w.magic ? w.INT : "";
+  $("#uacc").value = S.acc != null ? Math.round(S.acc) : ""; $("#uavo").value = S.def?.avoid ?? ""; $("#uhp").value = S.def?.hp ?? ""; $("#uwdef").value = S.def?.wdef ?? "";
+  DPS_FROM_BUILDER = S.dps || null;
+}
+// damage per second: stat-window ATTACK range (or Magic + INT for spells) × the default build's skill %, hits, crit and attack time
+function trainDps(cls, L, b){
+  const pm = (b.pct || 100) / 100, hits = b.hits || 1, iv = b.interval || 0.81, crit = b.crit || 0;
+  const critF = 1 - crit / 100 + crit / 100 * (100 + (b.critDmg || 0)) / 100, per = avg => avg * pm * hits * critF / iv;
+  if (DPS_FROM_BUILDER) return {dps: DPS_FROM_BUILDER, src: "builder"};
+  if (b.magic){ const mag = statNum("#umag"), int = statNum("#uint");
+    if (mag && int != null) return {dps: per(mag * (int * (b.mast || 0) / 100 + 1 + int / 100 + 1) / 2), src: "you"} }
+  else { const m = $("#atk").value.match(/(\d+)\D+(\d+)/); if (m) return {dps: per((+m[1] + +m[2]) / 2), src: "you"} }
+  return b.dps > 0 ? {dps: b.dps, src: "default"} : {dps: 20 * L, src: "guess"};
 }
 // HP potions for getting hit (estimate): every monster you kill gets one attack at you, landing at its hit chance vs your
 // avoid (mobHits), for hitTaken damage, healed at MESO_HP. mesos/hr.
@@ -149,12 +172,17 @@ function hitCostHr(r, L, def){
   return hp * 3600 * 0.5;   // Red Potion: 50 mesos for 100 HP
 }
 function rankMaps(){
-  let cls = $("#cls").value, L = +$("#lvl").value || 25, dps = +$("#dps").value || 20*L;
-  const acc = ACC_FROM_BUILDER ?? accFor(cls, L), frugal = $("#tmode").value === "frugal";
+  let cls = $("#cls").value, L = +$("#lvl").value || 25;
+  const fb = trainBuild(cls, L), {dps, src} = trainDps(cls, L, fb), frugal = $("#tmode").value === "frugal", pm = (fb.pct || 100) / 100;
+  // placeholders = the numbers assumed when a box is empty
+  const d0 = DEF_FROM_BUILDER || defaultDef(cls, L), acc0 = ACC_FROM_BUILDER ?? accFor(cls, L);
+  $("#atk").placeholder = fb.max && !fb.magic ? `${Math.round(fb.min / pm)}-${Math.round(fb.max / pm)}` : "";
+  document.querySelectorAll(".magin").forEach(e => e.hidden = !fb.magic); $("#atk").closest("label").hidden = !!fb.magic;
+  $("#uacc").placeholder = Math.round(acc0); $("#uavo").placeholder = d0.avoid ?? ""; $("#uhp").placeholder = d0.hp; $("#uwdef").placeholder = d0.wdef;
+  const acc = statNum("#uacc") ?? acc0, def = {...d0};
+  for (const [k, s] of [["avoid", "#uavo"], ["hp", "#uhp"], ["wdef", "#uwdef"]]){ const v = statNum(s); if (v != null) def[k] = v }
   const aoe = $("#aoe").value ? (AOE_FROM_BUILDER || classAoe(cls, L)) : null, area = aoe && aoe.t > 1 ? aoe : null;
-  const fb = frugal && !(DEF_FROM_BUILDER && COST_FROM_BUILDER) ? frugalBuild(cls, L) : {};
-  const party = +$("#party").value || 1, def = DEF_FROM_BUILDER || (fb.hp ? fb : defaultDef(cls, L));
-  const cost = COST_FROM_BUILDER || (frugal ? fb.cost : null);
+  const party = +$("#party").value || 1, cost = COST_FROM_BUILDER || (frugal ? fb.cost : null);
   let rows = mapRates(cls, L, dps, acc, 12, area, party), far = false;
   if (!rows.length){ rows = mapRates(cls, L, dps, acc, Infinity, area, party); far = rows.length > 0 }   // nothing near your level: best of the rest
   let loss = false;
@@ -176,13 +204,14 @@ function rankMaps(){
     <td class="num">${fmt(r.meso*3600)}${frugal ? `<div class="sub" title="Upkeep ${fmt(r.up)} + getting hit ${fmt(r.hitc)} mesos/hr">net <b${r.net > 0 ? "" : ' style="color:var(--bad)"'}>${r.net > 0 ? "+" : ""}${fmt(r.net)}</b></div>` : cost ? `<div class="sub">net ${fmt(r.meso*3600 - cost.mesoHr * (r.att ?? 1))}</div>` : ""}</td>
     <td class="num">${need ? (need/(r.rate*3600)).toFixed(1) : "–"}</td></tr>`).join("")
     : `<tr><td colspan="12" class="empty">No map fits this level and class. Try a different level.</td></tr>`;
-  $("#mapnote").innerHTML = (ACC_FROM_BUILDER != null ? `Accuracy <b>${Math.round(acc)}</b> from your Character Builder setup.`
+  $("#mapnote").innerHTML = `Damage: <b>${fmt(Math.round(dps))}</b>/s ${src === "builder" ? "from your Character Builder setup" : src === "you" ? `from your ${fb.magic ? "Magic and INT" : "Attack range"} with ${esc(fb.skill || "a basic attack")}${fb.pct && fb.pct !== 100 ? ` (${fb.pct}%${fb.hits > 1 ? ` × ${fb.hits}` : ""})` : ""}, ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${fb.magic ? "spell speed" : `its weapon's speed (${esc(fb.weapon || "?")})`}, the default build at your level` : src === "default" ? `from the Character Builder's default build at level ${L} (${esc(fb.weapon || "")}, ${esc(fb.skill || "")}); type your stat-window ${fb.magic ? "Magic and INT" : "Attack range"} for your own` : "a rough guess (20 × level)"}. `
+    + (statNum("#uacc") != null ? `Accuracy <b>${Math.round(acc)}</b> as typed.` : ACC_FROM_BUILDER != null ? `Accuracy <b>${Math.round(acc)}</b> from your Character Builder setup.`
     : `Assumed accuracy at level ${L}: <b>${Math.round(acc)}</b> (all AP in your main stat, secondary stat equal to your level, no accuracy gear${cls==="Warrior"&&L>=15?", Precise Strikes maxed":cls==="Thief"&&L>=15?", Nimble Body maxed":""}).`)
     + (need ? ` Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP.` : "") + (L > EXP_SURE && need ? ` EXP needed above level ${EXP_SURE} is meowdb's historical table (not yet confirmed in Classic).` : "")
     + (area ? ` Attack: <b>${esc(area.n)}</b>, up to ${area.t} monsters within ${area.r[0]}${area.r[1] ? ` / ${area.r[1]}` : ""} px; hits per cast are estimated from each map's spawn points.`
       : $("#aoe").value ? ` ${esc(cls)} has no area attack at level ${L}, so this is single target.` : ` Single target.`)
     + (party > 1 ? ` Party of ${party}: your share of the EXP plus the ${Math.round(partyBonus(party) * 100)}% party bonus, map spawns at ${Math.round(partyCap(party) * 100)}% (assumes equal players splitting kills).` : "")
-    + ` Danger: one touch from the map's hardest hitter as a share of ${DEF_FROM_BUILDER ? "your" : "a typical"} Max HP (${fmt(def.hp)}), before armor.`
+    + ` Danger: one touch from the map's hardest hitter as a share of ${DEF_FROM_BUILDER || statNum("#uhp") != null ? "your" : "a typical"} Max HP (${fmt(def.hp)}), before armor.`
     + ` Mesos/hr = monster meso drops: player reports on meowdb for ${Object.keys(D.meso || {}).length} monsters, the rest estimated at ${D.mesok} mesos per monster level (what the reported ones average). Loot sold to NPCs isn't counted.`
     + (frugal ? ` <b>Frugal:</b> only maps that pay for themselves and aren't Danger/Lethal, fastest EXP first. Net = mesos/hr minus ${COST_FROM_BUILDER ? "your build's" : `a default ${esc(cls)} build's`} skill potions and ammo (${fmt(cost?.mesoHr || 0)}/hr attacking nonstop, times the time spent attacking) minus Red Potions for getting hit (estimate: every monster you kill attacks you once, at its hit chance against your avoid, no armor). Loot sold to NPCs isn't counted, so real profit is higher.`
       + (loss ? ` <b>No map comes out meso positive at this level and damage</b>; these lose the least.` : "") : "")
@@ -190,14 +219,13 @@ function rankMaps(){
     + ` EXP/hr is a model estimate${party > 1 ? "" : ", solo"}.`
     + (far ? ` <b>No map has monsters within 12 levels of you</b> (Victoria Island tops out around level 60-75), so these are the best of the rest.` : "");
 }
-["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; AOE_FROM_BUILDER = null; DEF_FROM_BUILDER = null; COST_FROM_BUILDER = null; rankMaps() }));
+["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; AOE_FROM_BUILDER = null; DEF_FROM_BUILDER = null; COST_FROM_BUILDER = null; DPS_FROM_BUILDER = null; rankMaps() }));
+$("#cls").addEventListener("change", () => { STAT_IN.forEach(s => $(s).value = ""); rankMaps() });   // another class's stats don't carry over
 $("#party").addEventListener("change", rankMaps);
 $("#tmode").addEventListener("change", rankMaps);
 $("#aoe").addEventListener("change", rankMaps);
-$("#dps").addEventListener("input", rankMaps);
-$("#lvl").addEventListener("change", () => { $("#dps").value = Math.max(50, 20 * (+$("#lvl").value || 25)); rankMaps() });
-$("#dps").value = 20 * +$("#lvl").value;
-rankMaps();
+STAT_IN.forEach(s => $(s).addEventListener("input", () => { DPS_FROM_BUILDER = null; rankMaps() }));
+$("#lvl").addEventListener("change", rankMaps);
 
 
 // bosses and timed spawns (D.timed from the export's spawn timers)

@@ -398,7 +398,8 @@ buildAt = (cls, branch, fam, lvl, aoe = false, obt = false, guide = false) => {
   if (guide && GUIDE[cls].claw && lvl < (GUIDE2[branch]?.reset?.at || 30)) fam = lvl < 30 ? "Claw" : fam;
   S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe, obt, gear:{}};
   try { applyDefaults(); if (guide) guideBuild(); else S.sp = autoSP(); const r = calc(S.sp);
-    return {dps: r.dps, acc: r.acc, hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid, cost: r.cost, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo} }
+    return {dps: r.dps, acc: r.acc, hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid, cost: r.cost, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo,
+      min: r.min, max: r.max, pct: r.ai?.pct, hits: r.ai?.hits, interval: r.interval, crit: r.crit, critDmg: r.critDmg, mast: r.mast, magic: r.ai?.kind === "magic"} }
   finally { S = keep }
 };
 function fillControls(){
@@ -481,7 +482,7 @@ function renderSkills(){
 function render(){
   const L = S.lvl, ap = S.ap, cls = S.cls, br = S.branch;
   const r = calc(S.sp), w = r.w;
-  S.dps = Math.round(r.dps); S.acc = r.acc; S.def = {hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid}; S.cost = r.cost; S.area = r.ai && r.sk?.rg ? {t: r.ai.targets || 1, r: r.sk.rg, n: r.sk.n} : null;
+  S.dps = Math.round(r.dps); S.acc = r.acc; S.win = {min: r.min, max: r.max, pct: r.ai?.pct || 100, magic: r.ai?.kind === "magic" ? Math.floor(ap.INT / 2) + (w?.mad || 0) + r.matkB : 0, INT: ap.INT}; S.def = {hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid}; S.cost = r.cost; S.area = r.ai && r.sk?.rg ? {t: r.ai.targets || 1, r: r.sk.rg, n: r.sk.n} : null;
   const left = apTotal(L) - (ap.STR + ap.DEX + ap.INT + ap.LUK);
   $("#papleft").textContent = left === 0 ? "All AP spent" : left > 0 ? `${left} AP unspent` : `${-left} AP over budget`;
   $("#papleft").className = "pill " + (left === 0 ? "p-good" : "p-warn");
@@ -563,7 +564,7 @@ $("#psend").addEventListener("click", () => {
   const mcls = S.cls === "Magician" ? (map[S.branch] || "Magician") : S.cls;
   $("#cls").value = (S.cls === "Magician" && S.lvl < 30) ? "Magician" : mcls;
   $("#lvl").value = Math.min(MAX_LEVEL, S.lvl);
-  $("#dps").value = Math.max(50, S.dps || 50);
+  setTrainStats(S);
   ACC_FROM_BUILDER = S.acc ?? null; AOE_FROM_BUILDER = S.area?.t > 1 ? S.area : null; DEF_FROM_BUILDER = S.def || null; COST_FROM_BUILDER = S.cost || null;
   document.querySelector('[data-tab="maps"]').click();
   rankMaps();
