@@ -733,6 +733,7 @@ input.khave{width:64px;text-align:right}
         <li>Click an item (here, or any item icon or item name anywhere on the site) to open its page.</li>
         <li><b>Has a known source</b> (on by default) hides items nothing is known to drop, sell, craft or give (event, cash and unused items are mostly these).</li>
         <li><b>Get it from</b> keeps only items with that source, e.g. Monster drops = something is reported to drop it.</li>
+        <li><b>Used for</b>: Crafting component = at least one crafting recipe uses it; Quests ask for it = a launch quest wants it.</li>
         <li><b>Hide quest items</b> (on by default) hides letters, proofs and other items that only exist for a quest: the game's quest-item ID range, plus items a quest hands you.</li>
       </ul></div>
       <div><h4>Item pages</h4><ul>
@@ -749,6 +750,7 @@ input.khave{width:64px;text-align:right}
     <label>Slot<select id="itslot"><option value="">Any</option></select></label>
     <label>Job<select id="itjob"><option value="">Any</option><option>Beginner</option><option>Warrior</option><option value="Mage">Magician</option><option>Bowman</option><option>Thief</option></select></label>
     <label>Get it from<select id="itfrom"><option value="">Anywhere</option><option value="drop">Monster drops</option><option value="shop">NPC shops</option><option value="craft">Crafting</option><option value="quest">Quest rewards</option></select></label>
+    <label>Used for<select id="ituse"><option value="">Anything</option><option value="craft">Crafting component</option><option value="quest">Quests ask for it</option></select></label>
     <label class="chk"><input type="checkbox" id="itsrc"> Has a known source</label>
     <label class="chk"><input type="checkbox" id="itnoq"> Hide quest items</label>
     <span class="pill p-hot" id="itcount" style="align-self:center"></span>
@@ -954,7 +956,7 @@ input.khave{width:64px;text-align:right}
 
   <div class="changelog">
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Items: new filters</h3><span class="pill p-hot">update</span></div>
-      <p>Items tab has a <b>Get it from</b> filter (monster drops, NPC shops, crafting or quest rewards) and a <b>Hide quest items</b> filter (on by default) for letters, proofs and other quest-only items. Quest item pages are tagged "quest item".</p></div>
+      <p>Items tab has a <b>Get it from</b> filter (monster drops, NPC shops, crafting or quest rewards), a <b>Used for</b> filter (crafting components, items quests ask for) and a <b>Hide quest items</b> filter (on by default) for letters, proofs and other quest-only items. Quest item pages are tagged "quest item".</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Item database</h3><span class="pill p-hot">new</span></div>
       <p>New <b>Items</b> tab: all 2,220 items in the launch game files, searchable by name or by a monster that drops it, with type, slot, job and "has a known source" filters. Click any item (or any item icon or name anywhere on the site) for its page: stats, description, monsters that drop it, NPC shops, recipes, quest rewards, quests and recipes that want it, sell price and similar gear. Monster pages link their drops to item pages, and item pages link back to monster pages.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map monster search</h3><span class="pill p-hot">update</span></div>
@@ -2395,16 +2397,17 @@ const I = Object.entries(D.items).map(([id, it]) => {
   o.src = [drops.length || named.length || wdrop.length ? "drop" : "", shop.length ? "shop" : "", o.make.length ? "craft" : "", o.rew.length ? "quest" : ""].filter(Boolean);
   o.hay = [it.n, it.wt || it.s, ...drops.map(([m]) => D.mobdb[m].name), ...named.map(m => D.mobdb[m].name), ...wdrop.map(x => x[1])].join("|").toLowerCase();
   o.quest = QITEM(id, it);
+  o.use = [USE[id] ? "craft" : "", wantsOf(id, it).length ? "quest" : ""].filter(Boolean);
   return o;
 });
 const OPEN = {}; for (const o of I) OPEN[o.id] = o;
 const SLOTS = [...new Set(I.filter(o => o.it.c === "Equipment").map(o => o.it.s === "Weapon" ? o.it.wt : o.it.s))].sort();
 $("#itslot").innerHTML += SLOTS.map(s => `<option>${esc(s)}</option>`).join("");
 
-let S = {q: "", cat: "", slot: "", job: "", src: true, noq: true, from: "", sort: "name", dir: 1, open: null, all: false};
+let S = {q: "", cat: "", slot: "", job: "", src: true, noq: true, from: "", use: "", sort: "name", dir: 1, open: null, all: false};
 try { Object.assign(S, JSON.parse(localStorage.getItem("items") || "{}"), {q: "", open: null, all: false}) } catch(e) {}
 const save = () => { try { localStorage.setItem("items", JSON.stringify(S)) } catch(e) {} };
-for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"], ["from", "#itfrom"]]) $(el).value = S[k];
+for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"], ["from", "#itfrom"], ["use", "#ituse"]]) $(el).value = S[k];
 $("#itsrc").checked = S.src; $("#itnoq").checked = S.noq;
 
 const qn = ([src, r]) => `<span class="name qname" tabindex="0" data-src="${src}" data-i="${(src === "cit" ? D.citq : D.quests).indexOf(r)}">${esc(r.name)}</span>`;
@@ -2474,7 +2477,7 @@ const srcPills = o => o.src.map(k => `<span class="pill ${SRCPILL[k][1]}">${SRCP
 const COLS = {name: o => o.it.n, type: o => typeOf(o.it), lv: o => o.lv, price: o => o.it.p || 0};
 function render(){
   const q = S.q.trim().toLowerCase(), f = COLS[S.sort] || COLS.name;
-  const rows = I.filter(o => (!S.cat || o.cat === S.cat) && (!S.slot || typeOf(o.it) === S.slot) && jobOk(o.it, S.job) && (!S.src || o.src.length) && (!S.noq || !o.quest) && (!S.from || o.src.includes(S.from)) && (!q || o.hay.includes(q)))
+  const rows = I.filter(o => (!S.cat || o.cat === S.cat) && (!S.slot || typeOf(o.it) === S.slot) && jobOk(o.it, S.job) && (!S.src || o.src.length) && (!S.noq || !o.quest) && (!S.from || o.src.includes(S.from)) && (!S.use || o.use.includes(S.use)) && (!q || o.hay.includes(q)))
     .sort((a, b) => { const x = f(a), y = f(b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * S.dir || a.it.n.localeCompare(b.it.n) });
   document.querySelectorAll("#ithead th[data-k]").forEach(th => { const on = th.dataset.k === S.sort;
     th.setAttribute("aria-sort", on ? (S.dir > 0 ? "ascending" : "descending") : "none");
@@ -2495,7 +2498,7 @@ function show(){
 }
 function openItem(id, scroll = true){ S.open = String(id); save(); show(); if (scroll) $("#items").scrollIntoView({block: "start"}) }
 $("#itsearch").addEventListener("input", e => { S.q = e.target.value; S.all = false; render() });
-for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"], ["from", "#itfrom"]]) $(el).addEventListener("change", e => { S[k] = e.target.value; S.all = false; save(); render() });
+for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"], ["from", "#itfrom"], ["use", "#ituse"]]) $(el).addEventListener("change", e => { S[k] = e.target.value; S.all = false; save(); render() });
 $("#itsrc").addEventListener("change", e => { S.src = e.target.checked; save(); render() });
 $("#itnoq").addEventListener("change", e => { S.noq = e.target.checked; save(); render() });
 $("#itmore").addEventListener("click", () => { S.all = true; render() });

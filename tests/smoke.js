@@ -93,6 +93,7 @@ const path = require("path");
     check(!/Maria's Letter/.test(await p.textContent("#itrows")) && n !== await p.textContent("#itcount"), "item list: hide quest items");
   await p.fill("#itsearch", "") }
   await p.selectOption("#itfrom", "drop"); check(await p.$$eval("#itrows tr[data-id]", r => r.length > 50 && r.every(x => /drops/.test(x.lastElementChild.textContent))), "item list: dropped-by filter"); await p.selectOption("#itfrom", "");
+  await p.selectOption("#ituse", "craft"); check(/Ore|Ingot|Plank|Leather/.test(await p.textContent("#itrows")) && !/Gladius/.test(await p.textContent("#itrows")), "item list: crafting component filter"); await p.selectOption("#ituse", "");
   await p.selectOption("#itcat", "Equip"); await p.selectOption("#itjob", "Warrior"); check(await p.$$eval("#itrows tr[data-id]", r => r.length) > 50, "item filters: warrior equipment");
   await p.selectOption("#itcat", ""); await p.selectOption("#itjob", "");
   await p.fill("#itsearch", "snail shell"); await p.click("#itrows .ibtn");

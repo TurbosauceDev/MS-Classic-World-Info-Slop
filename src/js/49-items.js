@@ -28,16 +28,17 @@ const I = Object.entries(D.items).map(([id, it]) => {
   o.src = [drops.length || named.length || wdrop.length ? "drop" : "", shop.length ? "shop" : "", o.make.length ? "craft" : "", o.rew.length ? "quest" : ""].filter(Boolean);
   o.hay = [it.n, it.wt || it.s, ...drops.map(([m]) => D.mobdb[m].name), ...named.map(m => D.mobdb[m].name), ...wdrop.map(x => x[1])].join("|").toLowerCase();
   o.quest = QITEM(id, it);
+  o.use = [USE[id] ? "craft" : "", wantsOf(id, it).length ? "quest" : ""].filter(Boolean);
   return o;
 });
 const OPEN = {}; for (const o of I) OPEN[o.id] = o;
 const SLOTS = [...new Set(I.filter(o => o.it.c === "Equipment").map(o => o.it.s === "Weapon" ? o.it.wt : o.it.s))].sort();
 $("#itslot").innerHTML += SLOTS.map(s => `<option>${esc(s)}</option>`).join("");
 
-let S = {q: "", cat: "", slot: "", job: "", src: true, noq: true, from: "", sort: "name", dir: 1, open: null, all: false};
+let S = {q: "", cat: "", slot: "", job: "", src: true, noq: true, from: "", use: "", sort: "name", dir: 1, open: null, all: false};
 try { Object.assign(S, JSON.parse(localStorage.getItem("items") || "{}"), {q: "", open: null, all: false}) } catch(e) {}
 const save = () => { try { localStorage.setItem("items", JSON.stringify(S)) } catch(e) {} };
-for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"], ["from", "#itfrom"]]) $(el).value = S[k];
+for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"], ["from", "#itfrom"], ["use", "#ituse"]]) $(el).value = S[k];
 $("#itsrc").checked = S.src; $("#itnoq").checked = S.noq;
 
 const qn = ([src, r]) => `<span class="name qname" tabindex="0" data-src="${src}" data-i="${(src === "cit" ? D.citq : D.quests).indexOf(r)}">${esc(r.name)}</span>`;
@@ -107,7 +108,7 @@ const srcPills = o => o.src.map(k => `<span class="pill ${SRCPILL[k][1]}">${SRCP
 const COLS = {name: o => o.it.n, type: o => typeOf(o.it), lv: o => o.lv, price: o => o.it.p || 0};
 function render(){
   const q = S.q.trim().toLowerCase(), f = COLS[S.sort] || COLS.name;
-  const rows = I.filter(o => (!S.cat || o.cat === S.cat) && (!S.slot || typeOf(o.it) === S.slot) && jobOk(o.it, S.job) && (!S.src || o.src.length) && (!S.noq || !o.quest) && (!S.from || o.src.includes(S.from)) && (!q || o.hay.includes(q)))
+  const rows = I.filter(o => (!S.cat || o.cat === S.cat) && (!S.slot || typeOf(o.it) === S.slot) && jobOk(o.it, S.job) && (!S.src || o.src.length) && (!S.noq || !o.quest) && (!S.from || o.src.includes(S.from)) && (!S.use || o.use.includes(S.use)) && (!q || o.hay.includes(q)))
     .sort((a, b) => { const x = f(a), y = f(b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * S.dir || a.it.n.localeCompare(b.it.n) });
   document.querySelectorAll("#ithead th[data-k]").forEach(th => { const on = th.dataset.k === S.sort;
     th.setAttribute("aria-sort", on ? (S.dir > 0 ? "ascending" : "descending") : "none");
@@ -128,7 +129,7 @@ function show(){
 }
 function openItem(id, scroll = true){ S.open = String(id); save(); show(); if (scroll) $("#items").scrollIntoView({block: "start"}) }
 $("#itsearch").addEventListener("input", e => { S.q = e.target.value; S.all = false; render() });
-for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"], ["from", "#itfrom"]]) $(el).addEventListener("change", e => { S[k] = e.target.value; S.all = false; save(); render() });
+for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"], ["from", "#itfrom"], ["use", "#ituse"]]) $(el).addEventListener("change", e => { S[k] = e.target.value; S.all = false; save(); render() });
 $("#itsrc").addEventListener("change", e => { S.src = e.target.checked; save(); render() });
 $("#itnoq").addEventListener("change", e => { S.noq = e.target.checked; save(); render() });
 $("#itmore").addEventListener("click", () => { S.all = true; render() });
