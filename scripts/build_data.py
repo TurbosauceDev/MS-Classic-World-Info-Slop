@@ -378,7 +378,7 @@ def step_extras(D):
     # launch and later monsters alike (the page marks later ones). Drop rates are server-side, so there are no rates.
     dr = {}
     for mid, rows in json.load(open(ROOT / "data" / "sources" / "meowdb_drops.json"))["mobs"].items():
-        if mid not in D["mobs"]: continue
+        if mid not in D["mobs"] and mid not in mob: continue   # field monsters + bosses/KPQ/JQ; step_mobdb drops non-launch ones
         for iid, _, up, down in rows:
             if up - down >= 1: dr.setdefault(str(iid), []).append([mid, up - down])
     D["drops"] = {k: sorted(v, key=lambda x: -x[1]) for k, v in dr.items()}
@@ -544,6 +544,8 @@ def step_mobdb(D):
             if b: D["mobimg"][k] = b
         out[k] = o
     D["mobdb"] = out
+    # meowdb drops: keep monsters you can meet at launch (field ones + the bosses/KPQ/JQ in mobdb); Orbis/El Nath ones go
+    D["drops"] = {k: w for k, v in D["drops"].items() if (w := [x for x in v if x[0] in D["mobs"] or x[0] in out])}
 
 def step_worldmap(D):
     """wmap [[key, island, w, h, base64 webp, [[x, y, type, [mapIds]]]]]: the client's world maps (WorldMap.wz) for Maple

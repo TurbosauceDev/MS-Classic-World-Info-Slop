@@ -168,7 +168,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - Keep or sell tab: items launch quests (minus Event) or recipes ask for; quest-handed items (info.start) and unsellable items
   (no NPC price) left out unless a recipe uses them. Sources: quest data monster, crafting src, meowdb shops (shopsell), quest
   rewards, recipes, and D.drops (2026-10-06): meowdb community drop lists, `meowdb.com/msclassic/api/drops?monsterId=<game mob
-  id>` (headless Chromium, Cloudflare), saved in data/sources/meowdb_drops.json; kept when upvotes − downvotes ≥ 1 (votes shown
+  id>` (headless Chromium, Cloudflare), saved in data/sources/meowdb_drops.json (re-pulled 2026-10-08 for every mobdb monster; bosses/KPQ/JQ kept, Orbis/El Nath dropped in step_mobdb); kept when upvotes − downvotes ≥ 1 (votes shown
   as "N players"). Also used by Crafting raw materials. Verdict per item: Keep all (no known source) > Keep N (one-time quests
   still open − "have"; Must do/Recommended quest first) > If you craft (recipes only) > Repeatable (weekly asks only) > Enough
   (have ≥ wanted) > Sell (wanting quests all done). "Have" = localStorage keephave {item id: n}; UI state = keep. Done quests =
