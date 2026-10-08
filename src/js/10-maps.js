@@ -181,7 +181,7 @@ const POTION_IDS = ["2000000", "2000001", "2000002", "2000003", "2000004", "2010
 const POT_BY_MOB = {}; for (const id of POTION_IDS) for (const [mob] of D.drops?.[id] || []) (POT_BY_MOB[mob] ||= new Set()).add(id);
 const mapPots = mid => { const out = new Set(); for (const [id] of D.maps[mid]?.[2] || []) for (const p of POT_BY_MOB[id] || []) out.add(p); return POTION_IDS.filter(p => out.has(p)) };
 // NPC sale value of one kill's loot (Frugal): meowdb-reported drops that are monster ETC items (4000xxx) or the potions above,
-// each at the chosen drop rate (Danny's 15% "cautious" / 30% per kill, the same as quest items); ores, gems, equips and
+// each at the chosen drop rate (default 5% per kill: Danny, 2026-10-08, judged 15% optimistic); ores, gems, equips and
 // scrolls drop too rarely to count. Sell price = the item's NPC price.
 const LOOT_BY_MOB = {}; for (const [it, ms] of Object.entries(D.drops || {})) if ((it.startsWith("4000") || POTION_IDS.includes(it)) && D.items[it]?.p) for (const [mob] of ms) (LOOT_BY_MOB[mob] ||= []).push(it);
 const lootKill = mob => (LOOT_BY_MOB[mob] || []).reduce((a, it) => a + D.items[it].p, 0);
