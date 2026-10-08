@@ -417,6 +417,26 @@ input.khave{width:64px;text-align:right}
 #kpq .kpqbox{display:flex;flex-direction:column;gap:4px;font-size:14px}
 #kpq .kpqsrc{margin-top:18px}
 #kpq code{font:12.5px var(--f-mono);background:var(--accent-soft);padding:1px 4px;border-radius:4px}
+/* two-row nav: categories, then the pages in the open category; Home page = a card per category */
+nav{display:block;border-bottom:0}
+nav .cats{display:flex;gap:6px;flex-wrap:wrap}
+nav .cats button{font:600 14px var(--f-body);border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);padding:7px 14px}
+nav .cats button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+nav .subs{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;border-bottom:1px solid var(--line)}
+nav .subs[hidden]{display:none}
+nav button[hidden]{display:none}
+header h1{cursor:pointer}
+.homegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.homecat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.homecat h2{margin:0 0 6px}
+.hcat{font:800 20px var(--f-display);color:var(--ink);background:none;border:0;padding:0;cursor:pointer}
+.hcat:hover{color:var(--accent)}
+.hlink{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:9px 0;cursor:pointer;color:var(--ink);font:14px/1.4 var(--f-body)}
+.hlink b{display:block;font-weight:600;color:var(--accent)}
+.hlink span{color:var(--muted);font-size:13px}
+.hlink:hover b{text-decoration:underline}
+.hlink:focus-visible,.hcat:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:420px){.homegrid{grid-template-columns:1fr}}
 
 </style>
 
@@ -427,25 +447,65 @@ input.khave{width:64px;text-align:right}
   <div class="src">Data: OSMS Data Explorer launch export (Oct 6) · guides and mechanics: meowdb · client data: maplestory.quest · <a href="#credits" id="srclink">all sources and thanks</a></div>
 </header>
 
-<nav role="tablist">
-  <button role="tab" id="t-plan" aria-selected="true" data-tab="plan">Character Builder</button>
-  <button role="tab" id="t-path" aria-selected="false" data-tab="path">Path Planner</button>
-  <button role="tab" id="t-maps" aria-selected="false" data-tab="maps">Where to train</button>
-  <button role="tab" id="t-quests" aria-selected="false" data-tab="quests">Quest Database</button>
-  <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs">Monsters</button>
-  <button role="tab" id="t-items" aria-selected="false" data-tab="items">Items</button>
-  <button role="tab" id="t-wmap" aria-selected="false" data-tab="wmap">World Map</button>
-  <button role="tab" id="t-navi" aria-selected="false" data-tab="navi">Map Navigator</button>
-  <button role="tab" id="t-kpq" aria-selected="false" data-tab="kpq">KPQ</button>
-  <button role="tab" id="t-cit" aria-selected="false" data-tab="cit">Citizenship</button>
-  <button role="tab" id="t-craft" aria-selected="false" data-tab="craft">Crafting</button>
-  <button role="tab" id="t-keep" aria-selected="false" data-tab="keep">Keep or sell</button>
-  <button role="tab" id="t-kslist" aria-selected="false" data-tab="kslist">The List</button>
-  <button role="tab" id="t-log" aria-selected="false" data-tab="log">Changelog</button>
-  <button role="tab" id="t-credits" aria-selected="false" data-tab="credits">Credits</button>
+<nav>
+  <div class="cats" role="tablist" aria-label="Sections">
+    <button role="tab" id="c-home" aria-selected="false" data-cat="home">Home</button>
+    <button role="tab" id="c-char" aria-selected="false" data-cat="char">Your character</button>
+    <button role="tab" id="c-db" aria-selected="false" data-cat="db">Databases</button>
+    <button role="tab" id="c-world" aria-selected="false" data-cat="world">World</button>
+    <button role="tab" id="c-town" aria-selected="false" data-cat="town">Towns and trade</button>
+    <button role="tab" id="c-more" aria-selected="false" data-cat="more">More</button>
+  </div>
+  <div class="subs" role="tablist" aria-label="Pages">
+    <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="char" hidden>Character Builder</button>
+    <button role="tab" id="t-path" aria-selected="false" data-tab="path" data-cat="char" hidden>Path Planner</button>
+    <button role="tab" id="t-maps" aria-selected="false" data-tab="maps" data-cat="char" hidden>Where to train</button>
+    <button role="tab" id="t-quests" aria-selected="false" data-tab="quests" data-cat="db" hidden>Quest Database</button>
+    <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs" data-cat="db" hidden>Monsters</button>
+    <button role="tab" id="t-items" aria-selected="false" data-tab="items" data-cat="db" hidden>Items</button>
+    <button role="tab" id="t-wmap" aria-selected="false" data-tab="wmap" data-cat="world" hidden>World Map</button>
+    <button role="tab" id="t-navi" aria-selected="false" data-tab="navi" data-cat="world" hidden>Map Navigator</button>
+    <button role="tab" id="t-kpq" aria-selected="false" data-tab="kpq" data-cat="world" hidden>KPQ</button>
+    <button role="tab" id="t-cit" aria-selected="false" data-tab="cit" data-cat="town" hidden>Citizenship</button>
+    <button role="tab" id="t-craft" aria-selected="false" data-tab="craft" data-cat="town" hidden>Crafting</button>
+    <button role="tab" id="t-keep" aria-selected="false" data-tab="keep" data-cat="town" hidden>Keep or sell</button>
+    <button role="tab" id="t-kslist" aria-selected="false" data-tab="kslist" data-cat="more" hidden>The List</button>
+    <button role="tab" id="t-log" aria-selected="false" data-tab="log" data-cat="more" hidden>Changelog</button>
+    <button role="tab" id="t-credits" aria-selected="false" data-tab="credits" data-cat="more" hidden>Credits</button>
+  </div>
 </nav>
 
-<section id="plan">
+<section id="home">
+  <div class="homegrid">
+    <div class="homecat"><h2><button class="hcat" data-go-cat="char">Your character</button></h2>
+      <button class="hlink" data-go="plan"><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
+      <button class="hlink" data-go="path"><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
+      <button class="hlink" data-go="maps"><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
+    </div>
+    <div class="homecat"><h2><button class="hcat" data-go-cat="db">Databases</button></h2>
+      <button class="hlink" data-go="quests"><b>Quest Database</b><span>Every launch quest with level, rewards, questlines and community picks.</span></button>
+      <button class="hlink" data-go="mobs"><b>Monsters</b><span>Stats, spawns, drops and the best maps to farm each monster.</span></button>
+      <button class="hlink" data-go="items"><b>Items</b><span>Every item: stats, who drops it, shops, recipes and quests that use it.</span></button>
+    </div>
+    <div class="homecat"><h2><button class="hcat" data-go-cat="world">World</button></h2>
+      <button class="hlink" data-go="wmap"><b>World Map</b><span>Hover any spot for its maps, monsters, NPCs, quests and EXP per hour.</span></button>
+      <button class="hlink" data-go="navi"><b>Map Navigator</b><span>Fastest route between two maps, with exit numbers on the minimaps.</span></button>
+      <button class="hlink" data-go="kpq"><b>KPQ</b><span>Kerning Party Quest stage by stage: puzzles, answers and rewards.</span></button>
+    </div>
+    <div class="homecat"><h2><button class="hcat" data-go-cat="town">Towns and trade</button></h2>
+      <button class="hlink" data-go="cit"><b>Citizenship</b><span>Town grades, citizenship quests and town shops.</span></button>
+      <button class="hlink" data-go="craft"><b>Crafting</b><span>Professions, the cheapest way to level them, recipes and materials.</span></button>
+      <button class="hlink" data-go="keep"><b>Keep or sell</b><span>Which loot quests and recipes still want, and what's safe to sell.</span></button>
+    </div>
+    <div class="homecat"><h2><button class="hcat" data-go-cat="more">More</button></h2>
+      <button class="hlink" data-go="kslist"><b>The List</b><span>Known kill-stealers.</span></button>
+      <button class="hlink" data-go="log"><b>Changelog</b><span>What changed and when.</span></button>
+      <button class="hlink" data-go="credits"><b>Credits</b><span>Sources and thanks.</span></button>
+    </div>
+  </div>
+</section>
+
+<section id="plan" hidden>
   <details class="howto" open>
     <summary>How the numbers work</summary>
     <div class="howgrid">
@@ -1017,6 +1077,8 @@ input.khave{width:64px;text-align:right}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Home page and sections</h3><span class="pill p-hot">new</span></div>
+      <p>New <b>Home</b> page with every tool and what it's for. The top bar now shows five sections (<b>Your character</b>, <b>Databases</b>, <b>World</b>, <b>Towns and trade</b>, <b>More</b>); pick one to see its pages. Clicking the site title goes home. Links between pages (map names, items, monsters, Route here) work as before.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · KPQ guide</h3><span class="pill p-hot">new tab</span></div>
       <p>New <b>KPQ</b> tab: how to get in (4 players, level 21+, channels 3-5 only), Proof of Companionship, every stage with its minimap and monster spots, Cloto's coupon questions, all rope / platform / barrel combinations, King Slime's stats, the monsters inside and what players get from Companion's Magic Box. Game-file data plus meowdb's KPQ guide.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Sleepywood map easier to find</h3><span class="pill p-hot">fix</span></div>
@@ -1231,13 +1293,30 @@ async function copyShare(btn, url){
   setTimeout(() => { btn.textContent = old }, 2500);
 }
 
-/* tabs */
-document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
-  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
-  ["plan","path","maps","quests","mobs","items","wmap","navi","kpq","cit","craft","keep","kslist","log","credits"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
+/* tabs: category row (.cats) + that category's pages (.subs); Home is a category with no pages. Page buttons keep
+   their #t-<id> ids, so code elsewhere can still open a page with $("#t-items").click(). */
+const TABS = [...document.querySelectorAll("nav [data-tab]")], CATS = [...document.querySelectorAll("nav .cats button")];
+const LASTTAB = {};   // category -> last page opened in it
+const showCat = cat => {
+  CATS.forEach(x => x.setAttribute("aria-selected", x.dataset.cat === cat));
+  TABS.forEach(x => x.hidden = x.dataset.cat !== cat);
+  $("nav .subs").hidden = cat === "home";
+};
+TABS.forEach(b => b.addEventListener("click", () => {
+  showCat(b.dataset.cat); LASTTAB[b.dataset.cat] = b.dataset.tab;
+  TABS.forEach(x => x.setAttribute("aria-selected", x === b));
+  $("#home").hidden = true; TABS.forEach(x => $("#" + x.dataset.tab).hidden = x !== b);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
 }));
-try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : localStorage.getItem("tab"); if (t) document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
+const goHome = () => { showCat("home"); TABS.forEach(x => { x.setAttribute("aria-selected", false); $("#" + x.dataset.tab).hidden = true });
+  $("#home").hidden = false; try { localStorage.setItem("tab", "home") } catch(e) {} };
+const goCat = cat => cat === "home" ? goHome() : $("#t-" + (LASTTAB[cat] || TABS.find(x => x.dataset.cat === cat).dataset.tab)).click();
+CATS.forEach(b => b.addEventListener("click", () => goCat(b.dataset.cat)));
+$("#home").addEventListener("click", e => { const g = e.target.closest("[data-go],[data-go-cat]"); if (!g) return;
+  g.dataset.go ? $("#t-" + g.dataset.go).click() : goCat(g.dataset.goCat); window.scrollTo({top: $("nav").offsetTop - 8}) });
+$("header h1").addEventListener("click", goHome);
+goHome();
+try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : localStorage.getItem("tab"); if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
 $("#srclink").addEventListener("click", e => { e.preventDefault(); $("#t-credits").click(); $("#credits").scrollIntoView() });
 

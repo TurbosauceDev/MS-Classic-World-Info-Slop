@@ -35,12 +35,29 @@ async function copyShare(btn, url){
   setTimeout(() => { btn.textContent = old }, 2500);
 }
 
-/* tabs */
-document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
-  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
-  ["plan","path","maps","quests","mobs","items","wmap","navi","kpq","cit","craft","keep","kslist","log","credits"].forEach(id => $("#" + id).hidden = id !== b.dataset.tab);
+/* tabs: category row (.cats) + that category's pages (.subs); Home is a category with no pages. Page buttons keep
+   their #t-<id> ids, so code elsewhere can still open a page with $("#t-items").click(). */
+const TABS = [...document.querySelectorAll("nav [data-tab]")], CATS = [...document.querySelectorAll("nav .cats button")];
+const LASTTAB = {};   // category -> last page opened in it
+const showCat = cat => {
+  CATS.forEach(x => x.setAttribute("aria-selected", x.dataset.cat === cat));
+  TABS.forEach(x => x.hidden = x.dataset.cat !== cat);
+  $("nav .subs").hidden = cat === "home";
+};
+TABS.forEach(b => b.addEventListener("click", () => {
+  showCat(b.dataset.cat); LASTTAB[b.dataset.cat] = b.dataset.tab;
+  TABS.forEach(x => x.setAttribute("aria-selected", x === b));
+  $("#home").hidden = true; TABS.forEach(x => $("#" + x.dataset.tab).hidden = x !== b);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
 }));
-try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : localStorage.getItem("tab"); if (t) document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
+const goHome = () => { showCat("home"); TABS.forEach(x => { x.setAttribute("aria-selected", false); $("#" + x.dataset.tab).hidden = true });
+  $("#home").hidden = false; try { localStorage.setItem("tab", "home") } catch(e) {} };
+const goCat = cat => cat === "home" ? goHome() : $("#t-" + (LASTTAB[cat] || TABS.find(x => x.dataset.cat === cat).dataset.tab)).click();
+CATS.forEach(b => b.addEventListener("click", () => goCat(b.dataset.cat)));
+$("#home").addEventListener("click", e => { const g = e.target.closest("[data-go],[data-go-cat]"); if (!g) return;
+  g.dataset.go ? $("#t-" + g.dataset.go).click() : goCat(g.dataset.goCat); window.scrollTo({top: $("nav").offsetTop - 8}) });
+$("header h1").addEventListener("click", goHome);
+goHome();
+try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : localStorage.getItem("tab"); if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
 $("#srclink").addEventListener("click", e => { e.preventDefault(); $("#t-credits").click(); $("#credits").scrollIntoView() });

@@ -10,6 +10,14 @@ const path = require("path");
   await p.goto("file://" + path.resolve(__dirname, "../dist/index.html"));
   const check = (ok, msg) => { if (!ok) errs.push("FAILED: " + msg); else console.log("ok  " + msg) };
 
+  // Home page + section nav: page buttons only show in their section, so open the section first
+  const tab = async sel => { await p.click("#c-" + await p.$eval(sel, b => b.dataset.cat)); await p.click(sel) };
+  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 15, "home page lists every page");
+  await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && !(await p.isHidden("#t-items")) && await p.isHidden("#t-plan"), "home link opens its page and section");
+  await p.click("#c-home"); check(!(await p.isHidden("#home")) && await p.isHidden("#mobs"), "Home button returns home");
+  await p.click("#c-db"); check(!(await p.isHidden("#mobs")), "section remembers its last page");
+  await tab("#t-plan");
+
   // Character Builder
   for (const c of ["Warrior", "Magician", "Bowman", "Thief"]) {
     await p.click(`#pclass button[data-v="${c}"]`);
@@ -43,11 +51,11 @@ const path = require("path");
   check(/Kerning Party Quest/.test(await p.textContent("#xrows")) && /Safe|Caution|Danger/.test(await p.textContent("#xrows")), "party, KPQ and danger in the plan");
   await p.selectOption("#xparty", "1");
   // Where to train
-  await p.click("#t-maps"); check(await p.$$eval("#maps tbody tr", r => r.length) > 0, "map ranking renders");
+  await tab("#t-maps"); check(await p.$$eval("#maps tbody tr", r => r.length) > 0, "map ranking renders");
   await p.selectOption("#party", "3"); await p.fill("#lvl", "85"); await p.dispatchEvent("#lvl", "input");
   check(await p.$$eval("#maprows tr", r => r.length) > 0 && /portals to/.test(await p.textContent("#maprows")) && !/NaN|undefined/.test(await p.textContent("#maps")), "Where to train: level 85, party, danger, potions");
   // Quest Database
-  await p.click("#t-quests");
+  await tab("#t-quests");
   check((await p.textContent("#qcount")).includes("quests"), "quest table renders");
   await p.click("#qhead th[data-k=lvl] button");
   await (await p.$(".chainbtn")).click(); check(!(await p.isHidden("#qchainbar")), "questline filter");
@@ -55,17 +63,17 @@ const path = require("path");
   await p.click("#qeq"); check(await p.$$eval("#qrows tr", r => r.length) > 0, "equipment filter"); await p.click("#qeq");
   // Citizenship
   // KPQ guide
-  await p.click("#t-kpq");
+  await tab("#t-kpq");
   check(await p.$$eval("#kpq .kpqstage", r => r.length) === 6, "KPQ stages render");
   check(await p.$$eval("#kpq img.mm", r => r.length) === 6, "KPQ minimaps");
   check(await p.$$eval("#kpq .kpqtry", t => t.map(x => x.tBodies[0].rows.length).join()) === "4,10,20", "KPQ combination tables");
-  await p.click("#t-cit");
+  await tab("#t-cit");
   for (const t of ["Henesys", "Kerning City"]) {
     await p.click(`#ctown button[data-t="${t}"]`);
     check(await p.$$eval("#cgrades tr", r => r.length) === 10, `${t} grades table`);
   }
   // Crafting
-  await p.click("#t-craft");
+  await tab("#t-craft");
   check(await p.$$eval("#crmasters .fact", r => r.length) === 6, "six profession masters");
   check(/^348 /.test(await p.textContent("#crcount")), "all 348 recipes listed");
   await p.click('#crdisc button[data-d="4"]'); await p.selectOption("#crcls", "Thief");
@@ -73,7 +81,7 @@ const path = require("path");
   await p.click("#crmats .crfind >> nth=0");
   check(await p.$$eval("#crrows tr", r => r.length) > 0 && !/NaN|undefined/.test(await p.textContent("#craft")), "material click filters recipes");
   // Keep or sell, armor, share links, crafting leveling, bosses, quest compact toggle
-  await p.click("#t-keep"); check(/items/.test(await p.textContent("#kcount")) && await p.$$eval("#krows tr", r => r.length) > 50, "keep list renders");
+  await tab("#t-keep"); check(/items/.test(await p.textContent("#kcount")) && await p.$$eval("#krows tr", r => r.length) > 50, "keep list renders");
   await p.click("#konly"); check(await p.$$eval("#krows tr", r => r.length) > 0, "keep list: no-source filter"); await p.click("#konly");
   { const tr = await p.$("#krows tr:has(td:nth-child(2) .p-hot)"); const before = await tr.$eval("td:nth-child(2)", e => e.textContent);
     await (await tr.$(".khave")).fill("999"); const after = await tr.$eval("td:nth-child(2)", e => e.textContent);
@@ -81,7 +89,7 @@ const path = require("path");
     await (await tr.$(".khave")).fill(""); }
   await p.selectOption("#kby", "c"); await p.selectOption("#kdisc", { index: 1 }); check(await p.$$eval("#krows tr", r => r.length) > 0, "keep list: crafting + profession filter");
   await p.selectOption("#kby", ""); await p.selectOption("#kdisc", "");
-  await p.click("#t-mobs"); check(/^71 /.test(await p.textContent("#mbcount")), "monster database lists 71 monsters");
+  await tab("#t-mobs"); check(/^71 /.test(await p.textContent("#mbcount")), "monster database lists 71 monsters");
   await p.fill("#mbsearch", "balrog"); await p.click("#mbrows .mbtn");
   check(/Cursed Sanctuary/.test(await p.textContent("#mbpage")) && !/NaN|undefined/.test(await p.textContent("#mobs")), "monster page: Jr. Balrog");
   await p.click("#mbback"); await p.fill("#mbsearch", "green mushroom"); await p.click("#mbrows .mbtn");
@@ -92,7 +100,7 @@ const path = require("path");
   await p.fill("#mbsearch", ""); await p.selectOption("#mbkind", "kpq"); check(await p.$$eval("#mbrows tr.mrow", r => r.length) === 4, "monster type filter: KPQ");
   await p.selectOption("#mbkind", "");
   // Item database: list, filters, item page, cross-links with monster pages
-  await p.click("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); if (await p.isChecked("#itnoq")) await p.click("#itnoq"); check(/^2,220 /.test(await p.textContent("#itcount")), "item database lists 2,220 items");
+  await tab("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); if (await p.isChecked("#itnoq")) await p.click("#itnoq"); check(/^2,220 /.test(await p.textContent("#itcount")), "item database lists 2,220 items");
   await p.click("#itsrc"); check(/^[\d,]+ /.test(await p.textContent("#itcount")) && !/^2,220/.test(await p.textContent("#itcount")), "item list: known-source filter");
   { const n = await p.textContent("#itcount"); await p.click("#itnoq"); await p.fill("#itsearch", "letter");
     check(!/Maria's Letter/.test(await p.textContent("#itrows")) && n !== await p.textContent("#itcount"), "item list: hide quest items");
@@ -108,19 +116,19 @@ const path = require("path");
   await p.click("#itback"); await p.fill("#itsearch", "");
   await p.fill("#itsearch", "red potion"); await p.click("#itrows .ibtn"); check(/Lucy in Amherst/.test(await p.textContent("#itpage")), "item page: shops");
   await p.click("#itback"); await p.fill("#itsearch", "");
-  await p.click("#t-quests"); { const ri = await p.$("#qrows .ri"); if (ri) { await ri.click(); check(!(await p.isHidden("#itpage")), "item icon in quests opens its page"); await p.click("#itback") } }
-  await p.click("#t-quests"); const mn = await p.$("#qrows .mobname"); if (mn) { await mn.click(); check(!(await p.isHidden("#mbpage")), "monster name in quests opens its page"); await p.click("#mbback") }
+  await tab("#t-quests"); { const ri = await p.$("#qrows .ri"); if (ri) { await ri.click(); check(!(await p.isHidden("#itpage")), "item icon in quests opens its page"); await p.click("#itback") } }
+  await tab("#t-quests"); const mn = await p.$("#qrows .mobname"); if (mn) { await mn.click(); check(!(await p.isHidden("#mbpage")), "monster name in quests opens its page"); await p.click("#mbback") }
   // a map name opens its World Map card
-  await p.click("#t-maps"); const mn1 = await p.textContent("#maprows .mname >> nth=0"); await p.click("#maprows .mname >> nth=0");
+  await tab("#t-maps"); const mn1 = await p.textContent("#maprows .mname >> nth=0"); await p.click("#maprows .mname >> nth=0");
   check(!(await p.isHidden("#wmap")) && (await p.textContent("#wmcard")).includes(mn1) && !/NaN|undefined/.test(await p.textContent("#wmcard")), "map name opens its World Map card");
-  await p.click("#t-navi");
+  await tab("#t-navi");
   await p.click('#navtowns button[data-id="10001000"]'); await p.fill("#navto", "Perion"); await p.dispatchEvent("#navto", "change");
   check(await p.$$eval("#navout .navsteps li", r => r.length) > 0 && /cab ride/.test(await p.textContent("#navout")), "navigator: Henesys to Perion by cab");
   await p.check("#navnocab"); check(!/cab ride/.test(await p.textContent("#navout")) && /maps? on foot/.test(await p.textContent("#navout")), "navigator: no taxi walks the whole way"); await p.uncheck("#navnocab");
   await p.click('#navtowns button[data-id="60"]'); await p.fill("#navto", "Ant Tunnel I"); await p.dispatchEvent("#navto", "change");
   check(/Shanks/.test(await p.textContent("#navout")) && await p.$$eval("#navout .pt.on", r => r.length) > 0 && !/NaN|undefined/.test(await p.textContent("#navi")), "navigator: Maple Island route via Shanks with highlighted exits");
   // World Map: hover a dot fills the card, click pins it, Route here opens the navigator
-  await p.click("#t-wmap");
+  await tab("#t-wmap");
   await p.click('#wmisl button[data-i="1"]');
   check(await p.$$eval("#wmmap .wmdot", r => r.length) > 40, "world map: Victoria Island dots");
   await p.hover('#wmmap .wmdot.k0 >> nth=1');
@@ -145,13 +153,13 @@ const path = require("path");
   check(!/NaN|undefined/.test(await p.textContent("#wmcard")) && (await p.textContent("#wmcard")).length > 20, "world map: Maple Island card");
   await p.click('#wmcard [data-route]');
   check(!(await p.isHidden("#navi")) && (await p.inputValue("#navto")) !== "", "world map: Route here opens the navigator");
-  await p.click("#t-kslist"); check(/EllieFlower/.test(await p.textContent("#ksrows")), "the list renders");
-  await p.click("#t-log"); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
-  await p.click("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 6, "credits tab renders");
-  await p.click("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to craft Lv 10/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 10, "crafting leveling plan");
-  await p.click("#t-maps"); check(await p.$$eval("#timedrows tr", r => r.length) > 10 && /Mushmom/.test(await p.textContent("#timedrows")), "bosses and timed spawns");
-  await p.click("#t-quests"); await p.click("#qcompact"); await p.click("#qcompact"); check(await p.$$eval("#qrows tr", r => r.length) > 0, "quest compact toggle");
-  await p.click("#t-plan"); const opt = await p.$eval('#pgear select[data-slot="Hat"]', s => s.options[1]?.value);
+  await tab("#t-kslist"); check(/EllieFlower/.test(await p.textContent("#ksrows")), "the list renders");
+  await tab("#t-log"); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
+  await tab("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 6, "credits tab renders");
+  await tab("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to craft Lv 10/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 10, "crafting leveling plan");
+  await tab("#t-maps"); check(await p.$$eval("#timedrows tr", r => r.length) > 10 && /Mushmom/.test(await p.textContent("#timedrows")), "bosses and timed spawns");
+  await tab("#t-quests"); await p.click("#qcompact"); await p.click("#qcompact"); check(await p.$$eval("#qrows tr", r => r.length) > 0, "quest compact toggle");
+  await tab("#t-plan"); const opt = await p.$eval('#pgear select[data-slot="Hat"]', s => s.options[1]?.value);
   if (opt) { await p.selectOption('#pgear select[data-slot="Hat"]', opt); check(/1 piece/.test(await p.textContent("#pgearsum")), "armor slot equips"); await p.click("#pgearclear") }
   check(/mesos\/hr/.test(await p.textContent("#pcost")), "builder upkeep shown");
   await p.click("#pshare"); await p.waitForTimeout(200); check(!/NaN|undefined/.test(await p.textContent("#plan")), "copy build link");
