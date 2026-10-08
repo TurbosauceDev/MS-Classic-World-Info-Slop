@@ -769,7 +769,7 @@ input.khave{width:64px;text-align:right}
     <summary>How to use the world map</summary>
     <ul>
       <li>Hover a dot (tap on a phone) to see that place: its maps, monsters with level, HP and EXP, danger and EXP/hr at your class and level, NPCs, the quests they give, cab and potion shop, and a minimap with each monster's spawn points (one color per monster). Click a map row to switch the minimap.</li>
-      <li>Click a dot to pin it, so the card stays while you move the mouse. Click a map name or <b>Route here</b> to get directions in the Map Navigator.</li>
+      <li>Click a dot to pin it, so the card stays while you move the mouse. Clicking a map name anywhere on the site opens its card here. <b>Route here</b> gets directions in the Map Navigator.</li>
       <li><b>Find a monster</b> lights up every dot where it spawns and dims the rest; the card's minimap jumps to the map with the most of it.</li>
       <li>Big dots are towns, square dots dungeons. Brighter dots = more EXP/hr for you (estimate); 1-3 mark the best three on the island. Grey dots are maps the client shows that aren't open at launch.</li>
       <li>The world map pictures and dot positions are the Classic World client's own (Closed Online Test 2 client via maplestory.io); everything in the card is from the launch game files. Orbis and El Nath aren't in the launch, so Ossyria is left out.</li>
@@ -796,7 +796,7 @@ input.khave{width:64px;text-align:right}
   <details class="howto">
     <summary>How to use the map navigator</summary>
     <ul>
-      <li>Click any map name on the site (quests, planner, Where to train, monster pages) to open it here as the destination, or type one in.</li>
+      <li>Type a destination, or open a map's card (click any map name on the site) and press <b>Route here</b>.</li>
       <li>Pick where you're starting: type a map or tap a town.</li>
       <li>The route is the quickest one by our travel estimate (30 s per map walked, 45 s per cab ride between Lith Harbor, Henesys, Ellinia, Kerning City, Perion and Sleepywood), the same model the Path Planner uses. Tick <b>No taxi</b> to walk the whole way (fewest maps).</li>
       <li>Each step says which numbered exit to take; open <b>Minimap</b> to see where it is (highlighted). Dashed numbers are hidden portals.</li>
@@ -955,6 +955,8 @@ input.khave{width:64px;text-align:right}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Map names open map info</h3><span class="pill p-hot">maps</span></div>
+      <p>Clicking a map name anywhere on the site now opens that map's card on the <b>World Map</b> (monsters, EXP/hr, danger, NPCs, quests, minimap) instead of the navigator. Press <b>Route here</b> on the card for directions.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Fresh meowdb drop reports</h3><span class="pill p-hot">data</span></div>
       <p>Re-pulled meowdb's player drop reports: 82 new confirmed drops, 3 no longer confirmed. Bosses, KPQ and jump-quest monsters now show their reports too (Mano, Mushmom, Zombie Mushmom, Jr. Balrog, King Slime and more had none before). Updates monster pages, item pages, Crafting and Keep or sell.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Items: new filters</h3><span class="pill p-hot">update</span></div>
@@ -3558,10 +3560,11 @@ show();
 })();
 
 /* ---------------- map navigator ---------------- */
+let navTo;   // (mapId): open the navigator with that map as the destination
 (() => {
 // pick a start and a destination; shows the quickest route (same travel model as the Path Planner: walk 30 s a map,
-// cab 45 s between cab towns, both estimates) map by map, with the exit to take on each minimap. A map name anywhere
-// on the page opens this tab with that map as the destination. Maple Island -> Victoria goes through Shanks (one way).
+// cab 45 s between cab towns, both estimates) map by map, with the exit to take on each minimap. The World Map
+// card's "Route here" opens it (navTo). Maple Island -> Victoria goes through Shanks (one way).
 const {travel, DIST, ISLAND, SHIP_LV, WALK_SEC, TAXI_SEC} = TRAVEL, SOUTHPERRY = "60", LITH = "10000000";
 const mapName = id => D.maps[id]?.[0] || D.mapnames[id] || "map " + id;
 const IDS = Object.keys(D.nav);
@@ -3639,9 +3642,8 @@ $("#navtowns").addEventListener("click", e => { const b = e.target.closest("butt
 $("#navnocab").checked = !!S.nocab;
 $("#navnocab").addEventListener("change", e => { S.nocab = e.target.checked; save(); render() });
 $("#navswap").addEventListener("click", () => { if (S.to && D.nav[S.to]){ [S.from, S.to] = [S.to, S.from]; save(); render() } });
-// a map name anywhere on the page opens the navigator with it as the destination
-document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".mname"); if (!el) return;
-  hideQtip(); S.to = String(el.dataset.map); save(); $("#t-navi").click(); render(); $("#navi").scrollIntoView({block: "start"}) });
+// open the navigator with a map as the destination (World Map's "Route here")
+navTo = id => { hideQtip(); S.to = String(id); save(); $("#t-navi").click(); render(); $("#navi").scrollIntoView({block: "start"}) };
 render();
 })();
 
@@ -3649,7 +3651,8 @@ render();
 (() => {
 // the client's own world maps (WorldMap.wz via maplestory.io, Classic World COT2 client) with a dot per map spot.
 // Hovering a dot fills the side card: maps in that spot, monsters, EXP/hr at your class and level (same model as
-// Where to train), NPCs, quests, cab and potion shop. Clicking a dot pins it; map names open the Map Navigator.
+// Where to train), NPCs, quests, cab and potion shop. Clicking a dot pins it. A map name anywhere on the page opens
+// this tab with its card (openMapInfo); "Route here" opens the Map Navigator.
 const KIND = {0: "Town", 1: "Field", 2: "Dungeon", 3: "Field"};
 const mapName = id => D.maps[id]?.[0] || D.mapnames[id] || "";
 const known = id => !!(D.maps[id] || D.mapnames[id]);
@@ -3698,8 +3701,10 @@ function renderMap(){
   }).join("") + `<span id="wmlabel" hidden></span>`;
 }
 
-function card(i){
-  const [, island, , , , spots] = D.wmap[S.isl], [, , t, ids] = spots[i], open = ids.filter(known);
+// `lone` = one map id: the same card for that map alone (spot i, if any, gives its island and kind)
+function card(i, lone){
+  const [, isl, , , , spots] = D.wmap[S.isl], sp = i != null ? spots[i] : null, t = sp ? sp[2] : null, ids = lone ? [lone] : sp[3], open = ids.filter(known);
+  const island = sp ? isl : "Not marked on the world map";
   if (!open.length) return `<div class="qt-h"><b>Not open at launch</b><span>${esc(island)} · ${KIND[t]}</span></div>
     <p class="sub">The client marks ${ids.length} map${ids.length === 1 ? "" : "s"} here, but none of them are in the launch game files.</p>`;
   const main = open[0], fights = open.filter(id => D.maps[id]?.[2]?.length);
@@ -3723,7 +3728,7 @@ function card(i){
   const mobRows = Object.entries(mobs).sort((a, b) => D.mobs[a[0]][1] - D.mobs[b[0]][1]).map(([m, c]) => { const x = D.mobs[m];
     return `<li>${mobLink(m)} <span>Lv ${x[1]} · ${fmt(x[2])} HP · ${fmt(x[3])} EXP · ×${c}</span></li>` }).join("");
   const svc = [cab ? "Cab" : "", ...pots.map(id => `Potions: ${npcLink(POT[id])} (${esc(mapName(id))})`)].filter(Boolean);
-  return `<div class="qt-h"><b>${esc(mapName(main))}</b><span>${esc(island)} · ${KIND[t]}${mobRange(open) ? " · monsters " + mobRange(open) : ""}${open.length > 1 ? ` · ${open.length} maps` : ""}</span></div>
+  return `<div class="qt-h"><b>${esc(mapName(main))}</b><span>${esc(island)}${t != null ? " · " + KIND[t] : ""}${mobRange(open) ? " · monsters " + mobRange(open) : ""}${open.length > 1 ? ` · ${open.length} maps` : ""}</span></div>
     <div class="wmact"><button type="button" class="btn" data-route="${main}">Route here</button>${svc.length ? `<span class="sub">${svc.join(" · ")}</span>` : ""}</div>
     ${rows ? `<div class="tblwrap"><table class="mini"><thead><tr><th>Map</th><th>Danger</th><th class="num">EXP/hr</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}
     ${rest.length ? `<h5>${fights.length ? "Other maps here" : "Maps here"}</h5><p class="wmnpcs">${rest.map(id => mapLink(id, mapName(id))).join(", ")}</p>` : ""}
@@ -3788,9 +3793,16 @@ map.addEventListener("focusin", e => { const d = e.target.closest(".wmdot"); if 
 map.addEventListener("click", e => { const d = e.target.closest(".wmdot"); if (!d) return; const i = +d.dataset.i;
   S.pin = S.pin === i ? null : i; document.querySelectorAll(".wmdot").forEach(x => x.classList.toggle("pin", +x.dataset.i === S.pin)); show(i) });
 $("#wmcard").addEventListener("click", e => {
-  const r = e.target.closest("[data-route]");
-  if (r){ const s = document.createElement("span"); s.className = "mname"; s.dataset.map = r.dataset.route; s.hidden = true; document.body.append(s); s.click(); s.remove(); return }
+  const r = e.target.closest("[data-route]"); if (r) return navTo(r.dataset.route);
   const row = e.target.closest(".wmrow"); if (row && !e.target.closest(".mname")){ S.mm = row.dataset.map; show(shown) } });
+// a map name anywhere on the page opens a card for that map here, with its world map spot pinned (clicking the dot shows the whole spot)
+const SPOT = {}; D.wmap.forEach(([, , , , , spots], isl) => spots.forEach(([, , , ids], i) => ids.forEach(id => { if (!(id in SPOT)) SPOT[id] = [isl, i] })));
+const openMapInfo = id => { id = String(id); hideQtip(); $("#t-wmap").click(); const f = SPOT[id];
+  if (f){ S.isl = f[0]; S.pin = f[1]; save() } else S.pin = null;
+  render(); shown = f ? f[1] : null; $("#wmcard").innerHTML = card(shown, id);
+  document.querySelectorAll(".wmdot").forEach(d => d.classList.toggle("on", +d.dataset.i === shown));
+  (innerWidth < 900 ? $("#wmcard") : $("#wmap")).scrollIntoView({block: "start"}) };
+document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".mname"); if (el) openMapInfo(el.dataset.map) });
 render();
 })();
 

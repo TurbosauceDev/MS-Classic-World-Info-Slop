@@ -2,7 +2,8 @@
 (() => {
 // the client's own world maps (WorldMap.wz via maplestory.io, Classic World COT2 client) with a dot per map spot.
 // Hovering a dot fills the side card: maps in that spot, monsters, EXP/hr at your class and level (same model as
-// Where to train), NPCs, quests, cab and potion shop. Clicking a dot pins it; map names open the Map Navigator.
+// Where to train), NPCs, quests, cab and potion shop. Clicking a dot pins it. A map name anywhere on the page opens
+// this tab with its card (openMapInfo); "Route here" opens the Map Navigator.
 const KIND = {0: "Town", 1: "Field", 2: "Dungeon", 3: "Field"};
 const mapName = id => D.maps[id]?.[0] || D.mapnames[id] || "";
 const known = id => !!(D.maps[id] || D.mapnames[id]);
@@ -51,8 +52,10 @@ function renderMap(){
   }).join("") + `<span id="wmlabel" hidden></span>`;
 }
 
-function card(i){
-  const [, island, , , , spots] = D.wmap[S.isl], [, , t, ids] = spots[i], open = ids.filter(known);
+// `lone` = one map id: the same card for that map alone (spot i, if any, gives its island and kind)
+function card(i, lone){
+  const [, isl, , , , spots] = D.wmap[S.isl], sp = i != null ? spots[i] : null, t = sp ? sp[2] : null, ids = lone ? [lone] : sp[3], open = ids.filter(known);
+  const island = sp ? isl : "Not marked on the world map";
   if (!open.length) return `<div class="qt-h"><b>Not open at launch</b><span>${esc(island)} · ${KIND[t]}</span></div>
     <p class="sub">The client marks ${ids.length} map${ids.length === 1 ? "" : "s"} here, but none of them are in the launch game files.</p>`;
   const main = open[0], fights = open.filter(id => D.maps[id]?.[2]?.length);
@@ -76,7 +79,7 @@ function card(i){
   const mobRows = Object.entries(mobs).sort((a, b) => D.mobs[a[0]][1] - D.mobs[b[0]][1]).map(([m, c]) => { const x = D.mobs[m];
     return `<li>${mobLink(m)} <span>Lv ${x[1]} · ${fmt(x[2])} HP · ${fmt(x[3])} EXP · ×${c}</span></li>` }).join("");
   const svc = [cab ? "Cab" : "", ...pots.map(id => `Potions: ${npcLink(POT[id])} (${esc(mapName(id))})`)].filter(Boolean);
-  return `<div class="qt-h"><b>${esc(mapName(main))}</b><span>${esc(island)} · ${KIND[t]}${mobRange(open) ? " · monsters " + mobRange(open) : ""}${open.length > 1 ? ` · ${open.length} maps` : ""}</span></div>
+  return `<div class="qt-h"><b>${esc(mapName(main))}</b><span>${esc(island)}${t != null ? " · " + KIND[t] : ""}${mobRange(open) ? " · monsters " + mobRange(open) : ""}${open.length > 1 ? ` · ${open.length} maps` : ""}</span></div>
     <div class="wmact"><button type="button" class="btn" data-route="${main}">Route here</button>${svc.length ? `<span class="sub">${svc.join(" · ")}</span>` : ""}</div>
     ${rows ? `<div class="tblwrap"><table class="mini"><thead><tr><th>Map</th><th>Danger</th><th class="num">EXP/hr</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}
     ${rest.length ? `<h5>${fights.length ? "Other maps here" : "Maps here"}</h5><p class="wmnpcs">${rest.map(id => mapLink(id, mapName(id))).join(", ")}</p>` : ""}
@@ -141,8 +144,15 @@ map.addEventListener("focusin", e => { const d = e.target.closest(".wmdot"); if 
 map.addEventListener("click", e => { const d = e.target.closest(".wmdot"); if (!d) return; const i = +d.dataset.i;
   S.pin = S.pin === i ? null : i; document.querySelectorAll(".wmdot").forEach(x => x.classList.toggle("pin", +x.dataset.i === S.pin)); show(i) });
 $("#wmcard").addEventListener("click", e => {
-  const r = e.target.closest("[data-route]");
-  if (r){ const s = document.createElement("span"); s.className = "mname"; s.dataset.map = r.dataset.route; s.hidden = true; document.body.append(s); s.click(); s.remove(); return }
+  const r = e.target.closest("[data-route]"); if (r) return navTo(r.dataset.route);
   const row = e.target.closest(".wmrow"); if (row && !e.target.closest(".mname")){ S.mm = row.dataset.map; show(shown) } });
+// a map name anywhere on the page opens a card for that map here, with its world map spot pinned (clicking the dot shows the whole spot)
+const SPOT = {}; D.wmap.forEach(([, , , , , spots], isl) => spots.forEach(([, , , ids], i) => ids.forEach(id => { if (!(id in SPOT)) SPOT[id] = [isl, i] })));
+const openMapInfo = id => { id = String(id); hideQtip(); $("#t-wmap").click(); const f = SPOT[id];
+  if (f){ S.isl = f[0]; S.pin = f[1]; save() } else S.pin = null;
+  render(); shown = f ? f[1] : null; $("#wmcard").innerHTML = card(shown, id);
+  document.querySelectorAll(".wmdot").forEach(d => d.classList.toggle("on", +d.dataset.i === shown));
+  (innerWidth < 900 ? $("#wmcard") : $("#wmap")).scrollIntoView({block: "start"}) };
+document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".mname"); if (el) openMapInfo(el.dataset.map) });
 render();
 })();

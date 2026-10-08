@@ -1,8 +1,9 @@
 /* ---------------- map navigator ---------------- */
+let navTo;   // (mapId): open the navigator with that map as the destination
 (() => {
 // pick a start and a destination; shows the quickest route (same travel model as the Path Planner: walk 30 s a map,
-// cab 45 s between cab towns, both estimates) map by map, with the exit to take on each minimap. A map name anywhere
-// on the page opens this tab with that map as the destination. Maple Island -> Victoria goes through Shanks (one way).
+// cab 45 s between cab towns, both estimates) map by map, with the exit to take on each minimap. The World Map
+// card's "Route here" opens it (navTo). Maple Island -> Victoria goes through Shanks (one way).
 const {travel, DIST, ISLAND, SHIP_LV, WALK_SEC, TAXI_SEC} = TRAVEL, SOUTHPERRY = "60", LITH = "10000000";
 const mapName = id => D.maps[id]?.[0] || D.mapnames[id] || "map " + id;
 const IDS = Object.keys(D.nav);
@@ -80,8 +81,7 @@ $("#navtowns").addEventListener("click", e => { const b = e.target.closest("butt
 $("#navnocab").checked = !!S.nocab;
 $("#navnocab").addEventListener("change", e => { S.nocab = e.target.checked; save(); render() });
 $("#navswap").addEventListener("click", () => { if (S.to && D.nav[S.to]){ [S.from, S.to] = [S.to, S.from]; save(); render() } });
-// a map name anywhere on the page opens the navigator with it as the destination
-document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".mname"); if (!el) return;
-  hideQtip(); S.to = String(el.dataset.map); save(); $("#t-navi").click(); render(); $("#navi").scrollIntoView({block: "start"}) });
+// open the navigator with a map as the destination (World Map's "Route here")
+navTo = id => { hideQtip(); S.to = String(id); save(); $("#t-navi").click(); render(); $("#navi").scrollIntoView({block: "start"}) };
 render();
 })();

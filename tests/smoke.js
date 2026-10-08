@@ -105,9 +105,10 @@ const path = require("path");
   await p.click("#itback"); await p.fill("#itsearch", "");
   await p.click("#t-quests"); { const ri = await p.$("#qrows .ri"); if (ri) { await ri.click(); check(!(await p.isHidden("#itpage")), "item icon in quests opens its page"); await p.click("#itback") } }
   await p.click("#t-quests"); const mn = await p.$("#qrows .mobname"); if (mn) { await mn.click(); check(!(await p.isHidden("#mbpage")), "monster name in quests opens its page"); await p.click("#mbback") }
-  // Map Navigator: a map name opens it as the destination
-  await p.click("#t-maps"); await p.click("#maprows .mname >> nth=0");
-  check(!(await p.isHidden("#navi")) && (await p.inputValue("#navto")) !== "" && (await p.textContent("#navout")).length > 20, "map name opens the navigator as the destination");
+  // a map name opens its World Map card
+  await p.click("#t-maps"); const mn1 = await p.textContent("#maprows .mname >> nth=0"); await p.click("#maprows .mname >> nth=0");
+  check(!(await p.isHidden("#wmap")) && (await p.textContent("#wmcard")).includes(mn1) && !/NaN|undefined/.test(await p.textContent("#wmcard")), "map name opens its World Map card");
+  await p.click("#t-navi");
   await p.click('#navtowns button[data-id="10001000"]'); await p.fill("#navto", "Perion"); await p.dispatchEvent("#navto", "change");
   check(await p.$$eval("#navout .navsteps li", r => r.length) > 0 && /cab ride/.test(await p.textContent("#navout")), "navigator: Henesys to Perion by cab");
   await p.check("#navnocab"); check(!/cab ride/.test(await p.textContent("#navout")) && /maps? on foot/.test(await p.textContent("#navout")), "navigator: no taxi walks the whole way"); await p.uncheck("#navnocab");
