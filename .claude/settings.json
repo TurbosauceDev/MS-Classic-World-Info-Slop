@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sS -m 20 -o * https://meso.watch/*)",
+      "WebFetch(domain:meso.watch)"
+    ]
+  }
+}
