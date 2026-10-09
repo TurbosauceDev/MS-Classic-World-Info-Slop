@@ -164,7 +164,7 @@ function showMap(id){   // one map of a sub-map (or a grey neighbour outside it)
   document.querySelectorAll(".wmnode").forEach(d => d.classList.toggle("on", d.dataset.map === id));
 }
 function show(i){
-  if (i == null){ $("#wmcard").innerHTML = `<p class="sub">Hover a dot (tap on a phone) to see that place.</p>`; shown = null; return }
+  if (i == null){ $("#wmcard").innerHTML = `<p class="sub">Click a dot to see that place.</p>`; shown = null; return }
   if (i !== shown) S.mm = null;
   shown = i; $("#wmcard").innerHTML = card(i);
   document.querySelectorAll(".wmdot").forEach(d => d.classList.toggle("on", +d.dataset.i === i));
@@ -204,31 +204,29 @@ $("#wmmob").value = S.mob ? D.mobdb[S.mob].name : "";
 const setMob = id => { S.mob = id; S.pin = null; S.mm = null; S.subPin = null;
   if (id){ const n = D.wmap.map(([, , , , , spots]) => spots.filter(sp => spotMob(sp)).length); if (!n[S.isl] && n.some(Boolean)){ S.isl = n.findIndex(Boolean); S.sub = null } }
   save(); render() };
-$("#wmmob").addEventListener("change", e => { const v = e.target.value.trim().toLowerCase(); if (!v) return setMob(null); if (MOBS[v]) setMob(MOBS[v]) });
+$("#wmmob").addEventListener("change", e => { const v = e.target.value.trim().toLowerCase(); if (!v){ if (S.mob) setMob(null); return } if (MOBS[v] && MOBS[v] !== S.mob) setMob(MOBS[v]) });   // a repeat change (on blur) must not reset the selection
 $("#wmmobclr").addEventListener("click", () => { $("#wmmob").value = ""; setMob(null) });
 
 const map = $("#wmmap"), label = () => $("#wmlabel");
-map.addEventListener("mouseover", e => { const d = e.target.closest(".wmdot"); if (!d) return;
-  if (d.dataset.map){ if (shown !== "m" + d.dataset.map) showMap(d.dataset.map); return }
-  const i = +d.dataset.i;
-  if (i !== shown) show(i);
-  const sp = D.wmap[S.isl][5][i], n = mapName(sp[3].find(known)) || "Not open at launch", l = label();
-  l.textContent = n + (mobRange(sp[3]) ? " · " + mobRange(sp[3]) : "") + (DRILL(sp) ? " · click to open its map" : ""); l.hidden = false;
+// hovering only shows a name label; the card changes on a click (Danny: a stray mouse-over shouldn't replace what you're looking at)
+map.addEventListener("mouseover", e => { const d = e.target.closest(".wmdot"), l = label(); if (!d || !l) return;
+  let txt;
+  if (d.dataset.map){ const id = d.dataset.map; txt = mapName(id) + (mobRange([id]) ? " · " + mobRange([id]) : "") + " · click for details" }
+  else { const sp = D.wmap[S.isl][5][+d.dataset.i];
+    txt = (mapName(sp[3].find(known)) || "Not open at launch") + (mobRange(sp[3]) ? " · " + mobRange(sp[3]) : "") + (DRILL(sp) ? " · click to open its map" : " · click for details") }
+  l.textContent = txt; l.hidden = false;
   l.style.left = d.style.left; l.style.top = d.style.top; l.classList.toggle("left", parseFloat(d.style.left) > 60) });
-map.addEventListener("mouseleave", () => { label().hidden = true;
-  if (S.sub != null){ if (S.subPin && shown !== "m" + S.subPin) showMap(S.subPin); else if (!S.subPin && shown !== S.sub) show(S.sub) }
-  else if (S.pin != null && shown !== S.pin) show(S.pin) });
-map.addEventListener("focusin", e => { const d = e.target.closest(".wmdot"); if (d) d.dataset.map ? showMap(d.dataset.map) : show(+d.dataset.i) });
+map.addEventListener("mouseout", e => { if (e.target.closest(".wmdot") && label()) label().hidden = true });
 map.addEventListener("click", e => {
   const dr = e.target.closest("[data-drill]"); if (dr) return openArea(+dr.dataset.drill);
   if (e.target.closest(".wmback")){ S.pin = S.sub; S.sub = null; S.subPin = null; return render() }
   const d = e.target.closest(".wmdot"); if (!d) return;
   if (d.dataset.map){ const id = d.dataset.map;
     if (d.classList.contains("ext")){ const f = SPOT[id]; S.sub = null; S.subPin = null; if (f){ S.isl = f[0]; S.pin = f[1] } render(); return f && show(f[1]) }
-    S.subPin = S.subPin === id ? null : id; document.querySelectorAll(".wmnode").forEach(x => x.classList.toggle("pin", x.dataset.map === S.subPin)); return showMap(id) }
+    S.subPin = id; document.querySelectorAll(".wmnode").forEach(x => x.classList.toggle("pin", x.dataset.map === S.subPin)); return showMap(id) }
   const i = +d.dataset.i;
   if (DRILL(D.wmap[S.isl][5][i])) return openArea(i);
-  S.pin = S.pin === i ? null : i; document.querySelectorAll(".wmdot").forEach(x => x.classList.toggle("pin", +x.dataset.i === S.pin)); show(i) });
+  S.pin = i; document.querySelectorAll(".wmdot").forEach(x => x.classList.toggle("pin", +x.dataset.i === S.pin)); show(i) });
 $("#wmcard").addEventListener("click", e => {
   const dr = e.target.closest("[data-drill]"); if (dr) return openArea(+dr.dataset.drill);
   const r = e.target.closest("[data-route]"); if (r) return navTo(r.dataset.route);
