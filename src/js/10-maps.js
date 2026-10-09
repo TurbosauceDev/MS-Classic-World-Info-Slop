@@ -182,10 +182,18 @@ const POT_BY_MOB = {}; for (const id of POTION_IDS) for (const [mob] of D.drops?
 const mapPots = mid => { const out = new Set(); for (const [id] of D.maps[mid]?.[2] || []) for (const p of POT_BY_MOB[id] || []) out.add(p); return POTION_IDS.filter(p => out.has(p)) };
 // NPC sale value of one kill's loot (Frugal): meowdb-reported drops that are monster ETC items (4000xxx) or the potions above,
 // each at the chosen drop rate (default 5% per kill: Danny, 2026-10-08, judged 15% optimistic); ores, gems, equips and
-// scrolls drop too rarely to count. Sell price = the item's NPC price.
+// scrolls drop too rarely to count. Sell price = the item's NPC price, or (Loot price = player shops) its meso.watch median
+// sale price when it has enough sales (else NPC price).
+// PW: meso.watch player-shop prices {itemId: [median, p25, p75, sales, flags 1 = low data / 2 = per set]}, read D.pw.read.
+const PW = D.pw?.it || {};
+const pwSolid = id => PW[id] && !(PW[id][4] & 1) ? PW[id][0] : 0;
+function pwHtml(id, long){ const p = PW[id]; if (!p) return "";
+  const per = p[4] & 2 ? " per set" : "", low = p[4] & 1 ? ` <span class="pill p-warn" title="Fewer than 5 sales seen: rough">few sales</span>` : "";
+  return long ? `Player shops: about <b>${fmt(p[0])} mesos</b>${per} (median of ${fmt(p[3])} sale${p[3] === 1 ? "" : "s"} seen; half sold for ${fmt(p[1])}-${fmt(p[2])})${low}<br><span class="sub">meso.watch, as of ${D.pw.read}. Prices move; check before you sell.</span>`
+    : `players ~${fmt(p[0])}${per}${low}` }
 const LOOT_BY_MOB = {}; for (const [it, ms] of Object.entries(D.drops || {})) if ((it.startsWith("4000") || POTION_IDS.includes(it)) && D.items[it]?.p) for (const [mob] of ms) (LOOT_BY_MOB[mob] ||= []).push(it);
-const lootKill = mob => (LOOT_BY_MOB[mob] || []).reduce((a, it) => a + D.items[it].p, 0);
-function lootHr(r, rate){ let v = 0; for (const [id, c] of D.maps[r.id]?.[2] || []) v += c * r.rate / r.cyc * lootKill(id); return v * rate * 3600 }
+const lootKill = (mob, pw) => (LOOT_BY_MOB[mob] || []).reduce((a, it) => a + (pw && pwSolid(it) || D.items[it].p), 0);
+function lootHr(r, rate, pw){ let v = 0; for (const [id, c] of D.maps[r.id]?.[2] || []) v += c * r.rate / r.cyc * lootKill(id, pw); return v * rate * 3600 }
 function rankMaps(){
   let cls = $("#cls").value, L = +$("#lvl").value || 25;
   const basic = $("#aoe").value === "basic", fb = trainBuild(cls, L), {dps, src} = trainDps(cls, L, fb, basic), frugal = $("#tmode").value === "frugal", pm = (fb.pct || 100) / 100;
@@ -193,7 +201,7 @@ function rankMaps(){
   const d0 = DEF_FROM_BUILDER || defaultDef(cls, L), acc0 = ACC_FROM_BUILDER ?? accFor(cls, L);
   $("#atk").placeholder = fb.max && !fb.magic ? `${Math.round(fb.min / pm)}-${Math.round(fb.max / pm)}` : "";
   const magIn = fb.magic && !basic; document.querySelectorAll(".magin").forEach(e => e.hidden = !magIn); $("#atk").closest("label").hidden = magIn;
-  $("#hitsh").closest("label").hidden = $("#lootr").closest("label").hidden = !frugal;
+  $("#hitsh").closest("label").hidden = $("#lootr").closest("label").hidden = $("#lootp").closest("label").hidden = !frugal;
   $("#uacc").placeholder = Math.round(acc0); $("#uavo").placeholder = d0.avoid ?? ""; $("#uhp").placeholder = d0.hp; $("#uwdef").placeholder = d0.wdef;
   const acc = statNum("#uacc") ?? acc0, def = {...d0};
   for (const [k, s] of [["avoid", "#uavo"], ["hp", "#uhp"], ["wdef", "#uwdef"]]){ const v = statNum(s); if (v != null) def[k] = v }
@@ -205,7 +213,7 @@ function rankMaps(){
   if (!rows.length){ rows = mapRates(cls, L, dps, acc, Infinity, area, party); far = rows.length > 0 }   // nothing near your level: best of the rest
   let loss = false;
   if (frugal){
-    for (const r of rows){ r.dng = mapDanger(r.id, L, def); r.up = (cost?.mesoHr || 0) * (r.att ?? 1); r.hitc = hitCostHr(r, L, def, hitsh); r.loot = lootHr(r, +$("#lootr").value); r.net = r.meso * 3600 + r.loot - r.up - r.hitc }
+    for (const r of rows){ r.dng = mapDanger(r.id, L, def); r.up = (cost?.mesoHr || 0) * (r.att ?? 1); r.hitc = hitCostHr(r, L, def, hitsh); r.loot = lootHr(r, +$("#lootr").value, $("#lootp").value === "pw"); r.net = r.meso * 3600 + r.loot - r.up - r.hitc }
     const ok = rows.filter(r => r.net > 0 && r.dng.f < 0.25);
     if (ok.length) rows = ok; else { rows.sort((a, b) => b.net - a.net); loss = rows.length > 0 }
   }
@@ -233,7 +241,7 @@ function rankMaps(){
     + (party > 1 ? ` Party of ${party}: your share of the EXP plus the ${Math.round(partyBonus(party) * 100)}% party bonus, map spawns at ${Math.round(partyCap(party) * 100)}% (assumes equal players splitting kills).` : "")
     + ` Danger: one touch from the map's hardest hitter as a share of ${DEF_FROM_BUILDER || statNum("#uhp") != null ? "your" : "a typical"} Max HP (${fmt(def.hp)}), before armor.`
     + ` Mesos/hr = monster meso drops: player reports on meowdb for ${Object.keys(D.meso || {}).length} monsters, the rest estimated at ${D.mesok} mesos per monster level (what the reported ones average). Loot sold to NPCs isn't counted.`
-    + (frugal ? ` <b>Frugal:</b> only maps that pay for themselves and aren't Danger/Lethal, fastest EXP first. Net = mesos/hr minus ${basic ? (ammoP ? `ammo for basic attacks` : "nothing for basic attacks") : COST_FROM_BUILDER ? "your build's skill potions and ammo" : `a default ${esc(cls)} build's skill potions and ammo`} (${fmt(cost?.mesoHr || 0)}/hr attacking nonstop, times the time spent attacking) minus Red Potions for getting hit (estimate: ${({"0.1": "1 in 10", "0.25": "1 in 4", "0.5": "half", "1": "every one"})[$("#hitsh").value]} of the monsters you kill attack${hitsh === 1 ? "s" : ""} you once, at their hit chance against your avoid, no armor). ${+$("#lootr").value ? `Plus loot sold to NPCs: each monster's reported ETC item and potion drops (meowdb player reports) at ${Math.round($("#lootr").value * 100)}% per kill each (an assumption: drop rates aren't in the game files), at NPC sell price; ores, gems, equips and scrolls aren't counted.` : "Loot sold to NPCs isn't counted."} Potions its monsters drop are listed under the map name.`
+    + (frugal ? ` <b>Frugal:</b> only maps that pay for themselves and aren't Danger/Lethal, fastest EXP first. Net = mesos/hr minus ${basic ? (ammoP ? `ammo for basic attacks` : "nothing for basic attacks") : COST_FROM_BUILDER ? "your build's skill potions and ammo" : `a default ${esc(cls)} build's skill potions and ammo`} (${fmt(cost?.mesoHr || 0)}/hr attacking nonstop, times the time spent attacking) minus Red Potions for getting hit (estimate: ${({"0.1": "1 in 10", "0.25": "1 in 4", "0.5": "half", "1": "every one"})[$("#hitsh").value]} of the monsters you kill attack${hitsh === 1 ? "s" : ""} you once, at their hit chance against your avoid, no armor). ${+$("#lootr").value ? `Plus loot sold to NPCs: each monster's reported ETC item and potion drops (meowdb player reports) at ${Math.round($("#lootr").value * 100)}% per kill each (an assumption: drop rates aren't in the game files), ${$("#lootp").value === "pw" ? "at the median player-shop sale price (meso.watch, " + D.pw.read + ") where it has 5+ sales, else NPC sell price; selling to players takes a shop and time" : "at NPC sell price"}; ores, gems, equips and scrolls aren't counted.` : "Loot sold to NPCs isn't counted."} Potions its monsters drop are listed under the map name.`
       + (loss ? ` <b>No map comes out meso positive at this level and damage</b>; these lose the least.` : "") : "")
     + (!frugal && COST_FROM_BUILDER ? ` Your build's potions and ammo: up to ${fmt(COST_FROM_BUILDER.mesoHr)} mesos/hr while attacking nonstop; on the top map you attack about ${Math.round((top[0]?.att ?? 1) * 100)}% of the time, so about ${fmt(COST_FROM_BUILDER.mesoHr * (top[0]?.att ?? 1))}/hr. "net" = mesos/hr minus that.` : "")
     + ` EXP/hr is a model estimate${party > 1 ? "" : ", solo"}.`
@@ -245,6 +253,7 @@ $("#party").addEventListener("change", rankMaps);
 $("#tmode").addEventListener("change", rankMaps);
 $("#hitsh").addEventListener("change", rankMaps);
 $("#lootr").addEventListener("change", rankMaps);
+$("#lootp").addEventListener("change", rankMaps);
 $("#aoe").addEventListener("change", rankMaps);
 STAT_IN.forEach(s => $(s).addEventListener("input", () => { DPS_FROM_BUILDER = null; rankMaps() }));
 $("#lvl").addEventListener("change", rankMaps);

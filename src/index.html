@@ -323,6 +323,7 @@
     <label>Attack<select id="aoe"><option value="1">Area attack (AoE)</option><option value="">Single target</option><option value="basic">Basic attack (no skills)</option></select></label>
     <label>Mode<select id="tmode"><option value="">Fastest EXP</option><option value="frugal">Frugal (meso positive)</option></select></label>
     <label hidden title="Drop rate per kill for each ETC item and potion players reported. An assumption: the game files have no drop rates.">Loot sold to NPCs<select id="lootr"><option value="0">Not counted</option><option value="0.05" selected>5% a kill (cautious)</option><option value="0.1">10% a kill</option><option value="0.15">15% a kill</option></select></label>
+    <label hidden title="What each loot item is worth: NPC sell price, or the median player-shop sale price from meso.watch (NPC price when it has under 5 sales).">Loot price<select id="lootp"><option value="">NPC price</option><option value="pw">Player shops (meso.watch)</option></select></label>
     <label hidden title="Share of the monsters you kill that get a hit on you first. Your pick, not game data.">Monsters that hit you<select id="hitsh"><option value="0.1">1 in 10</option><option value="0.25" selected>1 in 4</option><option value="0.5">Half</option><option value="1">Every one</option></select></label>
     <label>Party<select id="party"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
   </div>
@@ -437,6 +438,7 @@
         <li>Stats, requirements, description and sell price come straight from the launch game files.</li>
         <li>Drop tables aren't in the game files. Drops are meowdb player reports (+ = net confirmations); a few weapons also list meowdb's old MapleSEA drop list, marked "likely".</li>
         <li>Shops are meowdb's NPC shop list. Recipes and quest rewards are from the game files.</li>
+        <li><b>Players</b> = the middle (median) price it sold for in player shops, from <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> (read off stream footage). "?" or "few sales" = under 5 sales seen, so rough. Prices move; check before selling.</li>
       </ul></div>
     </div>
   </details>
@@ -453,7 +455,7 @@
     <span class="pill p-hot" id="itcount" style="align-self:center"></span>
   </div>
   <div class="tblwrap"><table>
-    <thead id="ithead"><tr><th data-k="name"><button>Item</button></th><th data-k="type"><button>Type</button></th><th class="num" data-k="lv"><button>Lv</button></th><th>Job</th><th>Stats</th><th class="num" data-k="price"><button>Sells for</button></th><th>Get it from</th></tr></thead>
+    <thead id="ithead"><tr><th data-k="name"><button>Item</button></th><th data-k="type"><button>Type</button></th><th class="num" data-k="lv"><button>Lv</button></th><th>Job</th><th>Stats</th><th class="num" data-k="price"><button>NPC pays</button></th><th class="num" data-k="pw" title="Median player-shop sale price (meso.watch)"><button>Players</button></th><th>Get it from</th></tr></thead>
     <tbody id="itrows"></tbody>
   </table></div>
   <button class="btn" id="itmore" hidden></button>
@@ -618,7 +620,7 @@
       <div><h4>Where another comes from</h4><ul>
         <li><b>Drops:</b> the monster a quest names, monsters players report and confirm on meowdb (votes shown), and meowdb's grind guide. Drop rates aren't known: the server decides them.</li>
         <li><b>Shop</b> prices from meowdb's shop list, <b>quest rewards</b> and <b>crafting</b> recipes from the game files.</li>
-        <li><b>NPC pays</b> is the sell price. Players often pay more for quest and crafting items.</li>
+        <li><b>NPC pays</b> is the sell price. <b>players ~</b> under it is the median player-shop sale price from <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> (where it has sales seen); players often pay more for quest and crafting items.</li>
       </ul></div>
     </div>
   </details>
@@ -626,7 +628,7 @@
     <label>Search<input id="ksearch" type="search" placeholder="item"></label>
     <label>Wanted by<select id="kby"><option value="">Quests and crafting</option><option value="q">Quests</option><option value="c">Crafting</option></select></label>
     <label>Profession<select id="kdisc"><option value="">Any</option></select></label>
-    <label>Sort<select id="ksort"><option value="">What to keep first</option><option value="lvl">Quest level</option><option value="price">NPC price</option><option value="name">Name</option></select></label>
+    <label>Sort<select id="ksort"><option value="">What to keep first</option><option value="lvl">Quest level</option><option value="price">NPC price</option><option value="pw">Player-shop price</option><option value="name">Name</option></select></label>
     <button class="btn tgl" id="kneed" aria-pressed="false">Still needed only</button>
     <button class="btn tgl" id="konly" aria-pressed="false">No known source only</button>
     <button class="btn tgl" id="kdone" aria-pressed="true">Skip quests I've done</button>
@@ -666,6 +668,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 9, 2026 · Player-shop prices</h3><span class="pill p-hot">new</span></div>
+      <p>Items now show what players pay in player shops (median sale price from <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a>): a <b>Players</b> column in Items, a line on each item page, a "players ~" line and sort in Keep or sell, and a <b>Loot price</b> setting in Frugal mode to value loot at player prices instead of NPC prices.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Frugal mode counts loot</h3></div>
       <p>Frugal mode's net now includes ETC items and potions sold to NPCs (meowdb drop reports, at an assumed 5% a kill each; 10%, 15% or off in the new <b>Loot sold to NPCs</b> setting).</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Potion drops in Frugal mode</h3></div>
@@ -773,6 +777,10 @@
       <p><a href="https://maplestory.io/" target="_blank" rel="noopener">maplestory.io</a></p>
       <ul><li>Its Classic World API is used to compare client versions, so the numbers here can be checked against the launch client when it appears.</li>
         <li>World Map tab: the Maple Island and Victoria Island world map pictures and dot positions from its Classic World (Closed Online Test 2) client.</li></ul></div>
+
+    <div class="card"><div class="cardhead"><h3>6. meso.watch</h3><span class="pill p-hot">player-shop prices</span></div>
+      <p>Data used with the site creator's permission. <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a></p>
+      <ul><li>Player-shop sale prices (median and middle half of the sales it has seen) on item pages, the Items list, Keep or sell, and Frugal mode's optional <b>Loot price</b>.</li></ul></div>
 
     <div class="card"><div class="cardhead"><h3>6. Roxie's new player guide</h3><span class="pill p-hot">Maple Island</span></div>
       <ul><li>The Maple Island quest order and the beginner's route to level 10, together with meowdb's beginner guide.</li></ul></div>

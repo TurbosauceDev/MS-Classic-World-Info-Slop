@@ -64,6 +64,7 @@ JS files are concatenated in filename order into ONE `<script>`, so they share t
 python3 scripts/build_data.py           # only when data logic or the export changes
 node scripts/fetch_meowdb_drops.js       # re-pull meowdb player drop reports (then build_data.py extras mobdb)
 python3 scripts/build_data.py crafting extras  # cheap: re-runs only these steps (crafting; mobatk + potshops; also mobdb, worldmap) on the existing data.json
+python3 scripts/fetch_mesowatch.py        # re-pull meso.watch player-shop prices (creator OK'd), then build_data.py prices + build.py
 python3 scripts/build.py                # after any src/ change
 node tests/smoke.js                     # needs: npm i -D playwright (or global)
 node tests/golden.js                    # reference numbers (meowdb-published values); run after model changes

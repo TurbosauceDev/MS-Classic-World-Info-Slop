@@ -72,7 +72,7 @@ function rowHtml(o, j){
     <td class="num"><input class="khave" type="number" min="0" inputmode="numeric" value="${have || ""}" placeholder="0" aria-label="How many ${esc(o.name)} you have"><div class="sub">${n ? `quests want ${fmt(n)}` : ""}${rep ? `${n ? "<br>" : ""}+${fmt(rep)} weekly` : ""}</div></td>
     <td class="sub">${qs.slice(0, 3).map(qline).join("<br>")}${qs.length > 3 ? `<br>+${qs.length - 3} more quests` : ""}${o.quests.length > open.length ? `${qs.length ? "<br>" : ""}${o.quests.length - open.length} done` : ""}${o.recipes.size ? `${o.quests.length ? "<br>" : ""}${o.recipes.size} recipe${o.recipes.size === 1 ? "" : "s"} (${o.discs.map(esc).join(", ")}), ${rng(o.per)} per craft` : ""}</td>
     <td class="num">${lo < Infinity ? lo : lo2 < Infinity ? `<span class="sub">craft Lv ${lo2}</span>` : "–"}</td>
-    <td class="num">${o.price ? fmt(o.price) : "–"}</td><td class="sub">${where || `<span class="na">no known source yet</span>`}</td>`;
+    <td class="num">${o.price ? fmt(o.price) : "–"}${PW[o.id] ? `<div class="sub">${pwHtml(o.id)}</div>` : ""}</td><td class="sub">${where || `<span class="na">no known source yet</span>`}</td>`;
 }
 let shown = [];
 function render(){
@@ -82,6 +82,7 @@ function render(){
     && (S.by !== "q" || o.quests.length) && (S.by !== "c" || o.recipes.size) && (!S.disc || o.discs.includes(S.disc)))
     .sort((a, b) => S.sort === "name" ? a.o.name.localeCompare(b.o.name)
       : S.sort === "price" ? b.o.price - a.o.price || a.o.name.localeCompare(b.o.name)
+      : S.sort === "pw" ? (PW[b.o.id]?.[0] || 0) - (PW[a.o.id]?.[0] || 0) || a.o.name.localeCompare(b.o.name)
       : S.sort === "lvl" ? Math.min(999, ...a.o.quests.map(x => x[1].lvl || 1)) - Math.min(999, ...b.o.quests.map(x => x[1].lvl || 1)) || a.o.name.localeCompare(b.o.name)
       : a.j.v[2] - b.j.v[2] || Math.min(999, ...a.j.open.map(x => x[1].lvl || 1)) - Math.min(999, ...b.j.open.map(x => x[1].lvl || 1)) || a.o.name.localeCompare(b.o.name));
   const keepN = shown.filter(x => x.j.v[2] <= 2).length;

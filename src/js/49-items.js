@@ -83,7 +83,7 @@ function page(o){
   return `<div class="mpage">
     <div class="mpbar"><button class="btn" id="itback">← All items</button><button class="btn" id="itshare">Copy link</button></div>
     <div class="mtop">${D.iicons[o.id] ? `<img class="sprite" src="data:image/png;base64,${D.iicons[o.id]}" alt="">` : ""}<div><h2>${esc(it.n)}</h2>
-      <p class="sub">${esc(typeOf(it))}${isEq ? ` · level ${s.reqLevel || 0}+` : ""} · sells for ${it.p ? fmt(it.p) + " mesos" : "–"} · item ID ${o.id}${others ? ` · same name: ${others}` : ""}</p><p class="mflags">${flags}</p></div></div>
+      <p class="sub">${esc(typeOf(it))}${isEq ? ` · level ${s.reqLevel || 0}+` : ""} · NPC pays ${it.p ? fmt(it.p) + " mesos" : "–"}${PW[o.id] ? ` · ${pwHtml(o.id)}` : ""} · item ID ${o.id}${others ? ` · same name: ${others}` : ""}</p><p class="mflags">${flags}</p></div></div>
     ${it.d ? `<p class="idesc">${esc(it.d).replace(/\n/g, "<br>")}</p>` : ""}
     ${stats ? `<h3 class="msec">Stats</h3><dl class="stats mgrid">${stats}</dl>` : ""}
     <h3 class="msec">Where to get it</h3>
@@ -97,7 +97,7 @@ function page(o){
     <div class="mcols">
       ${card("Quests that want it", wants, "No quest asks for it.")}
       ${card("Crafting recipes that use it", makes, "No recipe uses it.")}
-      <div><h4>Selling</h4><p>${sell}</p></div>
+      <div><h4>Selling</h4><p>NPC shops: ${sell}</p><p>${PW[o.id] ? pwHtml(o.id, true) : `<span class="sub">No player-shop sales seen yet (meso.watch, ${D.pw.read}).</span>`}</p></div>
     </div>
     ${like.length ? `<h3 class="msec">Similar ${esc(typeOf(it))} for ${esc(it.job && it.job !== "All" ? it.job : "any job")}</h3><div class="tblwrap"><table class="mini"><thead><tr><th>Item</th><th class="num">Lv</th><th>Stats</th><th>Get it</th></tr></thead>
       <tbody>${like.map(x => `<tr><td><button class="linkbtn" data-iopen="${x.id}">${esc(x.it.n)}</button>${x.it.g ? ` <span class="sub">${esc(x.it.g)}</span>` : ""}</td><td class="num">${x.lv}</td><td class="sub">${esc(keyStats(x.it))}</td><td>${srcPills(x)}</td></tr>`).join("")}</tbody></table></div>` : ""}
@@ -105,7 +105,7 @@ function page(o){
 }
 const srcPills = o => o.src.map(k => `<span class="pill ${SRCPILL[k][1]}">${SRCPILL[k][0]}</span>`).join(" ") || `<span class="sub">–</span>`;
 
-const COLS = {name: o => o.it.n, type: o => typeOf(o.it), lv: o => o.lv, price: o => o.it.p || 0};
+const COLS = {name: o => o.it.n, type: o => typeOf(o.it), lv: o => o.lv, price: o => o.it.p || 0, pw: o => PW[o.id]?.[0] || 0};
 function render(){
   const q = S.q.trim().toLowerCase(), f = COLS[S.sort] || COLS.name;
   const rows = I.filter(o => (!S.cat || o.cat === S.cat) && (!S.slot || typeOf(o.it) === S.slot) && jobOk(o.it, S.job) && (!S.src || o.src.length) && (!S.noq || !o.quest) && (!S.from || o.src.includes(S.from)) && (!S.use || o.use.includes(S.use)) && (!q || o.hay.includes(q)))
@@ -117,8 +117,8 @@ function render(){
   const cap = S.all ? rows.length : 150;
   $("#itrows").innerHTML = rows.slice(0, cap).map(o => `<tr data-id="${o.id}"><td><button class="mbtn ibtn">${D.iicons[o.id] ? `<img src="data:image/png;base64,${D.iicons[o.id]}" alt="">` : "<i></i>"}<span><b>${esc(o.it.n)}</b>${o.it.g ? ` <span class="sub">${esc(o.it.g)}</span>` : ""}</span></button></td>
       <td>${esc(typeOf(o.it))}</td><td class="num">${o.it.c === "Equipment" ? o.lv : ""}</td><td class="sub">${o.it.c === "Equipment" ? esc(o.it.job || "All") : ""}</td>
-      <td class="sub">${esc(keyStats(o.it))}</td><td class="num">${o.it.p ? fmt(o.it.p) : "–"}</td><td>${srcPills(o)}</td></tr>`).join("")
-    || `<tr><td colspan="7" class="sub">No item matches.</td></tr>`;
+      <td class="sub">${esc(keyStats(o.it))}</td><td class="num">${o.it.p ? fmt(o.it.p) : "–"}</td><td class="num">${PW[o.id] ? fmt(PW[o.id][0]) + (PW[o.id][4] & 1 ? "?" : "") : "–"}</td><td>${srcPills(o)}</td></tr>`).join("")
+    || `<tr><td colspan="8" class="sub">No item matches.</td></tr>`;
   $("#itmore").hidden = rows.length <= cap; $("#itmore").textContent = `Show all ${fmt(rows.length)}`;
 }
 function show(){
