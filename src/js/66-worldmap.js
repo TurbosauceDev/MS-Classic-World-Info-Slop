@@ -14,13 +14,27 @@ for (const [src, rows] of [["q", D.quests], ["cit", D.citq]]) for (const r of ro
 const POT = Object.fromEntries(D.potshops.map(([npc, mid]) => [String(mid), npc]));
 const qn = ([src, r]) => `<span class="name qname" tabindex="0" data-src="${src}" data-i="${(src === "cit" ? D.citq : D.quests).indexOf(r)}">${esc(r.name)}</span>`;
 
-let S = {isl: 1, cls: "Warrior", lv: 10, pin: null, mm: null, mob: null, sub: null, subPin: null};
+let S = {isl: 1, cls: "Warrior", lv: 10, pin: null, mm: null, mob: null, sub: null, subPin: null, uv: false};
 try { Object.assign(S, JSON.parse(localStorage.getItem("wmap") || "{}")) } catch(e) {}
-const save = () => { try { localStorage.setItem("wmap", JSON.stringify({isl: S.isl, cls: S.cls, lv: S.lv, mob: S.mob})) } catch(e) {} };
+const save = () => { try { localStorage.setItem("wmap", JSON.stringify({isl: S.isl, cls: S.cls, lv: S.lv, mob: S.mob, uv: S.uv})) } catch(e) {} };
 S.pin = null; S.sub = null; S.subPin = null; if (!D.mobdb[S.mob]) S.mob = null;
 // spawn count of the searched monster in each map (export spawn list: every launch map, incl. bosses, KPQ, job test)
 const mobAt = id => S.mob ? (D.mobdb[S.mob].maps.filter(m => String(m[0]) === id).reduce((a, m) => a + (m[2] || 0), 0) || (D.mobdb[S.mob].maps.some(m => String(m[0]) === id) ? 1 : 0)) : 0;
 const spotMob = sp => sp[3].reduce((a, id) => a + mobAt(id), 0);
+// "Undervalued maps" (64-undervalued.js): green = a quieter pick, red ring = a map the guides call busy, rest dimmed. Ignores class and level.
+const uvOn = () => S.uv && !S.mob;
+const uvCls = ids => !uvOn() ? "" : ids.some(id => id in UV) ? " uv" : ids.some(id => UV_PACKED[id]) ? " pk" : " dim";
+const uvSrc = k => [...k].map(c => UV_SRC[c][1] ? `<a href="${UV_SRC[c][1]}" target="_blank" rel="noopener">${esc(UV_SRC[c][0])}</a>` : esc(UV_SRC[c][0])).join(", ");
+// reported drops of the monsters on these maps (meowdb player reports), dearest first by meso.watch median
+const DROPBY = {}; for (const [it, ms] of Object.entries(D.drops || {})) if (D.items[it]) for (const [mob] of ms) (DROPBY[mob] ||= []).push(it);
+const dearDrops = ids => [...new Set(ids.flatMap(id => (D.maps[id]?.[2] || []).flatMap(([m]) => DROPBY[m] || [])))].filter(pwSolid).sort((a, b) => pwSolid(b) - pwSolid(a)).slice(0, 5);
+function uvBox(open){
+  const picks = [...new Set(open.filter(id => id in UV).map(id => UV[id]))].map(i => UV_PICKS[i]), busy = open.filter(id => UV_PACKED[id]), dd = dearDrops(open);
+  return `<div class="wmuv">${picks.map(([ids, a, b, inst, why, src]) => `<p><span class="pill p-good">quieter pick</span> <b>${ids.map(id => mapLink(id, mapName(id))).join(", ")}</b> · Lv ${a}–${b}, instead of ${esc(inst)}. ${esc(why)} <span class="tiny">Source: ${uvSrc(src)}</span></p>`).join("")}
+    ${busy.map(id => `<p><span class="pill p-warn">expect a crowd</span> ${mapLink(id, mapName(id))}: ${esc(UV_PACKED[id])}.</p>`).join("")}
+    ${!picks.length && !busy.length ? `<p class="sub">Not on the undervalued list, and no guide calls it busy.</p>` : ""}
+    ${dd.length ? `<p class="sub">Dearest reported drops here: ${dd.map(it => `<span class="itname" tabindex="0" data-item="${it}">${esc(D.items[it].n)}</span> ~${fmt(pwSolid(it))}`).join(", ")} <span class="tiny">(player-shop median, meso.watch ${esc(D.pw.read)}; drop chances unknown)</span></p>` : ""}</div>`;
+}
 
 // EXP/hr per map for the chosen class and level: the Character Builder's default build, solo, single target (as on monster pages)
 let R = {}, DEF = null, RL = "";
@@ -91,7 +105,7 @@ function renderSub(){
   const pct = v => (v * 100).toFixed(2) + "%";
   const lines = G.E.map(([a, b]) => `<line x1="${G.pos[a][0] * w}" y1="${G.pos[a][1] * h}" x2="${G.pos[b][0] * w}" y2="${G.pos[b][1] * h}"${G.ids.includes(a) && G.ids.includes(b) ? "" : ' class="ext"'}/>`).join("");
   const node = (id, ext) => { const [x, y] = G.pos[id], r = !ext && R[id] && D.maps[id]?.[1] ? R[id].rate : 0, hit = S.mob && mobAt(id), town = D.cabs.includes(id);
-    return `<button type="button" class="wmdot wmnode${town ? " k0" : ""}${ext ? " ext" : ""}${S.subPin === id ? " pin" : ""}${S.mob ? (hit ? " hit" : " dim") : ""}" data-map="${id}" style="left:${pct(x)};top:${pct(y)}${r ? `;--heat:${Math.round(100 * r / best)}%` : ""}"
+    return `<button type="button" class="wmdot wmnode${town ? " k0" : ""}${ext ? " ext" : ""}${S.subPin === id ? " pin" : ""}${S.mob ? (hit ? " hit" : " dim") : uvCls([id])}" data-map="${id}" style="left:${pct(x)};top:${pct(y)}${r ? `;--heat:${Math.round(100 * r / best)}%` : ""}"
       aria-label="${esc(mapName(id))}"><span class="s${G.side[id]}">${esc(G.lab[id] || mapName(id))}</span></button>` };
   $("#wmmap").style.aspectRatio = `${w} / ${h}`;
   $("#wmmap").classList.add("sub");
@@ -112,8 +126,8 @@ function renderMap(){
   $("#wmmap").innerHTML = `<img src="data:image/webp;base64,${img}" alt="World map of ${esc(island)}" width="${w}" height="${h}">` + spots.map((sp, i) => {
     const [x, y, t, ids] = sp, open = ids.some(known), r = spotRate(sp), k = rank.indexOf(i);
     const heat = r ? Math.round(100 * r / best) : 0, hit = S.mob ? spotMob(sp) : 0;
-    return `<button type="button" class="wmdot k${t}${open ? "" : " off"}${S.pin === i ? " pin" : ""}${S.mob ? (hit ? " hit" : " dim") : ""}" data-i="${i}" style="left:${(x * 100).toFixed(2)}%;top:${(y * 100).toFixed(2)}%${r ? `;--heat:${heat}%` : ""}"
-      aria-label="${esc(mapName(ids.find(known)) || "Not open at launch")}">${S.mob ? "" : k >= 0 ? `<b>${k + 1}</b>` : ""}</button>`;
+    return `<button type="button" class="wmdot k${t}${open ? "" : " off"}${S.pin === i ? " pin" : ""}${S.mob ? (hit ? " hit" : " dim") : uvCls(ids)}" data-i="${i}" style="left:${(x * 100).toFixed(2)}%;top:${(y * 100).toFixed(2)}%${r ? `;--heat:${heat}%` : ""}"
+      aria-label="${esc(mapName(ids.find(known)) || "Not open at launch")}">${S.mob || uvOn() ? "" : k >= 0 ? `<b>${k + 1}</b>` : ""}</button>`;
   }).join("") + spots.map((sp, i) => DRILL(sp) ? `<button type="button" class="wmdrill" data-drill="${i}" style="left:${(sp[0] * 100).toFixed(2)}%;top:${(sp[1] * 100).toFixed(2)}%">Open ${esc(areaName(sp))} map</button>` : "").join("")
     + `<span id="wmlabel" hidden></span>`;
   $("#wmareas").innerHTML = spots.map((sp, i) => DRILL(sp) ? `<button type="button" class="btn" data-drill="${i}">${esc(areaName(sp))} area map (${sp[3].filter(known).length} maps)</button>` : "").join("");
@@ -141,13 +155,14 @@ function card(i, lone){
   const legend = here.length ? `<ul class="wmleg">${here.map(([m, c], k) => `<li${String(m) === S.mob ? ' class="me"' : ""}><i class="mspot c${k % 8}"></i>${mobLink(m)} <span>Lv ${D.mobs[m][1]} · ×${c}</span></li>`).join("")}</ul>` : "";
   const rest = open.filter(id => !fights.includes(id));
   const rows = fights.map(id => { const r = R[id], mp = D.maps[id], dg = mp?.[2]?.length && DEF ? mapDanger(id, +S.lv || 10, DEF) : null;
-    return `<tr class="wmrow${id === mmId ? " sel" : ""}" data-map="${id}"><td>${mapLink(id, mapName(id))}${mp && !mp[1] ? ' <span class="pill p-warn">not at launch</span>' : ""}<div class="sub">${mobRange([id])}</div></td>
+    return `<tr class="wmrow${id === mmId ? " sel" : ""}" data-map="${id}"><td>${mapLink(id, mapName(id))}${mp && !mp[1] ? ' <span class="pill p-warn">not at launch</span>' : ""}${uvOn() && id in UV ? ' <span class="pill p-good">quieter pick</span>' : uvOn() && UV_PACKED[id] ? ' <span class="pill p-warn">busy</span>' : ""}<div class="sub">${mobRange([id])}</div></td>
       <td>${dg ? dangerPill({f: dg.f}) : ""}</td><td class="num">${r && mp?.[1] ? fmt(r.rate * 3600) : "–"}</td></tr>` }).join("");
   const mobRows = Object.entries(mobs).sort((a, b) => D.mobs[a[0]][1] - D.mobs[b[0]][1]).map(([m, c]) => { const x = D.mobs[m];
     return `<li>${mobLink(m)} <span>Lv ${x[1]} · ${fmt(x[2])} HP · ${fmt(x[3])} EXP · ×${c}</span></li>` }).join("");
   const svc = [cab ? "Cab" : "", ...pots.map(id => `Potions: ${npcLink(POT[id])} (${esc(mapName(id))})`)].filter(Boolean);
   return `<div class="qt-h"><b>${esc(mapName(main))}</b><span>${esc(island)}${t != null ? " · " + KIND[t] : ""}${mobRange(open) ? " · monsters " + mobRange(open) : ""}${open.length > 1 ? ` · ${open.length} maps` : ""}</span></div>
     <div class="wmact">${sp && !lone && DRILL(sp) && S.sub == null ? `<button type="button" class="btn primary" style="margin:0" data-drill="${i}">Open ${esc(areaName(sp))} map</button>` : ""}<button type="button" class="btn" data-route="${main}">Route here</button>${svc.length ? `<span class="sub">${svc.join(" · ")}</span>` : ""}</div>
+    ${uvOn() ? uvBox(open) : ""}
     ${rows ? `<div class="tblwrap"><table class="mini"><thead><tr><th>Map</th><th>Danger</th><th class="num">EXP/hr</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}
     ${rest.length ? `<h5>${fights.length ? "Other maps here" : "Maps here"}</h5><p class="wmnpcs">${rest.map(id => mapLink(id, mapName(id))).join(", ")}</p>` : ""}
     <h5>Minimap: ${esc(mapName(mmId))}</h5><div class="mfmap">${mm}${legend}${exits}</div>
@@ -177,9 +192,16 @@ function mobNote(){
   $("#wmmobnote").innerHTML = `<b>${esc(o.name)}</b> (Lv ${o.level}) spawns on ${maps} map${maps === 1 ? "" : "s"}: ${here ? `${here} place${here === 1 ? "" : "s"} lit up on ${esc(per[S.isl][0])}` : `none on ${esc(per[S.isl][0])}`}${other.map(([n, c]) => `, ${c} on ${esc(n)}`).join("")}.`
     + (here ? "" : " Some of its maps (jump quests, KPQ, job test) have no dot on the world map.");
 }
+function uvList(){
+  const b = $("#wmuv"); b.setAttribute("aria-pressed", uvOn()); b.classList.toggle("primary", uvOn());
+  const el = $("#wmuvlist"); el.hidden = !uvOn(); if (!uvOn()) return el.innerHTML = "";
+  el.innerHTML = `<h5>Possibly undervalued maps</h5><ul class="mmobs">${UV_PICKS.map(([ids, a, b, inst]) => `<li><span>Lv ${a}–${b}</span> ${ids.map(id => mapLink(id, mapName(id))).join(", ")} <span>instead of ${esc(inst)}</span></li>`).join("")}</ul>
+    <p class="tiny">Picked 2026-10-10 from what guides call quieter, overflow or little-known spots, plus maps with the same monsters as a famous one (launch spawn data). Reddit couldn't be read and the official forums had no map threads, so this is not from in-game head counts. Click a map for why and sources.</p>`;
+}
 function render(){
   rates(); renderMap(); if (S.sub != null){ if (S.subPin) showMap(S.subPin); else show(S.sub) } else show(S.pin); mobNote();
-  $("#wmnote").textContent = `Dot color and EXP/hr: estimate for a ${RL} with the Character Builder's default build, solo, single target (same model as Where to train). Numbers 1-3 = best EXP/hr on this island.`;
+  uvList();
+  $("#wmnote").textContent = uvOn() ? "Undervalued maps: green = a quieter pick from the guides (or the same monsters as a famous map), red ring = a map the guides call busy. Doesn't use your class or level; a vibes list, not counted in-game." : `Dot color and EXP/hr: estimate for a ${RL} with the Character Builder's default build, solo, single target (same model as Where to train). Numbers 1-3 = best EXP/hr on this island.`;
 }
 
 $("#wmisl").innerHTML = D.wmap.map((w, i) => `<button type="button" data-i="${i}" aria-checked="false">${esc(w[1])}</button>`).join("");
@@ -201,11 +223,12 @@ $("#wmfind").addEventListener("change", e => { const f = FIND[e.target.value.tri
 const MOBS = {}; for (const [id, o] of Object.entries(D.mobdb)) if (!(o.name.toLowerCase() in MOBS)) MOBS[o.name.toLowerCase()] = id;
 $("#wmmoblist").innerHTML = Object.entries(D.mobdb).sort((a, b) => a[1].level - b[1].level).map(([, o]) => `<option value="${esc(o.name)}">Lv ${o.level}</option>`).join("");
 $("#wmmob").value = S.mob ? D.mobdb[S.mob].name : "";
-const setMob = id => { S.mob = id; S.pin = null; S.mm = null; S.subPin = null;
+const setMob = id => { S.mob = id; if (id) S.uv = false; S.pin = null; S.mm = null; S.subPin = null;
   if (id){ const n = D.wmap.map(([, , , , , spots]) => spots.filter(sp => spotMob(sp)).length); if (!n[S.isl] && n.some(Boolean)){ S.isl = n.findIndex(Boolean); S.sub = null } }
   save(); render() };
 $("#wmmob").addEventListener("change", e => { const v = e.target.value.trim().toLowerCase(); if (!v){ if (S.mob) setMob(null); return } if (MOBS[v] && MOBS[v] !== S.mob) setMob(MOBS[v]) });   // a repeat change (on blur) must not reset the selection
 $("#wmmobclr").addEventListener("click", () => { $("#wmmob").value = ""; setMob(null) });
+$("#wmuv").addEventListener("click", () => { S.uv = !uvOn(); if (S.uv && S.mob){ $("#wmmob").value = ""; S.mob = null } save(); render() });
 
 const map = $("#wmmap"), label = () => $("#wmlabel");
 // hovering only shows a name label; the card changes on a click (Danny: a stray mouse-over shouldn't replace what you're looking at)

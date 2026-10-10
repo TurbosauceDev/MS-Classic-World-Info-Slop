@@ -470,6 +470,7 @@
       <li>Click a dot to see that place: its maps, monsters with level, HP and EXP, danger and EXP/hr at your class and level, NPCs, the quests they give, cab and potion shop, and a minimap with each monster's spawn points (one color per monster). Click a map row to switch the minimap.</li>
       <li>Hovering a dot only shows its name and monster levels; the card only changes when you click, so moving the mouse across the map won't lose what you're reading. Clicking a map name anywhere on the site opens its card here. <b>Route here</b> gets directions in the Map Navigator.</li>
       <li>Click <b>Sleepywood area map</b> above the map (or the Sleepywood label on it) to open a map of the whole Sleepywood area: every map as a dot, lines are the walkable exits between them (dashed grey = maps outside the area it leads to). Click a dot for its card; <b>← Victoria Island</b> goes back. The layout is drawn to fit, not the game's geography.</li>
+      <li><b>Undervalued maps</b> turns green the spots that may be quieter than the famous maps for the same level (from guides' "overflow" and "quieter" picks, and maps with the same monsters as a famous one), with a red ring on maps the guides call busy. It's a vibes list: it ignores your class and level, and nobody counted players in-game. The card says why, which map it replaces, sources, and the dearest drops reported there.</li>
       <li><b>Find a monster</b> lights up every dot where it spawns and dims the rest; the card's minimap jumps to the map with the most of it.</li>
       <li>Big dots are towns, square dots dungeons. Brighter dots = more EXP/hr for you (estimate); 1-3 mark the best three on the island. Grey dots are maps the client shows that aren't open at launch.</li>
       <li>The world map pictures and dot positions are the Classic World client's own (Closed Online Test 2 client via maplestory.io); everything in the card is from the launch game files. Orbis and El Nath aren't in the launch, so Ossyria is left out.</li>
@@ -484,10 +485,11 @@
     <label>Find a monster<input id="wmmob" type="search" list="wmmoblist" placeholder="monster name"></label>
     <datalist id="wmmoblist"></datalist>
     <button class="btn" id="wmmobclr" type="button" hidden style="align-self:flex-end">Clear monster</button>
+    <button class="btn" id="wmuv" type="button" aria-pressed="false" style="align-self:flex-end">Undervalued maps</button>
   </div>
   <p class="sub" id="wmmobnote" aria-live="polite" style="margin:10px 0 0"></p>
   <div class="wmgrid">
-    <div><div class="btnrow" id="wmareas" style="margin:0 0 10px"></div><div id="wmmap"></div><p class="tiny" id="wmnote"></p></div>
+    <div><div class="btnrow" id="wmareas" style="margin:0 0 10px"></div><div id="wmmap"></div><p class="tiny" id="wmnote"></p><div id="wmuvlist" hidden></div></div>
     <div id="wmcard" class="mpage" aria-live="polite"></div>
   </div>
 </section>
@@ -668,6 +670,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 10, 2026 · Undervalued maps</h3><span class="pill p-hot">new</span></div>
+      <p>World Map has an <b>Undervalued maps</b> button: green dots are quieter training spots (maps guides call overflow, quieter or little-known, or that have the same monsters as a famous map), red rings are maps the guides call busy. Each card says why, what to go instead of, sources, and the dearest drops reported there. It ignores your class and level.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 9, 2026 · World Map: click, not hover</h3><span class="pill p-hot">update</span></div>
       <p>On the World Map (and the Sleepywood map), hovering a dot now only shows its name and monster levels. The card on the right changes only when you click a dot, so brushing over other dots no longer replaces what you're reading.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 9, 2026 · Player-shop prices</h3><span class="pill p-hot">new</span></div>

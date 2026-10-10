@@ -356,6 +356,11 @@ input.khave{width:64px;text-align:right}
 @keyframes wmpulse{50%{box-shadow:0 0 0 3px #fff,0 0 4px 1px #ff4d4d}}
 @media (prefers-reduced-motion:reduce){.wmdot.hit{animation:none}}
 .wmleg li.me{font-weight:700}
+.wmdot.uv{background:var(--leaf);box-shadow:0 0 0 3px #fff,0 0 12px 4px var(--leaf);z-index:1}
+.wmdot.pk{box-shadow:0 0 0 3px var(--bad);opacity:.8}
+.wmuv{border:1px solid var(--line);border-radius:10px;padding:4px 10px;margin:8px 0;background:var(--accent-soft)}
+.wmuv p{margin:6px 0}
+#wmuvlist{margin-top:10px}
 /* item database */
 .iname{display:inline-flex;gap:5px;align-items:center;margin:2px 10px 2px 0}
 .itname{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
