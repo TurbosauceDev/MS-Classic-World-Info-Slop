@@ -196,7 +196,7 @@ function uvList(){
   const b = $("#wmuv"); b.setAttribute("aria-pressed", uvOn()); b.classList.toggle("primary", uvOn());
   const el = $("#wmuvlist"); el.hidden = !uvOn(); if (!uvOn()) return el.innerHTML = "";
   el.innerHTML = `<h5>Possibly undervalued maps</h5><ul class="mmobs">${UV_PICKS.map(([ids, a, b, inst]) => `<li><span>Lv ${a}–${b}</span> ${ids.map(id => mapLink(id, mapName(id))).join(", ")} <span>instead of ${esc(inst)}</span></li>`).join("")}</ul>
-    <p class="tiny">Picked 2026-10-10 from what guides call quieter, overflow or little-known spots, plus maps with the same monsters as a famous one (launch spawn data). Reddit couldn't be read and the official forums had no map threads, so this is not from in-game head counts. Click a map for why and sources.</p>`;
+    <p class="tiny">Picked 2026-10-10 from what guides call quieter, overflow or little-known spots, plus maps with the same monsters as a famous one (launch spawn data). Newest sources: mapleclassic.wiki (edited Oct 9), u4n (updated Oct 9), meowdb grind maps (Oct 7); the meowdb guides and henesys.gg show no date. No player posts about crowded maps dated Oct 8-10 turned up: Reddit couldn't be read here, and the official forums, meowdb forum and news had nothing. The only dated crowding news: Nexon's release notes (updated Oct 7-8) moved KPQ to channels 3-6 "due to increased activity on Channels 1 and 2". Guess, not checked: higher channels may be quieter for grinding too. Click a map for why and sources.</p>`;
 }
 function render(){
   rates(); renderMap(); if (S.sub != null){ if (S.subPin) showMap(S.subPin); else show(S.sub) } else show(S.pin); mobNote();
