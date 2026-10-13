@@ -12,7 +12,7 @@ const path = require("path");
 
   // Home page + section nav: page buttons only show in their section, so open the section first
   const tab = async sel => { await p.click("#c-" + await p.$eval(sel, b => b.dataset.cat)); await p.click(sel) };
-  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 15, "home page lists every page");
+  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 16, "home page lists every page");
   await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && !(await p.isHidden("#t-items")) && await p.isHidden("#t-plan"), "home link opens its page and section");
   await p.click("#c-home"); check(!(await p.isHidden("#home")) && await p.isHidden("#mobs"), "Home button returns home");
   await p.click("#c-db"); check(!(await p.isHidden("#mobs")), "section remembers its last page");
@@ -54,6 +54,11 @@ const path = require("path");
   await tab("#t-maps"); check(await p.$$eval("#maps tbody tr", r => r.length) > 0, "map ranking renders");
   await p.selectOption("#party", "3"); await p.fill("#lvl", "85"); await p.dispatchEvent("#lvl", "input");
   check(await p.$$eval("#maprows tr", r => r.length) > 0 && /portals to/.test(await p.textContent("#maprows")) && !/NaN|undefined/.test(await p.textContent("#maps")), "Where to train: level 85, party, danger, potions");
+  // EXP/hr calculator
+  await tab("#t-expc"); await p.fill("#ecl0", "30"); await p.fill("#ecl1", "31"); await p.fill("#ece0", "90000[94.04%]"); await p.fill("#ece1", "10%");
+  await p.fill("#ecmin", "10"); await p.fill("#ecmap", "Ant Tunnel I"); await p.dispatchEvent("#ecmap", "input");
+  check(/EXP\/hr/.test(await p.textContent("#ecout")) && /our estimate/.test(await p.textContent("#ecout")) && !/NaN|undefined/.test(await p.textContent("#ecout")), "EXP/hr calculator: readings across a level-up, map estimate");
+ await p.click("#ecsave"); check(await p.$$eval("#ecrows tr", r => r.length) === 1 && /Ant Tunnel/.test(await p.textContent("#ecrows")), "EXP/hr calculator: session saved");
   // Quest Database
   await tab("#t-quests");
   check((await p.textContent("#qcount")).includes("quests"), "quest table renders");

@@ -25,6 +25,7 @@
     <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="char" hidden>Character Builder</button>
     <button role="tab" id="t-path" aria-selected="false" data-tab="path" data-cat="char" hidden>Path Planner</button>
     <button role="tab" id="t-maps" aria-selected="false" data-tab="maps" data-cat="char" hidden>Where to train</button>
+    <button role="tab" id="t-expc" aria-selected="false" data-tab="expc" data-cat="char" hidden>EXP/hr calculator</button>
     <button role="tab" id="t-quests" aria-selected="false" data-tab="quests" data-cat="db" hidden>Quest Database</button>
     <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs" data-cat="db" hidden>Monsters</button>
     <button role="tab" id="t-items" aria-selected="false" data-tab="items" data-cat="db" hidden>Items</button>
@@ -46,6 +47,7 @@
       <button class="hlink" data-go="plan"><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
       <button class="hlink" data-go="path"><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
       <button class="hlink" data-go="maps"><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
+      <button class="hlink" data-go="expc"><b>EXP/hr calculator</b><span>Time a session, get your real EXP per hour and time to level.</span></button>
     </div>
     <div class="homecat"><h2><button class="hcat" data-go-cat="db">Databases</button></h2>
       <button class="hlink" data-go="quests"><b>Quest Database</b><span>Every launch quest with level, rewards, questlines and community picks.</span></button>
@@ -346,6 +348,46 @@
   <div class="tblwrap"><table>
     <thead><tr><th>Monster</th><th class="num">Lv</th><th class="num">HP</th><th class="num">EXP</th><th>Map</th><th class="num">Count</th><th class="num">Respawn</th></tr></thead>
     <tbody id="timedrows"></tbody>
+  </table></div>
+</section>
+
+<section id="expc" hidden>
+  <details class="howto">
+    <summary>How to use the EXP/hr calculator</summary>
+    <ul>
+      <li>Before you start, note your EXP from the bar at the bottom of the screen (e.g. <b>123456[45.67%]</b>) and press <b>Start timer</b>.</li>
+      <li>Train for 5 to 10 minutes, then press <b>Stop</b> and type the new EXP. If you leveled up, raise <b>End level</b>.</li>
+      <li>EXP boxes take the number, the percentage (45.67%) or the whole bar text. Or skip the timer and type the minutes.</li>
+      <li>Pick the map, party and EXP card to compare with our <b>Where to train</b> estimate for that map (default build for your class and level). Our estimate counts no EXP card, so it's multiplied by your card here.</li>
+      <li><b>Save</b> keeps the session in this browser only. Sort by date or EXP/hr to compare maps.</li>
+      <li>EXP needed above level 49 is meowdb's historical table (not confirmed in game), so time to level is an estimate there.</li>
+    </ul>
+  </details>
+  <div class="controls">
+    <label>Class<select id="eccls">
+      <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
+      <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
+    <label>Start level<input id="ecl0" type="number" min="1" max="99" value="25" style="width:5em"></label>
+    <label>Start EXP<input id="ece0" type="text" inputmode="decimal" placeholder="12345 or 45.6%" size="13"></label>
+    <label>End level<input id="ecl1" type="number" min="1" max="99" value="25" style="width:5em"></label>
+    <label>End EXP<input id="ece1" type="text" inputmode="decimal" placeholder="12345 or 45.6%" size="13"></label>
+    <label>Minutes<input id="ecmin" type="number" min="0" step="0.1" style="width:6em"></label>
+    <button class="btn" id="ectimer" type="button" style="align-self:flex-end">Start timer</button>
+  </div>
+  <div class="controls" style="margin-top:8px">
+    <label>Map<input id="ecmap" type="search" list="ecmaps" placeholder="optional" size="24"></label>
+    <datalist id="ecmaps"></datalist>
+    <label>Party<select id="ecpty"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
+    <label>EXP card<select id="eccard"><option value="1">None</option><option value="1.5">1.5x</option><option value="2">2x</option></select></label>
+    <label>Goal level<input id="ecgoalL" type="number" min="2" max="100" style="width:5em"></label>
+  </div>
+  <div id="ecout" class="mpage"></div>
+  <h2>Saved sessions</h2>
+  <div class="controls"><label>Sort<select id="ecsort"><option value="t">Newest</option><option value="rate">EXP/hr</option></select></label>
+    <button class="btn" id="ecclear" type="button" style="align-self:flex-end">Clear all</button></div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>When</th><th>Class</th><th class="num">Lv</th><th>Map</th><th class="num">Party</th><th class="num">Card</th><th class="num">Min</th><th class="num">EXP</th><th class="num">EXP/hr</th><th class="num">vs estimate</th><th></th></tr></thead>
+    <tbody id="ecrows"></tbody>
   </table></div>
 </section>
 
@@ -670,6 +712,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · EXP/hr calculator</h3><span class="pill p-hot">new</span></div>
+      <p>New <b>EXP/hr calculator</b> under Your character: note your EXP, start the timer, train, then type the new EXP. It gives your real EXP per hour, % of a level per hour, time to the next level (or a goal level) and how it compares with our Where to train estimate for that map. Sessions save in your browser. Idea from <a href="https://mapleexp.com/" target="_blank" rel="noopener">MapleEXP</a>.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 10, 2026 · Undervalued maps</h3><span class="pill p-hot">new</span></div>
       <p>World Map has an <b>Undervalued maps</b> button: green dots are quieter training spots (maps guides call overflow, quieter or little-known, or that have the same monsters as a famous map), red rings are maps the guides call busy. Each card says why, what to go instead of, sources, and the dearest drops reported there. It ignores your class and level.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 9, 2026 · World Map: click, not hover</h3><span class="pill p-hot">update</span></div>

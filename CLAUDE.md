@@ -44,6 +44,7 @@ src/js/48-monsters.js  Monsters tab: searchable list of D.mobdb + a page per mon
 src/js/49-items.js    Items tab: every item (D.items) + a page per item (stats, drops, shops via D.ishop, recipes, quest rewards, quests/recipes that want it); any .ri icon or .itname click opens it
 src/js/50-builder.js  Character Builder: AP, skill build with per-job SP pools, damage calc, greedy auto-build; buildAt() = headless default build
 src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill; exports TRAVEL (travel model)
+src/js/62-expcalc.js   EXP/hr calculator: two EXP readings + time (or timer) -> EXP/hr, time to level, vs Where to train estimate; saved sessions
 src/js/65-navigator.js Map Navigator: route between two maps (TRAVEL + Shanks' ship), exit numbers on minimaps; navTo(id) opens it
 src/js/66-worldmap.js  World Map: client world map (D.wmap) with a dot per spot; hover = card (maps, mobs, EXP/hr via mapRates, NPCs, quests, minimap); dungeon spots (Sleepywood) open a spring-layout sub-map of D.nav exits
 src/js/67-kpq.js     KPQ guide: stages with minimaps (D.kpq), Cloto's questions, puzzle combos, King Slime, box contents (meowdb KPQ guide)
@@ -82,6 +83,6 @@ Danny's OK, fast-forward that branch to it (`git push origin HEAD:claude/trustin
   Palette is lavender/purple/grey; keep it. Both light and dark must work; no horizontal scroll at 390px.
 - Explanatory text goes in a collapsible `<details class="howto">` box at the top of a tab, as short bullet lists.
 - Tooltips: one floating `#qtip`; elements with `.qname` (quests), `.ri` (items), `.mname` (maps, `mapLink()`; a click opens its World Map card, 66-worldmap.js), `.nname` (NPCs, `npcLink()`) or `.mobname` (monsters, `mobLink()`) or `.itname` (item names; a click on it or a `.ri` icon opens the item page) get it via delegated listeners.
-- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, craft, craftlv, qcompact, keep, keephave, mobs, items, navi, wmap).
+- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, craft, craftlv, qcompact, keep, keephave, mobs, items, navi, wmap, expc).
 - Plain, game-player language on the page. Say when a number is estimated.
 - Add a dated entry to the Changelog tab (`#log` in src/index.html, newest first) for every user-visible change.

@@ -31,7 +31,7 @@ nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--acce
 nav button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .controls{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
 .controls label{display:flex;flex-direction:column;gap:4px;font:600 11px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-select,input[type=number],input[type=search]{font:500 15px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
+select,input[type=number],input[type=search],input[type=text]{font:500 15px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
 input[type=number]{width:96px}
 .chk{flex-direction:row!important;align-items:center;gap:8px!important;text-transform:none!important;letter-spacing:0!important;font:500 14px var(--f-body)!important;color:var(--ink)!important}
 .note{color:var(--muted);font-size:13.5px;max-width:78ch;margin:12px 0 0}
@@ -464,6 +464,7 @@ header h1{cursor:pointer}
     <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="char" hidden>Character Builder</button>
     <button role="tab" id="t-path" aria-selected="false" data-tab="path" data-cat="char" hidden>Path Planner</button>
     <button role="tab" id="t-maps" aria-selected="false" data-tab="maps" data-cat="char" hidden>Where to train</button>
+    <button role="tab" id="t-expc" aria-selected="false" data-tab="expc" data-cat="char" hidden>EXP/hr calculator</button>
     <button role="tab" id="t-quests" aria-selected="false" data-tab="quests" data-cat="db" hidden>Quest Database</button>
     <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs" data-cat="db" hidden>Monsters</button>
     <button role="tab" id="t-items" aria-selected="false" data-tab="items" data-cat="db" hidden>Items</button>
@@ -485,6 +486,7 @@ header h1{cursor:pointer}
       <button class="hlink" data-go="plan"><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
       <button class="hlink" data-go="path"><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
       <button class="hlink" data-go="maps"><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
+      <button class="hlink" data-go="expc"><b>EXP/hr calculator</b><span>Time a session, get your real EXP per hour and time to level.</span></button>
     </div>
     <div class="homecat"><h2><button class="hcat" data-go-cat="db">Databases</button></h2>
       <button class="hlink" data-go="quests"><b>Quest Database</b><span>Every launch quest with level, rewards, questlines and community picks.</span></button>
@@ -785,6 +787,46 @@ header h1{cursor:pointer}
   <div class="tblwrap"><table>
     <thead><tr><th>Monster</th><th class="num">Lv</th><th class="num">HP</th><th class="num">EXP</th><th>Map</th><th class="num">Count</th><th class="num">Respawn</th></tr></thead>
     <tbody id="timedrows"></tbody>
+  </table></div>
+</section>
+
+<section id="expc" hidden>
+  <details class="howto">
+    <summary>How to use the EXP/hr calculator</summary>
+    <ul>
+      <li>Before you start, note your EXP from the bar at the bottom of the screen (e.g. <b>123456[45.67%]</b>) and press <b>Start timer</b>.</li>
+      <li>Train for 5 to 10 minutes, then press <b>Stop</b> and type the new EXP. If you leveled up, raise <b>End level</b>.</li>
+      <li>EXP boxes take the number, the percentage (45.67%) or the whole bar text. Or skip the timer and type the minutes.</li>
+      <li>Pick the map, party and EXP card to compare with our <b>Where to train</b> estimate for that map (default build for your class and level). Our estimate counts no EXP card, so it's multiplied by your card here.</li>
+      <li><b>Save</b> keeps the session in this browser only. Sort by date or EXP/hr to compare maps.</li>
+      <li>EXP needed above level 49 is meowdb's historical table (not confirmed in game), so time to level is an estimate there.</li>
+    </ul>
+  </details>
+  <div class="controls">
+    <label>Class<select id="eccls">
+      <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
+      <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
+    <label>Start level<input id="ecl0" type="number" min="1" max="99" value="25" style="width:5em"></label>
+    <label>Start EXP<input id="ece0" type="text" inputmode="decimal" placeholder="12345 or 45.6%" size="13"></label>
+    <label>End level<input id="ecl1" type="number" min="1" max="99" value="25" style="width:5em"></label>
+    <label>End EXP<input id="ece1" type="text" inputmode="decimal" placeholder="12345 or 45.6%" size="13"></label>
+    <label>Minutes<input id="ecmin" type="number" min="0" step="0.1" style="width:6em"></label>
+    <button class="btn" id="ectimer" type="button" style="align-self:flex-end">Start timer</button>
+  </div>
+  <div class="controls" style="margin-top:8px">
+    <label>Map<input id="ecmap" type="search" list="ecmaps" placeholder="optional" size="24"></label>
+    <datalist id="ecmaps"></datalist>
+    <label>Party<select id="ecpty"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
+    <label>EXP card<select id="eccard"><option value="1">None</option><option value="1.5">1.5x</option><option value="2">2x</option></select></label>
+    <label>Goal level<input id="ecgoalL" type="number" min="2" max="100" style="width:5em"></label>
+  </div>
+  <div id="ecout" class="mpage"></div>
+  <h2>Saved sessions</h2>
+  <div class="controls"><label>Sort<select id="ecsort"><option value="t">Newest</option><option value="rate">EXP/hr</option></select></label>
+    <button class="btn" id="ecclear" type="button" style="align-self:flex-end">Clear all</button></div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>When</th><th>Class</th><th class="num">Lv</th><th>Map</th><th class="num">Party</th><th class="num">Card</th><th class="num">Min</th><th class="num">EXP</th><th class="num">EXP/hr</th><th class="num">vs estimate</th><th></th></tr></thead>
+    <tbody id="ecrows"></tbody>
   </table></div>
 </section>
 
@@ -1109,6 +1151,8 @@ header h1{cursor:pointer}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · EXP/hr calculator</h3><span class="pill p-hot">new</span></div>
+      <p>New <b>EXP/hr calculator</b> under Your character: note your EXP, start the timer, train, then type the new EXP. It gives your real EXP per hour, % of a level per hour, time to the next level (or a goal level) and how it compares with our Where to train estimate for that map. Sessions save in your browser. Idea from <a href="https://mapleexp.com/" target="_blank" rel="noopener">MapleEXP</a>.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 10, 2026 · Undervalued maps</h3><span class="pill p-hot">new</span></div>
       <p>World Map has an <b>Undervalued maps</b> button: green dots are quieter training spots (maps guides call overflow, quieter or little-known, or that have the same monsters as a famous map), red rings are maps the guides call busy. Each card says why, what to go instead of, sources, and the dearest drops reported there. It ignores your class and level.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 9, 2026 · World Map: click, not hover</h3><span class="pill p-hot">update</span></div>
@@ -3846,6 +3890,98 @@ pathFrom = (cls, branch, fam, lvl) => {
 const show = () => { if (!shown && !$("#path").hidden){ shown = true; render() } };
 document.querySelector('[data-tab="path"]').addEventListener("click", show);
 show();
+})();
+
+/* ---------------- EXP/hr calculator ---------------- */
+// two EXP readings + elapsed time -> measured EXP/hr, time to level, and the Where to train estimate for that map
+// (mapRates with the default build, × EXP card). Saved sessions live in localStorage "expc".
+(() => {
+const MAPS = {}, BYLABEL = {}, seen = {};
+for (const [id, [name, open]] of Object.entries(D.maps).sort((a, b) => a[1][0].localeCompare(b[1][0]))){
+  if (!open) continue;
+  let l = name; seen[l] = (seen[l] || 0) + 1; if (seen[l] > 1) l += ` #${seen[l]}`;
+  MAPS[id] = l; BYLABEL[l.toLowerCase()] = id;
+}
+$("#ecmaps").innerHTML = Object.values(MAPS).map(l => `<option value="${esc(l)}">`).join("");
+
+let S = {cls: "Warrior", l0: 25, l1: 25, e0: "", e1: "", min: "", map: "", pty: "1", card: "1", goal: "", t0: null, sort: "t", rec: []};
+try { Object.assign(S, JSON.parse(localStorage.getItem("expc") || "{}")) } catch(e) {}
+const save = () => { try { localStorage.setItem("expc", JSON.stringify(S)) } catch(e) {} };
+const F = {cls: "#eccls", l0: "#ecl0", l1: "#ecl1", e0: "#ece0", e1: "#ece1", min: "#ecmin", map: "#ecmap", pty: "#ecpty", card: "#eccard", goal: "#ecgoalL", sort: "#ecsort"};
+for (const [k, sel] of Object.entries(F)) $(sel).value = S[k] ?? "";
+
+const lvl = v => Math.min(99, Math.max(1, Math.trunc(+v) || 1));
+// "123456", "45.67%", or the bar text "123456[45.67%]" -> EXP into the level (null if unreadable)
+function readExp(txt, L){
+  const t = String(txt).replace(/[,\s]/g, ""); if (!t) return null;
+  const m = t.match(/^(\d+(?:\.\d+)?)(%?)/); if (!m) return null;
+  return m[2] ? +m[1] / 100 * D.exp[L] : +m[1];
+}
+const expBetween = (L0, e0, L1, e1) => { let g = e1 - e0; for (let l = L0; l < L1; l++) g += D.exp[l]; return g };
+const toLevel = (L, e, goal) => { let need = D.exp[L] - e; for (let l = L + 1; l < goal; l++) need += D.exp[l]; return need };
+const hrs = s => s == null || !isFinite(s) ? "–" : dur(s);
+// our Where to train estimate (EXP/hr, no card) for the default build of this class and level
+function modelRate(cls, L, mid, party){
+  if (!mid || !D.maps[mid]) return null;
+  const b = trainBuild(cls, L), dps = b.dps > 0 ? b.dps : 20 * L, aoe = classAoe(cls, L);
+  const r = mapRates(cls, L, dps, accFor(cls, L), Infinity, aoe && aoe.t > 1 ? aoe : null, party).find(r => r.id === mid);
+  return r ? r.rate * 3600 : null;
+}
+
+let tick = null;
+function timerUi(){
+  const run = S.t0 != null;
+  $("#ectimer").textContent = run ? `Stop (${dur((Date.now() - S.t0) / 1000)})` : "Start timer";
+  $("#ectimer").setAttribute("aria-pressed", run);
+  clearInterval(tick); tick = run ? setInterval(() => $("#ectimer").textContent = `Stop (${dur((Date.now() - S.t0) / 1000)})`, 1000) : null;
+}
+$("#ectimer").addEventListener("click", () => {
+  if (S.t0 == null){ S.t0 = Date.now(); S.e1 = ""; $("#ece1").value = ""; }
+  else { S.min = +((Date.now() - S.t0) / 60000).toFixed(1); $("#ecmin").value = S.min; S.t0 = null; $("#ece1").focus() }
+  save(); timerUi(); calc();
+});
+
+let cur = null;
+function calc(){
+  for (const [k, sel] of Object.entries(F)) S[k] = $(sel).value;
+  save();
+  const L0 = lvl(S.l0), L1 = Math.max(L0, lvl(S.l1)), e0 = readExp(S.e0, L0), e1 = readExp(S.e1, L1), min = +S.min;
+  const mid = BYLABEL[String(S.map).trim().toLowerCase()] || null, party = +S.pty || 1, card = +S.card || 1;
+  cur = null;
+  if (e0 == null || e1 == null || !(min > 0)){
+    $("#ecout").innerHTML = `<p class="note">${S.t0 != null ? "Timer running. Train, then press <b>Stop</b> and type your new EXP." : "Type your start and end EXP and the minutes (or use the timer)."}</p>`;
+    return;
+  }
+  const gain = expBetween(L0, e0, L1, e1);
+  if (gain <= 0){ $("#ecout").innerHTML = `<p class="note">End EXP is below the start. If you leveled up, raise <b>End level</b>.</p>`; return }
+  const rate = gain / min * 60, perSec = rate / 3600, goal = Math.min(MAX_LEVEL, Math.max(L1 + 1, +S.goal || L1 + 1));
+  const model = modelRate(S.cls, L1, mid, party), est = model != null ? model * card : null;
+  cur = {t: Date.now(), cls: S.cls, L: L1, map: mid, party, card, min, gain, rate, est};
+  const pct = rate / D.exp[L1] * 100, unsure = L1 >= EXP_SURE ? ' <span class="pill p-warn">estimated EXP table</span>' : "";
+  $("#ecout").innerHTML = `<div class="card">
+    <div class="big">${fmt(rate)} <small>EXP/hr</small></div>
+    <p>${fmt(gain)} EXP in ${+min.toFixed(1)} min · ${pct >= 10 ? Math.round(pct) : pct.toFixed(1)}% of level ${L1} per hour${card > 1 ? ` · ${fmt(rate / card)}/hr without the ${card}x card` : ""}</p>
+    <p>Next level: <b>${hrs(toLevel(L1, e1, L1 + 1) / perSec)}</b>${goal > L1 + 1 ? ` · Level ${goal}: <b>${hrs(toLevel(L1, e1, goal) / perSec)}</b>` : ""}${unsure}</p>
+    ${mid ? `<p>${mapLink(mid, D.maps[mid][0])}: our estimate ${est != null ? `<b>${fmt(est)}</b>/hr (default ${esc(S.cls)} build${party > 1 ? `, party of ${party}` : ""}${card > 1 ? `, ×${card} card` : ""}). You got <b>${Math.round(rate / est * 100)}%</b> of it.` : "none (your build can't hit these monsters reliably by our model)."}</p>` : ""}
+    <button class="btn primary" id="ecsave" type="button">Save session</button></div>`;
+  $("#ecsave").addEventListener("click", () => { S.rec.unshift(cur); save(); rows(); $("#ecsave").textContent = "Saved"; $("#ecsave").disabled = true });
+}
+function rows(){
+  const list = S.rec.map((r, i) => ({...r, i})).sort(S.sort === "rate" ? (a, b) => b.rate - a.rate : (a, b) => b.t - a.t);
+  $("#ecrows").innerHTML = list.length ? list.map(r => `<tr>
+    <td class="sub">${new Date(r.t).toLocaleString([], {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}</td>
+    <td>${esc(r.cls)}</td><td class="num">${r.L}</td><td>${r.map && D.maps[r.map] ? mapLink(r.map, D.maps[r.map][0]) : "–"}</td>
+    <td class="num">${r.party}</td><td class="num">${r.card > 1 ? r.card + "x" : "–"}</td><td class="num">${+(+r.min).toFixed(1)}</td>
+    <td class="num">${fmt(r.gain)}</td><td class="num"><b>${fmt(r.rate)}</b></td><td class="num">${r.est ? Math.round(r.rate / r.est * 100) + "%" : "–"}</td>
+    <td><button class="btn" data-ecdel="${r.i}" type="button" style="padding:3px 9px" aria-label="Delete">✕</button></td></tr>`).join("")
+    : `<tr><td colspan="11" class="sub">No saved sessions yet.</td></tr>`;
+}
+$("#ecrows").addEventListener("click", e => { const b = e.target.closest("[data-ecdel]"); if (!b) return; S.rec.splice(+b.dataset.ecdel, 1); save(); rows() });
+$("#ecclear").addEventListener("click", () => { if (S.rec.length && confirm("Delete all saved sessions?")){ S.rec = []; save(); rows() } });
+$("#ecsort").addEventListener("change", () => { S.sort = $("#ecsort").value; save(); rows() });
+$("#ecl0").addEventListener("input", () => { if (+$("#ecl1").value < +$("#ecl0").value) $("#ecl1").value = $("#ecl0").value });
+for (const sel of Object.values(F)) if (sel !== "#ecsort") $(sel).addEventListener("input", calc);
+timerUi(); calc(); rows();
 })();
 
 /* ---------------- possibly undervalued training maps (World Map "Undervalued maps" button) ---------------- */
