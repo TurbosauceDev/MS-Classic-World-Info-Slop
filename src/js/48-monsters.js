@@ -18,8 +18,12 @@ for (const [src, list] of [["q", QLAUNCH], ["cit", D.citq]]) for (const r of lis
 const MAT = {}; for (const [iid, s] of Object.entries(D.craft.src)) for (const mid of s.mob || []) (MAT[mid] = MAT[mid] || []).push(iid);
 for (const o of M) o.hay = [o.m.name, ...o.m.maps.map(x => x[1]), ...o.m.dr.map(x => x[1])].join("|").toLowerCase();
 
-let S = {q: "", kind: "", sort: "level", dir: 1, open: null, fc: "Warrior"};
-try { Object.assign(S, JSON.parse(localStorage.getItem("mobs") || "{}"), {q: "", open: null}) } catch(e) {}
+// item name -> ids, for the "Drops item" filter (only items some monster is reported to drop)
+const DROPN = {}; for (const o of M) for (const [iid, n] of o.m.dr) ((DROPN[n.toLowerCase()] = DROPN[n.toLowerCase()] || new Set())).add(String(iid));
+$("#mbitemlist").innerHTML = [...new Set(M.flatMap(o => o.m.dr.map(x => x[1])))].sort().map(n => `<option value="${esc(n)}">`).join("");
+
+let S = {q: "", item: "", kind: "", sort: "level", dir: 1, open: null, fc: "Warrior"};
+try { Object.assign(S, JSON.parse(localStorage.getItem("mobs") || "{}"), {q: "", item: "", open: null}) } catch(e) {}
 const save = () => { try { localStorage.setItem("mobs", JSON.stringify(S)) } catch(e) {} };
 $("#mbkind").value = S.kind;
 
@@ -79,15 +83,18 @@ function page(o){
 const COLS = {name: o => o.m.name, level: o => o.m.level, hp: o => o.m.hp, exp: o => o.m.exp, ratio: o => o.ratio, eva: o => o.m.eva || 0,
   pdd: o => o.m.PDDamage || 0, mdd: o => o.m.MDDamage || 0, atk: o => o.m.PADamage || 0, acc: o => o.m.acc || 0};
 function render(){
-  const q = S.q.trim().toLowerCase(), f = COLS[S.sort] || COLS.level;
-  const rows = M.filter(o => (!S.kind || o.kind === S.kind) && (!q || o.hay.includes(q)))
+  const q = S.q.trim().toLowerCase(), f = COLS[S.sort] || COLS.level, it = S.item.trim().toLowerCase();
+  // exact item name if it is one, else any drop whose name contains the text
+  const want = !it ? null : DROPN[it] ? x => DROPN[it].has(String(x[0])) : x => x[1].toLowerCase().includes(it);
+  const hit = o => want && o.m.dr.filter(want);
+  const rows = M.filter(o => (!S.kind || o.kind === S.kind) && (!q || o.hay.includes(q)) && (!want || hit(o).length))
     .sort((a, b) => { const x = f(a), y = f(b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * S.dir || a.m.level - b.m.level });
   document.querySelectorAll("#mbhead th[data-k]").forEach(th => { const on = th.dataset.k === S.sort;
     th.setAttribute("aria-sort", on ? (S.dir > 0 ? "ascending" : "descending") : "none");
     th.querySelector("button").dataset.arrow = on ? (S.dir > 0 ? "▲" : "▼") : "" });
   $("#mbcount").textContent = `${rows.length} monster${rows.length === 1 ? "" : "s"}`;
   $("#mbrows").innerHTML = rows.map(o => { const m = o.m, top = m.maps[0];
-    return `<tr class="mrow" data-id="${o.id}"><td><button class="mbtn">${D.mobimg[o.id] ? `<img src="data:image/png;base64,${D.mobimg[o.id]}" alt="">` : "<i></i>"}<span><b>${esc(m.name)}</b>${KIND[o.kind][0] ? ` <span class="pill ${KIND[o.kind][1]}">${KIND[o.kind][0]}</span>` : ""}<span class="sub">${esc(top[1])}${m.maps.length > 1 ? ` +${m.maps.length - 1}` : ""}</span></span></button></td>
+    return `<tr class="mrow" data-id="${o.id}"><td><button class="mbtn">${D.mobimg[o.id] ? `<img src="data:image/png;base64,${D.mobimg[o.id]}" alt="">` : "<i></i>"}<span><b>${esc(m.name)}</b>${KIND[o.kind][0] ? ` <span class="pill ${KIND[o.kind][1]}">${KIND[o.kind][0]}</span>` : ""}<span class="sub">${esc(top[1])}${m.maps.length > 1 ? ` +${m.maps.length - 1}` : ""}</span>${want ? `<span class="sub">drops ${hit(o).map(x => esc(x[1]) + (x[2] >= 1 ? ` (+${x[2]})` : " (unconfirmed)")).join(", ")}</span>` : ""}</span></button></td>
       <td class="num">${m.level}</td><td class="num">${fmt(m.hp)}</td><td class="num">${fmt(m.exp)}</td><td class="num">${(o.ratio * 100).toFixed(1)}</td>
       <td class="num">${m.eva || 0}</td><td class="num">${m.PDDamage || 0}</td><td class="num">${m.MDDamage || 0}</td><td class="num">${m.PADamage || 0}</td><td class="num">${m.acc || 0}</td></tr>` }).join("")
     || `<tr><td colspan="10" class="sub">No monster matches.</td></tr>`;
@@ -142,6 +149,9 @@ function show(){
 }
 function openMob(id, scroll = true){ S.open = id; save(); show(); if (scroll) $("#mobs").scrollIntoView({block: "start"}) }
 $("#mbsearch").addEventListener("input", e => { S.q = e.target.value; render() });
+$("#mbitem").addEventListener("input", e => { S.item = e.target.value; render() });
+$("#mbreset").addEventListener("click", () => { Object.assign(S, {q: "", item: "", kind: "", sort: "level", dir: 1});
+  $("#mbsearch").value = $("#mbitem").value = $("#mbkind").value = ""; save(); render() });
 $("#mbkind").addEventListener("change", e => { S.kind = e.target.value; save(); render() });
 document.querySelectorAll("#mbhead th[data-k] button").forEach(b => b.addEventListener("click", () => {
   const k = b.parentElement.dataset.k; S.dir = S.sort === k ? -S.dir : (k === "name" || k === "level" ? 1 : -1); S.sort = k; save(); render();
