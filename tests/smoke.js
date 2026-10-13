@@ -25,6 +25,13 @@ const path = require("path");
     check((await p.textContent("#pspleft")).includes("spent") || (await p.textContent("#pspleft")).includes("spare"), `${c} 45 auto-build spends all SP`);
     check(+(await p.textContent("#pdps")).replace(/,/g, "") > 0, `${c} 45 has damage`);
   }
+  // screenshot import (Danny's in-game windows): level, AP after gear, gear, skills
+  await p.setInputFiles("#pimpfile", ["stat", "equip", "skill"].map(f => path.resolve(__dirname, `fixtures/${f}.png`)));
+  await p.waitForSelector("#piapply", {timeout: 30000});
+  await p.click("#piapply");
+  const ap = await p.$$eval("#pSTR,#pDEX,#pINT,#pLUK", l => l.map(x => x.value).join(" "));
+  check(ap === "4 4 127 25" && (await p.textContent("#psummary")).startsWith("Level 28 Magician · Ice Wand · Magic Claw 20") && (await p.textContent("#pgearsum")) === "5 pieces", `screenshot import (AP ${ap})`);
+  await p.click("#pgearclear");
   // Path Planner (opened from the builder)
   await p.click("#ppath");
   await p.waitForTimeout(300);

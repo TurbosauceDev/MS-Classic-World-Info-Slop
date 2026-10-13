@@ -1,5 +1,6 @@
 /* character planner */
 let buildAt; // set inside the builder; used by the Path Planner
+let BLD;     // builder internals for the screenshot import (52-shotimport.js)
 /* ---------------- character planner ---------------- */
 (() => {
 const WMULT = { // [swing, stab, shoot] from the client damage routine
@@ -570,6 +571,8 @@ $("#psend").addEventListener("click", () => {
   document.querySelector('[data-tab="maps"]').click();
   rankMaps();
 });
+BLD = {get S(){ return S }, W, ARMOR, BRANCHES, JOBLABEL, PRIMARY, SLOTS, apTotal, kindOf, TWO_HANDED,
+  apply(fn){ fn(S); refresh() }};
 if (!Object.keys(S.sp).length) rebuild();
 refresh();
 })();

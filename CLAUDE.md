@@ -43,6 +43,8 @@ src/js/47-keep.js     Keep or sell tab: items quests/recipes ask for, verdict + 
 src/js/48-monsters.js  Monsters tab: searchable list of D.mobdb + a page per monster (stats, spawns with minimap dots, drops, best farming maps via mapRates/buildAt)
 src/js/49-items.js    Items tab: every item (D.items) + a page per item (stats, drops, shops via D.ishop, recipes, quest rewards, quests/recipes that want it); any .ri icon or .itname click opens it
 src/js/50-builder.js  Character Builder: AP, skill build with per-job SP pools, damage calc, greedy auto-build; buildAt() = headless default build
+src/js/51-shot.js     screenshot reader (no server): un-doubles the game UI, finds icons by pixel match, reads numbers with the game's digit font (SHOT_FONT); reusable
+src/js/52-shotimport.js Character Builder "Import from screenshots": stat/equip/skill windows -> review form -> builder (via BLD from 50-builder.js)
 src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill; exports TRAVEL (travel model)
 src/js/62-expcalc.js   EXP/hr calculator: two EXP readings + time (or timer) -> EXP/hr, time to level, vs Where to train estimate; saved sessions
 src/js/65-navigator.js Map Navigator: route between two maps (TRAVEL + Shanks' ship), exit numbers on minimaps; navTo(id) opens it

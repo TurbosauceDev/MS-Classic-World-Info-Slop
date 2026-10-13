@@ -442,6 +442,11 @@ header h1{cursor:pointer}
 .hlink:hover b{text-decoration:underline}
 .hlink:focus-visible,.hcat:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (max-width:420px){.homegrid{grid-template-columns:1fr}}
+.drop{display:block;border:1.5px dashed var(--line);border-radius:10px;padding:12px;font-size:13px;color:var(--muted);cursor:pointer;background:var(--bg)}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop input{display:block;margin-bottom:6px;max-width:100%;font-size:13px}
+.pigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px}
+.pigrid input{width:100%}
 
 </style>
 
@@ -526,6 +531,7 @@ header h1{cursor:pointer}
           <li><b>HP and MP</b> follow meowdb's measured gains per level and per job advancement, plus Max HP / Max MP Increase.</li>
           <li><b>Armor</b> (optional): pick pieces per slot; their stats count everywhere on this tab. <b>Upkeep</b> = potions and ammo per hour while attacking nonstop, at shop prices.</li>
           <li><b>Copy link</b> makes a link that opens this exact build.</li>
+          <li><b>Import from screenshots</b> reads the game's windows in this page (nothing is uploaded): level and STR/DEX/INT/LUK from the stat window, worn items by their icons, skill levels from the skill window (one screenshot per skill tab; scroll and add more if the list is long). The stat window shows totals, so the read gear's stats are taken off to get your AP. Scrolled or above-average gear counts as its base stats. PNG screenshots work best; a game window that's been smoothly resized (not 100% or 200%) may not read.</li>
           <li><b>Auto build</b> spends every point: first where it adds the most damage after misses, then passives, then buffs. Skills follow the game's prerequisites.</li>
         </ul>
       </div>
@@ -542,6 +548,12 @@ header h1{cursor:pointer}
   </details>
   <div class="plan">
     <div class="pcol">
+      <div class="card">
+        <div class="cardhead"><h3>Import from screenshots</h3><span id="pimpst" class="pill"></span></div>
+        <label class="drop" id="pimpdrop"><input type="file" id="pimpfile" accept="image/*" multiple>
+          <span>Drop, pick or paste (Ctrl+V) screenshots of your <b>Character Stat</b>, <b>Equipment Inventory</b> and <b>Skill Inventory</b> windows. You check what was read before it's applied.</span></label>
+        <div id="pimprev"></div>
+      </div>
       <div class="card">
         <div class="seg small" id="pclass">
           <button data-v="Warrior">Warrior</button><button data-v="Magician">Magician</button>
@@ -1154,6 +1166,8 @@ header h1{cursor:pointer}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · Character Builder: import from screenshots</h3><span class="pill p-hot">new</span></div>
+      <p>Drop, pick or paste screenshots of your <b>Character Stat</b>, <b>Equipment Inventory</b> and <b>Skill Inventory</b> windows into the new box at the top of the Character Builder. It reads level, STR/DEX/INT/LUK, worn items (by icon) and skill levels, shows them for a check, then fills the build. The stat window shows totals, so the read gear's base stats are taken off to get your AP. Reading happens in the page; nothing is uploaded.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · Monsters: find who drops an item</h3><span class="pill p-hot">update</span></div>
       <p>The Monsters list has a <b>Drops item</b> box: type or pick an item and only the monsters players report dropping it stay (from meowdb drop reports; + = net confirmations). A <b>Reset filters</b> button clears search, type, item and sorting.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · EXP/hr calculator</h3><span class="pill p-hot">new</span></div>
@@ -2875,6 +2889,7 @@ show();
 
 /* character planner */
 let buildAt; // set inside the builder; used by the Path Planner
+let BLD;     // builder internals for the screenshot import (52-shotimport.js)
 /* ---------------- character planner ---------------- */
 (() => {
 const WMULT = { // [swing, stab, shoot] from the client damage routine
@@ -3445,10 +3460,311 @@ $("#psend").addEventListener("click", () => {
   document.querySelector('[data-tab="maps"]').click();
   rankMaps();
 });
+BLD = {get S(){ return S }, W, ARMOR, BRANCHES, JOBLABEL, PRIMARY, SLOTS, apTotal, kindOf, TWO_HANDED,
+  apply(fn){ fn(S); refresh() }};
 if (!Object.keys(S.sp).length) rebuild();
 refresh();
 })();
 
+
+/* screenshot reader: runs in the page, no server. The game draws its UI pixel-exact (often doubled on big screens), so a
+   screenshot is first shrunk back to 1 screen pixel per game pixel; then icons are found by exact pixel match against the
+   embedded skill/item icons, and numbers are read with the game's digit font (glyphs copied from a real stat window).
+   Used by the Character Builder import (52-shotimport.js); shotText() is generic for any black game-font number. */
+const SHOT_FONT = {"0":[5,9,"e8c6318c62e"],"1":[3,9,"1749249"],"2":[5,9,"e884221111f"],"3":[5,9,"e884260862e"],"4":[5,9,"23194a97c42"],
+  "5":[5,9,"f443d10862e"],"6":[5,9,"e8c2d98c62e"],"7":[5,9,"1f1088422108"],"8":[5,9,"e8c62e8c62e"],"9":[5,9,"e8c6336862e"],
+  "/":[3,9,"12924a4"],"%":[9,9,"c4944a260d60c8a45246"],"(":[3,11,"52924891"],")":[3,11,"112249294"],"-":[3,1,"7"]};
+const SHOT_GLYPHS = Object.entries(SHOT_FONT).map(([ch, [w, h, hex]]) =>
+  ({ch, w, h, bits: [...hex].map(c => parseInt(c, 16).toString(2).padStart(4, "0")).join("").slice(-w * h).padStart(w * h, "0")}));
+
+// file / blob -> {w, h, d: RGBA bytes}
+async function shotLoad(blob){
+  const bmp = await createImageBitmap(blob), c = document.createElement("canvas");
+  c.width = bmp.width; c.height = bmp.height;
+  const g = c.getContext("2d", {willReadFrequently: true}); g.drawImage(bmp, 0, 0);
+  return {w: c.width, h: c.height, d: g.getImageData(0, 0, c.width, c.height).data};
+}
+// find the pixel-doubling factor k (1-4) and block offset; returns the image shrunk to 1 game pixel per pixel.
+// Each 48 px tile votes: in k-times content every color change falls on one column phase and one row phase (mod k).
+// Tiles of smooth or noisy content (game world, photos) vote for nothing.
+function shotNative(img){
+  const {w, h, d} = img, T = 48, diff = (i, j) => d[i] !== d[j] || d[i + 1] !== d[j + 1] || d[i + 2] !== d[j + 2];
+  const votes = {2: new Map(), 3: new Map(), 4: new Map()};
+  for (let ty = 0; ty + T <= h; ty += T) for (let tx = 0; tx + T <= w; tx += T){
+    const cx = new Array(12).fill(0), cy = new Array(12).fill(0);
+    for (let y = ty; y < ty + T; y++) for (let x = tx; x < tx + T; x++){
+      const i = (y * w + x) * 4;
+      if (x + 1 < w && diff(i, i + 4)) cx[x % 12]++;
+      if (y + 1 < h && diff(i, i + w * 4)) cy[y % 12]++;
+    }
+    for (const k of [2, 3, 4]){
+      const fx = new Array(k).fill(0), fy = new Array(k).fill(0);
+      cx.forEach((n, p) => fx[p % k] += n); cy.forEach((n, p) => fy[p % k] += n);
+      const sx = fx.reduce((a, b) => a + b), sy = fy.reduce((a, b) => a + b), bx = fx.indexOf(Math.max(...fx)), by = fy.indexOf(Math.max(...fy));
+      if (sx < 8 || sy < 8 || fx[bx] < sx * 0.98 || fy[by] < sy * 0.98) continue;
+      const key = (bx + 1) % k + "," + (by + 1) % k; votes[k].set(key, (votes[k].get(key) || 0) + 1);
+    }
+  }
+  const tot = k => [...votes[k].values()].reduce((a, b) => a + b, 0);
+  let best = {k: 1, ox: 0, oy: 0};
+  for (const k of [2, 3, 4]) if (tot(k) >= Math.max(3, tot(2) * 0.5)){
+    const [key] = [...votes[k]].sort((a, b) => b[1] - a[1])[0]; const [ox, oy] = key.split(",").map(Number); best = {k, ox, oy};
+  }
+  const {k, ox, oy} = best;
+  if (k === 1) return Object.assign({k}, img);
+  const W = Math.floor((w - ox) / k), H = Math.floor((h - oy) / k), out = new Uint8ClampedArray(W * H * 4);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++){
+    const i = ((oy + y * k) * w + ox + x * k) * 4, o = (y * W + x) * 4;
+    out[o] = d[i]; out[o + 1] = d[i + 1]; out[o + 2] = d[i + 2]; out[o + 3] = 255;
+  }
+  return {w: W, h: H, d: out, k};
+}
+// decoded icon pixels, cached: base64 PNG -> {w, h, px: [[x, y, r, g, b], ...] opaque pixels only}
+const SHOT_ICONS = new Map();
+async function shotIcon(b64){
+  if (SHOT_ICONS.has(b64)) return SHOT_ICONS.get(b64);
+  const bmp = new Image(); bmp.src = "data:image/png;base64," + b64; await bmp.decode();
+  const c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height;
+  const g = c.getContext("2d", {willReadFrequently: true}); g.drawImage(bmp, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height).data, px = [];
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++){ const i = (y * c.width + x) * 4; if (d[i + 3] === 255) px.push([x, y, d[i], d[i + 1], d[i + 2]]) }
+  const r = {w: c.width, h: c.height, px}; SHOT_ICONS.set(b64, r); return r;
+}
+// where each icon appears. icons: [[key, base64]]. Returns [{key, x, y, w, h, score}], best first, overlaps removed
+// (identical icons at one spot all stay, so the caller can offer them as alternatives).
+async function shotFindIcons(img, icons, minScore = 0.85){
+  const {w, h, d} = img, col = new Uint32Array(w * h), count = new Map();
+  for (let i = 0; i < w * h; i++){ const c = d[i * 4] << 16 | d[i * 4 + 1] << 8 | d[i * 4 + 2]; col[i] = c; count.set(c, (count.get(c) || 0) + 1) }
+  const start = new Map(); let n = 0; for (const [c, k] of count){ start.set(c, n); n += k }
+  const pos = new Uint32Array(w * h), fill = new Map(start);
+  for (let i = 0; i < w * h; i++){ const c = col[i], f = fill.get(c); pos[f] = i; fill.set(c, f + 1) }
+  const hits = [];
+  for (const [key, b64] of icons){
+    const ic = await shotIcon(b64), px = ic.px;
+    if (px.length < 40) continue;   // too few solid pixels to tell apart
+    // anchor on the rarest of a few solid pixels, so few spots need checking
+    let a = null, ac = Infinity;
+    for (let s = 0; s < 12; s++){ const p = px[Math.floor((s + 0.5) * px.length / 12)], c = count.get(p[2] << 16 | p[3] << 8 | p[4]); if (c && c < ac){ a = p; ac = c } }
+    if (!a) continue;
+    const s0 = start.get(a[2] << 16 | a[3] << 8 | a[4]), allow = px.length * (1 - minScore);
+    for (let q = s0; q < s0 + ac; q++){
+      const x0 = pos[q] % w - a[0], y0 = Math.floor(pos[q] / w) - a[1];
+      if (x0 < 0 || y0 < 0 || x0 + ic.w > w || y0 + ic.h > h) continue;
+      // spread order so misses show early; a real match misses at most 2 of the first 16
+      let miss = 0, s = 0;
+      for (; s < px.length && miss <= allow; s++){
+        if (s === 16 && miss > 2){ miss = Infinity; break }
+        const p = px[(s * 7919) % px.length], i = ((y0 + p[1]) * w + x0 + p[0]) * 4;
+        if (Math.abs(d[i] - p[2]) + Math.abs(d[i + 1] - p[3]) + Math.abs(d[i + 2] - p[4]) > 24) miss++;
+      }
+      if (miss <= allow) hits.push({key, x: x0, y: y0, w: ic.w, h: ic.h, score: 1 - miss / px.length, n: px.length});
+    }
+  }
+  hits.sort((p, q) => q.score - p.score || q.n - p.n);
+  const keep = [];
+  for (const m of hits){
+    const cx = m.x + m.w / 2, cy = m.y + m.h / 2;
+    const over = keep.find(k => cx > k.x && cx < k.x + k.w && cy > k.y && cy < k.y + k.h);
+    if (!over) keep.push(m);
+    else if (over.score === m.score && over.n === m.n && over.key !== m.key) (over.alt || (over.alt = [])).push(m.key);
+  }
+  return keep;
+}
+// text in a box, read with the game's digit font (black ink). Returns one string per line, top to bottom; unknown glyphs are "?"
+function shotText(img, x0, y0, x1, y1){
+  const {w, d} = img; x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(img.w, x1); y1 = Math.min(img.h, y1);
+  const ink = (x, y) => { const i = (y * w + x) * 4; return d[i] + d[i + 1] + d[i + 2] < 150 };
+  const lines = [];
+  for (let y = y0; y < y1; y++){
+    let any = false; for (let x = x0; x < x1 && !any; x++) any = ink(x, y);
+    if (!any) continue;
+    let e = y; while (e < y1){ let a = false; for (let x = x0; x < x1 && !a; x++) a = ink(x, e); if (!a) break; e++ }
+    let s = "", last = -1;
+    for (let x = x0; x < x1; x++){
+      let c = false; for (let yy = y; yy < e && !c; yy++) c = ink(x, yy);
+      if (!c) continue;
+      const gs = x; while (x < x1){ let c2 = false; for (let yy = y; yy < e && !c2; yy++) c2 = ink(x, yy); if (!c2) break; x++ }
+      let t = e, b = y; for (let yy = y; yy < e; yy++) for (let xx = gs; xx < x; xx++) if (ink(xx, yy)){ t = Math.min(t, yy); b = Math.max(b, yy) }
+      const gw = x - gs, gh = b - t + 1; let bits = "";
+      for (let yy = t; yy <= b; yy++) for (let xx = gs; xx < x; xx++) bits += ink(xx, yy) ? "1" : "0";
+      let ch = "?", bd = 3;
+      for (const g of SHOT_GLYPHS){ if (g.w !== gw || g.h !== gh) continue; let dd = 0; for (let i = 0; i < bits.length; i++) if (bits[i] !== g.bits[i]) dd++; if (dd < bd){ bd = dd; ch = g.ch } }
+      if (last >= 0 && gs - last > 12) break;   // a far-off mark (a button) isn't part of this value
+      if (last >= 0 && gs - last > 5) s += " ";   // digits sit 2-4 pixels apart ("1" is narrow)
+      s += ch; last = x;
+    }
+    lines.push({y, s}); y = e;
+  }
+  return lines;
+}
+// columns of solid label boxes of one color (e.g. the stat window's pink and green labels): [{x0, x1, y0, y1}] top to bottom
+function shotLabels(img, rgb, tol = 30){
+  const {w, h, d} = img, is = (x, y) => { const i = (y * w + x) * 4; return Math.abs(d[i] - rgb[0]) + Math.abs(d[i + 1] - rgb[1]) + Math.abs(d[i + 2] - rgb[2]) <= tol };
+  let bx = -1, bn = 0;
+  for (let x = 0; x < w; x++){ let n = 0; for (let y = 0; y < h; y++) if (is(x, y)) n++; if (n > bn){ bn = n; bx = x } }
+  if (bn < 20) return [];
+  const out = [];
+  for (let y = 0; y < h; y++){
+    if (!is(bx, y)) continue;
+    let e = y; while (e < h && is(bx, e)) e++;
+    if (e - y >= 6){ const m = y; /* top row: above the label's own text */ let x0 = bx, x1 = bx; while (x0 > 0 && is(x0 - 1, m)) x0--; while (x1 < w - 1 && is(x1 + 1, m)) x1++;
+      if (x1 - x0 >= 12) out.push({x0, x1, y0: y, y1: e - 1}) }
+    y = e;
+  }
+  return out;
+}
+
+/* Character Builder: fill the build from in-game screenshots (Character Stat, Equipment Inventory, Skill Inventory windows).
+   Reading happens in the page (51-shot.js); the result is shown for review and only applied on "Apply". */
+(() => {
+const STATS = ["STR", "DEX", "INT", "LUK"], PINK = [203, 79, 130], GREEN = [184, 199, 77];
+const SKJOB = {}; for (const [j, list] of Object.entries(D.skills)) for (const s of list) SKJOB[s.id] = {job: j, s};
+const clsOfJob = j => Object.keys(BLD.BRANCHES).find(c => BLD.BRANCHES[c].some(b => b[0] === j));
+const clsOfWeapon = w => Object.keys(BLD.BRANCHES).find(c => BLD.BRANCHES[c][0][2].includes(w.type));
+const WBYID = Object.fromEntries(BLD.W.map(w => [w.id, w]));
+const num = s => { const m = /\d+/.exec(s || ""); return m ? +m[0] : null };
+let R = null;   // what was read, edited in the review form
+
+async function readShots(files){
+  const r = {lvl: null, shown: null, skills: {}, gear: {}, weapon: [], seen: []};
+  const skIcons = Object.keys(SKJOB).filter(id => D.icons[id]).map(id => [id, D.icons[id]]);
+  const eqIcons = Object.keys(BLD.ARMOR).concat(Object.keys(WBYID)).filter(id => D.iicons[id]).map(id => [id, D.iicons[id]]);
+  for (const f of files){
+    const img = shotNative(await shotLoad(f)), seen = [];
+    // stat window: pink labels NAME, JOB (two lines tall), LEVEL...; green labels STR, DEX, INT, LUK
+    const pink = shotLabels(img, PINK), green = shotLabels(img, GREEN);
+    const val = b => num(shotText(img, b.x1 + 2, b.y0 - 2, b.x1 + 130, b.y1 + 3)[0]?.s);
+    if (pink.length >= 3){
+      const tall = pink.slice(0, 3).reduce((a, b, i, l) => b.y1 - b.y0 > l[a].y1 - l[a].y0 ? i : a, 0);
+      const lv = val(pink[Math.min(tall + 1, pink.length - 1)]);
+      if (lv >= 1 && lv <= 200){ r.lvl = lv; seen.push("level") }
+    }
+    if (green.length >= 4){
+      const v = green.slice(0, 4).map(val);
+      if (v.every(x => x != null)){ r.shown = Object.fromEntries(STATS.map((k, i) => [k, v[i]])); seen.push("stats") }
+    }
+    // skill window: an icon with its level written below-right of it
+    let ns = 0;
+    for (const m of await shotFindIcons(img, skIcons)){
+      const line = shotText(img, m.x + m.w + 2, m.y + m.h / 2, m.x + m.w + 80, m.y + m.h + 4).find(l => /^\d+$/.test(l.s));
+      const lv = line && +line.s, s = SKJOB[m.key].s;
+      if (lv && lv <= s.max){ r.skills[m.key] = Math.max(r.skills[m.key] || 0, lv); ns++ }
+    }
+    if (ns) seen.push(`${ns} skill${ns > 1 ? "s" : ""}`);
+    // equipment window
+    let ne = 0;
+    for (const m of await shotFindIcons(img, eqIcons)){
+      const ids = [m.key, ...(m.alt || [])];
+      if (WBYID[m.key]) r.weapon.push(...ids.filter(id => WBYID[id] && !r.weapon.includes(id)));
+      else { const sl = BLD.ARMOR[m.key][2]; r.gear[sl] = (r.gear[sl] || []).concat(ids.filter(id => BLD.ARMOR[id]?.[2] === sl && !(r.gear[sl] || []).includes(id))) }
+      ne++;
+    }
+    if (ne) seen.push(`${ne} item${ne > 1 ? "s" : ""}`);
+    r.seen.push(`${esc(f.name || "pasted image")}: ${seen.length ? seen.join(", ") : "nothing recognized"}${img.k > 1 ? ` (UI at ${img.k}×)` : ""}`);
+  }
+  // class: from skills, else the weapon, else the highest stat
+  const jobs = Object.keys(r.skills).map(id => SKJOB[id].job);
+  r.cls = clsOfJob(jobs[0]) || (r.weapon[0] && clsOfWeapon(WBYID[r.weapon[0]])) ||
+    (r.shown && Object.keys(BLD.PRIMARY).find(c => BLD.PRIMARY[c] === STATS.reduce((a, k) => r.shown[k] > r.shown[a] ? k : a, "STR"))) || BLD.S.cls;
+  r.branch = jobs.find(j => BLD.BRANCHES[r.cls].some(b => b[0] === j && b[1] >= 30)) || null;
+  r.lvl = r.lvl || BLD.S.lvl;
+  return r;
+}
+
+// base AP = what the stat window shows minus the picked gear's stats (the game shows totals)
+function baseAP(){
+  const g = {STR: 0, DEX: 0, INT: 0, LUK: 0}, w = WBYID[R.pick.weapon];
+  for (const [sl, id] of Object.entries(R.pick.gear)){
+    const a = BLD.ARMOR[id]; if (!a) continue;
+    if (sl === "Shield" && BLD.TWO_HANDED(w?.type)) continue;
+    if ((sl === "Top" || sl === "Bottom") && R.pick.gear.Overall) continue;
+    for (const k of STATS) g[k] += a[7][k] || 0;
+  }
+  const ap = Object.fromEntries(STATS.map(k => [k, Math.max(4, (R.shown?.[k] ?? 4) - g[k])]));
+  return {ap, g};
+}
+function reviewNote(){
+  if (!R.shown) return "No stat window found: AP will be auto-filled.";
+  const {ap, g} = baseAP(), tot = STATS.reduce((a, k) => a + ap[k], 0), budget = BLD.apTotal(Math.max(10, R.lvl));
+  const gl = STATS.filter(k => g[k]).map(k => `${k} +${g[k]}`).join(", ");
+  const over = tot - budget, top = STATS.reduce((a, k) => ap[k] > ap[a] ? k : a, "STR");
+  return `${gl ? `Gear adds ${gl}, taken off. ` : ""}AP for the builder: ${STATS.map(k => `${k} ${ap[k]}`).join(", ")} (${tot} of ${budget}).` +
+    (over > 0 ? ` <span class="down">${over} over the budget for level ${R.lvl}: probably gear or scroll bonuses not seen. Upload the Equipment window too, or ${over} comes off ${top}.</span>` : "");
+}
+const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, t]) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
+function renderReview(){
+  const el = $("#pimprev");
+  if (!R){ el.innerHTML = ""; return }
+  const br = BLD.BRANCHES[R.cls].filter(b => R.lvl >= b[1]);
+  if (!br.some(b => b[0] === R.branch)) R.branch = (br.find(b => b[1] >= 30) || br[0])[0];
+  const wname = id => `${WBYID[id].name} · Lv ${WBYID[id].lvl}`, aname = id => `${BLD.ARMOR[id][1]} · Lv ${BLD.ARMOR[id][3]}`;
+  const skills = Object.entries(R.skills).sort((a, b) => a[0] - b[0]);
+  el.innerHTML = `<p class="tiny">${R.seen.join("<br>")}</p>
+    <div class="row2"><label class="lab">Level<input id="pilvl" type="number" min="10" max="100" value="${R.lvl}"></label>
+      <label class="lab">Class${sel("picls", Object.keys(BLD.BRANCHES).map(c => [c, c]), R.cls)}</label></div>
+    <div class="row2"><label class="lab">Job${sel("pibranch", br.map(b => [b[0], b[0]]), R.branch)}</label>
+      <label class="lab">Weapon${sel("piweapon", [["", R.weapon.length ? "keep current" : "none found: keep current"], ...R.weapon.map(id => [id, wname(id)])], R.pick.weapon)}</label></div>
+    ${R.shown ? `<div class="apgrid" style="margin-top:12px">${STATS.map(k => `<label class="lab">${k} shown<input data-st="${k}" type="number" min="4" value="${R.shown[k]}"></label>`).join("")}</div>` : ""}
+    <p class="tiny" id="pinote">${reviewNote()}</p>
+    ${Object.keys(R.gear).length ? `<div class="geargrid">${BLD.SLOTS.filter(([sl]) => R.gear[sl]).map(([sl, label]) =>
+      `<label class="lab">${label}${sel("pig-" + sl, [["", "skip"], ...R.gear[sl].map(id => [id, aname(id)])], R.pick.gear[sl] || "")}</label>`).join("")}</div>` : ""}
+    ${skills.length ? `<div class="pigrid">${skills.map(([id, v]) => `<label class="lab">${esc(SKJOB[id].s.n)}<input data-sk="${id}" type="number" min="0" max="${SKJOB[id].s.max}" value="${v}"></label>`).join("")}</div>` :
+      `<p class="tiny">No skill window found: skills will be auto-built.</p>`}
+    <div class="btnrow"><button class="btn primary" id="piapply">Apply to builder</button><button class="btn" id="picancel" style="margin-top:12px">Discard</button></div>`;
+}
+async function handle(files){
+  files = [...files].filter(f => /^image\//.test(f.type));
+  if (!files.length) return;
+  $("#pimpst").textContent = "Reading…"; $("#pimpst").className = "pill p-warn";
+  try {
+    R = await readShots(files);
+    R.pick = {weapon: R.weapon[0] || "", gear: Object.fromEntries(Object.entries(R.gear).map(([sl, ids]) => [sl, ids[0]]))};
+    const any = R.shown || Object.keys(R.skills).length || R.weapon.length || Object.keys(R.gear).length;
+    $("#pimpst").textContent = any ? "Check, then apply" : "Nothing recognized"; $("#pimpst").className = "pill " + (any ? "p-good" : "p-bad");
+  } catch(e){ console.error(e); R = null; $("#pimpst").textContent = "Couldn't read that image"; $("#pimpst").className = "pill p-bad" }
+  renderReview();
+}
+$("#pimpfile").addEventListener("change", e => { handle(e.target.files); e.target.value = "" });
+const drop = $("#pimpdrop");
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over") });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); handle(e.dataTransfer.files) });
+document.addEventListener("paste", e => { if ($("#plan").hidden) return; const f = [...(e.clipboardData?.files || [])]; if (f.length){ e.preventDefault(); handle(f) } });
+$("#pimprev").addEventListener("change", e => {
+  const t = e.target;
+  if (t.id === "pilvl") R.lvl = Math.max(10, Math.min(100, +t.value || 10));
+  else if (t.id === "picls"){ R.cls = t.value; R.branch = null }
+  else if (t.id === "pibranch") R.branch = t.value;
+  else if (t.id === "piweapon") R.pick.weapon = t.value;
+  else if (t.id.startsWith("pig-")){ const sl = t.id.slice(4); if (t.value) R.pick.gear[sl] = t.value; else delete R.pick.gear[sl] }
+  else if (t.dataset.st) R.shown[t.dataset.st] = Math.max(4, +t.value || 4);
+  else if (t.dataset.sk) R.skills[t.dataset.sk] = Math.max(0, Math.min(SKJOB[t.dataset.sk].s.max, +t.value || 0));
+  if (t.id === "pilvl" || t.id === "picls") renderReview(); else $("#pinote").innerHTML = reviewNote();
+});
+$("#pimprev").addEventListener("click", e => {
+  if (e.target.id === "picancel"){ R = null; renderReview(); $("#pimpst").textContent = ""; return }
+  if (e.target.id !== "piapply") return;
+  BLD.apply(S => {
+    const clsChanged = S.cls !== R.cls, w = WBYID[R.pick.weapon];
+    S.cls = R.cls; S.lvl = Math.max(10, Math.min(100, R.lvl)); S.branch = R.branch; S.skill = null; S.ammo = null;
+    if (w){ S.weapon = w.name; S.fam = BLD.kindOf(w.type) } else if (clsChanged) S.weapon = null;
+    if (Object.keys(R.pick.gear).length){ S.gear = {...R.pick.gear};
+      const gs = Object.values(S.gear).map(id => BLD.ARMOR[id][5]).find(Boolean); if (gs && S.gender && S.gender !== gs) S.gender = gs }
+    else if (clsChanged) S.gear = {};
+    if (R.shown){
+      const {ap} = baseAP(), over = STATS.reduce((a, k) => a + ap[k], 0) - BLD.apTotal(S.lvl);
+      if (over > 0){ const top = STATS.reduce((a, k) => ap[k] > ap[a] ? k : a, "STR"); ap[top] = Math.max(4, ap[top] - over) }
+      S.ap = ap;
+    } else S.ap = null;
+    const sp = Object.fromEntries(Object.entries(R.skills).filter(([, v]) => v > 0));
+    S.sp = Object.keys(sp).length ? sp : {__auto: 1};
+  });
+  // attack: the attack skill with the most points (the builder's default looks at max levels)
+  const atk = [...$("#pskill").options].map(o => o.value).filter(id => R.skills[id]).sort((a, b) => R.skills[b] - R.skills[a])[0];
+  if (atk) BLD.apply(S => { S.skill = atk });
+  R = null; renderReview(); $("#pimpst").textContent = "Applied"; $("#pimpst").className = "pill p-good";
+});
+})();
 
 /* ---------------- path planner ---------------- */
 let pathFrom; // (cls, branch, fam, level): fill the planner from the Character Builder and open it

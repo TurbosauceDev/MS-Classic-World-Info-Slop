@@ -437,3 +437,8 @@ header h1{cursor:pointer}
 .hlink:hover b{text-decoration:underline}
 .hlink:focus-visible,.hcat:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (max-width:420px){.homegrid{grid-template-columns:1fr}}
+.drop{display:block;border:1.5px dashed var(--line);border-radius:10px;padding:12px;font-size:13px;color:var(--muted);cursor:pointer;background:var(--bg)}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop input{display:block;margin-bottom:6px;max-width:100%;font-size:13px}
+.pigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px}
+.pigrid input{width:100%}

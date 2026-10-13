@@ -87,6 +87,7 @@
           <li><b>HP and MP</b> follow meowdb's measured gains per level and per job advancement, plus Max HP / Max MP Increase.</li>
           <li><b>Armor</b> (optional): pick pieces per slot; their stats count everywhere on this tab. <b>Upkeep</b> = potions and ammo per hour while attacking nonstop, at shop prices.</li>
           <li><b>Copy link</b> makes a link that opens this exact build.</li>
+          <li><b>Import from screenshots</b> reads the game's windows in this page (nothing is uploaded): level and STR/DEX/INT/LUK from the stat window, worn items by their icons, skill levels from the skill window (one screenshot per skill tab; scroll and add more if the list is long). The stat window shows totals, so the read gear's stats are taken off to get your AP. Scrolled or above-average gear counts as its base stats. PNG screenshots work best; a game window that's been smoothly resized (not 100% or 200%) may not read.</li>
           <li><b>Auto build</b> spends every point: first where it adds the most damage after misses, then passives, then buffs. Skills follow the game's prerequisites.</li>
         </ul>
       </div>
@@ -103,6 +104,12 @@
   </details>
   <div class="plan">
     <div class="pcol">
+      <div class="card">
+        <div class="cardhead"><h3>Import from screenshots</h3><span id="pimpst" class="pill"></span></div>
+        <label class="drop" id="pimpdrop"><input type="file" id="pimpfile" accept="image/*" multiple>
+          <span>Drop, pick or paste (Ctrl+V) screenshots of your <b>Character Stat</b>, <b>Equipment Inventory</b> and <b>Skill Inventory</b> windows. You check what was read before it's applied.</span></label>
+        <div id="pimprev"></div>
+      </div>
       <div class="card">
         <div class="seg small" id="pclass">
           <button data-v="Warrior">Warrior</button><button data-v="Magician">Magician</button>
@@ -715,6 +722,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · Character Builder: import from screenshots</h3><span class="pill p-hot">new</span></div>
+      <p>Drop, pick or paste screenshots of your <b>Character Stat</b>, <b>Equipment Inventory</b> and <b>Skill Inventory</b> windows into the new box at the top of the Character Builder. It reads level, STR/DEX/INT/LUK, worn items (by icon) and skill levels, shows them for a check, then fills the build. The stat window shows totals, so the read gear's base stats are taken off to get your AP. Reading happens in the page; nothing is uploaded.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · Monsters: find who drops an item</h3><span class="pill p-hot">update</span></div>
       <p>The Monsters list has a <b>Drops item</b> box: type or pick an item and only the monsters players report dropping it stay (from meowdb drop reports; + = net confirmations). A <b>Reset filters</b> button clears search, type, item and sorting.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · EXP/hr calculator</h3><span class="pill p-hot">new</span></div>
