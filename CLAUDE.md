@@ -3,7 +3,7 @@
 A single-page planner for **MapleStory Classic World** (Founder's Access Oct 6 2026, Grand Launch Oct 21 2026),
 built from the Closed Online Test 2 (COT2) game-file export. Owner: Danny.
 
-Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Monsters** · **Items** · **World Map** · **Map Navigator** · **KPQ** · **Citizenship** · **Crafting** · **Keep or sell** · **Changelog** · **Credits**.
+Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Monsters** · **Items** · **Skills** · **World Map** · **Map Navigator** · **KPQ** · **Citizenship** · **Crafting** · **Keep or sell** · **Changelog** · **Credits**.
 
 ## Ground rules (from Danny)
 - **Classic World only.** Never use modern/retail MapleStory info. 2008-era info only if confirmed to still hold in Classic.
@@ -43,6 +43,7 @@ src/js/47-keep.js     Keep or sell tab: items quests/recipes ask for, verdict + 
 src/js/48-monsters.js  Monsters tab: searchable list of D.mobdb + a page per monster (stats, spawns with minimap dots, drops, best farming maps via mapRates/buildAt)
 src/js/49-items.js    Items tab: every item (D.items) + a page per item (stats, drops, shops via D.ishop, recipes, quest rewards, quests/recipes that want it); any .ri icon or .itname click opens it
 src/js/50-builder.js  Character Builder: AP, skill build with per-job SP pools, damage calc, greedy auto-build; buildAt() = headless default build
+src/js/53-skills.js   Skills tab: every 1st/2nd job skill (D.skills + D.icons) with search/filters + a page per skill (levels, needs, unlocks)
 src/js/51-shot.js     screenshot reader (no server): un-doubles the game UI, finds icons by pixel match, reads numbers with the game's digit font (SHOT_FONT); reusable
 src/js/52-shotimport.js Character Builder "Import from screenshots": stat/equip/skill windows -> review form -> builder (via BLD from 50-builder.js)
 src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill; exports TRAVEL (travel model)
@@ -85,6 +86,6 @@ Danny's OK, fast-forward that branch to it (`git push origin HEAD:claude/trustin
   Palette is lavender/purple/grey; keep it. Both light and dark must work; no horizontal scroll at 390px.
 - Explanatory text goes in a collapsible `<details class="howto">` box at the top of a tab, as short bullet lists.
 - Tooltips: one floating `#qtip`; elements with `.qname` (quests), `.ri` (items), `.mname` (maps, `mapLink()`; a click opens its World Map card, 66-worldmap.js), `.nname` (NPCs, `npcLink()`) or `.mobname` (monsters, `mobLink()`) or `.itname` (item names; a click on it or a `.ri` icon opens the item page) get it via delegated listeners.
-- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, craft, craftlv, qcompact, keep, keephave, mobs, items, navi, wmap, expc).
+- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, craft, craftlv, qcompact, keep, keephave, mobs, items, skills, navi, wmap, expc).
 - Plain, game-player language on the page. Say when a number is estimated.
 - Add a dated entry to the Changelog tab (`#log` in src/index.html, newest first) for every user-visible change.

@@ -29,6 +29,7 @@
     <button role="tab" id="t-quests" aria-selected="false" data-tab="quests" data-cat="db" hidden>Quest Database</button>
     <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs" data-cat="db" hidden>Monsters</button>
     <button role="tab" id="t-items" aria-selected="false" data-tab="items" data-cat="db" hidden>Items</button>
+    <button role="tab" id="t-skills" aria-selected="false" data-tab="skills" data-cat="db" hidden>Skills</button>
     <button role="tab" id="t-wmap" aria-selected="false" data-tab="wmap" data-cat="world" hidden>World Map</button>
     <button role="tab" id="t-navi" aria-selected="false" data-tab="navi" data-cat="world" hidden>Map Navigator</button>
     <button role="tab" id="t-kpq" aria-selected="false" data-tab="kpq" data-cat="world" hidden>KPQ</button>
@@ -53,6 +54,7 @@
       <button class="hlink" data-go="quests"><b>Quest Database</b><span>Every launch quest with level, rewards, questlines and community picks.</span></button>
       <button class="hlink" data-go="mobs"><b>Monsters</b><span>Stats, spawns, drops and the best maps to farm each monster.</span></button>
       <button class="hlink" data-go="items"><b>Items</b><span>Every item: stats, who drops it, shops, recipes and quests that use it.</span></button>
+      <button class="hlink" data-go="skills"><b>Skills</b><span>Every 1st and 2nd job skill: what it does at each level and what it needs.</span></button>
     </div>
     <div class="homecat"><h2><button class="hcat" data-go-cat="world">World</button></h2>
       <button class="hlink" data-go="wmap"><b>World Map</b><span>Click any spot for its maps, monsters, NPCs, quests and EXP per hour.</span></button>
@@ -515,6 +517,34 @@
   <div id="itpage" hidden></div>
 </section>
 
+<section id="skills" hidden>
+  <details class="howto">
+    <summary>How to use the skill database</summary>
+    <ul>
+      <li>Every 1st and 2nd job skill in the launch game files, for all 14 jobs. 3rd job isn't in the launch, so it's left out.</li>
+      <li>Search by skill name, job or anything in its description or effects (e.g. "speed", "MP -", "Def."). Filter by class, job, 1st/2nd job and type. <b>Reset filters</b> clears everything. Click a column to sort.</li>
+      <li>Click a skill to open its page: description, the effect at every level, which skill it needs first and which skills it unlocks.</li>
+      <li>Names, icons, max levels, requirements and effects come straight from the game files. <b>Type</b> is our own label from the game files' skill kind (Debuff = lowers a monster's stats without dealing damage).</li>
+    </ul>
+  </details>
+  <div id="sklist">
+  <div class="controls">
+    <label>Search<input id="sksearch" type="search" placeholder="skill, job or effect"></label>
+    <label>Class<select id="skcls"><option value="">All</option><option>Warrior</option><option>Magician</option><option>Bowman</option><option>Thief</option></select></label>
+    <label>Job<select id="skjob"><option value="">All</option></select></label>
+    <label>Advancement<select id="sktier"><option value="">Both</option><option value="1">1st job</option><option value="2">2nd job</option></select></label>
+    <label>Type<select id="sktype"><option value="">All</option></select></label>
+    <button class="btn" id="skreset" type="button" style="align-self:flex-end">Reset filters</button>
+    <span class="pill p-hot" id="skcount" style="align-self:center"></span>
+  </div>
+  <div class="tblwrap"><table>
+    <thead id="skhead"><tr><th data-k="name"><button>Skill</button></th><th data-k="job"><button>Job</button></th><th data-k="type"><button>Type</button></th><th class="num" data-k="max"><button>Max</button></th><th>Needs</th><th>At max level</th></tr></thead>
+    <tbody id="skrows"></tbody>
+  </table></div>
+  </div>
+  <div id="skpage" hidden></div>
+</section>
+
 <section id="wmap" hidden>
   <details class="howto">
     <summary>How to use the world map</summary>
@@ -722,6 +752,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 14, 2026 · Skill database</h3><span class="pill p-hot">new</span></div>
+      <p>New <b>Skills</b> page under Databases: all 90 1st and 2nd job skills from the launch game files, searchable by name, job or effect, with class, job, advancement and type filters. Click a skill for its page: description, effect at every level, the skill it needs and the skills it unlocks.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · Character Builder: import from screenshots</h3><span class="pill p-hot">new</span></div>
       <p>Drop, pick or paste screenshots of your <b>Character Stat</b>, <b>Equipment Inventory</b> and <b>Skill Inventory</b> windows into the new box at the top of the Character Builder. It reads level, STR/DEX/INT/LUK, worn items (by icon) and skill levels, shows them for a check, then fills the build. The stat window shows totals, so the read gear's base stats are taken off to get your AP. Reading happens in the page; nothing is uploaded.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · Monsters: find who drops an item</h3><span class="pill p-hot">update</span></div>
