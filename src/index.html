@@ -446,7 +446,7 @@
     <div class="howgrid">
       <div><h4>The list</h4><ul>
         <li>Every monster you can meet at launch: field monsters, bosses, jump quests, KPQ and the 2nd job test maps. Orbis, El Nath and Forgotten Hollow monsters are left out.</li>
-        <li>Search by monster, map or drop. <b>Drops item</b> shows only monsters players report dropping that item (pick from the list or type part of a name). <b>Reset filters</b> clears everything. Click a column to sort. Click a monster (here or anywhere on the site) to open its page.</li>
+        <li>Search by monster, map or drop. <b>Drops item</b> shows only monsters players report dropping that item (pick from the list or type part of a name). <b>Weak to</b> keeps monsters the game files mark weak to that element (spells of it hit harder). <b>Reset filters</b> clears everything. Click a column to sort. Click a monster (here or anywhere on the site) to open its page.</li>
         <li><b>Best maps to farm it:</b> every regular map it spawns on, ranked by how many of it you'd kill per hour at your class and level (estimate, same model as Where to train). The minimap shows where it spawns.</li>
         <li><b>EXP/100 HP</b> = EXP per 100 HP of damage: higher is a more efficient kill.</li>
         <li>Stats, attacks, skills and spawns come straight from the launch game files.</li>
@@ -462,6 +462,7 @@
   <div class="controls">
     <label>Search<input id="mbsearch" type="search" placeholder="monster, map or drop"></label>
     <label>Type<select id="mbkind"><option value="">All</option><option value="field">Field monsters</option><option value="boss">Bosses</option><option value="jq">Jump quests</option><option value="kpq">KPQ</option><option value="job">2nd job test</option></select></label>
+    <label>Weak to<select id="mbweak"><option value="">Any</option><option>Fire</option><option>Ice</option><option>Lightning</option><option>Poison</option><option>Holy</option><option value="none">No weakness</option></select></label>
     <label>Drops item<input id="mbitem" type="search" list="mbitemlist" placeholder="item name"></label>
     <datalist id="mbitemlist"></datalist>
     <button class="btn" id="mbreset" type="button" style="align-self:flex-end">Reset filters</button>
@@ -482,6 +483,8 @@
       <div><h4>The list</h4><ul>
         <li>Every item in the launch game files: equipment, use items, etc items, setup items and scrolls.</li>
         <li>Search by item name or by a monster that drops it. Filter by type, equipment slot and job. Click a column to sort.</li>
+        <li><b>Type</b>: Weapons, Armor (hats, tops, bottoms, overalls, shoes, gloves, shields, capes) and Accessories (earrings) narrow equipment; Slot then lists only that group's slots.</li>
+        <li><b>Reset filters</b> clears the search and puts every filter back to its default.</li>
         <li>Click an item (here, or any item icon or item name anywhere on the site) to open its page.</li>
         <li><b>Has a known source</b> (on by default) hides items nothing is known to drop, sell, craft or give (event, cash and unused items are mostly these).</li>
         <li><b>Get it from</b> keeps only items with that source, e.g. Monster drops = something is reported to drop it.</li>
@@ -499,13 +502,14 @@
   <div id="itlist">
   <div class="controls">
     <label>Search<input id="itsearch" type="search" placeholder="item or monster"></label>
-    <label>Type<select id="itcat"><option value="">All</option><option value="Equip">Equipment</option><option value="Use">Use</option><option value="Etc">Etc</option><option value="Setup">Setup</option><option value="Scroll">Scrolls</option></select></label>
+    <label>Type<select id="itcat"><option value="">All</option><option value="Equip">All equipment</option><option value="Weapon">Weapons</option><option value="Armor">Armor</option><option value="Acc">Accessories</option><option value="Use">Use</option><option value="Etc">Etc</option><option value="Setup">Setup</option><option value="Scroll">Scrolls</option></select></label>
     <label>Slot<select id="itslot"><option value="">Any</option></select></label>
     <label>Job<select id="itjob"><option value="">Any</option><option>Beginner</option><option>Warrior</option><option value="Mage">Magician</option><option>Bowman</option><option>Thief</option></select></label>
     <label>Get it from<select id="itfrom"><option value="">Anywhere</option><option value="drop">Monster drops</option><option value="shop">NPC shops</option><option value="craft">Crafting</option><option value="quest">Quest rewards</option></select></label>
     <label>Used for<select id="ituse"><option value="">Anything</option><option value="craft">Crafting component</option><option value="quest">Quests ask for it</option></select></label>
     <label class="chk"><input type="checkbox" id="itsrc"> Has a known source</label>
     <label class="chk"><input type="checkbox" id="itnoq"> Hide quest items</label>
+    <button class="btn" id="itreset" type="button" style="align-self:flex-end">Reset filters</button>
     <span class="pill p-hot" id="itcount" style="align-self:center"></span>
   </div>
   <div class="tblwrap"><table>
@@ -522,7 +526,7 @@
     <summary>How to use the skill database</summary>
     <ul>
       <li>Every 1st and 2nd job skill in the launch game files, for all 14 jobs. 3rd job isn't in the launch, so it's left out.</li>
-      <li>Search by skill name, job or anything in its description or effects (e.g. "speed", "MP -", "Def."). Filter by class, job, 1st/2nd job and type. <b>Reset filters</b> clears everything. Click a column to sort.</li>
+      <li>Search by skill name, job or anything in its description or effects (e.g. "speed", "MP -", "Def."). Filter by class, job, 1st/2nd job and type. <b>Weak to</b> keeps monsters the game files mark weak to that element (spells of it hit harder). <b>Reset filters</b> clears everything. Click a column to sort.</li>
       <li>Click a skill to open its page: description, the effect at every level, which skill it needs first and which skills it unlocks.</li>
       <li>Names, icons, max levels, requirements and effects come straight from the game files. <b>Type</b> is our own label from the game files' skill kind (Debuff = lowers a monster's stats without dealing damage).</li>
     </ul>
@@ -752,6 +756,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 16, 2026 · Item and monster filters</h3><span class="pill p-hot">update</span></div>
+      <p>Items: the <b>Type</b> filter now also picks <b>Weapons</b>, <b>Armor</b> or <b>Accessories</b> (Slot then lists only that group's slots), and a <b>Reset filters</b> button puts every filter back to its default. Monsters: new <b>Weak to</b> filter (Fire, Ice, Lightning, Poison, Holy or no weakness), from the launch game files' element data; Reset filters clears it too.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 16, 2026 · Fresh meowdb drops</h3><span class="pill p-hot">update</span></div>
       <p>Monster drops re-pulled from meowdb player reports: 825 confirmed drops (was 708), 122 new reports across 66 monsters, 2 removed by meowdb (Mithril Ore from Fire Boar, Diamond Ore from Evil Eye). Shade has drops listed for the first time; Wraith, Zombie Lupin and Dark Stone Golem got the most new ones.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 14, 2026 · Skill database</h3><span class="pill p-hot">new</span></div>

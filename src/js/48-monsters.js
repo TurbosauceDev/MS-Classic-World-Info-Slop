@@ -22,10 +22,10 @@ for (const o of M) o.hay = [o.m.name, ...o.m.maps.map(x => x[1]), ...o.m.dr.map(
 const DROPN = {}; for (const o of M) for (const [iid, n] of o.m.dr) ((DROPN[n.toLowerCase()] = DROPN[n.toLowerCase()] || new Set())).add(String(iid));
 $("#mbitemlist").innerHTML = [...new Set(M.flatMap(o => o.m.dr.map(x => x[1])))].sort().map(n => `<option value="${esc(n)}">`).join("");
 
-let S = {q: "", item: "", kind: "", sort: "level", dir: 1, open: null, fc: "Warrior"};
+let S = {q: "", item: "", kind: "", weak: "", sort: "level", dir: 1, open: null, fc: "Warrior"};
 try { Object.assign(S, JSON.parse(localStorage.getItem("mobs") || "{}"), {q: "", item: "", open: null}) } catch(e) {}
 const save = () => { try { localStorage.setItem("mobs", JSON.stringify(S)) } catch(e) {} };
-$("#mbkind").value = S.kind;
+$("#mbkind").value = S.kind; $("#mbweak").value = S.weak;
 
 const qn = ([src, r]) => `<span class="name qname" tabindex="0" data-src="${src}" data-i="${(src === "cit" ? D.citq : D.quests).indexOf(r)}">${esc(r.name)}</span>`;
 const icon = (id, n) => D.items[id]
@@ -82,12 +82,14 @@ function page(o){
 
 const COLS = {name: o => o.m.name, level: o => o.m.level, hp: o => o.m.hp, exp: o => o.m.exp, ratio: o => o.ratio, eva: o => o.m.eva || 0,
   pdd: o => o.m.PDDamage || 0, mdd: o => o.m.MDDamage || 0, atk: o => o.m.PADamage || 0, acc: o => o.m.acc || 0};
+const weakOk = (m, w) => { const el = Object.entries(m.elements || {}).filter(([, v]) => v === "Weak").map(([e]) => e);
+  return !w || (w === "none" ? !el.length : el.includes(w)) };
 function render(){
   const q = S.q.trim().toLowerCase(), f = COLS[S.sort] || COLS.level, it = S.item.trim().toLowerCase();
   // exact item name if it is one, else any drop whose name contains the text
   const want = !it ? null : DROPN[it] ? x => DROPN[it].has(String(x[0])) : x => x[1].toLowerCase().includes(it);
   const hit = o => want && o.m.dr.filter(want);
-  const rows = M.filter(o => (!S.kind || o.kind === S.kind) && (!q || o.hay.includes(q)) && (!want || hit(o).length))
+  const rows = M.filter(o => (!S.kind || o.kind === S.kind) && weakOk(o.m, S.weak) && (!q || o.hay.includes(q)) && (!want || hit(o).length))
     .sort((a, b) => { const x = f(a), y = f(b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * S.dir || a.m.level - b.m.level });
   document.querySelectorAll("#mbhead th[data-k]").forEach(th => { const on = th.dataset.k === S.sort;
     th.setAttribute("aria-sort", on ? (S.dir > 0 ? "ascending" : "descending") : "none");
@@ -150,9 +152,10 @@ function show(){
 function openMob(id, scroll = true){ S.open = id; save(); show(); if (scroll) $("#mobs").scrollIntoView({block: "start"}) }
 $("#mbsearch").addEventListener("input", e => { S.q = e.target.value; render() });
 $("#mbitem").addEventListener("input", e => { S.item = e.target.value; render() });
-$("#mbreset").addEventListener("click", () => { Object.assign(S, {q: "", item: "", kind: "", sort: "level", dir: 1});
-  $("#mbsearch").value = $("#mbitem").value = $("#mbkind").value = ""; save(); render() });
+$("#mbreset").addEventListener("click", () => { Object.assign(S, {q: "", item: "", kind: "", weak: "", sort: "level", dir: 1});
+  $("#mbsearch").value = $("#mbitem").value = $("#mbkind").value = $("#mbweak").value = ""; save(); render() });
 $("#mbkind").addEventListener("change", e => { S.kind = e.target.value; save(); render() });
+$("#mbweak").addEventListener("change", e => { S.weak = e.target.value; save(); render() });
 document.querySelectorAll("#mbhead th[data-k] button").forEach(b => b.addEventListener("click", () => {
   const k = b.parentElement.dataset.k; S.dir = S.sort === k ? -S.dir : (k === "name" || k === "level" ? 1 : -1); S.sort = k; save(); render();
 }));

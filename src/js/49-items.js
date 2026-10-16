@@ -32,14 +32,21 @@ const I = Object.entries(D.items).map(([id, it]) => {
   return o;
 });
 const OPEN = {}; for (const o of I) OPEN[o.id] = o;
+// broad equipment groups for the Type filter: weapons, armor (incl. shields and capes), accessories (earrings)
+const grpOf = it => it.c !== "Equipment" ? "" : it.s === "Weapon" ? "Weapon" : it.s === "Earring" ? "Acc" : "Armor";
+for (const o of I) o.grp = grpOf(o.it);
+const catOk = (o, c) => !c || o.cat === c || o.grp === c;
 const SLOTS = [...new Set(I.filter(o => o.it.c === "Equipment").map(o => o.it.s === "Weapon" ? o.it.wt : o.it.s))].sort();
-$("#itslot").innerHTML += SLOTS.map(s => `<option>${esc(s)}</option>`).join("");
+const slotOpts = () => { const ok = SLOTS.filter(sl => I.some(o => o.it.c === "Equipment" && typeOf(o.it) === sl && catOk(o, S.cat)));
+  if (S.slot && !ok.includes(S.slot)) S.slot = "";
+  $("#itslot").innerHTML = `<option value="">Any</option>` + ok.map(s => `<option>${esc(s)}</option>`).join(""); $("#itslot").value = S.slot };
 
 let S = {q: "", cat: "", slot: "", job: "", src: true, noq: true, from: "", use: "", sort: "name", dir: 1, open: null, all: false};
 try { Object.assign(S, JSON.parse(localStorage.getItem("items") || "{}"), {q: "", open: null, all: false}) } catch(e) {}
 const save = () => { try { localStorage.setItem("items", JSON.stringify(S)) } catch(e) {} };
-for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"], ["from", "#itfrom"], ["use", "#ituse"]]) $(el).value = S[k];
-$("#itsrc").checked = S.src; $("#itnoq").checked = S.noq;
+const DEF = {cat: "", slot: "", job: "", src: true, noq: true, from: "", use: "", sort: "name", dir: 1};
+const sync = () => { for (const [k, el] of [["cat", "#itcat"], ["job", "#itjob"], ["from", "#itfrom"], ["use", "#ituse"]]) $(el).value = S[k];
+  $("#itsrc").checked = S.src; $("#itnoq").checked = S.noq; $("#itsearch").value = S.q; slotOpts() };
 
 const qn = ([src, r]) => `<span class="name qname" tabindex="0" data-src="${src}" data-i="${(src === "cit" ? D.citq : D.quests).indexOf(r)}">${esc(r.name)}</span>`;
 const mob = id => `<span class="mobname" tabindex="0" data-mob="${id}">${esc(D.mobdb[id].name)}</span> <span class="sub">Lv ${D.mobdb[id].level}</span>`;
@@ -53,6 +60,7 @@ const keyStats = it => { const s = it.st || {};
     s.incACC && `ACC +${s.incACC}`, s.incEVA && `AVOID +${s.incEVA}`, s.incSpeed && `Speed +${s.incSpeed}`, s.incJump && `Jump +${s.incJump}`,
     ...Object.entries(it.sp || {}).filter(([k]) => SPEC[k]).map(([k, v]) => SPEC[k].replace("{}", fmt(v)))].filter(Boolean).join(" · ") };
 const SRCPILL = {drop: ["drops", "p-warn"], shop: ["shop", "p-good"], craft: ["craft", "p-hot"], quest: ["quest", "p-hot"]};
+sync();
 
 function page(o){
   const it = o.it, s = it.st || {}, st = (k, v, t) => v == null || v === "" ? "" : `<div${t ? ` title="${esc(t)}"` : ""}><dt>${k}</dt><dd>${v}</dd></div>`;
@@ -108,7 +116,7 @@ const srcPills = o => o.src.map(k => `<span class="pill ${SRCPILL[k][1]}">${SRCP
 const COLS = {name: o => o.it.n, type: o => typeOf(o.it), lv: o => o.lv, price: o => o.it.p || 0, pw: o => PW[o.id]?.[0] || 0};
 function render(){
   const q = S.q.trim().toLowerCase(), f = COLS[S.sort] || COLS.name;
-  const rows = I.filter(o => (!S.cat || o.cat === S.cat) && (!S.slot || typeOf(o.it) === S.slot) && jobOk(o.it, S.job) && (!S.src || o.src.length) && (!S.noq || !o.quest) && (!S.from || o.src.includes(S.from)) && (!S.use || o.use.includes(S.use)) && (!q || o.hay.includes(q)))
+  const rows = I.filter(o => catOk(o, S.cat) && (!S.slot || typeOf(o.it) === S.slot) && jobOk(o.it, S.job) && (!S.src || o.src.length) && (!S.noq || !o.quest) && (!S.from || o.src.includes(S.from)) && (!S.use || o.use.includes(S.use)) && (!q || o.hay.includes(q)))
     .sort((a, b) => { const x = f(a), y = f(b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * S.dir || a.it.n.localeCompare(b.it.n) });
   document.querySelectorAll("#ithead th[data-k]").forEach(th => { const on = th.dataset.k === S.sort;
     th.setAttribute("aria-sort", on ? (S.dir > 0 ? "ascending" : "descending") : "none");
@@ -129,9 +137,10 @@ function show(){
 }
 function openItem(id, scroll = true){ S.open = String(id); save(); show(); if (scroll) $("#items").scrollIntoView({block: "start"}) }
 $("#itsearch").addEventListener("input", e => { S.q = e.target.value; S.all = false; render() });
-for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"], ["from", "#itfrom"], ["use", "#ituse"]]) $(el).addEventListener("change", e => { S[k] = e.target.value; S.all = false; save(); render() });
+for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"], ["from", "#itfrom"], ["use", "#ituse"]]) $(el).addEventListener("change", e => { S[k] = e.target.value; S.all = false; if (k === "cat") slotOpts(); save(); render() });
 $("#itsrc").addEventListener("change", e => { S.src = e.target.checked; save(); render() });
 $("#itnoq").addEventListener("change", e => { S.noq = e.target.checked; save(); render() });
+$("#itreset").addEventListener("click", () => { Object.assign(S, DEF, {q: "", all: false}); sync(); save(); render() });
 $("#itmore").addEventListener("click", () => { S.all = true; render() });
 document.querySelectorAll("#ithead th[data-k] button").forEach(b => b.addEventListener("click", () => {
   const k = b.parentElement.dataset.k; S.dir = S.sort === k ? -S.dir : (k === "name" || k === "type" ? 1 : -1); S.sort = k; save(); render();
