@@ -4,6 +4,8 @@ name: tracker
 on:
   push:
     tags: ["tracker-v*"]
+    branches: ["claude/project-thread-5h55q0"]   # test builds while the tracker is in progress
+    paths: ["tracker/**", ".github/workflows/tracker.yml"]
   workflow_dispatch:
 permissions:
   contents: write
