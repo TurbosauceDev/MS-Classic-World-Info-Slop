@@ -53,6 +53,15 @@
     <label>Goal: level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="off"></label>
   </div>
   <div class="card hidden" id="selfcheck"></div>
+  <div class="card" id="snaps"><div class="k">Start and end snapshots</div>
+    <div class="note">EXP/hr from two pictures, the way mapleexp.com does it: level and EXP % at the start and at the end. Taken by
+      themselves when tracking starts and as it goes; press a button to take one now. Fix a number by hand if it read wrong.</div>
+    <p><button id="snapStart" class="alt">Snap start</button> <button id="snapEnd" class="alt">Snap end</button></p>
+    <table>
+      <tr><td>Start</td><td>Lv <input type="number" id="s0lv" min="1" max="200" style="width:48px"></td><td><input type="number" id="s0pct" min="0" max="100" step="0.01" style="width:70px">%</td><td id="s0t" class="n"></td></tr>
+      <tr><td>End</td><td>Lv <input type="number" id="s1lv" min="1" max="200" style="width:48px"></td><td><input type="number" id="s1pct" min="0" max="100" step="0.01" style="width:70px">%</td><td id="s1t" class="n"></td></tr>
+    </table>
+    <div class="v" id="snapRate">-</div><div class="note" id="snapNote"></div></div>
   <div class="card grid">
     <div><div class="k">Kills/hr</div><div class="v" id="killsHr">-</div><div class="note" id="killsEst"></div></div>
     <div><div class="k">EXP/hr</div><div class="v" id="expHr">-</div><div class="note" id="expHr5"></div></div>

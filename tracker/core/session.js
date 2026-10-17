@@ -250,6 +250,26 @@
     return {expHr: hr, verdict, ref, peers: groups(maps.flatMap(m => byMap[m.map].filter(r => r.expHr >= m.expHr / 2 && r.expHr <= m.expHr * 2))), faster};
   }
 
-  const api = {createSession, createRunSlicer, speedCheck, IDLE_MS, RUN_MS};
+  // start/end snapshots (mapleexp.com's way: two screenshots, level + EXP % on each, elapsed time between them).
+  // level: the EXP table level whose total fits EXP / % (null when the % is too small to tell)
+  function levelOf(G, exp, pct){
+    if (!(pct > 0.5)) return null;
+    for (const [L, need] of Object.entries(G.exp)) if (Math.abs(exp / (pct / 100) - need) / need < 0.004) return +L;
+    return null;
+  }
+  // EXP gained from snapshot a to b ({level, exp}; exp optional, else pct of the level's total): the rest of a's level,
+  // every full level between, and b's EXP into its level. null when it can't be worked out.
+  function expBetween(G, a, b){
+    const into = s => s.exp != null ? s.exp : G.exp[s.level] ? s.pct / 100 * G.exp[s.level] : null;
+    if (!a?.level || !b?.level || b.level < a.level) return null;
+    const ea = into(a), eb = into(b);
+    if (ea == null || eb == null) return null;
+    if (a.level === b.level) return eb - ea;
+    let d = (G.exp[a.level] || 0) - ea + eb;
+    for (let L = a.level + 1; L < b.level; L++){ if (!G.exp[L]) return null; d += G.exp[L] }
+    return d;
+  }
+
+  const api = {createSession, createRunSlicer, speedCheck, levelOf, expBetween, IDLE_MS, RUN_MS};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindSession = api;
 })(typeof window !== "undefined" ? window : globalThis);

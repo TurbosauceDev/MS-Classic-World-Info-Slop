@@ -248,6 +248,10 @@ function tick(){
     for (const e of readers.readFrame(f, t, img)){
       session.add(e); slicer.add(e); log("event", e);
       if (e.type === "item") dropAlert(e.id);
+      if (e.type === "bar"){
+        if (!snaps.start) snap("start", f, false).catch(() => {});
+        else if (!snaps.end?.hand) snaps.end = {t, level: e.level || session.state.level, pct: e.pct, exp: e.exp, hand: false};
+      }
       if (check && e.type === "bar" && !check.bar){ check.bar = e.level ? "Lv " + e.level + ", " + e.pct + "%" : e.pct + "%"; check.late = check.ended }
       if (check && /^(exp|bonus|meso|item|itemraw)$/.test(e.type) && !check.lines){ check.lines = true; check.late = check.ended }
     }
@@ -260,13 +264,59 @@ function tick(){
     if (!ocrBusy && t - lastOcr > 5000){ lastOcr = t; ocrBusy = true; readMap(img, t).catch(() => {}).finally(() => ocrBusy = false) }
     else if (!ocrBusy && !settings.job && t - lastJob > 30e3){ lastJob = t; ocrBusy = true; readJob(img, t).catch(() => {}).finally(() => ocrBusy = false) }
     if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
-    render();
+    render(); renderSnaps();
   } catch (err){ if (err) $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
   // over 250 ms a frame, 10 times running: read once a second instead of twice
   const ms = Date.now() - t;
   slowTicks = ms > 250 ? slowTicks + 1 : 0;
   if (slowTicks >= 10 && FPS === 2){ FPS = 1; $("#status").textContent = "Reading once a second to keep your PC smooth (big screen)." }
   timer = setTimeout(tick, Math.max(50, 1000 / FPS - ms));
+}
+
+// start/end snapshots: {t, level, pct, exp?, file?, hand?}; a hand-fixed or button snapshot isn't replaced by the automatic ones
+const snaps = {start: null, end: null};
+const clock = t => new Date(t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
+function renderSnaps(){
+  for (const [i, k] of [[0, "start"], [1, "end"]]){
+    const sn = snaps[k], lv = $("#s" + i + "lv"), pc = $("#s" + i + "pct");
+    if (document.activeElement !== lv) lv.value = sn?.level ?? "";
+    if (document.activeElement !== pc) pc.value = sn?.pct ?? "";
+    $("#s" + i + "t").textContent = sn ? clock(sn.t) + (sn.file ? " · saved" : "") : "";
+  }
+  const a = snaps.start, b = snaps.end, d = a && b && b.t > a.t ? GrindSession.expBetween(G, a, b) : null, hrs = a && b ? (b.t - a.t) / 3.6e6 : 0;
+  $("#snapRate").textContent = d != null && hrs > 0 ? fmt(d / hrs) + " EXP/hr" : "-";
+  const live = session?.stats().exp;   // EXP the live count added up over (about) the same stretch
+  $("#snapNote").textContent = d == null ? (a && b ? "Can't work it out: check the levels (a level or % is missing, or the end is before the start)." : "")
+    : `${fmt(d)} EXP in ${Math.round(hrs * 60)} min (clock time, breaks included)`
+      + (live && d > 0 && !a.hand && !b.hand && Math.abs(live - d) > 0.25 * d ? ` · the live count added up ${fmt(live)} EXP; the snapshots are the safer number` : "");
+}
+// take a snapshot from the game picture now: the EXP bar's level and %, the time, and the frame saved as a picture
+async function snap(which, f = null, hand = true){
+  if (!f){
+    if (!video?.srcObject?.active) await startCapture();
+    f = grab();
+  }
+  const img = GrindReaders.native(f), bar = GrindReaders.readBar(img) || GrindReaders.readBarAny(f);
+  const level = bar && (GrindSession.levelOf(G, bar.exp, bar.pct) || session?.state.level) || null;
+  const sn = {t: Date.now(), level, pct: bar ? bar.pct : null, exp: bar && level ? bar.exp : undefined, hand};
+  snaps[which] = sn;
+  try {
+    const c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
+    const blob = await new Promise(r => c.toBlob(r, "image/png"));
+    await host.saveFrame(`snap-${which}-${new Date(sn.t).toISOString().slice(0, 19).replace(/:/g, "-")}.png`, new Uint8Array(await blob.arrayBuffer()));
+    sn.file = true;
+  } catch {}
+  if (hand) $("#status").textContent = bar ? `Snapshot (${which}): Lv ${level ?? "?"}, ${bar.pct}%.` : `Snapshot (${which}) taken, but the EXP bar didn't read: type the level and % in by hand.`;
+  renderSnaps();
+}
+for (const [i, k] of [[0, "start"], [1, "end"]]){
+  $("#snap" + (i ? "End" : "Start")).onclick = () => snap(k).catch(e => { $("#status").textContent = "Couldn't take the snapshot: " + e.message });
+  // typed by hand: the level and % win over what was read; the EXP number goes (it was for the old reading)
+  for (const f of ["lv", "pct"]) $("#s" + i + f).onchange = () => {
+    const lv = +$("#s" + i + "lv").value || null, pc = $("#s" + i + "pct").value === "" ? null : +$("#s" + i + "pct").value;
+    snaps[k] = {t: snaps[k]?.t || Date.now(), level: lv, pct: pc, hand: true, file: snaps[k]?.file};
+    renderSnaps();
+  };
 }
 
 let starting = false, ICONS = null;
@@ -281,6 +331,7 @@ async function start(){
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
   check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   barSeen = false; goneSince = null; levelsShown = 0;
+  snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
   readers = GrindReaders.createReaders(G, ICONS); mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
@@ -288,7 +339,8 @@ async function start(){
   $("#go").textContent = "Stop";
 }
 async function stop(){
-  log("stop", {}); if (check && !check.ended){ check = null; renderCheck() }
+  log("stop", {});
+  if (video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {}); if (check && !check.ended){ check = null; renderCheck() }
   clearTimeout(timer); timer = null; $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   // a failed save (disk full, folder locked) must not leave the button saying Stop

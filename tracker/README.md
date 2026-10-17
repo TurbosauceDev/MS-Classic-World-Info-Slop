@@ -33,6 +33,15 @@ npm start           # run it (Windows, Electron)
   potion/food/arrow/star icons (gamedata icons, from the site's item icons). A count that drops (confirmed by the next
   read) = used; drops over 20 at once are ignored (sold/stored). Cost = cheapest NPC shop price (D.ishop), else the
   player-shop median. tests/inventory.test.js.
+- Item counts in the tracker's own (video) frames come out a few shades off, so ink is "white" on the top 4 rows and a
+  per-row light-blue band below (tests/frames-inv/video-a.png, Danny's KPQ run). Light-blue bits with no white above
+  (icon edges, the selected slot's frame) are skipped; a 1-wide column without outline above and below is a window edge.
+- EXP bar readings whose EXP / % fits no level's total are dropped (in the reader and again in the session): a
+  misread number ("1 [68.01%]") used to count as a death and then as +32k EXP.
+- Start/end snapshots (mapleexp.com's method): level + EXP % at the start and the end, EXP/hr = EXP between them /
+  clock time. Taken by themselves (first bar read, Stop; pictures saved as snap-*.png) or with Snap start / Snap end;
+  level and % can be typed by hand. Shown next to the live count, with a note when the two disagree by over 25%.
+- Always on top: "screen-saver" level, re-asserted on blur and every 5 s (setting "Keep this window on top").
 - Meso total: the inventory window's meso field (black 8-row digits on white) gives real money in/out, shop trips
   included. All ten digits are known (learned from real screenshots).
 - Arrows for Bows/Crossbows: 0.5 mesos each (Danny, 2026-10-17: not in our shop data); Bronze 2 (shop data).

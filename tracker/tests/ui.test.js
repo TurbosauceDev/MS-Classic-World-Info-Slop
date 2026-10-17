@@ -62,6 +62,14 @@ const path = require("path"), {chromium} = require("playwright");
   const rep = await page.evaluate(() => [window.report, window.opened]);
   if (!rep[0] || rep[0].frames < 1 || rep[0].info.note !== "map read wrong" || !rep[0].info.log.some(l => l.kind === "event") || !rep[0].info.log.some(l => l.kind === "status")
     || !rep[0].info.check || rep[1] !== "report-2026-10-17T20-00-00") throw new Error("report: " + JSON.stringify(rep).slice(0, 300));
+  // snapshots: typed by hand (Lv 25, 46.61% -> 71.40% over 22 min, Danny's KPQ run) -> about 31,900 EXP/hr
+  const sn = await page.evaluate(() => { snaps.start = {t: Date.now() - 22 * 60e3, level: 25, pct: 46.61, hand: true}; snaps.end = null;
+    const set = (id, v) => { const e = document.querySelector(id); e.value = v; e.onchange() };
+    set("#s1lv", 25); set("#s1pct", 71.40); return [document.querySelector("#snapRate").textContent, document.querySelector("#snapNote").textContent] });
+  const want = Math.round(0.2479 * 47216 / (22 / 60));
+  if (Math.abs(+sn[0].replace(/\D/g, "") - want) > want * 0.01 || !/22 min/.test(sn[1])) throw new Error("snapshots: " + JSON.stringify(sn) + " want ~" + want);
+  await page.click("#snapEnd"); await page.waitForTimeout(200);   // a button snapshot from the (test) game picture: saved, replaces the typed end
+  if (!(await page.evaluate(() => snaps.end.file && snaps.end.hand))) throw new Error("snap end button");
   await page.click("#go");
   await page.waitForTimeout(200);
   const saved = await page.evaluate(() => window.saved);

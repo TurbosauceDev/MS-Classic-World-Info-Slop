@@ -182,4 +182,11 @@ st = s.stats();
 assert.deepStrictEqual(st.used.map(u => [u.id, u.n, u.total]), [["2000002", 4, 4 * G.buy["2000002"]], ["2999999", 40, null]]);
 assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an hour: cost x2 per hour");
 
+// start/end snapshots: Danny's KPQ run (Lv 25, 46.61% -> 71.40%) and one across a level-up
+{ const {expBetween, levelOf} = require("../core/session.js"), n = G.exp[25];
+  assert.ok(Math.abs(expBetween(G, {level: 25, pct: 46.61}, {level: 25, pct: 71.40}) - 0.2479 * n) < 1, "same level");
+  assert.strictEqual(expBetween(G, {level: 24, exp: 100}, {level: 26, exp: 50}), G.exp[24] - 100 + G.exp[25] + 50, "across levels");
+  assert.strictEqual(expBetween(G, {level: 25, pct: 50}, {level: 24, pct: 10}), null, "level went down: no answer");
+  assert.strictEqual(levelOf(G, Math.round(0.7094 * n), 70.94), 25, "level from EXP / %");
+  assert.strictEqual(levelOf(G, 1, 68.01), null, "misread EXP fits no level") }
 console.log("core tests passed");
