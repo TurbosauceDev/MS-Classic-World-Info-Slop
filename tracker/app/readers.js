@@ -29,8 +29,13 @@
 
   // 1 game pixel per pixel: in a picture scaled up k times, (nearly) every color change between neighbors falls on a block
   // edge. Find the largest k (2-4) and offset where >= 85% of the sharp changes do. Tolerant: video capture blurs colors a little.
-  function native(img){
-    const {w, h, d} = img, step = (i, j) => Math.abs(d[i] - d[j]) + Math.abs(d[i + 1] - d[j + 1]) + Math.abs(d[i + 2] - d[j + 2]) > 150;
+  // cached = true (the live tracker): the scale found is reused for 20 frames of the same size, as finding it is the slow
+  // part (a pass over the whole frame) and it doesn't change while playing
+  let scaleMemo = null;
+  function native(img, cached = false){
+    const {w, h, d} = img;
+    if (cached && scaleMemo && scaleMemo.w === w && scaleMemo.h === h && scaleMemo.uses++ < 20) return shrink(img, scaleMemo.best);
+    const step = (i, j) => Math.abs(d[i] - d[j]) + Math.abs(d[i + 1] - d[j + 1]) + Math.abs(d[i + 2] - d[j + 2]) > 150;
     const hist = {x: new Array(12).fill(0), y: new Array(12).fill(0)};
     for (let y = 1; y < h - 1; y += 3) for (let x = 1; x < w - 1; x++){ const i = (y * w + x) * 4; if (step(i, i + 4)) hist.x[x % 12]++ }
     for (let x = 1; x < w - 1; x += 3) for (let y = 1; y < h - 1; y++){ const i = (y * w + x) * 4; if (step(i, i + w * 4)) hist.y[y % 12]++ }
@@ -41,7 +46,10 @@
       const px = fx.indexOf(Math.max(...fx)), py = fy.indexOf(Math.max(...fy));
       if (sx > 200 && sy > 200 && fx[px] >= sx * 0.85 && fy[py] >= sy * 0.85) best = {k, ox: (px + 1) % k, oy: (py + 1) % k};
     }
-    const {k, ox, oy} = best;
+    if (cached) scaleMemo = {w, h, best, uses: 0};
+    return shrink(img, best);
+  }
+  function shrink({w, h, d}, {k, ox, oy}){
     if (k === 1) return {w, h, d, k};
     const W = Math.floor((w - ox) / k), H = Math.floor((h - oy) / k), out = new Uint8ClampedArray(W * H * 4);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++){
@@ -134,8 +142,10 @@
     for (const f of DIG){ let d = 0; for (let i = 0; i < 35; i++) if (bits[i] !== f.bits[i]) d++; if (d < bd){ bd = d; best = f.ch } }
     return bd <= 7 ? best : null;
   }
-  function readBarAny(img){
-    const y0 = img.h < 200 ? 0 : Math.floor(img.h * 0.78), G = blobs(img, 0, y0, img.w, img.h, isGreen), W = blobs(img, 0, y0, img.w, img.h, isWhite);
+  // band: {y0, y1} rows to search (the live tracker passes the rows where it found the bar last time: about 5x faster)
+  function readBarAny(img, band = null){
+    const y0 = band ? Math.max(0, band.y0) : img.h < 200 ? 0 : Math.floor(img.h * 0.78), y1 = band ? Math.min(img.h, band.y1) : img.h;
+    const G = blobs(img, 0, y0, img.w, y1, isGreen), W = blobs(img, 0, y0, img.w, y1, isWhite);
     const br = G.out.filter(b => b.h >= 5 && b.w <= 0.6 * b.h).sort((a, b) => a.x - b.x);
     const found = [];
     for (const o of br){
@@ -157,12 +167,12 @@
       // % part: always two decimals, so its digits are enough (the dot is often too faint to see once scaled)
       const pd = digits(inside), ps = pd.includes(null) || pd.length < 3 ? "" : pd.slice(0, -2).join("") + "." + pd.slice(-2).join("");
       if (!expD.length || expD.includes(null) || !ps) continue;
-      found.push({cy: o.cy, x: o.x, exp: +expD.join(""), pct: +ps});
+      found.push({cy: o.cy, x: o.x, bh, exp: +expD.join(""), pct: +ps});
     }
     if (!found.length) return null;
     const low = Math.max(...found.map(f => f.cy));   // the status bar is the lowest line; EXP is the right-most value on it
     const f = found.filter(f => f.cy >= low - 4).sort((a, b) => b.x - a.x)[0];
-    return {exp: f.exp, pct: f.pct};
+    return {exp: f.exp, pct: f.pct, y: y0 + f.cy, bh: f.bh};
   }
 
   // ---- pickup messages (bottom right) ----
@@ -357,16 +367,18 @@
       }
       if (num) out.push(num);
     }
-    return out.filter(m => !m.bad).map(({x, y, n, end}) => ({x, y, n, end}));
+    // slot: the left edge of the icon slot. Counts start 1 px in, but a leading 1 or 7 only has ink further right (3 / 2 px),
+    // so the slot (not the first ink) is what stays put when 10 becomes 9 or 100 becomes 99
+    return out.filter(m => !m.bad).map(({x, y, n, end}) => ({x, y, n, end, slot: x - ({1: 3, 7: 2}[String(n)[0]] ?? 1)}));
   }
   // which icon sits above a count: icons are drawn bottom-aligned 3 px under the digits and centered on the 32 px slot;
   // the best color match (digits left out) when it's clearly the best. icons: [{id, w, h, d}] (loadIcons)
   function iconAt(img, num, icons, dbg){
     let best = null, second = Infinity;
     for (const ic of icons){
-      const x0 = num.x + 15 - (ic.w >> 1), y0 = num.y + 3 - ic.h;
+      const x0 = (num.slot ?? num.x - 1) + 16 - (ic.w >> 1), y0 = num.y + 3 - ic.h;   // centered on the 32 px slot
       let sc = Infinity;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -3; dx <= 1; dx++){   // -3: a leading 1 or 7 starts right of the usual digit cell
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){
         let s = 0, k = 0;
         for (let y = 0; y < ic.h; y += 1) for (let x = 0; x < ic.w; x += 1){
           const j = (y * ic.w + x) * 4; if (ic.d[j + 3] < 250) continue;
@@ -449,9 +461,9 @@
       prev = cur;
       return cur.slice(cur.length - n);
     }
-    function readFrame(raw, t){
-      const img = raw.k ? raw : native(raw), ev = [];
-      const bar = readBar(img) || readBarAny(raw);   // pixel-exact fast path, else any scale
+    function readFrame(raw, t, nat = null){   // nat: the native frame, when the caller already made it
+      const img = nat || (raw.k ? raw : native(raw)), ev = [];
+      const bar = readBar(img) || barAny(raw, t);   // pixel-exact fast path, else any scale
       // a new bar value counts when its EXP and % agree for the level (EXP / level total = %), or when it's read the same
       // twice in a row (after a level-up); one misread digit would otherwise add fake EXP
       const key = bar && bar.exp + "/" + bar.pct, steady = key && key === barNext;
@@ -490,7 +502,7 @@
     function readUse(img, t){
       const nums = readCounts(img), drops = {}, now = new Map();
       for (const num of nums){
-        const key = num.x + "," + num.y, sample = [-20, -14, -8].map(dy => { const i = ((num.y + dy) * img.w + num.x + 15) * 4; return img.d[i] + "," + img.d[i + 1] + "," + img.d[i + 2] }).join("|");
+        const key = num.slot + "," + num.y, sample = [-20, -14, -8].map(dy => { const i = ((num.y + dy) * img.w + num.slot + 16) * 4; return img.d[i] + "," + img.d[i + 1] + "," + img.d[i + 2] }).join("|");
         let id = iconCache.get(key)?.[0] === sample ? iconCache.get(key)[1] : undefined;
         if (id === undefined){ id = iconAt(img, num, icons); if (iconCache.size > 500) iconCache.clear(); iconCache.set(key, [sample, id]) }
         if (!id) continue;
@@ -508,6 +520,14 @@
       // once a minute while counts are visible: the session knows "nothing used" is a real 0, not "couldn't see"
       if (now.size && t - lastSeenEv >= 60e3){ lastSeenEv = t; ev.push({t, type: "useseen"}) }
       return ev;
+    }
+    // any-scale EXP bar: first in the rows it was found in last time; the whole bottom of the screen at most once a second
+    let barBand = null, lastFullBar = -Infinity;
+    function barAny(raw, t){
+      let b = barBand && readBarAny(raw, barBand);
+      if (!b && t - lastFullBar >= 1000){ lastFullBar = t; b = readBarAny(raw) }
+      if (b) barBand = {y0: Math.floor(b.y - 2 * b.bh), y1: Math.ceil(b.y + 2 * b.bh)};
+      return b && {exp: b.exp, pct: b.pct};
     }
     let info = {bar: false, partyWindow: null, counts: 0};
     return {readFrame, get info(){ return info }};

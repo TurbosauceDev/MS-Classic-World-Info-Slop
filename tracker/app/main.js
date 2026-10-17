@@ -61,13 +61,14 @@ ipcMain.handle("settings", (_, s) => {
   if (!cur.install) cur.install = require("crypto").randomUUID();   // random ID of this copy: one vote per player
   writeSettings({...cur, ...(s || {})});
   if (s && "onTop" in s) win?.setAlwaysOnTop(!!s.onTop);
+  if (s && s.share === false) fs.writeFileSync(QUEUE, "[]");   // sharing turned off: runs still waiting to go up are dropped, not sent later
   return readSettings();
 });
 // a finished 15-minute run (sharing on): queue it, then send everything queued. Kept until the server answers.
 const readQueue = () => { try { return JSON.parse(fs.readFileSync(QUEUE, "utf8")) } catch { return [] } };
 let flushing = false;
 async function flushRuns(){
-  if (!SERVER || flushing) return;
+  if (!SERVER || flushing || !readSettings().share) return;
   flushing = true;
   try {
     const q = readQueue(), left = [];

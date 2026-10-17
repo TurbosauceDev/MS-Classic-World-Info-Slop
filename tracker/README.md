@@ -33,6 +33,13 @@ npm start           # run it (Windows, Electron)
   potion/food/arrow/star icons (gamedata icons, from the site's item icons). A count that drops (confirmed by the next
   read) = used; drops over 20 at once are ignored (sold/stored). Cost = cheapest NPC shop price (D.ishop), else the
   player-shop median. tests/inventory.test.js.
+- Meso total: the inventory window's meso field (black 8-row digits on white) gives real money in/out, shop trips
+  included. Only the digits seen so far (4, 5, 6, 8) are known; a total with another digit isn't read yet.
+- Arrows for Bows/Crossbows: 0.5 mesos each (Danny, 2026-10-17: not in our shop data); Bronze 2 (shop data).
+- Shared runs carry usedCost (mesos spent on items used; null when no item counts were on screen). The server stores
+  deaths, start hour and usedCost in run_extra; the site shows "pots/ammo" per map and Frugal mode uses it.
+- Speed: frames are un-doubled once per tick (scale re-detected every 20 frames) and the any-scale EXP bar reader
+  searches the rows it found the bar in last time first.
 - Auto-pause: EXP bar and minimap both gone for 3 s (Cash Shop, channel change) = paused; that time is left out of
   active time and of 15-minute runs. Level-ups are logged with the farming time each level took (History).
 - Runs carry the UTC hour they started; the server's summary has "times" (best time to farm per map, each run against

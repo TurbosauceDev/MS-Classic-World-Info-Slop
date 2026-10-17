@@ -27,14 +27,16 @@ const WANT = [[91, "2010003"], [85, "2010005"], [29, "2000002"], [8, "2000001"],
       for (const q of n29) for (let y = -8; y <= 0; y++) for (let x = 0; x < 6; x++){ const s = ((n8.y + y) * img.w + n8.x + x) * 4, t = ((q.y + y) * img.w + q.x + 8 + x) * 4; for (let k = 0; k < 4; k++) d2[t + k] = d.data[s + k] }
       const img2 = {...img, d: d2};
       ev.push(...rd.readFrame(img2, 2000), ...rd.readFrame(img2, 4000), ...rd.readFrame(img2, 6000));
-      const wallet = GrindReaders.readMesoTotal(img);
-      return {wallet, found, dbg, ms, used: ev.filter(e => e.type === "use"), n29: n29.length};
+      const wallet = GrindReaders.readMesoTotal(img), slots = new Set(GrindReaders.readCounts(img).map(n => n.slot)).size;
+      return {slots, wallet, found, dbg, ms, used: ev.filter(e => e.type === "use"), n29: n29.length};
     }, fs.readFileSync(path.join(dir, name)).toString("base64"));
     const miss = WANT.filter(([n, id]) => !r.found.some(([m, i]) => m === n && i === id));
     const wrong = r.found.filter(([n, id]) => id && !WANT.some(([m, i]) => m === n && i === id));
     const used = JSON.stringify(r.used.map(e => [e.id, e.n]));
     if (r.wallet !== 4685) console.log("wallet read", r.wallet);
-    const ok = r.wallet === 4685 && !miss.length && !wrong.length && used === '[["2000002",1]]';
+    // 5 Use-tab columns + 3 quick-slot columns with counts: "1000", "10", "7" and "2" in one column share one slot edge
+    if (r.slots !== 8) console.log("slot columns", r.slots);
+    const ok = r.slots === 8 && r.wallet === 4685 && !miss.length && !wrong.length && used === '[["2000002",1]]';
     if (!ok) fail++;
     if (process.env.V) console.log(JSON.stringify(r.found), JSON.stringify(r.dbg));
     console.log(name, ok ? "ok" : "FAIL", Math.round(r.ms) + " ms", miss.length ? "missing " + JSON.stringify(miss) : "", wrong.length ? "wrong " + JSON.stringify(wrong) : "", "used " + used, "29s " + r.n29);

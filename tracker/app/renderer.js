@@ -126,8 +126,8 @@ async function toPng(c){
 }
 // job from the status bar every 30 s, when the player left the job on "Auto": taken once the same job is read twice running
 let lastJob = 0, jobSeen = null, jobNow = null;
-async function readJob(f, t){
-  const sess = session, sl = slicer, c = GrindReaders.jobTextCrop(GrindReaders.native(f));
+async function readJob(img, t){
+  const sess = session, sl = slicer, c = GrindReaders.jobTextCrop(img);
   if (!c){ if (check && !check.job) check.jobWhy = "The level and job text on the status bar wasn't found."; return }
   const text = await host.ocr(await toPng(c)), job = GrindReaders.jobFromText(text);
   log("job", {job});   // not the OCR text: the character name sits in the same box
@@ -138,9 +138,9 @@ async function readJob(f, t){
 
 // map name every 5 s: cut the minimap title out, OCR it in the main process, take it once the same map is read twice in a row
 let ocrBusy = false, lastOcr = 0, mapSeen = null, mapNow = null, mapMissing = 0;
-async function readMap(f, t){
+async function readMap(img, t){
   const sess = session, sl = slicer;   // an OCR that finishes after Stop/Start belongs to the old session
-  const c = GrindReaders.mapTextCrop(GrindReaders.native(f));
+  const c = GrindReaders.mapTextCrop(img);
   // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
   if (!c){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
   mapMissing = 0;
@@ -219,7 +219,7 @@ function autoPause(f, info, t){
   if (info.bar){ goneSince = null; if (paused){ const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Back in the game: tracking again." } return }
   if (paused || t - lastGoneCheck < 1000) return;
   lastGoneCheck = t;
-  if (GrindReaders.mapTextCrop(GrindReaders.native(f))){ goneSince = null; return }   // minimap still there: just the bar covered
+  if (GrindReaders.mapTextCrop(f)){ goneSince = null; return }   // minimap still there: just the bar covered
   goneSince ??= t;
   if (t - goneSince >= 3000){
     const e = {t: Math.max(goneSince, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); log("event", e);
@@ -243,9 +243,9 @@ function tick(){
     // game closed: the capture ends and the last frame would be read forever; minimized: no picture until it's back
     if (!video.srcObject?.active){ $("#status").textContent = "The game window closed. Press Stop, then Start once it's back."; throw null }
     if (!video.videoWidth){ $("#status").textContent = "No picture from the game (minimized?). Waiting..."; throw null }   // skip this tick
-    const f = grab();
+    const f = grab(), img = GrindReaders.native(f, true);   // un-doubled once per frame, shared by every reader
     keepFrame(t);
-    for (const e of readers.readFrame(f, t)){
+    for (const e of readers.readFrame(f, t, img)){
       session.add(e); slicer.add(e); log("event", e);
       if (e.type === "item") dropAlert(e.id);
       if (check && e.type === "bar" && !check.bar){ check.bar = e.level ? "Lv " + e.level + ", " + e.pct + "%" : e.pct + "%"; check.late = check.ended }
@@ -254,11 +254,11 @@ function tick(){
     const info = readers.info;
     if (check && info.useSpots && !check.use){ check.use = info.useSpots + " item count" + (info.useSpots > 1 ? "s" : ""); check.late = check.ended }
     if (check && info.partyWindow > 1 && !check.party){ check.party = info.partyWindow; check.late = check.ended }
-    autoPause(f, info, t);
+    autoPause(img, info, t);
     if (check && (!check.ended || check.late)){ check.late = false; renderCheck() }   // a ✗ turns ✓ when it starts working
     // one OCR at a time (the first can take seconds): the map every 5 s, the job every 30 s in between
-    if (!ocrBusy && t - lastOcr > 5000){ lastOcr = t; ocrBusy = true; readMap(f, t).catch(() => {}).finally(() => ocrBusy = false) }
-    else if (!ocrBusy && !settings.job && t - lastJob > 30e3){ lastJob = t; ocrBusy = true; readJob(f, t).catch(() => {}).finally(() => ocrBusy = false) }
+    if (!ocrBusy && t - lastOcr > 5000){ lastOcr = t; ocrBusy = true; readMap(img, t).catch(() => {}).finally(() => ocrBusy = false) }
+    else if (!ocrBusy && !settings.job && t - lastJob > 30e3){ lastJob = t; ocrBusy = true; readJob(img, t).catch(() => {}).finally(() => ocrBusy = false) }
     if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
     render();
   } catch (err){ if (err) $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
