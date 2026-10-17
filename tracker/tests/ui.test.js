@@ -6,7 +6,7 @@ const path = require("path"), {chromium} = require("playwright");
   const page = await browser.newPage(), errors = [];
   page.on("pageerror", e => errors.push(e.message));
   await page.addInitScript(() => {
-    window.host = {gameFound: async () => true, settings: async () => ({share: true, idleSec: 60}),
+    window.host = {gameFound: async () => true, wholeScreen: async on => on, settings: async () => ({share: true, idleSec: 60}),
       saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", openFolder: async () => {}};
     navigator.mediaDevices.getDisplayMedia = async () => {
       const c = document.createElement("canvas"); c.width = 800; c.height = 600;

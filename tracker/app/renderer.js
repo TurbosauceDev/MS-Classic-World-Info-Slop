@@ -4,10 +4,25 @@ const FPS = 2;
 let session = null, readers = null, video = null, timer = null, settings = {};
 const canvas = document.createElement("canvas"), g = canvas.getContext("2d", {willReadFrequently: true});
 
-async function startCapture(){
+async function openStream(){
+  video?.srcObject?.getTracks().forEach(tr => tr.stop());
   const stream = await navigator.mediaDevices.getDisplayMedia({video: {frameRate: FPS}, audio: false});
   video = document.createElement("video"); video.srcObject = stream; video.muted = true; await video.play();
-  return stream;
+  await new Promise(r => setTimeout(r, 700));   // first frames can be blank while capture starts
+}
+// a frame that is (almost) all black: the game window couldn't be captured
+function isBlack(){
+  const f = grab(), step = Math.max(4, (f.w * f.h / 5000 | 0) * 4);
+  for (let i = 0; i < f.d.length; i += step) if (f.d[i] + f.d[i + 1] + f.d[i + 2] > 24) return false;
+  return true;
+}
+async function startCapture(){
+  await host.wholeScreen(false); await openStream();
+  if (isBlack()){
+    await host.wholeScreen(true); await openStream();
+    $("#status").textContent = isBlack() ? "Capture is black even for the whole screen. Try windowed mode in the game's settings."
+      : "Game window came back black, so this is reading the whole screen instead.";
+  } else $("#status").textContent = "Reading the MapleStory window.";
 }
 function grab(){
   canvas.width = video.videoWidth; canvas.height = video.videoHeight;

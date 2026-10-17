@@ -9,10 +9,18 @@ const readSettings = () => { try { return JSON.parse(fs.readFileSync(SETTINGS, "
 const writeSettings = s => fs.writeFileSync(SETTINGS, JSON.stringify(s, null, 1));
 const SESSIONS = path.join(app.getPath("userData"), "sessions");   // finished sessions, kept locally either way
 
-let win;
+// Windows Graphics Capture (what OBS uses) instead of the old GDI window grab, which gives black frames for DirectX games
+app.commandLine.appendSwitch("enable-features", "WebRtcAllowWgcWindowCapturer,WebRtcAllowWgcScreenCapturer,AllowWgcWindowCapturer,AllowWgcScreenCapturer");
+
+let win, wholeScreen = false;   // fallback when the game window still comes back black: the readers find the UI anywhere on screen
 async function gameSource(){
   const srcs = await desktopCapturer.getSources({types: ["window"], thumbnailSize: {width: 0, height: 0}});
-  return srcs.find(s => /maplestory/i.test(s.name)) || null;
+  return srcs.find(s => /^maplestory$/i.test(s.name)) || srcs.find(s => /maplestory/i.test(s.name) && !/chrome|launcher|tracker/i.test(s.name)) || null;
+}
+async function captureSource(){
+  if (!wholeScreen) return gameSource();
+  const [screen] = await desktopCapturer.getSources({types: ["screen"], thumbnailSize: {width: 0, height: 0}});
+  return screen || null;
 }
 
 app.whenReady().then(() => {
@@ -20,7 +28,7 @@ app.whenReady().then(() => {
     webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true}});
   // getDisplayMedia() in the page gets the game window, chosen here (no picker)
   session.defaultSession.setDisplayMediaRequestHandler(async (req, cb) => {
-    const src = await gameSource();
+    const src = await captureSource();
     cb(src ? {video: src} : {});
   });
   win.loadFile(path.join(__dirname, "index.html"));
@@ -29,6 +37,7 @@ app.whenReady().then(() => {
 });
 app.on("window-all-closed", () => app.quit());
 
+ipcMain.handle("whole-screen", (_, on) => { wholeScreen = !!on; return wholeScreen });
 ipcMain.handle("game-found", async () => !!(await gameSource()));
 ipcMain.handle("settings", (_, s) => { if (s) writeSettings({...readSettings(), ...s}); return readSettings() });
 ipcMain.handle("save-session", (_, summary) => {
