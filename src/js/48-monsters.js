@@ -41,7 +41,7 @@ function confirmed(id){
   if (!c) return "";
   const items = Object.entries(c.items).sort((a, b) => b[1] - a[1]);
   return `<h4>Confirmed Drops <span class="sub">(${fmt(c.kills)} kills by ${c.players} tracker player${c.players > 1 ? "s" : ""}, read ${esc(D.shared.read)})</span></h4>
-    ${items.length ? `<div class="mdrops">${items.map(([iid, n]) => `<span class="mdrop">${icon(iid)}<span><span class="itname" tabindex="0" data-item="${iid}">${esc(D.items[iid].n)}</span> <span class="sub">×${fmt(n)}, ${n >= c.kills ? `about ${(n / c.kills).toFixed(1)} per kill` : `about 1 per ${fmt(Math.round(c.kills / n))} kills`}</span></span></span>`).join("")}</div>` : `<p class="sub">No items picked up yet.</p>`}
+    ${items.length ? `<div class="mdrops">${items.map(([iid, n]) => `<span class="mdrop">${icon(iid)}<span><span class="itname" tabindex="0" data-item="${iid}">${esc(D.items[iid].n)}</span> <span class="sub">×${fmt(n)}, ${dropRate(n, c.kills)}</span></span></span>`).join("")}</div>` : `<p class="sub">No items picked up yet.</p>`}
     ${c.mesoDrops ? `<p class="sub">Mesos: ${fmt(Math.round(c.mesos / c.mesoDrops))} per pickup, ${fmt(Math.round(c.mesos / c.kills))} per kill</p>` : ""}
     <p class="sub">Only what the sharing player picked up themselves, so real drop rates are at least this.</p>`;
 }

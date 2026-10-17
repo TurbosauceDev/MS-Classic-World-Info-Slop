@@ -21,6 +21,8 @@ CREATE INDEX IF NOT EXISTS runs_ipday ON runs (ipday);
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
 -- party code (salted hash) a run was sent with: one party = one group in the "3 players" rules
 CREATE TABLE IF NOT EXISTS run_groups (run_id INTEGER PRIMARY KEY, grp TEXT NOT NULL);
+-- deaths in a run (EXP bar drops without a level-up), from tracker 0.2.2 on; a table of its own so schema.sql stays re-runnable
+CREATE TABLE IF NOT EXISTS run_deaths (run_id INTEGER PRIMARY KEY, deaths INTEGER NOT NULL);
 -- party view: each tracker with a party code posts its live numbers about once a minute; rows older than an hour are deleted
 CREATE TABLE IF NOT EXISTS party_live (grp TEXT NOT NULL, install TEXT NOT NULL, updated TEXT NOT NULL, ip TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY (grp, install));
 CREATE INDEX IF NOT EXISTS party_live_updated ON party_live (updated);

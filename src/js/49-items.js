@@ -80,7 +80,7 @@ function page(o){
     ...o.named.map(m => `<li>${mob(m)} <span class="sub">${D.craft.src[o.id]?.meow?.includes(m) ? "meowdb farming guide" : "named after it in the game files"}</span></li>`),
     ...o.wdrop.filter(x => !sure.some(y => y[0] === x[0])).map(([m, n, lv]) => `<li>${m ? mob(m) : `${esc(n)} <span class="sub">Lv ${lv}</span>`} <span class="sub">${WSRC_BY_ID[o.id].dropsFrom === "msea" ? "old MapleSEA list, likely" : "player report"}</span></li>`)].join("");
   const cdrop = (CDROP[o.id] || []).filter(([m]) => D.mobdb[m]).sort((a, b) => b[1] / b[2] - a[1] / a[2])
-    .map(([m, n, k]) => `<li>${mob(m)} <span class="sub">×${fmt(n)} in ${fmt(k)} kills, ${n >= k ? `about ${(n / k).toFixed(1)} per kill` : `about 1 per ${fmt(Math.round(k / n))} kills`}</span></li>`).join("");
+    .map(([m, n, k]) => `<li>${mob(m)} <span class="sub">×${fmt(n)} in ${fmt(k)} kills, ${dropRate(n, k)}</span></li>`).join("");
   const shops = o.shop.sort((a, b) => a[3] - b[3]).map(x => `<li>${place(x)} <span class="sub">${fmt(x[3])} mesos</span></li>`).join("");
   const recipe = r => `<li><b>${esc(DISC[r[0]])}</b> <span class="sub">craft Lv ${r[2]} · ${fmt(r[6])} mesos${r[4] > 1 ? ` · makes ${r[4]}` : ""}</span><div class="ilist">${r[7].map(([id, n]) => iname(id, n)).join("")}</div></li>`;
   const rew = o.rew.map(([src, r, n, ch, k, job]) => `<li>${qn([src, r])} <span class="sub">${[n > 1 && "×" + fmt(n), k, ch != null && ch + "% chance", job && job !== "Any Class" && job].filter(Boolean).map(esc).join(" · ")}</span></li>`).join("");

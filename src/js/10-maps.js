@@ -202,8 +202,11 @@ function playersExp(map, L, party){
   const a = (D.shared?.rows || []).filter(r => r[0] === String(map) && r[1] === (party > 1 ? 1 : 0) && Math.abs(r[2] - L) <= 5);
   if (!a.length) return null;
   const m = median(a.map(r => r[3])), kept = a.filter(r => r[3] >= m / 2 && r[3] <= m * 2), groups = new Set(kept.map(r => r[4])).size;
-  return groups >= 3 ? {expHr: median(kept.map(r => r[3])), groups, lo: Math.min(...kept.map(r => r[2])), hi: Math.max(...kept.map(r => r[2]))} : null;
+  const dh = kept.map(r => r[5]).filter(v => v != null);   // deaths/hr: trackers from 0.2.2 on
+  return groups >= 3 ? {expHr: median(kept.map(r => r[3])), groups, lo: Math.min(...kept.map(r => r[2])), hi: Math.max(...kept.map(r => r[2])),
+    deathsHr: dh.length >= 3 ? median(dh) : null} : null;
 }
+const peLine = (pe, party) => `<div class="sub" title="Median of ${pe.groups} grind tracker players or parties at level ${pe.lo}-${pe.hi} (${party > 1 ? "party" : "solo"}), shared runs read ${esc(D.shared.read)}">players: ${fmt(pe.expHr)}${pe.deathsHr != null ? ` · ${+pe.deathsHr.toFixed(1)} deaths/hr` : ""}</div>`;
 function rankMaps(){
   let cls = $("#cls").value, L = +$("#lvl").value || 25;
   const basic = $("#aoe").value === "basic", fb = trainBuild(cls, L), {dps, src} = trainDps(cls, L, fb, basic), frugal = $("#tmode").value === "frugal", pm = (fb.pct || 100) / 100;
@@ -221,6 +224,9 @@ function rankMaps(){
   const party = +$("#party").value || 1, hitsh = +$("#hitsh").value, cost = basic ? {mesoHr: ammoP * 3600 / basicIv(fb)} : COST_FROM_BUILDER || (frugal ? fb.cost : null);
   let rows = mapRates(cls, L, dps, acc, 12, area, party), far = false;
   if (!rows.length){ rows = mapRates(cls, L, dps, acc, Infinity, area, party); far = rows.length > 0 }   // nothing near your level: best of the rest
+  // "Farmed by players": only maps grind tracker players around your level shared runs on, fastest for them first
+  const byPlayers = $("#tmode").value === "players";
+  if (byPlayers){ rows = mapRates(cls, L, dps, acc, Infinity, area, party).map(r => ({...r, pe: playersExp(r.id, L, party)})).filter(r => r.pe).sort((a, b) => b.pe.expHr - a.pe.expHr); far = false }
   let loss = false;
   if (frugal){
     for (const r of rows){ r.dng = mapDanger(r.id, L, def); r.up = (cost?.mesoHr || 0) * (r.att ?? 1); r.hitc = hitCostHr(r, L, def, hitsh); r.loot = lootHr(r, +$("#lootr").value, $("#lootp").value === "pw"); r.net = r.meso * 3600 + r.loot - r.up - r.hitc }
@@ -236,10 +242,10 @@ function rankMaps(){
     <td class="num">${r.hit < .9 ? `<span class="pill p-warn">${Math.round(r.hit*100)}%</span>` : Math.round(r.hit*100) + "%"}</td>
     <td>${dangerPill(r.dng || mapDanger(r.id, L, def))}</td><td class="sub">${esc(potsText(r.id))}</td>
     <td><span class="bar"><i style="width:${Math.round(100*r.rate/best)}%"></i></span><span class="mono">${Math.round(100*r.rate/best)}</span></td>
-    <td class="num">${fmt(r.rate*3600)}${(pe => pe ? `<div class="sub" title="Median of ${pe.groups} grind tracker players or parties at level ${pe.lo}-${pe.hi} (${party > 1 ? "party" : "solo"}), shared runs read ${esc(D.shared.read)}">players: ${fmt(pe.expHr)}</div>` : "")(playersExp(r.id, L, party))}</td>
+    <td class="num">${fmt(r.rate*3600)}${(pe => pe ? peLine(pe, party) : "")(r.pe || playersExp(r.id, L, party))}</td>
     <td class="num">${fmt(r.meso*3600)}${frugal ? `<div class="sub" title="Mesos ${fmt(r.meso * 3600)} + loot sold ${fmt(r.loot)} − upkeep ${fmt(r.up)} − getting hit ${fmt(r.hitc)} per hr">net <b${r.net > 0 ? "" : ' style="color:var(--bad)"'}>${r.net > 0 ? "+" : ""}${fmt(r.net)}</b></div>` : cost ? `<div class="sub">net ${fmt(r.meso*3600 - cost.mesoHr * (r.att ?? 1))}</div>` : ""}</td>
     <td class="num">${need ? (need/(r.rate*3600)).toFixed(1) : "–"}</td></tr>`).join("")
-    : `<tr><td colspan="12" class="empty">No map fits this level and class. Try a different level.</td></tr>`;
+    : `<tr><td colspan="12" class="empty">${byPlayers ? `No map has runs from 3+ grind tracker players or parties within 5 levels of ${L} (${party > 1 ? "party" : "solo"}) yet.` : "No map fits this level and class. Try a different level."}</td></tr>`;
   const how = basic ? `basic attacks (100%, one hit), ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${esc(fb.weapon || "a default weapon")}'s speed`
     : `${esc(fb.skill || "a basic attack")}${fb.pct && fb.pct !== 100 ? ` (${fb.pct}%${fb.hits > 1 ? ` × ${fb.hits}` : ""})` : ""}, ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${fb.magic ? "spell speed" : `its weapon's speed (${esc(fb.weapon || "?")})`}`;
   $("#mapnote").innerHTML = `Damage: <b>${fmt(Math.round(dps))}</b>/s ${src === "builder" ? "from your Character Builder setup" : src === "you" ? `from your ${magIn ? "Magic and INT" : "Attack range"} with ${how}, from the default build at your level` : src === "default" ? `from the Character Builder's default build at level ${L} (${esc(fb.weapon || "")}, ${basic ? "basic attacks" : esc(fb.skill || "")}); type your stat-window ${magIn ? "Magic and INT" : "Attack range"} for your own` : `a rough guess (20 × level)${basic && fb.magic ? "; type your stat-window Attack range for wand or staff hits" : ""}`}. `

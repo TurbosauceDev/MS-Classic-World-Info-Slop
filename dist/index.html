@@ -780,7 +780,7 @@ details.sec>summary:hover h2{color:var(--accent)}
       <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
     <label>Your level<input id="lvl" type="number" min="10" max="100" value="25"></label>
     <label>Attack<select id="aoe"><option value="1">Area attack (AoE)</option><option value="">Single target</option><option value="basic">Basic attack (no skills)</option></select></label>
-    <label>Mode<select id="tmode"><option value="">Fastest EXP</option><option value="frugal">Frugal (meso positive)</option></select></label>
+    <label>Mode<select id="tmode"><option value="">Fastest EXP</option><option value="frugal">Frugal (meso positive)</option><option value="players">Farmed by players (shared runs)</option></select></label>
     <label hidden title="Drop rate per kill for each ETC item and potion players reported. An assumption: the game files have no drop rates.">Loot sold to NPCs<select id="lootr"><option value="0">Not counted</option><option value="0.05" selected>5% a kill (cautious)</option><option value="0.1">10% a kill</option><option value="0.15">15% a kill</option></select></label>
     <label hidden title="What each loot item is worth: NPC sell price, or the median player-shop sale price from meso.watch (NPC price when it has under 5 sales).">Loot price<select id="lootp"><option value="">NPC price</option><option value="pw">Player shops (meso.watch)</option></select></label>
     <label hidden title="Share of the monsters you kill that get a hit on you first. Your pick, not game data.">Monsters that hit you<select id="hitsh"><option value="0.1">1 in 10</option><option value="0.25" selected>1 in 4</option><option value="0.5">Half</option><option value="1">Every one</option></select></label>
@@ -1187,7 +1187,7 @@ details.sec>summary:hover h2{color:var(--accent)}
 
   <div class="changelog">
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Players' EXP/hr</h3><span class="pill p-hot">new</span></div>
-      <p>Where to train: under each map's estimated EXP/hr, a <b>players:</b> line shows what grind tracker players within 5 levels of you really got there (solo or party, like your setting). It only appears once 3+ different players or parties have shared runs on that map; runs under half or over double the typical one are left out.</p></div>
+      <p>Where to train: under each map's estimated EXP/hr, a <b>players:</b> line shows what grind tracker players within 5 levels of you really got there (solo or party, like your setting). It only appears once 3+ different players or parties have shared runs on that map; runs under half or over double the typical one are left out. It also shows deaths per hour there (from tracker 0.2.2), and the same line is on World Map cards. New Mode <b>Farmed by players</b> lists only maps with players' runs, fastest for them first. Confirmed Drops now also give a likely range ("1 per 11 kills (likely 8-15)"), a statistics estimate that narrows as more kills are shared.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Confirmed Drops</h3><span class="pill p-hot">new</span></div>
       <p>Monster and item pages get a <b>Confirmed Drops</b> box once players of our grind tracker (a Windows app that reads the game screen) share their runs: kills counted and what they picked up, as "about 1 per X kills". It only sees the sharing player's own pickups, so real rates are at least that. Empty until runs come in.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · The List removed</h3><span class="pill p-hot">update</span></div>
@@ -1480,6 +1480,14 @@ goHome();
 try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : localStorage.getItem("tab"); if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
 $("#srclink").addEventListener("click", e => { e.preventDefault(); $("#t-credits").click(); $("#credits").scrollIntoView() });
+// "about 1 per X kills" for n picked up in k kills, plus a likely range (95% Wilson interval: a statistics estimate, wide
+// while kills are few). Used on monster and item pages (48-monsters.js, 49-items.js).
+function dropRate(n, k){
+  if (n >= k) return `about ${(n / k).toFixed(1)} per kill`;
+  const z = 1.96, p = n / k, den = 1 + z * z / k, mid = (p + z * z / (2 * k)) / den, half = z * Math.sqrt(p * (1 - p) / k + z * z / (4 * k * k)) / den;
+  const a = Math.round(1 / Math.min(1, mid + half)), b = Math.round(1 / Math.max(1e-6, mid - half));
+  return `about 1 per ${fmt(Math.round(k / n))} kills` + (a !== b ? ` <span class="tiny" title="95% range from these counts (an estimate: it narrows as more kills are shared)">(likely ${fmt(a)}-${fmt(b)})</span>` : "");
+}
 
 /* client formulas */
 function hitProb(acc, avoid, diff){
@@ -1685,8 +1693,11 @@ function playersExp(map, L, party){
   const a = (D.shared?.rows || []).filter(r => r[0] === String(map) && r[1] === (party > 1 ? 1 : 0) && Math.abs(r[2] - L) <= 5);
   if (!a.length) return null;
   const m = median(a.map(r => r[3])), kept = a.filter(r => r[3] >= m / 2 && r[3] <= m * 2), groups = new Set(kept.map(r => r[4])).size;
-  return groups >= 3 ? {expHr: median(kept.map(r => r[3])), groups, lo: Math.min(...kept.map(r => r[2])), hi: Math.max(...kept.map(r => r[2]))} : null;
+  const dh = kept.map(r => r[5]).filter(v => v != null);   // deaths/hr: trackers from 0.2.2 on
+  return groups >= 3 ? {expHr: median(kept.map(r => r[3])), groups, lo: Math.min(...kept.map(r => r[2])), hi: Math.max(...kept.map(r => r[2])),
+    deathsHr: dh.length >= 3 ? median(dh) : null} : null;
 }
+const peLine = (pe, party) => `<div class="sub" title="Median of ${pe.groups} grind tracker players or parties at level ${pe.lo}-${pe.hi} (${party > 1 ? "party" : "solo"}), shared runs read ${esc(D.shared.read)}">players: ${fmt(pe.expHr)}${pe.deathsHr != null ? ` · ${+pe.deathsHr.toFixed(1)} deaths/hr` : ""}</div>`;
 function rankMaps(){
   let cls = $("#cls").value, L = +$("#lvl").value || 25;
   const basic = $("#aoe").value === "basic", fb = trainBuild(cls, L), {dps, src} = trainDps(cls, L, fb, basic), frugal = $("#tmode").value === "frugal", pm = (fb.pct || 100) / 100;
@@ -1704,6 +1715,9 @@ function rankMaps(){
   const party = +$("#party").value || 1, hitsh = +$("#hitsh").value, cost = basic ? {mesoHr: ammoP * 3600 / basicIv(fb)} : COST_FROM_BUILDER || (frugal ? fb.cost : null);
   let rows = mapRates(cls, L, dps, acc, 12, area, party), far = false;
   if (!rows.length){ rows = mapRates(cls, L, dps, acc, Infinity, area, party); far = rows.length > 0 }   // nothing near your level: best of the rest
+  // "Farmed by players": only maps grind tracker players around your level shared runs on, fastest for them first
+  const byPlayers = $("#tmode").value === "players";
+  if (byPlayers){ rows = mapRates(cls, L, dps, acc, Infinity, area, party).map(r => ({...r, pe: playersExp(r.id, L, party)})).filter(r => r.pe).sort((a, b) => b.pe.expHr - a.pe.expHr); far = false }
   let loss = false;
   if (frugal){
     for (const r of rows){ r.dng = mapDanger(r.id, L, def); r.up = (cost?.mesoHr || 0) * (r.att ?? 1); r.hitc = hitCostHr(r, L, def, hitsh); r.loot = lootHr(r, +$("#lootr").value, $("#lootp").value === "pw"); r.net = r.meso * 3600 + r.loot - r.up - r.hitc }
@@ -1719,10 +1733,10 @@ function rankMaps(){
     <td class="num">${r.hit < .9 ? `<span class="pill p-warn">${Math.round(r.hit*100)}%</span>` : Math.round(r.hit*100) + "%"}</td>
     <td>${dangerPill(r.dng || mapDanger(r.id, L, def))}</td><td class="sub">${esc(potsText(r.id))}</td>
     <td><span class="bar"><i style="width:${Math.round(100*r.rate/best)}%"></i></span><span class="mono">${Math.round(100*r.rate/best)}</span></td>
-    <td class="num">${fmt(r.rate*3600)}${(pe => pe ? `<div class="sub" title="Median of ${pe.groups} grind tracker players or parties at level ${pe.lo}-${pe.hi} (${party > 1 ? "party" : "solo"}), shared runs read ${esc(D.shared.read)}">players: ${fmt(pe.expHr)}</div>` : "")(playersExp(r.id, L, party))}</td>
+    <td class="num">${fmt(r.rate*3600)}${(pe => pe ? peLine(pe, party) : "")(r.pe || playersExp(r.id, L, party))}</td>
     <td class="num">${fmt(r.meso*3600)}${frugal ? `<div class="sub" title="Mesos ${fmt(r.meso * 3600)} + loot sold ${fmt(r.loot)} − upkeep ${fmt(r.up)} − getting hit ${fmt(r.hitc)} per hr">net <b${r.net > 0 ? "" : ' style="color:var(--bad)"'}>${r.net > 0 ? "+" : ""}${fmt(r.net)}</b></div>` : cost ? `<div class="sub">net ${fmt(r.meso*3600 - cost.mesoHr * (r.att ?? 1))}</div>` : ""}</td>
     <td class="num">${need ? (need/(r.rate*3600)).toFixed(1) : "–"}</td></tr>`).join("")
-    : `<tr><td colspan="12" class="empty">No map fits this level and class. Try a different level.</td></tr>`;
+    : `<tr><td colspan="12" class="empty">${byPlayers ? `No map has runs from 3+ grind tracker players or parties within 5 levels of ${L} (${party > 1 ? "party" : "solo"}) yet.` : "No map fits this level and class. Try a different level."}</td></tr>`;
   const how = basic ? `basic attacks (100%, one hit), ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${esc(fb.weapon || "a default weapon")}'s speed`
     : `${esc(fb.skill || "a basic attack")}${fb.pct && fb.pct !== 100 ? ` (${fb.pct}%${fb.hits > 1 ? ` × ${fb.hits}` : ""})` : ""}, ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${fb.magic ? "spell speed" : `its weapon's speed (${esc(fb.weapon || "?")})`}`;
   $("#mapnote").innerHTML = `Damage: <b>${fmt(Math.round(dps))}</b>/s ${src === "builder" ? "from your Character Builder setup" : src === "you" ? `from your ${magIn ? "Magic and INT" : "Attack range"} with ${how}, from the default build at your level` : src === "default" ? `from the Character Builder's default build at level ${L} (${esc(fb.weapon || "")}, ${basic ? "basic attacks" : esc(fb.skill || "")}); type your stat-window ${magIn ? "Magic and INT" : "Attack range"} for your own` : `a rough guess (20 × level)${basic && fb.magic ? "; type your stat-window Attack range for wand or staff hits" : ""}`}. `
@@ -2649,7 +2663,7 @@ function confirmed(id){
   if (!c) return "";
   const items = Object.entries(c.items).sort((a, b) => b[1] - a[1]);
   return `<h4>Confirmed Drops <span class="sub">(${fmt(c.kills)} kills by ${c.players} tracker player${c.players > 1 ? "s" : ""}, read ${esc(D.shared.read)})</span></h4>
-    ${items.length ? `<div class="mdrops">${items.map(([iid, n]) => `<span class="mdrop">${icon(iid)}<span><span class="itname" tabindex="0" data-item="${iid}">${esc(D.items[iid].n)}</span> <span class="sub">×${fmt(n)}, ${n >= c.kills ? `about ${(n / c.kills).toFixed(1)} per kill` : `about 1 per ${fmt(Math.round(c.kills / n))} kills`}</span></span></span>`).join("")}</div>` : `<p class="sub">No items picked up yet.</p>`}
+    ${items.length ? `<div class="mdrops">${items.map(([iid, n]) => `<span class="mdrop">${icon(iid)}<span><span class="itname" tabindex="0" data-item="${iid}">${esc(D.items[iid].n)}</span> <span class="sub">×${fmt(n)}, ${dropRate(n, c.kills)}</span></span></span>`).join("")}</div>` : `<p class="sub">No items picked up yet.</p>`}
     ${c.mesoDrops ? `<p class="sub">Mesos: ${fmt(Math.round(c.mesos / c.mesoDrops))} per pickup, ${fmt(Math.round(c.mesos / c.kills))} per kill</p>` : ""}
     <p class="sub">Only what the sharing player picked up themselves, so real drop rates are at least this.</p>`;
 }
@@ -2881,7 +2895,7 @@ function page(o){
     ...o.named.map(m => `<li>${mob(m)} <span class="sub">${D.craft.src[o.id]?.meow?.includes(m) ? "meowdb farming guide" : "named after it in the game files"}</span></li>`),
     ...o.wdrop.filter(x => !sure.some(y => y[0] === x[0])).map(([m, n, lv]) => `<li>${m ? mob(m) : `${esc(n)} <span class="sub">Lv ${lv}</span>`} <span class="sub">${WSRC_BY_ID[o.id].dropsFrom === "msea" ? "old MapleSEA list, likely" : "player report"}</span></li>`)].join("");
   const cdrop = (CDROP[o.id] || []).filter(([m]) => D.mobdb[m]).sort((a, b) => b[1] / b[2] - a[1] / a[2])
-    .map(([m, n, k]) => `<li>${mob(m)} <span class="sub">×${fmt(n)} in ${fmt(k)} kills, ${n >= k ? `about ${(n / k).toFixed(1)} per kill` : `about 1 per ${fmt(Math.round(k / n))} kills`}</span></li>`).join("");
+    .map(([m, n, k]) => `<li>${mob(m)} <span class="sub">×${fmt(n)} in ${fmt(k)} kills, ${dropRate(n, k)}</span></li>`).join("");
   const shops = o.shop.sort((a, b) => a[3] - b[3]).map(x => `<li>${place(x)} <span class="sub">${fmt(x[3])} mesos</span></li>`).join("");
   const recipe = r => `<li><b>${esc(DISC[r[0]])}</b> <span class="sub">craft Lv ${r[2]} · ${fmt(r[6])} mesos${r[4] > 1 ? ` · makes ${r[4]}` : ""}</span><div class="ilist">${r[7].map(([id, n]) => iname(id, n)).join("")}</div></li>`;
   const rew = o.rew.map(([src, r, n, ch, k, job]) => `<li>${qn([src, r])} <span class="sub">${[n > 1 && "×" + fmt(n), k, ch != null && ch + "% chance", job && job !== "Any Class" && job].filter(Boolean).map(esc).join(" · ")}</span></li>`).join("");
@@ -4799,7 +4813,7 @@ function card(i, lone){
   const rest = open.filter(id => !fights.includes(id));
   const rows = fights.map(id => { const r = R[id], mp = D.maps[id], dg = mp?.[2]?.length && DEF ? mapDanger(id, +S.lv || 10, DEF) : null;
     return `<tr class="wmrow${id === mmId ? " sel" : ""}" data-map="${id}"><td>${mapLink(id, mapName(id))}${mp && !mp[1] ? ' <span class="pill p-warn">not at launch</span>' : ""}${uvOn() && id in UV ? ' <span class="pill p-good">quieter pick</span>' : uvOn() && UV_PACKED[id] ? ' <span class="pill p-warn">busy</span>' : ""}<div class="sub">${mobRange([id])}</div></td>
-      <td>${dg ? dangerPill({f: dg.f}) : ""}</td><td class="num">${r && mp?.[1] ? fmt(r.rate * 3600) : "–"}</td></tr>` }).join("");
+      <td>${dg ? dangerPill({f: dg.f}) : ""}</td><td class="num">${r && mp?.[1] ? fmt(r.rate * 3600) : "–"}${(pe => pe ? peLine(pe, 1) : "")(playersExp(id, +S.lv || 10, 1))}</td></tr>` }).join("");
   const mobRows = Object.entries(mobs).sort((a, b) => D.mobs[a[0]][1] - D.mobs[b[0]][1]).map(([m, c]) => { const x = D.mobs[m];
     return `<li>${mobLink(m)} <span>Lv ${x[1]} · ${fmt(x[2])} HP · ${fmt(x[3])} EXP · ×${c}</span></li>` }).join("");
   const svc = [cab ? "Cab" : "", ...pots.map(id => `Potions: ${npcLink(POT[id])} (${esc(mapName(id))})`)].filter(Boolean);

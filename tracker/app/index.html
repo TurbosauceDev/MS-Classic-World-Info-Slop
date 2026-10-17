@@ -23,7 +23,7 @@
 </head>
 <body>
   <div class="card" id="mini" title="Click for the full window"><span class="k">EXP/hr</span> <span class="v" id="miniExp">-</span>
-    · <span class="k">next level</span> <span class="v" id="miniTtl">-</span><div class="note" id="miniNote"></div><div class="note" id="miniParty"></div></div>
+    · <span class="k">next level</span> <span class="v" id="miniTtl">-</span><div class="note" id="miniNote"></div><div class="note" id="miniParty"></div><div class="note" id="miniGoal"></div></div>
   <div class="card hidden" id="guide">
     <div class="v">Welcome</div>
     <ol>
@@ -46,7 +46,9 @@
     <label>Name <input id="nick" maxlength="12" size="8" placeholder="optional"></label>
     <div class="note">Same code for everyone in your party: you see each other's EXP/hr, level and job live (name only if you type one), and the
       party counts as one group in the shared numbers.</div>
-    <label>Beep for drops worth at least <input type="number" id="alert" min="0" step="1000"> mesos (0 = off)</label>
+    <label>Beep for drops worth at least <input type="number" id="alert" min="0" step="1000"> mesos (0 = off)</label><br>
+    <label><input type="checkbox" id="stopBeep"> Beep when EXP stops for 2 minutes (died, disconnected, map taken)</label><br>
+    <label>Goal: level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="off"></label>
   </div>
   <div class="card grid">
     <div><div class="k">Kills/hr</div><div class="v" id="killsHr">-</div><div class="note" id="killsEst"></div></div>
@@ -55,11 +57,13 @@
     <div><div class="k">Mesos/hr</div><div class="v" id="mesosHr">-</div></div>
     <div><div class="k">Loot value/hr</div><div class="v" id="lootHr">-</div></div>
     <div><div class="k">Active time</div><div class="v" id="active">-</div></div>
+    <div><div class="k">Deaths</div><div class="v" id="deaths">0</div><div class="note">EXP bar drops without a level-up</div></div>
+    <div><div class="k" id="goalK">Goal</div><div class="v" id="goalV">-</div><div class="note" id="goalAt"></div></div>
   </div>
   <div class="card hidden" id="partyBox"></div>
   <div class="card hidden" id="lastRun"></div>
   <div class="card hidden" id="respawn"></div>
-  <div class="card hidden" id="hist"><div class="k">Past sessions <button id="csv" class="alt">Export CSV</button></div><table id="histRows"></table></div>
+  <div class="card hidden" id="hist"><div class="k">Past sessions <button id="csv" class="alt">Export CSV</button></div><div id="recap"></div><table id="histRows"></table></div>
   <div class="card"><div class="k" id="where">-</div><table id="mobs"></table></div>
   <div class="card"><div class="k">Picked up</div><table id="items"></table>
     <div class="note" id="priceNote"></div></div>

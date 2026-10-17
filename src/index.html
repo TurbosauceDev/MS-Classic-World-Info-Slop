@@ -330,7 +330,7 @@
       <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
     <label>Your level<input id="lvl" type="number" min="10" max="100" value="25"></label>
     <label>Attack<select id="aoe"><option value="1">Area attack (AoE)</option><option value="">Single target</option><option value="basic">Basic attack (no skills)</option></select></label>
-    <label>Mode<select id="tmode"><option value="">Fastest EXP</option><option value="frugal">Frugal (meso positive)</option></select></label>
+    <label>Mode<select id="tmode"><option value="">Fastest EXP</option><option value="frugal">Frugal (meso positive)</option><option value="players">Farmed by players (shared runs)</option></select></label>
     <label hidden title="Drop rate per kill for each ETC item and potion players reported. An assumption: the game files have no drop rates.">Loot sold to NPCs<select id="lootr"><option value="0">Not counted</option><option value="0.05" selected>5% a kill (cautious)</option><option value="0.1">10% a kill</option><option value="0.15">15% a kill</option></select></label>
     <label hidden title="What each loot item is worth: NPC sell price, or the median player-shop sale price from meso.watch (NPC price when it has under 5 sales).">Loot price<select id="lootp"><option value="">NPC price</option><option value="pw">Player shops (meso.watch)</option></select></label>
     <label hidden title="Share of the monsters you kill that get a hit on you first. Your pick, not game data.">Monsters that hit you<select id="hitsh"><option value="0.1">1 in 10</option><option value="0.25" selected>1 in 4</option><option value="0.5">Half</option><option value="1">Every one</option></select></label>
@@ -737,7 +737,7 @@
 
   <div class="changelog">
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Players' EXP/hr</h3><span class="pill p-hot">new</span></div>
-      <p>Where to train: under each map's estimated EXP/hr, a <b>players:</b> line shows what grind tracker players within 5 levels of you really got there (solo or party, like your setting). It only appears once 3+ different players or parties have shared runs on that map; runs under half or over double the typical one are left out.</p></div>
+      <p>Where to train: under each map's estimated EXP/hr, a <b>players:</b> line shows what grind tracker players within 5 levels of you really got there (solo or party, like your setting). It only appears once 3+ different players or parties have shared runs on that map; runs under half or over double the typical one are left out. It also shows deaths per hour there (from tracker 0.2.2), and the same line is on World Map cards. New Mode <b>Farmed by players</b> lists only maps with players' runs, fastest for them first. Confirmed Drops now also give a likely range ("1 per 11 kills (likely 8-15)"), a statistics estimate that narrows as more kills are shared.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Confirmed Drops</h3><span class="pill p-hot">new</span></div>
       <p>Monster and item pages get a <b>Confirmed Drops</b> box once players of our grind tracker (a Windows app that reads the game screen) share their runs: kills counted and what they picked up, as "about 1 per X kills". It only sees the sharing player's own pickups, so real rates are at least that. Empty until runs come in.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · The List removed</h3><span class="pill p-hot">update</span></div>

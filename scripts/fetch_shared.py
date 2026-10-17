@@ -8,8 +8,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 URL = "https://ms-classic-tracker.maplestoryclassic.workers.dev/api/summary"
 req = urllib.request.Request(URL, headers={"User-Agent": "ms-classic-world-info site build"})   # Cloudflare refuses Python's default
 with urllib.request.urlopen(req, timeout=60) as r: d = json.load(r)
-# rows: one per player per map and solo/party (their typical run) -> [map, party 0/1, level, EXP/hr, group]; maps we know only
-rows = [[r["map"], 1 if r["party"] > 1 else 0, r["level"], r["expHr"], r["group"]] for r in d.get("rows", []) if r.get("map") and r.get("level")]
+# rows: one per player per map and solo/party (their typical run) -> [map, party 0/1, level, EXP/hr, group, deaths/hr or None]; maps we know only
+rows = [[r["map"], 1 if r["party"] > 1 else 0, r["level"], r["expHr"], r["group"], r.get("deathsHr")] for r in d.get("rows", []) if r.get("map") and r.get("level")]
 j = {"source": URL, "read": d["updated"][:10], "runs": d["runs"], "players": d["players"], "hours": d["hours"], "mobs": d["mobs"], "rows": rows}
 dst = ROOT / "data" / "sources" / "shared_runs.json"
 try:   # nothing new: keep the old read date so the daily job doesn't commit just a date

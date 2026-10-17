@@ -61,3 +61,11 @@ goHome();
 try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : localStorage.getItem("tab"); if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
 $("#srclink").addEventListener("click", e => { e.preventDefault(); $("#t-credits").click(); $("#credits").scrollIntoView() });
+// "about 1 per X kills" for n picked up in k kills, plus a likely range (95% Wilson interval: a statistics estimate, wide
+// while kills are few). Used on monster and item pages (48-monsters.js, 49-items.js).
+function dropRate(n, k){
+  if (n >= k) return `about ${(n / k).toFixed(1)} per kill`;
+  const z = 1.96, p = n / k, den = 1 + z * z / k, mid = (p + z * z / (2 * k)) / den, half = z * Math.sqrt(p * (1 - p) / k + z * z / (4 * k * k)) / den;
+  const a = Math.round(1 / Math.min(1, mid + half)), b = Math.round(1 / Math.max(1e-6, mid - half));
+  return `about 1 per ${fmt(Math.round(k / n))} kills` + (a !== b ? ` <span class="tiny" title="95% range from these counts (an estimate: it narrows as more kills are shared)">(likely ${fmt(a)}-${fmt(b)})</span>` : "");
+}

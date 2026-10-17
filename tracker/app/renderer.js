@@ -58,6 +58,14 @@ function render(){
   $("#miniExp").textContent = fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent;
   $("#miniNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
   $("#lootHr").textContent = fmt(s.lootHr);
+  $("#deaths").textContent = s.deaths;
+  // goal level: time left at the current rate and the clock time it lands on
+  const hm = h => h < 1 ? Math.round(h * 60) + " min" : h.toFixed(1) + " h";
+  $("#goalK").textContent = s.goalLevel ? "Level " + s.goalLevel + " in" : "Goal";
+  $("#goalV").textContent = s.goalLevel ? s.level >= s.goalLevel ? "reached" : s.toGoalHrs == null ? "-" : hm(s.toGoalHrs) : "-";
+  $("#goalAt").textContent = s.toGoalHrs != null && s.toGoalHrs < 48 ? "about " + new Date(Date.now() + s.toGoalHrs * 3.6e6).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}) + " at this rate" : s.goalLevel ? "" : "set a level below";
+  $("#miniGoal").textContent = s.goalLevel && s.toGoalHrs != null ? `Lv ${s.goalLevel} in ${hm(s.toGoalHrs)}` : "";
+  stopCheck(s);
   $("#active").textContent = Math.round(s.activeMin) + " min";
   $("#where").textContent = [s.level && "Lv " + s.level, s.mapName, s.job, s.party > 1 ? "party of " + s.party : "solo",
     s.kills + " kills", fmt(s.mesoPerKill) + " mesos/kill",
@@ -111,16 +119,19 @@ async function showSpeed(run){
       + (sc.faster.length ? `<div class="note">Faster for players like you: ${sc.faster.map(m => `${esc(m.name)} (${fmt(m.expHr)})`).join(", ")}</div>` : "")
     : `<div class="note">${sc.noBar ? "The EXP bar wasn't read during this run, so it isn't compared." : `Not enough shared runs around your level yet to compare (${esc(band) || "level not read"}).`}</div>`);
 }
+function beep(hz, sec){
+  try {
+    audio = audio || new AudioContext();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = hz; g.gain.value = 0.15; o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + sec);
+  } catch {}
+}
 // a beep when something worth at least the set amount is picked up
 let audio = null;
 function dropAlert(id){
   const min = +settings.alertWorth || 0, worth = G.pw?.[id]?.[0] ?? G.items[id]?.p ?? 0;
   if (!min || worth < min) return;
-  try {
-    audio = audio || new AudioContext();
-    const o = audio.createOscillator(), g = audio.createGain();
-    o.frequency.value = 880; g.gain.value = 0.15; o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.25);
-  } catch {}
+  beep(880, 0.25);
   $("#status").textContent = `Valuable drop: ${G.items[id]?.n || "item " + id} (worth ~${fmt(worth)})`;
 }
 
@@ -138,6 +149,15 @@ async function sendParty(){
     `<tr><td>${m.you ? "<b>you</b>" : esc(m.nick || m.job || "member")}${m.nick && !m.you && m.job ? ` <span class="note">${esc(m.job)}</span>` : ""}${m.level ? " Lv " + m.level : ""}</td>
     <td class="n">${fmt(m.expHr || 0)}/hr</td><td class="n note">${m.expHr5 != null ? "5 min: " + fmt(m.expHr5) : ""}</td></tr>`).join("")
     + `</table><div class="note">Each member's own EXP/hr, updated every minute. Members who stopped drop off after 3 minutes.</div>`;
+}
+
+// EXP stopped: one low beep when no EXP for 2 minutes after some came in; again only after EXP comes back and stops again
+let stopWarned = false;
+function stopCheck(s){
+  if (settings.stopBeep === false || !s.lastExpT) return;
+  const quiet = Date.now() - s.lastExpT > 120e3;
+  if (quiet && !stopWarned){ stopWarned = true; beep(330, 0.6); $("#status").textContent = "No EXP for 2 minutes. Died, disconnected, or someone took the map?" }
+  if (!quiet) stopWarned = false;
 }
 
 let slowTicks = 0;
@@ -166,7 +186,7 @@ async function start(){
   starting = true; $("#status").className = "";
   try { await startCapture() } finally { starting = false }
   timer = 0;   // running (the first tick sets the real timeout)
-  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000});
+  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: settings.goal || 0}); stopWarned = false;
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
   readers = GrindReaders.createReaders(G); mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
@@ -206,16 +226,30 @@ $("#nick").onchange = e => host.settings({nick: e.target.value.trim().slice(0, 1
 const guideDone = share => host.settings({share, guideDone: true}).then(s => { settings = s; $("#share").checked = share; $("#guide").classList.add("hidden") });
 $("#guideShare").onclick = () => guideDone(true);
 $("#guideNo").onclick = () => guideDone(false);
+$("#stopBeep").onchange = e => host.settings({stopBeep: e.target.checked}).then(s => settings = s);
+$("#goal").onchange = e => { const v = Math.max(0, Math.min(200, Math.round(+e.target.value || 0))); host.settings({goal: v}).then(s => { settings = s; session?.setGoal(v) }) };
 $("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.value || 0)}).then(s => settings = s);
 $("#miniBtn").onclick = () => { document.body.classList.add("mini"); host.mini(true) };
 $("#mini").onclick = () => { document.body.classList.remove("mini"); host.mini(false) };
 $("#histBtn").onclick = async () => {
   const box = $("#hist"); box.classList.toggle("hidden"); if (box.classList.contains("hidden")) return;
   const list = await host.sessions();
+  $("#recap").innerHTML = recap(list);
   $("#histRows").innerHTML = list.length ? list.slice(0, 30).map(x => { const h = (x.activeMin || 0) / 60;
     return `<tr><td>${esc(x.date)} ${esc(x.mapName || "")}</td><td class="n">${Math.round(x.activeMin || 0)} min</td><td class="n">${h ? fmt(x.exp / h) : "-"} EXP/hr</td></tr>` }).join("")
     : `<tr><td>No sessions yet: they're saved when you press Stop.</td></tr>`;
 };
+// last 7 days from the saved sessions: time played, EXP, mesos, levels gained, deaths, the fastest map (15+ minutes there)
+function recap(list){
+  const week = list.filter(x => x.saved > Date.now() - 7 * 864e5);
+  if (!week.length) return "";
+  const sum = k => week.reduce((a, x) => a + (+x[k] || 0), 0), lv = week.map(x => x.level).filter(Boolean);
+  const byMap = {}; for (const x of week){ const m = x.mapName || "?"; (byMap[m] = byMap[m] || {min: 0, exp: 0}); byMap[m].min += x.activeMin || 0; byMap[m].exp += x.exp || 0 }
+  const best = Object.entries(byMap).filter(([m, v]) => m !== "?" && v.min >= 15).sort((a, b) => b[1].exp / b[1].min - a[1].exp / a[1].min)[0];
+  return `<div class="note"><b>Last 7 days:</b> ${week.length} session${week.length > 1 ? "s" : ""}, ${(sum("activeMin") / 60).toFixed(1)} h farming, ${fmt(sum("exp"))} EXP, ${fmt(sum("mesos"))} mesos`
+    + (lv.length ? `, level ${Math.min(...lv)} → ${Math.max(...lv)}` : "") + `, ${sum("deaths")} death${sum("deaths") === 1 ? "" : "s"}`
+    + (best ? `. Fastest map: ${esc(best[0])} (${fmt(best[1].exp / best[1].min * 60)} EXP/hr)` : "") + `</div>`;
+}
 $("#csv").onclick = () => host.exportCsv();
 $("#ontop").onchange = e => host.settings({onTop: e.target.checked}).then(s => settings = s);
 $("#share").onchange = e => host.settings({share: e.target.checked}).then(s => settings = s);
@@ -229,6 +263,8 @@ $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
   $("#job").value = settings.job || "";
   $("#ontop").checked = settings.onTop !== false;
   $("#alert").value = settings.alertWorth || 0;
+  $("#stopBeep").checked = settings.stopBeep !== false;   // on unless turned off
+  $("#goal").value = settings.goal || "";
   $("#pcode").value = settings.partyCode || "";
   $("#nick").value = settings.nick || "";
   $("#guide").classList.toggle("hidden", !!settings.guideDone);

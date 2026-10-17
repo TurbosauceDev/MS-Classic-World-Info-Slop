@@ -93,17 +93,17 @@ ipcMain.handle("sessions", () => sessions());
 ipcMain.handle("export-csv", () => {
   // text starting with = + - @ would run as a formula in Excel (map names come from OCR): prefixed with '
   const q = v => { let t = String(v ?? ""); if (typeof v === "string" && /^[=+\-@]/.test(t)) t = "'" + t; return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t };
-  const head = ["saved", "date", "map", "level", "job", "party", "active_min", "kills", "exp", "mesos", "exp_hr", "mesos_hr"];
+  const head = ["saved", "date", "map", "level", "job", "party", "active_min", "kills", "exp", "mesos", "exp_hr", "mesos_hr", "deaths"];
   const rows = sessions().map(x => { const h = (x.activeMin || 0) / 60;
     return [new Date(x.saved).toISOString(), x.date, x.mapName || x.map, x.level, x.job, x.party, x.activeMin, x.kills, x.exp, x.mesos,
-      h ? Math.round(x.exp / h) : "", h ? Math.round(x.mesos / h) : ""] });
+      h ? Math.round(x.exp / h) : "", h ? Math.round(x.mesos / h) : "", x.deaths ?? ""] });
   const file = path.join(app.getPath("documents"), "MS Classic Tracker sessions.csv");
   fs.writeFileSync(file, [head, ...rows].map(r => r.map(q).join(",")).join("\r\n"));
   shell.showItemInFolder(file);
   return file;
 });
 // mini bar: a small strip with just EXP/hr and time to level
-ipcMain.handle("mini", (_, on) => { if (win){ win.setSize(360, on ? 110 : 600) } return !!on });
+ipcMain.handle("mini", (_, on) => { if (win){ win.setSize(360, on ? 128 : 600) } return !!on });
 ipcMain.handle("share-run", async (_, run) => {
   const q = readQueue(); q.push({...run, install: readSettings().install}); fs.writeFileSync(QUEUE, JSON.stringify(q.slice(-200)));
   await flushRuns(); return true;

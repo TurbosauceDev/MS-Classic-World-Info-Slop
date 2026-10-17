@@ -18,7 +18,7 @@
   function createSession(G, opts = {}){
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
-      msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0};
+      msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
@@ -59,7 +59,7 @@
         case "party": S.party = Math.max(1, e.size | 0); break;
         case "job": S.job = e.name; break;
         case "exp": {
-          S.msgExp += e.gain;
+          S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t);
           if (!G.maps[S.map]){ S.kills++; S.lastKillMob = null; break }   // map not known: a kill, monster unknown
           const id = matchMob(e.gain);
           if (id === "?"){ S.kills++; S.lastKillMob = null }   // a party kill, monster unknown
@@ -67,7 +67,7 @@
           else S.otherExp += e.gain;   // fits no monster here: quest reward etc.
           break;
         }
-        case "bonus": S.msgExp += e.gain; break;
+        case "bonus": S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); break;
         case "itemraw": S.unreadItems++; break;
         case "bar": {
           if (e.level) S.level = e.level;
@@ -79,9 +79,11 @@
             const up = e.level && p.level ? e.level > p.level : p.level && p.pct >= 90 && e.exp < p.exp * 0.5;
             // the EXP number can come back higher after a level-up (it's into a bigger level); the % going down says so too
             if (up && (d < 0 || e.pct != null && p.pct != null && e.pct < p.pct)){ d = (G.exp[p.level] || 0) - p.exp + e.exp; if (!e.level) S.level = p.level + 1 }
-            if (d > 0) S.barExp += d;   // a drop without a level-up (death) is just skipped
+            if (d > 0){ S.barExp += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t) }
+            // a drop without a level-up = a death (the game takes a share of the level's EXP); not counted again until EXP rises
+            else if (d < 0 && !p.dead){ S.deaths++; const k = S.map || "?"; S.deathMaps[k] = (S.deathMaps[k] || 0) + 1 }
           }
-          S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: S.level}; break;
+          S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: S.level, dead: p && e.exp < p.exp && !(e.level > p.level) ? true : p?.dead && e.exp <= p.exp}; break;
         }
         case "meso":
           S.mesos += e.amount;
@@ -119,6 +121,10 @@
       const expHr = per(exp);
       const need = S.bar && S.level ? G.exp[S.level] : null;
       const toLevelHrs = need && expHr > 0 ? Math.max(0, need - S.bar.exp) / expHr : null;
+      // a goal level: the rest of this level plus every level up to it, at the current rate
+      const goal = +opts.goalLevel || 0;
+      let toGoalHrs = null;
+      if (need && expHr > 0 && goal > S.level){ let left = Math.max(0, need - S.bar.exp); for (let l = S.level + 1; l < goal; l++) left += G.exp[l] || 0; toGoalHrs = left / expHr }
       const items = Object.entries(S.items).map(([id, n]) => ({id, name: G.items[id]?.n || "Item " + id, n, each: worth(id), total: worth(id) * n}))
         .sort((a, b) => b.total - a.total);
       const lootValue = items.reduce((a, b) => a + b.total, 0);
@@ -130,20 +136,21 @@
         readShare: S.barExp > 0 ? Math.min(1, S.msgExp / S.barExp) : null,
         // kills if the missed lines were kills at the same rate as the ones read (an estimate; only from 20% read up)
         killsEstHr: S.barExp > 0 && S.msgExp / S.barExp >= 0.2 && S.msgExp < S.barExp ? per(S.kills * S.barExp / S.msgExp) : null,
-        expHr5: recentExpHr(),
+        expHr5: recentExpHr(), deaths: S.deaths, toGoalHrs, goalLevel: goal || null, lastExpT: S.lastExpT,
         mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: S.unreadItems, lootValue, lootHr: per(lootValue), items, mobs};
     }
 
     // anonymous summary for the shared drop tables (no character name, no timestamps beyond the date)
     function shareable(){
       const s = stats();
-      return {v: 1, date: new Date(S.start || Date.now()).toISOString().slice(0, 10), map: s.map, mapName: s.mapName, party: s.party, job: s.job,
+      return {v: 1, deaths: S.deaths, date: new Date(S.start || Date.now()).toISOString().slice(0, 10), map: s.map, mapName: s.mapName, party: s.party, job: s.job,
         level: s.level, activeMin: Math.round(s.activeMin * 10) / 10, kills: s.kills, exp: s.exp, mesos: s.mesos,
         msgExp: S.msgExp, barExp: S.barExp, readShare: s.readShare, otherExp: S.otherExp, unreadItems: S.unreadItems, items: S.items,
         mobs: s.mobs.map(m => ({id: m.id, kills: m.kills, mesos: m.mesos, mesoDrops: m.mesoDrops, items: m.items}))};
     }
 
-    return {add, stats, shareable, respawns, state: S};
+    const setGoal = lv => { opts.goalLevel = lv };
+    return {add, stats, shareable, respawns, setGoal, state: S};
   }
 
   /* Shared runs (the same rules as beanguri's Maple Classic Exp Overlay): 15 minutes of non-stop farming on one map with

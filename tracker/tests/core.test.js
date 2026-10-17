@@ -90,6 +90,15 @@ s = createSession(G);
 s.add({t: sec(0), type: "bar", exp: 33, pct: 97, level: 2});
 s.add({t: sec(10), type: "bar", exp: 40, pct: 70, level: 3});
 assert.strictEqual(s.stats().exp, G.exp[2] - 33 + 40, "level-up with a higher EXP number");
+// deaths: a drop without a level-up counts once, however many readings stay low; EXP rising again re-arms it
+s = createSession(G); s.add({t: sec(0), type: "map", id: 42});
+for (const [t, exp] of [[0, 5000], [10, 5200], [20, 4700], [30, 4700], [40, 4650], [50, 4800], [60, 4300]]) s.add({t: sec(t), type: "bar", exp, pct: exp / G.exp[22] * 100, level: 22});
+assert.strictEqual(s.stats().deaths, 2); assert.strictEqual(s.state.deathMaps["42"], 2);
+// goal level: rest of this level plus the next ones at the current rate
+s = createSession(G, {goalLevel: 24});
+s.add({t: sec(0), type: "bar", exp: 0, pct: 0.01, level: 22}); s.add({t: sec(30), type: "bar", exp: 1000, pct: 1, level: 22});
+const gs = s.stats(); assert.ok(Math.abs(gs.toGoalHrs - (G.exp[22] - 1000 + G.exp[23]) / gs.expHr) < 1e-9, "goal hours");
+s.setGoal(0); assert.strictEqual(s.stats().toGoalHrs, null);
 // a death low in the level (EXP drops to 0) is not a level-up
 s = createSession(G);
 s.add({t: sec(0), type: "bar", exp: 1000, pct: 3.45, level: 22});

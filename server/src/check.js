@@ -18,7 +18,8 @@ export function cleanRun(r, G){
   const items = itemsOf(r.items, 100);
   const run = {date: r.date || new Date().toISOString().slice(0, 10), map, map_name: map ? G.mapnames[map] || null : String(r.mapName || "").slice(0, 60) || null,
     level: r.level ?? null, job: r.job ? String(r.job).slice(0, 40) : null, party: r.party | 0, minutes: r.minutes, exp: Math.round(r.exp),
-    msg_exp: Math.round(r.msgExp || 0), bar_exp: Math.round(r.barExp || 0), kills, mesos: Math.round(r.mesos || 0), mobs, items};
+    msg_exp: Math.round(r.msgExp || 0), bar_exp: Math.round(r.barExp || 0), kills, mesos: Math.round(r.mesos || 0), mobs, items,
+    deaths: r.deaths == null ? null : cnt(r.deaths, 100)};
   // honesty: no farming at all; monsters that don't live on this map; EXP bar and EXP messages that disagree a lot
   let why = null;
   if (run.kills < 1 || run.exp <= 0) why = "no kills";

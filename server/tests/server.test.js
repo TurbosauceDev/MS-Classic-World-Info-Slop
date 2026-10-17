@@ -56,6 +56,10 @@ assert.ok(sum.rows.some(x => x.map === null && x.mapName === "Somewhere New"));
 assert.strictEqual(sum.mobs["2"].items["4000019"], 3 * 2 + 3 * 6 + 3 * 4 + 3 * 3, "players 1, 5, the g IDs (4 runs), the h IDs and j");
 assert.ok(!JSON.stringify(sum).includes("aaaaaaaa"), "no install ids in the summary");
 assert.strictEqual(new Set(sum.rows.map(x => x.group)).size, sum.rows.length - 1, "the two party members share a group");
+// deaths: kept per run, a median per player per hour in the summary
+[s] = await post(run("kkkkkkkkkkkkkkkk1", 1000, {deaths: 2}));
+[s] = await post(run("kkkkkkkkkkkkkkkk1", 1000, {deaths: 4}));
+assert.strictEqual((await fresh()).rows.find(x => x.deathsHr != null && x.runs === 2 && x.deathsHr === 12).expHr, 4000, "deaths/hr: median of 8 and 16");
 // junk counts are clamped: negative items dropped, a monster's kills no more than the run's
 [s, r] = await post(run("iiiiiiiiiiiiiiii1", 1000, {mobs: [{id: "3", kills: 1e9, mesos: -5, items: {"4000000": -3, "4000001": 2}}, null]}));
 assert.strictEqual(s, 200);
