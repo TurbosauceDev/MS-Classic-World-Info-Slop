@@ -76,27 +76,36 @@ async function partyLive(req, env){
 }
 
 export async function summary(db){
-  const {results} = await db.prepare(`SELECT r.install, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.kills, r.mesos, r.mobs, g.grp, d.deaths
+  const {results} = await db.prepare(`SELECT r.install, r.ipday, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.kills, r.mesos, r.mobs, g.grp, d.deaths
     FROM runs r LEFT JOIN run_groups g ON g.run_id = r.id LEFT JOIN run_deaths d ON d.run_id = r.id WHERE r.ok = 1`).all();
   // one row per player per map and solo/party: their typical (median) run
   const per = new Map(), mobs = Object.create(null);   // no prototype: a stored id can never reach Object.prototype
+  // one home network = one player: installs that ever sent runs from the same connection on the same day are joined, so
+  // one person with fresh installs (or a whole household) can't make up the "3+ players" a map needs on their own
+  const uf = new Map(), find = k => { let r = k; while (uf.has(r) && uf.get(r) !== r) r = uf.get(r); uf.set(k, r); return r },
+    join = (a, b) => { const x = find(a), y = find(b); if (x !== y) uf.set(x, y) };
+  for (const r of results) join("i" + r.install, "n" + r.ipday);
+  const net = install => find("i" + install);
+  // parties: a party code joined with its members' networks (a separate set, so soloing friends who partied once stay apart)
+  const puf = new Map(), pfind = k => { let r = k; while (puf.has(r) && puf.get(r) !== r) r = puf.get(r); puf.set(k, r); return r };
+  for (const r of results) if (r.grp && r.party > 1){ const x = pfind("p" + r.grp), y = pfind(net(r.install)); if (x !== y) puf.set(x, y) }
   for (const r of results){
     const k = [r.install, r.map ?? "?" + r.map_name, r.party > 1 ? 1 : 0].join("|"), h = r.minutes / 60;
     if (!per.has(k)) per.set(k, {map: r.map, mapName: r.map_name, party: [], level: [], job: [], exp: [], mesos: [], kills: [], deaths: [], grp: null});
     const p = per.get(k);
-    if (r.grp) p.grp = r.grp;
+    p.grp = r.party > 1 ? pfind(r.grp ? "p" + r.grp : net(r.install)) : net(r.install);
     p.party.push(r.party); p.level.push(r.level); p.job.push(r.job); p.exp.push(r.exp / h); p.mesos.push(r.mesos / h); p.kills.push(r.kills / h); if (r.deaths != null) p.deaths.push(r.deaths / h);
     for (const m of JSON.parse(r.mobs || "[]")){
       if (!/^\d{1,10}$/.test(m.id)) continue;   // runs stored before ids were checked
       const t = mobs[m.id] || (mobs[m.id] = {kills: 0, mesos: 0, mesoDrops: 0, items: Object.create(null), players: new Set()});
-      t.kills += m.kills; t.mesos += m.mesos; t.mesoDrops += m.mesoDrops; t.players.add(r.install);
+      t.kills += m.kills; t.mesos += m.mesos; t.mesoDrops += m.mesoDrops; t.players.add(net(r.install));
       for (const [id, n] of Object.entries(m.items || {})) if (/^\d{1,10}$/.test(id)) t.items[id] = (t.items[id] || 0) + (+n || 0);
     }
   }
   const last = a => a.filter(v => v != null).at(-1) ?? null;
-  // group: the party (by party code) or the player alone; a short label, not the code or the install ID
-  const label = new Map(), grp = (p, i) => { const k = p.grp || "solo" + i; if (!label.has(k)) label.set(k, "g" + label.size); return label.get(k) };
-  const rows = [...per.values()].map((p, i) => ({group: grp(p, i), map: p.map, mapName: p.mapName, party: Math.round(median(p.party)), level: last(p.level), job: last(p.job),
+  // group: the party or the player's home network; a short label, not the code, network or install ID
+  const label = new Map(), grp = p => { const k = (p.party.at(-1) > 1 ? "P" : "S") + p.grp; if (!label.has(k)) label.set(k, "g" + label.size); return label.get(k) };
+  const rows = [...per.values()].map(p => ({group: grp(p), map: p.map, mapName: p.mapName, party: Math.round(median(p.party)), level: last(p.level), job: last(p.job),
     runs: p.exp.length, expHr: Math.round(median(p.exp)), mesosHr: Math.round(median(p.mesos)), killsHr: Math.round(median(p.kills)),
     deathsHr: p.deaths.length ? Math.round(median(p.deaths) * 10) / 10 : null}));
   for (const t of Object.values(mobs)){ t.players = t.players.size }

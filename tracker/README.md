@@ -24,6 +24,12 @@ npm start           # run it (Windows, Electron)
   (MIT, tests/frames-beanguri/LICENSE). Job: the status-bar text next to the level, OCR'd the same way every 30 s (Job = Auto).
   Letters the font table hasn't seen read as "?" (item names still match as patterns). More frames: "Save sample frames"
   (60 frames, one every 3 s, to Pictures/MS Classic Tracker frames).
+- Self-check: for 8 s after Start a card shows which readers work (EXP bar, pickup lines, map name, job) with a hint
+  for each that doesn't. "Report a bug" saves the last 8 frames (one every 3 s) and the last 300 log lines (reader
+  events, map/job reads, status messages; no install ID, party code or name) to Pictures/MS Classic Tracker
+  frames/report-<time>/.
+- Shared numbers count one player per home network: the server joins installs that sent runs from the same connection
+  on the same day (and party codes with their members' networks) before the "3+ players" rules.
 - Release: run `.github/workflows/tracker.yml` by hand with "release" ticked (version = package.json); it builds the
   installer on Windows and publishes a GitHub Release; installed copies auto-update from it (electron-updater).
 - Sharing (asked on first start, off until answered): every 15 minutes of non-stop farming on one map is a run sent to

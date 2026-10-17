@@ -141,7 +141,17 @@ ipcMain.handle("save-frame", (_, name, pngBytes) => {
   fs.writeFileSync(path.join(dir, path.basename(String(name))), Buffer.from(pngBytes));   // a file name only, never a path
   return dir;
 });
-ipcMain.handle("open-folder", () => shell.openPath(FRAMES()));   // only ever the frames folder
+// bug report: frames + log.json in a new folder under the frames folder; returns the folder's name
+ipcMain.handle("save-report", (_, frames, info) => {
+  const name = "report-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19), dir = path.join(FRAMES(), name);
+  fs.mkdirSync(dir, {recursive: true});
+  for (const f of (Array.isArray(frames) ? frames : []).slice(0, 20)) fs.writeFileSync(path.join(dir, path.basename(String(f.name))), Buffer.from(f.bytes));
+  const {install, partyCode, nick, ...shown} = readSettings();   // nothing that identifies the player
+  fs.writeFileSync(path.join(dir, "log.json"), JSON.stringify({version: app.getVersion(), os: process.platform + " " + require("os").release(), saved: new Date().toString(), settings: shown, ...info}, null, 1));
+  return name;
+});
+// only ever the frames folder, or a report folder inside it
+ipcMain.handle("open-folder", (_, sub) => shell.openPath(typeof sub === "string" && /^report-[\dT-]+$/.test(sub) ? path.join(FRAMES(), sub) : FRAMES()));
 
 // map name: OCR of the minimap title (a black-on-white PNG the renderer cuts out). Tesseract runs here, offline, with the
 // English model shipped in the installer; files are unpacked from the asar because its worker thread loads them from disk.

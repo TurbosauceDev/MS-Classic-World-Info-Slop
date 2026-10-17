@@ -55,7 +55,16 @@ assert.strictEqual(sum.players, 12, "only counted runs: players 1, 5, 6, the six
 assert.ok(sum.rows.some(x => x.map === null && x.mapName === "Somewhere New"));
 assert.strictEqual(sum.mobs["2"].items["4000019"], 3 * 2 + 3 * 6 + 3 * 7 + 3 * 3, "players 1, 5, the g IDs (7 runs), the h IDs and j");
 assert.ok(!JSON.stringify(sum).includes("aaaaaaaa"), "no install ids in the summary");
-assert.strictEqual(new Set(sum.rows.map(x => x.group)).size, sum.rows.length - 1, "the two party members share a group");
+assert.strictEqual(new Set(sum.rows.map(x => x.group)).size, sum.rows.length - 1 - 5, "the two party members share a group; the six g IDs on one network are one player");
+const gg = sum.rows.filter(x => x.map === "42" && x.party === 1).map(x => x.group);
+assert.ok(new Set(gg).size < gg.length, "same network, same day: one group");
+// one network joins installs across days too: an install seen on two networks links both
+[s] = await post(run("mmmmmmmmmmmmmmm01", 1000), "7.7.7.7");
+[s] = await post(run("mmmmmmmmmmmmmmm02", 1000), "7.7.7.7");
+[s] = await post(run("nnnnnnnnnnnnnnn01", 1000), "6.6.6.6");
+const nets = (await fresh()).rows.filter(x => x.map === "42" && x.party === 1);
+const gm = new Set(nets.slice(-3).map(x => x.group));
+assert.strictEqual(gm.size, 2, "m01 + m02 (one network) and n01");
 // deaths: kept per run, a median per player per hour in the summary
 [s] = await post(run("kkkkkkkkkkkkkkkk1", 1000, {deaths: 2}));
 [s] = await post(run("kkkkkkkkkkkkkkkk1", 1000, {deaths: 4}));

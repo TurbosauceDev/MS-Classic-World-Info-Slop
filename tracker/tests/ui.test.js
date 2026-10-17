@@ -8,7 +8,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.addInitScript(() => {
     window.host = {gameFound: async () => true, wholeScreen: async on => on, settings: async x => (window.st = {...(window.st || {share: false, idleSec: 60, partyCode: "snails"}), ...(x || {})}),
       party: async live => (window.sentParty = live, {expHr: 9000, members: [{you: true, level: 22, expHr: 4000}, {nick: "Bo<b>", job: "Hunter", level: 25, expHr: 5000, expHr5: 6000}]}),
-      saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", openFolder: async () => {}, ocr: async () => "Victoria Road\nSnail Hunting Ground III", shareRun: async () => true, summary: async () => null, sessions: async () => [{saved: Date.now() - 3600e3, date: "2026-10-17", mapName: "Snail Hunting Ground III", level: 22, activeMin: 30, exp: 6000, mesos: 900, deaths: 1},
+      saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", openFolder: async d => (window.opened = d), saveReport: async (f, info) => (window.report = {frames: f.length, info}, "report-2026-10-17T20-00-00"), ocr: async () => "Victoria Road\nSnail Hunting Ground III", shareRun: async () => true, summary: async () => null, sessions: async () => [{saved: Date.now() - 3600e3, date: "2026-10-17", mapName: "Snail Hunting Ground III", level: 22, activeMin: 30, exp: 6000, mesos: 900, deaths: 1},
         {saved: Date.now() - 7200e3, date: "2026-10-17", mapName: "Pig Beach", level: 21, activeMin: 20, exp: 2000, mesos: 300, deaths: 0},
         {saved: Date.now() - 9 * 864e5, date: "2026-10-08", mapName: "Old", level: 10, activeMin: 60, exp: 1, mesos: 1}], exportCsv: async () => "", mini: async () => true};
     navigator.mediaDevices.getDisplayMedia = async () => {
@@ -42,6 +42,16 @@ const path = require("path"), {chromium} = require("playwright");
   await page.evaluate(() => { const t = Date.now(); session.add({t, type: "map", id: 10000013}); session.add({t, type: "exp", gain: 148}); render() });
   const respawn = await page.textContent("#respawn");
   if (!/Mano \(boss\)/.test(respawn) || !/back in ~60 min/.test(respawn)) throw new Error("respawn: " + respawn);
+  // self-check: still checking, then ✓/✗ per reader once its time is up (the noise canvas has no EXP bar or minimap)
+  const chk = await page.evaluate(() => { const during = document.querySelector("#selfcheck").textContent;
+    check.t0 -= 9000; check.lines = true; renderCheck(); return [during, document.querySelector("#selfcheck").innerHTML] });
+  if (!/checking/.test(chk[0]) || !/Minimap not found/.test(chk[1]) || !/EXP bar<\/td><td class="n slow">✗/.test(chk[1]) || !/Press Stop and Start/.test(chk[1])) throw new Error("self-check: " + chk.join(" | "));
+  // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened
+  await page.waitForTimeout(3200);
+  await page.fill("#reportNote", "map read wrong"); await page.click("#report"); await page.waitForTimeout(100);
+  const rep = await page.evaluate(() => [window.report, window.opened]);
+  if (!rep[0] || rep[0].frames < 1 || rep[0].info.note !== "map read wrong" || !rep[0].info.log.some(l => l.kind === "event") || !rep[0].info.log.some(l => l.kind === "status")
+    || !rep[0].info.check || rep[1] !== "report-2026-10-17T20-00-00") throw new Error("report: " + JSON.stringify(rep).slice(0, 300));
   await page.click("#go");
   await page.waitForTimeout(200);
   const saved = await page.evaluate(() => window.saved);

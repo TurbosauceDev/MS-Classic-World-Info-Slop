@@ -33,6 +33,37 @@ function grab(){
   return {w: id.width, h: id.height, d: id.data};
 }
 
+// bug reports: the last 300 log lines and the last 8 frames (one every 3 s, so about 25 s back), saved by "Report a bug"
+const LOG = [], RECENT = [];
+function log(kind, data){ LOG.push({t: Date.now(), kind, ...data}); if (LOG.length > 300) LOG.shift() }
+new MutationObserver(() => { const text = $("#status").textContent; if (LOG.findLast(l => l.kind === "status")?.text !== text) log("status", {text}) }).observe($("#status"), {childList: true, characterData: true, subtree: true});
+let lastKeep = 0;
+function keepFrame(t){
+  if (t - lastKeep < 3000) return;
+  lastKeep = t;
+  canvas.toBlob(async b => { if (!b) return; RECENT.push({t, bytes: new Uint8Array(await b.arrayBuffer())}); if (RECENT.length > 8) RECENT.shift() }, "image/png");
+}
+
+// self-check: for the first 8 s after Start, which readers work right now (8, not 5: the first map read loads the OCR)
+let check = null;
+const CHECK_MS = 8000;
+function renderCheck(){
+  const c = check, box = $("#selfcheck");
+  if (!c) return box.classList.add("hidden");
+  const done = Date.now() - c.t0 > CHECK_MS, row = (name, ok, why) => `<tr><td>${name}</td><td class="n ${ok ? "good" : done ? "slow" : ""}">${ok ? "✓" : done ? "✗" : "…"}</td><td class="note">${ok ? esc(ok === true ? "" : ok) : done ? why : "checking"}</td></tr>`;
+  box.classList.remove("hidden");
+  box.innerHTML = `<div class="k">Self-check${done ? "" : " (a few seconds)"}</div><table>`
+    + row("EXP bar", c.bar, "Not found. Keep the status bar at the bottom of the game on screen; a very small game window can't be read.")
+    + row("Pickup / EXP lines", c.lines, "None yet. Kill something; if this stays empty, the chat box may be covered or scrolled.")
+    + row("Map name", c.map, c.mapWhy || "Not read yet.")
+    + row("Job", settings.job ? "picked by hand" : c.job, c.jobWhy || "Not read yet.")
+    + `</table>` + (done ? `<div class="note">${c.bar && c.lines && c.map && (c.job || settings.job) ? "All readers work." : "✗ = that number won't be tracked until it's fixed. Press Stop and Start to check again."}</div>` : "");
+  if (done && !c.ended){
+    c.ended = true; log("selfcheck", {bar: !!c.bar, lines: !!c.lines, map: c.map || c.mapWhy, job: c.job || c.jobWhy});
+    if (c.bar && c.lines && c.map && (c.job || settings.job)) setTimeout(() => { if (check === c) box.classList.add("hidden") }, 20e3);   // all fine: out of the way
+  }
+}
+
 // sharing progress: minutes into the current 15-minute run, and runs sent this session
 let runsSent = 0;
 function runInfo(){
@@ -89,8 +120,10 @@ async function toPng(c){
 let lastJob = 0, jobSeen = null, jobNow = null;
 async function readJob(f, t){
   const sess = session, sl = slicer, c = GrindReaders.jobTextCrop(GrindReaders.native(f));
-  if (!c) return;
-  const job = GrindReaders.jobFromText(await host.ocr(await toPng(c)));
+  if (!c){ if (check && !check.job) check.jobWhy = "The level and job text on the status bar wasn't found."; return }
+  const text = await host.ocr(await toPng(c)), job = GrindReaders.jobFromText(text);
+  log("job", {job});   // not the OCR text: the character name sits in the same box
+  if (check && sess === session){ if (!job) check.jobWhy = "The status bar text was found but the job didn't read. Pick it by hand."; else if (!check.job){ check.job = job; check.late = check.ended } }
   if (job && job === jobSeen && job !== jobNow && sess === session && !settings.job){ jobNow = job; const e = {t, type: "job", name: job}; sess.add(e); sl.add(e) }
   jobSeen = job;
 }
@@ -101,9 +134,11 @@ async function readMap(f, t){
   const sess = session, sl = slicer;   // an OCR that finishes after Stop/Start belongs to the old session
   const c = GrindReaders.mapTextCrop(GrindReaders.native(f));
   // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
-  if (!c){ if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
+  if (!c){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
   mapMissing = 0;
-  const m = GrindReaders.mapFromText(await host.ocr(await toPng(c)), G), key = m && (m.id || m.name);
+  const text = await host.ocr(await toPng(c)), m = GrindReaders.mapFromText(text, G), key = m && (m.id || m.name);
+  log("map", {text, id: m?.id ?? null, name: m?.name ?? null});
+  if (check && sess === session){ if (!m) check.mapWhy = "Minimap found, but its name didn't read. Is something over the minimap title?"; else if (!check.map){ check.map = m.name || "map " + m.id; check.late = check.ended } }
   // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
   const same = (a, b) => a === b || a && b && !G.maps[a] && !G.maps[b] && GrindReaders.similar(a, b) >= 0.75;
   if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e) }
@@ -171,7 +206,14 @@ function tick(){
     if (!video.srcObject?.active){ $("#status").textContent = "The game window closed. Press Stop, then Start once it's back."; throw null }
     if (!video.videoWidth){ $("#status").textContent = "No picture from the game (minimized?). Waiting..."; throw null }   // skip this tick
     const f = grab();
-    for (const e of readers.readFrame(f, t)){ session.add(e); slicer.add(e); if (e.type === "item") dropAlert(e.id) }
+    keepFrame(t);
+    for (const e of readers.readFrame(f, t)){
+      session.add(e); slicer.add(e); log("event", e);
+      if (e.type === "item") dropAlert(e.id);
+      if (check && e.type === "bar" && !check.bar){ check.bar = e.level ? "Lv " + e.level + ", " + e.pct + "%" : e.pct + "%"; check.late = check.ended }
+      if (check && /^(exp|bonus|meso|item|itemraw)$/.test(e.type) && !check.lines){ check.lines = true; check.late = check.ended }
+    }
+    if (check && (!check.ended || check.late)){ check.late = false; renderCheck() }   // a ✗ turns ✓ when it starts working
     // one OCR at a time (the first can take seconds): the map every 5 s, the job every 30 s in between
     if (!ocrBusy && t - lastOcr > 5000){ lastOcr = t; ocrBusy = true; readMap(f, t).catch(() => {}).finally(() => ocrBusy = false) }
     else if (!ocrBusy && !settings.job && t - lastJob > 30e3){ lastJob = t; ocrBusy = true; readJob(f, t).catch(() => {}).finally(() => ocrBusy = false) }
@@ -194,6 +236,7 @@ async function start(){
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: settings.goal || 0}); stopWarned = false;
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
+  check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   readers = GrindReaders.createReaders(G); mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
@@ -201,6 +244,7 @@ async function start(){
   $("#go").textContent = "Stop";
 }
 async function stop(){
+  log("stop", {}); if (check && !check.ended){ check = null; renderCheck() }
   clearTimeout(timer); timer = null; $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   // a failed save (disk full, folder locked) must not leave the button saying Stop
@@ -225,6 +269,17 @@ $("#frames").onclick = async () => {
       if (++n >= 60){ clearInterval(iv); $("#status").textContent = "Frames saved."; $("#frames").disabled = false; host.openFolder(dir) }
     } catch (err){ clearInterval(iv); $("#frames").disabled = false; $("#status").textContent = `Stopped saving frames after ${n}: ${err.message}` }
   }, 3000);
+};
+
+// "Report a bug": the last frames and log lines into one folder, opened for sending
+$("#report").onclick = async () => {
+  const s = session?.stats(), note = $("#reportNote").value.trim().slice(0, 2000);
+  try {
+    const dir = await host.saveReport(RECENT.map((f, i) => ({name: `frame-${i}-${new Date(f.t).toISOString().slice(11, 19).replace(/:/g, "")}.png`, bytes: f.bytes})),
+      {note, running: timer != null, fps: FPS, check, stats: s && {...s, mobs: s.mobs.length, items: s.items.length}, log: LOG});
+    $("#status").textContent = `Bug report saved (${RECENT.length} frames + log). Send that folder to Danny.`; $("#reportNote").value = "";
+    host.openFolder(dir);
+  } catch (e){ $("#status").textContent = "Couldn't save the bug report: " + e.message }
 };
 
 $("#pcode").onchange = e => host.settings({partyCode: e.target.value.trim().slice(0, 20)}).then(s => { settings = s; lastParty = 0; if (!s.partyCode){ $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "" } });

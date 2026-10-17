@@ -39,6 +39,7 @@
     <div id="status">Looking for the MapleStory window...</div>
     <p><button id="go">Start</button> <button id="frames" class="alt">Save sample frames</button>
       <button id="miniBtn" class="alt">Mini bar</button> <button id="histBtn" class="alt">History</button></p>
+    <p><input id="reportNote" maxlength="2000" size="28" placeholder="What read wrong? (optional)"> <button id="report" class="alt" title="Saves the last ~25 s of game frames (your screen, character name included) and a log to a folder you can send">Report a bug</button></p>
     <p><label>Job <select id="job"><option value="">Auto (read from the status bar)</option><option>Beginner</option><option>Swordman</option><option>Fighter</option><option>Page</option><option>Spearman</option><option>Magician</option><option>Wizard (Fire,Poison)</option><option>Wizard (Ice,Lightning)</option><option>Cleric</option><option>Archer</option><option>Hunter</option><option>Crossbowman</option><option>Rogue</option><option>Assassin</option><option>Bandit</option></select></label></p>
     <label><input type="checkbox" id="share"> Share my sessions (anonymous: map, kills, drops; no character name)</label><br>
     <label><input type="checkbox" id="ontop"> Keep this window on top of the game</label><br>
@@ -50,6 +51,7 @@
     <label><input type="checkbox" id="stopBeep"> Beep when EXP stops for 2 minutes (died, disconnected, map taken)</label><br>
     <label>Goal: level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="off"></label>
   </div>
+  <div class="card hidden" id="selfcheck"></div>
   <div class="card grid">
     <div><div class="k">Kills/hr</div><div class="v" id="killsHr">-</div><div class="note" id="killsEst"></div></div>
     <div><div class="k">EXP/hr</div><div class="v" id="expHr">-</div><div class="note" id="expHr5"></div></div>
