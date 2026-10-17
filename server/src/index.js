@@ -1,5 +1,6 @@
 /* Shared grind data for MS Classic World Info (Cloudflare Worker + D1).
    POST /api/runs     a 15-minute run from the grind tracker (sharing on)
+   POST /api/party    live party view: post your numbers, get your party's (same party code)
    GET  /api/summary  everything the site needs, anonymous: one row per player per map/party (their typical run),
                       plus drop counts per monster. The site's daily build bakes this into the page. */
 import G from "./gamedata.json" with {type: "json"};
@@ -39,6 +40,37 @@ async function postRun(req, env){
   return json({ok: true, counted: c.ok, why: c.why});
 }
 
+// party view: a tracker posts its live numbers with its party code and gets back everyone with the same code seen in the
+// last 3 minutes. Nothing here is kept past an hour or used in the shared numbers. No install IDs go back out.
+const PARTY_FRESH = 3 * 60e3, PARTY_MAX = 6, PARTY_EVERY = 20e3;
+async function partyLive(req, env){
+  let b; try { b = await req.json() } catch { return json({error: "bad json"}, 400) }
+  const num = (v, hi) => typeof v === "number" && isFinite(v) && v >= 0 && v <= hi ? Math.round(v) : null;
+  if (!b || typeof b.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(b.install)) return json({error: "install id"}, 400);
+  const code = typeof b.partyCode === "string" ? b.partyCode.trim().toLowerCase().slice(0, 20) : "";
+  if (!code) return json({error: "party code"}, 400);
+  const grp = await sha("party:" + code + await salt(env.DB)), now = Date.now();
+  const me = {nick: typeof b.nick === "string" ? b.nick.replace(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 12) : "", job: b.job ? String(b.job).slice(0, 40) : null,
+    level: num(b.level, 200), mapName: b.mapName ? String(b.mapName).slice(0, 60) : null, expHr: num(b.expHr, 1e8), expHr5: num(b.expHr5, 1e8),
+    killsHr: num(b.killsHr, 1e5), mesosHr: num(b.mesosHr, 1e8), active: num(b.active, 1e7)};
+  const old = await env.DB.prepare("SELECT updated FROM party_live WHERE grp = ? AND install = ?").bind(grp, b.install).first();
+  if (old && now - Date.parse(old.updated) < PARTY_EVERY) return json({error: "too often"}, 429);
+  // one machine can't fill the table: at most 6 tracker copies per IP (hashed) in the last hour
+  const ip = await sha("ip:" + (req.headers.get("cf-connecting-ip") || "") + await salt(env.DB));
+  if (!old){
+    const k = await env.DB.prepare("SELECT COUNT(DISTINCT install) n, SUM(install = ?) mine FROM party_live WHERE ip = ?").bind(b.install, ip).first();
+    if (k.n >= PARTY_MAX && !k.mine) return json({error: "too many trackers"}, 429);
+    const n = await env.DB.prepare("SELECT COUNT(*) n FROM party_live WHERE grp = ? AND updated > ?").bind(grp, new Date(now - PARTY_FRESH).toISOString()).first();
+    if (n.n >= PARTY_MAX) return json({error: "party full"}, 429);
+  }
+  await env.DB.prepare("DELETE FROM party_live WHERE updated < ?").bind(new Date(now - 3600e3).toISOString()).run();
+  await env.DB.prepare("INSERT OR REPLACE INTO party_live (grp, install, updated, ip, data) VALUES (?, ?, ?, ?, ?)").bind(grp, b.install, new Date(now).toISOString(), ip, JSON.stringify(me)).run();
+  const {results} = await env.DB.prepare("SELECT install, updated, data FROM party_live WHERE grp = ? AND updated > ? ORDER BY install")
+    .bind(grp, new Date(now - PARTY_FRESH).toISOString()).all();
+  const members = results.map(r => ({...JSON.parse(r.data), you: r.install === b.install, ago: Math.round((now - Date.parse(r.updated)) / 1000)}));
+  return json({members, expHr: members.reduce((a, m) => a + (m.expHr || 0), 0)});
+}
+
 export async function summary(db){
   const {results} = await db.prepare(`SELECT r.install, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.kills, r.mesos, r.mobs, g.grp
     FROM runs r LEFT JOIN run_groups g ON g.run_id = r.id WHERE r.ok = 1`).all();
@@ -71,6 +103,7 @@ export default {
     const url = new URL(req.url);
     if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
     if (url.pathname === "/api/runs" && req.method === "POST") return postRun(req, env);
+    if (url.pathname === "/api/party" && req.method === "POST") return partyLive(req, env);
     if (url.pathname === "/api/summary" && req.method === "GET"){
       // worked out at most every 5 minutes (each request would otherwise read every run)
       const cache = typeof caches !== "undefined" ? caches.default : null, hit = cache && await cache.match(req);

@@ -4,9 +4,10 @@
    - status bar EXP "18,572[64.09%]": white 5x7 digits (BAR_FONT); level = the EXP table level whose total fits EXP / %
    - pickup messages (bottom right, yellow or white): "You have gained mesos (+N)", "You received EXP (+N)",
      "Bonus EXP for PARTY (+N)", "<item> xN earned. (Etc)" (MSG_FONT letters + the game's 5x9 digits from shot.js)
-   - party size: rows of the party window's HP bars, else 2+ when a party bonus line shows up
+   - party size: rows of the party window's HP bars, else 2+ while party bonus lines keep showing up
+   - map name: minimap title, OCR'd in the main process (mapTextCrop + mapFromText)
    Capture goes through a video track, so colors wobble a little: every test uses color ranges, never exact pixels.
-   Not read yet: map name, job. */
+   Not read yet: job. */
 (function (root){
   const decode = ([w, h, hex]) => [...hex].map(c => parseInt(c, 16).toString(2).padStart(4, "0")).join("").slice(-w * h).padStart(w * h, "0");
   const glyphs = font => Object.entries(font).map(([ch, f]) => ({ch, w: f[0], h: f[1], bits: decode(f)}));
@@ -291,7 +292,7 @@
 
   function createReaders(G){
     ITEMS = Object.entries(G.items);
-    let prev = [], lastBar = null, lastParty = null, sawBonus = false, partyNext = null, partySeen = 0, barNext = null;
+    let prev = [], lastBar = null, lastParty = null, bonusAt = -Infinity, partyNext = null, partySeen = 0, barNext = null;
     // new pickup lines since the previous frame. Each new message pushes the stack up one line, so the smallest shift n
     // (in lines) where every older line in this frame sits n lines above the same text in the last frame says how many
     // at the bottom are new. Lines that faded too far to read are just skipped.
@@ -328,11 +329,12 @@
         ev.push({t, type: "bar", exp: bar.exp, pct: bar.pct, level}); lastBar = {...bar, level: level || lastBar?.level};
       }
       for (const p of fresh(readPickups(img))){
-        if (p.event.type === "bonus") sawBonus = true;
+        if (p.event.type === "bonus") bonusAt = t;
         ev.push({t, ...p.event});
       }
       // party size only changes after the same new size is read 3 frames running (a window in the way, a bar mid-blink)
-      const party = readParty(img) || (sawBonus ? 2 : 1);
+      // no party window: a party while bonus lines came in the last 3 minutes (left the party = back to solo after that)
+      const party = readParty(img) || (t - bonusAt < 180e3 ? 2 : 1);
       if (party === partyNext) partySeen++; else { partyNext = party; partySeen = 1 }
       if (party !== lastParty && (lastParty === null || partySeen >= 3)){ ev.push({t, type: "party", size: party}); lastParty = party }
       return ev;

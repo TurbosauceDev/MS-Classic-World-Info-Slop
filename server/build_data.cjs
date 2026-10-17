@@ -9,6 +9,6 @@ for (const [mob, , , , exp, map, mapName] of D.timed || []){   // bosses / timed
   if (!maps[map]){ maps[map] = []; mapnames[map] = mapnames[map] || mapName }
   if (!maps[map].includes(String(mob))){ maps[map].push(String(mob)); mobs[mob] = exp }
 }
-for (const ids of Object.values(maps)) for (const id of ids) mobs[id] = mobs[id] || D.mobs[id]?.[3] || 0;
+for (const ids of Object.values(maps)) for (const id of ids) mobs[id] = mobs[id] || D.mobs[id]?.[3] || D.mobdb?.[id]?.exp || 0;   // KPQ monsters are only in mobdb
 fs.writeFileSync(path.join(__dirname, "src/gamedata.json"), JSON.stringify({maps, mobs, mapnames, exp: D.exp}));
 console.log("gamedata.json", Object.keys(maps).length, "maps", Object.keys(mobs).length, "monsters");

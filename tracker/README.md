@@ -24,6 +24,10 @@ npm start           # run it (Windows, Electron)
   (MIT, tests/frames-beanguri/LICENSE). Not read yet: job.
   Letters the font table hasn't seen read as "?" (item names still match as patterns). More frames: "Save sample frames"
   (60 frames, one every 3 s, to Pictures/MS Classic Tracker frames).
-- Release: push tag `tracker-vX.Y.Z` (= package.json version); `.github/workflows/tracker.yml` builds the installer on
-  Windows and publishes a GitHub Release; installed copies auto-update from it (electron-updater).
-- Sharing: finished sessions are saved under %APPDATA%/ms-classic-grind-tracker/sessions; upload waits on the backend.
+- Release: run `.github/workflows/tracker.yml` by hand with "release" ticked (version = package.json); it builds the
+  installer on Windows and publishes a GitHub Release; installed copies auto-update from it (electron-updater).
+- Sharing (asked on first start, off until answered): every 15 minutes of non-stop farming on one map is a run sent to
+  the server (server/), queued in run-queue.json until it answers. Sessions are also saved locally under
+  %APPDATA%/ms-classic-grind-tracker/sessions (History, CSV export).
+- Party view: with a party code, the tracker posts its live EXP/hr, level, job (and the name typed, if any) once a
+  minute to `/api/party` and shows everyone on the same code. Works with sharing off.

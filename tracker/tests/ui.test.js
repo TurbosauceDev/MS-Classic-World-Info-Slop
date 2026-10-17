@@ -6,7 +6,8 @@ const path = require("path"), {chromium} = require("playwright");
   const page = await browser.newPage(), errors = [];
   page.on("pageerror", e => errors.push(e.message));
   await page.addInitScript(() => {
-    window.host = {gameFound: async () => true, wholeScreen: async on => on, settings: async () => ({share: true, idleSec: 60}),
+    window.host = {gameFound: async () => true, wholeScreen: async on => on, settings: async x => (window.st = {...(window.st || {share: false, idleSec: 60, partyCode: "snails"}), ...(x || {})}),
+      party: async live => (window.sentParty = live, {expHr: 9000, members: [{you: true, level: 22, expHr: 4000}, {nick: "Bo<b>", job: "Hunter", level: 25, expHr: 5000, expHr5: 6000}]}),
       saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", openFolder: async () => {}, ocr: async () => "Victoria Road\nSnail Hunting Ground III", shareRun: async () => true, summary: async () => null, sessions: async () => [], exportCsv: async () => "", mini: async () => true};
     navigator.mediaDevices.getDisplayMedia = async () => {
       const c = document.createElement("canvas"); c.width = 800; c.height = 600;
@@ -15,8 +16,14 @@ const path = require("path"), {chromium} = require("playwright");
     };
   });
   await page.goto("file://" + path.join(__dirname, "../app/index.html"));
-  await page.click("#go");
+  // first run: the guide asks about sharing
+  if (!await page.isVisible("#guide")) throw new Error("guide not shown");
+  await page.click("#guideShare");
+  if (await page.isVisible("#guide") || !await page.isChecked("#share")) throw new Error("guide answer");
+  await page.dblclick("#go");
   await page.waitForTimeout(1500);
+  const party = await page.textContent("#partyBox");
+  if (!/9,000 EXP\/hr together/.test(party) || !/Bo&lt;b&gt;|Bo<b>/.test(party) || await page.$("#partyBox b b")) throw new Error("party: " + party);
   await page.evaluate(() => { const t = Date.now(); session.add({t, type: "map", id: 42}); session.add({t, type: "exp", gain: 8});
     session.add({t: t + 5000, type: "exp", gain: 4}); session.add({t: t + 5100, type: "meso", amount: 12}); session.add({t: t + 5200, type: "item", id: 4000019}) });
   await page.waitForTimeout(800);

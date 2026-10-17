@@ -5,7 +5,7 @@ const fs = require("fs"), path = require("path");
 const {autoUpdater} = require("electron-updater");
 
 const SETTINGS = path.join(app.getPath("userData"), "settings.json");
-const readSettings = () => { try { return JSON.parse(fs.readFileSync(SETTINGS, "utf8")) } catch { return {share: true, idleSec: 60} } };
+const readSettings = () => { try { return JSON.parse(fs.readFileSync(SETTINGS, "utf8")) } catch { return {share: false, idleSec: 60} } };   // sharing: the first-run guide asks
 // shared runs go to our server (server/ in the repo); runs wait in the queue file until it answers
 const SERVER = "https://ms-classic-tracker.maplestoryclassic.workers.dev";
 const QUEUE = path.join(app.getPath("userData"), "run-queue.json");
@@ -40,6 +40,7 @@ app.whenReady().then(() => {
   win.loadFile(path.join(__dirname, "index.html"));
   if (app.isPackaged) autoUpdater.checkForUpdatesAndNotify().catch(() => {});
   flushRuns().catch(() => {});
+  setInterval(() => flushRuns().catch(() => {}), 10 * 60e3);   // runs queued while a send was going, or while offline
   setInterval(() => app.isPackaged && autoUpdater.checkForUpdatesAndNotify().catch(() => {}), 6 * 3600e3);
 });
 app.on("window-all-closed", () => app.quit());
@@ -105,11 +106,20 @@ ipcMain.handle("share-run", async (_, run) => {
   const q = readQueue(); q.push({...run, install: readSettings().install}); fs.writeFileSync(QUEUE, JSON.stringify(q.slice(-200)));
   await flushRuns(); return true;
 });
-ipcMain.handle("save-session", (_, summary) => {
+ipcMain.handle("save-session", (_, summary) => {   // kept on this PC only (shared numbers go up as 15-minute runs)
   fs.mkdirSync(SESSIONS, {recursive: true});
   fs.writeFileSync(path.join(SESSIONS, Date.now() + ".json"), JSON.stringify(summary));
-  // upload goes here once the shared backend exists; until then sessions stay on this PC
   return true;
+});
+// party view: post this tracker's live numbers with the party code, get everyone with the same code (server keeps them an hour)
+ipcMain.handle("party", async (_, live) => {
+  const st = readSettings();
+  if (!SERVER || !st.partyCode) return null;
+  try {
+    const r = await fetch(SERVER + "/api/party", {method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({...live, install: st.install, partyCode: st.partyCode, nick: st.nick || ""})});
+    return r.ok ? await r.json() : {error: r.status, why: (await r.json().catch(() => ({}))).error || ""};
+  } catch { return null }
 });
 // "Save sample frames": raw captures for building and testing the screen readers
 const FRAMES = () => path.join(app.getPath("pictures"), "MS Classic Tracker frames");

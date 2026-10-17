@@ -23,6 +23,8 @@ for (const [mob, name, level, hp, exp, map, mapName, , sec, boss] of D.timed || 
   (G.timed[map] = G.timed[map] || []).push([String(mob), sec, boss]);
   if (G.maps[map] && !G.maps[map][2].some(([id]) => String(id) === String(mob))) G.maps[map] = [G.maps[map][0], G.maps[map][1], [...G.maps[map][2], [+mob, 0]]];
 }
+// monsters only in the site's monster pages (KPQ stages: Ligator, Curse Eye, King Slime...): same [name, level, hp, exp]
+for (const [, , list] of Object.values(G.maps)) for (const [id] of list){ const m = D.mobdb?.[id]; if (!G.mobs[id] && m) G.mobs[id] = [m.name, m.level, m.hp, m.exp] }
 fs.writeFileSync(path.join(__dirname, "app/gamedata.json"), JSON.stringify(G));   // tests
 fs.writeFileSync(path.join(__dirname, "app/gamedata.js"), "const GAMEDATA = " + JSON.stringify(G) + ";\n");   // the app (no fetch of file: URLs)
 // the site's screenshot reader (game digit font, un-doubling, icon matching) is shared, not forked

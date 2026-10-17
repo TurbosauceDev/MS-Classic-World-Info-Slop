@@ -10,15 +10,20 @@ export function cleanRun(r, G){
   if (r.date && !/^\d{4}-\d\d-\d\d$/.test(r.date)) return {error: "date"};
   // a map id the server doesn't know (a newer tracker): keep the run under its name rather than lose it
   const map = r.map != null && G.maps[String(r.map)] ? String(r.map) : null;
-  const mobs = Array.isArray(r.mobs) ? r.mobs.slice(0, 20).map(m => ({id: String(m.id), kills: m.kills | 0, mesos: m.mesos | 0,
-    mesoDrops: m.mesoDrops | 0, items: Object.fromEntries(Object.entries(m.items || {}).slice(0, 50).map(([k, v]) => [String(k), v | 0]))})) : [];
-  const items = Object.fromEntries(Object.entries(r.items || {}).slice(0, 100).map(([k, v]) => [String(k), v | 0]));
+  // counts: whole numbers from 0 up, a monster's kills no more than the run's (they add up to the Confirmed Drops)
+  const cnt = (v, hi) => Math.min(hi, Math.max(0, Math.floor(+v) || 0)), kills = cnt(r.kills, 1e5);
+  const itemsOf = (o, n) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).slice(0, n).map(([k, v]) => [String(k).slice(0, 12), cnt(v, 1e4)]).filter(([, v]) => v));
+  const mobs = Array.isArray(r.mobs) ? r.mobs.filter(m => m && typeof m === "object").slice(0, 20).map(m => ({id: String(m.id).slice(0, 12), kills: cnt(m.kills, kills),
+    mesos: cnt(m.mesos, 1e8), mesoDrops: cnt(m.mesoDrops, 1e5), items: itemsOf(m.items, 50)})) : [];
+  const items = itemsOf(r.items, 100);
   const run = {date: r.date || new Date().toISOString().slice(0, 10), map, map_name: map ? G.mapnames[map] || null : String(r.mapName || "").slice(0, 60) || null,
     level: r.level ?? null, job: r.job ? String(r.job).slice(0, 40) : null, party: r.party | 0, minutes: r.minutes, exp: Math.round(r.exp),
-    msg_exp: Math.round(r.msgExp || 0), bar_exp: Math.round(r.barExp || 0), kills: r.kills | 0, mesos: Math.round(r.mesos || 0), mobs, items};
+    msg_exp: Math.round(r.msgExp || 0), bar_exp: Math.round(r.barExp || 0), kills, mesos: Math.round(r.mesos || 0), mobs, items};
   // honesty: no farming at all; monsters that don't live on this map; EXP bar and EXP messages that disagree a lot
   let why = null;
   if (run.kills < 1 || run.exp <= 0) why = "no kills";
+  // every kill is an EXP message of at least 1, so kills can't be more than the messages' EXP
+  else if (run.msg_exp > 0 && run.kills > run.msg_exp) why = "more kills than EXP";
   else if (map && mobs.some(m => !G.maps[map].includes(m.id))) why = "monster not on this map";
   // more than 2 levels' worth of EXP an hour: a broken reading or a made-up run (mapleexp.com's leaderboard uses the same cut).
   // Only from Lv 20: below that a level can take minutes

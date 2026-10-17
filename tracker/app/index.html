@@ -24,6 +24,17 @@
 <body>
   <div class="card" id="mini" title="Click for the full window"><span class="k">EXP/hr</span> <span class="v" id="miniExp">-</span>
     · <span class="k">next level</span> <span class="v" id="miniTtl">-</span><div class="note" id="miniNote"></div></div>
+  <div class="card hidden" id="guide">
+    <div class="v">Welcome</div>
+    <ol>
+      <li>Pick your job below (it isn't read from the screen yet).</li>
+      <li>Press <b>Start</b> with MapleStory open. Keep the minimap and the EXP bar on screen; the chat box shows the kill and pickup lines.</li>
+      <li>Playing in a party? Everyone types the same <b>party code</b> to see each other's EXP/hr live.</li>
+    </ol>
+    <p>Share your runs with other players? Anonymous: map, level, job, EXP, kills, drops. Never your character name. It feeds the
+      speed check after each run and the Confirmed Drops on the site.</p>
+    <p><button id="guideShare">Share</button> <button id="guideNo" class="alt">Don't share</button></p>
+  </div>
   <div class="card">
     <div id="status">Looking for the MapleStory window...</div>
     <p><button id="go">Start</button> <button id="frames" class="alt">Save sample frames</button>
@@ -32,7 +43,9 @@
     <label><input type="checkbox" id="share"> Share my sessions (anonymous: map, kills, drops; no character name)</label><br>
     <label><input type="checkbox" id="ontop"> Keep this window on top of the game</label><br>
     <label>Party code <input id="pcode" maxlength="20" size="10" placeholder="optional"></label>
-    <span class="note">same code for everyone in your party: the party counts as one group in the shared numbers</span><br>
+    <label>Name <input id="nick" maxlength="12" size="8" placeholder="optional"></label>
+    <div class="note">Same code for everyone in your party: you see each other's EXP/hr, level and job live (name only if you type one), and the
+      party counts as one group in the shared numbers.</div>
     <label>Beep for drops worth at least <input type="number" id="alert" min="0" step="1000"> mesos (0 = off)</label>
   </div>
   <div class="card grid">
@@ -43,6 +56,7 @@
     <div><div class="k">Loot value/hr</div><div class="v" id="lootHr">-</div></div>
     <div><div class="k">Active time</div><div class="v" id="active">-</div></div>
   </div>
+  <div class="card hidden" id="partyBox"></div>
   <div class="card hidden" id="lastRun"></div>
   <div class="card hidden" id="respawn"></div>
   <div class="card hidden" id="hist"><div class="k">Past sessions <button id="csv" class="alt">Export CSV</button></div><table id="histRows"></table></div>

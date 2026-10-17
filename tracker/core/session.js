@@ -77,7 +77,8 @@
             // leveled up: the level says so, or (just after a level-up, when the % is too small to work the level out)
             // the bar was at 90%+ and fell to under half of that; a death only takes a few %
             const up = e.level && p.level ? e.level > p.level : p.level && p.pct >= 90 && e.exp < p.exp * 0.5;
-            if (d < 0 && up){ d = (G.exp[p.level] || 0) - p.exp + e.exp; if (!e.level) S.level = p.level + 1 }
+            // the EXP number can come back higher after a level-up (it's into a bigger level); the % going down says so too
+            if (up && (d < 0 || e.pct != null && p.pct != null && e.pct < p.pct)){ d = (G.exp[p.level] || 0) - p.exp + e.exp; if (!e.level) S.level = p.level + 1 }
             if (d > 0) S.barExp += d;   // a drop without a level-up (death) is just skipped
           }
           S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: S.level}; break;
@@ -203,7 +204,7 @@
     const ref = medianOf(all), x = hr / ref;
     const verdict = x < 0.75 ? "slow" : x <= 1.25 ? "average" : x <= 1.75 ? "good" : "very fast";
     const faster = maps.filter(m => m.expHr > hr && m.map !== String(run.map)).sort((a, b) => b.expHr - a.expHr).slice(0, 3);
-    return {expHr: hr, verdict, ref, peers: all.length, faster};
+    return {expHr: hr, verdict, ref, peers: groups(maps.flatMap(m => byMap[m.map].filter(r => r.expHr >= m.expHr / 2 && r.expHr <= m.expHr * 2))), faster};
   }
 
   const api = {createSession, createRunSlicer, speedCheck, IDLE_MS, RUN_MS};

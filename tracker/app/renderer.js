@@ -63,18 +63,19 @@ function render(){
     s.kills + " kills", fmt(s.mesoPerKill) + " mesos/kill",
     s.readShare != null && Math.round(s.readShare * 100) + "% of EXP seen as messages",
     settings.share && runInfo()].filter(Boolean).join(" · ");
-  $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${m.name}</td><td class="n">${m.kills} kills</td><td class="n">${fmt(m.mesoPerKill)} mesos/kill</td></tr>`).join("");
-  $("#items").innerHTML = s.items.map(i => `<tr><td>${i.name}</td><td class="n">×${i.n}</td><td class="n">${fmt(i.total)}</td></tr>`).join("")
+  $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${esc(m.name)}</td><td class="n">${m.kills} kills</td><td class="n">${fmt(m.mesoPerKill)} mesos/kill</td></tr>`).join("");
+  $("#items").innerHTML = s.items.map(i => `<tr><td>${esc(i.name)}</td><td class="n">×${i.n}</td><td class="n">${fmt(i.total)}</td></tr>`).join("")
     + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet</td></tr>` : "");
   $("#priceNote").textContent = G.pwRead ? `Worth = player-shop median from meso.watch (${G.pwRead}), else NPC price. Mesos/kill on maps with several monsters is a best guess.` : "";
 }
 
 // map name every 5 s: cut the minimap title out, OCR it in the main process, take it once the same map is read twice in a row
-let lastOcr = 0, mapSeen = null, mapNow = null, mapMissing = 0;
+let ocrBusy = false, lastOcr = 0, mapSeen = null, mapNow = null, mapMissing = 0;
 async function readMap(f, t){
+  const sess = session, sl = slicer;   // an OCR that finishes after Stop/Start belongs to the old session
   const c = GrindReaders.mapTextCrop(GrindReaders.native(f));
   // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
-  if (!c){ if (++mapMissing === 6 && mapNow && session){ mapNow = mapSeen = null; const e = {t, type: "map", id: null, name: null}; session.add(e); slicer.add(e) } return }
+  if (!c){ if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
   mapMissing = 0;
   const cv = document.createElement("canvas"); cv.width = c.w; cv.height = c.h;
   cv.getContext("2d").putImageData(new ImageData(c.d, c.w, c.h), 0, 0);
@@ -82,7 +83,7 @@ async function readMap(f, t){
   const m = GrindReaders.mapFromText(await host.ocr(png), G), key = m && (m.id || m.name);
   // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
   const same = (a, b) => a === b || a && b && !G.maps[a] && !G.maps[b] && GrindReaders.similar(a, b) >= 0.75;
-  if (key && same(key, mapSeen) && !same(key, mapNow) && session){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; session.add(e); slicer.add(e) }
+  if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e) }
   mapSeen = key;
 }
 
@@ -110,6 +111,21 @@ function dropAlert(id){
   $("#status").textContent = `Valuable drop: ${G.items[id]?.n || "item " + id} (worth ~${fmt(worth)})`;
 }
 
+// party view: every minute, our numbers go up with the party code and everyone's come back
+let lastParty = 0;
+async function sendParty(){
+  const s = session.stats(), box = $("#partyBox");
+  const r = await host.party({job: s.job, level: s.level, mapName: s.mapName, expHr: s.expHr, expHr5: s.expHr5, killsHr: s.killsHr, mesosHr: s.mesosHr,
+    active: Math.round(s.activeMin)}).catch(() => null);
+  if (!r) return;
+  box.classList.remove("hidden");
+  if (r.error){ box.innerHTML = `<div class="k">Party</div><div class="note">${r.why === "party full" ? "Party full: 6 trackers already use this code." : r.why === "too often" ? "Waiting a moment before updating." : "Party view didn't answer (" + esc(r.why || r.error) + ")."}</div>`; return }
+  box.innerHTML = `<div class="k">Party "${esc(settings.partyCode)}": ${fmt(r.expHr)} EXP/hr together</div><table>` + r.members.map(m =>
+    `<tr><td>${m.you ? "<b>you</b>" : esc(m.nick || m.job || "member")}${m.nick && !m.you && m.job ? ` <span class="note">${esc(m.job)}</span>` : ""}${m.level ? " Lv " + m.level : ""}</td>
+    <td class="n">${fmt(m.expHr || 0)}/hr</td><td class="n note">${m.expHr5 != null ? "5 min: " + fmt(m.expHr5) : ""}</td></tr>`).join("")
+    + `</table><div class="note">Each member's own EXP/hr, updated every minute. Members who stopped drop off after 3 minutes.</div>`;
+}
+
 let slowTicks = 0;
 function tick(){
   if (timer == null) return;   // stopped
@@ -117,7 +133,8 @@ function tick(){
   try {
     const f = grab();
     for (const e of readers.readFrame(f, t)){ session.add(e); slicer.add(e); if (e.type === "item") dropAlert(e.id) }
-    if (t - lastOcr > 5000){ lastOcr = t; readMap(f, t) }
+    if (t - lastOcr > 5000 && !ocrBusy){ lastOcr = t; ocrBusy = true; readMap(f, t).catch(() => {}).finally(() => ocrBusy = false) }   // the first OCR can take seconds
+    if (t - lastParty > 60e3 && settings.partyCode){ lastParty = t; sendParty() }
     render();
   } catch (err){ $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
   // over 250 ms a frame, 10 times running: read once a second instead of twice
@@ -127,20 +144,23 @@ function tick(){
   timer = setTimeout(tick, Math.max(50, 1000 / FPS - ms));
 }
 
+let starting = false;
 async function start(){
-  await startCapture();
+  if (starting) return;   // a double click starts one capture, not two
+  starting = true; $("#status").className = "";
+  try { await startCapture() } finally { starting = false }
   timer = 0;   // running (the first tick sets the real timeout)
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000});
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
-  readers = GrindReaders.createReaders(G); mapNow = mapSeen = null;
+  readers = GrindReaders.createReaders(G); mapNow = mapSeen = null; mapMissing = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
   // job isn't read from the screen yet: the player picks it
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   tick();
   $("#go").textContent = "Stop";
 }
 async function stop(){
-  clearTimeout(timer); timer = null;
+  clearTimeout(timer); timer = null; $("#partyBox").classList.add("hidden");
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable()});
   $("#go").textContent = "Start";
@@ -150,18 +170,26 @@ $("#go").onclick = () => timer != null ? stop() : start().catch(e => { $("#statu
 // one full frame every 3 s for 3 minutes, saved as PNG: material for building and testing the readers
 $("#frames").onclick = async () => {
   $("#frames").disabled = true;   // one batch at a time
-  if (!video) await startCapture();
+  try { if (!video?.srcObject?.active) await startCapture() }   // stopped tracks only give the last frame
+  catch (err){ $("#frames").disabled = false; $("#status").textContent = "Couldn't capture the game: " + err.message; return }
   let n = 0, dir = null;
   const iv = setInterval(async () => {
-    canvas.width = video.videoWidth; canvas.height = video.videoHeight; g.drawImage(video, 0, 0);
-    const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
-    dir = await host.saveFrame(`frame-${String(n).padStart(3, "0")}.png`, new Uint8Array(await blob.arrayBuffer()));
-    $("#status").textContent = `Saving sample frames: ${n + 1}/60`;
-    if (++n >= 60){ clearInterval(iv); $("#status").textContent = "Frames saved."; $("#frames").disabled = false; host.openFolder(dir) }
+    try {
+      if (!video.videoWidth || !video.srcObject?.active) throw new Error("capture stopped (Stop pressed or game closed)");
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight; g.drawImage(video, 0, 0);
+      const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
+      dir = await host.saveFrame(`frame-${String(n).padStart(3, "0")}.png`, new Uint8Array(await blob.arrayBuffer()));
+      $("#status").textContent = `Saving sample frames: ${n + 1}/60`;
+      if (++n >= 60){ clearInterval(iv); $("#status").textContent = "Frames saved."; $("#frames").disabled = false; host.openFolder(dir) }
+    } catch (err){ clearInterval(iv); $("#frames").disabled = false; $("#status").textContent = `Stopped saving frames after ${n}: ${err.message}` }
   }, 3000);
 };
 
-$("#pcode").onchange = e => host.settings({partyCode: e.target.value.trim().slice(0, 20)}).then(s => settings = s);
+$("#pcode").onchange = e => host.settings({partyCode: e.target.value.trim().slice(0, 20)}).then(s => { settings = s; lastParty = 0; if (!s.partyCode) $("#partyBox").classList.add("hidden") });
+$("#nick").onchange = e => host.settings({nick: e.target.value.trim().slice(0, 12)}).then(s => settings = s);
+const guideDone = share => host.settings({share, guideDone: true}).then(s => { settings = s; $("#share").checked = share; $("#guide").classList.add("hidden") });
+$("#guideShare").onclick = () => guideDone(true);
+$("#guideNo").onclick = () => guideDone(false);
 $("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.value || 0)}).then(s => settings = s);
 $("#miniBtn").onclick = () => { document.body.classList.add("mini"); host.mini(true) };
 $("#mini").onclick = () => { document.body.classList.remove("mini"); host.mini(false) };
@@ -186,6 +214,8 @@ $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
   $("#ontop").checked = settings.onTop !== false;
   $("#alert").value = settings.alertWorth || 0;
   $("#pcode").value = settings.partyCode || "";
+  $("#nick").value = settings.nick || "";
+  $("#guide").classList.toggle("hidden", !!settings.guideDone);
   const found = await host.gameFound();
   $("#status").textContent = found ? "MapleStory window found." : "Start MapleStory, then press Start.";
 })();

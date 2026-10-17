@@ -54,4 +54,26 @@ assert.ok(sum.rows.some(x => x.map === null && x.mapName === "Somewhere New"));
 assert.strictEqual(sum.mobs["2"].items["4000019"], 3 * 2 + 3 * 6 + 3 * 4 + 3 * 2, "players 1, 5, the g IDs (4 runs) and the h IDs");
 assert.ok(!JSON.stringify(sum).includes("aaaaaaaa"), "no install ids in the summary");
 assert.strictEqual(new Set(sum.rows.map(x => x.group)).size, sum.rows.length - 1, "the two party members share a group");
+// junk counts are clamped: negative items dropped, a monster's kills no more than the run's
+[s, r] = await post(run("iiiiiiiiiiiiiiii1", 1000, {mobs: [{id: "3", kills: 1e9, mesos: -5, items: {"4000000": -3, "4000001": 2}}, null]}));
+assert.strictEqual(s, 200);
+const bad = (await (await worker.fetch(new Request("https://x/api/summary"), env)).json()).mobs["3"];
+assert.strictEqual(bad.kills, 100); assert.strictEqual(bad.mesos, 0); assert.deepStrictEqual(bad.items, {"4000001": 2});
+// party view
+const party = (body, ip = "10.1.0." + body.install.slice(-1)) => worker.fetch(new Request("https://x/api/party", {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
+[s, r] = await party({install: "pppppppppppppp01", partyCode: "Snails", nick: "Danny<b>", job: "Cleric", level: 31, expHr: 50000});
+assert.strictEqual(s, 200); assert.strictEqual(r.members.length, 1); assert.strictEqual(r.members[0].nick, "Dannyb"); assert.ok(r.members[0].you);
+[s, r] = await party({install: "pppppppppppppp02", partyCode: "snails ", job: "Hunter", level: 30, expHr: 40000});
+assert.strictEqual(r.members.length, 2); assert.strictEqual(r.expHr, 90000); assert.strictEqual(r.members.filter(m => m.you).length, 1);
+assert.ok(!JSON.stringify(r).includes("pppppp"), "no install ids back");
+[s] = await party({install: "pppppppppppppp01", partyCode: "Snails", expHr: 1});
+assert.strictEqual(s, 429, "at most every 20 s");
+[s, r] = await party({install: "pppppppppppppp03", partyCode: "other", expHr: 1});
+assert.strictEqual(r.members.length, 1, "other code, other party");
+for (let i = 4; i <= 8; i++) [s] = await party({install: "pppppppppppppp0" + i, partyCode: "snails"});
+assert.strictEqual(s, 429, "7th member refused");
+[s] = await party({install: "pppppppppppppp09"});
+assert.strictEqual(s, 400, "no code");
+for (let i = 1; i <= 7; i++) [s] = await party({install: "qqqqqqqqqqqqqq0" + i, partyCode: "q" + i}, "8.8.8.8");
+assert.strictEqual(s, 429, "7 trackers from one IP");
 console.log("server tests passed");

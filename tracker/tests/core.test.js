@@ -85,6 +85,11 @@ s.add({t: sec(10), type: "bar", exp: 50, pct: 0.17, level: null});
 s.add({t: sec(20), type: "bar", exp: 300, level: 23});
 st = s.stats();
 assert.strictEqual(st.exp, 28980 - 28900 + 300); assert.strictEqual(st.level, 23);
+// level-up where the EXP number comes back higher (low level near the top -> next level a bit in): still the whole rest
+s = createSession(G);
+s.add({t: sec(0), type: "bar", exp: 33, pct: 97, level: 2});
+s.add({t: sec(10), type: "bar", exp: 40, pct: 70, level: 3});
+assert.strictEqual(s.stats().exp, G.exp[2] - 33 + 40, "level-up with a higher EXP number");
 // a death low in the level (EXP drops to 0) is not a level-up
 s = createSession(G);
 s.add({t: sec(0), type: "bar", exp: 1000, pct: 3.45, level: 22});

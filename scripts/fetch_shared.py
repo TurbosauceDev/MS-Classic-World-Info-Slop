@@ -10,6 +10,10 @@ req = urllib.request.Request(URL, headers={"User-Agent": "ms-classic-world-info 
 with urllib.request.urlopen(req, timeout=60) as r: d = json.load(r)
 j = {"source": URL, "read": d["updated"][:10], "runs": d["runs"], "players": d["players"], "hours": d["hours"], "mobs": d["mobs"]}
 dst = ROOT / "data" / "sources" / "shared_runs.json"
+try:   # nothing new: keep the old read date so the daily job doesn't commit just a date
+    old = json.loads(dst.read_text())
+    if {k: v for k, v in old.items() if k != "read"} == {k: v for k, v in j.items() if k != "read"}: j["read"] = old["read"]
+except (OSError, ValueError, KeyError): pass
 dst.write_text(json.dumps(j, separators=(",", ":")))
 print(f"{d['runs']} runs, {d['players']} players, {len(d['mobs'])} monsters -> {dst}")
 
