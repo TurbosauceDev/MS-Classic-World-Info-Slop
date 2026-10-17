@@ -258,6 +258,7 @@
     }
     return p[b.length];
   }
+  const similar = (a, b) => { a = norm(a); b = norm(b); return 1 - lev(a, b) / Math.max(a.length, b.length, 1) };
   // OCR text -> {id, name}: the closest map name to the last line (75%+ alike), else the map line as read (maps our data doesn't have)
   function mapFromText(text, G){
     const lines = text.split("\n").map(l => l.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9>)]+$/g, "").trim()).filter(l => l.length >= 3);
@@ -267,7 +268,7 @@
     {
       const a = norm(l);
       for (const [id, n] of Object.entries(G.mapnames)){
-        const b = norm(n), sim = 1 - lev(a, b) / Math.max(a.length, b.length);
+        const b = norm(n), sim = 1 - lev(a, b) / Math.max(a.length, b.length, 1);
         if (!best || sim > best.sim || sim === best.sim && G.maps[id] && !G.maps[best.id]) best = {id, name: n, sim};
       }
     }
@@ -290,7 +291,7 @@
 
   function createReaders(G){
     ITEMS = Object.entries(G.items);
-    let prev = [], lastBar = null, lastParty = null, sawBonus = false;
+    let prev = [], lastBar = null, lastParty = null, sawBonus = false, partyNext = null, partySeen = 0;
     // new pickup lines since the previous frame. Each new message pushes the stack up one line, so the smallest shift n
     // (in lines) where every older line in this frame sits n lines above the same text in the last frame says how many
     // at the bottom are new. Lines that faded too far to read are just skipped.
@@ -321,12 +322,14 @@
         if (p.event.type === "bonus") sawBonus = true;
         ev.push({t, ...p.event});
       }
+      // party size only changes after the same new size is read 3 frames running (a window in the way, a bar mid-blink)
       const party = readParty(img) || (sawBonus ? 2 : 1);
-      if (party !== lastParty){ ev.push({t, type: "party", size: party}); lastParty = party }
+      if (party === partyNext) partySeen++; else { partyNext = party; partySeen = 1 }
+      if (party !== lastParty && (lastParty === null || partySeen >= 3)){ ev.push({t, type: "party", size: party}); lastParty = party }
       return ev;
     }
     return {readFrame};
   }
-  const api = {createReaders, mapTextCrop, mapFromText, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {createReaders, mapTextCrop, mapFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

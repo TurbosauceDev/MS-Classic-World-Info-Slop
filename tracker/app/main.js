@@ -51,16 +51,22 @@ ipcMain.handle("settings", (_, s) => {
 });
 // a finished 15-minute run (sharing on): queue it, then send everything queued. Kept until the server answers.
 const readQueue = () => { try { return JSON.parse(fs.readFileSync(QUEUE, "utf8")) } catch { return [] } };
+let flushing = false;
 async function flushRuns(){
-  if (!SERVER) return;
-  let q = readQueue(), left = [];
-  for (const run of q){
-    try {
-      const r = await fetch(SERVER + "/api/runs", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(run)});
-      if (r.status === 429 || r.status >= 500) left.push(run);   // try again later; other answers are final
-    } catch { left.push(run) }
-  }
-  fs.writeFileSync(QUEUE, JSON.stringify(left));
+  if (!SERVER || flushing) return;
+  flushing = true;
+  try {
+    const q = readQueue(), left = [];
+    for (const run of q){
+      try {
+        const r = await fetch(SERVER + "/api/runs", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(run)});
+        if (r.status === 429 || r.status >= 500) left.push(run);   // try again later; other answers are final
+      } catch { left.push(run) }
+    }
+    // runs queued while this was sending stay queued
+    const sent = new Set(q.map(r => JSON.stringify(r))), added = readQueue().filter(r => !sent.has(JSON.stringify(r)));
+    fs.writeFileSync(QUEUE, JSON.stringify([...left, ...added]));
+  } finally { flushing = false }
 }
 ipcMain.handle("share-run", async (_, run) => {
   const q = readQueue(); q.push({...run, install: readSettings().install}); fs.writeFileSync(QUEUE, JSON.stringify(q.slice(-200)));

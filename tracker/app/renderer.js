@@ -56,7 +56,9 @@ async function readMap(f, t){
   cv.getContext("2d").putImageData(new ImageData(c.d, c.w, c.h), 0, 0);
   const png = new Uint8Array(await (await new Promise(r => cv.toBlob(r, "image/png"))).arrayBuffer());
   const m = GrindReaders.mapFromText(await host.ocr(png), G), key = m && (m.id || m.name);
-  if (key && key === mapSeen && key !== mapNow && session){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; session.add(e); slicer.add(e) }
+  // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
+  const same = (a, b) => a === b || a && b && !G.maps[a] && !G.maps[b] && GrindReaders.similar(a, b) >= 0.75;
+  if (key && same(key, mapSeen) && !same(key, mapNow) && session){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; session.add(e); slicer.add(e) }
   mapSeen = key;
 }
 
@@ -66,6 +68,8 @@ async function start(){
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => settings.share && host.shareRun(run)});
   readers = GrindReaders.createReaders(G); mapNow = mapSeen = null;
+  // job isn't read from the screen yet: the player picks it
+  if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   timer = setInterval(() => {
     const t = Date.now();
     const f = grab();
@@ -97,9 +101,14 @@ $("#frames").onclick = async () => {
 };
 
 $("#share").onchange = e => host.settings({share: e.target.checked}).then(s => settings = s);
+$("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
+  settings = s;
+  if (session){ const ev = {t: Date.now(), type: "job", name: s.job || null}; session.add(ev); slicer.add(ev) }
+});
 (async () => {
   settings = await host.settings();
   $("#share").checked = !!settings.share;
+  $("#job").value = settings.job || "";
   const found = await host.gameFound();
   $("#status").textContent = found ? "MapleStory window found." : "Start MapleStory, then press Start.";
 })();
