@@ -285,6 +285,8 @@ function renderSnaps(){
   }
   const a = snaps.start, b = snaps.end, d = a && b && b.t > a.t ? GrindSession.expBetween(G, a, b) : null, hrs = a && b ? (b.t - a.t) / 3.6e6 : 0;
   $("#snapRate").textContent = d != null && hrs > 0 ? fmt(d / hrs) + " EXP/hr" : "-";
+  // mini bar: the snapshot rate too, so the small view isn't only the live count (render() rewrites the note each tick first)
+  if (d != null && hrs > 0.05 && timer != null) $("#miniNote").textContent += ($("#miniNote").textContent ? " · " : "") + "start to now: " + fmt(d / hrs) + " EXP/hr";
   const live = session?.stats().exp;   // EXP the live count added up over (about) the same stretch
   $("#snapNote").textContent = d == null ? (a && b ? "Can't work it out: check the levels (a level or % is missing, or the end is before the start)." : "")
     : `${fmt(d)} EXP in ${Math.round(hrs * 60)} min (clock time, breaks included)`
