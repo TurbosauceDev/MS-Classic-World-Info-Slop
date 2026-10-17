@@ -442,3 +442,9 @@ header h1{cursor:pointer}
 .drop input{display:block;margin-bottom:6px;max-width:100%;font-size:13px}
 .pigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px}
 .pigrid input{width:100%}
+details.sec>summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:8px}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::before{content:"▸";color:var(--accent);font-size:16px;transition:transform .15s;display:inline-block}
+details.sec[open]>summary::before{transform:rotate(90deg)}
+details.sec>summary h2{display:inline}
+details.sec>summary:hover h2{color:var(--accent)}

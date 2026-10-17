@@ -151,6 +151,6 @@ $("#crmats").innerHTML = Object.entries(USE).sort((a, b) => b[1].size - a[1].siz
     <td class="sub">${where.join("<br>") || `<span class="na">not in the game files (no drop tables)</span>`}</td><td class="num">${fmt(it.p)}</td></tr>`;
 }).join("");
 $("#crmats").addEventListener("click", e => { const b = e.target.closest(".crfind"); if (!b) return;
-  Object.assign(S, {d: -1, type: "", cls: "", max: 10, q: b.dataset.q}); renderRecipes(); $("#crrecipes").scrollIntoView({behavior: "smooth"}) });
+  Object.assign(S, {d: -1, type: "", cls: "", max: 10, q: b.dataset.q}); renderRecipes(); $("#crrecipes").open = true; $("#crrecipes").scrollIntoView({behavior: "smooth"}) });
 renderRecipes();
 })();
