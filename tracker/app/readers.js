@@ -394,10 +394,13 @@
     return best && best.sc < 80 && second > best.sc * 1.5 ? best.id : null;
   }
   /* The meso total in the inventory window ("4,685"): black digits 8 rows tall on the white field, commas below the line.
-     Only the digits seen on Danny's screenshots so far are known (4, 5, 6, 8); a total with any other digit isn't read
-     (no guessing) until frames with the rest come in. Keys: rows of the glyph's columns, as in CDIG. */
+     All ten digits learned from Danny's screenshots (4,685; 3,590; 3,571; 3,560; 3,510; 3,210; 2,700). An unknown
+     glyph means it isn't a meso total, so nothing is read. Keys: rows of the glyph's columns, as in CDIG. */
   const MDIG = {"...#./..##./.#.#./#..#./#####/...#./...#./...#./": 4, "..##./.#.../#..../####./#...#/#...#/#...#/.###./": 6,
-    ".###./#...#/#...#/.###./#...#/#...#/#...#/.###./": 8, "#####/#..../#..../####./....#/....#/#...#/.###./": 5};
+    ".###./#...#/#...#/.###./#...#/#...#/#...#/.###./": 8, "#####/#..../#..../####./....#/....#/#...#/.###./": 5,
+    ".###./#...#/#...#/#...#/#...#/#...#/#...#/.###./": 0, ".#./##./.#./.#./.#./.#./.#./###/": 1,
+    ".###./#...#/....#/...#./..#../.#.../#..../#####/": 2, ".###./#...#/....#/..##./....#/....#/#...#/.###./": 3,
+    "#####/....#/...#./...#./..#../..#../.#.../.#.../": 7, ".###./#...#/#...#/#...#/.####/....#/...#./.##../": 9};
   function readMesoTotal(img){
     const {w, h, d} = img, ink = (x, y) => { const i = (y * w + x) * 4; return d[i] === 0 && d[i + 1] === 0 && d[i + 2] === 0 };
     const white = (x, y) => { const i = (y * w + x) * 4; return d[i] === 255 && d[i + 1] === 255 && d[i + 2] === 255 };

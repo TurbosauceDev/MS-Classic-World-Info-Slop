@@ -34,7 +34,7 @@ npm start           # run it (Windows, Electron)
   read) = used; drops over 20 at once are ignored (sold/stored). Cost = cheapest NPC shop price (D.ishop), else the
   player-shop median. tests/inventory.test.js.
 - Meso total: the inventory window's meso field (black 8-row digits on white) gives real money in/out, shop trips
-  included. Only the digits seen so far (4, 5, 6, 8) are known; a total with another digit isn't read yet.
+  included. All ten digits are known (learned from real screenshots).
 - Arrows for Bows/Crossbows: 0.5 mesos each (Danny, 2026-10-17: not in our shop data); Bronze 2 (shop data).
 - Shared runs carry usedCost (mesos spent on items used; null when no item counts were on screen). The server stores
   deaths, start hour and usedCost in run_extra; the site shows "pots/ammo" per map and Frugal mode uses it.

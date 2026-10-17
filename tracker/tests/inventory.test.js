@@ -51,6 +51,18 @@ const WANT = [[91, "2010003"], [85, "2010005"], [29, "2000002"], [8, "2000001"],
   }, bar);
   console.log("party HUD", JSON.stringify(party));
   if (JSON.stringify(party) !== "[null,2,3]"){ fail++; console.log("party FAIL") }
+  // meso totals (bottom of Danny's inventory screenshots, un-doubled): the file name is the total shown
+  const meso = [];
+  for (const name of fs.readdirSync(dir).filter(f => /^meso-\d+\.png$/.test(f)).sort()){
+    const got = await page.evaluate(async b64 => {
+      const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode();
+      const c = document.createElement("canvas"); c.width = im.width; c.height = im.height; const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+      const d = g.getImageData(0, 0, c.width, c.height); return GrindReaders.readMesoTotal({w: d.width, h: d.height, d: d.data, k: 1});
+    }, fs.readFileSync(path.join(dir, name)).toString("base64"));
+    const want = +name.match(/\d+/)[0]; meso.push(got);
+    if (got !== want){ fail++; console.log(name, "meso FAIL, read", got) }
+  }
+  console.log("meso totals", meso.join(" "));
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (fail) throw new Error(fail + " frame(s) failed");
