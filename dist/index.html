@@ -486,7 +486,6 @@ details.sec>summary:hover h2{color:var(--accent)}
     <button role="tab" id="t-cit" aria-selected="false" data-tab="cit" data-cat="town" hidden>Citizenship</button>
     <button role="tab" id="t-craft" aria-selected="false" data-tab="craft" data-cat="town" hidden>Crafting</button>
     <button role="tab" id="t-keep" aria-selected="false" data-tab="keep" data-cat="town" hidden>Keep or sell</button>
-    <button role="tab" id="t-kslist" aria-selected="false" data-tab="kslist" data-cat="more" hidden>The List</button>
     <button role="tab" id="t-log" aria-selected="false" data-tab="log" data-cat="more" hidden>Changelog</button>
     <button role="tab" id="t-credits" aria-selected="false" data-tab="credits" data-cat="more" hidden>Credits</button>
   </div>
@@ -517,7 +516,6 @@ details.sec>summary:hover h2{color:var(--accent)}
       <button class="hlink" data-go="keep"><b>Keep or sell</b><span>Which loot quests and recipes still want, and what's safe to sell.</span></button>
     </div>
     <div class="homecat"><h2><button class="hcat" data-go-cat="more">More</button></h2>
-      <button class="hlink" data-go="kslist"><b>The List</b><span>Known kill-stealers.</span></button>
       <button class="hlink" data-go="log"><b>Changelog</b><span>What changed and when.</span></button>
       <button class="hlink" data-go="credits"><b>Credits</b><span>Sources and thanks.</span></button>
     </div>
@@ -1178,24 +1176,6 @@ details.sec>summary:hover h2{color:var(--accent)}
   </table></div>
 </section>
 
-<section id="kslist" hidden>
-  <details class="howto">
-    <summary>What this is</summary>
-    <ul>
-      <li>Known kill-stealers (KSers) seen in-game: characters who steal other players' kills on purpose.</li>
-      <li>Level, job, guild and fame are as seen on their Character Info when reported; they change over time.</li>
-    </ul>
-  </details>
-  <div class="controls">
-    <label>Search<input id="kssearch" type="search" placeholder="name, job, guild"></label>
-    <span class="pill p-hot" id="kscount" style="align-self:center"></span>
-  </div>
-  <div class="tblwrap"><table>
-    <thead><tr><th>Name</th><th class="num">Level</th><th>Job</th><th>Guild</th><th class="num">Fame</th><th>What they do</th><th>Added</th></tr></thead>
-    <tbody id="ksrows"></tbody>
-  </table></div>
-</section>
-
 <section id="log" hidden>
   <details class="howto">
     <summary>About this page</summary>
@@ -1206,6 +1186,8 @@ details.sec>summary:hover h2{color:var(--accent)}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · The List removed</h3><span class="pill p-hot">update</span></div>
+      <p>The kill-stealer list tab is gone.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Collapsible crafting sections</h3><span class="pill p-hot">update</span></div>
       <p>Crafting: every section (Masters and profession quests, Craft levels, Cheapest way to level, Recipes, Raw materials) now folds up when you click its heading. Masters and profession quests starts folded.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 16, 2026 · Item and monster filters</h3><span class="pill p-hot">update</span></div>
@@ -1262,8 +1244,6 @@ details.sec>summary:hover h2{color:var(--accent)}
       <p>The World Map card's minimap now shows where each monster spawns, one color per monster, with a legend. It sits right under the map list.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map</h3><span class="pill p-hot">new tab</span></div>
       <p>New <b>World Map</b> tab: the game's own Maple Island and Victoria Island maps with a dot for every place. Hover a dot to see its maps, monsters (level, HP, EXP), danger and EXP/hr at your class and level (estimate), NPCs and their quests, cab and potion shop, and a minimap. Click to pin; map names open the Map Navigator.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · The List</h3><span class="pill p-hot">new tab</span></div>
-      <p>New <b>The List</b> tab: known kill-stealers, searchable. First entry: EllieFlower (Lv 18 Magician).</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Navigator: no taxi</h3><span class="pill p-hot">navigator</span></div>
       <p>Map Navigator has a <b>No taxi</b> box: tick it to get a walking-only route (fewest maps) instead of cab rides between towns.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Map navigator</h3><span class="pill p-hot">new tab</span></div>
@@ -5034,22 +5014,5 @@ function render(){
 }
 render();
 })();
-
-/* The List: known kill-stealers, as reported by Danny. Add new entries to the top of KSERS.
-   Fields: name, level, job, guild ("" = none), fame, note, added (YYYY-MM-DD). Only what was seen in-game. */
-const KSERS = [
-  {name: "EllieFlower", level: 18, job: "Magician", guild: "", fame: 0, note: "Intentionally camps melee classes to steal their kills.", added: "2026-10-07"},
-];
-
-const renderKs = () => {
-  const q = $("#kssearch").value.trim().toLowerCase();
-  const rows = KSERS.filter(k => !q || [k.name, k.job, k.guild, k.note].join(" ").toLowerCase().includes(q));
-  $("#ksrows").innerHTML = rows.map(k => `<tr><td><b>${esc(k.name)}</b></td><td class="num">${k.level ?? "?"}</td><td>${esc(k.job || "?")}</td>
-    <td>${k.guild ? esc(k.guild) : "none"}</td><td class="num">${k.fame ?? "?"}</td><td>${esc(k.note)}</td><td>${esc(k.added)}</td></tr>`).join("")
-    || `<tr><td colspan="7">No match.</td></tr>`;
-  $("#kscount").textContent = `${rows.length} of ${KSERS.length}`;
-};
-$("#kssearch").addEventListener("input", renderKs);
-renderKs();
 
 </script>

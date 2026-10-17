@@ -12,7 +12,7 @@ const path = require("path");
 
   // Home page + section nav: page buttons only show in their section, so open the section first
   const tab = async sel => { await p.click("#c-" + await p.$eval(sel, b => b.dataset.cat)); await p.click(sel) };
-  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 17, "home page lists every page");
+  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 16, "home page lists every page");
   await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && !(await p.isHidden("#t-items")) && await p.isHidden("#t-plan"), "home link opens its page and section");
   await p.click("#c-home"); check(!(await p.isHidden("#home")) && await p.isHidden("#mobs"), "Home button returns home");
   await p.click("#c-db"); check(!(await p.isHidden("#mobs")), "section remembers its last page");
@@ -172,7 +172,6 @@ const path = require("path");
   check(!/NaN|undefined/.test(await p.textContent("#wmcard")) && (await p.textContent("#wmcard")).length > 20, "world map: Maple Island card");
   await p.click('#wmcard [data-route]');
   check(!(await p.isHidden("#navi")) && (await p.inputValue("#navto")) !== "", "world map: Route here opens the navigator");
-  await tab("#t-kslist"); check(/EllieFlower/.test(await p.textContent("#ksrows")), "the list renders");
   await tab("#t-log"); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
   await tab("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 7, "credits tab renders");
   await tab("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to craft Lv 10/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 10, "crafting leveling plan");
