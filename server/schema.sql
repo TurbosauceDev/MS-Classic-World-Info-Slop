@@ -19,3 +19,5 @@ CREATE INDEX IF NOT EXISTS runs_map ON runs (map, party);
 CREATE INDEX IF NOT EXISTS runs_install ON runs (install, received);
 CREATE INDEX IF NOT EXISTS runs_ipday ON runs (ipday);
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
+-- test run sent by hand on 2026-10-17 (not real farming)
+DELETE FROM runs WHERE install = 'zzzzzzzzzzzzzzzzzz';
