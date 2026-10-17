@@ -34,6 +34,9 @@ app.whenReady().then(() => {
     const src = await captureSource();
     cb(src ? {video: src} : {});
   });
+  // the window only ever shows our own page: no new windows, no navigating away
+  win.webContents.setWindowOpenHandler(() => ({action: "deny"}));
+  win.webContents.on("will-navigate", e => e.preventDefault());
   win.loadFile(path.join(__dirname, "index.html"));
   if (app.isPackaged) autoUpdater.checkForUpdatesAndNotify().catch(() => {});
   flushRuns().catch(() => {});
@@ -69,6 +72,35 @@ async function flushRuns(){
     fs.writeFileSync(QUEUE, JSON.stringify([...left, ...added]));
   } finally { flushing = false }
 }
+// shared data for the speed check, fetched at most every 30 minutes
+let summary = null, summaryAt = 0;
+ipcMain.handle("summary", async () => {
+  if (SERVER && Date.now() - summaryAt > 30 * 60e3){
+    try { const r = await fetch(SERVER + "/api/summary"); if (r.ok){ summary = await r.json(); summaryAt = Date.now() } } catch {}
+  }
+  return summary;
+});
+// session history: the saved session summaries, newest first, and a CSV of them in Documents
+function sessions(){
+  try {
+    return fs.readdirSync(SESSIONS).filter(f => /^\d+\.json$/.test(f)).sort((a, b) => b.localeCompare(a, undefined, {numeric: true})).slice(0, 200)
+      .map(f => { try { return {saved: +f.slice(0, -5), ...JSON.parse(fs.readFileSync(path.join(SESSIONS, f), "utf8"))} } catch { return null } }).filter(Boolean);
+  } catch { return [] }
+}
+ipcMain.handle("sessions", () => sessions());
+ipcMain.handle("export-csv", () => {
+  const q = v => /[",\n]/.test(String(v ?? "")) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v ?? "");
+  const head = ["saved", "date", "map", "level", "job", "party", "active_min", "kills", "exp", "mesos", "exp_hr", "mesos_hr"];
+  const rows = sessions().map(x => { const h = (x.activeMin || 0) / 60;
+    return [new Date(x.saved).toISOString(), x.date, x.mapName || x.map, x.level, x.job, x.party, x.activeMin, x.kills, x.exp, x.mesos,
+      h ? Math.round(x.exp / h) : "", h ? Math.round(x.mesos / h) : ""] });
+  const file = path.join(app.getPath("documents"), "MS Classic Tracker sessions.csv");
+  fs.writeFileSync(file, [head, ...rows].map(r => r.map(q).join(",")).join("\r\n"));
+  shell.showItemInFolder(file);
+  return file;
+});
+// mini bar: a small strip with just EXP/hr and time to level
+ipcMain.handle("mini", (_, on) => { if (win){ win.setSize(360, on ? 92 : 600) } return !!on });
 ipcMain.handle("share-run", async (_, run) => {
   const q = readQueue(); q.push({...run, install: readSettings().install}); fs.writeFileSync(QUEUE, JSON.stringify(q.slice(-200)));
   await flushRuns(); return true;
@@ -80,13 +112,14 @@ ipcMain.handle("save-session", (_, summary) => {
   return true;
 });
 // "Save sample frames": raw captures for building and testing the screen readers
+const FRAMES = () => path.join(app.getPath("pictures"), "MS Classic Tracker frames");
 ipcMain.handle("save-frame", (_, name, pngBytes) => {
-  const dir = path.join(app.getPath("pictures"), "MS Classic Tracker frames");
+  const dir = FRAMES();
   fs.mkdirSync(dir, {recursive: true});
-  fs.writeFileSync(path.join(dir, name), Buffer.from(pngBytes));
+  fs.writeFileSync(path.join(dir, path.basename(String(name))), Buffer.from(pngBytes));   // a file name only, never a path
   return dir;
 });
-ipcMain.handle("open-folder", (_, dir) => shell.openPath(dir));
+ipcMain.handle("open-folder", () => shell.openPath(FRAMES()));   // only ever the frames folder
 
 // map name: OCR of the minimap title (a black-on-white PNG the renderer cuts out). Tesseract runs here, offline, with the
 // English model shipped in the installer; files are unpacked from the asar because its worker thread loads them from disk.

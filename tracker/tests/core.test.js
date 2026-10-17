@@ -110,4 +110,20 @@ sl.add({t: sec(1310), type: "map", id: 41});    // map change: starts over again
 for (let i = 1; i <= 80; i++) sl.add({t: sec(1310 + i * 10), type: "exp", gain: 4});   // 13.3 min: not a run yet
 assert.strictEqual(runs.length, 1); assert.strictEqual(sl.current.stats().kills, 80); assert.strictEqual(sl.current.stats().map, "41");
 
+// speed check against shared rows: peers within 5 levels, solo. Snail Hunting Ground III: 4 players, 60000 an outlier;
+// map 41: only 2 players (not counted); the Lv 40 row is out of the level band
+const {speedCheck} = require("../core/session.js");
+const rows = [[42, 20, 4000], [42, 22, 5000], [42, 18, 6000], [42, 21, 60000], [41, 20, 9000], [41, 20, 9500], [40, 40, 99999]]
+  .map(([map, level, expHr]) => ({map: String(map), level, party: 1, expHr}));
+let sc = speedCheck({exp: 1000, barExp: 1000, minutes: 15, level: 20, party: 1, map: 40}, {rows}, G);
+assert.strictEqual(sc.ref, 5000); assert.strictEqual(sc.verdict, "average"); assert.strictEqual(sc.peers, 3);
+assert.deepStrictEqual(sc.faster.map(m => m.name), ["Snail Hunting Ground III"]);
+assert.strictEqual(speedCheck({exp: 500, barExp: 500, minutes: 15, level: 20, party: 1}, {rows}, G).verdict, "slow");
+assert.strictEqual(speedCheck({exp: 2500, barExp: 2500, minutes: 15, level: 20, party: 1}, {rows}, G).verdict, "very fast");
+assert.strictEqual(speedCheck({exp: 1000, barExp: 1000, minutes: 15, level: 20, party: 3}, {rows}, G).verdict, null, "no party peers");
+assert.strictEqual(speedCheck({exp: 1000, minutes: 15, level: 20, party: 1}, {rows}, G).verdict, null, "EXP bar not read: no verdict");
+// the PC clock going back adds no negative time
+s = createSession(G); s.add({t: sec(100), type: "exp", gain: 2}); s.add({t: sec(40), type: "exp", gain: 2});
+assert.strictEqual(s.stats().activeMin, 0);
+
 console.log("core tests passed");

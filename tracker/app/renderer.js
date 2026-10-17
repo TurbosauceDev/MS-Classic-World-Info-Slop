@@ -45,6 +45,8 @@ function render(){
   $("#killsEst").textContent = s.killsEstHr == null ? "" : "~" + fmt(s.killsEstHr) + " with missed lines (est.)";
   $("#ttl").textContent = s.toLevelHrs == null ? "-" : s.toLevelHrs < 1 ? Math.round(s.toLevelHrs * 60) + " min" : s.toLevelHrs.toFixed(1) + " h";
   $("#mesosHr").textContent = fmt(s.mesosHr);
+  $("#miniExp").textContent = fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent;
+  $("#miniNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
   $("#lootHr").textContent = fmt(s.lootHr);
   $("#active").textContent = Math.round(s.activeMin) + " min";
   $("#where").textContent = [s.level && "Lv " + s.level, s.mapName, s.job, s.party > 1 ? "party of " + s.party : "solo",
@@ -74,18 +76,42 @@ async function readMap(f, t){
   mapSeen = key;
 }
 
+// after each 15-minute run: how it compares with other players around your level (shared data)
+const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
+async function showSpeed(run){
+  const sc = GrindSession.speedCheck(run, await host.summary(), G), box = $("#lastRun");
+  box.classList.remove("hidden");
+  const band = run.level ? `Lv ${Math.max(1, run.level - 5)}-${run.level + 5} ${run.party > 1 ? "in a party" : "solo"}` : "";
+  box.innerHTML = `<div class="k">Last 15-minute run</div><div class="v">${fmt(sc.expHr)} EXP/hr</div>` + (sc.verdict
+    ? `<div class="${/good|fast/.test(sc.verdict) ? "good" : sc.verdict === "slow" ? "slow" : ""}">${esc(sc.verdict)} for ${esc(band)} (typical ${fmt(sc.ref)}, ${sc.peers} players)</div>`
+      + (sc.faster.length ? `<div class="note">Faster for players like you: ${sc.faster.map(m => `${esc(m.name)} (${fmt(m.expHr)})`).join(", ")}</div>` : "")
+    : `<div class="note">${sc.noBar ? "The EXP bar wasn't read during this run, so it isn't compared." : `Not enough shared runs around your level yet to compare (${esc(band) || "level not read"}).`}</div>`);
+}
+// a beep when something worth at least the set amount is picked up
+let audio = null;
+function dropAlert(id){
+  const min = +settings.alertWorth || 0, worth = G.pw?.[id]?.[0] ?? G.items[id]?.p ?? 0;
+  if (!min || worth < min) return;
+  try {
+    audio = audio || new AudioContext();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = 880; g.gain.value = 0.15; o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.25);
+  } catch {}
+  $("#status").textContent = `Valuable drop: ${G.items[id]?.n || "item " + id} (worth ~${fmt(worth)})`;
+}
+
 async function start(){
   await startCapture();
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000});
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
-  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun(run) } }});
+  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun(run) } showSpeed(run) }});
   readers = GrindReaders.createReaders(G); mapNow = mapSeen = null;
   // job isn't read from the screen yet: the player picks it
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   timer = setInterval(() => {
     const t = Date.now();
     const f = grab();
-    for (const e of readers.readFrame(f, t)){ session.add(e); slicer.add(e) }
+    for (const e of readers.readFrame(f, t)){ session.add(e); slicer.add(e); if (e.type === "item") dropAlert(e.id) }
     if (t - lastOcr > 5000){ lastOcr = t; readMap(f, t) }
     render();
   }, 1000 / FPS);
@@ -101,6 +127,7 @@ $("#go").onclick = () => timer ? stop() : start().catch(e => { $("#status").text
 
 // one full frame every 3 s for 3 minutes, saved as PNG: material for building and testing the readers
 $("#frames").onclick = async () => {
+  $("#frames").disabled = true;   // one batch at a time
   if (!video) await startCapture();
   let n = 0, dir = null;
   const iv = setInterval(async () => {
@@ -108,10 +135,21 @@ $("#frames").onclick = async () => {
     const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
     dir = await host.saveFrame(`frame-${String(n).padStart(3, "0")}.png`, new Uint8Array(await blob.arrayBuffer()));
     $("#status").textContent = `Saving sample frames: ${n + 1}/60`;
-    if (++n >= 60){ clearInterval(iv); $("#status").textContent = "Frames saved."; host.openFolder(dir) }
+    if (++n >= 60){ clearInterval(iv); $("#status").textContent = "Frames saved."; $("#frames").disabled = false; host.openFolder(dir) }
   }, 3000);
 };
 
+$("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.value || 0)}).then(s => settings = s);
+$("#miniBtn").onclick = () => { document.body.classList.add("mini"); host.mini(true) };
+$("#mini").onclick = () => { document.body.classList.remove("mini"); host.mini(false) };
+$("#histBtn").onclick = async () => {
+  const box = $("#hist"); box.classList.toggle("hidden"); if (box.classList.contains("hidden")) return;
+  const list = await host.sessions();
+  $("#histRows").innerHTML = list.length ? list.slice(0, 30).map(x => { const h = (x.activeMin || 0) / 60;
+    return `<tr><td>${esc(x.date)} ${esc(x.mapName || "")}</td><td class="n">${Math.round(x.activeMin || 0)} min</td><td class="n">${h ? fmt(x.exp / h) : "-"} EXP/hr</td></tr>` }).join("")
+    : `<tr><td>No sessions yet: they're saved when you press Stop.</td></tr>`;
+};
+$("#csv").onclick = () => host.exportCsv();
 $("#ontop").onchange = e => host.settings({onTop: e.target.checked}).then(s => settings = s);
 $("#share").onchange = e => host.settings({share: e.target.checked}).then(s => settings = s);
 $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
@@ -123,6 +161,7 @@ $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
   $("#share").checked = !!settings.share;
   $("#job").value = settings.job || "";
   $("#ontop").checked = settings.onTop !== false;
+  $("#alert").value = settings.alertWorth || 0;
   const found = await host.gameFound();
   $("#status").textContent = found ? "MapleStory window found." : "Start MapleStory, then press Start.";
 })();

@@ -43,7 +43,7 @@
       S.events++;
       if (S.start === null) S.start = e.t;
       const counts = ["exp", "bonus", "meso", "item", "itemraw", "bar"].includes(e.type);
-      if (counts && S.last !== null){ const gap = e.t - S.last; S.activeMs += gap > idleMs ? 0 : gap }
+      if (counts && S.last !== null){ const gap = e.t - S.last; S.activeMs += gap > idleMs || gap < 0 ? 0 : gap }   // < 0: the PC clock went back
       if (counts) S.last = e.t;
       switch (e.type){
         case "map": S.map = e.id == null ? null : String(e.id); S.mapName = e.name || null; break;
@@ -170,6 +170,31 @@
     return {add, get current(){ return cur }};
   }
 
-  const api = {createSession, createRunSlicer, IDLE_MS, RUN_MS};
+  /* Speed check for a finished run against the shared data (server /api/summary rows: one per player per map, their
+     typical run). Peers = players within 5 levels, solo vs party the same as you. A map counts once 3+ players have farmed
+     it, without runs under half or over double its median (the same rules as the site). Verdict cut-offs are our own
+     choice: under 0.75x the peers' median = slow, up to 1.25x average, up to 1.75x good, above that very fast. */
+  const medianOf = a => { const s = [...a].sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[n >> 1] : (s[n / 2 - 1] + s[n / 2]) / 2) : null };
+  function speedCheck(run, summary, G){
+    const hr = run.exp / (run.minutes / 60), party = run.party > 1;
+    // without the EXP bar the run's EXP is only the messages read, which undercounts: no verdict
+    if (!run.level || !run.barExp || !summary?.rows) return {expHr: hr, verdict: null, noBar: !run.barExp};
+    const peers = summary.rows.filter(r => r.level && Math.abs(r.level - run.level) <= 5 && (r.party > 1) === party && r.map);
+    const byMap = {};
+    for (const r of peers) (byMap[r.map] = byMap[r.map] || []).push(r.expHr);
+    const maps = [];
+    for (const [map, a] of Object.entries(byMap)){
+      const m = medianOf(a), kept = a.filter(v => v >= m / 2 && v <= m * 2);
+      if (kept.length >= 3) maps.push({map, name: G.mapnames?.[map] || G.maps?.[map]?.[0] || "Map " + map, expHr: medianOf(kept), players: kept.length});
+    }
+    const all = maps.flatMap(m => byMap[m.map].filter(v => v >= m.expHr / 2 && v <= m.expHr * 2));
+    if (all.length < 3) return {expHr: hr, verdict: null, peers: all.length};
+    const ref = medianOf(all), x = hr / ref;
+    const verdict = x < 0.75 ? "slow" : x <= 1.25 ? "average" : x <= 1.75 ? "good" : "very fast";
+    const faster = maps.filter(m => m.expHr > hr && m.map !== String(run.map)).sort((a, b) => b.expHr - a.expHr).slice(0, 3);
+    return {expHr: hr, verdict, ref, peers: all.length, faster};
+  }
+
+  const api = {createSession, createRunSlicer, speedCheck, IDLE_MS, RUN_MS};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindSession = api;
 })(typeof window !== "undefined" ? window : globalThis);

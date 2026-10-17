@@ -16,15 +16,22 @@
   table { width:100%; border-collapse:collapse; } td { padding:2px 0; border-bottom:1px solid var(--line); } td.n { text-align:right; }
   #status { color:var(--muted); } #status.bad { color:var(--bad); }
   .note { color:var(--muted); font-size:11px; }
+  input[type=number] { width:80px; font:inherit; }
+  #mini { display:none; cursor:pointer; } body.mini > *:not(#mini) { display:none; } body.mini #mini { display:block; }
+  #mini .v { font-size:16px; } .hidden { display:none; } .good { color:var(--leaf); } .slow { color:var(--warn); }
 </style>
 </head>
 <body>
+  <div class="card" id="mini" title="Click for the full window"><span class="k">EXP/hr</span> <span class="v" id="miniExp">-</span>
+    · <span class="k">next level</span> <span class="v" id="miniTtl">-</span><div class="note" id="miniNote"></div></div>
   <div class="card">
     <div id="status">Looking for the MapleStory window...</div>
-    <p><button id="go">Start</button> <button id="frames" class="alt">Save sample frames</button></p>
+    <p><button id="go">Start</button> <button id="frames" class="alt">Save sample frames</button>
+      <button id="miniBtn" class="alt">Mini bar</button> <button id="histBtn" class="alt">History</button></p>
     <p><label>Job <select id="job"><option value="">Pick your job</option><option>Beginner</option><option>Swordman</option><option>Fighter</option><option>Page</option><option>Spearman</option><option>Magician</option><option>Wizard (Fire,Poison)</option><option>Wizard (Ice,Lightning)</option><option>Cleric</option><option>Archer</option><option>Hunter</option><option>Crossbowman</option><option>Rogue</option><option>Assassin</option><option>Bandit</option></select></label></p>
     <label><input type="checkbox" id="share"> Share my sessions (anonymous: map, kills, drops; no character name)</label><br>
-    <label><input type="checkbox" id="ontop"> Keep this window on top of the game</label>
+    <label><input type="checkbox" id="ontop"> Keep this window on top of the game</label><br>
+    <label>Beep for drops worth at least <input type="number" id="alert" min="0" step="1000"> mesos (0 = off)</label>
   </div>
   <div class="card grid">
     <div><div class="k">Kills/hr</div><div class="v" id="killsHr">-</div><div class="note" id="killsEst"></div></div>
@@ -34,6 +41,8 @@
     <div><div class="k">Loot value/hr</div><div class="v" id="lootHr">-</div></div>
     <div><div class="k">Active time</div><div class="v" id="active">-</div></div>
   </div>
+  <div class="card hidden" id="lastRun"></div>
+  <div class="card hidden" id="hist"><div class="k">Past sessions <button id="csv" class="alt">Export CSV</button></div><table id="histRows"></table></div>
   <div class="card"><div class="k" id="where">-</div><table id="mobs"></table></div>
   <div class="card"><div class="k">Picked up</div><table id="items"></table>
     <div class="note" id="priceNote"></div></div>

@@ -8,4 +8,8 @@ contextBridge.exposeInMainWorld("host", {
   openFolder: dir => ipcRenderer.invoke("open-folder", dir),
   ocr: png => ipcRenderer.invoke("ocr", png),
   shareRun: run => ipcRenderer.invoke("share-run", run),
+  summary: () => ipcRenderer.invoke("summary"),
+  sessions: () => ipcRenderer.invoke("sessions"),
+  exportCsv: () => ipcRenderer.invoke("export-csv"),
+  mini: on => ipcRenderer.invoke("mini", on),
 });

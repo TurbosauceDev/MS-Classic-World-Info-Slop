@@ -7,7 +7,7 @@ const path = require("path"), {chromium} = require("playwright");
   page.on("pageerror", e => errors.push(e.message));
   await page.addInitScript(() => {
     window.host = {gameFound: async () => true, wholeScreen: async on => on, settings: async () => ({share: true, idleSec: 60}),
-      saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", openFolder: async () => {}, ocr: async () => "Victoria Road\nSnail Hunting Ground III", shareRun: async () => true};
+      saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", openFolder: async () => {}, ocr: async () => "Victoria Road\nSnail Hunting Ground III", shareRun: async () => true, summary: async () => null, sessions: async () => [], exportCsv: async () => "", mini: async () => true};
     navigator.mediaDevices.getDisplayMedia = async () => {
       const c = document.createElement("canvas"); c.width = 800; c.height = 600;
       const x = c.getContext("2d"); setInterval(() => { x.fillStyle = "#" + Math.floor(Math.random() * 4095).toString(16); x.fillRect(0, 0, 800, 600) }, 100);
@@ -24,6 +24,18 @@ const path = require("path"), {chromium} = require("playwright");
   await page.click("#go");
   await page.waitForTimeout(200);
   const saved = await page.evaluate(() => window.saved);
+  // speed check card (no shared data yet), drop alert, history, mini bar
+  await page.evaluate(async () => { settings.alertWorth = 10; dropAlert(4000019);
+    await showSpeed({exp: 1000, barExp: 1000, minutes: 15, level: 20, party: 1, map: 42}) });
+  const status = await page.textContent("#status"), last = await page.textContent("#lastRun");
+  await page.click("#histBtn"); await page.waitForTimeout(100);
+  const hist = await page.textContent("#hist");
+  await page.click("#miniBtn"); const mini = await page.isVisible("#mini"), full = await page.isVisible("#go");
+  await page.click("#mini"); const back = await page.isVisible("#go");
+  if (!/Valuable drop: Horny Mushroom Cap/.test(status)) throw new Error("drop alert: " + status);
+  if (!/4,000 EXP\/hr/.test(last) || !/Not enough shared runs/.test(last)) throw new Error("speed card: " + last);
+  if (!/No sessions yet/.test(hist)) throw new Error("history: " + hist);
+  if (!mini || full || !back) throw new Error("mini bar toggle");
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (!/Red Snail/.test(mobs) || !/Blue Snail/.test(mobs)) throw new Error("mobs table: " + mobs);
