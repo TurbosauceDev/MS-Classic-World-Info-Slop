@@ -23,17 +23,22 @@ assert.strictEqual(s, 200); assert.strictEqual(r.counted, true);
 [s, r] = await post(run("aaaaaaaaaaaaaaaa1", 1200));
 [s, r] = await post(run("bbbbbbbbbbbbbbbb2", 2000, {mobs: [{id: "4", kills: 5, items: {}}]}));   // monster 4 (Shroom) isn't on this map
 assert.strictEqual(r.counted, false); assert.strictEqual(r.why, "monster not on this map");
-[s, r] = await post(run("cccccccccccccccc3", 2000, {barExp: 9000}));
+[s, r] = await post(run("cccccccccccccccc3", 2000, {barExp: 1500}));
 assert.strictEqual(r.why, "EXP bar and messages disagree");
 [s, r] = await post(run("dddddddddddddddd4", 2000, {minutes: 3}));
 assert.strictEqual(s, 400);
 for (let i = 0; i < 7; i++) [s] = await post(run("eeeeeeeeeeeeeeee5", 500));
 assert.strictEqual(s, 429, "7th run in an hour is refused");
 
+[s, r] = await post(run("ffffffffffffffff6", 1000, {map: 80000500, mapName: "1st Accompaniment <Bonus>", party: 4, mobs: [{id: "19", kills: 10, items: {}}]}));
+assert.strictEqual(r.counted, true, "KPQ bonus stage with Horny Mushrooms");
+[s, r] = await post(run("ffffffffffffffff6", 1000, {map: 99999999, mapName: "Somewhere New", mobs: []}));
+assert.strictEqual(s, 200, "unknown map id: kept under its name");
 const sum = await (await worker.fetch(new Request("https://x/api/summary"), env)).json();
 const a = sum.rows.find(x => x.expHr === 4400);   // player 1: median of 4000 and 4800 EXP/hr
 assert.ok(a && a.runs === 2 && a.map === "42");
-assert.strictEqual(sum.players, 2, "only counted runs: players 1 and 5");
+assert.strictEqual(sum.players, 3, "only counted runs: players 1, 5 and 6");
+assert.ok(sum.rows.some(x => x.map === null && x.mapName === "Somewhere New"));
 assert.strictEqual(sum.mobs["2"].items["4000019"], 3 * 2 + 3 * 6);
 assert.ok(!JSON.stringify(sum).includes("aaaaaaaa"), "no install ids in the summary");
 console.log("server tests passed");

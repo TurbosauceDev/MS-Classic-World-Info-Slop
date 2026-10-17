@@ -31,6 +31,12 @@ function grab(){
   return {w: id.width, h: id.height, d: id.data};
 }
 
+// sharing progress: minutes into the current 15-minute run, and runs sent this session
+let runsSent = 0;
+function runInfo(){
+  const S = slicer?.current?.state, min = S && S.last !== null ? Math.floor((S.last - S.start) / 6e4) : 0;
+  return `shared run ${min}/15 min` + (runsSent ? `, ${runsSent} sent` : "");
+}
 function render(){
   const s = session.stats();
   $("#killsHr").textContent = fmt(s.killsHr);
@@ -40,7 +46,9 @@ function render(){
   $("#lootHr").textContent = fmt(s.lootHr);
   $("#active").textContent = Math.round(s.activeMin) + " min";
   $("#where").textContent = [s.level && "Lv " + s.level, s.mapName, s.job, s.party > 1 ? "party of " + s.party : "solo",
-    s.kills + " kills", fmt(s.mesoPerKill) + " mesos/kill"].filter(Boolean).join(" · ");
+    s.kills + " kills", fmt(s.mesoPerKill) + " mesos/kill",
+    s.readShare != null && Math.round(s.readShare * 100) + "% of EXP seen as messages",
+    settings.share && runInfo()].filter(Boolean).join(" · ");
   $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${m.name}</td><td class="n">${m.kills} kills</td><td class="n">${fmt(m.mesoPerKill)} mesos/kill</td></tr>`).join("");
   $("#items").innerHTML = s.items.map(i => `<tr><td>${i.name}</td><td class="n">×${i.n}</td><td class="n">${fmt(i.total)}</td></tr>`).join("")
     + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet</td></tr>` : "");
@@ -66,7 +74,7 @@ async function start(){
   await startCapture();
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000});
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
-  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => settings.share && host.shareRun(run)});
+  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun(run) } }});
   readers = GrindReaders.createReaders(G); mapNow = mapSeen = null;
   // job isn't read from the screen yet: the player picks it
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }

@@ -302,7 +302,11 @@
       let n = 0;
       for (; n < cur.length; n++){
         let ok = true, seen = 0;
-        for (let i = 0; i < cur.length - n && ok; i++){ const p = find(cur[i].y + n * pitch); if (p !== undefined){ seen++; ok = p === cur[i].text } }
+        for (let i = 0; i < cur.length - n && ok; i++){
+          const p = find(cur[i].y + n * pitch);
+          // a line fading out reads partly as "?": it says nothing either way (comparing it would count old lines again)
+          if (p !== undefined && !p.includes("?") && !cur[i].text.includes("?")){ seen++; ok = p === cur[i].text }
+        }
         if (ok && (seen || !prev.length)) break;
       }
       if (!prev.length) n = cur.length;   // first frame: everything on screen counts once

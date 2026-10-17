@@ -8,8 +8,8 @@ export function cleanRun(r, G){
   if (!num(r.party, 1, 6) || !num(r.exp, 0, 1e8) || !num(r.kills, 0, 1e5) || !num(r.mesos ?? 0, 0, 1e8)) return {error: "numbers"};
   if (r.level != null && !num(r.level, 1, 200)) return {error: "level"};
   if (r.date && !/^\d{4}-\d\d-\d\d$/.test(r.date)) return {error: "date"};
-  const map = r.map == null ? null : String(r.map);
-  if (map !== null && !G.maps[map]) return {error: "map"};
+  // a map id the server doesn't know (a newer tracker): keep the run under its name rather than lose it
+  const map = r.map != null && G.maps[String(r.map)] ? String(r.map) : null;
   const mobs = Array.isArray(r.mobs) ? r.mobs.slice(0, 20).map(m => ({id: String(m.id), kills: m.kills | 0, mesos: m.mesos | 0,
     mesoDrops: m.mesoDrops | 0, items: Object.fromEntries(Object.entries(m.items || {}).slice(0, 50).map(([k, v]) => [String(k), v | 0]))})) : [];
   const items = Object.fromEntries(Object.entries(r.items || {}).slice(0, 100).map(([k, v]) => [String(k), v | 0]));
@@ -20,7 +20,8 @@ export function cleanRun(r, G){
   let why = null;
   if (run.kills < 1 || run.exp <= 0) why = "no kills";
   else if (map && mobs.some(m => !G.maps[map].includes(m.id))) why = "monster not on this map";
-  else if (run.bar_exp > 0 && run.msg_exp > 0 && (run.bar_exp < run.msg_exp * 0.8 || run.bar_exp > run.msg_exp * 2)) why = "EXP bar and messages disagree";
+  // the bar can be well above the messages (lines fade before they're read), never well below them
+  else if (run.bar_exp > 0 && run.msg_exp > 0 && (run.bar_exp < run.msg_exp * 0.8 || run.bar_exp > run.msg_exp * 6)) why = "EXP bar and messages disagree";
   return {run, ok: !why, why};
 }
 

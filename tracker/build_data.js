@@ -7,6 +7,13 @@ const G = {
   mobs: Object.fromEntries(Object.entries(D.mobs).map(([id, m]) => [id, m.slice(0, 4)])),   // [name, level, hp, exp]
   maps: D.maps, mapnames: D.mapnames, exp: D.exp, items, pw: D.pw?.it || {}, pwRead: D.pw?.read || null,
 };
+// KPQ stages aren't in D.maps (the site's grind maps): add the ones with monsters, e.g. the bonus stage players grind
+for (const k of D.kpq || []){
+  if (!k.mob?.length || G.maps[k.id]) continue;
+  const n = {}; for (const [id] of k.mob) n[id] = (n[id] || 0) + 1;
+  G.maps[k.id] = [k.name, 1, Object.entries(n).map(([id, c]) => [+id, c])];
+  G.mapnames = {...G.mapnames, [k.id]: k.name};
+}
 fs.writeFileSync(path.join(__dirname, "app/gamedata.json"), JSON.stringify(G));   // tests
 fs.writeFileSync(path.join(__dirname, "app/gamedata.js"), "const GAMEDATA = " + JSON.stringify(G) + ";\n");   // the app (no fetch of file: URLs)
 // the site's screenshot reader (game digit font, un-doubling, icon matching) is shared, not forked

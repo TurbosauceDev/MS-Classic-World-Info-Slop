@@ -15,27 +15,27 @@
    Rates use active time only: any gap of more than IDLE_MS with no EXP, meso or item event is left out. */
 (function (root){
   const IDLE_MS = 60000;
-  // party EXP (same model as the planner, src/js/10-maps.js): even split, +10/20/30% at 2/3/4+ players
-  const partyBonus = n => [0, 0, 0.1, 0.2, 0.3, 0.3, 0.3][n] || 0;
-
   function createSession(G, opts = {}){
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
       msgExp: 0, barExp: 0, kills: 0, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0};
 
-    // which monster on this map gives this much EXP? Exact base EXP first, then the party share, then nearest within 15%.
+    /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
+       your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
+       isn't even (the party bonus comes as its own line). There a kill is the monster only when just one monster on the
+       map gives that much; otherwise it's a kill with the monster unknown ("?"). More than any monster gives = not a kill. */
     function matchMob(gain){
-      const mobs = (G.maps[S.map]?.[2] || []).map(([id]) => id);
-      const share = S.party > 1 ? (1 + partyBonus(S.party)) / S.party : 1;
-      let best = null, bestErr = Infinity;
-      for (const id of mobs){
-        const base = G.mobs[id]?.[3]; if (!base) continue;
-        for (const f of share === 1 ? [1] : [1, share]){
-          const err = Math.abs(base * f - gain) / (base * f);
-          if (err < bestErr){ bestErr = err; best = id }
-        }
+      const mobs = (G.maps[S.map]?.[2] || []).map(([id]) => String(id)).filter(id => G.mobs[id]?.[3]);
+      const base = id => G.mobs[id][3];
+      if (S.party <= 1){
+        let best = null, bestErr = Infinity;
+        for (const id of mobs){ const err = Math.abs(base(id) - gain) / base(id); if (err < bestErr){ bestErr = err; best = id } }
+        return bestErr <= 0.15 ? best : null;
       }
-      return bestErr <= 0.15 ? best : null;
+      const fits = mobs.filter(id => gain <= base(id) * 1.05);
+      if (!fits.length) return null;
+      const exact = fits.filter(id => Math.abs(base(id) - gain) / base(id) <= 0.03);
+      return exact.length === 1 ? exact[0] : fits.length === 1 ? fits[0] : "?";
     }
     const mob = id => S.byMob[id] || (S.byMob[id] = {kills: 0, exp: 0, mesos: 0, mesoDrops: 0, items: {}});
 
@@ -53,7 +53,8 @@
           S.msgExp += e.gain;
           if (!G.maps[S.map]){ S.kills++; S.lastKillMob = null; break }   // map not known: a kill, monster unknown
           const id = matchMob(e.gain);
-          if (id){ const m = mob(id); m.kills++; m.exp += e.gain; S.kills++; S.lastKillMob = id }
+          if (id === "?"){ S.kills++; S.lastKillMob = null }   // a party kill, monster unknown
+          else if (id){ const m = mob(id); m.kills++; m.exp += e.gain; S.kills++; S.lastKillMob = id }
           else S.otherExp += e.gain;   // fits no monster here: quest reward etc.
           break;
         }
@@ -101,6 +102,8 @@
         mesoPerKill: m.kills ? m.mesos / m.kills : 0})).sort((a, b) => b.kills - a.kills);
       return {activeMin: S.activeMs / 6e4, map: S.map, mapName: G.mapnames?.[S.map] || G.maps[S.map]?.[0] || S.mapName || null, party: S.party,
         job: S.job, level: S.level, kills: S.kills, killsHr: per(S.kills), exp, expHr, toLevelHrs, otherExp: S.otherExp,
+        // share of the bar's EXP that showed up as readable messages: below ~70%, kills/mesos/drops are undercounted
+        readShare: S.barExp > 0 ? Math.min(1, S.msgExp / S.barExp) : null,
         mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: S.unreadItems, lootValue, lootHr: per(lootValue), items, mobs};
     }
 
@@ -109,7 +112,7 @@
       const s = stats();
       return {v: 1, date: new Date(S.start || Date.now()).toISOString().slice(0, 10), map: s.map, mapName: s.mapName, party: s.party, job: s.job,
         level: s.level, activeMin: Math.round(s.activeMin * 10) / 10, kills: s.kills, exp: s.exp, mesos: s.mesos,
-        msgExp: S.msgExp, barExp: S.barExp, otherExp: S.otherExp, unreadItems: S.unreadItems, items: S.items,
+        msgExp: S.msgExp, barExp: S.barExp, readShare: s.readShare, otherExp: S.otherExp, unreadItems: S.unreadItems, items: S.items,
         mobs: s.mobs.map(m => ({id: m.id, kills: m.kills, mesos: m.mesos, mesoDrops: m.mesoDrops, items: m.items}))};
     }
 

@@ -8,8 +8,8 @@ const EXPECT = {   // frame -> [EXP, %, level, pickup lines on screen that are b
   "frame-046.png": [19894, 68.65, 22, ["meso 20", "item 4000019"]],   // Horny Mushroom Cap
   "frame-042.png": [19803, 68.33, 22, ["meso 20", "exp 7", "bonus 2"]],
 };
-// frame -> [map id, start of the name]: Danny's map isn't in our data, so the name as read is kept
-const MAPS = {"frame-000.png": [null, "1st Accompaniment"], "frame-046.png": [null, "1st Accompaniment"]};
+// frame -> [map id, start of the name]: KPQ bonus stage (added from D.kpq)
+const MAPS = {"frame-000.png": ["80000500", "1st Accompaniment <Bonus>"], "frame-046.png": ["80000500", "1st Accompaniment <Bonus>"]};
 const G = require("../app/gamedata.json"), {mapFromText} = require("../app/readers.js");
 let ocr = null;
 (async () => {
