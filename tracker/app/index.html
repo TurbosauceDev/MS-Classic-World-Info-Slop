@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:">
+<title>MS Classic Grind Tracker</title>
+<style>
+  :root { --bg:#f6f4fb; --panel:#fff; --ink:#2b2638; --muted:#6f6880; --line:#e2dcef; --accent:#7b5cc4; --accent-soft:#ece5fa; --leaf:#3f8f5a; --warn:#b7791f; --bad:#c0392b; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#17141f; --panel:#211d2c; --ink:#ece8f5; --muted:#a39cb5; --line:#363044; --accent:#a98bf0; --accent-soft:#2e2640; } }
+  body { margin:0; padding:12px; background:var(--bg); color:var(--ink); font:13px/1.4 system-ui, sans-serif; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:10px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .k { color:var(--muted); font-size:11px; } .v { font-size:18px; font-weight:600; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:7px 12px; font:inherit; cursor:pointer; }
+  button.alt { background:var(--accent-soft); color:var(--ink); }
+  table { width:100%; border-collapse:collapse; } td { padding:2px 0; border-bottom:1px solid var(--line); } td.n { text-align:right; }
+  #status { color:var(--muted); } #status.bad { color:var(--bad); }
+  .note { color:var(--muted); font-size:11px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div id="status">Looking for the MapleStory window...</div>
+    <p><button id="go">Start</button> <button id="frames" class="alt">Save sample frames</button></p>
+    <label><input type="checkbox" id="share"> Share my sessions (anonymous: map, kills, drops; no character name)</label>
+  </div>
+  <div class="card grid">
+    <div><div class="k">Kills/hr</div><div class="v" id="killsHr">-</div></div>
+    <div><div class="k">EXP/hr</div><div class="v" id="expHr">-</div></div>
+    <div><div class="k">Next level in</div><div class="v" id="ttl">-</div></div>
+    <div><div class="k">Mesos/hr</div><div class="v" id="mesosHr">-</div></div>
+    <div><div class="k">Loot value/hr</div><div class="v" id="lootHr">-</div></div>
+    <div><div class="k">Active time</div><div class="v" id="active">-</div></div>
+  </div>
+  <div class="card"><div class="k" id="where">-</div><table id="mobs"></table></div>
+  <div class="card"><div class="k">Picked up</div><table id="items"></table>
+    <div class="note" id="priceNote"></div></div>
+  <script src="gamedata.js"></script>
+  <script src="shot.js"></script>
+  <script src="../core/session.js"></script>
+  <script src="readers.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

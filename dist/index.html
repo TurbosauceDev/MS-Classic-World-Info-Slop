@@ -3620,10 +3620,11 @@ async function shotFindIcons(img, icons, minScore = 0.85){
   }
   return keep;
 }
-// text in a box, read with the game's digit font (black ink). Returns one string per line, top to bottom; unknown glyphs are "?"
-function shotText(img, x0, y0, x1, y1){
+// text in a box, read with the game's digit font (black ink unless isInk(r, g, b) says otherwise, e.g. white chat text).
+// Returns one string per line, top to bottom; unknown glyphs are "?"
+function shotText(img, x0, y0, x1, y1, isInk = (r, g, b) => r + g + b < 150){
   const {w, d} = img; x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(img.w, x1); y1 = Math.min(img.h, y1);
-  const ink = (x, y) => { const i = (y * w + x) * 4; return d[i] + d[i + 1] + d[i + 2] < 150 };
+  const ink = (x, y) => { const i = (y * w + x) * 4; return isInk(d[i], d[i + 1], d[i + 2]) };
   const lines = [];
   for (let y = y0; y < y1; y++){
     let any = false; for (let x = x0; x < x1 && !any; x++) any = ink(x, y);

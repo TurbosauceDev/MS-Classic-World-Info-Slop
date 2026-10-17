@@ -55,6 +55,7 @@ scripts/fetch_osms.sh pin + clone the OSMS export into vendor/
 scripts/analyze.py    step 1: map ranking, quest rows, 2008 diffs -> build/analysis.json
 scripts/build_data.py all data steps -> data/data.json (embedded in the page)
 scripts/build.py      src + data -> dist/index.html (single self-contained file)
+tracker/              Windows grind tracker (Electron): core/session.js events->rates, app/readers.js frame->events (reuses 51-shot.js); see tracker/README.md
 tests/smoke.js        Playwright click-through of every tab; fails on any page error
 docs/notes.md         formulas, data.json schema, sources, decisions, known gaps — read before changing calculations
 ```

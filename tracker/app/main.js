@@ -1,0 +1,47 @@
+// Electron main process: one small always-on-top window. Captures only the MapleStory window's pixels (the same API OBS
+// and Discord use); it never opens the game's files or memory and never sends input to it.
+const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell} = require("electron");
+const fs = require("fs"), path = require("path");
+const {autoUpdater} = require("electron-updater");
+
+const SETTINGS = path.join(app.getPath("userData"), "settings.json");
+const readSettings = () => { try { return JSON.parse(fs.readFileSync(SETTINGS, "utf8")) } catch { return {share: true, idleSec: 60} } };
+const writeSettings = s => fs.writeFileSync(SETTINGS, JSON.stringify(s, null, 1));
+const SESSIONS = path.join(app.getPath("userData"), "sessions");   // finished sessions, kept locally either way
+
+let win;
+async function gameSource(){
+  const srcs = await desktopCapturer.getSources({types: ["window"], thumbnailSize: {width: 0, height: 0}});
+  return srcs.find(s => /maplestory/i.test(s.name)) || null;
+}
+
+app.whenReady().then(() => {
+  win = new BrowserWindow({width: 360, height: 560, alwaysOnTop: true, title: "MS Classic Grind Tracker",
+    webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true}});
+  // getDisplayMedia() in the page gets the game window, chosen here (no picker)
+  session.defaultSession.setDisplayMediaRequestHandler(async (req, cb) => {
+    const src = await gameSource();
+    cb(src ? {video: src} : {});
+  });
+  win.loadFile(path.join(__dirname, "index.html"));
+  if (app.isPackaged) autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+  setInterval(() => app.isPackaged && autoUpdater.checkForUpdatesAndNotify().catch(() => {}), 6 * 3600e3);
+});
+app.on("window-all-closed", () => app.quit());
+
+ipcMain.handle("game-found", async () => !!(await gameSource()));
+ipcMain.handle("settings", (_, s) => { if (s) writeSettings({...readSettings(), ...s}); return readSettings() });
+ipcMain.handle("save-session", (_, summary) => {
+  fs.mkdirSync(SESSIONS, {recursive: true});
+  fs.writeFileSync(path.join(SESSIONS, Date.now() + ".json"), JSON.stringify(summary));
+  // upload goes here once the shared backend exists; until then sessions stay on this PC
+  return true;
+});
+// "Save sample frames": raw captures for building and testing the screen readers
+ipcMain.handle("save-frame", (_, name, pngBytes) => {
+  const dir = path.join(app.getPath("pictures"), "MS Classic Tracker frames");
+  fs.mkdirSync(dir, {recursive: true});
+  fs.writeFileSync(path.join(dir, name), Buffer.from(pngBytes));
+  return dir;
+});
+ipcMain.handle("open-folder", (_, dir) => shell.openPath(dir));
