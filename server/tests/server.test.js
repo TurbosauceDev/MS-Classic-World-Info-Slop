@@ -36,8 +36,8 @@ assert.strictEqual(s, 429, "7th run in an hour is refused");
 assert.strictEqual(r.counted, true, "KPQ bonus stage with Horny Mushrooms");
 [s, r] = await post(run("ffffffffffffffff6", 1000, {map: 99999999, mapName: "Somewhere New", mobs: []}));
 assert.strictEqual(s, 200, "unknown map id: kept under its name");
-// a 4th new install ID from the same IP today is refused
-for (const id of ["g000000000000001", "g000000000000002", "g000000000000003"]) [s] = await post(run(id, 1000), "9.9.9.9");
+// a 7th new install ID from the same IP today is refused (6 = a party on one home network)
+for (const id of ["g000000000000001", "g000000000000002", "g000000000000003", "g000000000000005", "g000000000000006", "g000000000000007"]) [s] = await post(run(id, 1000), "9.9.9.9");
 assert.strictEqual(s, 200);
 [s] = await post(run("g000000000000004", 1000), "9.9.9.9");
 assert.strictEqual(s, 429, "ID rotation");
@@ -51,9 +51,9 @@ const fresh = async () => { sql.exec("DELETE FROM meta WHERE k = 'summary'"); re
 const sum = await fresh();
 const a = sum.rows.find(x => x.expHr === 4400);   // player 1: median of 4000 and 4800 EXP/hr
 assert.ok(a && a.runs === 2 && a.map === "42");
-assert.strictEqual(sum.players, 9, "only counted runs: players 1, 5, 6, the three g IDs, the two h IDs and j");
+assert.strictEqual(sum.players, 12, "only counted runs: players 1, 5, 6, the six g IDs, the two h IDs and j");
 assert.ok(sum.rows.some(x => x.map === null && x.mapName === "Somewhere New"));
-assert.strictEqual(sum.mobs["2"].items["4000019"], 3 * 2 + 3 * 6 + 3 * 4 + 3 * 3, "players 1, 5, the g IDs (4 runs), the h IDs and j");
+assert.strictEqual(sum.mobs["2"].items["4000019"], 3 * 2 + 3 * 6 + 3 * 7 + 3 * 3, "players 1, 5, the g IDs (7 runs), the h IDs and j");
 assert.ok(!JSON.stringify(sum).includes("aaaaaaaa"), "no install ids in the summary");
 assert.strictEqual(new Set(sum.rows.map(x => x.group)).size, sum.rows.length - 1, "the two party members share a group");
 // deaths: kept per run, a median per player per hour in the summary
@@ -67,6 +67,14 @@ const cached = await (await worker.fetch(new Request("https://x/api/summary"), e
 assert.strictEqual(cached.mobs["3"], undefined, "summary kept for 5 minutes");
 const bad = (await fresh()).mobs["3"];
 assert.strictEqual(bad.kills, 100); assert.strictEqual(bad.mesos, 0); assert.deepStrictEqual(bad.items, {"4000001": 2});
+// attack-style input: "__proto__" ids on an unknown map, non-text names. Never crashes the summary or touches Object.prototype
+[s] = await post(run("llllllllllllllll1", 1000, {map: 99999999, mobs: [{id: "__proto__", kills: 5, items: {"__proto__": 3, "4000000": 1}}, {id: "constructor"}]}));
+assert.strictEqual(s, 200);
+[s] = await post(run("llllllllllllllll1", 1000, {map: 99999999, mapName: {toString: 1}, job: ["x"]}));
+assert.strictEqual(s, 200, "object map name: stored without a name, no crash");
+const after = await fresh();
+assert.strictEqual(({}).kills, undefined); assert.ok(after.runs > 0 && !("__proto__" in JSON.parse(JSON.stringify(after.mobs)) && after.mobs.__proto__?.kills));
+assert.strictEqual((await worker.fetch(new Request("https://x/api/runs", {method: "POST", body: "{"}), env)).status, 400);
 // party view
 const party = (body, ip = "10.1.0." + body.install.slice(-1)) => worker.fetch(new Request("https://x/api/party", {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
 [s, r] = await party({install: "pppppppppppppp01", partyCode: "Snails", nick: "Danny<b>", job: "Cleric", level: 31, expHr: 50000});

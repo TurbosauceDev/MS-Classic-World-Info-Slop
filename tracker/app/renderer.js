@@ -18,6 +18,7 @@ function isBlack(){
 }
 async function startCapture(){
   await host.wholeScreen(false); await openStream();
+  if (!video.videoWidth) throw new Error("no picture from the game window. Is it minimized? Restore it and press Start again");
   if (isBlack()){
     await host.wholeScreen(true); await openStream();
     $("#status").textContent = isBlack() ? "Capture is black even for the whole screen. Try windowed mode in the game's settings."
@@ -25,7 +26,8 @@ async function startCapture(){
   } else $("#status").textContent = "Reading the MapleStory window.";
 }
 function grab(){
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  // resize only when the window size changed: setting it every frame reallocates the canvas twice a second
+  if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight){ canvas.width = video.videoWidth; canvas.height = video.videoHeight }
   g.drawImage(video, 0, 0);
   const id = g.getImageData(0, 0, canvas.width, canvas.height);
   return {w: id.width, h: id.height, d: id.data};
@@ -165,6 +167,9 @@ function tick(){
   if (timer == null) return;   // stopped
   const t = Date.now();
   try {
+    // game closed: the capture ends and the last frame would be read forever; minimized: no picture until it's back
+    if (!video.srcObject?.active){ $("#status").textContent = "The game window closed. Press Stop, then Start once it's back."; throw null }
+    if (!video.videoWidth){ $("#status").textContent = "No picture from the game (minimized?). Waiting..."; throw null }   // skip this tick
     const f = grab();
     for (const e of readers.readFrame(f, t)){ session.add(e); slicer.add(e); if (e.type === "item") dropAlert(e.id) }
     // one OCR at a time (the first can take seconds): the map every 5 s, the job every 30 s in between
@@ -172,7 +177,7 @@ function tick(){
     else if (!ocrBusy && !settings.job && t - lastJob > 30e3){ lastJob = t; ocrBusy = true; readJob(f, t).catch(() => {}).finally(() => ocrBusy = false) }
     if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
     render();
-  } catch (err){ $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
+  } catch (err){ if (err) $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
   // over 250 ms a frame, 10 times running: read once a second instead of twice
   const ms = Date.now() - t;
   slowTicks = ms > 250 ? slowTicks + 1 : 0;
@@ -198,7 +203,8 @@ async function start(){
 async function stop(){
   clearTimeout(timer); timer = null; $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
-  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable()});
+  // a failed save (disk full, folder locked) must not leave the button saying Stop
+  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable()}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
   $("#go").textContent = "Start";
 }
 $("#go").onclick = () => timer != null ? stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
@@ -250,7 +256,7 @@ function recap(list){
     + (lv.length ? `, level ${Math.min(...lv)} → ${Math.max(...lv)}` : "") + `, ${sum("deaths")} death${sum("deaths") === 1 ? "" : "s"}`
     + (best ? `. Fastest map: ${esc(best[0])} (${fmt(best[1].exp / best[1].min * 60)} EXP/hr)` : "") + `</div>`;
 }
-$("#csv").onclick = () => host.exportCsv();
+$("#csv").onclick = async () => { const r = await host.exportCsv(); $("#status").textContent = r?.error || "Saved to Documents: " + (r?.file || "").split(/[\\/]/).pop() };
 $("#ontop").onchange = e => host.settings({onTop: e.target.checked}).then(s => settings = s);
 $("#share").onchange = e => host.settings({share: e.target.checked}).then(s => settings = s);
 $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {

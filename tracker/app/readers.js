@@ -187,11 +187,15 @@
   }
   function readPickups(img){
     const lines = readLines(img), out = [];
+    // amounts of 1,000+ may be written with a comma, which the font table hasn't seen yet ("?"): either counts as a thousands
+    // mark. Every letter must still read exactly, so a faded line (letters turn "?" too) doesn't get through.
+    const N = "(\\d{1,3}(?:[,?]\\d{3})+|\\d+)", num = v => +v.replace(/[,?]/g, "");
+    const MESO = new RegExp(`^You have gained mesos \\(\\+${N}\\)$`), EXP = new RegExp(`^You received EXP \\(\\+${N}\\)$`), BONUS = new RegExp(`^Bonus EXP for PARTY \\(\\+${N}\\)$`);
     for (const l of lines){
       let m;
-      if ((m = l.text.match(/^You have gained mesos \(\+(\d+)\)$/))) out.push({y: l.y, text: l.text, event: {type: "meso", amount: +m[1]}});
-      else if ((m = l.text.match(/^You received EXP \(\+(\d+)\)$/))) out.push({y: l.y, text: l.text, event: {type: "exp", gain: +m[1]}});
-      else if ((m = l.text.match(/^Bonus EXP for PARTY \(\+(\d+)\)$/))) out.push({y: l.y, text: l.text, event: {type: "bonus", gain: +m[1]}});
+      if ((m = l.text.match(MESO))) out.push({y: l.y, text: l.text, event: {type: "meso", amount: num(m[1])}});
+      else if ((m = l.text.match(EXP))) out.push({y: l.y, text: l.text, event: {type: "exp", gain: num(m[1])}});
+      else if ((m = l.text.match(BONUS))) out.push({y: l.y, text: l.text, event: {type: "bonus", gain: num(m[1])}});
       else if ((m = l.text.match(/^(.+?) ?x(\d+) ?earned\. ?\((.+)\)$/))){
         const id = itemByName(m[1], m[3]);
         out.push({y: l.y, text: l.text, event: id ? {type: "item", id, qty: +m[2]} : {type: "itemraw", text: l.text}});

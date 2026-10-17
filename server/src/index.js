@@ -8,7 +8,9 @@ import {cleanRun, median} from "./check.js";
 
 const CORS = {"access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST", "access-control-allow-headers": "content-type"};
 const json = (v, status = 200) => new Response(JSON.stringify(v), {status, headers: {"content-type": "application/json", ...CORS}});
-const MAX_PER_HOUR = 6, MAX_PER_IP_DAY = 100;   // a run is 15 min, so 4/hour is the real most; the rest is slack
+// a run is 15 min, so 4/hour is the real most; the rest is slack. Per IP: a whole party can share one home network
+// (6 players x 4 runs/hr x 12 hr = 288), so up to 6 tracker copies and 300 runs a day
+const MAX_PER_HOUR = 6, MAX_PER_IP_DAY = 300, MAX_INSTALLS_PER_IP_DAY = 6;
 
 async function sha(s){ return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 32) }
 async function salt(db){
@@ -24,9 +26,9 @@ async function postRun(req, env){
   const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
   const recent = await env.DB.prepare("SELECT COUNT(*) n FROM runs WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n FROM runs WHERE ipday = ?").bind(ipday).first();
-  // one vote per player: a new install ID from an IP that already sent 3 others today is refused (ID rotation)
+  // one vote per player: a new install ID from an IP that already sent 6 others today is refused (ID rotation)
   const ids = await env.DB.prepare("SELECT COUNT(DISTINCT install) n, SUM(install = ?) mine FROM runs WHERE ipday = ?").bind(body.install, ipday).first();
-  if (recent.n >= MAX_PER_HOUR || today.n >= MAX_PER_IP_DAY || ids.n >= 3 && !ids.mine) return json({error: "too many runs"}, 429);
+  if (recent.n >= MAX_PER_HOUR || today.n >= MAX_PER_IP_DAY || ids.n >= MAX_INSTALLS_PER_IP_DAY && !ids.mine) return json({error: "too many runs"}, 429);
   const r = c.run;
   await env.DB.prepare(`INSERT INTO runs (install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp,
     kills, mesos, ok, why, mobs, items) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -51,8 +53,9 @@ async function partyLive(req, env){
   const code = typeof b.partyCode === "string" ? b.partyCode.trim().toLowerCase().slice(0, 20) : "";
   if (!code) return json({error: "party code"}, 400);
   const grp = await sha("party:" + code + await salt(env.DB)), now = Date.now();
-  const me = {nick: typeof b.nick === "string" ? b.nick.replace(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 12) : "", job: b.job ? String(b.job).slice(0, 40) : null,
-    level: num(b.level, 200), mapName: b.mapName ? String(b.mapName).slice(0, 60) : null, expHr: num(b.expHr, 1e8), expHr5: num(b.expHr5, 1e8),
+  const text = (v, n) => typeof v === "string" ? v.slice(0, n) : null;
+  const me = {nick: typeof b.nick === "string" ? b.nick.replace(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 12) : "", job: text(b.job, 40),
+    level: num(b.level, 200), mapName: text(b.mapName, 60), expHr: num(b.expHr, 1e8), expHr5: num(b.expHr5, 1e8),
     killsHr: num(b.killsHr, 1e5), mesosHr: num(b.mesosHr, 1e8), active: num(b.active, 1e7)};
   const old = await env.DB.prepare("SELECT updated FROM party_live WHERE grp = ? AND install = ?").bind(grp, b.install).first();
   if (old && now - Date.parse(old.updated) < PARTY_EVERY) return json({error: "too often"}, 429);
@@ -76,7 +79,7 @@ export async function summary(db){
   const {results} = await db.prepare(`SELECT r.install, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.kills, r.mesos, r.mobs, g.grp, d.deaths
     FROM runs r LEFT JOIN run_groups g ON g.run_id = r.id LEFT JOIN run_deaths d ON d.run_id = r.id WHERE r.ok = 1`).all();
   // one row per player per map and solo/party: their typical (median) run
-  const per = new Map(), mobs = {};
+  const per = new Map(), mobs = Object.create(null);   // no prototype: a stored id can never reach Object.prototype
   for (const r of results){
     const k = [r.install, r.map ?? "?" + r.map_name, r.party > 1 ? 1 : 0].join("|"), h = r.minutes / 60;
     if (!per.has(k)) per.set(k, {map: r.map, mapName: r.map_name, party: [], level: [], job: [], exp: [], mesos: [], kills: [], deaths: [], grp: null});
@@ -84,9 +87,10 @@ export async function summary(db){
     if (r.grp) p.grp = r.grp;
     p.party.push(r.party); p.level.push(r.level); p.job.push(r.job); p.exp.push(r.exp / h); p.mesos.push(r.mesos / h); p.kills.push(r.kills / h); if (r.deaths != null) p.deaths.push(r.deaths / h);
     for (const m of JSON.parse(r.mobs || "[]")){
-      const t = mobs[m.id] || (mobs[m.id] = {kills: 0, mesos: 0, mesoDrops: 0, items: {}, players: new Set()});
+      if (!/^\d{1,10}$/.test(m.id)) continue;   // runs stored before ids were checked
+      const t = mobs[m.id] || (mobs[m.id] = {kills: 0, mesos: 0, mesoDrops: 0, items: Object.create(null), players: new Set()});
       t.kills += m.kills; t.mesos += m.mesos; t.mesoDrops += m.mesoDrops; t.players.add(r.install);
-      for (const [id, n] of Object.entries(m.items)) t.items[id] = (t.items[id] || 0) + n;
+      for (const [id, n] of Object.entries(m.items || {})) if (/^\d{1,10}$/.test(id)) t.items[id] = (t.items[id] || 0) + (+n || 0);
     }
   }
   const last = a => a.filter(v => v != null).at(-1) ?? null;
@@ -102,22 +106,26 @@ export async function summary(db){
 
 export default {
   async fetch(req, env){
-    const url = new URL(req.url);
-    if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
-    if (url.pathname === "/api/runs" && req.method === "POST") return postRun(req, env);
-    if (url.pathname === "/api/party" && req.method === "POST") return partyLive(req, env);
-    if (url.pathname === "/api/summary" && req.method === "GET"){
-      // worked out at most every 5 minutes and kept in the meta table (each request would otherwise read every run; the
-      // Cache API does nothing on workers.dev)
-      const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary'").first();
-      let body = row?.v;
-      if (!body || Date.now() - Date.parse(JSON.parse(body).updated) > 5 * 60e3){
-        body = JSON.stringify(await summary(env.DB));
-        if (body.length < 1.5e6) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").bind(body).run();   // D1 rows max out at 2 MB
-      }
-      return new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=300", ...CORS}});
-    }
-    if (url.pathname === "/") return json({about: "MS Classic World Info shared grind data", summary: "/api/summary"});
-    return json({error: "not found"}, 404);
+    // whatever a request holds, the answer is JSON: a crash would show Cloudflare's error page and log nothing useful
+    try { return await route(req, env) } catch (e) { console.error(e); return json({error: "server error"}, 500) }
   },
 };
+async function route(req, env){
+  const url = new URL(req.url);
+  if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
+  if (url.pathname === "/api/runs" && req.method === "POST") return postRun(req, env);
+  if (url.pathname === "/api/party" && req.method === "POST") return partyLive(req, env);
+  if (url.pathname === "/api/summary" && req.method === "GET"){
+    // worked out at most every 5 minutes and kept in the meta table (each request would otherwise read every run; the
+    // Cache API does nothing on workers.dev)
+    const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary'").first();
+    let body = row?.v;
+    if (!body || Date.now() - Date.parse(JSON.parse(body).updated) > 5 * 60e3){
+      body = JSON.stringify(await summary(env.DB));
+      if (body.length < 1.5e6) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").bind(body).run();   // D1 rows max out at 2 MB
+    }
+    return new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=300", ...CORS}});
+  }
+  if (url.pathname === "/") return json({about: "MS Classic World Info shared grind data", summary: "/api/summary"});
+  return json({error: "not found"}, 404);
+}

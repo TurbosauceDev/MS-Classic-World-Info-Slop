@@ -15,6 +15,8 @@
    Rates use active time only: any gap of more than IDLE_MS with no EXP, meso or item event is left out. */
 (function (root){
   const IDLE_MS = 60000, RECENT_MS = 5 * 60e3;
+  // the player's own calendar day (toISOString alone is UTC: an evening in America would land on tomorrow)
+  const localDate = t => { const d = new Date(t); return new Date(t - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
   function createSession(G, opts = {}){
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
@@ -124,7 +126,7 @@
       // a goal level: the rest of this level plus every level up to it, at the current rate
       const goal = +opts.goalLevel || 0;
       let toGoalHrs = null;
-      if (need && expHr > 0 && goal > S.level){ let left = Math.max(0, need - S.bar.exp); for (let l = S.level + 1; l < goal; l++) left += G.exp[l] || 0; toGoalHrs = left / expHr }
+      if (need && expHr > 0 && goal > S.level){ let left = Math.max(0, need - S.bar.exp); let known = true; for (let l = S.level + 1; l < goal; l++){ if (!G.exp[l]) known = false; left += G.exp[l] || 0 } toGoalHrs = known ? left / expHr : null }   // past the EXP table: unknown, not "sooner"
       const items = Object.entries(S.items).map(([id, n]) => ({id, name: G.items[id]?.n || "Item " + id, n, each: worth(id), total: worth(id) * n}))
         .sort((a, b) => b.total - a.total);
       const lootValue = items.reduce((a, b) => a + b.total, 0);
@@ -143,7 +145,7 @@
     // anonymous summary for the shared drop tables (no character name, no timestamps beyond the date)
     function shareable(){
       const s = stats();
-      return {v: 1, deaths: S.deaths, date: new Date(S.start || Date.now()).toISOString().slice(0, 10), map: s.map, mapName: s.mapName, party: s.party, job: s.job,
+      return {v: 1, deaths: S.deaths, date: localDate(S.start || Date.now()), map: s.map, mapName: s.mapName, party: s.party, job: s.job,
         level: s.level, activeMin: Math.round(s.activeMin * 10) / 10, kills: s.kills, exp: s.exp, mesos: s.mesos,
         msgExp: S.msgExp, barExp: S.barExp, readShare: s.readShare, otherExp: S.otherExp, unreadItems: S.unreadItems, items: S.items,
         mobs: s.mobs.map(m => ({id: m.id, kills: m.kills, mesos: m.mesos, mesoDrops: m.mesoDrops, items: m.items}))};

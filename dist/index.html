@@ -1697,7 +1697,7 @@ function playersExp(map, L, party){
   return groups >= 3 ? {expHr: median(kept.map(r => r[3])), groups, lo: Math.min(...kept.map(r => r[2])), hi: Math.max(...kept.map(r => r[2])),
     deathsHr: dh.length >= 3 ? median(dh) : null} : null;
 }
-const peLine = (pe, party) => `<div class="sub" title="Median of ${pe.groups} grind tracker players or parties at level ${pe.lo}-${pe.hi} (${party > 1 ? "party" : "solo"}), shared runs read ${esc(D.shared.read)}">players: ${fmt(pe.expHr)}${pe.deathsHr != null ? ` · ${+pe.deathsHr.toFixed(1)} deaths/hr` : ""}</div>`;
+const peLine = (pe, party) => `<div class="sub" title="Median of ${pe.groups} grind tracker players or parties at level ${pe.lo}-${pe.hi} (${party > 1 ? "party" : "solo"}), shared runs read ${esc(D.shared.read)}">players: ${fmt(pe.expHr)}${pe.deathsHr != null ? ` · ${+pe.deathsHr.toFixed(1)} death${+pe.deathsHr.toFixed(1) === 1 ? "" : "s"}/hr` : ""}</div>`;
 function rankMaps(){
   let cls = $("#cls").value, L = +$("#lvl").value || 25;
   const basic = $("#aoe").value === "basic", fb = trainBuild(cls, L), {dps, src} = trainDps(cls, L, fb, basic), frugal = $("#tmode").value === "frugal", pm = (fb.pct || 100) / 100;

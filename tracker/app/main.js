@@ -27,9 +27,17 @@ async function captureSource(){
   return screen || null;
 }
 
+// one copy at a time: a second one would read the same screen and send every run twice. Starting it again shows the first.
+const firstCopy = app.requestSingleInstanceLock();
+if (!firstCopy) app.quit();
+app.on("second-instance", () => { if (win){ if (win.isMinimized()) win.restore(); win.focus() } });
+
 app.whenReady().then(() => {
+  if (!firstCopy) return;   // quitting: no window
   win = new BrowserWindow({width: 360, height: 600, alwaysOnTop: readSettings().onTop !== false, title: "MS Classic Grind Tracker",
-    webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true}});
+    // backgroundThrottling off: behind the game or minimized, Chromium would slow the frame timer to once a second and,
+    // after 5 minutes, once a minute, so pickup lines would scroll away unread
+    webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false}});
   // getDisplayMedia() in the page gets the game window, chosen here (no picker)
   session.defaultSession.setDisplayMediaRequestHandler(async (req, cb) => {
     const src = await captureSource();
@@ -98,9 +106,11 @@ ipcMain.handle("export-csv", () => {
     return [new Date(x.saved).toISOString(), x.date, x.mapName || x.map, x.level, x.job, x.party, x.activeMin, x.kills, x.exp, x.mesos,
       h ? Math.round(x.exp / h) : "", h ? Math.round(x.mesos / h) : "", x.deaths ?? ""] });
   const file = path.join(app.getPath("documents"), "MS Classic Tracker sessions.csv");
-  fs.writeFileSync(file, [head, ...rows].map(r => r.map(q).join(",")).join("\r\n"));
+  // Excel locks a CSV it has open: say so instead of failing silently
+  try { fs.writeFileSync(file, [head, ...rows].map(r => r.map(q).join(",")).join("\r\n")) }
+  catch (e){ return {error: e.code === "EBUSY" || e.code === "EPERM" ? "The CSV is open in another program (Excel?). Close it and try again." : "Couldn't save the CSV: " + e.message} }
   shell.showItemInFolder(file);
-  return file;
+  return {file};
 });
 // mini bar: a small strip with just EXP/hr and time to level
 ipcMain.handle("mini", (_, on) => { if (win){ win.setSize(360, on ? 128 : 600) } return !!on });
@@ -147,6 +157,12 @@ function ocrWorker(){
   }
   return ocr;
 }
+// a fresh worker every 500 reads (about 40 minutes): Tesseract's memory creeps up over thousands of reads in one worker
+let ocrReads = 0;
 ipcMain.handle("ocr", async (_, pngBytes) => {
-  try { return (await (await ocrWorker()).recognize(Buffer.from(pngBytes))).data.text } catch { return "" }
+  try {
+    const w = await ocrWorker(), text = (await w.recognize(Buffer.from(pngBytes))).data.text;
+    if (++ocrReads >= 500){ ocrReads = 0; ocr = null; w.terminate().catch(() => {}) }
+    return text;
+  } catch { const o = ocr; ocr = null; o?.then(w => w.terminate()).catch(() => {}); return "" }   // broken worker: a new one next time
 });
