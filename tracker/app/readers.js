@@ -517,8 +517,11 @@
     function readUse(img, t){
       const nums = readCounts(img), drops = {}, now = new Map();
       for (const num of nums){
-        const key = num.slot + "," + num.y, sample = [-20, -14, -8].map(dy => { const i = ((num.y + dy) * img.w + num.slot + 16) * 4; return img.d[i] + "," + img.d[i + 1] + "," + img.d[i + 2] }).join("|");
-        let id = iconCache.get(key)?.[0] === sample ? iconCache.get(key)[1] : undefined;
+        // the icon is matched again only when the 3 sample pixels above the count changed: by more than video noise (the
+        // tracker's frames jitter a few shades frame to frame, which used to re-match every icon every frame)
+        const key = num.slot + "," + num.y, sample = [-20, -14, -8].flatMap(dy => { const i = ((num.y + dy) * img.w + num.slot + 16) * 4; return [img.d[i], img.d[i + 1], img.d[i + 2]] });
+        const hit = iconCache.get(key), same = hit && hit[0].every((v, j) => Math.abs(v - sample[j]) <= 16);
+        let id = same ? hit[1] : undefined;
         if (id === undefined){ id = iconAt(img, num, icons); if (iconCache.size > 500) iconCache.clear(); iconCache.set(key, [sample, id]) }
         if (!id) continue;
         const was = spots.get(key);

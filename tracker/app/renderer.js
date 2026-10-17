@@ -116,6 +116,7 @@ function render(){
   $("#items").innerHTML = s.items.map(i => `<tr><td>${esc(i.name)}</td><td class="n">×${i.n}</td><td class="n">${fmt(i.total)}</td></tr>`).join("")
     + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet</td></tr>` : "");
   $("#priceNote").textContent = G.pwRead ? `Worth = player-shop median from meso.watch (${G.pwRead}), else NPC price. Mesos/kill on maps with several monsters is a best guess.` : "";
+  return s.exp;   // for renderSnaps
 }
 
 // a crop (black-on-white RGBA) -> PNG bytes for the OCR in the main process
@@ -264,7 +265,7 @@ function tick(){
     if (!ocrBusy && t - lastOcr > 5000){ lastOcr = t; ocrBusy = true; readMap(img, t).catch(() => {}).finally(() => ocrBusy = false) }
     else if (!ocrBusy && !settings.job && t - lastJob > 30e3){ lastJob = t; ocrBusy = true; readJob(img, t).catch(() => {}).finally(() => ocrBusy = false) }
     if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
-    render(); renderSnaps();
+    renderSnaps(render());
   } catch (err){ if (err) $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
   // over 250 ms a frame, 10 times running: read once a second instead of twice
   const ms = Date.now() - t;
@@ -276,7 +277,7 @@ function tick(){
 // start/end snapshots: {t, level, pct, exp?, file?, hand?}; a hand-fixed or button snapshot isn't replaced by the automatic ones
 const snaps = {start: null, end: null};
 const clock = t => new Date(t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
-function renderSnaps(){
+function renderSnaps(live = session?.stats().exp){   // live: EXP the live count added up over (about) the same stretch
   for (const [i, k] of [[0, "start"], [1, "end"]]){
     const sn = snaps[k], lv = $("#s" + i + "lv"), pc = $("#s" + i + "pct");
     if (document.activeElement !== lv) lv.value = sn?.level ?? "";
@@ -287,7 +288,6 @@ function renderSnaps(){
   $("#snapRate").textContent = d != null && hrs > 0 ? fmt(d / hrs) + " EXP/hr" : "-";
   // mini bar: the snapshot rate too, so the small view isn't only the live count (render() rewrites the note each tick first)
   if (d != null && hrs > 0.05 && timer != null) $("#miniNote").textContent += ($("#miniNote").textContent ? " · " : "") + "start to now: " + fmt(d / hrs) + " EXP/hr";
-  const live = session?.stats().exp;   // EXP the live count added up over (about) the same stretch
   $("#snapNote").textContent = d == null ? (a && b ? "Can't work it out: check the levels (a level or % is missing, or the end is before the start)." : "")
     : `${fmt(d)} EXP in ${Math.round(hrs * 60)} min (clock time, breaks included)`
       + (live && d > 0 && !a.hand && !b.hand && Math.abs(live - d) > 0.25 * d ? ` · the live count added up ${fmt(live)} EXP; the snapshots are the safer number` : "");
@@ -300,7 +300,8 @@ async function snap(which, f = null, hand = true){
   }
   const img = GrindReaders.native(f), bar = GrindReaders.readBar(img) || GrindReaders.readBarAny(f);
   const level = bar && (GrindSession.levelOf(G, bar.exp, bar.pct) || session?.state.level) || null;
-  const sn = {t: Date.now(), level, pct: bar ? bar.pct : null, exp: bar && level ? bar.exp : undefined, hand};
+  // an automatic snapshot whose bar didn't read keeps the last good reading (only the picture is new)
+  const sn = !bar && !hand && snaps[which]?.level ? {...snaps[which]} : {t: Date.now(), level, pct: bar ? bar.pct : null, exp: bar && level ? bar.exp : undefined, hand};
   snaps[which] = sn;
   try {
     const c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
