@@ -39,9 +39,11 @@ function render(){
   $("#mesosHr").textContent = fmt(s.mesosHr);
   $("#lootHr").textContent = fmt(s.lootHr);
   $("#active").textContent = Math.round(s.activeMin) + " min";
-  $("#where").textContent = [s.mapName, s.job, s.party > 1 ? "party of " + s.party : "solo"].filter(Boolean).join(" · ");
+  $("#where").textContent = [s.level && "Lv " + s.level, s.mapName, s.job, s.party > 1 ? "party of " + s.party : "solo",
+    s.kills + " kills", fmt(s.mesoPerKill) + " mesos/kill"].filter(Boolean).join(" · ");
   $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${m.name}</td><td class="n">${m.kills} kills</td><td class="n">${fmt(m.mesoPerKill)} mesos/kill</td></tr>`).join("");
-  $("#items").innerHTML = s.items.map(i => `<tr><td>${i.name}</td><td class="n">×${i.n}</td><td class="n">${fmt(i.total)}</td></tr>`).join("");
+  $("#items").innerHTML = s.items.map(i => `<tr><td>${i.name}</td><td class="n">×${i.n}</td><td class="n">${fmt(i.total)}</td></tr>`).join("")
+    + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet</td></tr>` : "");
   $("#priceNote").textContent = G.pwRead ? `Worth = player-shop median from meso.watch (${G.pwRead}), else NPC price. Mesos/kill on maps with several monsters is a best guess.` : "";
 }
 
@@ -51,7 +53,7 @@ async function start(){
   readers = GrindReaders.createReaders(G);
   timer = setInterval(() => {
     const t = Date.now();
-    for (const e of readers.readFrame(shotNative(grab()), t)) session.add(e);
+    for (const e of readers.readFrame(grab(), t)) session.add(e);
     render();
   }, 1000 / FPS);
   $("#go").textContent = "Stop";

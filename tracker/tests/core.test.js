@@ -42,4 +42,18 @@ assert.strictEqual(st.mobs[0].name, "Shroom");
 assert.strictEqual(st.otherExp, 500);
 assert.ok(!("name" in s.shareable()), "shared summary carries no character name");
 
+// real readings (Danny's party grind, map not in our data): EXP from the bar, kills from EXP messages, level-up carried over
+s = createSession(G);
+s.add({t: sec(0), type: "party", size: 4});
+s.add({t: sec(0), type: "bar", exp: 18572, level: 22});
+s.add({t: sec(2), type: "exp", gain: 7}); s.add({t: sec(2), type: "bonus", gain: 2}); s.add({t: sec(3), type: "meso", amount: 16});
+s.add({t: sec(54), type: "bar", exp: 20066, level: 22});
+s.add({t: sec(60), type: "bar", exp: 28900, level: 22});
+s.add({t: sec(70), type: "bar", exp: 100, level: 23});
+st = s.stats();
+assert.strictEqual(st.kills, 1);
+assert.strictEqual(st.exp, 28980 - 18572 + 100, "bar EXP across the level-up");
+assert.strictEqual(st.mesoPerKill, 16);
+assert.strictEqual(st.mobs.length, 0, "no monster guess without a map");
+
 console.log("core tests passed");

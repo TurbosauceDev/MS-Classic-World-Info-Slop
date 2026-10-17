@@ -2,7 +2,7 @@
 const fs = require("fs"), path = require("path");
 const D = JSON.parse(fs.readFileSync(path.join(__dirname, "../data/data.json"), "utf8"));
 const items = {};
-for (const [id, it] of Object.entries(D.items)) items[id] = {n: it.n, p: it.p || 0};
+for (const [id, it] of Object.entries(D.items)) items[id] = {n: it.n, p: it.p || 0, c: it.c};
 const G = {
   mobs: Object.fromEntries(Object.entries(D.mobs).map(([id, m]) => [id, m.slice(0, 4)])),   // [name, level, hp, exp]
   maps: D.maps, mapnames: D.mapnames, exp: D.exp, items, pw: D.pw?.it || {}, pwRead: D.pw?.read || null,
