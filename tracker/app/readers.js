@@ -207,15 +207,17 @@
   // ---- party window: a column of HP bars (red runs with the same left edge, ~17 px apart) in the top-left area ----
   function readParty(img){
     const X = Math.floor(img.w * 0.25), Y = Math.floor(img.h * 0.6), d = img.d, rows = [];
-    const red = i => d[i] > 170 && d[i + 1] < 70 && d[i + 2] < 70;
+    // the bar's rows: pure reds plus its light shine row (255,136,136), which would otherwise split one bar in two
+    const red = i => d[i] > 170 && d[i] - d[i + 1] > 100 && d[i] - d[i + 2] > 100;
     for (let y = 0; y < Y; y++){
       let x = 0;
       while (x < X){ if (!red((y * img.w + x) * 4)){ x++; continue } const s = x; while (x < X && red((y * img.w + x) * 4)) x++; if (x - s >= 25) rows.push({y, x: s}) }
     }
-    const byX = {};
-    for (const r of rows){ const k = r.x; (byX[k] = byX[k] || []).push(r.y) }
+    // bars line up on the left: rows starting within 4 px of each other (the rounded corner rows start a pixel or two later)
+    const byX = [];
+    for (const r of rows){ let b = byX.find(b => Math.abs(b.x - r.x) <= 4); if (!b) byX.push(b = {x: r.x, ys: []}); b.ys.push(r.y) }
     let best = 0;
-    for (const ys of Object.values(byX)){
+    for (const {ys} of byX){
       const starts = ys.filter((y, i) => i === 0 || y - ys[i - 1] > 2);   // one bar = a few rows
       if (starts.length >= 2 && starts.length <= 6) best = Math.max(best, starts.length);
     }
@@ -322,7 +324,76 @@
     return hits.length === 1 ? hits[0][0] : null;
   }
 
-  function createReaders(G){
+  /* Item counts on inventory and quick-slot icons ("91" on Meat): white-to-blue digits, each row one exact color, with a
+     black outline. Read pixel-exact on the native frame; glyph = the columns with ink in the lower 5 rows (learned from
+     Danny's inventory screenshots, 2026-10-17). */
+  const INK = [[255,255,255],[255,255,255],[255,255,255],[255,255,255],[238,255,255],[221,238,255],[187,221,255],[170,204,255],[153,204,255]];
+  const CDIG = {".####./#....#/#....#/#....#/#....#/#....#/#....#/#....#/.####./": 0, "#/#/#/#/#/#/#/#/#/": 1,
+    ".####./#....#/.....#/.....#/....#./..##../.#..../#...../######/": 2, ".####./#....#/.....#/.....#/..###./.....#/.....#/#....#/.####./": 3,
+    "....#./...##./..#.#./.#..#./#...#./######/....#./....#./....#./": 4, "######/#...../#...../#####./.....#/.....#/.....#/#....#/.####./": 5,
+    "..###./.#..../#...../#####./#....#/#....#/#....#/#....#/.####./": 6, "###/.../.../.../..#/..#/.#./.#./#../": 7,
+    ".####./#....#/#....#/#....#/.####./#....#/#....#/#....#/.####./": 8, ".####./#....#/#....#/#....#/#....#/.#####/.....#/.....#/.####./": 9};
+  // every count on screen: [{x, y, n}] (x = first digit's left column, y = the digits' bottom row)
+  function readCounts(img){
+    const {w, h, d} = img, is = (x, y, c) => { const i = (y * w + x) * 4; return d[i] === c[0] && d[i + 1] === c[1] && d[i + 2] === c[2] };
+    const out = [];
+    for (let y = 8; y < h; y++){
+      // quick test first: a row with the bottom color somewhere
+      let any = false; for (let i = y * w * 4, e = i + w * 4; i < e; i += 4) if (d[i] === 153 && d[i + 1] === 204 && d[i + 2] === 255){ any = true; break }
+      if (!any) continue;
+      const cols = [];
+      for (let x = 0; x < w; x++) for (let r = 4; r <= 8; r++) if (is(x, y - 8 + r, INK[r])){ cols.push(x); break }
+      let cl = [], cur = null;
+      for (const x of cols){ if (cur && x === cur.at(-1) + 1) cur.push(x); else { cur = [x]; cl.push(cur) } }
+      // digits less than 6 columns apart are one number; an unknown glyph touching a number spoils it (half covered)
+      let num = null, lastEnd = -99;
+      for (const c of cl){
+        let key = ""; for (let r = 0; r <= 8; r++){ for (const x of c) key += is(x, y - 8 + r, INK[r]) ? "#" : "."; key += "/" }
+        const dg = CDIG[key], near = c[0] - lastEnd <= 5;
+        lastEnd = c.at(-1);
+        if (num && near){ if (dg === undefined) num.bad = true; else num.n = num.n * 10 + dg; num.end = lastEnd; continue }
+        if (num) out.push(num);
+        num = {x: c[0], y, n: dg ?? 0, bad: dg === undefined, end: lastEnd};
+      }
+      if (num) out.push(num);
+    }
+    return out.filter(m => !m.bad).map(({x, y, n, end}) => ({x, y, n, end}));
+  }
+  // which icon sits above a count: icons are drawn bottom-aligned 3 px under the digits and centered on the 32 px slot;
+  // the best color match (digits left out) when it's clearly the best. icons: [{id, w, h, d}] (loadIcons)
+  function iconAt(img, num, icons, dbg){
+    let best = null, second = Infinity;
+    for (const ic of icons){
+      const x0 = num.x + 15 - (ic.w >> 1), y0 = num.y + 3 - ic.h;
+      let sc = Infinity;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -3; dx <= 1; dx++){   // -3: a leading 1 or 7 starts right of the usual digit cell
+        let s = 0, k = 0;
+        for (let y = 0; y < ic.h; y += 1) for (let x = 0; x < ic.w; x += 1){
+          const j = (y * ic.w + x) * 4; if (ic.d[j + 3] < 250) continue;
+          const X = x0 + dx + x, Y = y0 + dy + y; if (Y > num.y - 10 && X <= (num.end ?? num.x + 14) + 2 || X < 0 || Y < 0 || X >= img.w || Y >= img.h) continue;   // the count itself
+          const i = (Y * img.w + X) * 4;
+          s += Math.abs(img.d[i] - ic.d[j]) + Math.abs(img.d[i + 1] - ic.d[j + 1]) + Math.abs(img.d[i + 2] - ic.d[j + 2]); k++;
+        }
+        if (k > 40) sc = Math.min(sc, s / k);
+      }
+      if (!best || sc < best.sc){ if (best) second = Math.min(second, best.sc); best = {id: ic.id, sc} } else second = Math.min(second, sc);
+    }
+    if (dbg) dbg.push([num.n, best?.id, Math.round(best?.sc), Math.round(second)]);
+    return best && best.sc < 80 && second > best.sc * 1.5 ? best.id : null;
+  }
+  // G.icons (base64 PNGs of potions, food, arrows, stars) -> pixels; items with the same picture share one entry
+  async function loadIcons(G){
+    const seen = new Map(), out = [];
+    for (const [id, b64] of Object.entries(G.icons || {})){
+      if (seen.has(b64)) continue; seen.set(b64, id);
+      const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode();
+      const c = document.createElement("canvas"); c.width = im.width; c.height = im.height; const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+      out.push({id, w: im.width, h: im.height, d: g.getImageData(0, 0, im.width, im.height).data});
+    }
+    return out;
+  }
+
+  function createReaders(G, icons = null){
     ITEMS = Object.entries(G.items);
     let prev = [], lastBar = null, lastParty = null, bonusAt = -Infinity, partyNext = null, partySeen = 0, barNext = null;
     // new pickup lines since the previous frame. Each new message pushes the stack up one line, so the smallest shift n
@@ -367,14 +438,39 @@
       // party size only changes after the same new size is read 3 frames running (a window in the way, a bar mid-blink)
       // no party window: a party while bonus lines came in the last 3 minutes (left the party = back to solo after that)
       const partyRead = readParty(img), party = partyRead || (t - bonusAt < 180e3 ? 2 : 1);
-      info = {bar: !!bar, partyWindow: partyRead};   // what this frame showed (self-check, auto-pause)
+      info = {bar: !!bar, partyWindow: partyRead, counts: info.counts};   // what this frame showed (self-check, auto-pause)
+      if (icons?.length && t - lastCounts >= 2000){ lastCounts = t; ev.push(...readUse(img, t)) }
       if (party === partyNext) partySeen++; else { partyNext = party; partySeen = 1 }
       if (party !== lastParty && (lastParty === null || partySeen >= 3)){ ev.push({t, type: "party", size: party}); lastParty = party }
       return ev;
     }
-    let info = {bar: false, partyWindow: null};
+    /* items used (potions, food, arrows): counts on the quick slots and the open Use tab, every 2 s. Per spot on screen:
+       a count that went down (confirmed by the next read: the same or lower still) is that many used. One item seen in two spots (quick slot =
+       total, inventory = a stack) counts its biggest drop once. Going up = bought or picked up. A moved window = new spots. */
+    let lastCounts = -Infinity, spots = new Map();
+    const iconCache = new Map();   // spot -> [color sample, id]: icon matching only when the picture there changed
+    function readUse(img, t){
+      const nums = readCounts(img), drops = {}, now = new Map();
+      for (const num of nums){
+        const key = num.x + "," + num.y, sample = [-20, -14, -8].map(dy => { const i = ((num.y + dy) * img.w + num.x + 15) * 4; return img.d[i] + "," + img.d[i + 1] + "," + img.d[i + 2] }).join("|");
+        let id = iconCache.get(key)?.[0] === sample ? iconCache.get(key)[1] : undefined;
+        if (id === undefined){ id = iconAt(img, num, icons); if (iconCache.size > 500) iconCache.clear(); iconCache.set(key, [sample, id]) }
+        if (!id) continue;
+        const was = spots.get(key);
+        if (!was || was.id !== id){ now.set(key, {id, n: num.n, next: null}); continue }
+        // a new value is taken once the next read agrees: the same again, or (arrows while shooting) lower still
+        let {n, next} = was; const v = num.n;
+        if (v === n) next = null;
+        else if (next !== null && (v === next || next < n && v < next)){ if (next < n && n - next <= 20) drops[id] = Math.max(drops[id] || 0, n - next); n = next; next = v === n ? null : v }   // over 20 at once: sold, dropped or stored, not used
+        else next = v;
+        now.set(key, {id, n, next});
+      }
+      spots = now; info.counts = nums.length; info.useSpots = now.size;
+      return Object.entries(drops).map(([id, n]) => ({t, type: "use", id, n}));
+    }
+    let info = {bar: false, partyWindow: null, counts: 0};
     return {readFrame, get info(){ return info }};
   }
-  const api = {createReaders, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {createReaders, readCounts, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

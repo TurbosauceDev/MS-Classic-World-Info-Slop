@@ -12,6 +12,7 @@
      {t, type: "map",   id, name?}        map read from the minimap (id null: a map our data doesn't have, name as read)
      {t, type: "party", size}             party size from the party HP bars (1 = solo)
      {t, type: "job",   name}             class read from the screen
+     {t, type: "use",   id, n}            n of an item used up (potion, food, arrows), from the quick-slot / Use-tab counts
      {t, type: "pause"} / {t, type: "resume"}  the game screen is gone (Cash Shop, changing channel): that time isn't farming
    Rates use active time only: any gap of more than IDLE_MS with no EXP, meso or item event is left out. */
 (function (root){
@@ -22,7 +23,7 @@
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
       msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
-      pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null};
+      pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null, used: {}};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
@@ -85,6 +86,7 @@
         }
         case "bonus": S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); break;
         case "itemraw": S.unreadItems++; break;
+        case "use": { const n = Math.max(0, e.n | 0); if (n) S.used[String(e.id)] = (S.used[String(e.id)] || 0) + n; break }
         case "bar": {
           const p = S.bar, before = S.level;
           if (e.level) S.level = e.level;
@@ -146,6 +148,10 @@
       const items = Object.entries(S.items).map(([id, n]) => ({id, name: G.items[id]?.n || "Item " + id, n, each: worth(id), total: worth(id) * n}))
         .sort((a, b) => b.total - a.total);
       const lootValue = items.reduce((a, b) => a + b.total, 0);
+      // used up: NPC shop price (cheapest shop), else the player-shop median; unknown price = left out of the cost
+      const used = Object.entries(S.used).map(([id, n]) => { const each = G.buy?.[id] ?? G.pw?.[id]?.[0] ?? null;
+        return {id, name: G.items[id]?.n || "Item " + id, n, each, total: each == null ? null : each * n} }).sort((a, b) => (b.total || 0) - (a.total || 0));
+      const usedCost = used.reduce((a, u) => a + (u.total || 0), 0);
       const mobs = Object.entries(S.byMob).map(([id, m]) => ({id, name: G.mobs[id]?.[0] || "Monster " + id, ...m,
         mesoPerKill: m.kills ? m.mesos / m.kills : 0})).sort((a, b) => b.kills - a.kills);
       return {activeMin: S.activeMs / 6e4, map: S.map, mapName: G.mapnames?.[S.map] || G.maps[S.map]?.[0] || S.mapName || null, party: S.party,
@@ -155,7 +161,8 @@
         // kills if the missed lines were kills at the same rate as the ones read (an estimate; only from 20% read up)
         killsEstHr: S.barExp > 0 && S.msgExp / S.barExp >= 0.2 && S.msgExp < S.barExp ? per(S.kills * S.barExp / S.msgExp) : null,
         expHr5: recentExpHr(), deaths: S.deaths, paused: S.pausedAt !== null, levelUps: S.levelUps, toGoalHrs, goalLevel: goal || null, lastExpT: S.lastExpT,
-        mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: S.unreadItems, lootValue, lootHr: per(lootValue), items, mobs};
+        mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: S.unreadItems, lootValue, lootHr: per(lootValue), items, mobs,
+        used, usedCost, usedCostHr: per(usedCost), netHr: per(S.mesos + lootValue - usedCost)};
     }
 
     // anonymous summary for the shared drop tables (no character name, no timestamps beyond the date)
@@ -163,7 +170,7 @@
       const s = stats();
       return {v: 1, deaths: S.deaths, date: localDate(S.start || Date.now()), map: s.map, mapName: s.mapName, party: s.party, job: s.job,
         level: s.level, activeMin: Math.round(s.activeMin * 10) / 10, kills: s.kills, exp: s.exp, mesos: s.mesos,
-        msgExp: S.msgExp, barExp: S.barExp, readShare: s.readShare, otherExp: S.otherExp, unreadItems: S.unreadItems, items: S.items,
+        msgExp: S.msgExp, barExp: S.barExp, readShare: s.readShare, otherExp: S.otherExp, unreadItems: S.unreadItems, items: S.items, used: S.used,
         mobs: s.mobs.map(m => ({id: m.id, kills: m.kills, mesos: m.mesos, mesoDrops: m.mesoDrops, items: m.items}))};
     }
 

@@ -171,4 +171,11 @@ s = createSession(G); const bar = (t, lv, exp) => s.add({t: sec(t), type: "bar",
 bar(0, 20, 100); bar(30, 20, G.exp[20] - 10); bar(40, 21, 5); bar(50, 21, G.exp[21] - 5); bar(60, 22, 3); bar(61, 21, 900); bar(62, 22, 5);
 assert.deepStrictEqual(s.stats().levelUps.map(l => [l.level, l.activeMin]), [[21, null], [22, 0.3]], "Lv 20 started mid-way: no time; Lv 21 took 20 s; a flicker back to 21 isn't a new level-up");
 
+// items used: priced at the cheapest NPC shop; no known price = counted but not costed
+s = createSession(G); for (let i = 0; i <= 60; i++) s.add({t: sec(i * 30), type: "exp", gain: 2});
+s.add({t: sec(10), type: "use", id: "2000002", n: 3}); s.add({t: sec(20), type: "use", id: "2000002", n: 1}); s.add({t: sec(30), type: "use", id: "2999999", n: 40});
+st = s.stats();
+assert.deepStrictEqual(st.used.map(u => [u.id, u.n, u.total]), [["2000002", 4, 4 * G.buy["2000002"]], ["2999999", 40, null]]);
+assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an hour: cost x2 per hour");
+
 console.log("core tests passed");

@@ -25,6 +25,11 @@ for (const [mob, name, level, hp, exp, map, mapName, , sec, boss] of D.timed || 
 }
 // monsters only in the site's monster pages (KPQ stages: Ligator, Curse Eye, King Slime...): same [name, level, hp, exp]
 for (const [, , list] of Object.values(G.maps)) for (const [id] of list){ const m = D.mobdb?.[id]; if (!G.mobs[id] && m) G.mobs[id] = [m.name, m.level, m.hp, m.exp] }
+// items used up while farming (potions, food, arrows, throwing stars): icons for reading their counts on the quick slots
+// and in the Use tab, and the lowest NPC shop price (D.ishop) for their cost
+const used = Object.entries(D.items).filter(([id, it]) => /^20(60|61|70)/.test(id) || ["hp", "mp", "hpR", "mpR"].some(k => it.sp?.[k])).map(([id]) => id);
+G.icons = Object.fromEntries(used.filter(id => D.iicons[id]).map(id => [id, D.iicons[id]]));
+G.buy = Object.fromEntries(used.map(id => [id, Math.min(...(D.ishop[id] || []).map(s => s[3]).filter(p => p > 0))]).filter(([, p]) => isFinite(p)));
 fs.writeFileSync(path.join(__dirname, "app/gamedata.json"), JSON.stringify(G));   // tests
 fs.writeFileSync(path.join(__dirname, "app/gamedata.js"), "const GAMEDATA = " + JSON.stringify(G) + ";\n");   // the app (no fetch of file: URLs)
 // the site's screenshot reader (game digit font, un-doubling, icon matching) is shared, not forked

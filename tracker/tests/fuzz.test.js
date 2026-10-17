@@ -21,7 +21,8 @@ for (let trial = 0; trial < 300; trial++){
     else if (r < .85) e = {type: "meso", amount: pick([1, 30, 0, 100000])};
     else if (r < .95) e = {type: "item", id: pick([...items.slice(0, 50), "999"]), qty: pick([1, 3, undefined])};
     else if (r < .97) e = {type: "itemraw", text: "?"};
-    else e = {type: pick(["pause", "resume"])};
+    else if (r < .985) e = {type: pick(["pause", "resume"])};
+    else e = {type: "use", id: pick(["2000000", "2060000", "999", "2000004"]), n: pick([1, 3, 0, -2, 2.5])};
     e.t = t;
     try { s.add(e); sl.add(e) } catch (err){ bad.push("crash " + err.message + " " + JSON.stringify(e)); break }
   }

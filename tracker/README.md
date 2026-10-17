@@ -28,6 +28,15 @@ npm start           # run it (Windows, Electron)
   for each that doesn't. "Report a bug" saves the last 8 frames (one every 3 s) and the last 300 log lines (reader
   events, map/job reads, status messages; no install ID, party code or name) to Pictures/MS Classic Tracker
   frames/report-<time>/.
+- Items used: every 2 s the item counts on the quick slots and an open Use tab are read (their digit font is exact
+  per-row colors, learned from Danny's screenshots in tests/frames-inv) and the icon above each count is matched to
+  potion/food/arrow/star icons (gamedata icons, from the site's item icons). A count that drops (confirmed by the next
+  read) = used; drops over 20 at once are ignored (sold/stored). Cost = cheapest NPC shop price (D.ishop), else the
+  player-shop median. tests/inventory.test.js.
+- Auto-pause: EXP bar and minimap both gone for 3 s (Cash Shop, channel change) = paused; that time is left out of
+  active time and of 15-minute runs. Level-ups are logged with the farming time each level took (History).
+- Runs carry the UTC hour they started; the server's summary has "times" (best time to farm per map, each run against
+  the same player's usual speed there, 3-hour blocks with 3+ players).
 - Shared numbers count one player per home network: the server joins installs that sent runs from the same connection
   on the same day (and party codes with their members' networks) before the "3+ players" rules.
 - Release: run `.github/workflows/tracker.yml` by hand with "release" ticked (version = package.json); it builds the

@@ -39,6 +39,10 @@ const path = require("path"), {chromium} = require("playwright");
     session.state.lastExpT = Date.now() - 130e3;   // last EXP over 2 minutes ago
     render(); return [document.querySelector("#deaths").textContent, document.querySelector("#goalK").textContent, document.querySelector("#goalV").textContent, document.querySelector("#status").textContent] });
   if (gl[0] !== "1" || gl[1] !== "Level 23 in" || !/h|min/.test(gl[2]) || !/No EXP for 2 minutes/.test(gl[3])) throw new Error("goal/deaths/stop: " + gl);
+  // potions used (from the quick-slot counts): cost per hour and the list
+  const usedTxt = await page.evaluate(() => { session.add({t: Date.now(), type: "use", id: "2000002", n: 3}); render();
+    return [document.querySelector("#used").textContent, document.querySelector("#usedBox").classList.contains("hidden"), document.querySelector("#netHr").textContent, ICONS.length] });
+  if (!/White Potion×31,050/.test(usedTxt[0]) || usedTxt[1] || !/^net /.test(usedTxt[2]) || !(usedTxt[3] > 30)) throw new Error("used: " + usedTxt);
   // Mano killed on his map: respawn timer shows
   await page.evaluate(() => { const t = Date.now(); session.add({t, type: "map", id: 10000013}); session.add({t, type: "exp", gain: 148}); render() });
   const respawn = await page.textContent("#respawn");
@@ -46,7 +50,7 @@ const path = require("path"), {chromium} = require("playwright");
   // self-check: still checking, then ✓/✗ per reader once its time is up (the noise canvas has no EXP bar or minimap)
   const chk = await page.evaluate(() => { const during = document.querySelector("#selfcheck").textContent;
     check.t0 -= 9000; check.lines = true; renderCheck(); return [during, document.querySelector("#selfcheck").innerHTML] });
-  if (!/checking/.test(chk[0]) || !/Minimap not found/.test(chk[1]) || !/EXP bar<\/td><td class="n slow">✗/.test(chk[1]) || !/Press Stop and Start/.test(chk[1]) || !/Party window<\/td><td class="n slow">✗/.test(chk[1])) throw new Error("self-check: " + chk.join(" | "));
+  if (!/checking/.test(chk[0]) || !/Minimap not found/.test(chk[1]) || !/EXP bar<\/td><td class="n slow">✗/.test(chk[1]) || !/turns ✓ by itself/.test(chk[1]) || !/Party window<\/td><td class="n slow">✗/.test(chk[1])) throw new Error("self-check: " + chk.join(" | "));
   // auto-pause: bar read once, then bar and minimap gone for 3 s -> paused; the bar back -> tracking again
   const ap = await page.evaluate(() => { const f = grab(), t = Date.now() + 1e4; autoPause(f, {bar: true}, t); autoPause(f, {bar: false}, t + 1000); const a = session.state.pausedAt;
     autoPause(f, {bar: false}, t + 4100); const b = session.state.pausedAt, st = document.querySelector("#status").textContent; autoPause(f, {bar: true}, t + 9000);

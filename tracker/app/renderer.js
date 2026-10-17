@@ -47,6 +47,7 @@ function keepFrame(t){
 // self-check: for the first 8 s after Start, which readers work right now (8, not 5: the first map read loads the OCR)
 let check = null;
 const CHECK_MS = 8000;
+const allOk = c => c.bar && c.lines && c.map && (c.job || settings.job) && c.use && (c.party || !settings.partyCode);
 function renderCheck(){
   const c = check, box = $("#selfcheck");
   if (!c) return box.classList.add("hidden");
@@ -57,12 +58,13 @@ function renderCheck(){
     + row("Pickup / EXP lines", c.lines, "None yet. Kill something; if this stays empty, the chat box may be covered or scrolled.")
     + row("Map name", c.map, c.mapWhy || "Not read yet.")
     + row("Job", settings.job ? "picked by hand" : c.job, c.jobWhy || "Not read yet.")
+    + row("Potions / arrows", c.use, "No potion, food or arrow counts found. Put your potions on the quick slots (or open the Use tab) to track what you use.")
     + (settings.partyCode || c.party ? row("Party window", c.party && "party of " + c.party, "Not found. Open the party window so the party size is read; without it a party is only guessed from bonus EXP lines.") : "")
-    + `</table>` + (done ? `<div class="note">${c.bar && c.lines && c.map && (c.job || settings.job) ? "All readers work." : "✗ = that number won't be tracked until it's fixed. Press Stop and Start to check again."}</div>` : "");
+    + `</table>` + (done ? `<div class="note">${allOk(c) ? "All readers work." : "✗ = that number isn't tracked until it's fixed; it turns ✓ by itself once it works."}</div>` : "");
   if (done && !c.ended){
-    c.ended = true; log("selfcheck", {bar: !!c.bar, lines: !!c.lines, map: c.map || c.mapWhy, job: c.job || c.jobWhy});
-    if (c.bar && c.lines && c.map && (c.job || settings.job)) setTimeout(() => { if (check === c) box.classList.add("hidden") }, 20e3);   // all fine: out of the way
+    c.ended = true; log("selfcheck", {bar: !!c.bar, lines: !!c.lines, map: c.map || c.mapWhy, job: c.job || c.jobWhy, use: c.use || null, party: c.party || null});
   }
+  if (done && allOk(c) && !c.hiding){ c.hiding = true; setTimeout(() => { if (check === c) box.classList.add("hidden") }, 20e3) }   // all fine: out of the way
 }
 
 // sharing progress: minutes into the current 15-minute run, and runs sent this session
@@ -92,6 +94,10 @@ function render(){
   $("#miniExp").textContent = fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent;
   $("#miniNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
   $("#lootHr").textContent = fmt(s.lootHr);
+  $("#usedHr").textContent = s.used.length ? fmt(s.usedCostHr) : "-";
+  $("#netHr").textContent = s.used.length ? "net " + fmt(s.netHr) + " mesos/hr (mesos + loot - used)" : "from the quick-slot counts";
+  $("#used").innerHTML = s.used.map(u => `<tr><td>${esc(u.name)}</td><td class="n">×${u.n}</td><td class="n">${u.total == null ? "price unknown" : fmt(u.total)}</td></tr>`).join("");
+  $("#usedBox").classList.toggle("hidden", !s.used.length);
   $("#deaths").textContent = s.deaths;
   // goal level: time left at the current rate and the clock time it lands on
   levelNote(s);
@@ -245,6 +251,7 @@ function tick(){
       if (check && /^(exp|bonus|meso|item|itemraw)$/.test(e.type) && !check.lines){ check.lines = true; check.late = check.ended }
     }
     const info = readers.info;
+    if (check && info.useSpots && !check.use){ check.use = info.useSpots + " item count" + (info.useSpots > 1 ? "s" : ""); check.late = check.ended }
     if (check && info.partyWindow > 1 && !check.party){ check.party = info.partyWindow; check.late = check.ended }
     autoPause(f, info, t);
     if (check && (!check.ended || check.late)){ check.late = false; renderCheck() }   // a ✗ turns ✓ when it starts working
@@ -261,18 +268,19 @@ function tick(){
   timer = setTimeout(tick, Math.max(50, 1000 / FPS - ms));
 }
 
-let starting = false;
+let starting = false, ICONS = null;
 async function start(){
   if (starting) return;   // a double click starts one capture, not two
   starting = true; $("#status").className = "";
-  try { await startCapture() } finally { starting = false }
+  try { await startCapture(); ICONS ||= await GrindReaders.loadIcons(G).catch(() => []) }   // once: potion/arrow pictures for the counts
+  finally { starting = false }
   timer = 0;   // running (the first tick sets the real timeout)
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: settings.goal || 0}); stopWarned = false;
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
   check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   barSeen = false; goneSince = null; levelsShown = 0;
-  readers = GrindReaders.createReaders(G); mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
+  readers = GrindReaders.createReaders(G, ICONS); mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   tick();
@@ -283,7 +291,7 @@ async function stop(){
   clearTimeout(timer); timer = null; $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   // a failed save (disk full, folder locked) must not leave the button saying Stop
-  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
+  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), levelUps: session.state.levelUps.map(({t, ...l}) => l), usedCost: Math.round(session.stats().usedCost)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
   $("#go").textContent = "Start";
 }
 $("#go").onclick = () => timer != null ? stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
