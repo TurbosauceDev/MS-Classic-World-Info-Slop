@@ -109,12 +109,47 @@
       const s = stats();
       return {v: 1, date: new Date(S.start || Date.now()).toISOString().slice(0, 10), map: s.map, mapName: s.mapName, party: s.party, job: s.job,
         level: s.level, activeMin: Math.round(s.activeMin * 10) / 10, kills: s.kills, exp: s.exp, mesos: s.mesos,
+        msgExp: S.msgExp, barExp: S.barExp, otherExp: S.otherExp, unreadItems: S.unreadItems, items: S.items,
         mobs: s.mobs.map(m => ({id: m.id, kills: m.kills, mesos: m.mesos, mesoDrops: m.mesoDrops, items: m.items}))};
     }
 
     return {add, stats, shareable, state: S};
   }
 
-  const api = {createSession, IDLE_MS};
+  /* Shared runs (the same rules as beanguri's Maple Classic Exp Overlay): 15 minutes of non-stop farming on one map with
+     the same party. A map or party change, or a break longer than idleMs, starts a new run; a finished run goes to onRun. */
+  const RUN_MS = 15 * 60e3;
+  function createRunSlicer(G, opts = {}){
+    const idleMs = opts.idleMs || IDLE_MS, runMs = opts.runMs || RUN_MS, onRun = opts.onRun || (() => {});
+    let cur = null, last = null, bar = null;
+    const ctx = {};   // latest map / party / job, carried into each new run
+    // a new run at time t; after a finished run the last bar reading is its EXP baseline (not after a break)
+    function fresh(t, keepBar){
+      cur = createSession(G, {idleMs});
+      for (const e of Object.values(ctx)) cur.add({...e, t});
+      if (keepBar && bar) cur.add({...bar, t});
+    }
+    const same = (a, b) => JSON.stringify({...a, t: 0}) === JSON.stringify({...b, t: 0});
+    function add(e){
+      if (e.type === "map" || e.type === "party" || e.type === "job"){
+        const was = ctx[e.type]; ctx[e.type] = e;
+        if (!cur || e.type !== "job" && was && !same(was, e)) fresh(e.t, false); else cur.add(e);
+        return;
+      }
+      const counts = ["exp", "bonus", "meso", "item", "itemraw", "bar"].includes(e.type);
+      if (!cur || counts && last !== null && e.t - last > idleMs) fresh(e.t, false);
+      cur.add(e);
+      if (counts) last = e.t;
+      if (e.type === "bar") bar = e;
+      const S = cur.state;
+      if (S.last !== null && S.last - S.start >= runMs){
+        onRun({...cur.shareable(), minutes: Math.round((S.last - S.start) / 6e3) / 10});
+        fresh(e.t, true);
+      }
+    }
+    return {add, get current(){ return cur }};
+  }
+
+  const api = {createSession, createRunSlicer, IDLE_MS, RUN_MS};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindSession = api;
 })(typeof window !== "undefined" ? window : globalThis);

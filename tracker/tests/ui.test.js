@@ -7,7 +7,7 @@ const path = require("path"), {chromium} = require("playwright");
   page.on("pageerror", e => errors.push(e.message));
   await page.addInitScript(() => {
     window.host = {gameFound: async () => true, wholeScreen: async on => on, settings: async () => ({share: true, idleSec: 60}),
-      saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", openFolder: async () => {}, ocr: async () => "Victoria Road\nSnail Hunting Ground III"};
+      saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", openFolder: async () => {}, ocr: async () => "Victoria Road\nSnail Hunting Ground III", shareRun: async () => true};
     navigator.mediaDevices.getDisplayMedia = async () => {
       const c = document.createElement("canvas"); c.width = 800; c.height = 600;
       const x = c.getContext("2d"); setInterval(() => { x.fillStyle = "#" + Math.floor(Math.random() * 4095).toString(16); x.fillRect(0, 0, 800, 600) }, 100);

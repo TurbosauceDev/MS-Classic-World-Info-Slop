@@ -6,6 +6,9 @@ const {autoUpdater} = require("electron-updater");
 
 const SETTINGS = path.join(app.getPath("userData"), "settings.json");
 const readSettings = () => { try { return JSON.parse(fs.readFileSync(SETTINGS, "utf8")) } catch { return {share: true, idleSec: 60} } };
+// shared runs go to our server (server/ in the repo); empty = not deployed yet, runs wait in the queue file
+const SERVER = "";
+const QUEUE = path.join(app.getPath("userData"), "run-queue.json");
 const writeSettings = s => fs.writeFileSync(SETTINGS, JSON.stringify(s, null, 1));
 const SESSIONS = path.join(app.getPath("userData"), "sessions");   // finished sessions, kept locally either way
 
@@ -33,13 +36,36 @@ app.whenReady().then(() => {
   });
   win.loadFile(path.join(__dirname, "index.html"));
   if (app.isPackaged) autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+  flushRuns().catch(() => {});
   setInterval(() => app.isPackaged && autoUpdater.checkForUpdatesAndNotify().catch(() => {}), 6 * 3600e3);
 });
 app.on("window-all-closed", () => app.quit());
 
 ipcMain.handle("whole-screen", (_, on) => { wholeScreen = !!on; return wholeScreen });
 ipcMain.handle("game-found", async () => !!(await gameSource()));
-ipcMain.handle("settings", (_, s) => { if (s) writeSettings({...readSettings(), ...s}); return readSettings() });
+ipcMain.handle("settings", (_, s) => {
+  const cur = readSettings();
+  if (!cur.install) cur.install = require("crypto").randomUUID();   // random ID of this copy: one vote per player
+  writeSettings({...cur, ...(s || {})});
+  return readSettings();
+});
+// a finished 15-minute run (sharing on): queue it, then send everything queued. Kept until the server answers.
+const readQueue = () => { try { return JSON.parse(fs.readFileSync(QUEUE, "utf8")) } catch { return [] } };
+async function flushRuns(){
+  if (!SERVER) return;
+  let q = readQueue(), left = [];
+  for (const run of q){
+    try {
+      const r = await fetch(SERVER + "/api/runs", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(run)});
+      if (r.status === 429 || r.status >= 500) left.push(run);   // try again later; other answers are final
+    } catch { left.push(run) }
+  }
+  fs.writeFileSync(QUEUE, JSON.stringify(left));
+}
+ipcMain.handle("share-run", async (_, run) => {
+  const q = readQueue(); q.push({...run, install: readSettings().install}); fs.writeFileSync(QUEUE, JSON.stringify(q.slice(-200)));
+  await flushRuns(); return true;
+});
 ipcMain.handle("save-session", (_, summary) => {
   fs.mkdirSync(SESSIONS, {recursive: true});
   fs.writeFileSync(path.join(SESSIONS, Date.now() + ".json"), JSON.stringify(summary));

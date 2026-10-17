@@ -64,4 +64,14 @@ s = createSession(G);
 s.add({t: sec(0), type: "map", id: null, name: "1st Accompaniment <Bonus"});
 assert.strictEqual(s.stats().mapName, "1st Accompaniment <Bonus");
 
+// shared runs: 15 min non-stop on one map; a break or a map change starts over
+const runs = [], sl = require("../core/session.js").createRunSlicer(G, {onRun: r => runs.push(r)});
+sl.add({t: sec(0), type: "map", id: 42}); sl.add({t: sec(0), type: "bar", exp: 0, level: 10});
+for (let i = 1; i <= 100; i++) sl.add({t: sec(i * 10), type: "exp", gain: 8});   // 16.7 min: one run
+assert.strictEqual(runs.length, 1); assert.strictEqual(runs[0].minutes, 15); assert.strictEqual(runs[0].kills, 90);
+sl.add({t: sec(1300), type: "exp", gain: 8});   // after a 5-minute break: a new run, not finished
+sl.add({t: sec(1310), type: "map", id: 41});    // map change: starts over again
+for (let i = 1; i <= 80; i++) sl.add({t: sec(1310 + i * 10), type: "exp", gain: 4});   // 13.3 min: not a run yet
+assert.strictEqual(runs.length, 1); assert.strictEqual(sl.current.stats().kills, 80); assert.strictEqual(sl.current.stats().map, "41");
+
 console.log("core tests passed");

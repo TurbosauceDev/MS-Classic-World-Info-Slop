@@ -1,7 +1,7 @@
 // Tracker window: grabs 2 frames a second from the game window, runs the readers, shows the session.
 const G = GAMEDATA, $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString();
 const FPS = 2;
-let session = null, readers = null, video = null, timer = null, settings = {};
+let session = null, slicer = null, readers = null, video = null, timer = null, settings = {};
 const canvas = document.createElement("canvas"), g = canvas.getContext("2d", {willReadFrequently: true});
 
 async function openStream(){
@@ -56,18 +56,20 @@ async function readMap(f, t){
   cv.getContext("2d").putImageData(new ImageData(c.d, c.w, c.h), 0, 0);
   const png = new Uint8Array(await (await new Promise(r => cv.toBlob(r, "image/png"))).arrayBuffer());
   const m = GrindReaders.mapFromText(await host.ocr(png), G), key = m && (m.id || m.name);
-  if (key && key === mapSeen && key !== mapNow && session){ mapNow = key; session.add({t, type: "map", id: m.id, name: m.name}) }
+  if (key && key === mapSeen && key !== mapNow && session){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; session.add(e); slicer.add(e) }
   mapSeen = key;
 }
 
 async function start(){
   await startCapture();
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000});
+  // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
+  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => settings.share && host.shareRun(run)});
   readers = GrindReaders.createReaders(G); mapNow = mapSeen = null;
   timer = setInterval(() => {
     const t = Date.now();
     const f = grab();
-    for (const e of readers.readFrame(f, t)) session.add(e);
+    for (const e of readers.readFrame(f, t)){ session.add(e); slicer.add(e) }
     if (t - lastOcr > 5000){ lastOcr = t; readMap(f, t) }
     render();
   }, 1000 / FPS);
