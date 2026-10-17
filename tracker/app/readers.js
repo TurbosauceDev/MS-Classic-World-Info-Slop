@@ -217,6 +217,64 @@
     return best || null;
   }
 
+  // ---- map name: the two white lines (street, map) next to the minimap icon, top-left. The minimap font isn't in our
+  // tables, so this makes a clean black-on-white crop for OCR (Tesseract, in the main process) and fuzzy-matches the result.
+  // Approach borrowed from beanguri/Maple-Classic-Exp-Overlay (MIT).
+  function mapTextCrop(img){
+    const X = Math.floor(img.w * 0.4), Y = Math.floor(img.h * 0.3), d = img.d, ink = i => Math.min(d[i], d[i + 1], d[i + 2]) > 190;
+    // per row, white in short runs only (letters); long runs are bars and frames (the "MINI MAP" title, the map's border)
+    const cnt = [];
+    for (let y = 0; y < Y; y++){
+      let n = 0, long = 0;
+      for (let x = 0; x < X;){ if (!ink((y * img.w + x) * 4)){ x++; continue } const s = x; while (x < X && ink((y * img.w + x) * 4)) x++; if (x - s <= 30) n += x - s; else long = Math.max(long, x - s) }
+      cnt.push(long > 60 ? -1 : n);   // a row inside a white bar
+    }
+    // text lines: rows with 12+ such pixels, bridging gaps of up to 3 rows (thin parts of letters)
+    const bands = [];
+    for (let y = 0; y < Y; y++){
+      if (cnt[y] < 0){ bands.push(null); continue }
+      if (cnt[y] < 12) continue;
+      const last = bands[bands.length - 1];
+      if (last && y - last[1] <= 3) last[1] = y + 1; else bands.push([y, y + 1]);
+    }
+    for (let i = bands.length - 1; i >= 0; i--) if (!bands[i] || bands[i][1] - bands[i][0] < 5 || bands[i][1] - bands[i][0] > 30) bands.splice(i, 1);
+    const two = bands.findIndex((b, i) => bands[i + 1] && bands[i + 1][0] - b[1] < (b[1] - b[0]) && Math.abs((bands[i + 1][1] - bands[i + 1][0]) - (b[1] - b[0])) <= 4);
+    if (two < 0) return null;
+    const y0 = bands[two][0] - 2, y1 = bands[two + 1][1] + 2;
+    let x0 = X, x1 = 0;
+    for (let y = y0; y < y1; y++) for (let x = 0; x < X; x++) if (ink((y * img.w + x) * 4)){ x0 = Math.min(x0, x); x1 = Math.max(x1, x) }
+    const S = 2, P = 8, w = (x1 - x0 + 1) * S + 2 * P, h = (y1 - y0) * S + 2 * P, out = new Uint8ClampedArray(w * h * 4).fill(255);
+    for (let y = y0; y < y1; y++) for (let x = x0; x <= x1; x++) if (ink((y * img.w + x) * 4))
+      for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++){ const o = ((P + (y - y0) * S + dy) * w + P + (x - x0) * S + dx) * 4; out[o] = out[o + 1] = out[o + 2] = 0 }
+    return {w, h, d: out};
+  }
+  const norm = s => s.toLowerCase().replace(/[l1|!]/g, "i").replace(/0/g, "o").replace(/[^a-z0-9<>]/g, "");   // OCR mixes up I/l/1, O/0
+  function lev(a, b){
+    let p = [...Array(b.length + 1).keys()];
+    for (let i = 1; i <= a.length; i++){
+      const c = [i];
+      for (let j = 1; j <= b.length; j++) c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      p = c;
+    }
+    return p[b.length];
+  }
+  // OCR text -> {id, name}: the closest map name to the last line (75%+ alike), else the map line as read (maps our data doesn't have)
+  function mapFromText(text, G){
+    const lines = text.split("\n").map(l => l.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9>)]+$/g, "").trim()).filter(l => l.length >= 3);
+    if (!lines.length) return null;
+    let best = null;
+    const l = lines[lines.length - 1];   // line 1 is the street/region ("Victoria Road", "Hidden Street"), line 2 the map
+    {
+      const a = norm(l);
+      for (const [id, n] of Object.entries(G.mapnames)){
+        const b = norm(n), sim = 1 - lev(a, b) / Math.max(a.length, b.length);
+        if (!best || sim > best.sim || sim === best.sim && G.maps[id] && !G.maps[best.id]) best = {id, name: n, sim};
+      }
+    }
+    if (best && best.sim >= 0.75) return {id: best.id, name: best.name};
+    return {id: null, name: l};
+  }
+
   // item pickup: names are cut to ~13 letters ("Horny Mushroo...") and letters the font table doesn't know yet read as "?",
   // so match as a pattern against every item name, within the category in brackets (Etc, Use, Equip...)
   let ITEMS = null;
@@ -269,6 +327,6 @@
     }
     return {readFrame};
   }
-  const api = {createReaders, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {createReaders, mapTextCrop, mapFromText, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

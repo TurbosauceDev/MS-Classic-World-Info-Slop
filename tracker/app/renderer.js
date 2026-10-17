@@ -47,13 +47,28 @@ function render(){
   $("#priceNote").textContent = G.pwRead ? `Worth = player-shop median from meso.watch (${G.pwRead}), else NPC price. Mesos/kill on maps with several monsters is a best guess.` : "";
 }
 
+// map name every 5 s: cut the minimap title out, OCR it in the main process, take it once the same map is read twice in a row
+let lastOcr = 0, mapSeen = null, mapNow = null;
+async function readMap(f, t){
+  const c = GrindReaders.mapTextCrop(GrindReaders.native(f));
+  if (!c) return;
+  const cv = document.createElement("canvas"); cv.width = c.w; cv.height = c.h;
+  cv.getContext("2d").putImageData(new ImageData(c.d, c.w, c.h), 0, 0);
+  const png = new Uint8Array(await (await new Promise(r => cv.toBlob(r, "image/png"))).arrayBuffer());
+  const m = GrindReaders.mapFromText(await host.ocr(png), G), key = m && (m.id || m.name);
+  if (key && key === mapSeen && key !== mapNow && session){ mapNow = key; session.add({t, type: "map", id: m.id, name: m.name}) }
+  mapSeen = key;
+}
+
 async function start(){
   await startCapture();
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000});
-  readers = GrindReaders.createReaders(G);
+  readers = GrindReaders.createReaders(G); mapNow = mapSeen = null;
   timer = setInterval(() => {
     const t = Date.now();
-    for (const e of readers.readFrame(grab(), t)) session.add(e);
+    const f = grab();
+    for (const e of readers.readFrame(f, t)) session.add(e);
+    if (t - lastOcr > 5000){ lastOcr = t; readMap(f, t) }
     render();
   }, 1000 / FPS);
   $("#go").textContent = "Stop";

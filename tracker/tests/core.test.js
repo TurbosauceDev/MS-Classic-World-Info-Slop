@@ -56,4 +56,12 @@ assert.strictEqual(st.exp, 28980 - 18572 + 100, "bar EXP across the level-up");
 assert.strictEqual(st.mesoPerKill, 16);
 assert.strictEqual(st.mobs.length, 0, "no monster guess without a map");
 
+// map names from OCR: close enough matches our map, otherwise the line as read
+const {mapFromText} = require("../app/readers.js");
+assert.deepStrictEqual(mapFromText("Victoria Road\nSnail Hunting Graund lll\n", G), {id: "42", name: "Snail Hunting Ground III"});
+assert.deepStrictEqual(mapFromText("| Hidden Street\n1st Accompaniment <Bonus=\n", G), {id: null, name: "1st Accompaniment <Bonus"});
+s = createSession(G);
+s.add({t: sec(0), type: "map", id: null, name: "1st Accompaniment <Bonus"});
+assert.strictEqual(s.stats().mapName, "1st Accompaniment <Bonus");
+
 console.log("core tests passed");

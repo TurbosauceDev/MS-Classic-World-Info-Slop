@@ -54,3 +54,21 @@ ipcMain.handle("save-frame", (_, name, pngBytes) => {
   return dir;
 });
 ipcMain.handle("open-folder", (_, dir) => shell.openPath(dir));
+
+// map name: OCR of the minimap title (a black-on-white PNG the renderer cuts out). Tesseract runs here, offline, with the
+// English model shipped in the installer; files are unpacked from the asar because its worker thread loads them from disk.
+let ocr = null;
+const unpacked = p => p.replace(/app\.asar([\\/])/, "app.asar.unpacked$1");
+function ocrWorker(){
+  if (!ocr){
+    const {createWorker} = require("tesseract.js");
+    const langPath = unpacked(path.join(path.dirname(require.resolve("@tesseract.js-data/eng/package.json")), "4.0.0"));
+    const workerPath = unpacked(path.join(path.dirname(require.resolve("tesseract.js/package.json")), "src/worker-script/node/index.js"));
+    ocr = createWorker("eng", 1, {langPath, workerPath, cacheMethod: "none", gzip: true});
+    ocr.catch(() => ocr = null);
+  }
+  return ocr;
+}
+ipcMain.handle("ocr", async (_, pngBytes) => {
+  try { return (await (await ocrWorker()).recognize(Buffer.from(pngBytes))).data.text } catch { return "" }
+});

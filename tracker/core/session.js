@@ -9,7 +9,7 @@
      {t, type: "itemraw", text}           an item pickup line whose item name couldn't be read yet
      {t, type: "meso",  amount}           meso pickup message
      {t, type: "item",  id, qty?}         item pickup message (id resolved by the reader from the item name)
-     {t, type: "map",   id}               map read from the minimap
+     {t, type: "map",   id, name?}        map read from the minimap (id null: a map our data doesn't have, name as read)
      {t, type: "party", size}             party size from the party HP bars (1 = solo)
      {t, type: "job",   name}             class read from the screen
    Rates use active time only: any gap of more than IDLE_MS with no EXP, meso or item event is left out. */
@@ -46,7 +46,7 @@
       if (counts && S.last !== null){ const gap = e.t - S.last; S.activeMs += gap > idleMs ? 0 : gap }
       if (counts) S.last = e.t;
       switch (e.type){
-        case "map": S.map = String(e.id); break;
+        case "map": S.map = e.id == null ? null : String(e.id); S.mapName = e.name || null; break;
         case "party": S.party = Math.max(1, e.size | 0); break;
         case "job": S.job = e.name; break;
         case "exp": {
@@ -99,7 +99,7 @@
       const lootValue = items.reduce((a, b) => a + b.total, 0);
       const mobs = Object.entries(S.byMob).map(([id, m]) => ({id, name: G.mobs[id]?.[0] || "Monster " + id, ...m,
         mesoPerKill: m.kills ? m.mesos / m.kills : 0})).sort((a, b) => b.kills - a.kills);
-      return {activeMin: S.activeMs / 6e4, map: S.map, mapName: G.mapnames?.[S.map] || G.maps[S.map]?.[0] || null, party: S.party,
+      return {activeMin: S.activeMs / 6e4, map: S.map, mapName: G.mapnames?.[S.map] || G.maps[S.map]?.[0] || S.mapName || null, party: S.party,
         job: S.job, level: S.level, kills: S.kills, killsHr: per(S.kills), exp, expHr, toLevelHrs, otherExp: S.otherExp,
         mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: S.unreadItems, lootValue, lootHr: per(lootValue), items, mobs};
     }
@@ -107,7 +107,7 @@
     // anonymous summary for the shared drop tables (no character name, no timestamps beyond the date)
     function shareable(){
       const s = stats();
-      return {v: 1, date: new Date(S.start || Date.now()).toISOString().slice(0, 10), map: s.map, party: s.party, job: s.job,
+      return {v: 1, date: new Date(S.start || Date.now()).toISOString().slice(0, 10), map: s.map, mapName: s.mapName, party: s.party, job: s.job,
         level: s.level, activeMin: Math.round(s.activeMin * 10) / 10, kills: s.kills, exp: s.exp, mesos: s.mesos,
         mobs: s.mobs.map(m => ({id: m.id, kills: m.kills, mesos: m.mesos, mesoDrops: m.mesoDrops, items: m.items}))};
     }

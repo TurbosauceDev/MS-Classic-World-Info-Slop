@@ -8,6 +8,10 @@ const EXPECT = {   // frame -> [EXP, %, level, pickup lines on screen that are b
   "frame-046.png": [19894, 68.65, 22, ["meso 20", "item 4000019"]],   // Horny Mushroom Cap
   "frame-042.png": [19803, 68.33, 22, ["meso 20", "exp 7", "bonus 2"]],
 };
+// frame -> [map id, start of the name]: Danny's map isn't in our data, so the name as read is kept
+const MAPS = {"frame-000.png": [null, "1st Accompaniment"], "frame-046.png": [null, "1st Accompaniment"]};
+const G = require("../app/gamedata.json"), {mapFromText} = require("../app/readers.js");
+let ocr = null;
 (async () => {
   const browser = await chromium.launch({executablePath: process.env.CHROMIUM || undefined});
   const page = await browser.newPage(), errors = [];
@@ -24,8 +28,18 @@ const EXPECT = {   // frame -> [EXP, %, level, pickup lines on screen that are b
       const t0 = performance.now(), img = GrindReaders.native({w: d.width, h: d.height, d: d.data});
       const bar = GrindReaders.readBar(img), lines = GrindReaders.readPickups(img), party = GrindReaders.readParty(img);
       const rd = GrindReaders.createReaders(GAMEDATA), ev = rd.readFrame(img, 0), again = rd.readFrame(img, 500);
-      return {k: img.k, bar, lines: lines.map(l => l.text), ev, again, party, ms: Math.round(performance.now() - t0)};
+      const mc = GrindReaders.mapTextCrop(img); let crop = null;
+      if (mc){ const cv = document.createElement("canvas"); cv.width = mc.w; cv.height = mc.h; cv.getContext("2d").putImageData(new ImageData(mc.d, mc.w, mc.h), 0, 0); crop = cv.toDataURL() }
+      return {k: img.k, bar, lines: lines.map(l => l.text), ev, again, party, crop, ms: Math.round(performance.now() - t0)};
     }, b64);
+    let map = null;
+    if (r.crop && MAPS[name]){
+      ocr = ocr || await require("tesseract.js").createWorker("eng", 1, {langPath: path.join(path.dirname(require.resolve("@tesseract.js-data/eng/package.json")), "4.0.0"), cacheMethod: "none", gzip: true});
+      const text = (await ocr.recognize(Buffer.from(r.crop.split(",")[1], "base64"))).data.text;
+      map = mapFromText(text, G);
+      const ok = map && map.id === MAPS[name][0] && map.name.startsWith(MAPS[name][1]);
+      console.log("  map", JSON.stringify(text), "->", JSON.stringify(map), ok ? "" : "FAIL"); if (!ok) fail++;
+    } else if (MAPS[name]){ fail++; console.log("  FAIL: no map name crop") }
     const ex = EXPECT[name], lvl = r.ev.find(e => e.type === "bar")?.level;
     const picks = r.ev.filter(e => /meso|exp|bonus|item/.test(e.type)).map(e => e.type + " " + (e.amount ?? e.gain ?? e.id ?? e.text));
     console.log(name, `k=${r.k}`, JSON.stringify(r.bar), "level", lvl, picks.join(", "), "party", r.party, `${r.ms} ms`);
@@ -50,7 +64,7 @@ const EXPECT = {   // frame -> [EXP, %, level, pickup lines on screen that are b
       console.log(name, JSON.stringify(r), ok ? "" : "FAIL"); if (!ok) fail++;
     }
   }
-  await browser.close();
+  await browser.close(); if (ocr) await ocr.terminate();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (fail) throw new Error(fail + " frame(s) read wrong");
   console.log("readers test passed");
