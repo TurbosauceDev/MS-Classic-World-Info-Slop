@@ -366,12 +366,14 @@
       }
       // party size only changes after the same new size is read 3 frames running (a window in the way, a bar mid-blink)
       // no party window: a party while bonus lines came in the last 3 minutes (left the party = back to solo after that)
-      const party = readParty(img) || (t - bonusAt < 180e3 ? 2 : 1);
+      const partyRead = readParty(img), party = partyRead || (t - bonusAt < 180e3 ? 2 : 1);
+      info = {bar: !!bar, partyWindow: partyRead};   // what this frame showed (self-check, auto-pause)
       if (party === partyNext) partySeen++; else { partyNext = party; partySeen = 1 }
       if (party !== lastParty && (lastParty === null || partySeen >= 3)){ ev.push({t, type: "party", size: party}); lastParty = party }
       return ev;
     }
-    return {readFrame};
+    let info = {bar: false, partyWindow: null};
+    return {readFrame, get info(){ return info }};
   }
   const api = {createReaders, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;

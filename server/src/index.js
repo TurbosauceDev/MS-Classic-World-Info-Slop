@@ -35,6 +35,7 @@ async function postRun(req, env){
     .bind(body.install, ipday, now.toISOString(), r.date, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.msg_exp, r.bar_exp,
       r.kills, r.mesos, c.ok ? 1 : 0, c.why, JSON.stringify(r.mobs), JSON.stringify(r.items)).run();
   const {id: runId} = await env.DB.prepare("SELECT MAX(id) id FROM runs WHERE install = ?").bind(body.install).first();
+  if (r.hour != null) await env.DB.prepare("INSERT OR REPLACE INTO run_hours (run_id, hour) VALUES (?, ?)").bind(runId, r.hour).run();
   if (r.deaths != null) await env.DB.prepare("INSERT OR REPLACE INTO run_deaths (run_id, deaths) VALUES (?, ?)").bind(runId, r.deaths).run();
   const code = typeof body.partyCode === "string" ? body.partyCode.trim().toLowerCase().slice(0, 20) : "";
   if (code && r.party > 1){   // a code only groups party runs: friends soloing the same map with one code are separate players
@@ -76,8 +77,8 @@ async function partyLive(req, env){
 }
 
 export async function summary(db){
-  const {results} = await db.prepare(`SELECT r.install, r.ipday, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.kills, r.mesos, r.mobs, g.grp, d.deaths
-    FROM runs r LEFT JOIN run_groups g ON g.run_id = r.id LEFT JOIN run_deaths d ON d.run_id = r.id WHERE r.ok = 1`).all();
+  const {results} = await db.prepare(`SELECT r.install, r.ipday, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.kills, r.mesos, r.mobs, g.grp, d.deaths, hr.hour
+    FROM runs r LEFT JOIN run_groups g ON g.run_id = r.id LEFT JOIN run_deaths d ON d.run_id = r.id LEFT JOIN run_hours hr ON hr.run_id = r.id WHERE r.ok = 1`).all();
   // one row per player per map and solo/party: their typical (median) run
   const per = new Map(), mobs = Object.create(null);   // no prototype: a stored id can never reach Object.prototype
   // one home network = one player: installs that ever sent runs from the same connection on the same day are joined, so
@@ -89,11 +90,13 @@ export async function summary(db){
   // parties: a party code joined with its members' networks (a separate set, so soloing friends who partied once stay apart)
   const puf = new Map(), pfind = k => { let r = k; while (puf.has(r) && puf.get(r) !== r) r = puf.get(r); puf.set(k, r); return r };
   for (const r of results) if (r.grp && r.party > 1){ const x = pfind("p" + r.grp), y = pfind(net(r.install)); if (x !== y) puf.set(x, y) }
+  const timed = [];   // runs with their start hour: [key, EXP/hr, UTC hour]
   for (const r of results){
     const k = [r.install, r.map ?? "?" + r.map_name, r.party > 1 ? 1 : 0].join("|"), h = r.minutes / 60;
     if (!per.has(k)) per.set(k, {map: r.map, mapName: r.map_name, party: [], level: [], job: [], exp: [], mesos: [], kills: [], deaths: [], grp: null});
     const p = per.get(k);
     p.grp = r.party > 1 ? pfind(r.grp ? "p" + r.grp : net(r.install)) : net(r.install);
+    if (r.hour != null && r.map) timed.push([k, r.exp / h, r.hour]);
     p.party.push(r.party); p.level.push(r.level); p.job.push(r.job); p.exp.push(r.exp / h); p.mesos.push(r.mesos / h); p.kills.push(r.kills / h); if (r.deaths != null) p.deaths.push(r.deaths / h);
     for (const m of JSON.parse(r.mobs || "[]")){
       if (!/^\d{1,10}$/.test(m.id)) continue;   // runs stored before ids were checked
@@ -104,13 +107,27 @@ export async function summary(db){
   }
   const last = a => a.filter(v => v != null).at(-1) ?? null;
   // group: the party or the player's home network; a short label, not the code, network or install ID
-  const label = new Map(), grp = p => { const k = (p.party.at(-1) > 1 ? "P" : "S") + p.grp; if (!label.has(k)) label.set(k, "g" + label.size); return label.get(k) };
+  const groupKey = p => (p.party.at(-1) > 1 ? "P" : "S") + p.grp;
+  const label = new Map(), grp = p => { const k = groupKey(p); if (!label.has(k)) label.set(k, "g" + label.size); return label.get(k) };
   const rows = [...per.values()].map(p => ({group: grp(p), map: p.map, mapName: p.mapName, party: Math.round(median(p.party)), level: last(p.level), job: last(p.job),
     runs: p.exp.length, expHr: Math.round(median(p.exp)), mesosHr: Math.round(median(p.mesos)), killsHr: Math.round(median(p.kills)),
     deathsHr: p.deaths.length ? Math.round(median(p.deaths) * 10) / 10 : null}));
   for (const t of Object.values(mobs)){ t.players = t.players.size }
+  // best time to farm: each run against the same player's typical run on that map (so a time of day isn't "fast" just
+  // because stronger players play then), by 3-hour UTC block; a block shows once 3+ players (networks/parties) ran it then
+  const tb = Object.create(null);
+  for (const [k, hr, hour] of timed){
+    const p = per.get(k); if (p.exp.length < 3) continue;   // too few runs of their own to compare against
+    const b = (tb[p.map] ||= Array.from({length: 8}, () => ({x: [], g: new Set()})))[hour / 3 | 0];
+    b.x.push(hr / median(p.exp)); b.g.add(groupKey(p));
+  }
+  const times = Object.create(null);
+  for (const [map, bl] of Object.entries(tb)){
+    const out = bl.map((b, i) => b.g.size >= 3 ? [i * 3, Math.round(median(b.x) * 100) / 100, b.g.size] : null).filter(Boolean);
+    if (out.length >= 2) times[map] = out;   // [UTC start hour, speed vs the players' usual, players]; one block alone compares nothing
+  }
   const players = new Set(results.map(r => r.install)).size, hours = results.reduce((a, r) => a + r.minutes, 0) / 60;
-  return {updated: new Date().toISOString(), runs: results.length, players, hours: Math.round(hours * 10) / 10, rows, mobs};
+  return {updated: new Date().toISOString(), runs: results.length, players, hours: Math.round(hours * 10) / 10, rows, mobs, times};
 }
 
 export default {

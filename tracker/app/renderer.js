@@ -57,6 +57,7 @@ function renderCheck(){
     + row("Pickup / EXP lines", c.lines, "None yet. Kill something; if this stays empty, the chat box may be covered or scrolled.")
     + row("Map name", c.map, c.mapWhy || "Not read yet.")
     + row("Job", settings.job ? "picked by hand" : c.job, c.jobWhy || "Not read yet.")
+    + (settings.partyCode || c.party ? row("Party window", c.party && "party of " + c.party, "Not found. Open the party window so the party size is read; without it a party is only guessed from bonus EXP lines.") : "")
     + `</table>` + (done ? `<div class="note">${c.bar && c.lines && c.map && (c.job || settings.job) ? "All readers work." : "✗ = that number won't be tracked until it's fixed. Press Stop and Start to check again."}</div>` : "");
   if (done && !c.ended){
     c.ended = true; log("selfcheck", {bar: !!c.bar, lines: !!c.lines, map: c.map || c.mapWhy, job: c.job || c.jobWhy});
@@ -93,14 +94,14 @@ function render(){
   $("#lootHr").textContent = fmt(s.lootHr);
   $("#deaths").textContent = s.deaths;
   // goal level: time left at the current rate and the clock time it lands on
-  const hm = h => h < 1 ? Math.round(h * 60) + " min" : h.toFixed(1) + " h";
+  levelNote(s);
   $("#goalK").textContent = s.goalLevel ? "Level " + s.goalLevel + " in" : "Goal";
   $("#goalV").textContent = s.goalLevel ? s.level >= s.goalLevel ? "reached" : s.toGoalHrs == null ? "-" : hm(s.toGoalHrs) : "-";
   $("#goalAt").textContent = s.toGoalHrs != null && s.toGoalHrs < 48 ? "about " + new Date(Date.now() + s.toGoalHrs * 3.6e6).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}) + " at this rate" : s.goalLevel ? "" : "set a level below";
   $("#miniGoal").textContent = s.goalLevel && s.toGoalHrs != null ? `Lv ${s.goalLevel} in ${hm(s.toGoalHrs)}` : "";
   stopCheck(s);
   $("#active").textContent = Math.round(s.activeMin) + " min";
-  $("#where").textContent = [s.level && "Lv " + s.level, s.mapName, s.job, s.party > 1 ? "party of " + s.party : "solo",
+  $("#where").textContent = [s.paused && "PAUSED", s.level && "Lv " + s.level, s.mapName, s.job, s.party > 1 ? "party of " + s.party : "solo",
     s.kills + " kills", fmt(s.mesoPerKill) + " mesos/kill",
     s.readShare != null && Math.round(s.readShare * 100) + "% of EXP seen as messages",
     settings.share && runInfo()].filter(Boolean).join(" · ");
@@ -148,13 +149,17 @@ async function readMap(f, t){
 // after each 15-minute run: how it compares with other players around your level (shared data)
 const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
 async function showSpeed(run){
-  const sc = GrindSession.speedCheck(run, await host.summary(), G), box = $("#lastRun");
+  const sum = await host.summary(), sc = GrindSession.speedCheck(run, sum, G), box = $("#lastRun");
+  // best time to farm this map: the 3 hours (your time) when players beat their own usual speed here the most
+  const tb = sum?.times?.[String(run.map)], best = Array.isArray(tb) && tb.length ? tb.reduce((a, b) => b[1] > a[1] ? b : a) : null;
+  const lh = h => new Date(Date.UTC(2026, 0, 1, h)).toLocaleTimeString([], {hour: "numeric"});
+  const bt = best && best[1] >= 1.05 ? `<div class="note">Best time here: ${lh(best[0])}-${lh((best[0] + 3) % 24)}, players farm it ${Math.round((best[1] - 1) * 100)}% faster than usual then (${best[2]} players).</div>` : "";
   box.classList.remove("hidden");
   const band = run.level ? `Lv ${Math.max(1, run.level - 5)}-${run.level + 5} ${run.party > 1 ? "in a party" : "solo"}` : "";
   box.innerHTML = `<div class="k">Last 15-minute run</div><div class="v">${fmt(sc.expHr)} EXP/hr</div>` + (sc.verdict
     ? `<div class="${/good|fast/.test(sc.verdict) ? "good" : sc.verdict === "slow" ? "slow" : ""}">${esc(sc.verdict)} for ${esc(band)} (typical ${fmt(sc.ref)}, ${sc.peers} players)</div>`
       + (sc.faster.length ? `<div class="note">Faster for players like you: ${sc.faster.map(m => `${esc(m.name)} (${fmt(m.expHr)})`).join(", ")}</div>` : "")
-    : `<div class="note">${sc.noBar ? "The EXP bar wasn't read during this run, so it isn't compared." : `Not enough shared runs around your level yet to compare (${esc(band) || "level not read"}).`}</div>`);
+    : `<div class="note">${sc.noBar ? "The EXP bar wasn't read during this run, so it isn't compared." : `Not enough shared runs around your level yet to compare (${esc(band) || "level not read"}).`}</div>`) + bt;
 }
 function beep(hz, sec){
   try {
@@ -197,6 +202,32 @@ function stopCheck(s){
   if (!quiet) stopWarned = false;
 }
 
+// auto-pause: the EXP bar and the minimap both gone for 3 s (Cash Shop, changing channel, loading) = not farming. Only
+// after the bar was read once this session, so a game window the bar reader can't handle never pauses
+let barSeen = false, goneSince = null, lastGoneCheck = 0;
+function autoPause(f, info, t){
+  if (info.bar) barSeen = true;
+  if (settings.autoPause === false || !barSeen) return;
+  const paused = session.state.pausedAt !== null;
+  if (info.bar){ goneSince = null; if (paused){ const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Back in the game: tracking again." } return }
+  if (paused || t - lastGoneCheck < 1000) return;
+  lastGoneCheck = t;
+  if (GrindReaders.mapTextCrop(GrindReaders.native(f))){ goneSince = null; return }   // minimap still there: just the bar covered
+  goneSince ??= t;
+  if (t - goneSince >= 3000){
+    const e = {t: Math.max(goneSince, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); log("event", e);
+    $("#status").textContent = "Paused: the game screen is gone (Cash Shop, changing channel or loading). Resumes by itself.";
+  }
+}
+// a level-up: how long the last level took
+let levelsShown = 0;
+function levelNote(s){
+  if (s.levelUps.length <= levelsShown) return;
+  const l = s.levelUps.at(-1); levelsShown = s.levelUps.length;
+  $("#status").textContent = `Level ${l.level}!` + (l.activeMin != null ? ` Level ${l.level - 1} took ${hm(l.activeMin / 60)} of farming.` : "");
+}
+const hm = h => h < 1 ? Math.round(h * 60) + " min" : h.toFixed(1) + " h";
+
 let slowTicks = 0;
 function tick(){
   if (timer == null) return;   // stopped
@@ -213,6 +244,9 @@ function tick(){
       if (check && e.type === "bar" && !check.bar){ check.bar = e.level ? "Lv " + e.level + ", " + e.pct + "%" : e.pct + "%"; check.late = check.ended }
       if (check && /^(exp|bonus|meso|item|itemraw)$/.test(e.type) && !check.lines){ check.lines = true; check.late = check.ended }
     }
+    const info = readers.info;
+    if (check && info.partyWindow > 1 && !check.party){ check.party = info.partyWindow; check.late = check.ended }
+    autoPause(f, info, t);
     if (check && (!check.ended || check.late)){ check.late = false; renderCheck() }   // a ✗ turns ✓ when it starts working
     // one OCR at a time (the first can take seconds): the map every 5 s, the job every 30 s in between
     if (!ocrBusy && t - lastOcr > 5000){ lastOcr = t; ocrBusy = true; readMap(f, t).catch(() => {}).finally(() => ocrBusy = false) }
@@ -237,6 +271,7 @@ async function start(){
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
   check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
+  barSeen = false; goneSince = null; levelsShown = 0;
   readers = GrindReaders.createReaders(G); mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
@@ -248,7 +283,7 @@ async function stop(){
   clearTimeout(timer); timer = null; $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   // a failed save (disk full, folder locked) must not leave the button saying Stop
-  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable()}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
+  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
   $("#go").textContent = "Start";
 }
 $("#go").onclick = () => timer != null ? stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
@@ -295,11 +330,16 @@ $("#mini").onclick = () => { document.body.classList.remove("mini"); host.mini(f
 $("#histBtn").onclick = async () => {
   const box = $("#hist"); box.classList.toggle("hidden"); if (box.classList.contains("hidden")) return;
   const list = await host.sessions();
-  $("#recap").innerHTML = recap(list);
+  $("#recap").innerHTML = recap(list) + levelLog(list);
   $("#histRows").innerHTML = list.length ? list.slice(0, 30).map(x => { const h = (x.activeMin || 0) / 60;
     return `<tr><td>${esc(x.date)} ${esc(x.mapName || "")}</td><td class="n">${Math.round(x.activeMin || 0)} min</td><td class="n">${h ? fmt(x.exp / h) : "-"} EXP/hr</td></tr>` }).join("")
     : `<tr><td>No sessions yet: they're saved when you press Stop.</td></tr>`;
 };
+// level-up log: how long each level took (farming time in one session), newest first
+function levelLog(list){
+  const ups = list.flatMap(x => (Array.isArray(x.levelUps) ? x.levelUps : []).filter(l => l && l.activeMin != null).map(l => ({...l, date: x.date}))).slice(0, 10);
+  return ups.length ? `<div class="k">Level-ups (farming time the level took)</div><table>` + ups.map(l => `<tr><td>Lv ${+l.level - 1} → ${+l.level}</td><td class="n">${esc(hm(l.activeMin / 60))}</td><td class="note">${esc(l.mapName || "")} ${esc(l.date)}</td></tr>`).join("") + "</table>" : "";
+}
 // last 7 days from the saved sessions: time played, EXP, mesos, levels gained, deaths, the fastest map (15+ minutes there)
 function recap(list){
   const week = list.filter(x => x.saved > Date.now() - 7 * 864e5);
@@ -312,6 +352,7 @@ function recap(list){
     + (best ? `. Fastest map: ${esc(best[0])} (${fmt(best[1].exp / best[1].min * 60)} EXP/hr)` : "") + `</div>`;
 }
 $("#csv").onclick = async () => { const r = await host.exportCsv(); $("#status").textContent = r?.error || "Saved to Documents: " + (r?.file || "").split(/[\\/]/).pop() };
+$("#autoPause").onchange = e => host.settings({autoPause: e.target.checked}).then(s => settings = s);
 $("#ontop").onchange = e => host.settings({onTop: e.target.checked}).then(s => settings = s);
 $("#share").onchange = e => host.settings({share: e.target.checked}).then(s => settings = s);
 $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
@@ -324,7 +365,8 @@ $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
   $("#job").value = settings.job || "";
   $("#ontop").checked = settings.onTop !== false;
   $("#alert").value = settings.alertWorth || 0;
-  $("#stopBeep").checked = settings.stopBeep !== false;   // on unless turned off
+  $("#stopBeep").checked = settings.stopBeep !== false;
+  $("#autoPause").checked = settings.autoPause !== false;   // on unless turned off   // on unless turned off
   $("#goal").value = settings.goal || "";
   $("#pcode").value = settings.partyCode || "";
   $("#nick").value = settings.nick || "";

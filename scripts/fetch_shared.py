@@ -10,7 +10,7 @@ req = urllib.request.Request(URL, headers={"User-Agent": "ms-classic-world-info 
 with urllib.request.urlopen(req, timeout=60) as r: d = json.load(r)
 # rows: one per player per map and solo/party (their typical run) -> [map, party 0/1, level, EXP/hr, group, deaths/hr or None]; maps we know only
 rows = [[r["map"], 1 if r["party"] > 1 else 0, r["level"], r["expHr"], r["group"], r.get("deathsHr")] for r in d.get("rows", []) if r.get("map") and r.get("level")]
-j = {"source": URL, "read": d["updated"][:10], "runs": d["runs"], "players": d["players"], "hours": d["hours"], "mobs": d["mobs"], "rows": rows}
+j = {"source": URL, "read": d["updated"][:10], "runs": d["runs"], "players": d["players"], "hours": d["hours"], "mobs": d["mobs"], "rows": rows, "times": d.get("times", {})}
 dst = ROOT / "data" / "sources" / "shared_runs.json"
 try:   # nothing new: keep the old read date so the daily job doesn't commit just a date
     old = json.loads(dst.read_text())
@@ -23,6 +23,6 @@ print(f"{d['runs']} runs, {d['players']} players, {len(d['mobs'])} monsters -> {
 D = json.load(open(ROOT / "data" / "data.json"))
 mobs = {k: {**v, "items": {i: n for i, n in v["items"].items() if i in D["items"]}} for k, v in j["mobs"].items() if k in D["mobdb"] and v["kills"] > 0}
 D["shared"] = {"read": j["read"], "runs": j["runs"], "players": j["players"], "hours": j["hours"], "mobs": mobs,
-               "rows": [r for r in j["rows"] if r[0] in D["maps"]]}
+               "rows": [r for r in j["rows"] if r[0] in D["maps"]], "times": {m: t for m, t in j.get("times", {}).items() if m in D["maps"]}}
 (ROOT / "data" / "data.json").write_text(json.dumps(D, separators=(",", ":")))
 print(f"data/data.json: shared drops for {len(mobs)} monsters, {len(D['shared']['rows'])} player-map rows")

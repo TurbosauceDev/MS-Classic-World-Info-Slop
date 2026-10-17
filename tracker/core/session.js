@@ -12,6 +12,7 @@
      {t, type: "map",   id, name?}        map read from the minimap (id null: a map our data doesn't have, name as read)
      {t, type: "party", size}             party size from the party HP bars (1 = solo)
      {t, type: "job",   name}             class read from the screen
+     {t, type: "pause"} / {t, type: "resume"}  the game screen is gone (Cash Shop, changing channel): that time isn't farming
    Rates use active time only: any gap of more than IDLE_MS with no EXP, meso or item event is left out. */
 (function (root){
   const IDLE_MS = 60000, RECENT_MS = 5 * 60e3;
@@ -20,7 +21,8 @@
   function createSession(G, opts = {}){
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
-      msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null};
+      msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
+      pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
@@ -48,13 +50,25 @@
       return (G.timed?.[S.map] || []).map(([id, sec, boss]) => { const k = S.timedKills[id];
         return {id, name: G.mobs[id]?.[0] || "Monster " + id, sec, boss: !!boss, killed: k || null, dueIn: k ? Math.max(0, k + sec * 1000 - now) : null} });
     }
+    function credit(t){ const gap = t - S.last; S.activeMs += gap > idleMs || gap < 0 ? 0 : gap }   // < 0: the PC clock went back
+    // a level-up: how long the level before took (active time), when this session saw that level start
+    function levelUp(level, t){
+      const was = S.levelAt;
+      S.levelUps.push({level, t, map: S.map, mapName: G.mapnames?.[S.map] || G.maps[S.map]?.[0] || S.mapName || null,
+        activeMin: was && !was.partial && was.level === level - 1 ? Math.round((S.activeMs - was.activeMs) / 6e3) / 10 : null});
+      S.levelAt = {level, activeMs: S.activeMs};
+    }
     const mob = id => S.byMob[id] || (S.byMob[id] = {kills: 0, exp: 0, mesos: 0, mesoDrops: 0, items: {}});
 
     function add(e){
       S.events++;
       if (S.start === null) S.start = e.t;
       const counts = ["exp", "bonus", "meso", "item", "itemraw", "bar"].includes(e.type);
-      if (counts && S.last !== null){ const gap = e.t - S.last; S.activeMs += gap > idleMs || gap < 0 ? 0 : gap }   // < 0: the PC clock went back
+      // paused: farming time up to the pause counts, the pause itself doesn't; anything counted (or "resume") ends it
+      if (e.type === "pause"){ if (S.pausedAt === null && S.last !== null){ credit(e.t); S.last = e.t; S.pausedAt = e.t } return S }
+      if (S.pausedAt !== null && (counts || e.type === "resume")){ S.pausedMs += Math.max(0, e.t - S.pausedAt); S.pausedAt = null; S.last = e.t }
+      if (e.type === "resume") return S;
+      if (counts && S.last !== null) credit(e.t);
       if (counts) S.last = e.t;
       switch (e.type){
         case "map": S.map = e.id == null ? null : String(e.id); S.mapName = e.name || null; break;
@@ -72,8 +86,8 @@
         case "bonus": S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); break;
         case "itemraw": S.unreadItems++; break;
         case "bar": {
+          const p = S.bar, before = S.level;
           if (e.level) S.level = e.level;
-          const p = S.bar;
           if (p){
             let d = e.exp - p.exp;
             // leveled up: the level says so, or (just after a level-up, when the % is too small to work the level out)
@@ -85,6 +99,8 @@
             // a drop without a level-up = a death (the game takes a share of the level's EXP); not counted again until EXP rises
             else if (d < 0 && !p.dead){ S.deaths++; const k = S.map || "?"; S.deathMaps[k] = (S.deathMaps[k] || 0) + 1 }
           }
+          if (before && S.level === before + 1 && !(S.levelUps.at(-1)?.level >= S.level)) levelUp(S.level, e.t);   // once per level, even if a misread flickers it
+          else if (S.level && !S.levelAt) S.levelAt = {level: S.level, activeMs: S.activeMs, partial: true};   // started mid-level: its time is unknown
           S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: S.level, dead: p && e.exp < p.exp && !(e.level > p.level) ? true : p?.dead && e.exp <= p.exp}; break;
         }
         case "meso":
@@ -138,7 +154,7 @@
         readShare: S.barExp > 0 ? Math.min(1, S.msgExp / S.barExp) : null,
         // kills if the missed lines were kills at the same rate as the ones read (an estimate; only from 20% read up)
         killsEstHr: S.barExp > 0 && S.msgExp / S.barExp >= 0.2 && S.msgExp < S.barExp ? per(S.kills * S.barExp / S.msgExp) : null,
-        expHr5: recentExpHr(), deaths: S.deaths, toGoalHrs, goalLevel: goal || null, lastExpT: S.lastExpT,
+        expHr5: recentExpHr(), deaths: S.deaths, paused: S.pausedAt !== null, levelUps: S.levelUps, toGoalHrs, goalLevel: goal || null, lastExpT: S.lastExpT,
         mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: S.unreadItems, lootValue, lootHr: per(lootValue), items, mobs};
     }
 
@@ -181,8 +197,9 @@
       if (counts) last = e.t;
       if (e.type === "bar") bar = e;
       const S = cur.state;
-      if (S.last !== null && S.last - S.start >= runMs){
-        onRun({...cur.shareable(), minutes: Math.round((S.last - S.start) / 6e3) / 10});
+      // run length is wall time minus pauses (a channel change inside a run doesn't count as farming)
+      if (S.last !== null && S.last - S.start - S.pausedMs >= runMs){
+        onRun({...cur.shareable(), minutes: Math.round((S.last - S.start - S.pausedMs) / 6e3) / 10, hour: new Date(S.start).getUTCHours()});   // UTC hour: "best time to farm"
         fresh(e.t, true);
       }
     }

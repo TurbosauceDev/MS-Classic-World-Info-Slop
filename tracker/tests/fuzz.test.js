@@ -20,11 +20,15 @@ for (let trial = 0; trial < 300; trial++){
       e = {type: "bar", exp, pct: Math.round(exp / (G.exp[lv] || 1e6) * 1e4) / 100, level: pick([lv, null, lv + 1])} }
     else if (r < .85) e = {type: "meso", amount: pick([1, 30, 0, 100000])};
     else if (r < .95) e = {type: "item", id: pick([...items.slice(0, 50), "999"]), qty: pick([1, 3, undefined])};
-    else e = {type: "itemraw", text: "?"};
+    else if (r < .97) e = {type: "itemraw", text: "?"};
+    else e = {type: pick(["pause", "resume"])};
     e.t = t;
     try { s.add(e); sl.add(e) } catch (err){ bad.push("crash " + err.message + " " + JSON.stringify(e)); break }
   }
-  check(s.stats(), "stats"); check(s.shareable(), "share"); check(s.respawns(t), "respawns");
+  const st = s.stats(), S = s.state;
+  if (S.last !== null && st.activeMin * 6e4 > Math.max(0, S.last - S.start) + 1) bad.push("active time longer than the session " + st.activeMin);
+  for (let i = 1; i < st.levelUps.length; i++) if (st.levelUps[i].level <= st.levelUps[i - 1].level) bad.push("level-up log not rising");
+  check(st, "stats"); check(s.shareable(), "share"); check(s.respawns(t), "respawns");
   for (const r of runs){ check(r, "run"); if (!(r.minutes >= 15)) bad.push("short run " + r.minutes); speedCheck(r, {rows: [{map: r.map, level: r.level, party: 1, expHr: 5, group: "a"}]}, G) }
   if (bad.length) { console.log("trial", trial, bad.slice(0, 8)); break }
 }

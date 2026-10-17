@@ -155,4 +155,20 @@ assert.strictEqual(speedCheck({exp: 1000, barExp: 1000, minutes: 15, level: 20, 
 s = createSession(G); s.add({t: sec(100), type: "exp", gain: 2}); s.add({t: sec(40), type: "exp", gain: 2});
 assert.strictEqual(s.stats().activeMin, 0);
 
+// auto-pause: a channel change (30 s) and the Cash Shop (2 min) don't count as farming; runs leave pauses out
+s = createSession(G); s.add({t: sec(0), type: "exp", gain: 2}); s.add({t: sec(20), type: "exp", gain: 2});
+s.add({t: sec(25), type: "pause"}); assert.ok(s.stats().paused);
+s.add({t: sec(55), type: "exp", gain: 2}); assert.ok(!s.stats().paused);
+s.add({t: sec(60), type: "exp", gain: 2}); s.add({t: sec(61), type: "pause"}); s.add({t: sec(181), type: "resume"}); s.add({t: sec(186), type: "exp", gain: 2});
+assert.strictEqual(Math.round(s.stats().activeMin * 60), 25 + 5 + 1 + 5, "seconds farmed: 0-25, 55-60, 60-61, 181-186");
+assert.strictEqual(s.state.pausedMs, 150e3);
+const pr = []; const ps = require("../core/session.js").createRunSlicer(G, {onRun: r => pr.push(r)});
+ps.add({t: 0, type: "map", id: 42});
+for (let i = 1; i <= 16 * 6; i++){ ps.add({t: i * 10e3, type: "exp", gain: 2}); if (i === 30) ps.add({t: i * 10e3 + 1, type: "pause"}) }
+assert.strictEqual(pr.length, 1); assert.ok(pr[0].minutes >= 15 && pr[0].minutes < 15.2, "run minutes leave the pause out: " + pr[0].minutes);
+// level-up log: time each level took (active minutes), only for levels this session saw start
+s = createSession(G); const bar = (t, lv, exp) => s.add({t: sec(t), type: "bar", exp, pct: Math.round(exp / G.exp[lv] * 1e4) / 100, level: lv});
+bar(0, 20, 100); bar(30, 20, G.exp[20] - 10); bar(40, 21, 5); bar(50, 21, G.exp[21] - 5); bar(60, 22, 3); bar(61, 21, 900); bar(62, 22, 5);
+assert.deepStrictEqual(s.stats().levelUps.map(l => [l.level, l.activeMin]), [[21, null], [22, 0.3]], "Lv 20 started mid-way: no time; Lv 21 took 20 s; a flicker back to 21 isn't a new level-up");
+
 console.log("core tests passed");

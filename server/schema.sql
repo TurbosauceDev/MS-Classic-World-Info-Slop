@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
 CREATE TABLE IF NOT EXISTS run_groups (run_id INTEGER PRIMARY KEY, grp TEXT NOT NULL);
 -- deaths in a run (EXP bar drops without a level-up), from tracker 0.2.2 on; a table of its own so schema.sql stays re-runnable
 CREATE TABLE IF NOT EXISTS run_deaths (run_id INTEGER PRIMARY KEY, deaths INTEGER NOT NULL);
+-- UTC hour a run started (0-23), from tracker 0.2.5 on: "best time to farm"
+CREATE TABLE IF NOT EXISTS run_hours (run_id INTEGER PRIMARY KEY, hour INTEGER NOT NULL);
 -- party view: each tracker with a party code posts its live numbers about once a minute; rows older than an hour are deleted
 CREATE TABLE IF NOT EXISTS party_live (grp TEXT NOT NULL, install TEXT NOT NULL, updated TEXT NOT NULL, ip TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY (grp, install));
 CREATE INDEX IF NOT EXISTS party_live_updated ON party_live (updated);

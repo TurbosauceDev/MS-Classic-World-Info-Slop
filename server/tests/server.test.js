@@ -65,6 +65,14 @@ assert.ok(new Set(gg).size < gg.length, "same network, same day: one group");
 const nets = (await fresh()).rows.filter(x => x.map === "42" && x.party === 1);
 const gm = new Set(nets.slice(-3).map(x => x.group));
 assert.strictEqual(gm.size, 2, "m01 + m02 (one network) and n01");
+// best time to farm: 3 players, each 3 runs at 02:00 UTC (1000) and 3 at 20:00 (2000): slower than their usual at night
+for (const who of ["t00000000000001a", "t00000000000002b", "t00000000000003c"]) for (let i = 0; i < 6; i++)
+  [s, r] = await post(run(who, i < 3 ? 1000 : 2000, {hour: i < 3 ? 2 : 20}), "5.5.5." + who.at(-1).charCodeAt(0));
+assert.strictEqual(r.counted, true, JSON.stringify(r));
+const tsum = await fresh();
+assert.deepStrictEqual(tsum.times["42"], [[0, 0.67, 3], [18, 1.33, 3]], JSON.stringify(tsum.times));
+[s] = await post(run("t00000000000004d", 1000, {hour: 99}), "5.5.6.1");
+assert.strictEqual(s, 200, "a junk hour is dropped, not refused");
 // deaths: kept per run, a median per player per hour in the summary
 [s] = await post(run("kkkkkkkkkkkkkkkk1", 1000, {deaths: 2}));
 [s] = await post(run("kkkkkkkkkkkkkkkk1", 1000, {deaths: 4}));
