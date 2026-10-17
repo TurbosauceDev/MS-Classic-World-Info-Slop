@@ -1,5 +1,6 @@
 # Windows build of the grind tracker (tracker/). Push a tag like tracker-v0.1.0 (same as tracker/package.json "version")
-# to publish a GitHub Release; installed copies update themselves from the latest release. Manual runs only build.
+# to publish a GitHub Release (or run it by hand with "release" ticked); installed copies update themselves from the latest
+# release. Other runs only build.
 name: tracker
 on:
   push:
@@ -7,6 +8,11 @@ on:
     branches: ["claude/project-thread-5h55q0"]   # test builds while the tracker is in progress
     paths: ["tracker/**", ".github/workflows/tracker.yml"]
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish a GitHub Release (installed copies update to it)"
+        type: boolean
+        default: false
 permissions:
   contents: write
 jobs:
@@ -20,7 +26,7 @@ jobs:
       - run: npm install
       - run: npm run data
       - run: npm test
-      - run: npm run ${{ startsWith(github.ref, 'refs/tags/') && 'release' || 'dist' }}
+      - run: npm run ${{ (startsWith(github.ref, 'refs/tags/') || inputs.release) && 'release' || 'dist' }}
         env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
       - uses: actions/upload-artifact@v4
         with: { name: installer, path: tracker/dist/*.exe }
