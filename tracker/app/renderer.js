@@ -21,7 +21,7 @@ async function startCapture(){
   if (isBlack()){
     await host.wholeScreen(true); await openStream();
     $("#status").textContent = isBlack() ? "Capture is black even for the whole screen. Try windowed mode in the game's settings."
-      : "Game window came back black, so this is reading the whole screen instead.";
+      : "Game window came back black, so this is reading the whole screen instead. That only works with the game in full screen.";
   } else $("#status").textContent = "Reading the MapleStory window.";
 }
 function grab(){
@@ -41,6 +41,8 @@ function render(){
   const s = session.stats();
   $("#killsHr").textContent = fmt(s.killsHr);
   $("#expHr").textContent = fmt(s.expHr);
+  $("#expHr5").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5);
+  $("#killsEst").textContent = s.killsEstHr == null ? "" : "~" + fmt(s.killsEstHr) + " with missed lines (est.)";
   $("#ttl").textContent = s.toLevelHrs == null ? "-" : s.toLevelHrs < 1 ? Math.round(s.toLevelHrs * 60) + " min" : s.toLevelHrs.toFixed(1) + " h";
   $("#mesosHr").textContent = fmt(s.mesosHr);
   $("#lootHr").textContent = fmt(s.lootHr);
@@ -56,10 +58,12 @@ function render(){
 }
 
 // map name every 5 s: cut the minimap title out, OCR it in the main process, take it once the same map is read twice in a row
-let lastOcr = 0, mapSeen = null, mapNow = null;
+let lastOcr = 0, mapSeen = null, mapNow = null, mapMissing = 0;
 async function readMap(f, t){
   const c = GrindReaders.mapTextCrop(GrindReaders.native(f));
-  if (!c) return;
+  // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
+  if (!c){ if (++mapMissing === 6 && mapNow && session){ mapNow = mapSeen = null; const e = {t, type: "map", id: null, name: null}; session.add(e); slicer.add(e) } return }
+  mapMissing = 0;
   const cv = document.createElement("canvas"); cv.width = c.w; cv.height = c.h;
   cv.getContext("2d").putImageData(new ImageData(c.d, c.w, c.h), 0, 0);
   const png = new Uint8Array(await (await new Promise(r => cv.toBlob(r, "image/png"))).arrayBuffer());
@@ -108,6 +112,7 @@ $("#frames").onclick = async () => {
   }, 3000);
 };
 
+$("#ontop").onchange = e => host.settings({onTop: e.target.checked}).then(s => settings = s);
 $("#share").onchange = e => host.settings({share: e.target.checked}).then(s => settings = s);
 $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
   settings = s;
@@ -117,6 +122,7 @@ $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
   settings = await host.settings();
   $("#share").checked = !!settings.share;
   $("#job").value = settings.job || "";
+  $("#ontop").checked = settings.onTop !== false;
   const found = await host.gameFound();
   $("#status").textContent = found ? "MapleStory window found." : "Start MapleStory, then press Start.";
 })();

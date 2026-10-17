@@ -27,7 +27,7 @@ async function captureSource(){
 }
 
 app.whenReady().then(() => {
-  win = new BrowserWindow({width: 360, height: 560, alwaysOnTop: true, title: "MS Classic Grind Tracker",
+  win = new BrowserWindow({width: 360, height: 600, alwaysOnTop: readSettings().onTop !== false, title: "MS Classic Grind Tracker",
     webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true}});
   // getDisplayMedia() in the page gets the game window, chosen here (no picker)
   session.defaultSession.setDisplayMediaRequestHandler(async (req, cb) => {
@@ -47,6 +47,7 @@ ipcMain.handle("settings", (_, s) => {
   const cur = readSettings();
   if (!cur.install) cur.install = require("crypto").randomUUID();   // random ID of this copy: one vote per player
   writeSettings({...cur, ...(s || {})});
+  if (s && "onTop" in s) win?.setAlwaysOnTop(!!s.onTop);
   return readSettings();
 });
 // a finished 15-minute run (sharing on): queue it, then send everything queued. Kept until the server answers.

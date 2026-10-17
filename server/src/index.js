@@ -23,7 +23,9 @@ async function postRun(req, env){
   const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
   const recent = await env.DB.prepare("SELECT COUNT(*) n FROM runs WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n FROM runs WHERE ipday = ?").bind(ipday).first();
-  if (recent.n >= MAX_PER_HOUR || today.n >= MAX_PER_IP_DAY) return json({error: "too many runs"}, 429);
+  // one vote per player: a new install ID from an IP that already sent 3 others today is refused (ID rotation)
+  const ids = await env.DB.prepare("SELECT COUNT(DISTINCT install) n, SUM(install = ?) mine FROM runs WHERE ipday = ?").bind(body.install, ipday).first();
+  if (recent.n >= MAX_PER_HOUR || today.n >= MAX_PER_IP_DAY || ids.n >= 3 && !ids.mine) return json({error: "too many runs"}, 429);
   const r = c.run;
   await env.DB.prepare(`INSERT INTO runs (install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp,
     kills, mesos, ok, why, mobs, items) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -60,7 +62,15 @@ export default {
     const url = new URL(req.url);
     if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
     if (url.pathname === "/api/runs" && req.method === "POST") return postRun(req, env);
-    if (url.pathname === "/api/summary" && req.method === "GET") return json(await summary(env.DB));
+    if (url.pathname === "/api/summary" && req.method === "GET"){
+      // worked out at most every 5 minutes (each request would otherwise read every run)
+      const cache = typeof caches !== "undefined" ? caches.default : null, hit = cache && await cache.match(req);
+      if (hit) return hit;
+      const res = json(await summary(env.DB));
+      res.headers.set("cache-control", "public, max-age=300");
+      if (cache) await cache.put(req, res.clone());
+      return res;
+    }
     if (url.pathname === "/") return json({about: "MS Classic World Info shared grind data", summary: "/api/summary"});
     return json({error: "not found"}, 404);
   },

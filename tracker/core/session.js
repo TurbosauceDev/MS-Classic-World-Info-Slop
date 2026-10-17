@@ -14,11 +14,11 @@
      {t, type: "job",   name}             class read from the screen
    Rates use active time only: any gap of more than IDLE_MS with no EXP, meso or item event is left out. */
 (function (root){
-  const IDLE_MS = 60000;
+  const IDLE_MS = 60000, RECENT_MS = 5 * 60e3;
   function createSession(G, opts = {}){
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
-      msgExp: 0, barExp: 0, kills: 0, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0};
+      msgExp: 0, barExp: 0, recent: [], kills: 0, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
@@ -65,10 +65,13 @@
           const p = S.bar;
           if (p){
             let d = e.exp - p.exp;
-            if (d < 0 && e.level && p.level && e.level > p.level) d = (G.exp[p.level] || 0) - p.exp + e.exp;   // leveled up
+            // leveled up: the level says so, or (just after a level-up, when the % is too small to work the level out)
+            // the bar was at 90%+ and fell to under half of that; a death only takes a few %
+            const up = e.level && p.level ? e.level > p.level : p.level && p.pct >= 90 && e.exp < p.exp * 0.5;
+            if (d < 0 && up){ d = (G.exp[p.level] || 0) - p.exp + e.exp; if (!e.level) S.level = p.level + 1 }
             if (d > 0) S.barExp += d;   // a drop without a level-up (death) is just skipped
           }
-          S.bar = {t: e.t, exp: e.exp, level: S.level}; break;
+          S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: S.level}; break;
         }
         case "meso":
           S.mesos += e.amount;
@@ -82,11 +85,22 @@
           break;
         }
       }
+      // EXP so far at this moment, for the last-5-minutes rate
+      if (counts){ S.recent.push([e.t, S.barExp, S.msgExp]); while (S.recent.length > 2 && S.recent[1][0] < e.t - RECENT_MS) S.recent.shift() }
       return S;
     }
 
     // market value of one item: player-shop median (meso.watch), else NPC sell price
     const worth = id => G.pw?.[id]?.[0] ?? G.items[id]?.p ?? 0;
+
+    // EXP/hr over the last 5 minutes (wall time, breaks included): how you're doing right now
+    function recentExpHr(){
+      const r = S.recent; if (r.length < 2) return null;
+      const a = r.find(p => p[0] >= S.last - RECENT_MS) || r[0], b = r[r.length - 1], ms = b[0] - a[0];
+      if (ms < 60e3) return null;
+      const gain = b[1] > a[1] || S.barExp ? b[1] - a[1] : b[2] - a[2];
+      return gain / ms * 3.6e6;
+    }
 
     function stats(){
       const hrs = S.activeMs / 3.6e6, per = v => hrs > 0 ? v / hrs : 0;
@@ -104,6 +118,9 @@
         job: S.job, level: S.level, kills: S.kills, killsHr: per(S.kills), exp, expHr, toLevelHrs, otherExp: S.otherExp,
         // share of the bar's EXP that showed up as readable messages: below ~70%, kills/mesos/drops are undercounted
         readShare: S.barExp > 0 ? Math.min(1, S.msgExp / S.barExp) : null,
+        // kills if the missed lines were kills at the same rate as the ones read (an estimate; only from 20% read up)
+        killsEstHr: S.barExp > 0 && S.msgExp / S.barExp >= 0.2 && S.msgExp < S.barExp ? per(S.kills * S.barExp / S.msgExp) : null,
+        expHr5: recentExpHr(),
         mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: S.unreadItems, lootValue, lootHr: per(lootValue), items, mobs};
     }
 

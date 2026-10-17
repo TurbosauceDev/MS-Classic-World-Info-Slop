@@ -20,6 +20,9 @@ export function cleanRun(r, G){
   let why = null;
   if (run.kills < 1 || run.exp <= 0) why = "no kills";
   else if (map && mobs.some(m => !G.maps[map].includes(m.id))) why = "monster not on this map";
+  // more than 2 levels' worth of EXP an hour: a broken reading or a made-up run (mapleexp.com's leaderboard uses the same cut).
+  // Only from Lv 20: below that a level can take minutes
+  else if (run.level >= 20 && G.exp?.[run.level] && run.exp / (run.minutes / 60) > 2 * G.exp[run.level]) why = "too much EXP for this level";
   // the bar can be well above the messages (lines fade before they're read), never well below them
   else if (run.bar_exp > 0 && run.msg_exp > 0 && (run.bar_exp < run.msg_exp * 0.8 || run.bar_exp > run.msg_exp * 6)) why = "EXP bar and messages disagree";
   return {run, ok: !why, why};

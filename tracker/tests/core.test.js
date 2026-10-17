@@ -65,6 +65,8 @@ st = s.stats();
 assert.strictEqual(st.kills, 1);
 assert.strictEqual(st.exp, 28980 - 18572 + 100, "bar EXP across the level-up");
 assert.strictEqual(st.mesoPerKill, 16);
+assert.strictEqual(st.killsEstHr, null, "under 20% of EXP read: no estimate");
+assert.ok(st.expHr5 > 0, "last-5-minutes rate");
 assert.strictEqual(st.mobs.length, 0, "no monster guess without a map");
 
 // map names from OCR: close enough matches our map, otherwise the line as read
@@ -75,6 +77,28 @@ assert.deepStrictEqual(mapFromText("Hidden Street\nSecret Garden of Nowhere=\n",
 s = createSession(G);
 s.add({t: sec(0), type: "map", id: null, name: "1st Accompaniment <Bonus"});
 assert.strictEqual(s.stats().mapName, "1st Accompaniment <Bonus");
+
+// level-up read at 0.2% (too small to work out the level): still carried over, level goes up by one
+s = createSession(G);
+s.add({t: sec(0), type: "bar", exp: 28900, pct: 99.72, level: 22});
+s.add({t: sec(10), type: "bar", exp: 50, pct: 0.17, level: null});
+s.add({t: sec(20), type: "bar", exp: 300, level: 23});
+st = s.stats();
+assert.strictEqual(st.exp, 28980 - 28900 + 300); assert.strictEqual(st.level, 23);
+// a death low in the level (EXP drops to 0) is not a level-up
+s = createSession(G);
+s.add({t: sec(0), type: "bar", exp: 1000, pct: 3.45, level: 22});
+s.add({t: sec(10), type: "bar", exp: 0, pct: 0, level: null});
+s.add({t: sec(20), type: "bar", exp: 100, pct: 0.35, level: null});
+assert.strictEqual(s.stats().exp, 100); assert.strictEqual(s.stats().level, 22);
+
+// half the EXP seen as messages: estimated kills are double the kills read
+s = createSession(G);
+s.add({t: sec(0), type: "bar", exp: 0, level: 10});
+for (let i = 1; i <= 10; i++){ s.add({t: sec(i * 10), type: "exp", gain: 8}); s.add({t: sec(i * 10 + 1), type: "bar", exp: i * 16, level: 10}) }
+st = s.stats();
+assert.strictEqual(st.readShare, 0.5);
+assert.ok(Math.abs(st.killsEstHr - 2 * st.killsHr) < 1e-6);
 
 // shared runs: 15 min non-stop on one map; a break or a map change starts over
 const runs = [], sl = require("../core/session.js").createRunSlicer(G, {onRun: r => runs.push(r)});

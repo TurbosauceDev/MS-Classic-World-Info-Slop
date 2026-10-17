@@ -291,7 +291,7 @@
 
   function createReaders(G){
     ITEMS = Object.entries(G.items);
-    let prev = [], lastBar = null, lastParty = null, sawBonus = false, partyNext = null, partySeen = 0;
+    let prev = [], lastBar = null, lastParty = null, sawBonus = false, partyNext = null, partySeen = 0, barNext = null;
     // new pickup lines since the previous frame. Each new message pushes the stack up one line, so the smallest shift n
     // (in lines) where every older line in this frame sits n lines above the same text in the last frame says how many
     // at the bottom are new. Lines that faded too far to read are just skipped.
@@ -316,11 +316,16 @@
     function readFrame(raw, t){
       const img = raw.k ? raw : native(raw), ev = [];
       const bar = readBar(img) || readBarAny(raw);   // pixel-exact fast path, else any scale
-      if (bar && (!lastBar || bar.exp !== lastBar.exp || bar.pct !== lastBar.pct)){
+      // a new bar value counts when its EXP and % agree for the level (EXP / level total = %), or when it's read the same
+      // twice in a row (after a level-up); one misread digit would otherwise add fake EXP
+      const key = bar && bar.exp + "/" + bar.pct, steady = key && key === barNext;
+      barNext = key;
+      const need = lastBar?.level && G.exp[lastBar.level], agrees = bar && need && Math.abs(bar.exp / need * 100 - bar.pct) <= 0.02;
+      if (bar && (!lastBar || (steady || agrees) && (bar.exp !== lastBar.exp || bar.pct !== lastBar.pct))){
         // level: the EXP table entry that this EXP / % works out to
         let level = null;
         if (bar.pct > 0.5) for (const [L, need] of Object.entries(G.exp)) if (Math.abs(bar.exp / (bar.pct / 100) - need) / need < 0.004){ level = +L; break }
-        ev.push({t, type: "bar", exp: bar.exp, pct: bar.pct, level}); lastBar = bar;
+        ev.push({t, type: "bar", exp: bar.exp, pct: bar.pct, level}); lastBar = {...bar, level: level || lastBar?.level};
       }
       for (const p of fresh(readPickups(img))){
         if (p.event.type === "bonus") sawBonus = true;
