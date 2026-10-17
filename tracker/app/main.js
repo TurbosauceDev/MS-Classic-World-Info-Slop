@@ -34,7 +34,7 @@ app.on("second-instance", () => { if (win){ if (win.isMinimized()) win.restore()
 
 app.whenReady().then(() => {
   if (!firstCopy) return;   // quitting: no window
-  win = new BrowserWindow({width: 360, height: 600, alwaysOnTop: readSettings().onTop !== false, title: "MS Classic Grind Tracker",
+  win = new BrowserWindow({width: 360, height: 600, title: "MS Classic Grind Tracker",
     // backgroundThrottling off: behind the game or minimized, Chromium would slow the frame timer to once a second and,
     // after 5 minutes, once a minute, so pickup lines would scroll away unread
     webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false}});
@@ -47,12 +47,23 @@ app.whenReady().then(() => {
   win.webContents.setWindowOpenHandler(() => ({action: "deny"}));
   win.webContents.on("will-navigate", e => e.preventDefault());
   win.loadFile(path.join(__dirname, "index.html"));
+  pinOnTop();
+  // other programs that clicked to the front or made themselves topmost (the game, overlays) could still cover it: take
+  // the top back when this window loses focus, and every few seconds
+  win.on("blur", pinOnTop);
+  setInterval(pinOnTop, 5000);
   if (app.isPackaged) autoUpdater.checkForUpdatesAndNotify().catch(() => {});
   flushRuns().catch(() => {});
   setInterval(() => flushRuns().catch(() => {}), 10 * 60e3);   // runs queued while a send was going, or while offline
   setInterval(() => app.isPackaged && autoUpdater.checkForUpdatesAndNotify().catch(() => {}), 6 * 3600e3);
 });
 app.on("window-all-closed", () => app.quit());
+// on top of everything: the "screen-saver" level beats plain always-on-top windows (Danny: it kept going under other programs)
+function pinOnTop(){
+  if (!win || win.isDestroyed()) return;
+  if (readSettings().onTop === false){ win.setAlwaysOnTop(false); return }
+  win.setAlwaysOnTop(true, "screen-saver"); win.moveTop();
+}
 
 ipcMain.handle("whole-screen", (_, on) => { wholeScreen = !!on; return wholeScreen });
 ipcMain.handle("game-found", async () => !!(await gameSource()));
@@ -60,7 +71,7 @@ ipcMain.handle("settings", (_, s) => {
   const cur = readSettings();
   if (!cur.install) cur.install = require("crypto").randomUUID();   // random ID of this copy: one vote per player
   writeSettings({...cur, ...(s || {})});
-  if (s && "onTop" in s) win?.setAlwaysOnTop(!!s.onTop);
+  if (s && "onTop" in s) pinOnTop();
   if (s && s.share === false) fs.writeFileSync(QUEUE, "[]");   // sharing turned off: runs still waiting to go up are dropped, not sent later
   return readSettings();
 });

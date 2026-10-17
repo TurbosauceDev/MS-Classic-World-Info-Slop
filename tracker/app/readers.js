@@ -335,9 +335,10 @@
   }
 
   /* Item counts on inventory and quick-slot icons ("91" on Meat): white-to-blue digits, each row one exact color, with a
-     black outline. Read pixel-exact on the native frame; glyph = the columns with ink in the lower 5 rows (learned from
-     Danny's inventory screenshots, 2026-10-17). */
-  const INK = [[255,255,255],[255,255,255],[255,255,255],[255,255,255],[238,255,255],[221,238,255],[187,221,255],[170,204,255],[153,204,255]];
+     black outline; glyph = the columns with ink in the lower 5 rows (learned from Danny's inventory screenshots,
+     2026-10-17). The tracker's own frames are video and shift those colors (99ccff comes out a3caee), so ink is "white"
+     on the top 4 rows and "light blue" below, not one exact color per row (f3ffff and f4fdfb happen). The slot
+     background (f8faf9, border f4f6f6 / bfcacc) fails both tests. */
   const CDIG = {".####./#....#/#....#/#....#/#....#/#....#/#....#/#....#/.####./": 0, "#/#/#/#/#/#/#/#/#/": 1,
     ".####./#....#/.....#/.....#/....#./..##../.#..../#...../######/": 2, ".####./#....#/.....#/.....#/..###./.....#/.....#/#....#/.####./": 3,
     "....#./...##./..#.#./.#..#./#...#./######/....#./....#./....#./": 4, "######/#...../#...../#####./.....#/.....#/.....#/#....#/.####./": 5,
@@ -345,20 +346,28 @@
     ".####./#....#/#....#/#....#/.####./#....#/#....#/#....#/.####./": 8, ".####./#....#/#....#/#....#/#....#/.#####/.....#/.....#/.####./": 9};
   // every count on screen: [{x, y, n}] (x = first digit's left column, y = the digits' bottom row)
   function readCounts(img){
-    const {w, h, d} = img, is = (x, y, c) => { const i = (y * w + x) * 4; return d[i] === c[0] && d[i + 1] === c[1] && d[i + 2] === c[2] };
+    // red channel per row (white fades to light blue going down); the video's blur shifts each row toward its neighbors
+    const RED = [, , , , [215, 250], [185, 230], [165, 200], [150, 185], [140, 175]];
+    const {w, h, d} = img, blue = (i, r) => d[i + 2] >= 225 && d[i] >= RED[r][0] && d[i] <= RED[r][1] && d[i + 1] - d[i] >= 6 && d[i + 2] - d[i] >= 4;
+    const is = (x, y, r) => { const i = (y * w + x) * 4; return r < 4 ? d[i] >= 235 && d[i + 1] >= 253 && d[i + 2] >= 250 : blue(i, r) };
+    const dark = (x, y) => { const i = (y * w + x) * 4; return y >= 0 && y < h && d[i] + d[i + 1] + d[i + 2] < 150 };
     const out = [];
     for (let y = 8; y < h; y++){
       // quick test first: a row with the bottom color somewhere
-      let any = false; for (let i = y * w * 4, e = i + w * 4; i < e; i += 4) if (d[i] === 153 && d[i + 1] === 204 && d[i + 2] === 255){ any = true; break }
+      let any = false; for (let i = y * w * 4, e = i + w * 4; i < e; i += 4) if (blue(i, 8)){ any = true; break }
       if (!any) continue;
       const cols = [];
-      for (let x = 0; x < w; x++) for (let r = 4; r <= 8; r++) if (is(x, y - 8 + r, INK[r])){ cols.push(x); break }
+      for (let x = 0; x < w; x++) for (let r = 4; r <= 8; r++) if (is(x, y - 8 + r, r)){ cols.push(x); break }
       let cl = [], cur = null;
       for (const x of cols){ if (cur && x === cur.at(-1) + 1) cur.push(x); else { cur = [x]; cl.push(cur) } }
       // digits less than 6 columns apart are one number; an unknown glyph touching a number spoils it (half covered)
       let num = null, lastEnd = -99;
       for (const c of cl){
-        let key = ""; for (let r = 0; r <= 8; r++){ for (const x of c) key += is(x, y - 8 + r, INK[r]) ? "#" : "."; key += "/" }
+        let key = ""; for (let r = 0; r <= 8; r++){ for (const x of c) key += is(x, y - 8 + r, r) ? "#" : "."; key += "/" }
+        // light-blue bits with no white above them are icon edges or the selected slot's frame, not digits: skip
+        // them instead of letting them spoil the count next to them
+        if (CDIG[key] === undefined && !/#/.test(key.split("/").slice(0, 4).join(""))) continue;
+        if (key === "#/#/#/#/#/#/#/#/#/" && !(dark(c[0], y - 9) && dark(c[0], y + 1))) continue;   // a window edge, not a 1 (a 1 has its outline above and below)
         const dg = CDIG[key], near = c[0] - lastEnd <= 5;
         lastEnd = c.at(-1);
         if (num && near){ if (dg === undefined) num.bad = true; else num.n = num.n * 10 + dg; num.end = lastEnd; continue }
@@ -472,10 +481,13 @@
       const key = bar && bar.exp + "/" + bar.pct, steady = key && key === barNext;
       barNext = key;
       const need = lastBar?.level && G.exp[lastBar.level], agrees = bar && need && Math.abs(bar.exp / need * 100 - bar.pct) <= 0.02;
-      if (bar && (!lastBar || (steady || agrees) && (bar.exp !== lastBar.exp || bar.pct !== lastBar.pct))){
-        // level: the EXP table entry that this EXP / % works out to
-        let level = null;
-        if (bar.pct > 0.5) for (const [L, need] of Object.entries(G.exp)) if (Math.abs(bar.exp / (bar.pct / 100) - need) / need < 0.004){ level = +L; break }
+      // level: the EXP table entry that this EXP / % works out to
+      let level = null;
+      if (bar && bar.pct > 0.5) for (const [L, need] of Object.entries(G.exp)) if (Math.abs(bar.exp / (bar.pct / 100) - need) / need < 0.004){ level = +L; break }
+      // read twice the same is only trusted when it fits some level (or the % is too small to tell): a misread EXP number
+      // can repeat ("1 [68.01%]" on Danny's KPQ run, while the % kept reading right)
+      const fits = level || bar && bar.pct <= 0.5;
+      if (bar && (!lastBar ? fits : (steady && fits || agrees) && (bar.exp !== lastBar.exp || bar.pct !== lastBar.pct))){
         ev.push({t, type: "bar", exp: bar.exp, pct: bar.pct, level}); lastBar = {...bar, level: level || lastBar?.level};
       }
       for (const p of fresh(readPickups(img))){

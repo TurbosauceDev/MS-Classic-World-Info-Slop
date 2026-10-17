@@ -96,7 +96,11 @@ for (const [t, exp] of [[0, 5000], [10, 5200], [20, 4700], [30, 4700], [40, 4650
 assert.strictEqual(s.stats().deaths, 2); assert.strictEqual(s.state.deathMaps["42"], 2);
 // goal level: rest of this level plus the next ones at the current rate
 s = createSession(G, {goalLevel: 24});
-s.add({t: sec(0), type: "bar", exp: 0, pct: 0.01, level: 22}); s.add({t: sec(30), type: "bar", exp: 1000, pct: 1, level: 22});
+s.add({t: sec(0), type: "bar", exp: 0, pct: 0.01, level: 22}); s.add({t: sec(30), type: "bar", exp: 1000, pct: 1000 / G.exp[22] * 100, level: 22});
+// a misread EXP number whose % reads right (Danny's KPQ run: "1 [68.01%]" between good reads): no death, no fake EXP
+{ const m = createSession(G), at = p => ({exp: Math.round(p / 100 * G.exp[25]), pct: p, level: 25});
+  m.add({t: sec(0), type: "bar", ...at(68)}); m.add({t: sec(5), type: "bar", exp: 1, pct: 68.01, level: 25}); m.add({t: sec(10), type: "bar", ...at(68.1)});
+  const ms = m.stats(); assert.equal(ms.deaths, 0, "misread bar = no death"); assert.ok(ms.exp < 0.002 * G.exp[25], "misread bar = no fake EXP " + ms.exp) }
 const gs = s.stats(); assert.ok(Math.abs(gs.toGoalHrs - (G.exp[22] - 1000 + G.exp[23]) / gs.expHr) < 1e-9, "goal hours");
 s.setGoal(0); assert.strictEqual(s.stats().toGoalHrs, null);
 // a death low in the level (EXP drops to 0) is not a level-up

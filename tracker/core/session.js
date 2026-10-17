@@ -93,6 +93,9 @@
         case "useseen": S.useSeen = true; break;
         case "bar": {
           const p = S.bar, before = S.level;
+          // the EXP number and the % come from one line, so EXP / % must be some level's total: "1 [68.01%]" is a misread
+          // number (Danny's KPQ run: each one counted as a death, then the next good read as +32k EXP). Ignore it.
+          if (e.pct > 0.5 && !Object.values(G.exp).some(need => Math.abs(e.exp / (e.pct / 100) - need) / need < 0.004)){ S.badBars = (S.badBars || 0) + 1; break }
           if (e.level) S.level = e.level;
           if (p){
             let d = e.exp - p.exp;
