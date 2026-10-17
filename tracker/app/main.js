@@ -6,8 +6,8 @@ const {autoUpdater} = require("electron-updater");
 
 const SETTINGS = path.join(app.getPath("userData"), "settings.json");
 const readSettings = () => { try { return JSON.parse(fs.readFileSync(SETTINGS, "utf8")) } catch { return {share: true, idleSec: 60} } };
-// shared runs go to our server (server/ in the repo); empty = not deployed yet, runs wait in the queue file
-const SERVER = "";
+// shared runs go to our server (server/ in the repo); runs wait in the queue file until it answers
+const SERVER = "https://ms-classic-tracker.maplestoryclassic.workers.dev";
 const QUEUE = path.join(app.getPath("userData"), "run-queue.json");
 const writeSettings = s => fs.writeFileSync(SETTINGS, JSON.stringify(s, null, 1));
 const SESSIONS = path.join(app.getPath("userData"), "sessions");   // finished sessions, kept locally either way
