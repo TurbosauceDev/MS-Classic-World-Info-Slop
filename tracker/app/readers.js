@@ -96,6 +96,74 @@
     return null;
   }
 
+  // Any window size (the game scales its UI by odd amounts too, e.g. 1.5x at 1080p, which blurs the pixel font). Idea from
+  // beanguri's Maple Classic Exp Overlay (MIT): find the green [ ] brackets around the %, take the white blobs inside and
+  // the number to their left, and read each blob by shrinking it onto the 5x7 digit grid.
+  function blobs(img, x0, y0, x1, y1, isInk){
+    const M = mask(img, x0, y0, x1, y1, isInk), lab = new Int32Array(M.W * M.H), out = [], st = [];
+    for (let i = 0; i < M.m.length; i++){
+      if (!M.m[i] || lab[i]) continue;
+      const b = {x: 1e9, y: 1e9, x1: -1, y1: -1, n: 0, id: out.length + 1}; lab[i] = b.id; st.push(i);
+      while (st.length){
+        const j = st.pop(), x = j % M.W, y = (j - x) / M.W; b.n++;
+        if (x < b.x) b.x = x; if (x > b.x1) b.x1 = x; if (y < b.y) b.y = y; if (y > b.y1) b.y1 = y;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){
+          const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= M.W || yy >= M.H) continue;
+          const k = yy * M.W + xx; if (M.m[k] && !lab[k]){ lab[k] = b.id; st.push(k) }
+        }
+      }
+      b.w = b.x1 - b.x + 1; b.h = b.y1 - b.y + 1; b.cy = b.y + b.h / 2; out.push(b);
+    }
+    return {M, lab, out};
+  }
+  const hsv = (r, g, b) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0; if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [(h * 60 + 360) % 360, mx ? d / mx * 255 : 0, mx] };
+  const isGreen = (r, g, b) => { const [h, s, v] = hsv(r, g, b); return s >= 90 && v >= 110 && h >= 52 && h <= 100 };
+  const isWhite = (r, g, b) => { const [, s, v] = hsv(r, g, b); return s < 70 && v >= 140 };
+  const DIG = BAR.filter(f => /[02-9]/.test(f.ch));
+  function readDigit(W, b){   // blob -> best 5x7 digit by sampling cell centers
+    if (b.w < 0.55 * b.h) return "1";
+    let best = null, bd = 1e9;
+    let bits = "";
+    for (let r = 0; r < 7; r++) for (let c = 0; c < 5; c++){
+      const x = Math.min(b.x1, Math.floor(b.x + (c + 0.5) * b.w / 5)), y = Math.min(b.y1, Math.floor(b.y + (r + 0.5) * b.h / 7));
+      bits += W.lab[y * W.M.W + x] === b.id ? "1" : "0";
+    }
+    for (const f of DIG){ let d = 0; for (let i = 0; i < 35; i++) if (bits[i] !== f.bits[i]) d++; if (d < bd){ bd = d; best = f.ch } }
+    return bd <= 7 ? best : null;
+  }
+  function readBarAny(img){
+    const y0 = img.h < 200 ? 0 : Math.floor(img.h * 0.78), G = blobs(img, 0, y0, img.w, img.h, isGreen), W = blobs(img, 0, y0, img.w, img.h, isWhite);
+    const br = G.out.filter(b => b.h >= 5 && b.w <= 0.6 * b.h).sort((a, b) => a.x - b.x);
+    const found = [];
+    for (const o of br){
+      const bh = o.h, on = b => Math.abs(b.cy - o.cy) <= 0.3 * bh;
+      const c = br.find(c => c.x > o.x1 && c.x - o.x <= 9 * bh && on(c) && Math.abs(c.h - bh) <= 0.25 * bh);
+      if (!c) continue;
+      const line = W.out.filter(b => on(b) && b.h >= 0.1 * bh);
+      const inside = line.filter(b => b.x > o.x1 && b.x1 < c.x).sort((a, b) => a.x - b.x);
+      const tall = inside.filter(b => b.h >= 0.6 * bh);
+      if (tall.length < 3 || tall.some(b => b.h > 1.25 * bh)) continue;
+      const dh = tall.map(b => b.h).sort((a, b) => a - b)[tall.length >> 1];
+      const run = []; let edge = o.x;
+      for (const b of line.filter(b => b.x1 < o.x).sort((a, b) => b.x - a.x)){
+        if (edge - b.x1 > 2 * bh || b.h > 1.15 * dh) break;
+        run.unshift(b); edge = b.x;
+      }
+      const digits = bs => bs.filter(b => b.h >= 0.6 * dh && b.w < 0.95 * b.h).map(b => readDigit(W, b));
+      const expD = digits(run);
+      // % part: always two decimals, so its digits are enough (the dot is often too faint to see once scaled)
+      const pd = digits(inside), ps = pd.includes(null) || pd.length < 3 ? "" : pd.slice(0, -2).join("") + "." + pd.slice(-2).join("");
+      if (!expD.length || expD.includes(null) || !ps) continue;
+      found.push({cy: o.cy, x: o.x, exp: +expD.join(""), pct: +ps});
+    }
+    if (!found.length) return null;
+    const low = Math.max(...found.map(f => f.cy));   // the status bar is the lowest line; EXP is the right-most value on it
+    const f = found.filter(f => f.cy >= low - 4).sort((a, b) => b.x - a.x)[0];
+    return {exp: f.exp, pct: f.pct};
+  }
+
   // ---- pickup messages (bottom right) ----
   const msgInk = (r, g, b) => r > 215 && g > 215 && b < 150 || Math.min(r, g, b) > 165 && Math.max(r, g, b) - Math.min(r, g, b) < 60;
   function readLines(img){
@@ -184,7 +252,7 @@
     }
     function readFrame(raw, t){
       const img = raw.k ? raw : native(raw), ev = [];
-      const bar = readBar(img);
+      const bar = readBar(img) || readBarAny(raw);   // pixel-exact fast path, else any scale
       if (bar && (!lastBar || bar.exp !== lastBar.exp || bar.pct !== lastBar.pct)){
         // level: the EXP table entry that this EXP / % works out to
         let level = null;
@@ -201,6 +269,6 @@
     }
     return {readFrame};
   }
-  const api = {createReaders, native, readBar, readLines, readPickups, readParty};
+  const api = {createReaders, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

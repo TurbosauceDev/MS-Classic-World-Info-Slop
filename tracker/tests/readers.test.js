@@ -35,6 +35,21 @@ const EXPECT = {   // frame -> [EXP, %, level, pickup lines on screen that are b
       if (bad){ fail++; console.log("  FAIL, lines read:", r.lines) }
     }
   }
+  // any window size: beanguri's EXP-bar crops (MIT), all "68,601 [71.68%]"
+  if (!process.argv[2]){
+    const bdir = path.join(__dirname, "frames-beanguri");
+    for (const name of fs.readdirSync(bdir).filter(f => f.endsWith(".png"))){
+      const b64 = fs.readFileSync(path.join(bdir, name)).toString("base64");
+      const r = await page.evaluate(async b64 => {
+        const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode();
+        const c = document.createElement("canvas"); c.width = im.width; c.height = im.height;
+        const g = c.getContext("2d"); g.drawImage(im, 0, 0); const d = g.getImageData(0, 0, c.width, c.height);
+        return GrindReaders.readBarAny({w: d.width, h: d.height, d: d.data});
+      }, b64);
+      const ok = r && r.exp === 68601 && r.pct === 71.68;
+      console.log(name, JSON.stringify(r), ok ? "" : "FAIL"); if (!ok) fail++;
+    }
+  }
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (fail) throw new Error(fail + " frame(s) read wrong");
