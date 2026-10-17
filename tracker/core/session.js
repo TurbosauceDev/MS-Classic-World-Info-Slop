@@ -104,6 +104,10 @@
             const up = e.level && p.level ? e.level > p.level : p.level && p.pct >= 90 && e.exp < p.exp * 0.5;
             // the EXP number can come back higher after a level-up (it's into a bigger level); the % going down says so too
             if (up && (d < 0 || e.pct != null && p.pct != null && e.pct < p.pct)){ d = (G.exp[p.level] || 0) - p.exp + e.exp; if (!e.level) S.level = p.level + 1 }
+            // a death takes at most about a tenth of the level; a bigger drop without a level-up is a misread: ignore it,
+            // unless it keeps reading that way (3 in a row: a level-up the reader couldn't tell, e.g. a quest turn-in)
+            else if (d < 0 && G.exp[p.level] && -d > 0.2 * G.exp[p.level] && (S.bigDrops = (S.bigDrops || 0) + 1) < 3){ S.badBars = (S.badBars || 0) + 1; S.level = before; break }
+            S.bigDrops = 0;
             if (d > 0){ S.barExp += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t) }
             // a drop without a level-up = a death (the game takes a share of the level's EXP); not counted again until EXP rises
             else if (d < 0 && !p.dead){ S.deaths++; const k = S.map || "?"; S.deathMaps[k] = (S.deathMaps[k] || 0) + 1 }

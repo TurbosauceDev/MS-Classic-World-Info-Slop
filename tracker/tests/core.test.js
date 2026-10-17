@@ -100,6 +100,8 @@ s.add({t: sec(0), type: "bar", exp: 0, pct: 0.01, level: 22}); s.add({t: sec(30)
 // a misread EXP number whose % reads right (Danny's KPQ run: "1 [68.01%]" between good reads): no death, no fake EXP
 { const m = createSession(G), at = p => ({exp: Math.round(p / 100 * G.exp[25]), pct: p, level: 25});
   m.add({t: sec(0), type: "bar", ...at(68)}); m.add({t: sec(5), type: "bar", exp: 1, pct: 68.01, level: 25}); m.add({t: sec(10), type: "bar", ...at(68.1)});
+  m.add({t: sec(15), type: "bar", exp: Math.round(0.20 * G.exp[25]), pct: 20, level: 25});   // a misread that still fits the level
+  m.add({t: sec(20), type: "bar", ...at(68.2)});
   const ms = m.stats(); assert.equal(ms.deaths, 0, "misread bar = no death"); assert.ok(ms.exp < 0.002 * G.exp[25], "misread bar = no fake EXP " + ms.exp) }
 const gs = s.stats(); assert.ok(Math.abs(gs.toGoalHrs - (G.exp[22] - 1000 + G.exp[23]) / gs.expHr) < 1e-9, "goal hours");
 s.setGoal(0); assert.strictEqual(s.stats().toGoalHrs, null);
