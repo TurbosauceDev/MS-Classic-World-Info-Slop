@@ -13,6 +13,8 @@
      {t, type: "party", size}             party size from the party HP bars (1 = solo)
      {t, type: "job",   name}             class read from the screen
      {t, type: "use",   id, n}            n of an item used up (potion, food, arrows), from the quick-slot / Use-tab counts
+     {t, type: "useseen"}                 item counts are on screen (so nothing used = 0, not unknown)
+     {t, type: "wallet", n}               the meso total in the inventory window (spending shows here, pickups alone don't)
      {t, type: "pause"} / {t, type: "resume"}  the game screen is gone (Cash Shop, changing channel): that time isn't farming
    Rates use active time only: any gap of more than IDLE_MS with no EXP, meso or item event is left out. */
 (function (root){
@@ -23,7 +25,7 @@
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
       msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
-      pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null, used: {}};
+      pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null, used: {}, walletFirst: null, walletLast: null};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
@@ -86,7 +88,9 @@
         }
         case "bonus": S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); break;
         case "itemraw": S.unreadItems++; break;
-        case "use": { const n = Math.max(0, e.n | 0); if (n) S.used[String(e.id)] = (S.used[String(e.id)] || 0) + n; break }
+        case "wallet": if (Number.isFinite(e.n) && e.n >= 0){ if (S.walletFirst === null) S.walletFirst = e.n; S.walletLast = e.n } break;
+        case "use": { S.useSeen = true; const n = Math.max(0, e.n | 0); if (n) S.used[String(e.id)] = (S.used[String(e.id)] || 0) + n; break }
+        case "useseen": S.useSeen = true; break;
         case "bar": {
           const p = S.bar, before = S.level;
           if (e.level) S.level = e.level;
@@ -162,7 +166,9 @@
         killsEstHr: S.barExp > 0 && S.msgExp / S.barExp >= 0.2 && S.msgExp < S.barExp ? per(S.kills * S.barExp / S.msgExp) : null,
         expHr5: recentExpHr(), deaths: S.deaths, paused: S.pausedAt !== null, levelUps: S.levelUps, toGoalHrs, goalLevel: goal || null, lastExpT: S.lastExpT,
         mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: S.unreadItems, lootValue, lootHr: per(lootValue), items, mobs,
-        used, usedCost, usedCostHr: per(usedCost), netHr: per(S.mesos + lootValue - usedCost)};
+        used, usedCost, usedCostHr: per(usedCost), netHr: per(S.mesos + lootValue - usedCost),
+        // inventory mesos now minus at the first read: real money in or out, shop trips included (loot not sold yet isn't in it)
+        walletNet: S.walletFirst === null ? null : S.walletLast - S.walletFirst, walletNetHr: S.walletFirst === null ? null : per(S.walletLast - S.walletFirst)};
     }
 
     // anonymous summary for the shared drop tables (no character name, no timestamps beyond the date)
@@ -171,6 +177,7 @@
       return {v: 1, deaths: S.deaths, date: localDate(S.start || Date.now()), map: s.map, mapName: s.mapName, party: s.party, job: s.job,
         level: s.level, activeMin: Math.round(s.activeMin * 10) / 10, kills: s.kills, exp: s.exp, mesos: s.mesos,
         msgExp: S.msgExp, barExp: S.barExp, readShare: s.readShare, otherExp: S.otherExp, unreadItems: S.unreadItems, items: S.items, used: S.used,
+        usedCost: S.useSeen ? Math.round(s.usedCost) : null,
         mobs: s.mobs.map(m => ({id: m.id, kills: m.kills, mesos: m.mesos, mesoDrops: m.mesoDrops, items: m.items}))};
     }
 

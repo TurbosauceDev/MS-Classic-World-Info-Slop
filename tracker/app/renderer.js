@@ -95,7 +95,8 @@ function render(){
   $("#miniNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
   $("#lootHr").textContent = fmt(s.lootHr);
   $("#usedHr").textContent = s.used.length ? fmt(s.usedCostHr) : "-";
-  $("#netHr").textContent = s.used.length ? "net " + fmt(s.netHr) + " mesos/hr (mesos + loot - used)" : "from the quick-slot counts";
+  $("#netHr").textContent = (s.used.length ? "net " + fmt(s.netHr) + " mesos/hr (mesos + loot - used)" : "from the quick-slot counts")
+    + (s.walletNet != null ? ` · inventory mesos ${s.walletNet >= 0 ? "+" : ""}${fmt(s.walletNet)} (${fmt(s.walletNetHr)}/hr, spending included)` : "");
   $("#used").innerHTML = s.used.map(u => `<tr><td>${esc(u.name)}</td><td class="n">×${u.n}</td><td class="n">${u.total == null ? "price unknown" : fmt(u.total)}</td></tr>`).join("");
   $("#usedBox").classList.toggle("hidden", !s.used.length);
   $("#deaths").textContent = s.deaths;
@@ -291,7 +292,7 @@ async function stop(){
   clearTimeout(timer); timer = null; $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   // a failed save (disk full, folder locked) must not leave the button saying Stop
-  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), levelUps: session.state.levelUps.map(({t, ...l}) => l), usedCost: Math.round(session.stats().usedCost)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
+  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
   $("#go").textContent = "Start";
 }
 $("#go").onclick = () => timer != null ? stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });

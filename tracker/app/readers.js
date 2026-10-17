@@ -381,6 +381,38 @@
     if (dbg) dbg.push([num.n, best?.id, Math.round(best?.sc), Math.round(second)]);
     return best && best.sc < 80 && second > best.sc * 1.5 ? best.id : null;
   }
+  /* The meso total in the inventory window ("4,685"): black digits 8 rows tall on the white field, commas below the line.
+     Only the digits seen on Danny's screenshots so far are known (4, 5, 6, 8); a total with any other digit isn't read
+     (no guessing) until frames with the rest come in. Keys: rows of the glyph's columns, as in CDIG. */
+  const MDIG = {"...#./..##./.#.#./#..#./#####/...#./...#./...#./": 4, "..##./.#.../#..../####./#...#/#...#/#...#/.###./": 6,
+    ".###./#...#/#...#/.###./#...#/#...#/#...#/.###./": 8, "#####/#..../#..../####./....#/....#/#...#/.###./": 5};
+  function readMesoTotal(img){
+    const {w, h, d} = img, ink = (x, y) => { const i = (y * w + x) * 4; return d[i] === 0 && d[i + 1] === 0 && d[i + 2] === 0 };
+    const white = (x, y) => { const i = (y * w + x) * 4; return d[i] === 255 && d[i + 1] === 255 && d[i + 2] === 255 };
+    const found = [];
+    for (let y = 1; y + 10 < h; y++){
+      // a text line: black pixels with white above (the field), rows y..y+7
+      let row = false; for (let x = 0; x < w && !row; x++) row = ink(x, y) && white(x, y - 1);
+      if (!row) continue;
+      let s = "", x = 0, last = -1, ok = true, x0 = -1;
+      while (x < w){
+        let c = false; for (let yy = y; yy < y + 8 && !c; yy++) c = ink(x, yy);
+        if (!c){ x++; continue }
+        const gs = x; while (x < w){ let c2 = false; for (let yy = y; yy < y + 8 && !c2; yy++) c2 = ink(x, yy); if (!c2) break; x++ }
+        if (last >= 0 && gs - last > 6){ if (s) found.push({y, x0, s, ok}); s = ""; ok = true }
+        let key = ""; for (let yy = y; yy < y + 8; yy++){ for (let xx = gs; xx < x; xx++) key += ink(xx, yy) ? "#" : "."; key += "/" }
+        const dg = MDIG[key];
+        if (/^(\.+\/){6}/.test(key)) s += ",";   // ink only at the bottom: a comma (it hangs below the line)
+        else if (dg === undefined){ ok = false; s += "?" } else { if (!s) x0 = gs; s += dg }
+        last = x;
+      }
+      if (s) found.push({y, x0, s, ok});
+    }
+    // a meso total: known digits only, thousands commas in the right places
+    const good = found.filter(f => f.ok && /^\d{1,3}(,\d{3})*$/.test(f.s) && f.s.length >= 1);
+    return good.length === 1 ? +good[0].s.replace(/,/g, "") : null;
+  }
+
   // G.icons (base64 PNGs of potions, food, arrows, stars) -> pixels; items with the same picture share one entry
   async function loadIcons(G){
     const seen = new Map(), out = [];
@@ -439,7 +471,13 @@
       // no party window: a party while bonus lines came in the last 3 minutes (left the party = back to solo after that)
       const partyRead = readParty(img), party = partyRead || (t - bonusAt < 180e3 ? 2 : 1);
       info = {bar: !!bar, partyWindow: partyRead, counts: info.counts};   // what this frame showed (self-check, auto-pause)
-      if (icons?.length && t - lastCounts >= 2000){ lastCounts = t; ev.push(...readUse(img, t)) }
+      if (icons?.length && t - lastCounts >= 2000){
+        lastCounts = t; ev.push(...readUse(img, t));
+        // the inventory's meso total, taken when read the same twice running
+        const m = readMesoTotal(img);
+        if (m !== null && m === walletNext && m !== wallet){ wallet = m; ev.push({t, type: "wallet", n: m}) }
+        walletNext = m;
+      }
       if (party === partyNext) partySeen++; else { partyNext = party; partySeen = 1 }
       if (party !== lastParty && (lastParty === null || partySeen >= 3)){ ev.push({t, type: "party", size: party}); lastParty = party }
       return ev;
@@ -447,7 +485,7 @@
     /* items used (potions, food, arrows): counts on the quick slots and the open Use tab, every 2 s. Per spot on screen:
        a count that went down (confirmed by the next read: the same or lower still) is that many used. One item seen in two spots (quick slot =
        total, inventory = a stack) counts its biggest drop once. Going up = bought or picked up. A moved window = new spots. */
-    let lastCounts = -Infinity, spots = new Map();
+    let lastCounts = -Infinity, lastSeenEv = -Infinity, spots = new Map(), wallet = null, walletNext = null;
     const iconCache = new Map();   // spot -> [color sample, id]: icon matching only when the picture there changed
     function readUse(img, t){
       const nums = readCounts(img), drops = {}, now = new Map();
@@ -466,11 +504,14 @@
         now.set(key, {id, n, next});
       }
       spots = now; info.counts = nums.length; info.useSpots = now.size;
-      return Object.entries(drops).map(([id, n]) => ({t, type: "use", id, n}));
+      const ev = Object.entries(drops).map(([id, n]) => ({t, type: "use", id, n}));
+      // once a minute while counts are visible: the session knows "nothing used" is a real 0, not "couldn't see"
+      if (now.size && t - lastSeenEv >= 60e3){ lastSeenEv = t; ev.push({t, type: "useseen"}) }
+      return ev;
     }
     let info = {bar: false, partyWindow: null, counts: 0};
     return {readFrame, get info(){ return info }};
   }
-  const api = {createReaders, readCounts, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {createReaders, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

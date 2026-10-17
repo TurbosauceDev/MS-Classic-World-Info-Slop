@@ -21,10 +21,10 @@ CREATE INDEX IF NOT EXISTS runs_ipday ON runs (ipday);
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
 -- party code (salted hash) a run was sent with: one party = one group in the "3 players" rules
 CREATE TABLE IF NOT EXISTS run_groups (run_id INTEGER PRIMARY KEY, grp TEXT NOT NULL);
--- deaths in a run (EXP bar drops without a level-up), from tracker 0.2.2 on; a table of its own so schema.sql stays re-runnable
-CREATE TABLE IF NOT EXISTS run_deaths (run_id INTEGER PRIMARY KEY, deaths INTEGER NOT NULL);
--- UTC hour a run started (0-23), from tracker 0.2.5 on: "best time to farm"
-CREATE TABLE IF NOT EXISTS run_hours (run_id INTEGER PRIMARY KEY, hour INTEGER NOT NULL);
+-- fields newer trackers send, in one table of their own so schema.sql stays re-runnable (no ALTER TABLE): deaths (EXP bar
+-- drops without a level-up), the UTC hour the run started (best time to farm), mesos spent on potions/food/arrows (null:
+-- the tracker couldn't see any item counts). run_deaths / run_hours from 0.2.2-0.2.5 are no longer used (no runs had come in).
+CREATE TABLE IF NOT EXISTS run_extra (run_id INTEGER PRIMARY KEY, deaths INTEGER, hour INTEGER, used_cost INTEGER);
 -- party view: each tracker with a party code posts its live numbers about once a minute; rows older than an hour are deleted
 CREATE TABLE IF NOT EXISTS party_live (grp TEXT NOT NULL, install TEXT NOT NULL, updated TEXT NOT NULL, ip TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY (grp, install));
 CREATE INDEX IF NOT EXISTS party_live_updated ON party_live (updated);

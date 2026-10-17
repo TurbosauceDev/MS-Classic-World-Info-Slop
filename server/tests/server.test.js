@@ -7,7 +7,7 @@ import worker from "../src/index.js";
 const sql = new DatabaseSync(":memory:");
 sql.exec(readFileSync(new URL("../schema.sql", import.meta.url), "utf8"));
 const DB = {prepare(q){ let args = []; const st = sql.prepare(q); return {
-  bind(...a){ args = a; return this }, async first(){ return st.get(...args) ?? null }, async run(){ st.run(...args); return {} },
+  bind(...a){ args = a; return this }, async first(){ return st.get(...args) ?? null }, async run(){ const r = st.run(...args); return {meta: {last_row_id: Number(r.lastInsertRowid)}} },
   async all(){ return {results: st.all(...args)} } } }};
 const env = {DB};
 const post = (body, ip = "10.0.0." + body.install.charCodeAt(0)) => worker.fetch(new Request("https://x/api/runs", {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
@@ -77,6 +77,12 @@ assert.strictEqual(s, 200, "a junk hour is dropped, not refused");
 [s] = await post(run("kkkkkkkkkkkkkkkk1", 1000, {deaths: 2}));
 [s] = await post(run("kkkkkkkkkkkkkkkk1", 1000, {deaths: 4}));
 assert.strictEqual((await fresh()).rows.find(x => x.deathsHr != null && x.runs === 2 && x.deathsHr === 12).expHr, 4000, "deaths/hr: median of 8 and 16");
+// potions/arrows spent: a median per player per hour; a tracker that saw no item counts sends null (left out, not 0)
+[s] = await post(run("uuuuuuuuuuuuuuu1", 1000, {usedCost: 300}), "4.4.4.1");
+[s] = await post(run("uuuuuuuuuuuuuuu1", 1000, {usedCost: 500}), "4.4.4.1");
+[s] = await post(run("uuuuuuuuuuuuuuu2", 1000, {usedCost: null}), "4.4.4.2");
+const us = (await fresh()).rows.filter(x => x.usedHr != null);
+assert.deepStrictEqual(us.map(x => x.usedHr), [1600], JSON.stringify(us));
 // junk counts are clamped: negative items dropped, a monster's kills no more than the run's
 [s, r] = await post(run("iiiiiiiiiiiiiiii1", 1000, {mobs: [{id: "3", kills: 1e9, mesos: -5, items: {"4000000": -3, "4000001": 2}}, null]}));
 assert.strictEqual(s, 200);

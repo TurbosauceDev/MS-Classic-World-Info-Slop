@@ -628,7 +628,7 @@ def step_shared(D):
     j = json.load(open(f))
     mobs = {k: {**v, "items": {i: n for i, n in v["items"].items() if i in D["items"]}} for k, v in j["mobs"].items() if k in D["mobdb"] and v["kills"] > 0}
     D["shared"] = {"read": j["read"], "runs": j["runs"], "players": j["players"], "hours": j["hours"], "mobs": mobs,
-                   "rows": [r for r in j.get("rows", []) if r[0] in D["maps"]],   # [map, party 0/1, level, EXP/hr, group, deaths/hr]
+                   "rows": [r for r in j.get("rows", []) if r[0] in D["maps"]],   # [map, party 0/1, level, EXP/hr, group, deaths/hr, used-up mesos/hr]
                    "times": {m: t for m, t in j.get("times", {}).items() if m in D["maps"]}}   # map -> [[UTC start hour, speed vs usual, players]]
 
 PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D))}   # (key it owns, step)

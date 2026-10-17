@@ -30,6 +30,8 @@ for (const [, , list] of Object.values(G.maps)) for (const [id] of list){ const 
 const used = Object.entries(D.items).filter(([id, it]) => /^20(60|61|70)/.test(id) || ["hp", "mp", "hpR", "mpR"].some(k => it.sp?.[k])).map(([id]) => id);
 G.icons = Object.fromEntries(used.filter(id => D.iicons[id]).map(id => [id, D.iicons[id]]));
 G.buy = Object.fromEntries(used.map(id => [id, Math.min(...(D.ishop[id] || []).map(s => s[3]).filter(p => p > 0))]).filter(([, p]) => isFinite(p)));
+// plain arrows aren't in our shop data: Danny's price, 2 arrows = 1 meso (2026-10-17). Bronze arrows are 2 each (shop data, matches him)
+for (const id of ["2060000", "2061000"]) G.buy[id] ??= 0.5;
 fs.writeFileSync(path.join(__dirname, "app/gamedata.json"), JSON.stringify(G));   // tests
 fs.writeFileSync(path.join(__dirname, "app/gamedata.js"), "const GAMEDATA = " + JSON.stringify(G) + ";\n");   // the app (no fetch of file: URLs)
 // the site's screenshot reader (game digit font, un-doubling, icon matching) is shared, not forked

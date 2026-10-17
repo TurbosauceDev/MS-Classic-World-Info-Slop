@@ -23,7 +23,8 @@ export function cleanRun(r, G){
     level: r.level ?? null, job: text(r.job, 40) || null, party: r.party | 0, minutes: r.minutes, exp: Math.round(r.exp),
     msg_exp: Math.round(r.msgExp || 0), bar_exp: Math.round(r.barExp || 0), kills, mesos: Math.round(r.mesos || 0), mobs, items,
     deaths: r.deaths == null ? null : cnt(r.deaths, 100),
-    hour: Number.isInteger(r.hour) && r.hour >= 0 && r.hour < 24 ? r.hour : null};   // UTC hour the run started (best time to farm)
+    hour: Number.isInteger(r.hour) && r.hour >= 0 && r.hour < 24 ? r.hour : null,
+    used_cost: r.usedCost == null ? null : cnt(r.usedCost, 1e7)};   // UTC hour the run started (best time to farm)
   // honesty: no farming at all; monsters that don't live on this map; EXP bar and EXP messages that disagree a lot
   let why = null;
   if (run.kills < 1 || run.exp <= 0) why = "no kills";
