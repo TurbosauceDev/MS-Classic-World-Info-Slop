@@ -21,7 +21,7 @@ npm start           # run it (Windows, Electron)
   "<item> xN earned. (Etc)" matched to an item name), party size from the party window's HP bars. EXP bar also read at any window size (blob sampling) and the
   map name from the minimap title (white-text crop -> Tesseract.js OCR in the main process every 5 s, offline model
   shipped in the installer, fuzzy-matched to our map names); both approaches borrowed from beanguri/Maple-Classic-Exp-Overlay
-  (MIT, tests/frames-beanguri/LICENSE). Not read yet: job.
+  (MIT, tests/frames-beanguri/LICENSE). Job: the status-bar text next to the level, OCR'd the same way every 30 s (Job = Auto).
   Letters the font table hasn't seen read as "?" (item names still match as patterns). More frames: "Save sample frames"
   (60 frames, one every 3 s, to Pictures/MS Classic Tracker frames).
 - Release: run `.github/workflows/tracker.yml` by hand with "release" ticked (version = package.json); it builds the

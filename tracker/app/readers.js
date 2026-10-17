@@ -7,7 +7,7 @@
    - party size: rows of the party window's HP bars, else 2+ while party bonus lines keep showing up
    - map name: minimap title, OCR'd in the main process (mapTextCrop + mapFromText)
    Capture goes through a video track, so colors wobble a little: every test uses color ranges, never exact pixels.
-   Not read yet: job. */
+   - job: status-bar text next to the level, OCR'd the same way (jobTextCrop + jobFromText) */
 (function (root){
   const decode = ([w, h, hex]) => [...hex].map(c => parseInt(c, 16).toString(2).padStart(4, "0")).join("").slice(-w * h).padStart(w * h, "0");
   const glyphs = font => Object.entries(font).map(([ch, f]) => ({ch, w: f[0], h: f[1], bits: decode(f)}));
@@ -249,6 +249,34 @@
       for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++){ const o = ((P + (y - y0) * S + dy) * w + P + (x - x0) * S + dx) * 4; out[o] = out[o + 1] = out[o + 2] = 0 }
     return {w, h, d: out};
   }
+  // ---- job: the status bar shows "LV. 22 | Archer / <name>" bottom-left. Same idea as the map name: white text -> black on
+  // white for OCR; jobFromText keeps only a job name (the character name in the same box is never kept or sent).
+  function jobTextCrop(img){
+    const rows = Math.max(40, Math.round(img.h * 0.056)), y0 = img.h - rows, X = Math.floor(img.w * 0.55), d = img.d, S = 2, P = 8;
+    const w = X * S + 2 * P, h = rows * S + 2 * P, out = new Uint8ClampedArray(w * h * 4).fill(255);
+    let n = 0;
+    for (let y = y0; y < img.h; y++) for (let x = 0; x < X; x++){
+      const i = (y * img.w + x) * 4; if (Math.min(d[i], d[i + 1], d[i + 2]) <= 190) continue;
+      n++;
+      for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++){ const o = ((P + (y - y0) * S + dy) * w + P + x * S + dx) * 4; out[o] = out[o + 1] = out[o + 2] = 0 }
+    }
+    return n >= 30 ? {w, h, d: out} : null;   // no white text there: status bar not on screen
+  }
+  const JOBS = ["Beginner", "Swordman", "Fighter", "Page", "Spearman", "Magician", "Cleric", "Archer", "Hunter", "Crossbowman", "Rogue", "Assassin", "Bandit"];
+  function jobFromText(text){
+    const words = text.split(/[^A-Za-z]+/).filter(w => w.length >= 4);
+    for (let i = 0; i < words.length; i++){
+      if (similar(words[i], "Wizard") >= 0.8){   // "Wizard (Fire,Poison)" / "Wizard (Ice,Lightning)": the element words say which
+        const at = text.indexOf(words[i]), rest = text.slice(at + words[i].length, at + words[i].length + 24).toLowerCase();   // also "(F/P)", "(I/L)"
+        if (/fire|poison|f\s*\/\s*p/.test(rest)) return "Wizard (Fire,Poison)";
+        if (/ice|light|[il1|]\s*\/\s*[l1i|]/.test(rest)) return "Wizard (Ice,Lightning)";
+        continue;
+      }
+      const best = JOBS.map(j => [j, similar(words[i], j)]).sort((a, b) => b[1] - a[1])[0];
+      if (best[1] >= 0.8) return best[0];
+    }
+    return null;
+  }
   const norm = s => s.toLowerCase().replace(/[l1|!]/g, "i").replace(/0/g, "o").replace(/[^a-z0-9<>]/g, "");   // OCR mixes up I/l/1, O/0
   function lev(a, b){
     let p = [...Array(b.length + 1).keys()];
@@ -341,6 +369,6 @@
     }
     return {readFrame};
   }
-  const api = {createReaders, mapTextCrop, mapFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {createReaders, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

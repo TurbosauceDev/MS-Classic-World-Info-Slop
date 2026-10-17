@@ -7,6 +7,7 @@ const {autoUpdater} = require("electron-updater");
 const SETTINGS = path.join(app.getPath("userData"), "settings.json");
 const readSettings = () => { try { return JSON.parse(fs.readFileSync(SETTINGS, "utf8")) } catch { return {share: false, idleSec: 60} } };   // sharing: the first-run guide asks
 // shared runs go to our server (server/ in the repo); runs wait in the queue file until it answers
+// every request gives up after 10-20 s: a hung connection would otherwise keep the run queue busy until a restart
 const SERVER = "https://ms-classic-tracker.maplestoryclassic.workers.dev";
 const QUEUE = path.join(app.getPath("userData"), "run-queue.json");
 const writeSettings = s => fs.writeFileSync(SETTINGS, JSON.stringify(s, null, 1));
@@ -64,7 +65,7 @@ async function flushRuns(){
     const q = readQueue(), left = [];
     for (const run of q){
       try {
-        const r = await fetch(SERVER + "/api/runs", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(run)});
+        const r = await fetch(SERVER + "/api/runs", {signal: AbortSignal.timeout(20e3), method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(run)});
         if (r.status === 429 || r.status >= 500) left.push(run);   // try again later; other answers are final
       } catch { left.push(run) }
     }
@@ -77,7 +78,7 @@ async function flushRuns(){
 let summary = null, summaryAt = 0;
 ipcMain.handle("summary", async () => {
   if (SERVER && Date.now() - summaryAt > 30 * 60e3){
-    try { const r = await fetch(SERVER + "/api/summary"); if (r.ok){ summary = await r.json(); summaryAt = Date.now() } } catch {}
+    try { const r = await fetch(SERVER + "/api/summary", {signal: AbortSignal.timeout(20e3)}); if (r.ok){ summary = await r.json(); summaryAt = Date.now() } } catch {}
   }
   return summary;
 });
@@ -90,7 +91,8 @@ function sessions(){
 }
 ipcMain.handle("sessions", () => sessions());
 ipcMain.handle("export-csv", () => {
-  const q = v => /[",\n]/.test(String(v ?? "")) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v ?? "");
+  // text starting with = + - @ would run as a formula in Excel (map names come from OCR): prefixed with '
+  const q = v => { let t = String(v ?? ""); if (typeof v === "string" && /^[=+\-@]/.test(t)) t = "'" + t; return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t };
   const head = ["saved", "date", "map", "level", "job", "party", "active_min", "kills", "exp", "mesos", "exp_hr", "mesos_hr"];
   const rows = sessions().map(x => { const h = (x.activeMin || 0) / 60;
     return [new Date(x.saved).toISOString(), x.date, x.mapName || x.map, x.level, x.job, x.party, x.activeMin, x.kills, x.exp, x.mesos,
@@ -101,7 +103,7 @@ ipcMain.handle("export-csv", () => {
   return file;
 });
 // mini bar: a small strip with just EXP/hr and time to level
-ipcMain.handle("mini", (_, on) => { if (win){ win.setSize(360, on ? 92 : 600) } return !!on });
+ipcMain.handle("mini", (_, on) => { if (win){ win.setSize(360, on ? 110 : 600) } return !!on });
 ipcMain.handle("share-run", async (_, run) => {
   const q = readQueue(); q.push({...run, install: readSettings().install}); fs.writeFileSync(QUEUE, JSON.stringify(q.slice(-200)));
   await flushRuns(); return true;
@@ -116,7 +118,7 @@ ipcMain.handle("party", async (_, live) => {
   const st = readSettings();
   if (!SERVER || !st.partyCode) return null;
   try {
-    const r = await fetch(SERVER + "/api/party", {method: "POST", headers: {"content-type": "application/json"},
+    const r = await fetch(SERVER + "/api/party", {signal: AbortSignal.timeout(10e3), method: "POST", headers: {"content-type": "application/json"},
       body: JSON.stringify({...live, install: st.install, partyCode: st.partyCode, nick: st.nick || ""})});
     return r.ok ? await r.json() : {error: r.status, why: (await r.json().catch(() => ({}))).error || ""};
   } catch { return null }

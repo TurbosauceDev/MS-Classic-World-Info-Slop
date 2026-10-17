@@ -33,7 +33,7 @@ async function postRun(req, env){
     .bind(body.install, ipday, now.toISOString(), r.date, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.msg_exp, r.bar_exp,
       r.kills, r.mesos, c.ok ? 1 : 0, c.why, JSON.stringify(r.mobs), JSON.stringify(r.items)).run();
   const code = typeof body.partyCode === "string" ? body.partyCode.trim().toLowerCase().slice(0, 20) : "";
-  if (code){
+  if (code && r.party > 1){   // a code only groups party runs: friends soloing the same map with one code are separate players
     const {id} = await env.DB.prepare("SELECT MAX(id) id FROM runs WHERE install = ?").bind(body.install).first();
     await env.DB.prepare("INSERT OR REPLACE INTO run_groups (run_id, grp) VALUES (?, ?)").bind(id, await sha("party:" + code + await salt(env.DB))).run();
   }
@@ -105,13 +105,15 @@ export default {
     if (url.pathname === "/api/runs" && req.method === "POST") return postRun(req, env);
     if (url.pathname === "/api/party" && req.method === "POST") return partyLive(req, env);
     if (url.pathname === "/api/summary" && req.method === "GET"){
-      // worked out at most every 5 minutes (each request would otherwise read every run)
-      const cache = typeof caches !== "undefined" ? caches.default : null, hit = cache && await cache.match(req);
-      if (hit) return hit;
-      const res = json(await summary(env.DB));
-      res.headers.set("cache-control", "public, max-age=300");
-      if (cache) await cache.put(req, res.clone());
-      return res;
+      // worked out at most every 5 minutes and kept in the meta table (each request would otherwise read every run; the
+      // Cache API does nothing on workers.dev)
+      const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary'").first();
+      let body = row?.v;
+      if (!body || Date.now() - Date.parse(JSON.parse(body).updated) > 5 * 60e3){
+        body = JSON.stringify(await summary(env.DB));
+        if (body.length < 1.5e6) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").bind(body).run();   // D1 rows max out at 2 MB
+      }
+      return new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=300", ...CORS}});
     }
     if (url.pathname === "/") return json({about: "MS Classic World Info shared grind data", summary: "/api/summary"});
     return json({error: "not found"}, 404);

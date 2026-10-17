@@ -69,6 +69,22 @@ function render(){
   $("#priceNote").textContent = G.pwRead ? `Worth = player-shop median from meso.watch (${G.pwRead}), else NPC price. Mesos/kill on maps with several monsters is a best guess.` : "";
 }
 
+// a crop (black-on-white RGBA) -> PNG bytes for the OCR in the main process
+async function toPng(c){
+  const cv = document.createElement("canvas"); cv.width = c.w; cv.height = c.h;
+  cv.getContext("2d").putImageData(new ImageData(c.d, c.w, c.h), 0, 0);
+  return new Uint8Array(await (await new Promise(r => cv.toBlob(r, "image/png"))).arrayBuffer());
+}
+// job from the status bar every 30 s, when the player left the job on "Auto": taken once the same job is read twice running
+let lastJob = 0, jobSeen = null, jobNow = null;
+async function readJob(f, t){
+  const sess = session, sl = slicer, c = GrindReaders.jobTextCrop(GrindReaders.native(f));
+  if (!c) return;
+  const job = GrindReaders.jobFromText(await host.ocr(await toPng(c)));
+  if (job && job === jobSeen && job !== jobNow && sess === session && !settings.job){ jobNow = job; const e = {t, type: "job", name: job}; sess.add(e); sl.add(e) }
+  jobSeen = job;
+}
+
 // map name every 5 s: cut the minimap title out, OCR it in the main process, take it once the same map is read twice in a row
 let ocrBusy = false, lastOcr = 0, mapSeen = null, mapNow = null, mapMissing = 0;
 async function readMap(f, t){
@@ -77,10 +93,7 @@ async function readMap(f, t){
   // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
   if (!c){ if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
   mapMissing = 0;
-  const cv = document.createElement("canvas"); cv.width = c.w; cv.height = c.h;
-  cv.getContext("2d").putImageData(new ImageData(c.d, c.w, c.h), 0, 0);
-  const png = new Uint8Array(await (await new Promise(r => cv.toBlob(r, "image/png"))).arrayBuffer());
-  const m = GrindReaders.mapFromText(await host.ocr(png), G), key = m && (m.id || m.name);
+  const m = GrindReaders.mapFromText(await host.ocr(await toPng(c)), G), key = m && (m.id || m.name);
   // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
   const same = (a, b) => a === b || a && b && !G.maps[a] && !G.maps[b] && GrindReaders.similar(a, b) >= 0.75;
   if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e) }
@@ -112,14 +125,15 @@ function dropAlert(id){
 }
 
 // party view: every minute, our numbers go up with the party code and everyone's come back
-let lastParty = 0;
+let lastParty = 0, partyBusy = false;
 async function sendParty(){
   const s = session.stats(), box = $("#partyBox");
   const r = await host.party({job: s.job, level: s.level, mapName: s.mapName, expHr: s.expHr, expHr5: s.expHr5, killsHr: s.killsHr, mesosHr: s.mesosHr,
     active: Math.round(s.activeMin)}).catch(() => null);
-  if (!r) return;
-  box.classList.remove("hidden");
+  if (!r || timer == null) return;   // stopped while the answer was on its way: don't bring the card back
+  box.classList.remove("hidden"); $("#miniParty").textContent = "";
   if (r.error){ box.innerHTML = `<div class="k">Party</div><div class="note">${r.why === "party full" ? "Party full: 6 trackers already use this code." : r.why === "too often" ? "Waiting a moment before updating." : "Party view didn't answer (" + esc(r.why || r.error) + ")."}</div>`; return }
+  $("#miniParty").textContent = `party: ${fmt(r.expHr)} EXP/hr together (${r.members.length})`;
   box.innerHTML = `<div class="k">Party "${esc(settings.partyCode)}": ${fmt(r.expHr)} EXP/hr together</div><table>` + r.members.map(m =>
     `<tr><td>${m.you ? "<b>you</b>" : esc(m.nick || m.job || "member")}${m.nick && !m.you && m.job ? ` <span class="note">${esc(m.job)}</span>` : ""}${m.level ? " Lv " + m.level : ""}</td>
     <td class="n">${fmt(m.expHr || 0)}/hr</td><td class="n note">${m.expHr5 != null ? "5 min: " + fmt(m.expHr5) : ""}</td></tr>`).join("")
@@ -133,8 +147,10 @@ function tick(){
   try {
     const f = grab();
     for (const e of readers.readFrame(f, t)){ session.add(e); slicer.add(e); if (e.type === "item") dropAlert(e.id) }
-    if (t - lastOcr > 5000 && !ocrBusy){ lastOcr = t; ocrBusy = true; readMap(f, t).catch(() => {}).finally(() => ocrBusy = false) }   // the first OCR can take seconds
-    if (t - lastParty > 60e3 && settings.partyCode){ lastParty = t; sendParty() }
+    // one OCR at a time (the first can take seconds): the map every 5 s, the job every 30 s in between
+    if (!ocrBusy && t - lastOcr > 5000){ lastOcr = t; ocrBusy = true; readMap(f, t).catch(() => {}).finally(() => ocrBusy = false) }
+    else if (!ocrBusy && !settings.job && t - lastJob > 30e3){ lastJob = t; ocrBusy = true; readJob(f, t).catch(() => {}).finally(() => ocrBusy = false) }
+    if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
     render();
   } catch (err){ $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
   // over 250 ms a frame, 10 times running: read once a second instead of twice
@@ -153,14 +169,14 @@ async function start(){
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000});
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
-  readers = GrindReaders.createReaders(G); mapNow = mapSeen = null; mapMissing = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
-  // job isn't read from the screen yet: the player picks it
+  readers = GrindReaders.createReaders(G); mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
+  // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   tick();
   $("#go").textContent = "Stop";
 }
 async function stop(){
-  clearTimeout(timer); timer = null; $("#partyBox").classList.add("hidden");
+  clearTimeout(timer); timer = null; $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable()});
   $("#go").textContent = "Start";
@@ -185,7 +201,7 @@ $("#frames").onclick = async () => {
   }, 3000);
 };
 
-$("#pcode").onchange = e => host.settings({partyCode: e.target.value.trim().slice(0, 20)}).then(s => { settings = s; lastParty = 0; if (!s.partyCode) $("#partyBox").classList.add("hidden") });
+$("#pcode").onchange = e => host.settings({partyCode: e.target.value.trim().slice(0, 20)}).then(s => { settings = s; lastParty = 0; if (!s.partyCode){ $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "" } });
 $("#nick").onchange = e => host.settings({nick: e.target.value.trim().slice(0, 12)}).then(s => settings = s);
 const guideDone = share => host.settings({share, guideDone: true}).then(s => { settings = s; $("#share").checked = share; $("#guide").classList.add("hidden") });
 $("#guideShare").onclick = () => guideDone(true);
@@ -204,7 +220,7 @@ $("#csv").onclick = () => host.exportCsv();
 $("#ontop").onchange = e => host.settings({onTop: e.target.checked}).then(s => settings = s);
 $("#share").onchange = e => host.settings({share: e.target.checked}).then(s => settings = s);
 $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
-  settings = s;
+  settings = s; jobNow = jobSeen = null; lastJob = 0;   // back on Auto: read it again soon
   if (session){ const ev = {t: Date.now(), type: "job", name: s.job || null}; session.add(ev); slicer.add(ev) }
 });
 (async () => {

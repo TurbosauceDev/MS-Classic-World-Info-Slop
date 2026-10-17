@@ -10,7 +10,7 @@ const EXPECT = {   // frame -> [EXP, %, level, pickup lines on screen that are b
 };
 // frame -> [map id, start of the name]: KPQ bonus stage (added from D.kpq)
 const MAPS = {"frame-000.png": ["80000500", "1st Accompaniment <Bonus>"], "frame-046.png": ["80000500", "1st Accompaniment <Bonus>"]};
-const G = require("../app/gamedata.json"), {mapFromText} = require("../app/readers.js");
+const G = require("../app/gamedata.json"), {mapFromText, jobFromText} = require("../app/readers.js");
 let ocr = null;
 (async () => {
   const browser = await chromium.launch({executablePath: process.env.CHROMIUM || undefined});
@@ -30,7 +30,9 @@ let ocr = null;
       const rd = GrindReaders.createReaders(GAMEDATA), ev = rd.readFrame(img, 0), again = rd.readFrame(img, 500);
       const mc = GrindReaders.mapTextCrop(img); let crop = null;
       if (mc){ const cv = document.createElement("canvas"); cv.width = mc.w; cv.height = mc.h; cv.getContext("2d").putImageData(new ImageData(mc.d, mc.w, mc.h), 0, 0); crop = cv.toDataURL() }
-      return {k: img.k, bar, lines: lines.map(l => l.text), ev, again, party, crop, ms: Math.round(performance.now() - t0)};
+      const jc = GrindReaders.jobTextCrop(img); let jobCrop = null;
+      if (jc){ const cv = document.createElement("canvas"); cv.width = jc.w; cv.height = jc.h; cv.getContext("2d").putImageData(new ImageData(jc.d, jc.w, jc.h), 0, 0); jobCrop = cv.toDataURL() }
+      return {k: img.k, bar, lines: lines.map(l => l.text), ev, again, party, crop, jobCrop, ms: Math.round(performance.now() - t0)};
     }, b64);
     let map = null;
     if (r.crop && MAPS[name]){
@@ -40,6 +42,12 @@ let ocr = null;
       const ok = map && map.id === MAPS[name][0] && map.name.startsWith(MAPS[name][1]);
       console.log("  map", JSON.stringify(text), "->", JSON.stringify(map), ok ? "" : "FAIL"); if (!ok) fail++;
     } else if (MAPS[name]){ fail++; console.log("  FAIL: no map name crop") }
+    // job from the status bar: Danny's archer in every frame
+    if (!process.argv[2]){
+      ocr = ocr || await require("tesseract.js").createWorker("eng", 1, {langPath: path.join(path.dirname(require.resolve("@tesseract.js-data/eng/package.json")), "4.0.0"), cacheMethod: "none", gzip: true});
+      const job = r.jobCrop && jobFromText((await ocr.recognize(Buffer.from(r.jobCrop.split(",")[1], "base64"))).data.text);
+      console.log("  job", job, job === "Archer" ? "" : "FAIL"); if (job !== "Archer") fail++;
+    }
     const ex = EXPECT[name], lvl = r.ev.find(e => e.type === "bar")?.level;
     const picks = r.ev.filter(e => /meso|exp|bonus|item/.test(e.type)).map(e => e.type + " " + (e.amount ?? e.gain ?? e.id ?? e.text));
     console.log(name, `k=${r.k}`, JSON.stringify(r.bar), "level", lvl, picks.join(", "), "party", r.party, `${r.ms} ms`);

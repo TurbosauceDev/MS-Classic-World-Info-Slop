@@ -23,6 +23,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.dblclick("#go");
   await page.waitForTimeout(1500);
   const party = await page.textContent("#partyBox");
+  if (!/9,000 EXP\/hr together \(2\)/.test(await page.textContent("#miniParty"))) throw new Error("mini party line");
   if (!/9,000 EXP\/hr together/.test(party) || !/Bo&lt;b&gt;|Bo<b>/.test(party) || await page.$("#partyBox b b")) throw new Error("party: " + party);
   await page.evaluate(() => { const t = Date.now(); session.add({t, type: "map", id: 42}); session.add({t, type: "exp", gain: 8});
     session.add({t: t + 5000, type: "exp", gain: 4}); session.add({t: t + 5100, type: "meso", amount: 12}); session.add({t: t + 5200, type: "item", id: 4000019}) });

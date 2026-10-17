@@ -8,7 +8,9 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 URL = "https://ms-classic-tracker.maplestoryclassic.workers.dev/api/summary"
 req = urllib.request.Request(URL, headers={"User-Agent": "ms-classic-world-info site build"})   # Cloudflare refuses Python's default
 with urllib.request.urlopen(req, timeout=60) as r: d = json.load(r)
-j = {"source": URL, "read": d["updated"][:10], "runs": d["runs"], "players": d["players"], "hours": d["hours"], "mobs": d["mobs"]}
+# rows: one per player per map and solo/party (their typical run) -> [map, party 0/1, level, EXP/hr, group]; maps we know only
+rows = [[r["map"], 1 if r["party"] > 1 else 0, r["level"], r["expHr"], r["group"]] for r in d.get("rows", []) if r.get("map") and r.get("level")]
+j = {"source": URL, "read": d["updated"][:10], "runs": d["runs"], "players": d["players"], "hours": d["hours"], "mobs": d["mobs"], "rows": rows}
 dst = ROOT / "data" / "sources" / "shared_runs.json"
 try:   # nothing new: keep the old read date so the daily job doesn't commit just a date
     old = json.loads(dst.read_text())
@@ -20,6 +22,7 @@ print(f"{d['runs']} runs, {d['players']} players, {len(d['mobs'])} monsters -> {
 # same as build_data.py step_shared: only monsters and items the page knows
 D = json.load(open(ROOT / "data" / "data.json"))
 mobs = {k: {**v, "items": {i: n for i, n in v["items"].items() if i in D["items"]}} for k, v in j["mobs"].items() if k in D["mobdb"] and v["kills"] > 0}
-D["shared"] = {"read": j["read"], "runs": j["runs"], "players": j["players"], "hours": j["hours"], "mobs": mobs}
+D["shared"] = {"read": j["read"], "runs": j["runs"], "players": j["players"], "hours": j["hours"], "mobs": mobs,
+               "rows": [r for r in j["rows"] if r[0] in D["maps"]]}
 (ROOT / "data" / "data.json").write_text(json.dumps(D, separators=(",", ":")))
-print(f"data/data.json: shared drops for {len(mobs)} monsters")
+print(f"data/data.json: shared drops for {len(mobs)} monsters, {len(D['shared']['rows'])} player-map rows")

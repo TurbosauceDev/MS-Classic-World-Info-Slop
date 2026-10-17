@@ -23,11 +23,11 @@
 </head>
 <body>
   <div class="card" id="mini" title="Click for the full window"><span class="k">EXP/hr</span> <span class="v" id="miniExp">-</span>
-    · <span class="k">next level</span> <span class="v" id="miniTtl">-</span><div class="note" id="miniNote"></div></div>
+    · <span class="k">next level</span> <span class="v" id="miniTtl">-</span><div class="note" id="miniNote"></div><div class="note" id="miniParty"></div></div>
   <div class="card hidden" id="guide">
     <div class="v">Welcome</div>
     <ol>
-      <li>Pick your job below (it isn't read from the screen yet).</li>
+      <li>Your job is read from the status bar (leave Job on Auto), or pick it by hand.</li>
       <li>Press <b>Start</b> with MapleStory open. Keep the minimap and the EXP bar on screen; the chat box shows the kill and pickup lines.</li>
       <li>Playing in a party? Everyone types the same <b>party code</b> to see each other's EXP/hr live.</li>
     </ol>
@@ -39,7 +39,7 @@
     <div id="status">Looking for the MapleStory window...</div>
     <p><button id="go">Start</button> <button id="frames" class="alt">Save sample frames</button>
       <button id="miniBtn" class="alt">Mini bar</button> <button id="histBtn" class="alt">History</button></p>
-    <p><label>Job <select id="job"><option value="">Pick your job</option><option>Beginner</option><option>Swordman</option><option>Fighter</option><option>Page</option><option>Spearman</option><option>Magician</option><option>Wizard (Fire,Poison)</option><option>Wizard (Ice,Lightning)</option><option>Cleric</option><option>Archer</option><option>Hunter</option><option>Crossbowman</option><option>Rogue</option><option>Assassin</option><option>Bandit</option></select></label></p>
+    <p><label>Job <select id="job"><option value="">Auto (read from the status bar)</option><option>Beginner</option><option>Swordman</option><option>Fighter</option><option>Page</option><option>Spearman</option><option>Magician</option><option>Wizard (Fire,Poison)</option><option>Wizard (Ice,Lightning)</option><option>Cleric</option><option>Archer</option><option>Hunter</option><option>Crossbowman</option><option>Rogue</option><option>Assassin</option><option>Bandit</option></select></label></p>
     <label><input type="checkbox" id="share"> Share my sessions (anonymous: map, kills, drops; no character name)</label><br>
     <label><input type="checkbox" id="ontop"> Keep this window on top of the game</label><br>
     <label>Party code <input id="pcode" maxlength="20" size="10" placeholder="optional"></label>

@@ -622,12 +622,13 @@ def step_prices(D):
 
 def step_shared(D):
     """shared {read, runs, players, hours, mobs: {mobId: {kills, mesos, mesoDrops, players, items: {itemId: n}}}}: what grind
-    tracker players picked up per monster (scripts/fetch_shared.py; our server). Only monsters and items the page knows."""
+    tracker players picked up per monster, and rows [map, party 0/1, level, EXP/hr, group] for "Players' EXP/hr" (scripts/fetch_shared.py; our server). Only monsters and items the page knows."""
     f = ROOT / "data" / "sources" / "shared_runs.json"
     if not f.exists(): return
     j = json.load(open(f))
     mobs = {k: {**v, "items": {i: n for i, n in v["items"].items() if i in D["items"]}} for k, v in j["mobs"].items() if k in D["mobdb"] and v["kills"] > 0}
-    D["shared"] = {"read": j["read"], "runs": j["runs"], "players": j["players"], "hours": j["hours"], "mobs": mobs}
+    D["shared"] = {"read": j["read"], "runs": j["runs"], "players": j["players"], "hours": j["hours"], "mobs": mobs,
+                   "rows": [r for r in j.get("rows", []) if r[0] in D["maps"]]}   # [map, party 0/1, level, EXP/hr, group]
 
 PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
