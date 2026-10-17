@@ -52,7 +52,7 @@
 
   // ink mask of a box (rows y0..y1, cols x0..x1) -> {get(x, y), ...}; isInk(r, g, b)
   function mask(img, x0, y0, x1, y1, isInk){
-    const W = x1 - x0, H = y1 - y0, m = new Uint8Array(W * H), d = img.d;
+    const W = Math.max(0, x1 - x0), H = Math.max(0, y1 - y0), m = new Uint8Array(W * H), d = img.d;   // tiny images: empty box
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++){
       const i = ((y + y0) * img.w + x + x0) * 4; m[y * W + x] = isInk(d[i], d[i + 1], d[i + 2]) ? 1 : 0;
     }
