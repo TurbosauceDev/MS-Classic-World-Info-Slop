@@ -18,7 +18,7 @@
   function createSession(G, opts = {}){
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
-      msgExp: 0, barExp: 0, recent: [], kills: 0, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0};
+      msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
@@ -32,10 +32,19 @@
         for (const id of mobs){ const err = Math.abs(base(id) - gain) / base(id); if (err < bestErr){ bestErr = err; best = id } }
         return bestErr <= 0.15 ? best : null;
       }
-      const fits = mobs.filter(id => gain <= base(id) * 1.05);
+      // a boss on the map fits almost any small share: only count it when no regular monster gives that much
+      const regular = mobs.filter(id => !timed(id)), fitsReg = regular.filter(id => gain <= base(id) * 1.05);
+      const fits = fitsReg.length ? fitsReg : mobs.filter(id => gain <= base(id) * 1.05);
       if (!fits.length) return null;
       const exact = fits.filter(id => Math.abs(base(id) - gain) / base(id) <= 0.03);
       return exact.length === 1 ? exact[0] : fits.length === 1 ? fits[0] : "?";
+    }
+    // monsters on this map with a long respawn (bosses etc.), from the game data
+    const timed = id => (G.timed?.[S.map] || []).find(([m]) => m === String(id));
+    // respawn timers for this map: when each timed monster was last killed here and when it's due back
+    function respawns(now){
+      return (G.timed?.[S.map] || []).map(([id, sec, boss]) => { const k = S.timedKills[id];
+        return {id, name: G.mobs[id]?.[0] || "Monster " + id, sec, boss: !!boss, killed: k || null, dueIn: k ? Math.max(0, k + sec * 1000 - now) : null} });
     }
     const mob = id => S.byMob[id] || (S.byMob[id] = {kills: 0, exp: 0, mesos: 0, mesoDrops: 0, items: {}});
 
@@ -54,7 +63,7 @@
           if (!G.maps[S.map]){ S.kills++; S.lastKillMob = null; break }   // map not known: a kill, monster unknown
           const id = matchMob(e.gain);
           if (id === "?"){ S.kills++; S.lastKillMob = null }   // a party kill, monster unknown
-          else if (id){ const m = mob(id); m.kills++; m.exp += e.gain; S.kills++; S.lastKillMob = id }
+          else if (id){ const m = mob(id); m.kills++; m.exp += e.gain; S.kills++; S.lastKillMob = id; if (timed(id)) S.timedKills[id] = e.t }
           else S.otherExp += e.gain;   // fits no monster here: quest reward etc.
           break;
         }
@@ -133,7 +142,7 @@
         mobs: s.mobs.map(m => ({id: m.id, kills: m.kills, mesos: m.mesos, mesoDrops: m.mesoDrops, items: m.items}))};
     }
 
-    return {add, stats, shareable, state: S};
+    return {add, stats, shareable, respawns, state: S};
   }
 
   /* Shared runs (the same rules as beanguri's Maple Classic Exp Overlay): 15 minutes of non-stop farming on one map with
@@ -181,13 +190,15 @@
     if (!run.level || !run.barExp || !summary?.rows) return {expHr: hr, verdict: null, noBar: !run.barExp};
     const peers = summary.rows.filter(r => r.level && Math.abs(r.level - run.level) <= 5 && (r.party > 1) === party && r.map);
     const byMap = {};
-    for (const r of peers) (byMap[r.map] = byMap[r.map] || []).push(r.expHr);
+    for (const r of peers) (byMap[r.map] = byMap[r.map] || []).push(r);
+    // 3+ groups: a party sharing a party code is one group, so one party can't rank a map on its own
+    const groups = a => new Set(a.map((r, i) => r.group ?? "row" + i)).size;
     const maps = [];
     for (const [map, a] of Object.entries(byMap)){
-      const m = medianOf(a), kept = a.filter(v => v >= m / 2 && v <= m * 2);
-      if (kept.length >= 3) maps.push({map, name: G.mapnames?.[map] || G.maps?.[map]?.[0] || "Map " + map, expHr: medianOf(kept), players: kept.length});
+      const m = medianOf(a.map(r => r.expHr)), kept = a.filter(r => r.expHr >= m / 2 && r.expHr <= m * 2);
+      if (groups(kept) >= 3) maps.push({map, name: G.mapnames?.[map] || G.maps?.[map]?.[0] || "Map " + map, expHr: medianOf(kept.map(r => r.expHr)), players: kept.length});
     }
-    const all = maps.flatMap(m => byMap[m.map].filter(v => v >= m.expHr / 2 && v <= m.expHr * 2));
+    const all = maps.flatMap(m => byMap[m.map].filter(r => r.expHr >= m.expHr / 2 && r.expHr <= m.expHr * 2).map(r => r.expHr));
     if (all.length < 3) return {expHr: hr, verdict: null, peers: all.length};
     const ref = medianOf(all), x = hr / ref;
     const verdict = x < 0.75 ? "slow" : x <= 1.25 ? "average" : x <= 1.75 ? "good" : "very fast";

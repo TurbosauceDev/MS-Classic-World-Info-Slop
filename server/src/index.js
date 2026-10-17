@@ -31,17 +31,24 @@ async function postRun(req, env){
     kills, mesos, ok, why, mobs, items) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .bind(body.install, ipday, now.toISOString(), r.date, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.msg_exp, r.bar_exp,
       r.kills, r.mesos, c.ok ? 1 : 0, c.why, JSON.stringify(r.mobs), JSON.stringify(r.items)).run();
+  const code = typeof body.partyCode === "string" ? body.partyCode.trim().toLowerCase().slice(0, 20) : "";
+  if (code){
+    const {id} = await env.DB.prepare("SELECT MAX(id) id FROM runs WHERE install = ?").bind(body.install).first();
+    await env.DB.prepare("INSERT OR REPLACE INTO run_groups (run_id, grp) VALUES (?, ?)").bind(id, await sha("party:" + code + await salt(env.DB))).run();
+  }
   return json({ok: true, counted: c.ok, why: c.why});
 }
 
 export async function summary(db){
-  const {results} = await db.prepare("SELECT install, map, map_name, level, job, party, minutes, exp, kills, mesos, mobs FROM runs WHERE ok = 1").all();
+  const {results} = await db.prepare(`SELECT r.install, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.kills, r.mesos, r.mobs, g.grp
+    FROM runs r LEFT JOIN run_groups g ON g.run_id = r.id WHERE r.ok = 1`).all();
   // one row per player per map and solo/party: their typical (median) run
   const per = new Map(), mobs = {};
   for (const r of results){
     const k = [r.install, r.map ?? "?" + r.map_name, r.party > 1 ? 1 : 0].join("|"), h = r.minutes / 60;
-    if (!per.has(k)) per.set(k, {map: r.map, mapName: r.map_name, party: [], level: [], job: [], exp: [], mesos: [], kills: []});
+    if (!per.has(k)) per.set(k, {map: r.map, mapName: r.map_name, party: [], level: [], job: [], exp: [], mesos: [], kills: [], grp: null});
     const p = per.get(k);
+    if (r.grp) p.grp = r.grp;
     p.party.push(r.party); p.level.push(r.level); p.job.push(r.job); p.exp.push(r.exp / h); p.mesos.push(r.mesos / h); p.kills.push(r.kills / h);
     for (const m of JSON.parse(r.mobs || "[]")){
       const t = mobs[m.id] || (mobs[m.id] = {kills: 0, mesos: 0, mesoDrops: 0, items: {}, players: new Set()});
@@ -50,7 +57,9 @@ export async function summary(db){
     }
   }
   const last = a => a.filter(v => v != null).at(-1) ?? null;
-  const rows = [...per.values()].map(p => ({map: p.map, mapName: p.mapName, party: Math.round(median(p.party)), level: last(p.level), job: last(p.job),
+  // group: the party (by party code) or the player alone; a short label, not the code or the install ID
+  const label = new Map(), grp = (p, i) => { const k = p.grp || "solo" + i; if (!label.has(k)) label.set(k, "g" + label.size); return label.get(k) };
+  const rows = [...per.values()].map((p, i) => ({group: grp(p, i), map: p.map, mapName: p.mapName, party: Math.round(median(p.party)), level: last(p.level), job: last(p.job),
     runs: p.exp.length, expHr: Math.round(median(p.exp)), mesosHr: Math.round(median(p.mesos)), killsHr: Math.round(median(p.kills))}));
   for (const t of Object.values(mobs)){ t.players = t.players.size }
   const players = new Set(results.map(r => r.install)).size, hours = results.reduce((a, r) => a + r.minutes, 0) / 60;

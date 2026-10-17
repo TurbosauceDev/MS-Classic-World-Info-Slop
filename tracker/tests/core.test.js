@@ -110,6 +110,18 @@ sl.add({t: sec(1310), type: "map", id: 41});    // map change: starts over again
 for (let i = 1; i <= 80; i++) sl.add({t: sec(1310 + i * 10), type: "exp", gain: 4});   // 13.3 min: not a run yet
 assert.strictEqual(runs.length, 1); assert.strictEqual(sl.current.stats().kills, 80); assert.strictEqual(sl.current.stats().map, "41");
 
+// respawn timer: Mano on Thicket Around the Beach III (60 min in the game data)
+s = createSession(G);
+s.add({t: sec(0), type: "map", id: 10000013});
+s.add({t: sec(10), type: "exp", gain: 148});
+let rs = s.respawns(sec(70)).find(r => r.name === "Mano");
+assert.strictEqual(s.stats().mobs[0].name, "Mano");
+// in a party on Snail Hunting Ground I (Snails only... plus no boss) a small share is still a Snail; on Mano's map a big one is Mano
+s = createSession(G); s.add({t: sec(0), type: "map", id: 10000013}); s.add({t: sec(0), type: "party", size: 2});
+s.add({t: sec(1), type: "exp", gain: 60});
+assert.deepStrictEqual(s.stats().mobs.map(m => m.name), ["Mano"], "only Mano gives 60+");
+assert.ok(rs && rs.boss && rs.sec === 3600 && rs.dueIn === 3540e3, JSON.stringify(rs));
+
 // speed check against shared rows: peers within 5 levels, solo. Snail Hunting Ground III: 4 players, 60000 an outlier;
 // map 41: only 2 players (not counted); the Lv 40 row is out of the level band
 const {speedCheck} = require("../core/session.js");
@@ -122,6 +134,9 @@ assert.strictEqual(speedCheck({exp: 500, barExp: 500, minutes: 15, level: 20, pa
 assert.strictEqual(speedCheck({exp: 2500, barExp: 2500, minutes: 15, level: 20, party: 1}, {rows}, G).verdict, "very fast");
 assert.strictEqual(speedCheck({exp: 1000, barExp: 1000, minutes: 15, level: 20, party: 3}, {rows}, G).verdict, null, "no party peers");
 assert.strictEqual(speedCheck({exp: 1000, minutes: 15, level: 20, party: 1}, {rows}, G).verdict, null, "EXP bar not read: no verdict");
+// the same 3 rows from one party (one group): not enough groups
+const one = rows.map(r => ({...r, group: "g1"}));
+assert.strictEqual(speedCheck({exp: 1000, barExp: 1000, minutes: 15, level: 20, party: 1}, {rows: one}, G).verdict, null);
 // the PC clock going back adds no negative time
 s = createSession(G); s.add({t: sec(100), type: "exp", gain: 2}); s.add({t: sec(40), type: "exp", gain: 2});
 assert.strictEqual(s.stats().activeMin, 0);

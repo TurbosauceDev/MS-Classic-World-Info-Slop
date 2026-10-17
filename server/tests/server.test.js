@@ -43,11 +43,15 @@ assert.strictEqual(s, 200);
 assert.strictEqual(s, 429, "ID rotation");
 [s] = await post(run("g000000000000001", 1000), "9.9.9.9");
 assert.strictEqual(s, 200, "a known ID from that IP still sends");
+// two players with the same party code: one group
+[s] = await post(run("hhhhhhhhhhhhhhh01", 1000, {partyCode: "Shroomies"}));
+[s] = await post(run("hhhhhhhhhhhhhhh02", 1000, {partyCode: "shroomies "}));
 const sum = await (await worker.fetch(new Request("https://x/api/summary"), env)).json();
 const a = sum.rows.find(x => x.expHr === 4400);   // player 1: median of 4000 and 4800 EXP/hr
 assert.ok(a && a.runs === 2 && a.map === "42");
-assert.strictEqual(sum.players, 6, "only counted runs: players 1, 5, 6 and the three g IDs");
+assert.strictEqual(sum.players, 8, "only counted runs: players 1, 5, 6, the three g IDs and the two h IDs");
 assert.ok(sum.rows.some(x => x.map === null && x.mapName === "Somewhere New"));
-assert.strictEqual(sum.mobs["2"].items["4000019"], 3 * 2 + 3 * 6 + 3 * 4, "players 1, 5 and the g IDs (4 runs)");
+assert.strictEqual(sum.mobs["2"].items["4000019"], 3 * 2 + 3 * 6 + 3 * 4 + 3 * 2, "players 1, 5, the g IDs (4 runs) and the h IDs");
 assert.ok(!JSON.stringify(sum).includes("aaaaaaaa"), "no install ids in the summary");
+assert.strictEqual(new Set(sum.rows.map(x => x.group)).size, sum.rows.length - 1, "the two party members share a group");
 console.log("server tests passed");

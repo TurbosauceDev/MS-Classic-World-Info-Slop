@@ -34,6 +34,17 @@ const secs = t => { const [lo, hi] = String(t).split(/[-\s]/); const f = s => { 
   return hi && hi !== lo && !hi.startsWith("[") ? `${f(lo)} – ${f(hi)}` : f(lo) };
 const EL = (e, v) => `<span class="pill ${v === "Weak" ? "p-good" : v === "Immune" ? "p-bad" : "p-warn"}">${v === "Weak" ? "weak to" : v === "Immune" ? "immune to" : "resists"} ${esc(e)}</span>`;
 
+// Confirmed Drops: what grind tracker players picked up after kills of this monster (shared runs, D.shared).
+// Counts only the sharing player's own pickups, so party members' loot is missing: read as "at least".
+function confirmed(id){
+  const c = D.shared?.mobs[id];
+  if (!c) return "";
+  const items = Object.entries(c.items).sort((a, b) => b[1] - a[1]);
+  return `<h4>Confirmed Drops <span class="sub">(${fmt(c.kills)} kills by ${c.players} tracker player${c.players > 1 ? "s" : ""}, read ${esc(D.shared.read)})</span></h4>
+    ${items.length ? `<div class="mdrops">${items.map(([iid, n]) => `<span class="mdrop">${icon(iid)}<span><span class="itname" tabindex="0" data-item="${iid}">${esc(D.items[iid].n)}</span> <span class="sub">×${fmt(n)}, ${n > c.kills ? `about ${(n / c.kills).toFixed(1)} per kill` : `about 1 per ${fmt(Math.round(c.kills / n))} kills`}</span></span></span>`).join("")}</div>` : `<p class="sub">No items picked up yet.</p>`}
+    ${c.mesoDrops ? `<p class="sub">Mesos: ${fmt(Math.round(c.mesos / c.mesoDrops))} per pickup, ${fmt(Math.round(c.mesos / c.kills))} per kill</p>` : ""}
+    <p class="sub">Only what the sharing player picked up themselves, so real drop rates are at least this.</p>`;
+}
 function page(o){
   const m = o.m, st = (k, v, t) => v == null ? "" : `<div${t ? ` title="${esc(t)}"` : ""}><dt>${k}</dt><dd>${v}</dd></div>`;
   const flags = [o.kind !== "field" && `<span class="pill ${KIND[o.kind][1]}">${KIND[o.kind][0]}</span>`,
@@ -74,7 +85,7 @@ function page(o){
         ${sure.length ? `<div class="mdrops">${sure.map(drop).join("")}</div>` : `<p class="sub">No confirmed drops reported yet.</p>`}
         ${maybe.length ? `<p class="sub">Reported, not confirmed yet:</p><div class="mdrops dim">${maybe.map(drop).join("")}</div>` : ""}
         ${mats.length ? `<p class="sub">Crafting materials it's known for:</p><div class="ricons">${mats.map(i => icon(i)).join("")}</div>` : ""}
-        <h4>Mesos</h4><p>${meso}</p></div>
+        <h4>Mesos</h4><p>${meso}</p>${confirmed(o.id)}</div>
       ${atk || skills || rev ? `<div><h4>Attacks and skills</h4><ul class="mlist">${atk}${skills}${rev ? `<li><b>When it dies</b> splits into ${rev}</li>` : ""}</ul>${!atk ? `<p class="sub">No special attacks: it only hurts on touch.</p>` : ""}</div>` : ""}
       ${quests ? `<div><h4>Quests that want it</h4><ul class="mlist">${quests}</ul></div>` : ""}
     </div></div>`;

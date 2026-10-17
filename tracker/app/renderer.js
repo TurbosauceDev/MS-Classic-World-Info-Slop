@@ -1,6 +1,6 @@
 // Tracker window: grabs 2 frames a second from the game window, runs the readers, shows the session.
 const G = GAMEDATA, $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString();
-const FPS = 2;
+let FPS = 2;   // drops to 1 a second when reading a frame takes long (big screens, slow PCs)
 let session = null, slicer = null, readers = null, video = null, timer = null, settings = {};
 const canvas = document.createElement("canvas"), g = canvas.getContext("2d", {willReadFrequently: true});
 
@@ -37,6 +37,15 @@ function runInfo(){
   const S = slicer?.current?.state, min = S && S.last !== null ? Math.floor((S.last - S.start) / 6e4) : 0;
   return `shared run ${min}/15 min` + (runsSent ? `, ${runsSent} sent` : "");
 }
+// respawn timers for bosses and slow spawns on this map (respawn times from the game data; players say Mushmom takes longer)
+function renderRespawns(){
+  const list = session.respawns(Date.now()), box = $("#respawn");
+  box.classList.toggle("hidden", !list.length);
+  if (!list.length) return;
+  const mm = ms => { const m = Math.ceil(ms / 6e4); return m > 60 ? Math.floor(m / 60) + " h " + (m % 60) + " min" : m + " min" };
+  box.innerHTML = `<div class="k">Respawns on this map (game data)</div><table>` + list.map(r => `<tr><td>${esc(r.name)}${r.boss ? " (boss)" : ""}</td>
+    <td class="n">${r.killed ? r.dueIn > 0 ? "back in ~" + mm(r.dueIn) : "due now" : "every " + mm(r.sec * 1000)}</td></tr>`).join("") + "</table>";
+}
 function render(){
   const s = session.stats();
   $("#killsHr").textContent = fmt(s.killsHr);
@@ -45,6 +54,7 @@ function render(){
   $("#killsEst").textContent = s.killsEstHr == null ? "" : "~" + fmt(s.killsEstHr) + " with missed lines (est.)";
   $("#ttl").textContent = s.toLevelHrs == null ? "-" : s.toLevelHrs < 1 ? Math.round(s.toLevelHrs * 60) + " min" : s.toLevelHrs.toFixed(1) + " h";
   $("#mesosHr").textContent = fmt(s.mesosHr);
+  renderRespawns();
   $("#miniExp").textContent = fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent;
   $("#miniNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
   $("#lootHr").textContent = fmt(s.lootHr);
@@ -100,30 +110,42 @@ function dropAlert(id){
   $("#status").textContent = `Valuable drop: ${G.items[id]?.n || "item " + id} (worth ~${fmt(worth)})`;
 }
 
-async function start(){
-  await startCapture();
-  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000});
-  // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
-  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun(run) } showSpeed(run) }});
-  readers = GrindReaders.createReaders(G); mapNow = mapSeen = null;
-  // job isn't read from the screen yet: the player picks it
-  if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
-  timer = setInterval(() => {
-    const t = Date.now();
+let slowTicks = 0;
+function tick(){
+  if (timer == null) return;   // stopped
+  const t = Date.now();
+  try {
     const f = grab();
     for (const e of readers.readFrame(f, t)){ session.add(e); slicer.add(e); if (e.type === "item") dropAlert(e.id) }
     if (t - lastOcr > 5000){ lastOcr = t; readMap(f, t) }
     render();
-  }, 1000 / FPS);
+  } catch (err){ $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
+  // over 250 ms a frame, 10 times running: read once a second instead of twice
+  const ms = Date.now() - t;
+  slowTicks = ms > 250 ? slowTicks + 1 : 0;
+  if (slowTicks >= 10 && FPS === 2){ FPS = 1; $("#status").textContent = "Reading once a second to keep your PC smooth (big screen)." }
+  timer = setTimeout(tick, Math.max(50, 1000 / FPS - ms));
+}
+
+async function start(){
+  await startCapture();
+  timer = 0;   // running (the first tick sets the real timeout)
+  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000});
+  // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
+  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
+  readers = GrindReaders.createReaders(G); mapNow = mapSeen = null;
+  // job isn't read from the screen yet: the player picks it
+  if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
+  tick();
   $("#go").textContent = "Stop";
 }
 async function stop(){
-  clearInterval(timer); timer = null;
+  clearTimeout(timer); timer = null;
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable()});
   $("#go").textContent = "Start";
 }
-$("#go").onclick = () => timer ? stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
+$("#go").onclick = () => timer != null ? stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
 
 // one full frame every 3 s for 3 minutes, saved as PNG: material for building and testing the readers
 $("#frames").onclick = async () => {
@@ -139,6 +161,7 @@ $("#frames").onclick = async () => {
   }, 3000);
 };
 
+$("#pcode").onchange = e => host.settings({partyCode: e.target.value.trim().slice(0, 20)}).then(s => settings = s);
 $("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.value || 0)}).then(s => settings = s);
 $("#miniBtn").onclick = () => { document.body.classList.add("mini"); host.mini(true) };
 $("#mini").onclick = () => { document.body.classList.remove("mini"); host.mini(false) };
@@ -162,6 +185,7 @@ $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
   $("#job").value = settings.job || "";
   $("#ontop").checked = settings.onTop !== false;
   $("#alert").value = settings.alertWorth || 0;
+  $("#pcode").value = settings.partyCode || "";
   const found = await host.gameFound();
   $("#status").textContent = found ? "MapleStory window found." : "Start MapleStory, then press Start.";
 })();

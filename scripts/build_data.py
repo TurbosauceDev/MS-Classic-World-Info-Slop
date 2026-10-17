@@ -620,7 +620,16 @@ def step_prices(D):
     j = json.load(open(ROOT / "data" / "sources" / "mesowatch_prices.json"))
     D["pw"] = {"read": j["read"], "it": {k: v for k, v in j["items"].items() if k in D["items"]}}
 
-PARTIAL = {"prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D))}   # (key it owns, step)
+def step_shared(D):
+    """shared {read, runs, players, hours, mobs: {mobId: {kills, mesos, mesoDrops, players, items: {itemId: n}}}}: what grind
+    tracker players picked up per monster (scripts/fetch_shared.py; our server). Only monsters and items the page knows."""
+    f = ROOT / "data" / "sources" / "shared_runs.json"
+    if not f.exists(): return
+    j = json.load(open(f))
+    mobs = {k: {**v, "items": {i: n for i, n in v["items"].items() if i in D["items"]}} for k, v in j["mobs"].items() if k in D["mobdb"] and v["kills"] > 0}
+    D["shared"] = {"read": j["read"], "runs": j["runs"], "players": j["players"], "hours": j["hours"], "mobs": mobs}
+
+PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)
@@ -632,7 +641,7 @@ if __name__ == "__main__":
     D = step_base()
     step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D)
     D = json.loads(json.dumps(D))  # str keys, as in the partial rebuild path (crafting/extras look mobs up by str id)
-    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D); step_itemdb(D); step_kpq(D); step_prices(D)
+    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D); step_itemdb(D); step_kpq(D); step_prices(D); step_shared(D)
     for k in ("mobdiff", "skilldiff", "latermobnames"): D.pop(k, None)   # only the removed "What changed since 2008" tab used these
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees
     (ROOT / "data").mkdir(exist_ok=True)

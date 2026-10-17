@@ -14,6 +14,15 @@ for (const k of D.kpq || []){
   G.maps[k.id] = [k.name, 1, Object.entries(n).map(([id, c]) => [+id, c])];
   G.mapnames = {...G.mapnames, [k.id]: k.name};
 }
+// timed spawns (bosses and slow respawns; D.timed rows [mob, name, level, hp, exp, map, mapName, count, respawn s, boss]):
+// map -> [[mob, respawn s, boss]]; those monsters join their map's list so their kills are recognised
+G.timed = {};
+for (const [mob, name, level, hp, exp, map, mapName, , sec, boss] of D.timed || []){
+  if (!G.maps[map]){ G.maps[map] = [mapName, 1, []]; G.mapnames = {...G.mapnames, [map]: G.mapnames[map] || mapName} }
+  if (!G.mobs[mob]) G.mobs[mob] = [name, level, hp, exp];   // bosses aren't in D.mobs
+  (G.timed[map] = G.timed[map] || []).push([String(mob), sec, boss]);
+  if (G.maps[map] && !G.maps[map][2].some(([id]) => String(id) === String(mob))) G.maps[map] = [G.maps[map][0], G.maps[map][1], [...G.maps[map][2], [+mob, 0]]];
+}
 fs.writeFileSync(path.join(__dirname, "app/gamedata.json"), JSON.stringify(G));   // tests
 fs.writeFileSync(path.join(__dirname, "app/gamedata.js"), "const GAMEDATA = " + JSON.stringify(G) + ";\n");   // the app (no fetch of file: URLs)
 // the site's screenshot reader (game digit font, un-doubling, icon matching) is shared, not forked

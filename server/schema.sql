@@ -19,5 +19,7 @@ CREATE INDEX IF NOT EXISTS runs_map ON runs (map, party);
 CREATE INDEX IF NOT EXISTS runs_install ON runs (install, received);
 CREATE INDEX IF NOT EXISTS runs_ipday ON runs (ipday);
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
+-- party code (salted hash) a run was sent with: one party = one group in the "3 players" rules
+CREATE TABLE IF NOT EXISTS run_groups (run_id INTEGER PRIMARY KEY, grp TEXT NOT NULL);
 -- test run sent by hand on 2026-10-17 (not real farming)
 DELETE FROM runs WHERE install = 'zzzzzzzzzzzzzzzzzz';

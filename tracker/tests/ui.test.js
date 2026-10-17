@@ -21,6 +21,10 @@ const path = require("path"), {chromium} = require("playwright");
     session.add({t: t + 5000, type: "exp", gain: 4}); session.add({t: t + 5100, type: "meso", amount: 12}); session.add({t: t + 5200, type: "item", id: 4000019}) });
   await page.waitForTimeout(800);
   const mobs = await page.textContent("#mobs"), items = await page.textContent("#items");
+  // Mano killed on his map: respawn timer shows
+  await page.evaluate(() => { const t = Date.now(); session.add({t, type: "map", id: 10000013}); session.add({t, type: "exp", gain: 148}); render() });
+  const respawn = await page.textContent("#respawn");
+  if (!/Mano \(boss\)/.test(respawn) || !/back in ~60 min/.test(respawn)) throw new Error("respawn: " + respawn);
   await page.click("#go");
   await page.waitForTimeout(200);
   const saved = await page.evaluate(() => window.saved);
@@ -40,6 +44,6 @@ const path = require("path"), {chromium} = require("playwright");
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (!/Red Snail/.test(mobs) || !/Blue Snail/.test(mobs)) throw new Error("mobs table: " + mobs);
   if (!/Horny Mushroom Cap/.test(items)) throw new Error("items table: " + items);
-  if (!saved || saved.kills !== 2 || !saved.shared) throw new Error("saved session: " + JSON.stringify(saved));
+  if (!saved || saved.kills !== 3 || !saved.shared) throw new Error("saved session: " + JSON.stringify(saved));
   console.log("ui test passed");
 })().catch(e => { console.error(e.message); process.exit(1) });
