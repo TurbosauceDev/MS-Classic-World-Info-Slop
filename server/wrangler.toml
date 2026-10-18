@@ -1,0 +1,9 @@
+# Deployed by .github/workflows/server.yml (database_id is filled in there from the account's "ms-classic-runs" database)
+name = "ms-classic-tracker"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ms-classic-runs"
+database_id = "FILLED_IN_BY_DEPLOY"

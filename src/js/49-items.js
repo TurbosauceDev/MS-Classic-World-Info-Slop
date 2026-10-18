@@ -15,6 +15,8 @@ for (const [src, list] of [["q", QLAUNCH], ["cit", D.citq]]) for (const r of lis
 const BYNAME = {}; for (const [id, it] of Object.entries(D.items)) (BYNAME[it.n] = BYNAME[it.n] || []).push(id);
 const wantsOf = (id, it) => { const ids = BYNAME[it.n]; return ids.length > 1 && it.c === "Equipment" && ids.some(x => D.items[x].c !== "Equipment") ? [] : WANT[it.n] || [] };
 const WSRC_BY_ID = {}; for (const w of D.weapons) if (D.wsrc[w[0]]) WSRC_BY_ID[w[12]] = D.wsrc[w[0]];
+// Confirmed Drops (grind tracker shared runs, D.shared): item -> [[mob, picked up, kills]]
+const CDROP = {}; for (const [m, c] of Object.entries(D.shared?.mobs || {})) for (const [iid, n] of Object.entries(c.items)) (CDROP[iid] = CDROP[iid] || []).push([m, n, c.kills]);
 const mobId = name => Object.keys(D.mobdb).find(k => D.mobdb[k].name === name);
 
 // quest items: the client's quest-item ID block (403xxxx: letters, proofs, quest pieces), plus anything a quest hands you at its start
@@ -25,7 +27,7 @@ const I = Object.entries(D.items).map(([id, it]) => {
   const wdrop = (WSRC_BY_ID[id]?.drops || []).map(([n, lv]) => [mobId(n), n, lv]);
   const shop = [...(D.ishop[id] || [])], ss = D.shopsell[id]; if (ss && !shop.some(s => s[0] === ss[0])) shop.push([ss[0], "", ss[1], ss[2]]);
   const o = {id, it, cat: CAT[it.c] || it.c || "Other", lv: it.st?.reqLevel || 0, drops, named, wdrop, shop, make: MAKE[id] || [], rew: REW[id] || []};
-  o.src = [drops.length || named.length || wdrop.length ? "drop" : "", shop.length ? "shop" : "", o.make.length ? "craft" : "", o.rew.length ? "quest" : ""].filter(Boolean);
+  o.src = [drops.length || named.length || wdrop.length || CDROP[id]?.length ? "drop" : "", shop.length ? "shop" : "", o.make.length ? "craft" : "", o.rew.length ? "quest" : ""].filter(Boolean);
   o.hay = [it.n, it.wt || it.s, ...drops.map(([m]) => D.mobdb[m].name), ...named.map(m => D.mobdb[m].name), ...wdrop.map(x => x[1])].join("|").toLowerCase();
   o.quest = QITEM(id, it);
   o.use = [USE[id] ? "craft" : "", wantsOf(id, it).length ? "quest" : ""].filter(Boolean);
@@ -77,6 +79,8 @@ function page(o){
   const drops = [...sure.sort((a, b) => b[1] - a[1]).map(([m, v]) => `<li>${mob(m)} <span class="sub">+${v}</span></li>`),
     ...o.named.map(m => `<li>${mob(m)} <span class="sub">${D.craft.src[o.id]?.meow?.includes(m) ? "meowdb farming guide" : "named after it in the game files"}</span></li>`),
     ...o.wdrop.filter(x => !sure.some(y => y[0] === x[0])).map(([m, n, lv]) => `<li>${m ? mob(m) : `${esc(n)} <span class="sub">Lv ${lv}</span>`} <span class="sub">${WSRC_BY_ID[o.id].dropsFrom === "msea" ? "old MapleSEA list, likely" : "player report"}</span></li>`)].join("");
+  const cdrop = (CDROP[o.id] || []).filter(([m]) => D.mobdb[m]).sort((a, b) => b[1] / b[2] - a[1] / a[2])
+    .map(([m, n, k]) => `<li>${mob(m)} <span class="sub">×${fmt(n)} in ${fmt(k)} kills, ${dropRate(n, k)}</span></li>`).join("");
   const shops = o.shop.sort((a, b) => a[3] - b[3]).map(x => `<li>${place(x)} <span class="sub">${fmt(x[3])} mesos</span></li>`).join("");
   const recipe = r => `<li><b>${esc(DISC[r[0]])}</b> <span class="sub">craft Lv ${r[2]} · ${fmt(r[6])} mesos${r[4] > 1 ? ` · makes ${r[4]}` : ""}</span><div class="ilist">${r[7].map(([id, n]) => iname(id, n)).join("")}</div></li>`;
   const rew = o.rew.map(([src, r, n, ch, k, job]) => `<li>${qn([src, r])} <span class="sub">${[n > 1 && "×" + fmt(n), k, ch != null && ch + "% chance", job && job !== "Any Class" && job].filter(Boolean).map(esc).join(" · ")}</span></li>`).join("");
@@ -97,6 +101,7 @@ function page(o){
     <h3 class="msec">Where to get it</h3>
     <div class="mcols">
       ${card(`Monster drops <span class="sub">(meowdb player reports, + = net votes)</span>`, drops, "No drop reports yet.")}
+      ${cdrop ? card(`Confirmed Drops <span class="sub">(grind tracker players' own pickups, read ${esc(D.shared.read)}; real rates are at least this)</span>`, cdrop) : ""}
       ${card("Sold by", shops, "No NPC shop sells it (meowdb shop list).")}
       ${card("Crafted", (o.make).map(recipe).join(""), "No recipe makes it.")}
       ${card("Quest reward", rew, "No quest gives it.")}

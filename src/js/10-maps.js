@@ -194,6 +194,29 @@ function pwHtml(id, long){ const p = PW[id]; if (!p) return "";
 const LOOT_BY_MOB = {}; for (const [it, ms] of Object.entries(D.drops || {})) if ((it.startsWith("4000") || POTION_IDS.includes(it)) && D.items[it]?.p) for (const [mob] of ms) (LOOT_BY_MOB[mob] ||= []).push(it);
 const lootKill = (mob, pw) => (LOOT_BY_MOB[mob] || []).reduce((a, it) => a + (pw && pwSolid(it) || D.items[it].p), 0);
 function lootHr(r, rate, pw){ let v = 0; for (const [id, c] of D.maps[r.id]?.[2] || []) v += c * r.rate / r.cyc * lootKill(id, pw); return v * rate * 3600 }
+// Players' EXP/hr on a map: grind tracker runs shared by players within 5 levels, solo or party like you (D.shared.rows, one
+// row per player = their typical run). Shown only once 3+ separate players or parties ran it; runs under half or over double
+// the median are dropped (same rules as the tracker's speed check and beanguri's overlay).
+const median = a => { const s = [...a].sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[n >> 1] : (s[n / 2 - 1] + s[n / 2]) / 2) : null };
+function playersExp(map, L, party){
+  const a = (D.shared?.rows || []).filter(r => r[0] === String(map) && r[1] === (party > 1 ? 1 : 0) && Math.abs(r[2] - L) <= 5);
+  if (!a.length) return null;
+  const m = median(a.map(r => r[3])), kept = a.filter(r => r[3] >= m / 2 && r[3] <= m * 2), groups = new Set(kept.map(r => r[4])).size;
+  const dh = kept.map(r => r[5]).filter(v => v != null);   // deaths/hr: trackers from 0.2.2 on
+  const uh = kept.map(r => r[6]).filter(v => v != null);   // mesos/hr on potions, food, arrows: trackers from 0.2.6 on
+  return groups >= 3 ? {expHr: median(kept.map(r => r[3])), groups, lo: Math.min(...kept.map(r => r[2])), hi: Math.max(...kept.map(r => r[2])),
+    deathsHr: dh.length >= 3 ? median(dh) : null, usedHr: uh.length >= 3 ? median(uh) : null} : null;
+}
+const peLine = (pe, party) => `<div class="sub" title="Median of ${pe.groups} grind tracker players or parties at level ${pe.lo}-${pe.hi} (${party > 1 ? "party" : "solo"}), shared runs read ${esc(D.shared.read)}">players: ${fmt(pe.expHr)}${pe.deathsHr != null ? ` · ${+pe.deathsHr.toFixed(1)} death${+pe.deathsHr.toFixed(1) === 1 ? "" : "s"}/hr` : ""}${pe.usedHr != null ? ` · pots/ammo ${fmt(pe.usedHr)}/hr` : ""}</div>`;
+// best time to farm: shared runs by time of day (3-hour blocks), each run against the same player's usual speed on the map
+// (D.shared.times; a block shows once 3+ players ran it then). Hours are shown in the viewer's own time zone.
+const localHour = h => new Date(Date.UTC(2026, 0, 1, h)).toLocaleTimeString([], {hour: "numeric"});
+function bestTime(map){
+  const t = D.shared?.times?.[String(map)]; if (!t) return null;
+  const best = t.reduce((a, b) => b[1] > a[1] ? b : a);
+  return best[1] >= 1.05 ? {from: localHour(best[0]), to: localHour((best[0] + 3) % 24), pct: Math.round((best[1] - 1) * 100), players: best[2], blocks: t.length} : null;
+}
+const btLine = bt => bt ? `<div class="sub" title="Grind tracker runs on this map by time of day, each against the same player's usual speed there (${bt.players} players in the best 3 hours; ${bt.blocks} time blocks with 3+ players). Your time zone.">best time: ${bt.from}-${bt.to} (+${bt.pct}%)</div>` : "";
 function rankMaps(){
   let cls = $("#cls").value, L = +$("#lvl").value || 25;
   const basic = $("#aoe").value === "basic", fb = trainBuild(cls, L), {dps, src} = trainDps(cls, L, fb, basic), frugal = $("#tmode").value === "frugal", pm = (fb.pct || 100) / 100;
@@ -211,9 +234,14 @@ function rankMaps(){
   const party = +$("#party").value || 1, hitsh = +$("#hitsh").value, cost = basic ? {mesoHr: ammoP * 3600 / basicIv(fb)} : COST_FROM_BUILDER || (frugal ? fb.cost : null);
   let rows = mapRates(cls, L, dps, acc, 12, area, party), far = false;
   if (!rows.length){ rows = mapRates(cls, L, dps, acc, Infinity, area, party); far = rows.length > 0 }   // nothing near your level: best of the rest
+  // "Farmed by players": only maps grind tracker players around your level shared runs on, fastest for them first
+  const byPlayers = $("#tmode").value === "players";
+  if (byPlayers){ rows = mapRates(cls, L, dps, acc, Infinity, area, party).map(r => ({...r, pe: playersExp(r.id, L, party)})).filter(r => r.pe).sort((a, b) => b.pe.expHr - a.pe.expHr); far = false }
   let loss = false;
   if (frugal){
-    for (const r of rows){ r.dng = mapDanger(r.id, L, def); r.up = (cost?.mesoHr || 0) * (r.att ?? 1); r.hitc = hitCostHr(r, L, def, hitsh); r.loot = lootHr(r, +$("#lootr").value, $("#lootp").value === "pw"); r.net = r.meso * 3600 + r.loot - r.up - r.hitc }
+    for (const r of rows){ r.dng = mapDanger(r.id, L, def); r.up = (cost?.mesoHr || 0) * (r.att ?? 1); r.hitc = hitCostHr(r, L, def, hitsh);
+      // what tracker players near your level really spent there on potions, food and ammo replaces both estimates
+      const pe = r.pe || playersExp(r.id, L, party); if (pe?.usedHr != null){ r.real = pe.usedHr; r.up = pe.usedHr; r.hitc = 0 } r.loot = lootHr(r, +$("#lootr").value, $("#lootp").value === "pw"); r.net = r.meso * 3600 + r.loot - r.up - r.hitc }
     const ok = rows.filter(r => r.net > 0 && r.dng.f < 0.25);
     if (ok.length) rows = ok; else { rows.sort((a, b) => b.net - a.net); loss = rows.length > 0 }
   }
@@ -226,10 +254,10 @@ function rankMaps(){
     <td class="num">${r.hit < .9 ? `<span class="pill p-warn">${Math.round(r.hit*100)}%</span>` : Math.round(r.hit*100) + "%"}</td>
     <td>${dangerPill(r.dng || mapDanger(r.id, L, def))}</td><td class="sub">${esc(potsText(r.id))}</td>
     <td><span class="bar"><i style="width:${Math.round(100*r.rate/best)}%"></i></span><span class="mono">${Math.round(100*r.rate/best)}</span></td>
-    <td class="num">${fmt(r.rate*3600)}</td>
-    <td class="num">${fmt(r.meso*3600)}${frugal ? `<div class="sub" title="Mesos ${fmt(r.meso * 3600)} + loot sold ${fmt(r.loot)} − upkeep ${fmt(r.up)} − getting hit ${fmt(r.hitc)} per hr">net <b${r.net > 0 ? "" : ' style="color:var(--bad)"'}>${r.net > 0 ? "+" : ""}${fmt(r.net)}</b></div>` : cost ? `<div class="sub">net ${fmt(r.meso*3600 - cost.mesoHr * (r.att ?? 1))}</div>` : ""}</td>
+    <td class="num">${fmt(r.rate*3600)}${(pe => pe ? peLine(pe, party) : "")(r.pe || playersExp(r.id, L, party))}${btLine(bestTime(r.id))}</td>
+    <td class="num">${fmt(r.meso*3600)}${frugal ? `<div class="sub" title="Mesos ${fmt(r.meso * 3600)} + loot sold ${fmt(r.loot)} − ${r.real != null ? `potions/food/ammo players really used ${fmt(r.real)}` : `upkeep ${fmt(r.up)} − getting hit ${fmt(r.hitc)}`} per hr">net <b${r.net > 0 ? "" : ' style="color:var(--bad)"'}>${r.net > 0 ? "+" : ""}${fmt(r.net)}</b>${r.real != null ? " (players' costs)" : ""}</div>` : cost ? `<div class="sub">net ${fmt(r.meso*3600 - cost.mesoHr * (r.att ?? 1))}</div>` : ""}</td>
     <td class="num">${need ? (need/(r.rate*3600)).toFixed(1) : "–"}</td></tr>`).join("")
-    : `<tr><td colspan="12" class="empty">No map fits this level and class. Try a different level.</td></tr>`;
+    : `<tr><td colspan="12" class="empty">${byPlayers ? `No map has runs from 3+ grind tracker players or parties within 5 levels of ${L} (${party > 1 ? "party" : "solo"}) yet.` : "No map fits this level and class. Try a different level."}</td></tr>`;
   const how = basic ? `basic attacks (100%, one hit), ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${esc(fb.weapon || "a default weapon")}'s speed`
     : `${esc(fb.skill || "a basic attack")}${fb.pct && fb.pct !== 100 ? ` (${fb.pct}%${fb.hits > 1 ? ` × ${fb.hits}` : ""})` : ""}, ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${fb.magic ? "spell speed" : `its weapon's speed (${esc(fb.weapon || "?")})`}`;
   $("#mapnote").innerHTML = `Damage: <b>${fmt(Math.round(dps))}</b>/s ${src === "builder" ? "from your Character Builder setup" : src === "you" ? `from your ${magIn ? "Magic and INT" : "Attack range"} with ${how}, from the default build at your level` : src === "default" ? `from the Character Builder's default build at level ${L} (${esc(fb.weapon || "")}, ${basic ? "basic attacks" : esc(fb.skill || "")}); type your stat-window ${magIn ? "Magic and INT" : "Attack range"} for your own` : `a rough guess (20 × level)${basic && fb.magic ? "; type your stat-window Attack range for wand or staff hits" : ""}`}. `
@@ -241,10 +269,10 @@ function rankMaps(){
     + (party > 1 ? ` Party of ${party}: your share of the EXP plus the ${Math.round(partyBonus(party) * 100)}% party bonus, map spawns at ${Math.round(partyCap(party) * 100)}% (assumes equal players splitting kills).` : "")
     + ` Danger: one touch from the map's hardest hitter as a share of ${DEF_FROM_BUILDER || statNum("#uhp") != null ? "your" : "a typical"} Max HP (${fmt(def.hp)}), before armor.`
     + ` Mesos/hr = monster meso drops: player reports on meowdb for ${Object.keys(D.meso || {}).length} monsters, the rest estimated at ${D.mesok} mesos per monster level (what the reported ones average). Loot sold to NPCs isn't counted.`
-    + (frugal ? ` <b>Frugal:</b> only maps that pay for themselves and aren't Danger/Lethal, fastest EXP first. Net = mesos/hr minus ${basic ? (ammoP ? `ammo for basic attacks` : "nothing for basic attacks") : COST_FROM_BUILDER ? "your build's skill potions and ammo" : `a default ${esc(cls)} build's skill potions and ammo`} (${fmt(cost?.mesoHr || 0)}/hr attacking nonstop, times the time spent attacking) minus Red Potions for getting hit (estimate: ${({"0.1": "1 in 10", "0.25": "1 in 4", "0.5": "half", "1": "every one"})[$("#hitsh").value]} of the monsters you kill attack${hitsh === 1 ? "s" : ""} you once, at their hit chance against your avoid, no armor). ${+$("#lootr").value ? `Plus loot sold to NPCs: each monster's reported ETC item and potion drops (meowdb player reports) at ${Math.round($("#lootr").value * 100)}% per kill each (an assumption: drop rates aren't in the game files), ${$("#lootp").value === "pw" ? "at the median player-shop sale price (meso.watch, " + D.pw.read + ") where it has 5+ sales, else NPC sell price; selling to players takes a shop and time" : "at NPC sell price"}; ores, gems, equips and scrolls aren't counted.` : "Loot sold to NPCs isn't counted."} Potions its monsters drop are listed under the map name.`
+    + (frugal ? ` <b>Frugal:</b> only maps that pay for themselves and aren't Danger/Lethal, fastest EXP first. Net = mesos/hr minus ${basic ? (ammoP ? `ammo for basic attacks` : "nothing for basic attacks") : COST_FROM_BUILDER ? "your build's skill potions and ammo" : `a default ${esc(cls)} build's skill potions and ammo`} (${fmt(cost?.mesoHr || 0)}/hr attacking nonstop, times the time spent attacking) minus Red Potions for getting hit (estimate: ${({"0.1": "1 in 10", "0.25": "1 in 4", "0.5": "half", "1": "every one"})[$("#hitsh").value]} of the monsters you kill attack${hitsh === 1 ? "s" : ""} you once, at their hit chance against your avoid, no armor). ${+$("#lootr").value ? `Plus loot sold to NPCs: each monster's reported ETC item and potion drops (meowdb player reports) at ${Math.round($("#lootr").value * 100)}% per kill each (an assumption: drop rates aren't in the game files), ${$("#lootp").value === "pw" ? "at the median player-shop sale price (meso.watch, " + D.pw.read + ") where it has 5+ sales, else NPC sell price; selling to players takes a shop and time" : "at NPC sell price"}; ores, gems, equips and scrolls aren't counted.` : "Loot sold to NPCs isn't counted."} Potions its monsters drop are listed under the map name.${rows.some(r => r.real != null) ? ` "(players' costs)": instead of both estimates, what grind tracker players near your level really spent there on potions, food and ammo (median, 3+ players).` : ""}`
       + (loss ? ` <b>No map comes out meso positive at this level and damage</b>; these lose the least.` : "") : "")
     + (!frugal && COST_FROM_BUILDER ? ` Your build's potions and ammo: up to ${fmt(COST_FROM_BUILDER.mesoHr)} mesos/hr while attacking nonstop; on the top map you attack about ${Math.round((top[0]?.att ?? 1) * 100)}% of the time, so about ${fmt(COST_FROM_BUILDER.mesoHr * (top[0]?.att ?? 1))}/hr. "net" = mesos/hr minus that.` : "")
-    + ` EXP/hr is a model estimate${party > 1 ? "" : ", solo"}.`
+    + ` EXP/hr is a model estimate${party > 1 ? "" : ", solo"}.` + (D.shared?.rows?.length ? ` "players:" under it = what grind tracker players around your level really got there (median, shown once 3+ players or parties ran the map).` : "") + (Object.keys(D.shared?.times || {}).length ? ` "best time:" = the 3 hours of the day (your time) when tracker players farm that map fastest compared with their own usual speed there.` : "")
     + (far ? ` <b>No map has monsters within 12 levels of you</b> (Victoria Island tops out around level 60-75), so these are the best of the rest.` : "");
 }
 ["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; AOE_FROM_BUILDER = null; DEF_FROM_BUILDER = null; COST_FROM_BUILDER = null; DPS_FROM_BUILDER = null; rankMaps() }));

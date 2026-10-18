@@ -156,7 +156,7 @@ function card(i, lone){
   const rest = open.filter(id => !fights.includes(id));
   const rows = fights.map(id => { const r = R[id], mp = D.maps[id], dg = mp?.[2]?.length && DEF ? mapDanger(id, +S.lv || 10, DEF) : null;
     return `<tr class="wmrow${id === mmId ? " sel" : ""}" data-map="${id}"><td>${mapLink(id, mapName(id))}${mp && !mp[1] ? ' <span class="pill p-warn">not at launch</span>' : ""}${uvOn() && id in UV ? ' <span class="pill p-good">quieter pick</span>' : uvOn() && UV_PACKED[id] ? ' <span class="pill p-warn">busy</span>' : ""}<div class="sub">${mobRange([id])}</div></td>
-      <td>${dg ? dangerPill({f: dg.f}) : ""}</td><td class="num">${r && mp?.[1] ? fmt(r.rate * 3600) : "–"}</td></tr>` }).join("");
+      <td>${dg ? dangerPill({f: dg.f}) : ""}</td><td class="num">${r && mp?.[1] ? fmt(r.rate * 3600) : "–"}${(pe => pe ? peLine(pe, 1) : "")(playersExp(id, +S.lv || 10, 1))}${btLine(bestTime(id))}</td></tr>` }).join("");
   const mobRows = Object.entries(mobs).sort((a, b) => D.mobs[a[0]][1] - D.mobs[b[0]][1]).map(([m, c]) => { const x = D.mobs[m];
     return `<li>${mobLink(m)} <span>Lv ${x[1]} · ${fmt(x[2])} HP · ${fmt(x[3])} EXP · ×${c}</span></li>` }).join("");
   const svc = [cab ? "Cab" : "", ...pots.map(id => `Potions: ${npcLink(POT[id])} (${esc(mapName(id))})`)].filter(Boolean);
