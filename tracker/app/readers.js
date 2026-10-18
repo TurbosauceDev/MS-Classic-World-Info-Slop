@@ -653,7 +653,7 @@
     // learned boxes: the counts and the meso total are looked for only where they were last found, and over the whole
     // frame every 10 s (new windows opened) or as soon as nothing is found there
     let countBox = null, lastFullCounts = -Infinity, mesoBox = null, lastFullMeso = -Infinity;
-    const gone = new Map();   // item -> its count when it left the screen
+    const gone = new Map(), pend = new Map();   // item -> its total when it left the screen (pend: back, checked next read)
     const iconCache = new Map();   // spot -> [color sample, id]: icon matching only when the picture there changed
     // the player's marked area (fractions of the frame), turned into native pixels with a little room around it
     let area = null;
@@ -675,11 +675,7 @@
         if (id === undefined){ id = iconAt(img, num, icons); if (iconCache.size > 500) iconCache.clear(); iconCache.set(key, [sample, id]) }
         if (!id) continue;
         const was = spots.get(key);
-        if (!was || was.id !== id){
-          // back on screen after being hidden (arrows only show while the Use tab is open): what went down meanwhile was used
-          const g = gone.get(id), cap = String(id).startsWith("206") ? 2000 : 20;
-          if (g !== undefined && num.n < g && g - num.n <= cap) drops[id] = Math.max(drops[id] || 0, g - num.n);
-          gone.delete(id); now.set(key, {id, n: num.n, next: null}); continue }
+        if (!was || was.id !== id){ now.set(key, {id, n: num.n, next: null}); continue }
         // a new value is taken once the next read agrees: the same again, or (arrows while shooting) lower still
         let {n, next} = was; const v = num.n;
         if (v === n) next = null;
@@ -687,8 +683,19 @@
         else next = v;
         now.set(key, {id, n, next});
       }
-      const seen = new Set([...now.values()].map(v => v.id));
-      for (const v of spots.values()) if (!seen.has(v.id)) gone.set(v.id, v.n);
+      // an item back on screen after being hidden (arrows only show while the Use tab is open): what its total (all its
+      // stacks) went down by meanwhile was used. Totals, not single spots: two arrow stacks would otherwise read as a drop
+      const total = m => { const o = {}; for (const v of m.values()) o[v.id] = (o[v.id] || 0) + v.n; return o };
+      const before = total(spots), after = total(now);
+      for (const [id, n] of Object.entries(before)) if (!(id in after)) gone.set(id, n);
+      // counted on the read after it's back (the bigger of the two totals), so a stack missed on one read isn't a drop
+      for (const [id, g] of [...pend]){
+        if (!(id in after)){ pend.delete(id); gone.set(id, g); continue }   // gone again: keep the older total
+        const n = Math.max(after[id], before[id] || 0), cap = String(id).startsWith("206") ? 2000 : 20;
+        if (n < g && g - n <= cap) drops[id] = Math.max(drops[id] || 0, g - n);
+        pend.delete(id);
+      }
+      for (const id of Object.keys(after)) if (!(id in before) && gone.has(id)){ pend.set(id, gone.get(id)); gone.delete(id) }
       spots = now; info.counts = nums.length; info.useSpots = now.size;
       const ev = Object.entries(drops).map(([id, n]) => ({t, type: "use", id, n}));
       // once a minute while counts are visible: the session knows "nothing used" is a real 0, not "couldn't see"

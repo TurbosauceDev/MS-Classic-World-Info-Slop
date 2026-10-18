@@ -518,9 +518,12 @@ $("#invTabs").onclick = async e => {
   const b = e.target.closest("[data-tab]"); if (!b) return;
   const tab = b.dataset.tab, name = INV_TABS.find(x => x[0] === tab)[1], say = t => $("#status").textContent = t;
   if (timer == null || !engine?.invNow) return say("Press Start first, then click a tab to read it.");
-  const wait = async () => { engine.invNow(); for (let i = 0; i < 8; i++){ await new Promise(r => setTimeout(r, 500)); if (lastInvTab === tab) return true } return false };
+  // read = a new reading of that tab reached the session after the click (a tab counts once two reads agree, ~4 s)
+  const wait = async () => { const t0 = Date.now(); lastInvTab = null; engine.invNow();
+    for (let i = 0; i < 16; i++){ await new Promise(r => setTimeout(r, 500)); if ((session?.stats().invTabs?.[tab]?.last || 0) >= t0) return true } return false };
   say(`Reading your ${name} tab: have it open in the game...`);
   if (await wait()) return say(`${name} tab read.`);
+  if (timer == null) return;
   if (lastInvTab) return say(`That's your ${INV_TABS.find(x => x[0] === lastInvTab)[1]} tab: switch the inventory to ${name} and click again.`);
   say("Couldn't find your inventory: drag a box around it (with the " + name + " tab open).");
   const f = await oneFrame(), c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
@@ -543,7 +546,7 @@ async function start(){
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: settings.goal || 0}); stopWarned = false;
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
-  check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
+  $("#stopAnyway").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   kpqReset(); barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
   engine = makeEngine(ICONS, settings.countArea || null, settings.invArea || null); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
