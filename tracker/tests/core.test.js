@@ -267,4 +267,9 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
 { const s = createSession(G); s.add({t: sec(0), type: "map", id: "80000100"}); s.add({t: sec(1), type: "bar", exp: 1000, pct: 10, level: 20});
   s.add({t: sec(241), type: "bar", exp: 1600, pct: 16, level: 20});
   assert.ok(s.state.activeMs >= 240e3, "KPQ stage time counted: " + s.state.activeMs) }
+// paused by hand (hold): EXP read meanwhile doesn't restart the clock; "resume" does; works before anything was read too
+{ const s = createSession(G); s.add({t: sec(0), type: "pause", hold: true});
+  s.add({t: sec(10), type: "exp", gain: 5}); assert.ok(s.state.pausedAt !== null && s.state.held, "still paused by hand");
+  s.add({t: sec(100), type: "resume"}); s.add({t: sec(110), type: "exp", gain: 5}); s.add({t: sec(130), type: "exp", gain: 5});
+  assert.strictEqual(s.state.pausedAt, null); assert.strictEqual(s.state.activeMs, 20e3, "only the time after Go on counts") }
 console.log("core tests passed");

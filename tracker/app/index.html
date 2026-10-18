@@ -5,15 +5,16 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:">
 <title>MS Classic Grind Tracker</title>
 <style>
-  :root { --bg:#f6f4fb; --panel:#fff; --ink:#2b2638; --muted:#6f6880; --line:#e2dcef; --accent:#7b5cc4; --accent-soft:#ece5fa; --leaf:#3f8f5a; --warn:#b7791f; --bad:#c0392b; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#17141f; --panel:#211d2c; --ink:#ece8f5; --muted:#a39cb5; --line:#363044; --accent:#a98bf0; --accent-soft:#2e2640; --leaf:#5fbf7f; --warn:#e0a84a; --bad:#ef6b5b; } }
+  /* the colours: themes.js sets these from the chosen theme (Settings > Theme); these are the default Purple, for the first paint */
+  :root { --bg:#f8f6fe; --panel:#fff; --ink:#2b2638; --muted:#6c6580; --line:#e3dcf2; --accent:#8566d6; --accent-soft:#efe8ff; --on-accent:#fff; --leaf:#3f8f5a; --warn:#b7791f; --bad:#c0392b; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1d1929; --panel:#282338; --ink:#f0ecf8; --muted:#aba3bf; --line:#3e3651; --accent:#b49bff; --accent-soft:#362d4e; --on-accent:#1d1929; --leaf:#64c784; --warn:#e6ad52; --bad:#f2705f; } }
   * { box-sizing:border-box; }
   body { margin:0; padding:42px 10px 10px; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; }
   .k { color:var(--muted); font-size:12px; } .v { font-size:18px; font-weight:600; font-variant-numeric:tabular-nums; }
   h3 { margin:0 0 6px; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
-  button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:7px 12px; font:inherit; cursor:pointer; }
+  button { background:var(--accent); color:var(--on-accent); border:0; border-radius:8px; padding:7px 12px; font:inherit; cursor:pointer; }
   button.alt { background:var(--accent-soft); color:var(--ink); }
   button:disabled { opacity:.5; cursor:default; }
   input, select { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:3px 5px; }
@@ -55,7 +56,7 @@
   .ask{margin-top:6px;padding:6px 8px;border-radius:8px;background:var(--accent-soft);color:var(--ink);font-weight:600}
   .chip{display:inline-block;padding:2px 8px;border-radius:10px;border:1px solid var(--line);font-size:12px;background:none;color:inherit;font:inherit;font-size:12px;cursor:pointer}
   .chip.ok{border-color:var(--leaf)} .chip.need{color:var(--muted)}
-  button.del { padding:1px 7px; font-size:12px; } button.del.sure { background:var(--bad); color:#fff; }
+  button.del { padding:1px 7px; font-size:12px; } button.del.sure { background:var(--bad); color:var(--panel); }
   #snaps input.need { border-color:var(--warn); background:var(--accent-soft); }
   #helpBtn { padding:5px 10px; font-size:12px; font-weight:600; }
   #help details { border-top:1px solid var(--line); padding:6px 0; } #help details:first-of-type { border-top:0; }
@@ -83,7 +84,7 @@
   td.note { padding-left:12px; } .v .coin { height:.8em; }
   :focus-visible { outline:2px solid var(--accent); outline-offset:2px; } .grip:focus-visible { border-radius:4px; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
-  #goalNext[aria-pressed=true], #goalOff[aria-pressed=true], #meatOnly[aria-pressed=true] { background:var(--accent); color:#fff; }
+  #goalNext[aria-pressed=true], #goalOff[aria-pressed=true], #meatOnly[aria-pressed=true] { background:var(--accent); color:var(--on-accent); }
   #wrap .step { font-weight:600; margin:10px 0 4px; } #wrap .step:first-of-type { margin-top:0; }
   textarea { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:5px 6px; width:100%; margin-top:6px; resize:vertical; }
   .hsub { color:var(--muted); font-size:12px; margin-top:2px; } .hsub .ico { width:18px; height:18px; margin:-2px 4px -2px 0; }
@@ -91,7 +92,7 @@
   .hnote { color:var(--muted); font-size:12px; white-space:pre-wrap; overflow-wrap:anywhere; }
   .coin { height:1em; width:auto; image-rendering:pixelated; vertical-align:-0.12em; margin-right:2px; }
   .ico { display:inline-block; width:22px; height:22px; object-fit:contain; image-rendering:pixelated; vertical-align:middle; margin:-3px 6px -3px 0; }
-  .dragLabel { position:fixed; z-index:60; pointer-events:none; background:var(--accent); color:#fff; border-radius:6px; padding:3px 8px; font-size:12px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  .dragLabel { position:fixed; z-index:60; pointer-events:none; background:var(--accent); color:var(--on-accent); border-radius:6px; padding:3px 8px; font-size:12px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.3); }
   .over-top { box-shadow:0 -3px 0 var(--accent); } .over-bottom { box-shadow:0 3px 0 var(--accent); }
   .over-left { box-shadow:-3px 0 0 var(--accent); } .over-right { box-shadow:3px 0 0 var(--accent); }
   /* boxes side by side: a row of boxes (or columns of boxes) with a splitter between each two */
@@ -101,6 +102,15 @@
   .split::after { content:""; position:absolute; left:3px; top:25%; bottom:calc(25% + 8px); width:2px; border-radius:1px; background:var(--line); }
   .split:hover::after, .split.on::after, .split:focus-visible::after { background:var(--accent); }
   body.resizing, body.resizing * { cursor:col-resize !important; user-select:none; }
+  /* Settings > Theme: one swatch per theme (its boxes, accent and text), the editor's colour grid */
+  .sw { display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:6px; margin:4px 0 6px; }
+  .sw button { display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:6px; border-radius:8px; border:2px solid var(--line); text-align:left; font-size:12px; min-width:0; }
+  .sw button[aria-checked=true] { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+  .sw .bars { display:flex; height:12px; border-radius:4px; overflow:hidden; } .sw .bars i { flex:1; }
+  .sw .nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .thGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:4px 10px; margin:6px 0; }
+  .thGrid label { display:flex; align-items:center; gap:6px; font-size:12px; } .thGrid input[type=color] { width:34px; height:24px; padding:0 2px; cursor:pointer; }
+  button.keyset { min-width:118px; padding:4px 10px; font-size:12px; } button.keyset.bad { outline:2px solid var(--bad); }
   body.dragging #dock { min-height:40px; border:2px dashed var(--accent); border-radius:10px; margin-bottom:8px; padding:4px; }
   body.dragging #dock:empty::before { content:"Drop here to pin it above the tabs (shows on every tab)"; color:var(--muted); font-size:12px; }
   body.dragging .tabs button[data-tab=session], body.dragging .tabs button[data-tab=loot], body.dragging .tabs button[data-tab=hist] { outline:1px dashed var(--accent); }
@@ -142,6 +152,7 @@
       <div class="grow"><div id="state"><span class="dot"></span><span id="stateText">Not tracking</span></div><div id="status" role="status" aria-live="polite">Looking for the MapleStory window...</div></div>
       <button id="helpBtn" class="alt" title="How to use the tracker (F1)">?</button>
       <button id="bugBtn" class="alt" title="Report a bug (Ctrl+Shift+B, works from the game too)">Bug</button>
+      <button id="pauseBtn" class="alt hidden" aria-pressed="false" title="Pause the timer (break, shop trip); press again to go on">Pause</button>
       <button id="miniBtn" class="alt" title="Shrink to a small bar with just EXP/hr">Mini</button></div>
     <div class="row" id="nameRow" style="margin-top:6px"><input id="runName" maxlength="60" aria-label="Run name (optional)" placeholder="Name this run (optional), e.g. KPQ rush with randoms" style="flex:1;min-width:0"></div>
     <div class="tiles">
@@ -315,6 +326,29 @@
       <label class="chk"><input type="checkbox" id="share"> <span>Share my sessions for the leaderboards (map, kills, drops, KPQ rounds; no character name)</span></label>
       <div class="row"><button id="layoutReset" class="alt">Reset box layout</button> <span class="note">Boxes move by their ⠿ grip: onto another box, a tab, or the strip above the tabs.</span></div>
     </div>
+    <div class="card" id="themeCard"><h3>Theme</h3>
+      <div class="sw" id="themeSw" role="radiogroup" aria-label="Theme"></div>
+      <div class="row"><button id="themeEdit" class="alt">Edit colours</button> <span class="note" id="themeNow"></span></div>
+      <div id="themeEditor" class="hidden">
+        <div class="row"><label>Name <input id="thName" maxlength="30" size="14"></label> <label>Kind <select id="thMode"><option value="dark">Dark</option><option value="light">Light</option></select></label></div>
+        <div class="thGrid" id="thColors"></div>
+        <div class="note" id="thWarn"></div>
+        <div class="row"><button id="thSave">Save as my theme</button> <button id="thDelete" class="alt hidden">Delete</button> <button id="thCancel" class="alt">Cancel</button></div>
+      </div>
+      <div class="k" style="margin-top:8px">Share a theme</div>
+      <div class="row"><button id="thCopy" class="alt" title="A one-line code to paste in Discord">Copy share code</button> <button id="thExport" class="alt">Save as file</button> <button id="thOpen" class="alt">Open a file</button>
+        <input type="file" id="thFile" accept=".mstheme,.json,.txt" class="hidden"></div>
+      <div class="row"><input id="thCode" aria-label="Share code" placeholder="Paste a share code (MSCT1...)" style="flex:1;min-width:0"> <button id="thPaste" class="alt">Add</button></div>
+      <div class="note" id="thNote" role="status"></div>
+    </div>
+    <div class="card" id="prefs"><h3>Preferences</h3>
+      <div class="k">Keyboard shortcuts</div>
+      <div class="note">These work from anywhere, the game too. Click one and press the new keys (Ctrl, Alt or Shift plus a key, or an F key on its own); Esc cancels, Backspace turns it off.
+        While the tracker runs, a shortcut's keys don't reach other programs, so free any that clash with your game keys.</div>
+      <table id="keyRows"></table>
+      <div class="row"><button id="keysReset" class="alt">Reset shortcuts</button> <span class="note" id="keysNote" role="status"></span></div>
+      <div class="row"><label for="opacity">See-through window</label> <input type="range" id="opacity" min="40" max="100" step="5" value="100" style="flex:1;min-width:80px"> <span id="opacityV" class="n">100%</span></div>
+    </div>
     <div class="card"><h3>App</h3>
       <div class="row"><span>Version <b id="appVer">-</b></span> <button id="updCheck" class="alt">Check for updates</button> <button id="updInstall" class="hidden">Install</button></div>
       <div class="note" id="updNote">Updates also download by themselves and install when you close the app.</div>
@@ -336,6 +370,7 @@
   <script src="shot.js"></script>
   <script src="../core/session.js"></script>
   <script src="readers.js"></script>
+  <script src="themes.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

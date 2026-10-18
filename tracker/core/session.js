@@ -19,7 +19,7 @@
      {t, type: "use",   id, n}            n of an item used up (potion, food, arrows), from the quick-slot / Use-tab counts
      {t, type: "useseen"}                 item counts are on screen (so nothing used = 0, not unknown)
      {t, type: "wallet", n}               the meso total in the inventory window (spending shows here, pickups alone don't)
-     {t, type: "pause"} / {t, type: "resume"}  the game screen is gone (Cash Shop, changing channel): that time isn't farming
+     {t, type: "pause"} / {t, type: "resume"}  the game screen is gone (Cash Shop, changing channel): that time isn't farming; hold: paused by hand, only "resume" ends it
    Rates use active time only: any gap of more than IDLE_MS with no EXP, meso or item event is left out. */
 (function (root){
   const IDLE_MS = 60000, RECENT_MS = 5 * 60e3;
@@ -29,7 +29,7 @@
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
       msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, itemT: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
-      pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null, used: {}, have: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
+      pausedAt: null, held: false, pausedMs: 0, levelUps: [], levelAt: null, used: {}, have: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
@@ -104,11 +104,11 @@
       if (S.start === null) S.start = e.t;
       const counts = ["exp", "bonus", "meso", "item", "itemraw", "bar"].includes(e.type);
       // paused: farming time up to the pause counts, the pause itself doesn't; anything counted (or "resume") ends it
-      if (e.type === "pause"){ if (S.pausedAt === null && S.last !== null){ credit(e.t); S.last = e.t; S.pausedAt = e.t } return S }
-      if (S.pausedAt !== null && (counts || e.type === "resume")){ S.pausedMs += Math.max(0, e.t - S.pausedAt); S.pausedAt = null; S.last = e.t }
+      // a pause by hand (hold) only ends with "resume": nothing read meanwhile (a party member's EXP) restarts the clock
+      if (e.type === "pause"){ if (S.pausedAt === null){ if (S.last !== null){ credit(e.t); S.last = e.t } S.pausedAt = e.t } if (e.hold) S.held = true; return S }
+      if (S.pausedAt !== null && (e.type === "resume" || counts && !S.held)){ S.pausedMs += Math.max(0, e.t - S.pausedAt); S.pausedAt = null; S.held = false; if (S.last !== null || counts) S.last = e.t }
       if (e.type === "resume") return S;
-      if (counts && S.last !== null) credit(e.t);
-      if (counts) S.last = e.t;
+      if (counts && S.pausedAt === null){ if (S.last !== null) credit(e.t); S.last = e.t }
       switch (e.type){
         case "map": S.map = e.id == null ? null : String(e.id); S.mapName = e.name || null; S.bigKilled.clear(); break;
         case "party": S.party = Math.max(1, e.size | 0); break;

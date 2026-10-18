@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld("host", {
   mini: on => ipcRenderer.invoke("mini", on),
   menu: (label, x, y) => ipcRenderer.invoke("menu-popup", label, x, y),
   snip: url => ipcRenderer.invoke("snip", url),
+  themeBar: c => ipcRenderer.invoke("theme-bar", c),
+  keys: (keys, pause) => ipcRenderer.invoke("keys", keys, pause),
   version: () => ipcRenderer.invoke("version"),
   updateState: () => ipcRenderer.invoke("update-state"),
   updateCheck: () => ipcRenderer.invoke("update-check"),

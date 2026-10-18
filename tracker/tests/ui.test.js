@@ -14,7 +14,9 @@ const path = require("path"), {chromium} = require("playwright");
         {saved: Date.now() - 7200e3, date: "2026-10-17", mapName: "Pig Beach", level: 21, activeMin: 20, exp: 2000, mesos: 300, deaths: 0},
         {saved: Date.now() - 9 * 864e5, date: "2026-10-08", mapName: "Old", level: 10, activeMin: 60, exp: 1, mesos: 1}], exportCsv: async () => "", mini: async () => true,
       version: async () => "0.2.17", updateState: async () => ({state: "idle"}), updateCheck: async () => (window.upd?.({state: "downloading", version: "0.2.18", pct: 40}), {state: "ready", version: "0.2.18"}),
-      updateInstall: async () => (window.installed = true), onUpdate: cb => window.upd = cb};
+      updateInstall: async () => (window.installed = true), onUpdate: cb => window.upd = cb, onMenu: cb => window.menu = cb, themeBar: async c => (window.bar = c, true),
+      keys: async (k, pause) => { const D = {onTop: "CommandOrControl+Shift+T", startStop: "CommandOrControl+Shift+S", pause: "CommandOrControl+Shift+P", mini: "CommandOrControl+Shift+M", show: "CommandOrControl+Shift+H", invNow: "CommandOrControl+Shift+I", report: "CommandOrControl+Shift+B"};
+        window.keysPaused = !!pause; if (k) window.keysSt = {...(window.keysSt || {}), ...k}; return {keys: {...D, ...(window.keysSt || {})}, defaults: D, failed: []} }};
     navigator.mediaDevices.getDisplayMedia = async () => {
       const c = document.createElement("canvas"); c.width = 800; c.height = 600;
       const x = c.getContext("2d"); setInterval(() => { x.fillStyle = "#" + Math.floor(Math.random() * 4095).toString(16); x.fillRect(0, 0, 800, 600) }, 100);
@@ -40,6 +42,12 @@ const path = require("path"), {chromium} = require("playwright");
   // the top card: tracking state and Stop; tabs switch sections
   const top = await page.evaluate(() => [document.querySelector("#stateText").textContent, document.querySelector("#go").textContent, document.querySelector("#go").classList.contains("on")]);
   if (!/^Tracking/.test(top[0]) || top[1] !== "Stop" || !top[2]) throw new Error("top card: " + top);
+  // Pause (button or shortcut): stays paused through frames until pressed again
+  await page.evaluate(() => window.menu("pause")); await page.waitForTimeout(700);
+  const ps = await page.evaluate(() => [document.querySelector("#stateText").textContent, document.querySelector("#pauseBtn").textContent, session.state.pausedAt !== null]);
+  await page.click("#pauseBtn"); await page.waitForTimeout(100);
+  const ps2 = await page.evaluate(() => [document.querySelector("#pauseBtn").textContent, session.state.pausedAt === null]);
+  if (ps.join() !== "Paused by you,Go on,true" || ps2.join() !== "Pause,true") throw new Error("pause: " + JSON.stringify({ps, ps2}));
   await page.click(".tabs [data-tab=loot]");
   if (!await page.isVisible("#priceNote, #itemsEmpty") || await page.isVisible("#mobsEmpty") || !await page.isVisible("#itemsEmpty")) throw new Error("loot tab");
   // Help: the ? button opens it, Close goes back to Loot; F1 opens it too
@@ -255,6 +263,44 @@ const path = require("path"), {chromium} = require("playwright");
   const ask = await page.textContent(del), before = await page.evaluate(() => window.deleted);
   await page.click(del); await page.waitForTimeout(100);
   if (ask !== "Delete?" || before || !(await page.evaluate(() => window.deleted > 0))) throw new Error("delete session: " + ask);
+  // themes (Settings): a preset swatch recolours the page and the title bar; the editor saves your own; share code round trip
+  await page.click('.tabs button[data-tab="settings"]');
+  const sw = await page.$$eval("#themeSw [data-th]", b => b.map(x => x.dataset.th));
+  if (sw.length < 12 || sw[0] !== "p:Purple") throw new Error("theme swatches: " + sw);
+  await page.click('#themeSw [data-th="p:Slime"]'); await page.waitForTimeout(50);
+  const th1 = await page.evaluate(() => [document.documentElement.style.getPropertyValue("--bg"), window.bar?.bg, window.st.theme, document.querySelector('[data-th="p:Slime"]').getAttribute("aria-checked")]);
+  if (th1.join() !== "#111a14,#111a14,p:Slime,true") throw new Error("theme pick: " + th1);
+  await page.click("#themeEdit");
+  await page.evaluate(() => { const i = document.querySelector('#thColors [data-tk="ink"]'); i.value = "#1a1a1a"; i.dispatchEvent(new Event("input", {bubbles: true})) });
+  const warn = await page.textContent("#thWarn");
+  await page.evaluate(() => { const i = document.querySelector('#thColors [data-tk="ink"]'); i.value = "#e8f5ea"; i.dispatchEvent(new Event("input", {bubbles: true}));
+    const a = document.querySelector('#thColors [data-tk="accent"]'); a.value = "#ff00aa"; a.dispatchEvent(new Event("input", {bubbles: true})) });
+  const live = await page.evaluate(() => document.documentElement.style.getPropertyValue("--accent"));
+  await page.fill("#thName", "Danny's pink"); await page.click("#thSave"); await page.waitForTimeout(50);
+  const th2 = await page.evaluate(() => [window.st.theme, window.st.themes.length, window.st.themes[0].c.accent, document.querySelectorAll("#themeSw [data-th]").length]);
+  if (!/Hard to read: Text/.test(warn) || live !== "#ff00aa" || th2.slice(0, 3).join() !== "u:Danny's pink,1,#ff00aa" || th2[3] !== sw.length + 1) throw new Error("theme editor: " + JSON.stringify({warn, live, th2}));
+  await page.click("#thCopy"); const code = await page.inputValue("#thCode");
+  const thBack = await page.evaluate(c => TrackerThemes.decode(c), code);
+  await page.fill("#thCode", "MSCT1.bm9wZSBub3BlIG5vcGUgbm9wZQ=="); await page.click("#thPaste"); const bad = await page.textContent("#thNote");
+  await page.fill("#thCode", code); await page.click("#thPaste"); await page.waitForTimeout(50);
+  const th3 = await page.evaluate(() => [window.st.themes.length, window.st.theme]);
+  if (!/^MSCT1\./.test(code) || thBack?.c.accent !== "#ff00aa" || thBack.name !== "Danny's pink" || !/isn't a theme/.test(bad) || th3.join() !== "1,u:Danny's pink") throw new Error("theme share: " + JSON.stringify({code, thBack, bad, th3}));
+  // a hostile code can't get markup or odd values in
+  const evil = await page.evaluate(() => TrackerThemes.decode(TrackerThemes.encode({name: "<img src=x onerror=alert(1)>", mode: "dark", c: {...TrackerThemes.PRESETS[1].c, bg: "red;background:url(x)"}})));
+  if (evil !== null) throw new Error("theme validation: " + JSON.stringify(evil));
+  // shortcuts: click one, press new keys; Shift + a letter is refused; Backspace turns one off; keys from the game (main) act
+  await page.click('#keyRows [data-key="onTop"]');
+  const paused = await page.evaluate(() => window.keysPaused);
+  await page.keyboard.press("Shift+A"); const refused = await page.textContent("#keysNote");
+  await page.keyboard.press("Control+Alt+K"); await page.waitForTimeout(50);
+  const k1 = await page.evaluate(() => [window.keysSt?.onTop, document.querySelector('#keyRows [data-key="onTop"]').textContent]);
+  await page.click('#keyRows [data-key="mini"]'); await page.keyboard.press("Control+Alt+K"); await page.waitForTimeout(50);
+  const k2 = await page.evaluate(() => [window.keysSt?.mini, window.keysSt?.onTop]);
+  await page.click('#keyRows [data-key="report"]'); await page.keyboard.press("Backspace"); await page.waitForTimeout(50);
+  const k3 = await page.evaluate(() => [window.keysSt?.report, document.querySelector('#keyRows [data-key="report"]').textContent]);
+  await page.evaluate(() => window.menu("onTop:false")); const onTopNow = await page.isChecked("#ontop");
+  if (!paused || !/Add Ctrl or Alt/.test(refused) || k1.join() !== "CommandOrControl+Alt+K,Ctrl + Alt + K" || k2.join() !== "CommandOrControl+Alt+K," || k3.join() !== ",Off" || onTopNow)
+    throw new Error("shortcuts: " + JSON.stringify({paused, refused, k1, k2, k3, onTopNow}));
   await page.click("#updGo"); await page.waitForTimeout(100);
   if (!await page.evaluate(() => window.installed)) throw new Error("restart and update");
   await browser.close();

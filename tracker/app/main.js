@@ -19,6 +19,13 @@ const SESSIONS = path.join(app.getPath("userData"), "sessions");   // finished s
 // Windows Graphics Capture (what OBS uses) instead of the old GDI window grab, which gives black frames for DirectX games
 app.commandLine.appendSwitch("enable-features", "WebRtcAllowWgcWindowCapturer,WebRtcAllowWgcScreenCapturer,AllowWgcWindowCapturer,AllowWgcScreenCapturer");
 
+let themeBar = null, setBar = () => {};   // the theme's title bar colours {color, symbolColor, bg}, from the page
+// the page's theme (Settings > Theme): the Windows-drawn title bar buttons and the window's background follow it
+ipcMain.handle("theme-bar", (_, c) => {
+  const hex = x => typeof x === "string" && /^#[0-9a-f]{6}$/i.test(x);
+  themeBar = c && hex(c.color) && hex(c.symbolColor) && hex(c.bg) ? {color: c.color, symbolColor: c.symbolColor, bg: c.bg} : null;
+  setBar(); return !!themeBar;
+});
 let win, wholeScreen = false;   // fallback when the game window still comes back black: the readers find the UI anywhere on screen
 async function gameSource(){
   const srcs = await desktopCapturer.getSources({types: ["window"], thumbnailSize: {width: 0, height: 0}});
@@ -39,9 +46,11 @@ app.whenReady().then(() => {
   if (!firstCopy) return;   // quitting: no window
   // our own title bar in the app's colours (the page draws it, see #titlebar); Windows still draws the minimize, maximize and
   // close buttons, in the same colours, light or dark like the page (Danny, 2026-10-18)
-  const bar = () => nativeTheme.shouldUseDarkColors ? {color: "#211d2c", symbolColor: "#ece8f5", height: 32} : {color: "#ffffff", symbolColor: "#2b2638", height: 32};
+  // (a theme picked in Settings sends its own two colours: themeBar)
+  const bar = () => themeBar ? {...themeBar, height: 32} : nativeTheme.shouldUseDarkColors ? {color: "#282338", symbolColor: "#f0ecf8", height: 32} : {color: "#ffffff", symbolColor: "#2b2638", height: 32};
+  setBar = () => { if (win && !win.isDestroyed()) try { win.setTitleBarOverlay(bar()); if (themeBar) win.setBackgroundColor(themeBar.bg) } catch {} };
   win = new BrowserWindow({...lastBounds(), title: "MS Classic Grind Tracker", titleBarStyle: "hidden", titleBarOverlay: bar(),
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#17141f" : "#f6f4fb",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#1d1929" : "#f8f6fe",
     // backgroundThrottling off: behind the game or minimized, Chromium would slow the frame timer to once a second and,
     // after 5 minutes, once a minute, so pickup lines would scroll away unread
     webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false}});
@@ -54,7 +63,7 @@ app.whenReady().then(() => {
   win.webContents.setWindowOpenHandler(() => ({action: "deny"}));
   win.webContents.on("will-navigate", e => e.preventDefault());
   win.loadFile(path.join(__dirname, "index.html"));
-  nativeTheme.on("updated", () => { if (win && !win.isDestroyed()) try { win.setTitleBarOverlay(bar()) } catch {} });
+  nativeTheme.on("updated", () => setBar());
   // with the title bar hidden, the menu's zoom keys are handled here (F1 is the page's own)
   win.webContents.on("before-input-event", (e, i) => {
     if (i.type !== "keyDown" || !i.control || i.alt) return;
@@ -72,11 +81,11 @@ app.whenReady().then(() => {
     {label: "File", submenu: [{label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
     {label: "View", submenu: [{label: "Mini bar", click: show("mini")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
     {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Check for updates", click: show("update")},
-      {label: "Report a bug", accelerator: "CmdOrCtrl+Shift+B", click: show("report")}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
+      {label: "Report a bug", click: show("report")}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
   ]));
-  pinOnTop();
-  // Ctrl+Shift+B works while the game has focus: grabs the last frames at that moment and pops up the bug-report box
-  try { globalShortcut.register("CommandOrControl+Shift+B", () => { if (!win || win.isDestroyed()) return; win.webContents.send("menu", "report"); win.show(); win.focus() }) } catch {}
+  pinOnTop(); applyOpacity();
+  // keyboard shortcuts that work while the game has focus (Settings > Keyboard shortcuts)
+  registerKeys();
   app.on("will-quit", () => globalShortcut.unregisterAll());
   // other programs that clicked to the front or made themselves topmost (the game, overlays) could still cover it: take
   // the top back when this window loses focus, and every few seconds
@@ -108,6 +117,43 @@ ipcMain.handle("update-check", async () => {
 });
 // silent install, then the app starts again by itself
 ipcMain.handle("update-install", () => { if (upd.state !== "ready") return false; setImmediate(() => autoUpdater.quitAndInstall(true, true)); return true });
+/* keyboard shortcuts, working from anywhere (the game too): settings.keys {action: accelerator, "" = off}, else these.
+   Each one takes its keys away from every other program while the tracker runs, so all can be changed or turned off.
+   Always on top was Danny's ask (2026-10-18); the others are the buttons players reach for mid-grind */
+const KEYS = {onTop: "CommandOrControl+Shift+T", startStop: "CommandOrControl+Shift+S", pause: "CommandOrControl+Shift+P", mini: "CommandOrControl+Shift+M",
+  show: "CommandOrControl+Shift+H", invNow: "CommandOrControl+Shift+I", report: "CommandOrControl+Shift+B"};
+// modifiers + one key; a key with no modifier only for F1-F24 (a plain letter would be taken from the game's own keys)
+const ACCEL = /^(?:(?:(?:CommandOrControl|Alt|Shift|Super)\+)+(?:[A-Z0-9]|F(?:[1-9]|1\d|2[0-4])|Space|Tab|Backspace|Delete|Insert|Home|End|PageUp|PageDown|Up|Down|Left|Right|Plus|-|=|,|\.|\/|;|'|\[|\]|\\|`|num[0-9])|F(?:[1-9]|1\d|2[0-4]))$/;
+// Shift alone isn't enough on a letter (Shift+A is typing a capital A in chat); Alt+F4 stays Windows' close
+const okKey = k => k === "" || ACCEL.test(k) && (/(^|\+)F\d+$/.test(k) || /(CommandOrControl|Alt|Super)\+/.test(k)) && k !== "Alt+F4";
+const keysNow = () => { const k = readSettings().keys || {}; return Object.fromEntries(Object.entries(KEYS).map(([a, d]) => [a, typeof k[a] === "string" && okKey(k[a]) ? k[a] : d])) };
+let keyFailed = [];
+function registerKeys(){
+  globalShortcut.unregisterAll(); keyFailed = [];
+  for (const [a, k] of Object.entries(keysNow())){ if (!k) continue; let ok = false; try { ok = globalShortcut.register(k, () => keyAction(a)) } catch {} if (!ok) keyFailed.push(a) }
+  return keyFailed;
+}
+function keyAction(a){
+  if (!win || win.isDestroyed()) return;
+  if (a === "onTop"){ const on = readSettings().onTop === false; writeSettings({...readSettings(), onTop: on}); pinOnTop(); win.webContents.send("menu", "onTop:" + on); return }
+  if (a === "show"){ if (win.isVisible() && !win.isMinimized()) win.minimize(); else { win.restore(); win.show(); pinOnTop() } return }
+  if (a === "report"){ win.show(); win.focus() }
+  win.webContents.send("menu", a);
+}
+// the Preferences list: what each action is set to, the defaults, and which couldn't be had (another program holds them).
+// keys: {action: accelerator | ""} to change; pause: true while a box waits for the new keys (so pressing one in use reaches it)
+ipcMain.handle("keys", (_, keys, pause) => {
+  if (pause){ globalShortcut.unregisterAll(); return {keys: keysNow(), defaults: KEYS, failed: []} }
+  if (keys && typeof keys === "object"){
+    const cur = {...(readSettings().keys || {})};
+    for (const [a, k] of Object.entries(keys)) if (a in KEYS && typeof k === "string" && okKey(k)) cur[a] = k;
+    for (const a of Object.keys(cur)) if (cur[a] === KEYS[a]) delete cur[a];   // back to the default: not stored
+    writeSettings({...readSettings(), keys: cur});
+  }
+  return {keys: keysNow(), defaults: KEYS, failed: registerKeys()};
+});
+// see-through window (Settings): 40-100 %
+function applyOpacity(){ if (win && !win.isDestroyed()){ const o = +readSettings().opacity; win.setOpacity(o >= 0.4 && o <= 1 ? o : 1) } }
 // on top of everything: the "screen-saver" level beats plain always-on-top windows (Danny: it kept going under other programs)
 function pinOnTop(){
   if (!win || win.isDestroyed()) return;
@@ -160,6 +206,7 @@ ipcMain.handle("settings", (_, s) => {
   if (!cur.install) cur.install = require("crypto").randomUUID();   // random ID of this copy: one vote per player
   writeSettings({...cur, ...(s || {})});
   if (s && "onTop" in s) pinOnTop();
+  if (s && "opacity" in s) applyOpacity();
   if (s && s.share === false) writeAtomic(QUEUE, "[]");   // sharing turned off: runs still waiting to go up are dropped, not sent later
   return readSettings();
 });
