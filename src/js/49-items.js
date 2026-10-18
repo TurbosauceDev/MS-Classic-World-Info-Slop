@@ -164,4 +164,5 @@ document.addEventListener("click", e => { const el = e.target.closest && e.targe
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches && e.target.matches(".ri, .itname")) e.target.click() });
 if (HASH.i && OPEN[HASH.i]) S.open = String(HASH.i);
 show();
+navReg("items", () => S.open, v => { S.open = v; save(); show() });
 })();

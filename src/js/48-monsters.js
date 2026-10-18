@@ -193,4 +193,5 @@ document.addEventListener("click", e => { const el = e.target.closest && e.targe
 if (HASH.m && D.mobdb[HASH.m]) S.open = String(HASH.m);
 // built lazily: the farming table calls buildAt, which 50-builder.js defines after this file runs
 setTimeout(show);
+navReg("mobs", () => S.open, v => { S.open = v; save(); show() });
 })();

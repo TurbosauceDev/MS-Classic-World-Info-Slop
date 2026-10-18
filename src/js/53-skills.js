@@ -98,4 +98,5 @@ $("#skpage").addEventListener("click", e => {
 openSkillPage = key => { if (!OPEN[key]) return; $("#t-skills").click(); openSkill(key) };
 if (HASH.s && OPEN[HASH.s]) S.open = String(HASH.s);
 show();
+navReg("skills", () => S.open, v => { S.open = v; save(); show() });
 })();

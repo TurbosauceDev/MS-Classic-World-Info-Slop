@@ -40,6 +40,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </header>
 
 <nav>
+  <div class="navrow"><div class="navhist"><button class="btn" id="navback" type="button" title="Back (also the browser's Back)" aria-label="Back" disabled>←</button><button class="btn" id="navfwd" type="button" title="Forward" aria-label="Forward" disabled>→</button></div>
   <div class="cats" role="tablist" aria-label="Sections">
     <button role="tab" id="c-home" aria-selected="false" data-cat="home">Home</button>
     <button role="tab" id="c-trk" aria-selected="false" data-cat="trk">Grind Tracker</button>
@@ -48,7 +49,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="c-world" aria-selected="false" data-cat="world">World</button>
     <button role="tab" id="c-town" aria-selected="false" data-cat="town">Towns and trade</button>
     <button role="tab" id="c-more" aria-selected="false" data-cat="more">More</button>
-  </div>
+  </div></div>
   <div class="subs" role="tablist" aria-label="Pages">
     <button role="tab" id="t-trk" aria-selected="false" data-tab="trk" data-cat="trk" hidden>Overview</button>
     <button role="tab" id="t-trkhow" aria-selected="false" data-tab="trkhow" data-cat="trk" hidden>How to use</button>

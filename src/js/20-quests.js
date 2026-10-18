@@ -174,6 +174,7 @@ addEventListener("scroll", hideQtip, {passive:true});
 addEventListener("keydown", e => { if (e.key === "Escape") hideQtip() });
 
 let QSORT = {k:"mult", dir:-1}, QCHAIN = null;
+navReg("quests", () => QCHAIN, v => { QCHAIN = v; renderQuests() });
 $("#qrows").addEventListener("click", e => { const b = e.target.closest(".chainbtn"); if (!b) return; QCHAIN = b.dataset.chain; hideQtip(); renderQuests(); $("#qchainbar").scrollIntoView({block:"nearest"}) });
 $("#qchainbar").addEventListener("click", e => { if (e.target.id === "qchainclear"){ QCHAIN = null; renderQuests() } });
 try { const q = JSON.parse(localStorage.getItem("qsort") || "null"); if (q && q.k) QSORT = q } catch(e) {}

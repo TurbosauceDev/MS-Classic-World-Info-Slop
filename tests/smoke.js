@@ -17,6 +17,15 @@ const path = require("path");
   await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && !(await p.isHidden("#t-items")) && await p.isHidden("#t-plan"), "home link opens its page and section");
   await p.click("#c-home"); check(!(await p.isHidden("#home")) && await p.isHidden("#mobs"), "Home button returns home");
   await p.click("#c-db"); check(!(await p.isHidden("#mobs")), "section remembers its last page");
+  // Back / Forward (75-history.js): pages and places inside them are browser history entries
+  await tab("#t-mobs"); await p.click("#mbrows .mbtn"); const mob1 = await p.textContent("#mbpage h2");
+  await tab("#t-items"); await p.click("#c-world"); await p.waitForTimeout(50);
+  await p.goBack(); await p.waitForTimeout(50); check(!(await p.isHidden("#items")) && await p.isHidden("#wmap"), "browser Back returns to the previous page");
+  await p.click("#navback"); await p.waitForTimeout(50);
+  check(!(await p.isHidden("#mbpage")) && await p.textContent("#mbpage h2") === mob1, "site Back reopens the monster page");
+  await p.click("#navback"); await p.waitForTimeout(50); check(!(await p.isHidden("#mblist")), "Back again: monster list");
+  await p.click("#navfwd"); await p.waitForTimeout(50); check(!(await p.isHidden("#mbpage")), "Forward redoes the step");
+  await p.click("#mbback"); await p.waitForTimeout(50); check(await p.isDisabled("#navfwd"), "a new step clears Forward");
   await tab("#t-plan");
 
   // Character Builder

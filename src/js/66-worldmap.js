@@ -172,13 +172,14 @@ function card(i, lone){
     ${qs.length ? `<h5>Quests from NPCs here (${qs.length})</h5><ul class="mmobs">${qs.map(q => `<li>${qn(q)} <span>Lv ${q[1].lvl}${q[0] === "cit" ? " · Citizenship" : ""} · ${esc(q[1].npc)}</span></li>`).join("")}</ul>` : ""}
     `;
 }
-let shown = null;
+let shown = null, INFO = null;   // INFO = the map whose card openMapInfo drew (Back/Forward)
 function showMap(id){   // one map of a sub-map (or a grey neighbour outside it)
-  const f = SPOT[id], here = f && f[0] === S.isl ? f[1] : null; S.mm = null;
+  const f = SPOT[id], here = f && f[0] === S.isl ? f[1] : null; S.mm = null; INFO = null;
   $("#wmcard").innerHTML = card(here, id); shown = "m" + id;
   document.querySelectorAll(".wmnode").forEach(d => d.classList.toggle("on", d.dataset.map === id));
 }
 function show(i){
+  INFO = null;
   if (i == null){ $("#wmcard").innerHTML = `<p class="sub">Click a dot to see that place.</p>`; shown = null; return }
   if (i !== shown) S.mm = null;
   shown = i; $("#wmcard").innerHTML = card(i);
@@ -260,10 +261,14 @@ const SPOT = {}; D.wmap.forEach(([, , , , , spots], isl) => spots.forEach(([, , 
 const openMapInfo = id => { id = String(id); hideQtip(); $("#t-wmap").click(); const f = SPOT[id];
   if (f){ S.isl = f[0]; S.pin = f[1]; save() } else S.pin = null;
   if (f && DRILL(D.wmap[f[0]][5][f[1]])){ S.sub = f[1]; S.subPin = id; render() }
-  else { S.sub = null; render(); shown = f ? f[1] : null; $("#wmcard").innerHTML = card(shown, id) }
+  else { S.sub = null; render(); shown = f ? f[1] : null; $("#wmcard").innerHTML = card(shown, id); INFO = id }
   document.querySelectorAll(".wmdot").forEach(d => d.classList.toggle("on", +d.dataset.i === shown));
   (innerWidth < 900 ? $("#wmcard") : $("#wmap")).scrollIntoView({block: "start"}) };
 document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".mname"); if (el) openMapInfo(el.dataset.map) });
 render();
 if (HASH.w && known(String(HASH.w))) openMapInfo(HASH.w);   // shared link
+navReg("wmap", () => [S.isl, S.sub, S.subPin, shown, INFO], ([isl, sub, subPin, sh, info]) => {
+  Object.assign(S, {isl, sub, subPin}); if (typeof sh === "number") S.pin = sh; else if (sub == null) S.pin = null; save(); render();
+  if (sub == null && typeof sh === "string") showMap(sh.slice(1));
+  if (info){ $("#wmcard").innerHTML = card(sh, info); INFO = info } });
 })();

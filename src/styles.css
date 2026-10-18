@@ -425,7 +425,12 @@ input.khave{width:64px;text-align:right}
 #kpq code{font:12.5px var(--f-mono);background:var(--accent-soft);padding:1px 4px;border-radius:4px}
 /* two-row nav: categories, then the pages in the open category; Home page = a card per category */
 nav{display:block;border-bottom:0}
-nav .cats{display:flex;gap:6px;flex-wrap:wrap}
+nav .cats{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+/* Back / Forward (75-history.js), left of the section buttons */
+nav .navrow{display:flex;gap:6px;align-items:flex-start}
+nav .navhist{display:flex;gap:4px;flex:none}
+nav .navhist .btn{padding:6px 11px;border-radius:999px;font-size:15px;line-height:1.2}
+nav .navhist .btn:disabled{opacity:.4;cursor:default}
 nav .cats button{font:600 14px var(--f-body);border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);padding:7px 14px}
 nav .cats button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,var(--bg))}
 nav .subs{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;border-bottom:1px solid var(--line)}

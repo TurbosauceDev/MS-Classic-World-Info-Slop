@@ -39,6 +39,8 @@ async function copyShare(btn, url){
    their #t-<id> ids, so code elsewhere can still open a page with $("#t-items").click(). */
 const TABS = [...document.querySelectorAll("nav [data-tab]")], CATS = [...document.querySelectorAll("nav .cats button")];
 const LASTTAB = {};   // category -> last page opened in it
+const NAVREG = {};   // page -> {get, set} of its current place, for Back/Forward (75-history.js)
+const navReg = (tab, get, set) => { NAVREG[tab] = {get, set} };
 const showCat = cat => {
   CATS.forEach(x => x.setAttribute("aria-selected", x.dataset.cat === cat));
   TABS.forEach(x => x.hidden = x.dataset.cat !== cat);
