@@ -77,6 +77,18 @@
   body.dragging .tabs button[data-tab=session], body.dragging .tabs button[data-tab=loot], body.dragging .tabs button[data-tab=hist] { outline:1px dashed var(--accent); }
   .over-drop { background:var(--accent-soft) !important; }
   #hist > .row:first-child { padding-right:48px; }
+  /* History: compare two sessions */
+  #histRows, #recap { max-width:720px; }
+  .cmpBox { margin:8px 0 10px; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); max-width:720px; }
+  .cmpHead { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 6px; }
+  .cmpWho { border-left:4px solid; padding:2px 8px; } .cmpWho.a { border-color:var(--accent); } .cmpWho.b { border-color:var(--warn); }
+  .cmpWho b { margin-right:4px; }
+  .cmpT td { padding:5px 0; } .cmpT td:first-child { width:38%; padding-right:8px; } .cmpT td.n { width:72px; font-weight:600; }
+  .cmpT tr.grp td { color:var(--muted); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding-top:10px; border-bottom:0; }
+  .cbar { position:relative; height:17px; margin:1px 0; font-variant-numeric:tabular-nums; font-size:12px; }
+  .cbar i { position:absolute; left:0; top:2px; bottom:2px; border-radius:3px; opacity:.35; } .cbar.a i { background:var(--accent); } .cbar.b i { background:var(--warn); }
+  .cbar span { position:relative; padding-left:6px; line-height:17px; }
+  tr.pickA td:first-child { box-shadow:inset 4px 0 var(--accent); padding-left:8px; } tr.pickB td:first-child { box-shadow:inset 4px 0 var(--warn); padding-left:8px; }
   #updBanner { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-color:var(--accent); background:var(--accent-soft); } #updBanner b { flex:1; }
 </style>
 </head>

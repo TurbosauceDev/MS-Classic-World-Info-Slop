@@ -169,7 +169,7 @@ const path = require("path"), {chromium} = require("playwright");
   // compare: tick two sessions
   await page.click("#histRows .cmp >> nth=0"); await page.click("#histRows .cmp >> nth=1");
   const cmp = await page.textContent("#cmp");
-  if (!/B vs A/.test(cmp) || !/EXP\/hr/.test(cmp) || !/Pig Beach/.test(cmp)) throw new Error("compare: " + cmp);
+  if (!/B did better on/.test(cmp) || !/▲|▼/.test(cmp) || !/EXP\/hr/.test(cmp) || !/Pig Beach/.test(cmp)) throw new Error("compare: " + cmp);
   // a watched item: the alert set finds it by part of its name
   const watched = await page.evaluate(() => { settings.alertItems = "Horny Mushroom Cap"; return alertSet().has("4000019") });
   if (!watched) throw new Error("item alert set");

@@ -818,7 +818,7 @@ $("#mini").onclick = () => { document.body.classList.remove("mini"); host.mini(f
 $("#histBtn").onclick = () => { showTab("hist"); loadHist() };
 let histList = [];
 async function loadHist(){
-  const list = histList = await host.sessions(); $("#cmp").innerHTML = "";
+  const list = histList = await host.sessions(); $("#cmp").innerHTML = list.length > 1 ? `<div class="note" style="margin:8px 0">Tick two sessions below to compare them.</div>` : "";
   $("#recap").innerHTML = recap(list) + levelLog(list);
   $("#histRows").innerHTML = list.length ? list.slice(0, 30).map(x => { const h = (x.activeMin || 0) / 60;
     // EXP/hr from the start/end readings when the session has them (clock time), else the live count (farming time)
@@ -826,29 +826,51 @@ async function loadHist(){
     const sn = x.snap && x.snap.minutes > 0 ? x.snap : null, kq = x.kpq && typeof x.kpq === "object" ? x.kpq : null;
     const rate = kq ? h ? fmt((sn ? sn.exp : x.exp) / h) : "-" : sn ? fmt(sn.exp / (sn.minutes / 60)) : h ? fmt(x.exp / h) : "-";
     const what = kq ? `KPQ (${kq.mode === "Rush" ? "Rush" : "Bonus"}) · ${+kq.rounds || 0} round${+kq.rounds === 1 ? "" : "s"}` : x.mapName || "";
-    return `<tr><td>${esc(x.date)} ${esc(what)}</td><td class="n">${Math.round(sn && !kq ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${rate} EXP/hr</td>`
+    return `<tr><td>${esc(when(x))} · ${esc(what)}</td><td class="n">${Math.round(sn && !kq ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${rate} EXP/hr</td>`
       + `<td class="n"><input type="checkbox" class="cmp" data-saved="${+x.saved}" title="Compare: tick two sessions"> <button class="alt del" data-saved="${+x.saved}" title="Delete this session">×</button></td></tr>` }).join("")
     : `<tr><td>No sessions yet: they're saved when you press Stop.</td></tr>`;
 }
-// compare: two ticked sessions side by side (per hour of farming time; loot at the prices saved with each session)
+// compare: two ticked sessions side by side, A the older and B the newer, per hour of farming time (loot at the prices
+// saved with each session). Grouped, with a bar per value and the change in green when B did better (less spent, fewer
+// deaths, a faster KPQ round count as better)
+const when = x => x.saved ? new Date(+x.saved).toLocaleString([], {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) : x.date;
 function compare(a, b){
   const h = x => (x.activeMin || 0) / 60, hr = (x, v) => h(x) && v != null ? v / h(x) : null;
-  const what = x => x.kpq && typeof x.kpq === "object" ? `KPQ · ${+x.kpq.rounds || 0} rounds` : x.mapName || "?";
-  const rows = [["Where", what], ["Date", x => x.date], ["Level", x => x.level], ["Party", x => x.party > 1 ? "party of " + x.party : "solo"], ["Farming time", x => Math.round(x.activeMin || 0) + " min", null],
-    ["EXP/hr", x => hr(x, x.snap && x.snap.minutes > 0 && !x.kpq ? x.snap.exp * h(x) / (x.snap.minutes / 60) : x.exp)], ["Mesos/hr", x => hr(x, x.mesos)], ["Loot/hr", x => hr(x, x.lootValue)],
-    ["Pots/ammo/hr", x => hr(x, x.usedCost)], ["Net/hr", x => x.lootValue == null ? null : hr(x, (x.mesos || 0) + x.lootValue - (x.usedCost || 0))], ["Kills/hr", x => hr(x, x.kills)], ["Deaths", x => x.deaths || 0],
-    ["KPQ best round", x => x.kpq?.best != null ? mss(x.kpq.best) : null]];
-  const cell = v => v == null ? "-" : typeof v === "number" ? fmt(v) : esc(String(v));
-  return `<div class="k">Compare</div><table><tr><td></td><td class="n">A</td><td class="n">B</td><td class="n">B vs A</td></tr>` + rows.map(([k, f]) => { const va = f(a), vb = f(b);
-    const diff = typeof va === "number" && typeof vb === "number" && va && k.endsWith("/hr") ? Math.round((vb / va - 1) * 100) : null;
-    return va == null && vb == null ? "" : `<tr><td>${k}</td><td class="n">${cell(va)}</td><td class="n">${cell(vb)}</td><td class="n ${diff > 0 ? "good" : diff < 0 ? "slow" : ""}">${diff == null ? "" : (diff > 0 ? "+" : "") + diff + "%"}</td></tr>` }).join("") + "</table>";
+  const what = x => x.kpq && typeof x.kpq === "object" ? `KPQ ${x.kpq.mode === "Rush" ? "Rush" : "Bonus"} · ${+x.kpq.rounds || 0} round${+x.kpq.rounds === 1 ? "" : "s"}` : x.mapName || "?";
+  // [label, value, lower is better, shown as]
+  const groups = [["Speed", [["EXP/hr", x => hr(x, x.snap && x.snap.minutes > 0 && !x.kpq ? x.snap.exp * h(x) / (x.snap.minutes / 60) : x.exp)], ["Kills/hr", x => hr(x, x.kills)]]],
+    ["Money per hour", [["Mesos picked up", x => hr(x, x.mesos)], ["Items looted (worth)", x => hr(x, x.lootValue)], ["Potions and arrows used", x => hr(x, x.usedCost), true],
+      ["Net", x => x.lootValue == null ? null : hr(x, (x.mesos || 0) + x.lootValue - (x.usedCost || 0))]]],
+    ["Run", [["Farming time", x => x.activeMin || 0, null, v => Math.round(v) + " min"], ["Deaths", x => x.deaths || 0, true], ["KPQ best round", x => x.kpq?.best ?? null, true, mss]]]];
+  const head = (k, x) => `<div class="cmpWho ${k}"><b>${k.toUpperCase()}</b> ${esc(when(x))}<div class="note">${esc(what(x))} · Lv ${esc(x.level ?? "?")} · ${x.party > 1 ? "party of " + x.party : "solo"} · ${Math.round(x.activeMin || 0)} min</div></div>`;
+  let up = 0, down = 0;
+  const body = groups.map(([g, rows]) => {
+    const tr = rows.map(([k, f, low, show]) => { const va = f(a), vb = f(b); if (va == null && vb == null) return "";
+      const txt = v => v == null ? "-" : show ? show(v) : fmt(v), max = Math.max(Math.abs(va || 0), Math.abs(vb || 0)) || 1;
+      const bar = (v, c) => `<div class="cbar ${c}"><i style="width:${v == null ? 0 : Math.round(Math.abs(v) / max * 100)}%"></i><span>${txt(v)}</span></div>`;
+      let d = "";
+      if (typeof va === "number" && typeof vb === "number" && low !== null && va !== vb){
+        const better = low ? vb < va : vb > va; better ? up++ : down++;
+        const pct = va ? Math.round((vb / va - 1) * 100) : null;
+        d = `<span class="${better ? "pos" : "neg"}">${vb > va ? "▲" : "▼"} ${pct == null ? txt(Math.abs(vb - va)) : Math.abs(pct) + "%"}</span>`;
+      }
+      return `<tr><td>${k}</td><td>${bar(va, "a")}${bar(vb, "b")}</td><td class="n">${d}</td></tr>` }).join("");
+    return tr && `<tr class="grp"><td colspan="3">${g}</td></tr>` + tr }).join("");
+  return `<div class="cmpBox"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Compare</h3><button class="alt" id="cmpClear">Clear</button></div>
+    <div class="cmpHead">${head("a", a)}${head("b", b)}</div>
+    <div class="note">B did better on <b class="pos">${up}</b> and worse on <b class="neg">${down}</b> of these. Green = B better than A.</div>
+    <table class="cmpT">${body}</table></div>`;
 }
 $("#histRows").addEventListener("change", e => {
   if (!e.target.classList.contains("cmp")) return;
   const on = [...$("#histRows").querySelectorAll(".cmp:checked")];
   if (on.length > 2) on.filter(c => c !== e.target).slice(0, on.length - 2).forEach(c => c.checked = false);
   const pick = [...$("#histRows").querySelectorAll(".cmp:checked")].map(c => histList.find(x => String(+x.saved) === c.dataset.saved)).filter(Boolean);
-  $("#cmp").innerHTML = pick.length === 2 ? compare(pick[1], pick[0]) : pick.length === 1 ? `<div class="note">Tick one more session to compare.</div>` : "";
+  pick.sort((x, y) => +x.saved - +y.saved);
+  $("#cmp").innerHTML = pick.length === 2 ? compare(pick[0], pick[1]) : pick.length === 1 ? `<div class="note cmpBox">Tick one more session to compare.</div>` : `<div class="note" style="margin:8px 0">Tick two sessions below to compare them.</div>`;
+  for (const c of $("#histRows").querySelectorAll(".cmp")){ const i = pick.findIndex(x => String(+x.saved) === c.dataset.saved);
+    c.closest("tr").classList.toggle("pickA", pick.length === 2 && i === 0); c.closest("tr").classList.toggle("pickB", pick.length === 2 && i === 1) }
+  $("#cmpClear")?.addEventListener("click", () => { for (const c of $("#histRows").querySelectorAll(".cmp:checked")) c.checked = false; $("#histRows").dispatchEvent(new Event("change")) });
 });
 // delete a session: × asks "Delete?" first (a second click within 4 s deletes), then History is redrawn
 $("#histRows").onclick = async e => {
