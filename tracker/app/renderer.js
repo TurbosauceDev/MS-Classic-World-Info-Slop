@@ -316,10 +316,11 @@ document.addEventListener("pointermove", e => {
 const endDrag = (e, cancel) => {
   if (!drag) return; const d = drag; drag = null;
   if (!d.on) return;
-  clearInterval(d.iv); d.el.remove(); d.b.classList.remove("moving"); document.body.classList.remove("dragging"); dropMark(null);
-  const t = !cancel && dropTarget(e.clientX, e.clientY); dragBox = null;
+  // the target is found while the page still looks as it did under the pointer: the pin strip shrinks away once dragging ends
+  d.el.remove(); const t = !cancel && dropTarget(e.clientX, e.clientY), r = t?.getBoundingClientRect(), below = t && e.clientY > r.top + r.height / 2;
+  clearInterval(d.iv); d.b.classList.remove("moving"); document.body.classList.remove("dragging"); dropMark(null); dragBox = null;
   if (!t) return;
-  if (t.matches("[data-box]")){ const r = t.getBoundingClientRect(); t.parentElement.insertBefore(d.b, e.clientY > r.top + r.height / 2 ? t.nextSibling : t) }
+  if (t.matches("[data-box]")) t.parentElement.insertBefore(d.b, below ? t.nextSibling : t);
   else if (t.matches(".tabs button")){ document.querySelector(`section[data-tab="${t.dataset.tab}"]`).appendChild(d.b); showTab(t.dataset.tab) }
   else t.appendChild(d.b);
   layoutSave();
