@@ -62,6 +62,9 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - KPQ maps 80000000 (1st stage) … 80000400 (Last), 80000500 Bonus, 80000600 Exit; Kerning City 10003000.
 - Leaderboards aren't anonymous: don't call sharing "anonymous" in the UI.
 - beanguri's /api/stats needs their permission; we only borrowed MIT reader ideas.
+- Themes: PRESETS[0] "Default" = the site's src/styles.css colours (light+dark); core.test.js fails if they drift, so a
+  site recolour must update app/themes.js, the index.html :root fallback and main.js window/title-bar colours too.
+- Running tests locally: `npm run data` first (core.test.js needs app/gamedata.json, not committed).
 
 ## Split candidates (not done; tracker thread owned these 2026-10-18)
 - `app/renderer.js` 98 KB: split by UI area (history, settings/themes, layout/docking, live cards) into files loaded by

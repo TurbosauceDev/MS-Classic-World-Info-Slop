@@ -47,10 +47,10 @@ app.whenReady().then(() => {
   // our own title bar in the app's colours (the page draws it, see #titlebar); Windows still draws the minimize, maximize and
   // close buttons, in the same colours, light or dark like the page (Danny, 2026-10-18)
   // (a theme picked in Settings sends its own two colours: themeBar)
-  const bar = () => themeBar ? {...themeBar, height: 32} : nativeTheme.shouldUseDarkColors ? {color: "#282338", symbolColor: "#f0ecf8", height: 32} : {color: "#ffffff", symbolColor: "#2b2638", height: 32};
+  const bar = () => themeBar ? {...themeBar, height: 32} : nativeTheme.shouldUseDarkColors ? {color: "#2a2243", symbolColor: "#f0eafd", height: 32} : {color: "#f7f1ff", symbolColor: "#2a2142", height: 32};
   setBar = () => { if (win && !win.isDestroyed()) try { win.setTitleBarOverlay(bar()); if (themeBar) win.setBackgroundColor(themeBar.bg) } catch {} };
   win = new BrowserWindow({...lastBounds(), title: "MS Classic Grind Tracker", titleBarStyle: "hidden", titleBarOverlay: bar(),
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#1d1929" : "#f8f6fe",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#1f1931" : "#e7ddf9",
     // backgroundThrottling off: behind the game or minimized, Chromium would slow the frame timer to once a second and,
     // after 5 minutes, once a minute, so pickup lines would scroll away unread
     webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false}});
