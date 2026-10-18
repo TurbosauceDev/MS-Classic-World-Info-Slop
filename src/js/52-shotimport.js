@@ -30,7 +30,8 @@ async function readShots(files){
     // skill window: an icon with its level written below-right of it
     let ns = 0;
     for (const m of await shotFindIcons(img, skIcons)){
-      const line = shotText(img, m.x + m.w + 2, m.y + m.h / 2, m.x + m.w + 80, m.y + m.h + 4).find(l => /^\d+$/.test(l.s));
+      // from 60% down: skips descenders of the name above ("The Eye of Amazon" read as "??" from half way)
+      const line = shotText(img, m.x + m.w + 2, Math.round(m.y + m.h * 0.6), m.x + m.w + 80, m.y + m.h + 4).find(l => /^\d+$/.test(l.s));
       const lv = line && +line.s, s = SKJOB[m.key].s;
       if (lv && lv <= s.max){ r.skills[m.key] = Math.max(r.skills[m.key] || 0, lv); ns++ }
     }

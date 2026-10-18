@@ -32,6 +32,14 @@ const path = require("path");
   const ap = await p.$$eval("#pSTR,#pDEX,#pINT,#pLUK", l => l.map(x => x.value).join(" "));
   check(ap === "4 4 127 25" && (await p.textContent("#psummary")).startsWith("Level 28 Magician · Ice Wand · Magic Claw 20") && (await p.textContent("#pgearsum")) === "5 pieces", `screenshot import (AP ${ap})`);
   await p.click("#pgearclear");
+  // Danny's Lv28 Archer: every skill level read (The Eye of Amazon's used to fail), and the builder's own numbers match his stat window
+  await p.setInputFiles("#pimpfile", ["stat", "equip", "skill"].map(f => path.resolve(__dirname, `fixtures/bow-${f}.png`)));
+  await p.waitForSelector("#piapply", {timeout: 30000});
+  const bsk = await p.$$eval("#pimprev input[data-sk]", l => l.length);
+  await p.click("#piapply");
+  const bst = await p.evaluate(() => [...document.querySelectorAll("#plan .card")].find(c => c.querySelector("h3")?.textContent === "Character stats")?.innerText.replace(/\s+/g, " "));
+  check(bsk === 5 && (await p.textContent("#psummary")).startsWith("Level 28 Archer · Battle Bow") && /ACCURACY 66 AVOID 28 .*HP \/ MP 845 \/ 669 W.DEF \/ M.DEF 107 \/ 30/.test(bst), `bowman import matches the stat window (${bsk} skills; ${bst})`);
+  await p.click("#pgearclear");
   // Path Planner (opened from the builder)
   await p.click("#ppath");
   await p.waitForTimeout(300);

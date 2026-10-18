@@ -1428,7 +1428,7 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Home cards grow when clicked</h3><span class="pill p-hot">new</span></div>
       <p>Click a section card on Home and it grows into a big card at the top with a short description and its pages (the Grind Tracker one has the download). Click it again to shrink it back.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Fixes and polish</h3><span class="pill p-hot">update</span></div>
-      <p><b>Where to train</b> shows its ranking as soon as you open it (it was empty until you changed a setting). The site reopens on the page you last used instead of always on Home. Faster first load: the page is about a quarter smaller (item, NPC and monster pictures re-saved smaller, pixel for pixel the same), and Crafting and Keep or sell build their tables when you open them. Small touches: soft shadows on panels, gentle fade when pages and info boxes open, themed file buttons, focus rings and scrollbars. Motion is off if your system asks for reduced motion.</p></div>
+      <p><b>Where to train</b> shows its ranking as soon as you open it (it was empty until you changed a setting). The site reopens on the page you last used instead of always on Home. <b>Import from screenshots</b> now reads every skill level (The Eye of Amazon was missed). Faster first load: the page is about a quarter smaller (item, NPC and monster pictures re-saved smaller, pixel for pixel the same), and Crafting and Keep or sell build their tables when you open them. Small touches: soft shadows on panels, gentle fade when pages and info boxes open, themed file buttons, focus rings and scrollbars. Motion is off if your system asks for reduced motion.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Grind Tracker section</h3><span class="pill p-hot">new</span></div>
       <p>The <b>Grind Tracker</b> is now its own section, first in the menu and on Home: Overview (what it does and the download), How to use, Shared runs, and the KPQ leaderboard.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Search everything, more share links</h3><span class="pill p-hot">new</span></div>
@@ -4039,7 +4039,8 @@ async function readShots(files){
     // skill window: an icon with its level written below-right of it
     let ns = 0;
     for (const m of await shotFindIcons(img, skIcons)){
-      const line = shotText(img, m.x + m.w + 2, m.y + m.h / 2, m.x + m.w + 80, m.y + m.h + 4).find(l => /^\d+$/.test(l.s));
+      // from 60% down: skips descenders of the name above ("The Eye of Amazon" read as "??" from half way)
+      const line = shotText(img, m.x + m.w + 2, Math.round(m.y + m.h * 0.6), m.x + m.w + 80, m.y + m.h + 4).find(l => /^\d+$/.test(l.s));
       const lv = line && +line.s, s = SKJOB[m.key].s;
       if (lv && lv <= s.max){ r.skills[m.key] = Math.max(r.skills[m.key] || 0, lv); ns++ }
     }
