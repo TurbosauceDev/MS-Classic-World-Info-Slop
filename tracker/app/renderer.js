@@ -203,7 +203,7 @@ function renderInv(s){
   const g = s?.inv || [];
   $("#invBox").classList.toggle("hidden", !Object.keys(tabs).length);
   $("#invGain").innerHTML = g.slice(0, 40).map(x => `<tr><td>${esc(x.name)}${x.alike > 1 ? ` <span class="note">(or ${x.alike - 1} look-alike${x.alike > 2 ? "s" : ""})</span>` : ""}</td><td class="n">${x.n > 0 ? "+" : ""}${x.n}</td></tr>`).join("");
-  $("#invNote").textContent = g.length ? "Equip, Use and Etc read twice or more. Potions bought show up here too; loot counts only Etc items, equips and scrolls."
+  $("#invNote").textContent = g.length ? "Equip, Use and Etc read twice or more. Potions bought show up here too; loot counts only Etc items, equips and scrolls, and Use items that went down count as used up."
     : "No change yet: open the same tab again later in the session.";
 }
 // the line next to Start/Stop: tracking or not, paused, for how long

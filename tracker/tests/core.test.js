@@ -218,4 +218,11 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
   s.add({t: sec(1), type: "itemraw", text: "x", qty: 2, cands: ["1002000", horny]}); s.add({t: sec(2), type: "itemraw", text: "x", cands: ["1002000", "1002001"]});
   s.add({t: sec(3), type: "map", id: "80000100"}); s.add({t: sec(4), type: "itemraw", text: "Pa?? x1", cands: ["4001002", "1002001"]});
   assert.strictEqual(s.state.items[horny], 2); assert.strictEqual(s.state.items["4001002"], 1); assert.strictEqual(s.state.unreadItems, 1) }
+// Use-tab counts that went down between inventory looks = used up (Danny 2026-10-18: arrows/meat showed only as -48/-2)
+{ const s = createSession(G);
+  s.add({t: sec(0), type: "inv", tab: "use", items: {"2060000": 100, "2010001": 5}, unknown: 0});
+  s.add({t: sec(60), type: "use", id: "2060000", n: 10});
+  s.add({t: sec(120), type: "inv", tab: "use", items: {"2060000": 52, "2010001": 3}, unknown: 0});
+  const u = Object.fromEntries(s.stats().used.map(x => [x.id, x.n]));
+  assert.strictEqual(u["2060000"], 48); assert.strictEqual(u["2010001"], 2) }
 console.log("core tests passed");

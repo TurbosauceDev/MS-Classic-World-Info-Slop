@@ -217,7 +217,10 @@
       const unreadLeft = Math.max(0, S.unreadItems - Object.values(filled).reduce((a, b) => a + b, 0));
       const lootValue = items.reduce((a, b) => a + b.total, 0);
       // used up: NPC shop price (cheapest shop), else the player-shop median; unknown price = left out of the cost
-      const used = Object.entries(S.used).map(([id, n]) => { const each = G.buy?.[id] ?? G.pw?.[id]?.[0] ?? null;
+      // Use-tab items that went down between inventory looks count as used too (max of the two, like loot above)
+      const usedN = {...S.used};
+      for (const g of inv) if (g.tab === "use" && g.n < 0 && g.alike === 1 && -g.n > (usedN[g.id] || 0)) usedN[g.id] = -g.n;
+      const used = Object.entries(usedN).map(([id, n]) => { const each = G.buy?.[id] ?? G.pw?.[id]?.[0] ?? null;
         return {id, name: G.items[id]?.n || "Item " + id, n, each, total: each == null ? null : each * n} }).sort((a, b) => (b.total || 0) - (a.total || 0));
       const usedCost = used.reduce((a, u) => a + (u.total || 0), 0);
       const mobs = Object.entries(S.byMob).map(([id, m]) => ({id, name: G.mobs[id]?.[0] || "Monster " + id, ...m,
@@ -241,7 +244,7 @@
       return {v: 1, deaths: S.deaths, date: localDate(S.start || Date.now()), map: s.map, mapName: s.mapName, party: s.party, job: s.job,
         level: s.level, activeMin: Math.round(s.activeMin * 10) / 10, kills: s.kills, exp: s.exp, mesos: s.mesos,
         msgExp: S.msgExp, barExp: S.barExp, readShare: s.readShare, otherExp: S.otherExp, unreadItems: S.unreadItems, items: S.items, used: S.used,
-        usedCost: S.useSeen ? Math.round(s.usedCost) : null,
+        usedCost: S.useSeen || S.inv.use?.last.t > S.inv.use?.first.t ? Math.round(s.usedCost) : null,
         mobs: s.mobs.map(m => ({id: m.id, kills: m.kills, mesos: m.mesos, mesoDrops: m.mesoDrops, items: m.items}))};
     }
 
