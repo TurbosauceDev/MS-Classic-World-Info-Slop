@@ -1224,7 +1224,10 @@ $("#keyRows").onclick = async e => {
   const b = e.target.closest("[data-key]"); if (!b) return;
   if (keyWait){ const a = keyWait; keyWait = null; await keysSet(null, ""); if (a === b.dataset.key) return }   // clicked again: cancel
   keyWait = b.dataset.key; await host.keys?.(null, true); keysUi("Press the new keys for " + KEY_NAMES[keyWait] + " (Esc cancels, Backspace turns it off).");
+  // the shortcuts are off while it waits: back on after 15 s, or when the window loses focus
+  const w = keyWait; setTimeout(() => { if (keyWait === w) keysSet(null, "") }, 15e3);
 };
+addEventListener("blur", () => { if (keyWait) keysSet(null, "") });
 document.addEventListener("keydown", e => {
   if (!keyWait) return;
   e.preventDefault(); e.stopPropagation();

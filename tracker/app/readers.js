@@ -701,13 +701,18 @@
         const i = (y * w + x) * 4; if (Math.abs(d[i] - 225) + Math.abs(d[i + 1] - 223) + Math.abs(d[i + 2] - 213) > 40){ off++; sig = (sig * 31 + (d[i] >> 5) * 64 + (d[i + 1] >> 5) * 8 + (d[i + 2] >> 5)) | 0 }
       }
       if (off < 30) continue;   // empty
+      // the picture above the count, coarsely (6 patches' mean colours): "same item still there" when a read misses
+      const pic = [];
+      for (let py = 0; py < 2; py++) for (let px = 0; px < 3; px++){ let r0 = 0, g0 = 0, b0 = 0, k = 0;
+        for (let y = cy - 28 + py * 9; y < cy - 19 + py * 9; y++) for (let x = sx + 1 + px * 10; x < sx + 11 + px * 10; x++){ const i = (y * w + x) * 4; r0 += d[i]; g0 += d[i + 1]; b0 += d[i + 2]; k++ }
+        pic.push(r0 / k, g0 / k, b0 / k) }
       const num = nums.find(n => Math.abs(n.slot - sx) <= 2 && Math.abs(n.y - cy) <= 1);
       // the picture is matched again only when the slot changed (beyond video noise: colors in 32-shade steps)
       const key = inv.tab + "," + sx + "," + cy + "," + (num ? num.end : "") + "," + sig;
       let ic = cache?.get(key);
       if (ic === undefined){ ic = slotIcon(img, sx, cy, num ? num.end : sx - 12, cands); if (cache){ if (cache.size > 400) cache.clear(); cache.set(key, ic) } }
-      if (!ic){ unknown++; missed.push(r * 5 + c); continue }
-      slots.push({i: r * 5 + c, ids: ic.ids, n: num ? num.n : inv.tab === "equip" ? 1 : null});
+      if (!ic){ unknown++; missed.push({i: r * 5 + c, pic}); continue }
+      slots.push({i: r * 5 + c, ids: ic.ids, n: num ? num.n : inv.tab === "equip" ? 1 : null, pic});
     }
     return {tab: inv.tab, slots, unknown, missed};
   }
@@ -881,12 +886,13 @@
          800 stack in and out, Danny's KPQ runs, 2026-10-18). Never read at all: that item's total is marked partial */
       const mem = slotMem[inv.tab] ||= new Map(), add = (ids, n) => { items[ids[0]] = (items[ids[0]] || 0) + n; stacks[ids[0]] = (stacks[ids[0]] || 0) + 1; if (ids.length > 1) alike[ids[0]] = ids.length };
       for (const sl of r.slots){
-        if (sl.n !== null){ add(sl.ids, sl.n); mem.set(sl.i, {ids: sl.ids, n: sl.n}); continue }
+        if (sl.n !== null){ add(sl.ids, sl.n); mem.set(sl.i, {ids: sl.ids, n: sl.n, pic: sl.pic}); continue }
         const m = mem.get(sl.i);
         if (m && m.ids[0] === sl.ids[0]) add(sl.ids, m.n); else { r.unknown++; partial[sl.ids[0]] = 1 }
       }
-      for (const i of r.missed){ const m = mem.get(i); if (m){ add(m.ids, m.n); r.unknown-- } }
-      for (const i of [...mem.keys()]) if (!r.slots.some(sl => sl.i === i) && !r.missed.includes(i)) mem.delete(i);   // emptied
+      // a picture that didn't match: only when the slot looks exactly as it did (not scrolled, not another item)
+      for (const {i, pic} of r.missed){ const m = mem.get(i); if (m && m.pic.every((v, j) => Math.abs(v - pic[j]) <= 20)){ add(m.ids, m.n); r.unknown-- } }
+      for (const i of [...mem.keys()]) if (!r.slots.some(sl => sl.i === i) && !r.missed.some(x => x.i === i)) mem.delete(i);   // emptied
       const key = inv.tab + JSON.stringify(items) + r.unknown, steady = key === invNext;
       invNext = key;
       if (!steady || invSent[inv.tab] === key) return null;
