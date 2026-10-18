@@ -91,7 +91,7 @@ npm start           # run it (Windows, Electron)
   in `G.kpq` (80000000-80000600: 1st Accompaniment stages 1-4, Last Stage, Bonus, Exit; from the site's D.kpq). While on,
   any other known map (Kerning City 10003000 between rounds) pauses the session and the bar can't resume it; the next
   stage does. A round = entering a stage from outside. Saved as `kpq: {mode, rounds}`; History's EXP/hr for it uses
-  stage time only. No shared runs while KPQ is on.
+  stage time only. No 15-minute farming runs while KPQ is on; rounds go to the KPQ leaderboard instead (v0.2.40).
 - Runs carry the UTC hour they started; the server's summary has "times" (best time to farm per map, each run against
   the same player's usual speed there, 3-hour blocks with 3+ players).
 - Shared numbers count one player per home network: the server joins installs that sent runs from the same connection
@@ -118,3 +118,4 @@ npm start           # run it (Windows, Electron)
 - v0.2.37: Task Manager shows every process of the app as "MS Classic Grind Tracker" (the Windows file description was the long app blurb).
 - v0.2.38: Inventory: its last spot is remembered (also between sessions) and checked first; the whole screen is searched on every read (2 s, a few ms; was every 6 s); a window whose open tab is hidden under the mouse still counts as found. Default Session layout (Danny's): Session numbers, Monsters killed, then KPQ, Alerts and goal, Start and end folded. Total EXP gained and active EXP/min (EXP per minute of farming) in Session numbers, History rows, compare and the CSV.
 - v0.2.39: Run summary "Save as image" (Pictures\MS Classic Tracker runs, also copied to the clipboard). "I only buy meat and lemons" in Consumables used: Red/Orange/White/Blue Potions cost nothing. Fixes from the KPQ test run: quick-slot counts over a yellow icon (Lemon 98) read; an item that went down then stopped reading still counts as used (Warrior Potion); one Mace no longer counted twice when the inventory read clean around the pickup; KPQ "x1 earned" lines are not unread drops; compare Clear works.
+- v0.2.40: KPQ leaderboard. With sharing on, each KPQ round played from the 1st stage past the Last stage is sent to the server (`/api/kpq`: clear time = 1st stage to leaving the Last stage, time to Exit, stage times, party size, level, job, EXP/mesos that round, Bonus/Rush, party code hashed). The server keeps them in `kpq_rounds` and its summary has `kpq.board` (per mode, one line per party code or home network, best clear first); the site shows it on the Grind Tracker page.

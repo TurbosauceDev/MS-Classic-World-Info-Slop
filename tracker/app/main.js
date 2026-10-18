@@ -161,7 +161,7 @@ async function flushRuns(){
     const q = readQueue(), left = [];
     for (const run of q){
       try {
-        const r = await fetch(SERVER + "/api/runs", {signal: AbortSignal.timeout(20e3), method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(run)});
+        const r = await fetch(SERVER + (run.kpq ? "/api/kpq" : "/api/runs"), {signal: AbortSignal.timeout(20e3), method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(run)});
         if (r.status === 429 || r.status >= 500) left.push(run);   // try again later; other answers are final
       } catch { left.push(run) }
     }

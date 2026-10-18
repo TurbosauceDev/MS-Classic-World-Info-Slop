@@ -458,3 +458,6 @@ details.sec>summary:hover h2{color:var(--accent)}
 .trkstats .fact b{display:block;font:800 22px var(--f-display);color:var(--ink)}
 .trkempty{margin-top:14px;text-align:center;padding:28px 16px}
 .trkempty p{margin:6px auto 0;max-width:52ch;color:var(--muted);font-size:14px}
+.trkh3{font:800 17px/1.2 var(--f-display);margin:22px 0 0}
+.trkh4{font:700 15px var(--f-display);margin:18px 0 0}
+#trkkm{margin:10px 0 0}

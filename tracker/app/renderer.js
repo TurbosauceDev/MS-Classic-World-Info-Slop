@@ -475,7 +475,7 @@ function kpqTime(left, t){
 }
 function kpqEnd(t, round){
   if (kpq.stage){ const id = kpq.stage.id; (kpq.stageTimes[id] ||= []).push(kpqSince(kpq.stage, t)); kpq.stageExp[id] = (kpq.stageExp[id] || 0) + Math.max(0, (session?.stats().exp || 0) - kpq.stage.exp0); kpq.stage = null }
-  if (round && kpq.round){ kpq.times.push(kpqSince(kpq.round, t)); kpq.round = null }
+  if (round && kpq.round){ kpq.times.push(kpqSince(kpq.round, t)); kpqShare(kpq.round, t); kpq.round = null }
   if (round) kpq.left = null;   // each round's clock starts over
 }
 function kpqMap(id, t){
@@ -487,8 +487,11 @@ function kpqMap(id, t){
     if (!kpq.inside) kpq.rounds++;
     // a new stage: the last one's time is kept; the Exit map ends the round
     if (kpq.stage?.id !== String(id)){
+      // cleared: from the Last stage on to Bonus or Exit. Clear time = 1st stage to then (Bonus left out, so Bonus and Rush compare)
+      if (kpq.stage?.id === "80000400" && kpq.round) kpq.round.clear = kpqSince(kpq.round, t);
       kpqEnd(t, String(id) === "80000600");
-      if (KPQ_STAGE[id]){ const p = {id: String(id), t0: t, left0: kpqLeftAt(t), exp0: session?.stats().exp || 0}; kpq.stage = p; if (!kpq.round) kpq.round = {t0: t, left0: p.left0} }
+      if (KPQ_STAGE[id]){ const p = {id: String(id), t0: t, left0: kpqLeftAt(t), exp0: session?.stats().exp || 0}; kpq.stage = p; if (!kpq.round){ const st = session?.stats(); kpq.round = {t0: t, left0: p.left0, exp0: st?.exp || 0, mesos0: st?.mesos || 0, startStage: String(id), stages: {}} } }
+      if (KPQ_STAGE[id] && kpq.round) kpq.round.stages[String(id)] = 1;
     }
     kpq.inside = true;
     if (kpq.hold){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ round " + kpq.rounds + ": tracking again." }
@@ -498,6 +501,18 @@ function kpqMap(id, t){
     if (!kpq.hold){ kpq.hold = true; if (session.state.pausedAt === null) pauseAt(t); $("#status").textContent = "KPQ: paused between rounds. Picks back up on the next stage." }
   }
 }
+// KPQ leaderboard: a finished round (1st stage to past the Last stage) goes to the server's /api/kpq when sharing is on.
+// Rounds joined mid-way or left before the Last stage was cleared aren't sent.
+let kpqSent = 0;
+function kpqShare(r, t){
+  if (!settings.share || r.clear == null || r.startStage !== "80000000" || !session) return;
+  const s = session.stats(), st = {};
+  for (const [id, a] of Object.entries(kpq.stageTimes)) if (r.stages[id]) st[id] = Math.round(a.at(-1));
+  kpqSent++;
+  host.shareRun({kpq: true, v: 1, date: new Date(r.t0).toLocaleDateString("sv"), hour: new Date(r.t0).getUTCHours(), mode: settings.kpqMode === "Rush" ? "Rush" : "Bonus",
+    party: s.party, level: s.level, job: s.job, clear: Math.round(r.clear), total: Math.round(kpqSince(r, t)), clock: r.left0 !== null,
+    exp: Math.max(0, s.exp - r.exp0), mesos: Math.max(0, s.mesos - r.mesos0), stages: st, partyCode: settings.partyCode || null});
+}
 function kpqText(s){
   if (!kpq?.on) return settings.kpqAct === "kpq" ? "KPQ picked: the session pauses outside the KPQ stages and counts each round." : "During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.";
   const n = kpq.rounds, per = v => n ? fmt(v / n) : "-";
@@ -505,7 +520,7 @@ function kpqText(s){
     + (kpq.round ? ` · this round ${mss(kpqSince(kpq.round, Date.now()))}` + (kpq.stage ? ` (${KPQ_STAGE[kpq.stage.id]} stage ${mss(kpqSince(kpq.stage, Date.now()))})` : "") : "")
     + (kpq.times.length ? ` · best round ${mss(Math.min(...kpq.times))}, average ${mss(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length)}` : "")
     + (kpq.left !== null ? ` · KPQ clock ${mss(kpqLeftAt(Date.now()))} left` : "")
-    + (kpq.hold ? " · paused between rounds" : "");
+    + (kpq.hold ? " · paused between rounds" : "") + (kpqSent ? ` · ${kpqSent} round${kpqSent === 1 ? "" : "s"} sent to the KPQ leaderboard` : "");
 }
 function kpqSet(){
   if (!session || !kpq) return;
@@ -681,7 +696,7 @@ async function start(){
   kpqReset(); barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
   engine = makeEngine(ICONS, null, settings.invArea || null, settings.glyphs || [], settings.invLast || null); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
-  mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
+  mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; kpqSent = 0; FPS = 2; slowTicks = 0;
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   tick();

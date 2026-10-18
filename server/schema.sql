@@ -30,3 +30,10 @@ CREATE TABLE IF NOT EXISTS party_live (grp TEXT NOT NULL, install TEXT NOT NULL,
 CREATE INDEX IF NOT EXISTS party_live_updated ON party_live (updated);
 -- test run sent by hand on 2026-10-17 (not real farming)
 DELETE FROM runs WHERE install = 'zzzzzzzzzzzzzzzzzz';
+-- KPQ leaderboard: one row per KPQ round a tracker saw cleared from the 1st stage (sharing on). clear = seconds from the 1st
+-- stage to leaving the Last stage; total = to the Exit map (Bonus included); clock = 1 when timed off the in-game KPQ clock
+CREATE TABLE IF NOT EXISTS kpq_rounds (id INTEGER PRIMARY KEY, install TEXT NOT NULL, ipday TEXT NOT NULL, received TEXT NOT NULL, date TEXT NOT NULL,
+  hour INTEGER, mode TEXT NOT NULL, party INTEGER NOT NULL, level INTEGER, job TEXT, clear INTEGER NOT NULL, total INTEGER, clock INTEGER,
+  exp INTEGER, mesos INTEGER, stages TEXT, grp TEXT, ok INTEGER NOT NULL, why TEXT);
+CREATE INDEX IF NOT EXISTS kpq_install ON kpq_rounds (install, received);
+CREATE INDEX IF NOT EXISTS kpq_ipday ON kpq_rounds (ipday);

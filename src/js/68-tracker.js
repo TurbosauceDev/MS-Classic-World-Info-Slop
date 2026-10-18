@@ -14,7 +14,7 @@ function trkRender(){
   $("#trksrc").innerHTML = s.live ? `Live from the tracker server, updated ${esc(new Date(s.updated).toLocaleString())}.`
     : `Snapshot from the tracker server${s.read ? `, read ${esc(s.read)}` : ""}.${TRK_ASKED ? " The live server couldn't be reached from here." : ""}`;
   if (!s.runs){
-    $("#trkdata").innerHTML = `<div class="card trkempty"><h3>No shared runs yet</h3><p>Every 15 minutes of non-stop farming on one map that a tracker player shares lands here: EXP/hr and mesos/hr by map, confirmed drops by monster, and the best time of day to farm. Be the first: download the tracker above and say yes to sharing.</p></div>`;
+    $("#trkdata").innerHTML = trkKpq(s.kpq) + `<h3 class="trkh3">Grinding</h3><div class="card trkempty"><h3>No shared runs yet</h3><p>Every 15 minutes of non-stop farming on one map that a tracker player shares lands here: EXP/hr and mesos/hr by map, confirmed drops by monster, and the best time of day to farm. Be the first: download the tracker above and say yes to sharing.</p></div>`;
     return;
   }
   // maps: one line per map and solo/party; each player (or party) counts once (their typical run)
@@ -39,23 +39,41 @@ function trkRender(){
   const times = Object.entries(s.times || {}).map(([map, t]) => { const b = t.reduce((a, x) => x[1] > a[1] ? x : a); const w = t.reduce((a, x) => x[1] < a[1] ? x : a);
     return `<tr><td>${known(map) ? mapLink(map, D.mapnames[map] ?? D.maps[map][0]) : esc(map)}</td><td>${localHour(b[0])}-${localHour((b[0] + 3) % 24)} <span class="sub">${b[1] >= 1 ? "+" : ""}${Math.round((b[1] - 1) * 100)}%</span></td>
       <td>${localHour(w[0])}-${localHour((w[0] + 3) % 24)} <span class="sub">${Math.round((w[1] - 1) * 100)}%</span></td></tr>` }).join("");
-  $("#trkdata").innerHTML = `<div class="trkstats">
+  $("#trkdata").innerHTML = trkKpq(s.kpq) + `<h3 class="trkh3">Grinding</h3><div class="trkstats">
       <div class="fact"><b>${fmt(s.runs)}</b><p>15-minute runs</p></div>
       <div class="fact"><b>${fmt(s.players)}</b><p>trackers sharing</p></div>
       <div class="fact"><b>${(+s.hours || 0).toLocaleString()}</b><p>hours of grinding</p></div>
       <div class="fact"><b>${fmt(maps.length)}</b><p>map + party combos</p></div>
       <div class="fact"><b>${fmt(mobs.length)}</b><p>monsters with drops</p></div>
     </div>
-    <h3 class="trkh" style="font-size:17px">EXP and mesos by map</h3>
+    <h4 class="trkh4">EXP and mesos by map</h4>
     <p class="note">Median of each player's typical run (players on one home network count once). Mesos/hr is meso drops picked up, before potions. Pots/ammo = mesos/hr spent on potions, food and arrows.</p>
     <div class="tblwrap"><table><thead><tr><th>Map</th><th>Solo/party</th><th class="num">Players</th><th class="num">Levels</th><th class="num">EXP/hr</th><th class="num">Mesos/hr</th><th class="num">Deaths/hr</th><th class="num">Pots/ammo</th></tr></thead><tbody>${mapRows || '<tr><td colspan="8" class="sub">No map runs yet.</td></tr>'}</tbody></table></div>
-    <h3 class="trkh" style="font-size:17px">Confirmed drops by monster</h3>
+    <h4 class="trkh4">Confirmed drops by monster</h4>
     <p class="note">Items players picked up after killing it, as "1 in N kills". Real drop rates are at least this (not every drop gets picked up). Also shown on each monster's and item's page.</p>
     <div class="tblwrap"><table><thead><tr><th>Monster</th><th class="num">Kills</th><th class="num">Players</th><th class="num">Mesos/drop</th><th>Items</th></tr></thead><tbody>${mobRows || '<tr><td colspan="5" class="sub">No kills with drops yet.</td></tr>'}</tbody></table></div>
-    <h3 class="trkh" style="font-size:17px">Best time of day to farm</h3>
+    <h4 class="trkh4">Best time of day to farm</h4>
     <p class="note">Each run against the same player's usual speed on that map, in 3-hour blocks with 3+ players. Your time zone.</p>
     ${times ? `<div class="tblwrap"><table><thead><tr><th>Map</th><th>Fastest</th><th>Slowest</th></tr></thead><tbody>${times}</tbody></table></div>` : '<p class="sub">Not enough players at different times yet (needs 3+ players in at least two time blocks on a map).</p>'}`;
 }
+// KPQ leaderboard (server summary .kpq): per mode, one line per party (party code) or player, best clear time first.
+// Clear = 1st stage to leaving the Last stage, so Bonus time doesn't count
+const TRK_KMODE = {v: "Bonus"};
+function trkKpq(k){
+  const head = `<h3 class="trkh3">KPQ leaderboard</h3><p class="note">Fastest Kerning PQ clears by tracker players: 1st stage to the end of the Last stage (Bonus stage not counted). One line per party (same party code) or player. Rounds joined part-way aren't counted.</p>`;
+  const modes = Object.keys(k?.board || {});
+  if (!k?.rounds || !modes.length) return head + `<div class="card trkempty"><h3>No KPQ rounds yet</h3><p>With sharing on, every KPQ round the tracker sees from the 1st stage to the end lands here. Use the same party code as your party so you show up as one team.</p></div>`;
+  if (!modes.includes(TRK_KMODE.v)) TRK_KMODE.v = modes[0];
+  const seg = modes.length > 1 ? `<div class="seg" role="radiogroup" id="trkkm">${modes.map(m => `<button role="radio" aria-checked="${m === TRK_KMODE.v}" data-m="${esc(m)}">${esc(m)}</button>`).join("")}</div>` : "";
+  const rows = k.board[TRK_KMODE.v].map((e, i) => `<tr><td class="num">${i < 3 ? `<span class="pill ${i ? "p-hot" : "p-good"}">#${i + 1}</span>` : "#" + (i + 1)}</td>
+    <td class="num"><b>${mss(e.best)}</b>${e.clock ? "" : ' <span class="sub" title="Timed with the PC clock: the KPQ clock wasn\'t read">~</span>'}</td><td class="num">${mss(e.median)}</td><td class="num">${e.rounds}</td>
+    <td>${e.party > 1 ? "party of " + e.party : "solo"}</td><td>${e.level ? "Lv " + e.level : "–"}${e.job ? ` <span class="sub">${esc(e.job)}</span>` : ""}</td><td class="num">${fmt(e.exp)}</td><td class="sub">${esc(e.date || "")}</td></tr>`).join("");
+  return head + `<p class="sub">${fmt(k.rounds)} rounds from ${fmt(k.groups)} parties and players.</p>${seg}
+    <div class="tblwrap"><table><thead><tr><th class="num">Rank</th><th class="num">Best clear</th><th class="num">Typical</th><th class="num">Rounds</th><th>Party</th><th>Level and job</th><th class="num">EXP that round</th><th>Date</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="sub">Level and job are the tracker player's who sent the best round. "~" = timed with the PC clock.</p>`;
+}
+const mss = sec => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0") };
+$("#trkdata").addEventListener("click", e => { const b = e.target.closest("#trkkm button"); if (b){ TRK_KMODE.v = b.dataset.m; trkRender() } });
 function trkOpen(){
   trkRender();
   if (TRK_ASKED) return; TRK_ASKED = true;

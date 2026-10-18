@@ -1,10 +1,11 @@
 /* Shared grind data for MS Classic World Info (Cloudflare Worker + D1).
    POST /api/runs     a 15-minute run from the grind tracker (sharing on)
+   POST /api/kpq      a cleared KPQ round from the grind tracker (sharing on): the KPQ leaderboard
    POST /api/party    live party view: post your numbers, get your party's (same party code)
    GET  /api/summary  everything the site needs, anonymous: one row per player per map/party (their typical run),
                       plus drop counts per monster. The site's daily build bakes this into the page. */
 import G from "./gamedata.json" with {type: "json"};
-import {cleanRun, median} from "./check.js";
+import {cleanRun, cleanKpq, median} from "./check.js";
 
 const CORS = {"access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST", "access-control-allow-headers": "content-type"};
 const json = (v, status = 200) => new Response(JSON.stringify(v), {status, headers: {"content-type": "application/json", ...CORS}});
@@ -41,6 +42,24 @@ async function postRun(req, env){
   if (code && r.party > 1){   // a code only groups party runs: friends soloing the same map with one code are separate players
     await env.DB.prepare("INSERT OR REPLACE INTO run_groups (run_id, grp) VALUES (?, ?)").bind(runId, await sha("party:" + code + await salt(env.DB))).run();
   }
+  return json({ok: true, counted: c.ok, why: c.why});
+}
+
+// KPQ rounds: a round takes minutes, so 12 an hour per tracker is plenty; per IP the same daily cap as runs
+const KPQ_PER_HOUR = 12;
+async function postKpq(req, env){
+  let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
+  const c = cleanKpq(body);
+  if (c.error) return json({error: c.error}, 400);
+  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  const recent = await env.DB.prepare("SELECT COUNT(*) n FROM kpq_rounds WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
+  const today = await env.DB.prepare("SELECT COUNT(*) n, COUNT(DISTINCT install) k, SUM(install = ?) mine FROM kpq_rounds WHERE ipday = ?").bind(body.install, ipday).first();
+  if (recent.n >= KPQ_PER_HOUR || today.n >= MAX_PER_IP_DAY || today.k >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rounds"}, 429);
+  const r = c.round, code = typeof body.partyCode === "string" ? body.partyCode.trim().toLowerCase().slice(0, 20) : "";
+  const grp = code && r.party > 1 ? await sha("party:" + code + await salt(env.DB)) : null;
+  await env.DB.prepare(`INSERT INTO kpq_rounds (install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(body.install, ipday, now.toISOString(), r.date, r.hour, r.mode, r.party, r.level, r.job,
+    r.clear, r.total, r.clock, r.exp, r.mesos, JSON.stringify(r.stages), grp, c.ok ? 1 : 0, c.why).run();
   return json({ok: true, counted: c.ok, why: c.why});
 }
 
@@ -85,11 +104,12 @@ export async function summary(db){
   // one person with fresh installs (or a whole household) can't make up the "3+ players" a map needs on their own
   const uf = new Map(), find = k => { let r = k; while (uf.has(r) && uf.get(r) !== r) r = uf.get(r); uf.set(k, r); return r },
     join = (a, b) => { const x = find(a), y = find(b); if (x !== y) uf.set(x, y) };
-  for (const r of results) join("i" + r.install, "n" + r.ipday);
+  const kq = (await db.prepare("SELECT install, ipday, date, mode, party, level, job, clear, total, clock, exp, mesos, grp FROM kpq_rounds WHERE ok = 1").all()).results;
+  for (const r of [...results, ...kq]) join("i" + r.install, "n" + r.ipday);
   const net = install => find("i" + install);
   // parties: a party code joined with its members' networks (a separate set, so soloing friends who partied once stay apart)
   const puf = new Map(), pfind = k => { let r = k; while (puf.has(r) && puf.get(r) !== r) r = puf.get(r); puf.set(k, r); return r };
-  for (const r of results) if (r.grp && r.party > 1){ const x = pfind("p" + r.grp), y = pfind(net(r.install)); if (x !== y) puf.set(x, y) }
+  for (const r of [...results, ...kq]) if (r.grp && r.party > 1){ const x = pfind("p" + r.grp), y = pfind(net(r.install)); if (x !== y) puf.set(x, y) }
   const timed = [];   // runs with their start hour: [key, EXP/hr, UTC hour]
   for (const r of results){
     const k = [r.install, r.map ?? "?" + r.map_name, r.party > 1 ? 1 : 0].join("|"), h = r.minutes / 60;
@@ -126,8 +146,24 @@ export async function summary(db){
     const out = bl.map((b, i) => b.g.size >= 3 ? [i * 3, Math.round(median(b.x) * 100) / 100, b.g.size] : null).filter(Boolean);
     if (out.length >= 2) times[map] = out;   // [UTC start hour, speed vs the players' usual, players]; one block alone compares nothing
   }
+  // KPQ leaderboard, per mode: one line per party (party code) or player (home network), their best clear time. Every party
+  // member's tracker sends the same round, so a group's round count is its busiest tracker's, not the sum
+  const kg = new Map();
+  for (const r of kq){
+    const g = r.party > 1 && r.grp ? "P" + pfind("p" + r.grp) : "S" + net(r.install), k = r.mode + "|" + g;
+    if (!kg.has(k)) kg.set(k, {mode: r.mode, g, best: null, clears: [], per: new Map()});
+    const e = kg.get(k); e.clears.push(r.clear); e.per.set(r.install, (e.per.get(r.install) || 0) + 1);
+    if (!e.best || r.clear < e.best.clear) e.best = r;
+  }
+  const klabel = new Map(), kpq = {rounds: kq.length, groups: new Set([...kg.values()].map(e => e.g)).size, board: {}};
+  for (const e of [...kg.values()].sort((a, b) => a.best.clear - b.best.clear)){
+    if (!klabel.has(e.g)) klabel.set(e.g, "k" + klabel.size);
+    const b = e.best, list = kpq.board[e.mode] ||= [];
+    if (list.length < 50) list.push({group: klabel.get(e.g), best: b.clear, median: Math.round(median(e.clears)), rounds: Math.max(...e.per.values()),
+      party: b.party, level: b.level, job: b.job, date: b.date, clock: !!b.clock, exp: b.exp, mesos: b.mesos});
+  }
   const players = new Set(results.map(r => r.install)).size, hours = results.reduce((a, r) => a + r.minutes, 0) / 60;
-  return {updated: new Date().toISOString(), runs: results.length, players, hours: Math.round(hours * 10) / 10, rows, mobs, times};
+  return {updated: new Date().toISOString(), runs: results.length, players, hours: Math.round(hours * 10) / 10, rows, mobs, times, kpq};
 }
 
 export default {
@@ -140,6 +176,7 @@ async function route(req, env){
   const url = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
   if (url.pathname === "/api/runs" && req.method === "POST") return postRun(req, env);
+  if (url.pathname === "/api/kpq" && req.method === "POST") return postKpq(req, env);
   if (url.pathname === "/api/party" && req.method === "POST") return partyLive(req, env);
   if (url.pathname === "/api/summary" && req.method === "GET"){
     // worked out at most every 5 minutes and kept in the meta table (each request would otherwise read every run; the

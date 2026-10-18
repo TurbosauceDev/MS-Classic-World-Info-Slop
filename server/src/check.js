@@ -41,3 +41,28 @@ export function cleanRun(r, G){
 
 // typical value of a list (half above, half below) and the middle half
 export function median(a){ const s = [...a].sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[n >> 1] : (s[n / 2 - 1] + s[n / 2]) / 2) : null }
+
+/* A KPQ round for the leaderboard. Same idea as cleanRun: a failed round is kept with the reason, not counted. The time
+   limits are our own sanity bounds (no real round is under a minute), not game data. */
+const KPQ_IDS = ["80000000", "80000100", "80000200", "80000300", "80000400", "80000500"];
+export function cleanKpq(r){
+  const num = (v, lo, hi) => typeof v === "number" && isFinite(v) && v >= lo && v <= hi;
+  if (!r || typeof r !== "object") return {error: "not a round"};
+  if (typeof r.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(r.install)) return {error: "install id"};
+  if (!num(r.clear, 1, 7200) || !num(r.party, 1, 6)) return {error: "numbers"};
+  if (r.level != null && !num(r.level, 1, 200)) return {error: "level"};
+  if (r.date && (typeof r.date !== "string" || !/^\d{4}-\d\d-\d\d$/.test(r.date))) return {error: "date"};
+  const cnt = (v, hi) => v == null ? null : Math.min(hi, Math.max(0, Math.round(+v) || 0));
+  const st = r.stages && typeof r.stages === "object" && !Array.isArray(r.stages) ? r.stages : {};
+  const stages = Object.fromEntries(KPQ_IDS.filter(id => num(st[id], 0, 7200)).map(id => [id, Math.round(st[id])]));
+  const round = {date: r.date || new Date().toISOString().slice(0, 10), hour: Number.isInteger(r.hour) && r.hour >= 0 && r.hour < 24 ? r.hour : null,
+    mode: r.mode === "Rush" ? "Rush" : "Bonus", party: r.party | 0, level: r.level == null ? null : Math.round(r.level),
+    job: typeof r.job === "string" ? r.job.slice(0, 40) || null : null, clear: Math.round(r.clear), total: cnt(r.total, 7200),
+    clock: r.clock ? 1 : 0, exp: cnt(r.exp, 1e7), mesos: cnt(r.mesos, 1e7), stages};
+  let why = null;
+  if (round.clear < 60 || round.clear > 3600) why = "clear time";
+  else if (round.total != null && round.total < round.clear) why = "total under clear";
+  else if (["80000000", "80000400"].some(id => !(id in stages))) why = "stages missing";
+  else if (KPQ_IDS.slice(0, 5).reduce((a, id) => a + (stages[id] || 0), 0) > round.clear + 60) why = "stage times over clear";
+  return {round, ok: !why, why};
+}
