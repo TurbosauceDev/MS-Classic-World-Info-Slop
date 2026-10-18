@@ -185,6 +185,14 @@ const path = require("path");
   await tab("#t-inv"); await p.setInputFiles("#ivfile", path.resolve(__dirname, "../tracker/tests/frames-inv/use-12162.png"));
   await p.waitForFunction(() => /^Read$|had no/.test(document.querySelector("#ivst").textContent), null, {timeout: 60000});
   check(/Lemon/.test(await p.textContent("#ivbody")) && /mesos/.test(await p.textContent("#ivsum")), "price check reads a Use tab");
+  // every page at phone width: no sideways scroll, no NaN/undefined text
+  await p.setViewportSize({width: 390, height: 800});
+  for (const [id, cat] of await p.$$eval(".subs button[id^=t-]", bs => bs.map(b => [b.id, b.dataset.cat]))){
+    await p.click("#c-" + cat); await p.click("#" + id); await p.waitForTimeout(200);
+    const [sw, cw, bad] = await p.evaluate(() => { const m = document.querySelector("main section:not([hidden])") || document.body;
+      return [document.documentElement.scrollWidth, document.documentElement.clientWidth, (m.innerText.match(/.{0,30}\b(NaN|undefined|Infinity)\b.{0,20}/) || [""])[0]] });
+    check(sw <= cw + 1 && !bad, `${id} at 390px (width ${sw}/${cw}${bad ? ", text: " + bad : ""})`);
+  }
   console.log(errs.length ? "\n" + errs.join("\n") : "\nall good");
   await b.close();
   process.exit(errs.length ? 1 : 0);
