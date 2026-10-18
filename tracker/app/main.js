@@ -194,9 +194,9 @@ ipcMain.handle("delete-session", (_, saved) => {
 ipcMain.handle("export-csv", () => {
   // text starting with = + - @ would run as a formula in Excel (map names come from OCR): prefixed with '
   const q = v => { let t = String(v ?? ""); if (typeof v === "string" && /^[=+\-@]/.test(t)) t = "'" + t; return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t };
-  const head = ["saved", "date", "name", "map", "level", "job", "party", "active_min", "kills", "exp", "mesos", "exp_hr", "mesos_hr", "deaths", "used_cost", "note"];
+  const head = ["saved", "date", "name", "player", "start_level", "end_level", "clock_min", "best_drop", "best_drop_each", "map", "level", "job", "party", "active_min", "kills", "exp", "mesos", "exp_hr", "mesos_hr", "deaths", "used_cost", "note"];
   const rows = sessions().map(x => { const h = (x.activeMin || 0) / 60;
-    return [new Date(x.saved).toISOString(), x.date, x.name || "", x.mapName || x.map, x.level, x.job, x.party, x.activeMin, x.kills, x.exp, x.mesos,
+    return [new Date(x.saved).toISOString(), x.date, x.name || "", x.player || "", x.startLevel ?? "", x.endLevel ?? "", x.clockMin ?? "", x.bestDrop?.name || "", x.bestDrop?.each ?? "", x.mapName || x.map, x.level, x.job, x.party, x.activeMin, x.kills, x.exp, x.mesos,
       h ? Math.round(x.exp / h) : "", h ? Math.round(x.mesos / h) : "", x.deaths ?? "", x.usedCost ?? "", x.note || ""] });
   const file = path.join(app.getPath("documents"), "MS Classic Tracker sessions.csv");
   // Excel locks a CSV it has open: say so instead of failing silently

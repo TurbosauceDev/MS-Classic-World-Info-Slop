@@ -360,6 +360,41 @@
     }
     return n >= 30 ? {w, h, d: out} : null;   // no white text there: status bar not on screen
   }
+  // ---- character name: the lower of the two lines in the job box ("Archer" over "Turbow"). Columns of the status bar's white
+  // text split into blocks at gaps of 4+ px; the first block with two separate lines of text is the job box, made 4x bigger
+  // for the OCR. Only kept on this PC (History); never sent with shared runs or the party view.
+  function nameTextCrop(img){
+    const rows = Math.max(40, Math.round(img.h * 0.056)), y0 = img.h - rows, X = Math.floor(img.w * 0.55), d = img.d;
+    // white pixels, minus long horizontal runs (the box's top edge, the bars' outlines)
+    const M = new Uint8Array(rows * X);
+    for (let y = y0; y < img.h; y++){ let r = 0;
+      for (let x = 0; x <= X; x++){ const i = (y * img.w + x) * 4, w = x < X && Math.min(d[i], d[i + 1], d[i + 2]) > 190;
+        if (w) r++; else { if (r && r < 30) for (let k = x - r; k < x; k++) M[(y - y0) * X + k] = 1; r = 0 } } }
+    const on = (x, y) => M[(y - y0) * X + x] === 1;
+    const col = []; for (let x = 0; x < X; x++){ let c = 0; for (let y = y0; y < img.h; y++) if (on(x, y)) c++; col.push(c) }
+    const blocks = []; let a = -1, gap = 0;
+    for (let x = 0; x <= X; x++){ const ink = x < X && col[x] > 0 && col[x] < rows * 0.6;   // tall lines (box edges) aren't text
+      if (ink){ if (a < 0) a = x; gap = 0 } else if (a >= 0 && ++gap >= 4){ blocks.push([a, x - gap]); a = -1 } }
+    for (const [x0, x1] of blocks){
+      if (x1 - x0 < 12) continue;
+      const band = []; for (let y = y0; y < img.h; y++){ let c = 0; for (let x = x0; x <= x1; x++) if (on(x, y)) c++; band.push(c > 0) }
+      const lines = []; let s = -1;
+      for (let i = 0; i <= band.length; i++){ if (i < band.length && band[i]){ if (s < 0) s = i } else if (s >= 0){ if (i - s >= 4 && i - s <= 16) lines.push([s, i - 1]); s = -1 } }
+      if (lines.length !== 2) continue;
+      const ly0 = lines[0][0], ly1 = lines[1][1], S = 4, P = 24, cw = x1 - x0 + 1, ch = ly1 - ly0 + 1, w = cw * S + 2 * P, h = ch * S + 2 * P, out = new Uint8ClampedArray(w * h * 4).fill(255);
+      for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) if (on(x0 + x, y0 + ly0 + y))
+        for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++){ const o = ((P + y * S + dy) * w + P + x * S + dx) * 4; out[o] = out[o + 1] = out[o + 2] = 0 }
+      // softened (a 5x5 blur): the OCR reads the game's thin pixel letters better smooth than blocky ("w" got dropped)
+      const g = new Float32Array(w * h); for (let i = 0; i < w * h; i++) g[i] = out[i * 4];
+      for (let y = 2; y < h - 2; y++) for (let x = 2; x < w - 2; x++){ let t = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) t += g[(y + dy) * w + x + dx];
+        const o = (y * w + x) * 4; out[o] = out[o + 1] = out[o + 2] = t / 25 }
+      return {w, h, d: out};
+    }
+    return null;
+  }
+  // the name as read: letters, digits (MapleStory names are 4-12 of them), the longest such word
+  // (the crop holds both lines, "Archer" over the name: the OCR reads the pair better than the name alone; the last line is the name)
+  const nameFromText = text => { const ls = String(text || "").split("\n").map(l => l.trim()).filter(Boolean), m = ls.length >= 2 && ls.at(-1).match(/^[A-Za-z0-9]{4,12}$/); return m ? m[0] : null };
   const JOBS = ["Beginner", "Swordman", "Fighter", "Page", "Spearman", "Magician", "Cleric", "Archer", "Hunter", "Crossbowman", "Rogue", "Assassin", "Bandit"];
   /* death check: the chat box says "You have lost 4,721 EXP for dying" (grey) right after a death (Danny's screenshot,
      2026-10-18). Its font isn't learned, so it goes through the same OCR as the map name: the lower-left of the screen,
@@ -855,10 +890,10 @@
   function work(rd, {frame, t, want = {}}){
     const img = frame.k ? frame : native(frame), ev = rd.readFrame(frame, t, img), info = {...rd.info}, crops = {};
     if (want.map) crops.map = mapTextCrop(img);
-    if (want.job) crops.job = jobTextCrop(img);
+    if (want.job){ crops.job = jobTextCrop(img); crops.name = nameTextCrop(img) }
     if (want.chat) crops.chat = chatCrop(img);
     return {ev, info, crops, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

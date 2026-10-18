@@ -11,6 +11,9 @@ const EXPECT = {   // frame -> [EXP, %, level, pickup lines on screen that are b
 // frame -> [map id, start of the name]: KPQ bonus stage (added from D.kpq)
 const MAPS = {"frame-000.png": ["80000500", "1st Accompaniment <Bonus>"], "frame-046.png": ["80000500", "1st Accompaniment <Bonus>"]};
 const G = require("../app/gamedata.json"), {mapFromText, jobFromText} = require("../app/readers.js");
+// the character name: the last line of the job box OCR, letters and digits only
+{ const {nameFromText} = require("../app/readers.js"), eq = (a, b) => { if (a !== b) throw new Error("nameFromText: " + a + " != " + b) };
+  eq(nameFromText("Archer\nTurbow\n"), "Turbow"); eq(nameFromText("J TET\n[9\n"), null); eq(nameFromText("Turbow"), null); eq(nameFromText("Archer\nMy Name\n"), null) }
 let ocr = null;
 (async () => {
   const browser = await chromium.launch({executablePath: process.env.CHROMIUM || undefined});

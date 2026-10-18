@@ -342,9 +342,12 @@ async function toPng(c){
   return new Uint8Array(await (await new Promise(r => cv.toBlob(r, "image/png"))).arrayBuffer());
 }
 // job from the status bar every 30 s, when the player left the job on "Auto": taken once the same job is read twice running
-let lastJob = 0, jobSeen = null, jobNow = null;
-async function readJob(c, t){   // c: the status bar text crop (GrindReaders.jobTextCrop), or null
+let lastJob = 0, jobSeen = null, jobNow = null, charName = null, charSeen = null;   // charName: kept on this PC only (History)
+async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders.jobTextCrop), or null; nc: the name crop
   const sess = session, sl = slicer;
+  // the character name (for History only): taken once the same name reads twice in a row
+  if (nc){ const n = GrindReaders.nameFromText(await host.ocr(await toPng(nc))); if (n && n === charSeen) charName = n; charSeen = n }
+  if (settings.job) return;
   if (!c){ if (check && !check.job) check.jobWhy = "The level and job text on the status bar wasn't found."; return }
   const text = await host.ocr(await toPng(c)), job = GrindReaders.jobFromText(text);
   log("job", {job});   // not the OCR text: the character name sits in the same box
@@ -536,7 +539,7 @@ async function tick(){
     if (!ocrBusy){
       if (deathPending && t - deathPending.last >= 1000){ deathPending.last = t; want.chat = true }
       else if (t - lastOcr > 5000){ lastOcr = t; want.map = true }
-      else if (!settings.job && t - lastJob > 30e3){ lastJob = t; want.job = true }
+      else if ((!settings.job || !charName) && t - lastJob > 30e3){ lastJob = t; want.job = true }
     }
     const r = await eng.read({frame: f, t, want});
     if (timer == null || sess !== session || !r) throw null;   // stopped (or restarted) while reading, or the frame was lost
@@ -565,7 +568,7 @@ async function tick(){
     const ocr = fn => { ocrBusy = true; fn.catch(() => {}).finally(() => ocrBusy = false) };
     if (want.chat) ocr(checkDeath(r.crops.chat, t));
     else if (want.map) ocr(readMap(r.crops.map, t));
-    else if (want.job) ocr(readJob(r.crops.job, t));
+    else if (want.job) ocr(readJob(r.crops.job, t, r.crops.name));
     if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
   } catch (err){ if (err) $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
   if (timer == null || sess !== session) return;
@@ -747,13 +750,30 @@ async function stopNow(){
   const a = snaps.start, b = snaps.end, snapExp = a && b && b.t > a.t ? GrindSession.expBetween(G, a, b) : null;
   const snapRec = snapExp != null ? {startLevel: a.level, startPct: a.pct, endLevel: b.level, endPct: b.pct, minutes: Math.round((b.t - a.t) / 6e3) / 10, exp: Math.round(snapExp)} : null;
   if (!snapRec && session?.state.events) $("#status").textContent = "Saved, but the start or end EXP reading is missing: History uses the live count for this one.";
-  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), name: runName() || null, note: $("#runNote").value.trim() || null, kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds, best: kpq.times.length ? Math.round(Math.min(...kpq.times)) : null, avg: kpq.times.length ? Math.round(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length) : null} : null, lootValue: Math.round(session.stats().lootValue), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
+  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), name: runName() || null, note: $("#runNote").value.trim() || null, ...runExtras(), kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds, best: kpq.times.length ? Math.round(Math.min(...kpq.times)) : null, avg: kpq.times.length ? Math.round(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length) : null} : null, lootValue: Math.round(session.stats().lootValue), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
   renderState(session?.stats());
 }
+// more about the run for History: who played it, levels, clock time, the best drop, the monster killed most
+const worthOf = id => G.pw?.[id]?.[0] ?? G.items[id]?.p ?? 0;
+// the best drop: the single item worth the most (older sessions: from their item counts at today's prices)
+function bestDrop(x){
+  if (x.bestDrop !== undefined) return x.bestDrop;
+  const ids = Object.entries(x.items || {}).filter(([, n]) => n > 0); if (!ids.length) return null;
+  const [id, n] = ids.sort((a, b) => worthOf(b[0]) - worthOf(a[0]) || b[1] - a[1])[0];
+  return {id, name: G.items[id]?.n || "Item " + id, each: worthOf(id), n};
+}
+function runExtras(){
+  const s = session.stats(), a = snaps.start, b = snaps.end, top = [...s.mobs].sort((p, q) => q.kills - p.kills)[0];
+  const best = [...s.items].sort((p, q) => (q.each || 0) - (p.each || 0) || q.n - p.n)[0];
+  return {player: charName, startLevel: a?.level ?? (s.levelUps?.length ? s.levelUps[0].level - 1 : s.level) ?? null, endLevel: b?.level ?? s.level ?? null,
+    clockMin: Math.round((Date.now() - runT0) / 6e3) / 10, itemsN: s.items.reduce((t, i) => t + i.n, 0), usedN: s.used.reduce((t, u) => t + u.n, 0),
+    bestDrop: best ? {id: best.id, name: best.name, each: Math.round(best.each || 0), n: best.n} : null, topMob: top ? {name: top.name, kills: top.kills} : null};
+}
+const dropText = d => d ? `${ico(d.id)}${esc(d.name)}${d.n > 1 ? " ×" + fmt(d.n) : ""}${d.each ? ` <span class="dim">(${mz(d.each)} each)</span>` : ""}` : "none";
 // the summary after End run: clock time vs farming, EXP per clock hour and per active minute (KPQ Bonus: the bonus stage
 // only, stages 1st-Last left out), mesos in and out, what the loot is worth, and the inventory before and after
 function showSummary(t1){
-  const sumName = runName(), sumNote = $("#runNote").value.trim();
+  const sumName = runName(), sumNote = $("#runNote").value.trim(), best = [...session.stats().items].sort((p, q) => (q.each || 0) - (p.each || 0) || q.n - p.n)[0];
   const s = session.stats(), a = snaps.start, b = snaps.end;
   const snapExp = a && b && b.t > a.t && a.level != null && b.level != null ? GrindSession.expBetween(G, a, b) : null, exp = snapExp ?? s.exp;
   const clockH = Math.max(1 / 60, (t1 - runT0) / 3.6e6), act = s.activeMin;
@@ -761,7 +781,7 @@ function showSummary(t1){
   const perMin = bonus?.min > 0 ? bonus.exp / bonus.min : act > 0 ? exp / act : 0, net = s.mesos + s.lootValue - s.usedCost;
   const inv = s.inv.filter(x => x.alike === 1).slice(0, 40), tabName = k => INV_TABS.find(x => x[0] === k)?.[1] || k;
   $("#sumBody").innerHTML = (sumName ? `<div style="font-weight:600">${esc(sumName)}</div>` : "") + (sumNote ? `<div class="hnote">${esc(sumNote)}</div>` : "") + `<div class="note">${clock(runT0)} → ${clock(t1)} · ${hm(clockH)} on the clock, ${hm(act / 60)} farming`
-      + (a?.level && b?.level ? ` · Lv ${a.level} ${a.pct?.toFixed(2)}% → Lv ${b.level} ${b.pct?.toFixed(2)}%` : "") + (s.mapName ? " · " + esc(s.mapName) : "") + "</div>"
+      + (a?.level && b?.level ? ` · Lv ${a.level} ${a.pct?.toFixed(2)}% → Lv ${b.level} ${b.pct?.toFixed(2)}%` : "") + (s.mapName ? " · " + esc(s.mapName) : "") + (charName ? " · " + esc(charName) : "") + (s.job ? " · " + esc(s.job) : "") + "</div>"
     + `<div class="sgrid">`
     + cell("EXP gained", sg(exp), snapExp != null ? "from the start and end EXP bar" : "from the live count")
     + cell("EXP/hr", fmt(exp / clockH), "over the whole run (" + hm(clockH) + ")")
@@ -772,6 +792,7 @@ function showSummary(t1){
     + cell("Items looted are worth", `<span class="pos">~${mz(s.lootValue)}</span>`, "approx., player-shop or NPC price")
     + cell("Net", sgm(net), sgm(net / clockH) + "/hr · mesos + items - used")
     + (s.walletNet != null ? cell("Inventory mesos", sgm(s.walletNet), "first look vs. last look") : "")
+    + cell("Best drop", best ? `${ico(best.id)}${esc(best.name)}` : "-", best ? `${best.n > 1 ? "×" + fmt(best.n) + ", " : ""}${mz(best.each || 0)} each` : "nothing worth selling picked up")
     + `</div>`
     + (inv.length ? `<h3 style="margin-top:8px">Inventory: start → end</h3><table><tr class="th"><td>Item</td><td class="n">Start</td><td class="n">End</td><td class="n">Change</td></tr>`
       + inv.map(x => `<tr><td>${ico(x.id)}${esc(x.name)} <span class="note">${tabName(x.tab)}</span></td><td class="n dim">${fmt(x.was)}</td><td class="n">${fmt(x.now)}</td><td class="n">${sg(x.n)}</td></tr>`).join("") + "</table>"
@@ -849,6 +870,10 @@ $("#miniBtn").onclick = () => { document.body.classList.add("mini"); host.mini(t
 $("#mini").onclick = () => { document.body.classList.remove("mini"); host.mini(false) };
 $("#histBtn").onclick = () => { showTab("hist"); loadHist() };
 let histList = [];
+// a run's who and how: character, job, levels, party, kills, deaths, the monster killed most, clock time
+const who = x => [x.player, x.job, x.startLevel != null && x.endLevel != null && x.endLevel !== x.startLevel ? `Lv ${x.startLevel} → ${x.endLevel}` : x.level ? "Lv " + (x.endLevel ?? x.level) : null,
+  x.party > 1 ? "party of " + x.party : "solo", x.kills != null && fmt(x.kills) + (x.kills === 1 ? " kill" : " kills"), (x.deaths || 0) + (x.deaths === 1 ? " death" : " deaths"),
+  x.topMob && `mostly ${x.topMob.name}`, x.clockMin != null && `${Math.round(x.clockMin)} min on the clock`].filter(Boolean).join(" · ");
 async function loadHist(){
   const list = histList = await host.sessions(); $("#cmp").innerHTML = list.length > 1 ? `<div class="note" style="margin:8px 0">Tick two sessions below to compare them.</div>` : "";
   $("#recap").innerHTML = recap(list) + levelLog(list);
@@ -858,7 +883,10 @@ async function loadHist(){
     const sn = x.snap && x.snap.minutes > 0 ? x.snap : null, kq = x.kpq && typeof x.kpq === "object" ? x.kpq : null;
     const rate = kq ? h ? fmt((sn ? sn.exp : x.exp) / h) : "-" : sn ? fmt(sn.exp / (sn.minutes / 60)) : h ? fmt(x.exp / h) : "-";
     const what = kq ? `KPQ (${kq.mode === "Rush" ? "Rush" : "Bonus"}) · ${+kq.rounds || 0} round${+kq.rounds === 1 ? "" : "s"}` : x.mapName || "";
-    return `<tr><td>${esc(when(x))} · ${x.name ? `<b>${esc(x.name)}</b> · ` : ""}${esc(what)}${x.note ? `<div class="hnote">${esc(x.note)}</div>` : ""}</td><td class="n">${Math.round(sn && !kq ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${rate} EXP/hr</td>`
+    return `<tr><td>${esc(when(x))} · ${x.name ? `<b>${esc(x.name)}</b> · ` : ""}${esc(what)}<div class="hsub">${esc(who(x))}</div>`
+      + `<div class="hsub">${mz(h ? (x.mesos || 0) / h : 0)}/hr`
+      + (x.lootValue != null ? ` · net ${sgm(h ? ((x.mesos || 0) + x.lootValue - (x.usedCost || 0)) / h : 0)}/hr` : "") + (x.items || x.bestDrop !== undefined ? ` · best drop: ${dropText(bestDrop(x))}` : "") + `</div>`
+      + `${x.note ? `<div class="hnote">${esc(x.note)}</div>` : ""}</td><td class="n">${Math.round(sn && !kq ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${rate} EXP/hr</td>`
       + `<td class="n"><input type="checkbox" class="cmp" data-saved="${+x.saved}" title="Compare: tick two sessions"> <button class="alt del" data-saved="${+x.saved}" title="Delete this session">×</button></td></tr>` }).join("")
     : `<tr><td>No sessions yet: they're saved when you press Stop.</td></tr>`;
 }
@@ -871,10 +899,12 @@ function compare(a, b){
   const what = x => x.kpq && typeof x.kpq === "object" ? `KPQ ${x.kpq.mode === "Rush" ? "Rush" : "Bonus"} · ${+x.kpq.rounds || 0} round${+x.kpq.rounds === 1 ? "" : "s"}` : x.mapName || "?";
   // [label, value, lower is better, shown as]
   const groups = [["Speed", [["EXP/hr", x => hr(x, x.snap && x.snap.minutes > 0 && !x.kpq ? x.snap.exp * h(x) / (x.snap.minutes / 60) : x.exp)], ["Kills/hr", x => hr(x, x.kills)]]],
-    ["Money per hour", [["Mesos picked up", x => hr(x, x.mesos), false, mz], ["Items looted (worth)", x => hr(x, x.lootValue), false, mz], ["Potions and arrows used", x => hr(x, x.usedCost), true, mz],
+    ["Money per hour", [["Mesos picked up", x => hr(x, x.mesos), false, mz], ["Items looted (worth)", x => hr(x, x.lootValue), false, mz], ["Potions and arrows used", x => hr(x, x.usedCost), true, mz], ["Mesos per kill", x => x.kills ? (x.mesos || 0) / x.kills : null, false, mz],
+      ["Best drop (each)", x => bestDrop(x)?.each ?? null, false, mz],
       ["Net", x => x.lootValue == null ? null : hr(x, (x.mesos || 0) + x.lootValue - (x.usedCost || 0)), false, mz]]],
     ["Run", [["Farming time", x => x.activeMin || 0, null, v => Math.round(v) + " min"], ["Deaths", x => x.deaths || 0, true], ["KPQ best round", x => x.kpq?.best ?? null, true, mss]]]];
-  const head = (k, x) => `<div class="cmpWho ${k}"><b>${k.toUpperCase()}</b> ${esc(when(x))}${x.name ? ` · ${esc(x.name)}` : ""}<div class="note">${esc(what(x))} · Lv ${esc(x.level ?? "?")} · ${x.party > 1 ? "party of " + x.party : "solo"} · ${Math.round(x.activeMin || 0)} min</div></div>`;
+  const head = (k, x) => `<div class="cmpWho ${k}"><b>${k.toUpperCase()}</b> ${esc(when(x))}${x.name ? ` · ${esc(x.name)}` : ""}<div class="note">${esc(what(x))} · ${Math.round(x.activeMin || 0)} min farming</div><div class="note">${esc(who(x))}</div>`
+    + (x.items || x.bestDrop !== undefined ? `<div class="note">Best drop: ${dropText(bestDrop(x))}</div>` : "") + `${x.note ? `<div class="hnote">${esc(x.note)}</div>` : ""}</div>`;
   let up = 0, down = 0;
   const body = groups.map(([g, rows]) => {
     const tr = rows.map(([k, f, low, show]) => { const va = f(a), vb = f(b); if (va == null && vb == null) return "";
