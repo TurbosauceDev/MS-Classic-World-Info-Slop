@@ -2,7 +2,8 @@
 // game window). Fails on any page error. Needs playwright (global or npm i -D playwright).
 const path = require("path"), {chromium} = require("playwright");
 (async () => {
-  const browser = await chromium.launch({executablePath: process.env.CHROMIUM || undefined});
+  // file access on: plain Chromium blocks a worker from a file:// page, Electron doesn't (INLINE=1 tests the fallback)
+  const browser = await chromium.launch({executablePath: process.env.CHROMIUM || undefined, args: process.env.INLINE ? [] : ["--allow-file-access-from-files"]});
   const page = await browser.newPage(), errors = [];
   page.on("pageerror", e => errors.push(e.message));
   await page.addInitScript(() => {
@@ -25,6 +26,8 @@ const path = require("path"), {chromium} = require("playwright");
   if (await page.isVisible("#guide") || !await page.isChecked("#share")) throw new Error("guide answer");
   await page.dblclick("#go");
   await page.waitForTimeout(1500);
+  const eng = await page.evaluate(() => [engine.kind, LOG.filter(l => l.kind === "event").length, LOG.filter(l => l.kind === "engine").map(l => l.kind + ":" + (l.why || "")).join()]);
+  if (eng[0] !== (process.env.INLINE ? "window" : "worker")) throw new Error("reader engine: " + eng);
   const party = await page.textContent("#partyBox");
   if (!/9,000 EXP\/hr together \(2\)/.test(await page.textContent("#miniParty"))) throw new Error("mini party line");
   if (!/9,000 EXP\/hr together/.test(party) || !/Bo&lt;b&gt;|Bo<b>/.test(party) || await page.$("#partyBox b b")) throw new Error("party: " + party);
@@ -52,7 +55,8 @@ const path = require("path"), {chromium} = require("playwright");
     check.t0 -= 9000; check.lines = true; renderCheck(); return [during, document.querySelector("#selfcheck").innerHTML] });
   if (!/checking/.test(chk[0]) || !/Minimap not found/.test(chk[1]) || !/EXP bar<\/td><td class="n slow">✗/.test(chk[1]) || !/turns ✓ by itself/.test(chk[1]) || !/Party window<\/td><td class="n slow">✗/.test(chk[1])) throw new Error("self-check: " + chk.join(" | "));
   // auto-pause: bar read once, then bar and minimap gone for 3 s -> paused; the bar back -> tracking again
-  const ap = await page.evaluate(() => { const f = grab(), t = Date.now() + 1e4; autoPause(f, {bar: true}, t); autoPause(f, {bar: false}, t + 1000); const a = session.state.pausedAt;
+  // (false: no minimap on screen)
+  const ap = await page.evaluate(() => { const f = false, t = Date.now() + 1e4; autoPause(f, {bar: true}, t); autoPause(f, {bar: false}, t + 1000); const a = session.state.pausedAt;
     autoPause(f, {bar: false}, t + 4100); const b = session.state.pausedAt, st = document.querySelector("#status").textContent; autoPause(f, {bar: true}, t + 9000);
     return [a, b, st, session.state.pausedAt, session.state.pausedMs] });
   if (ap[0] !== null || !ap[1] || !/Paused/.test(ap[2]) || ap[3] !== null || !(ap[4] >= 4900)) throw new Error("auto-pause: " + JSON.stringify(ap));

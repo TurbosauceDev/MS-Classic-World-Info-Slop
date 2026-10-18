@@ -50,13 +50,13 @@
     return shrink(img, best);
   }
   function shrink({w, h, d}, {k, ox, oy}){
-    if (k === 1) return {w, h, d, k};
+    if (k === 1) return {w, h, d, k, ox: 0, oy: 0};
     const W = Math.floor((w - ox) / k), H = Math.floor((h - oy) / k), out = new Uint8ClampedArray(W * H * 4);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++){
       const i = ((oy + y * k) * w + ox + x * k) * 4, o = (y * W + x) * 4;
       out[o] = d[i]; out[o + 1] = d[i + 1]; out[o + 2] = d[i + 2]; out[o + 3] = 255;
     }
-    return {w: W, h: H, d: out, k};
+    return {w: W, h: H, d: out, k, ox, oy};
   }
 
   // ink mask of a box (rows y0..y1, cols x0..x1) -> {get(x, y), ...}; isInk(r, g, b)
@@ -425,24 +425,26 @@
   /* The meso total in the inventory window ("4,685"): black digits 8 rows tall on the white field, commas below the line.
      All ten digits learned from Danny's screenshots (4,685; 3,590; 3,571; 3,560; 3,510; 3,210; 2,700). An unknown
      glyph means it isn't a meso total, so nothing is read. Keys: rows of the glyph's columns, as in CDIG. */
+  let lastMeso = null;   // where readMesoTotal last found the total (createReaders only looks there between full scans)
   const MDIG = {"...#./..##./.#.#./#..#./#####/...#./...#./...#./": 4, "..##./.#.../#..../####./#...#/#...#/#...#/.###./": 6,
     ".###./#...#/#...#/.###./#...#/#...#/#...#/.###./": 8, "#####/#..../#..../####./....#/....#/#...#/.###./": 5,
     ".###./#...#/#...#/#...#/#...#/#...#/#...#/.###./": 0, ".#./##./.#./.#./.#./.#./.#./###/": 1,
     ".###./#...#/....#/...#./..#../.#.../#..../#####/": 2, ".###./#...#/....#/..##./....#/....#/#...#/.###./": 3,
     "#####/....#/...#./...#./..#../..#../.#.../.#.../": 7, ".###./#...#/#...#/#...#/.####/....#/...#./.##../": 9};
-  function readMesoTotal(img){
+  function readMesoTotal(img, area = null){   // area: {x0, y0, x1, y1} to look in (where it was last seen)
     const {w, h, d} = img, ink = (x, y) => { const i = (y * w + x) * 4; return d[i] === 0 && d[i + 1] === 0 && d[i + 2] === 0 };
     const white = (x, y) => { const i = (y * w + x) * 4; return d[i] === 255 && d[i + 1] === 255 && d[i + 2] === 255 };
     const found = [];
-    for (let y = 1; y + 10 < h; y++){
+    const X0 = area ? Math.max(0, area.x0) : 0, X1 = area ? Math.min(w, area.x1) : w;
+    for (let y = area ? Math.max(1, area.y0) : 1, Y1 = area ? Math.min(h - 10, area.y1) : h - 10; y < Y1; y++){
       // a text line: black pixels with white above (the field), rows y..y+7
-      let row = false; for (let x = 0; x < w && !row; x++) row = ink(x, y) && white(x, y - 1);
+      let row = false; for (let x = X0; x < X1 && !row; x++) row = ink(x, y) && white(x, y - 1);
       if (!row) continue;
-      let s = "", x = 0, last = -1, ok = true, x0 = -1;
-      while (x < w){
+      let s = "", x = X0, last = -1, ok = true, x0 = -1;
+      while (x < X1){
         let c = false; for (let yy = y; yy < y + 8 && !c; yy++) c = ink(x, yy);
         if (!c){ x++; continue }
-        const gs = x; while (x < w){ let c2 = false; for (let yy = y; yy < y + 8 && !c2; yy++) c2 = ink(x, yy); if (!c2) break; x++ }
+        const gs = x; while (x < X1){ let c2 = false; for (let yy = y; yy < y + 8 && !c2; yy++) c2 = ink(x, yy); if (!c2) break; x++ }
         if (last >= 0 && gs - last > 6){ if (s) found.push({y, x0, s, ok}); s = ""; ok = true }
         let key = ""; for (let yy = y; yy < y + 8; yy++){ for (let xx = gs; xx < x; xx++) key += ink(xx, yy) ? "#" : "."; key += "/" }
         const dg = MDIG[key];
@@ -454,6 +456,7 @@
     }
     // a meso total: known digits only, thousands commas in the right places
     const good = found.filter(f => f.ok && /^\d{1,3}(,\d{3})*$/.test(f.s) && f.s.length >= 1);
+    if (good.length === 1) lastMeso = {x0: good[0].x0, y: good[0].y};
     return good.length === 1 ? +good[0].s.replace(/,/g, "") : null;
   }
 
@@ -520,8 +523,13 @@
       info = {bar: !!bar, partyWindow: partyRead, counts: info.counts};   // what this frame showed (self-check, auto-pause)
       if (icons?.length && t - lastCounts >= 2000){
         lastCounts = t; ev.push(...readUse(img, t));
-        // the inventory's meso total, taken when read the same twice running
-        const m = readMesoTotal(img);
+        // the inventory's meso total, taken when read the same twice running. Only around where it was last seen, with
+        // a look over the whole frame every 10 s (or when it's gone from there: window moved or closed)
+        const full = !mesoBox || t - lastFullMeso >= 10e3;
+        lastMeso = null;
+        const m = readMesoTotal(img, full ? null : mesoBox);
+        if (full){ lastFullMeso = t; mesoBox = lastMeso && {x0: lastMeso.x0 - 8, x1: lastMeso.x0 + 90, y0: lastMeso.y - 3, y1: lastMeso.y + 4} }
+        else if (m === null) mesoBox = null;
         if (m !== null && m === walletNext && m !== wallet){ wallet = m; ev.push({t, type: "wallet", n: m}) }
         walletNext = m;
       }
@@ -533,12 +541,21 @@
        a count that went down (confirmed by the next read: the same or lower still) is that many used. One item seen in two spots (quick slot =
        total, inventory = a stack) counts its biggest drop once. Going up = bought or picked up. A moved window = new spots. */
     let lastCounts = -Infinity, lastSeenEv = -Infinity, spots = new Map(), wallet = null, walletNext = null;
+    // learned boxes: the counts and the meso total are looked for only where they were last found, and over the whole
+    // frame every 10 s (new windows opened) or as soon as nothing is found there
+    let countBox = null, lastFullCounts = -Infinity, mesoBox = null, lastFullMeso = -Infinity;
     const iconCache = new Map();   // spot -> [color sample, id]: icon matching only when the picture there changed
     // the player's marked area (fractions of the frame), turned into native pixels with a little room around it
     let area = null;
     const areaPx = img => area && {x0: Math.floor(area.x * img.w) - 4, y0: Math.floor(area.y * img.h) - 4, x1: Math.ceil((area.x + area.w) * img.w) + 4, y1: Math.ceil((area.y + area.h) * img.h) + 4};
     function readUse(img, t){
-      const nums = readCounts(img, areaPx(img)), drops = {}, now = new Map();
+      const mine = areaPx(img), full = !mine && (!countBox || t - lastFullCounts >= 10e3);
+      const nums = readCounts(img, mine || (full ? null : countBox)), drops = {}, now = new Map();
+      if (full){
+        lastFullCounts = t;
+        countBox = nums.length ? {x0: Math.min(...nums.map(n => n.slot)) - 6, x1: Math.max(...nums.map(n => n.end)) + 6,
+          y0: Math.min(...nums.map(n => n.y)) - 4, y1: Math.max(...nums.map(n => n.y)) + 4} : null;
+      } else if (!mine && !nums.length) countBox = null;
       for (const num of nums){
         // the icon is matched again only when the 3 sample pixels above the count changed: by more than video noise (the
         // tracker's frames jitter a few shades frame to frame, which used to re-match every icon every frame)
@@ -573,6 +590,18 @@
     let info = {bar: false, partyWindow: null, counts: 0};
     return {readFrame, get info(){ return info }, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx};
   }
-  const api = {createReaders, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  /* one frame for the tracker window (run in the reader worker, or in the window when the worker can't start).
+     m: {frame: {w, h, d, k?}, t, want: {map, job, chat}}. A frame without k is full size: its scale is found and sent
+     back, so the window can grab the next frames at the game's own size (k set) with no un-doubling needed.
+     Returns the events, what the frame showed (info), the OCR crops asked for, and whether the minimap is on screen
+     (only looked for when the EXP bar isn't: auto-pause). */
+  function work(rd, {frame, t, want = {}}){
+    const img = frame.k ? frame : native(frame), ev = rd.readFrame(frame, t, img), info = {...rd.info}, crops = {};
+    if (want.map) crops.map = mapTextCrop(img);
+    if (want.job) crops.job = jobTextCrop(img);
+    if (want.chat) crops.chat = chatCrop(img);
+    return {ev, info, crops, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
+  }
+  const api = {work, createReaders, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

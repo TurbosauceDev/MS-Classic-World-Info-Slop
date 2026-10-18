@@ -53,8 +53,15 @@ npm start           # run it (Windows, Electron)
 - Arrows for Bows/Crossbows: 0.5 mesos each (Danny, 2026-10-17: not in our shop data); Bronze 2 (shop data).
 - Shared runs carry usedCost (mesos spent on items used; null when no item counts were on screen). The server stores
   deaths, start hour and usedCost in run_extra; the site shows "pots/ammo" per map and Frugal mode uses it.
-- Speed: frames are un-doubled once per tick (scale re-detected every 20 frames) and the any-scale EXP bar reader
-  searches the rows it found the bar in last time first.
+- Speed (v0.2.15):
+  - Frames are grabbed at the game's own size: once a full frame shows the scale, the video is drawn shrunk by it
+    with no smoothing (renderer.js grabFrame). A full frame every 20 re-checks the scale. On a 2560x1440 capture the
+    grab went from about 60 ms to 4 ms.
+  - The readers run in a worker (app/reader-worker.js, GrindReaders.work), so the window never stutters. If the worker
+    can't start or doesn't answer in 5 s, they run in the window ("engine" log line says which).
+  - Item counts and the meso total are looked for only where they were last found, plus a whole-frame look every 10 s
+    or as soon as they're gone. The any-scale EXP bar reader does the same with its rows.
+  - A frame identical to the last one is skipped, at most 4 in a row (2 s).
 - Auto-pause: EXP bar and minimap both gone for 3 s (Cash Shop, channel change) = paused; that time is left out of
   active time and of 15-minute runs. Level-ups are logged with the farming time each level took (History).
 - Runs carry the UTC hour they started; the server's summary has "times" (best time to farm per map, each run against

@@ -83,6 +83,21 @@ const WANT = [[91, "2010003"], [85, "2010005"], [29, "2000002"], [8, "2000001"],
     return GrindReaders.readCounts(img, rd.areaPx(img)).map(n => n.n).sort((a, b) => a - b).join(",");
   }, fs.readFileSync(path.join(dir, "video-a.png")).toString("base64"));
   console.log("quick slots in a box:", boxed);
+  // learned box: the first read looks over the whole frame, the next ones only around the counts found; same counts, less
+  // time. With the counts gone (window closed) it looks over the whole frame again on the next read.
+  const learn = await page.evaluate(async b64 => {
+    const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode();
+    const c = document.createElement("canvas"); c.width = 900; c.height = 700; const g = c.getContext("2d"); g.fillStyle = "#246"; g.fillRect(0, 0, 900, 700); g.drawImage(im, 300, 250);
+    const d = g.getImageData(0, 0, 900, 700), img = {w: 900, h: 700, d: d.data, k: 1}, rd = GrindReaders.createReaders(GAMEDATA, ICONS);
+    const spots = t => { rd.readFrame(img, t); return rd.info.useSpots };
+    const a = spots(0), b = spots(2000), c2 = spots(4000);
+    g.fillRect(0, 0, 900, 700); const blank = {w: 900, h: 700, d: g.getImageData(0, 0, 900, 700).data, k: 1};
+    rd.readFrame(blank, 6000); const gone = rd.info.useSpots;
+    g.drawImage(im, 20, 20); const moved = {w: 900, h: 700, d: g.getImageData(0, 0, 900, 700).data, k: 1};
+    rd.readFrame(moved, 8000); return [a, b, c2, gone, rd.info.useSpots];
+  }, fs.readFileSync(path.join(dir, "video-a.png")).toString("base64"));
+  console.log("learned count box (spots: full, box, box, closed, moved):", learn.join());
+  if (!(learn[0] > 0 && learn[1] === learn[0] && learn[2] === learn[0] && learn[3] === 0 && learn[4] === learn[0])) fail++;
   if (boxed !== "5,9,24") fail++;
   const vleft = [...vid], vmiss = VWANT.filter(([n, id]) => { const i = vleft.findIndex(([m, j]) => m === n && j === id); if (i < 0) return true; vleft.splice(i, 1) });
   const vwrong = vleft.filter(([, id]) => id);

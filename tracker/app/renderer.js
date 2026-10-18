@@ -1,7 +1,7 @@
 // Tracker window: grabs 2 frames a second from the game window, runs the readers, shows the session.
 const G = GAMEDATA, $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString();
 let FPS = 2;   // drops to 1 a second when reading a frame takes long (big screens, slow PCs)
-let session = null, slicer = null, readers = null, video = null, timer = null, settings = {};
+let session = null, slicer = null, engine = null, video = null, timer = null, settings = {};
 const canvas = document.createElement("canvas"), g = canvas.getContext("2d", {willReadFrequently: true});
 
 async function openStream(){
@@ -31,6 +31,53 @@ function grab(){
   g.drawImage(video, 0, 0);
   const id = g.getImageData(0, 0, canvas.width, canvas.height);
   return {w: id.width, h: id.height, d: id.data};
+}
+/* the frame at the game's own size: once the readers found the scale (the game drawn 2x on a 2560 screen), the video is
+   drawn shrunk by that much with no smoothing, one pixel per game pixel. 4x fewer pixels to copy and read than the full
+   frame (60 ms to 4 ms on Danny's 2560x1440). A full frame every 20 (10 s) checks the scale again. */
+let scale = null, fastLeft = 0;
+function grabFrame(){
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!scale || scale.w !== vw || scale.h !== vh || fastLeft <= 0) return grab();
+  fastLeft--;
+  const {k, ox, oy} = scale, W = Math.floor((vw - ox) / k), H = Math.floor((vh - oy) / k);
+  if (canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H }
+  g.imageSmoothingEnabled = false;
+  g.drawImage(video, ox, oy, W * k, H * k, 0, 0, W, H);
+  const id = g.getImageData(0, 0, W, H);
+  return {w: W, h: H, d: id.data, k};
+}
+/* the readers run in a worker so the window never stutters while a frame is read; in the window itself when the worker
+   can't start or stops answering. read() resolves to GrindReaders.work's result, or null for a frame that was lost. */
+function makeEngine(icons, area){
+  const inline = () => { const rd = GrindReaders.createReaders(G, icons); rd.setArea(area);
+    return {kind: "window", setArea: a => rd.setArea(area = a), read: async m => GrindReaders.work(rd, m), close(){}} };
+  let w = null;
+  try { w = new Worker("reader-worker.js") } catch { return inline() }
+  let id = 0, waiting = null, eng;
+  const fallBack = why => { log("engine", {kind: "window", why}); w.terminate(); waiting?.(null); waiting = null; Object.assign(eng, inline()) };
+  w.onmessage = ({data}) => { if (data.id !== id || !waiting) return; const r = waiting; waiting = null; r(data.error ? null : data) };
+  w.onerror = e => { e.preventDefault?.(); fallBack(e.message || "worker failed to load") };
+  w.postMessage({type: "reset", icons, area});
+  return eng = {kind: "worker", close(){ w.terminate(); waiting?.(null) },
+    setArea(a){ area = a; w.postMessage({type: "area", area: a}) },
+    read(m){
+      return new Promise(res => {
+        waiting = res; id++;
+        w.postMessage({...m, type: "frame", id}, [m.frame.d.buffer]);
+        const mine = id; setTimeout(() => { if (waiting === res && id === mine) fallBack("no answer in 5 s") }, 5000);
+      });
+    }};
+}
+// skip a frame that is exactly the last one (game idle, menus, a frozen capture): up to 4 in a row (2 s), so the
+// readers' "read the same twice" checks still come round
+let lastPix = null, sameRun = 0;
+function sameAsLast(f){
+  const p = new Uint32Array(f.d.buffer);
+  let same = !!lastPix && lastPix.length === p.length && f.k === lastPix.k;
+  for (let i = p.length - 1; same && i >= 0; i--) same = p[i] === lastPix[i];   // bottom up: the status bar changes first
+  if (!same){ lastPix = p.slice(); lastPix.k = f.k; sameRun = 0; return false }
+  return ++sameRun <= 4 || (sameRun = 0, false);
 }
 
 // bug reports: the last 300 log lines and the last 8 frames (one every 3 s, so about 25 s back), saved by "Report a bug"
@@ -129,8 +176,8 @@ async function toPng(c){
 }
 // job from the status bar every 30 s, when the player left the job on "Auto": taken once the same job is read twice running
 let lastJob = 0, jobSeen = null, jobNow = null;
-async function readJob(img, t){
-  const sess = session, sl = slicer, c = GrindReaders.jobTextCrop(img);
+async function readJob(c, t){   // c: the status bar text crop (GrindReaders.jobTextCrop), or null
+  const sess = session, sl = slicer;
   if (!c){ if (check && !check.job) check.jobWhy = "The level and job text on the status bar wasn't found."; return }
   const text = await host.ocr(await toPng(c)), job = GrindReaders.jobFromText(text);
   log("job", {job});   // not the OCR text: the character name sits in the same box
@@ -141,9 +188,8 @@ async function readJob(img, t){
 
 // map name every 5 s: cut the minimap title out, OCR it in the main process, take it once the same map is read twice in a row
 let ocrBusy = false, lastOcr = 0, mapSeen = null, mapNow = null, mapMissing = 0;
-async function readMap(img, t){
+async function readMap(c, t){   // c: the minimap title crop (GrindReaders.mapTextCrop), or null
   const sess = session, sl = slicer;   // an OCR that finishes after Stop/Start belongs to the old session
-  const c = GrindReaders.mapTextCrop(img);
   // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
   if (!c){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
   mapMissing = 0;
@@ -215,14 +261,14 @@ function stopCheck(s){
 // auto-pause: the EXP bar and the minimap both gone for 3 s (Cash Shop, changing channel, loading) = not farming. Only
 // after the bar was read once this session, so a game window the bar reader can't handle never pauses
 let barSeen = false, goneSince = null, lastGoneCheck = 0;
-function autoPause(f, info, t){
+function autoPause(minimap, info, t){   // minimap: the minimap is on screen (looked for when the bar isn't)
   if (info.bar) barSeen = true;
   if (settings.autoPause === false || !barSeen) return;
   const paused = session.state.pausedAt !== null;
   if (info.bar){ goneSince = null; if (paused){ const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Back in the game: tracking again." } return }
   if (paused || t - lastGoneCheck < 1000) return;
   lastGoneCheck = t;
-  if (GrindReaders.mapTextCrop(f)){ goneSince = null; return }   // minimap still there: just the bar covered
+  if (minimap){ goneSince = null; return }   // minimap still there: just the bar covered
   goneSince ??= t;
   if (t - goneSince >= 3000){
     const e = {t: Math.max(goneSince, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); log("event", e);
@@ -238,39 +284,51 @@ function levelNote(s){
 }
 const hm = h => h < 1 ? Math.round(h * 60) + " min" : h.toFixed(1) + " h";
 
-let slowTicks = 0;
-function tick(){
+let slowTicks = 0, skipped = 0;
+async function tick(){
   if (timer == null) return;   // stopped
-  const t = Date.now();
+  const t = Date.now(), eng = engine, sess = session;
   try {
     // game closed: the capture ends and the last frame would be read forever; minimized: no picture until it's back
     if (!video.srcObject?.active){ $("#status").textContent = "The game window closed. Press Stop, then Start once it's back."; throw null }
     if (!video.videoWidth){ $("#status").textContent = "No picture from the game (minimized?). Waiting..."; throw null }   // skip this tick
-    const f = grab(), img = GrindReaders.native(f, true);   // un-doubled once per frame, shared by every reader
+    const f = grabFrame();
     keepFrame(t);
-    for (const e of readers.readFrame(f, t, img)){
+    if (sameAsLast(f)){ skipped++; throw null }
+    // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between
+    const want = {};
+    if (!ocrBusy){
+      if (deathPending && t - deathPending.last >= 1000){ deathPending.last = t; want.chat = true }
+      else if (t - lastOcr > 5000){ lastOcr = t; want.map = true }
+      else if (!settings.job && t - lastJob > 30e3){ lastJob = t; want.job = true }
+    }
+    const r = await eng.read({frame: f, t, want});
+    if (timer == null || sess !== session || !r) throw null;   // stopped (or restarted) while reading, or the frame was lost
+    if (r.scale){ scale = r.scale; fastLeft = r.scale.k > 1 ? 19 : 0 }
+    for (const e of r.ev){
       session.add(e); slicer.add(e); log("event", e);
       if (e.type === "item") dropAlert(e.id);
       if (e.type === "bar"){
-        if (!snaps.start) snap("start", f, false).catch(() => {});
+        if (!snaps.start) snap("start", null, false).catch(() => {});
         else if (!snaps.end?.hand) snaps.end = {t, level: e.level || session.state.level, pct: e.pct, exp: e.exp, hand: false};
       }
       if (check && e.type === "bar" && !check.bar){ check.bar = e.level ? "Lv " + e.level + ", " + e.pct + "%" : e.pct + "%"; check.late = check.ended }
       if (check && /^(exp|bonus|meso|item|itemraw)$/.test(e.type) && !check.lines){ check.lines = true; check.late = check.ended }
     }
-    const info = readers.info;
+    const info = r.info;
     if (check && info.useSpots && !check.use){ check.use = info.useSpots + " item count" + (info.useSpots > 1 ? "s" : ""); check.late = check.ended }
     if (check && info.partyWindow > 1 && !check.party){ check.party = info.partyWindow; check.late = check.ended }
-    autoPause(img, info, t);
+    autoPause(r.minimap, info, t);
     if (check && (!check.ended || check.late)){ check.late = false; renderCheck() }   // a ✗ turns ✓ when it starts working
     if (session.state.deaths > deathSeen){ deathSeen = session.state.deaths; deathPending = {t, tries: 0, last: 0} }
-    // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between
-    if (deathPending && !ocrBusy && t - deathPending.last >= 1000){ deathPending.last = t; ocrBusy = true; checkDeath(img, t).catch(() => {}).finally(() => ocrBusy = false) }
-    else if (!ocrBusy && t - lastOcr > 5000){ lastOcr = t; ocrBusy = true; readMap(img, t).catch(() => {}).finally(() => ocrBusy = false) }
-    else if (!ocrBusy && !settings.job && t - lastJob > 30e3){ lastJob = t; ocrBusy = true; readJob(img, t).catch(() => {}).finally(() => ocrBusy = false) }
+    const ocr = fn => { ocrBusy = true; fn.catch(() => {}).finally(() => ocrBusy = false) };
+    if (want.chat) ocr(checkDeath(r.crops.chat, t));
+    else if (want.map) ocr(readMap(r.crops.map, t));
+    else if (want.job) ocr(readJob(r.crops.job, t));
     if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
-    renderSnaps(render());
   } catch (err){ if (err) $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
+  if (timer == null || sess !== session) return;
+  try { renderSnaps(render()) } catch {}
   // over 250 ms a frame, 10 times running: read once a second instead of twice
   const ms = Date.now() - t;
   slowTicks = ms > 250 ? slowTicks + 1 : 0;
@@ -330,8 +388,8 @@ for (const [i, k] of [[0, "start"], [1, "end"]]){
 // second apart). Confirmed ones carry the exact EXP lost. The OCR text isn't logged: chat lines hold player names.
 let deathSeen = 0, deathPending = null;
 const deaths = {confirmed: 0, lost: 0, unseen: 0};
-async function checkDeath(img, t){
-  const sess = session, text = await host.ocr(await toPng(GrindReaders.chatCrop(img))), lost = GrindReaders.deathFromText(text);
+async function checkDeath(c, t){   // c: the chat box crop (GrindReaders.chatCrop)
+  const sess = session, text = await host.ocr(await toPng(c)), lost = GrindReaders.deathFromText(text);
   if (sess !== session || !deathPending) return;
   if (lost){ deaths.confirmed++; deaths.lost += lost; deathPending = null; log("death", {lost}) }
   else if (++deathPending.tries >= 3){ deaths.unseen++; deathPending = null; log("death", {lost: null}) }
@@ -345,7 +403,7 @@ async function pickArea(){
   const f = grab(), c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
   const rect = await host.snip(c.toDataURL("image/jpeg", 0.9));
   if (!rect) return;
-  settings = await host.settings({countArea: rect}); readers?.setArea(rect);
+  settings = await host.settings({countArea: rect}); engine?.setArea(rect);
   // read it right away so the player knows whether it worked
   const rd = GrindReaders.createReaders(G, ICONS); rd.setArea(rect);
   const img = GrindReaders.native(f), n = GrindReaders.readCounts(img, rd.areaPx(img)), known = n.filter(x => GrindReaders.iconAt(img, x, ICONS));
@@ -360,7 +418,7 @@ function showArea(){
   $("#areaNote").textContent = a ? "Reading counts only in your box." : "";
 }
 $("#snipBtn").onclick = () => pickArea().catch(e => { $("#status").textContent = "Couldn't take the picture: " + e.message });
-$("#areaClear").onclick = async () => { settings = await host.settings({countArea: null}); readers?.setArea(null); showArea() };
+$("#areaClear").onclick = async () => { settings = await host.settings({countArea: null}); engine?.setArea(null); showArea() };
 
 let starting = false, ICONS = null;
 async function start(){
@@ -375,16 +433,17 @@ async function start(){
   check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
-  readers = GrindReaders.createReaders(G, ICONS); readers.setArea(settings.countArea || null); mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
+  engine = makeEngine(ICONS, settings.countArea || null); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
+  mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   tick();
   $("#go").textContent = "Stop";
 }
 async function stop(){
-  log("stop", {});
+  log("stop", {engine: engine?.kind, skipped});
   if (video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {}); if (check && !check.ended){ check = null; renderCheck() }
-  clearTimeout(timer); timer = null; $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";
+  clearTimeout(timer); timer = null; engine?.close(); $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   // a failed save (disk full, folder locked) must not leave the button saying Stop
   if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });

@@ -57,6 +57,24 @@ let ocr = null;
       if (bad){ fail++; console.log("  FAIL, lines read:", r.lines) }
     }
   }
+  // the tracker's fast path: the full frame tells work() the scale, then the frame drawn at that size (no smoothing, as
+  // renderer.js grabFrame does) must give the same events and OCR crops as the full frame
+  for (const name of fs.readdirSync(dir).filter(f => f.endsWith(".png")).sort()){
+    const r = await page.evaluate(async b64 => {
+      const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode();
+      const c = document.createElement("canvas"); c.width = im.width; c.height = im.height;
+      const g = c.getContext("2d"); g.drawImage(im, 0, 0); const d = g.getImageData(0, 0, c.width, c.height);
+      const want = {map: true, job: true, chat: true};
+      const a = GrindReaders.work(GrindReaders.createReaders(GAMEDATA), {frame: {w: d.width, h: d.height, d: d.data}, t: 0, want}), {k, ox, oy} = a.scale;
+      const W = Math.floor((im.width - ox) / k), H = Math.floor((im.height - oy) / k), c2 = document.createElement("canvas"); c2.width = W; c2.height = H;
+      const g2 = c2.getContext("2d"); g2.imageSmoothingEnabled = false; g2.drawImage(im, ox, oy, W * k, H * k, 0, 0, W, H);
+      const t0 = performance.now(), d2 = g2.getImageData(0, 0, W, H), b = GrindReaders.work(GrindReaders.createReaders(GAMEDATA), {frame: {w: W, h: H, d: d2.data, k}, t: 0, want});
+      const sum = cr => cr && cr.w + "x" + cr.h + ":" + cr.d.reduce((s, v) => s + v, 0);
+      return {k, a: JSON.stringify(a.ev), b: JSON.stringify(b.ev), ca: Object.values(a.crops).map(sum).join(), cb: Object.values(b.crops).map(sum).join(), ms: Math.round(performance.now() - t0)};
+    }, fs.readFileSync(path.join(dir, name)).toString("base64"));
+    const ok = r.a === r.b && r.ca === r.cb;
+    console.log(name, "game-size frame", ok ? "same events and crops" : "FAIL " + r.a + " vs " + r.b, `${r.ms} ms`); if (!ok) fail++;
+  }
   // any window size: beanguri's EXP-bar crops (MIT), all "68,601 [71.68%]"
   if (!process.argv[2]){
     const bdir = path.join(__dirname, "frames-beanguri");
