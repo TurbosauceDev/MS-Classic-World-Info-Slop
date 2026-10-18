@@ -530,13 +530,22 @@ $("#goal").onchange = e => { const v = Math.max(0, Math.min(200, Math.round(+e.t
 $("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.value || 0)}).then(s => settings = s);
 $("#miniBtn").onclick = () => { document.body.classList.add("mini"); host.mini(true) };
 $("#mini").onclick = () => { document.body.classList.remove("mini"); host.mini(false) };
-$("#histBtn").onclick = async () => {
-  showTab("hist");
+$("#histBtn").onclick = () => { showTab("hist"); loadHist() };
+async function loadHist(){
   const list = await host.sessions();
   $("#recap").innerHTML = recap(list) + levelLog(list);
   $("#histRows").innerHTML = list.length ? list.slice(0, 30).map(x => { const h = (x.activeMin || 0) / 60;
-    return `<tr><td>${esc(x.date)} ${esc(x.mapName || "")}</td><td class="n">${Math.round(x.activeMin || 0)} min</td><td class="n">${h ? fmt(x.exp / h) : "-"} EXP/hr</td></tr>` }).join("")
+    return `<tr><td>${esc(x.date)} ${esc(x.mapName || "")}</td><td class="n">${Math.round(x.activeMin || 0)} min</td><td class="n">${h ? fmt(x.exp / h) : "-"} EXP/hr</td>`
+      + `<td class="n"><button class="alt del" data-saved="${+x.saved}" title="Delete this session">×</button></td></tr>` }).join("")
     : `<tr><td>No sessions yet: they're saved when you press Stop.</td></tr>`;
+}
+// delete a session: × asks "Delete?" first (a second click within 4 s deletes), then History is redrawn
+$("#histRows").onclick = async e => {
+  const b = e.target.closest("button.del"); if (!b) return;
+  if (!b.classList.contains("sure")){ b.classList.add("sure"); b.textContent = "Delete?"; setTimeout(() => { if (b.isConnected){ b.classList.remove("sure"); b.textContent = "×" } }, 4000); return }
+  b.disabled = true;
+  if (await host.deleteSession?.(b.dataset.saved)){ $("#status").textContent = "Session deleted."; loadHist() }
+  else { b.disabled = false; $("#status").textContent = "Couldn't delete that session." }
 };
 // level-up log: how long each level took (farming time in one session), newest first
 function levelLog(list){

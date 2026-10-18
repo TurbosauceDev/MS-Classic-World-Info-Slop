@@ -179,6 +179,11 @@ function sessions(){
   } catch { return [] }
 }
 ipcMain.handle("sessions", () => sessions());
+// History's delete: one saved session, by its file's time stamp (digits only: never a path)
+ipcMain.handle("delete-session", (_, saved) => {
+  if (!/^\d{10,16}$/.test(String(saved))) return false;
+  try { fs.unlinkSync(path.join(SESSIONS, saved + ".json")); return true } catch { return false }
+});
 ipcMain.handle("export-csv", () => {
   // text starting with = + - @ would run as a formula in Excel (map names come from OCR): prefixed with '
   const q = v => { let t = String(v ?? ""); if (typeof v === "string" && /^[=+\-@]/.test(t)) t = "'" + t; return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t };

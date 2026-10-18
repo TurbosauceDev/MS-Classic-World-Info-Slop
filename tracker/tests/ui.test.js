@@ -121,6 +121,13 @@ const path = require("path"), {chromium} = require("playwright");
   if (!/Last 7 days: 2 sessions, 0.8 h farming, 8,000 EXP, 1,200 mesos, level 21 → 22, 1 death. Fastest map: Snail Hunting Ground III \(12,000 EXP\/hr\)/.test(hist)) throw new Error("recap: " + hist);
   if (!/Lv 21 → 22\s*41 min\s*Snail Hunting Ground III/.test(hist) || /Lv 20 → 21/.test(hist)) throw new Error("level-up log: " + hist);
   if (!mini || full || !back) throw new Error("mini bar toggle");
+  // History: × asks first, the second click deletes and the list is redrawn
+  await page.evaluate(() => { host.deleteSession = async saved => (window.deleted = saved, true) });
+  await page.click("#histBtn"); await page.waitForTimeout(100);
+  const del = "#histRows button.del >> nth=0"; await page.click(del);
+  const ask = await page.textContent(del), before = await page.evaluate(() => window.deleted);
+  await page.click(del); await page.waitForTimeout(100);
+  if (ask !== "Delete?" || before || !(await page.evaluate(() => window.deleted > 0))) throw new Error("delete session: " + ask);
   await page.click("#updGo"); await page.waitForTimeout(100);
   if (!await page.evaluate(() => window.installed)) throw new Error("restart and update");
   await browser.close();
