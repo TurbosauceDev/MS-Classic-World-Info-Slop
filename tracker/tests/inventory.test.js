@@ -123,6 +123,27 @@ const WANT = [[91, "2010003"], [85, "2010005"], [29, "2000002"], [8, "2000001"],
   const iok = inv.found?.tab === "use" && inv.wallet === 12162 && !imiss.length && inv.slots.length === 21 && !inv.unknown && inv.ev.length === 1 && ev.items["2060001"] === 800 * 7 + 217 && ev.unknown === 0;
   console.log("inventory window", iok ? "ok" : "FAIL " + JSON.stringify({imiss, inv: {...inv, ev: inv.ev.length}}), Math.round(inv.ms) + " ms");
   if (!iok) fail++;
+  // Equip and Etc tabs (same day): no counts on equips; a white feather and pale ores under the counts ("131", "100")
+  const TABS = {"equip-12162.png": ["equip", [[0, 1, "Squishy Shoes"], [1, 1, "Pig Illustrated"]]],
+    "etc-12162.png": ["etc", [[1, 3, "Bronze Ore"], [2, 1, "Iron Ore"], [3, 4, "Mithril Ore"], [4, 14, "Adamantium Ore"], [5, 12, "Silver Ore"], [6, 2, "Orihalcon Ore"],
+      [7, 6, "Gold Ore"], [8, 1, "Garnet Ore"], [9, 1, "Amethyst Ore"], [10, 4, "Emerald Ore"], [11, 9, "Opal Ore"], [12, 2, "Sapphire Ore"], [13, 5, "Topaz Ore"],
+      [14, 200, "Tree Branch"], [15, 67, "Green Mushroom Cap"], [16, 7, "Jr. Necki Skin"], [17, 131, "Horny Mushroom Cap"], [18, 18, "Fragment of Magic"],
+      [19, 14, "Processed Wood"], [20, 100, "Stiff Feather"], [21, 4, "Stiff Feather"]]]};
+  for (const [f, [tab, want]] of Object.entries(TABS)){
+    const r = await page.evaluate(async b64 => {
+      const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode();
+      const c = document.createElement("canvas"); c.width = im.width; c.height = im.height; const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+      const d = g.getImageData(0, 0, c.width, c.height), img = {w: d.width, h: d.height, d: d.data, k: 1};
+      const all = window.ALLI ||= await GrindReaders.loadIcons(GAMEDATA, GAMEDATA.iicons), found = GrindReaders.findInventory(img);
+      const tabOf = {Equipment: "equip", Consumable: "use", Scroll: "use", Etc: "etc"};
+      const r = GrindReaders.readInventory(img, found, all.filter(ic => tabOf[GAMEDATA.items[ic.id].c] === found?.tab));
+      return {tab: found?.tab, slots: r.slots.map(sl => [sl.i, sl.n, GAMEDATA.items[sl.ids[0]].n]), unknown: r.unknown, wallet: GrindReaders.readMesoTotal(img)};
+    }, fs.readFileSync(path.join(dir, f)).toString("base64"));
+    const miss = want.filter(([i, n, name]) => !r.slots.some(s => s[0] === i && s[1] === n && s[2] === name));
+    const ok = r.tab === tab && !miss.length && !r.unknown && r.wallet === 12162 && r.slots.length === want.length + (tab === "etc" ? 1 : 0);   // + the letter (shared picture)
+    console.log(f, ok ? "ok" : "FAIL " + JSON.stringify({miss, r}));
+    if (!ok) fail++;
+  }
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (fail) throw new Error(fail + " frame(s) failed");

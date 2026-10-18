@@ -196,6 +196,10 @@ function renderInv(s){
   const tabs = s?.invTabs || {}, at = t => new Date(t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
   $("#invTabs").innerHTML = INV_TABS.map(([k, name]) => { const v = tabs[k];
     return `<span class="chip ${v ? v.last > v.first ? "ok" : "half" : "need"}" title="${v ? "first read " + at(v.first) + ", last " + at(v.last) : "not seen yet"}">${v ? v.last > v.first ? "✓✓" : "✓" : "○"} ${name}</span>` }).join(" ");
+  // the start count: asked for until all 3 tabs were read once
+  const missing = timer != null ? INV_TABS.filter(([k]) => !tabs[k]).map(([, n]) => n) : [];
+  $("#invAsk").classList.toggle("hidden", !missing.length);
+  $("#invAsk").textContent = `Open your inventory and show the ${missing.join(", ")} tab${missing.length > 1 ? "s" : ""} for a second${missing.length > 1 ? " each" : ""}: that's the start count.`;
   const g = s?.inv || [];
   $("#invBox").classList.toggle("hidden", !Object.keys(tabs).length);
   $("#invGain").innerHTML = g.slice(0, 40).map(x => `<tr><td>${esc(x.name)}${x.alike > 1 ? ` <span class="note">(or ${x.alike - 1} look-alike${x.alike > 2 ? "s" : ""})</span>` : ""}</td><td class="n">${x.n > 0 ? "+" : ""}${x.n}</td></tr>`).join("");
@@ -533,8 +537,9 @@ async function start(){
 let stopping = false;
 async function stop(){
   if (stopping) return;   // a double click saves one session, not two (the end picture takes a moment)
-  // tabs read at the start but not in the last 2 minutes: ask for one more look first (a second Stop within 20 s stops anyway)
-  const tabs = session?.stats().invTabs || {}, stale = INV_TABS.filter(([k]) => tabs[k] && Date.now() - tabs[k].last > 120e3).map(([, n]) => n);
+  // a tab not read in the last 2 minutes: ask for one more look first (a second Stop within 20 s stops anyway)
+  // all 3 tabs, read in the last 2 minutes: the end count
+  const tabs = session?.stats().invTabs || {}, stale = INV_TABS.filter(([k]) => !tabs[k] || Date.now() - tabs[k].last > 120e3).map(([, n]) => n);
   if (stale.length && Date.now() - stopAsked > 20e3){
     stopAsked = Date.now(); $("#go").textContent = "Stop anyway";
     $("#status").textContent = `Before stopping: open your inventory's ${stale.join(", ")} tab${stale.length > 1 ? "s" : ""} for a second so the end count is right, then press Stop.`;

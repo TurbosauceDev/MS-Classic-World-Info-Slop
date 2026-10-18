@@ -99,11 +99,12 @@ const path = require("path"), {chromium} = require("playwright");
     session.add({t: t - 300e3, type: "inv", tab: "etc", items: {"4000019": 3}, unknown: 0});
     session.add({t: t - 200e3, type: "itemraw", text: "?"});
     session.add({t: t - 150e3, type: "inv", tab: "etc", items: {"4000019": 8}, unknown: 0}); render();
-    const gain = document.querySelector("#invGain").textContent, chips = document.querySelector("#invTabs").textContent, items = document.querySelector("#items").textContent;
+    const ask = document.querySelector("#invAsk").textContent, gain = document.querySelector("#invGain").textContent, chips = document.querySelector("#invTabs").textContent, items = document.querySelector("#items").textContent;
     await stop(); const asked = [document.querySelector("#status").textContent, document.querySelector("#go").textContent, timer != null];
-    session.add({t: Date.now(), type: "inv", tab: "etc", items: {"4000019": 8}, unknown: 0}); stopAsked = 0; render();
-    return {gain, chips, items, asked, box: document.querySelector("#invBox").classList.contains("hidden")} });
-  if (!/\+5/.test(iv.gain) || !/✓✓ Etc/.test(iv.chips) || !/from the inventory/.test(iv.items) || /not read yet/.test(iv.items) || !/Before stopping: open your inventory's Etc tab/.test(iv.asked[0]) || iv.asked[1] !== "Stop anyway" || !iv.asked[2] || iv.box) throw new Error("inventory: " + JSON.stringify(iv));
+    for (const tab of ["equip", "use", "etc"]) session.add({t: Date.now(), type: "inv", tab, items: tab === "etc" ? {"4000019": 8} : {}, unknown: 0});
+    stopAsked = 0; render();
+    return {ask, asked2: document.querySelector("#invAsk").classList.contains("hidden"), gain, chips, items, asked, box: document.querySelector("#invBox").classList.contains("hidden")} });
+  if (!/\+5/.test(iv.gain) || !/✓✓ Etc/.test(iv.chips) || !/from the inventory/.test(iv.items) || /not read yet/.test(iv.items) || !/Before stopping: open your inventory's Equip, Use, Etc tabs/.test(iv.asked[0]) || !/show the Equip, Use tabs/.test(iv.ask) || !iv.asked2 || iv.asked[1] !== "Stop anyway" || !iv.asked[2] || iv.box) throw new Error("inventory: " + JSON.stringify(iv));
   // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened
   await page.waitForTimeout(3200);
   await page.click(".tabs [data-tab=settings]"); await page.fill("#reportNote", "map read wrong"); await page.click("#report"); await page.waitForTimeout(100);

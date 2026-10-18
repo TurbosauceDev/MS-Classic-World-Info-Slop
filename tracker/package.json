@@ -1,7 +1,7 @@
 {
   "name": "ms-classic-grind-tracker",
   "productName": "MS Classic Grind Tracker",
-  "version": "0.2.24",
+  "version": "0.2.25",
   "description": "Watches the MapleStory Classic World window while you grind: kills, EXP/hr, mesos/hr, drops. Reads pixels only.",
   "main": "app/main.js",
   "scripts": {

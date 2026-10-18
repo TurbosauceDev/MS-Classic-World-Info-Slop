@@ -42,6 +42,7 @@
   .row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:6px 0; }
   label.chk { display:flex; gap:6px; align-items:flex-start; margin:5px 0; } label.chk input { margin-top:3px; }
   #selfcheck td:first-child { width:42%; }
+  .ask{margin-top:6px;padding:6px 8px;border-radius:8px;background:var(--accent-soft);color:var(--ink);font-weight:600}
   .chip{display:inline-block;padding:2px 8px;border-radius:10px;border:1px solid var(--line);font-size:12px}
   .chip.ok{border-color:var(--leaf)} .chip.need{color:var(--muted)}
   button.del { padding:1px 7px; font-size:12px; } button.del.sure { background:var(--bad); color:#fff; }
@@ -97,7 +98,7 @@
       <div class="k" style="margin-top:8px">Inventory</div>
       <div class="note">Open your inventory on <b>Equip</b>, <b>Use</b> and <b>Etc</b> for a second each, after Start and again before Stop.
         The difference is your real loot, even when a pickup line didn't read.</div>
-      <div class="row" id="invTabs"></div></div>
+      <div class="row" id="invTabs"></div><div class="ask hidden" id="invAsk"></div></div>
     <div class="card" id="kpqBox"><h3>KPQ</h3>
       <div class="row"><label>Doing <select id="kpqAct"><option value="auto">Auto (spots KPQ)</option><option value="grind">Grinding</option><option value="kpq">KPQ</option></select></label>
         <label>Mode <select id="kpqMode"><option>Bonus</option><option>Rush</option></select></label></div>
@@ -168,7 +169,8 @@
         <li>Loot = what's in Etc (plus equips and scrolls) now minus at the first look, or the pickup lines, whichever is more.
           That covers lines that didn't read; the lines cover loot you sold in between.</li>
         <li>Only the slots you can see are read: scroll to the top of a tab.</li>
-        <li>Stop asks for one more look when a tab was last read over 2 minutes ago. Press <b>Stop anyway</b> to skip.</li>
+        <li>After Start the Session tab asks for all 3 tabs until each was read. Stop asks again for any tab not read in the
+          last 2 minutes. Press <b>Stop anyway</b> to skip.</li>
       </ul></details>
       <details><summary>KPQ runs</summary><ul>
         <li>On <b>Auto</b>, KPQ turns on by itself once a KPQ stage shows on the minimap. Pick <b>KPQ</b> in the Session tab to

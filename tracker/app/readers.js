@@ -362,6 +362,7 @@
     "....#./...##./..#.#./.#..#./#...#./######/....#./....#./....#./": 4, "######/#...../#...../#####./.....#/.....#/.....#/#....#/.####./": 5,
     "..###./.#..../#...../#####./#....#/#....#/#....#/#....#/.####./": 6, "###/.../.../.../..#/..#/.#./.#./#../": 7,
     ".####./#....#/#....#/#....#/.####./#....#/#....#/#....#/.####./": 8, ".####./#....#/#....#/#....#/#....#/.#####/.....#/.....#/.####./": 9};
+  const CTPL = Object.entries(CDIG).map(([k, dg]) => { const rows = k.split("/").slice(0, 9); return {dg, rows, w: rows[0].length} });
   // every count on screen: [{x, y, n}] (x = first digit's left column, y = the digits' bottom row)
   // area (optional): {x0, y0, x1, y1} in native pixels, the part of the screen the player marked (faster, and nothing
   // else on screen can be taken for a count)
@@ -372,6 +373,33 @@
     const is = (x, y, r) => { const i = (y * w + x) * 4; return r < 4 ? d[i] >= 235 && d[i + 1] >= 253 && d[i + 2] >= 250 : blue(i, r) };
     const dark = (x, y) => { const i = (y * w + x) * 4; return y >= 0 && y < h && d[i] + d[i + 1] + d[i + 2] < 150 };
     const out = [];
+    const keyOf = (cols, y) => { let k = ""; for (let r = 0; r <= 8; r++){ for (const x of cols) k += is(x, y - 8 + r, r) ? "#" : "."; k += "/" } return k };
+    /* a run of ink columns -> digits. Usually one exact digit. A light icon under the count (white feather, pale ore) adds
+       ink inside a digit or joins columns onto it (Danny's Etc tab, 2026-10-18: "131" and "100" didn't read): then each digit
+       is taken from the left where all its ink is there and at most 3 extra pixels are, and what's left after a digit is the
+       icon, not a digit */
+    function glyphsIn(c, y){
+      const key = keyOf(c, y);
+      if (CDIG[key] !== undefined) return [{x0: c[0], x1: c.at(-1), key, dg: CDIG[key]}];
+      const out = []; let pos = 0;
+      while (pos < c.length){
+        let best = null;
+        for (const t of CTPL){
+          if (pos + t.w > c.length) continue;
+          let extra = 0, ok = true;
+          for (let r = 0; r <= 8 && ok; r++) for (let i = 0; i < t.w; i++){
+            const ink = is(c[pos + i], y - 8 + r, r), want = t.rows[r][i] === "#";
+            if (want && !ink){ ok = false; break } if (!want && ink) extra++;
+          }
+          if (ok && extra <= 3 && (!best || extra < best.extra || extra === best.extra && t.w > best.t.w)) best = {t, extra};
+        }
+        if (!best){ if (!out.length) return [{x0: c[0], x1: c.at(-1), key}]; break }
+        const cols = c.slice(pos, pos + best.t.w);
+        out.push({x0: cols[0], x1: cols.at(-1), key: keyOf(cols, y), dg: best.t.dg});
+        pos += best.t.w;
+      }
+      return out;
+    }
     const X0 = area ? Math.max(0, area.x0) : 0, X1 = area ? Math.min(w, area.x1) : w;
     for (let y = area ? Math.max(8, area.y0) : 8, Y1 = area ? Math.min(h, area.y1) : h; y < Y1; y++){
       // quick test first: a row with the bottom color somewhere
@@ -383,17 +411,17 @@
       for (const x of cols){ if (cur && x === cur.at(-1) + 1) cur.push(x); else { cur = [x]; cl.push(cur) } }
       // digits less than 6 columns apart are one number; an unknown glyph touching a number spoils it (half covered)
       let num = null, lastEnd = -99;
-      for (const c of cl){
-        let key = ""; for (let r = 0; r <= 8; r++){ for (const x of c) key += is(x, y - 8 + r, r) ? "#" : "."; key += "/" }
+      for (const c of cl) for (const g of glyphsIn(c, y)){
+        const key = g.key;
         // light-blue bits with no white above them are icon edges or the selected slot's frame, not digits: skip
         // them instead of letting them spoil the count next to them
-        if (CDIG[key] === undefined && !/#/.test(key.split("/").slice(0, 4).join(""))) continue;
-        if (key === "#/#/#/#/#/#/#/#/#/" && !(dark(c[0], y - 9) && dark(c[0], y + 1))) continue;   // a window edge, not a 1 (a 1 has its outline above and below)
-        const dg = CDIG[key], near = c[0] - lastEnd <= 5;
-        lastEnd = c.at(-1);
+        if (g.dg === undefined && !/#/.test(key.split("/").slice(0, 4).join(""))) continue;
+        if (key === "#/#/#/#/#/#/#/#/#/" && !(dark(g.x0, y - 9) && dark(g.x0, y + 1))) continue;   // a window edge, not a 1 (a 1 has its outline above and below)
+        const dg = g.dg, near = g.x0 - lastEnd <= 5;
+        lastEnd = g.x1;
         if (num && near){ if (dg === undefined) num.bad = true; else num.n = num.n * 10 + dg; num.end = lastEnd; continue }
         if (num) out.push(num);
-        num = {x: c[0], y, n: dg ?? 0, bad: dg === undefined, end: lastEnd};
+        num = {x: g.x0, y, n: dg ?? 0, bad: dg === undefined, end: lastEnd};
       }
       if (num) out.push(num);
     }

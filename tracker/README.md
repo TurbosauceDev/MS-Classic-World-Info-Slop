@@ -81,6 +81,9 @@ npm start           # run it (Windows, Electron)
   readInventory (5x6 slots; picture vs every Equip/Use/Etc item icon, G.iicons, decoded in the worker; counts via readCounts).
   "inv" events {tab, items, alike, unknown} when read the same twice. Session keeps first/last per tab; loot per item =
   max(pickup lines, inventory gain) for Etc/equips/scrolls. Stop asks for another look if a tab is >2 min stale.
+- v0.2.25: Equip/Etc tabs tested (tests/frames-inv/{equip,etc}-12162.png). Counts over a light icon (white feather) read
+  digit by digit with up to 3 extra ink pixels. Session tab asks for all 3 tabs after Start until each is read; Stop asks
+  for any tab not read in the last 2 minutes.
 - Kills: KPQ stages without monsters are maps with none (stage-clear EXP isn't kills); a lone monster worth 5x the
   smallest on its map (King Slime) counts once per visit. Pickup names fitting several items: the one this map's
   monsters drop (G.drops from meowdb reports), Coupon/Pass on KPQ stages.
