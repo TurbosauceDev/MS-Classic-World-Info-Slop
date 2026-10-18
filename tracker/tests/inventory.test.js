@@ -144,6 +144,29 @@ const WANT = [[91, "2010003"], [85, "2010005"], [29, "2000002"], [8, "2000001"],
     console.log(f, ok ? "ok" : "FAIL " + JSON.stringify({miss, r}));
     if (!ok) fail++;
   }
+  // Danny's KPQ run (2026-10-18, native 2560x1440, UI "Ideal Ratio"): the Etc tab drawn pale pink over a broken top row
+  // of the red line; the minimap's two lines bridged by its icon; the minimap folded to one title line; and the screen
+  // scale, found from the status bar when the full-resolution scenery hides the UI's doubled pixels
+  const fx = await page.evaluate(async files => {
+    const load = async b64 => { const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode(); return im };
+    const frame = (im, W, H, x = 0, y = 0, k = 1, noise = false) => { const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
+      g.fillStyle = "#123"; g.fillRect(0, 0, W, H);
+      if (noise) for (let i = 0; i < 40000; i++){ g.fillStyle = i % 2 ? "#eee" : "#111"; g.fillRect(Math.random() * W | 0, Math.random() * (H - im.height) | 0, 1 + (Math.random() * 3 | 0), 1 + (Math.random() * 3 | 0)) }
+      g.imageSmoothingEnabled = false; g.drawImage(im, x, y, im.width / k, im.height / k);
+      const d = g.getImageData(0, 0, W, H); return {w: W, h: H, d: d.data, k: 1} };
+    const etc = frame(await load(files.etc), 1280, 720, 945, 170), all = await GrindReaders.loadIcons(GAMEDATA, GAMEDATA.iicons);
+    const rd = GrindReaders.createReaders(GAMEDATA, []); rd.setInvIcons(all);
+    const ev = [...rd.readFrame(etc, 0), ...rd.readFrame(etc, 2100), ...rd.readFrame(etc, 4200)].filter(e => e.type === "inv");
+    const ptr = GrindReaders.findInventory(frame(await load(files.ptr), 1280, 720, 945, 170))?.tab;   // mouse over Set Up, its hand on the red line
+    const mm = GrindReaders.mapTextCrop(frame(await load(files.mm), 1280, 720)), fold = GrindReaders.mapTextCrop(frame(await load(files.fold), 1280, 720, 0, 0, 2));
+    const sb = await load(files.sb), raw = frame(sb, 2560, 1440, 0, 1440 - sb.height, 1, true);
+    return {inv: ev[0], ptr, mm: mm && mm.h, fold: fold && fold.h, k: GrindReaders.native({w: raw.w, h: raw.h, d: raw.d}).k,
+      exit: GrindReaders.mapFromText("Hidden Street : 1st Accompaniment <Exit> [=][@] WORLD", GAMEDATA)?.id, mini: GrindReaders.mapFromText("MINI MAP", GAMEDATA)};
+  }, Object.fromEntries([["etc", "etc-pale-tab"], ["mm", "minimap-kpq"], ["fold", "minimap-folded-2x"], ["sb", "statusbar-native-1440"], ["ptr", "use-pointer-on-tabs"]].map(([k, f]) => [k, fs.readFileSync(path.join(dir, f + ".png")).toString("base64")])));
+  const it = fx.inv?.items || {}, fxOk = fx.inv?.tab === "etc" && it["4000019"] === 121 && it["4010000"] === 26 && it["4000013"] === 13 && it["4000063"] === 4 && it["4010104"] === 19 && fx.inv.unknown <= 2
+    && fx.ptr === "use" && fx.mm > 50 && fx.fold && fx.fold < 50 && fx.k === 2 && fx.exit === "80000600" && fx.mini === null;
+  console.log("KPQ run frames", fxOk ? "ok" : "FAIL " + JSON.stringify(fx));
+  if (!fxOk) fail++;
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (fail) throw new Error(fail + " frame(s) failed");

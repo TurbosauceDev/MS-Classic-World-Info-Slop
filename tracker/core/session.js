@@ -8,7 +8,7 @@
      {t, type: "bar",   exp, level?}      EXP bar reading: current EXP into the level (and level, when worked out)
      {t, type: "itemraw", text, qty?, cands?}  an item pickup line whose name fits several items (cands) or none; the one
                                           this map's monsters drop is taken when only one of them does
-     {t, type: "inv", tab, items, alike?, unknown}  the inventory's open tab (equip/use/etc): {id: count}; alike = how many
+     {t, type: "inv", tab, items, alike?, stacks?, unknown}  the inventory's open tab (equip/use/etc): {id: count}; alike = how many
                                           items share that picture (scrolls); unknown = slots that didn't read
      {t, type: "meso",  amount}           meso pickup message
      {t, type: "item",  id, qty?}         item pickup message (id resolved by the reader from the item name)
@@ -27,7 +27,7 @@
   function createSession(G, opts = {}){
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
-      msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
+      msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, itemT: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
       pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null, used: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
@@ -77,17 +77,22 @@
     // inventory now minus at the first read, per item (tabs read at least twice), biggest change first
     function invGain(){
       const out = [];
-      for (const [tab, {first, last}] of Object.entries(S.inv)){
+      for (const [tab, {first, last, low}] of Object.entries(S.inv)){
         if (last.t <= first.t) continue;
         for (const id of new Set([...Object.keys(first.items), ...Object.keys(last.items)])){
-          const n = (last.items[id] || 0) - (first.items[id] || 0);
-          if (n && !(G.kpqItems || []).includes(id)) out.push({id, tab, n, alike: last.alike[id] || first.alike[id] || 1, name: G.items[id]?.n || "Item " + id});
+          let n = (last.items[id] || 0) - (first.items[id] || 0);
+          // gone from the tab while some slots didn't read: most likely one of those, not all used up (Danny's Lemons, 2026-10-18)
+          // ...unless it went down while it still showed: that much was used (Danny's Warrior Potion 2 -> 1, then unread, 2026-10-18)
+          if (!last.items[id] && last.unknown > 0){ const lo = low[id]; if (lo == null || lo >= (first.items[id] || 0)) continue; n = lo - first.items[id] }
+          // one stack fewer and more slots unread than at the first look: a stack that didn't read, not used (Danny's arrows, 2026-10-18)
+          if (n < 0 && last.unknown > first.unknown && (last.stacks[id] || 0) < (first.stacks[id] || 0)) continue;
+          if (n && !(G.kpqItems || []).includes(id)) out.push({id, tab, n, was: first.items[id] || 0, now: last.items[id] || 0, alike: last.alike[id] || first.alike[id] || 1, name: G.items[id]?.n || "Item " + id});
         }
       }
       return out.sort((a, b) => Math.abs(b.n) - Math.abs(a.n));
     }
     // KPQ's Pass and Coupon only matter inside KPQ: not loot (Danny, 2026-10-18)
-    function gotItem(id, q){ id = String(id); if ((G.kpqItems || []).includes(id)) return; S.items[id] = (S.items[id] || 0) + q; if (S.lastKillMob){ const m = mob(S.lastKillMob); m.items[id] = (m.items[id] || 0) + q } }
+    function gotItem(id, q, t){ id = String(id); if ((G.kpqItems || []).includes(id)) return; S.items[id] = (S.items[id] || 0) + q; (S.itemT[id] ||= {first: t}).last = t; if (S.lastKillMob){ const m = mob(S.lastKillMob); m.items[id] = (m.items[id] || 0) + q } }
     const mob = id => S.byMob[id] || (S.byMob[id] = {kills: 0, exp: 0, mesos: 0, mesoDrops: 0, items: {}});
 
     function add(e){
@@ -117,15 +122,17 @@
         // the inventory's open tab read: kept as first and latest per tab (Equip, Use, Etc)
         case "inv": {
           if (!e.tab || !e.items) break;
-          const read = {t: e.t, items: e.items, alike: e.alike || {}, unknown: e.unknown || 0};
-          (S.inv[e.tab] ||= {first: read}).last = read;
+          const read = {t: e.t, items: e.items, alike: e.alike || {}, stacks: e.stacks || {}, unknown: e.unknown || 0};
+          const tab = S.inv[e.tab] ||= {first: read, low: {}}; tab.last = read;
+          for (const [id, n] of Object.entries(e.items)) if (n > 0 && !(tab.low[id] <= n)) tab.low[id] = n;   // fewest seen per item
           break;
         }
         case "itemraw": {
           // a name that fits several items: the one the monsters here drop (player drop reports), or KPQ's Coupon/Pass
           const here = new Set((G.maps[S.map]?.[2] || []).flatMap(([m]) => G.drops?.[m] || []).concat((G.kpq || []).includes(S.map) ? G.kpqItems || [] : []));
           const fit = (e.cands || []).filter(id => here.has(String(id)));
-          if (fit.length === 1) gotItem(fit[0], e.qty || 1); else S.unreadItems++;
+          // "x1 earned" inside KPQ is Cloto's Pass/reward hand-out, not loot: not an unread drop (Danny's reports, 2026-10-18)
+          if (fit.length === 1) gotItem(fit[0], e.qty || 1, e.t); else if (!(/earned/i.test(e.text || "") && (G.kpq || []).includes(S.map))) S.unreadItems++;
           break;
         }
         case "wallet": if (Number.isFinite(e.n) && e.n >= 0){ if (S.walletFirst === null) S.walletFirst = e.n; S.walletLast = e.n } break;
@@ -178,7 +185,7 @@
           if (S.lastKillMob){ const m = mob(S.lastKillMob); m.mesos += e.amount; m.mesoDrops++ }
           break;
         case "item": {
-          gotItem(e.id, e.qty || 1);
+          gotItem(e.id, e.qty || 1, e.t);
           break;
         }
       }
@@ -207,7 +214,7 @@
       const need = S.bar && S.level ? G.exp[S.level] : null;
       const toLevelHrs = need && expHr > 0 ? Math.max(0, need - S.bar.exp) / expHr : null;
       // a goal level: the rest of this level plus every level up to it, at the current rate
-      const goal = +opts.goalLevel || 0;
+      const goal = opts.goalLevel === "next" ? (S.level ? S.level + 1 : 0) : +opts.goalLevel || 0;   // "next": always the level after this one
       let toGoalHrs = null;
       if (need && expHr > 0 && goal > S.level){ let left = Math.max(0, need - S.bar.exp); let known = true; for (let l = S.level + 1; l < goal; l++){ if (!G.exp[l]) known = false; left += G.exp[l] || 0 } toGoalHrs = known ? left / expHr : null }   // past the EXP table: unknown, not "sooner"
       // the inventory read at two times (a tab opened early and again later): what's in it now minus what was in it then.
@@ -215,6 +222,10 @@
       // inventory catches lines that didn't read, the lines catch loot sold or stored in between
       const inv = invGain(), seenN = {...S.items}, filled = {};
       for (const g of inv) if (g.n > 0 && !(G.kpqItems || []).includes(g.id) && g.alike === 1 && ["Etc", "Equipment", "Scroll"].includes(G.items[g.id]?.c) && g.n > (seenN[g.id] || 0)){ filled[g.id] = g.n - (seenN[g.id] || 0); seenN[g.id] = g.n }
+      // fewer than the pickup lines, and the tab read with every slot readable both before the first and after the last
+      // pickup: the inventory is right, a line read twice (Danny's one Mace counted 2, 2026-10-18)
+      for (const g of inv){ const t = S.itemT[g.id], tab = S.inv[g.tab];
+        if (g.n > 0 && g.alike === 1 && t && g.n < (seenN[g.id] || 0) && !tab.first.unknown && !tab.last.unknown && tab.first.t < t.first && tab.last.t > t.last) seenN[g.id] = g.n }
       const items = Object.entries(seenN).map(([id, n]) => ({id, name: G.items[id]?.n || "Item " + id, n, each: worth(id), total: worth(id) * n, inv: filled[id] || 0}))
         .sort((a, b) => b.total - a.total);
       const unreadLeft = Math.max(0, S.unreadItems - Object.values(filled).reduce((a, b) => a + b, 0));
@@ -223,8 +234,10 @@
       // Use-tab items that went down between inventory looks count as used too (max of the two, like loot above)
       const usedN = {...S.used};
       for (const g of inv) if (g.tab === "use" && g.n < 0 && g.alike === 1 && -g.n > (usedN[g.id] || 0)) usedN[g.id] = -g.n;
-      const used = Object.entries(usedN).map(([id, n]) => { const each = G.buy?.[id] ?? G.pw?.[id]?.[0] ?? null;
-        return {id, name: G.items[id]?.n || "Item " + id, n, each, total: each == null ? null : each * n} }).sort((a, b) => (b.total || 0) - (a.total || 0));
+      // "I only buy meat and lemons": the potions they name came from drops and quests, so they cost nothing (Danny, 2026-10-18)
+      const free = new Set(opts.freeIds || []);
+      const used = Object.entries(usedN).map(([id, n]) => { const each = free.has(id) ? 0 : G.buy?.[id] ?? G.pw?.[id]?.[0] ?? null;
+        return {id, name: G.items[id]?.n || "Item " + id, n, each, total: each == null ? null : each * n, free: free.has(id)} }).sort((a, b) => (b.total || 0) - (a.total || 0));
       const usedCost = used.reduce((a, u) => a + (u.total || 0), 0);
       const mobs = Object.entries(S.byMob).map(([id, m]) => ({id, name: G.mobs[id]?.[0] || "Monster " + id, ...m,
         mesoPerKill: m.kills ? m.mesos / m.kills : 0})).sort((a, b) => b.kills - a.kills);
@@ -251,8 +264,8 @@
         mobs: s.mobs.map(m => ({id: m.id, kills: m.kills, mesos: m.mesos, mesoDrops: m.mesoDrops, items: m.items}))};
     }
 
-    const setGoal = lv => { opts.goalLevel = lv };
-    return {add, stats, shareable, respawns, setGoal, state: S};
+    const setGoal = lv => { opts.goalLevel = lv }, setFree = ids => { opts.freeIds = ids };
+    return {add, stats, shareable, respawns, setGoal, setFree, state: S};
   }
 
   /* Shared runs (the same rules as beanguri's Maple Classic Exp Overlay): 15 minutes of non-stop farming on one map with

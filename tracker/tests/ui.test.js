@@ -9,7 +9,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.addInitScript(() => {
     window.host = {gameFound: async () => true, wholeScreen: async on => on, settings: async x => (window.st = {...(window.st || {share: false, idleSec: 60, partyCode: "snails"}), ...(x || {})}),
       party: async live => (window.sentParty = live, {expHr: 9000, members: [{you: true, level: 22, expHr: 4000}, {nick: "Bo<b>", job: "Hunter", level: 25, expHr: 5000, expHr5: 6000}]}),
-      saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", openFolder: async d => (window.opened = d), saveReport: async (f, info) => (window.report = {frames: f.length, info}, "report-2026-10-17T20-00-00"), ocr: async () => "Victoria Road\nSnail Hunting Ground III", shareRun: async () => true, summary: async () => ({rows: [], times: {"42": [[0, 0.9, 3], [18, 1.2, 4]]}}), sessions: async () => [{saved: Date.now() - 3600e3, date: "2026-10-17", mapName: "Snail Hunting Ground III", level: 22, activeMin: 30, exp: 6000, mesos: 900, deaths: 1,
+      saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", saveImage: async (n, b) => (window.img = {n, b: [...b]}, "x"), openFolder: async d => (window.opened = d), saveReport: async (f, info) => (window.report = {frames: f.length, info}, "report-2026-10-17T20-00-00"), ocr: async () => "Victoria Road\nSnail Hunting Ground III", shareRun: async () => true, summary: async () => ({rows: [], times: {"42": [[0, 0.9, 3], [18, 1.2, 4]]}}), sessions: async () => [{saved: Date.now() - 3600e3, date: "2026-10-17", mapName: "Snail Hunting Ground III", level: 22, activeMin: 30, exp: 6000, mesos: 900, deaths: 1, player: "Turbow", job: "Archer", startLevel: 21, endLevel: 22, items: {"4000019": 3, "4000000": 9},
           levelUps: [{level: 22, activeMin: 41, mapName: "Snail Hunting Ground III"}, {level: 21, activeMin: null}]},
         {saved: Date.now() - 7200e3, date: "2026-10-17", mapName: "Pig Beach", level: 21, activeMin: 20, exp: 2000, mesos: 300, deaths: 0},
         {saved: Date.now() - 9 * 864e5, date: "2026-10-08", mapName: "Old", level: 10, activeMin: 60, exp: 1, mesos: 1}], exportCsv: async () => "", mini: async () => true,
@@ -26,6 +26,10 @@ const path = require("path"), {chromium} = require("playwright");
   if (!await page.isVisible("#guide")) throw new Error("guide not shown");
   await page.click("#guideShare");
   if (await page.isVisible("#guide") || !await page.isChecked("#share")) throw new Error("guide answer");
+  // default Session layout (Danny, 2026-10-18): numbers, monsters, then KPQ / Alerts and goal / Start and end folded
+  const lay0 = await page.evaluate(() => [...document.querySelectorAll('section[data-tab=session] > [data-box]')].map(b => b.dataset.box + (b.classList.contains("folded") ? "-" : "")).join());
+  if (lay0 !== "stats,mobs,kpq-,alerts-,snaps-") throw new Error("default layout: " + lay0);
+  await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click()));
   await page.dblclick("#go");
   await page.waitForTimeout(1500);
   // updates: Check for updates -> downloading -> ready banner; Restart and update stops (saves) the session first
@@ -55,16 +59,27 @@ const path = require("path"), {chromium} = require("playwright");
   await page.waitForTimeout(800);
   const mobs = await page.textContent("#mobs"), items = await page.textContent("#items");
   // a goal level and a death from the EXP bar; EXP silent for 2+ minutes -> warning
-  await page.click(".tabs [data-tab=settings]"); await page.fill("#goal", "23"); await page.dispatchEvent("#goal", "change");
+  await page.click(".tabs [data-tab=session]"); await page.fill("#goal", "23"); await page.dispatchEvent("#goal", "change");
   const gl = await page.evaluate(() => { const t = Date.now() - 200e3; session.add({t, type: "bar", exp: 5000, pct: 5000 / GAMEDATA.exp[22] * 100, level: 22});
     session.add({t: t + 10e3, type: "bar", exp: 6000, pct: 6000 / GAMEDATA.exp[22] * 100, level: 22}); session.add({t: t + 20e3, type: "bar", exp: 5500, pct: 5500 / GAMEDATA.exp[22] * 100, level: 22});
     session.state.lastExpT = Date.now() - 130e3;   // last EXP over 2 minutes ago
     render(); return [document.querySelector("#deaths").textContent, document.querySelector("#goalK").textContent, document.querySelector("#goalV").textContent, document.querySelector("#status").textContent] });
   if (gl[0] !== "1" || gl[1] !== "Level 23 in" || !/h|min/.test(gl[2]) || !/No EXP for 2 minutes/.test(gl[3])) throw new Error("goal/deaths/stop: " + gl);
+  // Next level (the default) and Off
+  await page.click("#goalNext"); await page.waitForTimeout(50);
+  const gn = await page.evaluate(() => [settings.goal, document.querySelector("#goal").value, document.querySelector("#goalNext").getAttribute("aria-pressed"), session.stats().goalLevel === session.stats().level + 1]);
+  if (gn.join() !== "next,,true,true") throw new Error("goal next: " + gn);
+  await page.click("#goalOff"); await page.waitForTimeout(50);
+  if (await page.evaluate(() => session.stats().goalLevel) !== null) throw new Error("goal off");
   // potions used (from the quick-slot counts): cost per hour and the list
   const usedTxt = await page.evaluate(() => { session.add({t: Date.now(), type: "use", id: "2000002", n: 3}); render();
     return [document.querySelector("#used").textContent, document.querySelector("#usedBox").classList.contains("hidden"), document.querySelector("#netHr").textContent, ICONS.length] });
-  if (!/White Potion×31,050/.test(usedTxt[0]) || usedTxt[1] || !/^net /.test(usedTxt[2]) || !(usedTxt[3] > 30)) throw new Error("used: " + usedTxt);
+  if (!/White Potion×3350−1,050Total×3−1,050/.test(usedTxt[0]) || usedTxt[1] || !/^net /.test(usedTxt[2]) || !(usedTxt[3] > 30)) throw new Error("used: " + usedTxt);
+  // "I only buy meat and lemons": colour potions cost nothing
+  await page.evaluate(() => document.querySelector("#meatOnly").click()); await page.waitForTimeout(50);
+  const meat = await page.evaluate(() => [document.querySelector("#used").textContent, document.querySelector("#meatOnly").getAttribute("aria-pressed")]);
+  if (!/White Potion×3free \(drop\)/.test(meat[0]) || meat[1] !== "true") throw new Error("meat only: " + meat);
+  await page.evaluate(() => document.querySelector("#meatOnly").click()); await page.waitForTimeout(50);
   // Mano killed on his map: respawn timer shows
   await page.evaluate(() => { const t = Date.now(); session.add({t, type: "map", id: 10000013}); session.add({t, type: "exp", gain: 148}); render() });
   const respawn = await page.textContent("#respawn");
@@ -96,30 +111,54 @@ const path = require("path"), {chromium} = require("playwright");
   const kg = await page.evaluate(async () => { const keep = kpq; settings = await host.settings({kpqAct: "grind"}); kpqReset(); kpqMap("80000000", Date.now() + 3e4); const on = kpq.on;
     settings = await host.settings({kpqAct: "auto"}); kpq = keep; return on });
   if (kg) throw new Error("kpq grind: still turned on");
-  // inventory: Etc read at the start and later -> the gain shows on the Loot tab and fills unread pickup lines; Stop asks
-  // for one more look when the last one is old, then works on the next press
+  // inventory: Etc read at the start and later -> fills unread pickup lines; Stop goes to the wrap-up card, where each tab
+  // turns green once read after Stop; Resume goes back to tracking
   const iv = await page.evaluate(async () => { const t = Date.now();
     session.add({t: t - 300e3, type: "inv", tab: "etc", items: {"4000019": 3}, unknown: 0});
     session.add({t: t - 200e3, type: "itemraw", text: "?"});
     session.add({t: t - 150e3, type: "inv", tab: "etc", items: {"4000019": 8}, unknown: 0}); render();
-    const ask = document.querySelector("#invAsk").textContent, gain = document.querySelector("#invGain").textContent, chips = document.querySelector("#invTabs").textContent, items = document.querySelector("#items").textContent;
-    await stop(); const asked = [document.querySelector("#status").textContent, document.querySelector("#stopAnyway").classList.contains("hidden") ? "" : "Stop anyway", timer != null];
+    const ask = document.querySelector("#invAsk").textContent, chips = document.querySelector("#invTabs").textContent, items = document.querySelector("#items").textContent;
+    await stop(); const ok = () => document.querySelectorAll("#wrapTabs .chip.ok").length;
+    const asked = [document.querySelector("#status").textContent, !document.querySelector("#wrap").classList.contains("hidden"), timer != null, document.querySelector("#go").textContent, ok(), session.state.pausedAt !== null];
     for (const tab of ["equip", "use", "etc"]) session.add({t: Date.now(), type: "inv", tab, items: tab === "etc" ? {"4000019": 8} : {}, unknown: 0});
-    stopAsked = 0; render();
-    return {ask, asked2: document.querySelector("#invAsk").classList.contains("hidden"), gain, chips, items, asked, box: document.querySelector("#invBox").classList.contains("hidden")} });
-  if (!/\+5/.test(iv.gain) || !/✓✓ Etc/.test(iv.chips) || !/from the inventory/.test(iv.items) || /not read yet/.test(iv.items) || !/Before stopping: open your inventory's Equip, Use, Etc tabs/.test(iv.asked[0]) || !/show the Equip, Use tabs/.test(iv.ask) || !iv.asked2 || iv.asked[1] !== "Stop anyway" || !iv.asked[2] || iv.box) throw new Error("inventory: " + JSON.stringify(iv));
+    render(); const after = [ok(), document.querySelector("#wrapNote").textContent];
+    resume(); const back = [wrap, document.querySelector("#go").textContent, document.querySelector("#wrap").classList.contains("hidden"), session.state.pausedAt];
+    return {ask, asked2: document.querySelector("#invAsk").classList.contains("hidden"), chips, items, asked, after, back, mesos: document.querySelector("#mesoGrid").textContent} });
+  if (!/✓✓ Etc/.test(iv.chips) || !/from the inventory/.test(iv.items) || !/Total/.test(iv.items) || /not read yet/.test(iv.items) || !/Finalize log/.test(iv.asked[0]) || !/show the Equip, Use tabs/.test(iv.ask) || !iv.asked2
+    || !iv.asked[1] || !iv.asked[2] || iv.asked[3] !== "Resume" || iv.asked[4] !== 0 || !iv.asked[5] || iv.after[0] !== 3 || !/Finalize log/.test(iv.after[1])
+    || iv.back[0] !== null || iv.back[1] !== "Stop" || !iv.back[2] || iv.back[3] !== null || !/Picked up\s*\+12/.test(iv.mesos)) throw new Error("inventory: " + JSON.stringify(iv));
+  // boxes: a saved layout puts the Mesos box in the pinned strip and folds Monsters; Reset puts them back
+  const lay = await page.evaluate(async () => { layoutLoad({order: {dock: ["mesos"]}, folded: ["mobs"]});
+    const moved = [document.querySelector("#mesoBox").parentElement.id, document.querySelector("[data-box=mobs]").classList.contains("folded")];
+    document.querySelector("#layoutReset").click(); await new Promise(r => setTimeout(r, 50));
+    return [...moved, document.querySelector("#mesoBox").parentElement.dataset.tab, document.querySelector("[data-box=mobs]").classList.contains("folded"), JSON.stringify(settings.layout.order.dock)] });
+  if (lay[0] !== "dock" || !lay[1] || lay[2] !== "loot" || lay[3] || lay[4] !== "[]") throw new Error("box layout: " + lay);
+  // dragged with the mouse: the Mesos box by its title onto the Session tab (moves there and opens it), then the Monsters
+  // box by its grip onto the top half of the Start and end box (goes above it)
+  // (the target is measured once the drag has started: the pin strip opening above the tabs moves things down)
+  const dragTo = async (from, to, dy = 0) => { const a = await page.locator(from).boundingBox();
+    await page.mouse.move(a.x + 10, a.y + a.height / 2); await page.mouse.down(); await page.mouse.move(a.x + 30, a.y + 20, {steps: 3});
+    const b = await page.locator(to).boundingBox();
+    await page.mouse.move(b.x + b.width / 2, b.y + (dy || b.height / 2), {steps: 5}); await page.mouse.up(); await page.waitForTimeout(50) };
+  await page.setViewportSize({width: 600, height: 2400}); await page.click(".tabs [data-tab=loot]");
+  await dragTo("#mesoBox h3", ".tabs [data-tab=session]");
+  await dragTo("[data-box=mobs] .grip", "#snaps", 10);
+  const dr = await page.evaluate(() => [document.querySelector("#mesoBox").parentElement.dataset.tab, document.querySelector(".tabs .sel").dataset.tab,
+    document.querySelector("[data-box=mobs]").nextElementSibling?.id, !!document.querySelector(".dragLabel, .moving"), JSON.stringify(settings.layout.order.session)]);
+  if (dr[0] !== "session" || dr[1] !== "session" || dr[2] !== "snaps" || dr[3] || !/mobs.*snaps/.test(dr[4])) throw new Error("mouse drag: " + dr);
+  // pinned: dropped on the strip above the tabs (it only has a size while dragging) the box lands there, not back in a tab
+  { const a = await page.locator("[data-box=stats] .grip").boundingBox(); await page.mouse.move(a.x + 3, a.y + 3); await page.mouse.down(); await page.mouse.move(a.x + 20, a.y + 20, {steps: 3});
+    const d = await page.locator("#dock").boundingBox(); await page.mouse.move(d.x + 40, d.y + d.height / 2, {steps: 5}); await page.mouse.up(); await page.waitForTimeout(50) }
+  const pin = await page.evaluate(() => [document.querySelector("[data-box=stats]").parentElement.id, JSON.stringify(settings.layout.order.dock)]);
+  if (pin[0] !== "dock" || pin[1] !== '["stats"]') throw new Error("pin: " + pin);
+  await page.click(".tabs [data-tab=settings]"); await page.click("#layoutReset"); if ((await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join())) !== "kpq,alerts,snaps") throw new Error("reset folds");
+  await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click())); await page.setViewportSize({width: 1280, height: 720});
   // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened
   await page.waitForTimeout(3200);
   await page.click(".tabs [data-tab=settings]"); await page.fill("#reportNote", "map read wrong"); await page.click("#report"); await page.waitForTimeout(100);
   const rep = await page.evaluate(() => [window.report, window.opened]);
   if (!rep[0] || rep[0].frames < 1 || rep[0].info.note !== "map read wrong" || !rep[0].info.log.some(l => l.kind === "event") || !rep[0].info.log.some(l => l.kind === "status")
     || !rep[0].info.check || rep[1] !== "report-2026-10-17T20-00-00") throw new Error("report: " + JSON.stringify(rep).slice(0, 300));
-  // "Show me where my potions are": the snip window's box is saved and used; "Look everywhere" clears it
-  const ar = await page.evaluate(async () => { host.snip = async url => (window.snipUrl = url.slice(0, 15), {x: 0.6, y: 0.7, w: 0.3, h: 0.25});
-    await pickArea(); const saved = settings.countArea, st = document.querySelector("#status").textContent, note = document.querySelector("#areaNote").textContent;
-    document.querySelector("#areaClear").click(); await new Promise(r => setTimeout(r, 50));
-    return {saved, st, note, url: window.snipUrl, cleared: settings.countArea, hidden: document.querySelector("#areaClear").classList.contains("hidden")} });
-  if (!ar.saved || ar.saved.x !== 0.6 || !/count|box/.test(ar.st) || !ar.note || ar.url !== "data:image/jpeg" || ar.cleared !== null || !ar.hidden) throw new Error("area pick: " + JSON.stringify(ar));
   // death check: a bar drop, then the chat OCR finds "lost 4,721 EXP for dying" (Danny's screenshot line)
   const dn = await page.evaluate(async () => { const ocr = host.ocr; host.ocr = async () => "[00:15] You have lost 4,721 EXP for dying\n"; deathSeen = session.state.deaths; session.state.deaths++;
     const t0 = Date.now(); while (!deaths.confirmed && Date.now() - t0 < 4000) await new Promise(r => setTimeout(r, 100));
@@ -133,9 +172,25 @@ const path = require("path"), {chromium} = require("playwright");
   if (Math.abs(+sn[0].replace(/\D/g, "") - want) > want * 0.01 || !/22 min/.test(sn[1])) throw new Error("snapshots: " + JSON.stringify(sn) + " want ~" + want);
   await page.click(".tabs [data-tab=session]"); await page.click("#snapEnd"); await page.waitForTimeout(200);   // a button snapshot from the (test) game picture: saved, replaces the typed end
   if (!(await page.evaluate(() => snaps.end.file && snaps.end.hand))) throw new Error("snap end button");
-  await page.click("#go");
-  await page.waitForTimeout(200);
-  const saved = await page.evaluate(() => window.saved);
+  await page.fill("#runName", "KPQ rush with randoms");
+  await page.click("#go"); await page.waitForTimeout(200);
+  if (await page.isVisible("#runName")) throw new Error("name row shown while wrapping up");
+  if (await page.evaluate(() => window.saved) || !await page.isVisible("#wrap")) throw new Error("stop: saved before End run");
+  // a name typed in the top card shows in the wrap-up card; a note written there; both saved and shown in the summary
+  await page.fill("#runNote", "ch 4, lost 2 to <b>ers");
+  if (await page.inputValue("#wrapName") !== "KPQ rush with randoms") throw new Error("wrap name");
+  await page.click("#wrapEnd"); await page.waitForTimeout(200);
+  { const nm = await page.evaluate(() => [window.saved?.name, window.saved?.note, document.querySelector("#runName").value, document.querySelector("#sumBody b, #sumBody .hnote")?.textContent, !!document.querySelector("#sumBody b b")]);
+    if (nm[0] !== "KPQ rush with randoms" || nm[1] !== "ch 4, lost 2 to <b>ers" || nm[2] !== "" || nm[4]) throw new Error("name/note: " + nm);
+    if (!/KPQ rush with randoms[\s\S]*ch 4, lost 2 to <b>ers/.test(await page.textContent("#sumBody"))) throw new Error("summary name/note") }
+  // summary saved as a picture: a PNG at 2x the card's size
+  await page.click("#sumImg"); await page.waitForFunction(() => window.img);
+  const im = await page.evaluate(async () => { const b = new Uint8Array(window.img.b), i = new Image(); i.src = URL.createObjectURL(new Blob([b], {type: "image/png"})); await i.decode();
+    return [window.img.n, b[1] === 80 && b[2] === 78, i.width === document.querySelector("#summary").offsetWidth * 2] });
+  if (!/^run-\d{4}-\d\d-\d\d-\d{4}\.png$/.test(im[0]) || !im[1] || !im[2]) throw new Error("summary image: " + im);
+  if (process.env.SHOT) require("fs").writeFileSync(process.env.SHOT, Buffer.from(await page.evaluate(() => window.img.b)));
+  const saved = await page.evaluate(() => window.saved), sum = await page.textContent("#summary");
+  if (!await page.isVisible("#summary") || !/EXP per active minute/.test(sum) || !/Mesos looted\s*\+12/.test(sum) || !/Horny Mushroom Cap/.test(sum) || await page.isVisible("#wrap")) throw new Error("summary: " + sum);
   // speed check card (no shared data yet), drop alert, history, mini bar
   await page.evaluate(async () => { settings.alertWorth = 10; dropAlert(4000019);
     await showSpeed({exp: 1000, barExp: 1000, minutes: 15, level: 20, party: 1, map: 42}) });
@@ -145,7 +200,8 @@ const path = require("path"), {chromium} = require("playwright");
   // compare: tick two sessions
   await page.click("#histRows .cmp >> nth=0"); await page.click("#histRows .cmp >> nth=1");
   const cmp = await page.textContent("#cmp");
-  if (!/B vs A/.test(cmp) || !/EXP\/hr/.test(cmp) || !/Pig Beach/.test(cmp)) throw new Error("compare: " + cmp);
+  await page.click("#cmpClear"); if (await page.evaluate(() => document.querySelectorAll("#histRows .cmp:checked").length)) throw new Error("compare clear");
+  if (!/B did better on/.test(cmp) || !/▲|▼/.test(cmp) || !/EXP\/hr/.test(cmp) || !/Pig Beach/.test(cmp)) throw new Error("compare: " + cmp);
   // a watched item: the alert set finds it by part of its name
   const watched = await page.evaluate(() => { settings.alertItems = "Horny Mushroom Cap"; return alertSet().has("4000019") });
   if (!watched) throw new Error("item alert set");
@@ -154,7 +210,8 @@ const path = require("path"), {chromium} = require("playwright");
   if (!/Valuable drop: Horny Mushroom Cap/.test(status)) throw new Error("drop alert: " + status);
   if (!/Best time here: .+ 20% faster than usual then \(4 players\)/.test(last)) throw new Error("best time: " + last);
   if (!/4,000 EXP\/hr/.test(last) || !/Not enough shared runs/.test(last)) throw new Error("speed card: " + last);
-  if (!/Last 7 days: 2 sessions, 0.8 h farming, 8,000 EXP, 1,200 mesos, level 21 → 22, 1 death. Fastest map: Snail Hunting Ground III \(12,000 EXP\/hr\)/.test(hist)) throw new Error("recap: " + hist);
+  { const r0 = await page.textContent("#histRows tr"); if (!/Turbow · Archer · Lv 21 → 22 · solo · 1 death/.test(r0) || !/best drop: Horny Mushroom Cap ×3/.test(r0) || !/\+6,000 EXP · 200 EXP\/min active/.test(r0)) throw new Error("history details: " + r0) }
+  if (!/Last 7 days: 2 sessions, 0.8 h farming, 8,000 EXP, 1,200, level 21 → 22, 1 death. Fastest map: Snail Hunting Ground III \(12,000 EXP\/hr\)/.test(hist)) throw new Error("recap: " + hist);
   if (!/Lv 21 → 22\s*41 min\s*Snail Hunting Ground III/.test(hist) || /Lv 20 → 21/.test(hist)) throw new Error("level-up log: " + hist);
   if (!mini || full || !back) throw new Error("mini bar toggle");
   // History: × asks first, the second click deletes and the list is redrawn
@@ -172,4 +229,4 @@ const path = require("path"), {chromium} = require("playwright");
   if (!/Horny Mushroom Cap/.test(items)) throw new Error("items table: " + items);
   if (!saved || saved.kills !== 3 || !saved.shared) throw new Error("saved session: " + JSON.stringify(saved));
   console.log("ui test passed");
-})().catch(e => { console.error(e.message); process.exit(1) });
+})().catch(e => { console.error(process.env.STACK ? e.stack : e.message); process.exit(1) });

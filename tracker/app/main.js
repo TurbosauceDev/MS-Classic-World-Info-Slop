@@ -194,10 +194,10 @@ ipcMain.handle("delete-session", (_, saved) => {
 ipcMain.handle("export-csv", () => {
   // text starting with = + - @ would run as a formula in Excel (map names come from OCR): prefixed with '
   const q = v => { let t = String(v ?? ""); if (typeof v === "string" && /^[=+\-@]/.test(t)) t = "'" + t; return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t };
-  const head = ["saved", "date", "map", "level", "job", "party", "active_min", "kills", "exp", "mesos", "exp_hr", "mesos_hr", "deaths", "used_cost"];
+  const head = ["saved", "date", "name", "player", "start_level", "end_level", "clock_min", "exp_total", "exp_per_active_min", "best_drop", "best_drop_each", "map", "level", "job", "party", "active_min", "kills", "exp", "mesos", "exp_hr", "mesos_hr", "deaths", "used_cost", "note"];
   const rows = sessions().map(x => { const h = (x.activeMin || 0) / 60;
-    return [new Date(x.saved).toISOString(), x.date, x.mapName || x.map, x.level, x.job, x.party, x.activeMin, x.kills, x.exp, x.mesos,
-      h ? Math.round(x.exp / h) : "", h ? Math.round(x.mesos / h) : "", x.deaths ?? "", x.usedCost ?? ""] });
+    return [new Date(x.saved).toISOString(), x.date, x.name || "", x.player || "", x.startLevel ?? "", x.endLevel ?? "", x.clockMin ?? "", x.expTotal ?? x.snap?.exp ?? x.exp ?? "", x.expPerActiveMin ?? "", x.bestDrop?.name || "", x.bestDrop?.each ?? "", x.mapName || x.map, x.level, x.job, x.party, x.activeMin, x.kills, x.exp, x.mesos,
+      h ? Math.round(x.exp / h) : "", h ? Math.round(x.mesos / h) : "", x.deaths ?? "", x.usedCost ?? "", x.note || ""] });
   const file = path.join(app.getPath("documents"), "MS Classic Tracker sessions.csv");
   // Excel locks a CSV it has open: say so instead of failing silently
   try { fs.writeFileSync(file, [head, ...rows].map(r => r.map(q).join(",")).join("\r\n")) }
@@ -247,6 +247,14 @@ ipcMain.handle("party", async (_, live) => {
 });
 // "Save sample frames": raw captures for building and testing the screen readers
 const FRAMES = () => path.join(app.getPath("pictures"), "MS Classic Tracker frames");
+// run summary picture: Pictures\MS Classic Tracker runs, also copied to the clipboard for pasting into Discord
+ipcMain.handle("save-image", (_, name, pngBytes) => {
+  const {nativeImage, clipboard} = require("electron"), dir = path.join(app.getPath("pictures"), "MS Classic Tracker runs");
+  fs.mkdirSync(dir, {recursive: true});
+  const file = path.join(dir, path.basename(String(name))), buf = Buffer.from(pngBytes);
+  fs.writeFileSync(file, buf); clipboard.writeImage(nativeImage.createFromBuffer(buf)); shell.showItemInFolder(file);
+  return file;
+});
 ipcMain.handle("save-frame", (_, name, pngBytes) => {
   const dir = FRAMES();
   fs.mkdirSync(dir, {recursive: true});

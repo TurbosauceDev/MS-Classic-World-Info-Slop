@@ -8,11 +8,11 @@
   :root { --bg:#f6f4fb; --panel:#fff; --ink:#2b2638; --muted:#6f6880; --line:#e2dcef; --accent:#7b5cc4; --accent-soft:#ece5fa; --leaf:#3f8f5a; --warn:#b7791f; --bad:#c0392b; }
   @media (prefers-color-scheme: dark) { :root { --bg:#17141f; --panel:#211d2c; --ink:#ece8f5; --muted:#a39cb5; --line:#363044; --accent:#a98bf0; --accent-soft:#2e2640; --leaf:#5fbf7f; --warn:#e0a84a; --bad:#ef6b5b; } }
   * { box-sizing:border-box; }
-  body { margin:0; padding:10px; background:var(--bg); color:var(--ink); font:13px/1.4 system-ui, sans-serif; }
+  body { margin:0; padding:10px; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; }
-  .k { color:var(--muted); font-size:11px; } .v { font-size:18px; font-weight:600; font-variant-numeric:tabular-nums; }
-  h3 { margin:0 0 6px; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .k { color:var(--muted); font-size:12px; } .v { font-size:18px; font-weight:600; font-variant-numeric:tabular-nums; }
+  h3 { margin:0 0 6px; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
   button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:7px 12px; font:inherit; cursor:pointer; }
   button.alt { background:var(--accent-soft); color:var(--ink); }
   button:disabled { opacity:.5; cursor:default; }
@@ -20,7 +20,7 @@
   input[type=checkbox] { padding:0; }
   table { width:100%; border-collapse:collapse; } td { padding:3px 0; border-bottom:1px solid var(--line); vertical-align:top; } td.n { text-align:right; padding-left:6px; white-space:nowrap; font-variant-numeric:tabular-nums; }
   #status { color:var(--muted); min-height:18px; } #status.bad { color:var(--bad); }
-  .note { color:var(--muted); font-size:11px; }
+  .note { color:var(--muted); font-size:12px; }
   .empty { color:var(--muted); font-size:12px; padding:4px 0; }
   input[type=number] { width:80px; }
   #mini { display:none; cursor:pointer; } body.mini > *:not(#mini) { display:none !important; } body.mini #mini { display:block; }
@@ -37,7 +37,7 @@
   #where { margin-top:6px; }
   /* tabs */
   .tabs { display:flex; gap:2px; margin:0 0 8px; border-bottom:1px solid var(--line); }
-  .tabs button { background:none; color:var(--muted); border-radius:6px 6px 0 0; padding:6px 8px; flex:1; font-size:12px; border-bottom:2px solid transparent; }
+  .tabs button { background:none; color:var(--muted); border-radius:6px 6px 0 0; padding:7px 8px; flex:1; font-size:13px; border-bottom:2px solid transparent; }
   .tabs button.sel { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
   .row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:6px 0; }
   label.chk { display:flex; gap:6px; align-items:flex-start; margin:5px 0; } label.chk input { margin-top:3px; }
@@ -50,6 +50,56 @@
   #helpBtn { padding:5px 10px; font-size:12px; font-weight:600; }
   #help details { border-top:1px solid var(--line); padding:6px 0; } #help details:first-of-type { border-top:0; }
   #help summary { cursor:pointer; font-weight:600; } #help ul { margin:6px 0 2px; padding-left:18px; } #help li { margin:3px 0; }
+  /* green = gained, red = lost or spent */
+  .pos { color:var(--leaf); } .neg { color:var(--bad); }
+  tr.th td { color:var(--muted); font-size:12px; border-bottom:1px solid var(--line); }
+  tr.tot td { font-weight:700; border-bottom:0; border-top:2px solid var(--line); padding-top:5px; }
+  td.n.dim, .dim { color:var(--muted); }
+  .chip.ok { border-color:var(--leaf); background:color-mix(in srgb, var(--leaf) 18%, transparent); }
+  .chip.half { border-color:var(--warn); }
+  .chip.need { color:var(--muted); background:var(--bg); }
+  #wrap { border:2px solid var(--accent); } #wrapEnd { margin-left:auto; }
+  #summary { border:2px solid var(--leaf); }
+  .sgrid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:8px 0; } .sgrid > div { background:var(--bg); border-radius:8px; padding:6px 8px; }
+  .sgrid .v { font-size:17px; }
+  /* boxes: dragged by the grip like OBS sources; folded to their title */
+  .box { position:relative; } .boxctl { position:absolute; top:5px; right:6px; display:flex; gap:2px; align-items:center; }
+  .boxctl .grip { cursor:grab; color:var(--muted); padding:0 4px; font-size:14px; user-select:none; }
+  .boxctl button { background:none; color:var(--muted); padding:0 6px; font-size:14px; line-height:1; }
+  .boxctl .btitle { display:none; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .box.folded { padding-top:6px; padding-bottom:6px; min-height:28px; } .box.folded > :not(.boxctl) { display:none !important; }
+  .box.folded .boxctl { position:static; } .box.folded .btitle { display:block; flex:1; }
+  .box h3 { cursor:grab; } .box.moving { opacity:.45; } body.dragging, body.dragging * { cursor:grabbing !important; user-select:none; }
+  td.note { padding-left:12px; } .v .coin { height:.8em; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; } .grip:focus-visible { border-radius:4px; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
+  #goalNext[aria-pressed=true], #goalOff[aria-pressed=true], #meatOnly[aria-pressed=true] { background:var(--accent); color:#fff; }
+  #wrap .step { font-weight:600; margin:10px 0 4px; } #wrap .step:first-of-type { margin-top:0; }
+  textarea { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:5px 6px; width:100%; margin-top:6px; resize:vertical; }
+  .hsub { color:var(--muted); font-size:12px; margin-top:2px; } .hsub .ico { width:18px; height:18px; margin:-2px 4px -2px 0; }
+  .cmpWho .ico { width:18px; height:18px; margin:-2px 4px -2px 0; }
+  .hnote { color:var(--muted); font-size:12px; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .coin { height:1em; width:auto; image-rendering:pixelated; vertical-align:-0.12em; margin-right:2px; }
+  .ico { display:inline-block; width:22px; height:22px; object-fit:contain; image-rendering:pixelated; vertical-align:middle; margin:-3px 6px -3px 0; }
+  .dragLabel { position:fixed; z-index:60; pointer-events:none; background:var(--accent); color:#fff; border-radius:6px; padding:3px 8px; font-size:12px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  .box.over-top { box-shadow:0 -3px 0 var(--accent); } .box.over-bottom { box-shadow:0 3px 0 var(--accent); }
+  body.dragging #dock { min-height:40px; border:2px dashed var(--accent); border-radius:10px; margin-bottom:8px; padding:4px; }
+  body.dragging #dock:empty::before { content:"Drop here to pin it above the tabs (shows on every tab)"; color:var(--muted); font-size:12px; }
+  body.dragging .tabs button[data-tab=session], body.dragging .tabs button[data-tab=loot], body.dragging .tabs button[data-tab=hist] { outline:1px dashed var(--accent); }
+  .over-drop { background:var(--accent-soft) !important; }
+  #hist > .row:first-child { padding-right:48px; }
+  /* History: compare two sessions */
+  #histRows, #recap { max-width:720px; }
+  .cmpBox { margin:8px 0 10px; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); max-width:720px; }
+  .cmpHead { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 6px; }
+  .cmpWho { border-left:4px solid; padding:2px 8px; } .cmpWho.a { border-color:var(--accent); } .cmpWho.b { border-color:var(--warn); }
+  .cmpWho b { margin-right:4px; }
+  .cmpT td { padding:5px 0; } .cmpT td:first-child { width:38%; padding-right:8px; } .cmpT td.n { width:72px; font-weight:600; }
+  .cmpT tr.grp td { color:var(--muted); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding-top:10px; border-bottom:0; }
+  .cbar { position:relative; height:17px; margin:1px 0; font-variant-numeric:tabular-nums; font-size:12px; }
+  .cbar i { position:absolute; left:0; top:2px; bottom:2px; border-radius:3px; opacity:.35; } .cbar.a i { background:var(--accent); } .cbar.b i { background:var(--warn); }
+  .cbar span { position:relative; padding-left:6px; line-height:17px; }
+  tr.pickA td:first-child { box-shadow:inset 4px 0 var(--accent); padding-left:8px; } tr.pickB td:first-child { box-shadow:inset 4px 0 var(--warn); padding-left:8px; }
   #updBanner { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-color:var(--accent); background:var(--accent-soft); } #updBanner b { flex:1; }
 </style>
 </head>
@@ -70,10 +120,11 @@
   <div class="card hidden" id="updBanner"><b id="updText"></b> <button id="updGo">Restart and update</button></div>
   <div class="card" id="top">
     <div class="bar"><button id="go">Start</button>
-      <div class="grow"><div id="state"><span class="dot"></span><span id="stateText">Not tracking</span></div><div id="status">Looking for the MapleStory window...</div><button id="stopAnyway" class="alt hidden" style="margin-top:6px">Stop anyway</button></div>
+      <div class="grow"><div id="state"><span class="dot"></span><span id="stateText">Not tracking</span></div><div id="status" role="status" aria-live="polite">Looking for the MapleStory window...</div></div>
       <button id="helpBtn" class="alt" title="How to use the tracker (F1)">?</button>
       <button id="bugBtn" class="alt" title="Report a bug (Ctrl+Shift+B, works from the game too)">Bug</button>
       <button id="miniBtn" class="alt" title="Shrink to a small bar with just EXP/hr">Mini</button></div>
+    <div class="row" id="nameRow" style="margin-top:6px"><input id="runName" maxlength="60" aria-label="Run name (optional)" placeholder="Name this run (optional), e.g. KPQ rush with randoms" style="flex:1;min-width:0"></div>
     <div class="tiles">
       <div class="tile main" title="EXP per hour of farming (breaks left out)"><div class="k">EXP/hr</div><div class="v" id="expHr">-</div><div class="note" id="expHr5"></div></div>
       <div class="tile" title="At the current EXP/hr"><div class="k">Next level in</div><div class="v" id="ttl">-</div><div class="note" id="lvNow"></div></div>
@@ -82,50 +133,69 @@
     </div>
     <div class="note" id="where"></div>
   </div>
+  <div class="card hidden" id="wrap"><h3>Wrapping up</h3>
+    <div class="step">1. Show your inventory</div>
+    <div class="note">The timer is stopped. Open your inventory on each tab for a second so the end count is right; a tab turns green once
+      it was read after you pressed Stop. Click a tab to read it now.</div>
+    <div class="row" id="wrapTabs"></div><div class="note" id="wrapNote"></div>
+    <div class="step">2. Name and note (optional)</div>
+    <input id="wrapName" maxlength="60" aria-label="Run name" placeholder="Run name, e.g. KPQ run 1" style="width:100%">
+    <textarea id="runNote" maxlength="1000" rows="3" aria-label="Note about this run" placeholder="A note for later: party, channel, buffs, what went well or wrong..."></textarea>
+    <div class="row"><button id="wrapEnd" title="Saves the run to History and shows the summary">Finalize log</button></div></div>
+  <div class="card hidden" id="summary"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Run summary</h3><button id="sumImg" class="alt" title="Saves a picture of this summary and copies it, ready to paste">Save as image</button> <button id="sumClose" class="alt">Close</button></div>
+    <div id="sumBody"></div></div>
   <div class="card hidden" id="selfcheck"></div>
+  <div id="dock"></div>
   <div class="tabs" role="tablist">
     <button data-tab="session" class="sel">Session</button><button data-tab="loot">Loot</button><button data-tab="hist" id="histBtn">History</button><button data-tab="settings">Settings</button>
   </div>
   <section data-tab="session">
-    <div class="card" id="snaps"><h3>Start and end (EXP bar, inventory)</h3>
-      <div class="note">Every session is measured from two EXP bar readings, at Start and at Stop (like mapleexp.com). Taken by
-        themselves; fix a level or % here if it read wrong. This is the number saved to History.</div>
-      <div class="row"><button id="snapStart" class="alt">Snap start</button> <button id="snapEnd" class="alt">Snap end</button></div>
-      <table>
-        <tr><td>Start</td><td>Lv <input type="number" id="s0lv" min="1" max="200" style="width:52px"></td><td><input type="number" id="s0pct" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s0t" class="n"></td></tr>
-        <tr><td>End</td><td>Lv <input type="number" id="s1lv" min="1" max="200" style="width:52px"></td><td><input type="number" id="s1pct" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s1t" class="n"></td></tr>
-      </table>
-      <div class="v" id="snapRate" style="margin-top:6px">-</div><div class="note" id="snapNote"></div>
-      <div class="k" style="margin-top:8px">Inventory</div>
-      <div class="note">Open your inventory on <b>Equip</b>, <b>Use</b> and <b>Etc</b> for a second each, after Start and again before Stop.
-        The difference is your real loot, even when a pickup line didn't read. Click a tab below to read it right now; if the tracker can't find
-        your inventory, you drag a box around it once.</div>
-      <div class="row" id="invTabs"></div><div class="ask hidden" id="invAsk"></div></div>
-    <div class="card" id="kpqBox"><h3>KPQ</h3>
+    <div class="card" data-box="stats" data-title="Session numbers"><h3>Session numbers</h3><div class="grid">
+      <div><div class="k">EXP gained</div><div class="v" id="expTotal">-</div><div class="note" id="expPerMin"></div></div>
+      <div><div class="k">Farming time</div><div class="v" id="active">-</div><div class="note">breaks over a minute left out</div></div>
+      <div><div class="k">Deaths</div><div class="v" id="deaths">0</div><div class="note" id="deathNote">EXP bar drops without a level-up</div></div>
+      <div><div class="k">Spent/hr (potions, arrows)</div><div class="v" id="usedHr">-</div><div class="note" id="netHr"></div></div>
+      <div><div class="k">Loot value/hr</div><div class="v" id="lootHr">-</div><div class="note">drops at player-shop or NPC price</div></div>
+      <div><div class="k" id="goalK">Goal</div><div class="v" id="goalV">-</div><div class="note" id="goalAt"></div></div>
+    </div></div>
+    <div class="card hidden" id="respawn"></div>
+    <div class="card hidden" id="partyBox"></div>
+    <div class="card" data-box="mobs" data-title="Monsters killed"><h3>Monsters killed</h3><table id="mobs"></table><div class="empty" id="mobsEmpty">No kills yet.</div></div>
+    <div class="card folded" id="kpqBox" data-box="kpq" data-title="KPQ"><h3>KPQ</h3>
       <div class="row"><label>Doing <select id="kpqAct"><option value="auto">Auto (spots KPQ)</option><option value="grind">Grinding</option><option value="kpq">KPQ</option></select></label>
         <label>Mode <select id="kpqMode"><option>Bonus</option><option>Rush</option></select></label></div>
       <div class="note" id="kpqNote">During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.</div></div>
     <div class="card hidden" id="lastRun"></div>
-    <div class="card hidden" id="partyBox"></div>
-    <div class="card grid">
-      <div><div class="k">Farming time</div><div class="v" id="active">-</div><div class="note">breaks over a minute left out</div></div>
-      <div><div class="k">Deaths</div><div class="v" id="deaths">0</div><div class="note" id="deathNote">EXP bar drops without a level-up</div></div>
-      <div><div class="k">Used up/hr (mesos)</div><div class="v" id="usedHr">-</div><div class="note" id="netHr"></div></div>
-      <div><div class="k">Loot value/hr</div><div class="v" id="lootHr">-</div><div class="note">drops at player-shop or NPC price</div></div>
-      <div><div class="k" id="goalK">Goal</div><div class="v" id="goalV">-</div><div class="note" id="goalAt"></div></div>
+    <div class="card folded" id="alertsBox" data-box="alerts" data-title="Alerts and goal"><h3>Alerts and goal</h3>
+      <div class="row"><span>Goal:</span> <button id="goalNext" class="alt" aria-pressed="true" title="Always the level after the one you're on">Next level</button> <label>or level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="-"></label> <button id="goalOff" class="alt" aria-pressed="false">Off</button></div>
+      <div class="row"><label>Beep for drops worth <input type="number" id="alert" min="0" step="1000"> mesos or more</label> <span class="note">0 = off</span></div>
+      <div class="row"><label style="flex:1;min-width:0">Beep for these drops <input id="alertItems" maxlength="500" style="width:100%;box-sizing:border-box" placeholder="e.g. Bronze Ore, Glove scroll"></label> <span class="note" id="alertItemsNote"></span></div>
+      <label class="chk"><input type="checkbox" id="stopBeep"> <span>Beep when EXP stops for 2 minutes (died, disconnected, map taken)</span></label>
     </div>
-    <div class="card hidden" id="respawn"></div>
-    <div class="card"><h3>Monsters killed</h3><table id="mobs"></table><div class="empty" id="mobsEmpty">No kills yet.</div></div>
+    <div class="card folded" id="snaps" data-box="snaps" data-title="Start and end"><h3>Start and end (EXP bar, inventory)</h3>
+      <div class="note">Your EXP bar is read at Start and at Stop, and the difference is what History saves. If a level or % read wrong, fix it here.</div>
+      <div class="row"><button id="snapStart" class="alt">Snap start</button> <button id="snapEnd" class="alt">Snap end</button></div>
+      <table>
+        <tr><td>Start</td><td>Lv <input type="number" id="s0lv" aria-label="Start level" min="1" max="200" style="width:52px"></td><td><input type="number" id="s0pct" aria-label="Start EXP percent" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s0t" class="n"></td></tr>
+        <tr><td>End</td><td>Lv <input type="number" id="s1lv" aria-label="End level" min="1" max="200" style="width:52px"></td><td><input type="number" id="s1pct" aria-label="End EXP percent" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s1t" class="n"></td></tr>
+      </table>
+      <div class="v" id="snapRate" style="margin-top:6px">-</div><div class="note" id="snapNote"></div>
+      <div class="k" style="margin-top:8px">Inventory</div>
+      <div class="note">Open your inventory on <b>Equip</b>, <b>Use</b> and <b>Etc</b> for a second each, after Start and again before Stop.
+        The difference is your real loot, even when a pickup line was missed. Click a tab below to read it now. If your inventory isn't found, you drag a box around it once.</div>
+      <div class="row" id="invTabs"></div><div class="ask hidden" id="invAsk"></div></div>
   </section>
   <section data-tab="loot" class="hidden">
-    <div class="card hidden" id="invBox"><h3>Inventory: now vs. first look</h3><table id="invGain"></table><div class="note" id="invNote"></div></div>
-    <div class="card"><h3>Picked up</h3><table id="items"></table><div class="empty" id="itemsEmpty">Nothing picked up yet.</div>
+    <div class="card" id="mesoBox" data-box="mesos" data-title="Mesos"><h3>Mesos</h3><div class="grid" id="mesoGrid"></div><div class="note" id="mesoNote"></div></div>
+    <div class="card" data-box="items" data-title="Items looted"><h3>Items looted</h3><table id="items"></table><div class="empty" id="itemsEmpty">Nothing picked up yet.</div>
       <div class="note" id="priceNote"></div></div>
-    <div class="card" id="usedBox"><h3>Used up</h3><div class="note">Potions, food and arrows, at the cheapest NPC shop price.</div><table id="used"></table>
-      <div class="empty" id="usedEmpty">Nothing used yet. Counts come from your quick slots or the Use tab.</div></div>
+    <div class="card" id="usedBox" data-box="used" data-title="Consumables used"><h3>Consumables used</h3>
+      <div class="row"><button id="meatOnly" class="alt" aria-pressed="false" title="Red, Orange, White and Blue Potions came from drops or quests: they cost nothing here">I only buy meat and lemons</button> <span class="note" id="meatNote"></span></div><table id="used"></table>
+      <div class="empty" id="usedEmpty">Nothing used yet. Counts come from your quick slots or the Use tab.</div>
+      <div class="note">Potions, food and arrows, at the cheapest NPC shop price.</div></div>
   </section>
   <section data-tab="hist" class="hidden">
-    <div class="card" id="hist"><div class="row"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div><div id="cmp"></div><table id="histRows"></table></div>
+    <div class="card" id="hist" data-box="hist" data-title="Past sessions"><div class="row" style="margin-top:0;padding-right:48px"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div><div id="cmp"></div><table id="histRows"></table></div>
   </section>
   <section data-tab="help" class="hidden">
     <div class="card" id="help"><div class="row"><h3 style="flex:1;margin:0">Help</h3><button id="helpClose" class="alt">Close</button></div>
@@ -135,7 +205,8 @@
           chat lines; level and EXP from the EXP bar; the map from the minimap title.</li>
         <li>For the first few seconds the <b>self-check</b> shows what it can read. A ✗ comes with what to fix and turns ✓ by
           itself once it works.</li>
-        <li>Press <b>Stop</b> when you're done. The session is saved to <b>History</b>.</li>
+        <li>Press <b>Stop</b> when you're done: the timer stops and the tracker asks for one last look at your inventory. Press
+          <b>Finalize log</b> to save it to <b>History</b> and see the run summary (a name, typed under Start, and a note are optional). <b>Resume</b> carries on instead.</li>
       </ul></details>
       <details><summary>What the numbers mean</summary><ul>
         <li><b>EXP/hr</b>: EXP per hour of farming. Breaks over a minute (no EXP, no pickups) are left out. "Last 5 min" is
@@ -149,7 +220,9 @@
       </ul></details>
       <details><summary>The tabs</summary><ul>
         <li><b>Session</b>: farming time, deaths, potion costs, your goal, party, boss respawns and monsters killed.</li>
-        <li><b>Loot</b>: everything picked up and used up, with prices.</li>
+        <li><b>Loot</b>: mesos in and out, items looted and consumables used, each with a total.</li>
+        <li>Every box can be moved by its <b>⠿</b> grip (onto another box, onto a tab, or above the tabs to see it on every tab)
+          and folded with <b>–</b>. Settings → Reset box layout puts them back.</li>
         <li><b>Snapshots</b>: EXP/hr from just two readings of the EXP bar (start and now), like mapleexp.com. A good check
           on the live number. Type a level or % to fix one that read wrong.</li>
         <li><b>History</b>: past sessions, your last 7 days, how long each level took, and Export CSV.</li>
@@ -157,8 +230,7 @@
       </ul></details>
       <details><summary>Potions or arrows not counted</summary><ul>
         <li>Put them on your quick slots, or open the Use tab of your inventory.</li>
-        <li>Still ✗? Settings → <b>Show me where my potions are</b>: the screen freezes, drag a box around your quick slots or
-          the Use tab. Counts are then read only in that box. <b>Look everywhere</b> undoes it.</li>
+        <li>Still ✗? Make sure the numbers under the slots aren't covered (by the chat box, a window or the mouse), then send a bug report.</li>
       </ul></details>
       <details><summary>Playing in a party</summary><ul>
         <li>Everyone types the same <b>party code</b> in Settings. You'll see each other's EXP/hr, level and job, updated
@@ -171,8 +243,8 @@
         <li>Loot = what's in Etc (plus equips and scrolls) now minus at the first look, or the pickup lines, whichever is more.
           That covers lines that didn't read; the lines cover loot you sold in between.</li>
         <li>Only the slots you can see are read: scroll to the top of a tab.</li>
-        <li>After Start the Session tab asks for all 3 tabs until each was read. Stop asks again for any tab not read in the
-          last 2 minutes. Press <b>Stop anyway</b> to skip.</li>
+        <li>After Start the Session tab asks for all 3 tabs until each was read. After Stop, each tab turns green once it was
+          read again; the run summary shows each item before and after.</li>
       </ul></details>
       <details><summary>KPQ runs</summary><ul>
         <li>On <b>Auto</b>, KPQ turns on by itself once a KPQ stage shows on the minimap. Pick <b>KPQ</b> in the Session tab to
@@ -201,7 +273,7 @@
         <li>The tracker only looks at the game window's picture, the same way OBS or Discord screen share does. It never
           reads the game's memory or files and never presses keys or clicks for you.</li>
         <li>Sharing (your choice, Settings) sends map, level, job, EXP, kills and drops per 15 minutes. Never your
-          character name.</li>
+          character name: that is only read for your own History and stays on this PC.</li>
       </ul></details>
       <div class="note" id="helpVer"></div>
     </div>
@@ -209,15 +281,7 @@
   <section data-tab="settings" class="hidden">
     <div class="card"><h3>Reading the game</h3>
       <div class="row"><label>Job <select id="job"><option value="">Auto (read from the status bar)</option><option>Beginner</option><option>Swordman</option><option>Fighter</option><option>Page</option><option>Spearman</option><option>Magician</option><option>Wizard (Fire,Poison)</option><option>Wizard (Ice,Lightning)</option><option>Cleric</option><option>Archer</option><option>Hunter</option><option>Crossbowman</option><option>Rogue</option><option>Assassin</option><option>Bandit</option></select></label></div>
-      <div class="row"><button id="snipBtn" class="alt" title="Freezes the game picture so you can drag a box around your potion quick slots or the Use tab">Show me where my potions are</button>
-        <button id="areaClear" class="alt hidden">Look everywhere</button></div><div class="note" id="areaNote"></div>
       <label class="chk"><input type="checkbox" id="autoPause"> <span>Pause when the game screen is gone (Cash Shop, changing channel)</span></label>
-    </div>
-    <div class="card"><h3>Alerts and goal</h3>
-      <div class="row"><label>Goal: level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="off"></label></div>
-      <div class="row"><label>Beep for drops worth <input type="number" id="alert" min="0" step="1000"> mesos or more</label> <span class="note">0 = off</span></div>
-      <div class="row"><label style="flex:1;min-width:0">Beep for these drops <input id="alertItems" maxlength="500" style="width:100%;box-sizing:border-box" placeholder="e.g. Bronze Ore, Glove scroll"></label> <span class="note" id="alertItemsNote"></span></div>
-      <label class="chk"><input type="checkbox" id="stopBeep"> <span>Beep when EXP stops for 2 minutes (died, disconnected, map taken)</span></label>
     </div>
     <div class="card"><h3>Party</h3>
       <div class="row"><label>Party code <input id="pcode" maxlength="20" size="10" placeholder="optional"></label>
@@ -228,13 +292,14 @@
     <div class="card"><h3>Window and sharing</h3>
       <label class="chk"><input type="checkbox" id="ontop"> <span>Keep this window on top of everything</span></label>
       <label class="chk"><input type="checkbox" id="share"> <span>Share my sessions (anonymous: map, kills, drops; no character name)</span></label>
+      <div class="row"><button id="layoutReset" class="alt">Reset box layout</button> <span class="note">Boxes move by their ⠿ grip: onto another box, a tab, or the strip above the tabs.</span></div>
     </div>
     <div class="card"><h3>App</h3>
       <div class="row"><span>Version <b id="appVer">-</b></span> <button id="updCheck" class="alt">Check for updates</button> <button id="updInstall" class="hidden">Install</button></div>
       <div class="note" id="updNote">Updates also download by themselves and install when you close the app.</div>
     </div>
     <div class="card"><h3>Something read wrong?</h3>
-      <div class="row"><input id="reportNote" maxlength="2000" style="flex:1;min-width:0" placeholder="What read wrong? (optional)">
+      <div class="row"><input id="reportNote" aria-label="What read wrong" maxlength="2000" style="flex:1;min-width:0" placeholder="What read wrong? (optional)">
         <button id="report" class="alt" title="Ctrl+Shift+B from anywhere (the game too). Saves the last ~25 s of game frames (your screen, character name included) and a log to a folder you can send">Report a bug</button></div>
       <div class="note">Saves the last ~25 s of game pictures (your character name shows in them) and a log to a folder you can send.</div>
       <div class="row"><button id="frames" class="alt" title="One full game picture every 3 s for 3 minutes">Save sample frames</button></div>
