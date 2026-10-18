@@ -534,6 +534,7 @@ nav .subs button:not([aria-selected="true"]):hover{color:var(--ink);border-botto
 .tblwrap tbody tr:not(.branch):hover>td{background-image:linear-gradient(color-mix(in srgb,var(--accent-soft) 40%,transparent),color-mix(in srgb,var(--accent-soft) 40%,transparent))}
 input[type=file]::file-selector-button{font:600 13px var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:5px 11px;margin-right:10px;cursor:pointer;transition:border-color .15s}
 input[type=file]::file-selector-button:hover{border-color:var(--accent)}
+.sitever{margin:18px 0 0;text-align:center;font:500 12px var(--f-mono);color:var(--muted);opacity:.85}
 
 </style>
 
@@ -633,6 +634,7 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
       </div>
     </div>
   </div>
+  <p class="sitever">Site version: built Oct 18, 2026 · 17:33 UTC</p>
 </section>
 
 <section id="plan" hidden>
@@ -1425,6 +1427,8 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Site version on Home</h3><span class="pill p-hot">update</span></div>
+      <p>The bottom of Home shows when this copy of the site was built, so you can tell at a glance that an update has reached you.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Respawns use each map's mob capacity</h3><span class="pill p-hot">update</span></div>
       <p><b>Where to train</b>, the <b>Path Planner</b>, the World Map and monster pages now cap respawns with each map's <b>mob capacity</b> from the game files: how many monsters it keeps alive for one player (OSMS, worked out from map size and checked against in-game counts). We used to assume 75% of spawn points everywhere; most maps keep about half. Area-attack EXP/hr drops on big maps (for example a level 45 F/P Wizard on B2 Subway Depot, about 238k to 157k an hour), and the top maps reshuffle. Single-target builds barely change. Parties of up to 5 get no extra monsters (OSMS's estimate, not yet confirmed).</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Game data updated to the Oct 17 export</h3><span class="pill p-hot">update</span></div>

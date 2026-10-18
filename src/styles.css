@@ -529,3 +529,4 @@ nav .subs button:not([aria-selected="true"]):hover{color:var(--ink);border-botto
 .tblwrap tbody tr:not(.branch):hover>td{background-image:linear-gradient(color-mix(in srgb,var(--accent-soft) 40%,transparent),color-mix(in srgb,var(--accent-soft) 40%,transparent))}
 input[type=file]::file-selector-button{font:600 13px var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:5px 11px;margin-right:10px;cursor:pointer;transition:border-color .15s}
 input[type=file]::file-selector-button:hover{border-color:var(--accent)}
+.sitever{margin:18px 0 0;text-align:center;font:500 12px var(--f-mono);color:var(--muted);opacity:.85}
