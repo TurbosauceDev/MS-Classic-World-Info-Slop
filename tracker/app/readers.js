@@ -582,9 +582,11 @@
     // any-scale EXP bar: first in the rows it was found in last time; the whole bottom of the screen at most once a second
     let barBand = null, lastFullBar = -Infinity;
     function barAny(raw, t){
-      let b = barBand && readBarAny(raw, barBand);
+      // the rows are kept as a share of the frame's height: the tracker sends game-size and full-size frames in turn
+      const band = barBand && {y0: Math.floor(barBand.y0 * raw.h), y1: Math.ceil(barBand.y1 * raw.h)};
+      let b = band && readBarAny(raw, band);
       if (!b && t - lastFullBar >= 1000){ lastFullBar = t; b = readBarAny(raw) }
-      if (b) barBand = {y0: Math.floor(b.y - 2 * b.bh), y1: Math.ceil(b.y + 2 * b.bh)};
+      if (b) barBand = {y0: (b.y - 2 * b.bh) / raw.h, y1: (b.y + 2 * b.bh) / raw.h};
       return b && {exp: b.exp, pct: b.pct};
     }
     let info = {bar: false, partyWindow: null, counts: 0};

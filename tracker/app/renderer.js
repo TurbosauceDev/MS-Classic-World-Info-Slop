@@ -67,7 +67,7 @@ function makeEngine(icons, area){
   w.onmessage = ({data}) => { if (data.id !== id || !waiting) return; const r = waiting; waiting = null; r(data.error ? null : data) };
   w.onerror = e => { e.preventDefault?.(); fallBack(e.message || "worker failed to load") };
   w.postMessage({type: "reset", icons, area});
-  return eng = {kind: "worker", close(){ w.terminate(); waiting?.(null) },
+  return eng = {kind: "worker", close(){ w.terminate(); const r = waiting; waiting = null; r?.(null) },
     setArea(a){ area = a; w.postMessage({type: "area", area: a}) },
     read(m){
       return new Promise(res => {
@@ -455,6 +455,7 @@ let starting = false, ICONS = null;
 async function start(){
   if (starting) return;   // a double click starts one capture, not two
   starting = true; $("#status").className = "";
+  FPS = 2; slowTicks = 0;   // before the capture opens: it runs at FPS frames a second
   try { await startCapture(); ICONS ||= await GrindReaders.loadIcons(G).catch(() => []) }   // once: potion/arrow pictures for the counts
   finally { starting = false }
   timer = 0;   // running (the first tick sets the real timeout)
@@ -471,7 +472,13 @@ async function start(){
   tick();
   renderState(null);
 }
+let stopping = false;
 async function stop(){
+  if (stopping) return;   // a double click saves one session, not two (the end picture takes a moment)
+  stopping = true;
+  try { await stopNow() } finally { stopping = false }
+}
+async function stopNow(){
   log("stop", {engine: engine?.kind, skipped});
   if (video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {}); if (check && !check.ended){ check = null; renderCheck() }
   clearTimeout(timer); timer = null; engine?.close(); $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";

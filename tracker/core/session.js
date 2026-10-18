@@ -101,7 +101,13 @@
           // (of some level, before the level is known)
           const tiny = !(e.pct > 0.5) && Number.isFinite(e.pct) && !(S.level ? [S.level, S.level + 1] : Object.keys(G.exp).map(Number))
             .some(L => G.exp[L] && Math.abs(e.exp - e.pct / 100 * G.exp[L]) <= Math.max(2, G.exp[L] * 0.00006));
-          if (tiny || e.pct > 0.5 && (!fit || S.level && fit !== S.level && fit !== S.level + 1)){ S.badBars = (S.badBars || 0) + 1; break }
+          // a jump of 2+ levels (quest turn-in, bar unread for a while): taken once the same level reads 3 times running (twice let garbled readings through in the fuzz test)
+          const jump = fit && S.level && fit > S.level + 1 && S.bar?.level && (S.jumpTo === fit ? ++S.jumpN >= 3 : (S.jumpTo = fit, S.jumpN = 1, false));
+          if (!jump && (tiny || e.pct > 0.5 && (!fit || S.level && fit !== S.level && fit !== S.level + 1))){ S.badBars = (S.badBars || 0) + 1; break }
+          S.jumpTo = null;
+          if (jump){ const q = S.bar; let d = (G.exp[q.level] || 0) - q.exp + e.exp; for (let L = q.level + 1; L < fit; L++) d += G.exp[L] || 0;
+            S.barExp += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t); for (let L = q.level + 1; L <= fit; L++){ S.level = L; if (!(S.levelUps.at(-1)?.level >= L)) levelUp(L, e.t) }
+            S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: fit}; break }
           if (e.level) S.level = e.level;
           // level not known yet (only readings under 0.5%, which can't be checked well): nothing counted until it is
           if (!S.level){ S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: null}; break }
@@ -115,6 +121,7 @@
             // a death takes at most about a tenth of the level; a bigger drop without a level-up is a misread: ignore it,
             // unless it keeps reading that way (3 in a row: a level-up the reader couldn't tell, e.g. a quest turn-in)
             else if (d < 0 && G.exp[p.level] && -d > 0.2 * G.exp[p.level] && (S.bigDrops = (S.bigDrops || 0) + 1) < 3){ S.badBars = (S.badBars || 0) + 1; S.level = before; break }
+            else if (d < 0 && S.bigDrops >= 3 && !e.level){ d = (G.exp[p.level] || 0) - p.exp + e.exp; S.level = p.level + 1 }   // 3 in a row: the level-up it was
             S.bigDrops = 0;
             if (d > 0){ S.barExp += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t) }
             // a drop without a level-up = a death (the game takes a share of the level's EXP); not counted again until EXP rises
@@ -273,7 +280,7 @@
   // EXP gained from snapshot a to b ({level, exp}; exp optional, else pct of the level's total): the rest of a's level,
   // every full level between, and b's EXP into its level. null when it can't be worked out.
   function expBetween(G, a, b){
-    const into = s => s.exp != null ? s.exp : G.exp[s.level] ? s.pct / 100 * G.exp[s.level] : null;
+    const into = s => s.exp != null ? s.exp : G.exp[s.level] && s.pct != null ? s.pct / 100 * G.exp[s.level] : null;
     if (!a?.level || !b?.level || b.level < a.level) return null;
     const ea = into(a), eb = into(b);
     if (ea == null || eb == null) return null;

@@ -53,6 +53,9 @@ npm start           # run it (Windows, Electron)
 - Arrows for Bows/Crossbows: 0.5 mesos each (Danny, 2026-10-17: not in our shop data); Bronze 2 (shop data).
 - Shared runs carry usedCost (mesos spent on items used; null when no item counts were on screen). The server stores
   deaths, start hour and usedCost in run_extra; the site shows "pots/ammo" per map and Frugal mode uses it.
+- Window (v0.2.16): Start/Stop, tracking state and the 4 main numbers (EXP/hr, next level, mesos/hr, kills/hr) on top;
+  tabs Session / Loot / Snapshots / History / Settings below (last tab remembered). Self-check is one line while
+  checking, then only the readers that fail, with the fix.
 - Speed (v0.2.15):
   - Frames are grabbed at the game's own size: once a full frame shows the scale, the video is drawn shrunk by it
     with no smoothing (renderer.js grabFrame). A full frame every 20 re-checks the scale. On a 2560x1440 capture the

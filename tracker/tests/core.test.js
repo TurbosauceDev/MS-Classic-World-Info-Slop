@@ -190,5 +190,18 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
   assert.strictEqual(expBetween(G, {level: 24, exp: 100}, {level: 26, exp: 50}), G.exp[24] - 100 + G.exp[25] + 50, "across levels");
   assert.strictEqual(expBetween(G, {level: 25, pct: 50}, {level: 24, pct: 10}), null, "level went down: no answer");
   assert.strictEqual(levelOf(G, Math.round(0.7094 * n), 70.94), 25, "level from EXP / %");
-  assert.strictEqual(levelOf(G, 1, 68.01), null, "misread EXP fits no level") }
+  assert.strictEqual(levelOf(G, 1, 68.01), null, "misread EXP fits no level");
+  assert.strictEqual(expBetween(G, {level: 20, pct: 50}, {level: 21, pct: null}), null, "a % left blank: no answer, not 0%") }
+
+// bug hunt 2026-10-18: a level-up from under 90% (quest turn-in to under 0.5%, level not readable) was a death; a jump of
+// 2 levels between readings froze EXP for the rest of the session
+{ const bar = (s, t, L, pct, level) => s.add({t: sec(t), type: "bar", exp: Math.round(pct / 100 * G.exp[L] * 100) / 100 | 0, pct, level});
+  let s = createSession(G); bar(s, 0, 20, 80, 20);
+  for (let i = 1; i <= 3; i++){ const e = Math.round(0.003 * G.exp[21]); s.add({t: sec(i), type: "bar", exp: e, pct: Math.round(e / G.exp[21] * 1e4) / 100, level: null}) }
+  assert.strictEqual(s.state.deaths, 0, "turn-in level-up isn't a death"); assert.strictEqual(s.state.level, 21);
+  s = createSession(G); bar(s, 0, 6, 70, 6);
+  for (let i = 1; i <= 3; i++) bar(s, i, 8, 30, 8);
+  bar(s, 4, 8, 40, 8);
+  assert.strictEqual(s.state.level, 8, "2-level jump taken after 3 readings");
+  assert.ok(s.stats().exp > G.exp[6] * 0.3 + G.exp[7] + G.exp[8] * 0.35, "EXP keeps counting after the jump: " + s.stats().exp) }
 console.log("core tests passed");
