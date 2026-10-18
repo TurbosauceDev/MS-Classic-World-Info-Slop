@@ -1152,8 +1152,16 @@ document.addEventListener("keydown", e => { if (e.key === "F1"){ e.preventDefaul
 // Settings: a popup from File → Settings (Ctrl+,). Was the Settings tab, then "Preferences" on the title bar; Danny 2026-10-18:
 // "rename preferences back to settings and have it live under file". Esc, ✕ or a click outside closes it
 let prefsFrom = null;
-function openPrefs(){ prefsFrom = document.activeElement; $("#prefsPop").classList.remove("hidden"); $("#prefsPop").scrollTop = 0; $("#prefsBack").classList.remove("hidden"); $("#prefsClose").focus() }
+function openPrefs(){ prefsFrom = document.activeElement; $("#prefsPop").classList.remove("hidden"); $("#prefsPop").scrollTop = 0; $("#prefsBack").classList.remove("hidden"); $("#prefsClose").focus(); prefsSpy() }
 function closePrefs(){ if ($("#prefsPop").classList.contains("hidden")) return; $("#prefsPop").classList.add("hidden"); $("#prefsBack").classList.add("hidden"); (prefsFrom?.isConnected ? prefsFrom : $("#titlebar [data-menu=File]")).focus?.() }
+// section chips at the top: jump to a section; the one in view is marked as you scroll
+const PREF_SECS = [...document.querySelectorAll("#prefsPop > [data-nav]")];
+$("#prefsNav").innerHTML = PREF_SECS.map((c, i) => `<button type="button" data-i="${i}">${esc(c.dataset.nav)}</button>`).join("");
+$("#prefsNav").onclick = e => { const b = e.target.closest("button"); if (b) PREF_SECS[+b.dataset.i].scrollIntoView({block: "start"}) };
+function prefsSpy(){ const top = $("#prefsPop").getBoundingClientRect().top + 110, pop = $("#prefsPop");
+  let i = PREF_SECS.findLastIndex(c => c.getBoundingClientRect().top <= top); if (pop.scrollTop + pop.clientHeight >= pop.scrollHeight - 4) i = PREF_SECS.length - 1;
+  $("#prefsNav").querySelectorAll("button").forEach((b, j) => b.setAttribute("aria-current", String(j === Math.max(0, i)))) }
+$("#prefsPop").addEventListener("scroll", prefsSpy, {passive: true});
 $("#prefsClose").onclick = closePrefs; $("#prefsBack").onclick = closePrefs;
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !keyWait && !drag && $("#bugPop").classList.contains("hidden") && !$("#prefsPop").classList.contains("hidden")) closePrefs() });
 for (const b of document.querySelectorAll("#titlebar [data-menu]")) b.onclick = () => { const r = b.getBoundingClientRect(); host.menu?.(b.dataset.menu, r.left, r.bottom) };
@@ -1276,7 +1284,7 @@ function accelOf(e){
 }
 let keyState = {keys: {}, defaults: {}, failed: []}, keyWait = null;
 function keysUi(note){
-  $("#keyRows").innerHTML = Object.entries(KEY_NAMES).map(([a, name]) => `<tr><td>${esc(name)}</td><td class="n"><button class="alt keyset${keyState.failed.includes(a) ? " bad" : ""}" data-key="${a}" title="Click, then press the new keys">${esc(keyWait === a ? "Press keys..." : keyText(keyState.keys[a]))}</button></td></tr>`).join("");
+  $("#keyRows").innerHTML = Object.entries(KEY_NAMES).map(([a, name]) => `<tr><td>${esc(name)}</td><td class="n"><button class="alt keyset${keyState.failed.includes(a) ? " bad" : ""}${!keyState.keys[a] && keyWait !== a ? " off" : ""}" data-key="${a}" title="Click, then press the new keys">${esc(keyWait === a ? "Press keys..." : keyText(keyState.keys[a]))}</button></td></tr>`).join("");
   if (note !== undefined) $("#keysNote").textContent = note;
   else if (keyState.failed.length) $("#keysNote").textContent = keyState.failed.map(a => KEY_NAMES[a]).join(", ") + ": those keys are taken by another program. Pick others.";
   // the shortcut on the Bug button's tooltip

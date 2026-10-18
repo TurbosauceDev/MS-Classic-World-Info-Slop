@@ -120,6 +120,35 @@
   #prefsPop { position:fixed; top:40px; left:8px; right:8px; bottom:8px; z-index:57; overflow:auto; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 10px; box-shadow:0 8px 28px rgba(0,0,0,.35); }
   #prefsPop .pophead { display:flex; align-items:center; justify-content:space-between; position:sticky; top:-8px; background:var(--bg); padding:4px 0 6px; z-index:1; }
   #prefsPop .pophead h2 { margin:0; font-size:15px; color:var(--accent); }
+  /* Settings polish (Danny, 2026-10-18: "feels rough"): section chips to jump around, softer cards, switches, themed slider,
+     shortcut keys as key caps, a gentle fade in */
+  #prefsBack { backdrop-filter:blur(2px); animation:fadeIn .15s ease-out; }
+  #prefsPop { padding:0 14px 14px; animation:popIn .18s ease-out; scroll-behavior:smooth; }
+  @keyframes fadeIn { from { opacity:0; } } @keyframes popIn { from { opacity:0; transform:translateY(8px) scale(.99); } }
+  #prefsPop .pophead { top:0; flex-wrap:wrap; gap:8px; padding:12px 0 10px; margin-bottom:4px; border-bottom:1px solid var(--line); }
+  #prefsPop .pophead h2 { font-size:16px; }
+  .pnav { display:flex; flex-wrap:wrap; gap:4px; order:3; flex-basis:100%; }
+  .pnav button { background:none; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:3px 11px; font-size:12px; transition:background .15s, color .15s, border-color .15s; }
+  .pnav button:hover { color:var(--ink); border-color:var(--accent); } .pnav button[aria-current=true] { background:var(--accent-soft); color:var(--ink); border-color:var(--accent); }
+  #prefsPop > .card { border:0; background:var(--panel); padding:14px 16px; margin:10px 0 0; scroll-margin-top:96px; box-shadow:0 1px 0 var(--line); }
+  #prefsPop > .card h3 { color:var(--accent); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  #prefsPop > .card h3::after { content:""; flex:1; height:1px; background:var(--line); }
+  #prefsPop .note { max-width:68ch; line-height:1.5; } #prefsPop .row { gap:8px; margin:8px 0; }
+  #prefsPop .k { margin-top:4px; font-weight:600; }
+  #prefsPop :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  #prefsPop input:not([type=checkbox]):not([type=range]):not([type=color]), #prefsPop select { padding:5px 8px; border-radius:7px; transition:border-color .15s; }
+  #prefsPop input:focus, #prefsPop select:focus { border-color:var(--accent); outline:none; }
+  #prefsPop input[type=range] { accent-color:var(--accent); height:4px; }
+  #keyRows { width:100%; border-collapse:collapse; margin:4px 0 6px; } #keyRows td { padding:4px 6px; vertical-align:middle; border-bottom:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+  #keyRows tr:last-child td { border-bottom:0; } #keyRows tr:hover td { background:color-mix(in srgb, var(--accent-soft) 45%, transparent); }
+  #keyRows td:first-child { border-radius:6px 0 0 6px; } #keyRows td:last-child { border-radius:0 6px 6px 0; }
+  button.keyset { font-family:ui-monospace, "Cascadia Mono", Consolas, monospace; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-bottom-width:2px; }
+  button.keyset.off { color:var(--muted); font-style:italic; font-family:inherit; }
+  /* on/off switches (every checkbox with a label: Settings and the Alerts box) */
+  label.chk { gap:10px; cursor:pointer; } label.chk input[type=checkbox] { appearance:none; flex:none; width:32px; height:18px; margin:1px 0 0; border-radius:9px; background:var(--line); position:relative; cursor:pointer; transition:background .15s; border:0; }
+  label.chk input[type=checkbox]::before { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:var(--panel); box-shadow:0 1px 2px rgba(0,0,0,.3); transition:transform .15s; }
+  label.chk input[type=checkbox]:checked { background:var(--accent); } label.chk input[type=checkbox]:checked::before { transform:translateX(14px); }
+  label.chk input[type=checkbox]:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   #titlebar button[aria-expanded=true] { background:var(--accent-soft); color:var(--ink); }
   body.through #titlebar { box-shadow:inset 0 -2px 0 var(--warn); } body.through #titlebar .tbname::after { content:" · click-through"; color:var(--warn); }
   button.keyset { min-width:118px; padding:4px 10px; font-size:12px; } button.keyset.bad { outline:2px solid var(--bad); }
@@ -348,24 +377,24 @@
   </section>
   <div id="prefsBack" class="hidden"></div>
   <section id="prefsPop" class="hidden" role="dialog" aria-modal="true" aria-labelledby="prefsTitle">
-    <div class="pophead"><h2 id="prefsTitle">Settings</h2><button id="prefsClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>
-    <div class="card"><h3>Reading the game</h3>
+    <div class="pophead"><h2 id="prefsTitle">Settings</h2><button id="prefsClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button><nav class="pnav" id="prefsNav" aria-label="Settings sections"></nav></div>
+    <div class="card" data-nav="Game"><h3>Reading the game</h3>
       <div class="row"><label>Job <select id="job"><option value="">Auto (read from the status bar)</option><option>Beginner</option><option>Swordman</option><option>Fighter</option><option>Page</option><option>Spearman</option><option>Magician</option><option>Wizard (Fire,Poison)</option><option>Wizard (Ice,Lightning)</option><option>Cleric</option><option>Archer</option><option>Hunter</option><option>Crossbowman</option><option>Rogue</option><option>Assassin</option><option>Bandit</option></select></label></div>
       <label class="chk"><input type="checkbox" id="autoPause"> <span>Pause when the game screen is gone (Cash Shop, changing channel)</span></label>
     </div>
-    <div class="card"><h3>Party</h3>
+    <div class="card" data-nav="Party"><h3>Party</h3>
       <div class="row"><label>Party code <input id="pcode" maxlength="20" size="10" placeholder="optional"></label>
         <label>Name <input id="nick" maxlength="12" size="8" placeholder="optional"></label></div>
       <div class="note">Everyone in the party types the same code to see each other's EXP/hr, level and job live (a name only if you type one).
         The party also counts as one group in the shared numbers.</div>
     </div>
-    <div class="card"><h3>Window and sharing</h3>
+    <div class="card" data-nav="Window"><h3>Window and sharing</h3>
       <label class="chk"><input type="checkbox" id="ontop"> <span>Keep this window on top of everything</span></label>
       <label class="chk"><input type="checkbox" id="share"> <span>Share my sessions for the leaderboards (map, kills, drops, KPQ rounds)</span></label>
       <label class="chk"><input type="checkbox" id="kpqName"> <span>Show my character name on the KPQ board (the Name above if typed, else the name read from the status bar). Off: a made-up name that stays yours, like Archer4821</span></label>
-      <div class="row"><button id="layoutReset" class="alt">Reset box layout</button> <span class="note">Boxes move by their ⠿ grip: onto another box, a tab, or the strip above the tabs.</span></div>
+      <div class="row"><button id="layoutReset" class="alt">Reset box layout</button> <span class="note">Boxes move by their ⠿ grip: onto the left or right of another box for side by side, onto a tab, or the strip above the tabs.</span></div>
     </div>
-    <div class="card" id="themeCard"><h3>Theme</h3>
+    <div class="card" id="themeCard" data-nav="Theme"><h3>Theme</h3>
       <div class="sw" id="themeSw" role="radiogroup" aria-label="Theme"></div>
       <div class="row"><button id="themeEdit" class="alt">Edit colours</button> <span class="note" id="themeNow"></span></div>
       <div id="themeEditor" class="hidden">
@@ -380,7 +409,7 @@
       <div class="row"><input id="thCode" aria-label="Share code" placeholder="Paste a share code (MSCT1...)" style="flex:1;min-width:0"> <button id="thPaste" class="alt">Add</button></div>
       <div class="note" id="thNote" role="status"></div>
     </div>
-    <div class="card" id="prefs"><h3>Shortcuts and window</h3>
+    <div class="card" id="prefs" data-nav="Shortcuts"><h3>Shortcuts and window</h3>
       <div class="k">Keyboard shortcuts</div>
       <div class="note">These work from anywhere, the game too. Click one and press the new keys (Ctrl, Alt or Shift plus a key, or an F key on its own); Esc cancels, Backspace turns it off.
         While the tracker runs, a shortcut's keys don't reach other programs, so free any that clash with your game keys.</div>
@@ -389,11 +418,11 @@
       <label class="chk"><input type="checkbox" id="muted"> <span>Mute sounds (drop alerts, the no-EXP warning)</span></label>
       <div class="row"><label for="opacity">See-through window</label> <input type="range" id="opacity" min="40" max="100" step="5" value="100" style="flex:1;min-width:80px"> <span id="opacityV" class="n">100%</span></div>
     </div>
-    <div class="card"><h3>App</h3>
+    <div class="card" data-nav="Updates"><h3>App</h3>
       <div class="row"><span>Version <b id="appVer">-</b></span> <button id="updCheck" class="alt">Check for updates</button> <button id="updInstall" class="hidden">Install</button></div>
       <div class="note" id="updNote">Updates also download by themselves and install when you close the app.</div>
     </div>
-    <div class="card"><h3>Something read wrong?</h3>
+    <div class="card" data-nav="Bug report"><h3>Something read wrong?</h3>
       <div class="row"><input id="reportNote" aria-label="What read wrong" maxlength="2000" style="flex:1;min-width:0" placeholder="What read wrong? (optional)">
         <button id="report" class="alt" title="Ctrl+Shift+B from anywhere (the game too). Saves the last ~25 s of game frames (your screen, character name included) and a log to a folder you can send">Report a bug</button></div>
       <div class="note">Saves the last ~25 s of game pictures (your character name shows in them) and a log to a folder you can send.</div>

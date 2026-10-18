@@ -65,7 +65,8 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   re-runs every deploy, so new columns go in side tables); tracker sends Name (Party card) else the OCR'd charName.
 - Settings is no longer a tab: it's a popup (#prefsPop, openPrefs/closePrefs; ids kept from "Preferences") opened from the
   native File menu → Settings (Ctrl+,, main.js sends menu "settings"); no title-bar button. Panel tabs: Session, Loot,
-  History. Tests open it with `window.menu("settings")` and must close it (it covers the page).
+  History. Tests open it with `window.menu("settings")` and must close it (it covers the page). Its section chips
+  (#prefsNav) come from `data-nav` on each card: a new section needs that attribute. label.chk checkboxes are switches.
 - The main card (#top, box id `main`) lives in #dock with the run log, so it moves/docks/folds like any box (folded keeps
   its Start bar). #wrap/#summary/#selfcheck sit after #dock.
 - Leaderboards aren't anonymous: don't call sharing "anonymous" in the UI.
