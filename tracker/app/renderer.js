@@ -164,7 +164,7 @@ function render(){
   $("#usedHr").innerHTML = s.used.length ? sgm(-s.usedCostHr) : "-";
   $("#netHr").innerHTML = s.used.length ? "net " + sgm(s.netHr) + "/hr (mesos + loot - used)" : "from the quick-slot counts";
   $("#used").innerHTML = s.used.length ? `<tr class="th"><td>Item</td><td class="n">Used</td><td class="n">Each</td><td class="n">Cost</td></tr>`
-    + s.used.map(u => `<tr><td>${ico(u.id)}${esc(u.name)}</td><td class="n">×${fmt(u.n)}</td><td class="n dim">${u.each == null ? "?" : mz(u.each)}</td><td class="n">${u.total == null ? "price unknown" : sgm(-u.total)}</td></tr>`).join("")
+    + s.used.map(u => `<tr><td>${ico(u.id)}${esc(u.name)}</td><td class="n">×${fmt(u.n)}</td><td class="n dim">${u.free ? "free (drop)" : u.each == null ? "?" : mz(u.each)}</td><td class="n">${u.total == null ? "price unknown" : sgm(-u.total)}</td></tr>`).join("")
     + `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.used.reduce((a, u) => a + u.n, 0))}</td><td></td><td class="n">${sgm(-s.usedCost)}</td></tr>` : "";
   $("#usedEmpty").classList.toggle("hidden", !!s.used.length);
   $("#mesosNet").innerHTML = s.used.length ? "net " + sgm(s.netHr) + "/hr after potions" : "";
@@ -674,7 +674,7 @@ async function start(){
   try { await startCapture(); ICONS ||= await GrindReaders.loadIcons(G).catch(() => []) }   // once: potion/arrow pictures for the counts
   finally { starting = false }
   timer = 0;   // running (the first tick sets the real timeout)
-  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: goalOf()}); stopWarned = false;
+  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: goalOf(), freeIds: freeIds()}); stopWarned = false;
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
   wrap = null; runT0 = Date.now(); $("#summary").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
@@ -786,6 +786,22 @@ const runName = () => $("#runName").value.trim();
 $("#runName").oninput = () => { $("#wrapName").value = $("#runName").value };
 $("#wrapName").oninput = () => { $("#runName").value = $("#wrapName").value };
 $("#sumClose").onclick = () => $("#summary").classList.add("hidden");
+// a picture of an element: its look copied onto a clone, drawn through an SVG at 2x (no screen capture, so any height works)
+async function elPng(el, scale = 2){
+  const W = Math.ceil(el.offsetWidth), H = Math.ceil(el.offsetHeight), clone = el.cloneNode(true);
+  const from = [el, ...el.querySelectorAll("*")], to = [clone, ...clone.querySelectorAll("*")];
+  from.forEach((n, i) => { const cs = getComputedStyle(n); let t = ""; for (const p of cs) t += `${p}:${cs.getPropertyValue(p)};`; to[i].setAttribute("style", t) });
+  clone.style.margin = "0"; for (const b of clone.querySelectorAll("button")) b.style.visibility = "hidden";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W * scale}" height="${H * scale}" viewBox="0 0 ${W} ${H}"><foreignObject width="${W}" height="${H}">${new XMLSerializer().serializeToString(clone)}</foreignObject></svg>`;
+  const img = new Image(); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); await img.decode();
+  const c = document.createElement("canvas"); c.width = W * scale; c.height = H * scale; c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return new Uint8Array(await (await new Promise(r => c.toBlob(r, "image/png"))).arrayBuffer());
+}
+$("#sumImg").onclick = async () => { const b = $("#sumImg"); b.disabled = true;
+  try { const png = await elPng($("#summary")), d = new Date(), p2 = n => String(n).padStart(2, "0");
+    await host.saveImage(`run-${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}.png`, png);
+    b.textContent = "Saved + copied" } catch (e) { log("error", {where: "summary image", msg: String(e)}); b.textContent = "Couldn't save" }
+  setTimeout(() => { b.textContent = "Save as image"; b.disabled = false }, 2500) };
 $("#go").onclick = () => timer != null ? wrap ? resume() : stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
 
 // one full frame every 3 s for 3 minutes, saved as PNG: material for building and testing the readers
@@ -842,6 +858,11 @@ $("#stopBeep").onchange = e => host.settings({stopBeep: e.target.checked}).then(
 const goalOf = () => settings.goal === "off" ? 0 : +settings.goal >= 2 ? +settings.goal : "next";
 function goalUi(){ const g = goalOf(); $("#goalNext").setAttribute("aria-pressed", String(g === "next")); $("#goalOff").setAttribute("aria-pressed", String(g === 0));
   $("#goal").value = typeof g === "number" && g ? g : "" }
+// "I only buy meat and lemons": Red/Orange/White/Blue Potions are drops or quest rewards, so using them costs nothing
+const FREE_POTS = ["2000000", "2000007", "2000001", "2000002", "2000003", "2000008"];
+const freeIds = () => settings.meatOnly ? FREE_POTS : [];
+function meatUi(){ $("#meatOnly").setAttribute("aria-pressed", String(!!settings.meatOnly)); $("#meatNote").textContent = settings.meatOnly ? "color potions count as free" : "" }
+$("#meatOnly").onclick = () => host.settings({meatOnly: !settings.meatOnly}).then(s => { settings = s; session?.setFree(freeIds()); meatUi(); if (session) render() });
 const setGoal = v => host.settings({goal: v}).then(s => { settings = s; session?.setGoal(goalOf()); goalUi(); if (session) render() });
 $("#goal").onchange = e => { const v = Math.round(+e.target.value || 0); setGoal(v >= 2 ? Math.min(200, v) : "next") };
 $("#goalNext").onclick = () => setGoal("next"); $("#goalOff").onclick = () => setGoal("off");
@@ -906,17 +927,18 @@ function compare(a, b){
     <div class="note">B did better on <b class="pos">${up}</b> and worse on <b class="neg">${down}</b> of these. Green = B better than A.</div>
     <table class="cmpT">${body}</table></div>`;
 }
-$("#histRows").addEventListener("change", e => {
-  if (!e.target.classList.contains("cmp")) return;
+$("#histRows").addEventListener("change", e => { if (e.target.classList.contains("cmp")) cmpUpdate(e.target) });
+// Clear: untick both (it used to send a change event from the table itself, which the handler above ignored)
+$("#cmp").addEventListener("click", e => { if (e.target.id !== "cmpClear") return; for (const c of $("#histRows").querySelectorAll(".cmp:checked")) c.checked = false; cmpUpdate(null) });
+function cmpUpdate(changed){
   const on = [...$("#histRows").querySelectorAll(".cmp:checked")];
-  if (on.length > 2) on.filter(c => c !== e.target).slice(0, on.length - 2).forEach(c => c.checked = false);
+  if (on.length > 2) on.filter(c => c !== changed).slice(0, on.length - 2).forEach(c => c.checked = false);
   const pick = [...$("#histRows").querySelectorAll(".cmp:checked")].map(c => histList.find(x => String(+x.saved) === c.dataset.saved)).filter(Boolean);
   pick.sort((x, y) => +x.saved - +y.saved);
   $("#cmp").innerHTML = pick.length === 2 ? compare(pick[0], pick[1]) : pick.length === 1 ? `<div class="note cmpBox">Tick one more session to compare.</div>` : `<div class="note" style="margin:8px 0">Tick two sessions below to compare them.</div>`;
   for (const c of $("#histRows").querySelectorAll(".cmp")){ const i = pick.findIndex(x => String(+x.saved) === c.dataset.saved);
     c.closest("tr").classList.toggle("pickA", pick.length === 2 && i === 0); c.closest("tr").classList.toggle("pickB", pick.length === 2 && i === 1) }
-  $("#cmpClear")?.addEventListener("click", () => { for (const c of $("#histRows").querySelectorAll(".cmp:checked")) c.checked = false; $("#histRows").dispatchEvent(new Event("change")) });
-});
+}
 // delete a session: × asks "Delete?" first (a second click within 4 s deletes), then History is redrawn
 $("#histRows").onclick = async e => {
   const b = e.target.closest("button.del"); if (!b) return;
@@ -1001,7 +1023,7 @@ $("#updGo").onclick = async () => {
   $("#stopBeep").checked = settings.stopBeep !== false;
   $("#kpqAct").value = settings.kpqAct || "auto"; $("#kpqMode").value = settings.kpqMode === "Rush" ? "Rush" : "Bonus";
   $("#autoPause").checked = settings.autoPause !== false;   // on unless turned off   // on unless turned off
-  goalUi();
+  goalUi(); meatUi();
   $("#pcode").value = settings.partyCode || "";
   $("#nick").value = settings.nick || "";
   $("#guide").classList.toggle("hidden", !!settings.guideDone);

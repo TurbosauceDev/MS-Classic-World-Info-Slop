@@ -217,7 +217,7 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
 { const s = createSession(G); s.add({t: sec(0), type: "map", id: "80000500"});
   const horny = Object.keys(G.items).filter(id => (G.drops["19"] || []).includes(id))[0];
   s.add({t: sec(1), type: "itemraw", text: "x", qty: 2, cands: ["1002000", horny]}); s.add({t: sec(2), type: "itemraw", text: "x", cands: ["1002000", "1002001"]});
-  s.add({t: sec(3), type: "map", id: "80000100"}); s.add({t: sec(4), type: "itemraw", text: "Pa?? x1", cands: ["4001002", "1002001"]});
+  s.add({t: sec(3), type: "map", id: "80000100"}); s.add({t: sec(4), type: "itemraw", text: "Pa?? x1", cands: ["4001002", "1002001"]}); s.add({t: sec(5), type: "itemraw", text: ".? ??.?on x1earned. (Etc)", qty: 1, cands: []});
   assert.strictEqual(s.state.items[horny], 2); assert.strictEqual(s.state.items["4001002"], undefined, "KPQ Pass isn't loot"); assert.strictEqual(s.state.unreadItems, 1) }
 // Use-tab counts that went down between inventory looks = used up (Danny 2026-10-18: arrows/meat showed only as -48/-2)
 { const s = createSession(G);
@@ -237,6 +237,19 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
   s.add({t: sec(0), type: "inv", tab: "use", items: {"2060001": 1015}, stacks: {"2060001": 2}, unknown: 0});
   s.add({t: sec(120), type: "inv", tab: "use", items: {"2060001": 800}, stacks: {"2060001": 1}, unknown: 1});
   assert.ok(!s.stats().used.some(x => x.id === "2060001")) }
+// went down while showing, then unread: what went down counts (Danny's Warrior Potion 2 -> 1, then gone, 2026-10-18)
+{ const s = createSession(G);
+  s.add({t: sec(0), type: "inv", tab: "use", items: {"2002000": 2, "2010003": 75}, unknown: 0});
+  s.add({t: sec(60), type: "inv", tab: "use", items: {"2002000": 1, "2010003": 70}, unknown: 0});
+  s.add({t: sec(120), type: "inv", tab: "use", items: {"2010003": 60}, unknown: 1});
+  const u = Object.fromEntries(s.stats().used.map(x => [x.id, x.n]));
+  assert.strictEqual(u["2002000"], 1); assert.strictEqual(u["2010003"], 15) }
+// one Mace in the Equip tab, read clean before and after two pickup lines: 1, not 2 (Danny, 2026-10-18)
+{ const s = createSession(G);
+  s.add({t: sec(0), type: "inv", tab: "equip", items: {}, unknown: 0});
+  s.add({t: sec(60), type: "item", id: "1322003"}); s.add({t: sec(61), type: "item", id: "1322003"});
+  s.add({t: sec(120), type: "inv", tab: "equip", items: {"1322003": 1}, unknown: 0});
+  assert.strictEqual(s.stats().items.find(x => x.id === "1322003").n, 1) }
 // KPQ middle stages: no monsters, so 4 minutes without EXP there is still active time
 { const s = createSession(G); s.add({t: sec(0), type: "map", id: "80000100"}); s.add({t: sec(1), type: "bar", exp: 1000, pct: 10, level: 20});
   s.add({t: sec(241), type: "bar", exp: 1600, pct: 16, level: 20});

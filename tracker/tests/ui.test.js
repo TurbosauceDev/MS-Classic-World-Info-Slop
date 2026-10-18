@@ -9,7 +9,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.addInitScript(() => {
     window.host = {gameFound: async () => true, wholeScreen: async on => on, settings: async x => (window.st = {...(window.st || {share: false, idleSec: 60, partyCode: "snails"}), ...(x || {})}),
       party: async live => (window.sentParty = live, {expHr: 9000, members: [{you: true, level: 22, expHr: 4000}, {nick: "Bo<b>", job: "Hunter", level: 25, expHr: 5000, expHr5: 6000}]}),
-      saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", openFolder: async d => (window.opened = d), saveReport: async (f, info) => (window.report = {frames: f.length, info}, "report-2026-10-17T20-00-00"), ocr: async () => "Victoria Road\nSnail Hunting Ground III", shareRun: async () => true, summary: async () => ({rows: [], times: {"42": [[0, 0.9, 3], [18, 1.2, 4]]}}), sessions: async () => [{saved: Date.now() - 3600e3, date: "2026-10-17", mapName: "Snail Hunting Ground III", level: 22, activeMin: 30, exp: 6000, mesos: 900, deaths: 1, player: "Turbow", job: "Archer", startLevel: 21, endLevel: 22, items: {"4000019": 3, "4000000": 9},
+      saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", saveImage: async (n, b) => (window.img = {n, b: [...b]}, "x"), openFolder: async d => (window.opened = d), saveReport: async (f, info) => (window.report = {frames: f.length, info}, "report-2026-10-17T20-00-00"), ocr: async () => "Victoria Road\nSnail Hunting Ground III", shareRun: async () => true, summary: async () => ({rows: [], times: {"42": [[0, 0.9, 3], [18, 1.2, 4]]}}), sessions: async () => [{saved: Date.now() - 3600e3, date: "2026-10-17", mapName: "Snail Hunting Ground III", level: 22, activeMin: 30, exp: 6000, mesos: 900, deaths: 1, player: "Turbow", job: "Archer", startLevel: 21, endLevel: 22, items: {"4000019": 3, "4000000": 9},
           levelUps: [{level: 22, activeMin: 41, mapName: "Snail Hunting Ground III"}, {level: 21, activeMin: null}]},
         {saved: Date.now() - 7200e3, date: "2026-10-17", mapName: "Pig Beach", level: 21, activeMin: 20, exp: 2000, mesos: 300, deaths: 0},
         {saved: Date.now() - 9 * 864e5, date: "2026-10-08", mapName: "Old", level: 10, activeMin: 60, exp: 1, mesos: 1}], exportCsv: async () => "", mini: async () => true,
@@ -75,6 +75,11 @@ const path = require("path"), {chromium} = require("playwright");
   const usedTxt = await page.evaluate(() => { session.add({t: Date.now(), type: "use", id: "2000002", n: 3}); render();
     return [document.querySelector("#used").textContent, document.querySelector("#usedBox").classList.contains("hidden"), document.querySelector("#netHr").textContent, ICONS.length] });
   if (!/White Potion×3350−1,050Total×3−1,050/.test(usedTxt[0]) || usedTxt[1] || !/^net /.test(usedTxt[2]) || !(usedTxt[3] > 30)) throw new Error("used: " + usedTxt);
+  // "I only buy meat and lemons": colour potions cost nothing
+  await page.evaluate(() => document.querySelector("#meatOnly").click()); await page.waitForTimeout(50);
+  const meat = await page.evaluate(() => [document.querySelector("#used").textContent, document.querySelector("#meatOnly").getAttribute("aria-pressed")]);
+  if (!/White Potion×3free \(drop\)/.test(meat[0]) || meat[1] !== "true") throw new Error("meat only: " + meat);
+  await page.evaluate(() => document.querySelector("#meatOnly").click()); await page.waitForTimeout(50);
   // Mano killed on his map: respawn timer shows
   await page.evaluate(() => { const t = Date.now(); session.add({t, type: "map", id: 10000013}); session.add({t, type: "exp", gain: 148}); render() });
   const respawn = await page.textContent("#respawn");
@@ -178,6 +183,12 @@ const path = require("path"), {chromium} = require("playwright");
   { const nm = await page.evaluate(() => [window.saved?.name, window.saved?.note, document.querySelector("#runName").value, document.querySelector("#sumBody b, #sumBody .hnote")?.textContent, !!document.querySelector("#sumBody b b")]);
     if (nm[0] !== "KPQ rush with randoms" || nm[1] !== "ch 4, lost 2 to <b>ers" || nm[2] !== "" || nm[4]) throw new Error("name/note: " + nm);
     if (!/KPQ rush with randoms[\s\S]*ch 4, lost 2 to <b>ers/.test(await page.textContent("#sumBody"))) throw new Error("summary name/note") }
+  // summary saved as a picture: a PNG at 2x the card's size
+  await page.click("#sumImg"); await page.waitForFunction(() => window.img);
+  const im = await page.evaluate(async () => { const b = new Uint8Array(window.img.b), i = new Image(); i.src = URL.createObjectURL(new Blob([b], {type: "image/png"})); await i.decode();
+    return [window.img.n, b[1] === 80 && b[2] === 78, i.width === document.querySelector("#summary").offsetWidth * 2] });
+  if (!/^run-\d{4}-\d\d-\d\d-\d{4}\.png$/.test(im[0]) || !im[1] || !im[2]) throw new Error("summary image: " + im);
+  if (process.env.SHOT) require("fs").writeFileSync(process.env.SHOT, Buffer.from(await page.evaluate(() => window.img.b)));
   const saved = await page.evaluate(() => window.saved), sum = await page.textContent("#summary");
   if (!await page.isVisible("#summary") || !/EXP per active minute/.test(sum) || !/Mesos looted\s*\+12/.test(sum) || !/Horny Mushroom Cap/.test(sum) || await page.isVisible("#wrap")) throw new Error("summary: " + sum);
   // speed check card (no shared data yet), drop alert, history, mini bar
@@ -189,6 +200,7 @@ const path = require("path"), {chromium} = require("playwright");
   // compare: tick two sessions
   await page.click("#histRows .cmp >> nth=0"); await page.click("#histRows .cmp >> nth=1");
   const cmp = await page.textContent("#cmp");
+  await page.click("#cmpClear"); if (await page.evaluate(() => document.querySelectorAll("#histRows .cmp:checked").length)) throw new Error("compare clear");
   if (!/B did better on/.test(cmp) || !/▲|▼/.test(cmp) || !/EXP\/hr/.test(cmp) || !/Pig Beach/.test(cmp)) throw new Error("compare: " + cmp);
   // a watched item: the alert set finds it by part of its name
   const watched = await page.evaluate(() => { settings.alertItems = "Horny Mushroom Cap"; return alertSet().has("4000019") });

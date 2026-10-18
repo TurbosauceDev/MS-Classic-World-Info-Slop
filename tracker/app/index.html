@@ -73,7 +73,7 @@
   td.note { padding-left:12px; } .v .coin { height:.8em; }
   :focus-visible { outline:2px solid var(--accent); outline-offset:2px; } .grip:focus-visible { border-radius:4px; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
-  #goalNext[aria-pressed=true], #goalOff[aria-pressed=true] { background:var(--accent); color:#fff; }
+  #goalNext[aria-pressed=true], #goalOff[aria-pressed=true], #meatOnly[aria-pressed=true] { background:var(--accent); color:#fff; }
   #wrap .step { font-weight:600; margin:10px 0 4px; } #wrap .step:first-of-type { margin-top:0; }
   textarea { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:5px 6px; width:100%; margin-top:6px; resize:vertical; }
   .hsub { color:var(--muted); font-size:12px; margin-top:2px; } .hsub .ico { width:18px; height:18px; margin:-2px 4px -2px 0; }
@@ -142,7 +142,7 @@
     <input id="wrapName" maxlength="60" aria-label="Run name" placeholder="Run name, e.g. KPQ run 1" style="width:100%">
     <textarea id="runNote" maxlength="1000" rows="3" aria-label="Note about this run" placeholder="A note for later: party, channel, buffs, what went well or wrong..."></textarea>
     <div class="row"><button id="wrapEnd" title="Saves the run to History and shows the summary">Finalize log</button></div></div>
-  <div class="card hidden" id="summary"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Run summary</h3><button id="sumClose" class="alt">Close</button></div>
+  <div class="card hidden" id="summary"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Run summary</h3><button id="sumImg" class="alt" title="Saves a picture of this summary and copies it, ready to paste">Save as image</button> <button id="sumClose" class="alt">Close</button></div>
     <div id="sumBody"></div></div>
   <div class="card hidden" id="selfcheck"></div>
   <div id="dock"></div>
@@ -189,7 +189,8 @@
     <div class="card" id="mesoBox" data-box="mesos" data-title="Mesos"><h3>Mesos</h3><div class="grid" id="mesoGrid"></div><div class="note" id="mesoNote"></div></div>
     <div class="card" data-box="items" data-title="Items looted"><h3>Items looted</h3><table id="items"></table><div class="empty" id="itemsEmpty">Nothing picked up yet.</div>
       <div class="note" id="priceNote"></div></div>
-    <div class="card" id="usedBox" data-box="used" data-title="Consumables used"><h3>Consumables used</h3><table id="used"></table>
+    <div class="card" id="usedBox" data-box="used" data-title="Consumables used"><h3>Consumables used</h3>
+      <div class="row"><button id="meatOnly" class="alt" aria-pressed="false" title="Red, Orange, White and Blue Potions came from drops or quests: they cost nothing here">I only buy meat and lemons</button> <span class="note" id="meatNote"></span></div><table id="used"></table>
       <div class="empty" id="usedEmpty">Nothing used yet. Counts come from your quick slots or the Use tab.</div>
       <div class="note">Potions, food and arrows, at the cheapest NPC shop price.</div></div>
   </section>

@@ -247,6 +247,14 @@ ipcMain.handle("party", async (_, live) => {
 });
 // "Save sample frames": raw captures for building and testing the screen readers
 const FRAMES = () => path.join(app.getPath("pictures"), "MS Classic Tracker frames");
+// run summary picture: Pictures\MS Classic Tracker runs, also copied to the clipboard for pasting into Discord
+ipcMain.handle("save-image", (_, name, pngBytes) => {
+  const {nativeImage, clipboard} = require("electron"), dir = path.join(app.getPath("pictures"), "MS Classic Tracker runs");
+  fs.mkdirSync(dir, {recursive: true});
+  const file = path.join(dir, path.basename(String(name))), buf = Buffer.from(pngBytes);
+  fs.writeFileSync(file, buf); clipboard.writeImage(nativeImage.createFromBuffer(buf)); shell.showItemInFolder(file);
+  return file;
+});
 ipcMain.handle("save-frame", (_, name, pngBytes) => {
   const dir = FRAMES();
   fs.mkdirSync(dir, {recursive: true});

@@ -492,7 +492,9 @@
     // red channel per row (white fades to light blue going down); the video's blur shifts each row toward its neighbors
     const RED = [, , , , [215, 250], [185, 230], [165, 200], [150, 185], [140, 175]];
     const {w, h, d} = img, blue = (i, r) => d[i + 2] >= 225 && d[i] >= RED[r][0] && d[i] <= RED[r][1] && d[i + 1] - d[i] >= 6 && d[i + 2] - d[i] >= 4;
-    const is = (x, y, r) => { const i = (y * w + x) * 4; return r < 4 ? d[i] >= 235 && d[i + 1] >= 253 && d[i + 2] >= 250 : blue(i, r) };
+    // (the top rows' white may take a little of the icon's colour behind it: blue down to 235, Danny's Lemon "98" read
+    // fffff1 on the 8's corner, 2026-10-18)
+    const is = (x, y, r) => { const i = (y * w + x) * 4; return r < 4 ? d[i] >= 235 && d[i + 1] >= 253 && d[i + 2] >= 235 : blue(i, r) };
     const dark = (x, y) => { const i = (y * w + x) * 4; return y >= 0 && y < h && d[i] + d[i + 1] + d[i + 2] < 150 };
     const out = [];
     const keyOf = (cols, y) => { let k = ""; for (let r = 0; r <= 8; r++){ for (const x of cols) k += is(x, y - 8 + r, r) ? "#" : "."; k += "/" } return k };
