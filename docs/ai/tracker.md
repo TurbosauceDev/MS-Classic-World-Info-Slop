@@ -74,6 +74,9 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   (#prefsNav) come from `data-nav` on each card: a new section needs that attribute. label.chk checkboxes are switches.
 - Mini (#mini, renderMini): its own copies of numbers, run log (#miniFeed, mirrored in feedAdd) and top-5 lists; host.mini(on, h)
   sizes the window's content height to the view (miniFit). #miniFull goes back; the card itself isn't clickable any more.
+- Dummy data: app/renderer-dummy.js (View menu "dummy" → dummyToggle via renderer-settings.js onMenu). It sets `session`
+  with the timer off, so nothing reaches History or the slicer; Clear reloads the window. Use it for layout screenshots.
+- Rows stretch (`.boxrow` align-items:stretch); column boxes flex:1; #logBox's #feed flexes in a row/column.
 - body is a flex column with `.tabs { margin-top:auto }`: spare height opens above the tabs (Danny). Body children are
   flex:none; don't give one flex-grow.
 - The main card (#top, box id `main`) lives in #dock with the run log, so it moves/docks/folds like any box (folded keeps

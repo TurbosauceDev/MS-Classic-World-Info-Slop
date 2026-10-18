@@ -5,7 +5,7 @@ function miniList(rows, cell, empty){ if (!rows.length) return `<tr class="more"
   const more = rows.length - MINI_ROWS; return rows.slice(0, MINI_ROWS).map(cell).join("") + (more > 0 ? `<tr class="more"><td colspan="2">and ${more} more</td></tr>` : "") }
 function renderMini(s){
   $("#miniTotal").textContent = fmt(s.exp); $("#miniActive").textContent = hm(s.activeMin / 60);
-  $("#miniClock").textContent = runT0 && timer != null ? hm((Date.now() - runT0) / 3.6e6) : "-";
+  $("#miniClock").textContent = runT0 && (timer != null || dummyOn) ? hm((Date.now() - runT0) / 3.6e6) : "-";
   $("#miniState").textContent = [$("#stateText").textContent, s.mapName].filter(Boolean).join(" · ");
   $("#miniItems").innerHTML = miniList(s.items, i => `<tr><td>${ico(i.id)}${esc(i.name)}</td><td class="n">×${fmt(i.n)}</td></tr>`, "Nothing yet");
   $("#miniMobs").innerHTML = miniList(s.mobs, m => `<tr><td>${esc(m.name)}</td><td class="n">${fmt(m.kills)}</td></tr>`, "None yet");

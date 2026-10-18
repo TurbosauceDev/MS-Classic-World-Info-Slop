@@ -41,6 +41,11 @@
   #miniFull { padding:3px 10px; font-size:12px; }
   #mini .mgrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(92px, 1fr)); gap:4px 10px; }
   #mini .mgrid .v { font-size:15px; } #mini .mgrid .main .v { color:var(--accent); }
+  #dummyBar { display:flex; align-items:center; gap:10px; border:1px dashed var(--warn); background:color-mix(in srgb, var(--warn) 14%, var(--panel)); padding:6px 10px; }
+  #dummyBar b { color:var(--warn); } #dummyBar span { flex:1; font-size:12px; color:var(--muted); } #dummyBar button { padding:3px 10px; font-size:12px; }
+  /* section headers (box titles, Mini's list titles): a soft outline and drop shadow (Danny, 2026-10-18) */
+  h3, .boxctl .btitle, #mini .mk { text-shadow:0 0 1px color-mix(in srgb, var(--bg) 85%, transparent), 0 1px 2px rgba(0,0,0,.35); }
+  #mini .mk { color:var(--accent); }
   #mini .mk { margin:8px 0 2px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; font-size:11px; }
   #miniFeed { height:6em; } #mini .mk:has(+ #miniFeed:empty) { display:none; }
   #mini .mlists { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:0 12px; }
@@ -114,7 +119,12 @@
   .over-top { box-shadow:0 -3px 0 var(--accent); } .over-bottom { box-shadow:0 3px 0 var(--accent); }
   .over-left { box-shadow:-3px 0 0 var(--accent); } .over-right { box-shadow:3px 0 0 var(--accent); }
   /* boxes side by side: a row of boxes (or columns of boxes) with a splitter between each two */
-  .boxrow { display:flex; align-items:flex-start; } .boxrow > :not(.split) { flex:1 1 0px; min-width:0; }
+  /* boxes fill in (Danny, 2026-10-18: "no awkward empty space"): a row's boxes stretch to the tallest, the boxes of a
+     column share its height, a folded box keeps to its title; the run log grows with its box */
+  .boxrow { display:flex; align-items:stretch; margin-bottom:8px; } .boxrow > .box, .boxcol > .box { margin-bottom:0; }
+  .boxrow > .box.folded { align-self:flex-start; }
+  .boxcol > .box:not(.folded) { flex:1 1 auto; } .boxcol > .box + .box { margin-top:8px; }
+  .boxrow #logBox:not(.folded), .boxcol #logBox:not(.folded) { display:flex; flex-direction:column; } .boxrow #feed, .boxcol #feed { flex:1 1 0px; height:auto; min-height:7.5em; } .boxrow > :not(.split) { flex:1 1 0px; min-width:0; }
   .boxcol { display:flex; flex-direction:column; } .boxrow .box { overflow-x:auto; }
   .split { flex:0 0 8px; align-self:stretch; cursor:col-resize; position:relative; touch-action:none; }
   .split::after { content:""; position:absolute; left:3px; top:25%; bottom:calc(25% + 8px); width:2px; border-radius:1px; background:var(--line); }
@@ -170,6 +180,8 @@
   body.dragging .tabs button[data-tab=session], body.dragging .tabs button[data-tab=loot], body.dragging .tabs button[data-tab=hist] { outline:1px dashed var(--accent); }
   /* the run log: a short window of lines, newest at the bottom, older ones scroll up */
   #logBox h3 { margin-bottom:4px; } #feed:not(:empty) + #feedEmpty { display:none; }
+  /* a chat-box look: a darker well with a little inset (Danny, 2026-10-18) */
+  .feedlist:not(:empty) { background:color-mix(in srgb, var(--bg) 70%, #000); border:1px solid color-mix(in srgb, var(--line) 60%, transparent); border-radius:7px; padding:4px 6px; box-shadow:inset 0 1px 3px rgba(0,0,0,.35); }
   .feedlist { height:7.5em; overflow-y:auto; font-size:12px; line-height:1.5; font-variant-numeric:tabular-nums; overscroll-behavior:contain; }
   .feedlist:empty { display:none; }
   .feedlist .fl { display:flex; gap:7px; padding:0 2px; border-radius:4px; animation:feedIn .35s ease-out; }
@@ -228,6 +240,7 @@
     <p><button id="guideShare">Share</button> <button id="guideNo" class="alt">Don't share</button></p>
   </div>
   <div class="card hidden" id="updBanner"><b id="updText"></b> <button id="updGo">Restart and update</button></div>
+  <div class="card hidden" id="dummyBar" role="status"><b>Dummy data</b><span>Made up to try layouts. Never saved or shared.</span><button id="dummyClear" class="alt">Clear</button></div>
   <div id="dock">
   <div class="card" id="top" data-box="main" data-title="Main numbers">
     <div class="bar"><button id="go">Start</button>
@@ -476,5 +489,6 @@
   <script src="renderer-run.js"></script>
   <script src="renderer-history.js"></script>
   <script src="renderer-settings.js"></script>
+  <script src="renderer-dummy.js"></script>
 </body>
 </html>

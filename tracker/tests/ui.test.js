@@ -33,8 +33,15 @@ const path = require("path"), {chromium} = require("playwright");
   const lay0 = await page.evaluate(() => [...document.querySelectorAll('section[data-tab=session] > [data-box]')].map(b => b.dataset.box + (b.classList.contains("folded") ? "-" : "")).join());
   if (lay0 !== "stats,mobs,kpq-,alerts-,snaps-") throw new Error("default layout: " + lay0);
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click()));
+  // Dummy data (View menu): every box filled, marked, nothing saved or shared; Start wipes it and tracks for real
+  await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(100);
+  const dm = await page.evaluate(() => [!document.querySelector("#dummyBar").classList.contains("hidden"), document.querySelectorAll("#items tr").length, document.querySelectorAll("#mobs tr").length,
+    document.querySelectorAll("#feed .fl").length, document.querySelector("#expHr").textContent, document.querySelector("#used").textContent, !!window.saved, document.querySelector("#go").textContent]);
+  if (!dm[0] || dm[1] < 3 || dm[2] !== 3 || dm[3] < 3 || dm[4] === "-" || !/Red Potion/.test(dm[5]) || dm[6] || dm[7] !== "Start") throw new Error("dummy data: " + JSON.stringify(dm));
   await page.dblclick("#go");
   await page.waitForTimeout(1500);
+  const dm2 = await page.evaluate(() => [document.querySelector("#dummyBar").classList.contains("hidden"), /Dummy/.test(document.querySelector("#feed").textContent), session.state.kills]);
+  if (!dm2[0] || dm2[1] || dm2[2]) throw new Error("dummy data after Start: " + dm2);
   // run log: a batch of kills and pickups becomes one line per kind, newest at the bottom (Danny, 2026-10-18)
   const fd = await page.evaluate(() => { const t = Date.now(), s = GrindSession.createSession(G), f = GrindFeed.createFeed(G); f.step(s.state, t);
     for (const e of [{type: "exp", gain: 20}, {type: "exp", gain: 20}, {type: "meso", amount: 55}, {type: "item", id: 2000000}]) s.add({t, ...e});

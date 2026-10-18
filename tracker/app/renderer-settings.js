@@ -42,6 +42,7 @@ for (const b of document.querySelectorAll("#titlebar [data-menu]")) b.onclick = 
 host.onMenu?.(what => {
   if (what === "help") openHelp();
   else if (what === "settings") openPrefs();
+  else if (what === "dummy") dummyToggle();
   else if (what === "mini") (document.body.classList.contains("mini") ? $("#miniFull") : $("#miniBtn")).click();
   else if (what === "report") openBugPop();
   else if (what.startsWith("onTop:")){ const on = what === "onTop:true"; settings.onTop = on; $("#ontop").checked = on; $("#status").textContent = "Keep on top: " + (on ? "on" : "off") + "." }
