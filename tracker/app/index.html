@@ -60,6 +60,9 @@
   #where { margin-top:6px; }
   /* tabs */
   .tabs { display:flex; gap:2px; margin:0 0 8px; border-bottom:1px solid var(--line); }
+  /* a window taller than its boxes: the spare room opens above the tabs, so the tabs and their boxes follow the bottom edge
+     (Danny, 2026-10-18: "i expected the empty space to grow in the middle, not the bottom") */
+  body { min-height:100vh; display:flex; flex-direction:column; } body > * { flex:none; } body > .tabs { margin-top:auto; }
   .tabs button { background:none; color:var(--muted); border-radius:6px 6px 0 0; padding:7px 8px; flex:1; font-size:13px; border-bottom:2px solid transparent; }
   .tabs button.sel { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
   .row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:6px 0; }

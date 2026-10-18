@@ -69,6 +69,8 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   (#prefsNav) come from `data-nav` on each card: a new section needs that attribute. label.chk checkboxes are switches.
 - Mini (#mini, renderMini): its own copies of numbers, run log (#miniFeed, mirrored in feedAdd) and top-5 lists; host.mini(on, h)
   sizes the window's content height to the view (miniFit). #miniFull goes back; the card itself isn't clickable any more.
+- body is a flex column with `.tabs { margin-top:auto }`: spare height opens above the tabs (Danny). Body children are
+  flex:none; don't give one flex-grow.
 - The main card (#top, box id `main`) lives in #dock with the run log, so it moves/docks/folds like any box (folded keeps
   its Start bar). #wrap/#summary/#selfcheck sit after #dock.
 - Leaderboards aren't anonymous: don't call sharing "anonymous" in the UI.
