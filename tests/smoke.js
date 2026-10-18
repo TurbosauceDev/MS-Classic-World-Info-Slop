@@ -31,7 +31,8 @@ const path = require("path");
   await p.click("#piapply");
   const ap = await p.$$eval("#pSTR,#pDEX,#pINT,#pLUK", l => l.map(x => x.value).join(" "));
   check(ap === "4 4 127 25" && (await p.textContent("#psummary")).startsWith("Level 28 Magician · Ice Wand · Magic Claw 20") && (await p.textContent("#pgearsum")) === "5 pieces", `screenshot import (AP ${ap})`);
-  await p.click("#pgearclear");
+  await p.click("#pgearclear"); await p.click("#pireset");
+  check(!(await p.textContent("#pimprev")).trim() && !(await p.textContent("#pimpreads")).trim(), "screenshot import Reset clears everything");
   // Danny's Lv28 Archer: every skill level read (The Eye of Amazon's used to fail), and the builder's own numbers match his stat window
   await p.setInputFiles("#pimpfile", ["stat", "equip", "skill"].map(f => path.resolve(__dirname, `fixtures/bow-${f}.png`)));
   await p.waitForSelector("#piapply", {timeout: 30000});
@@ -39,7 +40,14 @@ const path = require("path");
   await p.click("#piapply");
   const bst = await p.evaluate(() => [...document.querySelectorAll("#plan .card")].find(c => c.querySelector("h3")?.textContent === "Character stats")?.innerText.replace(/\s+/g, " "));
   check(bsk === 5 && (await p.textContent("#psummary")).startsWith("Level 28 Archer · Battle Bow") && /ACCURACY 66 AVOID 28 .*HP \/ MP 845 \/ 669 W.DEF \/ M.DEF 107 \/ 30/.test(bst), `bowman import matches the stat window (${bsk} skills; ${bst})`);
-  await p.click("#pgearclear");
+  await p.click("#pgearclear"); await p.click("#pireset");
+  // the same Archer, equipment uploaded first and the stat window after (Danny, 2026-10-18: stats alone read "11 over the budget")
+  await p.setInputFiles("#pimpfile", path.resolve(__dirname, "fixtures/bow-equip2.png")); await p.waitForSelector("#pimpreads .pill");
+  check(/Add: Stats/.test(await p.textContent("#pimpst")), "equipment alone asks for the stat window");
+  await p.setInputFiles("#pimpfile", path.resolve(__dirname, "fixtures/bow-stat2.png")); await p.waitForFunction(() => document.querySelectorAll("#pimpreads .pill").length === 2);
+  const bnote = await p.textContent("#pinote");
+  check(/Battle Bow/.test(await p.$eval("#piweapon", s => s.selectedOptions[0].text)) && !/over|more than/.test(bnote), `equipment then stats: weapon read, AP fits (${bnote})`);
+  await p.click("#piapply"); await p.click("#pgearclear"); await p.click("#pireset");
   // Path Planner (opened from the builder)
   await p.click("#ppath");
   await p.waitForTimeout(300);
@@ -193,6 +201,13 @@ const path = require("path");
   await tab("#t-inv"); await p.setInputFiles("#ivfile", path.resolve(__dirname, "../tracker/tests/frames-inv/use-12162.png"));
   await p.waitForFunction(() => /^Read$|had no/.test(document.querySelector("#ivst").textContent), null, {timeout: 60000});
   check(/Lemon/.test(await p.textContent("#ivbody")) && /mesos/.test(await p.textContent("#ivsum")), "price check reads a Use tab");
+  // Danny's bank, scrolled 0-4 rows, plus the bank with the inventory open beside it: overlapping rows counted once
+  await p.click("#ivclear");
+  await p.setInputFiles("#ivfile", ["bank-3", "bank-0", "bank-inv", "bank-4", "bank-1", "bank-2"].map(f => path.resolve(__dirname, `fixtures/${f}.png`)));
+  await p.waitForFunction(() => /^Read$|had no/.test(document.querySelector("#ivst").textContent), null, {timeout: 60000});
+  const bankRow = n => p.$$eval("#ivbody tr", (r, n) => r.find(x => x.cells[0].innerText.includes(n))?.cells[2].innerText, n);
+  check(await bankRow("Green Mushroom Cap") === "387" && await bankRow("Arrows for Bows") === "1,970" && await bankRow("Set of Match Cards") === "3" &&
+    /in the bank: 5,825/.test(await p.textContent("#ivsum")) && !/Equip:/.test(await p.textContent("#ivreads")), "price check lines up scrolled bank screenshots");
   // every page at phone width: no sideways scroll, no NaN/undefined text
   await p.setViewportSize({width: 390, height: 800});
   for (const [id, cat] of await p.$$eval(".subs button[id^=t-]", bs => bs.map(b => [b.id, b.dataset.cat]))){

@@ -634,7 +634,7 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
       </div>
     </div>
   </div>
-  <p class="sitever">Site version: built Oct 18, 2026 · 17:33 UTC</p>
+  <p class="sitever">Site version: built Oct 18, 2026 · 20:28 UTC</p>
 </section>
 
 <section id="plan" hidden>
@@ -652,7 +652,7 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
           <li><b>HP and MP</b> follow meowdb's measured gains per level and per job advancement, plus Max HP / Max MP Increase.</li>
           <li><b>Armor</b> (optional): pick pieces per slot; their stats count everywhere on this tab. <b>Upkeep</b> = potions and ammo per hour while attacking nonstop, at shop prices.</li>
           <li><b>Copy link</b> makes a link that opens this exact build.</li>
-          <li><b>Import from screenshots</b> reads the game's windows in this page (nothing is uploaded): level and STR/DEX/INT/LUK from the stat window, worn items by their icons, skill levels from the skill window (one screenshot per skill tab; scroll and add more if the list is long). The stat window shows totals, so the read gear's stats are taken off to get your AP. Scrolled or above-average gear counts as its base stats. PNG screenshots work best; a game window that's been smoothly resized (not 100% or 200%) may not read.</li>
+          <li><b>Import from screenshots</b> reads the game's windows in this page (nothing is uploaded): level and STR/DEX/INT/LUK from the stat window, worn items by their icons, skill levels from the skill window (one screenshot per skill tab; scroll and add more if the list is long). The stat window shows totals, so the read gear's stats are taken off to get your AP. Gear counts as its base stats (an average drop); scrolled or above-average gear adds more, so fix the numbers in the review if you know them. Screenshots add up in any order; ✕ removes one, <b>Reset</b> clears them all. PNG screenshots work best; a game window that's been smoothly resized (not 100% or 200%) may not read.</li>
           <li><b>Auto build</b> spends every point: first where it adds the most damage after misses, then passives, then buffs. Skills follow the game's prerequisites.</li>
         </ul>
       </div>
@@ -672,7 +672,8 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
       <div class="card">
         <div class="cardhead"><h3>Import from screenshots</h3><span id="pimpst" class="pill"></span></div>
         <label class="drop" id="pimpdrop"><input type="file" id="pimpfile" accept="image/*" multiple>
-          <span>Drop, pick or paste (Ctrl+V) screenshots of your <b>Character Stat</b>, <b>Equipment Inventory</b> and <b>Skill Inventory</b> windows. You check what was read before it's applied.</span></label>
+          <span>Drop, pick or paste (Ctrl+V) screenshots of your <b>Character Stat</b>, <b>Equipment Inventory</b> and <b>Skill Inventory</b> windows, in any order, one at a time or together. You check what was read before it's applied.</span></label>
+        <p id="pimpreads"></p>
         <div id="pimprev"></div>
       </div>
       <div class="card">
@@ -1399,7 +1400,8 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
   <details class="howto">
     <summary>How the price check works</summary>
     <ul>
-      <li>Open your item inventory on the <b>Equip</b>, <b>Use</b> or <b>Etc</b> tab and take a screenshot (Win+Shift+S, PrtSc). One screenshot per tab; scroll and take another if a tab has more than one page.</li>
+      <li>Open your item inventory on the <b>Equip</b>, <b>Use</b> or <b>Etc</b> tab and take a screenshot (Win+Shift+S, PrtSc). One tab per screenshot; scroll and take another if a tab has more than one page. Overlapping screenshots of the same tab are lined up, so nothing is counted twice.</li>
+      <li><b>Bank:</b> screenshots of the storage window work the same way: scroll down a bit at a time and add each one. When the bank is open, the inventory next to it is left out.</li>
       <li>Paste (Ctrl+V), drop or pick the screenshots below. Everything is read in your browser; nothing is uploaded.</li>
       <li>Prices are the median player-shop sale on <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> (as of <span id="ivdate"></span>); half of sales landed in the range shown. Items with no player sales fall back to the NPC price. Prices move, so check before you list.</li>
       <li>Equips are priced as plain ones: the reader can't see scrolls or stats, so good rolls are worth more.</li>
@@ -1407,9 +1409,9 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
     </ul>
   </details>
   <div class="card">
-    <div class="cardhead"><h3>Your inventory</h3><span id="ivst" class="pill"></span></div>
+    <div class="cardhead"><h3>Your inventory and bank</h3><span id="ivst" class="pill"></span></div>
     <label class="drop" id="ivdrop"><input type="file" id="ivfile" accept="image/*" multiple>
-      <span>Drop, pick or paste (Ctrl+V) screenshots of your inventory's <b>Equip</b>, <b>Use</b> and <b>Etc</b> tabs.</span></label>
+      <span>Drop, pick or paste (Ctrl+V) screenshots of your inventory's <b>Equip</b>, <b>Use</b> and <b>Etc</b> tabs, or of your <b>bank</b>.</span></label>
     <p id="ivreads"></p>
     <div id="ivsum"></div>
     <div class="tblwrap" id="ivtbl" hidden><table class="mini"><thead><tr><th>Item</th><th>Tab</th><th class="num">Count</th><th class="num">NPC pays</th><th>Suggested price</th><th class="num">Worth</th></tr></thead>
@@ -4029,53 +4031,69 @@ const clsOfJob = j => Object.keys(BLD.BRANCHES).find(c => BLD.BRANCHES[c].some(b
 const clsOfWeapon = w => Object.keys(BLD.BRANCHES).find(c => BLD.BRANCHES[c][0][2].includes(w.type));
 const WBYID = Object.fromEntries(BLD.W.map(w => [w.id, w]));
 const num = s => { const m = /\d+/.exec(s || ""); return m ? +m[0] : null };
-let R = null;   // what was read, edited in the review form
+let READS = [], R = null;   // READS: one result per screenshot; R: all of them merged, edited in the review form
 
-async function readShots(files){
-  const r = {lvl: null, shown: null, skills: {}, gear: {}, weapon: [], seen: []};
+// one screenshot -> whatever it shows: {name, lvl, shown, skills, gear, weapon, what}
+async function readShot(f){
+  const r = {name: f.name && f.name !== "image.png" ? f.name : "", lvl: null, shown: null, skills: {}, gear: {}, weapon: [], what: []};
   const skIcons = Object.keys(SKJOB).filter(id => D.icons[id]).map(id => [id, D.icons[id]]);
   const eqIcons = Object.keys(BLD.ARMOR).concat(Object.keys(WBYID)).filter(id => D.iicons[id]).map(id => [id, D.iicons[id]]);
-  for (const f of files){
-    const img = shotNative(await shotLoad(f)), seen = [];
-    // stat window: pink labels NAME, JOB (two lines tall), LEVEL...; green labels STR, DEX, INT, LUK
-    const pink = shotLabels(img, PINK), green = shotLabels(img, GREEN);
-    const val = b => num(shotText(img, b.x1 + 2, b.y0 - 2, b.x1 + 130, b.y1 + 3)[0]?.s);
-    if (pink.length >= 3){
-      const tall = pink.slice(0, 3).reduce((a, b, i, l) => b.y1 - b.y0 > l[a].y1 - l[a].y0 ? i : a, 0);
-      const lv = val(pink[Math.min(tall + 1, pink.length - 1)]);
-      if (lv >= 1 && lv <= 200){ r.lvl = lv; seen.push("level") }
-    }
-    if (green.length >= 4){
-      const v = green.slice(0, 4).map(val);
-      if (v.every(x => x != null)){ r.shown = Object.fromEntries(STATS.map((k, i) => [k, v[i]])); seen.push("stats") }
-    }
-    // skill window: an icon with its level written below-right of it
-    let ns = 0;
-    for (const m of await shotFindIcons(img, skIcons)){
-      // from 60% down: skips descenders of the name above ("The Eye of Amazon" read as "??" from half way)
-      const line = shotText(img, m.x + m.w + 2, Math.round(m.y + m.h * 0.6), m.x + m.w + 80, m.y + m.h + 4).find(l => /^\d+$/.test(l.s));
-      const lv = line && +line.s, s = SKJOB[m.key].s;
-      if (lv && lv <= s.max){ r.skills[m.key] = Math.max(r.skills[m.key] || 0, lv); ns++ }
-    }
-    if (ns) seen.push(`${ns} skill${ns > 1 ? "s" : ""}`);
-    // equipment window
-    let ne = 0;
-    for (const m of await shotFindIcons(img, eqIcons)){
-      const ids = [m.key, ...(m.alt || [])];
-      if (WBYID[m.key]) r.weapon.push(...ids.filter(id => WBYID[id] && !r.weapon.includes(id)));
-      else { const sl = BLD.ARMOR[m.key][2]; r.gear[sl] = (r.gear[sl] || []).concat(ids.filter(id => BLD.ARMOR[id]?.[2] === sl && !(r.gear[sl] || []).includes(id))) }
-      ne++;
-    }
-    if (ne) seen.push(`${ne} item${ne > 1 ? "s" : ""}`);
-    r.seen.push(`${esc(f.name || "pasted image")}: ${seen.length ? seen.join(", ") : "nothing recognized"}${img.k > 1 ? ` (UI at ${img.k}×)` : ""}`);
+  const img = shotNative(await shotLoad(f));
+  // stat window: pink labels NAME, JOB (two lines tall), LEVEL...; green labels STR, DEX, INT, LUK
+  const pink = shotLabels(img, PINK), green = shotLabels(img, GREEN);
+  const val = b => num(shotText(img, b.x1 + 2, b.y0 - 2, b.x1 + 130, b.y1 + 3)[0]?.s);
+  if (pink.length >= 3){
+    const tall = pink.slice(0, 3).reduce((a, b, i, l) => b.y1 - b.y0 > l[a].y1 - l[a].y0 ? i : a, 0);
+    const lv = val(pink[Math.min(tall + 1, pink.length - 1)]);
+    if (lv >= 1 && lv <= 200) r.lvl = lv;
+  }
+  if (green.length >= 4){
+    const v = green.slice(0, 4).map(val);
+    if (v.every(x => x != null)) r.shown = Object.fromEntries(STATS.map((k, i) => [k, v[i]]));
+  }
+  if (r.lvl || r.shown) r.what.push("Stats");
+  // skill window: an icon with its level written below-right of it
+  let ns = 0;
+  for (const m of await shotFindIcons(img, skIcons)){
+    // from 60% down: skips descenders of the name above ("The Eye of Amazon" read as "??" from half way)
+    const line = shotText(img, m.x + m.w + 2, Math.round(m.y + m.h * 0.6), m.x + m.w + 80, m.y + m.h + 4).find(l => /^\d+$/.test(l.s));
+    const lv = line && +line.s, s = SKJOB[m.key].s;
+    if (lv && lv <= s.max){ r.skills[m.key] = Math.max(r.skills[m.key] || 0, lv); ns++ }
+  }
+  if (ns) r.what.push(`${ns} skill${ns > 1 ? "s" : ""}`);
+  // equipment window
+  let ne = 0;
+  for (const m of await shotFindIcons(img, eqIcons)){
+    const ids = [m.key, ...(m.alt || [])];
+    if (WBYID[m.key]) r.weapon.push(...ids.filter(id => WBYID[id] && !r.weapon.includes(id)));
+    else { const sl = BLD.ARMOR[m.key][2]; r.gear[sl] = (r.gear[sl] || []).concat(ids.filter(id => BLD.ARMOR[id]?.[2] === sl && !(r.gear[sl] || []).includes(id))) }
+    ne++;
+  }
+  if (ne) r.what.push(`${ne} item${ne > 1 ? "s" : ""} worn`);
+  r.k = img.k;
+  return r;
+}
+// every screenshot read so far -> one character, in any order (equipment before stats works too). Picks and edits made in
+// the review form are kept when they still fit
+function merge(){
+  if (!READS.length){ R = null; return }
+  const old = R, m = {lvl: null, shown: null, skills: {}, gear: {}, weapon: []};
+  for (const r of READS){
+    if (r.lvl) m.lvl = r.lvl;
+    if (r.shown) m.shown = {...r.shown};
+    for (const [id, v] of Object.entries(r.skills)) m.skills[id] = Math.max(m.skills[id] || 0, v);
+    for (const [sl, ids] of Object.entries(r.gear)) m.gear[sl] = [...new Set((m.gear[sl] || []).concat(ids))];
+    for (const id of r.weapon) if (!m.weapon.includes(id)) m.weapon.push(id);
   }
   // class: from skills, else the weapon, else the highest stat
-  const jobs = Object.keys(r.skills).map(id => SKJOB[id].job);
-  r.cls = clsOfJob(jobs[0]) || (r.weapon[0] && clsOfWeapon(WBYID[r.weapon[0]])) ||
-    (r.shown && Object.keys(BLD.PRIMARY).find(c => BLD.PRIMARY[c] === STATS.reduce((a, k) => r.shown[k] > r.shown[a] ? k : a, "STR"))) || BLD.S.cls;
-  r.branch = jobs.find(j => BLD.BRANCHES[r.cls].some(b => b[0] === j && b[1] >= 30)) || null;
-  r.lvl = r.lvl || BLD.S.lvl;
-  return r;
+  const jobs = Object.keys(m.skills).map(id => SKJOB[id].job);
+  m.cls = clsOfJob(jobs[0]) || (m.weapon[0] && clsOfWeapon(WBYID[m.weapon[0]])) ||
+    (m.shown && Object.keys(BLD.PRIMARY).find(c => BLD.PRIMARY[c] === STATS.reduce((a, k) => m.shown[k] > m.shown[a] ? k : a, "STR"))) || BLD.S.cls;
+  m.branch = jobs.find(j => BLD.BRANCHES[m.cls].some(b => b[0] === j && b[1] >= 30)) || null;
+  m.lvl = m.lvl || BLD.S.lvl;
+  m.pick = {weapon: m.weapon.includes(old?.pick.weapon) ? old.pick.weapon : m.weapon[0] || "",
+    gear: Object.fromEntries(Object.entries(m.gear).map(([sl, ids]) => [sl, ids.includes(old?.pick.gear[sl]) ? old.pick.gear[sl] : ids[0]]))};
+  R = m;
 }
 
 // base AP = what the stat window shows minus the picked gear's stats (the game shows totals)
@@ -4095,8 +4113,10 @@ function reviewNote(){
   const {ap, g} = baseAP(), tot = STATS.reduce((a, k) => a + ap[k], 0), budget = BLD.apTotal(Math.max(10, R.lvl));
   const gl = STATS.filter(k => g[k]).map(k => `${k} +${g[k]}`).join(", ");
   const over = tot - budget, top = STATS.reduce((a, k) => ap[k] > ap[a] ? k : a, "STR");
-  return `${gl ? `Gear adds ${gl}, taken off. ` : ""}AP for the builder: ${STATS.map(k => `${k} ${ap[k]}`).join(", ")} (${tot} of ${budget}).` +
-    (over > 0 ? ` <span class="down">${over} over the budget for level ${R.lvl}: probably gear or scroll bonuses not seen. Upload the Equipment window too, or ${over} comes off ${top}.</span>` : "");
+  const geared = Object.keys(R.gear).length || R.weapon.length;
+  return `${gl ? `Gear adds ${gl} (its base stats), taken off. ` : ""}AP for the builder: ${STATS.map(k => `${k} ${ap[k]}`).join(", ")} (${tot} of ${budget}).` +
+    (over <= 0 ? "" : geared ? ` <span class="down">Still ${over} over level ${R.lvl}'s ${budget}: scrolls or above-average gear. ${over} comes off ${top} when applied; fix the numbers above if you know them.</span>`
+      : ` ${over} more than level ${R.lvl} gives: that's your gear. Add the <b>Equipment Inventory</b> screenshot and it's taken off.`);
 }
 const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, t]) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
 function renderReview(){
@@ -4106,8 +4126,7 @@ function renderReview(){
   if (!br.some(b => b[0] === R.branch)) R.branch = (br.find(b => b[1] >= 30) || br[0])[0];
   const wname = id => `${WBYID[id].name} · Lv ${WBYID[id].lvl}`, aname = id => `${BLD.ARMOR[id][1]} · Lv ${BLD.ARMOR[id][3]}`;
   const skills = Object.entries(R.skills).sort((a, b) => a[0] - b[0]);
-  el.innerHTML = `<p class="tiny">${R.seen.join("<br>")}</p>
-    <div class="row2"><label class="lab">Level<input id="pilvl" type="number" min="10" max="100" value="${R.lvl}"></label>
+  el.innerHTML = `<div class="row2"><label class="lab">Level<input id="pilvl" type="number" min="10" max="100" value="${R.lvl}"></label>
       <label class="lab">Class${sel("picls", Object.keys(BLD.BRANCHES).map(c => [c, c]), R.cls)}</label></div>
     <div class="row2"><label class="lab">Job${sel("pibranch", br.map(b => [b[0], b[0]]), R.branch)}</label>
       <label class="lab">Weapon${sel("piweapon", [["", R.weapon.length ? "keep current" : "none found: keep current"], ...R.weapon.map(id => [id, wname(id)])], R.pick.weapon)}</label></div>
@@ -4117,19 +4136,27 @@ function renderReview(){
       `<label class="lab">${label}${sel("pig-" + sl, [["", "skip"], ...R.gear[sl].map(id => [id, aname(id)])], R.pick.gear[sl] || "")}</label>`).join("")}</div>` : ""}
     ${skills.length ? `<div class="pigrid">${skills.map(([id, v]) => `<label class="lab">${esc(SKJOB[id].s.n)}<input data-sk="${id}" type="number" min="0" max="${SKJOB[id].s.max}" value="${v}"></label>`).join("")}</div>` :
       `<p class="tiny">No skill window found: skills will be auto-built.</p>`}
-    <div class="btnrow"><button class="btn primary" id="piapply">Apply to builder</button><button class="btn" id="picancel" style="margin-top:12px">Discard</button></div>`;
+    <div class="btnrow"><button class="btn primary" id="piapply">Apply to builder</button></div>`;
+}
+const KIND = r => r.what.length ? r.what.join(", ") : "nothing recognized";
+function renderReads(){
+  $("#pimpreads").innerHTML = READS.map((r, k) => `<span class="pill${r.what.length ? "" : " p-bad"}" title="${esc(r.name || "pasted image")}${r.k > 1 ? ` (UI at ${r.k}×)` : ""}">${KIND(r)}
+    <button class="linkbtn" data-pidel="${k}" title="Remove">✕</button></span>`).join(" ") + (READS.length ? ` <button id="pireset">Reset</button>` : "");
+  const st = $("#pimpst");
+  if (!READS.length){ st.textContent = ""; st.className = "pill" }
+  else if (!R || !READS.some(r => r.what.length)){ st.textContent = "Nothing recognized"; st.className = "pill p-bad" }
+  else { const miss = [!R.shown && "Stats", !Object.keys(R.gear).length && !R.weapon.length && "Equipment", !Object.keys(R.skills).length && "Skills"].filter(Boolean);
+    st.textContent = miss.length ? "Add: " + miss.join(", ") : "Check, then apply"; st.className = "pill " + (miss.length ? "p-warn" : "p-good") }
 }
 async function handle(files){
   files = [...files].filter(f => /^image\//.test(f.type));
   if (!files.length) return;
   $("#pimpst").textContent = "Reading…"; $("#pimpst").className = "pill p-warn";
-  try {
-    R = await readShots(files);
-    R.pick = {weapon: R.weapon[0] || "", gear: Object.fromEntries(Object.entries(R.gear).map(([sl, ids]) => [sl, ids[0]]))};
-    const any = R.shown || Object.keys(R.skills).length || R.weapon.length || Object.keys(R.gear).length;
-    $("#pimpst").textContent = any ? "Check, then apply" : "Nothing recognized"; $("#pimpst").className = "pill " + (any ? "p-good" : "p-bad");
-  } catch(e){ console.error(e); R = null; $("#pimpst").textContent = "Couldn't read that image"; $("#pimpst").className = "pill p-bad" }
-  renderReview();
+  for (const f of files){
+    try { READS.push(await readShot(f)) }
+    catch(e){ console.error(e); READS.push({name: f.name, what: [], skills: {}, gear: {}, weapon: []}) }
+  }
+  merge(); renderReview(); renderReads();
 }
 $("#pimpfile").addEventListener("change", e => { handle(e.target.files); e.target.value = "" });
 const drop = $("#pimpdrop");
@@ -4148,8 +4175,13 @@ $("#pimprev").addEventListener("change", e => {
   else if (t.dataset.sk) R.skills[t.dataset.sk] = Math.max(0, Math.min(SKJOB[t.dataset.sk].s.max, +t.value || 0));
   if (t.id === "pilvl" || t.id === "picls") renderReview(); else $("#pinote").innerHTML = reviewNote();
 });
+$("#pimpreads").addEventListener("click", e => {
+  if (e.target.id === "pireset") READS = [];
+  else if (e.target.dataset.pidel) READS.splice(+e.target.dataset.pidel, 1);
+  else return;
+  R = null; merge(); renderReview(); renderReads();
+});
 $("#pimprev").addEventListener("click", e => {
-  if (e.target.id === "picancel"){ R = null; renderReview(); $("#pimpst").textContent = ""; return }
   if (e.target.id !== "piapply") return;
   BLD.apply(S => {
     const clsChanged = S.cls !== R.cls, w = WBYID[R.pick.weapon];
@@ -4169,7 +4201,7 @@ $("#pimprev").addEventListener("click", e => {
   // attack: the attack skill with the most points (the builder's default looks at max levels)
   const atk = [...$("#pskill").options].map(o => o.value).filter(id => R.skills[id]).sort((a, b) => R.skills[b] - R.skills[a])[0];
   if (atk) BLD.apply(S => { S.skill = atk });
-  R = null; renderReview(); $("#pimpst").textContent = "Applied"; $("#pimpst").className = "pill p-good";
+  $("#pimpst").textContent = "Applied"; $("#pimpst").className = "pill p-good";
 });
 })();
 
@@ -5197,24 +5229,92 @@ async function cands(){
   for (const ic of await R.loadIcons(null, map)){ const tb = TABOF[D.items[ic.id].c]; (CANDS[tb] = CANDS[tb] || []).push(ic) }
   return CANDS;
 }
-let READS = [], PICK = {};   // PICK: same-picture group (ids joined) -> the item the player picked   // [{name, tab, slots: [{i, ids, n}], unknown, mesos}]
+let READS = [], PICK = {};   // READS: [{name, tab, slots: [{i, ids, n}], filled: [slot numbers], mesos, key}]; PICK: same-picture group (ids joined) -> the item the player picked
+let ALL = null;   // every item picture (the bank holds any kind of item)
 const st = $("#ivst");
+/* The bank (storage) window, Danny's screenshots 2026-10-18 (game pixels): the same red line as the inventory (3 rows, ~205 px)
+   with one pink "All" tab over its left end and plain grey (208,209,210) where the inventory has its other tabs. Slots: 5
+   columns 36 px apart, 6 rows 34 px apart, 3 px lower than the inventory's. When the bank is open, the inventory beside
+   it is left out. */
+function findBank(img){
+  const {w, h, d} = img, px = (x, y) => (y * w + x) * 4;
+  const red = (x, y) => { const i = px(x, y); return d[i] > 125 && d[i + 1] < 45 && d[i + 2] < 45 };
+  const pinkish = (x, y) => { const i = px(x, y); return d[i] >= 200 && d[i] - d[i + 1] >= 60 && d[i + 2] >= 100 && d[i] - d[i + 2] >= 40 };
+  const grey = (x, y) => { const i = px(x, y); return Math.abs(d[i] - 208) + Math.abs(d[i + 1] - 209) + Math.abs(d[i + 2] - 210) <= 12 };
+  for (let y = 16; y < h - 3; y++) for (let x = 0; x + 191 < w; x++){
+    if (!red(x, y) || x && red(x - 1, y) || red(x + 5, y - 1) || !red(x + 5, y + 1) || !red(x + 5, y + 2) || !red(x + 190, y)) continue;
+    let tab = false; for (let yy = y - 12; yy < y - 3 && !tab; yy++) for (let xx = x + 6; xx < x + 28 && !tab; xx++) tab = pinkish(xx, yy);
+    if (!tab) continue;
+    let plain = true; for (let yy = y - 13; yy < y - 2 && plain; yy += 2) for (let xx = x + 40; xx < x + 160 && plain; xx += 3) plain = grey(xx, yy);
+    if (plain) return {x, y: y + 3, tab: "bank", line: y};
+  }
+  return null;
+}
+// slots with something in them (the reader's own empty test), to tell an empty slot from one it couldn't match
+function filled(img, inv){
+  const {w, d} = img, out = [];
+  for (let r = 0; r < 6; r++) for (let c = 0; c < 5; c++){
+    const sx = inv.x + 5 + 36 * c, cy = inv.y + 37 + 34 * r; if (cy + 4 >= img.h || sx + 32 >= w) continue;
+    let off = 0;
+    for (let y = cy - 28; y <= cy; y++) for (let x = sx + 1; x < sx + 31; x++){ const i = (y * w + x) * 4; if (Math.abs(d[i] - 225) + Math.abs(d[i + 1] - 223) + Math.abs(d[i + 2] - 213) > 40) off++ }
+    if (off >= 30) out.push(r * 5 + c);
+  }
+  return out;
+}
 async function handle(files){
   const imgs = [...files].filter(f => f.type.startsWith("image/"));
   if (!imgs.length) return;
   st.textContent = "Reading…"; st.className = "pill";
   const C = await cands(); let bad = 0;
   for (const f of imgs){
-    const raw = await shotLoad(f), img = R.native(raw), inv = R.findInventory(img);
-    if (!inv || !C[inv.tab]){ bad++; continue }
-    const r = R.readInventory(img, inv, C[inv.tab]), mesos = R.readMesoTotal(img);
+    const raw = await shotLoad(f), img = R.native(raw), bank = findBank(img), inv = bank || R.findInventory(img);
+    if (!inv || !bank && !C[inv.tab]){ bad++; continue }
+    if (bank && !ALL) ALL = Object.values(C).flat();
+    const r = R.readInventory(img, inv, bank ? ALL : C[inv.tab]);
+    // the bank shows no count on equips: 1 each
+    if (bank) for (const s of r.slots) if (s.n == null && D.items[s.ids[0]].c === "Equipment") s.n = 1;
+    const mesos = bank ? R.readMesoTotal(img, {x0: inv.x, x1: inv.x + 210, y0: inv.y + 205, y1: inv.y + 260}) : R.readMesoTotal(img);
     const key = JSON.stringify([r.tab, r.slots, r.unknown]);
     if (READS.some(x => x.key === key)) continue;   // the same page pasted twice
-    READS.push({name: f.name && f.name !== "image.png" ? f.name : "Pasted " + inv.tab, tab: r.tab, slots: r.slots, unknown: r.unknown, mesos, key});
+    READS.push({name: f.name && f.name !== "image.png" ? f.name : "Pasted " + inv.tab, tab: r.tab, slots: r.slots, unknown: r.unknown, filled: filled(img, inv), mesos, key});
   }
-  st.textContent = bad ? `${bad} screenshot${bad > 1 ? "s" : ""} had no Equip, Use or Etc tab open` : "Read";
+  st.textContent = bad ? `${bad} screenshot${bad > 1 ? "s" : ""} had no bank, or no Equip, Use or Etc tab open` : "Read";
   st.className = "pill " + (bad ? "p-warn" : "p-good");
   render();
+}
+/* Screenshots of one tab scrolled to different places overlap: line them up by their rows and count each slot once.
+   A row is its 5 slots (item + count, "" empty, "?" not matched); two reads overlap where every shared row agrees.
+   Reads that share no row are taken as different pages, one after the other. Returns [{read, slots: [{i (in the whole tab), ...}]}] */
+function lineUp(reads){
+  const rows = r => { const by = Object.fromEntries(r.slots.map(s => [s.i, s.ids[0] + "x" + s.n])), out = [];
+    for (let k = 0; k < 6; k++) out.push([0, 1, 2, 3, 4].map(c => by[k * 5 + c] || (r.filled.includes(k * 5 + c) ? "?" : "")));
+    while (out.length && out.at(-1).every(v => !v)) out.pop();
+    return out };
+  const same = (a, b) => a.every((v, c) => v === b[c] || v === "?" && b[c] || b[c] === "?" && v);
+  const grid = [], placed = [], todo = reads.map(r => ({r, rows: rows(r)})).filter(x => x.rows.length);
+  while (todo.length){
+    let best = null;
+    for (const t of todo) for (let off = -t.rows.length + 1; off < grid.length; off++){
+      let hit = 0, ok = true;
+      t.rows.forEach((row, k) => { const g = grid[off + k]; if (!g || !ok) return; if (!same(row, g)) ok = false; else if (row.some(v => v)) hit++ });
+      if (ok && hit && (!best || hit > best.hit)) best = {t, off, hit};
+    }
+    if (!best) best = {t: todo[0], off: grid.length};   // no overlap: the next page
+    const {t, off} = best;
+    if (off < 0){ grid.unshift(...Array(-off).fill(null)); placed.forEach(p => p.off -= off) }
+    const o = Math.max(0, off);
+    t.rows.forEach((row, k) => { const g = grid[o + k]; grid[o + k] = g ? row.map((v, c) => v === "?" ? g[c] : v) : row });
+    placed.push({t, off: o}); todo.splice(todo.indexOf(t), 1);
+  }
+  // each whole-tab slot once: the read that placed it first
+  const seen = new Set(), out = [];
+  let unknown = 0;
+  for (const {t, off} of placed){
+    const got = new Set(t.r.slots.map(s => s.i));
+    for (const s of t.r.slots){ const i = off * 5 + s.i; if (!seen.has(i)){ seen.add(i); out.push({...s, i}) } }
+    for (const i0 of t.r.filled) if (!got.has(i0)){ const i = off * 5 + i0; if (!seen.has(i)){ seen.add(i); unknown++ } }
+  }
+  return {slots: out, unknown};
 }
 // per item: what to ask for in a player shop, and why
 function advice(id){
@@ -5225,20 +5325,23 @@ function advice(id){
   if (npc >= p[0]) return {each: npc, how: `Sell to an NPC: it pays ${fmt(npc)}, players ~${fmt(p[0])}${per}.`, cls: ""};
   return {each: p[0], how: `List at ~<b>${fmt(p[0])}</b>${per} (half sold for ${fmt(p[1])}-${fmt(p[2])}).${low ? ` <span class="pill p-warn" title="Fewer than 5 sales seen: rough">few sales</span>` : ""}`, cls: ""};
 }
-const TABNAME = {equip: "Equip", use: "Use", etc: "Etc"};
+const TABNAME = {equip: "Equip", use: "Use", etc: "Etc", bank: "Bank"};
 function render(){
   const list = $("#ivreads");
   list.innerHTML = READS.map((r, k) => `<span class="pill">${esc(TABNAME[r.tab])}: ${r.slots.length} slot${r.slots.length === 1 ? "" : "s"}${r.unknown ? `, ${r.unknown} not read` : ""}
     <button class="linkbtn" data-ivdel="${k}" title="Remove">✕</button></span>`).join(" ") + (READS.length ? ` <button id="ivclear">Clear all</button>` : "");
-  const rows = {};   // item id -> {n, alt, tab}
-  let unknown = 0, mesos = null;
-  for (const r of READS){
-    unknown += r.unknown; if (r.mesos != null) mesos = r.mesos;
-    for (const s of r.slots){
+  const rows = {};   // item id -> {n, g, tabs, noN}
+  let unknown = 0, mesos = null, bankMesos = null;
+  for (const r of READS) if (r.mesos != null){ if (r.tab === "bank") bankMesos = r.mesos; else mesos = r.mesos }
+  for (const tab of ["equip", "use", "etc", "bank"]){
+    const tr = READS.filter(r => r.tab === tab); if (!tr.length) continue;
+    const lu = lineUp(tr); unknown += lu.unknown;
+    for (const s of lu.slots){
       // one picture, several differently named items (scrolls): a choice, defaulting to the one players sell most
       const names = new Set(s.ids.map(i => D.items[i].n)), g = names.size > 1 ? s.ids.join(",") : "";
       const id = g ? PICK[g] || s.ids.reduce((a, b) => (PW[b]?.[3] || 0) > (PW[a]?.[3] || 0) ? b : a) : s.ids[0];
-      const o = rows[id] || (rows[id] = {id, n: 0, g, tab: r.tab, noN: 0});
+      const o = rows[id] || (rows[id] = {id, n: 0, g, tabs: new Set(), noN: 0});
+      o.tabs.add(tab);
       if (s.n == null) o.noN++; else o.n += s.n;
     }
   }
@@ -5246,13 +5349,13 @@ function render(){
   all.forEach(o => { o.qty = o.n || (o.noN ? 1 : 0); o.tot = o.each * o.qty });
   all.sort((a, b) => b.tot - a.tot || D.items[a.id].n.localeCompare(D.items[b.id].n));
   const fm = all.reduce((a, o) => a + o.tot, 0), npc = all.reduce((a, o) => a + o.npc * o.qty, 0);
-  $("#ivsum").innerHTML = all.length ? `<p><b>${fmt(fm)} mesos</b> if you sell everything at these prices <span class="sub">(NPCs alone: ${fmt(npc)}${mesos != null ? ` · mesos in your inventory: ${fmt(mesos)}` : ""})</span>.${unknown ? ` <span class="pill p-warn">${unknown} slot${unknown > 1 ? "s" : ""} not read</span>` : ""}</p>` : "";
+  $("#ivsum").innerHTML = all.length ? `<p><b>${fmt(fm)} mesos</b> if you sell everything at these prices <span class="sub">(NPCs alone: ${fmt(npc)}${mesos != null ? ` · mesos in your inventory: ${fmt(mesos)}` : ""}${bankMesos != null ? ` · in the bank: ${fmt(bankMesos)}` : ""})</span>.${unknown ? ` <span class="pill p-warn">${unknown} slot${unknown > 1 ? "s" : ""} not read</span>` : ""}</p>` : "";
   $("#ivbody").innerHTML = all.map(o => { const it = D.items[o.id];
     return `<tr><td><span class="ri" tabindex="0" data-item="${o.id}" data-n="${o.qty}">${D.iicons[o.id] ? `<img src="data:image/png;base64,${D.iicons[o.id]}" alt="">` : "<i></i>"}</span>
       ${o.g ? `<select data-ivg="${o.g}" title="Several items share this picture: pick yours">${[...new Map(o.g.split(",").map(i => [D.items[i].n, i])).values()]
         .sort((a, b) => D.items[a].n.localeCompare(D.items[b].n)).map(i => `<option value="${i}"${i === o.id ? " selected" : ""}>${esc(D.items[i].n)}</option>`).join("")}</select>`
         : `<span class="itname" data-item="${o.id}" tabindex="0">${esc(it.n)}</span>`}</td>
-      <td>${esc(TABNAME[o.tab])}</td><td class="num">${o.n ? fmt(o.n) : o.noN ? "?" : "–"}</td><td class="num">${o.npc ? fmt(o.npc) : "–"}</td>
+      <td>${[...o.tabs].map(t => TABNAME[t]).join(", ")}</td><td class="num">${o.n ? fmt(o.n) : o.noN ? "?" : "–"}</td><td class="num">${o.npc ? fmt(o.npc) : "–"}</td>
       <td class="${o.cls}">${o.how}</td><td class="num">${o.tot ? fmt(o.tot) : "–"}</td></tr>` }).join("");
   $("#ivtbl").hidden = !all.length;
 }
