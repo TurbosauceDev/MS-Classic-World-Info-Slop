@@ -35,6 +35,7 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-10 World Map "Undervalued maps" stays vibes: never tie it to the planner, class or level.
 - 2026-10-17 "The List" (KSers) tab removed ("im over it"), changelog entry too; don't re-add.
 - 2026-10-18 Home cards expand into a "billboard" on click: chill look, no ad banner. Grind Tracker section first after Home.
+- 2026-10-18 Small cute in-game sprites on Home card headers and on each billboard link; not flashy, not big.
 - 2026-10-18 Grind Tracker page may fetch the live /api/summary (the one exception to "no external requests").
 - 2026-10-18 EXP/hr calculator: screenshot-pair time fill and share-as-image card OK'd.
 - 2026-10-18 Share links extend the existing `#key=value&` hash; no new scheme. Search: Ctrl+K or `/`, @prefixes.
@@ -48,3 +49,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 KPQ board shows character names (his round = Turbow). Separate boards: Rush = fastest to beating King Slime;
   Bonus = EXP + mesos gained (more Bonus time = faster Rush, already in the gain).
 - 2026-10-18 KPQ name off = a fixed made-up name (1st job + 4 digits, e.g. Archer4821), never blank.
+- 2026-10-18 Tracker default theme is "Default" = the site's colours exactly (follows Windows light/dark); Lilac, Henesys, Perion sand toned down from "flash bang" white.

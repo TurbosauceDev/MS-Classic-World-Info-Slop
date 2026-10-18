@@ -272,7 +272,7 @@ const path = require("path"), {chromium} = require("playwright");
   // themes (Settings): a preset swatch recolours the page and the title bar; the editor saves your own; share code round trip
   await page.click('.tabs button[data-tab="settings"]');
   const sw = await page.$$eval("#themeSw [data-th]", b => b.map(x => x.dataset.th));
-  if (sw.length < 12 || sw[0] !== "p:Purple") throw new Error("theme swatches: " + sw);
+  if (sw.length < 12 || sw[0] !== "p:Default") throw new Error("theme swatches: " + sw);
   await page.click('#themeSw [data-th="p:Slime"]'); await page.waitForTimeout(50);
   const th1 = await page.evaluate(() => [document.documentElement.style.getPropertyValue("--bg"), window.bar?.bg, window.st.theme, document.querySelector('[data-th="p:Slime"]').getAttribute("aria-checked")]);
   if (th1.join() !== "#111a14,#111a14,p:Slime,true") throw new Error("theme pick: " + th1);

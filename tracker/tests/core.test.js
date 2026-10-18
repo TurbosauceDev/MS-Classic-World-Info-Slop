@@ -272,4 +272,17 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
   s.add({t: sec(10), type: "exp", gain: 5}); assert.ok(s.state.pausedAt !== null && s.state.held, "still paused by hand");
   s.add({t: sec(100), type: "resume"}); s.add({t: sec(110), type: "exp", gain: 5}); s.add({t: sec(130), type: "exp", gain: 5});
   assert.strictEqual(s.state.pausedAt, null); assert.strictEqual(s.state.activeMs, 20e3, "only the time after Go on counts") }
+// the Default theme is the planner site's colours exactly (Danny 2026-10-18: "match our webtool perfectly"): read them from
+// src/styles.css so a site recolour that skips themes.js fails here; text on accent is --panel like the site's buttons
+{
+  const TH = require("../app/themes.js"), css = require("fs").readFileSync(require("path").join(__dirname, "../../src/styles.css"), "utf8");
+  const vars = block => Object.fromEntries([...block.matchAll(/--([a-z-]+):(#[0-9a-f]{6})/g)].map(m => [m[1], m[2]]));
+  const site = {light: vars(css.slice(css.indexOf(":root{"), css.indexOf("@media (prefers-color-scheme: dark)"))),
+    dark: vars(css.slice(css.indexOf(':root[data-theme="dark"]{')))};
+  const d = TH.PRESETS[0]; assert.equal(d.name, "Default", "Default theme is first");
+  for (const side of ["light", "dark"]) for (const [k, [v]] of Object.entries(TH.TOKENS)){
+    const want = site[side][v === "--on-accent" ? "panel" : v.slice(2)];
+    assert.equal(d[side][k], want, `Default ${side} ${k} matches site ${v}`);
+  }
+}
 console.log("core tests passed");

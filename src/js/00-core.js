@@ -68,6 +68,9 @@ $("#home").addEventListener("click", e => { if (e.target.closest("a")) return;
   const g = e.target.closest("[data-go],[data-go-cat]");
   if (!g){ const c = e.target.closest(".homecat"); if (c) homeBig(c.dataset.sec); return }
   g.dataset.go ? $("#t-" + g.dataset.go).click() : goCat(g.dataset.goCat); window.scrollTo({top: $("nav").offsetTop - 8}) });
+// Home sprites: data-ic="i:<item>|m:<mob>|s:<skill>" -> the icon already in D (no new requests)
+document.querySelectorAll("img[data-ic]").forEach(im => { const [k, id] = im.dataset.ic.split(":"), b = {i: D.iicons, m: D.mobimg, s: D.icons}[k]?.[id];
+  if (b) im.src = "data:image/png;base64," + b; else im.remove() });
 $("header h1").addEventListener("click", goHome);
 // read the last page before goHome() overwrites it with "home" (that made every visit land on Home)
 let SAVEDTAB = null; try { SAVEDTAB = localStorage.getItem("tab") } catch(e) {}
