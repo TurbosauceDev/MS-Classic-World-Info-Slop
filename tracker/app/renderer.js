@@ -118,7 +118,7 @@ function renderCheck(){
     ["Pickup / EXP lines", c.lines, "None yet. Kill something; if this stays empty, the chat box may be covered or scrolled."],
     ["Map name", c.map, c.mapWhy || "Not read yet."],
     ["Job", settings.job ? "picked by hand" : c.job, c.jobWhy || "Not read yet."],
-    ["Potions / arrows", c.use, "No potion, food or arrow counts found. Put your potions on the quick slots (or open the Use tab), or press <b>Show me where my potions are</b> (Settings) and drag a box around them."]];
+    ["Potions / arrows", c.use, "No potion, food or arrow counts found. Put your potions on the quick slots (or open the Use tab), or press <b>Show me where my potions are</b> (Preferences) and drag a box around them."]];
   if (settings.partyCode || c.party) rows.push(["Party window", c.party && "party of " + c.party, "Not found. Open the party window so the party size is read; without it a party is only guessed from bonus EXP lines."]);
   box.classList.remove("hidden");
   // while checking: one line of ✓ / … per reader; after: what works on one line, a row with the fix for each that doesn't
@@ -1114,6 +1114,12 @@ $("#helpBtn").onclick = openHelp;
 $("#helpClose").onclick = () => showTab(beforeHelp);
 document.addEventListener("keydown", e => { if (e.key === "F1"){ e.preventDefault(); openHelp() } });
 // title bar: File / View / Help open the app's menus under the button
+// Preferences: a popup from the title bar (was the Settings tab). Esc, ✕ or a click outside closes it
+function openPrefs(){ $("#prefsPop").classList.remove("hidden"); $("#prefsPop").scrollTop = 0; $("#prefsBack").classList.remove("hidden"); $("#prefsBtn").setAttribute("aria-expanded", "true"); $("#prefsClose").focus() }
+function closePrefs(){ if ($("#prefsPop").classList.contains("hidden")) return; $("#prefsPop").classList.add("hidden"); $("#prefsBack").classList.add("hidden"); $("#prefsBtn").setAttribute("aria-expanded", "false"); $("#prefsBtn").focus() }
+$("#prefsBtn").onclick = () => $("#prefsPop").classList.contains("hidden") ? openPrefs() : closePrefs();
+$("#prefsClose").onclick = closePrefs; $("#prefsBack").onclick = closePrefs;
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !keyWait && !drag && $("#bugPop").classList.contains("hidden") && !$("#prefsPop").classList.contains("hidden")) closePrefs() });
 for (const b of document.querySelectorAll("#titlebar [data-menu]")) b.onclick = () => { const r = b.getBoundingClientRect(); host.menu?.(b.dataset.menu, r.left, r.bottom) };
 host.onMenu?.(what => {
   if (what === "help") openHelp();
@@ -1128,7 +1134,7 @@ host.onMenu?.(what => {
   else if (what === "startStop"){ if (!$("#go").disabled) $("#go").click() }
   else if (what === "pause") $("#pauseBtn").click();
   else if (what === "invNow"){ if (timer == null || !engine?.invNow) $("#status").textContent = "Press Start first."; else { engine.invNow(); $("#status").textContent = "Reading your open inventory tab: keep it open a few seconds..." } }
-  else if (what === "update"){ showTab("settings"); $("#updCheck").scrollIntoView(); $("#updCheck").click() }
+  else if (what === "update"){ openPrefs(); $("#updCheck").scrollIntoView(); $("#updCheck").click() }
 });
 // Theme (Settings): the presets (themes.js) and the player's own (settings.themes); settings.theme = "p:Name" or "u:Name".
 // Edit colours previews live; Save keeps it as one of yours; share as a one-line code or a .mstheme file

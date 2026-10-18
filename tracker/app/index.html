@@ -110,6 +110,12 @@
   .sw .nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .thGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:4px 10px; margin:6px 0; }
   .thGrid label { display:flex; align-items:center; gap:6px; font-size:12px; } .thGrid input[type=color] { width:34px; height:24px; padding:0 2px; cursor:pointer; }
+  /* Preferences popup (title bar): settings over the panel, Session/Loot/History stay the tabs (Danny, 2026-10-18) */
+  #prefsBack { position:fixed; inset:32px 0 0; z-index:56; background:rgba(0,0,0,.35); }
+  #prefsPop { position:fixed; top:40px; left:8px; right:8px; bottom:8px; z-index:57; overflow:auto; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 10px; box-shadow:0 8px 28px rgba(0,0,0,.35); }
+  #prefsPop .pophead { display:flex; align-items:center; justify-content:space-between; position:sticky; top:-8px; background:var(--bg); padding:4px 0 6px; z-index:1; }
+  #prefsPop .pophead h2 { margin:0; font-size:15px; color:var(--accent); }
+  #titlebar button[aria-expanded=true] { background:var(--accent-soft); color:var(--ink); }
   body.through #titlebar { box-shadow:inset 0 -2px 0 var(--warn); } body.through #titlebar .tbname::after { content:" · click-through"; color:var(--warn); }
   button.keyset { min-width:118px; padding:4px 10px; font-size:12px; } button.keyset.bad { outline:2px solid var(--bad); }
   body.dragging #dock { min-height:40px; border:2px dashed var(--accent); border-radius:10px; margin-bottom:8px; padding:4px; }
@@ -133,17 +139,17 @@
 </style>
 </head>
 <body>
-  <div id="titlebar"><span class="tbname">Grind Tracker</span><button data-menu="File">File</button><button data-menu="View">View</button><button data-menu="Help">Help</button></div>
+  <div id="titlebar"><span class="tbname">Grind Tracker</span><button data-menu="File">File</button><button data-menu="View">View</button><button id="prefsBtn" aria-haspopup="dialog" aria-expanded="false">Preferences</button><button data-menu="Help">Help</button></div>
   <div class="card" id="mini" title="Click for the full window"><span class="k">EXP/hr</span> <span class="v" id="miniExp">-</span>
     · <span class="k">next level</span> <span class="v" id="miniTtl">-</span><div class="note" id="miniNote"></div><div class="note" id="miniParty"></div><div class="note" id="miniGoal"></div></div>
   <div class="card hidden" id="guide">
     <div class="v">Welcome</div>
     <ol>
       <li>Press <b>Start</b> with MapleStory open. Keep the minimap and the EXP bar on screen; the chat box shows the kill and pickup lines.</li>
-      <li>Your job is read from the status bar. If it reads wrong, pick it under <b>Settings</b>.</li>
-      <li>Playing in a party? Everyone types the same <b>party code</b> (Settings) to see each other's EXP/hr live.</li>
+      <li>Your job is read from the status bar. If it reads wrong, pick it under <b>Preferences</b>.</li>
+      <li>Playing in a party? Everyone types the same <b>party code</b> (Preferences) to see each other's EXP/hr live.</li>
     </ol>
-    <p>Share your runs with other players? Sends map, level, job, EXP, kills, drops and KPQ rounds. Your character name goes only with KPQ rounds, for the KPQ board (Settings can turn that off). It feeds the
+    <p>Share your runs with other players? Sends map, level, job, EXP, kills, drops and KPQ rounds. Your character name goes only with KPQ rounds, for the KPQ board (Preferences can turn that off). It feeds the
       speed check after each run, the leaderboards and the Confirmed Drops on the site.</p>
     <p><button id="guideShare">Share</button> <button id="guideNo" class="alt">Don't share</button></p>
   </div>
@@ -178,7 +184,7 @@
   <div class="card hidden" id="selfcheck"></div>
   <div id="dock"></div>
   <div class="tabs" role="tablist">
-    <button data-tab="session" class="sel">Session</button><button data-tab="loot">Loot</button><button data-tab="hist" id="histBtn">History</button><button data-tab="settings">Settings</button>
+    <button data-tab="session" class="sel">Session</button><button data-tab="loot">Loot</button><button data-tab="hist" id="histBtn">History</button>
   </div>
   <section data-tab="session">
     <div class="card" data-box="stats" data-title="Session numbers"><h3>Session numbers</h3><div class="grid">
@@ -255,18 +261,18 @@
         <li><b>Loot</b>: mesos in and out, items looted and consumables used, each with a total.</li>
         <li>Every box can be moved by its <b>⠿</b> grip (onto another box, onto a tab, or above the tabs to see it on every tab)
           and folded with <b>–</b>. Drop it on another box's left or right edge to put the two side by side; drag the bar between
-          them to resize. Settings → Reset box layout puts them back.</li>
+          them to resize. Preferences → Reset box layout puts them back.</li>
         <li><b>Snapshots</b>: EXP/hr from just two readings of the EXP bar (start and now), like mapleexp.com. A good check
           on the live number. Type a level or % to fix one that read wrong.</li>
         <li><b>History</b>: past sessions, your last 7 days, how long each level took, and Export CSV.</li>
-        <li><b>Settings</b>: job, potion box, alerts, goal level, party code, sharing, updates and bug reports.</li>
+        <li><b>Preferences</b>: job, potion box, alerts, goal level, party code, sharing, updates and bug reports.</li>
       </ul></details>
       <details><summary>Potions or arrows not counted</summary><ul>
         <li>Put them on your quick slots, or open the Use tab of your inventory.</li>
         <li>Still ✗? Make sure the numbers under the slots aren't covered (by the chat box, a window or the mouse), then send a bug report.</li>
       </ul></details>
       <details><summary>Playing in a party</summary><ul>
-        <li>Everyone types the same <b>party code</b> in Settings. You'll see each other's EXP/hr, level and job, updated
+        <li>Everyone types the same <b>party code</b> in Preferences. You'll see each other's EXP/hr, level and job, updated
           every minute. A name only shows if you type one.</li>
         <li>Open the in-game party window so the tracker knows the party size.</li>
       </ul></details>
@@ -285,40 +291,42 @@
         <li>During KPQ the session pauses on any map that isn't a KPQ stage (Kerning City between rounds) and picks back up
           on the next stage. Each trip into the stages is one round.</li>
         <li>Bonus or Rush is just the label saved with the session. History shows rounds, and EXP/hr counts time in the stages only.</li>
-        <li>KPQ rounds don't count as farming runs. With sharing on, each round cleared from the 1st stage goes to the KPQ leaderboard on the site instead (clear time, party size, level, job and your character name, unless you turn the name off in Settings).</li>
+        <li>KPQ rounds don't count as farming runs. With sharing on, each round cleared from the 1st stage goes to the KPQ leaderboard on the site instead (clear time, party size, level, job and your character name, unless you turn the name off in Preferences).</li>
       </ul></details>
       <details><summary>Window tips</summary><ul>
         <li><b>Mini</b> shrinks the window to a strip with EXP/hr and time to level. Click the strip to bring it back.</li>
-        <li>The window stays on top of the game. Turn that off in Settings → Window and sharing.</li>
+        <li>The window stays on top of the game. Turn that off in Preferences → Window and sharing.</li>
         <li>Ctrl + and Ctrl - make the text bigger or smaller.</li>
         <li><b>Pause</b> (next to Start while tracking) stops the clock for a break; nothing picked up counts until you press <b>Go on</b>.</li>
       </ul></details>
       <details><summary>Shortcuts and themes</summary><ul>
         <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, Ctrl+Shift+S Start/Stop, P Pause, M Mini bar, H hide/show, I read the open inventory tab, B report a bug,
-          X click-through (clicks go to the game under the window; the same keys turn it off), N mark the moment in the run note, G save the numbers as a picture, U mute sounds. Change or turn them off in Settings → Preferences.</li>
-        <li>Settings → Theme: pick a colourway, or <b>Edit colours</b> and save your own. <b>Copy share code</b> gives a one-line code friends paste under Share a theme; <b>Save as file</b> makes a .mstheme file.</li>
-        <li>Settings → Preferences → See-through window makes the tracker partly transparent over the game.</li>
+          X click-through (clicks go to the game under the window; the same keys turn it off), N mark the moment in the run note, G save the numbers as a picture, U mute sounds. Change or turn them off in Preferences → Shortcuts and window.</li>
+        <li>Preferences → Theme: pick a colourway, or <b>Edit colours</b> and save your own. <b>Copy share code</b> gives a one-line code friends paste under Share a theme; <b>Save as file</b> makes a .mstheme file.</li>
+        <li>Preferences → Shortcuts and window → See-through window makes the tracker partly transparent over the game.</li>
       </ul></details>
       <details><summary>Something reads wrong</summary><ul>
-        <li><b>Ctrl+Shift+B</b> (even with the game in front; changeable in Settings → Preferences), the Bug button or Settings → <b>Report a bug</b> saves the last ~25 seconds of game pictures and a log to a folder. Your character
+        <li><b>Ctrl+Shift+B</b> (even with the game in front; changeable in Preferences → Shortcuts and window), the Bug button or Preferences → <b>Report a bug</b> saves the last ~25 seconds of game pictures and a log to a folder. Your character
           name shows in those pictures. Send the folder to Danny.</li>
         <li>File → Open frames and bug reports folder shows where they are.</li>
       </ul></details>
       <details><summary>Updates</summary><ul>
         <li>Updates download by themselves and install when you close the app.</li>
-        <li>Settings → <b>Check for updates</b> checks now. When one is ready, a banner on top offers <b>Restart and
+        <li>Preferences → <b>Check for updates</b> checks now. When one is ready, a banner on top offers <b>Restart and
           update</b>; it saves your session first.</li>
       </ul></details>
       <details><summary>Privacy and safety</summary><ul>
         <li>The tracker only looks at the game window's picture, the same way OBS or Discord screen share does. It never
           reads the game's memory or files and never presses keys or clicks for you.</li>
-        <li>Sharing (your choice, Settings) sends map, level, job, EXP, kills and drops per 15 minutes, never your character name. The name only goes with KPQ rounds, for the KPQ board
-          (Settings can turn that off).</li>
+        <li>Sharing (your choice, Preferences) sends map, level, job, EXP, kills and drops per 15 minutes, never your character name. The name only goes with KPQ rounds, for the KPQ board
+          (Preferences can turn that off).</li>
       </ul></details>
       <div class="note" id="helpVer"></div>
     </div>
   </section>
-  <section data-tab="settings" class="hidden">
+  <div id="prefsBack" class="hidden"></div>
+  <section id="prefsPop" class="hidden" role="dialog" aria-modal="true" aria-labelledby="prefsTitle">
+    <div class="pophead"><h2 id="prefsTitle">Preferences</h2><button id="prefsClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>
     <div class="card"><h3>Reading the game</h3>
       <div class="row"><label>Job <select id="job"><option value="">Auto (read from the status bar)</option><option>Beginner</option><option>Swordman</option><option>Fighter</option><option>Page</option><option>Spearman</option><option>Magician</option><option>Wizard (Fire,Poison)</option><option>Wizard (Ice,Lightning)</option><option>Cleric</option><option>Archer</option><option>Hunter</option><option>Crossbowman</option><option>Rogue</option><option>Assassin</option><option>Bandit</option></select></label></div>
       <label class="chk"><input type="checkbox" id="autoPause"> <span>Pause when the game screen is gone (Cash Shop, changing channel)</span></label>
@@ -350,7 +358,7 @@
       <div class="row"><input id="thCode" aria-label="Share code" placeholder="Paste a share code (MSCT1...)" style="flex:1;min-width:0"> <button id="thPaste" class="alt">Add</button></div>
       <div class="note" id="thNote" role="status"></div>
     </div>
-    <div class="card" id="prefs"><h3>Preferences</h3>
+    <div class="card" id="prefs"><h3>Shortcuts and window</h3>
       <div class="k">Keyboard shortcuts</div>
       <div class="note">These work from anywhere, the game too. Click one and press the new keys (Ctrl, Alt or Shift plus a key, or an F key on its own); Esc cancels, Backspace turns it off.
         While the tracker runs, a shortcut's keys don't reach other programs, so free any that clash with your game keys.</div>
@@ -370,7 +378,7 @@
       <div class="row"><button id="frames" class="alt" title="One full game picture every 3 s for 3 minutes">Save sample frames</button></div>
     </div>
   </section>
-<div id="bugPop" class="hidden" style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:12px">
+<div id="bugPop" class="hidden" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:12px">
   <div class="card" style="width:100%;max-width:420px;margin:0"><h3>Report a bug</h3>
     <div class="note" id="bugPopInfo">The last ~25 s of game pictures were grabbed just now.</div>
     <textarea id="bugPopNote" maxlength="2000" rows="3" style="width:100%;box-sizing:border-box" placeholder="What read wrong? (optional, e.g. &quot;Red Potion pickup not named&quot;)"></textarea>

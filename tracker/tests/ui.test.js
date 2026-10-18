@@ -36,9 +36,10 @@ const path = require("path"), {chromium} = require("playwright");
   await page.dblclick("#go");
   await page.waitForTimeout(1500);
   // updates: Check for updates -> downloading -> ready banner; Restart and update stops (saves) the session first
-  await page.click(".tabs [data-tab=settings]"); await page.click("#updCheck"); await page.waitForTimeout(100);
+  await page.click("#prefsBtn"); await page.click("#updCheck"); await page.waitForTimeout(100);
   const up = await page.evaluate(() => [document.querySelector("#appVer").textContent, document.querySelector("#updNote").textContent, document.querySelector("#updText").textContent]);
   if (up[0] !== "0.2.17" || !/0\.2\.18 is ready/.test(up[1]) || !await page.isVisible("#updBanner") || !await page.isVisible("#updInstall")) throw new Error("update: " + up);
+  await page.click("#prefsClose");
   await page.click(".tabs [data-tab=session]");
   // the top card: tracking state and Stop; tabs switch sections
   const top = await page.evaluate(() => [document.querySelector("#stateText").textContent, document.querySelector("#go").textContent, document.querySelector("#go").classList.contains("on")]);
@@ -199,11 +200,11 @@ const path = require("path"), {chromium} = require("playwright");
     layoutLoad(saved); const re = document.querySelector("#mesoBox").parentElement.className + "/" + Math.round(document.querySelector("#usedBox").getBoundingClientRect().width);
     return [flat, re, document.querySelector("#usedBox").parentElement.className] });
   if (unw[0] !== 0 || !unw[1].startsWith("boxcol/") || unw[2] !== "boxrow") throw new Error("unwrap/load: " + unw);
-  await page.click(".tabs [data-tab=settings]"); await page.click("#layoutReset"); if ((await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join())) !== "kpq,alerts,snaps") throw new Error("reset folds");
+  await page.click("#prefsBtn"); await page.click("#layoutReset"); await page.click("#prefsClose"); if ((await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join())) !== "kpq,alerts,snaps") throw new Error("reset folds");
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click())); await page.setViewportSize({width: 1280, height: 720});
   // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened
   await page.waitForTimeout(3200);
-  await page.click(".tabs [data-tab=settings]"); await page.fill("#reportNote", "map read wrong"); await page.click("#report"); await page.waitForTimeout(100);
+  await page.click("#prefsBtn"); await page.fill("#reportNote", "map read wrong"); await page.click("#report"); await page.waitForTimeout(100); await page.evaluate(() => closePrefs());
   const rep = await page.evaluate(() => [window.report, window.opened]);
   if (!rep[0] || rep[0].frames < 1 || rep[0].info.note !== "map read wrong" || !rep[0].info.log.some(l => l.kind === "event") || !rep[0].info.log.some(l => l.kind === "status")
     || !rep[0].info.check || rep[1] !== "report-2026-10-17T20-00-00") throw new Error("report: " + JSON.stringify(rep).slice(0, 300));
@@ -269,8 +270,13 @@ const path = require("path"), {chromium} = require("playwright");
   const ask = await page.textContent(del), before = await page.evaluate(() => window.deleted);
   await page.click(del); await page.waitForTimeout(100);
   if (ask !== "Delete?" || before || !(await page.evaluate(() => window.deleted > 0))) throw new Error("delete session: " + ask);
-  // themes (Settings): a preset swatch recolours the page and the title bar; the editor saves your own; share code round trip
-  await page.click('.tabs button[data-tab="settings"]');
+  // Preferences: a popup from the title bar; the panel keeps only Session, Loot and History (Danny, 2026-10-18)
+  const tabs = await page.$$eval(".tabs button", b => b.map(x => x.dataset.tab).join());
+  if (tabs !== "session,loot,hist") throw new Error("panel tabs: " + tabs);
+  await page.click("#prefsBtn"); if (!await page.isVisible("#prefsPop #themeSw")) throw new Error("preferences popup not shown");
+  await page.keyboard.press("Escape"); if (await page.isVisible("#prefsPop")) throw new Error("Esc didn't close preferences");
+  // themes (Preferences): a preset swatch recolours the page and the title bar; the editor saves your own; share code round trip
+  await page.click("#prefsBtn");
   const sw = await page.$$eval("#themeSw [data-th]", b => b.map(x => x.dataset.th));
   if (sw.length < 12 || sw[0] !== "p:Default") throw new Error("theme swatches: " + sw);
   await page.click('#themeSw [data-th="p:Slime"]'); await page.waitForTimeout(50);
@@ -320,7 +326,7 @@ const path = require("path"), {chromium} = require("playwright");
   const rows = await page.$$eval("#keyRows [data-key]", b => b.length);
   if (!/\[.*\] mark/.test(note) || pic?.join() !== "true,true" || mute.join() !== "true,true" || await page.evaluate(() => window.st.muted) !== false || !thr[0] || !/Ctrl \+ Shift \+ X turns it off/.test(thr[1]) || rows !== 11)
     throw new Error("more shortcuts: " + JSON.stringify({note, pic, mute, thr, rows}));
-  await page.click("#updGo"); await page.waitForTimeout(100);
+  await page.click("#prefsClose"); await page.click("#updGo"); await page.waitForTimeout(100);
   if (!await page.evaluate(() => window.installed)) throw new Error("restart and update");
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
