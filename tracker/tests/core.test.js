@@ -236,7 +236,18 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
 { const s = createSession(G);
   s.add({t: sec(0), type: "inv", tab: "use", items: {"2060001": 1015}, stacks: {"2060001": 2}, unknown: 0});
   s.add({t: sec(120), type: "inv", tab: "use", items: {"2060001": 800}, stacks: {"2060001": 1}, unknown: 1});
-  assert.ok(!s.stats().used.some(x => x.id === "2060001")) }
+  assert.ok(!s.stats().used.some(x => x.id === "2060001" && x.n)) }
+// a Bronze Arrow stack never read at the first look (marked partial): 2,183 -> 2,767 is not +584 arrows (Danny's KPQ run, 2026-10-18)
+{ const s = createSession(G);
+  s.add({t: sec(0), type: "inv", tab: "use", items: {"2060001": 2183}, stacks: {"2060001": 3}, partial: {"2060001": 1}, unknown: 1});
+  s.add({t: sec(120), type: "inv", tab: "use", items: {"2060001": 2767}, stacks: {"2060001": 4}, unknown: 0});
+  assert.ok(!s.stats().inv.some(x => x.id === "2060001")) }
+// arrows left: every stack on the Use tab (not partial), quick-slot totals as they change; listed before any are used
+{ const s = createSession(G);
+  s.add({t: sec(0), type: "inv", tab: "use", items: {"2060001": 2775, "2000001": 22}, unknown: 0});
+  s.add({t: sec(5), type: "have", items: {"2000001": 21}});
+  const u = Object.fromEntries(s.stats().used.map(x => [x.id, [x.n, x.have]]));
+  assert.deepStrictEqual(u["2060001"], [0, 2775]); assert.strictEqual(u["2000001"], undefined, "a potion not used isn't listed") }
 // went down while showing, then unread: what went down counts (Danny's Warrior Potion 2 -> 1, then gone, 2026-10-18)
 { const s = createSession(G);
   s.add({t: sec(0), type: "inv", tab: "use", items: {"2002000": 2, "2010003": 75}, unknown: 0});

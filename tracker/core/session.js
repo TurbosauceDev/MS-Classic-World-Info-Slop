@@ -15,6 +15,7 @@
      {t, type: "map",   id, name?}        map read from the minimap (id null: a map our data doesn't have, name as read)
      {t, type: "party", size}             party size from the party HP bars (1 = solo)
      {t, type: "job",   name}             class read from the screen
+     {t, type: "have",  items}            {id: count} on the quick slots (a quick slot shows the item's total)
      {t, type: "use",   id, n}            n of an item used up (potion, food, arrows), from the quick-slot / Use-tab counts
      {t, type: "useseen"}                 item counts are on screen (so nothing used = 0, not unknown)
      {t, type: "wallet", n}               the meso total in the inventory window (spending shows here, pickups alone don't)
@@ -28,7 +29,7 @@
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
       msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, itemT: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
-      pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null, used: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
+      pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null, used: {}, have: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
@@ -84,6 +85,8 @@
           // gone from the tab while some slots didn't read: most likely one of those, not all used up (Danny's Lemons, 2026-10-18)
           // ...unless it went down while it still showed: that much was used (Danny's Warrior Potion 2 -> 1, then unread, 2026-10-18)
           if (!last.items[id] && last.unknown > 0){ const lo = low[id]; if (lo == null || lo >= (first.items[id] || 0)) continue; n = lo - first.items[id] }
+          // a stack of it didn't read at either look (and no earlier read of that slot to fill in): its total is short, not changed
+          if (first.partial[id] || last.partial[id]) continue;
           // one stack fewer and more slots unread than at the first look: a stack that didn't read, not used (Danny's arrows, 2026-10-18)
           if (n < 0 && last.unknown > first.unknown && (last.stacks[id] || 0) < (first.stacks[id] || 0)) continue;
           if (n && !(G.kpqItems || []).includes(id)) out.push({id, tab, n, was: first.items[id] || 0, now: last.items[id] || 0, alike: last.alike[id] || first.alike[id] || 1, name: G.items[id]?.n || "Item " + id});
@@ -122,9 +125,10 @@
         // the inventory's open tab read: kept as first and latest per tab (Equip, Use, Etc)
         case "inv": {
           if (!e.tab || !e.items) break;
-          const read = {t: e.t, items: e.items, alike: e.alike || {}, stacks: e.stacks || {}, unknown: e.unknown || 0};
+          const read = {t: e.t, items: e.items, alike: e.alike || {}, stacks: e.stacks || {}, partial: e.partial || {}, unknown: e.unknown || 0};
           const tab = S.inv[e.tab] ||= {first: read, low: {}}; tab.last = read;
-          for (const [id, n] of Object.entries(e.items)) if (n > 0 && !(tab.low[id] <= n)) tab.low[id] = n;   // fewest seen per item
+          for (const [id, n] of Object.entries(e.items)) if (n > 0 && !read.partial[id] && !(tab.low[id] <= n)) tab.low[id] = n;   // fewest seen per item
+          if (e.tab === "use"){ for (const id of Object.keys(S.have)) if (!(id in e.items) && !read.unknown) delete S.have[id]; for (const [id, n] of Object.entries(e.items)) if (!read.partial[id]) S.have[id] = n }
           break;
         }
         case "itemraw": {
@@ -136,6 +140,8 @@
           break;
         }
         case "wallet": if (Number.isFinite(e.n) && e.n >= 0){ if (S.walletFirst === null) S.walletFirst = e.n; S.walletLast = e.n } break;
+        // how many of each counted item there are now (all its stacks on screen: quick slots or the open Use tab)
+        case "have": for (const [id, n] of Object.entries(e.items || {})) if (n >= 0) S.have[String(id)] = n; break;
         case "use": { S.useSeen = true; const n = Math.max(0, e.n | 0); if (n) S.used[String(e.id)] = (S.used[String(e.id)] || 0) + n; break }
         case "useseen": S.useSeen = true; break;
         case "bar": {
@@ -236,8 +242,11 @@
       for (const g of inv) if (g.tab === "use" && g.n < 0 && g.alike === 1 && -g.n > (usedN[g.id] || 0)) usedN[g.id] = -g.n;
       // "I only buy meat and lemons": the potions they name came from drops and quests, so they cost nothing (Danny, 2026-10-18)
       const free = new Set(opts.freeIds || []);
+      // arrows and stars carried: listed even before any are counted used, with how many are left (Danny: "you should be
+      // able to see exactly how many arrows i have each time", 2026-10-18)
+      for (const id of Object.keys(S.have)) if (/^20(60|61|70)/.test(id) && !(id in usedN)) usedN[id] = 0;
       const used = Object.entries(usedN).map(([id, n]) => { const each = free.has(id) ? 0 : G.buy?.[id] ?? G.pw?.[id]?.[0] ?? null;
-        return {id, name: G.items[id]?.n || "Item " + id, n, each, total: each == null ? null : each * n, free: free.has(id)} }).sort((a, b) => (b.total || 0) - (a.total || 0));
+        return {id, name: G.items[id]?.n || "Item " + id, n, each, total: each == null ? null : each * n, free: free.has(id), have: S.have[id] ?? null} }).sort((a, b) => (b.total || 0) - (a.total || 0) || b.n - a.n);
       const usedCost = used.reduce((a, u) => a + (u.total || 0), 0);
       const mobs = Object.entries(S.byMob).map(([id, m]) => ({id, name: G.mobs[id]?.[0] || "Monster " + id, ...m,
         mesoPerKill: m.kills ? m.mesos / m.kills : 0})).sort((a, b) => b.kills - a.kills);

@@ -642,6 +642,8 @@
     // pink tab wins over a pale one (Danny's frames, 2026-10-18)
     const pink = (x, y) => { const i = px(x, y); return Math.abs(d[i] - 234) < 26 && Math.abs(d[i + 1] - 101) < 26 && Math.abs(d[i + 2] - 129) < 26 };
     const pale = (x, y) => { const i = px(x, y); return d[i] >= 235 && d[i + 1] >= 195 && d[i + 1] <= 228 && d[i + 2] >= 200 && d[i + 2] <= 236 && d[i] - d[i + 1] >= 18 };
+    // the open tab's pink also pulses between the two (f1a4b2 halfway, Danny's Etc tab "not found", 2026-10-18): any rose in between
+    const rose = (x, y) => { const i = px(x, y), r = d[i], g = d[i + 1], b = d[i + 2]; return r >= 220 && r - g >= 50 && b - g >= 6 && b - g <= 45 && r - b >= 30 };
     const X0 = box ? Math.max(0, box.x0) : 0, X1 = box ? Math.min(w, box.x1) : w;
     for (let y = Math.max(22, box ? box.y0 : 0), Y1 = Math.min(h - 3, box ? box.y1 : h); y < Y1; y++){
       for (let x = X0; x < X1; x += 8){
@@ -653,7 +655,7 @@
         // the top row is darker and broken under a pale open tab (Danny's Etc tab): the line's full width may first show a row lower
         const top = red(a + 5, y - 1) ? y - 1 : y;
         if (b - a < 190 || b - a > 215 || !red(a + 5, top + 1) || !red(a + 5, top + 2) || red(a + 5, top - 1) || a + 200 >= w) continue;
-        for (const is of [pink, pale]) for (let yy = top - 20; yy < top - 1; yy++) for (let xx = a; xx < a + 200; xx++) if (is(xx, yy) && is(xx + 1, yy) && is(xx + 2, yy)){
+        for (const is of [pink, rose, pale]) for (let yy = top - 20; yy < top - 1; yy++) for (let xx = a; xx < a + 200; xx++) if (is(xx, yy) && is(xx + 1, yy) && is(xx + 2, yy)){
           const off = xx - a, tab = INV_TABS.reduce((p, q) => Math.abs(q[1] - off) < Math.abs(p[1] - off) ? q : p);
           return Math.abs(tab[1] - off) <= 8 ? {x: a, y: top, tab: tab[0]} : null;
         }
@@ -690,7 +692,7 @@
   // unknown = filled slots whose item didn't match. Equips show no count (1 each).
   function readInventory(img, inv, cands, cache = null){
     const {w, d} = img, nums = readCounts(img, {x0: inv.x, x1: inv.x + 190, y0: inv.y + 28, y1: inv.y + 37 + 34 * 5 + 2});
-    const slots = []; let unknown = 0;
+    const slots = [], missed = []; let unknown = 0;
     for (let r = 0; r < 6; r++) for (let c = 0; c < 5; c++){
       const sx = inv.x + 5 + 36 * c, cy = inv.y + 37 + 34 * r;
       if (cy + 4 >= img.h || sx + 32 >= w) continue;
@@ -704,10 +706,10 @@
       const key = inv.tab + "," + sx + "," + cy + "," + (num ? num.end : "") + "," + sig;
       let ic = cache?.get(key);
       if (ic === undefined){ ic = slotIcon(img, sx, cy, num ? num.end : sx - 12, cands); if (cache){ if (cache.size > 400) cache.clear(); cache.set(key, ic) } }
-      if (!ic){ unknown++; continue }
+      if (!ic){ unknown++; missed.push(r * 5 + c); continue }
       slots.push({i: r * 5 + c, ids: ic.ids, n: num ? num.n : inv.tab === "equip" ? 1 : null});
     }
-    return {tab: inv.tab, slots, unknown};
+    return {tab: inv.tab, slots, unknown, missed};
   }
 
   function createReaders(G, icons = null){
@@ -838,6 +840,10 @@
       for (const id of Object.keys(after)) if (!(id in before) && gone.has(id)){ pend.set(id, gone.get(id)); gone.delete(id) }
       spots = now; info.counts = nums.length; info.useSpots = now.size;
       const ev = Object.entries(drops).map(([id, n]) => ({t, type: "use", id, n}));
+      // quick slots (counts outside the inventory window) show the item's total: sent when one changes
+      const inInv = k => { if (!invPx) return false; const [x, y] = k.split(",").map(Number); return x >= invPx.x - 4 && x <= invPx.x + 200 && y >= invPx.y && y <= invPx.y + 240 };
+      const have = {}; for (const [k, v] of now) if (!inInv(k)) have[v.id] = Math.max(have[v.id] || 0, v.n);
+      const hk = JSON.stringify(have); if (hk !== lastHave && Object.keys(have).length){ lastHave = hk; ev.push({t, type: "have", items: have}) }
       // once a minute while counts are visible: the session knows "nothing used" is a real 0, not "couldn't see"
       if (now.size && t - lastSeenEv >= 60e3){ lastSeenEv = t; ev.push({t, type: "useseen"}) }
       return ev;
@@ -856,7 +862,8 @@
        count once the same read comes twice running; "inv" events carry {tab, items: {id: n}, unknown} (unknown: slots
        whose item or count didn't read; one picture shared by several items is listed under the first of them) */
     let invIcons = null, byTab = null, lastInv = -Infinity, invBox = null, invNext = null, invHint = null, invLast = null;
-    const invSent = {}, invCache = new Map();
+    const invSent = {}, invCache = new Map(), slotMem = {};
+    let invPx = null, lastHave = "";
     function readInv(img, t){
       // where it was last seen (this session, or the last one: settings.invLast) first, then the box the player drew around
       // it, then the whole frame (a few ms: Danny's 34 frames of moving it around, 2026-10-18)
@@ -865,16 +872,26 @@
       if (!inv && invHint) inv = findInventory(img, {x0: Math.floor(invHint.x * img.w) - 4, x1: Math.ceil((invHint.x + invHint.w) * img.w) + 4,
         y0: Math.floor(invHint.y * img.h) - 4, y1: Math.ceil((invHint.y + invHint.h) * img.h) + 4});
       if (!inv) inv = findInventory(img);
-      if (inv){ invBox = {x0: inv.x - 12, x1: inv.x + 230, y0: inv.y - 3, y1: inv.y + 4}; invLast = {x: inv.x / img.w, y: inv.y / img.h}; info.invAt = invLast }
-      info.inv = inv ? inv.tab : null;
+      if (inv){ invBox = {x0: inv.x - 12, x1: inv.x + 230, y0: inv.y - 3, y1: inv.y + 4}; invLast = {x: inv.x / img.w, y: inv.y / img.h}; info.invAt = invLast; invPx = {x: inv.x, y: inv.y} }
+      info.inv = inv ? inv.tab : null; if (!inv) invPx = null;
       if (!inv?.tab || !byTab[inv.tab]) return null;
-      const r = readInventory(img, inv, byTab[inv.tab], invCache), items = {}, alike = {}, stacks = {};
-      for (const sl of r.slots){ if (sl.n === null){ r.unknown++; continue } items[sl.ids[0]] = (items[sl.ids[0]] || 0) + sl.n; stacks[sl.ids[0]] = (stacks[sl.ids[0]] || 0) + 1; if (sl.ids.length > 1) alike[sl.ids[0]] = sl.ids.length }
+      const r = readInventory(img, inv, byTab[inv.tab], invCache), items = {}, alike = {}, stacks = {}, partial = {};
+      /* a slot whose count (or picture) didn't read this time keeps what that slot read last time, when it was the same
+         item: a stack missed on one read used to drop out of the total, so arrows jumped 2,183 -> 2,775 -> 2,767 (one
+         800 stack in and out, Danny's KPQ runs, 2026-10-18). Never read at all: that item's total is marked partial */
+      const mem = slotMem[inv.tab] ||= new Map(), add = (ids, n) => { items[ids[0]] = (items[ids[0]] || 0) + n; stacks[ids[0]] = (stacks[ids[0]] || 0) + 1; if (ids.length > 1) alike[ids[0]] = ids.length };
+      for (const sl of r.slots){
+        if (sl.n !== null){ add(sl.ids, sl.n); mem.set(sl.i, {ids: sl.ids, n: sl.n}); continue }
+        const m = mem.get(sl.i);
+        if (m && m.ids[0] === sl.ids[0]) add(sl.ids, m.n); else { r.unknown++; partial[sl.ids[0]] = 1 }
+      }
+      for (const i of r.missed){ const m = mem.get(i); if (m){ add(m.ids, m.n); r.unknown-- } }
+      for (const i of [...mem.keys()]) if (!r.slots.some(sl => sl.i === i) && !r.missed.includes(i)) mem.delete(i);   // emptied
       const key = inv.tab + JSON.stringify(items) + r.unknown, steady = key === invNext;
       invNext = key;
       if (!steady || invSent[inv.tab] === key) return null;
       invSent[inv.tab] = key;
-      return {t, type: "inv", tab: inv.tab, items, alike, stacks, unknown: r.unknown, slots: r.slots.length + r.unknown};
+      return {t, type: "inv", tab: inv.tab, items, alike, stacks, partial, unknown: r.unknown, slots: r.slots.length + r.missed.length};
     }
     let info = {bar: false, partyWindow: null, counts: 0};
     return {readFrame, get info(){ return info }, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,

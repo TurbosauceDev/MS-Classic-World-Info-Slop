@@ -161,13 +161,15 @@ function render(){
   $("#miniExp").textContent = fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent;
   $("#miniNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
   $("#lootHr").innerHTML = mz(s.lootHr);
-  $("#usedHr").innerHTML = s.used.length ? sgm(-s.usedCostHr) : "-";
-  $("#netHr").innerHTML = s.used.length ? "net " + sgm(s.netHr) + "/hr (mesos + loot - used)" : "from the quick-slot counts";
-  $("#used").innerHTML = s.used.length ? `<tr class="th"><td>Item</td><td class="n">Used</td><td class="n">Each</td><td class="n">Cost</td></tr>`
-    + s.used.map(u => `<tr><td>${ico(u.id)}${esc(u.name)}</td><td class="n">×${fmt(u.n)}</td><td class="n dim">${u.free ? "free (drop)" : u.each == null ? "?" : mz(u.each)}</td><td class="n">${u.total == null ? "price unknown" : sgm(-u.total)}</td></tr>`).join("")
-    + `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.used.reduce((a, u) => a + u.n, 0))}</td><td></td><td class="n">${sgm(-s.usedCost)}</td></tr>` : "";
+  const anyUsed = s.used.some(u => u.n);
+  $("#usedHr").innerHTML = anyUsed ? sgm(-s.usedCostHr) : "-";
+  $("#netHr").innerHTML = anyUsed ? "net " + sgm(s.netHr) + "/hr (mesos + loot - used)" : "from the quick-slot counts";
+  // "Left": how many there are now (quick slots, or every stack on the Use tab the last time it showed)
+  $("#used").innerHTML = s.used.length ? `<tr class="th"><td>Item</td><td class="n">Used</td><td class="n">Left</td><td class="n">Each</td><td class="n">Cost</td></tr>`
+    + s.used.map(u => `<tr><td>${ico(u.id)}${esc(u.name)}</td><td class="n">×${fmt(u.n)}</td><td class="n" title="How many you have now (quick slot, or all stacks on the Use tab when it was last open)">${u.have == null ? "<span class=dim>?</span>" : fmt(u.have)}</td><td class="n dim">${u.free ? "free (drop)" : u.each == null ? "?" : mz(u.each)}</td><td class="n">${u.total == null ? "price unknown" : sgm(-u.total)}</td></tr>`).join("")
+    + `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.used.reduce((a, u) => a + u.n, 0))}</td><td></td><td></td><td class="n">${sgm(-s.usedCost)}</td></tr>` : "";
   $("#usedEmpty").classList.toggle("hidden", !!s.used.length);
-  $("#mesosNet").innerHTML = s.used.length ? "net " + sgm(s.netHr) + "/hr after potions" : "";
+  $("#mesosNet").innerHTML = anyUsed ? "net " + sgm(s.netHr) + "/hr after potions" : "";
   renderMesos(s);
   const bar = session.state.bar;
   $("#lvNow").textContent = s.level ? "Lv " + s.level + (bar ? " · " + bar.pct.toFixed(2) + "%" : "") : "";
@@ -221,7 +223,7 @@ const sgm = n => sg(n, true), mz = n => COIN + fmt(n);
 const cell = (k, v, note = "") => `<div><div class="k">${k}</div><div class="v">${v}</div>${note ? `<div class="note">${note}</div>` : ""}</div>`;
 function renderMesos(s){
   $("#mesoGrid").innerHTML = cell("Picked up", sgm(s.mesos), mz(s.mesosHr) + "/hr of farming") + cell("Per kill", mz(s.mesoPerKill), kills(s.kills))
-    + cell("Spent on consumables", s.used.length ? sgm(-s.usedCost) : "-", s.used.length ? mz(s.usedCostHr) + "/hr" : "")
+    + cell("Spent on consumables", s.used.some(u => u.n) ? sgm(-s.usedCost) : "-", s.used.some(u => u.n) ? mz(s.usedCostHr) + "/hr" : "")
     + cell("Items looted are worth", sgm(s.lootValue), "if sold at the prices below")
     + cell("Net", sgm(s.mesos + s.lootValue - s.usedCost), "picked up + items - consumables")
     + cell("Inventory mesos", s.walletNet == null ? "-" : sgm(s.walletNet), s.walletNet == null ? "open the inventory to read it" : "now vs. first look, shop trips included");
@@ -856,7 +858,7 @@ function showSummary(t1){
     + cell("EXP per active minute", fmt(perMin), bonus?.min > 0 ? `Bonus stage only: ${fmt(bonus.exp)} EXP in ${mss(bonus.min * 60)}` : "time spent farming only")
     + cell("Kills · deaths", `${fmt(s.kills)} · <span class="${s.deaths ? "neg" : ""}">${s.deaths}</span>`, kpq?.on ? `KPQ ${settings.kpqMode || "Bonus"}: ${kpq.rounds} round${kpq.rounds === 1 ? "" : "s"}` : "")
     + cell("Mesos looted", sgm(s.mesos), mz(s.mesos / clockH) + "/hr over the run")
-    + cell("Mesos used", s.used.length ? sgm(-s.usedCost) : "-", s.used.length ? "potions, food, arrows" : "nothing counted")
+    + cell("Mesos used", s.used.some(u => u.n) ? sgm(-s.usedCost) : "-", s.used.some(u => u.n) ? "potions, food, arrows" : "nothing counted")
     + cell("Items looted are worth", `<span class="pos">~${mz(s.lootValue)}</span>`, "approx., player-shop or NPC price")
     + cell("Net", sgm(net), sgm(net / clockH) + "/hr · mesos + items - used")
     + (s.walletNet != null ? cell("Inventory mesos", sgm(s.walletNet), "first look vs. last look") : "")

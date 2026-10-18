@@ -167,6 +167,28 @@ const WANT = [[91, "2010003"], [85, "2010005"], [29, "2000002"], [8, "2000001"],
     && fx.ptr === "use" && fx.mm > 50 && fx.fold && fx.fold < 50 && fx.k === 2 && fx.exit === "80000600" && fx.mini === null;
   console.log("KPQ run frames", fxOk ? "ok" : "FAIL " + JSON.stringify(fx));
   if (!fxOk) fail++;
+  // Danny's KPQ runs (2026-10-18, v0.2.42): bow arrows 1 + Bronze 592, 800, 800, 583 = 2,775. One stack's count missed on a
+  // read used to drop it from the total (2,183, then 2,775, then 1,965 / 2,652: "arrows jumping around"); a missed slot now
+  // keeps what it read last time, and a stack never read marks the total partial. And the Etc tab caught mid-pulse (f1a4b2)
+  const ka = await page.evaluate(async files => {
+    const load = async b64 => { const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode(); return im };
+    const frame = (im, blank) => { const c = document.createElement("canvas"); c.width = 1280; c.height = 720; const g = c.getContext("2d");
+      g.fillStyle = "#123"; g.fillRect(0, 0, 1280, 720); g.drawImage(im, 995, 190);
+      if (blank){ g.fillStyle = "#e0dfd4"; g.fillRect(1046, 250, 24, 10) }   // the 592's digits wiped (slot 1)
+      return {w: 1280, h: 720, d: g.getImageData(0, 0, 1280, 720).data, k: 1} };
+    const all = window.ALLI ||= await GrindReaders.loadIcons(GAMEDATA, GAMEDATA.iicons), im = await load(files.use), ok = frame(im), bad = frame(im, true);
+    const inv = (rd, f, t) => rd.readFrame(f, t).filter(e => e.type === "inv");
+    let rd = GrindReaders.createReaders(GAMEDATA, []); rd.setInvIcons(all);
+    const first = [...inv(rd, ok, 0), ...inv(rd, ok, 2100)][0]; rd.invNow();
+    const later = [...inv(rd, bad, 4200), ...inv(rd, bad, 6300)][0];
+    rd = GrindReaders.createReaders(GAMEDATA, []); rd.setInvIcons(all);
+    const cold = [...inv(rd, bad, 0), ...inv(rd, bad, 2100)][0];
+    return {first: first?.items["2060001"], later: later?.items["2060001"], laterUnknown: later?.unknown, cold: cold?.items["2060001"], coldPartial: cold?.partial?.["2060001"] || (cold?.unknown > 0 ? "unknown" : 0),
+      etc: GrindReaders.findInventory(frame(await load(files.etc)))?.tab};
+  }, {use: fs.readFileSync(path.join(dir, "use-arrows-kpq.png")).toString("base64"), etc: fs.readFileSync(path.join(dir, "etc-pulse-tab.png")).toString("base64")});
+  const kaOk = ka.first === 2775 && ka.later === 2775 && ka.laterUnknown === 0 && ka.cold === 2183 && ka.coldPartial && ka.etc === "etc";
+  console.log("arrow stacks + pulsing tab", kaOk ? "ok" : "FAIL " + JSON.stringify(ka));
+  if (!kaOk) fail++;
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (fail) throw new Error(fail + " frame(s) failed");
