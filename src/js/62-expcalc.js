@@ -1,6 +1,7 @@
 /* ---------------- EXP/hr calculator ---------------- */
 // two EXP readings + elapsed time -> measured EXP/hr, time to level, and the Where to train estimate for that map
-// (mapRates with the default build, × EXP card). Saved sessions live in localStorage "expc".
+// (mapRates with the default build, × EXP card). Saved sessions live in localStorage "expc". Two screenshots fill it in:
+// EXP bar via expBarRead (61-expbar.js), time from EXIF / file name / file time. "Save as image" draws a result card.
 (() => {
 const MAPS = {}, BYLABEL = {}, seen = {};
 for (const [id, [name, open]] of Object.entries(D.maps).sort((a, b) => a[1][0].localeCompare(b[1][0]))){
@@ -47,6 +48,94 @@ $("#ectimer").addEventListener("click", () => {
   save(); timerUi(); calc();
 });
 
+
+// ---- screenshots: EXP bar + when each was taken ----
+// JPEG camera time (EXIF DateTimeOriginal, else DateTimeDigitized / DateTime), as a local time; null if none
+function exifTime(buf){
+  try {
+    const v = new DataView(buf); if (v.getUint16(0) !== 0xFFD8) return null;
+    let o = 2;
+    while (o + 4 < v.byteLength && v.getUint8(o) === 0xFF){
+      const mk = v.getUint8(o + 1), len = v.getUint16(o + 2);
+      if (mk === 0xE1 && v.getUint32(o + 4) === 0x45786966){
+        const t = o + 10, le = v.getUint16(t) === 0x4949, u16 = i => v.getUint16(t + i, le), u32 = i => v.getUint32(t + i, le);
+        const tag = (ifd, id) => { const n = u16(ifd); for (let k = 0; k < n; k++){ const e = ifd + 2 + k * 12; if (u16(e) === id) return e } return -1 };
+        const str = e => { let s = ""; for (let k = 0; k < 19; k++) s += String.fromCharCode(v.getUint8(t + u32(e + 8) + k)); return s };
+        const ifd0 = u32(4), ex = tag(ifd0, 0x8769);
+        let e = ex >= 0 ? tag(u32(ex + 8), 0x9003) : -1;
+        if (e < 0 && ex >= 0) e = tag(u32(ex + 8), 0x9004);
+        if (e < 0) e = tag(ifd0, 0x0132);
+        const m = e >= 0 && str(e).match(/(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/);
+        return m ? new Date(m[1], m[2] - 1, m[3], m[4], m[5], m[6]).getTime() : null;
+      }
+      o += 2 + len;
+    }
+  } catch(e) {}
+  return null;
+}
+// a date and time in the file name: 2026-10-17 21.05.33, 20261017_210533, 261017_210533 ...
+function nameTime(name){
+  const m = name.match(/(?:^|\D)((?:20)?\d\d)[-_.]?(\d\d)[-_.]?(\d\d)[ _T-]*(\d\d)[-_.:h]?(\d\d)[-_.:m]?(\d\d)(?!\d)/);
+  if (!m) return null;
+  const y = +m[1] < 100 ? 2000 + +m[1] : +m[1], d = new Date(y, m[2] - 1, m[3], m[4], m[5], m[6]);
+  return m[2] >= 1 && m[2] <= 12 && m[3] >= 1 && m[3] <= 31 && m[4] < 24 && m[5] < 60 && m[6] < 60 ? d.getTime() : null;
+}
+let SHOTS = [];   // [{t, how, bar}] this visit only
+async function addShots(files, pasted){
+  files = [...files].filter(f => f.type.startsWith("image/")); if (!files.length) return;
+  $("#ecshot").textContent = "Reading…";
+  for (const f of files){
+    let t = null, how = "pasted";
+    if (!pasted){ t = exifTime(await f.slice(0, 131072).arrayBuffer()); how = "camera time";
+      if (t == null){ t = nameTime(f.name); how = "file name" }
+      if (t == null){ t = f.lastModified; how = "file time" } }
+    else t = Date.now();
+    let bar = null; try { bar = expBarRead(await shotLoad(f)) } catch(e) {}
+    SHOTS.push({t, how, bar});
+  }
+  SHOTS.sort((a, b) => a.t - b.t); if (SHOTS.length > 2) SHOTS = [SHOTS[0], SHOTS[SHOTS.length - 1]];
+  const [a, b] = SHOTS, put = (sel, v) => { if (v != null) $(sel).value = v };
+  const said = s => s.bar ? `${fmt(s.bar.exp)} [${s.bar.pct.toFixed(2)}%]${s.bar.level ? ` at level ${s.bar.level}` : ""}` : "EXP bar not found (type it in)";
+  const when = s => `${new Date(s.t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit", second: "2-digit"})} (${s.how})`;
+  put("#ecl0", a.bar?.level); put("#ece0", a.bar?.exp);
+  if (b){
+    put("#ecl1", b.bar?.level ?? (a.bar?.level && Math.max(+$("#ecl1").value, a.bar.level))); put("#ece1", b.bar?.exp);
+    $("#ecmin").value = +((b.t - a.t) / 60000).toFixed(1);
+    if (S.t0 != null){ S.t0 = null; timerUi() }
+    $("#ecshot").innerHTML = `Start: ${esc(said(a))}, ${esc(when(a))}<br>End: ${esc(said(b))}, ${esc(when(b))}${b.t - a.t < 60000 ? '<br><b>Under a minute apart:</b> check the times, or type the minutes.' : ""}`;
+    SHOTS = [];
+  } else {
+    if (+$("#ecl1").value < +$("#ecl0").value) $("#ecl1").value = $("#ecl0").value;
+    $("#ece1").value = ""; $("#ecshot").innerHTML = `Start: ${esc(said(a))}, ${esc(when(a))}. Now add the end screenshot.`;
+  }
+  calc();
+}
+const drop = $("#ecdrop");
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over") });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); addShots(e.dataTransfer.files) });
+$("#ecfile").addEventListener("change", e => { addShots(e.target.files); e.target.value = "" });
+document.addEventListener("paste", e => { if ($("#expc").hidden) return; const f = [...(e.clipboardData?.files || [])]; if (f.length){ e.preventDefault(); addShots(f, true) } });
+
+// ---- result as a picture ----
+function shareCard(r){
+  const W = 720, H = 360, c = document.createElement("canvas"), g = c.getContext("2d"), css = getComputedStyle(document.documentElement);
+  c.width = W * 2; c.height = H * 2; g.scale(2, 2);
+  const col = k => css.getPropertyValue(k).trim() || "#888", ff = k => css.getPropertyValue(k).trim() || "sans-serif";
+  g.fillStyle = col("--panel"); g.fillRect(0, 0, W, H);
+  g.fillStyle = col("--accent"); g.fillRect(0, 0, 8, H);
+  const txt = (s, x, y, font, color) => { g.font = font; g.fillStyle = col(color); g.fillText(s, x, y) };
+  txt(`Level ${r.L} ${r.cls}${r.map ? " · " + D.maps[r.map][0] : ""}`, 40, 56, `600 22px ${ff("--f-body")}`, "--ink");
+  txt(fmt(r.rate), 40, 150, `800 84px ${ff("--f-display")}`, "--ink");
+  g.font = `800 84px ${ff("--f-display")}`; const w = g.measureText(fmt(r.rate)).width;
+  txt("EXP/hr", 52 + w, 150, `500 24px ${ff("--f-body")}`, "--muted");
+  txt(`${fmt(r.gain)} EXP in ${+(+r.min).toFixed(1)} min · ${+(r.rate / D.exp[r.L] * 100).toFixed(1)}% of a level per hour`, 40, 200, `500 20px ${ff("--f-body")}`, "--ink");
+  txt([r.party > 1 ? `Party of ${r.party}` : "Solo", r.card > 1 ? `${r.card}x EXP card` : "", r.next ? `next level in ${r.next}` : ""].filter(Boolean).join(" · "), 40, 234, `500 20px ${ff("--f-body")}`, "--muted");
+  txt(new Date(r.t).toLocaleString([], {year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}), 40, 300, `500 16px ${ff("--f-body")}`, "--muted");
+  txt("MS Classic World Data Slop · EXP/hr calculator", 40, 328, `600 16px ${ff("--f-body")}`, "--accent");
+  return c;
+}
+
 let cur = null;
 function calc(){
   for (const [k, sel] of Object.entries(F)) S[k] = $(sel).value;
@@ -63,14 +152,24 @@ function calc(){
   const rate = gain / min * 60, perSec = rate / 3600, goal = Math.min(MAX_LEVEL, Math.max(L1 + 1, +S.goal || L1 + 1));
   const model = modelRate(S.cls, L1, mid, party), est = model != null ? model * card : null;
   cur = {t: Date.now(), cls: S.cls, L: L1, map: mid, party, card, min, gain, rate, est};
+  const next = hrs(toLevel(L1, e1, L1 + 1) / perSec);
   const pct = rate / D.exp[L1] * 100, unsure = L1 >= EXP_SURE ? ' <span class="pill p-warn">estimated EXP table</span>' : "";
   $("#ecout").innerHTML = `<div class="card">
     <div class="big">${fmt(rate)} <small>EXP/hr</small></div>
     <p>${fmt(gain)} EXP in ${+min.toFixed(1)} min · ${pct >= 10 ? Math.round(pct) : pct.toFixed(1)}% of level ${L1} per hour${card > 1 ? ` · ${fmt(rate / card)}/hr without the ${card}x card` : ""}</p>
-    <p>Next level: <b>${hrs(toLevel(L1, e1, L1 + 1) / perSec)}</b>${goal > L1 + 1 ? ` · Level ${goal}: <b>${hrs(toLevel(L1, e1, goal) / perSec)}</b>` : ""}${unsure}</p>
+    <p>Next level: <b>${next}</b>${goal > L1 + 1 ? ` · Level ${goal}: <b>${hrs(toLevel(L1, e1, goal) / perSec)}</b>` : ""}${unsure}</p>
     ${mid ? `<p>${mapLink(mid, D.maps[mid][0])}: our estimate ${est != null ? `<b>${fmt(est)}</b>/hr (default ${esc(S.cls)} build${party > 1 ? `, party of ${party}` : ""}${card > 1 ? `, ×${card} card` : ""}). You got <b>${Math.round(rate / est * 100)}%</b> of it.` : "none (your build can't hit these monsters reliably by our model)."}</p>` : ""}
-    <button class="btn primary" id="ecsave" type="button">Save session</button></div>`;
+    <button class="btn primary" id="ecsave" type="button">Save session</button> <button class="btn" id="ecimg" type="button" style="margin-top:12px">Save as image</button>
+    <div id="ecimgout"></div></div>`;
   $("#ecsave").addEventListener("click", () => { S.rec.unshift(cur); save(); rows(); $("#ecsave").textContent = "Saved"; $("#ecsave").disabled = true });
+  $("#ecimg").addEventListener("click", () => {
+    const c = shareCard({...cur, next}), name = `exp-hr-${cur.L}-${new Date(cur.t).toISOString().slice(0, 10)}.png`;
+    // shown on the page too, so it can be copied or long-pressed where downloads are blocked
+    $("#ecimgout").innerHTML = `<img src="${c.toDataURL("image/png")}" alt="EXP/hr result picture" style="display:block;width:100%;max-width:520px;margin-top:12px;border-radius:8px;border:1px solid var(--line)"><p class="note">Right-click or long-press the picture to copy it.</p>`;
+    c.toBlob(b => { if (!b) return; const f = new File([b], name, {type: "image/png"});
+      if (navigator.canShare?.({files: [f]}) && matchMedia("(pointer:coarse)").matches){ navigator.share({files: [f]}).catch(() => {}); return }
+      const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000) });
+  });
 }
 function rows(){
   const list = S.rec.map((r, i) => ({...r, i})).sort(S.sort === "rate" ? (a, b) => b.rate - a.rate : (a, b) => b.t - a.t);

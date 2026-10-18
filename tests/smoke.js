@@ -65,7 +65,8 @@ const path = require("path");
   await tab("#t-expc"); await p.fill("#ecl0", "30"); await p.fill("#ecl1", "31"); await p.fill("#ece0", "90000[94.04%]"); await p.fill("#ece1", "10%");
   await p.fill("#ecmin", "10"); await p.fill("#ecmap", "Ant Tunnel I"); await p.dispatchEvent("#ecmap", "input");
   check(/EXP\/hr/.test(await p.textContent("#ecout")) && /our estimate/.test(await p.textContent("#ecout")) && !/NaN|undefined/.test(await p.textContent("#ecout")), "EXP/hr calculator: readings across a level-up, map estimate");
- await p.click("#ecsave"); check(await p.$$eval("#ecrows tr", r => r.length) === 1 && /Ant Tunnel/.test(await p.textContent("#ecrows")), "EXP/hr calculator: session saved");
+  await p.click("#ecimg"); await p.waitForTimeout(300); check(await p.$$eval("#ecimgout img", l => l.length) === 1, "EXP/hr calculator: result picture");
+  await p.click("#ecsave"); check(await p.$$eval("#ecrows tr", r => r.length) === 1 && /Ant Tunnel/.test(await p.textContent("#ecrows")), "EXP/hr calculator: session saved");
   // Quest Database
   await tab("#t-quests");
   check((await p.textContent("#qcount")).includes("quests"), "quest table renders");

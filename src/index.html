@@ -362,14 +362,19 @@
   <details class="howto">
     <summary>How to use the EXP/hr calculator</summary>
     <ul>
-      <li>Before you start, note your EXP from the bar at the bottom of the screen (e.g. <b>123456[45.67%]</b>) and press <b>Start timer</b>.</li>
+      <li><b>Quickest:</b> take a screenshot (Print Screen) when you start and another when you stop, then drop, pick or paste both into the box. It reads the EXP bar on each and the time each was taken, and fills everything in. Check the numbers it read.</li>
+      <li>Time comes from the photo's camera data, else a date and time in the file name, else the file's saved time. Pasted screenshots count from the moment you paste them.</li>
+      <li>Or by hand: note your EXP from the bar at the bottom of the screen (e.g. <b>123456[45.67%]</b>) and press <b>Start timer</b>.</li>
       <li>Train for 5 to 10 minutes, then press <b>Stop</b> and type the new EXP. If you leveled up, raise <b>End level</b>.</li>
       <li>EXP boxes take the number, the percentage (45.67%) or the whole bar text. Or skip the timer and type the minutes.</li>
       <li>Pick the map, party and EXP card to compare with our <b>Where to train</b> estimate for that map (default build for your class and level). Our estimate counts no EXP card, so it's multiplied by your card here.</li>
-      <li><b>Save</b> keeps the session in this browser only. Sort by date or EXP/hr to compare maps.</li>
+      <li><b>Save</b> keeps the session in this browser only. Sort by date or EXP/hr to compare maps. <b>Save as image</b> makes a picture of the result to share.</li>
       <li>EXP needed above level 49 is meowdb's historical table (not confirmed in game), so time to level is an estimate there.</li>
     </ul>
   </details>
+  <label class="drop" id="ecdrop"><input type="file" id="ecfile" accept="image/*" multiple>
+    <span>Drop, pick or paste (Ctrl+V) <b>two screenshots</b>, one from the start and one from the end of your session. The EXP bar and the time are read from them; nothing is uploaded.</span></label>
+  <p class="note" id="ecshot" style="margin-bottom:12px"></p>
   <div class="controls">
     <label>Class<select id="eccls">
       <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
@@ -736,6 +741,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · EXP/hr from screenshots</h3><span class="pill p-hot">new</span></div>
+      <p>The <b>EXP/hr calculator</b> now takes two screenshots (start and end of a session): it reads the EXP bar on each and the time each was taken, and fills in the levels, EXP and minutes. All in your browser, nothing uploaded. New <b>Save as image</b> button makes a picture of your result to share.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · The List removed</h3><span class="pill p-hot">update</span></div>
       <p>The kill-stealer list tab is gone.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Collapsible crafting sections</h3><span class="pill p-hot">update</span></div>

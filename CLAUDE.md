@@ -47,7 +47,8 @@ src/js/53-skills.js   Skills tab: every 1st/2nd job skill (D.skills + D.icons) w
 src/js/51-shot.js     screenshot reader (no server): un-doubles the game UI, finds icons by pixel match, reads numbers with the game's digit font (SHOT_FONT); reusable
 src/js/52-shotimport.js Character Builder "Import from screenshots": stat/equip/skill windows -> review form -> builder (via BLD from 50-builder.js)
 src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill; exports TRAVEL (travel model)
-src/js/62-expcalc.js   EXP/hr calculator: two EXP readings + time (or timer) -> EXP/hr, time to level, vs Where to train estimate; saved sessions
+src/js/61-expbar.js    expBarRead(img): EXP bar "18,572[64.09%]" from a screenshot (copy of the grind tracker reader; keep in step)
+src/js/62-expcalc.js   EXP/hr calculator: two screenshots or two typed EXP readings + time (or timer) -> EXP/hr, time to level, vs Where to train estimate; saved sessions
 src/js/65-navigator.js Map Navigator: route between two maps (TRAVEL + Shanks' ship), exit numbers on minimaps; navTo(id) opens it
 src/js/66-worldmap.js  World Map: client world map (D.wmap) with a dot per spot; hover = card (maps, mobs, EXP/hr via mapRates, NPCs, quests, minimap); dungeon spots (Sleepywood) open a spring-layout sub-map of D.nav exits
 src/js/67-kpq.js     KPQ guide: stages with minimaps (D.kpq), Cloto's questions, puzzle combos, King Slime, box contents (meowdb KPQ guide)
