@@ -3,7 +3,7 @@
 A single-page planner for **MapleStory Classic World** (Founder's Access Oct 6 2026, Grand Launch Oct 21 2026),
 built from the Closed Online Test 2 (COT2) game-file export. Owner: Danny.
 
-Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Monsters** · **Items** · **Skills** · **World Map** · **Map Navigator** · **KPQ** · **Citizenship** · **Crafting** · **Keep or sell** · **Changelog** · **Credits**.
+Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Monsters** · **Items** · **Skills** · **World Map** · **Map Navigator** · **KPQ** · **Citizenship** · **Crafting** · **Keep or sell** · **Price check** · **Changelog** · **Credits**.
 
 ## Ground rules (from Danny)
 - **Classic World only.** Never use modern/retail MapleStory info. 2008-era info only if confirmed to still hold in Classic.
@@ -44,6 +44,7 @@ src/js/48-monsters.js  Monsters tab: searchable list of D.mobdb + a page per mon
 src/js/49-items.js    Items tab: every item (D.items) + a page per item (stats, drops, shops via D.ishop, recipes, quest rewards, quests/recipes that want it); any .ri icon or .itname click opens it
 src/js/50-builder.js  Character Builder: AP, skill build with per-job SP pools, damage calc, greedy auto-build; buildAt() = headless default build
 src/js/53-skills.js   Skills tab: every 1st/2nd job skill (D.skills + D.icons) with search/filters + a page per skill (levels, needs, unlocks)
+src/js/54-invprice.js  Price check tab: inventory screenshots -> items + counts (tracker/app/readers.js inlined at /*@READERS*/ by build.py) priced with meso.watch (PW), NPC fallback
 src/js/51-shot.js     screenshot reader (no server): un-doubles the game UI, finds icons by pixel match, reads numbers with the game's digit font (SHOT_FONT); reusable
 src/js/52-shotimport.js Character Builder "Import from screenshots": stat/equip/skill windows -> review form -> builder (via BLD from 50-builder.js)
 src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill; exports TRAVEL (travel model)
