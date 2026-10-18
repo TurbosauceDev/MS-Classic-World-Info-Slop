@@ -20,8 +20,8 @@ export function cleanRun(r, G){
     mesos: cnt(m.mesos, 1e8), mesoDrops: cnt(m.mesoDrops, 1e5), items: itemsOf(m.items, 50)})) : [];
   const items = itemsOf(r.items, 100);
   const run = {date: r.date || new Date().toISOString().slice(0, 10), map, map_name: map ? G.mapnames[map] || null : text(r.mapName, 60) || null,
-    level: r.level ?? null, job: text(r.job, 40) || null, party: r.party | 0, minutes: r.minutes, exp: Math.round(r.exp),
-    msg_exp: Math.round(r.msgExp || 0), bar_exp: Math.round(r.barExp || 0), kills, mesos: Math.round(r.mesos || 0), mobs, items,
+    level: r.level == null ? null : Math.round(r.level), job: text(r.job, 40) || null, party: r.party | 0, minutes: r.minutes, exp: Math.round(r.exp),
+    msg_exp: cnt(r.msgExp, 1e8), bar_exp: cnt(r.barExp, 1e8), kills, mesos: Math.round(r.mesos || 0), mobs, items,
     deaths: r.deaths == null ? null : cnt(r.deaths, 100),
     hour: Number.isInteger(r.hour) && r.hour >= 0 && r.hour < 24 ? r.hour : null,
     used_cost: r.usedCost == null ? null : cnt(r.usedCost, 1e7)};   // UTC hour the run started (best time to farm)

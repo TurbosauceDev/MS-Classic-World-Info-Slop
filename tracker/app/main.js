@@ -167,7 +167,7 @@ async function flushRuns(){
     }
     // runs queued while this was sending stay queued
     const sent = new Set(q.map(r => JSON.stringify(r))), added = readQueue().filter(r => !sent.has(JSON.stringify(r)));
-    writeAtomic(QUEUE, JSON.stringify([...left, ...added]));
+    writeAtomic(QUEUE, JSON.stringify([...left, ...added].slice(-200)));   // capped: a long offline spell (or a server that keeps saying "too many") can't grow the file forever
   } finally { flushing = false }
 }
 // shared data for the speed check, fetched at most every 30 minutes
