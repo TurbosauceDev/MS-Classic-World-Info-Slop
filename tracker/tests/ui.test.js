@@ -100,7 +100,7 @@ const path = require("path"), {chromium} = require("playwright");
     session.add({t: t - 200e3, type: "itemraw", text: "?"});
     session.add({t: t - 150e3, type: "inv", tab: "etc", items: {"4000019": 8}, unknown: 0}); render();
     const ask = document.querySelector("#invAsk").textContent, gain = document.querySelector("#invGain").textContent, chips = document.querySelector("#invTabs").textContent, items = document.querySelector("#items").textContent;
-    await stop(); const asked = [document.querySelector("#status").textContent, document.querySelector("#go").textContent, timer != null];
+    await stop(); const asked = [document.querySelector("#status").textContent, document.querySelector("#stopAnyway").classList.contains("hidden") ? "" : "Stop anyway", timer != null];
     for (const tab of ["equip", "use", "etc"]) session.add({t: Date.now(), type: "inv", tab, items: tab === "etc" ? {"4000019": 8} : {}, unknown: 0});
     stopAsked = 0; render();
     return {ask, asked2: document.querySelector("#invAsk").classList.contains("hidden"), gain, chips, items, asked, box: document.querySelector("#invBox").classList.contains("hidden")} });

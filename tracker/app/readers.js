@@ -653,6 +653,7 @@
     // learned boxes: the counts and the meso total are looked for only where they were last found, and over the whole
     // frame every 10 s (new windows opened) or as soon as nothing is found there
     let countBox = null, lastFullCounts = -Infinity, mesoBox = null, lastFullMeso = -Infinity;
+    const gone = new Map();   // item -> its count when it left the screen
     const iconCache = new Map();   // spot -> [color sample, id]: icon matching only when the picture there changed
     // the player's marked area (fractions of the frame), turned into native pixels with a little room around it
     let area = null;
@@ -674,7 +675,11 @@
         if (id === undefined){ id = iconAt(img, num, icons); if (iconCache.size > 500) iconCache.clear(); iconCache.set(key, [sample, id]) }
         if (!id) continue;
         const was = spots.get(key);
-        if (!was || was.id !== id){ now.set(key, {id, n: num.n, next: null}); continue }
+        if (!was || was.id !== id){
+          // back on screen after being hidden (arrows only show while the Use tab is open): what went down meanwhile was used
+          const g = gone.get(id), cap = String(id).startsWith("206") ? 2000 : 20;
+          if (g !== undefined && num.n < g && g - num.n <= cap) drops[id] = Math.max(drops[id] || 0, g - num.n);
+          gone.delete(id); now.set(key, {id, n: num.n, next: null}); continue }
         // a new value is taken once the next read agrees: the same again, or (arrows while shooting) lower still
         let {n, next} = was; const v = num.n;
         if (v === n) next = null;
@@ -682,6 +687,8 @@
         else next = v;
         now.set(key, {id, n, next});
       }
+      const seen = new Set([...now.values()].map(v => v.id));
+      for (const v of spots.values()) if (!seen.has(v.id)) gone.set(v.id, v.n);
       spots = now; info.counts = nums.length; info.useSpots = now.size;
       const ev = Object.entries(drops).map(([id, n]) => ({t, type: "use", id, n}));
       // once a minute while counts are visible: the session knows "nothing used" is a real 0, not "couldn't see"

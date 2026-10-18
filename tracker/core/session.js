@@ -81,12 +81,13 @@
         if (last.t <= first.t) continue;
         for (const id of new Set([...Object.keys(first.items), ...Object.keys(last.items)])){
           const n = (last.items[id] || 0) - (first.items[id] || 0);
-          if (n) out.push({id, tab, n, alike: last.alike[id] || first.alike[id] || 1, name: G.items[id]?.n || "Item " + id});
+          if (n && !(G.kpqItems || []).includes(id)) out.push({id, tab, n, alike: last.alike[id] || first.alike[id] || 1, name: G.items[id]?.n || "Item " + id});
         }
       }
       return out.sort((a, b) => Math.abs(b.n) - Math.abs(a.n));
     }
-    function gotItem(id, q){ id = String(id); S.items[id] = (S.items[id] || 0) + q; if (S.lastKillMob){ const m = mob(S.lastKillMob); m.items[id] = (m.items[id] || 0) + q } }
+    // KPQ's Pass and Coupon only matter inside KPQ: not loot (Danny, 2026-10-18)
+    function gotItem(id, q){ id = String(id); if ((G.kpqItems || []).includes(id)) return; S.items[id] = (S.items[id] || 0) + q; if (S.lastKillMob){ const m = mob(S.lastKillMob); m.items[id] = (m.items[id] || 0) + q } }
     const mob = id => S.byMob[id] || (S.byMob[id] = {kills: 0, exp: 0, mesos: 0, mesoDrops: 0, items: {}});
 
     function add(e){
@@ -213,7 +214,7 @@
       // Etc, equips and scrolls only (potions go up when bought). Per item the bigger of that and the pickup lines: the
       // inventory catches lines that didn't read, the lines catch loot sold or stored in between
       const inv = invGain(), seenN = {...S.items}, filled = {};
-      for (const g of inv) if (g.n > 0 && g.alike === 1 && ["Etc", "Equipment", "Scroll"].includes(G.items[g.id]?.c) && g.n > (seenN[g.id] || 0)){ filled[g.id] = g.n - (seenN[g.id] || 0); seenN[g.id] = g.n }
+      for (const g of inv) if (g.n > 0 && !(G.kpqItems || []).includes(g.id) && g.alike === 1 && ["Etc", "Equipment", "Scroll"].includes(G.items[g.id]?.c) && g.n > (seenN[g.id] || 0)){ filled[g.id] = g.n - (seenN[g.id] || 0); seenN[g.id] = g.n }
       const items = Object.entries(seenN).map(([id, n]) => ({id, name: G.items[id]?.n || "Item " + id, n, each: worth(id), total: worth(id) * n, inv: filled[id] || 0}))
         .sort((a, b) => b.total - a.total);
       const unreadLeft = Math.max(0, S.unreadItems - Object.values(filled).reduce((a, b) => a + b, 0));

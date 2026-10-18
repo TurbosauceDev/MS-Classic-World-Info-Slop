@@ -214,7 +214,7 @@ function renderState(s){
   const on = timer != null, paused = on && s?.paused;
   $("#state").className = paused ? "paused" : on ? "on" : "";
   $("#stateText").textContent = paused ? "Paused" : on ? "Tracking" + (s ? " · " + hm(s.activeMin / 60) + " farmed" : "") : s && s.activeMin ? "Stopped · " + hm(s.activeMin / 60) + " farmed" : "Not tracking";
-  $("#go").textContent = on ? Date.now() - stopAsked < 20e3 ? "Stop anyway" : "Stop" : "Start"; $("#go").classList.toggle("on", on);
+  $("#go").textContent = on ? "Stop" : "Start"; $("#go").classList.toggle("on", on);
 }
 // tabs under the numbers; the last one open is remembered
 function showTab(name){
@@ -556,19 +556,21 @@ async function start(){
   if (!snaps.start) snap("start", null, false).catch(() => {});
 }
 let stopping = false;
-async function stop(){
+// the "Stop anyway" button sits under the status line, not where Start/Stop is: a double click on Stop can't confirm it,
+// and Start is locked for 3 s after a stop, so a double click doesn't start a new session (Danny, 2026-10-18)
+async function stop(force = false){
   if (stopping) return;   // a double click saves one session, not two (the end picture takes a moment)
   // a tab not read in the last 2 minutes: ask for one more look first (a second Stop within 20 s stops anyway)
   // all 3 tabs, read in the last 2 minutes: the end count
   const tabs = session?.stats().invTabs || {}, stale = INV_TABS.filter(([k]) => !tabs[k] || Date.now() - tabs[k].last > 120e3).map(([, n]) => n);
-  if (stale.length && Date.now() - stopAsked > 20e3){
-    stopAsked = Date.now(); $("#go").textContent = "Stop anyway";
-    $("#status").textContent = `Before stopping: open your inventory's ${stale.join(", ")} tab${stale.length > 1 ? "s" : ""} for a second so the end count is right, then press Stop.`;
+  if (stale.length && !force){
+    stopAsked = Date.now(); $("#stopAnyway").classList.remove("hidden");
+    $("#status").textContent = `Before stopping: open your inventory's ${stale.join(", ")} tab${stale.length > 1 ? "s" : ""} for a second so the end count is right, then press Stop (or Stop anyway below).`;
     return;
   }
-  stopAsked = 0;
-  stopping = true;
-  try { await stopNow() } finally { stopping = false }
+  stopAsked = 0; $("#stopAnyway").classList.add("hidden");
+  stopping = true; $("#go").disabled = true;
+  try { await stopNow() } finally { stopping = false; setTimeout(() => $("#go").disabled = false, 3000) }
 }
 async function stopNow(){
   log("stop", {engine: engine?.kind, skipped});
@@ -583,6 +585,7 @@ async function stopNow(){
   if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds} : null, levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
   renderState(session?.stats());
 }
+$("#stopAnyway").onclick = () => timer != null && stop(true);
 $("#go").onclick = () => timer != null ? stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
 
 // one full frame every 3 s for 3 minutes, saved as PNG: material for building and testing the readers
