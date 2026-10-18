@@ -343,7 +343,8 @@ async function tick(){
       session.add(e); slicer.add(e); log("event", e);
       if (e.type === "item") dropAlert(e.id);
       if (e.type === "bar"){
-        if (!snaps.start) snap("start", null, false).catch(() => {});
+        // the start reading: taken at Start; when the bar didn't read then, the first good reading fills it in
+        if (!snaps.start || snaps.start.level == null && !snaps.start.hand) snaps.start = {...snaps.start, t: snaps.start?.t || t, level: e.level || session.state.level, pct: e.pct, exp: e.exp, hand: false};
         else if (!snaps.end?.hand) snaps.end = {t, level: e.level || session.state.level, pct: e.pct, exp: e.exp, hand: false};
       }
       if (check && e.type === "bar" && !check.bar){ check.bar = e.level ? "Lv " + e.level + ", " + e.pct + "%" : e.pct + "%"; check.late = check.ended }
@@ -384,7 +385,10 @@ function renderSnaps(live = session?.stats().exp){   // live: EXP the live count
   $("#snapRate").textContent = d != null && hrs > 0 ? fmt(d / hrs) + " EXP/hr" : "-";
   // mini bar: the snapshot rate too, so the small view isn't only the live count (render() rewrites the note each tick first)
   if (d != null && hrs > 0.05 && timer != null) $("#miniNote").textContent += ($("#miniNote").textContent ? " · " : "") + "start to now: " + fmt(d / hrs) + " EXP/hr";
-  $("#snapNote").textContent = d == null ? (a && b ? "Can't work it out: check the levels (a level or % is missing, or the end is before the start)." : "")
+  // a reading without a level or % gets marked: the session's EXP/hr can't be worked out without it
+  for (const [i, sn] of [[0, a], [1, b]]) for (const f of ["lv", "pct"]) $("#s" + i + f).classList.toggle("need", !!(session && (i === 0 || timer == null)) && !(f === "lv" ? sn?.level : sn?.pct != null));
+  $("#snapNote").textContent = d == null ? (session && !(a?.level && a?.pct != null) ? "The start reading is missing: type your level and EXP % from when you started."
+      : a && b ? "Can't work it out: check the levels (a level or % is missing, or the end is before the start)." : "")
     : `${fmt(d)} EXP in ${Math.round(hrs * 60)} min (clock time, breaks included)`
       + (live && d > 0 && !a.hand && !b.hand && Math.abs(live - d) > 0.25 * d ? ` · the live count added up ${fmt(live)} EXP; the snapshots are the safer number` : "");
 }
@@ -471,6 +475,8 @@ async function start(){
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   tick();
   renderState(null);
+  // the start reading is taken right away (not only once the bar is read): its picture is the proof of where you started
+  if (!snaps.start) snap("start", null, false).catch(() => {});
 }
 let stopping = false;
 async function stop(){
@@ -484,7 +490,11 @@ async function stopNow(){
   clearTimeout(timer); timer = null; engine?.close(); $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   // a failed save (disk full, folder locked) must not leave the button saying Stop
-  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
+  // the start/end readings go with it: History's EXP/hr comes from them when both are complete
+  const a = snaps.start, b = snaps.end, snapExp = a && b && b.t > a.t ? GrindSession.expBetween(G, a, b) : null;
+  const snapRec = snapExp != null ? {startLevel: a.level, startPct: a.pct, endLevel: b.level, endPct: b.pct, minutes: Math.round((b.t - a.t) / 6e3) / 10, exp: Math.round(snapExp)} : null;
+  if (!snapRec && session?.state.events) $("#status").textContent = "Saved, but the start or end EXP reading is missing: History uses the live count for this one.";
+  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
   renderState(session?.stats());
 }
 $("#go").onclick = () => timer != null ? stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
@@ -535,7 +545,9 @@ async function loadHist(){
   const list = await host.sessions();
   $("#recap").innerHTML = recap(list) + levelLog(list);
   $("#histRows").innerHTML = list.length ? list.slice(0, 30).map(x => { const h = (x.activeMin || 0) / 60;
-    return `<tr><td>${esc(x.date)} ${esc(x.mapName || "")}</td><td class="n">${Math.round(x.activeMin || 0)} min</td><td class="n">${h ? fmt(x.exp / h) : "-"} EXP/hr</td>`
+    // EXP/hr from the start/end readings when the session has them (clock time), else the live count (farming time)
+    const sn = x.snap && x.snap.minutes > 0 ? x.snap : null, rate = sn ? fmt(sn.exp / (sn.minutes / 60)) : h ? fmt(x.exp / h) : "-";
+    return `<tr><td>${esc(x.date)} ${esc(x.mapName || "")}</td><td class="n">${Math.round(sn ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${rate} EXP/hr</td>`
       + `<td class="n"><button class="alt del" data-saved="${+x.saved}" title="Delete this session">×</button></td></tr>` }).join("")
     : `<tr><td>No sessions yet: they're saved when you press Stop.</td></tr>`;
 }

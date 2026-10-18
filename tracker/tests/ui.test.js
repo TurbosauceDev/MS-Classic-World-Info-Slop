@@ -102,7 +102,7 @@ const path = require("path"), {chromium} = require("playwright");
     set("#s1lv", 25); set("#s1pct", 71.40); return [document.querySelector("#snapRate").textContent, document.querySelector("#snapNote").textContent] });
   const want = Math.round(0.2479 * 47216 / (22 / 60));
   if (Math.abs(+sn[0].replace(/\D/g, "") - want) > want * 0.01 || !/22 min/.test(sn[1])) throw new Error("snapshots: " + JSON.stringify(sn) + " want ~" + want);
-  await page.click(".tabs [data-tab=snaps]"); await page.click("#snapEnd"); await page.waitForTimeout(200);   // a button snapshot from the (test) game picture: saved, replaces the typed end
+  await page.click(".tabs [data-tab=session]"); await page.click("#snapEnd"); await page.waitForTimeout(200);   // a button snapshot from the (test) game picture: saved, replaces the typed end
   if (!(await page.evaluate(() => snaps.end.file && snaps.end.hand))) throw new Error("snap end button");
   await page.click("#go");
   await page.waitForTimeout(200);

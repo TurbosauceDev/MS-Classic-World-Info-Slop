@@ -43,6 +43,7 @@
   label.chk { display:flex; gap:6px; align-items:flex-start; margin:5px 0; } label.chk input { margin-top:3px; }
   #selfcheck td:first-child { width:42%; }
   button.del { padding:1px 7px; font-size:12px; } button.del.sure { background:var(--bad); color:#fff; }
+  #snaps input.need { border-color:var(--warn); background:var(--accent-soft); }
   #helpBtn { padding:5px 10px; font-size:12px; font-weight:600; }
   #help details { border-top:1px solid var(--line); padding:6px 0; } #help details:first-of-type { border-top:0; }
   #help summary { cursor:pointer; font-weight:600; } #help ul { margin:6px 0 2px; padding-left:18px; } #help li { margin:3px 0; }
@@ -79,9 +80,18 @@
   </div>
   <div class="card hidden" id="selfcheck"></div>
   <div class="tabs" role="tablist">
-    <button data-tab="session" class="sel">Session</button><button data-tab="loot">Loot</button><button data-tab="snaps">Snapshots</button><button data-tab="hist" id="histBtn">History</button><button data-tab="settings">Settings</button>
+    <button data-tab="session" class="sel">Session</button><button data-tab="loot">Loot</button><button data-tab="hist" id="histBtn">History</button><button data-tab="settings">Settings</button>
   </div>
   <section data-tab="session">
+    <div class="card" id="snaps"><h3>Start and end (EXP bar)</h3>
+      <div class="note">Every session is measured from two EXP bar readings, at Start and at Stop (like mapleexp.com). Taken by
+        themselves; fix a level or % here if it read wrong. This is the number saved to History.</div>
+      <div class="row"><button id="snapStart" class="alt">Snap start</button> <button id="snapEnd" class="alt">Snap end</button></div>
+      <table>
+        <tr><td>Start</td><td>Lv <input type="number" id="s0lv" min="1" max="200" style="width:52px"></td><td><input type="number" id="s0pct" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s0t" class="n"></td></tr>
+        <tr><td>End</td><td>Lv <input type="number" id="s1lv" min="1" max="200" style="width:52px"></td><td><input type="number" id="s1pct" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s1t" class="n"></td></tr>
+      </table>
+      <div class="v" id="snapRate" style="margin-top:6px">-</div><div class="note" id="snapNote"></div></div>
     <div class="card hidden" id="lastRun"></div>
     <div class="card hidden" id="partyBox"></div>
     <div class="card grid">
@@ -99,17 +109,6 @@
       <div class="note" id="priceNote"></div></div>
     <div class="card" id="usedBox"><h3>Used up</h3><div class="note">Potions, food and arrows, at the cheapest NPC shop price.</div><table id="used"></table>
       <div class="empty" id="usedEmpty">Nothing used yet. Counts come from your quick slots or the Use tab.</div></div>
-  </section>
-  <section data-tab="snaps" class="hidden">
-    <div class="card" id="snaps"><h3>Start and end snapshots</h3>
-      <div class="note">EXP/hr from two readings of the EXP bar (level and %), like mapleexp.com. Taken by themselves at Start and as you
-        play. Fix a number here if it read wrong.</div>
-      <div class="row"><button id="snapStart" class="alt">Snap start</button> <button id="snapEnd" class="alt">Snap end</button></div>
-      <table>
-        <tr><td>Start</td><td>Lv <input type="number" id="s0lv" min="1" max="200" style="width:52px"></td><td><input type="number" id="s0pct" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s0t" class="n"></td></tr>
-        <tr><td>End</td><td>Lv <input type="number" id="s1lv" min="1" max="200" style="width:52px"></td><td><input type="number" id="s1pct" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s1t" class="n"></td></tr>
-      </table>
-      <div class="v" id="snapRate" style="margin-top:6px">-</div><div class="note" id="snapNote"></div></div>
   </section>
   <section data-tab="hist" class="hidden">
     <div class="card" id="hist"><div class="row"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div><table id="histRows"></table></div>

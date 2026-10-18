@@ -55,6 +55,7 @@ npm start           # run it (Windows, Electron)
   deaths, start hour and usedCost in run_extra; the site shows "pots/ammo" per map and Frugal mode uses it.
 - Potion box monitor (v0.2.19): the snip window opens on the game's monitor (GetWindowRect via PowerShell on the
   captured window's HWND, or the captured screen in whole-screen mode), else the main monitor; not the mouse's monitor.
+- Start and end readings (v0.2.21): part of the Session tab (Snapshots tab gone). The start reading is taken at Start (filled from the first bar reading if the bar did not read), the end at Stop; missing level/% boxes are marked. Saved with the session (snap: levels, %, minutes, EXP); History EXP/hr uses it when complete.
 - History (v0.2.21): × on each session deletes it (asks "Delete?" first; main.js delete-session takes the file time stamp only).
 - Help (v0.2.18): ? button, F1, or Help in the app menu (our own menu replaces Electron's default) opens a Help page:
   getting started, what the numbers mean, tabs, potions, party, window tips, bug reports, updates, privacy.
