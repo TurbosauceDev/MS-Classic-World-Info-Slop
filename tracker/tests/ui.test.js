@@ -284,6 +284,11 @@ const path = require("path"), {chromium} = require("playwright");
   // a watched item: the alert set finds it by part of its name
   const watched = await page.evaluate(() => { settings.alertItems = "Horny Mushroom Cap"; return alertSet().has("4000019") });
   if (!watched) throw new Error("item alert set");
+  // Compact view (View menu / shortcut): the tabs hide, the pinned boxes stay, the window asked to fit; saved
+  const cp = await page.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 60)); let h = null; const m0 = host.mini; host.mini = async (on, x) => (h = on ? x : 0, true);
+    window.menu("compact"); await w(); const r = [!!document.querySelector(".tabs").offsetParent, !!document.querySelector("#go").offsetParent, h, settings.compact];
+    window.menu("compact"); await w(); r.push(!!document.querySelector(".tabs").offsetParent, h, settings.compact); host.mini = m0; return r });
+  if (cp[0] || !cp[1] || !(cp[2] > 100) || cp[3] !== true || !cp[4] || cp[5] !== 0 || cp[6] !== false) throw new Error("compact: " + cp);
   await page.click("#miniBtn"); const mini = await page.isVisible("#mini"), full = await page.isVisible("#go");
   // Mini view (Danny, 2026-10-18): the totals and times, the run log and the three lists; the window asked to fit it
   const mv = await page.evaluate(() => ["#miniExp", "#miniMeso", "#miniTotal", "#miniActive", "#miniClock", "#miniTtl", "#miniItems", "#miniMobs", "#miniUsed"].filter(q => !document.querySelector(q).offsetParent));
@@ -357,7 +362,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.evaluate(() => window.menu("clickThrough:true")); const thr = await page.evaluate(() => [document.body.classList.contains("through"), document.querySelector("#status").textContent]);
   await page.evaluate(() => window.menu("clickThrough:false"));
   const rows = await page.$$eval("#keyRows [data-key]", b => b.length);
-  if (!/\[.*\] mark/.test(note) || pic?.join() !== "true,true" || mute.join() !== "true,true" || await page.evaluate(() => window.st.muted) !== false || !thr[0] || !/Ctrl \+ Shift \+ X turns it off/.test(thr[1]) || rows !== 11)
+  if (!/\[.*\] mark/.test(note) || pic?.join() !== "true,true" || mute.join() !== "true,true" || await page.evaluate(() => window.st.muted) !== false || !thr[0] || !/Ctrl \+ Shift \+ X turns it off/.test(thr[1]) || rows !== 12)
     throw new Error("more shortcuts: " + JSON.stringify({note, pic, mute, thr, rows}));
   await page.click("#prefsClose"); await page.click("#updGo"); await page.waitForTimeout(100);
   if (!await page.evaluate(() => window.installed)) throw new Error("restart and update");

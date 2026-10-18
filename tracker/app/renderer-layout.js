@@ -15,8 +15,16 @@ function renderMini(s){
 }
 // the window's height follows the Mini view's (only when it changed: setting it every tick would fight a user resizing)
 let miniH = 0;
-function miniFit(force){ if (!document.body.classList.contains("mini")) return;
+function miniFit(force){ if (!document.body.classList.contains("mini")) return compactFit(force);
   const h = Math.ceil($("#mini").getBoundingClientRect().bottom + 10); if (force || Math.abs(h - miniH) > 6){ miniH = h; host.mini?.(true, h) } }
+// Compact (Danny, 2026-10-18: a middle ground between everything and Mini): the tabs and their boxes are hidden, only the
+// boxes pinned above them show (the main card, the run log, whatever else is pinned), and the window fits their height.
+// Saved in settings.compact; View menu and a shortcut toggle it
+function compactSet(on){ document.body.classList.toggle("compact", on); miniH = 0;
+  if (on) requestAnimationFrame(() => compactFit(true)); else if (!document.body.classList.contains("mini")) host.mini?.(false) }
+function compactFit(force){ if (!document.body.classList.contains("compact") || document.body.classList.contains("mini")) return;
+  const h = Math.ceil(Math.max(...[...document.body.children].filter(e => e.offsetParent && getComputedStyle(e).position !== "fixed").map(e => e.getBoundingClientRect().bottom + scrollY)) + 10);
+  if (force || Math.abs(h - miniH) > 6){ miniH = h; host.mini?.(true, h) } }
 
 // inventory: which tabs were read and when (Session tab), and what changed since the first look (Loot tab)
 const INV_TABS = [["equip", "Equip"], ["use", "Use"], ["etc", "Etc"]];
@@ -105,6 +113,7 @@ function tidy(){
 }
 // saved as order[tab] = [box id | {row: [box id | [box ids (a column)]], w: [widths]}]; older saves (just ids) still load
 function layoutSave(){
+  requestAnimationFrame(() => compactFit());
   tidy(); const order = {};
   const ser = e => isRow(e) ? {row: parts(e).map(p => isCol(p) ? [...p.children].map(b => b.dataset.box) : p.dataset.box), w: parts(e).map(p => Math.round(grow(p)) || 1)} : e.dataset.box;
   for (const h of [$("#dock"), ...document.querySelectorAll("section[data-tab]")]) order[h.id || h.dataset.tab] = [...h.querySelectorAll(":scope > [data-box], :scope > .boxrow")].map(ser);

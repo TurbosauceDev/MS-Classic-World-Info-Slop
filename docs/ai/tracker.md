@@ -74,6 +74,9 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   (#prefsNav) come from `data-nav` on each card: a new section needs that attribute. label.chk checkboxes are switches.
 - Mini (#mini, renderMini): its own copies of numbers, run log (#miniFeed, mirrored in feedAdd) and top-5 lists; host.mini(on, h)
   sizes the window's content height to the view (miniFit). #miniFull goes back; the card itself isn't clickable any more.
+- Compact (body.compact, settings.compact, key `compact` Ctrl+Shift+K): hides .tabs + sections; compactFit sizes the window
+  via host.mini(true, h) like Mini (miniFit falls through to it). Adding a shortcut: KEYS (main.js), KEY_NAMES, and the
+  ui test's shortcut row count.
 - Dummy data: app/renderer-dummy.js (View menu "dummy" → dummyToggle via renderer-settings.js onMenu). It sets `session`
   with the timer off, so nothing reaches History or the slicer; Clear reloads the window. Use it for layout screenshots.
 - Rows stretch (`.boxrow` align-items:stretch); column boxes flex:1; #logBox's #feed flexes in a row/column.

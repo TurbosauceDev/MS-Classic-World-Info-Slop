@@ -15,7 +15,7 @@ $("#goalNext").onclick = () => setGoal("next"); $("#goalOff").onclick = () => se
 $("#alertItems").onchange = e => host.settings({alertItems: e.target.value.slice(0, 500)}).then(s => { settings = s; const n = alertSet().size; $("#alertItemsNote").textContent = n ? n + " item" + (n > 1 ? "s" : "") + " watched" : "" });
 $("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.value || 0)}).then(s => settings = s);
 $("#miniBtn").onclick = () => { document.body.classList.add("mini"); miniH = 0; if (session) renderMini(session.stats()); else miniFit(true) };
-$("#miniFull").onclick = () => { document.body.classList.remove("mini"); host.mini(false) };
+$("#miniFull").onclick = () => { document.body.classList.remove("mini"); if (document.body.classList.contains("compact")) requestAnimationFrame(() => compactFit(true)); else host.mini(false) };
 $("#histBtn").onclick = () => { showTab("hist"); loadHist() };
 let histList = [];
 // total EXP of a run (the start/end readings when it has both, else the live count) and EXP per minute of farming

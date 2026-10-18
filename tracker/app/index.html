@@ -45,6 +45,7 @@
      button, Danny 2026-10-18: "make it look and fit better") */
   .usedFoot { display:flex; align-items:center; gap:8px 14px; flex-wrap:wrap; margin-top:8px; } .usedFoot .note { flex:1; min-width:160px; }
   label.chk.freePots { margin:0; font-size:12px; color:var(--muted); align-items:center; white-space:nowrap; } label.chk.freePots input { margin:0; }
+  body.compact > .tabs, body.compact > section[data-tab] { display:none !important; } body.compact { min-height:0; }
   #dummyBar { display:flex; align-items:center; gap:10px; border:1px dashed var(--warn); background:color-mix(in srgb, var(--warn) 14%, var(--panel)); padding:6px 10px; }
   #dummyBar b { color:var(--warn); } #dummyBar span { flex:1; font-size:12px; color:var(--muted); } #dummyBar button { padding:3px 10px; font-size:12px; }
   /* section headers (box titles, Mini's list titles): a soft outline and drop shadow (Danny, 2026-10-18) */
@@ -398,7 +399,7 @@
         <li><b>Pause</b> (next to Start while tracking) stops the clock for a break; nothing picked up counts until you press <b>Go on</b>.</li>
       </ul></details>
       <details><summary>Shortcuts and themes</summary><ul>
-        <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, Ctrl+Shift+S Start/Stop, P Pause, M Mini bar, H hide/show, I read the open inventory tab, B report a bug,
+        <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, Ctrl+Shift+S Start/Stop, P Pause, M Mini bar, K Compact view (hides the tabs; also in View), H hide/show, I read the open inventory tab, B report a bug,
           X click-through (clicks go to the game under the window; the same keys turn it off), N mark the moment in the run note, G save the numbers as a picture, U mute sounds. Change or turn them off in Settings → Shortcuts and window.</li>
         <li>Settings → Theme: pick a colourway, or <b>Edit colours</b> and save your own. <b>Copy share code</b> gives a one-line code friends paste under Share a theme; <b>Save as file</b> makes a .mstheme file.</li>
         <li>Settings → Shortcuts and window → See-through window makes the tracker partly transparent over the game.</li>

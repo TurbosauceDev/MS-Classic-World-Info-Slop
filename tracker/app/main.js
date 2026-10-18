@@ -79,7 +79,7 @@ app.whenReady().then(() => {
   const show = what => () => win && !win.isDestroyed() && win.webContents.send("menu", what);
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {label: "File", submenu: [{label: "Settings", accelerator: "CmdOrCtrl+,", click: show("settings")}, {type: "separator"}, {label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
-    {label: "View", submenu: [{label: "Mini bar", click: show("mini")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
+    {label: "View", submenu: [{label: "Compact view (hide the tabs)", click: show("compact")}, {label: "Mini bar", click: show("mini")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
     {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Check for updates", click: show("update")},
       {label: "Report a bug", click: show("report")}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
   ]));
@@ -120,7 +120,7 @@ ipcMain.handle("update-install", () => { if (upd.state !== "ready") return false
 /* keyboard shortcuts, working from anywhere (the game too): settings.keys {action: accelerator, "" = off}, else these.
    Each one takes its keys away from every other program while the tracker runs, so all can be changed or turned off.
    Always on top was Danny's ask (2026-10-18); the others are the buttons players reach for mid-grind */
-const KEYS = {onTop: "CommandOrControl+Shift+T", startStop: "CommandOrControl+Shift+S", pause: "CommandOrControl+Shift+P", mini: "CommandOrControl+Shift+M",
+const KEYS = {onTop: "CommandOrControl+Shift+T", startStop: "CommandOrControl+Shift+S", pause: "CommandOrControl+Shift+P", mini: "CommandOrControl+Shift+M", compact: "CommandOrControl+Shift+K",
   show: "CommandOrControl+Shift+H", invNow: "CommandOrControl+Shift+I", report: "CommandOrControl+Shift+B",
   clickThrough: "CommandOrControl+Shift+X", mark: "CommandOrControl+Shift+N", saveImage: "CommandOrControl+Shift+G", mute: "CommandOrControl+Shift+U"};
 // modifiers + one key; a key with no modifier only for F1-F24 (a plain letter would be taken from the game's own keys)
@@ -293,7 +293,7 @@ ipcMain.handle("menu-popup", (_, label, x, y) => {
 });
 ipcMain.handle("mini", (_, on, h) => {
   // on: h = the Mini view's height in page pixels (it changes as lists fill); the width stays
-  if (win){ if (on){ fullSize ||= win.getSize(); const z = win.webContents.getZoomFactor() || 1; win.setContentSize(win.getContentSize()[0], Math.max(140, Math.min(900, Math.round((+h || 128) * z)))) }
+  if (win){ if (on){ fullSize ||= win.getSize(); const z = win.webContents.getZoomFactor() || 1; win.setContentSize(win.getContentSize()[0], Math.max(140, Math.min(1400, Math.round((+h || 128) * z)))) }
     else { win.setSize(...(fullSize || [360, 600])); fullSize = null } }
   return !!on;
 });
