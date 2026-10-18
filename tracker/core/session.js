@@ -8,7 +8,7 @@
      {t, type: "bar",   exp, level?}      EXP bar reading: current EXP into the level (and level, when worked out)
      {t, type: "itemraw", text, qty?, cands?}  an item pickup line whose name fits several items (cands) or none; the one
                                           this map's monsters drop is taken when only one of them does
-     {t, type: "inv", tab, items, alike?, unknown}  the inventory's open tab (equip/use/etc): {id: count}; alike = how many
+     {t, type: "inv", tab, items, alike?, stacks?, unknown}  the inventory's open tab (equip/use/etc): {id: count}; alike = how many
                                           items share that picture (scrolls); unknown = slots that didn't read
      {t, type: "meso",  amount}           meso pickup message
      {t, type: "item",  id, qty?}         item pickup message (id resolved by the reader from the item name)
@@ -81,6 +81,10 @@
         if (last.t <= first.t) continue;
         for (const id of new Set([...Object.keys(first.items), ...Object.keys(last.items)])){
           const n = (last.items[id] || 0) - (first.items[id] || 0);
+          // gone from the tab while some slots didn't read: most likely one of those, not all used up (Danny's Lemons, 2026-10-18)
+          if (!last.items[id] && last.unknown > 0) continue;
+          // one stack fewer and more slots unread than at the first look: a stack that didn't read, not used (Danny's arrows, 2026-10-18)
+          if (n < 0 && last.unknown > first.unknown && (last.stacks[id] || 0) < (first.stacks[id] || 0)) continue;
           if (n && !(G.kpqItems || []).includes(id)) out.push({id, tab, n, was: first.items[id] || 0, now: last.items[id] || 0, alike: last.alike[id] || first.alike[id] || 1, name: G.items[id]?.n || "Item " + id});
         }
       }
@@ -117,7 +121,7 @@
         // the inventory's open tab read: kept as first and latest per tab (Equip, Use, Etc)
         case "inv": {
           if (!e.tab || !e.items) break;
-          const read = {t: e.t, items: e.items, alike: e.alike || {}, unknown: e.unknown || 0};
+          const read = {t: e.t, items: e.items, alike: e.alike || {}, stacks: e.stacks || {}, unknown: e.unknown || 0};
           (S.inv[e.tab] ||= {first: read}).last = read;
           break;
         }

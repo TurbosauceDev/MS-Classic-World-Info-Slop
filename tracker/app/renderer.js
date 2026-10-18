@@ -626,6 +626,7 @@ $("#invTabs").onclick = $("#wrapTabs").onclick = async e => {
   say(`Reading your ${name} tab: have it open in the game...`);
   if (await wait()){ render(); return say(`${name} tab read.`) }
   if (timer == null) return;
+  if (lastInvTab === tab) return say(`Your ${name} tab is open but didn't read the same twice in a row: keep the mouse off it for a few seconds and click again.`);
   if (lastInvTab) return say(`That's your ${INV_TABS.find(x => x[0] === lastInvTab)[1]} tab: switch the inventory to ${name} and click again.`);
   say("Couldn't find your inventory: drag a box around it (with the " + name + " tab open).");
   const f = await oneFrame(), c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);

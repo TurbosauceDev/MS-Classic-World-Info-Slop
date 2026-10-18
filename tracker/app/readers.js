@@ -41,16 +41,22 @@
     const {w, h, d} = img;
     if (cached && scaleMemo && scaleMemo.w === w && scaleMemo.h === h && scaleMemo.uses++ < 20) return shrink(img, scaleMemo.best);
     const step = (i, j) => Math.abs(d[i] - d[j]) + Math.abs(d[i + 1] - d[j + 1]) + Math.abs(d[i + 2] - d[j + 2]) > 150;
-    const hist = {x: new Array(12).fill(0), y: new Array(12).fill(0)};
-    for (let y = 1; y < h - 1; y += 3) for (let x = 1; x < w - 1; x++){ const i = (y * w + x) * 4; if (step(i, i + 4)) hist.x[x % 12]++ }
-    for (let x = 1; x < w - 1; x += 3) for (let y = 1; y < h - 1; y++){ const i = (y * w + x) * 4; if (step(i, i + w * 4)) hist.y[y % 12]++ }
-    let best = {k: 1, ox: 0, oy: 0};
-    for (const k of [2, 3, 4]){
-      const fold = a => { const f = new Array(k).fill(0); a.forEach((n, p) => f[p % k] += n); return f };
-      const fx = fold(hist.x), fy = fold(hist.y), sx = fx.reduce((a, b) => a + b), sy = fy.reduce((a, b) => a + b);
-      const px = fx.indexOf(Math.max(...fx)), py = fy.indexOf(Math.max(...fy));
-      if (sx > 200 && sy > 200 && fx[px] >= sx * 0.85 && fy[py] >= sy * 0.85) best = {k, ox: (px + 1) % k, oy: (py + 1) % k};
-    }
+    // the status bar along the bottom first: it's always UI. With the game at native resolution (2560x1440, UI "Ideal
+    // Ratio") only the UI is doubled, and the sharp scenery over the whole frame drowns the UI's grid (Danny, 2026-10-18)
+    const find = (y0, y1) => {
+      const hist = {x: new Array(12).fill(0), y: new Array(12).fill(0)};
+      for (let y = y0; y < y1; y += 3) for (let x = 1; x < w - 1; x++){ const i = (y * w + x) * 4; if (step(i, i + 4)) hist.x[x % 12]++ }
+      for (let x = 1; x < w - 1; x += 3) for (let y = y0; y < y1; y++){ const i = (y * w + x) * 4; if (step(i, i + w * 4)) hist.y[y % 12]++ }
+      let best = null;
+      for (const k of [2, 3, 4]){
+        const fold = a => { const f = new Array(k).fill(0); a.forEach((n, p) => f[p % k] += n); return f };
+        const fx = fold(hist.x), fy = fold(hist.y), sx = fx.reduce((a, b) => a + b), sy = fy.reduce((a, b) => a + b);
+        const px = fx.indexOf(Math.max(...fx)), py = fy.indexOf(Math.max(...fy));
+        if (sx > 200 && sy > 200 && fx[px] >= sx * 0.85 && fy[py] >= sy * 0.85) best = {k, ox: (px + 1) % k, oy: (py + 1) % k};
+      }
+      return best;
+    };
+    const best = find(Math.floor(h * 0.92), h - 1) || find(1, h - 1) || {k: 1, ox: 0, oy: 0};
     if (cached) scaleMemo = {w, h, best, uses: 0};
     return shrink(img, best);
   }
@@ -304,14 +310,40 @@
       const last = bands[bands.length - 1];
       if (last && y - last[1] <= 3) last[1] = y + 1; else bands.push([y, y + 1]);
     }
+    // a band is split where its rows thin out to under a third of its fullest row: the minimap's icon next to the text can
+    // bridge the two lines into one band (Danny's KPQ minimap, 2026-10-18)
+    for (let i = bands.length - 1; i >= 0; i--){
+      const b = bands[i]; if (!b) continue;
+      let m = 0; for (let y = b[0]; y < b[1]; y++) m = Math.max(m, cnt[y]);
+      const parts = []; for (let y = b[0]; y < b[1]; y++) if (cnt[y] >= m / 3){ const l = parts[parts.length - 1]; if (l && y === l[1]) l[1] = y + 1; else parts.push([y, y + 1]) }
+      bands.splice(i, 1, ...parts);
+    }
     for (let i = bands.length - 1; i >= 0; i--) if (!bands[i] || bands[i][1] - bands[i][0] < 5 || bands[i][1] - bands[i][0] > 30) bands.splice(i, 1);
     const two = bands.findIndex((b, i) => bands[i + 1] && bands[i + 1][0] - b[1] < (b[1] - b[0]) && Math.abs((bands[i + 1][1] - bands[i + 1][0]) - (b[1] - b[0])) <= 4);
-    if (two < 0) return null;
-    const y0 = bands[two][0] - 2, y1 = bands[two + 1][1] + 2;
-    let x0 = X, x1 = 0;
-    for (let y = y0; y < y1; y++) for (let x = 0; x < X; x++) if (ink((y * img.w + x) * 4)){ x0 = Math.min(x0, x); x1 = Math.max(x1, x) }
+    // the minimap folded to its title bar: one line, "Hidden Street : 1st Accompaniment <Exit>", white on a light bar from
+    // the left edge at the very top (Danny's KPQ run, 2026-10-18): the bar's rows run light from x < 8 for 150+ px, except
+    // where the text cuts through them; the text is the rows between the bar's top and bottom edges
+    let one = null;
+    if (two < 0){
+      const bar = y => { let x = 0; while (x < 8 && !ink((y * img.w + x) * 4)) x++; const s = x; while (x < X && ink((y * img.w + x) * 4)) x++; return s < 8 && x - s > 150 };
+      let y = 0; while (y < 12 && !bar(y)) y++; while (y < 20 && bar(y)) y++;
+      const a = y; while (y < 30 && !bar(y)) y++;
+      if (y < 30 && y - a >= 6 && y - a <= 14) one = [a, y];
+    }
+    if (two < 0 && !one) return null;
+    const y0 = Math.max(0, (one || bands[two])[0] - 2), y1 = (one || bands[two + 1])[1] + 2;
+    // left to right: from the first column with ink to the end of the inkiest stretch of columns (gaps under 24 px): the
+    // game scene or the minimap's right border further right isn't text
+    const colN = x => { let n = 0; for (let y = y0; y < y1; y++) if (ink((y * img.w + x) * 4)) n++; return n };
+    const runs = []; for (let x = 0, gap = 99; x < X; x++){ const n = colN(x); if (!n){ gap++; continue } if (gap >= 24) runs.push({a: x, b: x, n: 0}); const r = runs[runs.length - 1]; r.b = x; r.n += n; gap = 0 }
+    if (!runs.length) return null;
+    const x0 = runs[0].a, x1 = runs.reduce((p, q) => q.n > p.n ? q : p).b;
+    if (x1 <= x0) return null;
     const S = 2, P = 8, w = (x1 - x0 + 1) * S + 2 * P, h = (y1 - y0) * S + 2 * P, out = new Uint8ClampedArray(w * h * 4).fill(255);
-    for (let y = y0; y < y1; y++) for (let x = x0; x <= x1; x++) if (ink((y * img.w + x) * 4))
+    // mostly ink: white text on the light folded bar, which reads as the background: flipped so the text is the black part
+    let all = 0, inked = 0; for (let y = y0; y < y1; y++) for (let x = x0; x <= x1; x++){ all++; if (ink((y * img.w + x) * 4)) inked++ }
+    const flip = inked > all / 2;
+    for (let y = y0; y < y1; y++) for (let x = x0; x <= x1; x++) if (ink((y * img.w + x) * 4) !== flip)
       for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++){ const o = ((P + (y - y0) * S + dy) * w + P + (x - x0) * S + dx) * 4; out[o] = out[o + 1] = out[o + 2] = 0 }
     return {w, h, d: out};
   }
@@ -373,12 +405,15 @@
   const similar = (a, b) => { a = norm(a); b = norm(b); return 1 - lev(a, b) / Math.max(a.length, b.length, 1) };
   // OCR text -> {id, name}: the closest map name to the last line (75%+ alike), else the map line as read (maps our data doesn't have)
   function mapFromText(text, G){
-    const lines = text.split("\n").map(l => l.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9>)]+$/g, "").trim()).filter(l => l.length >= 3);
+    // one line "Street : Map" when the minimap is folded to its title bar: the map is after the colon
+    const lines = text.split("\n").filter(l => !/mini\s*map/i.test(l)).map(l => l.replace(/^.*:/, "").replace(/(<[^<>=]*)[>=].*$/, "$1>").replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9>)]+$/g, "").trim()).filter(l => l.length >= 3);
     if (!lines.length) return null;
     let best = null;
     const l = lines[lines.length - 1];   // line 1 is the street/region ("Victoria Road", "Hidden Street"), line 2 the map
-    {
-      const a = norm(l);
+    // the folded minimap's one line can lose its colon: "Hidden Street 1st Accompaniment <Exit>" is also tried without its
+    // first 1-3 words (the street)
+    const words = l.split(/\s+/);
+    for (const a of [0, 1, 2, 3].filter(k => k < words.length).map(k => norm(words.slice(k).join(" ")))){
       for (const [id, n] of Object.entries(G.mapnames)){
         const b = norm(n), sim = 1 - lev(a, b) / Math.max(a.length, b.length, 1);
         if (!best || sim > best.sim || sim === best.sim && G.maps[id] && !G.maps[best.id]) best = {id, name: n, sim};
@@ -565,18 +600,25 @@
   const INV_TABS = [["equip", 4], ["use", 38], ["setup", 67], ["etc", 101], ["cash", 134], ["deco", 167]];
   function findInventory(img, box = null){
     const {w, h, d} = img, px = (x, y) => (y * w + x) * 4;
-    const red = (x, y) => { const i = px(x, y); return d[i] > 140 && d[i + 1] < 45 && d[i + 2] < 45 };
+    const red = (x, y) => { const i = px(x, y); return d[i] > 125 && d[i + 1] < 45 && d[i + 2] < 45 };
+    // the open tab: pink; pale pink (fddce2) when it's Etc in Danny's KPQ frames, and on a tab the mouse is over, so a
+    // pink tab wins over a pale one (Danny's frames, 2026-10-18)
     const pink = (x, y) => { const i = px(x, y); return Math.abs(d[i] - 234) < 26 && Math.abs(d[i + 1] - 101) < 26 && Math.abs(d[i + 2] - 129) < 26 };
+    const pale = (x, y) => { const i = px(x, y); return d[i] >= 235 && d[i + 1] >= 195 && d[i + 1] <= 228 && d[i + 2] >= 200 && d[i + 2] <= 236 && d[i] - d[i + 1] >= 18 };
     const X0 = box ? Math.max(0, box.x0) : 0, X1 = box ? Math.min(w, box.x1) : w;
     for (let y = Math.max(22, box ? box.y0 : 0), Y1 = Math.min(h - 3, box ? box.y1 : h); y < Y1; y++){
       for (let x = X0; x < X1; x += 8){
         if (!red(x, y)) continue;
-        let a = x, b = x; while (a > 0 && red(a - 1, y)) a--; while (b < w - 1 && red(b + 1, y)) b++;
+        // the line's ends, over breaks of up to 24 px (the mouse pointer on it)
+        const more = (p, dir) => { for (let k = 1; k <= 24; k++){ const q = p + dir * k; if (q < 0 || q >= w) return p; if (red(q, y)) return q } return p };
+        let a = x, b = x; for (let n; (n = more(a, -1)) !== a;) a = n; for (let n; (n = more(b, 1)) !== b;) b = n;
         x = b;
-        if (b - a < 190 || b - a > 215 || !red(a + 5, y + 1) || !red(a + 5, y + 2) || red(a + 5, y - 1) || a + 200 >= w) continue;
-        for (let yy = y - 20; yy < y - 1; yy++) for (let xx = a; xx < a + 200; xx++) if (pink(xx, yy) && pink(xx + 1, yy) && pink(xx + 2, yy)){
+        // the top row is darker and broken under a pale open tab (Danny's Etc tab): the line's full width may first show a row lower
+        const top = red(a + 5, y - 1) ? y - 1 : y;
+        if (b - a < 190 || b - a > 215 || !red(a + 5, top + 1) || !red(a + 5, top + 2) || red(a + 5, top - 1) || a + 200 >= w) continue;
+        for (const is of [pink, pale]) for (let yy = top - 20; yy < top - 1; yy++) for (let xx = a; xx < a + 200; xx++) if (is(xx, yy) && is(xx + 1, yy) && is(xx + 2, yy)){
           const off = xx - a, tab = INV_TABS.reduce((p, q) => Math.abs(q[1] - off) < Math.abs(p[1] - off) ? q : p);
-          return Math.abs(tab[1] - off) <= 8 ? {x: a, y, tab: tab[0]} : null;
+          return Math.abs(tab[1] - off) <= 8 ? {x: a, y: top, tab: tab[0]} : null;
         }
       }
     }
@@ -741,13 +783,17 @@
       // an item back on screen after being hidden (arrows only show while the Use tab is open): what its total (all its
       // stacks) went down by meanwhile was used. Totals, not single spots: two arrow stacks would otherwise read as a drop
       const total = m => { const o = {}; for (const v of m.values()) o[v.id] = (o[v.id] || 0) + v.n; return o };
-      const before = total(spots), after = total(now);
-      for (const [id, n] of Object.entries(before)) if (!(id in after)) gone.set(id, n);
+      const stacks = m => { const o = {}; for (const v of m.values()) (o[v.id] ||= []).push(v.n); return o };
+      const before = total(spots), after = total(now), bs = stacks(spots), as = stacks(now);
+      for (const [id, n] of Object.entries(before)) if (!(id in after)) gone.set(id, {n, s: bs[id]});
       // counted on the read after it's back (the bigger of the two totals), so a stack missed on one read isn't a drop
       for (const [id, g] of [...pend]){
         if (!(id in after)){ pend.delete(id); gone.set(id, g); continue }   // gone again: keep the older total
-        const n = Math.max(after[id], before[id] || 0), cap = String(id).startsWith("206") ? 2000 : 20;
-        if (n < g && g - n <= cap) drops[id] = Math.max(drops[id] || 0, g - n);
+        const n = Math.max(after[id], before[id] || 0), cap = String(id).startsWith("206") ? 2000 : 20, d = g.n - n;
+        // one stack fewer and the drop is exactly that stack: a count that didn't read (Danny's "215" arrows stack under the
+        // slot's frame, 2026-10-18), not a stack used up while hidden
+        const missed = as[id].length < g.s.length && g.s.includes(d);
+        if (d > 0 && d <= cap && !missed) drops[id] = Math.max(drops[id] || 0, d);
         pend.delete(id);
       }
       for (const id of Object.keys(after)) if (!(id in before) && gone.has(id)){ pend.set(id, gone.get(id)); gone.delete(id) }
@@ -781,13 +827,13 @@
       invBox = inv && {x0: inv.x - 12, x1: inv.x + 230, y0: inv.y - 3, y1: inv.y + 4};
       info.inv = inv ? inv.tab : null;
       if (!inv || !byTab[inv.tab]) return null;
-      const r = readInventory(img, inv, byTab[inv.tab], invCache), items = {}, alike = {};
-      for (const sl of r.slots){ if (sl.n === null){ r.unknown++; continue } items[sl.ids[0]] = (items[sl.ids[0]] || 0) + sl.n; if (sl.ids.length > 1) alike[sl.ids[0]] = sl.ids.length }
+      const r = readInventory(img, inv, byTab[inv.tab], invCache), items = {}, alike = {}, stacks = {};
+      for (const sl of r.slots){ if (sl.n === null){ r.unknown++; continue } items[sl.ids[0]] = (items[sl.ids[0]] || 0) + sl.n; stacks[sl.ids[0]] = (stacks[sl.ids[0]] || 0) + 1; if (sl.ids.length > 1) alike[sl.ids[0]] = sl.ids.length }
       const key = inv.tab + JSON.stringify(items) + r.unknown, steady = key === invNext;
       invNext = key;
       if (!steady || invSent[inv.tab] === key) return null;
       invSent[inv.tab] = key;
-      return {t, type: "inv", tab: inv.tab, items, alike, unknown: r.unknown, slots: r.slots.length + r.unknown};
+      return {t, type: "inv", tab: inv.tab, items, alike, stacks, unknown: r.unknown, slots: r.slots.length + r.unknown};
     }
     let info = {bar: false, partyWindow: null, counts: 0};
     return {readFrame, get info(){ return info }, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,

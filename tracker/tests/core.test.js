@@ -225,6 +225,17 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
   s.add({t: sec(120), type: "inv", tab: "use", items: {"2060000": 52, "2010001": 3}, unknown: 0});
   const u = Object.fromEntries(s.stats().used.map(x => [x.id, x.n]));
   assert.strictEqual(u["2060000"], 48); assert.strictEqual(u["2010001"], 2) }
+// an item gone from the Use tab while a slot didn't read: not all used (Danny's 75 Lemons, 2026-10-18; 13 really eaten)
+{ const s = createSession(G);
+  s.add({t: sec(0), type: "inv", tab: "use", items: {"2010005": 75, "2010003": 75}, unknown: 0});
+  s.add({t: sec(120), type: "inv", tab: "use", items: {"2010003": 45}, unknown: 1});
+  const u = Object.fromEntries(s.stats().used.map(x => [x.id, x.n]));
+  assert.strictEqual(u["2010005"], undefined); assert.strictEqual(u["2010003"], 30) }
+// an arrow stack that didn't read (one stack fewer, one more slot unread): not 215 arrows used
+{ const s = createSession(G);
+  s.add({t: sec(0), type: "inv", tab: "use", items: {"2060001": 1015}, stacks: {"2060001": 2}, unknown: 0});
+  s.add({t: sec(120), type: "inv", tab: "use", items: {"2060001": 800}, stacks: {"2060001": 1}, unknown: 1});
+  assert.ok(!s.stats().used.some(x => x.id === "2060001")) }
 // KPQ middle stages: no monsters, so 4 minutes without EXP there is still active time
 { const s = createSession(G); s.add({t: sec(0), type: "map", id: "80000100"}); s.add({t: sec(1), type: "bar", exp: 1000, pct: 10, level: 20});
   s.add({t: sec(241), type: "bar", exp: 1600, pct: 16, level: 20});
