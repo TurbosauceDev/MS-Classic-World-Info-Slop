@@ -7,7 +7,10 @@ const G = {
   mobs: Object.fromEntries(Object.entries(D.mobs).map(([id, m]) => [id, m.slice(0, 4)])),   // [name, level, hp, exp]
   maps: D.maps, mapnames: D.mapnames, exp: D.exp, items, pw: D.pw?.it || {}, pwRead: D.pw?.read || null,
 };
-// KPQ stages aren't in D.maps (the site's grind maps): add the ones with monsters, e.g. the bonus stage players grind
+// KPQ stages aren't in D.maps (the site's grind maps): every stage's name is known (the minimap OCR matches it: KPQ runs
+// are spotted by these ids, G.kpq), and the ones with monsters are added as maps, e.g. the bonus stage players grind
+G.kpq = (D.kpq || []).map(k => k.id);
+for (const k of D.kpq || []) G.mapnames = {...G.mapnames, [k.id]: k.name};
 for (const k of D.kpq || []){
   if (!k.mob?.length || G.maps[k.id]) continue;
   const n = {}; for (const [id] of k.mob) n[id] = (n[id] || 0) + 1;

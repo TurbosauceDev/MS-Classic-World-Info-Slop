@@ -174,7 +174,8 @@ function render(){
   $("#miniGoal").textContent = s.goalLevel && s.toGoalHrs != null ? `Lv ${s.goalLevel} in ${hm(s.toGoalHrs)}` : "";
   stopCheck(s);
   $("#active").textContent = Math.round(s.activeMin) + " min";
-  $("#where").textContent = [s.mapName, s.job, s.party > 1 ? "party of " + s.party : "solo",
+  $("#kpqNote").textContent = kpqText(s);
+  $("#where").textContent = [kpq?.on && "KPQ (" + (settings.kpqMode || "Bonus") + ")", s.mapName, s.job, s.party > 1 ? "party of " + s.party : "solo",
     s.kills + " kills", fmt(s.mesoPerKill) + " mesos/kill",
     s.readShare != null && Math.round(s.readShare * 100) + "% of EXP seen as messages",
     settings.share && runInfo()].filter(Boolean).join(" · ");
@@ -232,7 +233,7 @@ async function readMap(c, t){   // c: the minimap title crop (GrindReaders.mapTe
   if (check && sess === session){ if (!m) check.mapWhy = "Minimap found, but its name didn't read. Is something over the minimap title?"; else if (!check.map){ check.map = m.name || "map " + m.id; check.late = check.ended } }
   // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
   const same = (a, b) => a === b || a && b && !G.maps[a] && !G.maps[b] && GrindReaders.similar(a, b) >= 0.75;
-  if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e) }
+  if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e); kpqMap(m.id, t) }
   mapSeen = key;
 }
 
@@ -297,9 +298,10 @@ function stopCheck(s){
 let barSeen = false, goneSince = null, lastGoneCheck = 0;
 function autoPause(minimap, info, t){   // minimap: the minimap is on screen (looked for when the bar isn't)
   if (info.bar) barSeen = true;
+  if (kpq?.hold){ if (session.state.pausedAt === null) pauseAt(t); return }   // between KPQ rounds: stays paused until the next stage
   if (settings.autoPause === false || !barSeen) return;
   const paused = session.state.pausedAt !== null;
-  if (info.bar){ goneSince = null; if (paused){ const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Back in the game: tracking again." } return }
+  if (info.bar){ goneSince = null; if (paused && !kpq?.hold){ const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Back in the game: tracking again." } return }
   if (paused || t - lastGoneCheck < 1000) return;
   lastGoneCheck = t;
   if (minimap){ goneSince = null; return }   // minimap still there: just the bar covered
@@ -309,6 +311,41 @@ function autoPause(minimap, info, t){   // minimap: the minimap is on screen (lo
     $("#status").textContent = "Paused: the game screen is gone (Cash Shop, changing channel or loading). Resumes by itself.";
   }
 }
+// KPQ: picked in the Session tab, or found by itself (Auto) once a KPQ stage is on the minimap. While it's on, any map that
+// isn't a KPQ stage (Kerning City between rounds, a shop) pauses the session; the next stage picks it back up.
+// A round = coming into a KPQ stage from outside. Maps: G.kpq (80000000-80000600, from the site's KPQ data).
+const KPQ_MAPS = new Set((G.kpq || []).map(String));
+let kpq = null;
+function pauseAt(t){ const e = {t: Math.max(t, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); log("event", e) }
+function kpqReset(){ kpq = {on: settings.kpqAct === "kpq", hold: false, inside: false, rounds: 0} }
+function kpqMap(id, t){
+  if (!kpq || id == null) return;   // map not read: no change
+  const inside = KPQ_MAPS.has(String(id));
+  if (inside && !kpq.on && settings.kpqAct !== "grind"){ kpq.on = true; $("#status").textContent = "KPQ run spotted: rounds are counted, and Kerning City between rounds is paused." }
+  if (!kpq.on) return;
+  if (inside){
+    if (!kpq.inside) kpq.rounds++;
+    kpq.inside = true;
+    if (kpq.hold){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ round " + kpq.rounds + ": tracking again." }
+  } else {
+    kpq.inside = false;
+    if (!kpq.hold){ kpq.hold = true; if (session.state.pausedAt === null) pauseAt(t); $("#status").textContent = "KPQ: paused between rounds. Picks back up on the next stage." }
+  }
+}
+function kpqText(s){
+  if (!kpq?.on) return settings.kpqAct === "kpq" ? "KPQ picked: the session pauses outside the KPQ stages and counts each round." : "During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.";
+  const n = kpq.rounds, per = v => n ? fmt(v / n) : "-";
+  return `KPQ (${settings.kpqMode || "Bonus"}): ${n} round${n === 1 ? "" : "s"}` + (n ? ` · ${Math.round(s.activeMin / n * 10) / 10} min a round · ${per(s.exp)} EXP a round · ${per(s.mesos)} mesos a round` : "")
+    + (kpq.hold ? " · paused between rounds" : "");
+}
+function kpqSet(){
+  if (!session || !kpq) return;
+  const t = Date.now();
+  if (settings.kpqAct === "kpq" && !kpq.on){ kpq.on = true; kpqMap(session.state.map, t) }
+  else if (settings.kpqAct === "grind" && kpq.on){ kpq.on = false; if (kpq.hold){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e) } }
+}
+$("#kpqAct").onchange = e => host.settings({kpqAct: e.target.value}).then(s => { settings = s; kpqSet(); if (session) render() });
+$("#kpqMode").onchange = e => host.settings({kpqMode: e.target.value}).then(s => { settings = s; if (session) render() });
 // a level-up: how long the last level took
 let levelsShown = 0;
 function levelNote(s){
@@ -465,9 +502,9 @@ async function start(){
   timer = 0;   // running (the first tick sets the real timeout)
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: settings.goal || 0}); stopWarned = false;
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
-  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
+  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
   check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
-  barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
+  kpqReset(); barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
   engine = makeEngine(ICONS, settings.countArea || null); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
   mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
@@ -494,7 +531,7 @@ async function stopNow(){
   const a = snaps.start, b = snaps.end, snapExp = a && b && b.t > a.t ? GrindSession.expBetween(G, a, b) : null;
   const snapRec = snapExp != null ? {startLevel: a.level, startPct: a.pct, endLevel: b.level, endPct: b.pct, minutes: Math.round((b.t - a.t) / 6e3) / 10, exp: Math.round(snapExp)} : null;
   if (!snapRec && session?.state.events) $("#status").textContent = "Saved, but the start or end EXP reading is missing: History uses the live count for this one.";
-  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
+  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds} : null, levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
   renderState(session?.stats());
 }
 $("#go").onclick = () => timer != null ? stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
@@ -546,8 +583,11 @@ async function loadHist(){
   $("#recap").innerHTML = recap(list) + levelLog(list);
   $("#histRows").innerHTML = list.length ? list.slice(0, 30).map(x => { const h = (x.activeMin || 0) / 60;
     // EXP/hr from the start/end readings when the session has them (clock time), else the live count (farming time)
-    const sn = x.snap && x.snap.minutes > 0 ? x.snap : null, rate = sn ? fmt(sn.exp / (sn.minutes / 60)) : h ? fmt(x.exp / h) : "-";
-    return `<tr><td>${esc(x.date)} ${esc(x.mapName || "")}</td><td class="n">${Math.round(sn ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${rate} EXP/hr</td>`
+    // KPQ: over time in the stages only (the readings' clock time includes the waits in Kerning)
+    const sn = x.snap && x.snap.minutes > 0 ? x.snap : null, kq = x.kpq && typeof x.kpq === "object" ? x.kpq : null;
+    const rate = kq ? h ? fmt((sn ? sn.exp : x.exp) / h) : "-" : sn ? fmt(sn.exp / (sn.minutes / 60)) : h ? fmt(x.exp / h) : "-";
+    const what = kq ? `KPQ (${kq.mode === "Rush" ? "Rush" : "Bonus"}) · ${+kq.rounds || 0} round${+kq.rounds === 1 ? "" : "s"}` : x.mapName || "";
+    return `<tr><td>${esc(x.date)} ${esc(what)}</td><td class="n">${Math.round(sn && !kq ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${rate} EXP/hr</td>`
       + `<td class="n"><button class="alt del" data-saved="${+x.saved}" title="Delete this session">×</button></td></tr>` }).join("")
     : `<tr><td>No sessions yet: they're saved when you press Stop.</td></tr>`;
 }
@@ -628,6 +668,7 @@ $("#updGo").onclick = async () => {
   $("#ontop").checked = settings.onTop !== false; showArea();
   $("#alert").value = settings.alertWorth || 0;
   $("#stopBeep").checked = settings.stopBeep !== false;
+  $("#kpqAct").value = settings.kpqAct || "auto"; $("#kpqMode").value = settings.kpqMode === "Rush" ? "Rush" : "Bonus";
   $("#autoPause").checked = settings.autoPause !== false;   // on unless turned off   // on unless turned off
   $("#goal").value = settings.goal || "";
   $("#pcode").value = settings.partyCode || "";

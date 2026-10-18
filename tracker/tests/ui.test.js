@@ -79,6 +79,20 @@ const path = require("path"), {chromium} = require("playwright");
     autoPause(f, {bar: false}, t + 4100); const b = session.state.pausedAt, st = document.querySelector("#status").textContent; autoPause(f, {bar: true}, t + 9000);
     return [a, b, st, session.state.pausedAt, session.state.pausedMs] });
   if (ap[0] !== null || !ap[1] || !/Paused/.test(ap[2]) || ap[3] !== null || !(ap[4] >= 4900)) throw new Error("auto-pause: " + JSON.stringify(ap));
+  // KPQ (Auto): a stage on the minimap turns it on; Kerning City between rounds pauses (and the bar doesn't resume it); the next stage resumes
+  const kq = await page.evaluate(() => { const t = Date.now() + 2e4, f = false;
+    kpqMap("104000000", t); const off = kpq.on;
+    kpqMap("80000000", t + 100); kpqMap("80000100", t + 200); kpqMap("80000600", t + 300); const r1 = kpq.rounds;
+    kpqMap("10003000", t + 400); const held = session.state.pausedAt !== null;
+    autoPause(f, {bar: true}, t + 900); const stillHeld = session.state.pausedAt !== null;
+    session.add({t: t + 950, type: "bar", level: 22, pct: 10}); autoPause(f, {bar: true}, t + 1000); const reheld = session.state.pausedAt !== null;
+    kpqMap("80000000", t + 5000); const back = session.state.pausedAt === null; render();
+    return {off, r1, held, stillHeld, reheld, back, rounds: kpq.rounds, note: document.querySelector("#kpqNote").textContent, where: document.querySelector("#where").textContent} });
+  if (kq.off || kq.r1 !== 1 || !kq.held || !kq.stillHeld || !kq.reheld || !kq.back || kq.rounds !== 2 || !/KPQ \(Bonus\): 2 rounds/.test(kq.note) || !/^KPQ \(Bonus\)/.test(kq.where)) throw new Error("kpq: " + JSON.stringify(kq));
+  // Grinding picked: KPQ stages don't turn it on
+  const kg = await page.evaluate(async () => { const keep = kpq; settings = await host.settings({kpqAct: "grind"}); kpqReset(); kpqMap("80000000", Date.now() + 3e4); const on = kpq.on;
+    settings = await host.settings({kpqAct: "auto"}); kpq = keep; return on });
+  if (kg) throw new Error("kpq grind: still turned on");
   // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened
   await page.waitForTimeout(3200);
   await page.click(".tabs [data-tab=settings]"); await page.fill("#reportNote", "map read wrong"); await page.click("#report"); await page.waitForTimeout(100);

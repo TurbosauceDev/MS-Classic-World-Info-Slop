@@ -76,6 +76,11 @@ npm start           # run it (Windows, Electron)
   - A frame identical to the last one is skipped, at most 4 in a row (2 s).
 - Auto-pause: EXP bar and minimap both gone for 3 s (Cash Shop, channel change) = paused; that time is left out of
   active time and of 15-minute runs. Level-ups are logged with the farming time each level took (History).
+- KPQ: Session tab "Doing" Auto / Grinding / KPQ, plus Mode Bonus / Rush (a label). Auto turns KPQ on at the first map
+  in `G.kpq` (80000000-80000600: 1st Accompaniment stages 1-4, Last Stage, Bonus, Exit; from the site's D.kpq). While on,
+  any other known map (Kerning City 10003000 between rounds) pauses the session and the bar can't resume it; the next
+  stage does. A round = entering a stage from outside. Saved as `kpq: {mode, rounds}`; History's EXP/hr for it uses
+  stage time only. No shared runs while KPQ is on.
 - Runs carry the UTC hour they started; the server's summary has "times" (best time to farm per map, each run against
   the same player's usual speed there, 3-hour blocks with 3+ players).
 - Shared numbers count one player per home network: the server joins installs that sent runs from the same connection

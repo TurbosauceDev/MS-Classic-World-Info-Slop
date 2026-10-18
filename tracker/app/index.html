@@ -92,6 +92,10 @@
         <tr><td>End</td><td>Lv <input type="number" id="s1lv" min="1" max="200" style="width:52px"></td><td><input type="number" id="s1pct" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s1t" class="n"></td></tr>
       </table>
       <div class="v" id="snapRate" style="margin-top:6px">-</div><div class="note" id="snapNote"></div></div>
+    <div class="card" id="kpqBox"><h3>KPQ</h3>
+      <div class="row"><label>Doing <select id="kpqAct"><option value="auto">Auto (spots KPQ)</option><option value="grind">Grinding</option><option value="kpq">KPQ</option></select></label>
+        <label>Mode <select id="kpqMode"><option>Bonus</option><option>Rush</option></select></label></div>
+      <div class="note" id="kpqNote">During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.</div></div>
     <div class="card hidden" id="lastRun"></div>
     <div class="card hidden" id="partyBox"></div>
     <div class="card grid">
@@ -150,6 +154,14 @@
         <li>Everyone types the same <b>party code</b> in Settings. You'll see each other's EXP/hr, level and job, updated
           every minute. A name only shows if you type one.</li>
         <li>Open the in-game party window so the tracker knows the party size.</li>
+      </ul></details>
+      <details><summary>KPQ runs</summary><ul>
+        <li>On <b>Auto</b>, KPQ turns on by itself once a KPQ stage shows on the minimap. Pick <b>KPQ</b> in the Session tab to
+          also skip the wait in Kerning City before the first round.</li>
+        <li>During KPQ the session pauses on any map that isn't a KPQ stage (Kerning City between rounds) and picks back up
+          on the next stage. Each trip into the stages is one round.</li>
+        <li>Bonus or Rush is just the label saved with the session. History shows rounds, and EXP/hr counts time in the stages only.</li>
+        <li>KPQ sessions aren't sent as shared farming runs.</li>
       </ul></details>
       <details><summary>Window tips</summary><ul>
         <li><b>Mini</b> shrinks the window to a strip with EXP/hr and time to level. Click the strip to bring it back.</li>
