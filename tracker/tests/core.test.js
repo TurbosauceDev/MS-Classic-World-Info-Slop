@@ -18,7 +18,7 @@ assert.strictEqual(st.mobs.find(m => m.name === "Red Snail").mesos, 200, "mesos 
 assert.strictEqual(st.mobs.find(m => m.name === "Blue Snail").items["4000019"], 10);
 assert.ok(Math.abs(st.activeMin - 591 / 60) < 1e-9, "active time from first to last pickup");
 assert.ok(Math.abs(st.killsHr - 60 / (591 / 3600)) < 1e-6);
-assert.strictEqual(st.lootValue, 10 * 22, "Horny Mushroom Cap at its meso.watch median (22)");
+assert.strictEqual(st.lootValue, 10 * G.pw["4000019"][0], "Horny Mushroom Cap at its meso.watch median");
 assert.ok(st.toLevelHrs > 0 && st.toLevelHrs < 100);
 
 // idle: a 5-minute AFK gap adds nothing to active time
