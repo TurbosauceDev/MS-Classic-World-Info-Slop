@@ -93,6 +93,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - meso.watch raw JSON is behind a Cloudflare check: never bypass. Refresh = Danny drops a dev CSV in chat.
 - mapleexp.com drops are CMS v79 (China), not Classic: don't use. Its EXP table to Lv 100 is fine.
 - No drop rates exist anywhere (OSMS, meowdb have reports only); every rate on the page is an assumption, labelled.
+- Keep or sell skips quest items with the same test as Items "Hide quest items" (403xxxx ID block + quest start items; `QITEM` in 47-keep.js and 49-items.js, keep both in sync). Smoke: "keep list: no quest items".
 
 ## Split candidates (not done; their owners were mid-work 2026-10-18)
 - `src/index.html` 114 KB: move the changelog (~275 lines) to `src/changelog.html`, injected by build.py.

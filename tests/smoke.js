@@ -111,6 +111,7 @@ const path = require("path");
   check(await p.$$eval("#crrows tr", r => r.length) > 0 && !/NaN|undefined/.test(await p.textContent("#craft")), "material click filters recipes");
   // Keep or sell, armor, share links, crafting leveling, bosses, quest compact toggle
   await tab("#t-keep"); check(/items/.test(await p.textContent("#kcount")) && await p.$$eval("#krows tr", r => r.length) > 50, "keep list renders");
+  { const names = await p.$$eval("#krows tr b", b => b.map(x => x.textContent)); check(!names.some(n => /^(Pink Anthurium|Black Feather|Fresh Milk|Shumi's Coin)$/.test(n)), "keep list: no quest items (403xxxx)", names.filter(n => /Anthurium|Feather|Milk|Shumi/.test(n))); }
   await p.click("#konly"); check(await p.$$eval("#krows tr", r => r.length) > 0, "keep list: no-source filter"); await p.click("#konly");
   { const tr = await p.$("#krows tr:has(td:nth-child(2) .p-hot)"); const before = await tr.$eval("td:nth-child(2)", e => e.textContent);
     await (await tr.$(".khave")).fill("999"); const after = await tr.$eval("td:nth-child(2)", e => e.textContent);
