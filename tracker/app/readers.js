@@ -701,10 +701,13 @@
     /* the open inventory tab, every 2 s: looked for where it was last seen, over the whole frame every 6 s. A tab's items
        count once the same read comes twice running; "inv" events carry {tab, items: {id: n}, unknown} (unknown: slots
        whose item or count didn't read; one picture shared by several items is listed under the first of them) */
-    let invIcons = null, byTab = null, lastInv = -Infinity, invBox = null, lastFullInv = -Infinity, invNext = null;
+    let invIcons = null, byTab = null, lastInv = -Infinity, invBox = null, lastFullInv = -Infinity, invNext = null, invHint = null;
     const invSent = {}, invCache = new Map();
     function readInv(img, t){
       let inv = invBox && findInventory(img, invBox);
+      // the box the player drew around the inventory (clicked a tab chip and it wasn't found): looked at first, every read
+      if (!inv && invHint) inv = findInventory(img, {x0: Math.floor(invHint.x * img.w) - 4, x1: Math.ceil((invHint.x + invHint.w) * img.w) + 4,
+        y0: Math.floor(invHint.y * img.h) - 4, y1: Math.ceil((invHint.y + invHint.h) * img.h) + 4});
       if (!inv && (t - lastFullInv >= 6000 || invBox)){ lastFullInv = t; inv = findInventory(img) }
       invBox = inv && {x0: inv.x - 12, x1: inv.x + 230, y0: inv.y - 3, y1: inv.y + 4};
       info.inv = inv ? inv.tab : null;
@@ -720,6 +723,9 @@
     let info = {bar: false, partyWindow: null, counts: 0};
     return {readFrame, get info(){ return info }, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,
       // all item pictures (loadIcons on G.iicons), sorted by tab: matching only looks at the open tab's kind of items
+      // a tab chip was clicked: look everywhere now and send the next steady read even when it didn't change
+      invNow(){ for (const k in invSent) delete invSent[k]; invNext = null; lastFullInv = -Infinity; lastInv = -Infinity },
+      setInvHint(a){ invHint = a && a.w > 0 && a.h > 0 ? a : null },
       setInvIcons(list){
         const tabOf = {Equipment: "equip", Consumable: "use", Scroll: "use", Etc: "etc"};
         invIcons = list; byTab = {};

@@ -57,19 +57,20 @@ function grabFrame(){
 }
 /* the readers run in a worker so the window never stutters while a frame is read; in the window itself when the worker
    can't start or stops answering. read() resolves to GrindReaders.work's result, or null for a frame that was lost. */
-function makeEngine(icons, area){
-  const inline = () => { const rd = GrindReaders.createReaders(G, icons); rd.setArea(area);
+function makeEngine(icons, area, invHint){
+  const inline = () => { const rd = GrindReaders.createReaders(G, icons); rd.setArea(area); rd.setInvHint(invHint);
     (ALL_ICONS ||= GrindReaders.loadIcons(G, G.iicons).catch(() => null)).then(l => l && rd.setInvIcons(l));
-    return {kind: "window", setArea: a => rd.setArea(area = a), read: async m => GrindReaders.work(rd, m), close(){}} };
+    return {kind: "window", setArea: a => rd.setArea(area = a), invNow: () => rd.invNow(), setInvHint: a => rd.setInvHint(invHint = a), read: async m => GrindReaders.work(rd, m), close(){}} };
   let w = null;
   try { w = new Worker("reader-worker.js") } catch { return inline() }
   let id = 0, waiting = null, eng;
   const fallBack = why => { log("engine", {kind: "window", why}); w.terminate(); waiting?.(null); waiting = null; Object.assign(eng, inline()) };
   w.onmessage = ({data}) => { if (data.id !== id || !waiting) return; const r = waiting; waiting = null; r(data.error ? null : data) };
   w.onerror = e => { e.preventDefault?.(); fallBack(e.message || "worker failed to load") };
-  w.postMessage({type: "reset", icons, area});
+  w.postMessage({type: "reset", icons, area, invHint});
   return eng = {kind: "worker", close(){ w.terminate(); const r = waiting; waiting = null; r?.(null) },
     setArea(a){ area = a; w.postMessage({type: "area", area: a}) },
+    invNow(){ w.postMessage({type: "invnow"}) }, setInvHint(a){ invHint = a; w.postMessage({type: "invhint", area: a}) },
     read(m){
       return new Promise(res => {
         waiting = res; id++;
@@ -197,7 +198,7 @@ const INV_TABS = [["equip", "Equip"], ["use", "Use"], ["etc", "Etc"]];
 function renderInv(s){
   const tabs = s?.invTabs || {}, at = t => new Date(t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
   $("#invTabs").innerHTML = INV_TABS.map(([k, name]) => { const v = tabs[k];
-    return `<span class="chip ${v ? v.last > v.first ? "ok" : "half" : "need"}" title="${v ? "first read " + at(v.first) + ", last " + at(v.last) : "not seen yet"}">${v ? v.last > v.first ? "✓✓" : "✓" : "○"} ${name}</span>` }).join(" ");
+    return `<button class="chip ${v ? v.last > v.first ? "ok" : "half" : "need"}" data-tab="${k}" title="${(v ? "first read " + at(v.first) + ", last " + at(v.last) : "not seen yet") + ". Click to read it now (have the " + name + " tab open in the game)"}">${v ? v.last > v.first ? "✓✓" : "✓" : "○"} ${name}</button>` }).join(" ");
   // the start count: asked for until all 3 tabs were read once
   const missing = timer != null ? INV_TABS.filter(([k]) => !tabs[k]).map(([, n]) => n) : [];
   $("#invAsk").classList.toggle("hidden", !missing.length);
@@ -408,7 +409,7 @@ async function tick(){
       if (check && e.type === "bar" && !check.bar){ check.bar = e.level ? "Lv " + e.level + ", " + e.pct + "%" : e.pct + "%"; check.late = check.ended }
       if (check && /^(exp|bonus|meso|item|itemraw)$/.test(e.type) && !check.lines){ check.lines = true; check.late = check.ended }
     }
-    const info = r.info;
+    const info = r.info; lastInvTab = info.inv || null;
     if (check && info.useSpots && !check.use){ check.use = info.useSpots + " item count" + (info.useSpots > 1 ? "s" : ""); check.late = check.ended }
     if (check && info.partyWindow > 1 && !check.party){ check.party = info.partyWindow; check.late = check.ended }
     autoPause(r.minimap, info, t);
@@ -510,6 +511,24 @@ function showArea(){
   $("#areaClear").classList.toggle("hidden", !a);
   $("#areaNote").textContent = a ? "Reading counts only in your box." : "";
 }
+// a tab chip clicked: read that tab now. The inventory is looked for anywhere on screen (it can be moved during the
+// session); if it isn't found in 4 s, the player drags a box around it (snip window), saved as settings.invArea
+let lastInvTab = null;
+$("#invTabs").onclick = async e => {
+  const b = e.target.closest("[data-tab]"); if (!b) return;
+  const tab = b.dataset.tab, name = INV_TABS.find(x => x[0] === tab)[1], say = t => $("#status").textContent = t;
+  if (timer == null || !engine?.invNow) return say("Press Start first, then click a tab to read it.");
+  const wait = async () => { engine.invNow(); for (let i = 0; i < 8; i++){ await new Promise(r => setTimeout(r, 500)); if (lastInvTab === tab) return true } return false };
+  say(`Reading your ${name} tab: have it open in the game...`);
+  if (await wait()) return say(`${name} tab read.`);
+  if (lastInvTab) return say(`That's your ${INV_TABS.find(x => x[0] === lastInvTab)[1]} tab: switch the inventory to ${name} and click again.`);
+  say("Couldn't find your inventory: drag a box around it (with the " + name + " tab open).");
+  const f = await oneFrame(), c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
+  const rect = await host.snip(c.toDataURL("image/jpeg", 0.9));
+  if (!rect) return say("No box drawn: the inventory is still looked for by itself.");
+  settings = await host.settings({invArea: rect}); engine.setInvHint(rect);
+  say(await wait() ? `${name} tab read. That spot is remembered; moving the window is fine too.` : `Still can't read the ${name} tab there. Report a bug (Ctrl+Shift+B) with it open so it can be fixed.`);
+};
 $("#snipBtn").onclick = () => pickArea().catch(e => { $("#status").textContent = "Couldn't take the picture: " + e.message });
 $("#areaClear").onclick = async () => { settings = await host.settings({countArea: null}); engine?.setArea(null); showArea() };
 
@@ -527,7 +546,7 @@ async function start(){
   check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   kpqReset(); barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
-  engine = makeEngine(ICONS, settings.countArea || null); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
+  engine = makeEngine(ICONS, settings.countArea || null, settings.invArea || null); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
   mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }

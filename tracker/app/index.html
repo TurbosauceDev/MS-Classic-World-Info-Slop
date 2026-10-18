@@ -43,7 +43,7 @@
   label.chk { display:flex; gap:6px; align-items:flex-start; margin:5px 0; } label.chk input { margin-top:3px; }
   #selfcheck td:first-child { width:42%; }
   .ask{margin-top:6px;padding:6px 8px;border-radius:8px;background:var(--accent-soft);color:var(--ink);font-weight:600}
-  .chip{display:inline-block;padding:2px 8px;border-radius:10px;border:1px solid var(--line);font-size:12px}
+  .chip{display:inline-block;padding:2px 8px;border-radius:10px;border:1px solid var(--line);font-size:12px;background:none;color:inherit;font:inherit;font-size:12px;cursor:pointer}
   .chip.ok{border-color:var(--leaf)} .chip.need{color:var(--muted)}
   button.del { padding:1px 7px; font-size:12px; } button.del.sure { background:var(--bad); color:#fff; }
   #snaps input.need { border-color:var(--warn); background:var(--accent-soft); }
@@ -98,7 +98,8 @@
       <div class="v" id="snapRate" style="margin-top:6px">-</div><div class="note" id="snapNote"></div>
       <div class="k" style="margin-top:8px">Inventory</div>
       <div class="note">Open your inventory on <b>Equip</b>, <b>Use</b> and <b>Etc</b> for a second each, after Start and again before Stop.
-        The difference is your real loot, even when a pickup line didn't read.</div>
+        The difference is your real loot, even when a pickup line didn't read. Click a tab below to read it right now; if the tracker can't find
+        your inventory, you drag a box around it once.</div>
       <div class="row" id="invTabs"></div><div class="ask hidden" id="invAsk"></div></div>
     <div class="card" id="kpqBox"><h3>KPQ</h3>
       <div class="row"><label>Doing <select id="kpqAct"><option value="auto">Auto (spots KPQ)</option><option value="grind">Grinding</option><option value="kpq">KPQ</option></select></label>
