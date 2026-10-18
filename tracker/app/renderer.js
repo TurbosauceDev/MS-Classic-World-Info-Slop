@@ -185,11 +185,11 @@ function render(){
   $("#active").textContent = Math.round(s.activeMin) + " min";
   $("#kpqNote").textContent = kpqText(s);
   $("#where").innerHTML = [kpq?.on && "KPQ (" + esc(settings.kpqMode || "Bonus") + ")", s.mapName && esc(s.mapName), s.job && esc(s.job), s.party > 1 ? "party of " + s.party : "solo",
-    s.kills + " kills", mz(s.mesoPerKill) + "/kill",
+    kills(s.kills), mz(s.mesoPerKill) + "/kill",
     s.readShare != null && Math.round(s.readShare * 100) + "% of EXP seen as messages",
     settings.share && esc(runInfo())].filter(Boolean).join(" · ");
   $("#mobsEmpty").classList.toggle("hidden", !!s.mobs.length); $("#itemsEmpty").classList.toggle("hidden", !!(s.items.length || s.unreadItems));
-  $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${esc(m.name)}</td><td class="n">${m.kills} kills</td><td class="n">${mz(m.mesoPerKill)}/kill</td></tr>`).join("");
+  $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${esc(m.name)}</td><td class="n">${kills(m.kills)}</td><td class="n">${mz(m.mesoPerKill)}/kill</td></tr>`).join("");
   $("#items").innerHTML = (s.items.length ? `<tr class="th"><td>Item</td><td class="n">Got</td><td class="n">Each</td><td class="n">Worth</td></tr>` : "")
     + s.items.map(i => `<tr><td>${ico(i.id)}${esc(i.name)}${i.inv ? ` <span class="note">(${i.inv} from the inventory)</span>` : ""}</td><td class="n">×${fmt(i.n)}</td><td class="n dim">${mz(i.each)}</td><td class="n">${sgm(i.total)}</td></tr>`).join("")
     + (s.items.length ? `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.items.reduce((a, i) => a + i.n, 0))}</td><td></td><td class="n">${sgm(s.lootValue)}</td></tr>` : "")
@@ -214,11 +214,12 @@ function renderInv(s){
 }
 // a number with its sign, green when gained and red when lost or spent
 const sg = (n, coin) => { n = Math.round(n || 0); return `<span class="${n > 0 ? "pos" : n < 0 ? "neg" : ""}">${n > 0 ? "+" : n < 0 ? "−" : ""}${coin ? COIN : ""}${fmt(Math.abs(n))}</span>` };
+const kills = n => fmt(n) + (n === 1 ? " kill" : " kills");
 const sgm = n => sg(n, true), mz = n => COIN + fmt(n);
 // Loot tab: where the mesos came from and went
 const cell = (k, v, note = "") => `<div><div class="k">${k}</div><div class="v">${v}</div>${note ? `<div class="note">${note}</div>` : ""}</div>`;
 function renderMesos(s){
-  $("#mesoGrid").innerHTML = cell("Picked up", sgm(s.mesos), mz(s.mesosHr) + "/hr of farming") + cell("Per kill", mz(s.mesoPerKill), s.kills + " kills")
+  $("#mesoGrid").innerHTML = cell("Picked up", sgm(s.mesos), mz(s.mesosHr) + "/hr of farming") + cell("Per kill", mz(s.mesoPerKill), kills(s.kills))
     + cell("Spent on consumables", s.used.length ? sgm(-s.usedCost) : "-", s.used.length ? mz(s.usedCostHr) + "/hr" : "")
     + cell("Items looted are worth", sgm(s.lootValue), "if sold at the prices below")
     + cell("Net", sgm(s.mesos + s.lootValue - s.usedCost), "picked up + items - consumables")
@@ -242,13 +243,19 @@ function renderState(s){
 }
 // tabs under the numbers; the last one open is remembered
 function showTab(name){
-  for (const b of document.querySelectorAll(".tabs button")) b.classList.toggle("sel", b.dataset.tab === name);
+  for (const b of document.querySelectorAll(".tabs button")){ b.classList.toggle("sel", b.dataset.tab === name); b.setAttribute("aria-selected", String(b.dataset.tab === name)); b.tabIndex = b.dataset.tab === name ? 0 : -1 }
   for (const sec of document.querySelectorAll("section[data-tab]")) sec.classList.toggle("hidden", sec.dataset.tab !== name);
   try { localStorage.setItem("tab", name) } catch {}
 }
-for (const b of document.querySelectorAll(".tabs button")) if (b.id !== "histBtn") b.onclick = () => showTab(b.dataset.tab);
+for (const b of document.querySelectorAll(".tabs button")){ b.setAttribute("role", "tab"); if (b.id !== "histBtn") b.onclick = () => showTab(b.dataset.tab) }
+for (const sec of document.querySelectorAll("section[data-tab]")) sec.setAttribute("role", "tabpanel");
+// left/right arrows move between the tabs (the usual tab-strip keys)
+$(".tabs").addEventListener("keydown", e => { if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  const bs = [...document.querySelectorAll(".tabs button")], i = bs.indexOf(document.activeElement); if (i < 0) return;
+  const n = bs[(i + (e.key === "ArrowRight" ? 1 : bs.length - 1)) % bs.length]; n.click(); n.focus(); e.preventDefault() });
 // boxes, like OBS sources: dragged by the ⠿ grip or the title onto another box (above or below it), onto a tab (to the end of it), or onto
 // the strip above the tabs (pinned: shows on every tab); – folds one to its title. Saved in settings.layout (Danny, 2026-10-18)
+function foldMark(b){ const f = b.querySelector(".fold"), on = b.classList.contains("folded"); f.textContent = on ? "+" : "–"; f.setAttribute("aria-expanded", String(!on)) }
 const BOXES = [...document.querySelectorAll("[data-box]")], BOX_HOME = BOXES.map(b => [b, b.parentElement, b.nextElementSibling]);
 let dragBox = null;
 function layoutSave(){
@@ -267,9 +274,13 @@ function layoutLoad(l){
 for (const b of BOXES){
   b.classList.add("box");
   const c = document.createElement("div"); c.className = "boxctl";
-  c.innerHTML = `<span class="btitle">${esc(b.dataset.title)}</span><span class="grip" title="Drag to move: onto another box, a tab, or the strip above the tabs">⠿</span><button class="fold" title="Fold or unfold">–</button>`;
+  c.innerHTML = `<span class="btitle">${esc(b.dataset.title)}</span><span class="grip" tabindex="0" role="button" aria-label="Move ${esc(b.dataset.title)} (arrow keys)" title="Drag to move: onto another box, a tab, or the strip above the tabs. Or focus it and use the up and down arrow keys">⠿</span><button class="fold" aria-label="Fold ${esc(b.dataset.title)}" aria-expanded="true" title="Fold or unfold">–</button>`;
   b.prepend(c);
-  c.querySelector(".fold").onclick = () => { b.classList.toggle("folded"); c.querySelector(".fold").textContent = b.classList.contains("folded") ? "+" : "–"; layoutSave() };
+  c.querySelector(".fold").onclick = () => { b.classList.toggle("folded"); foldMark(b); layoutSave() };
+  // keyboard: arrow up/down on the grip moves the box past its neighbour
+  c.querySelector(".grip").onkeydown = e => { if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return; e.preventDefault();
+    const sib = e.key === "ArrowUp" ? b.previousElementSibling : b.nextElementSibling; if (!sib?.matches("[data-box]")) return;
+    e.key === "ArrowUp" ? sib.before(b) : sib.after(b); c.querySelector(".grip").focus(); layoutSave() };
 }
 // mouse dragging (pointer events: the browser's own drag and drop didn't start in the app, Danny 2026-10-18). Held on the
 // grip or the box's title, moved 5 px: the box follows as a label under the pointer until it's let go
@@ -316,7 +327,7 @@ const endDrag = (e, cancel) => {
 document.addEventListener("pointerup", e => endDrag(e, false));
 document.addEventListener("pointercancel", e => endDrag(e, true));
 document.addEventListener("keydown", e => { if (e.key === "Escape" && drag) endDrag(e, true) });
-$("#layoutReset").onclick = () => { for (const [b, p, next] of [...BOX_HOME].reverse()){ p.insertBefore(b, next); b.classList.remove("folded"); b.querySelector(".fold").textContent = "–" } layoutSave() };
+$("#layoutReset").onclick = () => { for (const [b, p, next] of [...BOX_HOME].reverse()){ p.insertBefore(b, next); b.classList.remove("folded"); foldMark(b) } layoutSave() };
 try { const t = localStorage.getItem("tab"); if (t && t !== "hist" && t !== "help" && document.querySelector(`section[data-tab="${t}"]`)) showTab(t) } catch {}
 
 // a crop (black-on-white RGBA) -> PNG bytes for the OCR in the main process
@@ -950,7 +961,7 @@ $("#updGo").onclick = async () => {
   host.updateState?.().then(u => u.state !== "idle" && showUpdate(u)).catch(() => {});
   settings = await host.settings();
   $("#share").checked = !!settings.share;
-  layoutLoad(settings.layout); for (const b of BOXES) b.querySelector(".fold").textContent = b.classList.contains("folded") ? "+" : "–";
+  layoutLoad(settings.layout); for (const b of BOXES) foldMark(b);
   $("#job").value = settings.job || "";
   $("#ontop").checked = settings.onTop !== false; showArea();
   $("#alert").value = settings.alertWorth || 0;
