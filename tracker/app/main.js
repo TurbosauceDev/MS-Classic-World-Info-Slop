@@ -10,7 +10,10 @@ const readSettings = () => { try { return JSON.parse(fs.readFileSync(SETTINGS, "
 // every request gives up after 10-20 s: a hung connection would otherwise keep the run queue busy until a restart
 const SERVER = "https://ms-classic-tracker.maplestoryclassic.workers.dev";
 const QUEUE = path.join(app.getPath("userData"), "run-queue.json");
-const writeSettings = s => fs.writeFileSync(SETTINGS, JSON.stringify(s, null, 1));
+// written to a temp file first, then swapped in: a crash or power cut mid-write can't leave a half file (that lost every
+// setting and the install ID)
+const writeAtomic = (file, text) => { fs.writeFileSync(file + ".tmp", text); fs.renameSync(file + ".tmp", file) };
+const writeSettings = s => writeAtomic(SETTINGS, JSON.stringify(s, null, 1));
 const SESSIONS = path.join(app.getPath("userData"), "sessions");   // finished sessions, kept locally either way
 
 // Windows Graphics Capture (what OBS uses) instead of the old GDI window grab, which gives black frames for DirectX games
@@ -89,7 +92,7 @@ ipcMain.handle("settings", (_, s) => {
   if (!cur.install) cur.install = require("crypto").randomUUID();   // random ID of this copy: one vote per player
   writeSettings({...cur, ...(s || {})});
   if (s && "onTop" in s) pinOnTop();
-  if (s && s.share === false) fs.writeFileSync(QUEUE, "[]");   // sharing turned off: runs still waiting to go up are dropped, not sent later
+  if (s && s.share === false) writeAtomic(QUEUE, "[]");   // sharing turned off: runs still waiting to go up are dropped, not sent later
   return readSettings();
 });
 // a finished 15-minute run (sharing on): queue it, then send everything queued. Kept until the server answers.
@@ -108,7 +111,7 @@ async function flushRuns(){
     }
     // runs queued while this was sending stay queued
     const sent = new Set(q.map(r => JSON.stringify(r))), added = readQueue().filter(r => !sent.has(JSON.stringify(r)));
-    fs.writeFileSync(QUEUE, JSON.stringify([...left, ...added]));
+    writeAtomic(QUEUE, JSON.stringify([...left, ...added]));
   } finally { flushing = false }
 }
 // shared data for the speed check, fetched at most every 30 minutes
@@ -142,9 +145,14 @@ ipcMain.handle("export-csv", () => {
   return {file};
 });
 // mini bar: a small strip with just EXP/hr and time to level
-ipcMain.handle("mini", (_, on) => { if (win){ win.setSize(360, on ? 128 : 600) } return !!on });
+// back from the mini bar: the size the window had before, not the default (a player who made it bigger keeps that)
+let fullSize = null;
+ipcMain.handle("mini", (_, on) => {
+  if (win){ if (on){ fullSize = win.getSize(); win.setSize(fullSize[0], 128) } else win.setSize(...(fullSize || [360, 600])) }
+  return !!on;
+});
 ipcMain.handle("share-run", async (_, run) => {
-  const q = readQueue(); q.push({...run, install: readSettings().install}); fs.writeFileSync(QUEUE, JSON.stringify(q.slice(-200)));
+  const q = readQueue(); q.push({...run, install: readSettings().install}); writeAtomic(QUEUE, JSON.stringify(q.slice(-200)));
   await flushRuns(); return true;
 });
 ipcMain.handle("save-session", (_, summary) => {   // kept on this PC only (shared numbers go up as 15-minute runs)

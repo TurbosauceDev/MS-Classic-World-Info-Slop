@@ -6,19 +6,42 @@
 <title>MS Classic Grind Tracker</title>
 <style>
   :root { --bg:#f6f4fb; --panel:#fff; --ink:#2b2638; --muted:#6f6880; --line:#e2dcef; --accent:#7b5cc4; --accent-soft:#ece5fa; --leaf:#3f8f5a; --warn:#b7791f; --bad:#c0392b; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#17141f; --panel:#211d2c; --ink:#ece8f5; --muted:#a39cb5; --line:#363044; --accent:#a98bf0; --accent-soft:#2e2640; } }
-  body { margin:0; padding:12px; background:var(--bg); color:var(--ink); font:13px/1.4 system-ui, sans-serif; }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:10px; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .k { color:var(--muted); font-size:11px; } .v { font-size:18px; font-weight:600; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#17141f; --panel:#211d2c; --ink:#ece8f5; --muted:#a39cb5; --line:#363044; --accent:#a98bf0; --accent-soft:#2e2640; --leaf:#5fbf7f; --warn:#e0a84a; --bad:#ef6b5b; } }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:10px; background:var(--bg); color:var(--ink); font:13px/1.4 system-ui, sans-serif; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; }
+  .k { color:var(--muted); font-size:11px; } .v { font-size:18px; font-weight:600; font-variant-numeric:tabular-nums; }
+  h3 { margin:0 0 6px; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
   button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:7px 12px; font:inherit; cursor:pointer; }
   button.alt { background:var(--accent-soft); color:var(--ink); }
-  table { width:100%; border-collapse:collapse; } td { padding:2px 0; border-bottom:1px solid var(--line); } td.n { text-align:right; }
-  #status { color:var(--muted); } #status.bad { color:var(--bad); }
+  button:disabled { opacity:.5; cursor:default; }
+  input, select { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:3px 5px; }
+  input[type=checkbox] { padding:0; }
+  table { width:100%; border-collapse:collapse; } td { padding:3px 0; border-bottom:1px solid var(--line); vertical-align:top; } td.n { text-align:right; padding-left:6px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  #status { color:var(--muted); min-height:18px; } #status.bad { color:var(--bad); }
   .note { color:var(--muted); font-size:11px; }
-  input[type=number] { width:80px; font:inherit; }
-  #mini { display:none; cursor:pointer; } body.mini > *:not(#mini) { display:none; } body.mini #mini { display:block; }
-  #mini .v { font-size:16px; } .hidden { display:none; } .good { color:var(--leaf); } .slow { color:var(--warn); }
+  .empty { color:var(--muted); font-size:12px; padding:4px 0; }
+  input[type=number] { width:80px; }
+  #mini { display:none; cursor:pointer; } body.mini > *:not(#mini) { display:none !important; } body.mini #mini { display:block; }
+  #mini .v { font-size:16px; } .hidden { display:none !important; } .good { color:var(--leaf); } .slow { color:var(--warn); }
+  /* top: Start/Stop, what's going on, the four numbers that matter */
+  #top .bar { display:flex; align-items:center; gap:8px; }
+  #go { padding:9px 18px; font-weight:600; min-width:78px; } #go.on { background:var(--bad); }
+  #state { font-weight:600; } #state .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--muted); margin-right:5px; vertical-align:1px; }
+  #state.on .dot { background:var(--leaf); } #state.paused .dot { background:var(--warn); }
+  #top .bar .grow { flex:1; min-width:0; } #miniBtn { padding:5px 9px; font-size:12px; }
+  .tiles { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
+  .tile { background:var(--bg); border-radius:8px; padding:6px 8px; } .tile .v { font-size:20px; line-height:1.2; }
+  .tile.main .v { color:var(--accent); }
+  #where { margin-top:6px; }
+  /* tabs */
+  .tabs { display:flex; gap:2px; margin:0 0 8px; border-bottom:1px solid var(--line); }
+  .tabs button { background:none; color:var(--muted); border-radius:6px 6px 0 0; padding:6px 8px; flex:1; font-size:12px; border-bottom:2px solid transparent; }
+  .tabs button.sel { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+  .row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:6px 0; }
+  label.chk { display:flex; gap:6px; align-items:flex-start; margin:5px 0; } label.chk input { margin-top:3px; }
+  #selfcheck td:first-child { width:42%; }
 </style>
 </head>
 <body>
@@ -27,62 +50,92 @@
   <div class="card hidden" id="guide">
     <div class="v">Welcome</div>
     <ol>
-      <li>Your job is read from the status bar (leave Job on Auto), or pick it by hand.</li>
       <li>Press <b>Start</b> with MapleStory open. Keep the minimap and the EXP bar on screen; the chat box shows the kill and pickup lines.</li>
-      <li>Playing in a party? Everyone types the same <b>party code</b> to see each other's EXP/hr live.</li>
+      <li>Your job is read from the status bar. If it reads wrong, pick it under <b>Settings</b>.</li>
+      <li>Playing in a party? Everyone types the same <b>party code</b> (Settings) to see each other's EXP/hr live.</li>
     </ol>
     <p>Share your runs with other players? Anonymous: map, level, job, EXP, kills, drops. Never your character name. It feeds the
       speed check after each run and the Confirmed Drops on the site.</p>
     <p><button id="guideShare">Share</button> <button id="guideNo" class="alt">Don't share</button></p>
   </div>
-  <div class="card">
-    <div id="status">Looking for the MapleStory window...</div>
-    <p><button id="go">Start</button> <button id="frames" class="alt">Save sample frames</button>
-      <button id="miniBtn" class="alt">Mini bar</button> <button id="histBtn" class="alt">History</button></p>
-    <p><input id="reportNote" maxlength="2000" size="28" placeholder="What read wrong? (optional)"> <button id="report" class="alt" title="Saves the last ~25 s of game frames (your screen, character name included) and a log to a folder you can send">Report a bug</button></p>
-    <p><label>Job <select id="job"><option value="">Auto (read from the status bar)</option><option>Beginner</option><option>Swordman</option><option>Fighter</option><option>Page</option><option>Spearman</option><option>Magician</option><option>Wizard (Fire,Poison)</option><option>Wizard (Ice,Lightning)</option><option>Cleric</option><option>Archer</option><option>Hunter</option><option>Crossbowman</option><option>Rogue</option><option>Assassin</option><option>Bandit</option></select></label></p>
-    <p><button id="snipBtn" class="alt" title="Freezes the game picture so you can drag a box around your potion quick slots or the Use tab">Show me where my potions are</button>
-      <button id="areaClear" class="alt hidden">Look everywhere</button> <span class="note" id="areaNote"></span></p>
-    <label><input type="checkbox" id="share"> Share my sessions (anonymous: map, kills, drops; no character name)</label><br>
-    <label><input type="checkbox" id="ontop"> Keep this window on top of everything</label><br>
-    <label>Party code <input id="pcode" maxlength="20" size="10" placeholder="optional"></label>
-    <label>Name <input id="nick" maxlength="12" size="8" placeholder="optional"></label>
-    <div class="note">Same code for everyone in your party: you see each other's EXP/hr, level and job live (name only if you type one), and the
-      party counts as one group in the shared numbers.</div>
-    <label>Beep for drops worth at least <input type="number" id="alert" min="0" step="1000"> mesos (0 = off)</label><br>
-    <label><input type="checkbox" id="autoPause"> Pause when the game screen is gone (Cash Shop, changing channel)</label><br>
-    <label><input type="checkbox" id="stopBeep"> Beep when EXP stops for 2 minutes (died, disconnected, map taken)</label><br>
-    <label>Goal: level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="off"></label>
+  <div class="card" id="top">
+    <div class="bar"><button id="go">Start</button>
+      <div class="grow"><div id="state"><span class="dot"></span><span id="stateText">Not tracking</span></div><div id="status">Looking for the MapleStory window...</div></div>
+      <button id="miniBtn" class="alt" title="Shrink to a small bar with just EXP/hr">Mini</button></div>
+    <div class="tiles">
+      <div class="tile main" title="EXP per hour of farming (breaks left out)"><div class="k">EXP/hr</div><div class="v" id="expHr">-</div><div class="note" id="expHr5"></div></div>
+      <div class="tile" title="At the current EXP/hr"><div class="k">Next level in</div><div class="v" id="ttl">-</div><div class="note" id="lvNow"></div></div>
+      <div class="tile" title="Mesos picked up per hour of farming"><div class="k">Mesos/hr</div><div class="v" id="mesosHr">-</div><div class="note" id="mesosNet"></div></div>
+      <div class="tile" title="Kills counted from the EXP lines in chat"><div class="k">Kills/hr</div><div class="v" id="killsHr">-</div><div class="note" id="killsEst"></div></div>
+    </div>
+    <div class="note" id="where"></div>
   </div>
   <div class="card hidden" id="selfcheck"></div>
-  <div class="card" id="snaps"><div class="k">Start and end snapshots</div>
-    <div class="note">EXP/hr from two pictures, the way mapleexp.com does it: level and EXP % at the start and at the end. Taken by
-      themselves when tracking starts and as it goes; press a button to take one now. Fix a number by hand if it read wrong.</div>
-    <p><button id="snapStart" class="alt">Snap start</button> <button id="snapEnd" class="alt">Snap end</button></p>
-    <table>
-      <tr><td>Start</td><td>Lv <input type="number" id="s0lv" min="1" max="200" style="width:48px"></td><td><input type="number" id="s0pct" min="0" max="100" step="0.01" style="width:70px">%</td><td id="s0t" class="n"></td></tr>
-      <tr><td>End</td><td>Lv <input type="number" id="s1lv" min="1" max="200" style="width:48px"></td><td><input type="number" id="s1pct" min="0" max="100" step="0.01" style="width:70px">%</td><td id="s1t" class="n"></td></tr>
-    </table>
-    <div class="v" id="snapRate">-</div><div class="note" id="snapNote"></div></div>
-  <div class="card grid">
-    <div><div class="k">Kills/hr</div><div class="v" id="killsHr">-</div><div class="note" id="killsEst"></div></div>
-    <div><div class="k">EXP/hr</div><div class="v" id="expHr">-</div><div class="note" id="expHr5"></div></div>
-    <div><div class="k">Next level in</div><div class="v" id="ttl">-</div></div>
-    <div><div class="k">Mesos/hr</div><div class="v" id="mesosHr">-</div></div>
-    <div><div class="k">Loot value/hr</div><div class="v" id="lootHr">-</div></div>
-    <div><div class="k">Active time</div><div class="v" id="active">-</div></div>
-    <div><div class="k">Used up/hr (mesos)</div><div class="v" id="usedHr">-</div><div class="note" id="netHr"></div></div>
-    <div><div class="k">Deaths</div><div class="v" id="deaths">0</div><div class="note" id="deathNote">EXP bar drops without a level-up</div></div>
-    <div><div class="k" id="goalK">Goal</div><div class="v" id="goalV">-</div><div class="note" id="goalAt"></div></div>
+  <div class="tabs" role="tablist">
+    <button data-tab="session" class="sel">Session</button><button data-tab="loot">Loot</button><button data-tab="snaps">Snapshots</button><button data-tab="hist" id="histBtn">History</button><button data-tab="settings">Settings</button>
   </div>
-  <div class="card hidden" id="partyBox"></div>
-  <div class="card hidden" id="lastRun"></div>
-  <div class="card hidden" id="respawn"></div>
-  <div class="card hidden" id="hist"><div class="k">Past sessions <button id="csv" class="alt">Export CSV</button></div><div id="recap"></div><table id="histRows"></table></div>
-  <div class="card"><div class="k" id="where">-</div><table id="mobs"></table></div>
-  <div class="card hidden" id="usedBox"><div class="k">Used up (potions, food, arrows; cheapest NPC shop price)</div><table id="used"></table></div>
-  <div class="card"><div class="k">Picked up</div><table id="items"></table>
-    <div class="note" id="priceNote"></div></div>
+  <section data-tab="session">
+    <div class="card hidden" id="lastRun"></div>
+    <div class="card hidden" id="partyBox"></div>
+    <div class="card grid">
+      <div><div class="k">Farming time</div><div class="v" id="active">-</div><div class="note">breaks over a minute left out</div></div>
+      <div><div class="k">Deaths</div><div class="v" id="deaths">0</div><div class="note" id="deathNote">EXP bar drops without a level-up</div></div>
+      <div><div class="k">Used up/hr (mesos)</div><div class="v" id="usedHr">-</div><div class="note" id="netHr"></div></div>
+      <div><div class="k">Loot value/hr</div><div class="v" id="lootHr">-</div><div class="note">drops at player-shop or NPC price</div></div>
+      <div><div class="k" id="goalK">Goal</div><div class="v" id="goalV">-</div><div class="note" id="goalAt"></div></div>
+    </div>
+    <div class="card hidden" id="respawn"></div>
+    <div class="card"><h3>Monsters killed</h3><table id="mobs"></table><div class="empty" id="mobsEmpty">No kills yet.</div></div>
+  </section>
+  <section data-tab="loot" class="hidden">
+    <div class="card"><h3>Picked up</h3><table id="items"></table><div class="empty" id="itemsEmpty">Nothing picked up yet.</div>
+      <div class="note" id="priceNote"></div></div>
+    <div class="card" id="usedBox"><h3>Used up</h3><div class="note">Potions, food and arrows, at the cheapest NPC shop price.</div><table id="used"></table>
+      <div class="empty" id="usedEmpty">Nothing used yet. Counts come from your quick slots or the Use tab.</div></div>
+  </section>
+  <section data-tab="snaps" class="hidden">
+    <div class="card" id="snaps"><h3>Start and end snapshots</h3>
+      <div class="note">EXP/hr from two readings of the EXP bar (level and %), like mapleexp.com. Taken by themselves at Start and as you
+        play. Fix a number here if it read wrong.</div>
+      <div class="row"><button id="snapStart" class="alt">Snap start</button> <button id="snapEnd" class="alt">Snap end</button></div>
+      <table>
+        <tr><td>Start</td><td>Lv <input type="number" id="s0lv" min="1" max="200" style="width:52px"></td><td><input type="number" id="s0pct" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s0t" class="n"></td></tr>
+        <tr><td>End</td><td>Lv <input type="number" id="s1lv" min="1" max="200" style="width:52px"></td><td><input type="number" id="s1pct" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s1t" class="n"></td></tr>
+      </table>
+      <div class="v" id="snapRate" style="margin-top:6px">-</div><div class="note" id="snapNote"></div></div>
+  </section>
+  <section data-tab="hist" class="hidden">
+    <div class="card" id="hist"><div class="row"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div><table id="histRows"></table></div>
+  </section>
+  <section data-tab="settings" class="hidden">
+    <div class="card"><h3>Reading the game</h3>
+      <div class="row"><label>Job <select id="job"><option value="">Auto (read from the status bar)</option><option>Beginner</option><option>Swordman</option><option>Fighter</option><option>Page</option><option>Spearman</option><option>Magician</option><option>Wizard (Fire,Poison)</option><option>Wizard (Ice,Lightning)</option><option>Cleric</option><option>Archer</option><option>Hunter</option><option>Crossbowman</option><option>Rogue</option><option>Assassin</option><option>Bandit</option></select></label></div>
+      <div class="row"><button id="snipBtn" class="alt" title="Freezes the game picture so you can drag a box around your potion quick slots or the Use tab">Show me where my potions are</button>
+        <button id="areaClear" class="alt hidden">Look everywhere</button></div><div class="note" id="areaNote"></div>
+      <label class="chk"><input type="checkbox" id="autoPause"> <span>Pause when the game screen is gone (Cash Shop, changing channel)</span></label>
+    </div>
+    <div class="card"><h3>Alerts and goal</h3>
+      <div class="row"><label>Goal: level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="off"></label></div>
+      <div class="row"><label>Beep for drops worth <input type="number" id="alert" min="0" step="1000"> mesos or more</label> <span class="note">0 = off</span></div>
+      <label class="chk"><input type="checkbox" id="stopBeep"> <span>Beep when EXP stops for 2 minutes (died, disconnected, map taken)</span></label>
+    </div>
+    <div class="card"><h3>Party</h3>
+      <div class="row"><label>Party code <input id="pcode" maxlength="20" size="10" placeholder="optional"></label>
+        <label>Name <input id="nick" maxlength="12" size="8" placeholder="optional"></label></div>
+      <div class="note">Everyone in the party types the same code to see each other's EXP/hr, level and job live (a name only if you type one).
+        The party also counts as one group in the shared numbers.</div>
+    </div>
+    <div class="card"><h3>Window and sharing</h3>
+      <label class="chk"><input type="checkbox" id="ontop"> <span>Keep this window on top of everything</span></label>
+      <label class="chk"><input type="checkbox" id="share"> <span>Share my sessions (anonymous: map, kills, drops; no character name)</span></label>
+    </div>
+    <div class="card"><h3>Something read wrong?</h3>
+      <div class="row"><input id="reportNote" maxlength="2000" style="flex:1;min-width:0" placeholder="What read wrong? (optional)">
+        <button id="report" class="alt" title="Saves the last ~25 s of game frames (your screen, character name included) and a log to a folder you can send">Report a bug</button></div>
+      <div class="note">Saves the last ~25 s of game pictures (your character name shows in them) and a log to a folder you can send.</div>
+      <div class="row"><button id="frames" class="alt" title="One full game picture every 3 s for 3 minutes">Save sample frames</button></div>
+    </div>
+  </section>
   <script src="gamedata.js"></script>
   <script src="shot.js"></script>
   <script src="../core/session.js"></script>

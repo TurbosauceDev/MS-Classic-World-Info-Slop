@@ -25,6 +25,14 @@ async function startCapture(){
       : "Game window came back black, so this is reading the whole screen instead. That only works with the game in full screen.";
   } else $("#status").textContent = "Reading the MapleStory window.";
 }
+// one full frame now: from the running capture, or a capture opened just for it and closed again (when not tracking,
+// a picture for a snapshot or the potion box shouldn't leave the game being captured)
+async function oneFrame(){
+  if (timer != null && video?.srcObject?.active && video.videoWidth) return grab();
+  const st = $("#status").textContent;
+  await startCapture();
+  try { return grab() } finally { if (timer == null){ video?.srcObject?.getTracks().forEach(tr => tr.stop()); if (/^Reading the MapleStory/.test($("#status").textContent)) $("#status").textContent = st } }
+}
 function grab(){
   // resize only when the window size changed: setting it every frame reallocates the canvas twice a second
   if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight){ canvas.width = video.videoWidth; canvas.height = video.videoHeight }
@@ -98,20 +106,25 @@ const allOk = c => c.bar && c.lines && c.map && (c.job || settings.job) && c.use
 function renderCheck(){
   const c = check, box = $("#selfcheck");
   if (!c) return box.classList.add("hidden");
-  const done = Date.now() - c.t0 > CHECK_MS, row = (name, ok, why) => `<tr><td>${name}</td><td class="n ${ok ? "good" : done ? "slow" : ""}">${ok ? "✓" : done ? "✗" : "…"}</td><td class="note">${ok ? esc(ok === true ? "" : ok) : done ? why : "checking"}</td></tr>`;
+  const done = Date.now() - c.t0 > CHECK_MS;
+  const rows = [["EXP bar", c.bar, "Not found. Keep the status bar at the bottom of the game on screen; a very small game window can't be read."],
+    ["Pickup / EXP lines", c.lines, "None yet. Kill something; if this stays empty, the chat box may be covered or scrolled."],
+    ["Map name", c.map, c.mapWhy || "Not read yet."],
+    ["Job", settings.job ? "picked by hand" : c.job, c.jobWhy || "Not read yet."],
+    ["Potions / arrows", c.use, "No potion, food or arrow counts found. Put your potions on the quick slots (or open the Use tab), or press <b>Show me where my potions are</b> (Settings) and drag a box around them."]];
+  if (settings.partyCode || c.party) rows.push(["Party window", c.party && "party of " + c.party, "Not found. Open the party window so the party size is read; without it a party is only guessed from bonus EXP lines."]);
   box.classList.remove("hidden");
-  box.innerHTML = `<div class="k">Self-check${done ? "" : " (a few seconds)"}</div><table>`
-    + row("EXP bar", c.bar, "Not found. Keep the status bar at the bottom of the game on screen; a very small game window can't be read.")
-    + row("Pickup / EXP lines", c.lines, "None yet. Kill something; if this stays empty, the chat box may be covered or scrolled.")
-    + row("Map name", c.map, c.mapWhy || "Not read yet.")
-    + row("Job", settings.job ? "picked by hand" : c.job, c.jobWhy || "Not read yet.")
-    + row("Potions / arrows", c.use, "No potion, food or arrow counts found. Put your potions on the quick slots (or open the Use tab), or press <b>Show me where my potions are</b> and drag a box around them.")
-    + (settings.partyCode || c.party ? row("Party window", c.party && "party of " + c.party, "Not found. Open the party window so the party size is read; without it a party is only guessed from bonus EXP lines.") : "")
-    + `</table>` + (done ? `<div class="note">${allOk(c) ? "All readers work." : "✗ = that number isn't tracked until it's fixed; it turns ✓ by itself once it works."}</div>` : "");
+  // while checking: one line of ✓ / … per reader; after: what works on one line, a row with the fix for each that doesn't
+  const ok = rows.filter(r => r[1]), bad = rows.filter(r => !r[1]);
+  box.innerHTML = `<h3>Self-check${done ? "" : " (a few seconds)"}</h3>`
+    + (!done ? `<div class="note">${rows.map(([n, v]) => `<span class="${v ? "good" : ""}">${v ? "✓" : "…"} ${n}</span>`).join(" · ")}</div>`
+      : (ok.length ? `<div class="note good">✓ ${ok.map(([n, v]) => n + (v === true ? "" : " (" + esc(v) + ")")).join(" · ")}</div>` : "")
+        + (bad.length ? `<table>` + bad.map(([n, , why]) => `<tr><td>${n}</td><td class="n slow">✗</td><td class="note">${why}</td></tr>`).join("") + `</table>` : "")
+        + `<div class="note">${allOk(c) ? "All readers work." : "✗ = that number isn't tracked until it's fixed; it turns ✓ by itself once it works."}</div>`);
   if (done && !c.ended){
     c.ended = true; log("selfcheck", {bar: !!c.bar, lines: !!c.lines, map: c.map || c.mapWhy, job: c.job || c.jobWhy, use: c.use || null, party: c.party || null});
   }
-  if (done && allOk(c) && !c.hiding){ c.hiding = true; setTimeout(() => { if (check === c) box.classList.add("hidden") }, 20e3) }   // all fine: out of the way
+  if (done && allOk(c) && !c.hiding){ c.hiding = true; setTimeout(() => { if (check === c) box.classList.add("hidden") }, 6000) }   // all fine: out of the way
 }
 
 // sharing progress: minutes into the current 15-minute run, and runs sent this session
@@ -145,7 +158,11 @@ function render(){
   $("#netHr").textContent = (s.used.length ? "net " + fmt(s.netHr) + " mesos/hr (mesos + loot - used)" : "from the quick-slot counts")
     + (s.walletNet != null ? ` · inventory mesos ${s.walletNet >= 0 ? "+" : ""}${fmt(s.walletNet)} (${fmt(s.walletNetHr)}/hr, spending included)` : "");
   $("#used").innerHTML = s.used.map(u => `<tr><td>${esc(u.name)}</td><td class="n">×${u.n}</td><td class="n">${u.total == null ? "price unknown" : fmt(u.total)}</td></tr>`).join("");
-  $("#usedBox").classList.toggle("hidden", !s.used.length);
+  $("#usedEmpty").classList.toggle("hidden", !!s.used.length);
+  $("#mesosNet").textContent = s.used.length ? "net " + fmt(s.netHr) + " after potions" : "";
+  const bar = session.state.bar;
+  $("#lvNow").textContent = s.level ? "Lv " + s.level + (bar ? " · " + bar.pct.toFixed(2) + "%" : "") : "";
+  renderState(s);
   $("#deaths").textContent = s.deaths;
   $("#deathNote").textContent = deaths.confirmed || deaths.unseen ? [deaths.confirmed && `${deaths.confirmed} confirmed by the chat line (lost ${fmt(deaths.lost)} EXP)`,
     deaths.unseen && `${deaths.unseen} not seen in chat (chat box hidden, or a misread)`].filter(Boolean).join(" · ") : "EXP bar drops without a level-up";
@@ -153,20 +170,37 @@ function render(){
   levelNote(s);
   $("#goalK").textContent = s.goalLevel ? "Level " + s.goalLevel + " in" : "Goal";
   $("#goalV").textContent = s.goalLevel ? s.level >= s.goalLevel ? "reached" : s.toGoalHrs == null ? "-" : hm(s.toGoalHrs) : "-";
-  $("#goalAt").textContent = s.toGoalHrs != null && s.toGoalHrs < 48 ? "about " + new Date(Date.now() + s.toGoalHrs * 3.6e6).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}) + " at this rate" : s.goalLevel ? "" : "set a level below";
+  $("#goalAt").textContent = s.toGoalHrs != null && s.toGoalHrs < 48 ? "about " + new Date(Date.now() + s.toGoalHrs * 3.6e6).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}) + " at this rate" : s.goalLevel ? "" : "set one in Settings";
   $("#miniGoal").textContent = s.goalLevel && s.toGoalHrs != null ? `Lv ${s.goalLevel} in ${hm(s.toGoalHrs)}` : "";
   stopCheck(s);
   $("#active").textContent = Math.round(s.activeMin) + " min";
-  $("#where").textContent = [s.paused && "PAUSED", s.level && "Lv " + s.level, s.mapName, s.job, s.party > 1 ? "party of " + s.party : "solo",
+  $("#where").textContent = [s.mapName, s.job, s.party > 1 ? "party of " + s.party : "solo",
     s.kills + " kills", fmt(s.mesoPerKill) + " mesos/kill",
     s.readShare != null && Math.round(s.readShare * 100) + "% of EXP seen as messages",
     settings.share && runInfo()].filter(Boolean).join(" · ");
+  $("#mobsEmpty").classList.toggle("hidden", !!s.mobs.length); $("#itemsEmpty").classList.toggle("hidden", !!(s.items.length || s.unreadItems));
   $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${esc(m.name)}</td><td class="n">${m.kills} kills</td><td class="n">${fmt(m.mesoPerKill)} mesos/kill</td></tr>`).join("");
   $("#items").innerHTML = s.items.map(i => `<tr><td>${esc(i.name)}</td><td class="n">×${i.n}</td><td class="n">${fmt(i.total)}</td></tr>`).join("")
     + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet</td></tr>` : "");
   $("#priceNote").textContent = G.pwRead ? `Worth = player-shop median from meso.watch (${G.pwRead}), else NPC price. Mesos/kill on maps with several monsters is a best guess.` : "";
   return s.exp;   // for renderSnaps
 }
+
+// the line next to Start/Stop: tracking or not, paused, for how long
+function renderState(s){
+  const on = timer != null, paused = on && s?.paused;
+  $("#state").className = paused ? "paused" : on ? "on" : "";
+  $("#stateText").textContent = paused ? "Paused" : on ? "Tracking" + (s ? " · " + hm(s.activeMin / 60) + " farmed" : "") : s && s.activeMin ? "Stopped · " + hm(s.activeMin / 60) + " farmed" : "Not tracking";
+  $("#go").textContent = on ? "Stop" : "Start"; $("#go").classList.toggle("on", on);
+}
+// tabs under the numbers; the last one open is remembered
+function showTab(name){
+  for (const b of document.querySelectorAll(".tabs button")) b.classList.toggle("sel", b.dataset.tab === name);
+  for (const sec of document.querySelectorAll("section[data-tab]")) sec.classList.toggle("hidden", sec.dataset.tab !== name);
+  try { localStorage.setItem("tab", name) } catch {}
+}
+for (const b of document.querySelectorAll(".tabs button")) if (b.id !== "histBtn") b.onclick = () => showTab(b.dataset.tab);
+try { const t = localStorage.getItem("tab"); if (t && t !== "hist" && document.querySelector(`section[data-tab="${t}"]`)) showTab(t) } catch {}
 
 // a crop (black-on-white RGBA) -> PNG bytes for the OCR in the main process
 async function toPng(c){
@@ -304,7 +338,7 @@ async function tick(){
     }
     const r = await eng.read({frame: f, t, want});
     if (timer == null || sess !== session || !r) throw null;   // stopped (or restarted) while reading, or the frame was lost
-    if (r.scale){ scale = r.scale; fastLeft = r.scale.k > 1 ? 19 : 0 }
+    if (r.scale){ scale = r.scale; fastLeft = 19 }   // also at 1x: finding the scale is the slow part, so it's checked every 20 frames only
     for (const e of r.ev){
       session.add(e); slicer.add(e); log("event", e);
       if (e.type === "item") dropAlert(e.id);
@@ -356,10 +390,7 @@ function renderSnaps(live = session?.stats().exp){   // live: EXP the live count
 }
 // take a snapshot from the game picture now: the EXP bar's level and %, the time, and the frame saved as a picture
 async function snap(which, f = null, hand = true){
-  if (!f){
-    if (!video?.srcObject?.active) await startCapture();
-    f = grab();
-  }
+  f ||= await oneFrame();
   const img = GrindReaders.native(f), bar = GrindReaders.readBar(img) || GrindReaders.readBarAny(f);
   const level = bar && (GrindSession.levelOf(G, bar.exp, bar.pct) || session?.state.level) || null;
   // an automatic snapshot whose bar didn't read keeps the last good reading (only the picture is new)
@@ -398,9 +429,9 @@ async function checkDeath(c, t){   // c: the chat box crop (GrindReaders.chatCro
 // "Show me where my potions are": freeze the game picture, drag a box (snip window), then counts are only read in there.
 // Saved in the settings, so it holds for the next sessions too.
 async function pickArea(){
-  if (!video?.srcObject?.active) await startCapture();
+  const f = await oneFrame();
   ICONS ||= await GrindReaders.loadIcons(G).catch(() => []);
-  const f = grab(), c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
+  const c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
   const rect = await host.snip(c.toDataURL("image/jpeg", 0.9));
   if (!rect) return;
   settings = await host.settings({countArea: rect}); engine?.setArea(rect);
@@ -438,7 +469,7 @@ async function start(){
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   tick();
-  $("#go").textContent = "Stop";
+  renderState(null);
 }
 async function stop(){
   log("stop", {engine: engine?.kind, skipped});
@@ -447,7 +478,7 @@ async function stop(){
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   // a failed save (disk full, folder locked) must not leave the button saying Stop
   if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
-  $("#go").textContent = "Start";
+  renderState(session?.stats());
 }
 $("#go").onclick = () => timer != null ? stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
 
@@ -457,6 +488,8 @@ $("#frames").onclick = async () => {
   try { if (!video?.srcObject?.active) await startCapture() }   // stopped tracks only give the last frame
   catch (err){ $("#frames").disabled = false; $("#status").textContent = "Couldn't capture the game: " + err.message; return }
   let n = 0, dir = null;
+  // done: the capture closes again unless tracking runs on it
+  const done = () => { clearInterval(iv); $("#frames").disabled = false; if (timer == null) video?.srcObject?.getTracks().forEach(tr => tr.stop()) };
   const iv = setInterval(async () => {
     try {
       if (!video.videoWidth || !video.srcObject?.active) throw new Error("capture stopped (Stop pressed or game closed)");
@@ -464,8 +497,8 @@ $("#frames").onclick = async () => {
       const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
       dir = await host.saveFrame(`frame-${String(n).padStart(3, "0")}.png`, new Uint8Array(await blob.arrayBuffer()));
       $("#status").textContent = `Saving sample frames: ${n + 1}/60`;
-      if (++n >= 60){ clearInterval(iv); $("#status").textContent = "Frames saved."; $("#frames").disabled = false; host.openFolder(dir) }
-    } catch (err){ clearInterval(iv); $("#frames").disabled = false; $("#status").textContent = `Stopped saving frames after ${n}: ${err.message}` }
+      if (++n >= 60){ done(); $("#status").textContent = "Frames saved."; host.openFolder(dir) }
+    } catch (err){ done(); $("#status").textContent = `Stopped saving frames after ${n}: ${err.message}` }
   }, 3000);
 };
 
@@ -491,7 +524,7 @@ $("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.val
 $("#miniBtn").onclick = () => { document.body.classList.add("mini"); host.mini(true) };
 $("#mini").onclick = () => { document.body.classList.remove("mini"); host.mini(false) };
 $("#histBtn").onclick = async () => {
-  const box = $("#hist"); box.classList.toggle("hidden"); if (box.classList.contains("hidden")) return;
+  showTab("hist");
   const list = await host.sessions();
   $("#recap").innerHTML = recap(list) + levelLog(list);
   $("#histRows").innerHTML = list.length ? list.slice(0, 30).map(x => { const h = (x.activeMin || 0) / 60;

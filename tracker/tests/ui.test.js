@@ -26,6 +26,12 @@ const path = require("path"), {chromium} = require("playwright");
   if (await page.isVisible("#guide") || !await page.isChecked("#share")) throw new Error("guide answer");
   await page.dblclick("#go");
   await page.waitForTimeout(1500);
+  // the top card: tracking state and Stop; tabs switch sections
+  const top = await page.evaluate(() => [document.querySelector("#stateText").textContent, document.querySelector("#go").textContent, document.querySelector("#go").classList.contains("on")]);
+  if (!/^Tracking/.test(top[0]) || top[1] !== "Stop" || !top[2]) throw new Error("top card: " + top);
+  await page.click(".tabs [data-tab=loot]");
+  if (!await page.isVisible("#priceNote, #itemsEmpty") || await page.isVisible("#mobsEmpty") || !await page.isVisible("#itemsEmpty")) throw new Error("loot tab");
+  await page.click(".tabs [data-tab=session]");
   const eng = await page.evaluate(() => [engine.kind, LOG.filter(l => l.kind === "event").length, LOG.filter(l => l.kind === "engine").map(l => l.kind + ":" + (l.why || "")).join()]);
   if (eng[0] !== (process.env.INLINE ? "window" : "worker")) throw new Error("reader engine: " + eng);
   const party = await page.textContent("#partyBox");
@@ -36,7 +42,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.waitForTimeout(800);
   const mobs = await page.textContent("#mobs"), items = await page.textContent("#items");
   // a goal level and a death from the EXP bar; EXP silent for 2+ minutes -> warning
-  await page.fill("#goal", "23"); await page.dispatchEvent("#goal", "change");
+  await page.click(".tabs [data-tab=settings]"); await page.fill("#goal", "23"); await page.dispatchEvent("#goal", "change");
   const gl = await page.evaluate(() => { const t = Date.now() - 200e3; session.add({t, type: "bar", exp: 5000, pct: 5000 / GAMEDATA.exp[22] * 100, level: 22});
     session.add({t: t + 10e3, type: "bar", exp: 6000, pct: 6000 / GAMEDATA.exp[22] * 100, level: 22}); session.add({t: t + 20e3, type: "bar", exp: 5500, pct: 5500 / GAMEDATA.exp[22] * 100, level: 22});
     session.state.lastExpT = Date.now() - 130e3;   // last EXP over 2 minutes ago
@@ -53,7 +59,7 @@ const path = require("path"), {chromium} = require("playwright");
   // self-check: still checking, then ✓/✗ per reader once its time is up (the noise canvas has no EXP bar or minimap)
   const chk = await page.evaluate(() => { const during = document.querySelector("#selfcheck").textContent;
     check.t0 -= 9000; check.lines = true; renderCheck(); return [during, document.querySelector("#selfcheck").innerHTML] });
-  if (!/checking/.test(chk[0]) || !/Minimap not found/.test(chk[1]) || !/EXP bar<\/td><td class="n slow">✗/.test(chk[1]) || !/turns ✓ by itself/.test(chk[1]) || !/Party window<\/td><td class="n slow">✗/.test(chk[1])) throw new Error("self-check: " + chk.join(" | "));
+  if (!/a few seconds/.test(chk[0]) || !/✓ Pickup \/ EXP lines/.test(chk[1]) || !/Minimap not found/.test(chk[1]) || !/EXP bar<\/td><td class="n slow">✗/.test(chk[1]) || !/turns ✓ by itself/.test(chk[1]) || !/Party window<\/td><td class="n slow">✗/.test(chk[1])) throw new Error("self-check: " + chk.join(" | "));
   // auto-pause: bar read once, then bar and minimap gone for 3 s -> paused; the bar back -> tracking again
   // (false: no minimap on screen)
   const ap = await page.evaluate(() => { const f = false, t = Date.now() + 1e4; autoPause(f, {bar: true}, t); autoPause(f, {bar: false}, t + 1000); const a = session.state.pausedAt;
@@ -62,7 +68,7 @@ const path = require("path"), {chromium} = require("playwright");
   if (ap[0] !== null || !ap[1] || !/Paused/.test(ap[2]) || ap[3] !== null || !(ap[4] >= 4900)) throw new Error("auto-pause: " + JSON.stringify(ap));
   // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened
   await page.waitForTimeout(3200);
-  await page.fill("#reportNote", "map read wrong"); await page.click("#report"); await page.waitForTimeout(100);
+  await page.click(".tabs [data-tab=settings]"); await page.fill("#reportNote", "map read wrong"); await page.click("#report"); await page.waitForTimeout(100);
   const rep = await page.evaluate(() => [window.report, window.opened]);
   if (!rep[0] || rep[0].frames < 1 || rep[0].info.note !== "map read wrong" || !rep[0].info.log.some(l => l.kind === "event") || !rep[0].info.log.some(l => l.kind === "status")
     || !rep[0].info.check || rep[1] !== "report-2026-10-17T20-00-00") throw new Error("report: " + JSON.stringify(rep).slice(0, 300));
@@ -83,7 +89,7 @@ const path = require("path"), {chromium} = require("playwright");
     set("#s1lv", 25); set("#s1pct", 71.40); return [document.querySelector("#snapRate").textContent, document.querySelector("#snapNote").textContent] });
   const want = Math.round(0.2479 * 47216 / (22 / 60));
   if (Math.abs(+sn[0].replace(/\D/g, "") - want) > want * 0.01 || !/22 min/.test(sn[1])) throw new Error("snapshots: " + JSON.stringify(sn) + " want ~" + want);
-  await page.click("#snapEnd"); await page.waitForTimeout(200);   // a button snapshot from the (test) game picture: saved, replaces the typed end
+  await page.click(".tabs [data-tab=snaps]"); await page.click("#snapEnd"); await page.waitForTimeout(200);   // a button snapshot from the (test) game picture: saved, replaces the typed end
   if (!(await page.evaluate(() => snaps.end.file && snaps.end.hand))) throw new Error("snap end button");
   await page.click("#go");
   await page.waitForTimeout(200);
