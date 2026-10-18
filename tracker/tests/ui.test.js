@@ -42,7 +42,7 @@ const path = require("path"), {chromium} = require("playwright");
     return [...document.querySelectorAll("#feed .fl")].map(l => l.className + ":" + l.textContent).join("|") });
   if (!/^fl sep:.*Started tracking\|fl exp:.*Danny gained 40 EXP from 2 kills\|fl meso:.*Danny picked up 55\|fl loot:.*Danny looted 1 Red Potion/.test(fd)) throw new Error("run log: " + fd);
   // updates: Check for updates -> downloading -> ready banner; Restart and update stops (saves) the session first
-  await page.click("#prefsBtn"); await page.click("#updCheck"); await page.waitForTimeout(100);
+  await page.evaluate(() => window.menu("settings")); await page.click("#updCheck"); await page.waitForTimeout(100);
   const up = await page.evaluate(() => [document.querySelector("#appVer").textContent, document.querySelector("#updNote").textContent, document.querySelector("#updText").textContent]);
   if (up[0] !== "0.2.17" || !/0\.2\.18 is ready/.test(up[1]) || !await page.isVisible("#updBanner") || !await page.isVisible("#updInstall")) throw new Error("update: " + up);
   await page.click("#prefsClose");
@@ -160,7 +160,7 @@ const path = require("path"), {chromium} = require("playwright");
     const moved = [document.querySelector("#mesoBox").parentElement.id, document.querySelector("[data-box=mobs]").classList.contains("folded")];
     document.querySelector("#layoutReset").click(); await new Promise(r => setTimeout(r, 50));
     return [...moved, document.querySelector("#mesoBox").parentElement.dataset.tab, document.querySelector("[data-box=mobs]").classList.contains("folded"), JSON.stringify(settings.layout.order.dock)] });
-  if (lay[0] !== "dock" || !lay[1] || lay[2] !== "loot" || lay[3] || lay[4] !== '["log"]') throw new Error("box layout: " + lay);
+  if (lay[0] !== "dock" || !lay[1] || lay[2] !== "loot" || lay[3] || lay[4] !== '["main","log"]') throw new Error("box layout: " + lay);
   // dragged with the mouse: the Mesos box by its title onto the Session tab (moves there and opens it), then the Monsters
   // box by its grip onto the top half of the Start and end box (goes above it)
   // (the target is measured once the drag has started: the pin strip opening above the tabs moves things down)
@@ -182,13 +182,20 @@ const path = require("path"), {chromium} = require("playwright");
     if (g[0] || !/Below/.test(g[1])) throw new Error("ghost: " + g);
     await page.mouse.up(); await page.waitForTimeout(50) }
   const pin = await page.evaluate(() => [document.querySelector("[data-box=stats]").parentElement.id, JSON.stringify(settings.layout.order.dock), document.querySelector(".dropGhost").classList.contains("hidden")]);
-  if (pin[0] !== "dock" || pin[1] !== '["log","stats"]' || !pin[2]) throw new Error("pin: " + pin);
+  if (pin[0] !== "dock" || pin[1] !== '["main","log","stats"]' || !pin[2]) throw new Error("pin: " + pin);
   // keyboard: right arrow on a box on its own puts it beside its neighbour (the run log, above it)
   const kb = await page.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 30));
     document.querySelector("[data-box=stats] .grip").dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowRight"})); await w();
     const r = JSON.stringify(settings.layout.order.dock); document.querySelector("[data-box=stats] .grip").dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowDown"})); await w();
     return [r, JSON.stringify(settings.layout.order.dock)] });
-  if (!kb[0].startsWith('[{"row":["log","stats"]') || kb[1] !== '["log","stats"]') throw new Error("keyboard side by side: " + kb);
+  if (!kb[0].startsWith('["main",{"row":["log","stats"]') || kb[1] !== '["main","log","stats"]') throw new Error("keyboard side by side: " + kb);
+  // the main card is a box too (Danny, 2026-10-18): it goes beside the run log, and folded it keeps the Start bar
+  const mc = await page.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 30)), g = document.querySelector("#top .grip");
+    g.dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowRight"})); await w(); const r = JSON.stringify(settings.layout.order.dock);
+    document.querySelector("#top .fold").click(); await w(); const go = !!document.querySelector("#go").offsetParent, tiles = !!document.querySelector("#expHr").offsetParent;
+    document.querySelector("#top .fold").click(); g.dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowUp"})); await w();
+    return [r, go, tiles, JSON.stringify(settings.layout.order.dock)] });
+  if (!mc[0].startsWith('[{"row":["log","main"]') || !mc[1] || mc[2] || mc[3] !== '["main","log","stats"]') throw new Error("main card: " + mc);
   // side by side: Items looted dropped on the right edge of Consumables used makes a row; the splitter resizes it; the
   // Mesos box dropped on the bottom half of Items looted stacks under it in a column; saved and loaded back as rows
   await page.click(".tabs [data-tab=loot]");
@@ -216,11 +223,11 @@ const path = require("path"), {chromium} = require("playwright");
     layoutLoad(saved); const re = document.querySelector("#mesoBox").parentElement.className + "/" + Math.round(document.querySelector("#usedBox").getBoundingClientRect().width);
     return [flat, re, document.querySelector("#usedBox").parentElement.className] });
   if (unw[0] !== 0 || !unw[1].startsWith("boxcol/") || unw[2] !== "boxrow") throw new Error("unwrap/load: " + unw);
-  await page.click("#prefsBtn"); await page.click("#layoutReset"); await page.click("#prefsClose"); if ((await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join())) !== "kpq,alerts,snaps") throw new Error("reset folds");
+  await page.evaluate(() => window.menu("settings")); await page.click("#layoutReset"); await page.click("#prefsClose"); if ((await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join())) !== "kpq,alerts,snaps") throw new Error("reset folds");
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click())); await page.setViewportSize({width: 1280, height: 720});
   // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened
   await page.waitForTimeout(3200);
-  await page.click("#prefsBtn"); await page.fill("#reportNote", "map read wrong"); await page.click("#report"); await page.waitForTimeout(100); await page.evaluate(() => closePrefs());
+  await page.evaluate(() => window.menu("settings")); await page.fill("#reportNote", "map read wrong"); await page.click("#report"); await page.waitForTimeout(100); await page.evaluate(() => closePrefs());
   const rep = await page.evaluate(() => [window.report, window.opened]);
   if (!rep[0] || rep[0].frames < 1 || rep[0].info.note !== "map read wrong" || !rep[0].info.log.some(l => l.kind === "event") || !rep[0].info.log.some(l => l.kind === "status")
     || !rep[0].info.check || rep[1] !== "report-2026-10-17T20-00-00") throw new Error("report: " + JSON.stringify(rep).slice(0, 300));
@@ -286,13 +293,13 @@ const path = require("path"), {chromium} = require("playwright");
   const ask = await page.textContent(del), before = await page.evaluate(() => window.deleted);
   await page.click(del); await page.waitForTimeout(100);
   if (ask !== "Delete?" || before || !(await page.evaluate(() => window.deleted > 0))) throw new Error("delete session: " + ask);
-  // Preferences: a popup from the title bar; the panel keeps only Session, Loot and History (Danny, 2026-10-18)
+  // Settings: a popup from File → Settings; the panel keeps only Session, Loot and History (Danny, 2026-10-18)
   const tabs = await page.$$eval(".tabs button", b => b.map(x => x.dataset.tab).join());
   if (tabs !== "session,loot,hist") throw new Error("panel tabs: " + tabs);
-  await page.click("#prefsBtn"); if (!await page.isVisible("#prefsPop #themeSw")) throw new Error("preferences popup not shown");
+  await page.evaluate(() => window.menu("settings")); if (!await page.isVisible("#prefsPop #themeSw")) throw new Error("preferences popup not shown");
   await page.keyboard.press("Escape"); if (await page.isVisible("#prefsPop")) throw new Error("Esc didn't close preferences");
-  // themes (Preferences): a preset swatch recolours the page and the title bar; the editor saves your own; share code round trip
-  await page.click("#prefsBtn");
+  // themes (Settings): a preset swatch recolours the page and the title bar; the editor saves your own; share code round trip
+  await page.evaluate(() => window.menu("settings"));
   const sw = await page.$$eval("#themeSw [data-th]", b => b.map(x => x.dataset.th));
   if (sw.length < 12 || sw[0] !== "p:Default") throw new Error("theme swatches: " + sw);
   await page.click('#themeSw [data-th="p:Slime"]'); await page.waitForTimeout(50);

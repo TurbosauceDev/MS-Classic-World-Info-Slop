@@ -63,8 +63,11 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - KPQ boards (server summary.kpq.board): Rush = all rounds by clear; Bonus = rounds with 80000500 stage time, by EXP +
   mesos. The tracker's Bonus/Rush pick is stored (mode) but no longer picks the board. Names: kpq_names table (schema.sql
   re-runs every deploy, so new columns go in side tables); tracker sends Name (Party card) else the OCR'd charName.
-- Settings is no longer a tab: it's the Preferences popup (#prefsPop, openPrefs/closePrefs) from the title bar; the
-  panel tabs are Session, Loot, History. Tests open it with #prefsBtn and must close it (it covers the page).
+- Settings is no longer a tab: it's a popup (#prefsPop, openPrefs/closePrefs; ids kept from "Preferences") opened from the
+  native File menu → Settings (Ctrl+,, main.js sends menu "settings"); no title-bar button. Panel tabs: Session, Loot,
+  History. Tests open it with `window.menu("settings")` and must close it (it covers the page).
+- The main card (#top, box id `main`) lives in #dock with the run log, so it moves/docks/folds like any box (folded keeps
+  its Start bar). #wrap/#summary/#selfcheck sit after #dock.
 - Leaderboards aren't anonymous: don't call sharing "anonymous" in the UI.
 - beanguri's /api/stats needs their permission; we only borrowed MIT reader ideas.
 - Themes: PRESETS[0] "Default" = the site's src/styles.css colours (light+dark); core.test.js fails if they drift, so a

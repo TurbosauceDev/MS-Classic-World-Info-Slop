@@ -56,3 +56,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 Tracker run log: WoW-combat-log style, batched (every 2 s), skinny box near the run name; side-by-side docking must be obvious ("i can only move things up and down").
 - 2026-10-18 Ignore the price checker's blue tube "1 not read" and the tracker's "117 on pale selected slot" misreads unless the exact same issue comes up again.
 - 2026-10-18 Split big source files to make threads cheaper (Danny: "we will take every 'free' savings"); pure refactors, no behaviour change.
+- 2026-10-18 Tracker main card (run name + tiles) is a movable, dockable box like the rest. Preferences renamed back to Settings, opened from File (no title-bar entry).

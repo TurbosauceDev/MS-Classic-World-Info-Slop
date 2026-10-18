@@ -78,7 +78,7 @@ app.whenReady().then(() => {
   // our own menu instead of Electron's default (its Help menu only linked to Electron's site)
   const show = what => () => win && !win.isDestroyed() && win.webContents.send("menu", what);
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    {label: "File", submenu: [{label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
+    {label: "File", submenu: [{label: "Settings", accelerator: "CmdOrCtrl+,", click: show("settings")}, {type: "separator"}, {label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
     {label: "View", submenu: [{label: "Mini bar", click: show("mini")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
     {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Check for updates", click: show("update")},
       {label: "Report a bug", click: show("report")}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
@@ -145,7 +145,7 @@ function keyAction(a){
   if (a === "report"){ win.show(); win.focus() }
   win.webContents.send("menu", a);
 }
-// the Preferences list: what each action is set to, the defaults, and which couldn't be had (another program holds them).
+// the Settings list: what each action is set to, the defaults, and which couldn't be had (another program holds them).
 // keys: {action: accelerator | ""} to change; pause: true while a box waits for the new keys (so pressing one in use reaches it)
 ipcMain.handle("keys", (_, keys, pause) => {
   if (pause){ globalShortcut.unregisterAll(); if (clickThrough) keyAction("clickThrough"); return {keys: keysNow(), defaults: KEYS, failed: []} }

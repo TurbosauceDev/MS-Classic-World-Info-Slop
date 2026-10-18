@@ -118,7 +118,7 @@ function renderCheck(){
     ["Pickup / EXP lines", c.lines, "None yet. Kill something; if this stays empty, the chat box may be covered or scrolled."],
     ["Map name", c.map, c.mapWhy || "Not read yet."],
     ["Job", settings.job ? "picked by hand" : c.job, c.jobWhy || "Not read yet."],
-    ["Potions / arrows", c.use, "No potion, food or arrow counts found. Put your potions on the quick slots (or open the Use tab), or press <b>Show me where my potions are</b> (Preferences) and drag a box around them."]];
+    ["Potions / arrows", c.use, "No potion, food or arrow counts found. Put your potions on the quick slots (or open the Use tab), or press <b>Show me where my potions are</b> (Settings) and drag a box around them."]];
   if (settings.partyCode || c.party) rows.push(["Party window", c.party && "party of " + c.party, "Not found. Open the party window so the party size is read; without it a party is only guessed from bonus EXP lines."]);
   box.classList.remove("hidden");
   // while checking: one line of ✓ / … per reader; after: what works on one line, a row with the fix for each that doesn't
@@ -478,7 +478,7 @@ async function showSpeed(run){
     : `<div class="note">${sc.noBar ? "The EXP bar wasn't read during this run, so it isn't compared." : `Not enough shared runs around your level yet to compare (${esc(band) || "level not read"}).`}</div>`) + bt;
 }
 function beep(hz, sec){
-  if (settings.muted) return;   // Mute sounds (Preferences, or its shortcut)
+  if (settings.muted) return;   // Mute sounds (Settings, or its shortcut)
   try {
     audio = audio || new AudioContext();
     const o = audio.createOscillator(), g = audio.createGain();
@@ -1149,15 +1149,17 @@ $("#helpBtn").onclick = openHelp;
 $("#helpClose").onclick = () => showTab(beforeHelp);
 document.addEventListener("keydown", e => { if (e.key === "F1"){ e.preventDefault(); openHelp() } });
 // title bar: File / View / Help open the app's menus under the button
-// Preferences: a popup from the title bar (was the Settings tab). Esc, ✕ or a click outside closes it
-function openPrefs(){ $("#prefsPop").classList.remove("hidden"); $("#prefsPop").scrollTop = 0; $("#prefsBack").classList.remove("hidden"); $("#prefsBtn").setAttribute("aria-expanded", "true"); $("#prefsClose").focus() }
-function closePrefs(){ if ($("#prefsPop").classList.contains("hidden")) return; $("#prefsPop").classList.add("hidden"); $("#prefsBack").classList.add("hidden"); $("#prefsBtn").setAttribute("aria-expanded", "false"); $("#prefsBtn").focus() }
-$("#prefsBtn").onclick = () => $("#prefsPop").classList.contains("hidden") ? openPrefs() : closePrefs();
+// Settings: a popup from File → Settings (Ctrl+,). Was the Settings tab, then "Preferences" on the title bar; Danny 2026-10-18:
+// "rename preferences back to settings and have it live under file". Esc, ✕ or a click outside closes it
+let prefsFrom = null;
+function openPrefs(){ prefsFrom = document.activeElement; $("#prefsPop").classList.remove("hidden"); $("#prefsPop").scrollTop = 0; $("#prefsBack").classList.remove("hidden"); $("#prefsClose").focus() }
+function closePrefs(){ if ($("#prefsPop").classList.contains("hidden")) return; $("#prefsPop").classList.add("hidden"); $("#prefsBack").classList.add("hidden"); (prefsFrom?.isConnected ? prefsFrom : $("#titlebar [data-menu=File]")).focus?.() }
 $("#prefsClose").onclick = closePrefs; $("#prefsBack").onclick = closePrefs;
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !keyWait && !drag && $("#bugPop").classList.contains("hidden") && !$("#prefsPop").classList.contains("hidden")) closePrefs() });
 for (const b of document.querySelectorAll("#titlebar [data-menu]")) b.onclick = () => { const r = b.getBoundingClientRect(); host.menu?.(b.dataset.menu, r.left, r.bottom) };
 host.onMenu?.(what => {
   if (what === "help") openHelp();
+  else if (what === "settings") openPrefs();
   else if (what === "mini") (document.body.classList.contains("mini") ? $("#mini") : $("#miniBtn")).click();
   else if (what === "report") openBugPop();
   else if (what.startsWith("onTop:")){ const on = what === "onTop:true"; settings.onTop = on; $("#ontop").checked = on; $("#status").textContent = "Keep on top: " + (on ? "on" : "off") + "." }
@@ -1258,7 +1260,7 @@ $("#thFile").onchange = async e => { const f = e.target.files?.[0]; e.target.val
   themeAdd(t, "file") };
 darkQ.addEventListener?.("change", () => { themeShow(); themeUi() });
 
-// Preferences: keyboard shortcuts (they work from the game too; main.js registers them) and the see-through window
+// Settings: keyboard shortcuts (they work from the game too; main.js registers them) and the see-through window
 const KEY_NAMES = {onTop: "Keep on top on/off", startStop: "Start / Stop", pause: "Pause / go on", mini: "Mini bar on/off",
   show: "Hide / show the tracker", invNow: "Read the open inventory tab now", report: "Report a bug",
   clickThrough: "Click-through on/off (mouse goes to the game)", mark: "Mark this moment (in the run note)", saveImage: "Save the numbers as a picture", mute: "Mute sounds on/off"};
