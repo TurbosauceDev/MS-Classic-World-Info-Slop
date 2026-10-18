@@ -486,16 +486,6 @@ details.sec>summary:hover h2{color:var(--accent)}
 .srchbox .pill{flex:none;min-width:56px;text-align:center}
 .srchbox .ri{flex:none}
 .srchbox p.tiny{margin:0;color:var(--muted)}
-nav .cats button.flag{color:var(--accent);border-color:var(--accent)}
-nav .cats button.flag[aria-selected="true"]{color:var(--bg)}
-.homeflag{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:8px 24px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:14px;padding:16px 18px;margin-bottom:14px}
-.homeflag h2{margin:0 0 6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.homeflag p{margin:0;color:var(--ink);font-size:14.5px;line-height:1.5;max-width:60ch}
-.homeflagbtns .btn{display:inline-block;text-decoration:none}
-.homeflaglinks .hlink:first-child{border-top:0}
-.trkhero h2{font:800 24px/1.2 var(--f-display);margin:0 0 6px}
-.trkhero p{margin:0 0 16px;color:var(--muted);font-size:15px;line-height:1.5;max-width:75ch}
-.homeflag .pill{background:var(--panel)}
 #trk a[data-go],#trkhow a[data-go],#trkruns a[data-go]{color:var(--accent)}
 
 </style>
@@ -510,7 +500,7 @@ nav .cats button.flag[aria-selected="true"]{color:var(--bg)}
 <nav>
   <div class="cats" role="tablist" aria-label="Sections">
     <button role="tab" id="c-home" aria-selected="false" data-cat="home">Home</button>
-    <button role="tab" id="c-trk" aria-selected="false" data-cat="trk" class="flag">Grind Tracker</button>
+    <button role="tab" id="c-trk" aria-selected="false" data-cat="trk">Grind Tracker</button>
     <button role="tab" id="c-char" aria-selected="false" data-cat="char">Your character</button>
     <button role="tab" id="c-db" aria-selected="false" data-cat="db">Databases</button>
     <button role="tab" id="c-world" aria-selected="false" data-cat="world">World</button>
@@ -543,20 +533,13 @@ nav .cats button.flag[aria-selected="true"]{color:var(--bg)}
 </nav>
 
 <section id="home">
-  <div class="homeflag">
-    <div>
-      <h2><button class="hcat" data-go-cat="trk">MS Classic Grind Tracker</button> <span class="pill p-hot">Windows · free</span></h2>
-      <p>A small window on top of the game that counts your EXP/hr, kills, mesos, loot and potions while you grind, times your KPQ rounds, and shares real numbers with everyone here.</p>
-      <div class="homeflagbtns"><a class="btn primary" href="https://github.com/TurbosauceDev/MS-Classic-World-Info-Slop/releases/latest" target="_blank" rel="noopener">Download for Windows</a></div>
-    </div>
-    <div class="homeflaglinks">
-      <button class="hlink" data-go="trk"><b>Overview</b><span>What it tracks, privacy and the download.</span></button>
+  <div class="homegrid">
+    <div class="homecat"><h2><button class="hcat" data-go-cat="trk">Grind Tracker</button></h2>
+      <button class="hlink" data-go="trk"><b>Overview</b><span>Our Windows app that counts EXP/hr, kills, mesos and loot while you grind.</span></button>
       <button class="hlink" data-go="trkhow"><b>How to use</b><span>Set-up, the numbers, parties, KPQ and fixing bad reads.</span></button>
       <button class="hlink" data-go="trkruns"><b>Shared runs</b><span>Real EXP/hr, mesos and drops from tracker players.</span></button>
       <button class="hlink" data-go="trkkpq"><b>KPQ leaderboard</b><span>Fastest Kerning PQ clears by tracker parties.</span></button>
     </div>
-  </div>
-  <div class="homegrid">
     <div class="homecat"><h2><button class="hcat" data-go-cat="char">Your character</button></h2>
       <button class="hlink" data-go="plan"><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
       <button class="hlink" data-go="path"><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
@@ -915,10 +898,13 @@ nav .cats button.flag[aria-selected="true"]{color:var(--bg)}
 </section>
 
 <section id="trk" hidden>
-  <div class="trkhero">
-    <h2>MS Classic Grind Tracker</h2>
-    <p>Our own Windows app for MapleStory Classic World. It sits on top of the game while you grind and does the counting for you, then pools what players share into real numbers on this site: EXP/hr by map, confirmed drops and a KPQ leaderboard.</p>
-  </div>
+  <details class="howto">
+    <summary>About the Grind Tracker</summary>
+    <ul>
+      <li>Our own Windows app for MapleStory Classic World. It sits on top of the game while you grind and does the counting for you.</li>
+      <li>What players share shows up in Shared runs and the KPQ leaderboard, and as "players:" lines and Confirmed Drops elsewhere on the site.</li>
+    </ul>
+  </details>
   <div class="grid2" style="margin-top:0">
     <div class="card">
       <div class="cardhead"><h3>MS Classic Grind Tracker</h3><span class="pill p-hot">Windows · free</span></div>
@@ -928,7 +914,7 @@ nav .cats button.flag[aria-selected="true"]{color:var(--bg)}
         <li><b>Potions and ammo used</b> and what they cost, read off your quick slots and Use tab.</li>
         <li><b>Deaths</b> confirmed from the chat line, with the EXP lost.</li>
         <li><b>Party view</b>: share a party code to see everyone's EXP/hr live.</li>
-        <li><b>KPQ mode</b>: stage and round times, best and average round, and your clears on the KPQ leaderboard below.</li>
+        <li><b>KPQ mode</b>: stage and round times, best and average round, and your clears on the <a href="#" data-go="trkkpq">KPQ leaderboard</a>.</li>
         <li><b>History</b> of every session, with CSV export and side-by-side compare.</li>
       </ul>
       <a class="btn primary trkdl" id="trkdl" href="https://github.com/TurbosauceDev/MS-Classic-World-Info-Slop/releases/latest" target="_blank" rel="noopener">Download for Windows</a>
@@ -1375,7 +1361,7 @@ nav .cats button.flag[aria-selected="true"]{color:var(--bg)}
 
   <div class="changelog">
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Grind Tracker section</h3><span class="pill p-hot">new</span></div>
-      <p>The <b>Grind Tracker</b> is now its own section, first in the menu and at the top of Home: Overview (what it does and the download), How to use, Shared runs, and the KPQ leaderboard.</p></div>
+      <p>The <b>Grind Tracker</b> is now its own section, first in the menu and on Home: Overview (what it does and the download), How to use, Shared runs, and the KPQ leaderboard.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Search everything, more share links</h3><span class="pill p-hot">new</span></div>
       <p><b>Search everything</b> (top of the page, or press <b>Ctrl K</b> or <b>/</b>): monsters, items, maps, quests and skills in one box. Parts of words work, so "or mu cap" finds Orange Mushroom Cap. <b>@mob</b>, <b>@item</b>, <b>@map</b>, <b>@quest</b> and <b>@skill</b> narrow it, and <b>@drop</b> lists the monsters players have seen drop an item.
       <b>Copy link</b> buttons now also on World Map cards, the Map Navigator, Where to train and the Quest Database. Monster drops are split into Equip, Use, Etc and Quest.</p></div>

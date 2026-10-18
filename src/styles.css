@@ -481,14 +481,4 @@ details.sec>summary:hover h2{color:var(--accent)}
 .srchbox .pill{flex:none;min-width:56px;text-align:center}
 .srchbox .ri{flex:none}
 .srchbox p.tiny{margin:0;color:var(--muted)}
-nav .cats button.flag{color:var(--accent);border-color:var(--accent)}
-nav .cats button.flag[aria-selected="true"]{color:var(--bg)}
-.homeflag{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:8px 24px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:14px;padding:16px 18px;margin-bottom:14px}
-.homeflag h2{margin:0 0 6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.homeflag p{margin:0;color:var(--ink);font-size:14.5px;line-height:1.5;max-width:60ch}
-.homeflagbtns .btn{display:inline-block;text-decoration:none}
-.homeflaglinks .hlink:first-child{border-top:0}
-.trkhero h2{font:800 24px/1.2 var(--f-display);margin:0 0 6px}
-.trkhero p{margin:0 0 16px;color:var(--muted);font-size:15px;line-height:1.5;max-width:75ch}
-.homeflag .pill{background:var(--panel)}
 #trk a[data-go],#trkhow a[data-go],#trkruns a[data-go]{color:var(--accent)}
