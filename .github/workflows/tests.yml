@@ -1,0 +1,20 @@
+# Site tests on every push/PR: smoke (every tab, 390px, no page errors) + golden (meowdb reference numbers).
+# Runs against the committed dist/index.html, so a push with a stale or broken build goes red here.
+name: Site tests
+on:
+  push:
+    branches: ["claude/trusting-bell-fqgar6"]
+    paths: ["dist/**", "src/**", "data/**", "tests/**", ".github/workflows/tests.yml"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm i --no-save playwright && npx playwright install --with-deps chromium
+      - run: node tests/smoke.js
+      - run: node tests/golden.js

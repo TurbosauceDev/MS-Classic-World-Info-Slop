@@ -1,94 +1,41 @@
 # MS Classic World Data Slop
 
-A single-page planner for **MapleStory Classic World** (Founder's Access Oct 6 2026, Grand Launch Oct 21 2026),
-built from the Closed Online Test 2 (COT2) game-file export. Owner: Danny.
+Planner site + Windows grind tracker for **MapleStory Classic World** (launch Oct 21 2026), built from the OSMS game-file
+export. Owner: Danny (GitHub TurbosauceDev).
 
-Tabs: **Character Builder** · **Path Planner** · Where to train · **Quest Database** · **Monsters** · **Items** · **Skills** · **World Map** · **Map Navigator** · **KPQ** · **Citizenship** · **Crafting** · **Keep or sell** · **Price check** · **Changelog** · **Credits**.
+**Read only the doc for the area you touch:** site → [docs/ai/site.md](docs/ai/site.md) · tracker/server →
+[docs/ai/tracker.md](docs/ai/tracker.md) · formulas, data schema, sources → `docs/notes.md` (grep its `##` headings, read one section).
 
-## Ground rules (from Danny)
-- **Classic World only.** Never use modern/retail MapleStory info. 2008-era info only if confirmed to still hold in Classic.
-- **Launch content only.** Orbis, El Nath, Forgotten Hollow and 3rd job are hidden (not in the launch). Don't add them back unless asked.
-- **No made-up numbers.** Every value comes from the OSMS export or a cited source (meowdb, maplestory.quest — Danny has the owner's
-  permission to use all maplestory.quest data; its raw API is listed in docs/notes.md). If something is
-  estimated, say so on the page. Put sources in replies.
-- Keep replies short and direct, no filler. Push back when something is wrong.
-- Batch related changes; only take screenshots when layout/visuals actually changed.
+## Ground rules (Danny)
+- **Classic World only.** No modern/retail info; 2008-era only if confirmed for Classic. Magician 1st job is Lv 10.
+- **Launch content only.** Orbis, El Nath, Forgotten Hollow, 3rd job stay hidden unless asked.
+- **No made-up numbers.** Every value cites the OSMS export, meowdb, maplestory.quest (owner's permission), meso.watch,
+  docs/notes.md, or Danny's screenshots. Estimates say so on the page. Outside specs are idea lists: verify every number.
+- Terse replies, no filler. Push back when something is wrong, and when Danny asks for token-hungry work (full audits,
+  rewrites, broad research) offer a cheaper alternative first (a test, a targeted check).
+- Every real bug becomes a test/fixture. Prefer automated tests (CI runs them) over Claude audit passes.
+- One feature per thread; close it when shipped.
 
-## Token budget (read first)
-- **Never Read/cat/grep `data/data.json` or `dist/index.html`**: each is ~900 KB, mostly on one line. `.rgignore` keeps Grep out of them.
-  Query data with a short script that prints only what's needed, e.g.
+## Token budget
+- **Never read whole:** `data/data.json` (5.7 MB), `dist/index.html` (6.2 MB), `data/sources/*.json`, `vendor/`,
+  image fixtures (`tests/fixtures/`, `tracker/tests/frames*/`). `.rgignore` keeps Grep out of dist/ and data.json.
+  Query data with a one-liner that prints only what's needed:
   `python3 -c "import json;d=json.load(open('data/data.json'));print(d['mobs']['22'])"`.
-- Source is small (~1.6k lines). Read only the file/section being changed; `grep -n "^function\|^const" src/js/*.js` gives a symbol index.
-- Don't read the live artifact back or diff it against dist. Publish dist straight to the URL below. In a new session the first
-  publish may be refused and hand back the live page; that costs ~20 KB of context, so do it once.
-- Don't re-run `fetch_osms.sh` / `build_data.py` unless data logic or the export changed. Pipe test/build output through `tail`.
-- **Never `git clone` a repo in full or download anything big without checking its size first** (GitHub API `size`, `du`, a dry run).
-  The OSMS repo is 8.6 GB with history; `fetch_osms.sh` is shallow + sparse + blob-filtered (~100 MB). Keep it that way.
-  Anything over ~200 MB: ask Danny first. The vendor clone is blob-filtered: `git ls-tree -l`, `git log -p`, `git show` of
-  many files etc. silently download the blobs. Use `ls-tree --name-only`, or fetch single files with an HTTP range/raw URL.
-- Screenshots only when layout changed. Ask Danny before anything expensive: data rebuilds, big refactors, web research, subagents.
+- Big source files: grep for the symbol, then read that range (`sed -n 'A,Bp'`). Sizes and symbol-index commands are in
+  the two docs/ai files.
+- Images: crop/zoom to the region that matters before viewing (PIL crop to scratchpad). Don't re-view the same image.
+- Pipe build/test output through `tail`. Screenshots only when layout changed.
+- Never `git clone` in full or download >200 MB without asking. OSMS repo is 8.6 GB; `fetch_osms.sh` is shallow+sparse+
+  blob-filtered. In `vendor/`, `git ls-tree -l` / `git log -p` / `git show` silently fetch blobs; use `--name-only`.
+- Don't re-run `fetch_osms.sh` / `build_data.py` unless data logic or the export changed.
+- Don't read the live artifact back; publish dist straight to it.
 
-## Layout
-```
-src/index.html        markup; /*@CSS*/ and /*@JS*/ placeholders
-src/styles.css        all CSS; theme tokens on :root, dark mode via prefers-color-scheme + [data-theme]
-src/js/00-core.js     const D = __DATA__ (replaced at build), $, fmt, esc, tab switching
-src/js/10-maps.js     client formulas (hitProb, lvlPen, classAcc), HP/MP (hpmpAt), danger (touchPct), portals to potions (POTS), party, mobKill, mapRates + "Where to train" (rankMaps)
-src/js/15-valuable.js  VALUE: community-picked valuable quests (tier, reward, why, sources) — not game data
-src/js/16-guides.js   GUIDE (1-30) + GUIDE2 (2nd-job branches 30-70): meowdb class guides (SP/AP per level, weapons, gear, maps) used by buildAt + Path Planner
-src/js/20-quests.js   Quest Database: filters, header sorting, questline filter, quest + item tooltips (#qtip), rewardCell()
-src/js/40-citizenship.js  Citizenship tab (GRADES + SHOPS consts are from meowdb, not the export)
-src/js/45-crafting.js  Crafting tab: masters + profession quests, craft levels (CRAFT_LV from OSMS dashboard), cheapest leveling, recipes, raw materials
-src/js/47-keep.js     Keep or sell tab: items quests/recipes ask for, verdict + have counts, sources (incl. meowdb player drop reports)
-src/js/48-monsters.js  Monsters tab: searchable list of D.mobdb + a page per monster (stats, spawns with minimap dots, drops, best farming maps via mapRates/buildAt)
-src/js/49-items.js    Items tab: every item (D.items) + a page per item (stats, drops, shops via D.ishop, recipes, quest rewards, quests/recipes that want it); any .ri icon or .itname click opens it
-src/js/50-builder.js  Character Builder: AP, skill build with per-job SP pools, damage calc, greedy auto-build; buildAt() = headless default build
-src/js/53-skills.js   Skills tab: every 1st/2nd job skill (D.skills + D.icons) with search/filters + a page per skill (levels, needs, unlocks)
-src/js/54-invprice.js  Price check tab: inventory screenshots -> items + counts (tracker/app/readers.js inlined at /*@READERS*/ by build.py) priced with meso.watch (PW), NPC fallback
-src/js/51-shot.js     screenshot reader (no server): un-doubles the game UI, finds icons by pixel match, reads numbers with the game's digit font (SHOT_FONT); reusable
-src/js/52-shotimport.js Character Builder "Import from screenshots": stat/equip/skill windows -> review form -> builder (via BLD from 50-builder.js)
-src/js/60-planner.js  Path Planner: level-by-level plan (quests / grinding / mix) using buildAt + mapRates + mobKill; exports TRAVEL (travel model)
-src/js/62-expcalc.js   EXP/hr calculator: two EXP readings + time (or timer) -> EXP/hr, time to level, vs Where to train estimate; saved sessions
-src/js/65-navigator.js Map Navigator: route between two maps (TRAVEL + Shanks' ship), exit numbers on minimaps; navTo(id) opens it
-src/js/66-worldmap.js  World Map: client world map (D.wmap) with a dot per spot; hover = card (maps, mobs, EXP/hr via mapRates, NPCs, quests, minimap); dungeon spots (Sleepywood) open a spring-layout sub-map of D.nav exits
-src/js/67-kpq.js     KPQ guide: stages with minimaps (D.kpq), Cloto's questions, puzzle combos, King Slime, box contents (meowdb KPQ guide)
-src/js/69-search.js  "Search everything" (Ctrl K or /): word-prefix search over mobs/items/maps/quests/skills, @mob/@item/@drop/@map/@quest/@skill; also #q/#t share links
-scripts/fetch_osms.sh pin + clone the OSMS export into vendor/
-scripts/analyze.py    step 1: map ranking, quest rows, 2008 diffs -> build/analysis.json
-scripts/build_data.py all data steps -> data/data.json (embedded in the page)
-scripts/squash_images.py lossless re-save of every embedded PNG in data.json (~2 MB off the page); build_data.py runs it last
-scripts/build.py      src + data -> dist/index.html (single self-contained file)
-tracker/              Windows grind tracker (Electron): core/session.js events->rates, app/readers.js frame->events (reuses 51-shot.js); see tracker/README.md
-tests/smoke.js        Playwright click-through of every tab; fails on any page error
-docs/notes.md         formulas, data.json schema, sources, decisions, known gaps — read before changing calculations
-```
-JS files are concatenated in filename order into ONE `<script>`, so they share top-level scope
-(e.g. 50-builder.js calls hitProb/rankMaps; 40-citizenship.js uses rewardCell/qtip from 20-quests.js).
-
-## Workflow
-```
-./scripts/fetch_osms.sh                 # once (or OSMS_DATA=/path/to/osms/data)
-python3 scripts/build_data.py           # only when data logic or the export changes
-node scripts/fetch_meowdb_drops.js       # re-pull meowdb player drop reports (then build_data.py extras mobdb)
-python3 scripts/build_data.py crafting extras  # cheap: re-runs only these steps (crafting; mobatk + potshops; also mobdb, worldmap) on the existing data.json
-python3 scripts/fetch_mesowatch.py        # re-pull meso.watch player-shop prices (creator OK'd), then build_data.py prices + build.py
-python3 scripts/build.py                # after any src/ change
-node tests/smoke.js                     # needs: npm i -D playwright (or global)
-node tests/golden.js                    # reference numbers (meowdb-published values); run after model changes
-python3 scripts/launch_diff.py <ver>    # a maplestory.io MCW client vs our COT2 data -> docs/launch_diff.md ("1" = COT1, "CBT2" = ours; use it when a launch version appears)
-```
-Open `dist/index.html` directly in a browser — no server needed. Published artifact (republish `dist/index.html` to this URL after
-every change): https://claude.ai/artifact/Facfj1DVkTNyQyrbHHFQcH
-GitHub Pages: https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/ builds from branch `claude/trusting-bell-fqgar6`
-(not the session branch) via .github/workflows/pages.yml (Pages source = GitHub Actions since 2026-10-18): dist/index.html is served at the site root, /dist/ forwards there. To update the site, commit a rebuilt dist/index.html and, with
-Danny's OK, fast-forward that branch to it (`git push origin HEAD:claude/trusting-bell-fqgar6`, ~1 min to deploy). The page must stay one self-contained file
-(it's also published as a claude.ai artifact): no external requests except Google Fonts.
-
-## Conventions
-- Use the existing CSS tokens (--bg, --panel, --ink, --muted, --line, --accent, --accent-soft, --leaf, --warn, --bad).
-  Palette is lavender/purple/grey; keep it. Both light and dark must work; no horizontal scroll at 390px.
-- Explanatory text goes in a collapsible `<details class="howto">` box at the top of a tab, as short bullet lists.
-- Tooltips: one floating `#qtip`; elements with `.qname` (quests), `.ri` (items), `.mname` (maps, `mapLink()`; a click opens its World Map card, 66-worldmap.js), `.nname` (NPCs, `npcLink()`) or `.mobname` (monsters, `mobLink()`) or `.itname` (item names; a click on it or a `.ri` icon opens the item page) get it via delegated listeners.
-- Per-viewer UI state goes in localStorage wrapped in try/catch (keys: tab, planner, path, pathdone, qsort, qeq, qval, ctown, craft, craftlv, qcompact, keep, keephave, mobs, items, skills, navi, wmap, expc).
-- Plain, game-player language on the page. Say when a number is estimated.
-- Add a dated entry to the Changelog tab (`#log` in src/index.html, newest first) for every user-visible change.
+## Branches, deploy
+- Default branch: `claude/trusting-bell-fqgar6` (no `main`). Site, tracker, server, CI all run from it.
+- Pushing to it = production (Pages redeploys). Needs Danny's in-thread "push" unless the brief says he OK'd it.
+- Before pushing: `git fetch origin claude/trusting-bell-fqgar6 && git rebase origin/claude/trusting-bell-fqgar6`.
+  Build/publish the artifact only from that latest base, so another thread's newer version isn't overwritten.
+- After pushing: wait for pages.yml, check the Home "Site version: built ..." stamp on
+  https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/, smoke test green, then report once.
+- Artifact (republish `dist/index.html` after every site change): https://claude.ai/artifact/Facfj1DVkTNyQyrbHHFQcH
+- One owner per shared area (Home cards, global CSS, the data build, CLAUDE.md/docs): check with the coordinator first.
