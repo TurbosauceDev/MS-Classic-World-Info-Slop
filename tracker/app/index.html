@@ -73,6 +73,7 @@
   td.note { padding-left:12px; } .v .coin { height:.8em; }
   :focus-visible { outline:2px solid var(--accent); outline-offset:2px; } .grip:focus-visible { border-radius:4px; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
+  #goalNext[aria-pressed=true], #goalOff[aria-pressed=true] { background:var(--accent); color:#fff; }
   .coin { height:1em; width:auto; image-rendering:pixelated; vertical-align:-0.12em; margin-right:2px; }
   .ico { display:inline-block; width:22px; height:22px; object-fit:contain; image-rendering:pixelated; vertical-align:middle; margin:-3px 6px -3px 0; }
   .dragLabel { position:fixed; z-index:60; pointer-events:none; background:var(--accent); color:#fff; border-radius:6px; padding:3px 8px; font-size:12px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.3); }
@@ -140,7 +141,7 @@
   </div>
   <section data-tab="session">
     <div class="card" id="alertsBox" data-box="alerts" data-title="Alerts and goal"><h3>Alerts and goal</h3>
-      <div class="row"><label>Goal: level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="off"></label></div>
+      <div class="row"><span>Goal:</span> <button id="goalNext" class="alt" aria-pressed="true" title="Always the level after the one you're on">Next level</button> <label>or level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="-"></label> <button id="goalOff" class="alt" aria-pressed="false">Off</button></div>
       <div class="row"><label>Beep for drops worth <input type="number" id="alert" min="0" step="1000"> mesos or more</label> <span class="note">0 = off</span></div>
       <div class="row"><label style="flex:1;min-width:0">Beep for these drops <input id="alertItems" maxlength="500" style="width:100%;box-sizing:border-box" placeholder="e.g. Bronze Ore, Glove scroll"></label> <span class="note" id="alertItemsNote"></span></div>
       <label class="chk"><input type="checkbox" id="stopBeep"> <span>Beep when EXP stops for 2 minutes (died, disconnected, map taken)</span></label>

@@ -687,7 +687,7 @@ async function start(){
   try { await startCapture(); ICONS ||= await GrindReaders.loadIcons(G).catch(() => []) }   // once: potion/arrow pictures for the counts
   finally { starting = false }
   timer = 0;   // running (the first tick sets the real timeout)
-  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: settings.goal || 0}); stopWarned = false;
+  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: goalOf()}); stopWarned = false;
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
   wrap = null; runT0 = Date.now(); $("#summary").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
@@ -826,7 +826,13 @@ const guideDone = share => host.settings({share, guideDone: true}).then(s => { s
 $("#guideShare").onclick = () => guideDone(true);
 $("#guideNo").onclick = () => guideDone(false);
 $("#stopBeep").onchange = e => host.settings({stopBeep: e.target.checked}).then(s => settings = s);
-$("#goal").onchange = e => { const v = Math.max(0, Math.min(200, Math.round(+e.target.value || 0))); host.settings({goal: v}).then(s => { settings = s; session?.setGoal(v) }) };
+// goal: "next" (the default: the level after the one you're on), a typed level, or "off"
+const goalOf = () => settings.goal === "off" ? 0 : +settings.goal >= 2 ? +settings.goal : "next";
+function goalUi(){ const g = goalOf(); $("#goalNext").setAttribute("aria-pressed", String(g === "next")); $("#goalOff").setAttribute("aria-pressed", String(g === 0));
+  $("#goal").value = typeof g === "number" && g ? g : "" }
+const setGoal = v => host.settings({goal: v}).then(s => { settings = s; session?.setGoal(goalOf()); goalUi(); if (session) render() });
+$("#goal").onchange = e => { const v = Math.round(+e.target.value || 0); setGoal(v >= 2 ? Math.min(200, v) : "next") };
+$("#goalNext").onclick = () => setGoal("next"); $("#goalOff").onclick = () => setGoal("off");
 $("#alertItems").onchange = e => host.settings({alertItems: e.target.value.slice(0, 500)}).then(s => { settings = s; const n = alertSet().size; $("#alertItemsNote").textContent = n ? n + " item" + (n > 1 ? "s" : "") + " watched" : "" });
 $("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.value || 0)}).then(s => settings = s);
 $("#miniBtn").onclick = () => { document.body.classList.add("mini"); host.mini(true) };
@@ -970,7 +976,7 @@ $("#updGo").onclick = async () => {
   $("#stopBeep").checked = settings.stopBeep !== false;
   $("#kpqAct").value = settings.kpqAct || "auto"; $("#kpqMode").value = settings.kpqMode === "Rush" ? "Rush" : "Bonus";
   $("#autoPause").checked = settings.autoPause !== false;   // on unless turned off   // on unless turned off
-  $("#goal").value = settings.goal || "";
+  goalUi();
   $("#pcode").value = settings.partyCode || "";
   $("#nick").value = settings.nick || "";
   $("#guide").classList.toggle("hidden", !!settings.guideDone);

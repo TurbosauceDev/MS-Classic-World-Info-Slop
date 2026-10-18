@@ -211,7 +211,7 @@
       const need = S.bar && S.level ? G.exp[S.level] : null;
       const toLevelHrs = need && expHr > 0 ? Math.max(0, need - S.bar.exp) / expHr : null;
       // a goal level: the rest of this level plus every level up to it, at the current rate
-      const goal = +opts.goalLevel || 0;
+      const goal = opts.goalLevel === "next" ? (S.level ? S.level + 1 : 0) : +opts.goalLevel || 0;   // "next": always the level after this one
       let toGoalHrs = null;
       if (need && expHr > 0 && goal > S.level){ let left = Math.max(0, need - S.bar.exp); let known = true; for (let l = S.level + 1; l < goal; l++){ if (!G.exp[l]) known = false; left += G.exp[l] || 0 } toGoalHrs = known ? left / expHr : null }   // past the EXP table: unknown, not "sooner"
       // the inventory read at two times (a tab opened early and again later): what's in it now minus what was in it then.

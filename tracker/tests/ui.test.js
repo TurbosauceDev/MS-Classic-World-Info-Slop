@@ -61,6 +61,12 @@ const path = require("path"), {chromium} = require("playwright");
     session.state.lastExpT = Date.now() - 130e3;   // last EXP over 2 minutes ago
     render(); return [document.querySelector("#deaths").textContent, document.querySelector("#goalK").textContent, document.querySelector("#goalV").textContent, document.querySelector("#status").textContent] });
   if (gl[0] !== "1" || gl[1] !== "Level 23 in" || !/h|min/.test(gl[2]) || !/No EXP for 2 minutes/.test(gl[3])) throw new Error("goal/deaths/stop: " + gl);
+  // Next level (the default) and Off
+  await page.click("#goalNext"); await page.waitForTimeout(50);
+  const gn = await page.evaluate(() => [settings.goal, document.querySelector("#goal").value, document.querySelector("#goalNext").getAttribute("aria-pressed"), session.stats().goalLevel === session.stats().level + 1]);
+  if (gn.join() !== "next,,true,true") throw new Error("goal next: " + gn);
+  await page.click("#goalOff"); await page.waitForTimeout(50);
+  if (await page.evaluate(() => session.stats().goalLevel) !== null) throw new Error("goal off");
   // potions used (from the quick-slot counts): cost per hour and the list
   const usedTxt = await page.evaluate(() => { session.add({t: Date.now(), type: "use", id: "2000002", n: 3}); render();
     return [document.querySelector("#used").textContent, document.querySelector("#usedBox").classList.contains("hidden"), document.querySelector("#netHr").textContent, ICONS.length] });

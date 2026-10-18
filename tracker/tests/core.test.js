@@ -104,6 +104,7 @@ s.add({t: sec(0), type: "bar", exp: 0, pct: 0.01, level: 22}); s.add({t: sec(30)
   m.add({t: sec(20), type: "bar", ...at(68.2)});
   const ms = m.stats(); assert.equal(ms.deaths, 0, "misread bar = no death"); assert.ok(ms.exp < 0.002 * G.exp[25], "misread bar = no fake EXP " + ms.exp) }
 const gs = s.stats(); assert.ok(Math.abs(gs.toGoalHrs - (G.exp[22] - 1000 + G.exp[23]) / gs.expHr) < 1e-9, "goal hours");
+s.setGoal("next"); { const n = s.stats(); assert.equal(n.goalLevel, 23); assert.ok(Math.abs(n.toGoalHrs - n.toLevelHrs) < 1e-9, "next level = time to level") }
 s.setGoal(0); assert.strictEqual(s.stats().toGoalHrs, null);
 // a death low in the level (EXP drops to 0) is not a level-up
 s = createSession(G);
