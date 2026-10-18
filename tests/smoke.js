@@ -209,6 +209,22 @@ const path = require("path");
   const bankRow = n => p.$$eval("#ivbody tr", (r, n) => r.find(x => x.cells[0].innerText.includes(n))?.cells[2].innerText, n);
   check(await bankRow("Green Mushroom Cap") === "387" && await bankRow("Arrows for Bows") === "1,970" && await bankRow("Set of Match Cards") === "3" &&
     /in the bank: 5,825/.test(await p.textContent("#ivsum")) && !/Equip:/.test(await p.textContent("#ivreads")), "price check lines up scrolled bank screenshots");
+  // theme picker: tracker presets recolour the page, a tracker share code is accepted, the pick survives a reload, Default
+  // puts styles.css back (no inline colours)
+  {
+    const bg = () => p.evaluate(() => [document.documentElement.style.getPropertyValue("--bg"), document.documentElement.dataset.theme || ""].join());
+    await p.click("#thopen"); await p.click('#thsw [data-th="p:Slime"]');
+    const slime = await bg();
+    const code = await p.evaluate(() => TrackerThemes.encode({name: "Smoke pink", mode: "light", c: {...TrackerThemes.PRESETS[5].c, accent: "#ff00aa"}}));
+    await p.fill("#thcode", code); await p.click("#thadd");
+    const pink = await p.evaluate(() => [document.documentElement.style.getPropertyValue("--accent"), document.documentElement.dataset.theme].join());
+    await p.reload(); await p.waitForTimeout(300);
+    const kept = await p.evaluate(() => document.documentElement.style.getPropertyValue("--accent"));
+    await p.click("#thopen"); await p.click('#thsw [data-th="p:Default"]'); const def = await bg();
+    await p.fill("#thcode", "nope"); await p.click("#thadd"); const bad = await p.textContent("#thmsg"); await p.click("#thopen");
+    check(slime === "#111a14,dark" && pink === "#ff00aa,light" && kept === "#ff00aa" && def === "," && /isn't a theme/.test(bad),
+      `theme picker (${slime} | ${pink} | ${kept} | ${def})`);
+  }
   // every page at phone width: no sideways scroll, no NaN/undefined text
   await p.setViewportSize({width: 390, height: 800});
   for (const [id, cat] of await p.$$eval(".subs button[id^=t-]", bs => bs.map(b => [b.id, b.dataset.cat]))){

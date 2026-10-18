@@ -51,3 +51,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 KPQ name off = a fixed made-up name (1st job + 4 digits, e.g. Archer4821), never blank.
 - 2026-10-18 Tracker settings live in a Preferences popup from the title bar; panel tabs are only Session, Loot, History.
 - 2026-10-18 Tracker default theme is "Default" = the site's colours exactly (follows Windows light/dark); Lilac, Henesys, Perion sand toned down from "flash bang" white.
+- 2026-10-18 Site gets a Theme picker with the tracker's presets and MSCT1 share codes, so both can match in any theme.
