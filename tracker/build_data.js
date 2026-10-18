@@ -39,6 +39,8 @@ for (const [, , list] of Object.values(G.maps)) for (const [id] of list){ const 
 // and in the Use tab, and the lowest NPC shop price (D.ishop) for their cost
 const used = Object.entries(D.items).filter(([id, it]) => /^20(60|61|70)/.test(id) || ["hp", "mp", "hpR", "mpR"].some(k => it.sp?.[k])).map(([id]) => id);
 G.icons = Object.fromEntries(used.filter(id => D.iicons[id]).map(id => [id, D.iicons[id]]));
+// every Equip / Use / Etc item's picture, for reading the inventory window (readers.js readInventory)
+G.iicons = Object.fromEntries(Object.entries(D.iicons).filter(([id]) => ["Equipment", "Consumable", "Scroll", "Etc"].includes(D.items[id]?.c)));
 G.buy = Object.fromEntries(used.map(id => [id, Math.min(...(D.ishop[id] || []).map(s => s[3]).filter(p => p > 0))]).filter(([, p]) => isFinite(p)));
 // plain arrows aren't in our shop data: Danny's price, 2 arrows = 1 meso (2026-10-17). Bronze arrows are 2 each (shop data, matches him)
 for (const id of ["2060000", "2061000"]) G.buy[id] ??= 0.5;

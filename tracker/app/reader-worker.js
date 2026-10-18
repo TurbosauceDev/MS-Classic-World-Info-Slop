@@ -1,9 +1,11 @@
 // Reader worker: the screen readers run here, off the window's thread, so the tracker window never stutters while a
 // frame is read. Messages from renderer.js: reset (new session: icons, potion box), area (potion box changed), frame.
 importScripts("gamedata.js", "shot.js", "readers.js");
-let rd = null;
+let rd = null, all = null;
+// every item picture (for reading the inventory window): decoded once, here, in the background (~2 s)
+const allIcons = GrindReaders.loadIcons(GAMEDATA, GAMEDATA.iicons).then(l => (all = l, rd?.setInvIcons(l), l)).catch(() => null);
 onmessage = ({data: m}) => {
-  if (m.type === "reset"){ rd = GrindReaders.createReaders(GAMEDATA, m.icons); rd.setArea(m.area); return }
+  if (m.type === "reset"){ rd = GrindReaders.createReaders(GAMEDATA, m.icons); rd.setArea(m.area); if (all) rd.setInvIcons(all); return }
   if (m.type === "area") return rd?.setArea(m.area);
   try {
     const out = GrindReaders.work(rd, m);

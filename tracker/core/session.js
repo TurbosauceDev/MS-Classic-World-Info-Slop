@@ -6,7 +6,10 @@
      {t, type: "exp",   gain}             one "You received EXP (+gain)" message = one kill (yours or a party member's)
      {t, type: "bonus", gain}             "Bonus EXP for PARTY (+gain)": EXP, not a kill
      {t, type: "bar",   exp, level?}      EXP bar reading: current EXP into the level (and level, when worked out)
-     {t, type: "itemraw", text}           an item pickup line whose item name couldn't be read yet
+     {t, type: "itemraw", text, qty?, cands?}  an item pickup line whose name fits several items (cands) or none; the one
+                                          this map's monsters drop is taken when only one of them does
+     {t, type: "inv", tab, items, alike?, unknown}  the inventory's open tab (equip/use/etc): {id: count}; alike = how many
+                                          items share that picture (scrolls); unknown = slots that didn't read
      {t, type: "meso",  amount}           meso pickup message
      {t, type: "item",  id, qty?}         item pickup message (id resolved by the reader from the item name)
      {t, type: "map",   id, name?}        map read from the minimap (id null: a map our data doesn't have, name as read)
@@ -25,7 +28,7 @@
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
       msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
-      pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null, used: {}, walletFirst: null, walletLast: null, bigKilled: new Set()};
+      pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null, used: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
@@ -69,6 +72,18 @@
         activeMin: was && !was.partial && was.level === level - 1 ? Math.round((S.activeMs - was.activeMs) / 6e3) / 10 : null});
       S.levelAt = {level, activeMs: S.activeMs};
     }
+    // inventory now minus at the first read, per item (tabs read at least twice), biggest change first
+    function invGain(){
+      const out = [];
+      for (const [tab, {first, last}] of Object.entries(S.inv)){
+        if (last.t <= first.t) continue;
+        for (const id of new Set([...Object.keys(first.items), ...Object.keys(last.items)])){
+          const n = (last.items[id] || 0) - (first.items[id] || 0);
+          if (n) out.push({id, tab, n, alike: last.alike[id] || first.alike[id] || 1, name: G.items[id]?.n || "Item " + id});
+        }
+      }
+      return out.sort((a, b) => Math.abs(b.n) - Math.abs(a.n));
+    }
     function gotItem(id, q){ id = String(id); S.items[id] = (S.items[id] || 0) + q; if (S.lastKillMob){ const m = mob(S.lastKillMob); m.items[id] = (m.items[id] || 0) + q } }
     const mob = id => S.byMob[id] || (S.byMob[id] = {kills: 0, exp: 0, mesos: 0, mesoDrops: 0, items: {}});
 
@@ -96,6 +111,13 @@
           break;
         }
         case "bonus": S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); break;
+        // the inventory's open tab read: kept as first and latest per tab (Equip, Use, Etc)
+        case "inv": {
+          if (!e.tab || !e.items) break;
+          const read = {t: e.t, items: e.items, alike: e.alike || {}, unknown: e.unknown || 0};
+          (S.inv[e.tab] ||= {first: read}).last = read;
+          break;
+        }
         case "itemraw": {
           // a name that fits several items: the one the monsters here drop (player drop reports), or KPQ's Coupon/Pass
           const here = new Set((G.maps[S.map]?.[2] || []).flatMap(([m]) => G.drops?.[m] || []).concat((G.kpq || []).includes(S.map) ? G.kpqItems || [] : []));
@@ -185,8 +207,14 @@
       const goal = +opts.goalLevel || 0;
       let toGoalHrs = null;
       if (need && expHr > 0 && goal > S.level){ let left = Math.max(0, need - S.bar.exp); let known = true; for (let l = S.level + 1; l < goal; l++){ if (!G.exp[l]) known = false; left += G.exp[l] || 0 } toGoalHrs = known ? left / expHr : null }   // past the EXP table: unknown, not "sooner"
-      const items = Object.entries(S.items).map(([id, n]) => ({id, name: G.items[id]?.n || "Item " + id, n, each: worth(id), total: worth(id) * n}))
+      // the inventory read at two times (a tab opened early and again later): what's in it now minus what was in it then.
+      // Etc, equips and scrolls only (potions go up when bought). Per item the bigger of that and the pickup lines: the
+      // inventory catches lines that didn't read, the lines catch loot sold or stored in between
+      const inv = invGain(), seenN = {...S.items}, filled = {};
+      for (const g of inv) if (g.n > 0 && g.alike === 1 && ["Etc", "Equipment", "Scroll"].includes(G.items[g.id]?.c) && g.n > (seenN[g.id] || 0)){ filled[g.id] = g.n - (seenN[g.id] || 0); seenN[g.id] = g.n }
+      const items = Object.entries(seenN).map(([id, n]) => ({id, name: G.items[id]?.n || "Item " + id, n, each: worth(id), total: worth(id) * n, inv: filled[id] || 0}))
         .sort((a, b) => b.total - a.total);
+      const unreadLeft = Math.max(0, S.unreadItems - Object.values(filled).reduce((a, b) => a + b, 0));
       const lootValue = items.reduce((a, b) => a + b.total, 0);
       // used up: NPC shop price (cheapest shop), else the player-shop median; unknown price = left out of the cost
       const used = Object.entries(S.used).map(([id, n]) => { const each = G.buy?.[id] ?? G.pw?.[id]?.[0] ?? null;
@@ -201,7 +229,7 @@
         // kills if the missed lines were kills at the same rate as the ones read (an estimate; only from 20% read up)
         killsEstHr: S.barExp > 0 && S.msgExp / S.barExp >= 0.2 && S.msgExp < S.barExp ? per(S.kills * S.barExp / S.msgExp) : null,
         expHr5: recentExpHr(), deaths: S.deaths, paused: S.pausedAt !== null, levelUps: S.levelUps, toGoalHrs, goalLevel: goal || null, lastExpT: S.lastExpT,
-        mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: S.unreadItems, lootValue, lootHr: per(lootValue), items, mobs,
+        mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: unreadLeft, unreadLines: S.unreadItems, inv, invTabs: Object.fromEntries(Object.entries(S.inv).map(([k, v]) => [k, {first: v.first.t, last: v.last.t}])), lootValue, lootHr: per(lootValue), items, mobs,
         used, usedCost, usedCostHr: per(usedCost), netHr: per(S.mesos + lootValue - usedCost),
         // inventory mesos now minus at the first read: real money in or out, shop trips included (loot not sold yet isn't in it)
         walletNet: S.walletFirst === null ? null : S.walletLast - S.walletFirst, walletNetHr: S.walletFirst === null ? null : per(S.walletLast - S.walletFirst)};

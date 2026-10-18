@@ -42,6 +42,8 @@
   .row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:6px 0; }
   label.chk { display:flex; gap:6px; align-items:flex-start; margin:5px 0; } label.chk input { margin-top:3px; }
   #selfcheck td:first-child { width:42%; }
+  .chip{display:inline-block;padding:2px 8px;border-radius:10px;border:1px solid var(--line);font-size:12px}
+  .chip.ok{border-color:var(--leaf)} .chip.need{color:var(--muted)}
   button.del { padding:1px 7px; font-size:12px; } button.del.sure { background:var(--bad); color:#fff; }
   #snaps input.need { border-color:var(--warn); background:var(--accent-soft); }
   #helpBtn { padding:5px 10px; font-size:12px; font-weight:600; }
@@ -83,7 +85,7 @@
     <button data-tab="session" class="sel">Session</button><button data-tab="loot">Loot</button><button data-tab="hist" id="histBtn">History</button><button data-tab="settings">Settings</button>
   </div>
   <section data-tab="session">
-    <div class="card" id="snaps"><h3>Start and end (EXP bar)</h3>
+    <div class="card" id="snaps"><h3>Start and end (EXP bar, inventory)</h3>
       <div class="note">Every session is measured from two EXP bar readings, at Start and at Stop (like mapleexp.com). Taken by
         themselves; fix a level or % here if it read wrong. This is the number saved to History.</div>
       <div class="row"><button id="snapStart" class="alt">Snap start</button> <button id="snapEnd" class="alt">Snap end</button></div>
@@ -91,7 +93,11 @@
         <tr><td>Start</td><td>Lv <input type="number" id="s0lv" min="1" max="200" style="width:52px"></td><td><input type="number" id="s0pct" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s0t" class="n"></td></tr>
         <tr><td>End</td><td>Lv <input type="number" id="s1lv" min="1" max="200" style="width:52px"></td><td><input type="number" id="s1pct" min="0" max="100" step="0.01" style="width:72px">%</td><td id="s1t" class="n"></td></tr>
       </table>
-      <div class="v" id="snapRate" style="margin-top:6px">-</div><div class="note" id="snapNote"></div></div>
+      <div class="v" id="snapRate" style="margin-top:6px">-</div><div class="note" id="snapNote"></div>
+      <div class="k" style="margin-top:8px">Inventory</div>
+      <div class="note">Open your inventory on <b>Equip</b>, <b>Use</b> and <b>Etc</b> for a second each, after Start and again before Stop.
+        The difference is your real loot, even when a pickup line didn't read.</div>
+      <div class="row" id="invTabs"></div></div>
     <div class="card" id="kpqBox"><h3>KPQ</h3>
       <div class="row"><label>Doing <select id="kpqAct"><option value="auto">Auto (spots KPQ)</option><option value="grind">Grinding</option><option value="kpq">KPQ</option></select></label>
         <label>Mode <select id="kpqMode"><option>Bonus</option><option>Rush</option></select></label></div>
@@ -109,6 +115,7 @@
     <div class="card"><h3>Monsters killed</h3><table id="mobs"></table><div class="empty" id="mobsEmpty">No kills yet.</div></div>
   </section>
   <section data-tab="loot" class="hidden">
+    <div class="card hidden" id="invBox"><h3>Inventory: now vs. first look</h3><table id="invGain"></table><div class="note" id="invNote"></div></div>
     <div class="card"><h3>Picked up</h3><table id="items"></table><div class="empty" id="itemsEmpty">Nothing picked up yet.</div>
       <div class="note" id="priceNote"></div></div>
     <div class="card" id="usedBox"><h3>Used up</h3><div class="note">Potions, food and arrows, at the cheapest NPC shop price.</div><table id="used"></table>
@@ -154,6 +161,14 @@
         <li>Everyone types the same <b>party code</b> in Settings. You'll see each other's EXP/hr, level and job, updated
           every minute. A name only shows if you type one.</li>
         <li>Open the in-game party window so the tracker knows the party size.</li>
+      </ul></details>
+      <details><summary>Inventory and loot</summary><ul>
+        <li>Open your inventory on <b>Equip</b>, <b>Use</b> and <b>Etc</b> for a second each after Start, and again before Stop.
+          The tracker reads every slot (picture and count) by itself; ✓✓ on a tab means it was read twice.</li>
+        <li>Loot = what's in Etc (plus equips and scrolls) now minus at the first look, or the pickup lines, whichever is more.
+          That covers lines that didn't read; the lines cover loot you sold in between.</li>
+        <li>Only the slots you can see are read: scroll to the top of a tab.</li>
+        <li>Stop asks for one more look when a tab was last read over 2 minutes ago. Press <b>Stop anyway</b> to skip.</li>
       </ul></details>
       <details><summary>KPQ runs</summary><ul>
         <li>On <b>Auto</b>, KPQ turns on by itself once a KPQ stage shows on the minimap. Pick <b>KPQ</b> in the Session tab to

@@ -462,15 +462,91 @@
   }
 
   // G.icons (base64 PNGs of potions, food, arrows, stars) -> pixels; items with the same picture share one entry
-  async function loadIcons(G){
+  // map: {id: base64 PNG} (default G.icons). Works in the window and in the reader worker (no document there).
+  // Items drawn with the same picture are one entry: ids lists them all (id = the first)
+  async function loadIcons(G, map = G.icons){
     const seen = new Map(), out = [];
-    for (const [id, b64] of Object.entries(G.icons || {})){
-      if (seen.has(b64)) continue; seen.set(b64, id);
-      const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode();
-      const c = document.createElement("canvas"); c.width = im.width; c.height = im.height; const g = c.getContext("2d"); g.drawImage(im, 0, 0);
-      out.push({id, w: im.width, h: im.height, d: g.getImageData(0, 0, im.width, im.height).data});
+    for (const [id, b64] of Object.entries(map || {})){
+      if (seen.has(b64)){ seen.get(b64).ids.push(id); continue }
+      const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], {type: "image/png"}));
+      const c = typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(bmp.width, bmp.height) : Object.assign(document.createElement("canvas"), {width: bmp.width, height: bmp.height});
+      const g = c.getContext("2d"); g.drawImage(bmp, 0, 0);
+      const ic = {id, ids: [id], w: bmp.width, h: bmp.height, d: g.getImageData(0, 0, bmp.width, bmp.height).data};
+      let n = 0; for (let j = 3; j < ic.d.length; j += 4) if (ic.d[j] >= 250) n++;
+      ic.n = n; seen.set(b64, ic); out.push(ic);
     }
     return out;
+  }
+
+  /* The item inventory window (Danny's Use tab, 2026-10-18, game pixels): a red line 3 rows tall (ac0000 / c40000 /
+     cb0000) about 203 px wide under the tabs, the open tab pink (ea6581) above it. Tabs start at these distances from the
+     line's left end (the pink starts a pixel in). Slots: 5 columns 36 px apart from 5 px right of the line's left end,
+     6 rows 34 px apart, a slot's count on y = line + 37 + 34 * row (same as readCounts' slot/y). Empty slots: (225,223,213). */
+  const INV_TABS = [["equip", 4], ["use", 38], ["setup", 67], ["etc", 101], ["cash", 134], ["deco", 167]];
+  function findInventory(img, box = null){
+    const {w, h, d} = img, px = (x, y) => (y * w + x) * 4;
+    const red = (x, y) => { const i = px(x, y); return d[i] > 140 && d[i + 1] < 45 && d[i + 2] < 45 };
+    const pink = (x, y) => { const i = px(x, y); return Math.abs(d[i] - 234) < 26 && Math.abs(d[i + 1] - 101) < 26 && Math.abs(d[i + 2] - 129) < 26 };
+    const X0 = box ? Math.max(0, box.x0) : 0, X1 = box ? Math.min(w, box.x1) : w;
+    for (let y = Math.max(22, box ? box.y0 : 0), Y1 = Math.min(h - 3, box ? box.y1 : h); y < Y1; y++){
+      for (let x = X0; x < X1; x += 8){
+        if (!red(x, y)) continue;
+        let a = x, b = x; while (a > 0 && red(a - 1, y)) a--; while (b < w - 1 && red(b + 1, y)) b++;
+        x = b;
+        if (b - a < 190 || b - a > 215 || !red(a + 5, y + 1) || !red(a + 5, y + 2) || red(a + 5, y - 1) || a + 200 >= w) continue;
+        for (let yy = y - 20; yy < y - 1; yy++) for (let xx = a; xx < a + 200; xx++) if (pink(xx, yy) && pink(xx + 1, yy) && pink(xx + 2, yy)){
+          const off = xx - a, tab = INV_TABS.reduce((p, q) => Math.abs(q[1] - off) < Math.abs(p[1] - off) ? q : p);
+          return Math.abs(tab[1] - off) <= 8 ? {x: a, y, tab: tab[0]} : null;
+        }
+      }
+    }
+    return null;
+  }
+  // the best icon for a slot, stopping early on any candidate already clearly worse than the best (fast enough for the
+  // 1,200 equips). Same rules as iconAt: centered on the slot, bottom 3 px under the count row, count digits left out
+  function slotIcon(img, sx, cy, end, cands){
+    let best = null, second = Infinity;
+    for (const ic of cands){
+      const x0 = sx + 16 - (ic.w >> 1), y0 = cy + 3 - ic.h;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){
+        const cut = Math.min(80, best ? best.sc : 80) * 1.5 * ic.n;
+        let s = 0, k = 0;
+        for (let y = 0; y < ic.h && s <= cut; y++) for (let x = 0; x < ic.w; x++){
+          const j = (y * ic.w + x) * 4; if (ic.d[j + 3] < 250) continue;
+          const X = x0 + dx + x, Y = y0 + dy + y; if (Y > cy - 10 && X <= end + 2 || X < 0 || Y < 0 || X >= img.w || Y >= img.h) continue;
+          const i = (Y * img.w + X) * 4;
+          s += Math.abs(img.d[i] - ic.d[j]) + Math.abs(img.d[i + 1] - ic.d[j + 1]) + Math.abs(img.d[i + 2] - ic.d[j + 2]); k++;
+        }
+        if (s > cut || k <= 40) continue;
+        const sc = s / k;
+        if (!best || sc < best.sc){ if (best && best.ic !== ic) second = Math.min(second, best.sc); best = {ic, sc} }
+        else if (best.ic !== ic) second = Math.min(second, sc);
+      }
+    }
+    return best && best.sc < 80 && second > best.sc * 1.5 ? best.ic : null;
+  }
+  // every slot on the open tab: [{i (slot 0-29), ids (one picture can be several items), n (null: count not read)}],
+  // unknown = filled slots whose item didn't match. Equips show no count (1 each).
+  function readInventory(img, inv, cands, cache = null){
+    const {w, d} = img, nums = readCounts(img, {x0: inv.x, x1: inv.x + 190, y0: inv.y + 28, y1: inv.y + 37 + 34 * 5 + 2});
+    const slots = []; let unknown = 0;
+    for (let r = 0; r < 6; r++) for (let c = 0; c < 5; c++){
+      const sx = inv.x + 5 + 36 * c, cy = inv.y + 37 + 34 * r;
+      if (cy + 4 >= img.h || sx + 32 >= w) continue;
+      let off = 0, sig = 0;
+      for (let y = cy - 28; y <= cy; y++) for (let x = sx + 1; x < sx + 31; x++){
+        const i = (y * w + x) * 4; if (Math.abs(d[i] - 225) + Math.abs(d[i + 1] - 223) + Math.abs(d[i + 2] - 213) > 40){ off++; sig = (sig * 31 + (d[i] >> 5) * 64 + (d[i + 1] >> 5) * 8 + (d[i + 2] >> 5)) | 0 }
+      }
+      if (off < 30) continue;   // empty
+      const num = nums.find(n => Math.abs(n.slot - sx) <= 2 && Math.abs(n.y - cy) <= 1);
+      // the picture is matched again only when the slot changed (beyond video noise: colors in 32-shade steps)
+      const key = inv.tab + "," + sx + "," + cy + "," + (num ? num.end : "") + "," + sig;
+      let ic = cache?.get(key);
+      if (ic === undefined){ ic = slotIcon(img, sx, cy, num ? num.end : sx - 12, cands); if (cache){ if (cache.size > 400) cache.clear(); cache.set(key, ic) } }
+      if (!ic){ unknown++; continue }
+      slots.push({i: r * 5 + c, ids: ic.ids, n: num ? num.n : inv.tab === "equip" ? 1 : null});
+    }
+    return {tab: inv.tab, slots, unknown};
   }
 
   function createReaders(G, icons = null){
@@ -521,7 +597,7 @@
       // party size only changes after the same new size is read 3 frames running (a window in the way, a bar mid-blink)
       // no party window: a party while bonus lines came in the last 3 minutes (left the party = back to solo after that)
       const partyRead = readParty(img), party = partyRead || (t - bonusAt < 180e3 ? 2 : 1);
-      info = {bar: !!bar, partyWindow: partyRead, counts: info.counts};   // what this frame showed (self-check, auto-pause)
+      info = {bar: !!bar, partyWindow: partyRead, counts: info.counts, inv: info.inv};   // what this frame showed (self-check, auto-pause)
       if (icons?.length && t - lastCounts >= 2000){
         lastCounts = t; ev.push(...readUse(img, t));
         // the inventory's meso total, taken when read the same twice running. Only around where it was last seen, with
@@ -534,6 +610,7 @@
         if (m !== null && m === walletNext && m !== wallet){ wallet = m; ev.push({t, type: "wallet", n: m}) }
         walletNext = m;
       }
+      if (invIcons && t - lastInv >= 2000){ lastInv = t; const e = readInv(img, t); if (e) ev.push(e) }
       if (party === partyNext) partySeen++; else { partyNext = party; partySeen = 1 }
       if (party !== lastParty && (lastParty === null || partySeen >= 3)){ ev.push({t, type: "party", size: party}); lastParty = party }
       return ev;
@@ -590,8 +667,33 @@
       if (b) barBand = {y0: (b.y - 2 * b.bh) / raw.h, y1: (b.y + 2 * b.bh) / raw.h};
       return b && {exp: b.exp, pct: b.pct};
     }
+    /* the open inventory tab, every 2 s: looked for where it was last seen, over the whole frame every 6 s. A tab's items
+       count once the same read comes twice running; "inv" events carry {tab, items: {id: n}, unknown} (unknown: slots
+       whose item or count didn't read; one picture shared by several items is listed under the first of them) */
+    let invIcons = null, byTab = null, lastInv = -Infinity, invBox = null, lastFullInv = -Infinity, invNext = null;
+    const invSent = {}, invCache = new Map();
+    function readInv(img, t){
+      let inv = invBox && findInventory(img, invBox);
+      if (!inv && (t - lastFullInv >= 6000 || invBox)){ lastFullInv = t; inv = findInventory(img) }
+      invBox = inv && {x0: inv.x - 12, x1: inv.x + 230, y0: inv.y - 3, y1: inv.y + 4};
+      info.inv = inv ? inv.tab : null;
+      if (!inv || !byTab[inv.tab]) return null;
+      const r = readInventory(img, inv, byTab[inv.tab], invCache), items = {}, alike = {};
+      for (const sl of r.slots){ if (sl.n === null){ r.unknown++; continue } items[sl.ids[0]] = (items[sl.ids[0]] || 0) + sl.n; if (sl.ids.length > 1) alike[sl.ids[0]] = sl.ids.length }
+      const key = inv.tab + JSON.stringify(items) + r.unknown, steady = key === invNext;
+      invNext = key;
+      if (!steady || invSent[inv.tab] === key) return null;
+      invSent[inv.tab] = key;
+      return {t, type: "inv", tab: inv.tab, items, alike, unknown: r.unknown, slots: r.slots.length + r.unknown};
+    }
     let info = {bar: false, partyWindow: null, counts: 0};
-    return {readFrame, get info(){ return info }, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx};
+    return {readFrame, get info(){ return info }, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,
+      // all item pictures (loadIcons on G.iicons), sorted by tab: matching only looks at the open tab's kind of items
+      setInvIcons(list){
+        const tabOf = {Equipment: "equip", Consumable: "use", Scroll: "use", Etc: "etc"};
+        invIcons = list; byTab = {};
+        for (const ic of list){ const tb = tabOf[G.items[ic.id]?.c]; if (tb) (byTab[tb] = byTab[tb] || []).push(ic) }
+      }};
   }
   /* one frame for the tracker window (run in the reader worker, or in the window when the worker can't start).
      m: {frame: {w, h, d, k?}, t, want: {map, job, chat}}. A frame without k is full size: its scale is found and sent
@@ -605,6 +707,6 @@
     if (want.chat) crops.chat = chatCrop(img);
     return {ev, info, crops, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {work, createReaders, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {work, createReaders, findInventory, readInventory, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

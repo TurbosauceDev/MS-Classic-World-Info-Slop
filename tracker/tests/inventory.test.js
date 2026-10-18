@@ -103,6 +103,26 @@ const WANT = [[91, "2010003"], [85, "2010005"], [29, "2000002"], [8, "2000001"],
   const vwrong = vleft.filter(([, id]) => id);
   console.log("video frame", vmiss.length || vwrong.length ? "FAIL missing " + JSON.stringify(vmiss) + " wrong " + JSON.stringify(vwrong) : "ok", vid.length + " counts");
   if (vmiss.length || vwrong.length) fail++;
+  // the inventory window (Danny's Use tab, 2026-10-18, 12,162 mesos): found by its red line and pink tab, every slot's item
+  // and count; then as reader events (the same read twice = one "inv" event). Items read off the screenshot by eye.
+  const IWANT = [[0, 130, "Arrows for Bows"], ...[1, 2, 3, 4, 5, 6, 7].map(i => [i, 800, "Bronze Arrows for Bows"]), [8, 217, "Bronze Arrows for Bows"],
+    [9, 200, "Arrows for Crossbows"], [10, 11, "Orange Potion"], [11, 18, "Blue Potion"], [15, 6, "Lemon"], [16, 10, "Pure Water"],
+    [17, 1, "Return Scroll to Perion"], [18, 1, "Return Scroll to Henesys"], [19, 1, "Return Scroll to Sleepywood"]];
+  const inv = await page.evaluate(async b64 => {
+    const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode();
+    const c = document.createElement("canvas"); c.width = im.width; c.height = im.height; const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height), img = {w: d.width, h: d.height, d: d.data, k: 1};
+    const all = await GrindReaders.loadIcons(GAMEDATA, GAMEDATA.iicons), rd = GrindReaders.createReaders(GAMEDATA, []); rd.setInvIcons(all);
+    const found = GrindReaders.findInventory(img), t0 = performance.now();
+    const r = GrindReaders.readInventory(img, found, all.filter(ic => ["Consumable", "Scroll"].includes(GAMEDATA.items[ic.id].c)));
+    const ms = performance.now() - t0, ev = [...rd.readFrame(img, 0), ...rd.readFrame(img, 2000), ...rd.readFrame(img, 4000)].filter(e => e.type === "inv");
+    return {found, ms, wallet: GrindReaders.readMesoTotal(img), slots: r.slots.map(sl => [sl.i, sl.n, GAMEDATA.items[sl.ids[0]].n, sl.ids.length]), unknown: r.unknown, ev};
+  }, fs.readFileSync(path.join(dir, "use-12162.png")).toString("base64"));
+  const imiss = IWANT.filter(([i, n, name]) => !inv.slots.some(s => s[0] === i && s[1] === n && s[2] === name));
+  const ev = inv.ev[0];
+  const iok = inv.found?.tab === "use" && inv.wallet === 12162 && !imiss.length && inv.slots.length === 21 && !inv.unknown && inv.ev.length === 1 && ev.items["2060001"] === 800 * 7 + 217 && ev.unknown === 0;
+  console.log("inventory window", iok ? "ok" : "FAIL " + JSON.stringify({imiss, inv: {...inv, ev: inv.ev.length}}), Math.round(inv.ms) + " ms");
+  if (!iok) fail++;
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (fail) throw new Error(fail + " frame(s) failed");

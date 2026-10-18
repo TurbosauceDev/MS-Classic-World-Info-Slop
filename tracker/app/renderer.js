@@ -59,6 +59,7 @@ function grabFrame(){
    can't start or stops answering. read() resolves to GrindReaders.work's result, or null for a frame that was lost. */
 function makeEngine(icons, area){
   const inline = () => { const rd = GrindReaders.createReaders(G, icons); rd.setArea(area);
+    (ALL_ICONS ||= GrindReaders.loadIcons(G, G.iicons).catch(() => null)).then(l => l && rd.setInvIcons(l));
     return {kind: "window", setArea: a => rd.setArea(area = a), read: async m => GrindReaders.work(rd, m), close(){}} };
   let w = null;
   try { w = new Worker("reader-worker.js") } catch { return inline() }
@@ -79,7 +80,7 @@ function makeEngine(icons, area){
 }
 // skip a frame that is exactly the last one (game idle, menus, a frozen capture): up to 4 in a row (2 s), so the
 // readers' "read the same twice" checks still come round
-let lastPix = null, sameRun = 0;
+let lastPix = null, sameRun = 0, ALL_ICONS = null;   // every item picture, decoded once when the worker can't run
 function sameAsLast(f){
   const p = new Uint32Array(f.d.buffer);
   let same = !!lastPix && lastPix.length === p.length && f.k === lastPix.k;
@@ -90,6 +91,7 @@ function sameAsLast(f){
 
 // bug reports: the last 300 log lines and the last 8 frames (one every 3 s, so about 25 s back), saved by "Report a bug"
 const LOG = [], RECENT = [];
+let stopAsked = 0;   // when Stop asked for one more look at the inventory first
 function log(kind, data){ LOG.push({t: Date.now(), kind, ...data}); if (LOG.length > 300) LOG.shift() }
 new MutationObserver(() => { const text = $("#status").textContent; if (LOG.findLast(l => l.kind === "status")?.text !== text) log("status", {text}) }).observe($("#status"), {childList: true, characterData: true, subtree: true});
 let lastKeep = 0;
@@ -181,18 +183,31 @@ function render(){
     settings.share && runInfo()].filter(Boolean).join(" · ");
   $("#mobsEmpty").classList.toggle("hidden", !!s.mobs.length); $("#itemsEmpty").classList.toggle("hidden", !!(s.items.length || s.unreadItems));
   $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${esc(m.name)}</td><td class="n">${m.kills} kills</td><td class="n">${fmt(m.mesoPerKill)} mesos/kill</td></tr>`).join("");
-  $("#items").innerHTML = s.items.map(i => `<tr><td>${esc(i.name)}</td><td class="n">×${i.n}</td><td class="n">${fmt(i.total)}</td></tr>`).join("")
-    + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet</td></tr>` : "");
+  $("#items").innerHTML = s.items.map(i => `<tr><td>${esc(i.name)}${i.inv ? ` <span class="note">(${i.inv} from the inventory)</span>` : ""}</td><td class="n">×${i.n}</td><td class="n">${fmt(i.total)}</td></tr>`).join("")
+    + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet: open your Etc tab for a second to count them from the inventory</td></tr>` : "");
+  renderInv(s);
   $("#priceNote").textContent = G.pwRead ? `Worth = player-shop median from meso.watch (${G.pwRead}), else NPC price. Mesos/kill on maps with several monsters is a best guess.` : "";
   return s.exp;   // for renderSnaps
 }
 
+// inventory: which tabs were read and when (Session tab), and what changed since the first look (Loot tab)
+const INV_TABS = [["equip", "Equip"], ["use", "Use"], ["etc", "Etc"]];
+function renderInv(s){
+  const tabs = s?.invTabs || {}, at = t => new Date(t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
+  $("#invTabs").innerHTML = INV_TABS.map(([k, name]) => { const v = tabs[k];
+    return `<span class="chip ${v ? v.last > v.first ? "ok" : "half" : "need"}" title="${v ? "first read " + at(v.first) + ", last " + at(v.last) : "not seen yet"}">${v ? v.last > v.first ? "✓✓" : "✓" : "○"} ${name}</span>` }).join(" ");
+  const g = s?.inv || [];
+  $("#invBox").classList.toggle("hidden", !Object.keys(tabs).length);
+  $("#invGain").innerHTML = g.slice(0, 40).map(x => `<tr><td>${esc(x.name)}${x.alike > 1 ? ` <span class="note">(or ${x.alike - 1} look-alike${x.alike > 2 ? "s" : ""})</span>` : ""}</td><td class="n">${x.n > 0 ? "+" : ""}${x.n}</td></tr>`).join("");
+  $("#invNote").textContent = g.length ? "Equip, Use and Etc read twice or more. Potions bought show up here too; loot counts only Etc items, equips and scrolls."
+    : "No change yet: open the same tab again later in the session.";
+}
 // the line next to Start/Stop: tracking or not, paused, for how long
 function renderState(s){
   const on = timer != null, paused = on && s?.paused;
   $("#state").className = paused ? "paused" : on ? "on" : "";
   $("#stateText").textContent = paused ? "Paused" : on ? "Tracking" + (s ? " · " + hm(s.activeMin / 60) + " farmed" : "") : s && s.activeMin ? "Stopped · " + hm(s.activeMin / 60) + " farmed" : "Not tracking";
-  $("#go").textContent = on ? "Stop" : "Start"; $("#go").classList.toggle("on", on);
+  $("#go").textContent = on ? Date.now() - stopAsked < 20e3 ? "Stop anyway" : "Stop" : "Start"; $("#go").classList.toggle("on", on);
 }
 // tabs under the numbers; the last one open is remembered
 function showTab(name){
@@ -518,6 +533,14 @@ async function start(){
 let stopping = false;
 async function stop(){
   if (stopping) return;   // a double click saves one session, not two (the end picture takes a moment)
+  // tabs read at the start but not in the last 2 minutes: ask for one more look first (a second Stop within 20 s stops anyway)
+  const tabs = session?.stats().invTabs || {}, stale = INV_TABS.filter(([k]) => tabs[k] && Date.now() - tabs[k].last > 120e3).map(([, n]) => n);
+  if (stale.length && Date.now() - stopAsked > 20e3){
+    stopAsked = Date.now(); $("#go").textContent = "Stop anyway";
+    $("#status").textContent = `Before stopping: open your inventory's ${stale.join(", ")} tab${stale.length > 1 ? "s" : ""} for a second so the end count is right, then press Stop.`;
+    return;
+  }
+  stopAsked = 0;
   stopping = true;
   try { await stopNow() } finally { stopping = false }
 }
@@ -531,7 +554,7 @@ async function stopNow(){
   const a = snaps.start, b = snaps.end, snapExp = a && b && b.t > a.t ? GrindSession.expBetween(G, a, b) : null;
   const snapRec = snapExp != null ? {startLevel: a.level, startPct: a.pct, endLevel: b.level, endPct: b.pct, minutes: Math.round((b.t - a.t) / 6e3) / 10, exp: Math.round(snapExp)} : null;
   if (!snapRec && session?.state.events) $("#status").textContent = "Saved, but the start or end EXP reading is missing: History uses the live count for this one.";
-  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds} : null, levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
+  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds} : null, levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
   renderState(session?.stats());
 }
 $("#go").onclick = () => timer != null ? stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });

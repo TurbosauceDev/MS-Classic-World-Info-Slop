@@ -77,6 +77,13 @@ npm start           # run it (Windows, Electron)
 - Auto-pause: EXP bar and minimap both gone for 3 s (Cash Shop, channel change) = paused; that time is left out of
   active time and of 15-minute runs. Level-ups are logged with the farming time each level took (History).
 - Window spot (v0.2.23): position and size saved to settings.winBounds on move/resize/close (full height while mini); reopens there if the title bar is still on a monitor, else 360x600 default.
+- Inventory (v0.2.24): readers.js findInventory (red line under the tabs + pink open tab, Danny's Use tab 2026-10-18) and
+  readInventory (5x6 slots; picture vs every Equip/Use/Etc item icon, G.iicons, decoded in the worker; counts via readCounts).
+  "inv" events {tab, items, alike, unknown} when read the same twice. Session keeps first/last per tab; loot per item =
+  max(pickup lines, inventory gain) for Etc/equips/scrolls. Stop asks for another look if a tab is >2 min stale.
+- Kills: KPQ stages without monsters are maps with none (stage-clear EXP isn't kills); a lone monster worth 5x the
+  smallest on its map (King Slime) counts once per visit. Pickup names fitting several items: the one this map's
+  monsters drop (G.drops from meowdb reports), Coupon/Pass on KPQ stages.
 - KPQ: Session tab "Doing" Auto / Grinding / KPQ, plus Mode Bonus / Rush (a label). Auto turns KPQ on at the first map
   in `G.kpq` (80000000-80000600: 1st Accompaniment stages 1-4, Last Stage, Bonus, Exit; from the site's D.kpq). While on,
   any other known map (Kerning City 10003000 between rounds) pauses the session and the bar can't resume it; the next
