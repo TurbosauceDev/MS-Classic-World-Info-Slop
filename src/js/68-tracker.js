@@ -11,10 +11,12 @@ const trkMed = a => { const v = a.filter(x => x != null); return v.length ? medi
 let TRK = null, TRK_ASKED = false;
 function trkRender(){
   const s = TRK || {...(D.shared || {}), rows: trkRows(D.shared?.rows, false), live: false};
-  $("#trksrc").innerHTML = s.live ? `Live from the tracker server, updated ${esc(new Date(s.updated).toLocaleString())}.`
+  const src = s.live ? `Live from the tracker server, updated ${esc(new Date(s.updated).toLocaleString())}.`
     : `Snapshot from the tracker server${s.read ? `, read ${esc(s.read)}` : ""}.${TRK_ASKED ? " The live server couldn't be reached from here." : ""}`;
+  document.querySelectorAll(".trksrc").forEach(e => e.innerHTML = src);
+  $("#trkkpqdata").innerHTML = trkKpq(s.kpq);
   if (!s.runs){
-    $("#trkdata").innerHTML = trkKpq(s.kpq) + `<h3 class="trkh3">Grinding</h3><div class="card trkempty"><h3>No shared runs yet</h3><p>Every 15 minutes of non-stop farming on one map that a tracker player shares lands here: EXP/hr and mesos/hr by map, confirmed drops by monster, and the best time of day to farm. Be the first: download the tracker above and say yes to sharing.</p></div>`;
+    $("#trkdata").innerHTML = `<div class="card trkempty"><h3>No shared runs yet</h3><p>Every 15 minutes of non-stop farming on one map that a tracker player shares lands here: EXP/hr and mesos/hr by map, confirmed drops by monster, and the best time of day to farm. Be the first: <a href="#" data-go="trk">download the tracker</a> and say yes to sharing.</p></div>`;
     return;
   }
   // maps: one line per map and solo/party; each player (or party) counts once (their typical run)
@@ -39,7 +41,7 @@ function trkRender(){
   const times = Object.entries(s.times || {}).map(([map, t]) => { const b = t.reduce((a, x) => x[1] > a[1] ? x : a); const w = t.reduce((a, x) => x[1] < a[1] ? x : a);
     return `<tr><td>${known(map) ? mapLink(map, D.mapnames[map] ?? D.maps[map][0]) : esc(map)}</td><td>${localHour(b[0])}-${localHour((b[0] + 3) % 24)} <span class="sub">${b[1] >= 1 ? "+" : ""}${Math.round((b[1] - 1) * 100)}%</span></td>
       <td>${localHour(w[0])}-${localHour((w[0] + 3) % 24)} <span class="sub">${Math.round((w[1] - 1) * 100)}%</span></td></tr>` }).join("");
-  $("#trkdata").innerHTML = trkKpq(s.kpq) + `<h3 class="trkh3">Grinding</h3><div class="trkstats">
+  $("#trkdata").innerHTML = `<div class="trkstats">
       <div class="fact"><b>${fmt(s.runs)}</b><p>15-minute runs</p></div>
       <div class="fact"><b>${fmt(s.players)}</b><p>trackers sharing</p></div>
       <div class="fact"><b>${(+s.hours || 0).toLocaleString()}</b><p>hours of grinding</p></div>
@@ -60,7 +62,7 @@ function trkRender(){
 // Clear = 1st stage to leaving the Last stage, so Bonus time doesn't count
 const TRK_KMODE = {v: "Bonus"};
 function trkKpq(k){
-  const head = `<h3 class="trkh3">KPQ leaderboard</h3><p class="note">Fastest Kerning PQ clears by tracker players: 1st stage to the end of the Last stage (Bonus stage not counted). One line per party (same party code) or player. Rounds joined part-way aren't counted.</p>`;
+  const head = `<p class="note">Fastest Kerning PQ clears by tracker players: 1st stage to the end of the Last stage (Bonus stage not counted). One line per party (same party code) or player. Rounds joined part-way aren't counted.</p>`;
   const modes = Object.keys(k?.board || {});
   if (!k?.rounds || !modes.length) return head + `<div class="card trkempty"><h3>No KPQ rounds yet</h3><p>With sharing on, every KPQ round the tracker sees from the 1st stage to the end lands here. Use the same party code as your party so you show up as one team.</p></div>`;
   if (!modes.includes(TRK_KMODE.v)) TRK_KMODE.v = modes[0];
@@ -73,7 +75,10 @@ function trkKpq(k){
     <p class="sub">Level and job are the tracker player's who sent the best round. "~" = timed with the PC clock.</p>`;
 }
 const mss = sec => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0") };
-$("#trkdata").addEventListener("click", e => { const b = e.target.closest("#trkkm button"); if (b){ TRK_KMODE.v = b.dataset.m; trkRender() } });
+$("#trkkpqdata").addEventListener("click", e => { const b = e.target.closest("#trkkm button"); if (b){ TRK_KMODE.v = b.dataset.m; trkRender() } });
+// in-page links between the tracker pages (data-go = page id)
+for (const id of ["trk", "trkhow", "trkruns", "trkkpq"]) $("#" + id).addEventListener("click", e => { const a = e.target.closest("a[data-go]"); if (!a) return;
+  e.preventDefault(); $("#t-" + a.dataset.go).click(); window.scrollTo({top: $("nav").offsetTop - 8}) });
 function trkOpen(){
   trkRender();
   if (TRK_ASKED) return; TRK_ASKED = true;
@@ -82,5 +87,5 @@ function trkOpen(){
     TRK = {...d, rows: trkRows(d.rows, true), live: true}; trkRender();
   }).catch(() => trkRender());
 }
-$("#t-trk").addEventListener("click", trkOpen);
-if (!$("#trk").hidden) trkOpen();
+// the data pages ask the server once, on first open
+for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click", trkOpen); if (!$("#" + id).hidden) trkOpen() }
