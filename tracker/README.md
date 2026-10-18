@@ -41,6 +41,9 @@ npm start           # run it (Windows, Electron)
 - Start/end snapshots (mapleexp.com's method): level + EXP % at the start and the end, EXP/hr = EXP between them /
   clock time. Taken by themselves (first bar read, Stop; pictures saved as snap-*.png) or with Snap start / Snap end;
   level and % can be typed by hand. Shown next to the live count, with a note when the two disagree by over 25%.
+- Deaths: each EXP bar drop is checked against the chat box line "You have lost N EXP for dying" (lower-left of the
+  screen, bright text to black-on-white, 2x, same Tesseract OCR as the map; up to 3 tries a second apart). The Deaths
+  box says how many were confirmed and the exact EXP lost. OCR text isn't logged (player names).
 - Always on top: "screen-saver" level, re-asserted on blur and every 5 s (setting "Keep this window on top").
 - Meso total: the inventory window's meso field (black 8-row digits on white) gives real money in/out, shop trips
   included. All ten digits are known (learned from real screenshots).

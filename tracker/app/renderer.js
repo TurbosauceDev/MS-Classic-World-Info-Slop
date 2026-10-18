@@ -100,6 +100,8 @@ function render(){
   $("#used").innerHTML = s.used.map(u => `<tr><td>${esc(u.name)}</td><td class="n">×${u.n}</td><td class="n">${u.total == null ? "price unknown" : fmt(u.total)}</td></tr>`).join("");
   $("#usedBox").classList.toggle("hidden", !s.used.length);
   $("#deaths").textContent = s.deaths;
+  $("#deathNote").textContent = deaths.confirmed || deaths.unseen ? [deaths.confirmed && `${deaths.confirmed} confirmed by the chat line (lost ${fmt(deaths.lost)} EXP)`,
+    deaths.unseen && `${deaths.unseen} not seen in chat (chat box hidden, or a misread)`].filter(Boolean).join(" · ") : "EXP bar drops without a level-up";
   // goal level: time left at the current rate and the clock time it lands on
   levelNote(s);
   $("#goalK").textContent = s.goalLevel ? "Level " + s.goalLevel + " in" : "Goal";
@@ -261,8 +263,10 @@ function tick(){
     if (check && info.partyWindow > 1 && !check.party){ check.party = info.partyWindow; check.late = check.ended }
     autoPause(img, info, t);
     if (check && (!check.ended || check.late)){ check.late = false; renderCheck() }   // a ✗ turns ✓ when it starts working
-    // one OCR at a time (the first can take seconds): the map every 5 s, the job every 30 s in between
-    if (!ocrBusy && t - lastOcr > 5000){ lastOcr = t; ocrBusy = true; readMap(img, t).catch(() => {}).finally(() => ocrBusy = false) }
+    if (session.state.deaths > deathSeen){ deathSeen = session.state.deaths; deathPending = {t, tries: 0, last: 0} }
+    // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between
+    if (deathPending && !ocrBusy && t - deathPending.last >= 1000){ deathPending.last = t; ocrBusy = true; checkDeath(img, t).catch(() => {}).finally(() => ocrBusy = false) }
+    else if (!ocrBusy && t - lastOcr > 5000){ lastOcr = t; ocrBusy = true; readMap(img, t).catch(() => {}).finally(() => ocrBusy = false) }
     else if (!ocrBusy && !settings.job && t - lastJob > 30e3){ lastJob = t; ocrBusy = true; readJob(img, t).catch(() => {}).finally(() => ocrBusy = false) }
     if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
     renderSnaps(render());
@@ -322,6 +326,17 @@ for (const [i, k] of [[0, "start"], [1, "end"]]){
   };
 }
 
+// deaths: each EXP bar drop is checked against the chat box's "You have lost N EXP for dying" line (OCR, up to 3 tries a
+// second apart). Confirmed ones carry the exact EXP lost. The OCR text isn't logged: chat lines hold player names.
+let deathSeen = 0, deathPending = null;
+const deaths = {confirmed: 0, lost: 0, unseen: 0};
+async function checkDeath(img, t){
+  const sess = session, text = await host.ocr(await toPng(GrindReaders.chatCrop(img))), lost = GrindReaders.deathFromText(text);
+  if (sess !== session || !deathPending) return;
+  if (lost){ deaths.confirmed++; deaths.lost += lost; deathPending = null; log("death", {lost}) }
+  else if (++deathPending.tries >= 3){ deaths.unseen++; deathPending = null; log("death", {lost: null}) }
+}
+
 let starting = false, ICONS = null;
 async function start(){
   if (starting) return;   // a double click starts one capture, not two
@@ -333,7 +348,7 @@ async function start(){
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
   check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
-  barSeen = false; goneSince = null; levelsShown = 0;
+  barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
   readers = GrindReaders.createReaders(G, ICONS); mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
   // a job picked by hand wins; "Auto" reads it from the status bar

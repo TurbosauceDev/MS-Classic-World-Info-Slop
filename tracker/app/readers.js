@@ -279,6 +279,23 @@
     return n >= 30 ? {w, h, d: out} : null;   // no white text there: status bar not on screen
   }
   const JOBS = ["Beginner", "Swordman", "Fighter", "Page", "Spearman", "Magician", "Cleric", "Archer", "Hunter", "Crossbowman", "Rogue", "Assassin", "Bandit"];
+  /* death check: the chat box says "You have lost 4,721 EXP for dying" (grey) right after a death (Danny's screenshot,
+     2026-10-18). Its font isn't learned, so it goes through the same OCR as the map name: the lower-left of the screen,
+     where the chat box sits, bright text made black on white and doubled in size for the OCR. */
+  function chatCrop(img){
+    const {w, h, d} = img, x1 = Math.floor(w * 0.7), y0 = Math.floor(h * 0.55), y1 = Math.floor(h * 0.95), cw = x1, ch = y1 - y0;
+    const out = new Uint8ClampedArray(cw * 2 * ch * 2 * 4);
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++){
+      const i = ((y0 + y) * w + x) * 4, ink = d[i] + d[i + 1] + d[i + 2] > 420 && Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]) < 140, v = ink ? 0 : 255;
+      for (let k = 0; k < 4; k++){ const o = (((y * 2 + (k >> 1)) * cw * 2) + x * 2 + (k & 1)) * 4; out[o] = out[o + 1] = out[o + 2] = v; out[o + 3] = 255 }
+    }
+    return {w: cw * 2, h: ch * 2, d: out};
+  }
+  // the EXP lost, from the OCR text ("lost 4,721 EXP for dying"; OCR may turn the comma into a dot or a space)
+  function deathFromText(text){
+    const m = /lost\s*(\d[\d,. ]*\d|\d)\s*E\s*X\s*P?\s*f\w*\s*d\s*y/i.exec(String(text || "").replace(/\n/g, " "));
+    return m ? +m[1].replace(/[,. ]/g, "") : null;
+  }
   function jobFromText(text){
     const words = text.split(/[^A-Za-z]+/).filter(w => w.length >= 4);
     for (let i = 0; i < words.length; i++){
@@ -550,6 +567,6 @@
     let info = {bar: false, partyWindow: null, counts: 0};
     return {readFrame, get info(){ return info }};
   }
-  const api = {createReaders, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {createReaders, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);
