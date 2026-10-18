@@ -15,4 +15,9 @@ contextBridge.exposeInMainWorld("host", {
   party: live => ipcRenderer.invoke("party", live),
   mini: on => ipcRenderer.invoke("mini", on),
   snip: url => ipcRenderer.invoke("snip", url),
+  version: () => ipcRenderer.invoke("version"),
+  updateState: () => ipcRenderer.invoke("update-state"),
+  updateCheck: () => ipcRenderer.invoke("update-check"),
+  updateInstall: () => ipcRenderer.invoke("update-install"),
+  onUpdate: cb => ipcRenderer.on("update", (_, u) => cb(u)),
 });

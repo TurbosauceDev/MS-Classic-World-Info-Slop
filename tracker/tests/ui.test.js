@@ -12,7 +12,9 @@ const path = require("path"), {chromium} = require("playwright");
       saveSession: async s => (window.saved = s, true), saveFrame: async () => "x", openFolder: async d => (window.opened = d), saveReport: async (f, info) => (window.report = {frames: f.length, info}, "report-2026-10-17T20-00-00"), ocr: async () => "Victoria Road\nSnail Hunting Ground III", shareRun: async () => true, summary: async () => ({rows: [], times: {"42": [[0, 0.9, 3], [18, 1.2, 4]]}}), sessions: async () => [{saved: Date.now() - 3600e3, date: "2026-10-17", mapName: "Snail Hunting Ground III", level: 22, activeMin: 30, exp: 6000, mesos: 900, deaths: 1,
           levelUps: [{level: 22, activeMin: 41, mapName: "Snail Hunting Ground III"}, {level: 21, activeMin: null}]},
         {saved: Date.now() - 7200e3, date: "2026-10-17", mapName: "Pig Beach", level: 21, activeMin: 20, exp: 2000, mesos: 300, deaths: 0},
-        {saved: Date.now() - 9 * 864e5, date: "2026-10-08", mapName: "Old", level: 10, activeMin: 60, exp: 1, mesos: 1}], exportCsv: async () => "", mini: async () => true};
+        {saved: Date.now() - 9 * 864e5, date: "2026-10-08", mapName: "Old", level: 10, activeMin: 60, exp: 1, mesos: 1}], exportCsv: async () => "", mini: async () => true,
+      version: async () => "0.2.17", updateState: async () => ({state: "idle"}), updateCheck: async () => (window.upd?.({state: "downloading", version: "0.2.18", pct: 40}), {state: "ready", version: "0.2.18"}),
+      updateInstall: async () => (window.installed = true), onUpdate: cb => window.upd = cb};
     navigator.mediaDevices.getDisplayMedia = async () => {
       const c = document.createElement("canvas"); c.width = 800; c.height = 600;
       const x = c.getContext("2d"); setInterval(() => { x.fillStyle = "#" + Math.floor(Math.random() * 4095).toString(16); x.fillRect(0, 0, 800, 600) }, 100);
@@ -26,6 +28,11 @@ const path = require("path"), {chromium} = require("playwright");
   if (await page.isVisible("#guide") || !await page.isChecked("#share")) throw new Error("guide answer");
   await page.dblclick("#go");
   await page.waitForTimeout(1500);
+  // updates: Check for updates -> downloading -> ready banner; Restart and update stops (saves) the session first
+  await page.click(".tabs [data-tab=settings]"); await page.click("#updCheck"); await page.waitForTimeout(100);
+  const up = await page.evaluate(() => [document.querySelector("#appVer").textContent, document.querySelector("#updNote").textContent, document.querySelector("#updText").textContent]);
+  if (up[0] !== "0.2.17" || !/0\.2\.18 is ready/.test(up[1]) || !await page.isVisible("#updBanner")) throw new Error("update: " + up);
+  await page.click(".tabs [data-tab=session]");
   // the top card: tracking state and Stop; tabs switch sections
   const top = await page.evaluate(() => [document.querySelector("#stateText").textContent, document.querySelector("#go").textContent, document.querySelector("#go").classList.contains("on")]);
   if (!/^Tracking/.test(top[0]) || top[1] !== "Stop" || !top[2]) throw new Error("top card: " + top);
@@ -108,6 +115,8 @@ const path = require("path"), {chromium} = require("playwright");
   if (!/Last 7 days: 2 sessions, 0.8 h farming, 8,000 EXP, 1,200 mesos, level 21 → 22, 1 death. Fastest map: Snail Hunting Ground III \(12,000 EXP\/hr\)/.test(hist)) throw new Error("recap: " + hist);
   if (!/Lv 21 → 22\s*41 min\s*Snail Hunting Ground III/.test(hist) || /Lv 20 → 21/.test(hist)) throw new Error("level-up log: " + hist);
   if (!mini || full || !back) throw new Error("mini bar toggle");
+  await page.click("#updGo"); await page.waitForTimeout(100);
+  if (!await page.evaluate(() => window.installed)) throw new Error("restart and update");
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (!/Red Snail/.test(mobs) || !/Blue Snail/.test(mobs)) throw new Error("mobs table: " + mobs);

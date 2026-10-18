@@ -562,7 +562,26 @@ $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
   settings = s; jobNow = jobSeen = null; lastJob = 0;   // back on Auto: read it again soon
   if (session){ const ev = {t: Date.now(), type: "job", name: s.job || null}; session.add(ev); slicer.add(ev) }
 });
+// updates: "Check for updates" in Settings; a banner on top once one is downloaded. Restarting saves a running session first.
+function showUpdate(u){
+  if (!u) return;
+  const note = {checking: "Checking...", latest: "You have the latest version.", downloading: `Downloading ${u.version ? "version " + u.version : "the update"}${u.pct ? " (" + u.pct + "%)" : ""}...`,
+    ready: `Version ${u.version} is ready.`, dev: "Running from source: no updates here.", error: "Couldn't check: " + (u.why || "no connection") + "."}[u.state];
+  if (note) $("#updNote").textContent = note;
+  $("#updCheck").disabled = u.state === "checking" || u.state === "downloading";
+  $("#updBanner").classList.toggle("hidden", u.state !== "ready");
+  $("#updText").textContent = `Update ${u.version || ""} is ready.`;
+}
+host.onUpdate?.(showUpdate);
+$("#updCheck").onclick = async () => { $("#updNote").textContent = "Checking..."; showUpdate(await host.updateCheck?.()) };
+$("#updGo").onclick = async () => {
+  $("#updGo").disabled = true;
+  if (timer != null){ $("#status").textContent = "Saving this session before the update..."; await stop() }
+  if (!await host.updateInstall?.()){ $("#updGo").disabled = false; $("#status").textContent = "The update isn't ready yet." }
+};
 (async () => {
+  host.version?.().then(v => $("#appVer").textContent = v).catch(() => {});
+  host.updateState?.().then(u => u.state !== "idle" && showUpdate(u)).catch(() => {});
   settings = await host.settings();
   $("#share").checked = !!settings.share;
   $("#job").value = settings.job || "";

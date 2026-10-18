@@ -42,6 +42,7 @@
   .row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:6px 0; }
   label.chk { display:flex; gap:6px; align-items:flex-start; margin:5px 0; } label.chk input { margin-top:3px; }
   #selfcheck td:first-child { width:42%; }
+  #updBanner { display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-color:var(--accent); background:var(--accent-soft); } #updBanner b { flex:1; }
 </style>
 </head>
 <body>
@@ -58,6 +59,7 @@
       speed check after each run and the Confirmed Drops on the site.</p>
     <p><button id="guideShare">Share</button> <button id="guideNo" class="alt">Don't share</button></p>
   </div>
+  <div class="card hidden" id="updBanner"><b id="updText"></b> <button id="updGo">Restart and update</button></div>
   <div class="card" id="top">
     <div class="bar"><button id="go">Start</button>
       <div class="grow"><div id="state"><span class="dot"></span><span id="stateText">Not tracking</span></div><div id="status">Looking for the MapleStory window...</div></div>
@@ -128,6 +130,10 @@
     <div class="card"><h3>Window and sharing</h3>
       <label class="chk"><input type="checkbox" id="ontop"> <span>Keep this window on top of everything</span></label>
       <label class="chk"><input type="checkbox" id="share"> <span>Share my sessions (anonymous: map, kills, drops; no character name)</span></label>
+    </div>
+    <div class="card"><h3>App</h3>
+      <div class="row"><span>Version <b id="appVer">-</b></span> <button id="updCheck" class="alt">Check for updates</button></div>
+      <div class="note" id="updNote">Updates also download by themselves and install when you close the app.</div>
     </div>
     <div class="card"><h3>Something read wrong?</h3>
       <div class="row"><input id="reportNote" maxlength="2000" style="flex:1;min-width:0" placeholder="What read wrong? (optional)">

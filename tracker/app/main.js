@@ -61,6 +61,26 @@ app.whenReady().then(() => {
   setInterval(() => app.isPackaged && autoUpdater.checkForUpdatesAndNotify().catch(() => {}), 6 * 3600e3);
 });
 app.on("window-all-closed", () => app.quit());
+// updates: checked at launch and every 6 h, downloaded in the background and installed when the app closes. The window
+// can also check now ("Check for updates") and restart into a downloaded one right away; it's told each step.
+let upd = {state: "idle"};
+const sendUpd = p => { upd = {...upd, ...p}; if (win && !win.isDestroyed()) win.webContents.send("update", upd); return upd };
+autoUpdater.on("checking-for-update", () => sendUpd({state: "checking"}));
+autoUpdater.on("update-available", i => sendUpd({state: "downloading", version: i.version, pct: 0}));
+autoUpdater.on("update-not-available", () => sendUpd({state: "latest"}));
+autoUpdater.on("download-progress", p => sendUpd({state: "downloading", pct: Math.round(p.percent || 0)}));
+autoUpdater.on("update-downloaded", i => sendUpd({state: "ready", version: i.version}));
+autoUpdater.on("error", e => sendUpd({state: "error", why: String(e?.message || e).split("\n")[0].slice(0, 160)}));
+ipcMain.handle("version", () => app.getVersion());
+ipcMain.handle("update-state", () => upd);   // the window asks once loaded: events sent before that were missed
+ipcMain.handle("update-check", async () => {
+  if (!app.isPackaged) return sendUpd({state: "dev"});   // running from source: nothing to update
+  if (upd.state === "ready" || upd.state === "downloading" || upd.state === "checking") return upd;
+  try { await autoUpdater.checkForUpdates() } catch (e){ sendUpd({state: "error", why: String(e?.message || e).split("\n")[0].slice(0, 160)}) }
+  return upd;
+});
+// silent install, then the app starts again by itself
+ipcMain.handle("update-install", () => { if (upd.state !== "ready") return false; setImmediate(() => autoUpdater.quitAndInstall(true, true)); return true });
 // on top of everything: the "screen-saver" level beats plain always-on-top windows (Danny: it kept going under other programs)
 function pinOnTop(){
   if (!win || win.isDestroyed()) return;
