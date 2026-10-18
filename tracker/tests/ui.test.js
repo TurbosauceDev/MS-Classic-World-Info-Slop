@@ -149,12 +149,6 @@ const path = require("path"), {chromium} = require("playwright");
   const rep = await page.evaluate(() => [window.report, window.opened]);
   if (!rep[0] || rep[0].frames < 1 || rep[0].info.note !== "map read wrong" || !rep[0].info.log.some(l => l.kind === "event") || !rep[0].info.log.some(l => l.kind === "status")
     || !rep[0].info.check || rep[1] !== "report-2026-10-17T20-00-00") throw new Error("report: " + JSON.stringify(rep).slice(0, 300));
-  // "Show me where my potions are": the snip window's box is saved and used; "Look everywhere" clears it
-  const ar = await page.evaluate(async () => { host.snip = async url => (window.snipUrl = url.slice(0, 15), {x: 0.6, y: 0.7, w: 0.3, h: 0.25});
-    await pickArea(); const saved = settings.countArea, st = document.querySelector("#status").textContent, note = document.querySelector("#areaNote").textContent;
-    document.querySelector("#areaClear").click(); await new Promise(r => setTimeout(r, 50));
-    return {saved, st, note, url: window.snipUrl, cleared: settings.countArea, hidden: document.querySelector("#areaClear").classList.contains("hidden")} });
-  if (!ar.saved || ar.saved.x !== 0.6 || !/count|box/.test(ar.st) || !ar.note || ar.url !== "data:image/jpeg" || ar.cleared !== null || !ar.hidden) throw new Error("area pick: " + JSON.stringify(ar));
   // death check: a bar drop, then the chat OCR finds "lost 4,721 EXP for dying" (Danny's screenshot line)
   const dn = await page.evaluate(async () => { const ocr = host.ocr; host.ocr = async () => "[00:15] You have lost 4,721 EXP for dying\n"; deathSeen = session.state.deaths; session.state.deaths++;
     const t0 = Date.now(); while (!deaths.confirmed && Date.now() - t0 < 4000) await new Promise(r => setTimeout(r, 100));

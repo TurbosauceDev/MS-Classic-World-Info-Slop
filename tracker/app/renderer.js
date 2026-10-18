@@ -639,28 +639,6 @@ async function checkDeath(c, t){   // c: the chat box crop (GrindReaders.chatCro
   else if (++deathPending.tries >= 3){ deaths.unseen++; deathPending = null; log("death", {lost: null}) }
 }
 
-// "Show me where my potions are": freeze the game picture, drag a box (snip window), then counts are only read in there.
-// Saved in the settings, so it holds for the next sessions too.
-async function pickArea(){
-  const f = await oneFrame();
-  ICONS ||= await GrindReaders.loadIcons(G).catch(() => []);
-  const c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
-  const rect = await host.snip(c.toDataURL("image/jpeg", 0.9));
-  if (!rect) return;
-  settings = await host.settings({countArea: rect}); engine?.setArea(rect);
-  // read it right away so the player knows whether it worked
-  const rd = GrindReaders.createReaders(G, ICONS); rd.setArea(rect);
-  const img = GrindReaders.native(f), n = GrindReaders.readCounts(img, rd.areaPx(img)), known = n.filter(x => GrindReaders.iconAt(img, x, ICONS));
-  $("#status").textContent = !n.length ? "No item counts found in that box. Try a bigger box around the slots, with the numbers inside."
-    : `Found ${n.length} count${n.length > 1 ? "s" : ""} there (${known.length} potion, food or arrow). Only that part of the screen is read for them now.`;
-  if (check && known.length && !check.use){ check.use = known.length + " item count" + (known.length > 1 ? "s" : "") + " (your box)"; check.late = check.ended; renderCheck() }
-  showArea();
-}
-function showArea(){
-  const a = settings.countArea;
-  $("#areaClear").classList.toggle("hidden", !a);
-  $("#areaNote").textContent = a ? "Reading counts only in your box." : "";
-}
 // a tab chip clicked: read that tab now. The inventory is looked for anywhere on screen (it can be moved during the
 // session); if it isn't found in 4 s, the player drags a box around it (snip window), saved as settings.invArea
 let lastInvTab = null;
@@ -683,8 +661,6 @@ $("#invTabs").onclick = $("#wrapTabs").onclick = async e => {
   settings = await host.settings({invArea: rect}); engine.setInvHint(rect);
   say(await wait() ? `${name} tab read. That spot is remembered; moving the window is fine too.` : `Still can't read the ${name} tab there. Report a bug (Ctrl+Shift+B) with it open so it can be fixed.`);
 };
-$("#snipBtn").onclick = () => pickArea().catch(e => { $("#status").textContent = "Couldn't take the picture: " + e.message });
-$("#areaClear").onclick = async () => { settings = await host.settings({countArea: null}); engine?.setArea(null); showArea() };
 
 let starting = false, ICONS = null;
 async function start(){
@@ -700,7 +676,7 @@ async function start(){
   wrap = null; runT0 = Date.now(); $("#summary").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   kpqReset(); barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
-  engine = makeEngine(ICONS, settings.countArea || null, settings.invArea || null, settings.glyphs || []); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
+  engine = makeEngine(ICONS, null, settings.invArea || null, settings.glyphs || []); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
   mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
@@ -1010,7 +986,9 @@ $("#updGo").onclick = async () => {
   $("#share").checked = !!settings.share;
   layoutLoad(settings.layout); for (const b of BOXES) foldMark(b);
   $("#job").value = settings.job || "";
-  $("#ontop").checked = settings.onTop !== false; showArea();
+  $("#ontop").checked = settings.onTop !== false;
+  // the old "Show me where my potions are" box (removed in 0.2.36): counts are looked for on the whole screen again
+  if (settings.countArea) settings = await host.settings({countArea: null});
   $("#alert").value = settings.alertWorth || 0;
   $("#alertItems").value = settings.alertItems || "";
   $("#stopBeep").checked = settings.stopBeep !== false;
