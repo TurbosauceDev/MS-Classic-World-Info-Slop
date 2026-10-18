@@ -1,5 +1,8 @@
 // Tracker window: grabs 2 frames a second from the game window, runs the readers, shows the session.
 const G = GAMEDATA, $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString();
+// the game's meso coin (cut from the inventory window, 12x12) in front of meso amounts, and item pictures in the loot lists
+const COIN = `<img class="coin" alt="mesos" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAABfUlEQVR42m2SP09TYRTGf+/bWxu4xV5A00H+DiwO1BAGNjdMnE1c+B5+AhONsvAVjLCwuZimxIRQIgkofwaDTUVJwBS1ty2xCbT3fRhKbzXhmU5Onifn5PyO4X8JIGHBM52GE7QcpmuIC2tQ5MpAFfgI9Q+gJM5NkrrzgrZ6XqxBUlEKn6i85ut7ISWVfLlyVoeFe9Lv1+q7nm4BRW4fakt828kznBY+/ZT2m4Ahm2mj4xXevBoFkLUWYJfyToFGtcXleZpb6QxHR6Lxx4A8vvz4xFRupLsNQIMETSYnAvY+n/F17xTjoLRbobh5wv2Hs731PQOEG/TbNkbwIDdIWL8EIDx3PHqchciLAx4ClOZvK8nB+k+CTO98wW1Ye1dhfOIC6093AnJQOR4jsgPkZpo0wk6gWoexKcv0yDBJM8fyarVHyzNI4XPVtnxF2xn9ygfKL6J26a50Nq+t90/VhRrD6AO9fTnOYJD6B3uC09oQC8+Ksdfc9Bo3KPZdAcyooNdmNWPbAAAAAElFTkSuQmCC">`;
+const ico = id => { const b = G.iicons?.[id] || G.icons?.[id]; return b ? `<img class="ico" alt="" src="data:image/png;base64,${b}">` : `<span class="ico"></span>` };
 const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
 let FPS = 2;   // drops to 1 a second when reading a frame takes long (big screens, slow PCs)
 let session = null, slicer = null, engine = null, video = null, timer = null, settings = {};
@@ -153,18 +156,18 @@ function render(){
   $("#expHr5").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5);
   $("#killsEst").textContent = s.killsEstHr == null ? "" : "~" + fmt(s.killsEstHr) + " with missed lines (est.)";
   $("#ttl").textContent = s.toLevelHrs == null ? "-" : s.toLevelHrs < 1 ? Math.round(s.toLevelHrs * 60) + " min" : s.toLevelHrs.toFixed(1) + " h";
-  $("#mesosHr").textContent = fmt(s.mesosHr);
+  $("#mesosHr").innerHTML = mz(s.mesosHr);
   renderRespawns();
   $("#miniExp").textContent = fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent;
   $("#miniNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
-  $("#lootHr").textContent = fmt(s.lootHr);
-  $("#usedHr").innerHTML = s.used.length ? sg(-s.usedCostHr) : "-";
-  $("#netHr").innerHTML = s.used.length ? "net " + sg(s.netHr) + " mesos/hr (mesos + loot - used)" : "from the quick-slot counts";
+  $("#lootHr").innerHTML = mz(s.lootHr);
+  $("#usedHr").innerHTML = s.used.length ? sgm(-s.usedCostHr) : "-";
+  $("#netHr").innerHTML = s.used.length ? "net " + sgm(s.netHr) + "/hr (mesos + loot - used)" : "from the quick-slot counts";
   $("#used").innerHTML = s.used.length ? `<tr class="th"><td>Item</td><td class="n">Used</td><td class="n">Each</td><td class="n">Cost</td></tr>`
-    + s.used.map(u => `<tr><td>${esc(u.name)}</td><td class="n">×${fmt(u.n)}</td><td class="n dim">${u.each == null ? "?" : fmt(u.each)}</td><td class="n">${u.total == null ? "price unknown" : sg(-u.total)}</td></tr>`).join("")
-    + `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.used.reduce((a, u) => a + u.n, 0))}</td><td></td><td class="n">${sg(-s.usedCost)}</td></tr>` : "";
+    + s.used.map(u => `<tr><td>${ico(u.id)}${esc(u.name)}</td><td class="n">×${fmt(u.n)}</td><td class="n dim">${u.each == null ? "?" : mz(u.each)}</td><td class="n">${u.total == null ? "price unknown" : sgm(-u.total)}</td></tr>`).join("")
+    + `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.used.reduce((a, u) => a + u.n, 0))}</td><td></td><td class="n">${sgm(-s.usedCost)}</td></tr>` : "";
   $("#usedEmpty").classList.toggle("hidden", !!s.used.length);
-  $("#mesosNet").innerHTML = s.used.length ? "net " + sg(s.netHr) + " after potions" : "";
+  $("#mesosNet").innerHTML = s.used.length ? "net " + sgm(s.netHr) + "/hr after potions" : "";
   renderMesos(s);
   const bar = session.state.bar;
   $("#lvNow").textContent = s.level ? "Lv " + s.level + (bar ? " · " + bar.pct.toFixed(2) + "%" : "") : "";
@@ -176,20 +179,20 @@ function render(){
   levelNote(s);
   $("#goalK").textContent = s.goalLevel ? "Level " + s.goalLevel + " in" : "Goal";
   $("#goalV").textContent = s.goalLevel ? s.level >= s.goalLevel ? "reached" : s.toGoalHrs == null ? "-" : hm(s.toGoalHrs) : "-";
-  $("#goalAt").textContent = s.toGoalHrs != null && s.toGoalHrs < 48 ? "about " + new Date(Date.now() + s.toGoalHrs * 3.6e6).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}) + " at this rate" : s.goalLevel ? "" : "set one in Settings";
+  $("#goalAt").textContent = s.toGoalHrs != null && s.toGoalHrs < 48 ? "about " + new Date(Date.now() + s.toGoalHrs * 3.6e6).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}) + " at this rate" : s.goalLevel ? "" : "set one in Alerts and goal";
   $("#miniGoal").textContent = s.goalLevel && s.toGoalHrs != null ? `Lv ${s.goalLevel} in ${hm(s.toGoalHrs)}` : "";
   stopCheck(s);
   $("#active").textContent = Math.round(s.activeMin) + " min";
   $("#kpqNote").textContent = kpqText(s);
-  $("#where").textContent = [kpq?.on && "KPQ (" + (settings.kpqMode || "Bonus") + ")", s.mapName, s.job, s.party > 1 ? "party of " + s.party : "solo",
-    s.kills + " kills", fmt(s.mesoPerKill) + " mesos/kill",
+  $("#where").innerHTML = [kpq?.on && "KPQ (" + esc(settings.kpqMode || "Bonus") + ")", s.mapName && esc(s.mapName), s.job && esc(s.job), s.party > 1 ? "party of " + s.party : "solo",
+    s.kills + " kills", mz(s.mesoPerKill) + "/kill",
     s.readShare != null && Math.round(s.readShare * 100) + "% of EXP seen as messages",
-    settings.share && runInfo()].filter(Boolean).join(" · ");
+    settings.share && esc(runInfo())].filter(Boolean).join(" · ");
   $("#mobsEmpty").classList.toggle("hidden", !!s.mobs.length); $("#itemsEmpty").classList.toggle("hidden", !!(s.items.length || s.unreadItems));
-  $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${esc(m.name)}</td><td class="n">${m.kills} kills</td><td class="n">${fmt(m.mesoPerKill)} mesos/kill</td></tr>`).join("");
+  $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${esc(m.name)}</td><td class="n">${m.kills} kills</td><td class="n">${mz(m.mesoPerKill)}/kill</td></tr>`).join("");
   $("#items").innerHTML = (s.items.length ? `<tr class="th"><td>Item</td><td class="n">Got</td><td class="n">Each</td><td class="n">Worth</td></tr>` : "")
-    + s.items.map(i => `<tr><td>${esc(i.name)}${i.inv ? ` <span class="note">(${i.inv} from the inventory)</span>` : ""}</td><td class="n">×${fmt(i.n)}</td><td class="n dim">${fmt(i.each)}</td><td class="n">${sg(i.total)}</td></tr>`).join("")
-    + (s.items.length ? `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.items.reduce((a, i) => a + i.n, 0))}</td><td></td><td class="n">${sg(s.lootValue)}</td></tr>` : "")
+    + s.items.map(i => `<tr><td>${ico(i.id)}${esc(i.name)}${i.inv ? ` <span class="note">(${i.inv} from the inventory)</span>` : ""}</td><td class="n">×${fmt(i.n)}</td><td class="n dim">${mz(i.each)}</td><td class="n">${sgm(i.total)}</td></tr>`).join("")
+    + (s.items.length ? `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.items.reduce((a, i) => a + i.n, 0))}</td><td></td><td class="n">${sgm(s.lootValue)}</td></tr>` : "")
     + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet: ${(s.invTabs?.etc?.last || 0) > (s.invTabs?.etc?.first || 0)
       ? "the Etc tab doesn't show more than the pickup lines already counted, so they're probably Use items (potions) or a misread line. Report a bug right after one shows up so it can be fixed"
       : "open your Etc tab for a second to count them from the inventory"}</td></tr>` : "");
@@ -210,15 +213,16 @@ function renderInv(s){
   $("#invAsk").textContent = `Open your inventory and show the ${missing.join(", ")} tab${missing.length > 1 ? "s" : ""} for a second${missing.length > 1 ? " each" : ""}: that's the start count.`;
 }
 // a number with its sign, green when gained and red when lost or spent
-const sg = n => { n = Math.round(n || 0); return `<span class="${n > 0 ? "pos" : n < 0 ? "neg" : ""}">${n > 0 ? "+" : n < 0 ? "−" : ""}${fmt(Math.abs(n))}</span>` };
+const sg = (n, coin) => { n = Math.round(n || 0); return `<span class="${n > 0 ? "pos" : n < 0 ? "neg" : ""}">${n > 0 ? "+" : n < 0 ? "−" : ""}${coin ? COIN : ""}${fmt(Math.abs(n))}</span>` };
+const sgm = n => sg(n, true), mz = n => COIN + fmt(n);
 // Loot tab: where the mesos came from and went
 const cell = (k, v, note = "") => `<div><div class="k">${k}</div><div class="v">${v}</div>${note ? `<div class="note">${note}</div>` : ""}</div>`;
 function renderMesos(s){
-  $("#mesoGrid").innerHTML = cell("Picked up", sg(s.mesos), fmt(s.mesosHr) + "/hr of farming") + cell("Per kill", fmt(s.mesoPerKill), s.kills + " kills")
-    + cell("Spent on consumables", s.used.length ? sg(-s.usedCost) : "-", s.used.length ? fmt(s.usedCostHr) + "/hr" : "")
-    + cell("Items looted are worth", sg(s.lootValue), "if sold at the prices below")
-    + cell("Net", sg(s.mesos + s.lootValue - s.usedCost), "picked up + items - consumables")
-    + cell("Inventory mesos", s.walletNet == null ? "-" : sg(s.walletNet), s.walletNet == null ? "open the inventory to read it" : "now vs. first look, shop trips included");
+  $("#mesoGrid").innerHTML = cell("Picked up", sgm(s.mesos), mz(s.mesosHr) + "/hr of farming") + cell("Per kill", mz(s.mesoPerKill), s.kills + " kills")
+    + cell("Spent on consumables", s.used.length ? sgm(-s.usedCost) : "-", s.used.length ? mz(s.usedCostHr) + "/hr" : "")
+    + cell("Items looted are worth", sgm(s.lootValue), "if sold at the prices below")
+    + cell("Net", sgm(s.mesos + s.lootValue - s.usedCost), "picked up + items - consumables")
+    + cell("Inventory mesos", s.walletNet == null ? "-" : sgm(s.walletNet), s.walletNet == null ? "open the inventory to read it" : "now vs. first look, shop trips included");
 }
 // after Stop: each inventory tab read since then (green), open on screen right now (amber) or not yet (grey)
 function renderWrap(s){
@@ -745,14 +749,14 @@ function showSummary(t1){
     + cell("EXP/hr", fmt(exp / clockH), "over the whole run (" + hm(clockH) + ")")
     + cell("EXP per active minute", fmt(perMin), bonus?.min > 0 ? `Bonus stage only: ${fmt(bonus.exp)} EXP in ${mss(bonus.min * 60)}` : "time spent farming only")
     + cell("Kills · deaths", `${fmt(s.kills)} · <span class="${s.deaths ? "neg" : ""}">${s.deaths}</span>`, kpq?.on ? `KPQ ${settings.kpqMode || "Bonus"}: ${kpq.rounds} round${kpq.rounds === 1 ? "" : "s"}` : "")
-    + cell("Mesos looted", sg(s.mesos), fmt(s.mesos / clockH) + "/hr over the run")
-    + cell("Mesos used", s.used.length ? sg(-s.usedCost) : "-", s.used.length ? "potions, food, arrows" : "nothing counted")
-    + cell("Items looted are worth", `<span class="pos">~${fmt(s.lootValue)}</span>`, "approx., player-shop or NPC price")
-    + cell("Net", sg(net), sg(net / clockH) + "/hr · mesos + items - used")
-    + (s.walletNet != null ? cell("Inventory mesos", sg(s.walletNet), "first look vs. last look") : "")
+    + cell("Mesos looted", sgm(s.mesos), mz(s.mesos / clockH) + "/hr over the run")
+    + cell("Mesos used", s.used.length ? sgm(-s.usedCost) : "-", s.used.length ? "potions, food, arrows" : "nothing counted")
+    + cell("Items looted are worth", `<span class="pos">~${mz(s.lootValue)}</span>`, "approx., player-shop or NPC price")
+    + cell("Net", sgm(net), sgm(net / clockH) + "/hr · mesos + items - used")
+    + (s.walletNet != null ? cell("Inventory mesos", sgm(s.walletNet), "first look vs. last look") : "")
     + `</div>`
     + (inv.length ? `<h3 style="margin-top:8px">Inventory: start → end</h3><table><tr class="th"><td>Item</td><td class="n">Start</td><td class="n">End</td><td class="n">Change</td></tr>`
-      + inv.map(x => `<tr><td>${esc(x.name)} <span class="note">${tabName(x.tab)}</span></td><td class="n dim">${fmt(x.was)}</td><td class="n">${fmt(x.now)}</td><td class="n">${sg(x.n)}</td></tr>`).join("") + "</table>"
+      + inv.map(x => `<tr><td>${ico(x.id)}${esc(x.name)} <span class="note">${tabName(x.tab)}</span></td><td class="n dim">${fmt(x.was)}</td><td class="n">${fmt(x.now)}</td><td class="n">${sg(x.n)}</td></tr>`).join("") + "</table>"
       : `<div class="note">No inventory before/after: a tab has to be read at the start and again at the end.</div>`);
   $("#summary").classList.remove("hidden"); $("#summary").scrollIntoView({block: "nearest"});
 }
@@ -839,8 +843,8 @@ function compare(a, b){
   const what = x => x.kpq && typeof x.kpq === "object" ? `KPQ ${x.kpq.mode === "Rush" ? "Rush" : "Bonus"} · ${+x.kpq.rounds || 0} round${+x.kpq.rounds === 1 ? "" : "s"}` : x.mapName || "?";
   // [label, value, lower is better, shown as]
   const groups = [["Speed", [["EXP/hr", x => hr(x, x.snap && x.snap.minutes > 0 && !x.kpq ? x.snap.exp * h(x) / (x.snap.minutes / 60) : x.exp)], ["Kills/hr", x => hr(x, x.kills)]]],
-    ["Money per hour", [["Mesos picked up", x => hr(x, x.mesos)], ["Items looted (worth)", x => hr(x, x.lootValue)], ["Potions and arrows used", x => hr(x, x.usedCost), true],
-      ["Net", x => x.lootValue == null ? null : hr(x, (x.mesos || 0) + x.lootValue - (x.usedCost || 0))]]],
+    ["Money per hour", [["Mesos picked up", x => hr(x, x.mesos), false, mz], ["Items looted (worth)", x => hr(x, x.lootValue), false, mz], ["Potions and arrows used", x => hr(x, x.usedCost), true, mz],
+      ["Net", x => x.lootValue == null ? null : hr(x, (x.mesos || 0) + x.lootValue - (x.usedCost || 0)), false, mz]]],
     ["Run", [["Farming time", x => x.activeMin || 0, null, v => Math.round(v) + " min"], ["Deaths", x => x.deaths || 0, true], ["KPQ best round", x => x.kpq?.best ?? null, true, mss]]]];
   const head = (k, x) => `<div class="cmpWho ${k}"><b>${k.toUpperCase()}</b> ${esc(when(x))}<div class="note">${esc(what(x))} · Lv ${esc(x.level ?? "?")} · ${x.party > 1 ? "party of " + x.party : "solo"} · ${Math.round(x.activeMin || 0)} min</div></div>`;
   let up = 0, down = 0;
@@ -892,7 +896,7 @@ function recap(list){
   const sum = k => week.reduce((a, x) => a + (+x[k] || 0), 0), lv = week.map(x => x.level).filter(Boolean);
   const byMap = {}; for (const x of week){ const m = x.mapName || "?"; (byMap[m] = byMap[m] || {min: 0, exp: 0}); byMap[m].min += x.activeMin || 0; byMap[m].exp += x.exp || 0 }
   const best = Object.entries(byMap).filter(([m, v]) => m !== "?" && v.min >= 15).sort((a, b) => b[1].exp / b[1].min - a[1].exp / a[1].min)[0];
-  return `<div class="note"><b>Last 7 days:</b> ${week.length} session${week.length > 1 ? "s" : ""}, ${(sum("activeMin") / 60).toFixed(1)} h farming, ${fmt(sum("exp"))} EXP, ${fmt(sum("mesos"))} mesos`
+  return `<div class="note"><b>Last 7 days:</b> ${week.length} session${week.length > 1 ? "s" : ""}, ${(sum("activeMin") / 60).toFixed(1)} h farming, ${fmt(sum("exp"))} EXP, ${mz(sum("mesos"))}`
     + (lv.length ? `, level ${Math.min(...lv)} → ${Math.max(...lv)}` : "") + `, ${sum("deaths")} death${sum("deaths") === 1 ? "" : "s"}`
     + (best ? `. Fastest map: ${esc(best[0])} (${fmt(best[1].exp / best[1].min * 60)} EXP/hr)` : "") + `</div>`;
 }

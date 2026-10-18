@@ -70,6 +70,9 @@
   .box.folded { padding-top:6px; padding-bottom:6px; min-height:28px; } .box.folded > :not(.boxctl) { display:none !important; }
   .box.folded .boxctl { position:static; } .box.folded .btitle { display:block; flex:1; }
   .box h3 { cursor:grab; } .box.moving { opacity:.45; } body.dragging, body.dragging * { cursor:grabbing !important; user-select:none; }
+  td.note { padding-left:12px; } .v .coin { height:.8em; }
+  .coin { height:1em; width:auto; image-rendering:pixelated; vertical-align:-0.12em; margin-right:2px; }
+  .ico { display:inline-block; width:22px; height:22px; object-fit:contain; image-rendering:pixelated; vertical-align:middle; margin:-3px 6px -3px 0; }
   .dragLabel { position:fixed; z-index:60; pointer-events:none; background:var(--accent); color:#fff; border-radius:6px; padding:3px 8px; font-size:12px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.3); }
   .box.over-top { box-shadow:0 -3px 0 var(--accent); } .box.over-bottom { box-shadow:0 3px 0 var(--accent); }
   body.dragging #dock { min-height:40px; border:2px dashed var(--accent); border-radius:10px; margin-bottom:8px; padding:4px; }
@@ -134,6 +137,12 @@
     <button data-tab="session" class="sel">Session</button><button data-tab="loot">Loot</button><button data-tab="hist" id="histBtn">History</button><button data-tab="settings">Settings</button>
   </div>
   <section data-tab="session">
+    <div class="card" id="alertsBox" data-box="alerts" data-title="Alerts and goal"><h3>Alerts and goal</h3>
+      <div class="row"><label>Goal: level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="off"></label></div>
+      <div class="row"><label>Beep for drops worth <input type="number" id="alert" min="0" step="1000"> mesos or more</label> <span class="note">0 = off</span></div>
+      <div class="row"><label style="flex:1;min-width:0">Beep for these drops <input id="alertItems" maxlength="500" style="width:100%;box-sizing:border-box" placeholder="e.g. Bronze Ore, Glove scroll"></label> <span class="note" id="alertItemsNote"></span></div>
+      <label class="chk"><input type="checkbox" id="stopBeep"> <span>Beep when EXP stops for 2 minutes (died, disconnected, map taken)</span></label>
+    </div>
     <div class="card" id="snaps" data-box="snaps" data-title="Start and end"><h3>Start and end (EXP bar, inventory)</h3>
       <div class="note">Every session is measured from two EXP bar readings, at Start and at Stop (like mapleexp.com). Taken by
         themselves; fix a level or % here if it read wrong. This is the number saved to History.</div>
@@ -173,7 +182,7 @@
       <div class="note">Potions, food and arrows, at the cheapest NPC shop price.</div></div>
   </section>
   <section data-tab="hist" class="hidden">
-    <div class="card" id="hist" data-box="hist" data-title="Past sessions"><div class="row"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div><div id="cmp"></div><table id="histRows"></table></div>
+    <div class="card" id="hist" data-box="hist" data-title="Past sessions"><div class="row" style="margin-top:0;padding-right:48px"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div><div id="cmp"></div><table id="histRows"></table></div>
   </section>
   <section data-tab="help" class="hidden">
     <div class="card" id="help"><div class="row"><h3 style="flex:1;margin:0">Help</h3><button id="helpClose" class="alt">Close</button></div>
@@ -264,12 +273,7 @@
         <button id="areaClear" class="alt hidden">Look everywhere</button></div><div class="note" id="areaNote"></div>
       <label class="chk"><input type="checkbox" id="autoPause"> <span>Pause when the game screen is gone (Cash Shop, changing channel)</span></label>
     </div>
-    <div class="card"><h3>Alerts and goal</h3>
-      <div class="row"><label>Goal: level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="off"></label></div>
-      <div class="row"><label>Beep for drops worth <input type="number" id="alert" min="0" step="1000"> mesos or more</label> <span class="note">0 = off</span></div>
-      <div class="row"><label style="flex:1;min-width:0">Beep for these drops <input id="alertItems" maxlength="500" style="width:100%;box-sizing:border-box" placeholder="e.g. Bronze Ore, Glove scroll"></label> <span class="note" id="alertItemsNote"></span></div>
-      <label class="chk"><input type="checkbox" id="stopBeep"> <span>Beep when EXP stops for 2 minutes (died, disconnected, map taken)</span></label>
-    </div>
+    <div class="note" style="margin:0 0 10px">Alerts and goal are on the Session tab.</div>
     <div class="card"><h3>Party</h3>
       <div class="row"><label>Party code <input id="pcode" maxlength="20" size="10" placeholder="optional"></label>
         <label>Name <input id="nick" maxlength="12" size="8" placeholder="optional"></label></div>
