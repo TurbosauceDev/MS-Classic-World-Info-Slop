@@ -103,3 +103,4 @@ npm start           # run it (Windows, Electron)
   %APPDATA%/ms-classic-grind-tracker/sessions (History, CSV export).
 - Party view: with a party code, the tracker posts its live EXP/hr, level, job (and the name typed, if any) once a
   minute to `/api/party` and shows everyone on the same code. Works with sharing off.
+- v0.2.26: Ctrl+Shift+B (global, works with the game in front), the Bug button or Help > Report a bug opens a popup that grabs the last 8 frames at that moment, then asks for a note. Use-tab drops between inventory looks count as used up. KPQ stage time counts with no EXP (middle stages have no monsters).

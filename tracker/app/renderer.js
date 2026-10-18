@@ -586,16 +586,29 @@ $("#frames").onclick = async () => {
   }, 3000);
 };
 
-// "Report a bug": the last frames and log lines into one folder, opened for sending
-$("#report").onclick = async () => {
-  const s = session?.stats(), note = $("#reportNote").value.trim().slice(0, 2000);
+// "Report a bug": the last frames and log lines into one folder, opened for sending. The popup (Ctrl+Shift+B from the game,
+// the Bug button, the menu) grabs the frames the moment it opens, so typing the note doesn't push the problem out of them
+async function saveReport(frames, note){
+  const s = session?.stats();
   try {
-    const dir = await host.saveReport(RECENT.map((f, i) => ({name: `frame-${i}-${new Date(f.t).toISOString().slice(11, 19).replace(/:/g, "")}.png`, bytes: f.bytes})),
-      {note, running: timer != null, fps: FPS, check, stats: s && {...s, mobs: s.mobs.length, items: s.items.length}, log: LOG});
-    $("#status").textContent = `Bug report saved (${RECENT.length} frames + log). Send that folder to Danny.`; $("#reportNote").value = "";
+    const dir = await host.saveReport(frames.map((f, i) => ({name: `frame-${i}-${new Date(f.t).toISOString().slice(11, 19).replace(/:/g, "")}.png`, bytes: f.bytes})),
+      {note: note.trim().slice(0, 2000), running: timer != null, fps: FPS, check, stats: s && {...s, mobs: s.mobs.length, items: s.items.length}, log: LOG.slice()});
+    $("#status").textContent = `Bug report saved (${frames.length} frames + log). Send that folder to Danny.`;
     host.openFolder(dir);
   } catch (e){ $("#status").textContent = "Couldn't save the bug report: " + e.message }
-};
+}
+$("#report").onclick = () => { saveReport(RECENT.slice(), $("#reportNote").value); $("#reportNote").value = "" };
+let bugFrames = null;
+function openBugPop(){
+  bugFrames = RECENT.slice();
+  $("#bugPopInfo").textContent = bugFrames.length ? `The last ${bugFrames.length} game pictures (~${bugFrames.length * 3} s) were grabbed just now.` : "No game pictures yet (press Start first); the log is still saved.";
+  $("#bugPop").classList.remove("hidden"); $("#bugPopNote").focus();
+}
+const closeBugPop = () => { $("#bugPop").classList.add("hidden"); $("#bugPopNote").value = ""; bugFrames = null };
+$("#bugBtn").onclick = openBugPop;
+$("#bugPopCancel").onclick = closeBugPop;
+$("#bugPopSave").onclick = () => { const f = bugFrames || [], n = $("#bugPopNote").value; closeBugPop(); saveReport(f, n) };
+$("#bugPopNote").onkeydown = e => { if (e.key === "Escape") closeBugPop(); else if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); $("#bugPopSave").click() } };
 
 $("#pcode").onchange = e => host.settings({partyCode: e.target.value.trim().slice(0, 20)}).then(s => { settings = s; lastParty = 0; if (!s.partyCode){ $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "" } });
 $("#nick").onchange = e => host.settings({nick: e.target.value.trim().slice(0, 12)}).then(s => settings = s);
@@ -679,7 +692,8 @@ document.addEventListener("keydown", e => { if (e.key === "F1"){ e.preventDefaul
 host.onMenu?.(what => {
   if (what === "help") openHelp();
   else if (what === "mini") $("#miniBtn").click();
-  else if (what === "update" || what === "report"){ showTab("settings"); (what === "update" ? $("#updCheck") : $("#reportNote")).scrollIntoView(); if (what === "update") $("#updCheck").click(); else $("#reportNote").focus() }
+  else if (what === "report") openBugPop();
+  else if (what === "update"){ showTab("settings"); $("#updCheck").scrollIntoView(); $("#updCheck").click() }
 });
 $("#updCheck").onclick = async () => { $("#updNote").textContent = "Checking..."; showUpdate(await host.updateCheck?.()) };
 // Install (Settings) and Restart and update (the banner, which stays on top while scrolling) do the same

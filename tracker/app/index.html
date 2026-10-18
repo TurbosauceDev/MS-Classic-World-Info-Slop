@@ -72,6 +72,7 @@
     <div class="bar"><button id="go">Start</button>
       <div class="grow"><div id="state"><span class="dot"></span><span id="stateText">Not tracking</span></div><div id="status">Looking for the MapleStory window...</div></div>
       <button id="helpBtn" class="alt" title="How to use the tracker (F1)">?</button>
+      <button id="bugBtn" class="alt" title="Report a bug (Ctrl+Shift+B, works from the game too)">Bug</button>
       <button id="miniBtn" class="alt" title="Shrink to a small bar with just EXP/hr">Mini</button></div>
     <div class="tiles">
       <div class="tile main" title="EXP per hour of farming (breaks left out)"><div class="k">EXP/hr</div><div class="v" id="expHr">-</div><div class="note" id="expHr5"></div></div>
@@ -186,7 +187,7 @@
         <li>Ctrl + and Ctrl - make the text bigger or smaller.</li>
       </ul></details>
       <details><summary>Something reads wrong</summary><ul>
-        <li>Settings → <b>Report a bug</b> saves the last ~25 seconds of game pictures and a log to a folder. Your character
+        <li><b>Ctrl+Shift+B</b> (even with the game in front), the Bug button or Settings → <b>Report a bug</b> saves the last ~25 seconds of game pictures and a log to a folder. Your character
           name shows in those pictures. Send the folder to Danny.</li>
         <li>File → Open frames and bug reports folder shows where they are.</li>
       </ul></details>
@@ -232,11 +233,17 @@
     </div>
     <div class="card"><h3>Something read wrong?</h3>
       <div class="row"><input id="reportNote" maxlength="2000" style="flex:1;min-width:0" placeholder="What read wrong? (optional)">
-        <button id="report" class="alt" title="Saves the last ~25 s of game frames (your screen, character name included) and a log to a folder you can send">Report a bug</button></div>
+        <button id="report" class="alt" title="Ctrl+Shift+B from anywhere (the game too). Saves the last ~25 s of game frames (your screen, character name included) and a log to a folder you can send">Report a bug</button></div>
       <div class="note">Saves the last ~25 s of game pictures (your character name shows in them) and a log to a folder you can send.</div>
       <div class="row"><button id="frames" class="alt" title="One full game picture every 3 s for 3 minutes">Save sample frames</button></div>
     </div>
   </section>
+<div id="bugPop" class="hidden" style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:12px">
+  <div class="card" style="width:100%;max-width:420px;margin:0"><h3>Report a bug</h3>
+    <div class="note" id="bugPopInfo">The last ~25 s of game pictures were grabbed just now.</div>
+    <textarea id="bugPopNote" maxlength="2000" rows="3" style="width:100%;box-sizing:border-box" placeholder="What read wrong? (optional, e.g. &quot;Red Potion pickup not named&quot;)"></textarea>
+    <div class="row"><button id="bugPopSave">Save report</button> <button id="bugPopCancel" class="alt">Cancel</button></div>
+  </div></div>
   <script src="gamedata.js"></script>
   <script src="shot.js"></script>
   <script src="../core/session.js"></script>
