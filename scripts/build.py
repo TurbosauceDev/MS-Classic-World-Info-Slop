@@ -12,6 +12,8 @@ css = (src / "styles.css").read_text()
 js = "\n".join(p.read_text() for p in sorted((src / "js").glob("*.js")))
 # the grind tracker's screen readers (inventory price check uses them); one IIFE, exports window.GrindReaders
 js = js.replace("/*@READERS*/", (ROOT / "tracker" / "app" / "readers.js").read_text(), 1)
+# the tracker's themes (presets + MSCT1. share codes), so the site and the tracker can wear the same theme; window.TrackerThemes
+js = js.replace("/*@THEMES*/", (ROOT / "tracker" / "app" / "themes.js").read_text(), 1)
 data = (ROOT / "data" / "data.json").read_text()
 assert "/*@CSS*/" in html and "/*@JS*/" in html and "__DATA__" in js
 # site version on Home = when this file was built (UTC), so a landed update is easy to spot

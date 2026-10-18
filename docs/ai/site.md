@@ -74,9 +74,12 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - **Tooltips:** one floating `#qtip`; classes `.qname` quest, `.ri` item icon, `.itname` item name, `.mname` map
   (`mapLink()`, click opens World Map card), `.nname` NPC (`npcLink()`), `.mobname` monster (`mobLink()`).
 - **Per-viewer state:** localStorage in try/catch. Keys in use: tab planner path pathdone qsort qeq qval ctown craft craftlv
-  qcompact keep keephave mobs items skills navi wmap expc.
+  qcompact keep keephave mobs items skills navi wmap expc theme themes themec.
 - **Explanations:** a closed `<details class="howto">` at the top of the tab, short bullets.
 - **Share links:** extend the existing `#key=value&` hash (69-search.js); never a new scheme.
+- **Themes:** `src/js/70-theme.js` + the `siteTheme` head script in index.html; presets/share codes come from
+  `tracker/app/themes.js` (build.py `/*@THEMES*/`). Text on accent: `var(--on-accent,var(--panel))`. Default sets nothing,
+  so styles.css :root stays the source; tracker core.test.js fails if the tracker's Default drifts from it.
 
 ## Conventions
 - CSS tokens only: --bg --panel --ink --muted --line --accent --accent-soft --leaf --warn --bad. Lavender/purple/grey.

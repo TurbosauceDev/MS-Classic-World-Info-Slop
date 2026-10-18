@@ -5,12 +5,38 @@
 <style>
 /*@CSS*/
 </style>
+<script>
+// Theme (Settings > Theme, 70-theme.js): applied before the page draws so a picked theme doesn't flash the default first.
+// "Default" sets nothing (styles.css as is); any other theme sets the colour tokens inline and data-theme for light/dark.
+window.siteTheme = function (t){
+  var el = document.documentElement, s = el.style, dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  ["--bg","--panel","--ink","--muted","--line","--accent","--accent-soft","--on-accent","--leaf","--warn","--bad","--leaf-soft","--warn-soft"].forEach(function (v){ s.removeProperty(v) });
+  el.removeAttribute("data-theme");
+  if (!t || !t.c && !t.light) return;
+  var mode = t.mode === "system" ? (dark ? "dark" : "light") : t.mode, c = t.mode === "system" ? (dark ? t.dark : t.light) : t.c;
+  var map = {bg:"--bg", panel:"--panel", ink:"--ink", muted:"--muted", line:"--line", accent:"--accent", soft:"--accent-soft", on:"--on-accent", leaf:"--leaf", warn:"--warn", bad:"--bad"};
+  for (var k in map) if (/^#[0-9a-f]{6}$/i.test(c[k] || "")) s.setProperty(map[k], c[k]);
+  s.setProperty("--leaf-soft", "color-mix(in srgb," + c.leaf + " 16%," + c.panel + ")");
+  s.setProperty("--warn-soft", "color-mix(in srgb," + c.warn + " 16%," + c.panel + ")");
+  el.setAttribute("data-theme", mode === "light" ? "light" : "dark");
+};
+try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) siteTheme(t0) } catch (e) {}
+</script>
 
 <div class="wrap">
 <header>
   <h1>MS Classic World Data Slop</h1>
   <p>Planner and database for MapleStory Classic World, built from the launch game files. <a href="#credits" id="srclink">Sources</a></p>
   <button class="btn srchbtn" id="srchopen" type="button">Search everything <kbd>Ctrl K</kbd></button>
+  <button class="btn srchbtn" id="thopen" type="button" aria-expanded="false" aria-controls="thpop">Theme</button>
+  <div id="thpop" class="card" hidden>
+    <h3>Theme</h3>
+    <p class="thnote">Same themes and share codes as the Grind Tracker, so the two can sit side by side. Default follows your system's light/dark setting.</p>
+    <div id="thsw" class="thsw" role="radiogroup" aria-label="Theme"></div>
+    <div class="throw"><input id="thcode" type="text" placeholder="Paste a tracker theme code (MSCT1...)" aria-label="Theme share code" spellcheck="false">
+      <button class="btn" id="thadd" type="button">Use code</button><button class="btn" id="thcopy" type="button">Copy code</button></div>
+    <p class="thnote" id="thmsg" aria-live="polite"></p>
+  </div>
 </header>
 
 <nav>
@@ -897,6 +923,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Themes, same as the Grind Tracker</h3><span class="pill p-hot">update</span></div>
+      <p>A <b>Theme</b> button at the top lets you pick any of the Grind Tracker's colour themes, or paste a tracker theme code (MSCT1...) to wear your own. <b>Copy code</b> gives a code the tracker accepts. Default is this site's own look, and it's now the tracker's default too, so the two match side by side.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Little sprites on Home</h3><span class="pill p-hot">update</span></div>
       <p>Each Home card has a small in-game icon by its name, and an opened card shows one for every page in it (a Snail for the Grind Tracker, an Orange Mushroom for Monsters, Teleport for the Map Navigator and so on).</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Bank in the price check, easier screenshot import</h3><span class="pill p-hot">update</span></div>
