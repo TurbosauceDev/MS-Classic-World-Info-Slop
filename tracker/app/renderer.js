@@ -464,6 +464,7 @@ async function showSpeed(run){
     : `<div class="note">${sc.noBar ? "The EXP bar wasn't read during this run, so it isn't compared." : `Not enough shared runs around your level yet to compare (${esc(band) || "level not read"}).`}</div>`) + bt;
 }
 function beep(hz, sec){
+  if (settings.muted) return;   // Mute sounds (Preferences, or its shortcut)
   try {
     audio = audio || new AudioContext();
     const o = audio.createOscillator(), g = audio.createGain();
@@ -1106,6 +1107,11 @@ host.onMenu?.(what => {
   else if (what === "mini") (document.body.classList.contains("mini") ? $("#mini") : $("#miniBtn")).click();
   else if (what === "report") openBugPop();
   else if (what.startsWith("onTop:")){ const on = what === "onTop:true"; settings.onTop = on; $("#ontop").checked = on; $("#status").textContent = "Keep on top: " + (on ? "on" : "off") + "." }
+  else if (what.startsWith("clickThrough:")){ const on = what === "clickThrough:true"; document.body.classList.toggle("through", on)
+    $("#status").textContent = on ? `Click-through on: clicks go to the game. ${keyText(keyState.keys.clickThrough)} turns it off.` : "Click-through off." }
+  else if (what === "mark") markNow();
+  else if (what === "saveImage") saveNumbers();
+  else if (what === "mute") muteSet(!settings.muted);
   else if (what === "startStop"){ if (!$("#go").disabled) $("#go").click() }
   else if (what === "pause") $("#pauseBtn").click();
   else if (what === "invNow"){ if (timer == null || !engine?.invNow) $("#status").textContent = "Press Start first."; else { engine.invNow(); $("#status").textContent = "Reading your open inventory tab: keep it open a few seconds..." } }
@@ -1200,7 +1206,8 @@ darkQ.addEventListener?.("change", () => { themeShow(); themeUi() });
 
 // Preferences: keyboard shortcuts (they work from the game too; main.js registers them) and the see-through window
 const KEY_NAMES = {onTop: "Keep on top on/off", startStop: "Start / Stop", pause: "Pause / go on", mini: "Mini bar on/off",
-  show: "Hide / show the tracker", invNow: "Read the open inventory tab now", report: "Report a bug"};
+  show: "Hide / show the tracker", invNow: "Read the open inventory tab now", report: "Report a bug",
+  clickThrough: "Click-through on/off (mouse goes to the game)", mark: "Mark this moment (in the run note)", saveImage: "Save the numbers as a picture", mute: "Mute sounds on/off"};
 const keyText = k => k ? k.replace("CommandOrControl", "Ctrl").replace("Super", "Win").replace(/\+/g, " + ") : "Off";
 const CODE_KEY = {Space: "Space", Tab: "Tab", Delete: "Delete", Insert: "Insert", Home: "Home", End: "End", PageUp: "PageUp", PageDown: "PageDown",
   ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right", Minus: "-", Equal: "=", Comma: ",", Period: ".", Slash: "/",
@@ -1243,6 +1250,22 @@ document.addEventListener("keydown", e => {
 $("#keysReset").onclick = () => keysSet(Object.fromEntries(Object.entries(keyState.defaults).map(([a, k]) => [a, k])), "Shortcuts back to the defaults.");
 $("#opacity").oninput = e => { $("#opacityV").textContent = e.target.value + "%" };
 $("#opacity").onchange = e => host.settings({opacity: Math.min(1, Math.max(0.4, +e.target.value / 100))}).then(x => settings = x);
+// Mark: a time stamp (and the map) in the run's note, for "this is when the party left" moments; also in the log
+function markNow(){
+  const d = new Date(), at = d.toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}), map = session?.stats().mapName;
+  const line = `[${at}] mark${map ? " · " + map : ""}`, n = $("#runNote");
+  n.value = (n.value ? n.value.replace(/\s*$/, "") + "\n" : "") + line; log("mark", {map: map || null});
+  $("#status").textContent = `Marked ${at} (in the run note, under Stop's wrap-up).`;
+}
+// Save as picture: the run summary when it's showing, else the numbers at the top (EXP/hr, mesos, kills)
+async function saveNumbers(){
+  const el = !$("#summary").classList.contains("hidden") ? $("#summary") : $("#top"), d = new Date(), p2 = n => String(n).padStart(2, "0");
+  try { await host.saveImage(`${el.id === "summary" ? "run" : "now"}-${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}.png`, await elPng(el), true);
+    $("#status").textContent = "Picture saved to Pictures\\MS Classic Tracker runs and copied." }
+  catch (e){ log("error", {where: "save picture", msg: String(e)}); $("#status").textContent = "Couldn't save the picture." }
+}
+const muteSet = on => host.settings({muted: !!on}).then(x => { settings = x; $("#muted").checked = !!on; $("#status").textContent = on ? "Sounds muted." : "Sounds on." });
+$("#muted").onchange = e => muteSet(e.target.checked);
 $("#updCheck").onclick = async () => { $("#updNote").textContent = "Checking..."; showUpdate(await host.updateCheck?.()) };
 // Install (Settings) and Restart and update (the banner, which stays on top while scrolling) do the same
 $("#updInstall").onclick = () => $("#updGo").click();
@@ -1260,7 +1283,7 @@ $("#updGo").onclick = async () => {
   $("#job").value = settings.job || "";
   $("#ontop").checked = settings.onTop !== false;
   const op = Math.round((+settings.opacity || 1) * 100); $("#opacity").value = op; $("#opacityV").textContent = op + "%";
-  keysSet(null); themeShow(); themeUi();
+  keysSet(null); themeShow(); themeUi(); $("#muted").checked = !!settings.muted;
   // the old "Show me where my potions are" box (removed in 0.2.36): counts are looked for on the whole screen again
   if (settings.countArea) settings = await host.settings({countArea: null});
   $("#alert").value = settings.alertWorth || 0;

@@ -5,7 +5,7 @@ contextBridge.exposeInMainWorld("host", {
   settings: s => ipcRenderer.invoke("settings", s),
   saveSession: summary => ipcRenderer.invoke("save-session", summary),
   saveFrame: (name, bytes) => ipcRenderer.invoke("save-frame", name, bytes),
-  saveImage: (name, bytes) => ipcRenderer.invoke("save-image", name, bytes),
+  saveImage: (name, bytes, quiet) => ipcRenderer.invoke("save-image", name, bytes, quiet),
   saveReport: (frames, info) => ipcRenderer.invoke("save-report", frames, info),
   openFolder: dir => ipcRenderer.invoke("open-folder", dir),
   ocr: png => ipcRenderer.invoke("ocr", png),

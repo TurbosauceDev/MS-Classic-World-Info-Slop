@@ -121,21 +121,26 @@ ipcMain.handle("update-install", () => { if (upd.state !== "ready") return false
    Each one takes its keys away from every other program while the tracker runs, so all can be changed or turned off.
    Always on top was Danny's ask (2026-10-18); the others are the buttons players reach for mid-grind */
 const KEYS = {onTop: "CommandOrControl+Shift+T", startStop: "CommandOrControl+Shift+S", pause: "CommandOrControl+Shift+P", mini: "CommandOrControl+Shift+M",
-  show: "CommandOrControl+Shift+H", invNow: "CommandOrControl+Shift+I", report: "CommandOrControl+Shift+B"};
+  show: "CommandOrControl+Shift+H", invNow: "CommandOrControl+Shift+I", report: "CommandOrControl+Shift+B",
+  clickThrough: "CommandOrControl+Shift+X", mark: "CommandOrControl+Shift+N", saveImage: "CommandOrControl+Shift+G", mute: "CommandOrControl+Shift+U"};
 // modifiers + one key; a key with no modifier only for F1-F24 (a plain letter would be taken from the game's own keys)
 const ACCEL = /^(?:(?:(?:CommandOrControl|Alt|Shift|Super)\+)+(?:[A-Z0-9]|F(?:[1-9]|1\d|2[0-4])|Space|Tab|Backspace|Delete|Insert|Home|End|PageUp|PageDown|Up|Down|Left|Right|Plus|-|=|,|\.|\/|;|'|\[|\]|\\|`|num[0-9])|F(?:[1-9]|1\d|2[0-4]))$/;
 // Shift alone isn't enough on a letter (Shift+A is typing a capital A in chat); Alt+F4 stays Windows' close
 const okKey = k => k === "" || ACCEL.test(k) && (/(^|\+)F\d+$/.test(k) || /(CommandOrControl|Alt|Super)\+/.test(k)) && k !== "Alt+F4";
 const keysNow = () => { const k = readSettings().keys || {}; return Object.fromEntries(Object.entries(KEYS).map(([a, d]) => [a, typeof k[a] === "string" && okKey(k[a]) ? k[a] : d])) };
-let keyFailed = [];
+let keyFailed = [], clickThrough = false;
 function registerKeys(){
   globalShortcut.unregisterAll(); keyFailed = [];
   for (const [a, k] of Object.entries(keysNow())){ if (!k) continue; let ok = false; try { ok = globalShortcut.register(k, () => keyAction(a)) } catch {} if (!ok) keyFailed.push(a) }
+  if (clickThrough && (!keysNow().clickThrough || keyFailed.includes("clickThrough"))) keyAction("clickThrough");   // no way back otherwise
   return keyFailed;
 }
 function keyAction(a){
   if (!win || win.isDestroyed()) return;
   if (a === "onTop"){ const on = readSettings().onTop === false; writeSettings({...readSettings(), onTop: on}); pinOnTop(); win.webContents.send("menu", "onTop:" + on); return }
+  // click-through: the mouse goes to the game under the window (an overlay); only its shortcut turns it back off, so it
+  // starts off every launch and can't be turned on while that shortcut is off
+  if (a === "clickThrough"){ clickThrough = !clickThrough; win.setIgnoreMouseEvents(clickThrough, {forward: true}); win.webContents.send("menu", "clickThrough:" + clickThrough); return }
   if (a === "show"){ if (win.isVisible() && !win.isMinimized()) win.minimize(); else { win.restore(); win.show(); pinOnTop() } return }
   if (a === "report"){ win.show(); win.focus() }
   win.webContents.send("menu", a);
@@ -143,7 +148,7 @@ function keyAction(a){
 // the Preferences list: what each action is set to, the defaults, and which couldn't be had (another program holds them).
 // keys: {action: accelerator | ""} to change; pause: true while a box waits for the new keys (so pressing one in use reaches it)
 ipcMain.handle("keys", (_, keys, pause) => {
-  if (pause){ globalShortcut.unregisterAll(); return {keys: keysNow(), defaults: KEYS, failed: []} }
+  if (pause){ globalShortcut.unregisterAll(); if (clickThrough) keyAction("clickThrough"); return {keys: keysNow(), defaults: KEYS, failed: []} }
   if (keys && typeof keys === "object"){
     const cur = {...(readSettings().keys || {})};
     for (const [a, k] of Object.entries(keys)) if (a in KEYS && typeof k === "string" && okKey(k)) cur[a] = k;
@@ -312,11 +317,11 @@ ipcMain.handle("party", async (_, live) => {
 // "Save sample frames": raw captures for building and testing the screen readers
 const FRAMES = () => path.join(app.getPath("pictures"), "MS Classic Tracker frames");
 // run summary picture: Pictures\MS Classic Tracker runs, also copied to the clipboard for pasting into Discord
-ipcMain.handle("save-image", (_, name, pngBytes) => {
+ipcMain.handle("save-image", (_, name, pngBytes, quiet) => {   // quiet: from a shortcut mid-game, no Explorer window
   const {nativeImage, clipboard} = require("electron"), dir = path.join(app.getPath("pictures"), "MS Classic Tracker runs");
   fs.mkdirSync(dir, {recursive: true});
   const file = path.join(dir, path.basename(String(name))), buf = Buffer.from(pngBytes);
-  fs.writeFileSync(file, buf); clipboard.writeImage(nativeImage.createFromBuffer(buf)); shell.showItemInFolder(file);
+  fs.writeFileSync(file, buf); clipboard.writeImage(nativeImage.createFromBuffer(buf)); if (!quiet) shell.showItemInFolder(file);
   return file;
 });
 ipcMain.handle("save-frame", (_, name, pngBytes) => {

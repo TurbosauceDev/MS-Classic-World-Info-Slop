@@ -110,6 +110,7 @@
   .sw .nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .thGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:4px 10px; margin:6px 0; }
   .thGrid label { display:flex; align-items:center; gap:6px; font-size:12px; } .thGrid input[type=color] { width:34px; height:24px; padding:0 2px; cursor:pointer; }
+  body.through #titlebar { box-shadow:inset 0 -2px 0 var(--warn); } body.through #titlebar .tbname::after { content:" · click-through"; color:var(--warn); }
   button.keyset { min-width:118px; padding:4px 10px; font-size:12px; } button.keyset.bad { outline:2px solid var(--bad); }
   body.dragging #dock { min-height:40px; border:2px dashed var(--accent); border-radius:10px; margin-bottom:8px; padding:4px; }
   body.dragging #dock:empty::before { content:"Drop here to pin it above the tabs (shows on every tab)"; color:var(--muted); font-size:12px; }
@@ -293,7 +294,8 @@
         <li><b>Pause</b> (next to Start while tracking) stops the clock for a break; nothing picked up counts until you press <b>Go on</b>.</li>
       </ul></details>
       <details><summary>Shortcuts and themes</summary><ul>
-        <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, S Start/Stop, P Pause, M Mini bar, H hide/show, I read the open inventory tab, B report a bug. Change or turn them off in Settings → Preferences.</li>
+        <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, Ctrl+Shift+S Start/Stop, P Pause, M Mini bar, H hide/show, I read the open inventory tab, B report a bug,
+          X click-through (clicks go to the game under the window; the same keys turn it off), N mark the moment in the run note, G save the numbers as a picture, U mute sounds. Change or turn them off in Settings → Preferences.</li>
         <li>Settings → Theme: pick a colourway, or <b>Edit colours</b> and save your own. <b>Copy share code</b> gives a one-line code friends paste under Share a theme; <b>Save as file</b> makes a .mstheme file.</li>
         <li>Settings → Preferences → See-through window makes the tracker partly transparent over the game.</li>
       </ul></details>
@@ -353,6 +355,7 @@
         While the tracker runs, a shortcut's keys don't reach other programs, so free any that clash with your game keys.</div>
       <table id="keyRows"></table>
       <div class="row"><button id="keysReset" class="alt">Reset shortcuts</button> <span class="note" id="keysNote" role="status"></span></div>
+      <label class="chk"><input type="checkbox" id="muted"> <span>Mute sounds (drop alerts, the no-EXP warning)</span></label>
       <div class="row"><label for="opacity">See-through window</label> <input type="range" id="opacity" min="40" max="100" step="5" value="100" style="flex:1;min-width:80px"> <span id="opacityV" class="n">100%</span></div>
     </div>
     <div class="card"><h3>App</h3>

@@ -16,6 +16,7 @@ const path = require("path"), {chromium} = require("playwright");
       version: async () => "0.2.17", updateState: async () => ({state: "idle"}), updateCheck: async () => (window.upd?.({state: "downloading", version: "0.2.18", pct: 40}), {state: "ready", version: "0.2.18"}),
       updateInstall: async () => (window.installed = true), onUpdate: cb => window.upd = cb, onMenu: cb => window.menu = cb, themeBar: async c => (window.bar = c, true),
       keys: async (k, pause) => { const D = {onTop: "CommandOrControl+Shift+T", startStop: "CommandOrControl+Shift+S", pause: "CommandOrControl+Shift+P", mini: "CommandOrControl+Shift+M", show: "CommandOrControl+Shift+H", invNow: "CommandOrControl+Shift+I", report: "CommandOrControl+Shift+B"};
+        D.clickThrough = "CommandOrControl+Shift+X"; D.mark = "CommandOrControl+Shift+N"; D.saveImage = "CommandOrControl+Shift+G"; D.mute = "CommandOrControl+Shift+U";
         window.keysPaused = !!pause; if (k) window.keysSt = {...(window.keysSt || {}), ...k}; return {keys: {...D, ...(window.keysSt || {})}, defaults: D, failed: []} }};
     navigator.mediaDevices.getDisplayMedia = async () => {
       const c = document.createElement("canvas"); c.width = 800; c.height = 600;
@@ -301,6 +302,19 @@ const path = require("path"), {chromium} = require("playwright");
   await page.evaluate(() => window.menu("onTop:false")); const onTopNow = await page.isChecked("#ontop");
   if (!paused || !/Add Ctrl or Alt/.test(refused) || k1.join() !== "CommandOrControl+Alt+K,Ctrl + Alt + K" || k2.join() !== "CommandOrControl+Alt+K," || k3.join() !== ",Off" || onTopNow)
     throw new Error("shortcuts: " + JSON.stringify({paused, refused, k1, k2, k3, onTopNow}));
+  // the other shortcuts: mark (run note), picture of the numbers (no Explorer window), mute, click-through state shown
+  await page.evaluate(() => { window.img = null; window.menu("mark") });
+  const note = await page.inputValue("#runNote");
+  await page.evaluate(() => window.menu("saveImage")); await page.waitForTimeout(400);
+  const pic = await page.evaluate(() => window.img && [/^(now|run)-.*\.png$/.test(window.img.n), window.img.b.length > 1000]);
+  await page.evaluate(() => window.menu("mute")); await page.waitForTimeout(50);
+  const mute = await page.evaluate(() => [window.st.muted, document.querySelector("#muted").checked]);
+  await page.evaluate(() => window.menu("mute")); await page.waitForTimeout(50);
+  await page.evaluate(() => window.menu("clickThrough:true")); const thr = await page.evaluate(() => [document.body.classList.contains("through"), document.querySelector("#status").textContent]);
+  await page.evaluate(() => window.menu("clickThrough:false"));
+  const rows = await page.$$eval("#keyRows [data-key]", b => b.length);
+  if (!/\[.*\] mark/.test(note) || pic?.join() !== "true,true" || mute.join() !== "true,true" || await page.evaluate(() => window.st.muted) !== false || !thr[0] || !/Ctrl \+ Shift \+ X turns it off/.test(thr[1]) || rows !== 11)
+    throw new Error("more shortcuts: " + JSON.stringify({note, pic, mute, thr, rows}));
   await page.click("#updGo"); await page.waitForTimeout(100);
   if (!await page.evaluate(() => window.installed)) throw new Error("restart and update");
   await browser.close();
