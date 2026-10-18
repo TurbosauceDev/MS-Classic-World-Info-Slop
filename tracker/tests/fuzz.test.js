@@ -34,5 +34,22 @@ for (let trial = 0; trial < 300; trial++){
   for (const r of runs){ check(r, "run"); if (!(r.minutes >= 15)) bad.push("short run " + r.minutes); speedCheck(r, {rows: [{map: r.map, level: r.level, party: 1, expHr: 5, group: "a"}]}, G) }
   if (bad.length) { console.log("trial", trial, bad.slice(0, 8)); break }
 }
-if (bad.length){ console.error("fuzz found " + bad.length + " problems"); process.exit(1) }
+// misreads: a steady climb with 1 in 10 readings garbled the way the KPQ run showed (EXP number wrong, a digit dropped or
+// doubled, the % wrong). The EXP counted may not run ahead of the real gain, and no garble may count as a death.
+for (let trial = 0; trial < 200 && !bad.length; trial++){
+  const s = createSession(G); let t = 1.7e12, lv = 10 + Math.floor(rnd() * 50), exp = Math.floor(rnd() * G.exp[lv] * 0.8), gain = 0;
+  for (let i = 0; i < 600; i++){
+    t += 2000;
+    if (rnd() < 0.3){ const d = Math.ceil(rnd() * G.exp[lv] * 0.003); exp += d; gain += d; if (exp >= G.exp[lv]){ exp -= G.exp[lv]; lv++ } }
+    const pct = Math.round(exp / G.exp[lv] * 1e4) / 100, good = {t, type: "bar", exp, pct, level: pct > 0.5 ? lv : null};
+    const g = String(exp), garble = pick([{exp: 1}, {exp: 20}, {exp: +g.slice(1) || 0}, {exp: +(g + g.at(-1))}, {pct: Math.round(rnd() * 1e4) / 100}]);
+    const ev = rnd() < 0.1 ? {...good, ...garble, level: null} : good, d0 = s.state.deaths, b0 = s.state.bar;
+    s.add(ev);
+    if (process.env.V && s.state.deaths > d0) console.log("death on", JSON.stringify(ev), "after", JSON.stringify(b0), "true", exp, lv);
+  }
+  const st = s.stats();
+  if (st.deaths) bad.push("misread fuzz: " + st.deaths + " fake deaths (trial " + trial + ")");
+  if (st.exp > gain * 1.02 + 50) bad.push("misread fuzz: counted " + st.exp + " for a real " + gain + " (trial " + trial + ")");
+}
+if (bad.length){ console.error(bad.slice(0, 4).join("\n")); console.error("fuzz found " + bad.length + " problems"); process.exit(1) }
 console.log("fuzz test passed (300 random sessions)");

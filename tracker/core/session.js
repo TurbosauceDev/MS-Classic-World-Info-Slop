@@ -95,9 +95,17 @@
           const p = S.bar, before = S.level;
           // the EXP number and the % come from one line, so EXP / % must be some level's total: "1 [68.01%]" is a misread
           // number (Danny's KPQ run: each one counted as a death, then the next good read as +32k EXP). Ignore it.
-          if (e.pct > 0.5 && !Object.values(G.exp).some(need => Math.abs(e.exp / (e.pct / 100) - need) / need < 0.004)){ S.badBars = (S.badBars || 0) + 1; break }
+          // and that level must be this one or the next (a garbled % can make EXP / % land on another level's total)
+          const fit = e.pct > 0.5 ? levelOf(G, e.exp, e.pct) : null;
+          // under 0.5% the level can't be worked out, but the EXP must still be that % (to 2 decimals) of this level or the next
+          // (of some level, before the level is known)
+          const tiny = !(e.pct > 0.5) && Number.isFinite(e.pct) && !(S.level ? [S.level, S.level + 1] : Object.keys(G.exp).map(Number))
+            .some(L => G.exp[L] && Math.abs(e.exp - e.pct / 100 * G.exp[L]) <= Math.max(2, G.exp[L] * 0.00006));
+          if (tiny || e.pct > 0.5 && (!fit || S.level && fit !== S.level && fit !== S.level + 1)){ S.badBars = (S.badBars || 0) + 1; break }
           if (e.level) S.level = e.level;
-          if (p){
+          // level not known yet (only readings under 0.5%, which can't be checked well): nothing counted until it is
+          if (!S.level){ S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: null}; break }
+          if (p && p.level){
             let d = e.exp - p.exp;
             // leveled up: the level says so, or (just after a level-up, when the % is too small to work the level out)
             // the bar was at 90%+ and fell to under half of that; a death only takes a few %
@@ -110,7 +118,8 @@
             S.bigDrops = 0;
             if (d > 0){ S.barExp += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t) }
             // a drop without a level-up = a death (the game takes a share of the level's EXP); not counted again until EXP rises
-            else if (d < 0 && !p.dead){ S.deaths++; const k = S.map || "?"; S.deathMaps[k] = (S.deathMaps[k] || 0) + 1 }
+            else if (d < -Math.max(5, (G.exp[p.level] || 0) * 0.001) && !p.dead){   // a few EXP down is the last digit misread, not a death
+              S.deaths++; const k = S.map || "?"; S.deathMaps[k] = (S.deathMaps[k] || 0) + 1 }
           }
           if (before && S.level === before + 1 && !(S.levelUps.at(-1)?.level >= S.level)) levelUp(S.level, e.t);   // once per level, even if a misread flickers it
           else if (S.level && !S.levelAt) S.levelAt = {level: S.level, activeMs: S.activeMs, partial: true};   // started mid-level: its time is unknown
