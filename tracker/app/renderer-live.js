@@ -1,0 +1,370 @@
+// Tracker window, live readers: OCR job/map, run compare, beeps, party, auto-pause, KPQ, level-ups, run log, snapshots, deaths (renderer.js is split in load order; all share one global scope, see renderer.js)
+// a crop (black-on-white RGBA) -> PNG bytes for the OCR in the main process
+async function toPng(c){
+  const cv = document.createElement("canvas"); cv.width = c.w; cv.height = c.h;
+  cv.getContext("2d").putImageData(new ImageData(c.d, c.w, c.h), 0, 0);
+  return new Uint8Array(await (await new Promise(r => cv.toBlob(r, "image/png"))).arrayBuffer());
+}
+// job from the status bar every 30 s, when the player left the job on "Auto": taken once the same job is read twice running
+let lastJob = 0, jobSeen = null, jobNow = null, charName = null, charSeen = null;   // charName: History, and KPQ rounds (Settings > KPQ board name)
+async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders.jobTextCrop), or null; nc: the name crop
+  const sess = session, sl = slicer;
+  // the character name (History, KPQ board): taken once the same name reads twice in a row
+  if (nc){ const n = GrindReaders.nameFromText(await host.ocr(await toPng(nc))); if (n && n === charSeen) charName = n; charSeen = n }
+  if (settings.job) return;
+  if (!c){ if (check && !check.job) check.jobWhy = "The level and job text on the status bar wasn't found."; return }
+  const text = await host.ocr(await toPng(c)), job = GrindReaders.jobFromText(text);
+  log("job", {job});   // not the OCR text: the character name sits in the same box
+  if (check && sess === session){ if (!job) check.jobWhy = "The status bar text was found but the job didn't read. Pick it by hand."; else if (!check.job){ check.job = job; check.late = check.ended } }
+  if (job && job === jobSeen && job !== jobNow && sess === session && !settings.job){ jobNow = job; const e = {t, type: "job", name: job}; sess.add(e); sl.add(e) }
+  jobSeen = job;
+}
+
+// map name every 5 s: cut the minimap title out, OCR it in the main process, take it once the same map is read twice in a row
+let ocrBusy = false, lastOcr = 0, mapSeen = null, mapNow = null, mapMissing = 0;
+async function readMap(c, t){   // c: the minimap title crop (GrindReaders.mapTextCrop), or null
+  const sess = session, sl = slicer;   // an OCR that finishes after Stop/Start belongs to the old session
+  // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
+  if (!c){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
+  mapMissing = 0;
+  const text = await host.ocr(await toPng(c)), m = GrindReaders.mapFromText(text, G), key = m && (m.id || m.name);
+  log("map", {text, id: m?.id ?? null, name: m?.name ?? null});
+  if (check && sess === session){ if (!m) check.mapWhy = "Minimap found, but its name didn't read. Is something over the minimap title?"; else if (!check.map){ check.map = m.name || "map " + m.id; check.late = check.ended } }
+  // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
+  const same = (a, b) => a === b || a && b && !G.maps[a] && !G.maps[b] && GrindReaders.similar(a, b) >= 0.75;
+  if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session && !wrap){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e); kpqMap(m.id, t) }
+  mapSeen = key;
+}
+
+// after each 15-minute run: how it compares with other players around your level (shared data)
+async function showSpeed(run){
+  const sum = await host.summary(), sc = GrindSession.speedCheck(run, sum, G), box = $("#lastRun");
+  // best time to farm this map: the 3 hours (your time) when players beat their own usual speed here the most
+  const tb = sum?.times?.[String(run.map)], best = Array.isArray(tb) && tb.length ? tb.reduce((a, b) => b[1] > a[1] ? b : a) : null;
+  const lh = h => new Date(Date.UTC(2026, 0, 1, h)).toLocaleTimeString([], {hour: "numeric"});
+  const bt = best && best[1] >= 1.05 ? `<div class="note">Best time here: ${lh(best[0])}-${lh((best[0] + 3) % 24)}, players farm it ${Math.round((best[1] - 1) * 100)}% faster than usual then (${best[2]} players).</div>` : "";
+  box.classList.remove("hidden");
+  const band = run.level ? `Lv ${Math.max(1, run.level - 5)}-${run.level + 5} ${run.party > 1 ? "in a party" : "solo"}` : "";
+  box.innerHTML = `<div class="k">Last 15-minute run</div><div class="v">${fmt(sc.expHr)} EXP/hr</div>` + (sc.verdict
+    ? `<div class="${/good|fast/.test(sc.verdict) ? "good" : sc.verdict === "slow" ? "slow" : ""}">${esc(sc.verdict)} for ${esc(band)} (typical ${fmt(sc.ref)}, ${sc.peers} players)</div>`
+      + (sc.faster.length ? `<div class="note">Faster for players like you: ${sc.faster.map(m => `${esc(m.name)} (${fmt(m.expHr)})`).join(", ")}</div>` : "")
+    : `<div class="note">${sc.noBar ? "The EXP bar wasn't read during this run, so it isn't compared." : `Not enough shared runs around your level yet to compare (${esc(band) || "level not read"}).`}</div>`) + bt;
+}
+function beep(hz, sec){
+  if (settings.muted) return;   // Mute sounds (Settings, or its shortcut)
+  try {
+    audio = audio || new AudioContext();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = hz; g.gain.value = 0.15; o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + sec);
+  } catch {}
+}
+// a beep when something worth at least the set amount is picked up
+let audio = null;
+// items picked by name in Settings (e.g. "Bronze Ore, Glove scroll"): a name matches every item that contains it
+let alertIds = null, alertKey = null;
+function alertSet(){
+  const key = settings.alertItems || "";
+  if (key !== alertKey){ alertKey = key; const parts = key.split(",").map(x => x.trim().toLowerCase()).filter(x => x.length >= 3);
+    alertIds = new Set(parts.length ? Object.entries(G.items).filter(([, it]) => parts.some(p => (it.n || "").toLowerCase().includes(p))).map(([id]) => id) : []) }
+  return alertIds;
+}
+function flash(){ $("#top").classList.remove("flash"); void $("#top").offsetWidth; $("#top").classList.add("flash") }
+function dropAlert(id){
+  const min = +settings.alertWorth || 0, worth = G.pw?.[id]?.[0] ?? G.items[id]?.p ?? 0;
+  if (alertSet().has(String(id))){ beep(660, 0.15); setTimeout(() => beep(990, 0.25), 180); flash(); $("#status").textContent = `Drop you're watching for: ${G.items[id]?.n || "item " + id}`; return }
+  if (!min || worth < min) return;
+  flash();
+  beep(880, 0.25);
+  $("#status").textContent = `Valuable drop: ${G.items[id]?.n || "item " + id} (worth ~${fmt(worth)})`;
+}
+
+// party view: every minute, our numbers go up with the party code and everyone's come back
+let lastParty = 0, partyBusy = false;
+async function sendParty(){
+  const s = session.stats(), box = $("#partyBox");
+  const r = await host.party({job: s.job, level: s.level, mapName: s.mapName, expHr: s.expHr, expHr5: s.expHr5, killsHr: s.killsHr, mesosHr: s.mesosHr,
+    active: Math.round(s.activeMin)}).catch(() => null);
+  if (!r || timer == null) return;   // stopped while the answer was on its way: don't bring the card back
+  box.classList.remove("hidden"); $("#miniParty").textContent = "";
+  if (r.error){ box.innerHTML = `<div class="k">Party</div><div class="note">${r.why === "party full" ? "Party full: 6 trackers already use this code." : r.why === "too often" ? "Waiting a moment before updating." : "Party view didn't answer (" + esc(r.why || r.error) + ")."}</div>`; return }
+  $("#miniParty").textContent = `party: ${fmt(r.expHr)} EXP/hr together (${r.members.length})`;
+  box.innerHTML = `<div class="k">Party "${esc(settings.partyCode)}": ${fmt(r.expHr)} EXP/hr together</div><table>` + r.members.map(m =>
+    `<tr><td>${m.you ? "<b>you</b>" : esc(m.nick || m.job || "member")}${m.nick && !m.you && m.job ? ` <span class="note">${esc(m.job)}</span>` : ""}${m.level ? " Lv " + m.level : ""}</td>
+    <td class="n">${fmt(m.expHr || 0)}/hr</td><td class="n note">${m.expHr5 != null ? "5 min: " + fmt(m.expHr5) : ""}</td></tr>`).join("")
+    + `</table><div class="note">Each member's own EXP/hr, updated every minute. Members who stopped drop off after 3 minutes.</div>`;
+}
+
+// EXP stopped: one low beep when no EXP for 2 minutes after some came in; again only after EXP comes back and stops again
+let stopWarned = false;
+function stopCheck(s){
+  if (wrap || settings.stopBeep === false || !s.lastExpT) return;
+  const quiet = Date.now() - s.lastExpT > 120e3;
+  if (quiet && !stopWarned){ stopWarned = true; beep(330, 0.6); $("#status").textContent = "No EXP for 2 minutes. Died, disconnected, or someone took the map?" }
+  if (!quiet) stopWarned = false;
+}
+
+// auto-pause: the EXP bar and the minimap both gone for 3 s (Cash Shop, changing channel, loading) = not farming. Only
+// after the bar was read once this session, so a game window the bar reader can't handle never pauses
+let barSeen = false, goneSince = null, lastGoneCheck = 0;
+function autoPause(minimap, info, t){   // minimap: the minimap is on screen (looked for when the bar isn't)
+  if (info.bar) barSeen = true;
+  if (held) return;   // paused by hand: stays paused until Go on
+  if (kpq?.hold){ if (session.state.pausedAt === null) pauseAt(t); return }   // between KPQ rounds: stays paused until the next stage
+  if (settings.autoPause === false || !barSeen) return;
+  const paused = session.state.pausedAt !== null;
+  if (info.bar){ goneSince = null; if (paused && !kpq?.hold){ const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Back in the game: tracking again." } return }
+  if (paused || t - lastGoneCheck < 1000) return;
+  lastGoneCheck = t;
+  if (minimap){ goneSince = null; return }   // minimap still there: just the bar covered
+  goneSince ??= t;
+  if (t - goneSince >= 3000){
+    const e = {t: Math.max(goneSince, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); log("event", e);
+    $("#status").textContent = "Paused: the game screen is gone (Cash Shop, changing channel or loading). Resumes by itself.";
+  }
+}
+// KPQ: picked in the Session tab, or found by itself (Auto) once a KPQ stage is on the minimap. While it's on, any map that
+// isn't a KPQ stage (Kerning City between rounds, a shop) pauses the session; the next stage picks it back up.
+// A round = coming into a KPQ stage from outside. Maps: G.kpq (80000000-80000600, from the site's KPQ data).
+const KPQ_MAPS = new Set((G.kpq || []).map(String));
+let kpq = null;
+// Pause (button or its shortcut): the timer stops until pressed again (held); the game screen coming back doesn't resume it
+function pauseUi(){ const b = $("#pauseBtn"); b.classList.toggle("hidden", timer == null || !!wrap); b.textContent = held ? "Go on" : "Pause"; b.setAttribute("aria-pressed", String(held)) }
+$("#pauseBtn").onclick = () => {
+  if (timer == null || wrap || !session) return;
+  held = !held; const t = Date.now();
+  if (held){ const e = {t: Math.max(t, session.state.last || 0), type: "pause", hold: true}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Paused by you. Press Go on (or the Pause shortcut) to carry on." }
+  else { const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Tracking again." }
+  pauseUi(); render();
+};
+function pauseAt(t){ const e = {t: Math.max(t, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); log("event", e) }
+function kpqReset(){ kpq = {on: settings.kpqAct === "kpq", hold: false, inside: false, rounds: 0, left: null, leftT: 0, stage: null, round: null, times: [], stageTimes: {}, stageExp: {}} }
+// stage and round times: from the KPQ clock ("Time Left", top middle) when it reads, else the PC clock
+const KPQ_STAGE = {"80000000": "1st", "80000100": "2nd", "80000200": "3rd", "80000300": "4th", "80000400": "Last", "80000500": "Bonus"};
+const kpqLeftAt = t => kpq.left === null ? null : kpq.left - (t - kpq.leftT) / 1000;
+const kpqSince = (p, t) => p.left0 !== null && kpq.left !== null ? p.left0 - kpqLeftAt(t) : (t - p.t0) / 1000;
+const mss = sec => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0") };
+function kpqTime(left, t){
+  kpq.left = left; kpq.leftT = t;
+  for (const p of [kpq.stage, kpq.round]) if (p && p.left0 === null) p.left0 = left + (t - p.t0) / 1000;   // clock first seen mid-stage
+}
+function kpqEnd(t, round){
+  if (kpq.stage){ const id = kpq.stage.id; (kpq.stageTimes[id] ||= []).push(kpqSince(kpq.stage, t)); kpq.stageExp[id] = (kpq.stageExp[id] || 0) + Math.max(0, (session?.stats().exp || 0) - kpq.stage.exp0); kpq.stage = null }
+  if (round && kpq.round){ kpq.times.push(kpqSince(kpq.round, t)); kpqShare(kpq.round, t); kpq.round = null }
+  if (round) kpq.left = null;   // each round's clock starts over
+}
+function kpqMap(id, t){
+  if (!kpq || id == null) return;   // map not read: no change
+  const inside = KPQ_MAPS.has(String(id));
+  if (inside && !kpq.on && settings.kpqAct !== "grind"){ kpq.on = true; $("#status").textContent = "KPQ run spotted: rounds are counted, and Kerning City between rounds is paused." }
+  if (!kpq.on) return;
+  if (inside){
+    if (!kpq.inside) kpq.rounds++;
+    // a new stage: the last one's time is kept; the Exit map ends the round
+    if (kpq.stage?.id !== String(id)){
+      // cleared: from the Last stage on to Bonus or Exit. Clear time = 1st stage to then (Bonus left out, so Bonus and Rush compare)
+      if (kpq.stage?.id === "80000400" && kpq.round) kpq.round.clear = kpqSince(kpq.round, t);
+      kpqEnd(t, String(id) === "80000600");
+      if (KPQ_STAGE[id]){ const p = {id: String(id), t0: t, left0: kpqLeftAt(t), exp0: session?.stats().exp || 0}; kpq.stage = p; if (!kpq.round){ const st = session?.stats(); kpq.round = {t0: t, left0: p.left0, exp0: st?.exp || 0, mesos0: st?.mesos || 0, startStage: String(id), stages: {}} } }
+      if (KPQ_STAGE[id] && kpq.round) kpq.round.stages[String(id)] = 1;
+    }
+    kpq.inside = true;
+    if (kpq.hold && !held){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ round " + kpq.rounds + ": tracking again." }
+  } else {
+    kpqEnd(t, true);
+    kpq.inside = false;
+    if (!kpq.hold){ kpq.hold = true; if (session.state.pausedAt === null) pauseAt(t); $("#status").textContent = "KPQ: paused between rounds. Picks back up on the next stage." }
+  }
+}
+// KPQ leaderboard: a finished round (1st stage to past the Last stage) goes to the server's /api/kpq when sharing is on.
+// Rounds joined mid-way or left before the Last stage was cleared aren't sent.
+let kpqSent = 0;
+function kpqShare(r, t){
+  if (!settings.share || r.clear == null || r.startStage !== "80000000" || !session) return;
+  const s = session.stats(), st = {};
+  for (const [id, a] of Object.entries(kpq.stageTimes)) if (r.stages[id]) st[id] = Math.round(a.at(-1));
+  kpqSent++;
+  host.shareRun({kpq: true, v: 1, date: new Date(r.t0).toLocaleDateString("sv"), hour: new Date(r.t0).getUTCHours(), mode: settings.kpqMode === "Rush" ? "Rush" : "Bonus",
+    party: s.party, level: s.level, job: s.job, clear: Math.round(r.clear), total: Math.round(kpqSince(r, t)), clock: r.left0 !== null,
+    exp: Math.max(0, s.exp - r.exp0), mesos: Math.max(0, s.mesos - r.mesos0), stages: st, partyCode: settings.partyCode || null,
+    name: settings.kpqName !== false && [settings.nick, charName].find(n => /^[A-Za-z0-9]{2,12}$/.test(n || "")) || kpqAlias(s.job)});   // KPQ board only; runs never carry the name
+}
+// name off (or none read): a made-up name like "Archer4821" (1st job + 4 digits from the install ID), saved the first time so
+// the player keeps the same one on the board after a job advance (Danny, 2026-10-18)
+const FIRST_JOB = {Fighter: "Swordman", Page: "Swordman", Spearman: "Swordman", Cleric: "Magician", Hunter: "Archer", Crossbowman: "Archer", Assassin: "Rogue", Bandit: "Rogue"};
+function kpqAlias(job){
+  if (/^[A-Za-z]+\d{4}$/.test(settings.alias || "")) return settings.alias;
+  job = job || settings.job || "";
+  const base = job.startsWith("Wizard") ? "Magician" : FIRST_JOB[job] || (/^(Beginner|Swordman|Magician|Archer|Rogue)$/.test(job) ? job : "Player");
+  const alias = base + (parseInt(String(settings.install || "").replace(/[^0-9a-f]/gi, "").slice(0, 8) || "0", 16) % 9000 + 1000);
+  settings.alias = alias; host.settings({alias}).then(s => settings = s).catch(() => {});
+  return alias;
+}
+function kpqText(s){
+  if (!kpq?.on) return settings.kpqAct === "kpq" ? "KPQ picked: the session pauses outside the KPQ stages and counts each round." : "During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.";
+  const n = kpq.rounds, per = v => n ? fmt(v / n) : "-";
+  return `KPQ (${settings.kpqMode || "Bonus"}): ${n} round${n === 1 ? "" : "s"}` + (n ? ` · ${Math.round(s.activeMin / n * 10) / 10} min a round · ${per(s.exp)} EXP a round · ${per(s.mesos)} mesos a round` : "")
+    + (kpq.round ? ` · this round ${mss(kpqSince(kpq.round, Date.now()))}` + (kpq.stage ? ` (${KPQ_STAGE[kpq.stage.id]} stage ${mss(kpqSince(kpq.stage, Date.now()))})` : "") : "")
+    + (kpq.times.length ? ` · best round ${mss(Math.min(...kpq.times))}, average ${mss(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length)}` : "")
+    + (kpq.left !== null ? ` · KPQ clock ${mss(kpqLeftAt(Date.now()))} left` : "")
+    + (kpq.hold ? " · paused between rounds" : "") + (kpqSent ? ` · ${kpqSent} round${kpqSent === 1 ? "" : "s"} sent to the KPQ leaderboard` : "");
+}
+function kpqSet(){
+  if (!session || !kpq) return;
+  const t = Date.now();
+  if (settings.kpqAct === "kpq" && !kpq.on){ kpq.on = true; kpqMap(session.state.map, t) }
+  else if (settings.kpqAct === "grind" && kpq.on && !wrap){ kpq.on = false; if (kpq.hold && !held){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e) } }
+}
+$("#kpqAct").onchange = e => host.settings({kpqAct: e.target.value}).then(s => { settings = s; kpqSet(); if (session) render() });
+$("#kpqMode").onchange = e => host.settings({kpqMode: e.target.value}).then(s => { settings = s; if (session) render() });
+// a level-up: how long the last level took
+let levelsShown = 0;
+function levelNote(s){
+  if (s.levelUps.length <= levelsShown) return;
+  const l = s.levelUps.at(-1); levelsShown = s.levelUps.length;
+  $("#status").textContent = `Level ${l.level}!` + (l.activeMin != null ? ` Level ${l.level - 1} took ${hm(l.activeMin / 60)} of farming.` : "");
+}
+const hm = h => h < 1 ? Math.round(h * 60) + " min" : h.toFixed(1) + " h";
+
+let slowTicks = 0, skipped = 0;
+async function tick(){
+  if (timer == null) return;   // stopped
+  const t = Date.now(), eng = engine, sess = session;
+  try {
+    // game closed: the capture ends and the last frame would be read forever; minimized: no picture until it's back
+    if (!video.srcObject?.active){ $("#status").textContent = "The game window closed. Press Stop, then Start once it's back."; throw null }
+    if (!video.videoWidth){ $("#status").textContent = "No picture from the game (minimized?). Waiting..."; throw null }   // skip this tick
+    const f = grabFrame();
+    keepFrame(t);
+    if (sameAsLast(f)){ skipped++; throw null }
+    // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between
+    const want = {};
+    if (!ocrBusy){
+      if (deathPending && t - deathPending.last >= 1000){ deathPending.last = t; want.chat = true }
+      else if (t - lastOcr > 5000){ lastOcr = t; want.map = true }
+      else if ((!settings.job || !charName) && t - lastJob > 30e3){ lastJob = t; want.job = true }
+    }
+    const r = await eng.read({frame: f, t, want});
+    if (timer == null || sess !== session || !r) throw null;   // stopped (or restarted) while reading, or the frame was lost
+    if (r.scale){ scale = r.scale; fastLeft = 19 }   // also at 1x: finding the scale is the slow part, so it's checked every 20 frames only
+    for (const e of r.ev){
+      if (wrap && e.type !== "inv" && e.type !== "wallet" && e.type !== "glyph") continue;   // after Stop: only the end inventory look counts
+      if (held && /^(exp|bonus|meso|item|itemraw)$/.test(e.type)) continue;   // paused by hand: a break, nothing picked up counts
+      if (e.type === "kpqtime"){ if (kpq) kpqTime(e.left, e.t); continue }
+      // a pickup-line letter learned from an item name: kept for next time (at most 300)
+      if (e.type === "glyph"){ const g = [...(settings.glyphs || []), {ch: e.ch, w: e.w, h: e.h, bits: e.bits}].slice(-300); host.settings({glyphs: g}).then(x => settings = x); log("glyph", {ch: e.ch}); continue }
+      session.add(e); slicer.add(e); log("event", e);
+      if (e.type === "item") dropAlert(e.id);
+      if (e.type === "bar"){
+        // the start reading: taken at Start; when the bar didn't read then, the first good reading fills it in
+        if (!snaps.start || snaps.start.level == null && !snaps.start.hand) snaps.start = {...snaps.start, t: snaps.start?.t || t, level: e.level || session.state.level, pct: e.pct, exp: e.exp, hand: false};
+        else if (!snaps.end?.hand) snaps.end = {t, level: e.level || session.state.level, pct: e.pct, exp: e.exp, hand: false};
+      }
+      if (check && e.type === "bar" && !check.bar){ check.bar = e.level ? "Lv " + e.level + ", " + e.pct + "%" : e.pct + "%"; check.late = check.ended }
+      if (check && /^(exp|bonus|meso|item|itemraw)$/.test(e.type) && !check.lines){ check.lines = true; check.late = check.ended }
+    }
+    const info = r.info; lastInvTab = info.inv || null;
+    // the inventory's spot, remembered for next time (saved when it moved, at most every 10 s)
+    const ia = info.invAt, il = settings.invLast;
+    if (ia && (!il || Math.abs(ia.x - il.x) + Math.abs(ia.y - il.y) > 0.005) && t - invSavedT > 10e3){ invSavedT = t; host.settings({invLast: ia}).then(x => settings = x) }
+    if (check && info.useSpots && !check.use){ check.use = info.useSpots + " item count" + (info.useSpots > 1 ? "s" : ""); check.late = check.ended }
+    if (check && info.partyWindow > 1 && !check.party){ check.party = info.partyWindow; check.late = check.ended }
+    if (!wrap) autoPause(r.minimap, info, t);
+    if (check && (!check.ended || check.late)){ check.late = false; renderCheck() }   // a ✗ turns ✓ when it starts working
+    if (session.state.deaths > deathSeen){ deathSeen = session.state.deaths; deathPending = {t, tries: 0, last: 0} }
+    const ocr = fn => { ocrBusy = true; fn.catch(() => {}).finally(() => ocrBusy = false) };
+    if (want.chat) ocr(checkDeath(r.crops.chat, t));
+    else if (want.map) ocr(readMap(r.crops.map, t));
+    else if (want.job) ocr(readJob(r.crops.job, t, r.crops.name));
+    if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
+  } catch (err){ if (err) $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
+  if (timer == null || sess !== session) return;
+  try { renderSnaps(render()) } catch {}
+  try { feedAdd(feed?.step(session.state, t, feedWho())) } catch {}
+  // over 250 ms a frame, 10 times running: read once a second instead of twice
+  const ms = Date.now() - t;
+  slowTicks = ms > 250 ? slowTicks + 1 : 0;
+  if (slowTicks >= 10 && FPS === 2){ FPS = 1; $("#status").textContent = "Reading once a second to keep your PC smooth (big screen)." }
+  timer = setTimeout(tick, Math.max(50, 1000 / FPS - ms));
+}
+
+// the run log (core/feed.js, Danny 2026-10-18: "like WoW's combat log"): every 2 s, what changed since the last batch as a
+// line per kind; newest at the bottom, older lines scroll up (it stays put while you've scrolled up to read)
+let feed = null;
+const feedWho = () => [settings.nick, charName].find(n => /^[A-Za-z0-9]{2,12}$/.test(n || "")) || "You";
+const clockS = t => new Date(t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit", second: "2-digit"});
+function feedLine(l){ const who = `<span class="who">${esc(l.who)}</span>`; let h;
+  if (l.kind === "exp") h = `${who} gained <b>${fmt(l.n)} EXP</b>${l.detail ? ` <span class="dim">${esc(l.detail)}</span>` : ""}`;
+  else if (l.kind === "meso") h = `${who} picked up ${COIN}<b>${fmt(l.n)}</b>`;
+  else if (l.kind === "loot") h = `${who} looted ` + [...l.parts.map(p => (G.iicons?.[p.id] ? `<img class="ic" alt="" src="data:image/png;base64,${G.iicons[p.id]}">` : "") + `<b>${fmt(p.n)}</b> ${esc(p.name)}`),
+    ...(l.unread ? [`<span class="dim">${l.unread} that didn't read</span>`] : [])].join(", ");
+  else h = esc(l.text);
+  return `<div class="fl ${l.kind}"><time>${clockS(l.t)}</time><span>${h}</span></div>` }
+function feedAdd(lines){ const el = $("#feed"); if (!lines?.length) return;
+  const stick = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+  const html = lines.map(feedLine).join("");
+  el.insertAdjacentHTML("beforeend", html);
+  while (el.children.length > 300) el.firstElementChild.remove();
+  if (stick) el.scrollTop = el.scrollHeight;
+  // the Mini view has its own copy (always at the newest line)
+  const m = $("#miniFeed"); m.insertAdjacentHTML("beforeend", html); while (m.children.length > 60) m.firstElementChild.remove(); m.scrollTop = m.scrollHeight }
+const feedSep = text => feedAdd([{t: Date.now(), kind: "sep", text}]);
+
+// start/end snapshots: {t, level, pct, exp?, file?, hand?}; a hand-fixed or button snapshot isn't replaced by the automatic ones
+const snaps = {start: null, end: null};
+const clock = t => new Date(t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
+function renderSnaps(live = session?.stats().exp){   // live: EXP the live count added up over (about) the same stretch
+  for (const [i, k] of [[0, "start"], [1, "end"]]){
+    const sn = snaps[k], lv = $("#s" + i + "lv"), pc = $("#s" + i + "pct");
+    if (document.activeElement !== lv) lv.value = sn?.level ?? "";
+    if (document.activeElement !== pc) pc.value = sn?.pct ?? "";
+    $("#s" + i + "t").textContent = sn ? clock(sn.t) + (sn.file ? " · saved" : "") : "";
+  }
+  const a = snaps.start, b = snaps.end, d = a && b && b.t > a.t ? GrindSession.expBetween(G, a, b) : null, hrs = a && b ? (b.t - a.t) / 3.6e6 : 0;
+  $("#snapRate").textContent = d != null && hrs > 0 ? fmt(d / hrs) + " EXP/hr" : "-";
+  // mini bar: the snapshot rate too, so the small view isn't only the live count (render() rewrites the note each tick first)
+  if (d != null && hrs > 0.05 && timer != null) $("#miniNote").textContent += ($("#miniNote").textContent ? " · " : "") + "start to now: " + fmt(d / hrs) + " EXP/hr";
+  // a reading without a level or % gets marked: the session's EXP/hr can't be worked out without it
+  for (const [i, sn] of [[0, a], [1, b]]) for (const f of ["lv", "pct"]) $("#s" + i + f).classList.toggle("need", !!(session && (i === 0 || timer == null)) && !(f === "lv" ? sn?.level : sn?.pct != null));
+  $("#snapNote").textContent = d == null ? (session && !(a?.level && a?.pct != null) ? "The start reading is missing: type your level and EXP % from when you started."
+      : a && b ? "Can't work it out: check the levels (a level or % is missing, or the end is before the start)." : "")
+    : `${fmt(d)} EXP in ${Math.round(hrs * 60)} min (clock time, breaks included)`
+      + (live && d > 0 && !a.hand && !b.hand && Math.abs(live - d) > 0.25 * d ? ` · the live count added up ${fmt(live)} EXP; the snapshots are the safer number` : "");
+}
+// take a snapshot from the game picture now: the EXP bar's level and %, the time, and the frame saved as a picture
+async function snap(which, f = null, hand = true){
+  f ||= await oneFrame();
+  const img = GrindReaders.native(f), bar = GrindReaders.readBar(img) || GrindReaders.readBarAny(f);
+  const level = bar && (GrindSession.levelOf(G, bar.exp, bar.pct) || session?.state.level) || null;
+  // an automatic snapshot whose bar didn't read keeps the last good reading (only the picture is new)
+  const sn = !bar && !hand && snaps[which]?.level ? {...snaps[which]} : {t: Date.now(), level, pct: bar ? bar.pct : null, exp: bar && level ? bar.exp : undefined, hand};
+  snaps[which] = sn;
+  try {
+    const c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
+    const blob = await new Promise(r => c.toBlob(r, "image/png"));
+    await host.saveFrame(`snap-${which}-${new Date(sn.t).toISOString().slice(0, 19).replace(/:/g, "-")}.png`, new Uint8Array(await blob.arrayBuffer()));
+    sn.file = true;
+  } catch {}
+  if (hand) $("#status").textContent = bar ? `Snapshot (${which}): Lv ${level ?? "?"}, ${bar.pct}%.` : `Snapshot (${which}) taken, but the EXP bar didn't read: type the level and % in by hand.`;
+  renderSnaps();
+}
+for (const [i, k] of [[0, "start"], [1, "end"]]){
+  $("#snap" + (i ? "End" : "Start")).onclick = () => snap(k).catch(e => { $("#status").textContent = "Couldn't take the snapshot: " + e.message });
+  // typed by hand: the level and % win over what was read; the EXP number goes (it was for the old reading)
+  for (const f of ["lv", "pct"]) $("#s" + i + f).onchange = () => {
+    const lv = +$("#s" + i + "lv").value || null, pc = $("#s" + i + "pct").value === "" ? null : +$("#s" + i + "pct").value;
+    snaps[k] = {t: snaps[k]?.t || Date.now(), level: lv, pct: pc, hand: true, file: snaps[k]?.file};
+    renderSnaps();
+  };
+}
+
+// deaths: each EXP bar drop is checked against the chat box's "You have lost N EXP for dying" line (OCR, up to 3 tries a
+// second apart). Confirmed ones carry the exact EXP lost. The OCR text isn't logged: chat lines hold player names.
+let deathSeen = 0, deathPending = null;
+const deaths = {confirmed: 0, lost: 0, unseen: 0};
+async function checkDeath(c, t){   // c: the chat box crop (GrindReaders.chatCrop)
+  const sess = session, text = await host.ocr(await toPng(c)), lost = GrindReaders.deathFromText(text);
+  if (sess !== session || !deathPending) return;
+  if (lost){ deaths.confirmed++; deaths.lost += lost; deathPending = null; log("death", {lost}) }
+  else if (++deathPending.tries >= 3){ deaths.unseen++; deathPending = null; log("death", {lost: null}) }
+}
+

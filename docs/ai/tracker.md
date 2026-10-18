@@ -21,7 +21,12 @@ game window ─(Windows Graphics Capture)─► app/main.js ─frames─► app/
 ## Source map (grep before reading; these are big)
 | file | KB | what |
 |---|---|---|
-| app/renderer.js | 98 | all UI: tabs, cards, settings, docking layout, history, themes (72 top-level functions) |
+| app/renderer.js | 17 | window core: globals (G, $, settings, session), capture/grabFrame, reader worker, bug buffer, self-check, respawns |
+| app/renderer-layout.js | 21 | Mini view, inventory/Loot tab, tabs, box docking (OBS-style rows/columns, splitter) |
+| app/renderer-live.js | 30 | per-frame/timer reads: OCR job/map, run compare, beeps, party, auto-pause, KPQ + leaderboard, level-ups, run log, snapshots, deaths |
+| app/renderer-run.js | 20 | Start/Stop, inventory tab chips, End run summary, run name, frame pictures, Report a bug |
+| app/renderer-history.js | 13 | History: goal, compare, delete, level-up log, last 7 days |
+| app/renderer-settings.js | 20 | updates, Help, title bar, Settings popup, themes editor, sharing, shortcuts, Install |
 | app/readers.js | 68 | frame → events: EXP bar (BAR_FONT), pickup lines, party HP bars, inventory counts, KPQ clock. Also inlined into the site by build.py (`/*@READERS*/`) |
 | app/index.html | 34 | window markup + CSS |
 | app/main.js | 23 | Electron main: capture, OCR, updater, files, IPC |
@@ -29,7 +34,7 @@ game window ─(Windows Graphics Capture)─► app/main.js ─frames─► app/
 | build_data.js | | data/data.json → app/gamedata.json; copies src/js/51-shot.js → app/shot.js |
 | server/src/index.js | 17 | Worker routes; `server/src/check.js` validates runs |
 
-Symbol index: `grep -n "^function\|^async function" tracker/app/renderer.js`; readers/session are indented:
+Symbol index: `grep -n "^function\|^async function" tracker/app/renderer*.js`; readers/session are indented:
 `grep -n "^  function\|^  async function" tracker/app/readers.js tracker/core/session.js`.
 
 ## Commands (from tracker/)
@@ -84,8 +89,9 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   the old quarter-width edge (his saved layout had no rows), so check discoverability, not just that the code works.
 - Running tests locally: `npm run data` first (core.test.js needs app/gamedata.json, not committed).
 
-## Split candidates (not done; tracker thread owned these 2026-10-18)
-- `app/renderer.js` 98 KB: split by UI area (history, settings/themes, layout/docking, live cards) into files loaded by
-  index.html. Biggest win for future threads.
-- `app/readers.js` 68 KB: one file per reader (EXP bar, pickups, inventory, KPQ clock) is natural, but build.py inlines it
-  into the site, so update `/*@READERS*/` handling at the same time.
+## Splits
+- 10-18: `app/renderer.js` cut into 6 files at top-level boundaries, loaded in order by app/index.html (one shared global
+  scope, so no imports). A new file goes in index.html's script list; top-level code may only call functions from its
+  own or earlier files at load time (ui.test.js catches a load-time ReferenceError).
+- `app/readers.js` 68 KB left whole: one IIFE closure loaded 5 ways (worker importScripts, require in tests, script tags,
+  site `/*@READERS*/`); splitting needs a namespace rewrite. Grep + ranged reads instead.
