@@ -121,12 +121,13 @@ const path = require("path"), {chromium} = require("playwright");
     settings = await host.settings({kpqAct: "auto"}); kpq = keep; return on });
   if (kg) throw new Error("kpq grind: still turned on");
   // KPQ leaderboard: with sharing on, a full round (1st stage .. Last, Bonus, Exit) is sent with its clear time (to leaving
-  // the Last stage); a round left at the 2nd stage isn't
-  const kl = await page.evaluate(async () => { const keep = settings, t = Date.now() + 4e5; settings = {...settings, share: true}; window.shared = [];
+  // the Last stage) and the character name; a round left at the 2nd stage isn't
+  const kl = await page.evaluate(async () => { const keep = settings, t = Date.now() + 4e5; settings = {...settings, share: true, nick: "two words"}; window.shared = []; charName = "Turbow";
     kpqMap("10003000", t); for (const [i, id] of ["80000000", "80000100", "80000200", "80000300", "80000400", "80000500", "80000600"].entries()) kpqMap(id, t + 1000 + i * 60e3);
     kpqMap("10003000", t + 5e5); kpqMap("80000000", t + 6e5); kpqMap("80000100", t + 6.6e5); kpqMap("10003000", t + 7e5);
-    settings = keep; return window.shared });
-  if (kl.length !== 1 || !kl[0].kpq || kl[0].clear !== 300 || kl[0].total !== 360 || kl[0].mode !== "Bonus" || Object.keys(kl[0].stages).length !== 6) throw new Error("kpq share: " + JSON.stringify(kl));
+    settings = keep; charName = null; return window.shared });
+  // the name: a Name that isn't letters/digits falls back to the one read from the status bar
+  if (kl.length !== 1 || !kl[0].kpq || kl[0].name !== "Turbow" || kl[0].clear !== 300 || kl[0].total !== 360 || kl[0].mode !== "Bonus" || Object.keys(kl[0].stages).length !== 6) throw new Error("kpq share: " + JSON.stringify(kl));
   // inventory: Etc read at the start and later -> fills unread pickup lines; Stop goes to the wrap-up card, where each tab
   // turns green once read after Stop; Resume goes back to tracking
   const iv = await page.evaluate(async () => { const t = Date.now();

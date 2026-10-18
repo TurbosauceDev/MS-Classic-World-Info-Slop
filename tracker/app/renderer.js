@@ -419,10 +419,10 @@ async function toPng(c){
   return new Uint8Array(await (await new Promise(r => cv.toBlob(r, "image/png"))).arrayBuffer());
 }
 // job from the status bar every 30 s, when the player left the job on "Auto": taken once the same job is read twice running
-let lastJob = 0, jobSeen = null, jobNow = null, charName = null, charSeen = null;   // charName: kept on this PC only (History)
+let lastJob = 0, jobSeen = null, jobNow = null, charName = null, charSeen = null;   // charName: History, and KPQ rounds (Settings > KPQ board name)
 async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders.jobTextCrop), or null; nc: the name crop
   const sess = session, sl = slicer;
-  // the character name (for History only): taken once the same name reads twice in a row
+  // the character name (History, KPQ board): taken once the same name reads twice in a row
   if (nc){ const n = GrindReaders.nameFromText(await host.ocr(await toPng(nc))); if (n && n === charSeen) charName = n; charSeen = n }
   if (settings.job) return;
   if (!c){ if (check && !check.job) check.jobWhy = "The level and job text on the status bar wasn't found."; return }
@@ -598,7 +598,8 @@ function kpqShare(r, t){
   kpqSent++;
   host.shareRun({kpq: true, v: 1, date: new Date(r.t0).toLocaleDateString("sv"), hour: new Date(r.t0).getUTCHours(), mode: settings.kpqMode === "Rush" ? "Rush" : "Bonus",
     party: s.party, level: s.level, job: s.job, clear: Math.round(r.clear), total: Math.round(kpqSince(r, t)), clock: r.left0 !== null,
-    exp: Math.max(0, s.exp - r.exp0), mesos: Math.max(0, s.mesos - r.mesos0), stages: st, partyCode: settings.partyCode || null});
+    exp: Math.max(0, s.exp - r.exp0), mesos: Math.max(0, s.mesos - r.mesos0), stages: st, partyCode: settings.partyCode || null,
+    name: settings.kpqName !== false && [settings.nick, charName].find(n => /^[A-Za-z0-9]{2,12}$/.test(n || "")) || null});   // KPQ board only; runs never carry the name
 }
 function kpqText(s){
   if (!kpq?.on) return settings.kpqAct === "kpq" ? "KPQ picked: the session pauses outside the KPQ stages and counts each round." : "During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.";
@@ -1073,6 +1074,7 @@ $("#csv").onclick = async () => { const r = await host.exportCsv(); $("#status")
 $("#autoPause").onchange = e => host.settings({autoPause: e.target.checked}).then(s => settings = s);
 $("#ontop").onchange = e => host.settings({onTop: e.target.checked}).then(s => settings = s);
 $("#share").onchange = e => host.settings({share: e.target.checked}).then(s => settings = s);
+$("#kpqName").onchange = e => host.settings({kpqName: e.target.checked}).then(s => settings = s);
 $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
   settings = s; jobNow = jobSeen = null; lastJob = 0;   // back on Auto: read it again soon
   if (session){ const ev = {t: Date.now(), type: "job", name: s.job || null}; session.add(ev); slicer.add(ev) }
@@ -1279,6 +1281,7 @@ $("#updGo").onclick = async () => {
   host.updateState?.().then(u => u.state !== "idle" && showUpdate(u)).catch(() => {});
   settings = await host.settings();
   $("#share").checked = !!settings.share;
+  $("#kpqName").checked = settings.kpqName !== false;
   layoutLoad(settings.layout); for (const b of BOXES) foldMark(b);
   $("#job").value = settings.job || "";
   $("#ontop").checked = settings.onTop !== false;

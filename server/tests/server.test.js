@@ -121,17 +121,23 @@ assert.strictEqual(s, 429, "7 trackers from one IP");
 const kpost = (body, ip) => worker.fetch(new Request("https://x/api/kpq", {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
 const kr = (install, clear, extra = {}) => ({kpq: true, install, date: "2026-10-18", hour: 20, mode: "Bonus", party: 4, level: 25, job: "Hunter", clear, total: clear + 60, clock: true,
   exp: 9000, mesos: 300, stages: {"80000000": 60, "80000100": 60, "80000200": 60, "80000300": 60, "80000400": clear - 250}, ...extra});
-for (let i = 1; i <= 4; i++){ [s, r] = await kpost(kr("kpqparty0000000" + i, 400, {partyCode: "Slimes"}), "20.0.0." + i); assert.ok(r.counted, JSON.stringify(r)) }
-for (let i = 1; i <= 4; i++) [s, r] = await kpost(kr("kpqparty0000000" + i, 500, {partyCode: "slimes"}), "20.0.0." + i);
+for (let i = 1; i <= 4; i++){ [s, r] = await kpost(kr("kpqparty0000000" + i, 400, {partyCode: "Slimes", name: i === 4 ? "<b>x</b>" : "Turbow" + i}), "20.0.0." + i); assert.ok(r.counted, JSON.stringify(r)) }
+// the slower party round stayed in the Bonus stage and gained more: it is their Bonus-board round
+for (let i = 1; i <= 4; i++) [s, r] = await kpost(kr("kpqparty0000000" + i, 500, {partyCode: "slimes", exp: 9000 + i * 100, stages: {"80000000": 60, "80000400": 250, "80000500": 55}}), "20.0.0." + i);
 [s, r] = await kpost(kr("kpqsolo000000001", 900, {party: 1}), "21.0.0.1");
-[s, r] = await kpost(kr("kpqsolo000000002", 700, {mode: "Rush"}), "21.0.0.2");
+[s, r] = await kpost(kr("kpqsolo000000002", 700, {mode: "Rush", exp: 20000, mesos: 50, stages: {"80000000": 60, "80000400": 250, "80000500": 30}}), "21.0.0.2");
 [s, r] = await kpost(kr("kpqsolo000000003", 30), "21.0.0.3"); assert.ok(!r.counted && r.why === "clear time", "30 s round not counted: " + JSON.stringify([s, r]));
 [s, r] = await kpost(kr("kpqsolo000000004", 400, {stages: {"80000100": 60}}), "21.0.0.4"); assert.strictEqual(r.why, "stages missing");
 [s] = await kpost({install: "x"}, "21.0.0.5"); assert.strictEqual(s, 400);
 const kb = (await fresh()).kpq;
-assert.strictEqual(kb.rounds, 10); assert.strictEqual(kb.board.Bonus.length, 2); assert.strictEqual(kb.board.Rush.length, 1);
-assert.deepStrictEqual([kb.board.Bonus[0].best, kb.board.Bonus[0].rounds, kb.board.Bonus[0].median, kb.board.Bonus[0].party], [400, 2, 450, 4]);
-assert.strictEqual(kb.board.Bonus[1].best, 900);
+// Rush: every round by clear time, whatever mode the tracker picked; Bonus: only rounds with Bonus stage time, by EXP + mesos
+assert.strictEqual(kb.rounds, 10); assert.strictEqual(kb.board.Rush.length, 3); assert.strictEqual(kb.board.Bonus.length, 2);
+assert.deepStrictEqual([kb.board.Rush[0].best, kb.board.Rush[0].rounds, kb.board.Rush[0].median, kb.board.Rush[0].party], [400, 2, 450, 4]);
+assert.deepStrictEqual(kb.board.Rush.map(e => e.best), [400, 700, 900]);
+assert.deepStrictEqual(kb.board.Rush[0].names, ["Turbow1", "Turbow2", "Turbow3"], "party names, a bad name dropped");
+assert.deepStrictEqual(kb.board.Rush[2].names, [], "no name sent");
+assert.deepStrictEqual(kb.board.Bonus.map(e => [e.best, e.bonus, e.clear, e.rounds]), [[20050, 30, 700, 1], [9700, 55, 500, 1]]);
+assert.strictEqual(kb.board.Bonus[1].group, kb.board.Rush[0].group, "same party, same label on both boards");
 assert.ok(!JSON.stringify(kb).includes("kpqparty"), "no install ids in the board");
 for (let i = 0; i < 13; i++) [s] = await kpost(kr("kpqsolo000000009", 600 + i, {party: 1}), "22.0.0.1");
 assert.strictEqual(s, 429, "13th round in an hour refused");

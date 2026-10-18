@@ -45,3 +45,5 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 Sharing is opt-in; the UI must not call it "anonymous" (it feeds leaderboards).
 - 2026-10-18 Themes: brighten purple a little, several colorways, editor with share codes (shipped 0.2.43).
 - 2026-10-18 KPQ Bonus/Rush is a label he picks; rounds before 0.2.40 can't be backfilled to the KPQ leaderboard.
+- 2026-10-18 KPQ board shows character names (his round = Turbow). Separate boards: Rush = fastest to beating King Slime;
+  Bonus = EXP + mesos gained (more Bonus time = faster Rush, already in the gain).

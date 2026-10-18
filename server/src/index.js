@@ -57,9 +57,10 @@ async function postKpq(req, env){
   if (recent.n >= KPQ_PER_HOUR || today.n >= MAX_PER_IP_DAY || today.k >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rounds"}, 429);
   const r = c.round, code = typeof body.partyCode === "string" ? body.partyCode.trim().toLowerCase().slice(0, 20) : "";
   const grp = code && r.party > 1 ? await sha("party:" + code + await salt(env.DB)) : null;
-  await env.DB.prepare(`INSERT INTO kpq_rounds (install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why)
+  const ins = await env.DB.prepare(`INSERT INTO kpq_rounds (install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(body.install, ipday, now.toISOString(), r.date, r.hour, r.mode, r.party, r.level, r.job,
     r.clear, r.total, r.clock, r.exp, r.mesos, JSON.stringify(r.stages), grp, c.ok ? 1 : 0, c.why).run();
+  if (r.name) await env.DB.prepare("INSERT OR REPLACE INTO kpq_names (kpq_id, name) VALUES (?, ?)").bind(ins.meta.last_row_id, r.name).run();
   return json({ok: true, counted: c.ok, why: c.why});
 }
 
@@ -104,7 +105,7 @@ export async function summary(db){
   // one person with fresh installs (or a whole household) can't make up the "3+ players" a map needs on their own
   const uf = new Map(), find = k => { let r = k; while (uf.has(r) && uf.get(r) !== r) r = uf.get(r); uf.set(k, r); return r },
     join = (a, b) => { const x = find(a), y = find(b); if (x !== y) uf.set(x, y) };
-  const kq = (await db.prepare("SELECT install, ipday, date, mode, party, level, job, clear, total, clock, exp, mesos, grp FROM kpq_rounds WHERE ok = 1").all()).results;
+  const kq = (await db.prepare("SELECT k.install, k.ipday, k.date, k.mode, k.party, k.level, k.job, k.clear, k.total, k.clock, k.exp, k.mesos, k.stages, k.grp, n.name FROM kpq_rounds k LEFT JOIN kpq_names n ON n.kpq_id = k.id WHERE k.ok = 1").all()).results;
   for (const r of [...results, ...kq]) join("i" + r.install, "n" + r.ipday);
   const net = install => find("i" + install);
   // parties: a party code joined with its members' networks (a separate set, so soloing friends who partied once stay apart)
@@ -146,21 +147,30 @@ export async function summary(db){
     const out = bl.map((b, i) => b.g.size >= 3 ? [i * 3, Math.round(median(b.x) * 100) / 100, b.g.size] : null).filter(Boolean);
     if (out.length >= 2) times[map] = out;   // [UTC start hour, speed vs the players' usual, players]; one block alone compares nothing
   }
-  // KPQ leaderboard, per mode: one line per party (party code) or player (home network), their best clear time. Every party
-  // member's tracker sends the same round, so a group's round count is its busiest tracker's, not the sum
-  const kg = new Map();
+  // KPQ leaderboards (Danny, 2026-10-18), one line per party (party code) or player (home network):
+  //  Rush: every round, fastest clear (1st stage to leaving the Last stage, so Bonus time never counts against it)
+  //  Bonus: rounds that reached the Bonus stage, most EXP + mesos gained that round (1 meso = 1 point, our own weighting);
+  //   Bonus stage seconds shown beside it. A faster Rush leaves more Bonus time, which already shows up as more EXP/mesos.
+  // Every party member's tracker sends the same round, so a group's round count is its busiest tracker's, not the sum
+  const BONUS = "80000500", kg = {Rush: new Map(), Bonus: new Map()};
+  const score = r => (r.exp || 0) + (r.mesos || 0), bonusSec = r => { try { return JSON.parse(r.stages || "{}")[BONUS] || 0 } catch { return 0 } };
   for (const r of kq){
-    const g = r.party > 1 && r.grp ? "P" + pfind("p" + r.grp) : "S" + net(r.install), k = r.mode + "|" + g;
-    if (!kg.has(k)) kg.set(k, {mode: r.mode, g, best: null, clears: [], per: new Map()});
-    const e = kg.get(k); e.clears.push(r.clear); e.per.set(r.install, (e.per.get(r.install) || 0) + 1);
-    if (!e.best || r.clear < e.best.clear) e.best = r;
+    const g = r.party > 1 && r.grp ? "P" + pfind("p" + r.grp) : "S" + net(r.install), bs = bonusSec(r);
+    for (const mode of bs > 0 ? ["Rush", "Bonus"] : ["Rush"]){
+      const m = kg[mode]; if (!m.has(g)) m.set(g, {g, best: null, vals: [], per: new Map(), names: new Map()});
+      const e = m.get(g), better = mode === "Rush" ? !e.best || r.clear < e.best.clear : !e.best || score(r) > score(e.best);
+      e.vals.push(mode === "Rush" ? r.clear : score(r)); e.per.set(r.install, (e.per.get(r.install) || 0) + 1);
+      if (r.name) e.names.set(r.install, r.name);   // each member's tracker sends its own name: the latest one per tracker
+      if (better) e.best = {...r, bonus: bs};
+    }
   }
-  const klabel = new Map(), kpq = {rounds: kq.length, groups: new Set([...kg.values()].map(e => e.g)).size, board: {}};
-  for (const e of [...kg.values()].sort((a, b) => a.best.clear - b.best.clear)){
-    if (!klabel.has(e.g)) klabel.set(e.g, "k" + klabel.size);
-    const b = e.best, list = kpq.board[e.mode] ||= [];
-    if (list.length < 50) list.push({group: klabel.get(e.g), best: b.clear, median: Math.round(median(e.clears)), rounds: Math.max(...e.per.values()),
-      party: b.party, level: b.level, job: b.job, date: b.date, clock: !!b.clock, exp: b.exp, mesos: b.mesos});
+  const klabel = new Map(), lab = g => { if (!klabel.has(g)) klabel.set(g, "k" + klabel.size); return klabel.get(g) };
+  const kpq = {rounds: kq.length, groups: kg.Rush.size, board: {}};
+  for (const mode of ["Rush", "Bonus"]){
+    const list = [...kg[mode].values()].sort(mode === "Rush" ? (a, b) => a.best.clear - b.best.clear : (a, b) => score(b.best) - score(a.best)).slice(0, 50);
+    if (list.length) kpq.board[mode] = list.map(e => { const b = e.best; return {group: lab(e.g), best: mode === "Rush" ? b.clear : score(b), median: Math.round(median(e.vals)),
+      rounds: Math.max(...e.per.values()), names: [...new Set(e.names.values())].slice(0, 6), party: b.party, level: b.level, job: b.job, date: b.date, clock: !!b.clock,
+      clear: b.clear, bonus: b.bonus, exp: b.exp, mesos: b.mesos} });
   }
   const players = new Set(results.map(r => r.install)).size, hours = results.reduce((a, r) => a + r.minutes, 0) / 60;
   return {updated: new Date().toISOString(), runs: results.length, players, hours: Math.round(hours * 10) / 10, rows, mobs, times, kpq};

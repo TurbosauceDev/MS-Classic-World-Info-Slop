@@ -60,6 +60,9 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Danny plays native 1440, UI "Ideal Ratio" (UI 2x, world not). Captured video shifts colors: match color ranges.
 - Share runs: 15 min straight on one map, same party, no break > 60 s. KPQ rounds sent separately (since v0.2.40).
 - KPQ maps 80000000 (1st stage) … 80000400 (Last), 80000500 Bonus, 80000600 Exit; Kerning City 10003000.
+- KPQ boards (server summary.kpq.board): Rush = all rounds by clear; Bonus = rounds with 80000500 stage time, by EXP +
+  mesos. The tracker's Bonus/Rush pick is stored (mode) but no longer picks the board. Names: kpq_names table (schema.sql
+  re-runs every deploy, so new columns go in side tables); tracker sends Name (Party card) else the OCR'd charName.
 - Leaderboards aren't anonymous: don't call sharing "anonymous" in the UI.
 - beanguri's /api/stats needs their permission; we only borrowed MIT reader ideas.
 

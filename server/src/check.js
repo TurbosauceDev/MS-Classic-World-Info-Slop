@@ -45,6 +45,9 @@ export function median(a){ const s = [...a].sort((x, y) => x - y), n = s.length;
 /* A KPQ round for the leaderboard. Same idea as cleanRun: a failed round is kept with the reason, not counted. The time
    limits are our own sanity bounds (no real round is under a minute), not game data. */
 const KPQ_IDS = ["80000000", "80000100", "80000200", "80000300", "80000400", "80000500"];
+// character name for the board: letters and digits, up to 12 (our own bound, same as the tracker's name box); anything else
+// is dropped, the round still counts
+const kpqName = v => typeof v === "string" && /^[A-Za-z0-9]{2,12}$/.test(v.trim()) ? v.trim() : null;
 export function cleanKpq(r){
   const num = (v, lo, hi) => typeof v === "number" && isFinite(v) && v >= lo && v <= hi;
   if (!r || typeof r !== "object") return {error: "not a round"};
@@ -58,7 +61,7 @@ export function cleanKpq(r){
   const round = {date: r.date || new Date().toISOString().slice(0, 10), hour: Number.isInteger(r.hour) && r.hour >= 0 && r.hour < 24 ? r.hour : null,
     mode: r.mode === "Rush" ? "Rush" : "Bonus", party: r.party | 0, level: r.level == null ? null : Math.round(r.level),
     job: typeof r.job === "string" ? r.job.slice(0, 40) || null : null, clear: Math.round(r.clear), total: cnt(r.total, 7200),
-    clock: r.clock ? 1 : 0, exp: cnt(r.exp, 1e7), mesos: cnt(r.mesos, 1e7), stages};
+    clock: r.clock ? 1 : 0, exp: cnt(r.exp, 1e7), mesos: cnt(r.mesos, 1e7), stages, name: kpqName(r.name)};
   let why = null;
   if (round.clear < 60 || round.clear > 3600) why = "clear time";
   else if (round.total != null && round.total < round.clear) why = "total under clear";

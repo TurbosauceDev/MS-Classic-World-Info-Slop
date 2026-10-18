@@ -37,3 +37,8 @@ CREATE TABLE IF NOT EXISTS kpq_rounds (id INTEGER PRIMARY KEY, install TEXT NOT 
   exp INTEGER, mesos INTEGER, stages TEXT, grp TEXT, ok INTEGER NOT NULL, why TEXT);
 CREATE INDEX IF NOT EXISTS kpq_install ON kpq_rounds (install, received);
 CREATE INDEX IF NOT EXISTS kpq_ipday ON kpq_rounds (ipday);
+-- KPQ board names (tracker 0.2.44+): the character name a tracker sent with the round. Its own table because schema.sql
+-- re-runs on every deploy and SQLite has no ADD COLUMN IF NOT EXISTS
+CREATE TABLE IF NOT EXISTS kpq_names (kpq_id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+-- the one round sent before names existed (Rush 4:37, 2026-10-18) was Danny's Turbow (Danny, 2026-10-18)
+INSERT OR IGNORE INTO kpq_names (kpq_id, name) SELECT id, 'Turbow' FROM kpq_rounds WHERE date = '2026-10-18' AND mode = 'Rush' AND clear = 277 AND received < '2026-10-18T21:00';

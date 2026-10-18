@@ -59,7 +59,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden on every push/PR to the de
 | 65-navigator.js | | Map Navigator, `navTo(id)` |
 | 66-worldmap.js | 28 | World Map (D.wmap), map cards (`openMapInfo`), Sleepywood sub-map |
 | 67-kpq.js | 13 | KPQ guide (D.kpq) |
-| 68-tracker.js | 10 | Grind Tracker pages (live /api/summary, D.shared fallback) |
+| 68-tracker.js | 11 | Grind Tracker pages (live /api/summary, D.shared fallback); trkKpq = Rush/Bonus KPQ boards |
 | 69-search.js | | Ctrl K / `/` search, `#key=value&` share links |
 
 Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `python3 -c "import json;d=json.load(open('data/data.json'));print(list(d))"`.

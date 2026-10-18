@@ -58,21 +58,29 @@ function trkRender(){
     <p class="note">Each run against the same player's usual speed on that map, in 3-hour blocks with 3+ players. Your time zone.</p>
     ${times ? `<div class="tblwrap"><table><thead><tr><th>Map</th><th>Fastest</th><th>Slowest</th></tr></thead><tbody>${times}</tbody></table></div>` : '<p class="sub">Not enough players at different times yet (needs 3+ players in at least two time blocks on a map).</p>'}`;
 }
-// KPQ leaderboard (server summary .kpq): per mode, one line per party (party code) or player, best clear time first.
-// Clear = 1st stage to leaving the Last stage, so Bonus time doesn't count
-const TRK_KMODE = {v: "Bonus"};
+// KPQ leaderboards (server summary .kpq, Danny 2026-10-18), one line per party (party code) or player:
+// Rush = fastest clear (1st stage to leaving the Last stage, after King Slime); Bonus = rounds that reached the Bonus stage,
+// most EXP + mesos gained that round. Names: the character names the party's trackers sent
+const TRK_KMODE = {v: "Rush"};
 function trkKpq(k){
-  const head = `<p class="note">Fastest Kerning PQ clears by tracker players: 1st stage to the end of the Last stage (Bonus stage not counted). One line per party (same party code) or player. Rounds joined part-way aren't counted.</p>`;
-  const modes = Object.keys(k?.board || {});
+  const head = `<p class="note">Kerning PQ boards from tracker players. <b>Rush</b>: fastest clear, 1st stage to beating King Slime and leaving the Last stage (Bonus stage not counted). <b>Bonus</b>: rounds that went into the Bonus stage, ranked by EXP + mesos gained that round (1 meso = 1 point, our own weighting); a faster Rush leaves more Bonus time, which shows up as more EXP and mesos. One line per party (same party code) or player. Rounds joined part-way aren't counted.</p>`;
+  const modes = ["Rush", "Bonus"].filter(m => k?.board?.[m]?.length);
   if (!k?.rounds || !modes.length) return head + `<div class="card trkempty"><h3>No KPQ rounds yet</h3><p>With sharing on, every KPQ round the tracker sees from the 1st stage to the end lands here. Use the same party code as your party so you show up as one team.</p></div>`;
   if (!modes.includes(TRK_KMODE.v)) TRK_KMODE.v = modes[0];
-  const seg = modes.length > 1 ? `<div class="seg" role="radiogroup" id="trkkm">${modes.map(m => `<button role="radio" aria-checked="${m === TRK_KMODE.v}" data-m="${esc(m)}">${esc(m)}</button>`).join("")}</div>` : "";
-  const rows = k.board[TRK_KMODE.v].map((e, i) => `<tr><td class="num">${i < 3 ? `<span class="pill ${i ? "p-hot" : "p-good"}">#${i + 1}</span>` : "#" + (i + 1)}</td>
-    <td class="num"><b>${mss(e.best)}</b>${e.clock ? "" : ' <span class="sub" title="Timed with the PC clock: the KPQ clock wasn\'t read">~</span>'}</td><td class="num">${mss(e.median)}</td><td class="num">${e.rounds}</td>
-    <td>${e.party > 1 ? "party of " + e.party : "solo"}</td><td>${e.level ? "Lv " + e.level : "–"}${e.job ? ` <span class="sub">${esc(e.job)}</span>` : ""}</td><td class="num">${fmt(e.exp)}</td><td class="sub">${esc(e.date || "")}</td></tr>`).join("");
+  const rush = TRK_KMODE.v === "Rush";
+  const seg = `<div class="seg" role="radiogroup" id="trkkm">${["Rush", "Bonus"].map(m => `<button role="radio" aria-checked="${m === TRK_KMODE.v}" data-m="${m}"${modes.includes(m) ? "" : " disabled"}>${m}</button>`).join("")}</div>`;
+  const who = e => (e.names?.length ? `<b>${e.names.map(esc).join(", ")}</b> <span class="sub">` : "<span>") + (e.party > 1 ? "party of " + e.party : "solo") + "</span>";
+  const rank = i => i < 3 ? `<span class="pill ${i ? "p-hot" : "p-good"}">#${i + 1}</span>` : "#" + (i + 1);
+  const clockMark = e => e.clock ? "" : ' <span class="sub" title="Timed with the PC clock: the KPQ clock wasn\'t read">~</span>';
+  const lj = e => `<td>${e.level ? "Lv " + e.level : "–"}${e.job ? ` <span class="sub">${esc(e.job)}</span>` : ""}</td>`;
+  const rows = k.board[TRK_KMODE.v].map((e, i) => rush
+    ? `<tr><td class="num">${rank(i)}</td><td class="num"><b>${mss(e.best)}</b>${clockMark(e)}</td><td class="num">${mss(e.median)}</td><td class="num">${e.rounds}</td><td>${who(e)}</td>${lj(e)}<td class="sub">${esc(e.date || "")}</td></tr>`
+    : `<tr><td class="num">${rank(i)}</td><td class="num"><b>${fmt(e.best)}</b></td><td class="num">${fmt(e.exp)}</td><td class="num">${fmt(e.mesos)}</td><td class="num">${e.bonus ? mss(e.bonus) : "–"}</td><td class="num">${mss(e.clear)}${clockMark(e)}</td><td class="num">${e.rounds}</td><td>${who(e)}</td>${lj(e)}<td class="sub">${esc(e.date || "")}</td></tr>`).join("");
+  const th = rush ? `<th class="num">Rank</th><th class="num">Best clear</th><th class="num">Typical</th><th class="num">Rounds</th><th>Who</th><th>Level and job</th><th>Date</th>`
+    : `<th class="num">Rank</th><th class="num">EXP + mesos</th><th class="num">EXP</th><th class="num">Mesos</th><th class="num">Bonus time</th><th class="num">Rush clear</th><th class="num">Rounds</th><th>Who</th><th>Level and job</th><th>Date</th>`;
   return head + `<p class="sub">${fmt(k.rounds)} rounds from ${fmt(k.groups)} parties and players.</p>${seg}
-    <div class="tblwrap"><table><thead><tr><th class="num">Rank</th><th class="num">Best clear</th><th class="num">Typical</th><th class="num">Rounds</th><th>Party</th><th>Level and job</th><th class="num">EXP that round</th><th>Date</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="sub">Level and job are the tracker player's who sent the best round. "~" = timed with the PC clock.</p>`;
+    <div class="tblwrap"><table><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="sub">${rush ? "" : "EXP and mesos are what the tracker player who sent the best round gained in it. "}Level and job are that tracker player's. "~" = timed with the PC clock.</p>`;
 }
 const mss = sec => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0") };
 $("#trkkpqdata").addEventListener("click", e => { const b = e.target.closest("#trkkm button"); if (b){ TRK_KMODE.v = b.dataset.m; trkRender() } });
