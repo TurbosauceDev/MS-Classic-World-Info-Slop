@@ -225,4 +225,8 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
   s.add({t: sec(120), type: "inv", tab: "use", items: {"2060000": 52, "2010001": 3}, unknown: 0});
   const u = Object.fromEntries(s.stats().used.map(x => [x.id, x.n]));
   assert.strictEqual(u["2060000"], 48); assert.strictEqual(u["2010001"], 2) }
+// KPQ middle stages: no monsters, so 4 minutes without EXP there is still active time
+{ const s = createSession(G); s.add({t: sec(0), type: "map", id: "80000100"}); s.add({t: sec(1), type: "bar", exp: 1000, pct: 10, level: 20});
+  s.add({t: sec(241), type: "bar", exp: 1600, pct: 16, level: 20});
+  assert.ok(s.state.activeMs >= 240e3, "KPQ stage time counted: " + s.state.activeMs) }
 console.log("core tests passed");

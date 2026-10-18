@@ -64,7 +64,9 @@
       return (G.timed?.[S.map] || []).map(([id, sec, boss]) => { const k = S.timedKills[id];
         return {id, name: G.mobs[id]?.[0] || "Monster " + id, sec, boss: !!boss, killed: k || null, dueIn: k ? Math.max(0, k + sec * 1000 - now) : null} });
     }
-    function credit(t){ const gap = t - S.last; S.activeMs += gap > idleMs || gap < 0 ? 0 : gap }   // < 0: the PC clock went back
+    // KPQ's middle stages have no monsters, so minutes with no EXP there are still play time (Danny, 2026-10-18): no idle cut-off in a stage
+    const kpqStage = () => (G.kpq || []).includes(S.map) && S.map !== "80000600";
+    function credit(t){ const gap = t - S.last; S.activeMs += gap > (kpqStage() ? 30 * 60e3 : idleMs) || gap < 0 ? 0 : gap }   // < 0: the PC clock went back
     // a level-up: how long the level before took (active time), when this session saw that level start
     function levelUp(level, t){
       const was = S.levelAt;
