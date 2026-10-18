@@ -286,3 +286,24 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
   }
 }
 console.log("core tests passed");
+
+// run log (Danny 2026-10-18, "like WoW's combat log"): batched, one line per kind per batch
+{
+  const {createFeed} = require("../core/feed.js"), f = createFeed(G, {every: 2000}), s = createSession(G);
+  s.add({t: sec(0), type: "map", id: 42}); s.add({t: sec(0), type: "bar", exp: 100, level: 10});
+  assert.deepStrictEqual(f.step(s.state, sec(0), "Danny"), [], "first step only takes the baseline");
+  for (const g of [2, 4, 4, 8]) s.add({t: sec(0.2), type: "exp", gain: g});
+  s.add({t: sec(0.3), type: "meso", amount: 12}); s.add({t: sec(0.4), type: "item", id: 4000019}); s.add({t: sec(0.5), type: "item", id: 4000019});
+  assert.deepStrictEqual(f.step(s.state, sec(1), "Danny"), [], "nothing before the batch time");
+  const l = f.step(s.state, sec(2), "Danny");
+  assert.deepStrictEqual(l.map(x => x.kind), ["exp", "meso", "loot"]);
+  assert.strictEqual(l[0].text, "Danny gained 18 EXP from 4 kills (2 Blue Snail, 1 Snail, 1 Red Snail)");
+  assert.strictEqual(l[1].text, "Danny picked up 12 mesos");
+  assert.strictEqual(l[2].text, `Danny looted 2 ${G.items[4000019].n}`); assert.strictEqual(l[2].parts[0].id, "4000019");
+  assert.deepStrictEqual(f.step(s.state, sec(4), "Danny"), [], "quiet batch: no lines");
+  s.add({t: sec(5), type: "map", id: 1}); s.add({t: sec(5), type: "exp", gain: 999999});
+  const m = f.step(s.state, sec(6));
+  assert.strictEqual(m[0].kind, "map"); assert.ok(m[0].text.startsWith("You entered "));
+  assert.ok(/^You gained 999,999 EXP/.test(m[1].text), m[1].text);
+}
+console.log("feed ok");

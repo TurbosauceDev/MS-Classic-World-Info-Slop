@@ -333,14 +333,18 @@ function place(b, t, z){
 for (const b of BOXES){
   b.classList.add("box");
   const c = document.createElement("div"); c.className = "boxctl";
-  c.innerHTML = `<span class="btitle">${esc(b.dataset.title)}</span><span class="grip" tabindex="0" role="button" aria-label="Move ${esc(b.dataset.title)} (arrow keys)" title="Drag to move: onto another box (its left or right edge puts them side by side), a tab, or the strip above the tabs. Or focus it and use the arrow keys">⠿</span><button class="fold" aria-label="Fold ${esc(b.dataset.title)}" aria-expanded="true" title="Fold or unfold">–</button>`;
+  c.innerHTML = `<span class="btitle">${esc(b.dataset.title)}</span><span class="grip" tabindex="0" role="button" aria-label="Move ${esc(b.dataset.title)} (arrow keys)" title="Drag to move. Drop on the left or right side of another box to put them side by side, on its middle to go above or below; or onto a tab, or the strip above the tabs. Keys: focus it, then arrows (left/right puts it beside its neighbour)">⠿</span><button class="fold" aria-label="Fold ${esc(b.dataset.title)}" aria-expanded="true" title="Fold or unfold">–</button>`;
   b.prepend(c);
   c.querySelector(".fold").onclick = () => { b.classList.toggle("folded"); foldMark(b); layoutSave() };
   // keyboard: arrow up/down on the grip moves the box past its neighbour (out of its row at a row's or column's end); left/right
-  // moves it along its row
+  // moves it along its row, or puts a box that's on its own beside its neighbour
   c.querySelector(".grip").onkeydown = e => { const k = e.key, up = k === "ArrowUp" || k === "ArrowLeft"; if (!/^Arrow(Up|Down|Left|Right)$/.test(k)) return; e.preventDefault();
     const p = b.parentElement, side = x => { do x = up ? x.previousElementSibling : x.nextElementSibling; while (isSplit(x)); return x };
-    if (k === "ArrowLeft" || k === "ArrowRight"){ const u = isCol(p) ? p : b; if (!isRow(u.parentElement)) return; const s = side(u); if (!s) return; up ? s.before(u) : s.after(u) }
+    if (k === "ArrowLeft" || k === "ArrowRight"){ const u = isCol(p) ? p : b;
+      // not in a row yet: it goes beside the box above it (or below, when it's the first), making a row
+      if (!isRow(u.parentElement)){ const n = [b.previousElementSibling, b.nextElementSibling].find(x => x?.matches("[data-box], .boxrow")); if (!n) return;
+        place(b, isRow(n) ? parts(n)[up ? 0 : parts(n).length - 1] : n, up ? "left" : "right") }
+      else { const s = side(u); if (!s) return; up ? s.before(u) : s.after(u) } }
     else if (isRow(p)) up ? p.before(b) : p.after(b);
     else { const s = side(b); if (s?.matches("[data-box], .boxrow")) up ? s.before(b) : s.after(b); else if (isCol(p) && !s) up ? p.parentElement.before(b) : p.parentElement.after(b); else return }
     c.querySelector(".grip").focus(); layoutSave() };
@@ -356,25 +360,35 @@ document.addEventListener("pointerdown", e => {
 const dropTarget = (x, y) => { const t = document.elementFromPoint(x, y)?.closest("[data-box], .boxrow, #dock, section[data-tab], .tabs button");
   if (!t || t === dragBox || dragBox.contains(t)) return null;
   if (t.matches(".tabs button") && !["session", "loot", "hist"].includes(t.dataset.tab)) return null; return t };
-// which side of a box the pointer is on: its left or right quarter (up to 90 px) = beside it, otherwise above or below
-function dropZone(t, x, y){ const r = t.getBoundingClientRect(), ex = Math.min(r.width / 4, 90);
+// which side of a box the pointer is on: its left or right third = beside it, the middle third = above or below. (It was the
+// left/right quarter, at most 90 px, marked by a 3 px line: Danny never found it, "i can only move things up and down",
+// 2026-10-18.) The ghost shows where the box will land: half the box for side by side, a bar for above or below
+function dropZone(t, x, y){ const r = t.getBoundingClientRect(), ex = Math.max(r.width / 3, Math.min(40, r.width / 2));
   if (t.matches("[data-box]")){ if (x < r.left + ex) return "left"; if (x > r.right - ex) return "right" }
   return y > r.top + r.height / 2 ? "bottom" : "top" }
+let ghost = null;
 function dropMark(t, z){
   for (const x of document.querySelectorAll(".over-top, .over-bottom, .over-left, .over-right, .over-drop")) x.classList.remove("over-top", "over-bottom", "over-left", "over-right", "over-drop");
-  if (t) t.classList.add(t.matches("[data-box], .boxrow") ? "over-" + z : "over-drop");
+  ghost ||= document.body.appendChild(mk("dropGhost"));
+  const box = t?.matches("[data-box], .boxrow");
+  ghost.classList.toggle("hidden", !box); if (t) t.classList.add(box ? "over-" + z : "over-drop");
+  if (!box) return;
+  const r = t.getBoundingClientRect(), side = z === "left" || z === "right", h = Math.min(30, r.height / 2);
+  Object.assign(ghost.style, {left: (z === "right" ? r.left + r.width / 2 : r.left) + "px", width: (side ? r.width / 2 : r.width) + "px",
+    top: (z === "bottom" ? r.bottom - h : r.top) + "px", height: (side ? r.height : h) + "px"});
+  ghost.textContent = side ? (z === "left" ? "◧ Side by side (left)" : "Side by side (right) ◨") : z === "top" ? "▲ Above" : "▼ Below";
 }
 document.addEventListener("pointermove", e => {
   if (!drag) return;
   if (!drag.on){
     if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) < 5) return;
     drag.on = true; dragBox = drag.b; dragBox.classList.add("moving"); document.body.classList.add("dragging");
-    drag.el = Object.assign(document.createElement("div"), {className: "dragLabel", textContent: dragBox.dataset.title}); document.body.appendChild(drag.el);
+    drag.el = Object.assign(document.createElement("div"), {className: "dragLabel", innerHTML: `${esc(dragBox.dataset.title)}<small>left or right side of a box: side by side</small>`}); document.body.appendChild(drag.el);
     // near the window's top or bottom edge: the page scrolls, to reach boxes out of sight
     drag.iv = setInterval(() => { if (drag?.cy < 72) scrollBy(0, -15); else if (drag?.cy > innerHeight - 40) scrollBy(0, 15) }, 30);
   }
   drag.cy = e.clientY;
-  drag.el.style.left = e.clientX + 12 + "px"; drag.el.style.top = e.clientY + 8 + "px";
+  drag.el.style.left = Math.max(4, Math.min(e.clientX + 12, innerWidth - drag.el.offsetWidth - 4)) + "px"; drag.el.style.top = Math.min(e.clientY + 8, innerHeight - drag.el.offsetHeight - 4) + "px";
   const t = dropTarget(e.clientX, e.clientY);
   dropMark(t, t && dropZone(t, e.clientX, e.clientY));
   // held over a tab for half a second: that tab opens, so the box can go between its boxes
@@ -692,12 +706,32 @@ async function tick(){
   } catch (err){ if (err) $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
   if (timer == null || sess !== session) return;
   try { renderSnaps(render()) } catch {}
+  try { feedAdd(feed?.step(session.state, t, feedWho())) } catch {}
   // over 250 ms a frame, 10 times running: read once a second instead of twice
   const ms = Date.now() - t;
   slowTicks = ms > 250 ? slowTicks + 1 : 0;
   if (slowTicks >= 10 && FPS === 2){ FPS = 1; $("#status").textContent = "Reading once a second to keep your PC smooth (big screen)." }
   timer = setTimeout(tick, Math.max(50, 1000 / FPS - ms));
 }
+
+// the run log (core/feed.js, Danny 2026-10-18: "like WoW's combat log"): every 2 s, what changed since the last batch as a
+// line per kind; newest at the bottom, older lines scroll up (it stays put while you've scrolled up to read)
+let feed = null;
+const feedWho = () => [settings.nick, charName].find(n => /^[A-Za-z0-9]{2,12}$/.test(n || "")) || "You";
+const clockS = t => new Date(t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit", second: "2-digit"});
+function feedLine(l){ const who = `<span class="who">${esc(l.who)}</span>`; let h;
+  if (l.kind === "exp") h = `${who} gained <b>${fmt(l.n)} EXP</b>${l.detail ? ` <span class="dim">${esc(l.detail)}</span>` : ""}`;
+  else if (l.kind === "meso") h = `${who} picked up ${COIN}<b>${fmt(l.n)}</b>`;
+  else if (l.kind === "loot") h = `${who} looted ` + [...l.parts.map(p => (G.iicons?.[p.id] ? `<img class="ic" alt="" src="data:image/png;base64,${G.iicons[p.id]}">` : "") + `<b>${fmt(p.n)}</b> ${esc(p.name)}`),
+    ...(l.unread ? [`<span class="dim">${l.unread} that didn't read</span>`] : [])].join(", ");
+  else h = esc(l.text);
+  return `<div class="fl ${l.kind}"><time>${clockS(l.t)}</time><span>${h}</span></div>` }
+function feedAdd(lines){ const el = $("#feed"); if (!lines?.length) return;
+  const stick = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+  el.insertAdjacentHTML("beforeend", lines.map(feedLine).join(""));
+  while (el.children.length > 300) el.firstElementChild.remove();
+  if (stick) el.scrollTop = el.scrollHeight }
+const feedSep = text => feedAdd([{t: Date.now(), kind: "sep", text}]);
 
 // start/end snapshots: {t, level, pct, exp?, file?, hand?}; a hand-fixed or button snapshot isn't replaced by the automatic ones
 const snaps = {start: null, end: null};
@@ -799,6 +833,7 @@ async function start(){
   mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; kpqSent = 0; FPS = 2; slowTicks = 0;
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
+  feed = GrindFeed.createFeed(G); feedSep("Started tracking");
   tick();
   renderState(null);
   // the start reading is taken right away (not only once the bar is read): its picture is the proof of where you started
@@ -816,7 +851,7 @@ async function stop(){
     const t = Date.now(); wrap = {t};
     if (session.state.pausedAt === null) pauseAt(t);
     if (kpq?.on) kpqEnd(t, true);
-    log("wrap", {});
+    log("wrap", {}); feedAdd(feed?.step(session.state, t, feedWho(), true)); feedSep("Stopped");
     if (video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {});
     $("#status").textContent = "Stopped. Open your inventory on Equip, Use and Etc for a second each, then add a name or note if you like and press Finalize log.";
     render();
@@ -825,7 +860,7 @@ async function stop(){
 function resume(){
   if (!wrap || timer == null) return;
   const e = {t: Date.now(), type: "resume"}; session.add(e); slicer.add(e); log("event", e);
-  wrap = null; lockGo(1000); $("#status").textContent = "Tracking again."; render();
+  wrap = null; lockGo(1000); $("#status").textContent = "Tracking again."; feedSep("Tracking again"); render();
 }
 async function finish(){
   if (stopping || timer == null) return;

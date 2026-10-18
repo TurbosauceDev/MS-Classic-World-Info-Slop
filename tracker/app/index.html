@@ -93,6 +93,9 @@
   .coin { height:1em; width:auto; image-rendering:pixelated; vertical-align:-0.12em; margin-right:2px; }
   .ico { display:inline-block; width:22px; height:22px; object-fit:contain; image-rendering:pixelated; vertical-align:middle; margin:-3px 6px -3px 0; }
   .dragLabel { position:fixed; z-index:60; pointer-events:none; background:var(--accent); color:var(--on-accent); border-radius:6px; padding:3px 8px; font-size:12px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  .dragLabel small { display:block; font-weight:400; opacity:.85; font-size:11px; }
+  .dropGhost { position:fixed; z-index:59; pointer-events:none; display:flex; align-items:center; justify-content:center; border:2px dashed var(--accent); border-radius:9px;
+    background:color-mix(in srgb, var(--accent) 22%, transparent); color:var(--ink); font-size:12px; font-weight:600; transition:left .08s, top .08s, width .08s, height .08s; }
   .over-top { box-shadow:0 -3px 0 var(--accent); } .over-bottom { box-shadow:0 3px 0 var(--accent); }
   .over-left { box-shadow:-3px 0 0 var(--accent); } .over-right { box-shadow:3px 0 0 var(--accent); }
   /* boxes side by side: a row of boxes (or columns of boxes) with a splitter between each two */
@@ -121,6 +124,17 @@
   body.dragging #dock { min-height:40px; border:2px dashed var(--accent); border-radius:10px; margin-bottom:8px; padding:4px; }
   body.dragging #dock:empty::before { content:"Drop here to pin it above the tabs (shows on every tab)"; color:var(--muted); font-size:12px; }
   body.dragging .tabs button[data-tab=session], body.dragging .tabs button[data-tab=loot], body.dragging .tabs button[data-tab=hist] { outline:1px dashed var(--accent); }
+  /* the run log: a short window of lines, newest at the bottom, older ones scroll up */
+  #logBox h3 { margin-bottom:4px; } #feed:not(:empty) + #feedEmpty { display:none; }
+  #feed { height:7.5em; overflow-y:auto; font-size:12px; line-height:1.5; font-variant-numeric:tabular-nums; overscroll-behavior:contain; }
+  #feed:empty { display:none; }
+  #feed .fl { display:flex; gap:7px; padding:0 2px; border-radius:4px; animation:feedIn .35s ease-out; }
+  #feed .fl time { color:var(--muted); flex:none; } #feed .fl > span { min-width:0; }
+  #feed .fl b { font-weight:600; } #feed .who { color:var(--accent); font-weight:600; } #feed .dim { color:var(--muted); }
+  #feed .fl.meso b { color:var(--warn); } #feed .fl.level { background:var(--accent-soft); } #feed .fl.death span { color:var(--bad); }
+  #feed .fl.map, #feed .fl.sep { color:var(--muted); font-style:italic; }
+  #feed .ic { height:1.25em; width:auto; vertical-align:-0.3em; image-rendering:pixelated; margin-right:1px; }
+  @keyframes feedIn { from { opacity:0; transform:translateY(6px); } }
   .over-drop { background:var(--accent-soft) !important; }
   #hist > .row:first-child { padding-right:48px; }
   /* History: compare two sessions */
@@ -182,7 +196,8 @@
   <div class="card hidden" id="summary"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Run summary</h3><button id="sumImg" class="alt" title="Saves a picture of this summary and copies it, ready to paste">Save as image</button> <button id="sumClose" class="alt">Close</button></div>
     <div id="sumBody"></div></div>
   <div class="card hidden" id="selfcheck"></div>
-  <div id="dock"></div>
+  <div id="dock"><div class="card" id="logBox" data-box="log" data-title="Run log"><h3>Run log</h3><div id="feed" role="log" aria-label="Run log" tabindex="0"></div>
+    <div class="empty" id="feedEmpty">EXP, mesos and loot show up here every 2 seconds once you press Start.</div></div></div>
   <div class="tabs" role="tablist">
     <button data-tab="session" class="sel">Session</button><button data-tab="loot">Loot</button><button data-tab="hist" id="histBtn">History</button>
   </div>
@@ -260,8 +275,11 @@
         <li><b>Session</b>: farming time, deaths, potion costs, your goal, party, boss respawns and monsters killed.</li>
         <li><b>Loot</b>: mesos in and out, items looted and consumables used, each with a total.</li>
         <li>Every box can be moved by its <b>⠿</b> grip (onto another box, onto a tab, or above the tabs to see it on every tab)
-          and folded with <b>–</b>. Drop it on another box's left or right edge to put the two side by side; drag the bar between
-          them to resize. Preferences → Reset box layout puts them back.</li>
+          and folded with <b>–</b>. Drop it on the left or right third of another box to put the two side by side (the dashed
+          preview shows where it lands); drag the bar between them to resize. With the grip focused, the left and right arrow keys
+          do the same. Preferences → Reset box layout puts them back.</li>
+        <li><b>Run log</b>: what you gained every 2 seconds (EXP and kills, mesos, loot, level ups, deaths, map changes), newest
+          at the bottom. Scroll up to read back; it stays put until you scroll down again.</li>
         <li><b>Snapshots</b>: EXP/hr from just two readings of the EXP bar (start and now), like mapleexp.com. A good check
           on the live number. Type a level or % to fix one that read wrong.</li>
         <li><b>History</b>: past sessions, your last 7 days, how long each level took, and Export CSV.</li>
@@ -387,6 +405,7 @@
   <script src="gamedata.js"></script>
   <script src="shot.js"></script>
   <script src="../core/session.js"></script>
+  <script src="../core/feed.js"></script>
   <script src="readers.js"></script>
   <script src="themes.js"></script>
   <script src="renderer.js"></script>

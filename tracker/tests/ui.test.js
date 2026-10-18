@@ -35,6 +35,12 @@ const path = require("path"), {chromium} = require("playwright");
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click()));
   await page.dblclick("#go");
   await page.waitForTimeout(1500);
+  // run log: a batch of kills and pickups becomes one line per kind, newest at the bottom (Danny, 2026-10-18)
+  const fd = await page.evaluate(() => { const t = Date.now(), s = GrindSession.createSession(G), f = GrindFeed.createFeed(G); f.step(s.state, t);
+    for (const e of [{type: "exp", gain: 20}, {type: "exp", gain: 20}, {type: "meso", amount: 55}, {type: "item", id: 2000000}]) s.add({t, ...e});
+    feedAdd(f.step(s.state, t + 2500, "Danny"));
+    return [...document.querySelectorAll("#feed .fl")].map(l => l.className + ":" + l.textContent).join("|") });
+  if (!/^fl sep:.*Started tracking\|fl exp:.*Danny gained 40 EXP from 2 kills\|fl meso:.*Danny picked up 55\|fl loot:.*Danny looted 1 Red Potion/.test(fd)) throw new Error("run log: " + fd);
   // updates: Check for updates -> downloading -> ready banner; Restart and update stops (saves) the session first
   await page.click("#prefsBtn"); await page.click("#updCheck"); await page.waitForTimeout(100);
   const up = await page.evaluate(() => [document.querySelector("#appVer").textContent, document.querySelector("#updNote").textContent, document.querySelector("#updText").textContent]);
@@ -154,7 +160,7 @@ const path = require("path"), {chromium} = require("playwright");
     const moved = [document.querySelector("#mesoBox").parentElement.id, document.querySelector("[data-box=mobs]").classList.contains("folded")];
     document.querySelector("#layoutReset").click(); await new Promise(r => setTimeout(r, 50));
     return [...moved, document.querySelector("#mesoBox").parentElement.dataset.tab, document.querySelector("[data-box=mobs]").classList.contains("folded"), JSON.stringify(settings.layout.order.dock)] });
-  if (lay[0] !== "dock" || !lay[1] || lay[2] !== "loot" || lay[3] || lay[4] !== "[]") throw new Error("box layout: " + lay);
+  if (lay[0] !== "dock" || !lay[1] || lay[2] !== "loot" || lay[3] || lay[4] !== '["log"]') throw new Error("box layout: " + lay);
   // dragged with the mouse: the Mesos box by its title onto the Session tab (moves there and opens it), then the Monsters
   // box by its grip onto the top half of the Start and end box (goes above it)
   // (the target is measured once the drag has started: the pin strip opening above the tabs moves things down)
@@ -170,9 +176,19 @@ const path = require("path"), {chromium} = require("playwright");
   if (dr[0] !== "session" || dr[1] !== "session" || dr[2] !== "snaps" || dr[3] || !/mobs.*snaps/.test(dr[4])) throw new Error("mouse drag: " + dr);
   // pinned: dropped on the strip above the tabs (it only has a size while dragging) the box lands there, not back in a tab
   { const a = await page.locator("[data-box=stats] .grip").boundingBox(); await page.mouse.move(a.x + 3, a.y + 3); await page.mouse.down(); await page.mouse.move(a.x + 20, a.y + 20, {steps: 3});
-    const d = await page.locator("#dock").boundingBox(); await page.mouse.move(d.x + 40, d.y + d.height / 2, {steps: 5}); await page.mouse.up(); await page.waitForTimeout(50) }
-  const pin = await page.evaluate(() => [document.querySelector("[data-box=stats]").parentElement.id, JSON.stringify(settings.layout.order.dock)]);
-  if (pin[0] !== "dock" || pin[1] !== '["stats"]') throw new Error("pin: " + pin);
+    const d = await page.locator("#logBox").boundingBox(); await page.mouse.move(d.x + d.width / 2, d.y + d.height - 4, {steps: 5});
+    // the ghost shows where it lands (Danny couldn't find side by side when it was a 3 px line)
+    const g = await page.evaluate(() => { const e = document.querySelector(".dropGhost"); return [e.classList.contains("hidden"), e.textContent] });
+    if (g[0] || !/Below/.test(g[1])) throw new Error("ghost: " + g);
+    await page.mouse.up(); await page.waitForTimeout(50) }
+  const pin = await page.evaluate(() => [document.querySelector("[data-box=stats]").parentElement.id, JSON.stringify(settings.layout.order.dock), document.querySelector(".dropGhost").classList.contains("hidden")]);
+  if (pin[0] !== "dock" || pin[1] !== '["log","stats"]' || !pin[2]) throw new Error("pin: " + pin);
+  // keyboard: right arrow on a box on its own puts it beside its neighbour (the run log, above it)
+  const kb = await page.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 30));
+    document.querySelector("[data-box=stats] .grip").dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowRight"})); await w();
+    const r = JSON.stringify(settings.layout.order.dock); document.querySelector("[data-box=stats] .grip").dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowDown"})); await w();
+    return [r, JSON.stringify(settings.layout.order.dock)] });
+  if (!kb[0].startsWith('[{"row":["log","stats"]') || kb[1] !== '["log","stats"]') throw new Error("keyboard side by side: " + kb);
   // side by side: Items looted dropped on the right edge of Consumables used makes a row; the splitter resizes it; the
   // Mesos box dropped on the bottom half of Items looted stacks under it in a column; saved and loaded back as rows
   await page.click(".tabs [data-tab=loot]");
