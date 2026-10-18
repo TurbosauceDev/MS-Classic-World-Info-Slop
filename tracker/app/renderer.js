@@ -158,7 +158,7 @@ function render(){
   $("#ttl").textContent = s.toLevelHrs == null ? "-" : s.toLevelHrs < 1 ? Math.round(s.toLevelHrs * 60) + " min" : s.toLevelHrs.toFixed(1) + " h";
   $("#mesosHr").innerHTML = mz(s.mesosHr);
   renderRespawns();
-  $("#miniExp").textContent = fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent;
+  $("#miniExp").textContent = fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent; $("#miniMeso").innerHTML = mz(s.mesosHr);
   $("#miniNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
   $("#lootHr").innerHTML = mz(s.lootHr);
   const anyUsed = s.used.some(u => u.n);
@@ -199,10 +199,29 @@ function render(){
     + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet: ${(s.invTabs?.etc?.last || 0) > (s.invTabs?.etc?.first || 0)
       ? "the Etc tab doesn't show more than the pickup lines already counted, so they're probably Use items (potions) or a misread line. Report a bug right after one shows up so it can be fixed"
       : "open your Etc tab for a second to count them from the inventory"}</td></tr>` : "");
-  renderInv(s); renderWrap(s);
+  renderInv(s); renderWrap(s); renderMini(s);
   $("#priceNote").textContent = G.pwRead ? `Worth = player-shop median from meso.watch (${G.pwRead}), else NPC price. Mesos/kill on maps with several monsters is a best guess.` : "";
   return s.exp;   // for renderSnaps
 }
+
+// Mini view (Danny, 2026-10-18): totals, times, the run log and the top 5 of each list; the window is sized to fit it
+const MINI_ROWS = 5;
+function miniList(rows, cell, empty){ if (!rows.length) return `<tr class="more"><td>${empty}</td></tr>`;
+  const more = rows.length - MINI_ROWS; return rows.slice(0, MINI_ROWS).map(cell).join("") + (more > 0 ? `<tr class="more"><td colspan="2">and ${more} more</td></tr>` : "") }
+function renderMini(s){
+  $("#miniTotal").textContent = fmt(s.exp); $("#miniActive").textContent = hm(s.activeMin / 60);
+  $("#miniClock").textContent = runT0 && timer != null ? hm((Date.now() - runT0) / 3.6e6) : "-";
+  $("#miniState").textContent = [$("#stateText").textContent, s.mapName].filter(Boolean).join(" · ");
+  $("#miniItems").innerHTML = miniList(s.items, i => `<tr><td>${ico(i.id)}${esc(i.name)}</td><td class="n">×${fmt(i.n)}</td></tr>`, "Nothing yet");
+  $("#miniMobs").innerHTML = miniList(s.mobs, m => `<tr><td>${esc(m.name)}</td><td class="n">${fmt(m.kills)}</td></tr>`, "None yet");
+  $("#miniUsed").innerHTML = miniList(s.used.filter(u => u.n), u => `<tr><td>${ico(u.id)}${esc(u.name)}</td><td class="n">×${fmt(u.n)}</td></tr>`, "None yet");
+  const f = $("#miniFeed"); f.scrollTop = f.scrollHeight;   // (it can't scroll while hidden: set again once shown)
+  miniFit();
+}
+// the window's height follows the Mini view's (only when it changed: setting it every tick would fight a user resizing)
+let miniH = 0;
+function miniFit(force){ if (!document.body.classList.contains("mini")) return;
+  const h = Math.ceil($("#mini").getBoundingClientRect().bottom + 10); if (force || Math.abs(h - miniH) > 6){ miniH = h; host.mini?.(true, h) } }
 
 // inventory: which tabs were read and when (Session tab), and what changed since the first look (Loot tab)
 const INV_TABS = [["equip", "Equip"], ["use", "Use"], ["etc", "Etc"]];
@@ -728,9 +747,12 @@ function feedLine(l){ const who = `<span class="who">${esc(l.who)}</span>`; let 
   return `<div class="fl ${l.kind}"><time>${clockS(l.t)}</time><span>${h}</span></div>` }
 function feedAdd(lines){ const el = $("#feed"); if (!lines?.length) return;
   const stick = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
-  el.insertAdjacentHTML("beforeend", lines.map(feedLine).join(""));
+  const html = lines.map(feedLine).join("");
+  el.insertAdjacentHTML("beforeend", html);
   while (el.children.length > 300) el.firstElementChild.remove();
-  if (stick) el.scrollTop = el.scrollHeight }
+  if (stick) el.scrollTop = el.scrollHeight;
+  // the Mini view has its own copy (always at the newest line)
+  const m = $("#miniFeed"); m.insertAdjacentHTML("beforeend", html); while (m.children.length > 60) m.firstElementChild.remove(); m.scrollTop = m.scrollHeight }
 const feedSep = text => feedAdd([{t: Date.now(), kind: "sep", text}]);
 
 // start/end snapshots: {t, level, pct, exp?, file?, hand?}; a hand-fixed or button snapshot isn't replaced by the automatic ones
@@ -1021,8 +1043,8 @@ $("#goal").onchange = e => { const v = Math.round(+e.target.value || 0); setGoal
 $("#goalNext").onclick = () => setGoal("next"); $("#goalOff").onclick = () => setGoal("off");
 $("#alertItems").onchange = e => host.settings({alertItems: e.target.value.slice(0, 500)}).then(s => { settings = s; const n = alertSet().size; $("#alertItemsNote").textContent = n ? n + " item" + (n > 1 ? "s" : "") + " watched" : "" });
 $("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.value || 0)}).then(s => settings = s);
-$("#miniBtn").onclick = () => { document.body.classList.add("mini"); host.mini(true) };
-$("#mini").onclick = () => { document.body.classList.remove("mini"); host.mini(false) };
+$("#miniBtn").onclick = () => { document.body.classList.add("mini"); miniH = 0; if (session) renderMini(session.stats()); else miniFit(true) };
+$("#miniFull").onclick = () => { document.body.classList.remove("mini"); host.mini(false) };
 $("#histBtn").onclick = () => { showTab("hist"); loadHist() };
 let histList = [];
 // total EXP of a run (the start/end readings when it has both, else the live count) and EXP per minute of farming
@@ -1168,7 +1190,7 @@ for (const b of document.querySelectorAll("#titlebar [data-menu]")) b.onclick = 
 host.onMenu?.(what => {
   if (what === "help") openHelp();
   else if (what === "settings") openPrefs();
-  else if (what === "mini") (document.body.classList.contains("mini") ? $("#mini") : $("#miniBtn")).click();
+  else if (what === "mini") (document.body.classList.contains("mini") ? $("#miniFull") : $("#miniBtn")).click();
   else if (what === "report") openBugPop();
   else if (what.startsWith("onTop:")){ const on = what === "onTop:true"; settings.onTop = on; $("#ontop").checked = on; $("#status").textContent = "Keep on top: " + (on ? "on" : "off") + "." }
   else if (what.startsWith("clickThrough:")){ const on = what === "clickThrough:true"; document.body.classList.toggle("through", on)

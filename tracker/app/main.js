@@ -269,7 +269,7 @@ ipcMain.handle("export-csv", () => {
   shell.showItemInFolder(file);
   return {file};
 });
-// mini bar: a small strip with just EXP/hr and time to level
+// Mini view: the numbers and lists that matter while farming, the window sized to fit
 // back from the mini bar: the size the window had before, not the default (a player who made it bigger keeps that)
 let fullSize = null;
 // the window opens where it was last time (same monitor, spot and size) when that spot is still on a monitor, else the default
@@ -291,8 +291,10 @@ ipcMain.handle("menu-popup", (_, label, x, y) => {
   const m = Menu.getApplicationMenu()?.items.find(i => i.label === label)?.submenu;
   if (m && win && !win.isDestroyed()) m.popup({window: win, x: Math.round(+x || 0), y: Math.round(+y || 0)});
 });
-ipcMain.handle("mini", (_, on) => {
-  if (win){ if (on){ fullSize = win.getSize(); win.setSize(fullSize[0], 128) } else { win.setSize(...(fullSize || [360, 600])); fullSize = null } }
+ipcMain.handle("mini", (_, on, h) => {
+  // on: h = the Mini view's height in page pixels (it changes as lists fill); the width stays
+  if (win){ if (on){ fullSize ||= win.getSize(); const z = win.webContents.getZoomFactor() || 1; win.setContentSize(win.getContentSize()[0], Math.max(140, Math.min(900, Math.round((+h || 128) * z)))) }
+    else { win.setSize(...(fullSize || [360, 600])); fullSize = null } }
   return !!on;
 });
 ipcMain.handle("share-run", async (_, run) => {

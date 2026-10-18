@@ -278,7 +278,10 @@ const path = require("path"), {chromium} = require("playwright");
   const watched = await page.evaluate(() => { settings.alertItems = "Horny Mushroom Cap"; return alertSet().has("4000019") });
   if (!watched) throw new Error("item alert set");
   await page.click("#miniBtn"); const mini = await page.isVisible("#mini"), full = await page.isVisible("#go");
-  await page.click("#mini"); const back = await page.isVisible("#go");
+  // Mini view (Danny, 2026-10-18): the totals and times, the run log and the three lists; the window asked to fit it
+  const mv = await page.evaluate(() => ["#miniExp", "#miniMeso", "#miniTotal", "#miniActive", "#miniClock", "#miniTtl", "#miniItems", "#miniMobs", "#miniUsed"].filter(q => !document.querySelector(q).offsetParent));
+  if (mv.length) throw new Error("mini view hides: " + mv);
+  await page.click("#miniFull"); const back = await page.isVisible("#go");
   if (!/Valuable drop: Horny Mushroom Cap/.test(status)) throw new Error("drop alert: " + status);
   if (!/Best time here: .+ 20% faster than usual then \(4 players\)/.test(last)) throw new Error("best time: " + last);
   if (!/4,000 EXP\/hr/.test(last) || !/Not enough shared runs/.test(last)) throw new Error("speed card: " + last);

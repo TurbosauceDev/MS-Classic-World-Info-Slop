@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld("host", {
   deleteSession: saved => ipcRenderer.invoke("delete-session", saved),
   exportCsv: () => ipcRenderer.invoke("export-csv"),
   party: live => ipcRenderer.invoke("party", live),
-  mini: on => ipcRenderer.invoke("mini", on),
+  mini: (on, h) => ipcRenderer.invoke("mini", on, h),
   menu: (label, x, y) => ipcRenderer.invoke("menu-popup", label, x, y),
   snip: url => ipcRenderer.invoke("snip", url),
   themeBar: c => ipcRenderer.invoke("theme-bar", c),
