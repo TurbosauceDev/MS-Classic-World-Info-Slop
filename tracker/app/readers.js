@@ -21,11 +21,16 @@
     "B":[6,9,"3e86187f86187e"],"f":[3,9,"15d2492"],"A":[7,9,"082850a227c8a0c1"],"R":[7,9,"7e83060fe890a141"],
     "TY":[14,9,"3fc11088422105040810204081020408"],"(":[3,11,"052924891"],"+":[5,5,"0427c84"],")":[3,11,"112249294"],
     "H":[7,9,"4183060ff83060c1"],"y":[5,9,"118a94a21088"],"M":[7,9,"41c78ead5ab564c9"],".":[1,1,"1"],"x":[5,7,"454a22951"],
-    "t":[3,9,"25d2493"]};
+    "t":[3,9,"25d2493"],
+    // l: a full 1x9 bar, the i's shape without its gap (it read as "i" by one dot: "Biue Potion", Danny's report 2026-10-18)
+    "l":[1,9,"1ff"]};
   // the message digits are the same 5x9 font as the stat window (shot.js SHOT_FONT)
   const SHOT = typeof SHOT_FONT !== "undefined" ? SHOT_FONT : root.SHOT_FONT || {};
   for (const ch of "0123456789") if (SHOT[ch]) MSG_FONT[ch] = SHOT[ch];
   const BAR = glyphs(BAR_FONT), MSG = glyphs(MSG_FONT);
+  // letters learned on this PC from pickup lines whose item was certain (saved in the settings, sent back at Start)
+  const LEARNED = [];   // new ones, handed to readFrame as "glyph" events (the tracker saves them)
+  function addGlyphs(list){ const added = []; for (const g of list || []) if (g && g.ch && g.bits && !MSG.some(f => f.w === g.w && f.h === g.h && f.bits === g.bits)){ const f = {ch: g.ch, w: g.w, h: g.h, bits: g.bits}; MSG.push(f); added.push(f) } return added }
 
   // 1 game pixel per pixel: in a picture scaled up k times, (nearly) every color change between neighbors falls on a block
   // edge. Find the largest k (2-4) and offset where >= 85% of the sharp changes do. Tolerant: video capture blurs colors a little.
@@ -192,8 +197,9 @@
       const keep = [gl[gl.length - 1]];
       for (let i = gl.length - 2; i >= 0 && keep[0].x - (gl[i].x + gl[i].w) <= 9; i--) keep.unshift(gl[i]);
       let str = "", last = null;
-      for (const g of keep){ if (last !== null && g.x - last >= 4) str += " "; str += match(g, MSG) || "?"; last = g.x + g.w }
-      lines.push({y: s + y0, text: str.replace(/ (?=[0-9)])|(?<=[(+0-9]) /g, "")});
+      const chars = keep.map(g => match(g, MSG) || "?");
+      keep.forEach((g, i) => { if (last !== null && g.x - last >= 4) str += " "; str += chars[i]; last = g.x + g.w });
+      lines.push({y: s + y0, text: str.replace(/ (?=[0-9)])|(?<=[(+0-9]) /g, ""), glyphs: keep, chars});
     }
     return lines;
   }
@@ -242,6 +248,16 @@
       else if ((m = l.text.match(/^(.+?) ?x(\d+) ?earned\. ?\((.+)\)$/))){
         // several items fit (letters not learned yet, a cut name): the session picks the one this map's monsters drop
         const ids = itemByName(m[1], m[3], true);
+        // one item fits a name with unread letters: its name says what those letters are. Learned when the glyphs line up
+        // one-to-one with the name's letters (spaces aside)
+        if (ids.length === 1 && m[1].includes("?") && l.glyphs){
+          const name = (ITEMS.find(([id]) => id === ids[0])?.[1].n || "").replace(/ /g, ""), k = m[1].replace(/ /g, "").length;
+          if (name.length === k && l.chars.slice(0, k).every(c => c.length === 1)){
+            const learn = [];
+            l.chars.slice(0, k).forEach((c, i) => { if (c === "?"){ const g = l.glyphs[i]; learn.push({ch: name[i], w: g.w, h: g.h, bits: g.bits}) } });
+            LEARNED.push(...addGlyphs(learn));
+          }
+        }
         out.push({y: l.y, text: l.text, event: ids.length === 1 ? {type: "item", id: ids[0], qty: +m[2]} : {type: "itemraw", text: l.text, qty: +m[2], cands: ids.length <= 40 ? ids : []}});
       }
     }
@@ -658,7 +674,9 @@
       // KPQ clock: sent when it changes, at most every 5 s
       const left = readKpqTimer(img);
       if (left !== null && (lastLeft === null || left !== lastLeft && t - lastLeftT >= 5000)){ ev.push({t, type: "kpqtime", left}); lastLeft = left; lastLeftT = t }
-      for (const p of fresh(readPickups(img))){
+      const picked = fresh(readPickups(img));
+      if (LEARNED.length) ev.push(...LEARNED.splice(0).map(g => ({t, type: "glyph", ...g})));
+      for (const p of picked){
         if (p.event.type === "bonus") bonusAt = t;
         ev.push({t, ...p.event});
       }
@@ -795,6 +813,6 @@
     if (want.chat) crops.chat = chatCrop(img);
     return {ev, info, crops, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {work, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);
