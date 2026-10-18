@@ -50,6 +50,7 @@ cd ../server && npm install && npm run data && npm test   # Node 22 (node:sqlite
   Live: https://ms-classic-tracker.maplestoryclassic.workers.dev/api/summary
 
 ## Fixtures (images: never view whole; crop to the region first)
+Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with every new fixture (docs.yml checks).
 - `tests/frames/` Danny's 2560x1440 captures (playfield blanked), `frames-inv/` inventory, `frames-kpq/` KPQ clock,
   `frames-beanguri/` (MIT, from beanguri's overlay). Every misread from real use becomes a fixture + expected value.
 - Danny's device (folder tools, already approved): `C:\Users\danny\Pictures\MS Classic Tracker frames` (debug/report

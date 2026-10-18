@@ -5,6 +5,8 @@ export. Owner: Danny (GitHub TurbosauceDev).
 
 **Read only the doc for the area you touch:** site → [docs/ai/site.md](docs/ai/site.md) · tracker/server →
 [docs/ai/tracker.md](docs/ai/tracker.md) · formulas, data schema, sources → `docs/notes.md` (grep its `##` headings, read one section).
+Before proposing anything, grep [docs/ai/decisions.md](docs/ai/decisions.md) (Danny's past calls). Need a test image? Pick
+it from [docs/ai/fixtures.md](docs/ai/fixtures.md) instead of opening images.
 
 ## Ground rules (Danny)
 - **Classic World only.** No modern/retail info; 2008-era only if confirmed for Classic. Magician 1st job is Lv 10.
@@ -15,6 +17,9 @@ export. Owner: Danny (GitHub TurbosauceDev).
   rewrites, broad research) offer a cheaper alternative first (a test, a targeted check).
 - Every real bug becomes a test/fixture. Prefer automated tests (CI runs them) over Claude audit passes.
 - One feature per thread; close it when shipped.
+- **Hand-off on the way out:** in the same push as the work, add 2-3 lines to the docs/ai page for your area (what
+  changed, new traps), a dated line to decisions.md for each call Danny made, and a row in fixtures.md per new test
+  image. `node tests/docs.test.js` (CI: docs.yml) fails if a path or command named in these docs no longer exists.
 
 ## Token budget
 - **Never read whole:** `data/data.json` (5.7 MB), `dist/index.html` (6.2 MB), `data/sources/*.json`, `vendor/`,

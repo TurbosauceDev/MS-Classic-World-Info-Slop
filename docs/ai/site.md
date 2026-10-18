@@ -30,7 +30,8 @@ python3 scripts/launch_diff.py <ver>        # maplestory.io MCW client vs our da
 Playwright: global install works here (`NODE_PATH` set, browsers in /opt/pw-browsers). If `chromium.launch` can't find a
 browser: `CHROMIUM=/opt/pw-browsers/chromium` (tracker tests, fetch_meowdb_drops) or a `-r` preload shim that passes
 `executablePath`. Never `playwright install`.
-CI: `.github/workflows/tests.yml` runs smoke + golden on every push/PR to the default branch.
+CI: `.github/workflows/tests.yml` runs smoke + golden on every push/PR to the default branch; `docs.yml` runs
+`tests/docs.test.js` (paths/commands in these docs exist, every test image listed in [fixtures.md](fixtures.md)).
 
 ## Source map (bytes; grep before reading anything over ~15 KB)
 | file | KB | what |

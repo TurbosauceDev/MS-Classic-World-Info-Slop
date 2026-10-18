@@ -1,0 +1,17 @@
+# Docs check on every push/PR (no path filter, so a code move that breaks the notes goes red): every path and command
+# named in CLAUDE.md and docs/ai/*.md exists, and docs/ai/fixtures.md lists every test image. No installs, seconds.
+name: Docs check
+on:
+  push:
+    branches: ["claude/trusting-bell-fqgar6"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node tests/docs.test.js
