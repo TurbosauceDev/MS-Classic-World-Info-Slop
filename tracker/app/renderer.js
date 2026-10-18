@@ -339,7 +339,21 @@ function autoPause(minimap, info, t){   // minimap: the minimap is on screen (lo
 const KPQ_MAPS = new Set((G.kpq || []).map(String));
 let kpq = null;
 function pauseAt(t){ const e = {t: Math.max(t, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); log("event", e) }
-function kpqReset(){ kpq = {on: settings.kpqAct === "kpq", hold: false, inside: false, rounds: 0} }
+function kpqReset(){ kpq = {on: settings.kpqAct === "kpq", hold: false, inside: false, rounds: 0, left: null, leftT: 0, stage: null, round: null, times: [], stageTimes: {}} }
+// stage and round times: from the KPQ clock ("Time Left", top middle) when it reads, else the PC clock
+const KPQ_STAGE = {"80000000": "1st", "80000100": "2nd", "80000200": "3rd", "80000300": "4th", "80000400": "Last", "80000500": "Bonus"};
+const kpqLeftAt = t => kpq.left === null ? null : kpq.left - (t - kpq.leftT) / 1000;
+const kpqSince = (p, t) => p.left0 !== null && kpq.left !== null ? p.left0 - kpqLeftAt(t) : (t - p.t0) / 1000;
+const mss = sec => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0") };
+function kpqTime(left, t){
+  kpq.left = left; kpq.leftT = t;
+  for (const p of [kpq.stage, kpq.round]) if (p && p.left0 === null) p.left0 = left + (t - p.t0) / 1000;   // clock first seen mid-stage
+}
+function kpqEnd(t, round){
+  if (kpq.stage){ (kpq.stageTimes[kpq.stage.id] ||= []).push(kpqSince(kpq.stage, t)); kpq.stage = null }
+  if (round && kpq.round){ kpq.times.push(kpqSince(kpq.round, t)); kpq.round = null }
+  if (round) kpq.left = null;   // each round's clock starts over
+}
 function kpqMap(id, t){
   if (!kpq || id == null) return;   // map not read: no change
   const inside = KPQ_MAPS.has(String(id));
@@ -347,9 +361,15 @@ function kpqMap(id, t){
   if (!kpq.on) return;
   if (inside){
     if (!kpq.inside) kpq.rounds++;
+    // a new stage: the last one's time is kept; the Exit map ends the round
+    if (kpq.stage?.id !== String(id)){
+      kpqEnd(t, String(id) === "80000600");
+      if (KPQ_STAGE[id]){ const p = {id: String(id), t0: t, left0: kpqLeftAt(t)}; kpq.stage = p; if (!kpq.round) kpq.round = {t0: t, left0: p.left0} }
+    }
     kpq.inside = true;
     if (kpq.hold){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ round " + kpq.rounds + ": tracking again." }
   } else {
+    kpqEnd(t, true);
     kpq.inside = false;
     if (!kpq.hold){ kpq.hold = true; if (session.state.pausedAt === null) pauseAt(t); $("#status").textContent = "KPQ: paused between rounds. Picks back up on the next stage." }
   }
@@ -358,6 +378,9 @@ function kpqText(s){
   if (!kpq?.on) return settings.kpqAct === "kpq" ? "KPQ picked: the session pauses outside the KPQ stages and counts each round." : "During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.";
   const n = kpq.rounds, per = v => n ? fmt(v / n) : "-";
   return `KPQ (${settings.kpqMode || "Bonus"}): ${n} round${n === 1 ? "" : "s"}` + (n ? ` · ${Math.round(s.activeMin / n * 10) / 10} min a round · ${per(s.exp)} EXP a round · ${per(s.mesos)} mesos a round` : "")
+    + (kpq.round ? ` · this round ${mss(kpqSince(kpq.round, Date.now()))}` + (kpq.stage ? ` (${KPQ_STAGE[kpq.stage.id]} stage ${mss(kpqSince(kpq.stage, Date.now()))})` : "") : "")
+    + (kpq.times.length ? ` · best round ${mss(Math.min(...kpq.times))}, average ${mss(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length)}` : "")
+    + (kpq.left !== null ? ` · KPQ clock ${mss(kpqLeftAt(Date.now()))} left` : "")
     + (kpq.hold ? " · paused between rounds" : "");
 }
 function kpqSet(){
@@ -399,6 +422,7 @@ async function tick(){
     if (timer == null || sess !== session || !r) throw null;   // stopped (or restarted) while reading, or the frame was lost
     if (r.scale){ scale = r.scale; fastLeft = 19 }   // also at 1x: finding the scale is the slow part, so it's checked every 20 frames only
     for (const e of r.ev){
+      if (e.type === "kpqtime"){ if (kpq) kpqTime(e.left, e.t); continue }
       session.add(e); slicer.add(e); log("event", e);
       if (e.type === "item") dropAlert(e.id);
       if (e.type === "bar"){

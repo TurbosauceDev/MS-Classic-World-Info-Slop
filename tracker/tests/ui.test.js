@@ -86,9 +86,12 @@ const path = require("path"), {chromium} = require("playwright");
     kpqMap("10003000", t + 400); const held = session.state.pausedAt !== null;
     autoPause(f, {bar: true}, t + 900); const stillHeld = session.state.pausedAt !== null;
     session.add({t: t + 950, type: "bar", level: 22, pct: 10}); autoPause(f, {bar: true}, t + 1000); const reheld = session.state.pausedAt !== null;
-    kpqMap("80000000", t + 5000); const back = session.state.pausedAt === null; render();
-    return {off, r1, held, stillHeld, reheld, back, rounds: kpq.rounds, note: document.querySelector("#kpqNote").textContent, where: document.querySelector("#where").textContent} });
-  if (kq.off || kq.r1 !== 1 || !kq.held || !kq.stillHeld || !kq.reheld || !kq.back || kq.rounds !== 2 || !/KPQ \(Bonus\): 2 rounds/.test(kq.note) || !/^KPQ \(Bonus\)/.test(kq.where)) throw new Error("kpq: " + JSON.stringify(kq));
+    kpqMap("80000000", t + 5000); const back = session.state.pausedAt === null;
+    // the KPQ clock: 30:00 left on the 1st stage, 29:00 a minute into the 2nd, Exit 60 s later = a 2:00 round
+    kpqTime(1800, t + 5000); kpqMap("80000100", t + 65000); kpqTime(1740, t + 65000); kpqMap("80000600", t + 125000);
+    const times = [...kpq.times], st = kpq.stageTimes["80000000"]; render();
+    return {times, st, off, r1, held, stillHeld, reheld, back, rounds: kpq.rounds, note: document.querySelector("#kpqNote").textContent, where: document.querySelector("#where").textContent} });
+  if (kq.off || kq.r1 !== 1 || !kq.held || !kq.stillHeld || !kq.reheld || !kq.back || kq.rounds !== 2 || !/KPQ \(Bonus\): 2 rounds/.test(kq.note) || !/^KPQ \(Bonus\)/.test(kq.where) || kq.times.at(-1) !== 120 || kq.st?.at(-1) !== 60 || !/best round /.test(kq.note)) throw new Error("kpq: " + JSON.stringify(kq));
   // Grinding picked: KPQ stages don't turn it on
   const kg = await page.evaluate(async () => { const keep = kpq; settings = await host.settings({kpqAct: "grind"}); kpqReset(); kpqMap("80000000", Date.now() + 3e4); const on = kpq.on;
     settings = await host.settings({kpqAct: "auto"}); kpq = keep; return on });

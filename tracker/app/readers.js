@@ -99,6 +99,8 @@
     for (let s = 0; s + 7 <= M.H; s++){
       let str = "", last = -9;
       for (const g of cut(M, s, s + 7)){ const ch = match(g, BAR); if (g.x - last > 3) str += " "; str += ch || "?"; last = g.x + g.w }
+      // a narrow 1 leaves a wide gap before its comma ("1 ,601", Danny's KPQ frame 2026-10-18): that space isn't a break
+      str = str.replace(/(\d) ,(?=\d)/g, "$1,");
       const m = str.match(/(\d{1,3}(?:,\d{3})*) +(\d{1,3}\.\d\d)%/);
       if (m) return {exp: +m[1].replace(/,/g, ""), pct: +m[2]};
     }
@@ -194,6 +196,37 @@
       lines.push({y: s + y0, text: str.replace(/ (?=[0-9)])|(?<=[(+0-9]) /g, "")});
     }
     return lines;
+  }
+  /* KPQ's "Time Left" clock, top middle of the screen: cream dot-matrix digits, 5x7 dots each, one dot every 5 px (game
+     pixels), laid out MM.SS as digit, digit, 4 columns, digit, digit. Read from Danny's KPQ frames (2026-10-18), where the
+     dot grid sat at x = middle - 37 + 5*col, y = 44 + 5*row. 6 and 9 weren't in those frames: they're the font's usual
+     shapes, unconfirmed, so they only count on an exact match. Returns seconds left, or null. */
+  const TDIG = {".###./#..##/#.#.#/#.#.#/##..#/##..#/.###.": 0, "..#../.##../..#../..#../..#../..#../.###.": 1,
+    ".###./#...#/....#/...#./..#../.#.../#####": 2, ".###./#...#/....#/..##./....#/#...#/.###.": 3,
+    "..##./.#.#./.#.#./#..#./#####/...#./...#.": 4, "#####/#..../####./....#/....#/#...#/.###.": 5,
+    "#####/...#./...#./..#../..#../.#.../.#...": 7, ".###./#...#/#...#/.###./#...#/#...#/.###.": 8};
+  const TDIG_GUESS = {".##../.#.../#..../####./#...#/#...#/.###.": 6, ".###./#...#/#...#/.####/....#/...#./.##..": 9};
+  function readKpqTimer(img){
+    const {w, h, d} = img, mid = Math.round(w / 2);
+    if (w < 400 || h < 100) return null;
+    const ink = (x, y) => { const i = (y * w + x) * 4; return d[i] > 200 && d[i + 1] > 180 && d[i + 2] > 120 };
+    const g = [];
+    for (let r = 0; r < 7; r++){ const row = []; for (let c = 0; c < 30; c++) row.push(ink(mid - 37 + 5 * c, 44 + 5 * r)); g.push(row) }
+    const cell = (a, i) => { const rows = []; for (let r = 0; r < 7; r++){ let x = ""; for (let c = 0; c < 5; c++) x += g[r][a + c] ? "#" : "."; rows.push(x) } return rows.join("/") };
+    const digit = bm => { if (bm in TDIG) return TDIG[bm]; if (bm in TDIG_GUESS) return TDIG_GUESS[bm];
+      let best = null, bd = 9, tie = false;
+      for (const [k, v] of Object.entries(TDIG)){ let n = 0; for (let j = 0; j < k.length; j++) if (k[j] !== bm[j]) n++; if (n < bd){ bd = n; best = v; tie = false } else if (n === bd) tie = true }
+      return bd <= 1 && !tie ? best : null };
+    for (let a = 0; a <= 3; a++){
+      // the columns between the digits are blank (a dot under the 4-column gap is the MM.SS point)
+      const blank = c => g.every((row, r) => !row[c] || r === 6);
+      if (![a + 5, a + 11, a + 15, a + 21].every(c => c < 30 && blank(c))) continue;
+      const ds = [0, 6, 16, 22].map(o => digit(cell(a + o)));
+      if (ds.some(v => v === null)) continue;
+      const m = ds[0] * 10 + ds[1], sec = ds[2] * 10 + ds[3];
+      if (sec < 60) return m * 60 + sec;
+    }
+    return null;
   }
   function readPickups(img){
     const lines = readLines(img), out = [];
@@ -604,6 +637,7 @@
       prev = cur;
       return cur.slice(cur.length - n);
     }
+    let lastLeft = null, lastLeftT = -Infinity;
     function readFrame(raw, t, nat = null){   // nat: the native frame, when the caller already made it
       const img = nat || (raw.k ? raw : native(raw)), ev = [];
       const bar = readBar(img) || barAny(raw, t);   // pixel-exact fast path, else any scale
@@ -621,6 +655,9 @@
       if (bar && (!lastBar ? fits : (steady && fits || agrees) && (bar.exp !== lastBar.exp || bar.pct !== lastBar.pct))){
         ev.push({t, type: "bar", exp: bar.exp, pct: bar.pct, level}); lastBar = {...bar, level: level || lastBar?.level};
       }
+      // KPQ clock: sent when it changes, at most every 5 s
+      const left = readKpqTimer(img);
+      if (left !== null && (lastLeft === null || left !== lastLeft && t - lastLeftT >= 5000)){ ev.push({t, type: "kpqtime", left}); lastLeft = left; lastLeftT = t }
       for (const p of fresh(readPickups(img))){
         if (p.event.type === "bonus") bonusAt = t;
         ev.push({t, ...p.event});
@@ -628,7 +665,7 @@
       // party size only changes after the same new size is read 3 frames running (a window in the way, a bar mid-blink)
       // no party window: a party while bonus lines came in the last 3 minutes (left the party = back to solo after that)
       const partyRead = readParty(img), party = partyRead || (t - bonusAt < 180e3 ? 2 : 1);
-      info = {bar: !!bar, partyWindow: partyRead, counts: info.counts, inv: info.inv};   // what this frame showed (self-check, auto-pause)
+      info = {bar: !!bar, partyWindow: partyRead, counts: info.counts, inv: info.inv, kpqLeft: left};   // what this frame showed (self-check, auto-pause)
       if (icons?.length && t - lastCounts >= 2000){
         lastCounts = t; ev.push(...readUse(img, t));
         // the inventory's meso total, taken when read the same twice running. Only around where it was last seen, with
@@ -758,6 +795,6 @@
     if (want.chat) crops.chat = chatCrop(img);
     return {ev, info, crops, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {work, createReaders, findInventory, readInventory, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {work, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);
