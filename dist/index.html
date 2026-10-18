@@ -506,6 +506,13 @@ details.sec>summary:hover h2{color:var(--accent)}
 .homecat.bill .hlinks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:0 24px}
 .homecat.bill .hlink b{font-size:15.5px}
 .homecat.bill .hlink span{font-size:13.5px}
+/* Home sprites: in-game icons from D (filled by 00-core.js); header icon always, link icons only on the billboard */
+.hic{width:26px;height:26px;object-fit:contain;vertical-align:-5px;margin-right:9px}
+.hlink .hic{display:none}
+.homecat.bill .hcat .hic{width:34px;height:34px;vertical-align:-6px;margin-right:11px}
+.homecat.bill .hlink{display:grid;grid-template-columns:34px 1fr;column-gap:10px;align-items:center}
+.homecat.bill .hlink .hic{display:block;grid-row:1/3;width:34px;height:34px;margin:0}
+.homecat.bill .hlink b,.homecat.bill .hlink span{grid-column:2}
 ::view-transition-group(*){animation-duration:.35s;animation-timing-function:cubic-bezier(.2,.7,.2,1)}
 /* small polish: soft depth on panels, gentle motion on open/close and hover. All motion is off under prefers-reduced-motion
    (rule above); nothing here touches the Home cards. */
@@ -584,59 +591,59 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
 
 <section id="home">
   <div class="homegrid">
-    <div class="homecat" data-sec="trk"><h2><button class="hcat" data-big="trk" aria-expanded="false">Grind Tracker</button></h2>
+    <div class="homecat" data-sec="trk"><h2><button class="hcat" data-big="trk" aria-expanded="false"><img class="hic" data-ic="m:2" alt="">Grind Tracker</button></h2>
       <div class="hbill"><p>A small window on top of the game that counts your EXP/hr, kills, mesos, loot and potions while you grind, times your KPQ rounds, and pools what players share into real numbers on this site.</p><div class="hbillact"><a class="btn primary" href="https://github.com/TurbosauceDev/MS-Classic-World-Info-Slop/releases/latest" target="_blank" rel="noopener">Download for Windows</a> <span class="pill p-hot">Windows · free</span> <button class="btn hopen" data-go-cat="trk">Open Grind Tracker →</button></div></div>
       <div class="hlinks">
-      <button class="hlink" data-go="trk"><b>Overview</b><span>Our Windows app that counts EXP/hr, kills, mesos and loot while you grind.</span></button>
-      <button class="hlink" data-go="trkhow"><b>How to use</b><span>Set-up, the numbers, parties, KPQ and fixing bad reads.</span></button>
-      <button class="hlink" data-go="trkruns"><b>Shared runs</b><span>Real EXP/hr, mesos and drops from tracker players.</span></button>
-      <button class="hlink" data-go="trkkpq"><b>KPQ leaderboard</b><span>Fastest Kerning PQ clears by tracker parties.</span></button>
+      <button class="hlink" data-go="trk"><img class="hic" data-ic="i:4001005" alt=""><b>Overview</b><span>Our Windows app that counts EXP/hr, kills, mesos and loot while you grind.</span></button>
+      <button class="hlink" data-go="trkhow"><img class="hic" data-ic="i:4031032" alt=""><b>How to use</b><span>Set-up, the numbers, parties, KPQ and fixing bad reads.</span></button>
+      <button class="hlink" data-go="trkruns"><img class="hic" data-ic="i:4031126" alt=""><b>Shared runs</b><span>Real EXP/hr, mesos and drops from tracker players.</span></button>
+      <button class="hlink" data-go="trkkpq"><img class="hic" data-ic="m:800003" alt=""><b>KPQ leaderboard</b><span>Fastest Kerning PQ clears by tracker parties.</span></button>
       </div>
     </div>
-    <div class="homecat" data-sec="char"><h2><button class="hcat" data-big="char" aria-expanded="false">Your character</button></h2>
+    <div class="homecat" data-sec="char"><h2><button class="hcat" data-big="char" aria-expanded="false"><img class="hic" data-ic="i:1002084" alt="">Your character</button></h2>
       <div class="hbill"><p>Plan a character from level 1 to 100: stats and skills for any class, which quests to do when, where to grind for your build, and how fast you really level.</p><div class="hbillact"><button class="btn hopen" data-go-cat="char">Open Your character →</button></div></div>
       <div class="hlinks">
-      <button class="hlink" data-go="plan"><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
-      <button class="hlink" data-go="path"><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
-      <button class="hlink" data-go="maps"><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
-      <button class="hlink" data-go="expc"><b>EXP/hr calculator</b><span>Time a session, get your real EXP per hour and time to level.</span></button>
+      <button class="hlink" data-go="plan"><img class="hic" data-ic="s:1001001" alt=""><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
+      <button class="hlink" data-go="path"><img class="hic" data-ic="i:2010000" alt=""><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
+      <button class="hlink" data-go="maps"><img class="hic" data-ic="m:10" alt=""><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
+      <button class="hlink" data-go="expc"><img class="hic" data-ic="s:4101001" alt=""><b>EXP/hr calculator</b><span>Time a session, get your real EXP per hour and time to level.</span></button>
       </div>
     </div>
-    <div class="homecat" data-sec="db"><h2><button class="hcat" data-big="db" aria-expanded="false">Databases</button></h2>
+    <div class="homecat" data-sec="db"><h2><button class="hcat" data-big="db" aria-expanded="false"><img class="hic" data-ic="i:4001007" alt="">Databases</button></h2>
       <div class="hbill"><p>Everything in the launch game files, cross-linked: every quest, monster, item and 1st/2nd job skill. Search them all at once with Ctrl K.</p><div class="hbillact"><button class="btn hopen" data-go-cat="db">Open Databases →</button></div></div>
       <div class="hlinks">
-      <button class="hlink" data-go="quests"><b>Quest Database</b><span>Every launch quest with level, rewards, questlines and community picks.</span></button>
-      <button class="hlink" data-go="mobs"><b>Monsters</b><span>Stats, spawns, drops and the best maps to farm each monster.</span></button>
-      <button class="hlink" data-go="items"><b>Items</b><span>Every item: stats, who drops it, shops, recipes and quests that use it.</span></button>
-      <button class="hlink" data-go="skills"><b>Skills</b><span>Every 1st and 2nd job skill: what it does at each level and what it needs.</span></button>
+      <button class="hlink" data-go="quests"><img class="hic" data-ic="i:4031001" alt=""><b>Quest Database</b><span>Every launch quest with level, rewards, questlines and community picks.</span></button>
+      <button class="hlink" data-go="mobs"><img class="hic" data-ic="m:9" alt=""><b>Monsters</b><span>Stats, spawns, drops and the best maps to farm each monster.</span></button>
+      <button class="hlink" data-go="items"><img class="hic" data-ic="i:2000000" alt=""><b>Items</b><span>Every item: stats, who drops it, shops, recipes and quests that use it.</span></button>
+      <button class="hlink" data-go="skills"><img class="hic" data-ic="s:2001003" alt=""><b>Skills</b><span>Every 1st and 2nd job skill: what it does at each level and what it needs.</span></button>
       </div>
     </div>
-    <div class="homecat" data-sec="world"><h2><button class="hcat" data-big="world" aria-expanded="false">World</button></h2>
+    <div class="homecat" data-sec="world"><h2><button class="hcat" data-big="world" aria-expanded="false"><img class="hic" data-ic="i:2030000" alt="">World</button></h2>
       <div class="hbill"><p>Find your way around the launch world: the in-game world map with what lives where, the fastest route between any two maps, and a stage-by-stage KPQ guide.</p><div class="hbillact"><button class="btn hopen" data-go-cat="world">Open World →</button></div></div>
       <div class="hlinks">
-      <button class="hlink" data-go="wmap"><b>World Map</b><span>Click any spot for its maps, monsters, NPCs, quests and EXP per hour.</span></button>
-      <button class="hlink" data-go="navi"><b>Map Navigator</b><span>Fastest route between two maps, with exit numbers on the minimaps.</span></button>
-      <button class="hlink" data-go="kpq"><b>KPQ</b><span>Kerning Party Quest stage by stage: puzzles, answers and rewards.</span></button>
+      <button class="hlink" data-go="wmap"><img class="hic" data-ic="i:4031134" alt=""><b>World Map</b><span>Click any spot for its maps, monsters, NPCs, quests and EXP per hour.</span></button>
+      <button class="hlink" data-go="navi"><img class="hic" data-ic="s:2101001" alt=""><b>Map Navigator</b><span>Fastest route between two maps, with exit numbers on the minimaps.</span></button>
+      <button class="hlink" data-go="kpq"><img class="hic" data-ic="m:29" alt=""><b>KPQ</b><span>Kerning Party Quest stage by stage: puzzles, answers and rewards.</span></button>
       </div>
     </div>
-    <div class="homecat" data-sec="town"><h2><button class="hcat" data-big="town" aria-expanded="false">Towns and trade</button></h2>
+    <div class="homecat" data-sec="town"><h2><button class="hcat" data-big="town" aria-expanded="false"><img class="hic" data-ic="i:3994011" alt="">Towns and trade</button></h2>
       <div class="hbill"><p>Town grades and shops, crafting professions and recipes, which loot is worth keeping, and a price check from inventory screenshots.</p><div class="hbillact"><button class="btn hopen" data-go-cat="town">Open Towns and trade →</button></div></div>
       <div class="hlinks">
-      <button class="hlink" data-go="cit"><b>Citizenship</b><span>Town grades, citizenship quests and town shops.</span></button>
-      <button class="hlink" data-go="craft"><b>Crafting</b><span>Professions, the cheapest way to level them, recipes and materials.</span></button>
-      <button class="hlink" data-go="keep"><b>Keep or sell</b><span>Which loot quests and recipes still want, and what's safe to sell.</span></button>
-      <button class="hlink" data-go="inv"><b>Price check</b><span>Paste inventory screenshots, get every item listed with a player-shop price.</span></button>
+      <button class="hlink" data-go="cit"><img class="hic" data-ic="i:2030004" alt=""><b>Citizenship</b><span>Town grades, citizenship quests and town shops.</span></button>
+      <button class="hlink" data-go="craft"><img class="hic" data-ic="i:4010100" alt=""><b>Crafting</b><span>Professions, the cheapest way to level them, recipes and materials.</span></button>
+      <button class="hlink" data-go="keep"><img class="hic" data-ic="i:4000001" alt=""><b>Keep or sell</b><span>Which loot quests and recipes still want, and what's safe to sell.</span></button>
+      <button class="hlink" data-go="inv"><img class="hic" data-ic="i:4031041" alt=""><b>Price check</b><span>Paste inventory screenshots, get every item listed with a player-shop price.</span></button>
       </div>
     </div>
-    <div class="homecat" data-sec="more"><h2><button class="hcat" data-big="more" aria-expanded="false">More</button></h2>
+    <div class="homecat" data-sec="more"><h2><button class="hcat" data-big="more" aria-expanded="false"><img class="hic" data-ic="m:7" alt="">More</button></h2>
       <div class="hbill"><p>What changed on this site and when, and where every number comes from.</p><div class="hbillact"><button class="btn hopen" data-go-cat="more">Open More →</button></div></div>
       <div class="hlinks">
-      <button class="hlink" data-go="log"><b>Changelog</b><span>What changed and when.</span></button>
-      <button class="hlink" data-go="credits"><b>Credits</b><span>Sources and thanks.</span></button>
+      <button class="hlink" data-go="log"><img class="hic" data-ic="i:4031122" alt=""><b>Changelog</b><span>What changed and when.</span></button>
+      <button class="hlink" data-go="credits"><img class="hic" data-ic="i:4020109" alt=""><b>Credits</b><span>Sources and thanks.</span></button>
       </div>
     </div>
   </div>
-  <p class="sitever">Site version: built Oct 18, 2026 · 20:33 UTC</p>
+  <p class="sitever">Site version: built Oct 18, 2026 · 21:13 UTC</p>
 </section>
 
 <section id="plan" hidden>
@@ -1431,6 +1438,8 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Little sprites on Home</h3><span class="pill p-hot">update</span></div>
+      <p>Each Home card has a small in-game icon by its name, and an opened card shows one for every page in it (a Snail for the Grind Tracker, an Orange Mushroom for Monsters, Teleport for the Map Navigator and so on).</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Bank in the price check, easier screenshot import</h3><span class="pill p-hot">update</span></div>
       <p><b>Price check</b> reads your <b>bank</b>: add screenshots scrolled down a bit at a time and the overlapping rows are counted once (same for scrolled inventory tabs). With the bank open, the inventory beside it is left out; bank mesos are shown. <b>Character Builder</b> import adds screenshots up in any order: equipment before the stat window no longer reads as "over the budget". Each screenshot gets a chip you can remove, and <b>Reset</b> clears them all. Worn gear counts at its base stats (an average drop); edit the numbers before applying if yours are better.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Site version on Home</h3><span class="pill p-hot">update</span></div>
@@ -1767,6 +1776,9 @@ $("#home").addEventListener("click", e => { if (e.target.closest("a")) return;
   const g = e.target.closest("[data-go],[data-go-cat]");
   if (!g){ const c = e.target.closest(".homecat"); if (c) homeBig(c.dataset.sec); return }
   g.dataset.go ? $("#t-" + g.dataset.go).click() : goCat(g.dataset.goCat); window.scrollTo({top: $("nav").offsetTop - 8}) });
+// Home sprites: data-ic="i:<item>|m:<mob>|s:<skill>" -> the icon already in D (no new requests)
+document.querySelectorAll("img[data-ic]").forEach(im => { const [k, id] = im.dataset.ic.split(":"), b = {i: D.iicons, m: D.mobimg, s: D.icons}[k]?.[id];
+  if (b) im.src = "data:image/png;base64," + b; else im.remove() });
 $("header h1").addEventListener("click", goHome);
 // read the last page before goHome() overwrites it with "home" (that made every visit land on Home)
 let SAVEDTAB = null; try { SAVEDTAB = localStorage.getItem("tab") } catch(e) {}
@@ -4959,6 +4971,8 @@ show();
     // pink tab wins over a pale one (Danny's frames, 2026-10-18)
     const pink = (x, y) => { const i = px(x, y); return Math.abs(d[i] - 234) < 26 && Math.abs(d[i + 1] - 101) < 26 && Math.abs(d[i + 2] - 129) < 26 };
     const pale = (x, y) => { const i = px(x, y); return d[i] >= 235 && d[i + 1] >= 195 && d[i + 1] <= 228 && d[i + 2] >= 200 && d[i + 2] <= 236 && d[i] - d[i + 1] >= 18 };
+    // the open tab's pink also pulses between the two (f1a4b2 halfway, Danny's Etc tab "not found", 2026-10-18): any rose in between
+    const rose = (x, y) => { const i = px(x, y), r = d[i], g = d[i + 1], b = d[i + 2]; return r >= 220 && r - g >= 50 && b - g >= 6 && b - g <= 45 && r - b >= 30 };
     const X0 = box ? Math.max(0, box.x0) : 0, X1 = box ? Math.min(w, box.x1) : w;
     for (let y = Math.max(22, box ? box.y0 : 0), Y1 = Math.min(h - 3, box ? box.y1 : h); y < Y1; y++){
       for (let x = X0; x < X1; x += 8){
@@ -4970,7 +4984,7 @@ show();
         // the top row is darker and broken under a pale open tab (Danny's Etc tab): the line's full width may first show a row lower
         const top = red(a + 5, y - 1) ? y - 1 : y;
         if (b - a < 190 || b - a > 215 || !red(a + 5, top + 1) || !red(a + 5, top + 2) || red(a + 5, top - 1) || a + 200 >= w) continue;
-        for (const is of [pink, pale]) for (let yy = top - 20; yy < top - 1; yy++) for (let xx = a; xx < a + 200; xx++) if (is(xx, yy) && is(xx + 1, yy) && is(xx + 2, yy)){
+        for (const is of [pink, rose, pale]) for (let yy = top - 20; yy < top - 1; yy++) for (let xx = a; xx < a + 200; xx++) if (is(xx, yy) && is(xx + 1, yy) && is(xx + 2, yy)){
           const off = xx - a, tab = INV_TABS.reduce((p, q) => Math.abs(q[1] - off) < Math.abs(p[1] - off) ? q : p);
           return Math.abs(tab[1] - off) <= 8 ? {x: a, y: top, tab: tab[0]} : null;
         }
@@ -5007,7 +5021,7 @@ show();
   // unknown = filled slots whose item didn't match. Equips show no count (1 each).
   function readInventory(img, inv, cands, cache = null){
     const {w, d} = img, nums = readCounts(img, {x0: inv.x, x1: inv.x + 190, y0: inv.y + 28, y1: inv.y + 37 + 34 * 5 + 2});
-    const slots = []; let unknown = 0;
+    const slots = [], missed = []; let unknown = 0;
     for (let r = 0; r < 6; r++) for (let c = 0; c < 5; c++){
       const sx = inv.x + 5 + 36 * c, cy = inv.y + 37 + 34 * r;
       if (cy + 4 >= img.h || sx + 32 >= w) continue;
@@ -5016,15 +5030,20 @@ show();
         const i = (y * w + x) * 4; if (Math.abs(d[i] - 225) + Math.abs(d[i + 1] - 223) + Math.abs(d[i + 2] - 213) > 40){ off++; sig = (sig * 31 + (d[i] >> 5) * 64 + (d[i + 1] >> 5) * 8 + (d[i + 2] >> 5)) | 0 }
       }
       if (off < 30) continue;   // empty
+      // the picture above the count, coarsely (6 patches' mean colours): "same item still there" when a read misses
+      const pic = [];
+      for (let py = 0; py < 2; py++) for (let px = 0; px < 3; px++){ let r0 = 0, g0 = 0, b0 = 0, k = 0;
+        for (let y = cy - 28 + py * 9; y < cy - 19 + py * 9; y++) for (let x = sx + 1 + px * 10; x < sx + 11 + px * 10; x++){ const i = (y * w + x) * 4; r0 += d[i]; g0 += d[i + 1]; b0 += d[i + 2]; k++ }
+        pic.push(r0 / k, g0 / k, b0 / k) }
       const num = nums.find(n => Math.abs(n.slot - sx) <= 2 && Math.abs(n.y - cy) <= 1);
       // the picture is matched again only when the slot changed (beyond video noise: colors in 32-shade steps)
       const key = inv.tab + "," + sx + "," + cy + "," + (num ? num.end : "") + "," + sig;
       let ic = cache?.get(key);
       if (ic === undefined){ ic = slotIcon(img, sx, cy, num ? num.end : sx - 12, cands); if (cache){ if (cache.size > 400) cache.clear(); cache.set(key, ic) } }
-      if (!ic){ unknown++; continue }
-      slots.push({i: r * 5 + c, ids: ic.ids, n: num ? num.n : inv.tab === "equip" ? 1 : null});
+      if (!ic){ unknown++; missed.push({i: r * 5 + c, pic}); continue }
+      slots.push({i: r * 5 + c, ids: ic.ids, n: num ? num.n : inv.tab === "equip" ? 1 : null, pic});
     }
-    return {tab: inv.tab, slots, unknown};
+    return {tab: inv.tab, slots, unknown, missed};
   }
 
   function createReaders(G, icons = null){
@@ -5155,6 +5174,10 @@ show();
       for (const id of Object.keys(after)) if (!(id in before) && gone.has(id)){ pend.set(id, gone.get(id)); gone.delete(id) }
       spots = now; info.counts = nums.length; info.useSpots = now.size;
       const ev = Object.entries(drops).map(([id, n]) => ({t, type: "use", id, n}));
+      // quick slots (counts outside the inventory window) show the item's total: sent when one changes
+      const inInv = k => { if (!invPx) return false; const [x, y] = k.split(",").map(Number); return x >= invPx.x - 4 && x <= invPx.x + 200 && y >= invPx.y && y <= invPx.y + 240 };
+      const have = {}; for (const [k, v] of now) if (!inInv(k)) have[v.id] = Math.max(have[v.id] || 0, v.n);
+      const hk = JSON.stringify(have); if (hk !== lastHave && Object.keys(have).length){ lastHave = hk; ev.push({t, type: "have", items: have}) }
       // once a minute while counts are visible: the session knows "nothing used" is a real 0, not "couldn't see"
       if (now.size && t - lastSeenEv >= 60e3){ lastSeenEv = t; ev.push({t, type: "useseen"}) }
       return ev;
@@ -5173,7 +5196,8 @@ show();
        count once the same read comes twice running; "inv" events carry {tab, items: {id: n}, unknown} (unknown: slots
        whose item or count didn't read; one picture shared by several items is listed under the first of them) */
     let invIcons = null, byTab = null, lastInv = -Infinity, invBox = null, invNext = null, invHint = null, invLast = null;
-    const invSent = {}, invCache = new Map();
+    const invSent = {}, invCache = new Map(), slotMem = {};
+    let invPx = null, lastHave = "";
     function readInv(img, t){
       // where it was last seen (this session, or the last one: settings.invLast) first, then the box the player drew around
       // it, then the whole frame (a few ms: Danny's 34 frames of moving it around, 2026-10-18)
@@ -5182,16 +5206,27 @@ show();
       if (!inv && invHint) inv = findInventory(img, {x0: Math.floor(invHint.x * img.w) - 4, x1: Math.ceil((invHint.x + invHint.w) * img.w) + 4,
         y0: Math.floor(invHint.y * img.h) - 4, y1: Math.ceil((invHint.y + invHint.h) * img.h) + 4});
       if (!inv) inv = findInventory(img);
-      if (inv){ invBox = {x0: inv.x - 12, x1: inv.x + 230, y0: inv.y - 3, y1: inv.y + 4}; invLast = {x: inv.x / img.w, y: inv.y / img.h}; info.invAt = invLast }
-      info.inv = inv ? inv.tab : null;
+      if (inv){ invBox = {x0: inv.x - 12, x1: inv.x + 230, y0: inv.y - 3, y1: inv.y + 4}; invLast = {x: inv.x / img.w, y: inv.y / img.h}; info.invAt = invLast; invPx = {x: inv.x, y: inv.y} }
+      info.inv = inv ? inv.tab : null; if (!inv) invPx = null;
       if (!inv?.tab || !byTab[inv.tab]) return null;
-      const r = readInventory(img, inv, byTab[inv.tab], invCache), items = {}, alike = {}, stacks = {};
-      for (const sl of r.slots){ if (sl.n === null){ r.unknown++; continue } items[sl.ids[0]] = (items[sl.ids[0]] || 0) + sl.n; stacks[sl.ids[0]] = (stacks[sl.ids[0]] || 0) + 1; if (sl.ids.length > 1) alike[sl.ids[0]] = sl.ids.length }
+      const r = readInventory(img, inv, byTab[inv.tab], invCache), items = {}, alike = {}, stacks = {}, partial = {};
+      /* a slot whose count (or picture) didn't read this time keeps what that slot read last time, when it was the same
+         item: a stack missed on one read used to drop out of the total, so arrows jumped 2,183 -> 2,775 -> 2,767 (one
+         800 stack in and out, Danny's KPQ runs, 2026-10-18). Never read at all: that item's total is marked partial */
+      const mem = slotMem[inv.tab] ||= new Map(), add = (ids, n) => { items[ids[0]] = (items[ids[0]] || 0) + n; stacks[ids[0]] = (stacks[ids[0]] || 0) + 1; if (ids.length > 1) alike[ids[0]] = ids.length };
+      for (const sl of r.slots){
+        if (sl.n !== null){ add(sl.ids, sl.n); mem.set(sl.i, {ids: sl.ids, n: sl.n, pic: sl.pic}); continue }
+        const m = mem.get(sl.i);
+        if (m && m.ids[0] === sl.ids[0]) add(sl.ids, m.n); else { r.unknown++; partial[sl.ids[0]] = 1 }
+      }
+      // a picture that didn't match: only when the slot looks exactly as it did (not scrolled, not another item)
+      for (const {i, pic} of r.missed){ const m = mem.get(i); if (m && m.pic.every((v, j) => Math.abs(v - pic[j]) <= 20)){ add(m.ids, m.n); r.unknown-- } }
+      for (const i of [...mem.keys()]) if (!r.slots.some(sl => sl.i === i) && !r.missed.some(x => x.i === i)) mem.delete(i);   // emptied
       const key = inv.tab + JSON.stringify(items) + r.unknown, steady = key === invNext;
       invNext = key;
       if (!steady || invSent[inv.tab] === key) return null;
       invSent[inv.tab] = key;
-      return {t, type: "inv", tab: inv.tab, items, alike, stacks, unknown: r.unknown, slots: r.slots.length + r.unknown};
+      return {t, type: "inv", tab: inv.tab, items, alike, stacks, partial, unknown: r.unknown, slots: r.slots.length + r.missed.length};
     }
     let info = {bar: false, partyWindow: null, counts: 0};
     return {readFrame, get info(){ return info }, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,

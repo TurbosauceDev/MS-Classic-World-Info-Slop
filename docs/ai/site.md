@@ -67,6 +67,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Recipes
 - **New page/tab:** markup `<section id="x" hidden>` in index.html; button `#t-x` with `data-cat` in `.subs`; `.hlink`
   on the Home card; bump the home-link count in tests/smoke.js (21 now) and add a click-through check.
+  Give the `.hlink` an `<img class="hic" data-ic="i:<item>|m:<mob>|s:<skill>">` sprite (filled from D in 00-core.js,
+  shown only when the card is a billboard) and bump the sprite count in smoke.js (27 = 6 headers + 21 links).
 - **Changelog:** every user-visible change gets a dated entry at the top of `#log` (grep `id="log"`, read ~20 lines there).
 - **Item count** asserted in smoke.js (2,221); update when items change.
 - **Tooltips:** one floating `#qtip`; classes `.qname` quest, `.ri` item icon, `.itname` item name, `.mname` map
