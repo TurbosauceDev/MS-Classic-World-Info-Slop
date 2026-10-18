@@ -200,7 +200,7 @@ function showTab(name){
   try { localStorage.setItem("tab", name) } catch {}
 }
 for (const b of document.querySelectorAll(".tabs button")) if (b.id !== "histBtn") b.onclick = () => showTab(b.dataset.tab);
-try { const t = localStorage.getItem("tab"); if (t && t !== "hist" && document.querySelector(`section[data-tab="${t}"]`)) showTab(t) } catch {}
+try { const t = localStorage.getItem("tab"); if (t && t !== "hist" && t !== "help" && document.querySelector(`section[data-tab="${t}"]`)) showTab(t) } catch {}
 
 // a crop (black-on-white RGBA) -> PNG bytes for the OCR in the main process
 async function toPng(c){
@@ -573,6 +573,22 @@ function showUpdate(u){
   $("#updText").textContent = `Update ${u.version || ""} is ready.`;
 }
 host.onUpdate?.(showUpdate);
+// Help: the ? button, F1 or Help in the menu; Close goes back to the tab that was open
+let beforeHelp = "session";
+function openHelp(){
+  const cur = document.querySelector(".tabs button.sel")?.dataset.tab;
+  if (cur && cur !== "help") beforeHelp = cur;
+  document.body.classList.remove("mini"); host.mini?.(false);
+  showTab("help"); $("#help").scrollIntoView();
+}
+$("#helpBtn").onclick = openHelp;
+$("#helpClose").onclick = () => showTab(beforeHelp);
+document.addEventListener("keydown", e => { if (e.key === "F1"){ e.preventDefault(); openHelp() } });
+host.onMenu?.(what => {
+  if (what === "help") openHelp();
+  else if (what === "mini") $("#miniBtn").click();
+  else if (what === "update" || what === "report"){ showTab("settings"); (what === "update" ? $("#updCheck") : $("#reportNote")).scrollIntoView(); if (what === "update") $("#updCheck").click(); else $("#reportNote").focus() }
+});
 $("#updCheck").onclick = async () => { $("#updNote").textContent = "Checking..."; showUpdate(await host.updateCheck?.()) };
 $("#updGo").onclick = async () => {
   $("#updGo").disabled = true;
@@ -580,7 +596,7 @@ $("#updGo").onclick = async () => {
   if (!await host.updateInstall?.()){ $("#updGo").disabled = false; $("#status").textContent = "The update isn't ready yet." }
 };
 (async () => {
-  host.version?.().then(v => $("#appVer").textContent = v).catch(() => {});
+  host.version?.().then(v => { if (!v) return; $("#appVer").textContent = v; $("#helpVer").textContent = "MS Classic Grind Tracker " + v }).catch(() => {});
   host.updateState?.().then(u => u.state !== "idle" && showUpdate(u)).catch(() => {});
   settings = await host.settings();
   $("#share").checked = !!settings.share;

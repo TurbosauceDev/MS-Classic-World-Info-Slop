@@ -1,6 +1,6 @@
 // Electron main process: one small always-on-top window. Captures only the MapleStory window's pixels (the same API OBS
 // and Discord use); it never opens the game's files or memory and never sends input to it.
-const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell} = require("electron");
+const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu} = require("electron");
 const fs = require("fs"), path = require("path");
 const {autoUpdater} = require("electron-updater");
 
@@ -50,6 +50,14 @@ app.whenReady().then(() => {
   win.webContents.setWindowOpenHandler(() => ({action: "deny"}));
   win.webContents.on("will-navigate", e => e.preventDefault());
   win.loadFile(path.join(__dirname, "index.html"));
+  // our own menu instead of Electron's default (its Help menu only linked to Electron's site)
+  const show = what => () => win && !win.isDestroyed() && win.webContents.send("menu", what);
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    {label: "File", submenu: [{label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
+    {label: "View", submenu: [{label: "Mini bar", click: show("mini")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
+    {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Check for updates", click: show("update")},
+      {label: "Report a bug", click: show("report")}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
+  ]));
   pinOnTop();
   // other programs that clicked to the front or made themselves topmost (the game, overlays) could still cover it: take
   // the top back when this window loses focus, and every few seconds

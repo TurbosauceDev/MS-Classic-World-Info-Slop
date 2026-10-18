@@ -42,6 +42,9 @@
   .row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:6px 0; }
   label.chk { display:flex; gap:6px; align-items:flex-start; margin:5px 0; } label.chk input { margin-top:3px; }
   #selfcheck td:first-child { width:42%; }
+  #helpBtn { padding:5px 10px; font-size:12px; font-weight:600; }
+  #help details { border-top:1px solid var(--line); padding:6px 0; } #help details:first-of-type { border-top:0; }
+  #help summary { cursor:pointer; font-weight:600; } #help ul { margin:6px 0 2px; padding-left:18px; } #help li { margin:3px 0; }
   #updBanner { display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-color:var(--accent); background:var(--accent-soft); } #updBanner b { flex:1; }
 </style>
 </head>
@@ -63,6 +66,7 @@
   <div class="card" id="top">
     <div class="bar"><button id="go">Start</button>
       <div class="grow"><div id="state"><span class="dot"></span><span id="stateText">Not tracking</span></div><div id="status">Looking for the MapleStory window...</div></div>
+      <button id="helpBtn" class="alt" title="How to use the tracker (F1)">?</button>
       <button id="miniBtn" class="alt" title="Shrink to a small bar with just EXP/hr">Mini</button></div>
     <div class="tiles">
       <div class="tile main" title="EXP per hour of farming (breaks left out)"><div class="k">EXP/hr</div><div class="v" id="expHr">-</div><div class="note" id="expHr5"></div></div>
@@ -108,6 +112,68 @@
   </section>
   <section data-tab="hist" class="hidden">
     <div class="card" id="hist"><div class="row"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div><table id="histRows"></table></div>
+  </section>
+  <section data-tab="help" class="hidden">
+    <div class="card" id="help"><div class="row"><h3 style="flex:1;margin:0">Help</h3><button id="helpClose" class="alt">Close</button></div>
+      <details open><summary>Getting started</summary><ul>
+        <li>Open MapleStory, then press <b>Start</b>. The tracker finds the game window by itself.</li>
+        <li>Keep the <b>EXP bar</b>, the <b>minimap</b> and the <b>chat box</b> on screen. Kills, mesos and drops are read from the
+          chat lines; level and EXP from the EXP bar; the map from the minimap title.</li>
+        <li>For the first few seconds the <b>self-check</b> shows what it can read. A ✗ comes with what to fix and turns ✓ by
+          itself once it works.</li>
+        <li>Press <b>Stop</b> when you're done. The session is saved to <b>History</b>.</li>
+      </ul></details>
+      <details><summary>What the numbers mean</summary><ul>
+        <li><b>EXP/hr</b>: EXP per hour of farming. Breaks over a minute (no EXP, no pickups) are left out. "Last 5 min" is
+          your speed right now.</li>
+        <li><b>Next level in</b>: time to level at the current EXP/hr, with your level and EXP %.</li>
+        <li><b>Mesos/hr</b>: mesos picked up per hour. "Net" takes off the potions and arrows you used.</li>
+        <li><b>Kills/hr</b>: from the "You received EXP" lines. When lines scroll by too fast, an estimate of the real
+          number is shown under it.</li>
+        <li><b>Loot value/hr</b>: drops at player-shop prices (meso.watch), or the NPC price when there's none.</li>
+        <li><b>Deaths</b>: the EXP bar dropping without a level-up, checked against the "You have lost ... EXP" chat line.</li>
+      </ul></details>
+      <details><summary>The tabs</summary><ul>
+        <li><b>Session</b>: farming time, deaths, potion costs, your goal, party, boss respawns and monsters killed.</li>
+        <li><b>Loot</b>: everything picked up and used up, with prices.</li>
+        <li><b>Snapshots</b>: EXP/hr from just two readings of the EXP bar (start and now), like mapleexp.com. A good check
+          on the live number. Type a level or % to fix one that read wrong.</li>
+        <li><b>History</b>: past sessions, your last 7 days, how long each level took, and Export CSV.</li>
+        <li><b>Settings</b>: job, potion box, alerts, goal level, party code, sharing, updates and bug reports.</li>
+      </ul></details>
+      <details><summary>Potions or arrows not counted</summary><ul>
+        <li>Put them on your quick slots, or open the Use tab of your inventory.</li>
+        <li>Still ✗? Settings → <b>Show me where my potions are</b>: the screen freezes, drag a box around your quick slots or
+          the Use tab. Counts are then read only in that box. <b>Look everywhere</b> undoes it.</li>
+      </ul></details>
+      <details><summary>Playing in a party</summary><ul>
+        <li>Everyone types the same <b>party code</b> in Settings. You'll see each other's EXP/hr, level and job, updated
+          every minute. A name only shows if you type one.</li>
+        <li>Open the in-game party window so the tracker knows the party size.</li>
+      </ul></details>
+      <details><summary>Window tips</summary><ul>
+        <li><b>Mini</b> shrinks the window to a strip with EXP/hr and time to level. Click the strip to bring it back.</li>
+        <li>The window stays on top of the game. Turn that off in Settings → Window and sharing.</li>
+        <li>Ctrl + and Ctrl - make the text bigger or smaller.</li>
+      </ul></details>
+      <details><summary>Something reads wrong</summary><ul>
+        <li>Settings → <b>Report a bug</b> saves the last ~25 seconds of game pictures and a log to a folder. Your character
+          name shows in those pictures. Send the folder to Danny.</li>
+        <li>File → Open frames and bug reports folder shows where they are.</li>
+      </ul></details>
+      <details><summary>Updates</summary><ul>
+        <li>Updates download by themselves and install when you close the app.</li>
+        <li>Settings → <b>Check for updates</b> checks now. When one is ready, a banner on top offers <b>Restart and
+          update</b>; it saves your session first.</li>
+      </ul></details>
+      <details><summary>Privacy and safety</summary><ul>
+        <li>The tracker only looks at the game window's picture, the same way OBS or Discord screen share does. It never
+          reads the game's memory or files and never presses keys or clicks for you.</li>
+        <li>Sharing (your choice, Settings) sends map, level, job, EXP, kills and drops per 15 minutes. Never your
+          character name.</li>
+      </ul></details>
+      <div class="note" id="helpVer"></div>
+    </div>
   </section>
   <section data-tab="settings" class="hidden">
     <div class="card"><h3>Reading the game</h3>

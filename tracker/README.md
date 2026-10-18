@@ -53,6 +53,8 @@ npm start           # run it (Windows, Electron)
 - Arrows for Bows/Crossbows: 0.5 mesos each (Danny, 2026-10-17: not in our shop data); Bronze 2 (shop data).
 - Shared runs carry usedCost (mesos spent on items used; null when no item counts were on screen). The server stores
   deaths, start hour and usedCost in run_extra; the site shows "pots/ammo" per map and Frugal mode uses it.
+- Help (v0.2.18): ? button, F1, or Help in the app menu (our own menu replaces Electron's default) opens a Help page:
+  getting started, what the numbers mean, tabs, potions, party, window tips, bug reports, updates, privacy.
 - Updates (v0.2.17): checked at launch and every 6 h, downloaded in the background, installed on close (electron-updater,
   GitHub Releases). Settings > App has "Check for updates"; once downloaded, a banner on top offers "Restart and update"
   (stops and saves a running session first, then installs silently and starts the app again).

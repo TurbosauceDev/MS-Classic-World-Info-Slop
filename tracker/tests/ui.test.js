@@ -38,6 +38,12 @@ const path = require("path"), {chromium} = require("playwright");
   if (!/^Tracking/.test(top[0]) || top[1] !== "Stop" || !top[2]) throw new Error("top card: " + top);
   await page.click(".tabs [data-tab=loot]");
   if (!await page.isVisible("#priceNote, #itemsEmpty") || await page.isVisible("#mobsEmpty") || !await page.isVisible("#itemsEmpty")) throw new Error("loot tab");
+  // Help: the ? button opens it, Close goes back to Loot; F1 opens it too
+  await page.click("#helpBtn");
+  if (!await page.isVisible("#help") || !/Getting started/.test(await page.textContent("#help")) || await page.isVisible("#itemsEmpty")) throw new Error("help open");
+  await page.click("#helpClose");
+  if (await page.isVisible("#help") || !await page.isVisible("#itemsEmpty")) throw new Error("help close");
+  await page.keyboard.press("F1"); if (!await page.isVisible("#help")) throw new Error("F1 help");
   await page.click(".tabs [data-tab=session]");
   const eng = await page.evaluate(() => [engine.kind, LOG.filter(l => l.kind === "event").length, LOG.filter(l => l.kind === "engine").map(l => l.kind + ":" + (l.why || "")).join()]);
   if (eng[0] !== (process.env.INLINE ? "window" : "worker")) throw new Error("reader engine: " + eng);
