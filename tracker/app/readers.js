@@ -207,8 +207,9 @@
       else if ((m = l.text.match(EXP))) out.push({y: l.y, text: l.text, event: {type: "exp", gain: num(m[1])}});
       else if ((m = l.text.match(BONUS))) out.push({y: l.y, text: l.text, event: {type: "bonus", gain: num(m[1])}});
       else if ((m = l.text.match(/^(.+?) ?x(\d+) ?earned\. ?\((.+)\)$/))){
-        const id = itemByName(m[1], m[3]);
-        out.push({y: l.y, text: l.text, event: id ? {type: "item", id, qty: +m[2]} : {type: "itemraw", text: l.text}});
+        // several items fit (letters not learned yet, a cut name): the session picks the one this map's monsters drop
+        const ids = itemByName(m[1], m[3], true);
+        out.push({y: l.y, text: l.text, event: ids.length === 1 ? {type: "item", id: ids[0], qty: +m[2]} : {type: "itemraw", text: l.text, qty: +m[2], cands: ids.length <= 40 ? ids : []}});
       }
     }
     return out;
@@ -341,14 +342,14 @@
   // item pickup: names are cut to ~13 letters ("Horny Mushroo...") and letters the font table doesn't know yet read as "?",
   // so match as a pattern against every item name, within the category in brackets (Etc, Use, Equip...)
   let ITEMS = null;
-  function itemByName(name, cat){
-    if (!ITEMS) return null;
+  function itemByName(name, cat, all = false){
+    if (!ITEMS) return all ? [] : null;
     const cut = /\.\.\.$/.test(name), core = name.replace(/\.\.\.$/, "");
     const re = new RegExp("^" + core.split("").map(c => c === "?" ? "." : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + (cut ? "" : "$"));
     const tab = {Etc: ["Etc"], Use: ["Consumable", "Scroll"], Equip: ["Equipment"], Setup: ["Setup"]};
     const catRe = new RegExp("^" + cat.replace(/\?/g, ".") + "$"), cats = Object.keys(tab).filter(k => catRe.test(k)).flatMap(k => tab[k]);
     const hits = ITEMS.filter(([id, it]) => re.test(it.n) && (!cats.length || cats.includes(it.c)));
-    return hits.length === 1 ? hits[0][0] : null;
+    return all ? hits.map(h => h[0]) : hits.length === 1 ? hits[0][0] : null;
   }
 
   /* Item counts on inventory and quick-slot icons ("91" on Meat): white-to-blue digits, each row one exact color, with a

@@ -12,11 +12,18 @@ const G = {
 G.kpq = (D.kpq || []).map(k => k.id);
 for (const k of D.kpq || []) G.mapnames = {...G.mapnames, [k.id]: k.name};
 for (const k of D.kpq || []){
-  if (!k.mob?.length || G.maps[k.id]) continue;
+  if (G.maps[k.id]) continue;
+  // stages without monsters (2-4, Exit) are maps too, with none: EXP there is stage-clear EXP, not kills
+  if (!k.mob?.length){ G.maps[k.id] = [k.name, 1, []]; continue }
   const n = {}; for (const [id] of k.mob) n[id] = (n[id] || 0) + 1;
   G.maps[k.id] = [k.name, 1, Object.entries(n).map(([id, c]) => [+id, c])];
   G.mapnames = {...G.mapnames, [k.id]: k.name};
 }
+// mob -> items players have seen it drop (meowdb reports, D.drops item -> [[mob, reports]]): picks the item when a pickup
+// line's name fits several. KPQ's own items (Coupon, Pass) on the KPQ stages
+G.drops = {};
+for (const [item, list] of Object.entries(D.drops || {})) for (const [mob] of list) (G.drops[mob] = G.drops[mob] || []).push(item);
+G.kpqItems = ["4001001", "4001002"];
 // timed spawns (bosses and slow respawns; D.timed rows [mob, name, level, hp, exp, map, mapName, count, respawn s, boss]):
 // map -> [[mob, respawn s, boss]]; those monsters join their map's list so their kills are recognised
 G.timed = {};

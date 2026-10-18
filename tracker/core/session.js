@@ -25,26 +25,34 @@
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
       msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
-      pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null, used: {}, walletFirst: null, walletLast: null};
+      pausedAt: null, pausedMs: 0, levelUps: [], levelAt: null, used: {}, walletFirst: null, walletLast: null, bigKilled: new Set()};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
        isn't even (the party bonus comes as its own line). There a kill is the monster only when just one monster on the
        map gives that much; otherwise it's a kill with the monster unknown ("?"). More than any monster gives = not a kill. */
     function matchMob(gain){
-      const mobs = (G.maps[S.map]?.[2] || []).map(([id]) => String(id)).filter(id => G.mobs[id]?.[3]);
+      const list = G.maps[S.map]?.[2] || [], mobs = list.map(([id]) => String(id)).filter(id => G.mobs[id]?.[3]);
       const base = id => G.mobs[id][3];
-      if (S.party <= 1){
-        let best = null, bestErr = Infinity;
-        for (const id of mobs){ const err = Math.abs(base(id) - gain) / base(id); if (err < bestErr){ bestErr = err; best = id } }
-        return bestErr <= 0.15 ? best : null;
+      // a lone monster worth 5x the smallest one on the map (KPQ's King Slime) is a boss: one kill per visit to the map, so
+      // stage-clear EXP after it isn't taken for more kills (Danny's KPQ run, 2026-10-18)
+      const least = Math.min(...mobs.map(base)), big = id => mobs.length > 1 && list.find(([m]) => String(m) === id)?.[1] === 1 && base(id) >= 5 * least;
+      const r = pick();
+      if (r && r !== "?" && big(r)){ if (S.bigKilled.has(r)) return null; S.bigKilled.add(r) }
+      return r;
+      function pick(){
+        if (S.party <= 1){
+          let best = null, bestErr = Infinity;
+          for (const id of mobs){ const err = Math.abs(base(id) - gain) / base(id); if (err < bestErr){ bestErr = err; best = id } }
+          return bestErr <= 0.15 ? best : null;
       }
       // a boss on the map fits almost any small share: only count it when no regular monster gives that much
-      const regular = mobs.filter(id => !timed(id)), fitsReg = regular.filter(id => gain <= base(id) * 1.05);
+      const regular = mobs.filter(id => !timed(id) && !big(id)), fitsReg = regular.filter(id => gain <= base(id) * 1.05);
       const fits = fitsReg.length ? fitsReg : mobs.filter(id => gain <= base(id) * 1.05);
       if (!fits.length) return null;
       const exact = fits.filter(id => Math.abs(base(id) - gain) / base(id) <= 0.03);
       return exact.length === 1 ? exact[0] : fits.length === 1 ? fits[0] : "?";
+      }
     }
     // monsters on this map with a long respawn (bosses etc.), from the game data
     const timed = id => (G.timed?.[S.map] || []).find(([m]) => m === String(id));
@@ -61,6 +69,7 @@
         activeMin: was && !was.partial && was.level === level - 1 ? Math.round((S.activeMs - was.activeMs) / 6e3) / 10 : null});
       S.levelAt = {level, activeMs: S.activeMs};
     }
+    function gotItem(id, q){ id = String(id); S.items[id] = (S.items[id] || 0) + q; if (S.lastKillMob){ const m = mob(S.lastKillMob); m.items[id] = (m.items[id] || 0) + q } }
     const mob = id => S.byMob[id] || (S.byMob[id] = {kills: 0, exp: 0, mesos: 0, mesoDrops: 0, items: {}});
 
     function add(e){
@@ -74,7 +83,7 @@
       if (counts && S.last !== null) credit(e.t);
       if (counts) S.last = e.t;
       switch (e.type){
-        case "map": S.map = e.id == null ? null : String(e.id); S.mapName = e.name || null; break;
+        case "map": S.map = e.id == null ? null : String(e.id); S.mapName = e.name || null; S.bigKilled.clear(); break;
         case "party": S.party = Math.max(1, e.size | 0); break;
         case "job": S.job = e.name; break;
         case "exp": {
@@ -87,7 +96,13 @@
           break;
         }
         case "bonus": S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); break;
-        case "itemraw": S.unreadItems++; break;
+        case "itemraw": {
+          // a name that fits several items: the one the monsters here drop (player drop reports), or KPQ's Coupon/Pass
+          const here = new Set((G.maps[S.map]?.[2] || []).flatMap(([m]) => G.drops?.[m] || []).concat((G.kpq || []).includes(S.map) ? G.kpqItems || [] : []));
+          const fit = (e.cands || []).filter(id => here.has(String(id)));
+          if (fit.length === 1) gotItem(fit[0], e.qty || 1); else S.unreadItems++;
+          break;
+        }
         case "wallet": if (Number.isFinite(e.n) && e.n >= 0){ if (S.walletFirst === null) S.walletFirst = e.n; S.walletLast = e.n } break;
         case "use": { S.useSeen = true; const n = Math.max(0, e.n | 0); if (n) S.used[String(e.id)] = (S.used[String(e.id)] || 0) + n; break }
         case "useseen": S.useSeen = true; break;
@@ -138,9 +153,7 @@
           if (S.lastKillMob){ const m = mob(S.lastKillMob); m.mesos += e.amount; m.mesoDrops++ }
           break;
         case "item": {
-          const q = e.qty || 1, id = String(e.id);
-          S.items[id] = (S.items[id] || 0) + q;
-          if (S.lastKillMob){ const m = mob(S.lastKillMob); m.items[id] = (m.items[id] || 0) + q }
+          gotItem(e.id, e.qty || 1);
           break;
         }
       }

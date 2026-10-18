@@ -204,4 +204,18 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
   bar(s, 4, 8, 40, 8);
   assert.strictEqual(s.state.level, 8, "2-level jump taken after 3 readings");
   assert.ok(s.stats().exp > G.exp[6] * 0.3 + G.exp[7] + G.exp[8] * 0.35, "EXP keeps counting after the jump: " + s.stats().exp) }
+// KPQ (Danny's run 2026-10-18 over-counted kills): stage-clear EXP on the puzzle stages isn't a kill; King Slime is one
+// kill per visit to the Last Stage, in a party too
+{ const s = createSession(G); s.add({t: sec(0), type: "party", size: 4});
+  s.add({t: sec(1), type: "map", id: "80000100"}); s.add({t: sec(2), type: "exp", gain: 600}); s.add({t: sec(3), type: "exp", gain: 600});
+  assert.strictEqual(s.state.kills, 0, "puzzle stage EXP isn't kills");
+  s.add({t: sec(4), type: "map", id: "80000400"}); s.add({t: sec(5), type: "exp", gain: 20}); s.add({t: sec(6), type: "exp", gain: 900}); s.add({t: sec(7), type: "exp", gain: 1500});
+  assert.strictEqual(s.state.kills, 2, "one regular kill + King Slime once: " + s.state.kills);
+  assert.ok(s.state.otherExp >= 1500 + 1200, "the rest is stage-clear EXP") }
+// a pickup name that fits several items: the one this map's monsters drop (Horny Mushroom on the bonus stage), KPQ's Pass
+{ const s = createSession(G); s.add({t: sec(0), type: "map", id: "80000500"});
+  const horny = Object.keys(G.items).filter(id => (G.drops["19"] || []).includes(id))[0];
+  s.add({t: sec(1), type: "itemraw", text: "x", qty: 2, cands: ["1002000", horny]}); s.add({t: sec(2), type: "itemraw", text: "x", cands: ["1002000", "1002001"]});
+  s.add({t: sec(3), type: "map", id: "80000100"}); s.add({t: sec(4), type: "itemraw", text: "Pa?? x1", cands: ["4001002", "1002001"]});
+  assert.strictEqual(s.state.items[horny], 2); assert.strictEqual(s.state.items["4001002"], 1); assert.strictEqual(s.state.unreadItems, 1) }
 console.log("core tests passed");
