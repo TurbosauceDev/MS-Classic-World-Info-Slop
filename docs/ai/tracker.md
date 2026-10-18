@@ -69,6 +69,11 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - beanguri's /api/stats needs their permission; we only borrowed MIT reader ideas.
 - Themes: PRESETS[0] "Default" = the site's src/styles.css colours (light+dark); core.test.js fails if they drift, so a
   site recolour must update app/themes.js, the index.html :root fallback and main.js window/title-bar colours too.
+- Run log (core/feed.js, box `log` pinned in #dock by default): diffs session.state every 2 s (feed.step), so it shows
+  what the session counted, not raw events. Box ids saved in a user's layout.order win; an unsaved new box stays at home.
+  The dock now holds a box, so drag tests that drop "onto the dock" land relative to #logBox.
+- Docking: dropZone = left/right third of a box → side by side; `.dropGhost` previews the landing spot. Danny never found
+  the old quarter-width edge (his saved layout had no rows), so check discoverability, not just that the code works.
 - Running tests locally: `npm run data` first (core.test.js needs app/gamedata.json, not committed).
 
 ## Split candidates (not done; tracker thread owned these 2026-10-18)
