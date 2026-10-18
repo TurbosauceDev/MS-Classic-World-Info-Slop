@@ -655,6 +655,8 @@
           const off = xx - a, tab = INV_TABS.reduce((p, q) => Math.abs(q[1] - off) < Math.abs(p[1] - off) ? q : p);
           return Math.abs(tab[1] - off) <= 8 ? {x: a, y: top, tab: tab[0]} : null;
         }
+        // the window, but no tab colour (the mouse pointer on the open tab, Danny's frame-014): where it is still counts
+        return {x: a, y: top, tab: null};
       }
     }
     return null;
@@ -760,7 +762,7 @@
       // party size only changes after the same new size is read 3 frames running (a window in the way, a bar mid-blink)
       // no party window: a party while bonus lines came in the last 3 minutes (left the party = back to solo after that)
       const partyRead = readParty(img), party = partyRead || (t - bonusAt < 180e3 ? 2 : 1);
-      info = {bar: !!bar, partyWindow: partyRead, counts: info.counts, inv: info.inv, kpqLeft: left};   // what this frame showed (self-check, auto-pause)
+      info = {bar: !!bar, partyWindow: partyRead, counts: info.counts, inv: info.inv, invAt: info.invAt, kpqLeft: left};   // what this frame showed (self-check, auto-pause)
       if (icons?.length && t - lastCounts >= 2000){
         lastCounts = t; ev.push(...readUse(img, t));
         // the inventory's meso total, taken when read the same twice running. Only around where it was last seen, with
@@ -851,17 +853,19 @@
     /* the open inventory tab, every 2 s: looked for where it was last seen, over the whole frame every 6 s. A tab's items
        count once the same read comes twice running; "inv" events carry {tab, items: {id: n}, unknown} (unknown: slots
        whose item or count didn't read; one picture shared by several items is listed under the first of them) */
-    let invIcons = null, byTab = null, lastInv = -Infinity, invBox = null, lastFullInv = -Infinity, invNext = null, invHint = null;
+    let invIcons = null, byTab = null, lastInv = -Infinity, invBox = null, invNext = null, invHint = null, invLast = null;
     const invSent = {}, invCache = new Map();
     function readInv(img, t){
-      let inv = invBox && findInventory(img, invBox);
-      // the box the player drew around the inventory (clicked a tab chip and it wasn't found): looked at first, every read
+      // where it was last seen (this session, or the last one: settings.invLast) first, then the box the player drew around
+      // it, then the whole frame (a few ms: Danny's 34 frames of moving it around, 2026-10-18)
+      const near = p => p && findInventory(img, {x0: Math.round(p.x * img.w) - 12, x1: Math.round(p.x * img.w) + 230, y0: Math.round(p.y * img.h) - 3, y1: Math.round(p.y * img.h) + 4});
+      let inv = invBox && findInventory(img, invBox) || near(invLast);
       if (!inv && invHint) inv = findInventory(img, {x0: Math.floor(invHint.x * img.w) - 4, x1: Math.ceil((invHint.x + invHint.w) * img.w) + 4,
         y0: Math.floor(invHint.y * img.h) - 4, y1: Math.ceil((invHint.y + invHint.h) * img.h) + 4});
-      if (!inv && (t - lastFullInv >= 6000 || invBox)){ lastFullInv = t; inv = findInventory(img) }
-      invBox = inv && {x0: inv.x - 12, x1: inv.x + 230, y0: inv.y - 3, y1: inv.y + 4};
+      if (!inv) inv = findInventory(img);
+      if (inv){ invBox = {x0: inv.x - 12, x1: inv.x + 230, y0: inv.y - 3, y1: inv.y + 4}; invLast = {x: inv.x / img.w, y: inv.y / img.h}; info.invAt = invLast }
       info.inv = inv ? inv.tab : null;
-      if (!inv || !byTab[inv.tab]) return null;
+      if (!inv?.tab || !byTab[inv.tab]) return null;
       const r = readInventory(img, inv, byTab[inv.tab], invCache), items = {}, alike = {}, stacks = {};
       for (const sl of r.slots){ if (sl.n === null){ r.unknown++; continue } items[sl.ids[0]] = (items[sl.ids[0]] || 0) + sl.n; stacks[sl.ids[0]] = (stacks[sl.ids[0]] || 0) + 1; if (sl.ids.length > 1) alike[sl.ids[0]] = sl.ids.length }
       const key = inv.tab + JSON.stringify(items) + r.unknown, steady = key === invNext;
@@ -874,8 +878,9 @@
     return {readFrame, get info(){ return info }, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,
       // all item pictures (loadIcons on G.iicons), sorted by tab: matching only looks at the open tab's kind of items
       // a tab chip was clicked: look everywhere now and send the next steady read even when it didn't change
-      invNow(){ for (const k in invSent) delete invSent[k]; invNext = null; lastFullInv = -Infinity; lastInv = -Infinity },
+      invNow(){ for (const k in invSent) delete invSent[k]; invNext = null; lastInv = -Infinity },
       setInvHint(a){ invHint = a && a.w > 0 && a.h > 0 ? a : null },
+      setInvLast(p){ invLast = p && p.x >= 0 && p.y >= 0 ? p : null },   // where the last session saw it (settings.invLast)
       setInvIcons(list){
         const tabOf = {Equipment: "equip", Consumable: "use", Scroll: "use", Etc: "etc"};
         invIcons = list; byTab = {};

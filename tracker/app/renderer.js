@@ -61,8 +61,8 @@ function grabFrame(){
 }
 /* the readers run in a worker so the window never stutters while a frame is read; in the window itself when the worker
    can't start or stops answering. read() resolves to GrindReaders.work's result, or null for a frame that was lost. */
-function makeEngine(icons, area, invHint, glyphs){
-  const inline = () => { GrindReaders.addGlyphs(glyphs); const rd = GrindReaders.createReaders(G, icons); rd.setArea(area); rd.setInvHint(invHint);
+function makeEngine(icons, area, invHint, glyphs, invLast){
+  const inline = () => { GrindReaders.addGlyphs(glyphs); const rd = GrindReaders.createReaders(G, icons); rd.setArea(area); rd.setInvHint(invHint); rd.setInvLast(invLast);
     (ALL_ICONS ||= GrindReaders.loadIcons(G, G.iicons).catch(() => null)).then(l => l && rd.setInvIcons(l));
     return {kind: "window", setArea: a => rd.setArea(area = a), invNow: () => rd.invNow(), setInvHint: a => rd.setInvHint(invHint = a), read: async m => GrindReaders.work(rd, m), close(){}} };
   let w = null;
@@ -71,7 +71,7 @@ function makeEngine(icons, area, invHint, glyphs){
   const fallBack = why => { log("engine", {kind: "window", why}); w.terminate(); waiting?.(null); waiting = null; Object.assign(eng, inline()) };
   w.onmessage = ({data}) => { if (data.id !== id || !waiting) return; const r = waiting; waiting = null; r(data.error ? null : data) };
   w.onerror = e => { e.preventDefault?.(); fallBack(e.message || "worker failed to load") };
-  w.postMessage({type: "reset", icons, area, invHint, glyphs});
+  w.postMessage({type: "reset", icons, area, invHint, glyphs, invLast});
   return eng = {kind: "worker", close(){ w.terminate(); const r = waiting; waiting = null; r?.(null) },
     setArea(a){ area = a; w.postMessage({type: "area", area: a}) },
     invNow(){ w.postMessage({type: "invnow"}) }, setInvHint(a){ invHint = a; w.postMessage({type: "invhint", area: a}) },
@@ -183,6 +183,7 @@ function render(){
   $("#miniGoal").textContent = s.goalLevel && s.toGoalHrs != null ? `Lv ${s.goalLevel} in ${hm(s.toGoalHrs)}` : "";
   stopCheck(s);
   $("#active").textContent = Math.round(s.activeMin) + " min";
+  $("#expTotal").textContent = fmt(s.exp); $("#expPerMin").textContent = s.activeMin >= 1 ? fmt(s.exp / s.activeMin) + " EXP/min active" : "";
   $("#kpqNote").textContent = kpqText(s);
   $("#where").innerHTML = [kpq?.on && "KPQ (" + esc(settings.kpqMode || "Bonus") + ")", s.mapName && esc(s.mapName), s.job && esc(s.job), s.party > 1 ? "party of " + s.party : "solo",
     kills(s.kills), mz(s.mesoPerKill) + "/kill",
@@ -260,7 +261,7 @@ $(".tabs").addEventListener("keydown", e => { if (e.key !== "ArrowLeft" && e.key
 // boxes, like OBS sources: dragged by the ⠿ grip or the title onto another box (above or below it), onto a tab (to the end of it), or onto
 // the strip above the tabs (pinned: shows on every tab); – folds one to its title. Saved in settings.layout (Danny, 2026-10-18)
 function foldMark(b){ const f = b.querySelector(".fold"), on = b.classList.contains("folded"); f.textContent = on ? "+" : "–"; f.setAttribute("aria-expanded", String(!on)) }
-const BOXES = [...document.querySelectorAll("[data-box]")], BOX_HOME = BOXES.map(b => [b, b.parentElement, b.nextElementSibling]);
+const BOXES = [...document.querySelectorAll("[data-box]")], BOX_HOME = BOXES.map(b => [b, b.parentElement, b.nextElementSibling, b.classList.contains("folded")]);   // folded in the HTML = folded by default
 let dragBox = null;
 function layoutSave(){
   const order = {};
@@ -332,7 +333,7 @@ const endDrag = (e, cancel) => {
 document.addEventListener("pointerup", e => endDrag(e, false));
 document.addEventListener("pointercancel", e => endDrag(e, true));
 document.addEventListener("keydown", e => { if (e.key === "Escape" && drag) endDrag(e, true) });
-$("#layoutReset").onclick = () => { for (const [b, p, next] of [...BOX_HOME].reverse()){ p.insertBefore(b, next); b.classList.remove("folded"); foldMark(b) } layoutSave() };
+$("#layoutReset").onclick = () => { for (const [b, p, next, f] of [...BOX_HOME].reverse()){ p.insertBefore(b, next); b.classList.toggle("folded", f); foldMark(b) } layoutSave() };
 try { const t = localStorage.getItem("tab"); if (t && t !== "hist" && t !== "help" && document.querySelector(`section[data-tab="${t}"]`)) showTab(t) } catch {}
 
 // a crop (black-on-white RGBA) -> PNG bytes for the OCR in the main process
@@ -560,6 +561,9 @@ async function tick(){
       if (check && /^(exp|bonus|meso|item|itemraw)$/.test(e.type) && !check.lines){ check.lines = true; check.late = check.ended }
     }
     const info = r.info; lastInvTab = info.inv || null;
+    // the inventory's spot, remembered for next time (saved when it moved, at most every 10 s)
+    const ia = info.invAt, il = settings.invLast;
+    if (ia && (!il || Math.abs(ia.x - il.x) + Math.abs(ia.y - il.y) > 0.005) && t - invSavedT > 10e3){ invSavedT = t; host.settings({invLast: ia}).then(x => settings = x) }
     if (check && info.useSpots && !check.use){ check.use = info.useSpots + " item count" + (info.useSpots > 1 ? "s" : ""); check.late = check.ended }
     if (check && info.partyWindow > 1 && !check.party){ check.party = info.partyWindow; check.late = check.ended }
     if (!wrap) autoPause(r.minimap, info, t);
@@ -641,7 +645,7 @@ async function checkDeath(c, t){   // c: the chat box crop (GrindReaders.chatCro
 
 // a tab chip clicked: read that tab now. The inventory is looked for anywhere on screen (it can be moved during the
 // session); if it isn't found in 4 s, the player drags a box around it (snip window), saved as settings.invArea
-let lastInvTab = null;
+let lastInvTab = null, invSavedT = 0;
 $("#invTabs").onclick = $("#wrapTabs").onclick = async e => {
   const b = e.target.closest("[data-tab]"); if (!b) return;
   const tab = b.dataset.tab, name = INV_TABS.find(x => x[0] === tab)[1], say = t => $("#status").textContent = t;
@@ -676,7 +680,7 @@ async function start(){
   wrap = null; runT0 = Date.now(); $("#summary").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   kpqReset(); barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
-  engine = makeEngine(ICONS, null, settings.invArea || null, settings.glyphs || []); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
+  engine = makeEngine(ICONS, null, settings.invArea || null, settings.glyphs || [], settings.invLast || null); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
   mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
@@ -741,7 +745,8 @@ function bestDrop(x){
 function runExtras(){
   const s = session.stats(), a = snaps.start, b = snaps.end, top = [...s.mobs].sort((p, q) => q.kills - p.kills)[0];
   const best = [...s.items].sort((p, q) => (q.each || 0) - (p.each || 0) || q.n - p.n)[0];
-  return {player: charName, startLevel: a?.level ?? (s.levelUps?.length ? s.levelUps[0].level - 1 : s.level) ?? null, endLevel: b?.level ?? s.level ?? null,
+  const sx = a && b && b.t > a.t && a.level != null && b.level != null ? GrindSession.expBetween(G, a, b) : null, exp = Math.round(sx ?? s.exp);
+  return {expTotal: exp, expPerActiveMin: s.activeMin >= 1 ? Math.round(exp / s.activeMin) : null, player: charName, startLevel: a?.level ?? (s.levelUps?.length ? s.levelUps[0].level - 1 : s.level) ?? null, endLevel: b?.level ?? s.level ?? null,
     clockMin: Math.round((Date.now() - runT0) / 6e3) / 10, itemsN: s.items.reduce((t, i) => t + i.n, 0), usedN: s.used.reduce((t, u) => t + u.n, 0),
     bestDrop: best ? {id: best.id, name: best.name, each: Math.round(best.each || 0), n: best.n} : null, topMob: top ? {name: top.name, kills: top.kills} : null};
 }
@@ -846,6 +851,8 @@ $("#miniBtn").onclick = () => { document.body.classList.add("mini"); host.mini(t
 $("#mini").onclick = () => { document.body.classList.remove("mini"); host.mini(false) };
 $("#histBtn").onclick = () => { showTab("hist"); loadHist() };
 let histList = [];
+// total EXP of a run (the start/end readings when it has both, else the live count) and EXP per minute of farming
+const expOf = x => x.expTotal ?? (x.snap?.exp ?? x.exp ?? 0), apm = x => x.expPerActiveMin ?? (x.activeMin >= 1 ? expOf(x) / x.activeMin : null);
 // a run's who and how: character, job, levels, party, kills, deaths, the monster killed most, clock time
 const who = x => [x.player, x.job, x.startLevel != null && x.endLevel != null && x.endLevel !== x.startLevel ? `Lv ${x.startLevel} → ${x.endLevel}` : x.level ? "Lv " + (x.endLevel ?? x.level) : null,
   x.party > 1 ? "party of " + x.party : "solo", x.kills != null && fmt(x.kills) + (x.kills === 1 ? " kill" : " kills"), (x.deaths || 0) + (x.deaths === 1 ? " death" : " deaths"),
@@ -860,7 +867,7 @@ async function loadHist(){
     const rate = kq ? h ? fmt((sn ? sn.exp : x.exp) / h) : "-" : sn ? fmt(sn.exp / (sn.minutes / 60)) : h ? fmt(x.exp / h) : "-";
     const what = kq ? `KPQ (${kq.mode === "Rush" ? "Rush" : "Bonus"}) · ${+kq.rounds || 0} round${+kq.rounds === 1 ? "" : "s"}` : x.mapName || "";
     return `<tr><td>${esc(when(x))} · ${x.name ? `<b>${esc(x.name)}</b> · ` : ""}${esc(what)}<div class="hsub">${esc(who(x))}</div>`
-      + `<div class="hsub">${mz(h ? (x.mesos || 0) / h : 0)}/hr`
+      + `<div class="hsub"><b>${sg(expOf(x))} EXP</b>${apm(x) != null ? ` · ${fmt(apm(x))} EXP/min active` : ""} · ${mz(h ? (x.mesos || 0) / h : 0)}/hr`
       + (x.lootValue != null ? ` · net ${sgm(h ? ((x.mesos || 0) + x.lootValue - (x.usedCost || 0)) / h : 0)}/hr` : "") + (x.items || x.bestDrop !== undefined ? ` · best drop: ${dropText(bestDrop(x))}` : "") + `</div>`
       + `${x.note ? `<div class="hnote">${esc(x.note)}</div>` : ""}</td><td class="n">${Math.round(sn && !kq ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${rate} EXP/hr</td>`
       + `<td class="n"><input type="checkbox" class="cmp" data-saved="${+x.saved}" title="Compare: tick two sessions"> <button class="alt del" data-saved="${+x.saved}" title="Delete this session">×</button></td></tr>` }).join("")
@@ -874,7 +881,7 @@ function compare(a, b){
   const h = x => (x.activeMin || 0) / 60, hr = (x, v) => h(x) && v != null ? v / h(x) : null;
   const what = x => x.kpq && typeof x.kpq === "object" ? `KPQ ${x.kpq.mode === "Rush" ? "Rush" : "Bonus"} · ${+x.kpq.rounds || 0} round${+x.kpq.rounds === 1 ? "" : "s"}` : x.mapName || "?";
   // [label, value, lower is better, shown as]
-  const groups = [["Speed", [["EXP/hr", x => hr(x, x.snap && x.snap.minutes > 0 && !x.kpq ? x.snap.exp * h(x) / (x.snap.minutes / 60) : x.exp)], ["Kills/hr", x => hr(x, x.kills)]]],
+  const groups = [["Speed", [["EXP/hr", x => hr(x, x.snap && x.snap.minutes > 0 && !x.kpq ? x.snap.exp * h(x) / (x.snap.minutes / 60) : x.exp)], ["EXP gained (total)", x => expOf(x)], ["Active EXP/min", x => apm(x)], ["Kills/hr", x => hr(x, x.kills)]]],
     ["Money per hour", [["Mesos picked up", x => hr(x, x.mesos), false, mz], ["Items looted (worth)", x => hr(x, x.lootValue), false, mz], ["Potions and arrows used", x => hr(x, x.usedCost), true, mz], ["Mesos per kill", x => x.kills ? (x.mesos || 0) / x.kills : null, false, mz],
       ["Best drop (each)", x => bestDrop(x)?.each ?? null, false, mz],
       ["Net", x => x.lootValue == null ? null : hr(x, (x.mesos || 0) + x.lootValue - (x.usedCost || 0)), false, mz]]],

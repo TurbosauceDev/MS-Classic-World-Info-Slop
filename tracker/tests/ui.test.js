@@ -26,6 +26,10 @@ const path = require("path"), {chromium} = require("playwright");
   if (!await page.isVisible("#guide")) throw new Error("guide not shown");
   await page.click("#guideShare");
   if (await page.isVisible("#guide") || !await page.isChecked("#share")) throw new Error("guide answer");
+  // default Session layout (Danny, 2026-10-18): numbers, monsters, then KPQ / Alerts and goal / Start and end folded
+  const lay0 = await page.evaluate(() => [...document.querySelectorAll('section[data-tab=session] > [data-box]')].map(b => b.dataset.box + (b.classList.contains("folded") ? "-" : "")).join());
+  if (lay0 !== "stats,mobs,kpq-,alerts-,snaps-") throw new Error("default layout: " + lay0);
+  await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click()));
   await page.dblclick("#go");
   await page.waitForTimeout(1500);
   // updates: Check for updates -> downloading -> ready banner; Restart and update stops (saves) the session first
@@ -142,7 +146,8 @@ const path = require("path"), {chromium} = require("playwright");
     const d = await page.locator("#dock").boundingBox(); await page.mouse.move(d.x + 40, d.y + d.height / 2, {steps: 5}); await page.mouse.up(); await page.waitForTimeout(50) }
   const pin = await page.evaluate(() => [document.querySelector("[data-box=stats]").parentElement.id, JSON.stringify(settings.layout.order.dock)]);
   if (pin[0] !== "dock" || pin[1] !== '["stats"]') throw new Error("pin: " + pin);
-  await page.click(".tabs [data-tab=settings]"); await page.click("#layoutReset"); await page.setViewportSize({width: 1280, height: 720});
+  await page.click(".tabs [data-tab=settings]"); await page.click("#layoutReset"); if ((await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join())) !== "kpq,alerts,snaps") throw new Error("reset folds");
+  await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click())); await page.setViewportSize({width: 1280, height: 720});
   // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened
   await page.waitForTimeout(3200);
   await page.click(".tabs [data-tab=settings]"); await page.fill("#reportNote", "map read wrong"); await page.click("#report"); await page.waitForTimeout(100);
@@ -193,7 +198,7 @@ const path = require("path"), {chromium} = require("playwright");
   if (!/Valuable drop: Horny Mushroom Cap/.test(status)) throw new Error("drop alert: " + status);
   if (!/Best time here: .+ 20% faster than usual then \(4 players\)/.test(last)) throw new Error("best time: " + last);
   if (!/4,000 EXP\/hr/.test(last) || !/Not enough shared runs/.test(last)) throw new Error("speed card: " + last);
-  { const r0 = await page.textContent("#histRows tr"); if (!/Turbow · Archer · Lv 21 → 22 · solo · 1 death/.test(r0) || !/best drop: Horny Mushroom Cap ×3/.test(r0)) throw new Error("history details: " + r0) }
+  { const r0 = await page.textContent("#histRows tr"); if (!/Turbow · Archer · Lv 21 → 22 · solo · 1 death/.test(r0) || !/best drop: Horny Mushroom Cap ×3/.test(r0) || !/\+6,000 EXP · 200 EXP\/min active/.test(r0)) throw new Error("history details: " + r0) }
   if (!/Last 7 days: 2 sessions, 0.8 h farming, 8,000 EXP, 1,200, level 21 → 22, 1 death. Fastest map: Snail Hunting Ground III \(12,000 EXP\/hr\)/.test(hist)) throw new Error("recap: " + hist);
   if (!/Lv 21 → 22\s*41 min\s*Snail Hunting Ground III/.test(hist) || /Lv 20 → 21/.test(hist)) throw new Error("level-up log: " + hist);
   if (!mini || full || !back) throw new Error("mini bar toggle");

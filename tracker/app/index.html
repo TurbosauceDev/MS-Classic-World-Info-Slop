@@ -150,13 +150,8 @@
     <button data-tab="session" class="sel">Session</button><button data-tab="loot">Loot</button><button data-tab="hist" id="histBtn">History</button><button data-tab="settings">Settings</button>
   </div>
   <section data-tab="session">
-    <div class="card" id="alertsBox" data-box="alerts" data-title="Alerts and goal"><h3>Alerts and goal</h3>
-      <div class="row"><span>Goal:</span> <button id="goalNext" class="alt" aria-pressed="true" title="Always the level after the one you're on">Next level</button> <label>or level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="-"></label> <button id="goalOff" class="alt" aria-pressed="false">Off</button></div>
-      <div class="row"><label>Beep for drops worth <input type="number" id="alert" min="0" step="1000"> mesos or more</label> <span class="note">0 = off</span></div>
-      <div class="row"><label style="flex:1;min-width:0">Beep for these drops <input id="alertItems" maxlength="500" style="width:100%;box-sizing:border-box" placeholder="e.g. Bronze Ore, Glove scroll"></label> <span class="note" id="alertItemsNote"></span></div>
-      <label class="chk"><input type="checkbox" id="stopBeep"> <span>Beep when EXP stops for 2 minutes (died, disconnected, map taken)</span></label>
-    </div>
     <div class="card" data-box="stats" data-title="Session numbers"><h3>Session numbers</h3><div class="grid">
+      <div><div class="k">EXP gained</div><div class="v" id="expTotal">-</div><div class="note" id="expPerMin"></div></div>
       <div><div class="k">Farming time</div><div class="v" id="active">-</div><div class="note">breaks over a minute left out</div></div>
       <div><div class="k">Deaths</div><div class="v" id="deaths">0</div><div class="note" id="deathNote">EXP bar drops without a level-up</div></div>
       <div><div class="k">Spent/hr (potions, arrows)</div><div class="v" id="usedHr">-</div><div class="note" id="netHr"></div></div>
@@ -164,7 +159,20 @@
       <div><div class="k" id="goalK">Goal</div><div class="v" id="goalV">-</div><div class="note" id="goalAt"></div></div>
     </div></div>
     <div class="card hidden" id="respawn"></div>
-    <div class="card" id="snaps" data-box="snaps" data-title="Start and end"><h3>Start and end (EXP bar, inventory)</h3>
+    <div class="card hidden" id="partyBox"></div>
+    <div class="card" data-box="mobs" data-title="Monsters killed"><h3>Monsters killed</h3><table id="mobs"></table><div class="empty" id="mobsEmpty">No kills yet.</div></div>
+    <div class="card folded" id="kpqBox" data-box="kpq" data-title="KPQ"><h3>KPQ</h3>
+      <div class="row"><label>Doing <select id="kpqAct"><option value="auto">Auto (spots KPQ)</option><option value="grind">Grinding</option><option value="kpq">KPQ</option></select></label>
+        <label>Mode <select id="kpqMode"><option>Bonus</option><option>Rush</option></select></label></div>
+      <div class="note" id="kpqNote">During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.</div></div>
+    <div class="card hidden" id="lastRun"></div>
+    <div class="card folded" id="alertsBox" data-box="alerts" data-title="Alerts and goal"><h3>Alerts and goal</h3>
+      <div class="row"><span>Goal:</span> <button id="goalNext" class="alt" aria-pressed="true" title="Always the level after the one you're on">Next level</button> <label>or level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="-"></label> <button id="goalOff" class="alt" aria-pressed="false">Off</button></div>
+      <div class="row"><label>Beep for drops worth <input type="number" id="alert" min="0" step="1000"> mesos or more</label> <span class="note">0 = off</span></div>
+      <div class="row"><label style="flex:1;min-width:0">Beep for these drops <input id="alertItems" maxlength="500" style="width:100%;box-sizing:border-box" placeholder="e.g. Bronze Ore, Glove scroll"></label> <span class="note" id="alertItemsNote"></span></div>
+      <label class="chk"><input type="checkbox" id="stopBeep"> <span>Beep when EXP stops for 2 minutes (died, disconnected, map taken)</span></label>
+    </div>
+    <div class="card folded" id="snaps" data-box="snaps" data-title="Start and end"><h3>Start and end (EXP bar, inventory)</h3>
       <div class="note">Your EXP bar is read at Start and at Stop, and the difference is what History saves. If a level or % read wrong, fix it here.</div>
       <div class="row"><button id="snapStart" class="alt">Snap start</button> <button id="snapEnd" class="alt">Snap end</button></div>
       <table>
@@ -176,13 +184,6 @@
       <div class="note">Open your inventory on <b>Equip</b>, <b>Use</b> and <b>Etc</b> for a second each, after Start and again before Stop.
         The difference is your real loot, even when a pickup line was missed. Click a tab below to read it now. If your inventory isn't found, you drag a box around it once.</div>
       <div class="row" id="invTabs"></div><div class="ask hidden" id="invAsk"></div></div>
-    <div class="card" id="kpqBox" data-box="kpq" data-title="KPQ"><h3>KPQ</h3>
-      <div class="row"><label>Doing <select id="kpqAct"><option value="auto">Auto (spots KPQ)</option><option value="grind">Grinding</option><option value="kpq">KPQ</option></select></label>
-        <label>Mode <select id="kpqMode"><option>Bonus</option><option>Rush</option></select></label></div>
-      <div class="note" id="kpqNote">During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.</div></div>
-    <div class="card hidden" id="lastRun"></div>
-    <div class="card hidden" id="partyBox"></div>
-    <div class="card" data-box="mobs" data-title="Monsters killed"><h3>Monsters killed</h3><table id="mobs"></table><div class="empty" id="mobsEmpty">No kills yet.</div></div>
   </section>
   <section data-tab="loot" class="hidden">
     <div class="card" id="mesoBox" data-box="mesos" data-title="Mesos"><h3>Mesos</h3><div class="grid" id="mesoGrid"></div><div class="note" id="mesoNote"></div></div>
