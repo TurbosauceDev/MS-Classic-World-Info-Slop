@@ -345,10 +345,13 @@
   function itemByName(name, cat, all = false){
     if (!ITEMS) return all ? [] : null;
     const cut = /\.\.\.$/.test(name), core = name.replace(/\.\.\.$/, "");
-    const re = new RegExp("^" + core.split("").map(c => c === "?" ? "." : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + (cut ? "" : "$"));
+    const re = new RegExp("^" + core.split("").map(c => c === "?" ? "." : "ilI1".includes(c) ? "[ilI1]" : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + (cut ? "" : "$"));
     const tab = {Etc: ["Etc"], Use: ["Consumable", "Scroll"], Equip: ["Equipment"], Setup: ["Setup"]};
     const catRe = new RegExp("^" + cat.replace(/\?/g, ".") + "$"), cats = Object.keys(tab).filter(k => catRe.test(k)).flatMap(k => tab[k]);
-    const hits = ITEMS.filter(([id, it]) => re.test(it.n) && (!cats.length || cats.includes(it.c)));
+    // l and i look alike in the pickup font ("Biue Potion", Danny's report 2026-10-18): either matches either
+    let hits = ITEMS.filter(([id, it]) => re.test(it.n) && (!cats.length || cats.includes(it.c)));
+    // the same name twice in the game data (Red Potion 2000000 / 2000007): the first one, which the shops sell
+    if (hits.length > 1 && hits.every(h => h[1].n === hits[0][1].n)) hits = [hits[0]];
     return all ? hits.map(h => h[0]) : hits.length === 1 ? hits[0][0] : null;
   }
 
