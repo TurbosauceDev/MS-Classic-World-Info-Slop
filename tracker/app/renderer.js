@@ -228,11 +228,15 @@ function renderMesos(s){
 // after Stop: each inventory tab read since then (green), open on screen right now (amber) or not yet (grey)
 function renderWrap(s){
   $("#wrap").classList.toggle("hidden", !wrap);
+  $("#nameRow").classList.toggle("hidden", !!wrap);   // asked in the wrap-up card instead
   if (!wrap) return;
   const tabs = (s || session?.stats())?.invTabs || {}, n = INV_TABS.filter(([k]) => tabs[k]?.last >= wrap.t).length;
   $("#wrapTabs").innerHTML = INV_TABS.map(([k, name]) => { const done = tabs[k]?.last >= wrap.t, seeing = !done && lastInvTab === k && Date.now() - (tabs[k]?.last || 0) < 10e3;
     return `<button class="chip ${done ? "ok" : seeing ? "half" : "need"}" data-tab="${k}" title="${done ? "Read after Stop" : "Not read since Stop. Click to read it now (have the " + name + " tab open in the game)"}">${done ? "✓" : seeing ? "…" : "○"} ${name}</button>` }).join(" ");
-  $("#wrapNote").textContent = n === 3 ? "All 3 tabs read: ready to end." : `${n} of 3 tabs read since Stop.`;
+  $("#wrapNote").textContent = n === 3 ? "All 3 tabs read: add a name or note below if you like, then Finalize log." : `${n} of 3 tabs read since Stop.`;
+  $("#wrapName").value = $("#runName").value;
+  // all 3 tabs read: on to the name and note (once, and not while typing somewhere)
+  if (n === 3 && !wrap.noted){ wrap.noted = true; if (!document.activeElement?.matches("input, textarea")) $("#runNote").focus() }
 }
 // the line next to Start/Stop: tracking or not, paused, for how long
 function renderState(s){
@@ -716,7 +720,7 @@ async function stop(){
     if (kpq?.on) kpqEnd(t, true);
     log("wrap", {});
     if (video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {});
-    $("#status").textContent = "Stopped. Open your inventory on Equip, Use and Etc for a second each, then press End run.";
+    $("#status").textContent = "Stopped. Open your inventory on Equip, Use and Etc for a second each, then add a name or note if you like and press Finalize log.";
     render();
   } finally { stopping = false }
 }
@@ -731,6 +735,7 @@ async function finish(){
   const t1 = wrap?.t || Date.now();
   try { await stopNow() } finally { stopping = false; wrap = null; $("#wrapEnd").disabled = false; renderWrap(); renderState(session?.stats()) }
   try { showSummary(t1) } catch (e){ log("summary", {err: e.message}) }
+  $("#runName").value = $("#wrapName").value = $("#runNote").value = "";
 }
 async function stopNow(){
   log("stop", {engine: engine?.kind, skipped});
@@ -742,19 +747,20 @@ async function stopNow(){
   const a = snaps.start, b = snaps.end, snapExp = a && b && b.t > a.t ? GrindSession.expBetween(G, a, b) : null;
   const snapRec = snapExp != null ? {startLevel: a.level, startPct: a.pct, endLevel: b.level, endPct: b.pct, minutes: Math.round((b.t - a.t) / 6e3) / 10, exp: Math.round(snapExp)} : null;
   if (!snapRec && session?.state.events) $("#status").textContent = "Saved, but the start or end EXP reading is missing: History uses the live count for this one.";
-  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds, best: kpq.times.length ? Math.round(Math.min(...kpq.times)) : null, avg: kpq.times.length ? Math.round(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length) : null} : null, lootValue: Math.round(session.stats().lootValue), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
+  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), name: runName() || null, note: $("#runNote").value.trim() || null, kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds, best: kpq.times.length ? Math.round(Math.min(...kpq.times)) : null, avg: kpq.times.length ? Math.round(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length) : null} : null, lootValue: Math.round(session.stats().lootValue), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
   renderState(session?.stats());
 }
 // the summary after End run: clock time vs farming, EXP per clock hour and per active minute (KPQ Bonus: the bonus stage
 // only, stages 1st-Last left out), mesos in and out, what the loot is worth, and the inventory before and after
 function showSummary(t1){
+  const sumName = runName(), sumNote = $("#runNote").value.trim();
   const s = session.stats(), a = snaps.start, b = snaps.end;
   const snapExp = a && b && b.t > a.t && a.level != null && b.level != null ? GrindSession.expBetween(G, a, b) : null, exp = snapExp ?? s.exp;
   const clockH = Math.max(1 / 60, (t1 - runT0) / 3.6e6), act = s.activeMin;
   const bonus = kpq?.on && (settings.kpqMode || "Bonus") === "Bonus" ? {min: (kpq.stageTimes["80000500"] || []).reduce((x, y) => x + y, 0) / 60, exp: kpq.stageExp["80000500"] || 0} : null;
   const perMin = bonus?.min > 0 ? bonus.exp / bonus.min : act > 0 ? exp / act : 0, net = s.mesos + s.lootValue - s.usedCost;
   const inv = s.inv.filter(x => x.alike === 1).slice(0, 40), tabName = k => INV_TABS.find(x => x[0] === k)?.[1] || k;
-  $("#sumBody").innerHTML = `<div class="note">${clock(runT0)} → ${clock(t1)} · ${hm(clockH)} on the clock, ${hm(act / 60)} farming`
+  $("#sumBody").innerHTML = (sumName ? `<div style="font-weight:600">${esc(sumName)}</div>` : "") + (sumNote ? `<div class="hnote">${esc(sumNote)}</div>` : "") + `<div class="note">${clock(runT0)} → ${clock(t1)} · ${hm(clockH)} on the clock, ${hm(act / 60)} farming`
       + (a?.level && b?.level ? ` · Lv ${a.level} ${a.pct?.toFixed(2)}% → Lv ${b.level} ${b.pct?.toFixed(2)}%` : "") + (s.mapName ? " · " + esc(s.mapName) : "") + "</div>"
     + `<div class="sgrid">`
     + cell("EXP gained", sg(exp), snapExp != null ? "from the start and end EXP bar" : "from the live count")
@@ -773,6 +779,10 @@ function showSummary(t1){
   $("#summary").classList.remove("hidden"); $("#summary").scrollIntoView({block: "nearest"});
 }
 $("#wrapEnd").onclick = () => finish();
+// the run's name (top card, before or during the run; again in the wrap-up card) and the note written at wrap-up
+const runName = () => $("#runName").value.trim();
+$("#runName").oninput = () => { $("#wrapName").value = $("#runName").value };
+$("#wrapName").oninput = () => { $("#runName").value = $("#wrapName").value };
 $("#sumClose").onclick = () => $("#summary").classList.add("hidden");
 $("#go").onclick = () => timer != null ? wrap ? resume() : stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
 
@@ -848,7 +858,7 @@ async function loadHist(){
     const sn = x.snap && x.snap.minutes > 0 ? x.snap : null, kq = x.kpq && typeof x.kpq === "object" ? x.kpq : null;
     const rate = kq ? h ? fmt((sn ? sn.exp : x.exp) / h) : "-" : sn ? fmt(sn.exp / (sn.minutes / 60)) : h ? fmt(x.exp / h) : "-";
     const what = kq ? `KPQ (${kq.mode === "Rush" ? "Rush" : "Bonus"}) · ${+kq.rounds || 0} round${+kq.rounds === 1 ? "" : "s"}` : x.mapName || "";
-    return `<tr><td>${esc(when(x))} · ${esc(what)}</td><td class="n">${Math.round(sn && !kq ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${rate} EXP/hr</td>`
+    return `<tr><td>${esc(when(x))} · ${x.name ? `<b>${esc(x.name)}</b> · ` : ""}${esc(what)}${x.note ? `<div class="hnote">${esc(x.note)}</div>` : ""}</td><td class="n">${Math.round(sn && !kq ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${rate} EXP/hr</td>`
       + `<td class="n"><input type="checkbox" class="cmp" data-saved="${+x.saved}" title="Compare: tick two sessions"> <button class="alt del" data-saved="${+x.saved}" title="Delete this session">×</button></td></tr>` }).join("")
     : `<tr><td>No sessions yet: they're saved when you press Stop.</td></tr>`;
 }
@@ -864,7 +874,7 @@ function compare(a, b){
     ["Money per hour", [["Mesos picked up", x => hr(x, x.mesos), false, mz], ["Items looted (worth)", x => hr(x, x.lootValue), false, mz], ["Potions and arrows used", x => hr(x, x.usedCost), true, mz],
       ["Net", x => x.lootValue == null ? null : hr(x, (x.mesos || 0) + x.lootValue - (x.usedCost || 0)), false, mz]]],
     ["Run", [["Farming time", x => x.activeMin || 0, null, v => Math.round(v) + " min"], ["Deaths", x => x.deaths || 0, true], ["KPQ best round", x => x.kpq?.best ?? null, true, mss]]]];
-  const head = (k, x) => `<div class="cmpWho ${k}"><b>${k.toUpperCase()}</b> ${esc(when(x))}<div class="note">${esc(what(x))} · Lv ${esc(x.level ?? "?")} · ${x.party > 1 ? "party of " + x.party : "solo"} · ${Math.round(x.activeMin || 0)} min</div></div>`;
+  const head = (k, x) => `<div class="cmpWho ${k}"><b>${k.toUpperCase()}</b> ${esc(when(x))}${x.name ? ` · ${esc(x.name)}` : ""}<div class="note">${esc(what(x))} · Lv ${esc(x.level ?? "?")} · ${x.party > 1 ? "party of " + x.party : "solo"} · ${Math.round(x.activeMin || 0)} min</div></div>`;
   let up = 0, down = 0;
   const body = groups.map(([g, rows]) => {
     const tr = rows.map(([k, f, low, show]) => { const va = f(a), vb = f(b); if (va == null && vb == null) return "";

@@ -115,8 +115,8 @@ const path = require("path"), {chromium} = require("playwright");
     render(); const after = [ok(), document.querySelector("#wrapNote").textContent];
     resume(); const back = [wrap, document.querySelector("#go").textContent, document.querySelector("#wrap").classList.contains("hidden"), session.state.pausedAt];
     return {ask, asked2: document.querySelector("#invAsk").classList.contains("hidden"), chips, items, asked, after, back, mesos: document.querySelector("#mesoGrid").textContent} });
-  if (!/✓✓ Etc/.test(iv.chips) || !/from the inventory/.test(iv.items) || !/Total/.test(iv.items) || /not read yet/.test(iv.items) || !/End run/.test(iv.asked[0]) || !/show the Equip, Use tabs/.test(iv.ask) || !iv.asked2
-    || !iv.asked[1] || !iv.asked[2] || iv.asked[3] !== "Resume" || iv.asked[4] !== 0 || !iv.asked[5] || iv.after[0] !== 3 || !/ready to end/.test(iv.after[1])
+  if (!/✓✓ Etc/.test(iv.chips) || !/from the inventory/.test(iv.items) || !/Total/.test(iv.items) || /not read yet/.test(iv.items) || !/Finalize log/.test(iv.asked[0]) || !/show the Equip, Use tabs/.test(iv.ask) || !iv.asked2
+    || !iv.asked[1] || !iv.asked[2] || iv.asked[3] !== "Resume" || iv.asked[4] !== 0 || !iv.asked[5] || iv.after[0] !== 3 || !/Finalize log/.test(iv.after[1])
     || iv.back[0] !== null || iv.back[1] !== "Stop" || !iv.back[2] || iv.back[3] !== null || !/Picked up\s*\+12/.test(iv.mesos)) throw new Error("inventory: " + JSON.stringify(iv));
   // boxes: a saved layout puts the Mesos box in the pinned strip and folds Monsters; Reset puts them back
   const lay = await page.evaluate(async () => { layoutLoad({order: {dock: ["mesos"]}, folded: ["mobs"]});
@@ -168,9 +168,17 @@ const path = require("path"), {chromium} = require("playwright");
   if (Math.abs(+sn[0].replace(/\D/g, "") - want) > want * 0.01 || !/22 min/.test(sn[1])) throw new Error("snapshots: " + JSON.stringify(sn) + " want ~" + want);
   await page.click(".tabs [data-tab=session]"); await page.click("#snapEnd"); await page.waitForTimeout(200);   // a button snapshot from the (test) game picture: saved, replaces the typed end
   if (!(await page.evaluate(() => snaps.end.file && snaps.end.hand))) throw new Error("snap end button");
+  await page.fill("#runName", "KPQ rush with randoms");
   await page.click("#go"); await page.waitForTimeout(200);
+  if (await page.isVisible("#runName")) throw new Error("name row shown while wrapping up");
   if (await page.evaluate(() => window.saved) || !await page.isVisible("#wrap")) throw new Error("stop: saved before End run");
+  // a name typed in the top card shows in the wrap-up card; a note written there; both saved and shown in the summary
+  await page.fill("#runNote", "ch 4, lost 2 to <b>ers");
+  if (await page.inputValue("#wrapName") !== "KPQ rush with randoms") throw new Error("wrap name");
   await page.click("#wrapEnd"); await page.waitForTimeout(200);
+  { const nm = await page.evaluate(() => [window.saved?.name, window.saved?.note, document.querySelector("#runName").value, document.querySelector("#sumBody b, #sumBody .hnote")?.textContent, !!document.querySelector("#sumBody b b")]);
+    if (nm[0] !== "KPQ rush with randoms" || nm[1] !== "ch 4, lost 2 to <b>ers" || nm[2] !== "" || nm[4]) throw new Error("name/note: " + nm);
+    if (!/KPQ rush with randoms[\s\S]*ch 4, lost 2 to <b>ers/.test(await page.textContent("#sumBody"))) throw new Error("summary name/note") }
   const saved = await page.evaluate(() => window.saved), sum = await page.textContent("#summary");
   if (!await page.isVisible("#summary") || !/EXP per active minute/.test(sum) || !/Mesos looted\s*\+12/.test(sum) || !/Horny Mushroom Cap/.test(sum) || await page.isVisible("#wrap")) throw new Error("summary: " + sum);
   // speed check card (no shared data yet), drop alert, history, mini bar

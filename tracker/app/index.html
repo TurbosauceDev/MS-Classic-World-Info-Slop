@@ -74,6 +74,9 @@
   :focus-visible { outline:2px solid var(--accent); outline-offset:2px; } .grip:focus-visible { border-radius:4px; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
   #goalNext[aria-pressed=true], #goalOff[aria-pressed=true] { background:var(--accent); color:#fff; }
+  #wrap .step { font-weight:600; margin:10px 0 4px; } #wrap .step:first-of-type { margin-top:0; }
+  textarea { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:5px 6px; width:100%; margin-top:6px; resize:vertical; }
+  .hnote { color:var(--muted); font-size:12px; white-space:pre-wrap; overflow-wrap:anywhere; }
   .coin { height:1em; width:auto; image-rendering:pixelated; vertical-align:-0.12em; margin-right:2px; }
   .ico { display:inline-block; width:22px; height:22px; object-fit:contain; image-rendering:pixelated; vertical-align:middle; margin:-3px 6px -3px 0; }
   .dragLabel { position:fixed; z-index:60; pointer-events:none; background:var(--accent); color:#fff; border-radius:6px; padding:3px 8px; font-size:12px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.3); }
@@ -119,6 +122,7 @@
       <button id="helpBtn" class="alt" title="How to use the tracker (F1)">?</button>
       <button id="bugBtn" class="alt" title="Report a bug (Ctrl+Shift+B, works from the game too)">Bug</button>
       <button id="miniBtn" class="alt" title="Shrink to a small bar with just EXP/hr">Mini</button></div>
+    <div class="row" id="nameRow" style="margin-top:6px"><input id="runName" maxlength="60" aria-label="Run name (optional)" placeholder="Name this run (optional), e.g. KPQ rush with randoms" style="flex:1;min-width:0"></div>
     <div class="tiles">
       <div class="tile main" title="EXP per hour of farming (breaks left out)"><div class="k">EXP/hr</div><div class="v" id="expHr">-</div><div class="note" id="expHr5"></div></div>
       <div class="tile" title="At the current EXP/hr"><div class="k">Next level in</div><div class="v" id="ttl">-</div><div class="note" id="lvNow"></div></div>
@@ -128,10 +132,14 @@
     <div class="note" id="where"></div>
   </div>
   <div class="card hidden" id="wrap"><h3>Wrapping up</h3>
+    <div class="step">1. Show your inventory</div>
     <div class="note">The timer is stopped. Open your inventory on each tab for a second so the end count is right; a tab turns green once
       it was read after you pressed Stop. Click a tab to read it now.</div>
-    <div class="row" id="wrapTabs"></div>
-    <div class="row"><span class="note" id="wrapNote"></span><button id="wrapEnd" title="Saves the session and shows the summary">End run</button></div></div>
+    <div class="row" id="wrapTabs"></div><div class="note" id="wrapNote"></div>
+    <div class="step">2. Name and note (optional)</div>
+    <input id="wrapName" maxlength="60" aria-label="Run name" placeholder="Run name, e.g. KPQ run 1" style="width:100%">
+    <textarea id="runNote" maxlength="1000" rows="3" aria-label="Note about this run" placeholder="A note for later: party, channel, buffs, what went well or wrong..."></textarea>
+    <div class="row"><button id="wrapEnd" title="Saves the run to History and shows the summary">Finalize log</button></div></div>
   <div class="card hidden" id="summary"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Run summary</h3><button id="sumClose" class="alt">Close</button></div>
     <div id="sumBody"></div></div>
   <div class="card hidden" id="selfcheck"></div>
@@ -194,7 +202,7 @@
         <li>For the first few seconds the <b>self-check</b> shows what it can read. A ✗ comes with what to fix and turns ✓ by
           itself once it works.</li>
         <li>Press <b>Stop</b> when you're done: the timer stops and the tracker asks for one last look at your inventory. Press
-          <b>End run</b> to save it to <b>History</b> and see the run summary. <b>Resume</b> carries on instead.</li>
+          <b>Finalize log</b> to save it to <b>History</b> and see the run summary (a name, typed under Start, and a note are optional). <b>Resume</b> carries on instead.</li>
       </ul></details>
       <details><summary>What the numbers mean</summary><ul>
         <li><b>EXP/hr</b>: EXP per hour of farming. Breaks over a minute (no EXP, no pickups) are left out. "Last 5 min" is
