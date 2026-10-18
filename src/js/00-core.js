@@ -54,7 +54,19 @@ const goHome = () => { showCat("home"); TABS.forEach(x => { x.setAttribute("aria
   $("#home").hidden = false; try { localStorage.setItem("tab", "home") } catch(e) {} };
 const goCat = cat => cat === "home" ? goHome() : $("#t-" + (LASTTAB[cat] || TABS.find(x => x.dataset.cat === cat).dataset.tab)).click();
 CATS.forEach(b => b.addEventListener("click", () => goCat(b.dataset.cat)));
-$("#home").addEventListener("click", e => { const g = e.target.closest("[data-go],[data-go-cat]"); if (!g) return;
+// Home: a click on a section card (not one of its links) grows it into a "billboard" at the top (wider, bigger text, a
+// longer description); a second click, or another card, shrinks it back. Animated with the View Transitions API where the
+// browser has it (each card has its own view-transition-name), instantly elsewhere and with reduced motion.
+function homeBig(cat){
+  const cards = [...document.querySelectorAll(".homecat")], cur = cards.find(c => c.classList.contains("big")), next = cur?.dataset.sec === cat ? null : cat;
+  const apply = () => { cards.forEach(c => { const on = c.dataset.sec === next; c.classList.toggle("big", on); c.querySelector(".hcat").setAttribute("aria-expanded", on) });
+    const top = $("#home").getBoundingClientRect().top; if (next && top < 0) window.scrollBy(0, top - 8) };   // the billboard sits first: keep it in view
+  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (document.startViewTransition && !calm){ cards.forEach((c, i) => c.style.viewTransitionName = "hc" + i); document.startViewTransition(apply) } else apply();
+}
+$("#home").addEventListener("click", e => { if (e.target.closest("a")) return;
+  const g = e.target.closest("[data-go],[data-go-cat]");
+  if (!g){ const c = e.target.closest(".homecat"); if (c) homeBig(c.dataset.sec); return }
   g.dataset.go ? $("#t-" + g.dataset.go).click() : goCat(g.dataset.goCat); window.scrollTo({top: $("nav").offsetTop - 8}) });
 $("header h1").addEventListener("click", goHome);
 goHome();

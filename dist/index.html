@@ -487,6 +487,21 @@ details.sec>summary:hover h2{color:var(--accent)}
 .srchbox .ri{flex:none}
 .srchbox p.tiny{margin:0;color:var(--muted)}
 #trk a[data-go],#trkhow a[data-go],#trkruns a[data-go]{color:var(--accent)}
+/* Home: section card -> billboard (homeBig in 00-core.js) */
+.homecat{cursor:pointer;transition:background-color .25s,border-color .25s}
+.homecat:hover{border-color:var(--accent)}
+.homecat .hlinks{cursor:auto}
+.hbill{display:none}
+.homecat.big{grid-column:1/-1;order:-1;background:var(--accent-soft);border-color:var(--accent);padding:20px 22px}
+.homecat.big .hcat{font-size:28px}
+.homecat.big .hbill{display:block}
+.hbill p{margin:4px 0 12px;font:400 16px var(--f-body);line-height:1.55;color:var(--ink);max-width:70ch}
+.hbillact{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+.hbillact .btn{text-decoration:none;margin:0}
+.homecat.big .hlinks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:0 24px}
+.homecat.big .hlink b{font-size:15.5px}
+.homecat.big .hlink span{font-size:13.5px}
+::view-transition-group(*){animation-duration:.35s;animation-timing-function:cubic-bezier(.2,.7,.2,1)}
 
 </style>
 
@@ -534,38 +549,56 @@ details.sec>summary:hover h2{color:var(--accent)}
 
 <section id="home">
   <div class="homegrid">
-    <div class="homecat"><h2><button class="hcat" data-go-cat="trk">Grind Tracker</button></h2>
+    <div class="homecat" data-sec="trk"><h2><button class="hcat" data-big="trk" aria-expanded="false">Grind Tracker</button></h2>
+      <div class="hbill"><p>A small window on top of the game that counts your EXP/hr, kills, mesos, loot and potions while you grind, times your KPQ rounds, and pools what players share into real numbers on this site.</p><div class="hbillact"><a class="btn primary" href="https://github.com/TurbosauceDev/MS-Classic-World-Info-Slop/releases/latest" target="_blank" rel="noopener">Download for Windows</a> <span class="pill p-hot">Windows · free</span> <button class="btn hopen" data-go-cat="trk">Open Grind Tracker →</button></div></div>
+      <div class="hlinks">
       <button class="hlink" data-go="trk"><b>Overview</b><span>Our Windows app that counts EXP/hr, kills, mesos and loot while you grind.</span></button>
       <button class="hlink" data-go="trkhow"><b>How to use</b><span>Set-up, the numbers, parties, KPQ and fixing bad reads.</span></button>
       <button class="hlink" data-go="trkruns"><b>Shared runs</b><span>Real EXP/hr, mesos and drops from tracker players.</span></button>
       <button class="hlink" data-go="trkkpq"><b>KPQ leaderboard</b><span>Fastest Kerning PQ clears by tracker parties.</span></button>
+      </div>
     </div>
-    <div class="homecat"><h2><button class="hcat" data-go-cat="char">Your character</button></h2>
+    <div class="homecat" data-sec="char"><h2><button class="hcat" data-big="char" aria-expanded="false">Your character</button></h2>
+      <div class="hbill"><p>Plan a character from level 1 to 100: stats and skills for any class, which quests to do when, where to grind for your build, and how fast you really level.</p><div class="hbillact"><button class="btn hopen" data-go-cat="char">Open Your character →</button></div></div>
+      <div class="hlinks">
       <button class="hlink" data-go="plan"><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
       <button class="hlink" data-go="path"><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
       <button class="hlink" data-go="maps"><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
       <button class="hlink" data-go="expc"><b>EXP/hr calculator</b><span>Time a session, get your real EXP per hour and time to level.</span></button>
+      </div>
     </div>
-    <div class="homecat"><h2><button class="hcat" data-go-cat="db">Databases</button></h2>
+    <div class="homecat" data-sec="db"><h2><button class="hcat" data-big="db" aria-expanded="false">Databases</button></h2>
+      <div class="hbill"><p>Everything in the launch game files, cross-linked: every quest, monster, item and 1st/2nd job skill. Search them all at once with Ctrl K.</p><div class="hbillact"><button class="btn hopen" data-go-cat="db">Open Databases →</button></div></div>
+      <div class="hlinks">
       <button class="hlink" data-go="quests"><b>Quest Database</b><span>Every launch quest with level, rewards, questlines and community picks.</span></button>
       <button class="hlink" data-go="mobs"><b>Monsters</b><span>Stats, spawns, drops and the best maps to farm each monster.</span></button>
       <button class="hlink" data-go="items"><b>Items</b><span>Every item: stats, who drops it, shops, recipes and quests that use it.</span></button>
       <button class="hlink" data-go="skills"><b>Skills</b><span>Every 1st and 2nd job skill: what it does at each level and what it needs.</span></button>
+      </div>
     </div>
-    <div class="homecat"><h2><button class="hcat" data-go-cat="world">World</button></h2>
+    <div class="homecat" data-sec="world"><h2><button class="hcat" data-big="world" aria-expanded="false">World</button></h2>
+      <div class="hbill"><p>Find your way around the launch world: the in-game world map with what lives where, the fastest route between any two maps, and a stage-by-stage KPQ guide.</p><div class="hbillact"><button class="btn hopen" data-go-cat="world">Open World →</button></div></div>
+      <div class="hlinks">
       <button class="hlink" data-go="wmap"><b>World Map</b><span>Click any spot for its maps, monsters, NPCs, quests and EXP per hour.</span></button>
       <button class="hlink" data-go="navi"><b>Map Navigator</b><span>Fastest route between two maps, with exit numbers on the minimaps.</span></button>
       <button class="hlink" data-go="kpq"><b>KPQ</b><span>Kerning Party Quest stage by stage: puzzles, answers and rewards.</span></button>
+      </div>
     </div>
-    <div class="homecat"><h2><button class="hcat" data-go-cat="town">Towns and trade</button></h2>
+    <div class="homecat" data-sec="town"><h2><button class="hcat" data-big="town" aria-expanded="false">Towns and trade</button></h2>
+      <div class="hbill"><p>Town grades and shops, crafting professions and recipes, which loot is worth keeping, and a price check from inventory screenshots.</p><div class="hbillact"><button class="btn hopen" data-go-cat="town">Open Towns and trade →</button></div></div>
+      <div class="hlinks">
       <button class="hlink" data-go="cit"><b>Citizenship</b><span>Town grades, citizenship quests and town shops.</span></button>
       <button class="hlink" data-go="craft"><b>Crafting</b><span>Professions, the cheapest way to level them, recipes and materials.</span></button>
       <button class="hlink" data-go="keep"><b>Keep or sell</b><span>Which loot quests and recipes still want, and what's safe to sell.</span></button>
       <button class="hlink" data-go="inv"><b>Price check</b><span>Paste inventory screenshots, get every item listed with a player-shop price.</span></button>
+      </div>
     </div>
-    <div class="homecat"><h2><button class="hcat" data-go-cat="more">More</button></h2>
+    <div class="homecat" data-sec="more"><h2><button class="hcat" data-big="more" aria-expanded="false">More</button></h2>
+      <div class="hbill"><p>What changed on this site and when, and where every number comes from.</p><div class="hbillact"><button class="btn hopen" data-go-cat="more">Open More →</button></div></div>
+      <div class="hlinks">
       <button class="hlink" data-go="log"><b>Changelog</b><span>What changed and when.</span></button>
       <button class="hlink" data-go="credits"><b>Credits</b><span>Sources and thanks.</span></button>
+      </div>
     </div>
   </div>
 </section>
@@ -1360,6 +1393,8 @@ details.sec>summary:hover h2{color:var(--accent)}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Home cards grow when clicked</h3><span class="pill p-hot">new</span></div>
+      <p>Click a section card on Home and it grows into a big card at the top with a short description and its pages (the Grind Tracker one has the download). Click it again to shrink it back.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Grind Tracker section</h3><span class="pill p-hot">new</span></div>
       <p>The <b>Grind Tracker</b> is now its own section, first in the menu and on Home: Overview (what it does and the download), How to use, Shared runs, and the KPQ leaderboard.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Search everything, more share links</h3><span class="pill p-hot">new</span></div>
@@ -1670,7 +1705,19 @@ const goHome = () => { showCat("home"); TABS.forEach(x => { x.setAttribute("aria
   $("#home").hidden = false; try { localStorage.setItem("tab", "home") } catch(e) {} };
 const goCat = cat => cat === "home" ? goHome() : $("#t-" + (LASTTAB[cat] || TABS.find(x => x.dataset.cat === cat).dataset.tab)).click();
 CATS.forEach(b => b.addEventListener("click", () => goCat(b.dataset.cat)));
-$("#home").addEventListener("click", e => { const g = e.target.closest("[data-go],[data-go-cat]"); if (!g) return;
+// Home: a click on a section card (not one of its links) grows it into a "billboard" at the top (wider, bigger text, a
+// longer description); a second click, or another card, shrinks it back. Animated with the View Transitions API where the
+// browser has it (each card has its own view-transition-name), instantly elsewhere and with reduced motion.
+function homeBig(cat){
+  const cards = [...document.querySelectorAll(".homecat")], cur = cards.find(c => c.classList.contains("big")), next = cur?.dataset.sec === cat ? null : cat;
+  const apply = () => { cards.forEach(c => { const on = c.dataset.sec === next; c.classList.toggle("big", on); c.querySelector(".hcat").setAttribute("aria-expanded", on) });
+    const top = $("#home").getBoundingClientRect().top; if (next && top < 0) window.scrollBy(0, top - 8) };   // the billboard sits first: keep it in view
+  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (document.startViewTransition && !calm){ cards.forEach((c, i) => c.style.viewTransitionName = "hc" + i); document.startViewTransition(apply) } else apply();
+}
+$("#home").addEventListener("click", e => { if (e.target.closest("a")) return;
+  const g = e.target.closest("[data-go],[data-go-cat]");
+  if (!g){ const c = e.target.closest(".homecat"); if (c) homeBig(c.dataset.sec); return }
   g.dataset.go ? $("#t-" + g.dataset.go).click() : goCat(g.dataset.goCat); window.scrollTo({top: $("nav").offsetTop - 8}) });
 $("header h1").addEventListener("click", goHome);
 goHome();

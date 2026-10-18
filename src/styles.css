@@ -482,3 +482,18 @@ details.sec>summary:hover h2{color:var(--accent)}
 .srchbox .ri{flex:none}
 .srchbox p.tiny{margin:0;color:var(--muted)}
 #trk a[data-go],#trkhow a[data-go],#trkruns a[data-go]{color:var(--accent)}
+/* Home: section card -> billboard (homeBig in 00-core.js) */
+.homecat{cursor:pointer;transition:background-color .25s,border-color .25s}
+.homecat:hover{border-color:var(--accent)}
+.homecat .hlinks{cursor:auto}
+.hbill{display:none}
+.homecat.big{grid-column:1/-1;order:-1;background:var(--accent-soft);border-color:var(--accent);padding:20px 22px}
+.homecat.big .hcat{font-size:28px}
+.homecat.big .hbill{display:block}
+.hbill p{margin:4px 0 12px;font:400 16px var(--f-body);line-height:1.55;color:var(--ink);max-width:70ch}
+.hbillact{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+.hbillact .btn{text-decoration:none;margin:0}
+.homecat.big .hlinks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:0 24px}
+.homecat.big .hlink b{font-size:15.5px}
+.homecat.big .hlink span{font-size:13.5px}
+::view-transition-group(*){animation-duration:.35s;animation-timing-function:cubic-bezier(.2,.7,.2,1)}
