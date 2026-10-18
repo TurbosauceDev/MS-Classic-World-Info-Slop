@@ -58,7 +58,7 @@ function renderCheck(){
     + row("Pickup / EXP lines", c.lines, "None yet. Kill something; if this stays empty, the chat box may be covered or scrolled.")
     + row("Map name", c.map, c.mapWhy || "Not read yet.")
     + row("Job", settings.job ? "picked by hand" : c.job, c.jobWhy || "Not read yet.")
-    + row("Potions / arrows", c.use, "No potion, food or arrow counts found. Put your potions on the quick slots (or open the Use tab) to track what you use.")
+    + row("Potions / arrows", c.use, "No potion, food or arrow counts found. Put your potions on the quick slots (or open the Use tab), or press <b>Show me where my potions are</b> and drag a box around them.")
     + (settings.partyCode || c.party ? row("Party window", c.party && "party of " + c.party, "Not found. Open the party window so the party size is read; without it a party is only guessed from bonus EXP lines.") : "")
     + `</table>` + (done ? `<div class="note">${allOk(c) ? "All readers work." : "✗ = that number isn't tracked until it's fixed; it turns ✓ by itself once it works."}</div>` : "");
   if (done && !c.ended){
@@ -337,6 +337,31 @@ async function checkDeath(img, t){
   else if (++deathPending.tries >= 3){ deaths.unseen++; deathPending = null; log("death", {lost: null}) }
 }
 
+// "Show me where my potions are": freeze the game picture, drag a box (snip window), then counts are only read in there.
+// Saved in the settings, so it holds for the next sessions too.
+async function pickArea(){
+  if (!video?.srcObject?.active) await startCapture();
+  ICONS ||= await GrindReaders.loadIcons(G).catch(() => []);
+  const f = grab(), c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
+  const rect = await host.snip(c.toDataURL("image/jpeg", 0.9));
+  if (!rect) return;
+  settings = await host.settings({countArea: rect}); readers?.setArea(rect);
+  // read it right away so the player knows whether it worked
+  const rd = GrindReaders.createReaders(G, ICONS); rd.setArea(rect);
+  const img = GrindReaders.native(f), n = GrindReaders.readCounts(img, rd.areaPx(img)), known = n.filter(x => GrindReaders.iconAt(img, x, ICONS));
+  $("#status").textContent = !n.length ? "No item counts found in that box. Try a bigger box around the slots, with the numbers inside."
+    : `Found ${n.length} count${n.length > 1 ? "s" : ""} there (${known.length} potion, food or arrow). Only that part of the screen is read for them now.`;
+  if (check && known.length && !check.use){ check.use = known.length + " item count" + (known.length > 1 ? "s" : "") + " (your box)"; check.late = check.ended; renderCheck() }
+  showArea();
+}
+function showArea(){
+  const a = settings.countArea;
+  $("#areaClear").classList.toggle("hidden", !a);
+  $("#areaNote").textContent = a ? "Reading counts only in your box." : "";
+}
+$("#snipBtn").onclick = () => pickArea().catch(e => { $("#status").textContent = "Couldn't take the picture: " + e.message });
+$("#areaClear").onclick = async () => { settings = await host.settings({countArea: null}); readers?.setArea(null); showArea() };
+
 let starting = false, ICONS = null;
 async function start(){
   if (starting) return;   // a double click starts one capture, not two
@@ -350,7 +375,7 @@ async function start(){
   check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
-  readers = GrindReaders.createReaders(G, ICONS); mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
+  readers = GrindReaders.createReaders(G, ICONS); readers.setArea(settings.countArea || null); mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; FPS = 2; slowTicks = 0;
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   tick();
@@ -442,7 +467,7 @@ $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
   settings = await host.settings();
   $("#share").checked = !!settings.share;
   $("#job").value = settings.job || "";
-  $("#ontop").checked = settings.onTop !== false;
+  $("#ontop").checked = settings.onTop !== false; showArea();
   $("#alert").value = settings.alertWorth || 0;
   $("#stopBeep").checked = settings.stopBeep !== false;
   $("#autoPause").checked = settings.autoPause !== false;   // on unless turned off   // on unless turned off

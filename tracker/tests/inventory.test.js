@@ -74,6 +74,16 @@ const WANT = [[91, "2010003"], [85, "2010005"], [29, "2000002"], [8, "2000001"],
     const d = g.getImageData(0, 0, c.width, c.height), img = {w: d.width, h: d.height, d: d.data, k: 1};
     return GrindReaders.readCounts(img).map(n => [n.n, GrindReaders.iconAt(img, n, ICONS)]);
   }, fs.readFileSync(path.join(dir, "video-a.png")).toString("base64"));
+  // the same frame with a box drawn around the quick slots only (they sit lower left in this crop): just their 3 counts
+  const boxed = await page.evaluate(async b64 => {
+    const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode();
+    const c = document.createElement("canvas"); c.width = im.width; c.height = im.height; const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height), img = {w: d.width, h: d.height, d: d.data, k: 1}, rd = GrindReaders.createReaders(GAMEDATA, ICONS);
+    rd.setArea({x: 0, y: 100 / img.h, w: 160 / img.w, h: 100 / img.h});
+    return GrindReaders.readCounts(img, rd.areaPx(img)).map(n => n.n).sort((a, b) => a - b).join(",");
+  }, fs.readFileSync(path.join(dir, "video-a.png")).toString("base64"));
+  console.log("quick slots in a box:", boxed);
+  if (boxed !== "5,9,24") fail++;
   const vleft = [...vid], vmiss = VWANT.filter(([n, id]) => { const i = vleft.findIndex(([m, j]) => m === n && j === id); if (i < 0) return true; vleft.splice(i, 1) });
   const vwrong = vleft.filter(([, id]) => id);
   console.log("video frame", vmiss.length || vwrong.length ? "FAIL missing " + JSON.stringify(vmiss) + " wrong " + JSON.stringify(vwrong) : "ok", vid.length + " counts");

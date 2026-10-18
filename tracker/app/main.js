@@ -65,6 +65,23 @@ function pinOnTop(){
   win.setAlwaysOnTop(true, "screen-saver"); win.moveTop();
 }
 
+// "Show me where": a full-screen window with the frozen game picture; the player drags a box (snipping-tool style)
+let snipWin = null;
+ipcMain.handle("snip", (_, url) => new Promise(resolve => {
+  if (snipWin && !snipWin.isDestroyed()) snipWin.close();
+  const {screen} = require("electron"), d = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  snipWin = new BrowserWindow({...d.bounds, frame: false, fullscreen: true, alwaysOnTop: true, skipTaskbar: true, show: false,
+    webPreferences: {preload: path.join(__dirname, "snip-preload.js"), contextIsolation: true}});
+  snipWin.setAlwaysOnTop(true, "screen-saver");
+  let done = false;
+  const finish = rect => { if (done) return; done = true; ipcMain.removeListener("snip-done", onDone); if (snipWin && !snipWin.isDestroyed()) snipWin.close(); snipWin = null; resolve(rect || null) };
+  const onDone = (e, rect) => { if (e.sender === snipWin?.webContents) finish(rect) };
+  ipcMain.on("snip-done", onDone);
+  snipWin.on("closed", () => finish(null));
+  snipWin.webContents.setWindowOpenHandler(() => ({action: "deny"}));
+  snipWin.webContents.on("will-navigate", e => e.preventDefault());
+  snipWin.loadFile(path.join(__dirname, "snip.html")).then(() => { snipWin.webContents.send("snip-image", url); snipWin.show(); snipWin.focus() });
+}));
 ipcMain.handle("whole-screen", (_, on) => { wholeScreen = !!on; return wholeScreen });
 ipcMain.handle("game-found", async () => !!(await gameSource()));
 ipcMain.handle("settings", (_, s) => {

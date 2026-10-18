@@ -44,6 +44,9 @@ npm start           # run it (Windows, Electron)
 - Deaths: each EXP bar drop is checked against the chat box line "You have lost N EXP for dying" (lower-left of the
   screen, bright text to black-on-white, 2x, same Tesseract OCR as the map; up to 3 tries a second apart). The Deaths
   box says how many were confirmed and the exact EXP lost. OCR text isn't logged (player names).
+- "Show me where my potions are": freezes the game picture in a full-screen window (snip.html, snipping-tool style);
+  the box dragged there (fractions of the frame, saved as settings.countArea) is the only place counts are read.
+  "Look everywhere" clears it. tests/snip.test.js, inventory test (box around the quick slots).
 - Always on top: "screen-saver" level, re-asserted on blur and every 5 s (setting "Keep this window on top").
 - Meso total: the inventory window's meso field (black 8-row digits on white) gives real money in/out, shop trips
   included. All ten digits are known (learned from real screenshots).

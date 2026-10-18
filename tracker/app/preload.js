@@ -14,4 +14,5 @@ contextBridge.exposeInMainWorld("host", {
   exportCsv: () => ipcRenderer.invoke("export-csv"),
   party: live => ipcRenderer.invoke("party", live),
   mini: on => ipcRenderer.invoke("mini", on),
+  snip: url => ipcRenderer.invoke("snip", url),
 });

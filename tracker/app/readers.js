@@ -362,19 +362,22 @@
     "..###./.#..../#...../#####./#....#/#....#/#....#/#....#/.####./": 6, "###/.../.../.../..#/..#/.#./.#./#../": 7,
     ".####./#....#/#....#/#....#/.####./#....#/#....#/#....#/.####./": 8, ".####./#....#/#....#/#....#/#....#/.#####/.....#/.....#/.####./": 9};
   // every count on screen: [{x, y, n}] (x = first digit's left column, y = the digits' bottom row)
-  function readCounts(img){
+  // area (optional): {x0, y0, x1, y1} in native pixels, the part of the screen the player marked (faster, and nothing
+  // else on screen can be taken for a count)
+  function readCounts(img, area = null){
     // red channel per row (white fades to light blue going down); the video's blur shifts each row toward its neighbors
     const RED = [, , , , [215, 250], [185, 230], [165, 200], [150, 185], [140, 175]];
     const {w, h, d} = img, blue = (i, r) => d[i + 2] >= 225 && d[i] >= RED[r][0] && d[i] <= RED[r][1] && d[i + 1] - d[i] >= 6 && d[i + 2] - d[i] >= 4;
     const is = (x, y, r) => { const i = (y * w + x) * 4; return r < 4 ? d[i] >= 235 && d[i + 1] >= 253 && d[i + 2] >= 250 : blue(i, r) };
     const dark = (x, y) => { const i = (y * w + x) * 4; return y >= 0 && y < h && d[i] + d[i + 1] + d[i + 2] < 150 };
     const out = [];
-    for (let y = 8; y < h; y++){
+    const X0 = area ? Math.max(0, area.x0) : 0, X1 = area ? Math.min(w, area.x1) : w;
+    for (let y = area ? Math.max(8, area.y0) : 8, Y1 = area ? Math.min(h, area.y1) : h; y < Y1; y++){
       // quick test first: a row with the bottom color somewhere
-      let any = false; for (let i = y * w * 4, e = i + w * 4; i < e; i += 4) if (blue(i, 8)){ any = true; break }
+      let any = false; for (let i = (y * w + X0) * 4, e = (y * w + X1) * 4; i < e; i += 4) if (blue(i, 8)){ any = true; break }
       if (!any) continue;
       const cols = [];
-      for (let x = 0; x < w; x++) for (let r = 4; r <= 8; r++) if (is(x, y - 8 + r, r)){ cols.push(x); break }
+      for (let x = X0; x < X1; x++) for (let r = 4; r <= 8; r++) if (is(x, y - 8 + r, r)){ cols.push(x); break }
       let cl = [], cur = null;
       for (const x of cols){ if (cur && x === cur.at(-1) + 1) cur.push(x); else { cur = [x]; cl.push(cur) } }
       // digits less than 6 columns apart are one number; an unknown glyph touching a number spoils it (half covered)
@@ -531,8 +534,11 @@
        total, inventory = a stack) counts its biggest drop once. Going up = bought or picked up. A moved window = new spots. */
     let lastCounts = -Infinity, lastSeenEv = -Infinity, spots = new Map(), wallet = null, walletNext = null;
     const iconCache = new Map();   // spot -> [color sample, id]: icon matching only when the picture there changed
+    // the player's marked area (fractions of the frame), turned into native pixels with a little room around it
+    let area = null;
+    const areaPx = img => area && {x0: Math.floor(area.x * img.w) - 4, y0: Math.floor(area.y * img.h) - 4, x1: Math.ceil((area.x + area.w) * img.w) + 4, y1: Math.ceil((area.y + area.h) * img.h) + 4};
     function readUse(img, t){
-      const nums = readCounts(img), drops = {}, now = new Map();
+      const nums = readCounts(img, areaPx(img)), drops = {}, now = new Map();
       for (const num of nums){
         // the icon is matched again only when the 3 sample pixels above the count changed: by more than video noise (the
         // tracker's frames jitter a few shades frame to frame, which used to re-match every icon every frame)
@@ -565,7 +571,7 @@
       return b && {exp: b.exp, pct: b.pct};
     }
     let info = {bar: false, partyWindow: null, counts: 0};
-    return {readFrame, get info(){ return info }};
+    return {readFrame, get info(){ return info }, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx};
   }
   const api = {createReaders, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
