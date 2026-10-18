@@ -448,3 +448,13 @@ details.sec>summary::before{content:"▸";color:var(--accent);font-size:16px;tra
 details.sec[open]>summary::before{transform:rotate(90deg)}
 details.sec>summary h2{display:inline}
 details.sec>summary:hover h2{color:var(--accent)}
+/* Grind Tracker page */
+.trkfeat{margin:0 0 4px;padding-left:20px;font-size:14px;line-height:1.5}
+.trkfeat li{margin:3px 0}
+.trkfeat li::marker{color:var(--accent)}
+.trkdl{display:inline-block;text-decoration:none;margin:10px 0 8px}
+.trkh{font:800 20px/1.2 var(--f-display);margin:26px 0 0}
+.trkstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:10px;margin-top:14px}
+.trkstats .fact b{display:block;font:800 22px var(--f-display);color:var(--ink)}
+.trkempty{margin-top:14px;text-align:center;padding:28px 16px}
+.trkempty p{margin:6px auto 0;max-width:52ch;color:var(--muted);font-size:14px}

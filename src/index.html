@@ -26,6 +26,7 @@
     <button role="tab" id="t-path" aria-selected="false" data-tab="path" data-cat="char" hidden>Path Planner</button>
     <button role="tab" id="t-maps" aria-selected="false" data-tab="maps" data-cat="char" hidden>Where to train</button>
     <button role="tab" id="t-expc" aria-selected="false" data-tab="expc" data-cat="char" hidden>EXP/hr calculator</button>
+    <button role="tab" id="t-trk" aria-selected="false" data-tab="trk" data-cat="char" hidden>Grind Tracker</button>
     <button role="tab" id="t-quests" aria-selected="false" data-tab="quests" data-cat="db" hidden>Quest Database</button>
     <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs" data-cat="db" hidden>Monsters</button>
     <button role="tab" id="t-items" aria-selected="false" data-tab="items" data-cat="db" hidden>Items</button>
@@ -48,6 +49,7 @@
       <button class="hlink" data-go="path"><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
       <button class="hlink" data-go="maps"><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
       <button class="hlink" data-go="expc"><b>EXP/hr calculator</b><span>Time a session, get your real EXP per hour and time to level.</span></button>
+      <button class="hlink" data-go="trk"><b>Grind Tracker</b><span>Our Windows app that times your grinding, plus what its players really got.</span></button>
     </div>
     <div class="homecat"><h2><button class="hcat" data-go-cat="db">Databases</button></h2>
       <button class="hlink" data-go="quests"><b>Quest Database</b><span>Every launch quest with level, rewards, questlines and community picks.</span></button>
@@ -398,6 +400,46 @@
   </table></div>
 </section>
 
+<section id="trk" hidden>
+  <details class="howto">
+    <summary>About the Grind Tracker</summary>
+    <ul>
+      <li>A small Windows window that sits on top of MapleStory Classic World while you grind and counts for you.</li>
+      <li>It only reads the game's picture (the same screen capture OBS and Discord use). It never touches game files or memory and never presses keys.</li>
+      <li>Sharing is off until you say yes on first start. Shared runs carry no name or character, only map, level, job, party size and what you got.</li>
+      <li>Player numbers below are real runs, not our model. Until 3 or more players have run a map, treat its numbers as early.</li>
+    </ul>
+  </details>
+  <div class="grid2" style="margin-top:0">
+    <div class="card">
+      <div class="cardhead"><h3>MS Classic Grind Tracker</h3><span class="pill p-hot">Windows · free</span></div>
+      <ul class="trkfeat">
+        <li><b>EXP/hr and time to level</b> from the EXP bar, plus start and end readings.</li>
+        <li><b>Kills, mesos/hr and loot</b> from the pickup lines, each item with its NPC and player-shop value.</li>
+        <li><b>Potions and ammo used</b> and what they cost, read off your quick slots and Use tab.</li>
+        <li><b>Deaths</b> confirmed from the chat line, with the EXP lost.</li>
+        <li><b>Party view</b>: share a party code to see everyone's EXP/hr live.</li>
+        <li><b>KPQ mode</b>: stage and round times, best and average round.</li>
+        <li><b>History</b> of every session, with CSV export and side-by-side compare.</li>
+      </ul>
+      <a class="btn primary trkdl" id="trkdl" href="https://github.com/TurbosauceDev/MS-Classic-World-Info-Slop/releases/latest" target="_blank" rel="noopener">Download for Windows</a>
+      <p class="sub">Windows 10/11, about 110 MB. The installer isn't code-signed yet, so Windows may warn: <b>More info → Run anyway</b>. Your browser may also ask to keep the file. It updates itself after that.</p>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h3>Getting started</h3></div>
+      <ol class="trkfeat">
+        <li>Install and open it, then pick the game window when asked.</li>
+        <li>Press <b>Start</b> when you begin grinding and <b>Stop</b> when you're done.</li>
+        <li>Open your Use tab once so it can see your potions.</li>
+        <li>Say yes to sharing if you want your runs to count toward the numbers below.</li>
+        <li>Press <b>?</b> or F1 in the app for help. Ctrl+Shift+B sends us a bug report.</li>
+      </ol>
+    </div>
+  </div>
+  <h2 class="trkh">What players really got</h2>
+  <p class="note" id="trksrc"></p>
+  <div id="trkdata"></div>
+</section>
 <section id="quests" hidden>
   <details class="howto">
     <summary>How to read this table</summary>
@@ -736,6 +778,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Grind Tracker page</h3><span class="pill p-hot">new</span></div>
+      <p>New <b>Grind Tracker</b> page under Your character: what our Windows grind tracker does, a download link, and everything its players have shared so far (EXP/hr and mesos/hr by map, confirmed drops by monster, best time of day to farm).</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Player-shop prices refreshed</h3><span class="pill p-hot">update</span></div>
       <p>Player-shop prices updated from a fresh <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> export: 824 items now have a price (up from 459), read Oct 17.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Real potion costs</h3><span class="pill p-hot">new</span></div>

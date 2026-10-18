@@ -453,6 +453,16 @@ details.sec>summary::before{content:"▸";color:var(--accent);font-size:16px;tra
 details.sec[open]>summary::before{transform:rotate(90deg)}
 details.sec>summary h2{display:inline}
 details.sec>summary:hover h2{color:var(--accent)}
+/* Grind Tracker page */
+.trkfeat{margin:0 0 4px;padding-left:20px;font-size:14px;line-height:1.5}
+.trkfeat li{margin:3px 0}
+.trkfeat li::marker{color:var(--accent)}
+.trkdl{display:inline-block;text-decoration:none;margin:10px 0 8px}
+.trkh{font:800 20px/1.2 var(--f-display);margin:26px 0 0}
+.trkstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:10px;margin-top:14px}
+.trkstats .fact b{display:block;font:800 22px var(--f-display);color:var(--ink)}
+.trkempty{margin-top:14px;text-align:center;padding:28px 16px}
+.trkempty p{margin:6px auto 0;max-width:52ch;color:var(--muted);font-size:14px}
 
 </style>
 
@@ -476,6 +486,7 @@ details.sec>summary:hover h2{color:var(--accent)}
     <button role="tab" id="t-path" aria-selected="false" data-tab="path" data-cat="char" hidden>Path Planner</button>
     <button role="tab" id="t-maps" aria-selected="false" data-tab="maps" data-cat="char" hidden>Where to train</button>
     <button role="tab" id="t-expc" aria-selected="false" data-tab="expc" data-cat="char" hidden>EXP/hr calculator</button>
+    <button role="tab" id="t-trk" aria-selected="false" data-tab="trk" data-cat="char" hidden>Grind Tracker</button>
     <button role="tab" id="t-quests" aria-selected="false" data-tab="quests" data-cat="db" hidden>Quest Database</button>
     <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs" data-cat="db" hidden>Monsters</button>
     <button role="tab" id="t-items" aria-selected="false" data-tab="items" data-cat="db" hidden>Items</button>
@@ -498,6 +509,7 @@ details.sec>summary:hover h2{color:var(--accent)}
       <button class="hlink" data-go="path"><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
       <button class="hlink" data-go="maps"><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
       <button class="hlink" data-go="expc"><b>EXP/hr calculator</b><span>Time a session, get your real EXP per hour and time to level.</span></button>
+      <button class="hlink" data-go="trk"><b>Grind Tracker</b><span>Our Windows app that times your grinding, plus what its players really got.</span></button>
     </div>
     <div class="homecat"><h2><button class="hcat" data-go-cat="db">Databases</button></h2>
       <button class="hlink" data-go="quests"><b>Quest Database</b><span>Every launch quest with level, rewards, questlines and community picks.</span></button>
@@ -848,6 +860,46 @@ details.sec>summary:hover h2{color:var(--accent)}
   </table></div>
 </section>
 
+<section id="trk" hidden>
+  <details class="howto">
+    <summary>About the Grind Tracker</summary>
+    <ul>
+      <li>A small Windows window that sits on top of MapleStory Classic World while you grind and counts for you.</li>
+      <li>It only reads the game's picture (the same screen capture OBS and Discord use). It never touches game files or memory and never presses keys.</li>
+      <li>Sharing is off until you say yes on first start. Shared runs carry no name or character, only map, level, job, party size and what you got.</li>
+      <li>Player numbers below are real runs, not our model. Until 3 or more players have run a map, treat its numbers as early.</li>
+    </ul>
+  </details>
+  <div class="grid2" style="margin-top:0">
+    <div class="card">
+      <div class="cardhead"><h3>MS Classic Grind Tracker</h3><span class="pill p-hot">Windows · free</span></div>
+      <ul class="trkfeat">
+        <li><b>EXP/hr and time to level</b> from the EXP bar, plus start and end readings.</li>
+        <li><b>Kills, mesos/hr and loot</b> from the pickup lines, each item with its NPC and player-shop value.</li>
+        <li><b>Potions and ammo used</b> and what they cost, read off your quick slots and Use tab.</li>
+        <li><b>Deaths</b> confirmed from the chat line, with the EXP lost.</li>
+        <li><b>Party view</b>: share a party code to see everyone's EXP/hr live.</li>
+        <li><b>KPQ mode</b>: stage and round times, best and average round.</li>
+        <li><b>History</b> of every session, with CSV export and side-by-side compare.</li>
+      </ul>
+      <a class="btn primary trkdl" id="trkdl" href="https://github.com/TurbosauceDev/MS-Classic-World-Info-Slop/releases/latest" target="_blank" rel="noopener">Download for Windows</a>
+      <p class="sub">Windows 10/11, about 110 MB. The installer isn't code-signed yet, so Windows may warn: <b>More info → Run anyway</b>. Your browser may also ask to keep the file. It updates itself after that.</p>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h3>Getting started</h3></div>
+      <ol class="trkfeat">
+        <li>Install and open it, then pick the game window when asked.</li>
+        <li>Press <b>Start</b> when you begin grinding and <b>Stop</b> when you're done.</li>
+        <li>Open your Use tab once so it can see your potions.</li>
+        <li>Say yes to sharing if you want your runs to count toward the numbers below.</li>
+        <li>Press <b>?</b> or F1 in the app for help. Ctrl+Shift+B sends us a bug report.</li>
+      </ol>
+    </div>
+  </div>
+  <h2 class="trkh">What players really got</h2>
+  <p class="note" id="trksrc"></p>
+  <div id="trkdata"></div>
+</section>
 <section id="quests" hidden>
   <details class="howto">
     <summary>How to read this table</summary>
@@ -1186,6 +1238,8 @@ details.sec>summary:hover h2{color:var(--accent)}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Grind Tracker page</h3><span class="pill p-hot">new</span></div>
+      <p>New <b>Grind Tracker</b> page under Your character: what our Windows grind tracker does, a download link, and everything its players have shared so far (EXP/hr and mesos/hr by map, confirmed drops by monster, best time of day to farm).</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Player-shop prices refreshed</h3><span class="pill p-hot">update</span></div>
       <p>Player-shop prices updated from a fresh <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> export: 824 items now have a price (up from 459), read Oct 17.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Real potion costs</h3><span class="pill p-hot">new</span></div>
@@ -5077,5 +5131,74 @@ function render(){
 }
 render();
 })();
+
+/* ---------------- Grind Tracker page: the Windows app + what its players shared ---------------- */
+// Data: the tracker server's /api/summary. The copy embedded at build (D.shared, scripts/fetch_shared.py) shows first; on
+// opening the page we also ask the server for the latest (it allows any site; blocked in some previews, then the copy stays).
+const TRK_API = "https://ms-classic-tracker.maplestoryclassic.workers.dev/api/summary";
+// rows -> one shape: embedded rows are [map, party 0/1, level, EXP/hr, group, deaths/hr, pots/hr]; the server's are objects
+const trkRows = (rows, live) => (rows || []).map(r => live ? {map: String(r.map ?? ""), name: r.mapName, party: r.party > 1 ? 1 : 0, level: r.level, job: r.job,
+  expHr: r.expHr, mesosHr: r.mesosHr, killsHr: r.killsHr, deathsHr: r.deathsHr, usedHr: r.usedHr, group: r.group, runs: r.runs}
+  : {map: r[0], party: r[1], level: r[2], expHr: r[3], group: r[4], deathsHr: r[5], usedHr: r[6]}).filter(r => r.map && r.level);
+const trkMapName = r => D.mapnames[r.map] ?? D.maps[r.map]?.[0] ?? r.name ?? r.map;
+const trkMed = a => { const v = a.filter(x => x != null); return v.length ? median(v) : null };
+let TRK = null, TRK_ASKED = false;
+function trkRender(){
+  const s = TRK || {...(D.shared || {}), rows: trkRows(D.shared?.rows, false), live: false};
+  $("#trksrc").innerHTML = s.live ? `Live from the tracker server, updated ${esc(new Date(s.updated).toLocaleString())}.`
+    : `Snapshot from the tracker server${s.read ? `, read ${esc(s.read)}` : ""}.${TRK_ASKED ? " The live server couldn't be reached from here." : ""}`;
+  if (!s.runs){
+    $("#trkdata").innerHTML = `<div class="card trkempty"><h3>No shared runs yet</h3><p>Every 15 minutes of non-stop farming on one map that a tracker player shares lands here: EXP/hr and mesos/hr by map, confirmed drops by monster, and the best time of day to farm. Be the first: download the tracker above and say yes to sharing.</p></div>`;
+    return;
+  }
+  // maps: one line per map and solo/party; each player (or party) counts once (their typical run)
+  const by = new Map();
+  for (const r of s.rows){ const k = r.map + "|" + r.party; if (!by.has(k)) by.set(k, []); by.get(k).push(r) }
+  const maps = [...by.values()].map(a => ({r: a[0], groups: new Set(a.map(x => x.group)).size, lo: Math.min(...a.map(x => x.level)), hi: Math.max(...a.map(x => x.level)),
+    exp: trkMed(a.map(x => x.expHr)), mesos: trkMed(a.map(x => x.mesosHr)), deaths: trkMed(a.map(x => x.deathsHr)), used: trkMed(a.map(x => x.usedHr)),
+    runs: a.reduce((t, x) => t + (x.runs || 0), 0)})).sort((a, b) => b.groups - a.groups || b.exp - a.exp);
+  const known = id => D.mapnames[id] != null || D.maps[id];
+  const mapRows = maps.map(m => `<tr><td>${known(m.r.map) ? mapLink(m.r.map, trkMapName(m.r)) : esc(trkMapName(m.r))}${m.groups < 3 ? ' <span class="pill p-warn">early</span>' : ""}</td>
+    <td>${m.r.party ? "party" : "solo"}</td><td class="num">${m.groups}</td><td class="num">${m.lo === m.hi ? m.lo : m.lo + "-" + m.hi}</td>
+    <td class="num">${fmt(m.exp)}</td><td class="num">${fmt(m.mesos)}</td><td class="num">${m.deaths == null ? "–" : +m.deaths.toFixed(1)}</td><td class="num">${fmt(m.used)}</td></tr>`).join("");
+  // monsters: what players picked up after kills (Confirmed Drops)
+  const mobs = Object.entries(s.mobs || {}).filter(([, c]) => c.kills > 0).sort((a, b) => b[1].kills - a[1].kills);
+  const mobRows = mobs.map(([id, c]) => {
+    const items = Object.entries(c.items || {}).filter(([i, n]) => n > 0 && D.items[i]).sort((a, b) => b[1] - a[1]);
+    const shown = items.slice(0, 6).map(([i, n]) => `${itemIcon(i, 1, true)} <span class="sub">1 in ${fmt(c.kills / n)}</span>`).join(" ");
+    return `<tr><td>${D.mobs[id] || D.mobdb[id] ? mobLink(id) : esc(id)}</td><td class="num">${fmt(c.kills)}</td><td class="num">${c.players}</td>
+      <td class="num">${c.mesoDrops ? fmt(c.mesos / c.mesoDrops) : "–"}</td><td>${shown || '<span class="sub">none yet</span>'}${items.length > 6 ? ` <span class="sub">+${items.length - 6} more</span>` : ""}</td></tr>`;
+  }).join("");
+  // best time of day per map (3-hour blocks with 3+ players, each run against the player's own usual speed there)
+  const times = Object.entries(s.times || {}).map(([map, t]) => { const b = t.reduce((a, x) => x[1] > a[1] ? x : a); const w = t.reduce((a, x) => x[1] < a[1] ? x : a);
+    return `<tr><td>${known(map) ? mapLink(map, D.mapnames[map] ?? D.maps[map][0]) : esc(map)}</td><td>${localHour(b[0])}-${localHour((b[0] + 3) % 24)} <span class="sub">${b[1] >= 1 ? "+" : ""}${Math.round((b[1] - 1) * 100)}%</span></td>
+      <td>${localHour(w[0])}-${localHour((w[0] + 3) % 24)} <span class="sub">${Math.round((w[1] - 1) * 100)}%</span></td></tr>` }).join("");
+  $("#trkdata").innerHTML = `<div class="trkstats">
+      <div class="fact"><b>${fmt(s.runs)}</b><p>15-minute runs</p></div>
+      <div class="fact"><b>${fmt(s.players)}</b><p>trackers sharing</p></div>
+      <div class="fact"><b>${(+s.hours || 0).toLocaleString()}</b><p>hours of grinding</p></div>
+      <div class="fact"><b>${fmt(maps.length)}</b><p>map + party combos</p></div>
+      <div class="fact"><b>${fmt(mobs.length)}</b><p>monsters with drops</p></div>
+    </div>
+    <h3 class="trkh" style="font-size:17px">EXP and mesos by map</h3>
+    <p class="note">Median of each player's typical run (players on one home network count once). Mesos/hr is meso drops picked up, before potions. Pots/ammo = mesos/hr spent on potions, food and arrows.</p>
+    <div class="tblwrap"><table><thead><tr><th>Map</th><th>Solo/party</th><th class="num">Players</th><th class="num">Levels</th><th class="num">EXP/hr</th><th class="num">Mesos/hr</th><th class="num">Deaths/hr</th><th class="num">Pots/ammo</th></tr></thead><tbody>${mapRows || '<tr><td colspan="8" class="sub">No map runs yet.</td></tr>'}</tbody></table></div>
+    <h3 class="trkh" style="font-size:17px">Confirmed drops by monster</h3>
+    <p class="note">Items players picked up after killing it, as "1 in N kills". Real drop rates are at least this (not every drop gets picked up). Also shown on each monster's and item's page.</p>
+    <div class="tblwrap"><table><thead><tr><th>Monster</th><th class="num">Kills</th><th class="num">Players</th><th class="num">Mesos/drop</th><th>Items</th></tr></thead><tbody>${mobRows || '<tr><td colspan="5" class="sub">No kills with drops yet.</td></tr>'}</tbody></table></div>
+    <h3 class="trkh" style="font-size:17px">Best time of day to farm</h3>
+    <p class="note">Each run against the same player's usual speed on that map, in 3-hour blocks with 3+ players. Your time zone.</p>
+    ${times ? `<div class="tblwrap"><table><thead><tr><th>Map</th><th>Fastest</th><th>Slowest</th></tr></thead><tbody>${times}</tbody></table></div>` : '<p class="sub">Not enough players at different times yet (needs 3+ players in at least two time blocks on a map).</p>'}`;
+}
+function trkOpen(){
+  trkRender();
+  if (TRK_ASKED) return; TRK_ASKED = true;
+  const ctl = new AbortController(); setTimeout(() => ctl.abort(), 8000);
+  fetch(TRK_API, {signal: ctl.signal}).then(r => r.ok ? r.json() : Promise.reject()).then(d => {
+    TRK = {...d, rows: trkRows(d.rows, true), live: true}; trkRender();
+  }).catch(() => trkRender());
+}
+$("#t-trk").addEventListener("click", trkOpen);
+if (!$("#trk").hidden) trkOpen();
 
 </script>
