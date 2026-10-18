@@ -430,7 +430,12 @@ input.khave{width:64px;text-align:right}
 #kpq code{font:12.5px var(--f-mono);background:var(--accent-soft);padding:1px 4px;border-radius:4px}
 /* two-row nav: categories, then the pages in the open category; Home page = a card per category */
 nav{display:block;border-bottom:0}
-nav .cats{display:flex;gap:6px;flex-wrap:wrap}
+nav .cats{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+/* Back / Forward (75-history.js), left of the section buttons */
+nav .navrow{display:flex;gap:6px;align-items:flex-start}
+nav .navhist{display:flex;gap:4px;flex:none}
+nav .navhist .btn{padding:6px 11px;border-radius:999px;font-size:15px;line-height:1.2}
+nav .navhist .btn:disabled{opacity:.4;cursor:default}
 nav .cats button{font:600 14px var(--f-body);border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);padding:7px 14px}
 nav .cats button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,var(--bg))}
 nav .subs{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;border-bottom:1px solid var(--line)}
@@ -592,6 +597,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </header>
 
 <nav>
+  <div class="navrow"><div class="navhist"><button class="btn" id="navback" type="button" title="Back (also the browser's Back)" aria-label="Back" disabled>←</button><button class="btn" id="navfwd" type="button" title="Forward" aria-label="Forward" disabled>→</button></div>
   <div class="cats" role="tablist" aria-label="Sections">
     <button role="tab" id="c-home" aria-selected="false" data-cat="home">Home</button>
     <button role="tab" id="c-trk" aria-selected="false" data-cat="trk">Grind Tracker</button>
@@ -600,7 +606,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="c-world" aria-selected="false" data-cat="world">World</button>
     <button role="tab" id="c-town" aria-selected="false" data-cat="town">Towns and trade</button>
     <button role="tab" id="c-more" aria-selected="false" data-cat="more">More</button>
-  </div>
+  </div></div>
   <div class="subs" role="tablist" aria-label="Pages">
     <button role="tab" id="t-trk" aria-selected="false" data-tab="trk" data-cat="trk" hidden>Overview</button>
     <button role="tab" id="t-trkhow" aria-selected="false" data-tab="trkhow" data-cat="trk" hidden>How to use</button>
@@ -680,7 +686,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       </div>
     </div>
   </div>
-  <p class="sitever">Site version: built Oct 18, 2026 · 21:51 UTC</p>
+  <p class="sitever">Site version: built Oct 18, 2026 · 21:56 UTC</p>
 </section>
 
 <section id="plan" hidden>
@@ -1475,6 +1481,8 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Back and Forward</h3><span class="pill p-hot">update</span></div>
+      <p><b>← →</b> buttons left of the section buttons step back and forward through the pages and places you opened (a monster, item or skill page, a World Map island, area or card, a quest line). Your browser's Back button does the same now, instead of dropping you on Home.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Themes, same as the Grind Tracker</h3><span class="pill p-hot">update</span></div>
       <p>A <b>Theme</b> button at the top lets you pick any of the Grind Tracker's colour themes, or paste a tracker theme code (MSCT1...) to wear your own. <b>Copy code</b> gives a code the tracker accepts. Default is this site's own look, and it's now the tracker's default too, so the two match side by side.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Little sprites on Home</h3><span class="pill p-hot">update</span></div>
@@ -1786,6 +1794,8 @@ async function copyShare(btn, url){
    their #t-<id> ids, so code elsewhere can still open a page with $("#t-items").click(). */
 const TABS = [...document.querySelectorAll("nav [data-tab]")], CATS = [...document.querySelectorAll("nav .cats button")];
 const LASTTAB = {};   // category -> last page opened in it
+const NAVREG = {};   // page -> {get, set} of its current place, for Back/Forward (75-history.js)
+const navReg = (tab, get, set) => { NAVREG[tab] = {get, set} };
 const showCat = cat => {
   CATS.forEach(x => x.setAttribute("aria-selected", x.dataset.cat === cat));
   TABS.forEach(x => x.hidden = x.dataset.cat !== cat);
@@ -2600,6 +2610,7 @@ addEventListener("scroll", hideQtip, {passive:true});
 addEventListener("keydown", e => { if (e.key === "Escape") hideQtip() });
 
 let QSORT = {k:"mult", dir:-1}, QCHAIN = null;
+navReg("quests", () => QCHAIN, v => { QCHAIN = v; renderQuests() });
 $("#qrows").addEventListener("click", e => { const b = e.target.closest(".chainbtn"); if (!b) return; QCHAIN = b.dataset.chain; hideQtip(); renderQuests(); $("#qchainbar").scrollIntoView({block:"nearest"}) });
 $("#qchainbar").addEventListener("click", e => { if (e.target.id === "qchainclear"){ QCHAIN = null; renderQuests() } });
 try { const q = JSON.parse(localStorage.getItem("qsort") || "null"); if (q && q.k) QSORT = q } catch(e) {}
@@ -3181,6 +3192,7 @@ document.addEventListener("click", e => { const el = e.target.closest && e.targe
 if (HASH.m && D.mobdb[HASH.m]) S.open = String(HASH.m);
 // built lazily: the farming table calls buildAt, which 50-builder.js defines after this file runs
 setTimeout(show);
+navReg("mobs", () => S.open, v => { S.open = v; save(); show() });
 })();
 
 /* ---------------- item database ---------------- */
@@ -3349,6 +3361,7 @@ document.addEventListener("click", e => { const el = e.target.closest && e.targe
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches && e.target.matches(".ri, .itname")) e.target.click() });
 if (HASH.i && OPEN[HASH.i]) S.open = String(HASH.i);
 show();
+navReg("items", () => S.open, v => { S.open = v; save(); show() });
 })();
 
 /* character planner */
@@ -4362,6 +4375,7 @@ $("#skpage").addEventListener("click", e => {
 openSkillPage = key => { if (!OPEN[key]) return; $("#t-skills").click(); openSkill(key) };
 if (HASH.s && OPEN[HASH.s]) S.open = String(HASH.s);
 show();
+navReg("skills", () => S.open, v => { S.open = v; save(); show() });
 })();
 
 /* Inventory price check: screenshots of the item inventory (Equip / Use / Etc tabs) -> every item and count, priced with
@@ -6326,13 +6340,14 @@ function card(i, lone){
     ${qs.length ? `<h5>Quests from NPCs here (${qs.length})</h5><ul class="mmobs">${qs.map(q => `<li>${qn(q)} <span>Lv ${q[1].lvl}${q[0] === "cit" ? " · Citizenship" : ""} · ${esc(q[1].npc)}</span></li>`).join("")}</ul>` : ""}
     `;
 }
-let shown = null;
+let shown = null, INFO = null;   // INFO = the map whose card openMapInfo drew (Back/Forward)
 function showMap(id){   // one map of a sub-map (or a grey neighbour outside it)
-  const f = SPOT[id], here = f && f[0] === S.isl ? f[1] : null; S.mm = null;
+  const f = SPOT[id], here = f && f[0] === S.isl ? f[1] : null; S.mm = null; INFO = null;
   $("#wmcard").innerHTML = card(here, id); shown = "m" + id;
   document.querySelectorAll(".wmnode").forEach(d => d.classList.toggle("on", d.dataset.map === id));
 }
 function show(i){
+  INFO = null;
   if (i == null){ $("#wmcard").innerHTML = `<p class="sub">Click a dot to see that place.</p>`; shown = null; return }
   if (i !== shown) S.mm = null;
   shown = i; $("#wmcard").innerHTML = card(i);
@@ -6414,12 +6429,16 @@ const SPOT = {}; D.wmap.forEach(([, , , , , spots], isl) => spots.forEach(([, , 
 const openMapInfo = id => { id = String(id); hideQtip(); $("#t-wmap").click(); const f = SPOT[id];
   if (f){ S.isl = f[0]; S.pin = f[1]; save() } else S.pin = null;
   if (f && DRILL(D.wmap[f[0]][5][f[1]])){ S.sub = f[1]; S.subPin = id; render() }
-  else { S.sub = null; render(); shown = f ? f[1] : null; $("#wmcard").innerHTML = card(shown, id) }
+  else { S.sub = null; render(); shown = f ? f[1] : null; $("#wmcard").innerHTML = card(shown, id); INFO = id }
   document.querySelectorAll(".wmdot").forEach(d => d.classList.toggle("on", +d.dataset.i === shown));
   (innerWidth < 900 ? $("#wmcard") : $("#wmap")).scrollIntoView({block: "start"}) };
 document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".mname"); if (el) openMapInfo(el.dataset.map) });
 render();
 if (HASH.w && known(String(HASH.w))) openMapInfo(HASH.w);   // shared link
+navReg("wmap", () => [S.isl, S.sub, S.subPin, shown, INFO], ([isl, sub, subPin, sh, info]) => {
+  Object.assign(S, {isl, sub, subPin}); if (typeof sh === "number") S.pin = sh; else if (sub == null) S.pin = null; save(); render();
+  if (sub == null && typeof sh === "string") showMap(sh.slice(1));
+  if (info){ $("#wmcard").innerHTML = card(sh, info); INFO = info } });
 })();
 
 /* ---------------- KPQ guide ---------------- */
@@ -6867,6 +6886,47 @@ $("#t-maps").addEventListener("click", firstRank); if (!$("#maps").hidden) first
   });
   // a light/dark theme (Default, Purple) follows the system setting live
   dq.addEventListener("change", () => { const t = now(); if (t !== TH.PRESETS[0]) siteTheme(t); if (!$("#thpop").hidden) draw() });
+})();
+
+// Back / Forward (Danny, 2026-10-18): every page change, and every "place" inside a page (a monster, item or skill page,
+// a World Map island, area or card, a quest line), is a browser history entry, so the browser's Back button steps
+// through the site instead of leaving it. The header ← → buttons call history.back()/forward(). No URL change: share
+// links (#key=value&) keep working. Pages report their place with navReg(tab, get, set) (NAVREG in 00-core.js).
+(() => {
+const here = () => { const b = TABS.find(x => x.getAttribute("aria-selected") === "true"), tab = $("#home").hidden && b ? b.dataset.tab : "home";
+  const r = NAVREG[tab]; let v = null; try { v = r ? r.get() : null } catch(e) {} return {tab, v: v ?? null} };
+const same = (a, b) => !!a && !!b && a.tab === b.tab && JSON.stringify(a.v) === JSON.stringify(b.v);
+let MAX = 0, busy = false, y0 = 0;
+try { MAX = +sessionStorage.getItem("navmax") || 0 } catch(e) {}
+const st = () => history.state && history.state.nav ? history.state : null;
+const setMax = m => { MAX = m; try { sessionStorage.setItem("navmax", m) } catch(e) {} };
+const btns = () => { const i = st()?.i || 0; $("#navback").disabled = i <= 0; $("#navfwd").disabled = i >= MAX };
+const put = (o, push) => { try { push ? history.pushState(o, "") : history.replaceState(o, "") } catch(e) {} btns() };
+// after any click / Enter / change has run its handlers: if the place changed, that's a new entry
+function check(){
+  if (busy) return; const cur = st(), now = here(); if (same(cur, now)) return;
+  if (!cur) return put({nav: 1, i: 0, ...now, y: scrollY});
+  put({...cur, y: y0});                                 // where the old place was scrolled to, for Back
+  setMax(cur.i + 1); put({nav: 1, i: cur.i + 1, ...now, y: scrollY}, true);
+}
+const later = () => { y0 = scrollY; setTimeout(check) };
+document.addEventListener("click", later, true);
+document.addEventListener("change", later, true);
+document.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === "Escape") later() }, true);
+// keep the current entry's scroll spot fresh (debounced: browsers cap replaceState calls)
+let sT; addEventListener("scroll", () => { clearTimeout(sT); sT = setTimeout(() => { const s = st(); if (s && !busy) put({...s, y: scrollY}) }, 300) }, {passive: true});
+addEventListener("popstate", () => {
+  const s = st(); if (!s) return btns();
+  busy = true;
+  try { if (s.tab === "home") goHome(); else { const b = $(`[data-tab="${s.tab}"]`); if (b && b.getAttribute("aria-selected") !== "true") b.click(); else if (b){ showCat(b.dataset.cat) } }
+    const r = NAVREG[s.tab]; if (r) r.set(s.v); hideQtip(); $("#srch").hidden = true } catch(e) {}
+  scrollTo(0, s.y || 0);
+  setTimeout(() => { busy = false; btns() });
+});
+$("#navback").addEventListener("click", e => { e.stopPropagation(); history.back() });
+$("#navfwd").addEventListener("click", e => { e.stopPropagation(); history.forward() });
+// first entry, once every page has drawn its saved place (some draw in a setTimeout); a reload keeps its spot in the list
+setTimeout(() => { const s = st(), now = here(); put(s ? {...s, ...now} : {nav: 1, i: 0, ...now, y: scrollY}); if (!s) setMax(0) });
 })();
 
 </script>

@@ -39,6 +39,7 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 Grind Tracker page may fetch the live /api/summary (the one exception to "no external requests").
 - 2026-10-18 EXP/hr calculator: screenshot-pair time fill and share-as-image card OK'd.
 - 2026-10-18 Share links extend the existing `#key=value&` hash; no new scheme. Search: Ctrl+K or `/`, @prefixes.
+- 2026-10-18 Universal Back/Forward buttons, tied to the browser Back/Forward: step through pages and places inside a page.
 
 ## Tracker and server
 - 2026-10-17 Build the screen reader anyway (no official Nexon rule found); it reads pixels only, no memory, files or input.
