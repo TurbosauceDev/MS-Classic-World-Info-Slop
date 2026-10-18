@@ -125,7 +125,11 @@ const path = require("path"), {chromium} = require("playwright");
   const kl = await page.evaluate(async () => { const keep = settings, t = Date.now() + 4e5; settings = {...settings, share: true, nick: "two words"}; window.shared = []; charName = "Turbow";
     kpqMap("10003000", t); for (const [i, id] of ["80000000", "80000100", "80000200", "80000300", "80000400", "80000500", "80000600"].entries()) kpqMap(id, t + 1000 + i * 60e3);
     kpqMap("10003000", t + 5e5); kpqMap("80000000", t + 6e5); kpqMap("80000100", t + 6.6e5); kpqMap("10003000", t + 7e5);
-    settings = keep; charName = null; return window.shared });
+    // name off: a made-up name from the 1st job and the install ID, the same on the next round even after a job advance
+    settings = {...settings, kpqName: false, alias: undefined, install: "0000abcd-0000"}; const a1 = kpqAlias("Hunter"), a2 = kpqAlias("Assassin");
+    settings = keep; charName = null; return [...window.shared, a1, a2] });
+  const [al1, al2] = kl.splice(-2);
+  if (al1 !== "Archer8981" || al2 !== al1) throw new Error("kpq alias: " + [al1, al2]);
   // the name: a Name that isn't letters/digits falls back to the one read from the status bar
   if (kl.length !== 1 || !kl[0].kpq || kl[0].name !== "Turbow" || kl[0].clear !== 300 || kl[0].total !== 360 || kl[0].mode !== "Bonus" || Object.keys(kl[0].stages).length !== 6) throw new Error("kpq share: " + JSON.stringify(kl));
   // inventory: Etc read at the start and later -> fills unread pickup lines; Stop goes to the wrap-up card, where each tab

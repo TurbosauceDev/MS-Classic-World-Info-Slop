@@ -47,3 +47,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 KPQ Bonus/Rush is a label he picks; rounds before 0.2.40 can't be backfilled to the KPQ leaderboard.
 - 2026-10-18 KPQ board shows character names (his round = Turbow). Separate boards: Rush = fastest to beating King Slime;
   Bonus = EXP + mesos gained (more Bonus time = faster Rush, already in the gain).
+- 2026-10-18 KPQ name off = a fixed made-up name (1st job + 4 digits, e.g. Archer4821), never blank.

@@ -599,7 +599,18 @@ function kpqShare(r, t){
   host.shareRun({kpq: true, v: 1, date: new Date(r.t0).toLocaleDateString("sv"), hour: new Date(r.t0).getUTCHours(), mode: settings.kpqMode === "Rush" ? "Rush" : "Bonus",
     party: s.party, level: s.level, job: s.job, clear: Math.round(r.clear), total: Math.round(kpqSince(r, t)), clock: r.left0 !== null,
     exp: Math.max(0, s.exp - r.exp0), mesos: Math.max(0, s.mesos - r.mesos0), stages: st, partyCode: settings.partyCode || null,
-    name: settings.kpqName !== false && [settings.nick, charName].find(n => /^[A-Za-z0-9]{2,12}$/.test(n || "")) || null});   // KPQ board only; runs never carry the name
+    name: settings.kpqName !== false && [settings.nick, charName].find(n => /^[A-Za-z0-9]{2,12}$/.test(n || "")) || kpqAlias(s.job)});   // KPQ board only; runs never carry the name
+}
+// name off (or none read): a made-up name like "Archer4821" (1st job + 4 digits from the install ID), saved the first time so
+// the player keeps the same one on the board after a job advance (Danny, 2026-10-18)
+const FIRST_JOB = {Fighter: "Swordman", Page: "Swordman", Spearman: "Swordman", Cleric: "Magician", Hunter: "Archer", Crossbowman: "Archer", Assassin: "Rogue", Bandit: "Rogue"};
+function kpqAlias(job){
+  if (/^[A-Za-z]+\d{4}$/.test(settings.alias || "")) return settings.alias;
+  job = job || settings.job || "";
+  const base = job.startsWith("Wizard") ? "Magician" : FIRST_JOB[job] || (/^(Beginner|Swordman|Magician|Archer|Rogue)$/.test(job) ? job : "Player");
+  const alias = base + (parseInt(String(settings.install || "").replace(/[^0-9a-f]/gi, "").slice(0, 8) || "0", 16) % 9000 + 1000);
+  settings.alias = alias; host.settings({alias}).then(s => settings = s).catch(() => {});
+  return alias;
 }
 function kpqText(s){
   if (!kpq?.on) return settings.kpqAct === "kpq" ? "KPQ picked: the session pauses outside the KPQ stages and counts each round." : "During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.";
