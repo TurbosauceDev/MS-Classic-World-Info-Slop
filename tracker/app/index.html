@@ -69,6 +69,8 @@
   .boxctl .btitle { display:none; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
   .box.folded { padding-top:6px; padding-bottom:6px; min-height:28px; } .box.folded > :not(.boxctl) { display:none !important; }
   .box.folded .boxctl { position:static; } .box.folded .btitle { display:block; flex:1; }
+  .box h3 { cursor:grab; } .box.moving { opacity:.45; } body.dragging, body.dragging * { cursor:grabbing !important; user-select:none; }
+  .dragLabel { position:fixed; z-index:60; pointer-events:none; background:var(--accent); color:#fff; border-radius:6px; padding:3px 8px; font-size:12px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.3); }
   .box.over-top { box-shadow:0 -3px 0 var(--accent); } .box.over-bottom { box-shadow:0 3px 0 var(--accent); }
   body.dragging #dock { min-height:40px; border:2px dashed var(--accent); border-radius:10px; margin-bottom:8px; padding:4px; }
   body.dragging #dock:empty::before { content:"Drop here to pin it above the tabs (shows on every tab)"; color:var(--muted); font-size:12px; }

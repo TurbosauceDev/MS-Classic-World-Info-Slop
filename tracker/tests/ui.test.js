@@ -118,6 +118,18 @@ const path = require("path"), {chromium} = require("playwright");
     document.querySelector("#layoutReset").click(); await new Promise(r => setTimeout(r, 50));
     return [...moved, document.querySelector("#mesoBox").parentElement.dataset.tab, document.querySelector("[data-box=mobs]").classList.contains("folded"), JSON.stringify(settings.layout.order.dock)] });
   if (lay[0] !== "dock" || !lay[1] || lay[2] !== "loot" || lay[3] || lay[4] !== "[]") throw new Error("box layout: " + lay);
+  // dragged with the mouse: the Mesos box by its title onto the Session tab (moves there and opens it), then the Monsters
+  // box by its grip onto the top half of the Start and end box (goes above it)
+  const dragTo = async (from, to, dy = 0) => { const a = await page.locator(from).boundingBox(), b = await page.locator(to).boundingBox();
+    await page.mouse.move(a.x + 10, a.y + a.height / 2); await page.mouse.down(); await page.mouse.move(a.x + 30, a.y + 20, {steps: 3});
+    await page.mouse.move(b.x + b.width / 2, b.y + (dy || b.height / 2), {steps: 5}); await page.mouse.up(); await page.waitForTimeout(50) };
+  await page.setViewportSize({width: 600, height: 2400}); await page.click(".tabs [data-tab=loot]");
+  await dragTo("#mesoBox h3", ".tabs [data-tab=session]");
+  await dragTo("[data-box=mobs] .grip", "#snaps", 10);
+  const dr = await page.evaluate(() => [document.querySelector("#mesoBox").parentElement.dataset.tab, document.querySelector(".tabs .sel").dataset.tab,
+    document.querySelector("[data-box=mobs]").nextElementSibling?.id, !!document.querySelector(".dragLabel, .moving"), JSON.stringify(settings.layout.order.session)]);
+  if (dr[0] !== "session" || dr[1] !== "session" || dr[2] !== "snaps" || dr[3] || !/mobs.*snaps/.test(dr[4])) throw new Error("mouse drag: " + dr);
+  await page.click(".tabs [data-tab=settings]"); await page.click("#layoutReset"); await page.setViewportSize({width: 1280, height: 720});
   // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened
   await page.waitForTimeout(3200);
   await page.click(".tabs [data-tab=settings]"); await page.fill("#reportNote", "map read wrong"); await page.click("#report"); await page.waitForTimeout(100);

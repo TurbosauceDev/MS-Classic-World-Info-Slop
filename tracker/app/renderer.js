@@ -243,10 +243,9 @@ function showTab(name){
   try { localStorage.setItem("tab", name) } catch {}
 }
 for (const b of document.querySelectorAll(".tabs button")) if (b.id !== "histBtn") b.onclick = () => showTab(b.dataset.tab);
-// boxes, like OBS sources: dragged by the ⠿ grip onto another box (above or below it), onto a tab (to the end of it), or onto
+// boxes, like OBS sources: dragged by the ⠿ grip or the title onto another box (above or below it), onto a tab (to the end of it), or onto
 // the strip above the tabs (pinned: shows on every tab); – folds one to its title. Saved in settings.layout (Danny, 2026-10-18)
 const BOXES = [...document.querySelectorAll("[data-box]")], BOX_HOME = BOXES.map(b => [b, b.parentElement, b.nextElementSibling]);
-const holderOf = el => el.closest("#dock") || el.closest("section[data-tab]");
 let dragBox = null;
 function layoutSave(){
   const order = {};
@@ -267,26 +266,52 @@ for (const b of BOXES){
   c.innerHTML = `<span class="btitle">${esc(b.dataset.title)}</span><span class="grip" title="Drag to move: onto another box, a tab, or the strip above the tabs">⠿</span><button class="fold" title="Fold or unfold">–</button>`;
   b.prepend(c);
   c.querySelector(".fold").onclick = () => { b.classList.toggle("folded"); c.querySelector(".fold").textContent = b.classList.contains("folded") ? "+" : "–"; layoutSave() };
-  c.querySelector(".grip").onmousedown = () => b.draggable = true;
-  b.ondragstart = e => { if (!b.draggable) return; dragBox = b; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", b.dataset.box); document.body.classList.add("dragging") };
-  b.ondragend = () => { b.draggable = false; dragBox = null; document.body.classList.remove("dragging"); dropMark(null) };
 }
-document.addEventListener("mouseup", () => { if (!dragBox) for (const b of BOXES) b.draggable = false });
-const dropTarget = e => { const t = e.target.closest?.("[data-box], #dock, section[data-tab], .tabs button"); if (!t || t === dragBox || dragBox?.contains(t)) return null;
+// mouse dragging (pointer events: the browser's own drag and drop didn't start in the app, Danny 2026-10-18). Held on the
+// grip or the box's title, moved 5 px: the box follows as a label under the pointer until it's let go
+let drag = null;
+document.addEventListener("pointerdown", e => {
+  const h = e.button === 0 && e.target.closest(".grip, .box h3"), b = h?.closest("[data-box]");
+  if (!b) return;
+  e.preventDefault(); drag = {b, x: e.clientX, y: e.clientY, on: false, el: null};
+});
+const dropTarget = (x, y) => { const t = document.elementFromPoint(x, y)?.closest("[data-box], #dock, section[data-tab], .tabs button");
+  if (!t || t === dragBox || dragBox.contains(t)) return null;
   if (t.matches(".tabs button") && !["session", "loot", "hist"].includes(t.dataset.tab)) return null; return t };
 function dropMark(t, below){
   for (const x of document.querySelectorAll(".over-top, .over-bottom, .over-drop")) x.classList.remove("over-top", "over-bottom", "over-drop");
   if (t) t.classList.add(t.matches("[data-box]") ? below ? "over-bottom" : "over-top" : "over-drop");
 }
-document.addEventListener("dragover", e => { if (!dragBox) return; const t = dropTarget(e); if (!t) return dropMark(null);
-  e.preventDefault(); const r = t.getBoundingClientRect(); dropMark(t, e.clientY > r.top + r.height / 2) });
-document.addEventListener("drop", e => {
-  if (!dragBox) return; const t = dropTarget(e); dropMark(null); if (!t) return; e.preventDefault();
-  if (t.matches("[data-box]")){ const r = t.getBoundingClientRect(); t.parentElement.insertBefore(dragBox, e.clientY > r.top + r.height / 2 ? t.nextSibling : t) }
-  else if (t.matches(".tabs button")) document.querySelector(`section[data-tab="${t.dataset.tab}"]`).appendChild(dragBox);
-  else t.appendChild(dragBox);
-  layoutSave();
+document.addEventListener("pointermove", e => {
+  if (!drag) return;
+  if (!drag.on){
+    if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) < 5) return;
+    drag.on = true; dragBox = drag.b; dragBox.classList.add("moving"); document.body.classList.add("dragging");
+    drag.el = Object.assign(document.createElement("div"), {className: "dragLabel", textContent: dragBox.dataset.title}); document.body.appendChild(drag.el);
+    // near the window's top or bottom edge: the page scrolls, to reach boxes out of sight
+    drag.iv = setInterval(() => { if (drag?.cy < 40) scrollBy(0, -15); else if (drag?.cy > innerHeight - 40) scrollBy(0, 15) }, 30);
+  }
+  drag.cy = e.clientY;
+  drag.el.style.left = e.clientX + 12 + "px"; drag.el.style.top = e.clientY + 8 + "px";
+  const t = dropTarget(e.clientX, e.clientY), r = t?.getBoundingClientRect();
+  dropMark(t, t && e.clientY > r.top + r.height / 2);
+  // held over a tab for half a second: that tab opens, so the box can go between its boxes
+  if (t?.matches(".tabs button")){ if (drag.tab !== t){ drag.tab = t; drag.tabT = Date.now() } else if (Date.now() - drag.tabT > 500 && !t.classList.contains("sel")) showTab(t.dataset.tab) } else drag.tab = null;
 });
+const endDrag = (e, cancel) => {
+  if (!drag) return; const d = drag; drag = null;
+  if (!d.on) return;
+  clearInterval(d.iv); d.el.remove(); d.b.classList.remove("moving"); document.body.classList.remove("dragging"); dropMark(null);
+  const t = !cancel && dropTarget(e.clientX, e.clientY); dragBox = null;
+  if (!t) return;
+  if (t.matches("[data-box]")){ const r = t.getBoundingClientRect(); t.parentElement.insertBefore(d.b, e.clientY > r.top + r.height / 2 ? t.nextSibling : t) }
+  else if (t.matches(".tabs button")){ document.querySelector(`section[data-tab="${t.dataset.tab}"]`).appendChild(d.b); showTab(t.dataset.tab) }
+  else t.appendChild(d.b);
+  layoutSave();
+};
+document.addEventListener("pointerup", e => endDrag(e, false));
+document.addEventListener("pointercancel", e => endDrag(e, true));
+document.addEventListener("keydown", e => { if (e.key === "Escape" && drag) endDrag(e, true) });
 $("#layoutReset").onclick = () => { for (const [b, p, next] of [...BOX_HOME].reverse()){ p.insertBefore(b, next); b.classList.remove("folded"); b.querySelector(".fold").textContent = "–" } layoutSave() };
 try { const t = localStorage.getItem("tab"); if (t && t !== "hist" && t !== "help" && document.querySelector(`section[data-tab="${t}"]`)) showTab(t) } catch {}
 
