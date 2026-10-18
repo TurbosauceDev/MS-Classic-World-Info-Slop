@@ -317,9 +317,9 @@
         <h4>The score</h4>
         <ul>
           <li>Each kill costs the monster's HP ÷ your damage, after hit chance, defense, level penalty and element, plus 1 second of walking and aiming.</li>
-          <li>Score = map EXP ÷ total time, capped at what one player can kill per 7.56-second respawn with 75% of spawns alive.</li>
+          <li>Score = map EXP ÷ total time, capped at what one player can kill per 7.56-second respawn. How many monsters a map keeps alive is its <b>mob capacity</b> from the game files (OSMS: worked out from map size, checked against in-game counts), often about half its spawn points.</li>
           <li>Maps need 8+ monsters; bosses are left out. Hit below 90% is flagged.</li>
-          <li><b>Area attacks by default:</b> Slash Blast, Arrow Bomb, Thunder Bolt, Poison Breath (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, 75% alive: an estimate. Iron Arrow loses 20% per extra monster. Double Shot and Holy Arrow split a fixed number of arrows, so they count as single target. Thieves, 1st job Bowmen and 1st job Magicians have no area attack.</li>
+          <li><b>Area attacks by default:</b> Slash Blast, Arrow Bomb, Thunder Bolt, Poison Breath (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, with the map's mob capacity alive: an estimate. Iron Arrow loses 20% per extra monster. Double Shot and Holy Arrow split a fixed number of arrows, so they count as single target. Thieves, 1st job Bowmen and 1st job Magicians have no area attack.</li>
           <li><b>Danger:</b> one hit from the map's hardest hitter as a share of your Max HP: its touch against your W.DEF, or for Tauromacis and Taurospear (the only launch monsters with a magic attack) the magic attack against your M.DEF (meowdb's labels: under 10% Safe, 10–24% Caution, 25–49% Danger, 50%+ Lethal). Armor isn't counted, so it reads a little high. "Hits you" is the chance its attack lands against your avoid (meowdb's formula).</li>
           <li><b>To potions:</b> portals to the nearest NPC selling potions (meowdb's shop list). A far refill eats into the real EXP/hr.</li>
           <li><b>Mesos/hr:</b> monster meso drops at that kill speed. Per-kill amounts are player reports on meowdb (17 monsters so far); the rest are estimated at 2 mesos per monster level, which is what the reported ones average. With a Character Builder setup, "net" takes off your potions and ammo.</li>
@@ -894,6 +894,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Respawns use each map's mob capacity</h3><span class="pill p-hot">update</span></div>
+      <p><b>Where to train</b>, the <b>Path Planner</b>, the World Map and monster pages now cap respawns with each map's <b>mob capacity</b> from the game files: how many monsters it keeps alive for one player (OSMS, worked out from map size and checked against in-game counts). We used to assume 75% of spawn points everywhere; most maps keep about half. Area-attack EXP/hr drops on big maps (for example a level 45 F/P Wizard on B2 Subway Depot, about 238k to 157k an hour), and the top maps reshuffle. Single-target builds barely change. Parties of up to 5 get no extra monsters (OSMS's estimate, not yet confirmed).</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Game data updated to the Oct 17 export</h3><span class="pill p-hot">update</span></div>
       <p>Rebuilt from the newest OSMS game-file export (Oct 17; was Oct 6). <b>The Filing Error</b> now asks for 25 Torn Ledger Pages (was 50). Coconut sells to NPCs for 10 mesos (was 145). Blue Mushroom in L Forest III has a 10-minute respawn, so it moves to timed spawns and out of Where to train. Wild Kargo's Area has 14 Wild Kargos (was 13). New item: Lie Detector Test. Small map, portal and skill-range fixes. Player drop reports and shop prices are unchanged.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Home cards grow when clicked</h3><span class="pill p-hot">new</span></div>

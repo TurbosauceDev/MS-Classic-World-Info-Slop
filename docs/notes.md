@@ -37,9 +37,15 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 - Magic: MAGIC = floor(INT/2) + MATK; MIN = BA/100×MAGIC×(INT×Mastery/100+1); MAX = BA/100×MAGIC×(INT/100+1).
 - Defense: dmg×100/(def+100). Level penalty: d<10: 1/(d²×0.005+1); d≥10: 1/(d×0.05+1).
   Elements: weak 1.25 / strong 0.75 / immune 0 (1.5 only for 3rd-job Element Composition). Crit base 5% for +20%. Damage cap 99,999.
-- Party EXP: +10/20/30% for 2/3/4+ players (meowdb, measured in COT2); map capacity 75% solo +5%/player to 100% at 6 (meowdb:
-  not fully confirmed). Party option (Where to train, planner grinding): per-player rate = min(N × kill rate, map EXP ×
-  capacity / 7.56 s) / N × (1 + bonus); assumes equal players splitting kills and EXP. Quests stay solo.
+- Party EXP: +10/20/30% for 2/3/4+ players (meowdb, measured in COT2). Party option (Where to train, planner grinding):
+  per-player rate = min(N × kill rate, map EXP × share / 7.56 s) / N × (1 + bonus); assumes equal players splitting kills and EXP.
+  Quests stay solo.
+- **Share alive** (`mapShare`, since 2026-10-18; was meowdb's 75% solo +5%/player): min(1, (M + floor(0.75 × max(P − 5, 0))) /
+  spawn points). M = the map's `mob_capacity` in OSMS maps.json (solo target, M = clamp(floor(max(W,800) × max(H−450,600) ×
+  mobRate / 128000), 1, 40) from foothold bounds; OSMS "verified" against in-game counts; tabs/formulas-mob-spawning.js).
+  The +players term is OSMS's unverified theory from 3 Sunset Sky counts. Stored as D.maps[id][3]; maps without one fall
+  back to 75% +5%/player. Median M / spawn points on launch maps is 0.48 (Ant Tunnel III 26/99), so respawn caps are
+  lower than meowdb's numbers.
 - Attack time: meowdb's measured ladder per speed tier 0-10 (swing / spear-polearm stab / crossbow columns), SPEED_MS in
   50-builder.js. Spells always tier 6 (810 ms). Savage Blow = 30 × ceil(960 × (10 + tier) / 16 / 30). Spears and polearms
   60% swing + 40% stab. Spell Booster is 3rd job (not modeled).
@@ -67,10 +73,10 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
 
 ## Estimates the page makes (flagged in its "How" boxes)
 - **Ammo attack** (stars, arrows): old-game values; Subi +15, Wolbi +17, Bronze arrows +1 confirmed by the meowdb class guides.
-- **Map ranking**: time per kill = effective HP / DPS + 1.0 s; rate = min(map EXP / time, map EXP × 0.75 / 7.56 s respawn).
+- **Map ranking**: time per kill = effective HP / DPS + 1.0 s; rate = min(map EXP / time, map EXP × share / 7.56 s respawn).
   Default DPS = 20 × level. Accuracy assumes all AP in the main stat, secondary = level, Precise Strikes (+20) / Nimble Body (+15)
   maxed from level 15. "Use this in Where to train" sends the builder's DPS and real accuracy instead (cleared when class/level is edited there). Maps need ≥8 mobs; bosses and mob_time > 60 excluded.
-  meowdb's "max EXP/hr" ceiling = full-clear EXP × 0.75 × 3600 / 7.56 (verified exactly).
+  meowdb's "max EXP/hr" ceiling = full-clear EXP × 0.75 × 3600 / 7.56 (verified exactly); we now use share instead of 0.75.
 - **SP**: 1 at each job advancement + 3/level. 1st job = 61 (levels 10–30) and can only go into 1st job skills;
   2nd job = 1 + 3×(L−30). Spare SP shows once every visible 2nd-job skill is maxed (3rd job not in launch).
 - **Auto skill build**: greedy, buys the next 1–5 points (incl. prerequisites) with the best (DPS × avg hit chance vs
@@ -104,7 +110,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   kills of the source monster, overlapping per monster. Items with no known source (NPC-made, boxes) stay untimed.
 - Travel (estimates): walk 30 s per map crossed, cab 45 s between the 6 cab towns, NPC talk 60 s (30 s same NPC again; 180 s
   all-in when the NPC has no launch spot). Dijkstra over `nav` + cab links. A quest = walk to its NPC, each kill monster at
-  the map minimising travel + kill time (kill time = max(n × kill time, n / (count × 0.75 / 7.56 s respawn))), then back.
+  the map minimising travel + kill time (kill time = max(n × kill time, n / (count × share / 7.56 s respawn))), then back.
   Grind maps: score = (level EXP + drop credit) / (grind time + travel from where you are). Position starts in Lith Harbor
   after the ship, unknown (no first-leg cost) when starting at 10+. Each leg is its own "travel" step (route text rebuilt
   from Dijkstra prev pointers); quest rows show talk + kill time only. Drop credit values saved kills at the quest's level.
@@ -113,7 +119,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   no route. Exit number per hop = the destination's number in minimap() (portals sorted by x). "No taxi" (`navi.nocab`) = BFS over `nav` only (fewest maps). Maps not in `nav` (JQ, KPQ,
   Florina Beach, subway, Orbis...) have no route.
 - AoE build (planner default): default skill weighs targets as if ~3 are in reach (Rush, Steal, Power Knockback excluded).
-  Hits per cast per map = average over spawn points of min(targets, 1 + 0.75 × spawn points on the same platform
+  Hits per cast per map = average over spawn points of min(targets, 1 + share × spawn points on the same platform
   (|dy| ≤ 60 px) within reach, busier facing). Reach = skill `range`, Thunder Bolt's ±170 px box, or 300 px projectile
   corridor. Kill time per monster ÷ hits; respawn cap unchanged. Where to train uses the same model by default (class area
   attack via AOE_SKILL, or the builder skill if it hits several), with a single-target option.

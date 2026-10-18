@@ -84,7 +84,9 @@ def eff_hp(mob, cls, L):
 def dps(L):
     return 20 * L          # rough single-target damage/sec for a level-L character in level-L gear
 KILL_OVERHEAD = 1.0        # seconds of walking/aggro/animation per kill
-SOLO_SPAWN = 0.75          # solo player keeps ~75% of spawns alive (COT2 measurement)
+SOLO_SPAWN = 0.75          # fallback share of spawns alive solo (meowdb) for maps without a mob_capacity
+# solo mob capacity: how many monsters the map keeps alive for one player (OSMS maps.json, from map size, checked in game)
+map_cap = {m["id"]: m["mob_capacity"] for r in mapsj["regions"] for m in r["maps"] if m.get("mob_capacity")}
 RESPAWN = 7.56
 
 # ---------- 1. Map ranking ----------
@@ -119,7 +121,8 @@ for cls in CLASSES:
                 cost += (e / dps(L) + KILL_OVERHEAD) * c   # seconds spent per kill
                 hits.append((hit, c)); lvls.append((mob["level"], c))
             if not ok or cost == 0: continue
-            cap = exp * SOLO_SPAWN / RESPAWN              # EXP/s if you cleared every respawn
+            share = min(1, map_cap[mid] / total) if mid in map_cap else SOLO_SPAWN
+            cap = exp * share / RESPAWN                   # EXP/s if you cleared every respawn
             rate = min(exp / cost, cap)
             avg_lvl = sum(a * c for a, c in lvls) / total
             if avg_lvl < L - 12: continue

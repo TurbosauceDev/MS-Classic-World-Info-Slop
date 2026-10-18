@@ -34,7 +34,7 @@ def step_base():
     mobs, maps = {}, {}
     for mid, lst in a.by_map.items():
         if sum(c for _, c in lst) < 8: continue               # ignore tiny maps
-        maps[mid] = [a.map_name[mid], 1 if a.launch_status(mid) == "Open at launch" else 0, [[m["id"], c] for m, c in lst]]
+        maps[mid] = [a.map_name[mid], 1 if a.launch_status(mid) == "Open at launch" else 0, [[m["id"], c] for m, c in lst], a.map_cap.get(mid) or 0]
         for m, c in lst:
             mobs[m["id"]] = [m["name"], m["level"], m["hp"], m["exp"], m.get("eva") or 0, m.get("PDDamage") or 0,
                              m.get("MDDamage") or 0, m.get("elements") or {}, 1 if m.get("undead") else 0]

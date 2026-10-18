@@ -13,7 +13,7 @@ const SKIP = ["El Nath","Orbis","Forgotten Hollow","Event","Crafting","Maple Isl
 // estimates, said so on the page: talking to accept + turn in a quest (less if it's the same NPC again), crossing one map on
 // foot, one cab ride between towns. NPCs with no known launch spot keep the old all-in 3 minutes.
 const QUEST_SEC = 60, SAME_NPC_SEC = 30, NO_SPOT_SEC = 180, WALK_SEC = 30, TAXI_SEC = 45;
-const RESPAWN = 7.56, SOLO_ALIVE = 0.75;   // respawn timer and share of spawns a solo player keeps alive (same as Where to train)
+const RESPAWN = 7.56;   // respawn timer; share of spawns alive solo = mapShare() (same as Where to train)
 const STICK = 0.9;       // keep the current map while it's within 10% of the best
 const BACKUP_LV = 5, BACKUP_RATE = 0.6;   // backup maps: monsters within 5 levels on average, at least 60% of the EXP/hr
 const MAXL = MAX_LEVEL;   // level cap (EXP above 49 is meowdb's historical reference, see 00-core.js)
@@ -97,14 +97,14 @@ function routeText(a, b){
 const tripText = tr => !tr || !tr.sec ? "" : [tr.taxi ? `${tr.taxi === 1 ? "cab" : tr.taxi + " cabs"}` : "", tr.walk ? `walk ${tr.walk} map${tr.walk === 1 ? "" : "s"}` : ""].filter(Boolean).join(" + ");
 const npcSpot = name => D.npcs[D.npcid[name]]?.[1]?.[0]?.[0] || null;
 // where to kill n of a monster, starting from `from`: the map with the least travel + kill time. Kill time is the slower
-// of your killing speed and the map's respawn of that monster (count × 75% alive every 7.56 s).
+// of your killing speed and the map's respawn of that monster (count × the map's share alive every 7.56 s).
 function killSpot(id, n, from, L, ch, island){
   const k = mobKill(D.mobs[id], mcls(L), L, ch.dps, ch.acc); if (k.hit < 0.05) return null;
   let best = null;
   for (const [mid, mp] of Object.entries(D.maps)){
     if (!mp[1] || ISLAND(mid) !== !!island) continue;
     const c = (mp[2].find(s => String(s[0]) === id) || [0, 0])[1]; if (!c) continue;
-    const a = aoeOf(ch), kill = Math.max(n * k.sec / (a ? aoeHits(mid, a.t, a.r, AOE_FALL[a.n] || 0) : 1), n / (c * SOLO_ALIVE / RESPAWN)), tr = tripSec(from, mid), tot = kill + tr;
+    const a = aoeOf(ch), kill = Math.max(n * k.sec / (a ? aoeHits(mid, a.t, a.r, AOE_FALL[a.n] || 0) : 1), n / (c * mapShare(mid) / RESPAWN)), tr = tripSec(from, mid), tot = kill + tr;
     if (!best || tot < best.tot) best = {map: [mid, mp[0]], kill, tr, tot};
   }
   return best;

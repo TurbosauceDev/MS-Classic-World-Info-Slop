@@ -64,9 +64,14 @@ const POTS = (() => { const out = {}, q = [];
   while (q.length){ const u = q.shift(); for (const v of D.nav[u] || []) if (!out[v]){ out[v] = [out[u][0] + 1, out[u][1], out[u][2]]; q.push(v) } }
   return out })();
 const potsText = mid => { const p = POTS[mid]; return p ? `${p[0]} portal${p[0] === 1 ? "" : "s"} to ${p[1]}` : "" };
-// party (meowdb EXP + spawn guides): +10/20/30% bonus EXP at 2/3/4+ players; map capacity 75% solo, +5% a player up to 100% at 6
-// (meowdb: not fully confirmed). Assumes equal players sharing the kills and the EXP evenly.
-const partyBonus = n => [0, 0, 0.1, 0.2, 0.3, 0.3, 0.3][n] || 0, partyCap = n => Math.min(1, 0.75 + 0.05 * (n - 1));
+// party (meowdb EXP guide): +10/20/30% bonus EXP at 2/3/4+ players. Assumes equal players sharing the kills and the EXP evenly.
+const partyBonus = n => [0, 0, 0.1, 0.2, 0.3, 0.3, 0.3][n] || 0;
+// share of a map's spawn points alive at once: its mob capacity (OSMS maps.json: solo target from map size, checked in game)
+// over its spawn points, at most 1. Players on the map add floor(0.75 × (players − 5)) (OSMS theory from 3 counts, unverified),
+// so a party of up to 5 gets no more monsters than solo. Maps without a capacity: meowdb's 75% solo, +5% a player.
+const mapShare = (mid, n = 1) => { const m = D.maps[mid]; if (!m) return 0.75;
+  const sp = m[2].reduce((s, x) => s + x[1], 0), cap = m[3];
+  return cap ? Math.min(1, (cap + Math.floor(0.75 * Math.max(n - 5, 0))) / sp) : Math.min(1, 0.75 + 0.05 * (n - 1)) };
 let ACC_FROM_BUILDER = null; // set by "Use this in Where to train"; cleared when class or level is changed here
 const accFor = (cls, L) => classAcc(MAGIC.has(cls) ? "Magician" : cls, L);
 // seconds to kill one monster (HP / damage after hit chance, defense, level penalty, element) + 1 s walking and aiming
@@ -80,8 +85,8 @@ function mobKill(m, cls, L, dps, acc){
   return {hit, sec: eff / dps + 1};
 }
 // how many monsters one cast of an area attack hits on a map (estimate from spawn points): from each spawn point, count
-// the others on the same platform (within 60 px up/down) inside the attack's reach, facing the busier side; 75% of
-// spawns are alive solo; capped at the skill's target count. reach = [front, back] px.
+// the others on the same platform (within 60 px up/down) inside the attack's reach, facing the busier side; the map's
+// mapShare() of spawns are alive solo; capped at the skill's target count. reach = [front, back] px.
 const AOE = {};
 // damage lost per extra target: Iron Arrow pierces at 100/80/60/40% (meowdb damage formula)
 const AOE_FALL = {"Iron Arrow: Crossbow": 0.2};
@@ -89,13 +94,13 @@ function aoeHits(mid, targets, reach, fall = 0){
   if (!targets || targets <= 1 || !reach) return 1;
   const key = `${mid}|${targets}|${reach}|${fall}`; if (AOE[key]) return AOE[key];
   const P = D.mpos[mid] || []; if (P.length < 2) return AOE[key] = 1;
-  let sum = 0;
+  let sum = 0; const alive = mapShare(mid);
   P.forEach(([x, y], i) => {
     let r = 0, l = 0, rb = 0, lb = 0;
     P.forEach(([x2, y2], j) => { if (i === j || Math.abs(y2 - y) > 60) return; const dx = x2 - x;
       if (dx >= 0 && dx <= reach[0]) r++; if (dx <= 0 && -dx <= reach[0]) l++;
       if (dx < 0 && -dx <= reach[1]) rb++; if (dx > 0 && dx <= reach[1]) lb++; });
-    const n = Math.min(targets, 1 + 0.75 * Math.max(r + rb, l + lb));
+    const n = Math.min(targets, 1 + alive * Math.max(r + rb, l + lb));
     sum += n - fall / 2 * n * (n - 1);   // n targets at 1, 1 - fall, 1 - 2·fall, ... (fractional n interpolates)
   });
   return AOE[key] = sum / P.length;
@@ -116,7 +121,7 @@ function mapRates(cls, L, dps, acc, floor = 12, aoe = null, party = 1){
     }
     if (!ok || !n) continue;
     const avg = lvSum / n; if (avg < L - floor) continue;
-    const raw = Math.min(party * exp / time, exp * partyCap(party) / 7.56) / party, rate = raw * (1 + partyBonus(party));
+    const raw = Math.min(party * exp / time, exp * mapShare(mid, party) / 7.56) / party, rate = raw * (1 + partyBonus(party));
     // att = share of the time you're attacking (not walking, not waiting for respawns): for potion/ammo upkeep
     rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate, cyc: exp, hits, meso: rate * mes / exp, att: Math.min(1, raw * time / exp) * (time - walk) / time});   // kills/s of a mob = count × rate / cyc
   }
@@ -266,7 +271,7 @@ function rankMaps(){
     + (need ? ` Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP.` : "") + (L > EXP_SURE && need ? ` EXP needed above level ${EXP_SURE} is meowdb's historical table (not yet confirmed in Classic).` : "")
     + (area ? ` Attack: <b>${esc(area.n)}</b>, up to ${area.t} monsters within ${area.r[0]}${area.r[1] ? ` / ${area.r[1]}` : ""} px; hits per cast are estimated from each map's spawn points.`
       : basic ? ` Basic attacks only (100%, one hit${fb.weapon ? `, ${esc(fb.weapon)} speed` : ""}).` : $("#aoe").value ? ` ${esc(cls)} has no area attack at level ${L}, so this is single target.` : ` Single target.`)
-    + (party > 1 ? ` Party of ${party}: your share of the EXP plus the ${Math.round(partyBonus(party) * 100)}% party bonus, map spawns at ${Math.round(partyCap(party) * 100)}% (assumes equal players splitting kills).` : "")
+    + (party > 1 ? ` Party of ${party}: your share of the EXP plus the ${Math.round(partyBonus(party) * 100)}% party bonus, map capacity +${Math.max(0, Math.floor(0.75 * (party - 5)))} monsters (OSMS theory, unverified; assumes equal players splitting kills).` : "")
     + ` Danger: one touch from the map's hardest hitter as a share of ${DEF_FROM_BUILDER || statNum("#uhp") != null ? "your" : "a typical"} Max HP (${fmt(def.hp)}), before armor.`
     + ` Mesos/hr = monster meso drops: player reports on meowdb for ${Object.keys(D.meso || {}).length} monsters, the rest estimated at ${D.mesok} mesos per monster level (what the reported ones average). Loot sold to NPCs isn't counted.`
     + (frugal ? ` <b>Frugal:</b> only maps that pay for themselves and aren't Danger/Lethal, fastest EXP first. Net = mesos/hr minus ${basic ? (ammoP ? `ammo for basic attacks` : "nothing for basic attacks") : COST_FROM_BUILDER ? "your build's skill potions and ammo" : `a default ${esc(cls)} build's skill potions and ammo`} (${fmt(cost?.mesoHr || 0)}/hr attacking nonstop, times the time spent attacking) minus Red Potions for getting hit (estimate: ${({"0.1": "1 in 10", "0.25": "1 in 4", "0.5": "half", "1": "every one"})[$("#hitsh").value]} of the monsters you kill attack${hitsh === 1 ? "s" : ""} you once, at their hit chance against your avoid, no armor). ${+$("#lootr").value ? `Plus loot sold to NPCs: each monster's reported ETC item and potion drops (meowdb player reports) at ${Math.round($("#lootr").value * 100)}% per kill each (an assumption: drop rates aren't in the game files), ${$("#lootp").value === "pw" ? "at the median player-shop sale price (meso.watch, " + D.pw.read + ") where it has 5+ sales, else NPC sell price; selling to players takes a shop and time" : "at NPC sell price"}; ores, gems, equips and scrolls aren't counted.` : "Loot sold to NPCs isn't counted."} Potions its monsters drop are listed under the map name.${rows.some(r => r.real != null) ? ` "(players' costs)": instead of both estimates, what grind tracker players near your level really spent there on potions, food and ammo (median, 3+ players).` : ""}`
