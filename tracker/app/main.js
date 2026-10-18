@@ -97,10 +97,31 @@ function pinOnTop(){
 }
 
 // "Show me where": a full-screen window with the frozen game picture; the player drags a box (snipping-tool style)
+// It opens on the game's monitor (Danny: it opened on his second monitor, where the tracker and the mouse were): the game
+// window's spot from Windows (GetWindowRect on the captured window), else the captured screen, else the main monitor.
+function winRect(hwnd){
+  return new Promise(resolve => {
+    const ps = `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public struct R{public int L,T,Rt,B;}public static class W{[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out R r);}';`
+      + `$r=New-Object R; if([W]::GetWindowRect([IntPtr][long]${hwnd},[ref]$r)){"$($r.L),$($r.T),$($r.Rt),$($r.B)"}`;
+    require("child_process").execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ps], {timeout: 5000, windowsHide: true}, (err, out) => {
+      const n = String(out || "").trim().split(",").map(Number);
+      resolve(!err && n.length === 4 && n.every(Number.isFinite) && n[2] > n[0] && n[3] > n[1] ? {x: n[0], y: n[1], width: n[2] - n[0], height: n[3] - n[1]} : null);
+    });
+  });
+}
+async function gameDisplay(){
+  const {screen} = require("electron");
+  try {
+    const src = await captureSource();
+    if (src?.display_id){ const d = screen.getAllDisplays().find(d => String(d.id) === String(src.display_id)); if (d) return d }   // whole-screen capture
+    const hwnd = /^window:(\d+):/.exec(src?.id || "")?.[1];   // digits only: safe to put in the command
+    if (hwnd && process.platform === "win32"){ const r = await winRect(hwnd); if (r) return screen.getDisplayMatching(screen.screenToDipRect(null, r)) }
+  } catch {}
+  return screen.getPrimaryDisplay();
+}
 let snipWin = null;
-ipcMain.handle("snip", (_, url) => new Promise(resolve => {
+ipcMain.handle("snip", async (_, url) => { const d = await gameDisplay(); return new Promise(resolve => {
   if (snipWin && !snipWin.isDestroyed()) snipWin.close();
-  const {screen} = require("electron"), d = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   snipWin = new BrowserWindow({...d.bounds, frame: false, fullscreen: true, alwaysOnTop: true, skipTaskbar: true, show: false,
     webPreferences: {preload: path.join(__dirname, "snip-preload.js"), contextIsolation: true}});
   snipWin.setAlwaysOnTop(true, "screen-saver");
@@ -112,7 +133,7 @@ ipcMain.handle("snip", (_, url) => new Promise(resolve => {
   snipWin.webContents.setWindowOpenHandler(() => ({action: "deny"}));
   snipWin.webContents.on("will-navigate", e => e.preventDefault());
   snipWin.loadFile(path.join(__dirname, "snip.html")).then(() => { snipWin.webContents.send("snip-image", url); snipWin.show(); snipWin.focus() });
-}));
+}) });
 ipcMain.handle("whole-screen", (_, on) => { wholeScreen = !!on; return wholeScreen });
 ipcMain.handle("game-found", async () => !!(await gameSource()));
 ipcMain.handle("settings", (_, s) => {
