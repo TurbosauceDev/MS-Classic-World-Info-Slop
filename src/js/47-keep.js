@@ -5,8 +5,10 @@
 // sources, shops, quest rewards, recipes that make it). "Have" counts are per viewer (localStorage keephave).
 const ID = {}; for (const [id, it] of Object.entries(D.items)) if (!(it.n in ID)) ID[it.n] = id;
 const K = new Map();
-// items a quest hands you at its start ("Maria's Letter x1") aren't yours to keep or sell
+// quest items are always kept (the game marks them): same test as the Items tab's "Hide quest items", i.e. the client's
+// quest-item ID block (403xxxx) plus anything a quest hands you at its start ("Maria's Letter x1")
 const GIVEN = new Set([...D.quests, ...D.citq].flatMap(r => (r.info?.start || []).map(x => x.replace(/ x\d+$/, ""))));
+const QITEM = o => (+o.id >= 4031000 && +o.id < 4033000) || GIVEN.has(o.name);
 const row = (name, id) => { const k = id || ID[name] || name; if (!K.has(k)) K.set(k, {k, id: id || ID[name], name: D.items[id || ID[name]]?.n || name, quests: [], recipes: new Set(), mobs: new Set()}); return K.get(k) };
 for (const [src, list] of [["q", QLAUNCH.filter(r => r.region !== "Event")], ["cit", D.citq]]) for (const r of list) for (const [name, n, mob] of r.il || []){
   const o = row(name); o.quests.push([src, r, n]); if (mob) o.mobs.add(String(mob));
@@ -34,7 +36,7 @@ for (const o of K.values()){
   o.per = [...o.recipes].map(r => r[7].find(x => x[0] === o.id)[1]);
   o.price = D.items[o.id]?.p || 0;
 }
-const LIST = [...K.values()].filter(o => o.recipes.size || (o.price && !GIVEN.has(o.name)));
+const LIST = [...K.values()].filter(o => !QITEM(o) && (o.recipes.size || o.price));
 $("#kdisc").innerHTML += [...new Set(LIST.flatMap(o => o.discs))].sort().map(d => `<option>${esc(d)}</option>`).join("");
 
 let S = {q: "", by: "", disc: "", sort: "", need: false, only: false, done: true};
