@@ -11,15 +11,18 @@
   --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --shadow:0 1px 2px rgba(42,33,66,.05),0 6px 16px -10px rgba(85,56,160,.28); --tshadow:0 1px 1px rgba(125,88,214,.14);
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#1f1931; --panel:#2a2243; --ink:#f0eafd; --muted:#b6aad8; --line:#453a64;
   --accent:#d2bffb; --accent-soft:#41346a; --leaf:#7cc9a2; --leaf-soft:#1d3029;
-  --warn:#e2b44a; --warn-soft:#352b14; --bad:#ef7a70; color-scheme:dark}}
+  --warn:#e2b44a; --warn-soft:#352b14; --bad:#ef7a70; --shadow:0 1px 2px rgba(0,0,0,.22),0 8px 18px -12px rgba(0,0,0,.6); --tshadow:0 1px 2px rgba(0,0,0,.45);
+  color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1f1931; --panel:#2a2243; --ink:#f0eafd; --muted:#b6aad8; --line:#453a64;
   --accent:#d2bffb; --accent-soft:#41346a; --leaf:#7cc9a2; --leaf-soft:#1d3029;
-  --warn:#e2b44a; --warn-soft:#352b14; --bad:#ef7a70; color-scheme:dark}
+  --warn:#e2b44a; --warn-soft:#352b14; --bad:#ef7a70; --shadow:0 1px 2px rgba(0,0,0,.22),0 8px 18px -12px rgba(0,0,0,.6); --tshadow:0 1px 2px rgba(0,0,0,.45);
+  color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-body)}
 .wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:28px 60px}
 header h1{font:800 clamp(28px,4.4vw,44px)/1.05 var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
@@ -185,7 +188,7 @@ table.mini td,table.mini th{padding:6px 8px}
 #qtip li{margin:1px 0}
 .btn.tgl{align-self:flex-end;border-radius:999px}
 .btn.tgl[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--panel)}
-@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 .vwhy{font-size:12.5px;line-height:1.4;margin:3px 0 2px;max-width:46ch;color:var(--ink)}
 .vwhy a{color:var(--accent)}
 .vrow td{background:color-mix(in srgb,var(--accent-soft) 45%,transparent)}
@@ -487,6 +490,34 @@ details.sec>summary:hover h2{color:var(--accent)}
 .srchbox .ri{flex:none}
 .srchbox p.tiny{margin:0;color:var(--muted)}
 #trk a[data-go],#trkhow a[data-go],#trkruns a[data-go]{color:var(--accent)}
+/* small polish: soft depth on panels, gentle motion on open/close and hover. All motion is off under prefers-reduced-motion
+   (rule above); nothing here touches the Home cards. */
+::selection{background:color-mix(in srgb,var(--accent) 30%,transparent);color:var(--ink)}
+html{scrollbar-color:var(--line) transparent}
+header h1,h2,.big,.mtop h2{text-shadow:var(--tshadow)}
+.controls,.card,.fact,.tblwrap,.howto,.navsteps>li,#wmcard,.chainbar{box-shadow:var(--shadow)}
+.card.hero{box-shadow:var(--shadow),inset 0 1px 0 color-mix(in srgb,#fff 18%,transparent)}
+@keyframes pagein{from{opacity:0;transform:translateY(5px)}}
+@keyframes tray{from{opacity:0;transform:translateY(-5px)}}
+@keyframes fadein{from{opacity:0}}
+@keyframes popin{from{opacity:0;transform:translateY(-6px) scale(.985)}}
+.wrap>section:not(#home):not([hidden]){animation:pagein .22s ease-out}
+details[open]>:not(summary){animation:tray .2s ease-out}
+.mpage{animation:pagein .2s ease-out}
+#qtip:not([hidden]){animation:fadein .12s ease-out}
+.srch:not([hidden]){animation:fadein .14s ease-out;backdrop-filter:blur(2px)}
+.srch:not([hidden]) .srchbox{animation:popin .18s ease-out}
+.btn,.seg button,nav button,.stepper button,.ri,.wmdot,select,input,.drop,.srchbox li,.hcat{transition:border-color .15s,background-color .15s,color .15s,box-shadow .15s,transform .12s}
+.btn:active,.seg button:active,.stepper button:not(:disabled):active,nav .cats button:active{transform:translateY(1px)}
+.ri:hover{transform:translateY(-1px)}
+select:focus,input[type=number]:focus,input[type=search]:focus,input[type=text]:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent);outline:none}
+select:focus-visible,input:focus-visible{outline:none}
+nav .cats button:not([aria-selected="true"]):hover,.seg button:not([aria-checked="true"]):hover{border-color:var(--accent);color:var(--ink)}
+nav .subs button:not([aria-selected="true"]):hover{color:var(--ink);border-bottom-color:var(--line)}
+.bar i{transition:width .3s ease-out}
+.tblwrap tbody tr:not(.branch):hover>td{background-image:linear-gradient(color-mix(in srgb,var(--accent-soft) 40%,transparent),color-mix(in srgb,var(--accent-soft) 40%,transparent))}
+input[type=file]::file-selector-button{font:600 13px var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:5px 11px;margin-right:10px;cursor:pointer;transition:border-color .15s}
+input[type=file]::file-selector-button:hover{border-color:var(--accent)}
 
 </style>
 
@@ -835,7 +866,7 @@ details.sec>summary:hover h2{color:var(--accent)}
     <label>Party<select id="party"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
   </div>
   <div class="controls" style="margin-top:8px" title="From the in-game stat window. Leave a box empty to use the number shown in it.">
-    <label>Attack<input id="atk" inputmode="numeric" size="9"></label>
+    <label>Attack<input id="atk" type="text" inputmode="numeric" size="9"></label>
     <label class="magin" hidden>Magic<input id="umag" type="number" min="0" style="width:6em"></label>
     <label class="magin" hidden>INT<input id="uint" type="number" min="0" style="width:6em"></label>
     <label>Accuracy<input id="uacc" type="number" min="0" style="width:6em"></label>
@@ -1360,6 +1391,8 @@ details.sec>summary:hover h2{color:var(--accent)}
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Fixes and polish</h3><span class="pill p-hot">update</span></div>
+      <p><b>Where to train</b> shows its ranking as soon as you open it (it was empty until you changed a setting). The site reopens on the page you last used instead of always on Home. Faster first load: Crafting and Keep or sell build their tables when you open them. Small touches: soft shadows on panels, gentle fade when pages and info boxes open, themed file buttons and focus rings. Motion is off if your system asks for reduced motion.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Grind Tracker section</h3><span class="pill p-hot">new</span></div>
       <p>The <b>Grind Tracker</b> is now its own section, first in the menu and on Home: Overview (what it does and the download), How to use, Shared runs, and the KPQ leaderboard.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Search everything, more share links</h3><span class="pill p-hot">new</span></div>
@@ -1673,8 +1706,10 @@ CATS.forEach(b => b.addEventListener("click", () => goCat(b.dataset.cat)));
 $("#home").addEventListener("click", e => { const g = e.target.closest("[data-go],[data-go-cat]"); if (!g) return;
   g.dataset.go ? $("#t-" + g.dataset.go).click() : goCat(g.dataset.goCat); window.scrollTo({top: $("nav").offsetTop - 8}) });
 $("header h1").addEventListener("click", goHome);
+// read the last page before goHome() overwrites it with "home" (that made every visit land on Home)
+let SAVEDTAB = null; try { SAVEDTAB = localStorage.getItem("tab") } catch(e) {}
 goHome();
-try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : HASH.n ? "navi" : HASH.t ? "maps" : HASH.q ? "quests" : localStorage.getItem("tab"); if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
+try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : HASH.n ? "navi" : HASH.t ? "maps" : HASH.q ? "quests" : SAVEDTAB; if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
 $("#srclink").addEventListener("click", e => { e.preventDefault(); $("#t-credits").click(); $("#credits").scrollIntoView() });
 // "about 1 per X kills" for n picked up in k kills, plus a likely range (95% Wilson interval: a statistics estimate, wide
@@ -2703,7 +2738,7 @@ document.querySelectorAll("#crhead th[data-k] button").forEach(b => b.addEventLi
 /* raw materials: everything a recipe uses that no recipe makes */
 const USE = {};
 for (const r of R) for (const [x] of r.ing) if (!pick(x)) (USE[x] = USE[x] || new Set()).add(r);
-$("#crmats").innerHTML = Object.entries(USE).sort((a, b) => b[1].size - a[1].size || D.items[a[0]].n.localeCompare(D.items[b[0]].n)).map(([id, rs]) => {
+const renderMats = () => { $("#crmats").innerHTML = Object.entries(USE).sort((a, b) => b[1].size - a[1].size || D.items[a[0]].n.localeCompare(D.items[b[0]].n)).map(([id, rs]) => {
   const s = C.src[id] || {}, it = D.items[id], qs = QREW[id] || [], where = [];
   for (const [npc, mid, map, price] of s.shop || []) where.push(`Shop: ${npcLink(npc)} (${mid ? mapLink(mid, map) : esc(map)}), ${fmt(price)} mesos`);
   if (qs.length) where.push(`Quest reward: ${qs.slice(0, 3).map(qn).join(", ")}${qs.length > 3 ? ` +${qs.length - 3} more` : ""}`);
@@ -2714,10 +2749,12 @@ $("#crmats").innerHTML = Object.entries(USE).sort((a, b) => b[1].size - a[1].siz
   return `<tr><td><span class="ing">${itemIcon(id, 1)}<span><button class="crfind" data-q="${esc(it.n)}">${esc(it.n)}</button><div class="sub">${esc(it.c === "Equipment" ? eqLine(it) : it.s || it.c || "")}</div></span></span></td>
     <td class="num">${rs.size}</td><td class="sub">${discs.map(esc).join(", ")}</td>
     <td class="sub">${where.join("<br>") || `<span class="na">not in the game files (no drop tables)</span>`}</td><td class="num">${fmt(it.p)}</td></tr>`;
-}).join("");
+}).join("") };
 $("#crmats").addEventListener("click", e => { const b = e.target.closest(".crfind"); if (!b) return;
   Object.assign(S, {d: -1, type: "", cls: "", max: 10, q: b.dataset.q}); renderRecipes(); $("#crrecipes").open = true; $("#crrecipes").scrollIntoView({behavior: "smooth"}) });
-renderRecipes();
+// the two big tables (~15k elements) are built on first open, not on page load
+let built = false; const build = () => { if (built) return; built = true; renderMats(); renderRecipes() };
+$("#t-craft").addEventListener("click", build); if (!$("#craft").hidden) build();
 })();
 
 /* ---------------- keep or sell ---------------- */
@@ -2826,7 +2863,7 @@ for (const [id, k] of [["#kneed", "need"], ["#konly", "only"], ["#kdone", "done"
   $(id).addEventListener("click", e => { e.currentTarget.setAttribute("aria-pressed", !S[k]); set(k, !S[k]) }) }
 // ticking quests done in the Path Planner changes what's still wanted: refresh when this tab opens
 $("#t-keep").addEventListener("click", render);
-render();
+if (!$("#keep").hidden) render();   // otherwise the first open renders it
 })();
 
 /* ---------------- monster database ---------------- */
@@ -6468,6 +6505,9 @@ const TRAIN = ["cls", "lvl", "party", "tmode", "aoe", "hitsh", "lootr", "lootp",
 $("#tshare").addEventListener("click", () => copyShare($("#tshare"), shareUrl("t", Object.fromEntries(TRAIN.map(k => [k, $("#" + k).value]).filter(([, v]) => v !== "")))));
 if (HASH.t){ for (const k of TRAIN) if (HASH.t[k] != null && [...($("#" + k).options || [{value: HASH.t[k]}])].some(o => o.value === String(HASH.t[k]))) $("#" + k).value = HASH.t[k];
   rankMaps() }
+// Where to train: nothing filled the table on load (it sat empty until a setting changed), so rank on first open
+const firstRank = () => { if (!$("#maprows").children.length) rankMaps() };
+$("#t-maps").addEventListener("click", firstRank); if (!$("#maps").hidden) firstRank();
 })();
 
 </script>
