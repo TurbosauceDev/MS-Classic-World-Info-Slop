@@ -60,3 +60,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 Tracker main card (run name + tiles) is a movable, dockable box like the rest. Preferences renamed back to Settings, opened from File (no title-bar entry).
 - 2026-10-18 Tracker Mini: compact, readable view (EXP/hr, mesos/hr, EXP gained, active and total time, time to level, run log, items, monsters, consumables), "not small for the sake of being small".
 - 2026-10-18 Tracker: Dummy data button to try layouts (never saved/shared); docked boxes fill in with no empty space; run log looks like a chat box.
+- 2026-10-18 Tracker: "I only buy meat and lemons" button becomes a small "Dropped potions are free" switch in the Consumables used footer (settings.meatOnly unchanged).

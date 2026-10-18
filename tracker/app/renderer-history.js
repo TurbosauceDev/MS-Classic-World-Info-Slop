@@ -6,8 +6,9 @@ function goalUi(){ const g = goalOf(); $("#goalNext").setAttribute("aria-pressed
 // "I only buy meat and lemons": Red/Orange/White/Blue Potions are drops or quest rewards, so using them costs nothing
 const FREE_POTS = ["2000000", "2000007", "2000001", "2000002", "2000003", "2000008"];
 const freeIds = () => settings.meatOnly ? FREE_POTS : [];
-function meatUi(){ $("#meatOnly").setAttribute("aria-pressed", String(!!settings.meatOnly)); $("#meatNote").textContent = settings.meatOnly ? "color potions count as free" : "" }
-$("#meatOnly").onclick = () => host.settings({meatOnly: !settings.meatOnly}).then(s => { settings = s; session?.setFree(freeIds()); meatUi(); if (session) render() });
+// "Dropped potions are free" switch (was the "I only buy meat and lemons" button): the colour potions cost nothing
+function meatUi(){ $("#meatOnly").checked = !!settings.meatOnly }
+$("#meatOnly").onchange = () => host.settings({meatOnly: $("#meatOnly").checked}).then(s => { settings = s; session?.setFree(freeIds()); meatUi(); if (session) render() });
 const setGoal = v => host.settings({goal: v}).then(s => { settings = s; session?.setGoal(goalOf()); goalUi(); if (session) render() });
 $("#goal").onchange = e => { const v = Math.round(+e.target.value || 0); setGoal(v >= 2 ? Math.min(200, v) : "next") };
 $("#goalNext").onclick = () => setGoal("next"); $("#goalOff").onclick = () => setGoal("off");

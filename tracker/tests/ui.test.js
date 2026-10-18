@@ -98,9 +98,9 @@ const path = require("path"), {chromium} = require("playwright");
   const usedTxt = await page.evaluate(() => { session.add({t: Date.now(), type: "use", id: "2000002", n: 3}); render();
     return [document.querySelector("#used").textContent, document.querySelector("#usedBox").classList.contains("hidden"), document.querySelector("#netHr").textContent, ICONS.length] });
   if (!/White Potion×3\?350−1,050Total×3−1,050/.test(usedTxt[0]) || usedTxt[1] || !/^net /.test(usedTxt[2]) || !(usedTxt[3] > 30)) throw new Error("used: " + usedTxt);
-  // "I only buy meat and lemons": colour potions cost nothing
+  // "Dropped potions are free" (was "I only buy meat and lemons"): colour potions cost nothing
   await page.evaluate(() => document.querySelector("#meatOnly").click()); await page.waitForTimeout(50);
-  const meat = await page.evaluate(() => [document.querySelector("#used").textContent, document.querySelector("#meatOnly").getAttribute("aria-pressed")]);
+  const meat = await page.evaluate(() => [document.querySelector("#used").textContent, String(document.querySelector("#meatOnly").checked)]);
   if (!/White Potion×3\?free \(drop\)/.test(meat[0]) || meat[1] !== "true") throw new Error("meat only: " + meat);
   await page.evaluate(() => document.querySelector("#meatOnly").click()); await page.waitForTimeout(50);
   // Mano killed on his map: respawn timer shows

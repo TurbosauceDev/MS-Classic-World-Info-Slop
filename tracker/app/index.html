@@ -41,6 +41,10 @@
   #miniFull { padding:3px 10px; font-size:12px; }
   #mini .mgrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(92px, 1fr)); gap:4px 10px; }
   #mini .mgrid .v { font-size:15px; } #mini .mgrid .main .v { color:var(--accent); }
+  /* Consumables used footer: the source note, and a small switch for potions you never buy (was the "I only buy meat and lemons"
+     button, Danny 2026-10-18: "make it look and fit better") */
+  .usedFoot { display:flex; align-items:center; gap:8px 14px; flex-wrap:wrap; margin-top:8px; } .usedFoot .note { flex:1; min-width:160px; }
+  label.chk.freePots { margin:0; font-size:12px; color:var(--muted); align-items:center; white-space:nowrap; } label.chk.freePots input { margin:0; }
   #dummyBar { display:flex; align-items:center; gap:10px; border:1px dashed var(--warn); background:color-mix(in srgb, var(--warn) 14%, var(--panel)); padding:6px 10px; }
   #dummyBar b { color:var(--warn); } #dummyBar span { flex:1; font-size:12px; color:var(--muted); } #dummyBar button { padding:3px 10px; font-size:12px; }
   /* section headers (box titles, Mini's list titles): a soft outline and drop shadow (Danny, 2026-10-18) */
@@ -104,7 +108,7 @@
   td.note { padding-left:12px; } .v .coin { height:.8em; }
   :focus-visible { outline:2px solid var(--accent); outline-offset:2px; } .grip:focus-visible { border-radius:4px; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
-  #goalNext[aria-pressed=true], #goalOff[aria-pressed=true], #meatOnly[aria-pressed=true] { background:var(--accent); color:var(--on-accent); }
+  #goalNext[aria-pressed=true], #goalOff[aria-pressed=true] { background:var(--accent); color:var(--on-accent); }
   #wrap .step { font-weight:600; margin:10px 0 4px; } #wrap .step:first-of-type { margin-top:0; }
   textarea { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:5px 6px; width:100%; margin-top:6px; resize:vertical; }
   .hsub { color:var(--muted); font-size:12px; margin-top:2px; } .hsub .ico { width:18px; height:18px; margin:-2px 4px -2px 0; }
@@ -318,9 +322,10 @@
     <div class="card" data-box="items" data-title="Items looted"><h3>Items looted</h3><table id="items"></table><div class="empty" id="itemsEmpty">Nothing picked up yet.</div>
       <div class="note" id="priceNote"></div></div>
     <div class="card" id="usedBox" data-box="used" data-title="Consumables used"><h3>Consumables used</h3>
-      <div class="row"><button id="meatOnly" class="alt" aria-pressed="false" title="Red, Orange, White and Blue Potions came from drops or quests: they cost nothing here">I only buy meat and lemons</button> <span class="note" id="meatNote"></span></div><table id="used"></table>
+<table id="used"></table>
       <div class="empty" id="usedEmpty">Nothing used yet. Counts come from your quick slots or the Use tab.</div>
-      <div class="note">Potions, food and arrows, at the cheapest NPC shop price.</div></div>
+      <div class="usedFoot"><span class="note">Potions, food and arrows, at the cheapest NPC shop price.</span>
+        <label class="chk freePots" title="Red, Orange, White and Blue Potions dropped by monsters or given by quests cost nothing here, so only what you buy (meat, lemons, Elixirs) is a cost"><input type="checkbox" id="meatOnly"> <span>Dropped potions are free</span></label></div></div>
   </section>
   <section data-tab="hist" class="hidden">
     <div class="card" id="hist" data-box="hist" data-title="Past sessions"><div class="row" style="margin-top:0;padding-right:48px"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div><div id="cmp"></div><table id="histRows"></table></div>
