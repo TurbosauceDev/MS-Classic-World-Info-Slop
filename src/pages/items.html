@@ -1,0 +1,44 @@
+<section id="items" hidden>
+  <details class="howto">
+    <summary>How to use the item database</summary>
+    <div class="howgrid">
+      <div><h4>The list</h4><ul>
+        <li>Every item in the launch game files: equipment, use items, etc items, setup items and scrolls.</li>
+        <li>Search by item name or by a monster that drops it. Filter by type, equipment slot and job. Click a column to sort.</li>
+        <li><b>Type</b>: Weapons, Armor (hats, tops, bottoms, overalls, shoes, gloves, shields, capes) and Accessories (earrings) narrow equipment; Slot then lists only that group's slots.</li>
+        <li><b>Reset filters</b> clears the search and puts every filter back to its default.</li>
+        <li>Click an item (here, or any item icon or item name anywhere on the site) to open its page.</li>
+        <li><b>Has a known source</b> (on by default) hides items nothing is known to drop, sell, craft or give (event, cash and unused items are mostly these).</li>
+        <li><b>Get it from</b> keeps only items with that source, e.g. Monster drops = something is reported to drop it.</li>
+        <li><b>Used for</b>: Crafting component = at least one crafting recipe uses it; Quests ask for it = a launch quest wants it.</li>
+        <li><b>Hide quest items</b> (on by default) hides letters, proofs and other items that only exist for a quest: the game's quest-item ID range, plus items a quest hands you.</li>
+      </ul></div>
+      <div><h4>Item pages</h4><ul>
+        <li>Stats, requirements, description and sell price come straight from the launch game files.</li>
+        <li>Drop tables aren't in the game files. Drops are meowdb player reports (+ = net confirmations); a few weapons also list meowdb's old MapleSEA drop list, marked "likely".</li>
+        <li>Shops are meowdb's NPC shop list. Recipes and quest rewards are from the game files.</li>
+        <li><b>Players</b> = the middle (median) price it sold for in player shops, from <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> (read off stream footage). "?" or "few sales" = under 5 sales seen, so rough. Prices move; check before selling.</li>
+      </ul></div>
+    </div>
+  </details>
+  <div id="itlist">
+  <div class="controls">
+    <label>Search<input id="itsearch" type="search" placeholder="item or monster"></label>
+    <label>Type<select id="itcat"><option value="">All</option><option value="Equip">All equipment</option><option value="Weapon">Weapons</option><option value="Armor">Armor</option><option value="Acc">Accessories</option><option value="Use">Use</option><option value="Etc">Etc</option><option value="Setup">Setup</option><option value="Scroll">Scrolls</option></select></label>
+    <label>Slot<select id="itslot"><option value="">Any</option></select></label>
+    <label>Job<select id="itjob"><option value="">Any</option><option>Beginner</option><option>Warrior</option><option value="Mage">Magician</option><option>Bowman</option><option>Thief</option></select></label>
+    <label>Get it from<select id="itfrom"><option value="">Anywhere</option><option value="drop">Monster drops</option><option value="shop">NPC shops</option><option value="craft">Crafting</option><option value="quest">Quest rewards</option></select></label>
+    <label>Used for<select id="ituse"><option value="">Anything</option><option value="craft">Crafting component</option><option value="quest">Quests ask for it</option></select></label>
+    <label class="chk"><input type="checkbox" id="itsrc"> Has a known source</label>
+    <label class="chk"><input type="checkbox" id="itnoq"> Hide quest items</label>
+    <button class="btn" id="itreset" type="button" style="align-self:flex-end">Reset filters</button>
+    <span class="pill p-hot" id="itcount" style="align-self:center"></span>
+  </div>
+  <div class="tblwrap"><table>
+    <thead id="ithead"><tr><th data-k="name"><button>Item</button></th><th data-k="type"><button>Type</button></th><th class="num" data-k="lv"><button>Lv</button></th><th>Job</th><th>Stats</th><th class="num" data-k="price"><button>NPC pays</button></th><th class="num" data-k="pw" title="Median player-shop sale price (meso.watch)"><button>Players</button></th><th>Get it from</th></tr></thead>
+    <tbody id="itrows"></tbody>
+  </table></div>
+  <button class="btn" id="itmore" hidden></button>
+  </div>
+  <div id="itpage" hidden></div>
+</section>

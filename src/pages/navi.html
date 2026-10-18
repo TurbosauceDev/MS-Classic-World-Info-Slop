@@ -1,0 +1,22 @@
+<section id="navi" hidden>
+  <details class="howto">
+    <summary>How to use the map navigator</summary>
+    <ul>
+      <li>Type a destination, or open a map's card (click any map name on the site) and press <b>Route here</b>.</li>
+      <li>Pick where you're starting: type a map or tap a town.</li>
+      <li>The route is the quickest one by our travel estimate (30 s per map walked, 45 s per cab ride between Lith Harbor, Henesys, Ellinia, Kerning City, Perion and Sleepywood), the same model the Path Planner uses. Tick <b>No taxi</b> to walk the whole way (fewest maps).</li>
+      <li>Each step says which numbered exit to take; open <b>Minimap</b> to see where it is (highlighted). Dashed numbers are hidden portals.</li>
+      <li>Portals come from the launch game files. Maps you only reach through an NPC (jump quests, KPQ, job tests) have no route.</li>
+    </ul>
+  </details>
+  <div class="controls">
+    <label>From<input id="navfrom" type="search" list="navmaps" placeholder="starting map"></label>
+    <button class="btn" id="navswap" type="button" style="align-self:flex-end">Swap</button>
+    <button class="btn" id="navshare" type="button" style="align-self:flex-end">Copy link</button>
+    <label>To<input id="navto" type="search" list="navmaps" placeholder="destination map"></label>
+    <label class="chk" style="align-self:center"><input id="navnocab" type="checkbox"> No taxi</label>
+    <datalist id="navmaps"></datalist>
+  </div>
+  <div class="seg small" id="navtowns" role="radiogroup" aria-label="Start from a town" style="margin:10px 0 14px"></div>
+  <div id="navout" class="mpage"></div>
+</section>

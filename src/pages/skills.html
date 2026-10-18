@@ -1,0 +1,27 @@
+<section id="skills" hidden>
+  <details class="howto">
+    <summary>How to use the skill database</summary>
+    <ul>
+      <li>Every 1st and 2nd job skill in the launch game files, for all 14 jobs. 3rd job isn't in the launch, so it's left out.</li>
+      <li>Search by skill name, job or anything in its description or effects (e.g. "speed", "MP -", "Def."). Filter by class, job, 1st/2nd job and type. <b>Reset filters</b> clears everything. Click a column to sort.</li>
+      <li>Click a skill to open its page: description, the effect at every level, which skill it needs first and which skills it unlocks.</li>
+      <li>Names, icons, max levels, requirements and effects come straight from the game files. <b>Type</b> is our own label from the game files' skill kind (Debuff = lowers a monster's stats without dealing damage).</li>
+    </ul>
+  </details>
+  <div id="sklist">
+  <div class="controls">
+    <label>Search<input id="sksearch" type="search" placeholder="skill, job or effect"></label>
+    <label>Class<select id="skcls"><option value="">All</option><option>Warrior</option><option>Magician</option><option>Bowman</option><option>Thief</option></select></label>
+    <label>Job<select id="skjob"><option value="">All</option></select></label>
+    <label>Advancement<select id="sktier"><option value="">Both</option><option value="1">1st job</option><option value="2">2nd job</option></select></label>
+    <label>Type<select id="sktype"><option value="">All</option></select></label>
+    <button class="btn" id="skreset" type="button" style="align-self:flex-end">Reset filters</button>
+    <span class="pill p-hot" id="skcount" style="align-self:center"></span>
+  </div>
+  <div class="tblwrap"><table>
+    <thead id="skhead"><tr><th data-k="name"><button>Skill</button></th><th data-k="job"><button>Job</button></th><th data-k="type"><button>Type</button></th><th class="num" data-k="max"><button>Max</button></th><th>Needs</th><th>At max level</th></tr></thead>
+    <tbody id="skrows"></tbody>
+  </table></div>
+  </div>
+  <div id="skpage" hidden></div>
+</section>

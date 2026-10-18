@@ -1,0 +1,35 @@
+<section id="mobs" hidden>
+  <details class="howto">
+    <summary>How to use the monster database</summary>
+    <div class="howgrid">
+      <div><h4>The list</h4><ul>
+        <li>Every monster you can meet at launch: field monsters, bosses, jump quests, KPQ and the 2nd job test maps. Orbis, El Nath and Forgotten Hollow monsters are left out.</li>
+        <li>Search by monster, map or drop. <b>Drops item</b> shows only monsters players report dropping that item (pick from the list or type part of a name). <b>Weak to</b> keeps monsters the game files mark weak to that element (spells of it hit harder). <b>Reset filters</b> clears everything. Click a column to sort. Click a monster (here or anywhere on the site) to open its page.</li>
+        <li><b>Best maps to farm it:</b> every regular map it spawns on, ranked by how many of it you'd kill per hour at your class and level (estimate, same model as Where to train). The minimap shows where it spawns.</li>
+        <li><b>EXP/100 HP</b> = EXP per 100 HP of damage: higher is a more efficient kill.</li>
+        <li>Stats, attacks, skills and spawns come straight from the launch game files.</li>
+      </ul></div>
+      <div><h4>Drops and mesos</h4><ul>
+        <li>Drop tables aren't in the game files (the server decides them). Drops shown are what players report on meowdb; + is how many more players confirmed it than disputed it. Unconfirmed reports are shown faded.</li>
+        <li>Mesos are the median of trusted meowdb player reports, times how often it drops mesos.</li>
+        <li>Skill names the game files leave blank show as "Self buff #id".</li>
+      </ul></div>
+    </div>
+  </details>
+  <div id="mblist">
+  <div class="controls">
+    <label>Search<input id="mbsearch" type="search" placeholder="monster, map or drop"></label>
+    <label>Type<select id="mbkind"><option value="">All</option><option value="field">Field monsters</option><option value="boss">Bosses</option><option value="jq">Jump quests</option><option value="kpq">KPQ</option><option value="job">2nd job test</option></select></label>
+    <label>Weak to<select id="mbweak"><option value="">Any</option><option>Fire</option><option>Ice</option><option>Lightning</option><option>Poison</option><option>Holy</option><option value="none">No weakness</option></select></label>
+    <label>Drops item<input id="mbitem" type="search" list="mbitemlist" placeholder="item name"></label>
+    <datalist id="mbitemlist"></datalist>
+    <button class="btn" id="mbreset" type="button" style="align-self:flex-end">Reset filters</button>
+    <span class="pill p-hot" id="mbcount" style="align-self:center"></span>
+  </div>
+  <div class="tblwrap"><table>
+    <thead id="mbhead"><tr><th data-k="name"><button>Monster</button></th><th class="num" data-k="level"><button>Lv</button></th><th class="num" data-k="hp"><button>HP</button></th><th class="num" data-k="exp"><button>EXP</button></th><th class="num" data-k="ratio"><button>EXP/100 HP</button></th><th class="num" data-k="eva"><button>Avoid</button></th><th class="num" data-k="pdd"><button>W.DEF</button></th><th class="num" data-k="mdd"><button>M.DEF</button></th><th class="num" data-k="atk"><button>Touch ATK</button></th><th class="num" data-k="acc"><button>ACC</button></th></tr></thead>
+    <tbody id="mbrows"></tbody>
+  </table></div>
+  </div>
+  <div id="mbpage" hidden></div>
+</section>

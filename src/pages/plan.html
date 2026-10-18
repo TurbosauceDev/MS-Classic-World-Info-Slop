@@ -1,0 +1,115 @@
+<section id="plan" hidden>
+  <details class="howto">
+    <summary>How the numbers work</summary>
+    <div class="howgrid">
+      <div>
+        <h4>What's counted</h4>
+        <ul>
+          <li>Damage, accuracy and crit use the COT2 client formulas and per-level skill tables.</li>
+          <li><b>SP:</b> 1 at each job advancement plus 3 per level. 1st job gets 61 (levels 10–30) and those stay in 1st job skills; 2nd job SP can't go back into them (per meowdb).</li>
+          <li><b>Count buffs</b> adds Rage, Meditation, Focus, Bless, Steal's Attack Power (Bandit), Magic Armor / Iron Body / Iron Will defense and your booster if they have points.</li>
+          <li><b>Attack speed:</b> meowdb's measured times per weapon speed (e.g. speed 6 = 810 ms, 4 = 720 ms); every Magician spell takes 810 ms whatever the weapon. Booster moves your weapon 2 speeds.</li>
+          <li><b>Final Attack</b> is counted only when it helps: each proc plays its own attack (~0.6 s), so on one monster it can cost damage. Hunter's fires 3 arrows. Axe Mastery's bleed and Poison Breath's poison add their damage over time.</li>
+          <li><b>HP and MP</b> follow meowdb's measured gains per level and per job advancement, plus Max HP / Max MP Increase.</li>
+          <li><b>Armor</b> (optional): pick pieces per slot; their stats count everywhere on this tab. <b>Upkeep</b> = potions and ammo per hour while attacking nonstop, at shop prices.</li>
+          <li><b>Copy link</b> makes a link that opens this exact build.</li>
+          <li><b>Import from screenshots</b> reads the game's windows in this page (nothing is uploaded): level and STR/DEX/INT/LUK from the stat window, worn items by their icons, skill levels from the skill window (one screenshot per skill tab; scroll and add more if the list is long). The stat window shows totals, so the read gear's stats are taken off to get your AP. Gear counts as its base stats (an average drop); scrolled or above-average gear adds more, so fix the numbers in the review if you know them. Screenshots add up in any order; ✕ removes one, <b>Reset</b> clears them all. PNG screenshots work best; a game window that's been smoothly resized (not 100% or 200%) may not read.</li>
+          <li><b>Auto build</b> spends every point: first where it adds the most damage after misses, then passives, then buffs. Skills follow the game's prerequisites.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Not counted or estimated</h4>
+        <ul>
+          <li>Scrolls and party buffs. Without armor picked, W.DEF is your STR's share plus skills only.</li>
+          <li>3rd job skills, since 3rd job isn't in the launch. Once every 2nd job skill is maxed, extra SP shows as spare.</li>
+          
+          <li>Final Attack's own attack time is fitted to meowdb's Fighter numbers (0.88 × your weapon's attack time).</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+  <div class="plan">
+    <div class="pcol">
+      <div class="card">
+        <div class="cardhead"><h3>Import from screenshots</h3><span id="pimpst" class="pill"></span></div>
+        <label class="drop" id="pimpdrop"><input type="file" id="pimpfile" accept="image/*" multiple>
+          <span>Drop, pick or paste (Ctrl+V) screenshots of your <b>Character Stat</b>, <b>Equipment Inventory</b> and <b>Skill Inventory</b> windows, in any order, one at a time or together. You check what was read before it's applied.</span></label>
+        <p id="pimpreads"></p>
+        <div id="pimprev"></div>
+      </div>
+      <div class="card">
+        <div class="seg small" id="pclass">
+          <button data-v="Warrior">Warrior</button><button data-v="Magician">Magician</button>
+          <button data-v="Bowman">Bowman</button><button data-v="Thief">Thief</button>
+        </div>
+        <div class="row2">
+          <label class="lab">Level <b id="plvlout">30</b>
+            <input id="plvl" type="range" min="10" max="100" value="30"></label>
+          <label class="lab">Job<select id="pbranch"></select></label>
+        </div>
+        <div class="lab" id="pfamwrap" style="margin-top:12px">Weapon type<div class="seg small" id="pfam"></div></div>
+        <div class="row2">
+          <label class="lab">Weapon<select id="pweapon"></select></label>
+          <label class="lab">Attack skill<select id="pskill"></select></label>
+        </div>
+        <label class="lab" id="pammowrap">Ammo<select id="pammo"></select></label>
+      </div>
+
+      <div class="card">
+        <div class="cardhead"><h3>Ability points</h3><span id="papleft" class="pill p-good"></span></div>
+        <div class="apgrid">
+          <label class="lab">STR<input id="pSTR" type="number" min="4"></label>
+          <label class="lab">DEX<input id="pDEX" type="number" min="4"></label>
+          <label class="lab">INT<input id="pINT" type="number" min="4"></label>
+          <label class="lab">LUK<input id="pLUK" type="number" min="4"></label>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="pauto">Auto: meet weapon needs, rest into main stat</button>
+        </div>
+        <p class="tiny" id="preqnote"></p>
+      </div>
+
+      <div class="card">
+        <div class="cardhead"><h3>Armor</h3><span id="pgearsum" class="pill p-hot"></span></div>
+        <div class="row2"><label class="lab">Character<select id="pgender"><option value="">Any gender</option><option value="male">Male</option><option value="female">Female</option></select></label>
+          <div class="lab"><span>&nbsp;</span><button class="btn" id="pgearclear">Remove all armor</button></div></div>
+        <div class="geargrid" id="pgear"></div>
+        <p class="tiny">Armor stats count toward damage, accuracy, avoid, defense, HP/MP and weapon requirements. Where to get it: shop price (meowdb), craft, quest reward, or drop / Free Market. The Path Planner's character wears none.</p>
+      </div>
+
+      <div class="card">
+        <div class="cardhead"><h3>Skill build</h3><span id="pspleft" class="pill p-good"></span></div>
+        <div class="btnrow" style="margin-top:0">
+          <button class="btn" id="pspauto">Auto: most damage for this attack</button>
+          <button class="btn" id="pspreset">Reset</button>
+          <label class="chk"><input type="checkbox" id="pbuffs"> Count buffs</label>
+        </div>
+        <div id="pskills"></div>
+      </div>
+    </div>
+
+    <div class="pcol">
+      <div class="card hero">
+        <div class="psum"><span id="psicon"></span><div class="tiny" id="psummary"></div></div>
+        <div class="big"><span id="pdps">–</span><small> damage / sec</small></div>
+        <div class="tiny" id="pdpsnote"></div>
+        <div class="tiny" id="pcost"></div>
+        <div class="btnrow"><button class="btn primary" id="psend">Use this in "Where to train"</button>
+          <button class="btn primary" id="ppath">Plan a path for this character</button>
+          <button class="btn" id="pshare">Copy link to this build</button></div>
+      </div>
+      <div class="card">
+        <h3>Per attack</h3>
+        <dl class="stats" id="pattack"></dl>
+      </div>
+      <div class="card">
+        <h3>Character stats</h3>
+        <dl class="stats" id="pstats"></dl>
+      </div>
+      <div class="card">
+        <h3>Can you hit them?</h3>
+        <div id="phits"></div>
+      </div>
+    </div>
+  </div>
+</section>

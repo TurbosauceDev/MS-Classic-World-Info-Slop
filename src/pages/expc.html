@@ -1,0 +1,39 @@
+<section id="expc" hidden>
+  <details class="howto">
+    <summary>How to use the EXP/hr calculator</summary>
+    <ul>
+      <li>Before you start, note your EXP from the bar at the bottom of the screen (e.g. <b>123456[45.67%]</b>) and press <b>Start timer</b>.</li>
+      <li>Train for 5 to 10 minutes, then press <b>Stop</b> and type the new EXP. If you leveled up, raise <b>End level</b>.</li>
+      <li>EXP boxes take the number, the percentage (45.67%) or the whole bar text. Or skip the timer and type the minutes.</li>
+      <li>Pick the map, party and EXP card to compare with our <b>Where to train</b> estimate for that map (default build for your class and level). Our estimate counts no EXP card, so it's multiplied by your card here.</li>
+      <li><b>Save</b> keeps the session in this browser only. Sort by date or EXP/hr to compare maps.</li>
+      <li>EXP needed above level 49 is meowdb's historical table (not confirmed in game), so time to level is an estimate there.</li>
+    </ul>
+  </details>
+  <div class="controls">
+    <label>Class<select id="eccls">
+      <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
+      <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
+    <label>Start level<input id="ecl0" type="number" min="1" max="99" value="25" style="width:5em"></label>
+    <label>Start EXP<input id="ece0" type="text" inputmode="decimal" placeholder="12345 or 45.6%" size="13"></label>
+    <label>End level<input id="ecl1" type="number" min="1" max="99" value="25" style="width:5em"></label>
+    <label>End EXP<input id="ece1" type="text" inputmode="decimal" placeholder="12345 or 45.6%" size="13"></label>
+    <label>Minutes<input id="ecmin" type="number" min="0" step="0.1" style="width:6em"></label>
+    <button class="btn" id="ectimer" type="button" style="align-self:flex-end">Start timer</button>
+  </div>
+  <div class="controls" style="margin-top:8px">
+    <label>Map<input id="ecmap" type="search" list="ecmaps" placeholder="optional" size="24"></label>
+    <datalist id="ecmaps"></datalist>
+    <label>Party<select id="ecpty"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
+    <label>EXP card<select id="eccard"><option value="1">None</option><option value="1.5">1.5x</option><option value="2">2x</option></select></label>
+    <label>Goal level<input id="ecgoalL" type="number" min="2" max="100" style="width:5em"></label>
+  </div>
+  <div id="ecout" class="mpage"></div>
+  <h2>Saved sessions</h2>
+  <div class="controls"><label>Sort<select id="ecsort"><option value="t">Newest</option><option value="rate">EXP/hr</option></select></label>
+    <button class="btn" id="ecclear" type="button" style="align-self:flex-end">Clear all</button></div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>When</th><th>Class</th><th class="num">Lv</th><th>Map</th><th class="num">Party</th><th class="num">Card</th><th class="num">Min</th><th class="num">EXP</th><th class="num">EXP/hr</th><th class="num">vs estimate</th><th></th></tr></thead>
+    <tbody id="ecrows"></tbody>
+  </table></div>
+</section>

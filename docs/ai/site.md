@@ -36,7 +36,8 @@ CI: `.github/workflows/tests.yml` runs smoke + golden on every push/PR to the de
 ## Source map (bytes; grep before reading anything over ~15 KB)
 | file | KB | what |
 |---|---|---|
-| src/index.html | 114 | all markup; changelog `<section id="log">` starts ~line 888 (newest first) |
+| src/index.html | 7 | page shell: head, header/nav, `<!--@page id-->` slots (build.py inlines `src/pages/<id>.html`) |
+| src/pages/*.html | | one `<section id>` per page; biggest `src/pages/log.html` 24 KB (changelog, newest first), `src/pages/path.html` 11 KB |
 | src/styles.css | 42 | theme tokens on `:root`, dark via prefers-color-scheme + `[data-theme]` |
 | 00-core.js | | `D = __DATA__`, `$`, fmt, esc, tab switching, home/nav |
 | 10-maps.js | 31 | client formulas (hitProb, lvlPen, classAcc), hpmpAt, touchPct, POTS, party, mobKill, mapShare, mapRates, rankMaps (Where to train) |
@@ -65,7 +66,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden on every push/PR to the de
 Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `python3 -c "import json;d=json.load(open('data/data.json'));print(list(d))"`.
 
 ## Recipes
-- **New page/tab:** markup `<section id="x" hidden>` in index.html; button `#t-x` with `data-cat` in `.subs`; `.hlink`
+- **New page/tab:** markup `<section id="x" hidden>` in src/pages/x.html + a `<!--@page x-->` slot in index.html; button `#t-x` with `data-cat` in `.subs`; `.hlink`
   on the Home card; bump the home-link count in tests/smoke.js (21 now) and add a click-through check.
   Give the `.hlink` an `<img class="hic" data-ic="i:<item>|m:<mob>|s:<skill>">` sprite (filled from D in 00-core.js,
   shown only when the card is a billboard) and bump the sprite count in smoke.js (27 = 6 headers + 21 links).
@@ -95,6 +96,6 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - No drop rates exist anywhere (OSMS, meowdb have reports only); every rate on the page is an assumption, labelled.
 - Keep or sell skips quest items with the same test as Items "Hide quest items" (403xxxx ID block + quest start items; `QITEM` in 47-keep.js and 49-items.js, keep both in sync). Smoke: "keep list: no quest items".
 
-## Split candidates (not done; their owners were mid-work 2026-10-18)
-- `src/index.html` 114 KB: move the changelog (~275 lines) to `src/changelog.html`, injected by build.py.
+## Splits
+- 10-18: `src/index.html` split into `src/pages/<id>.html` (built dist identical). Edit a page's file, not the shell; build.py asserts every page file has a slot.
 - `50-builder.js` 43 KB and `60-planner.js` 42 KB are big but cohesive; grep + ranged reads are enough for now.

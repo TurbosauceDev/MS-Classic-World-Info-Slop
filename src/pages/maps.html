@@ -1,0 +1,81 @@
+<section id="maps" hidden>
+  <details class="howto">
+    <summary>How the ranking works</summary>
+    <div class="howgrid">
+      <div>
+        <h4>The score</h4>
+        <ul>
+          <li>Each kill costs the monster's HP ÷ your damage, after hit chance, defense, level penalty and element, plus 1 second of walking and aiming.</li>
+          <li>Score = map EXP ÷ total time, capped at what one player can kill per 7.56-second respawn. How many monsters a map keeps alive is its <b>mob capacity</b> from the game files (OSMS: worked out from map size, checked against in-game counts), often about half its spawn points.</li>
+          <li>Maps need 8+ monsters; bosses are left out. Hit below 90% is flagged.</li>
+          <li><b>Area attacks by default:</b> Slash Blast, Arrow Bomb, Thunder Bolt, Poison Breath (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, with the map's mob capacity alive: an estimate. Iron Arrow loses 20% per extra monster. Double Shot and Holy Arrow split a fixed number of arrows, so they count as single target. Thieves, 1st job Bowmen and 1st job Magicians have no area attack.</li>
+          <li><b>Danger:</b> one hit from the map's hardest hitter as a share of your Max HP: its touch against your W.DEF, or for Tauromacis and Taurospear (the only launch monsters with a magic attack) the magic attack against your M.DEF (meowdb's labels: under 10% Safe, 10–24% Caution, 25–49% Danger, 50%+ Lethal). Armor isn't counted, so it reads a little high. "Hits you" is the chance its attack lands against your avoid (meowdb's formula).</li>
+          <li><b>To potions:</b> portals to the nearest NPC selling potions (meowdb's shop list). A far refill eats into the real EXP/hr.</li>
+          <li><b>Mesos/hr:</b> monster meso drops at that kill speed. Per-kill amounts are player reports on meowdb (17 monsters so far); the rest are estimated at 2 mesos per monster level, which is what the reported ones average. With a Character Builder setup, "net" takes off your potions and ammo.</li>
+          <li><b>Party:</b> your share of the map plus the measured party bonus (+10/20/30% at 2/3/4+). Spawns grow 5% per extra player up to 100% at 6 (meowdb: not fully confirmed). Assumes equal players.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Set your real damage</h4>
+        <ul>
+          <li>Copy the second row from your in-game stat window: <b>Attack</b> range (e.g. 43-200), Accuracy, Evasion, Max HP, Weapon Def. Magicians: Magic and INT instead of Attack.</li>
+          <li><b>Basic attack (no skills)</b> under Attack: 100% damage, one hit per swing at your weapon's speed, no MP. Bows and claws still use an arrow or star per attack.</li>
+          <li>Empty boxes use the grey number in them: the Character Builder's default build for your class and level.</li>
+          <li>Damage per second = your Attack range × that build's main skill, crit and weapon speed (named under the controls). Or build your character in the <b>Character Builder</b> and press "Use this in Where to train".</li>
+          <li>Weak, low-level mobs win when you hit softly; tankier at-level mobs win once you hit hard.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Frugal mode</h4>
+        <ul>
+          <li>For when mesos are tight: shows only maps where meso drops beat what you spend, fastest EXP first.</li>
+          <li>Spending = potions for your skills and buffs plus ammo (the Character Builder's numbers if you sent them, else a default build for your class and level) and Red Potions for damage taken.</li>
+          <li>Damage taken is an estimate. <b>Monsters that hit you</b> (default 1 in 4, your pick) sets how many of the monsters you kill get one swing at you first; each lands at its hit chance against your Evasion. Ranged classes can go lower, melee higher.</li>
+          <li><b>Loot sold to NPCs</b> counts in "net": every ETC item and potion players reported a monster dropping (meowdb), at NPC sell price, at 5% a kill each (default, cautious), 10% or 15%. Drop rates aren't in the game files, so this is an assumption. Ores, gems, equips and scrolls are too rare to count.</li>
+          <li>Potions the map's monsters drop (Red, Orange, White, Blue, Elixir, Lemon) are listed under the map name.</li>
+          <li>Maps rated Danger or Lethal are left out.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Left out</h4>
+        <ul>
+          <li>Map layout and climbing, item drops and selling loot (except in Frugal mode), crowding. EXP needed above level 49 is meowdb's historical table.</li>
+          <li>EXP/hr is an estimate. Use it to shortlist maps, then pick the one that feels best.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+  <div class="controls">
+    <label>Class<select id="cls">
+      <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
+      <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
+    <label>Your level<input id="lvl" type="number" min="10" max="100" value="25"></label>
+    <label>Attack<select id="aoe"><option value="1">Area attack (AoE)</option><option value="">Single target</option><option value="basic">Basic attack (no skills)</option></select></label>
+    <label>Mode<select id="tmode"><option value="">Fastest EXP</option><option value="frugal">Frugal (meso positive)</option><option value="players">Farmed by players (shared runs)</option></select></label>
+    <label hidden title="Drop rate per kill for each ETC item and potion players reported. An assumption: the game files have no drop rates.">Loot sold to NPCs<select id="lootr"><option value="0">Not counted</option><option value="0.05" selected>5% a kill (cautious)</option><option value="0.1">10% a kill</option><option value="0.15">15% a kill</option></select></label>
+    <label hidden title="What each loot item is worth: NPC sell price, or the median player-shop sale price from meso.watch (NPC price when it has under 5 sales).">Loot price<select id="lootp"><option value="">NPC price</option><option value="pw">Player shops (meso.watch)</option></select></label>
+    <label hidden title="Share of the monsters you kill that get a hit on you first. Your pick, not game data.">Monsters that hit you<select id="hitsh"><option value="0.1">1 in 10</option><option value="0.25" selected>1 in 4</option><option value="0.5">Half</option><option value="1">Every one</option></select></label>
+    <label>Party<select id="party"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
+  </div>
+  <div class="controls" style="margin-top:8px" title="From the in-game stat window. Leave a box empty to use the number shown in it.">
+    <label>Attack<input id="atk" type="text" inputmode="numeric" size="9"></label>
+    <label class="magin" hidden>Magic<input id="umag" type="number" min="0" style="width:6em"></label>
+    <label class="magin" hidden>INT<input id="uint" type="number" min="0" style="width:6em"></label>
+    <label>Accuracy<input id="uacc" type="number" min="0" style="width:6em"></label>
+    <label>Evasion<input id="uavo" type="number" min="0" style="width:6em"></label>
+    <label>Max HP<input id="uhp" type="number" min="1" style="width:6em"></label>
+    <label>Weapon Def.<input id="uwdef" type="number" min="0" style="width:6em"></label>
+    <button class="btn" id="tshare" type="button" style="align-self:flex-end">Copy link</button>
+  </div>
+  <p class="note" id="mapnote"></p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>#</th><th>Map</th><th>Monsters</th><th class="num">Mobs</th><th class="num">Avg lvl</th><th class="num">Hit</th><th>Danger</th><th>To potions</th><th>Relative</th><th class="num">Est. EXP/hr</th><th class="num">Mesos/hr</th><th class="num">Hrs / level</th></tr></thead>
+    <tbody id="maprows"></tbody>
+  </table></div>
+  <h2>Bosses and timed spawns</h2>
+  <p class="note">Monsters on a respawn timer instead of the normal 7.56 s cycle, on maps open at launch. The ranking above leaves them out. A timer starts when the monster dies and the spawn waits for the next 7.56 s tick (meowdb spawn guide). Mushmom's map data says 60 minutes, but two player reports put it near 90 (meowdb). Crimson Balrog has no spawn on a launch map, King Slime is only in the Kerning Party Quest and Rotten Mushmom is in Forgotten Hollow.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Monster</th><th class="num">Lv</th><th class="num">HP</th><th class="num">EXP</th><th>Map</th><th class="num">Count</th><th class="num">Respawn</th></tr></thead>
+    <tbody id="timedrows"></tbody>
+  </table></div>
+</section>

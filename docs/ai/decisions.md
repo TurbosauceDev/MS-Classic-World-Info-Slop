@@ -54,3 +54,5 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 Site gets a Theme picker with the tracker's presets and MSCT1 share codes, so both can match in any theme.
 - 2026-10-18 Keep or sell lists only equips/use/monster-drop materials; quest items (403xxxx block or handed out by a quest) are always kept in-game, so they are dropped.
 - 2026-10-18 Tracker run log: WoW-combat-log style, batched (every 2 s), skinny box near the run name; side-by-side docking must be obvious ("i can only move things up and down").
+- 2026-10-18 Ignore the price checker's blue tube "1 not read" and the tracker's "117 on pale selected slot" misreads unless the exact same issue comes up again.
+- 2026-10-18 Split big source files to make threads cheaper (Danny: "we will take every 'free' savings"); pure refactors, no behaviour change.

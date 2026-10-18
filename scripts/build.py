@@ -1,13 +1,16 @@
-"""Assemble the single-file page: src/index.html + src/styles.css + src/js/*.js + data/data.json -> dist/index.html.
+"""Assemble the single-file page: src/index.html (+ src/pages/*.html) + src/styles.css + src/js/*.js + data/data.json -> dist/index.html.
 
 The page must stay one self-contained HTML file (it is published as a claude.ai artifact and also opens from file://),
 so CSS, JS and the data are inlined. JS files are concatenated in filename order into ONE <script>, so they share
 top-level scope: later files can use functions/consts from earlier ones (e.g. 50-builder.js uses hitProb and rankMaps).
 """
-import datetime, pathlib, sys
+import datetime, pathlib, re, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 src = ROOT / "src"
 html = (src / "index.html").read_text()
+# each page's <section> lives in src/pages/<id>.html (so a thread reads only the page it touches); <!--@page id--> marks its slot
+html = re.sub(r"<!--@page ([\w-]+)-->", lambda m: (src / "pages" / f"{m.group(1)}.html").read_text().rstrip("\n"), html)
+assert not set(p.stem for p in (src / "pages").glob("*.html")) - set(re.findall(r'<section id="([\w-]+)"', html)), "page file not in index.html"
 css = (src / "styles.css").read_text()
 js = "\n".join(p.read_text() for p in sorted((src / "js").glob("*.js")))
 # the grind tracker's screen readers (inventory price check uses them); one IIFE, exports window.GrindReaders
