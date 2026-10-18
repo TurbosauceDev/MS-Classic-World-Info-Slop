@@ -158,6 +158,33 @@ const path = require("path"), {chromium} = require("playwright");
     const d = await page.locator("#dock").boundingBox(); await page.mouse.move(d.x + 40, d.y + d.height / 2, {steps: 5}); await page.mouse.up(); await page.waitForTimeout(50) }
   const pin = await page.evaluate(() => [document.querySelector("[data-box=stats]").parentElement.id, JSON.stringify(settings.layout.order.dock)]);
   if (pin[0] !== "dock" || pin[1] !== '["stats"]') throw new Error("pin: " + pin);
+  // side by side: Items looted dropped on the right edge of Consumables used makes a row; the splitter resizes it; the
+  // Mesos box dropped on the bottom half of Items looted stacks under it in a column; saved and loaded back as rows
+  await page.click(".tabs [data-tab=loot]");
+  const edge = async (from, to, fx, fy) => { const a = await page.locator(from).boundingBox();
+    await page.mouse.move(a.x + 3, a.y + 3); await page.mouse.down(); await page.mouse.move(a.x + 20, a.y + 20, {steps: 3});
+    const b = await page.locator(to).boundingBox(); await page.mouse.move(b.x + b.width * fx, b.y + b.height * fy, {steps: 5}); await page.mouse.up(); await page.waitForTimeout(50) };
+  await edge("[data-box=items] .grip", "#usedBox", 0.95, 0.5);
+  const row1 = await page.evaluate(() => { const r = document.querySelector("#usedBox").parentElement;
+    return [r.className, [...r.children].map(x => x.dataset.box || x.className).join(), JSON.stringify(settings.layout.order.loot)] });
+  if (row1[0] !== "boxrow" || row1[1] !== "used,split,items" || !row1[2].includes('{"row":["used","items"]')) throw new Error("row: " + row1);
+  { const s = await page.locator(".boxrow .split").boundingBox(); await page.mouse.move(s.x + 4, s.y + 20); await page.mouse.down();
+    await page.mouse.move(s.x + 104, s.y + 20, {steps: 4}); await page.mouse.up(); await page.waitForTimeout(50) }
+  const wd = await page.evaluate(() => [document.querySelector("#usedBox").getBoundingClientRect().width, document.querySelector("[data-box=items]").getBoundingClientRect().width, settings.layout.order.loot.find(x => x.row).w]);
+  if (!(wd[0] > wd[1] + 150) || !(wd[2][0] > wd[2][1])) throw new Error("resize: " + JSON.stringify(wd));
+  await page.evaluate(() => document.querySelector("section[data-tab=loot]").appendChild(document.querySelector("#mesoBox")));   // (moved to Session above)
+  await edge("#mesoBox h3", "[data-box=items]", 0.5, 0.9);
+  const col = await page.evaluate(() => { const c = document.querySelector("#mesoBox").parentElement;
+    return [c.className, c.parentElement.className, [...c.children].map(x => x.dataset.box).join(), JSON.stringify(settings.layout.order.loot)] });
+  if (col[0] !== "boxcol" || col[1] !== "boxrow" || col[2] !== "items,mesos" || !col[3].includes('["items","mesos"]')) throw new Error("column: " + col);
+  // pulled back out: the column and then the row unwrap on their own
+  const unw = await page.evaluate(async () => { const saved = JSON.parse(JSON.stringify(settings.layout));
+    for (const k of ["ArrowUp", "ArrowUp"]) document.querySelector("[data-box=mesos] .grip").dispatchEvent(new KeyboardEvent("keydown", {key: k}));
+    document.querySelector("[data-box=items] .grip").dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowDown"}));
+    const flat = document.querySelectorAll(".boxrow, .boxcol").length;
+    layoutLoad(saved); const re = document.querySelector("#mesoBox").parentElement.className + "/" + Math.round(document.querySelector("#usedBox").getBoundingClientRect().width);
+    return [flat, re, document.querySelector("#usedBox").parentElement.className] });
+  if (unw[0] !== 0 || !unw[1].startsWith("boxcol/") || unw[2] !== "boxrow") throw new Error("unwrap/load: " + unw);
   await page.click(".tabs [data-tab=settings]"); await page.click("#layoutReset"); if ((await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join())) !== "kpq,alerts,snaps") throw new Error("reset folds");
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click())); await page.setViewportSize({width: 1280, height: 720});
   // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened

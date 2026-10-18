@@ -8,7 +8,7 @@
   :root { --bg:#f6f4fb; --panel:#fff; --ink:#2b2638; --muted:#6f6880; --line:#e2dcef; --accent:#7b5cc4; --accent-soft:#ece5fa; --leaf:#3f8f5a; --warn:#b7791f; --bad:#c0392b; }
   @media (prefers-color-scheme: dark) { :root { --bg:#17141f; --panel:#211d2c; --ink:#ece8f5; --muted:#a39cb5; --line:#363044; --accent:#a98bf0; --accent-soft:#2e2640; --leaf:#5fbf7f; --warn:#e0a84a; --bad:#ef6b5b; } }
   * { box-sizing:border-box; }
-  body { margin:0; padding:10px; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
+  body { margin:0; padding:42px 10px 10px; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; }
   .k { color:var(--muted); font-size:12px; } .v { font-size:18px; font-weight:600; font-variant-numeric:tabular-nums; }
@@ -23,7 +23,17 @@
   .note { color:var(--muted); font-size:12px; }
   .empty { color:var(--muted); font-size:12px; padding:4px 0; }
   input[type=number] { width:80px; }
-  #mini { display:none; cursor:pointer; } body.mini > *:not(#mini) { display:none !important; } body.mini #mini { display:block; }
+  /* title bar: drawn by the page in the app's colours; the window's own buttons sit over its right end (titleBarOverlay) */
+  #titlebar { position:fixed; top:0; left:0; right:0; height:32px; z-index:55; display:flex; align-items:center; gap:2px; padding:0 0 0 10px;
+    padding-right:calc(100vw - env(titlebar-area-width, calc(100vw - 140px))); background:var(--panel); border-bottom:1px solid var(--line); -webkit-app-region:drag; user-select:none; }
+  #titlebar .tbname { font-size:12px; font-weight:600; color:var(--accent); margin-right:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #titlebar button { -webkit-app-region:no-drag; background:none; color:var(--muted); padding:4px 8px; font-size:12px; border-radius:6px; }
+  #titlebar button:hover, #titlebar button:focus-visible { background:var(--accent-soft); color:var(--ink); }
+  /* scrollbars in the app's colours (the page's own one starts under the title bar) */
+  ::-webkit-scrollbar { width:10px; height:10px; } ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--line); border-radius:6px; border:2px solid transparent; background-clip:padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background-color:var(--accent); } html::-webkit-scrollbar-track { margin-top:32px; }
+  #mini { display:none; cursor:pointer; } body.mini > *:not(#mini):not(#titlebar) { display:none !important; } body.mini #mini { display:block; }
   #mini .v { font-size:16px; } .hidden { display:none !important; } @keyframes flash { from { box-shadow: 0 0 0 3px var(--accent, #a78bfa) } to { box-shadow: none } } .flash { animation: flash 1.2s ease-out } .good { color:var(--leaf); } .slow { color:var(--warn); }
   /* top: Start/Stop, what's going on, the four numbers that matter */
   #top .bar { display:flex; align-items:center; gap:8px; }
@@ -82,7 +92,15 @@
   .coin { height:1em; width:auto; image-rendering:pixelated; vertical-align:-0.12em; margin-right:2px; }
   .ico { display:inline-block; width:22px; height:22px; object-fit:contain; image-rendering:pixelated; vertical-align:middle; margin:-3px 6px -3px 0; }
   .dragLabel { position:fixed; z-index:60; pointer-events:none; background:var(--accent); color:#fff; border-radius:6px; padding:3px 8px; font-size:12px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.3); }
-  .box.over-top { box-shadow:0 -3px 0 var(--accent); } .box.over-bottom { box-shadow:0 3px 0 var(--accent); }
+  .over-top { box-shadow:0 -3px 0 var(--accent); } .over-bottom { box-shadow:0 3px 0 var(--accent); }
+  .over-left { box-shadow:-3px 0 0 var(--accent); } .over-right { box-shadow:3px 0 0 var(--accent); }
+  /* boxes side by side: a row of boxes (or columns of boxes) with a splitter between each two */
+  .boxrow { display:flex; align-items:flex-start; } .boxrow > :not(.split) { flex:1 1 0px; min-width:0; }
+  .boxcol { display:flex; flex-direction:column; } .boxrow .box { overflow-x:auto; }
+  .split { flex:0 0 8px; align-self:stretch; cursor:col-resize; position:relative; touch-action:none; }
+  .split::after { content:""; position:absolute; left:3px; top:25%; bottom:calc(25% + 8px); width:2px; border-radius:1px; background:var(--line); }
+  .split:hover::after, .split.on::after, .split:focus-visible::after { background:var(--accent); }
+  body.resizing, body.resizing * { cursor:col-resize !important; user-select:none; }
   body.dragging #dock { min-height:40px; border:2px dashed var(--accent); border-radius:10px; margin-bottom:8px; padding:4px; }
   body.dragging #dock:empty::before { content:"Drop here to pin it above the tabs (shows on every tab)"; color:var(--muted); font-size:12px; }
   body.dragging .tabs button[data-tab=session], body.dragging .tabs button[data-tab=loot], body.dragging .tabs button[data-tab=hist] { outline:1px dashed var(--accent); }
@@ -100,10 +118,11 @@
   .cbar i { position:absolute; left:0; top:2px; bottom:2px; border-radius:3px; opacity:.35; } .cbar.a i { background:var(--accent); } .cbar.b i { background:var(--warn); }
   .cbar span { position:relative; padding-left:6px; line-height:17px; }
   tr.pickA td:first-child { box-shadow:inset 4px 0 var(--accent); padding-left:8px; } tr.pickB td:first-child { box-shadow:inset 4px 0 var(--warn); padding-left:8px; }
-  #updBanner { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-color:var(--accent); background:var(--accent-soft); } #updBanner b { flex:1; }
+  #updBanner { position:sticky; top:38px; z-index:5; display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-color:var(--accent); background:var(--accent-soft); } #updBanner b { flex:1; }
 </style>
 </head>
 <body>
+  <div id="titlebar"><span class="tbname">Grind Tracker</span><button data-menu="File">File</button><button data-menu="View">View</button><button data-menu="Help">Help</button></div>
   <div class="card" id="mini" title="Click for the full window"><span class="k">EXP/hr</span> <span class="v" id="miniExp">-</span>
     · <span class="k">next level</span> <span class="v" id="miniTtl">-</span><div class="note" id="miniNote"></div><div class="note" id="miniParty"></div><div class="note" id="miniGoal"></div></div>
   <div class="card hidden" id="guide">
@@ -113,8 +132,8 @@
       <li>Your job is read from the status bar. If it reads wrong, pick it under <b>Settings</b>.</li>
       <li>Playing in a party? Everyone types the same <b>party code</b> (Settings) to see each other's EXP/hr live.</li>
     </ol>
-    <p>Share your runs with other players? Anonymous: map, level, job, EXP, kills, drops. Never your character name. It feeds the
-      speed check after each run and the Confirmed Drops on the site.</p>
+    <p>Share your runs with other players? Sends map, level, job, EXP, kills, drops and KPQ rounds, never your character name. It feeds the
+      speed check after each run, the leaderboards and the Confirmed Drops on the site.</p>
     <p><button id="guideShare">Share</button> <button id="guideNo" class="alt">Don't share</button></p>
   </div>
   <div class="card hidden" id="updBanner"><b id="updText"></b> <button id="updGo">Restart and update</button></div>
@@ -222,7 +241,8 @@
         <li><b>Session</b>: farming time, deaths, potion costs, your goal, party, boss respawns and monsters killed.</li>
         <li><b>Loot</b>: mesos in and out, items looted and consumables used, each with a total.</li>
         <li>Every box can be moved by its <b>⠿</b> grip (onto another box, onto a tab, or above the tabs to see it on every tab)
-          and folded with <b>–</b>. Settings → Reset box layout puts them back.</li>
+          and folded with <b>–</b>. Drop it on another box's left or right edge to put the two side by side; drag the bar between
+          them to resize. Settings → Reset box layout puts them back.</li>
         <li><b>Snapshots</b>: EXP/hr from just two readings of the EXP bar (start and now), like mapleexp.com. A good check
           on the live number. Type a level or % to fix one that read wrong.</li>
         <li><b>History</b>: past sessions, your last 7 days, how long each level took, and Export CSV.</li>
@@ -291,7 +311,7 @@
     </div>
     <div class="card"><h3>Window and sharing</h3>
       <label class="chk"><input type="checkbox" id="ontop"> <span>Keep this window on top of everything</span></label>
-      <label class="chk"><input type="checkbox" id="share"> <span>Share my sessions (anonymous: map, kills, drops, KPQ rounds; no character name)</span></label>
+      <label class="chk"><input type="checkbox" id="share"> <span>Share my sessions for the leaderboards (map, kills, drops, KPQ rounds; no character name)</span></label>
       <div class="row"><button id="layoutReset" class="alt">Reset box layout</button> <span class="note">Boxes move by their ⠿ grip: onto another box, a tab, or the strip above the tabs.</span></div>
     </div>
     <div class="card"><h3>App</h3>

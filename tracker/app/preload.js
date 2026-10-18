@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld("host", {
   exportCsv: () => ipcRenderer.invoke("export-csv"),
   party: live => ipcRenderer.invoke("party", live),
   mini: on => ipcRenderer.invoke("mini", on),
+  menu: (label, x, y) => ipcRenderer.invoke("menu-popup", label, x, y),
   snip: url => ipcRenderer.invoke("snip", url),
   version: () => ipcRenderer.invoke("version"),
   updateState: () => ipcRenderer.invoke("update-state"),

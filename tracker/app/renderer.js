@@ -259,33 +259,87 @@ $(".tabs").addEventListener("keydown", e => { if (e.key !== "ArrowLeft" && e.key
   const bs = [...document.querySelectorAll(".tabs button")], i = bs.indexOf(document.activeElement); if (i < 0) return;
   const n = bs[(i + (e.key === "ArrowRight" ? 1 : bs.length - 1)) % bs.length]; n.click(); n.focus(); e.preventDefault() });
 // boxes, like OBS sources: dragged by the ⠿ grip or the title onto another box (above or below it), onto a tab (to the end of it), or onto
-// the strip above the tabs (pinned: shows on every tab); – folds one to its title. Saved in settings.layout (Danny, 2026-10-18)
+// the strip above the tabs (pinned: shows on every tab); – folds one to its title. Saved in settings.layout (Danny, 2026-10-18).
+// Dropped on a box's left or right edge, it goes beside it in a row (Danny, 2026-10-18: "like OBS"); the splitter between them
+// resizes; dropped on the top or bottom of a box in a row, the two stack in a column inside the row
 function foldMark(b){ const f = b.querySelector(".fold"), on = b.classList.contains("folded"); f.textContent = on ? "+" : "–"; f.setAttribute("aria-expanded", String(!on)) }
 const BOXES = [...document.querySelectorAll("[data-box]")], BOX_HOME = BOXES.map(b => [b, b.parentElement, b.nextElementSibling, b.classList.contains("folded")]);   // folded in the HTML = folded by default
 let dragBox = null;
+const isRow = e => !!e?.classList?.contains("boxrow"), isCol = e => !!e?.classList?.contains("boxcol"), isSplit = e => !!e?.classList?.contains("split");
+const mk = cls => Object.assign(document.createElement("div"), {className: cls});
+const parts = r => [...r.children].filter(x => !isSplit(x));
+const grow = e => parseFloat(e.style.flexGrow) || 0;
+function mkSplit(){ const s = mk("split"); s.tabIndex = 0; s.title = "Drag to resize (or left and right arrow keys)";
+  s.setAttribute("role", "separator"); s.setAttribute("aria-orientation", "vertical"); s.setAttribute("aria-label", "Resize the boxes beside it"); return s }
+// after a move: a column or row left with one part unwraps, empty ones go, a splitter sits between each two parts of a row,
+// and a part new to a row gets the row's average width
+function tidy(){
+  for (const c of [...document.querySelectorAll(".boxcol")]){ const k = [...c.children]; if (k.length < 2 || !isRow(c.parentElement)) c.replaceWith(...k) }
+  for (const r of [...document.querySelectorAll(".boxrow")]){
+    const p = parts(r);
+    if (p.length < 2){ r.replaceWith(...(isCol(p[0]) ? [...p[0].children] : p)); continue }
+    const k = [...r.children]; k.forEach((x, i) => { if (isSplit(x) && (i === 0 || i === k.length - 1 || isSplit(k[i - 1]))) x.remove() });
+    for (const x of p){ if (x.previousElementSibling && !isSplit(x.previousElementSibling)) x.before(mkSplit()); if (x.nextElementSibling && !isSplit(x.nextElementSibling)) x.after(mkSplit()) }
+    const set = p.filter(grow), avg = set.length ? set.reduce((a, x) => a + grow(x), 0) / set.length : 0;
+    if (avg) for (const x of p) if (!grow(x)) x.style.flex = `${avg} 1 0px`;
+  }
+  for (const e of document.querySelectorAll("[data-box], .boxcol")) if (!isRow(e.parentElement)) e.style.flex = "";
+}
+// saved as order[tab] = [box id | {row: [box id | [box ids (a column)]], w: [widths]}]; older saves (just ids) still load
 function layoutSave(){
-  const order = {};
-  for (const h of [$("#dock"), ...document.querySelectorAll("section[data-tab]")]) order[h.id || h.dataset.tab] = [...h.querySelectorAll(":scope > [data-box]")].map(b => b.dataset.box);
+  tidy(); const order = {};
+  const ser = e => isRow(e) ? {row: parts(e).map(p => isCol(p) ? [...p.children].map(b => b.dataset.box) : p.dataset.box), w: parts(e).map(p => Math.round(grow(p)) || 1)} : e.dataset.box;
+  for (const h of [$("#dock"), ...document.querySelectorAll("section[data-tab]")]) order[h.id || h.dataset.tab] = [...h.querySelectorAll(":scope > [data-box], :scope > .boxrow")].map(ser);
   host.settings({layout: {order, folded: BOXES.filter(b => b.classList.contains("folded")).map(b => b.dataset.box)}}).then(x => settings = x);
 }
 function layoutLoad(l){
   if (!l?.order) return;
-  for (const [k, ids] of Object.entries(l.order)){
-    const h = k === "dock" ? $("#dock") : document.querySelector(`section[data-tab="${k}"]`); if (!h) continue;
-    for (const id of ids){ const b = BOXES.find(x => x.dataset.box === id); if (b) h.appendChild(b) }
+  const box = id => BOXES.find(x => x.dataset.box === id);
+  for (const [k, items] of Object.entries(l.order)){
+    const h = k === "dock" ? $("#dock") : document.querySelector(`section[data-tab="${k}"]`); if (!h || !Array.isArray(items)) continue;
+    for (const it of items){
+      if (typeof it === "string"){ const b = box(it); if (b) h.appendChild(b); continue }
+      if (!Array.isArray(it?.row)) continue;
+      const r = mk("boxrow"); h.appendChild(r);
+      it.row.forEach((p, i) => { let e;
+        if (Array.isArray(p)){ e = mk("boxcol"); for (const id of p){ const b = box(id); if (b) e.appendChild(b) } if (!e.children.length) return }
+        else if (!(e = box(p))) return;
+        r.appendChild(e); const w = +it.w?.[i]; if (w > 0) e.style.flex = `${w} 1 0px`;
+      });
+    }
   }
   for (const b of BOXES) b.classList.toggle("folded", (l.folded || []).includes(b.dataset.box));
+  tidy();
+}
+// puts box b at side z (top, bottom, left, right) of target t (a box, or a row when dropped in a row's gap)
+function place(b, t, z){
+  b.style.flex = "";
+  if (isRow(t)){ z === "bottom" ? t.after(b) : t.before(b); return }
+  const p = t.parentElement;
+  if (z === "left" || z === "right"){
+    let u = t, r = p;
+    if (isCol(p)){ u = p; r = p.parentElement }
+    else if (!isRow(p)){ r = mk("boxrow"); t.before(r); r.appendChild(t) }
+    z === "left" ? u.before(b) : u.after(b);
+  } else {
+    if (isRow(p)){ const c = mk("boxcol"); c.style.flex = t.style.flex; t.style.flex = ""; t.before(c); c.appendChild(t) }
+    z === "bottom" ? t.after(b) : t.before(b);
+  }
 }
 for (const b of BOXES){
   b.classList.add("box");
   const c = document.createElement("div"); c.className = "boxctl";
-  c.innerHTML = `<span class="btitle">${esc(b.dataset.title)}</span><span class="grip" tabindex="0" role="button" aria-label="Move ${esc(b.dataset.title)} (arrow keys)" title="Drag to move: onto another box, a tab, or the strip above the tabs. Or focus it and use the up and down arrow keys">⠿</span><button class="fold" aria-label="Fold ${esc(b.dataset.title)}" aria-expanded="true" title="Fold or unfold">–</button>`;
+  c.innerHTML = `<span class="btitle">${esc(b.dataset.title)}</span><span class="grip" tabindex="0" role="button" aria-label="Move ${esc(b.dataset.title)} (arrow keys)" title="Drag to move: onto another box (its left or right edge puts them side by side), a tab, or the strip above the tabs. Or focus it and use the arrow keys">⠿</span><button class="fold" aria-label="Fold ${esc(b.dataset.title)}" aria-expanded="true" title="Fold or unfold">–</button>`;
   b.prepend(c);
   c.querySelector(".fold").onclick = () => { b.classList.toggle("folded"); foldMark(b); layoutSave() };
-  // keyboard: arrow up/down on the grip moves the box past its neighbour
-  c.querySelector(".grip").onkeydown = e => { if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return; e.preventDefault();
-    const sib = e.key === "ArrowUp" ? b.previousElementSibling : b.nextElementSibling; if (!sib?.matches("[data-box]")) return;
-    e.key === "ArrowUp" ? sib.before(b) : sib.after(b); c.querySelector(".grip").focus(); layoutSave() };
+  // keyboard: arrow up/down on the grip moves the box past its neighbour (out of its row at a row's or column's end); left/right
+  // moves it along its row
+  c.querySelector(".grip").onkeydown = e => { const k = e.key, up = k === "ArrowUp" || k === "ArrowLeft"; if (!/^Arrow(Up|Down|Left|Right)$/.test(k)) return; e.preventDefault();
+    const p = b.parentElement, side = x => { do x = up ? x.previousElementSibling : x.nextElementSibling; while (isSplit(x)); return x };
+    if (k === "ArrowLeft" || k === "ArrowRight"){ const u = isCol(p) ? p : b; if (!isRow(u.parentElement)) return; const s = side(u); if (!s) return; up ? s.before(u) : s.after(u) }
+    else if (isRow(p)) up ? p.before(b) : p.after(b);
+    else { const s = side(b); if (s?.matches("[data-box], .boxrow")) up ? s.before(b) : s.after(b); else if (isCol(p) && !s) up ? p.parentElement.before(b) : p.parentElement.after(b); else return }
+    c.querySelector(".grip").focus(); layoutSave() };
 }
 // mouse dragging (pointer events: the browser's own drag and drop didn't start in the app, Danny 2026-10-18). Held on the
 // grip or the box's title, moved 5 px: the box follows as a label under the pointer until it's let go
@@ -295,12 +349,16 @@ document.addEventListener("pointerdown", e => {
   if (!b) return;
   e.preventDefault(); drag = {b, x: e.clientX, y: e.clientY, on: false, el: null};
 });
-const dropTarget = (x, y) => { const t = document.elementFromPoint(x, y)?.closest("[data-box], #dock, section[data-tab], .tabs button");
+const dropTarget = (x, y) => { const t = document.elementFromPoint(x, y)?.closest("[data-box], .boxrow, #dock, section[data-tab], .tabs button");
   if (!t || t === dragBox || dragBox.contains(t)) return null;
   if (t.matches(".tabs button") && !["session", "loot", "hist"].includes(t.dataset.tab)) return null; return t };
-function dropMark(t, below){
-  for (const x of document.querySelectorAll(".over-top, .over-bottom, .over-drop")) x.classList.remove("over-top", "over-bottom", "over-drop");
-  if (t) t.classList.add(t.matches("[data-box]") ? below ? "over-bottom" : "over-top" : "over-drop");
+// which side of a box the pointer is on: its left or right quarter (up to 90 px) = beside it, otherwise above or below
+function dropZone(t, x, y){ const r = t.getBoundingClientRect(), ex = Math.min(r.width / 4, 90);
+  if (t.matches("[data-box]")){ if (x < r.left + ex) return "left"; if (x > r.right - ex) return "right" }
+  return y > r.top + r.height / 2 ? "bottom" : "top" }
+function dropMark(t, z){
+  for (const x of document.querySelectorAll(".over-top, .over-bottom, .over-left, .over-right, .over-drop")) x.classList.remove("over-top", "over-bottom", "over-left", "over-right", "over-drop");
+  if (t) t.classList.add(t.matches("[data-box], .boxrow") ? "over-" + z : "over-drop");
 }
 document.addEventListener("pointermove", e => {
   if (!drag) return;
@@ -309,12 +367,12 @@ document.addEventListener("pointermove", e => {
     drag.on = true; dragBox = drag.b; dragBox.classList.add("moving"); document.body.classList.add("dragging");
     drag.el = Object.assign(document.createElement("div"), {className: "dragLabel", textContent: dragBox.dataset.title}); document.body.appendChild(drag.el);
     // near the window's top or bottom edge: the page scrolls, to reach boxes out of sight
-    drag.iv = setInterval(() => { if (drag?.cy < 40) scrollBy(0, -15); else if (drag?.cy > innerHeight - 40) scrollBy(0, 15) }, 30);
+    drag.iv = setInterval(() => { if (drag?.cy < 72) scrollBy(0, -15); else if (drag?.cy > innerHeight - 40) scrollBy(0, 15) }, 30);
   }
   drag.cy = e.clientY;
   drag.el.style.left = e.clientX + 12 + "px"; drag.el.style.top = e.clientY + 8 + "px";
-  const t = dropTarget(e.clientX, e.clientY), r = t?.getBoundingClientRect();
-  dropMark(t, t && e.clientY > r.top + r.height / 2);
+  const t = dropTarget(e.clientX, e.clientY);
+  dropMark(t, t && dropZone(t, e.clientX, e.clientY));
   // held over a tab for half a second: that tab opens, so the box can go between its boxes
   if (t?.matches(".tabs button")){ if (drag.tab !== t){ drag.tab = t; drag.tabT = Date.now() } else if (Date.now() - drag.tabT > 500 && !t.classList.contains("sel")) showTab(t.dataset.tab) } else drag.tab = null;
 });
@@ -322,10 +380,10 @@ const endDrag = (e, cancel) => {
   if (!drag) return; const d = drag; drag = null;
   if (!d.on) return;
   // the target is found while the page still looks as it did under the pointer: the pin strip shrinks away once dragging ends
-  d.el.remove(); const t = !cancel && dropTarget(e.clientX, e.clientY), r = t?.getBoundingClientRect(), below = t && e.clientY > r.top + r.height / 2;
+  d.el.remove(); const t = !cancel && dropTarget(e.clientX, e.clientY), z = t && dropZone(t, e.clientX, e.clientY);
   clearInterval(d.iv); d.b.classList.remove("moving"); document.body.classList.remove("dragging"); dropMark(null); dragBox = null;
   if (!t) return;
-  if (t.matches("[data-box]")) t.parentElement.insertBefore(d.b, below ? t.nextSibling : t);
+  if (t.matches("[data-box], .boxrow")) place(d.b, t, z);
   else if (t.matches(".tabs button")){ document.querySelector(`section[data-tab="${t.dataset.tab}"]`).appendChild(d.b); showTab(t.dataset.tab) }
   else t.appendChild(d.b);
   layoutSave();
@@ -333,6 +391,20 @@ const endDrag = (e, cancel) => {
 document.addEventListener("pointerup", e => endDrag(e, false));
 document.addEventListener("pointercancel", e => endDrag(e, true));
 document.addEventListener("keydown", e => { if (e.key === "Escape" && drag) endDrag(e, true) });
+// the splitter between two boxes in a row: dragged (or arrow keys) to share the row's width between them, each at least 110 px
+let rs = null;
+function resize(s, dx){
+  for (const p of parts(s.parentElement)) p.style.flex = `${Math.round(p.getBoundingClientRect().width)} 1 0px`;
+  const a = s.previousElementSibling, b = s.nextElementSibling, wa = grow(a), sum = wa + grow(b), na = Math.max(110, Math.min(sum - 110, wa + dx));
+  if (sum < 220) return; a.style.flex = `${Math.round(na)} 1 0px`; b.style.flex = `${Math.round(sum - na)} 1 0px`;
+}
+document.addEventListener("pointerdown", e => { const s = e.button === 0 && e.target.closest?.(".split"); if (!s) return;
+  e.preventDefault(); rs = {s, x: e.clientX}; s.classList.add("on"); document.body.classList.add("resizing") });
+document.addEventListener("pointermove", e => { if (!rs) return; resize(rs.s, e.clientX - rs.x); rs.x = e.clientX });
+const endResize = () => { if (!rs) return; rs.s.classList.remove("on"); document.body.classList.remove("resizing"); rs = null; layoutSave() };
+document.addEventListener("pointerup", endResize); document.addEventListener("pointercancel", endResize);
+document.addEventListener("keydown", e => { if (!isSplit(e.target) || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
+  e.preventDefault(); resize(e.target, e.key === "ArrowLeft" ? -24 : 24); layoutSave() });
 $("#layoutReset").onclick = () => { for (const [b, p, next, f] of [...BOX_HOME].reverse()){ p.insertBefore(b, next); b.classList.toggle("folded", f); foldMark(b) } layoutSave() };
 try { const t = localStorage.getItem("tab"); if (t && t !== "hist" && t !== "help" && document.querySelector(`section[data-tab="${t}"]`)) showTab(t) } catch {}
 
@@ -1012,6 +1084,8 @@ function openHelp(){
 $("#helpBtn").onclick = openHelp;
 $("#helpClose").onclick = () => showTab(beforeHelp);
 document.addEventListener("keydown", e => { if (e.key === "F1"){ e.preventDefault(); openHelp() } });
+// title bar: File / View / Help open the app's menus under the button
+for (const b of document.querySelectorAll("#titlebar [data-menu]")) b.onclick = () => { const r = b.getBoundingClientRect(); host.menu?.(b.dataset.menu, r.left, r.bottom) };
 host.onMenu?.(what => {
   if (what === "help") openHelp();
   else if (what === "mini") $("#miniBtn").click();

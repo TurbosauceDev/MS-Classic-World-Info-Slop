@@ -1,6 +1,6 @@
 // Electron main process: one small always-on-top window. Captures only the MapleStory window's pixels (the same API OBS
 // and Discord use); it never opens the game's files or memory and never sends input to it.
-const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu, globalShortcut} = require("electron");
+const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu, globalShortcut, nativeTheme} = require("electron");
 const fs = require("fs"), path = require("path");
 const {autoUpdater} = require("electron-updater");
 
@@ -37,7 +37,11 @@ app.on("second-instance", () => { if (win){ if (win.isMinimized()) win.restore()
 
 app.whenReady().then(() => {
   if (!firstCopy) return;   // quitting: no window
-  win = new BrowserWindow({...lastBounds(), title: "MS Classic Grind Tracker",
+  // our own title bar in the app's colours (the page draws it, see #titlebar); Windows still draws the minimize, maximize and
+  // close buttons, in the same colours, light or dark like the page (Danny, 2026-10-18)
+  const bar = () => nativeTheme.shouldUseDarkColors ? {color: "#211d2c", symbolColor: "#ece8f5", height: 32} : {color: "#ffffff", symbolColor: "#2b2638", height: 32};
+  win = new BrowserWindow({...lastBounds(), title: "MS Classic Grind Tracker", titleBarStyle: "hidden", titleBarOverlay: bar(),
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#17141f" : "#f6f4fb",
     // backgroundThrottling off: behind the game or minimized, Chromium would slow the frame timer to once a second and,
     // after 5 minutes, once a minute, so pickup lines would scroll away unread
     webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false}});
@@ -50,6 +54,14 @@ app.whenReady().then(() => {
   win.webContents.setWindowOpenHandler(() => ({action: "deny"}));
   win.webContents.on("will-navigate", e => e.preventDefault());
   win.loadFile(path.join(__dirname, "index.html"));
+  nativeTheme.on("updated", () => { if (win && !win.isDestroyed()) try { win.setTitleBarOverlay(bar()) } catch {} });
+  // with the title bar hidden, the menu's zoom keys are handled here (F1 is the page's own)
+  win.webContents.on("before-input-event", (e, i) => {
+    if (i.type !== "keyDown" || !i.control || i.alt) return;
+    const z = win.webContents, k = i.key;
+    if (k === "=" || k === "+") z.setZoomLevel(Math.min(z.getZoomLevel() + 0.5, 5)); else if (k === "-") z.setZoomLevel(Math.max(z.getZoomLevel() - 0.5, -3)); else if (k === "0") z.setZoomLevel(0); else return;
+    e.preventDefault();
+  });
   // where the window was: saved half a second after a move or resize, and on close
   let saveT = null;
   const keep = () => { clearTimeout(saveT); saveT = setTimeout(saveBounds, 500) };
@@ -222,6 +234,11 @@ function saveBounds(){
   if (fullSize) b.height = fullSize[1];   // mini bar: keep the full height, it opens full size
   writeSettings({...readSettings(), winBounds: b});
 }
+// the page's title bar buttons (File, View, Help) open the same menus the old menu bar had, under the button
+ipcMain.handle("menu-popup", (_, label, x, y) => {
+  const m = Menu.getApplicationMenu()?.items.find(i => i.label === label)?.submenu;
+  if (m && win && !win.isDestroyed()) m.popup({window: win, x: Math.round(+x || 0), y: Math.round(+y || 0)});
+});
 ipcMain.handle("mini", (_, on) => {
   if (win){ if (on){ fullSize = win.getSize(); win.setSize(fullSize[0], 128) } else { win.setSize(...(fullSize || [360, 600])); fullSize = null } }
   return !!on;
