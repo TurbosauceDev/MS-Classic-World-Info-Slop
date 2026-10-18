@@ -124,8 +124,8 @@ const path = require("path");
   await p.fill("#sksearch", "magic claw"); await p.click("#skrows .skbtn");
   check(/Magic Claw/.test(await p.textContent("#skpage h2")) && await p.$$eval("#skpage tbody tr", r => r.length) === 20 && /Energy Bolt/.test(await p.textContent("#skpage .mcols")), "skill page: levels and requirements");
   await p.click("#skback"); await p.click("#skreset"); check(/^90 /.test(await p.textContent("#skcount")) && !/NaN|undefined/.test(await p.textContent("#skills")), "skill list: reset filters");
-  await tab("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); if (await p.isChecked("#itnoq")) await p.click("#itnoq"); check(/^2,220 /.test(await p.textContent("#itcount")), "item database lists 2,220 items");
-  await p.click("#itsrc"); check(/^[\d,]+ /.test(await p.textContent("#itcount")) && !/^2,220/.test(await p.textContent("#itcount")), "item list: known-source filter");
+  await tab("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); if (await p.isChecked("#itnoq")) await p.click("#itnoq"); check(/^2,221 /.test(await p.textContent("#itcount")), "item database lists 2,221 items");
+  await p.click("#itsrc"); check(/^[\d,]+ /.test(await p.textContent("#itcount")) && !/^2,221/.test(await p.textContent("#itcount")), "item list: known-source filter");
   { const n = await p.textContent("#itcount"); await p.click("#itnoq"); await p.fill("#itsearch", "letter");
     check(!/Maria's Letter/.test(await p.textContent("#itrows")) && n !== await p.textContent("#itcount"), "item list: hide quest items");
   await p.fill("#itsearch", "") }

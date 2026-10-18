@@ -242,7 +242,7 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   kl [[mobId, n]], il [[item, n, sourceMobId|null]], pre [questId],
   chain, cpos, cn, ri (reward groups {k: get|pick|rand, job, it: [[itemId, count, chance%]]}), info (tooltip: d, req, mesos, items, start, prev, next, chain, rep, contrib, eq)
 - `items` {itemId: {n, c category, s sub, st stats, job, p price, d desc, wt weapon type, spd, sp spec, g gender}}; `iicons` {itemId: base64}.
-  Every item in the export (2,220 incl. scrolls) since the `itemdb` step (Items tab). `ishop` {itemId: [[npc, mapId, mapName, price]]}:
+  Every item in the export (2,221 incl. scrolls) since the `itemdb` step (Items tab). `ishop` {itemId: [[npc, mapId, mapName, price]]}:
   every meowdb NPC shop that sells it (same-name items: both genders of gendered gear, else the one with a sell price).
 - `mmaps` {mapId: base64 minimap, open maps only}, `mmapType` "webp" | "png" (WebP needs Pillow at data-build time)
 - `mmdim` {mapId: [w, h]} minimap pixels; `portals` {mapId: [[x, y, destMapId, hidden]]} x/y as 0-1 fractions of the minimap;
