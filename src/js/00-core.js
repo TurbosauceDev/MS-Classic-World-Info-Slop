@@ -58,8 +58,8 @@ CATS.forEach(b => b.addEventListener("click", () => goCat(b.dataset.cat)));
 // longer description); a second click, or another card, shrinks it back. Animated with the View Transitions API where the
 // browser has it (each card has its own view-transition-name), instantly elsewhere and with reduced motion.
 function homeBig(cat){
-  const cards = [...document.querySelectorAll(".homecat")], cur = cards.find(c => c.classList.contains("big")), next = cur?.dataset.sec === cat ? null : cat;
-  const apply = () => { cards.forEach(c => { const on = c.dataset.sec === next; c.classList.toggle("big", on); c.querySelector(".hcat").setAttribute("aria-expanded", on) });
+  const cards = [...document.querySelectorAll(".homecat")], cur = cards.find(c => c.classList.contains("bill")), next = cur?.dataset.sec === cat ? null : cat;
+  const apply = () => { cards.forEach(c => { const on = c.dataset.sec === next; c.classList.toggle("bill", on); c.querySelector(".hcat").setAttribute("aria-expanded", on) });
     const top = $("#home").getBoundingClientRect().top; if (next && top < 0) window.scrollBy(0, top - 8) };   // the billboard sits first: keep it in view
   const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (document.startViewTransition && !calm){ cards.forEach((c, i) => c.style.viewTransitionName = "hc" + i); document.startViewTransition(apply) } else apply();
@@ -69,8 +69,10 @@ $("#home").addEventListener("click", e => { if (e.target.closest("a")) return;
   if (!g){ const c = e.target.closest(".homecat"); if (c) homeBig(c.dataset.sec); return }
   g.dataset.go ? $("#t-" + g.dataset.go).click() : goCat(g.dataset.goCat); window.scrollTo({top: $("nav").offsetTop - 8}) });
 $("header h1").addEventListener("click", goHome);
+// read the last page before goHome() overwrites it with "home" (that made every visit land on Home)
+let SAVEDTAB = null; try { SAVEDTAB = localStorage.getItem("tab") } catch(e) {}
 goHome();
-try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : HASH.n ? "navi" : HASH.t ? "maps" : HASH.q ? "quests" : localStorage.getItem("tab"); if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
+try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : HASH.n ? "navi" : HASH.t ? "maps" : HASH.q ? "quests" : SAVEDTAB; if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
 $("#srclink").addEventListener("click", e => { e.preventDefault(); $("#t-credits").click(); $("#credits").scrollIntoView() });
 // "about 1 per X kills" for n picked up in k kills, plus a likely range (95% Wilson interval: a statistics estimate, wide

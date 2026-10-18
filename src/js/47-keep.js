@@ -104,5 +104,5 @@ for (const [id, k] of [["#kneed", "need"], ["#konly", "only"], ["#kdone", "done"
   $(id).addEventListener("click", e => { e.currentTarget.setAttribute("aria-pressed", !S[k]); set(k, !S[k]) }) }
 // ticking quests done in the Path Planner changes what's still wanted: refresh when this tab opens
 $("#t-keep").addEventListener("click", render);
-render();
+if (!$("#keep").hidden) render();   // otherwise the first open renders it
 })();

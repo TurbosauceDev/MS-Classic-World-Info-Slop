@@ -138,7 +138,7 @@ document.querySelectorAll("#crhead th[data-k] button").forEach(b => b.addEventLi
 /* raw materials: everything a recipe uses that no recipe makes */
 const USE = {};
 for (const r of R) for (const [x] of r.ing) if (!pick(x)) (USE[x] = USE[x] || new Set()).add(r);
-$("#crmats").innerHTML = Object.entries(USE).sort((a, b) => b[1].size - a[1].size || D.items[a[0]].n.localeCompare(D.items[b[0]].n)).map(([id, rs]) => {
+const renderMats = () => { $("#crmats").innerHTML = Object.entries(USE).sort((a, b) => b[1].size - a[1].size || D.items[a[0]].n.localeCompare(D.items[b[0]].n)).map(([id, rs]) => {
   const s = C.src[id] || {}, it = D.items[id], qs = QREW[id] || [], where = [];
   for (const [npc, mid, map, price] of s.shop || []) where.push(`Shop: ${npcLink(npc)} (${mid ? mapLink(mid, map) : esc(map)}), ${fmt(price)} mesos`);
   if (qs.length) where.push(`Quest reward: ${qs.slice(0, 3).map(qn).join(", ")}${qs.length > 3 ? ` +${qs.length - 3} more` : ""}`);
@@ -149,8 +149,10 @@ $("#crmats").innerHTML = Object.entries(USE).sort((a, b) => b[1].size - a[1].siz
   return `<tr><td><span class="ing">${itemIcon(id, 1)}<span><button class="crfind" data-q="${esc(it.n)}">${esc(it.n)}</button><div class="sub">${esc(it.c === "Equipment" ? eqLine(it) : it.s || it.c || "")}</div></span></span></td>
     <td class="num">${rs.size}</td><td class="sub">${discs.map(esc).join(", ")}</td>
     <td class="sub">${where.join("<br>") || `<span class="na">not in the game files (no drop tables)</span>`}</td><td class="num">${fmt(it.p)}</td></tr>`;
-}).join("");
+}).join("") };
 $("#crmats").addEventListener("click", e => { const b = e.target.closest(".crfind"); if (!b) return;
   Object.assign(S, {d: -1, type: "", cls: "", max: 10, q: b.dataset.q}); renderRecipes(); $("#crrecipes").open = true; $("#crrecipes").scrollIntoView({behavior: "smooth"}) });
-renderRecipes();
+// the two big tables (~15k elements) are built on first open, not on page load
+let built = false; const build = () => { if (built) return; built = true; renderMats(); renderRecipes() };
+$("#t-craft").addEventListener("click", build); if (!$("#craft").hidden) build();
 })();

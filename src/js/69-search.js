@@ -97,4 +97,7 @@ const TRAIN = ["cls", "lvl", "party", "tmode", "aoe", "hitsh", "lootr", "lootp",
 $("#tshare").addEventListener("click", () => copyShare($("#tshare"), shareUrl("t", Object.fromEntries(TRAIN.map(k => [k, $("#" + k).value]).filter(([, v]) => v !== "")))));
 if (HASH.t){ for (const k of TRAIN) if (HASH.t[k] != null && [...($("#" + k).options || [{value: HASH.t[k]}])].some(o => o.value === String(HASH.t[k]))) $("#" + k).value = HASH.t[k];
   rankMaps() }
+// Where to train: nothing filled the table on load (it sat empty until a setting changed), so rank on first open
+const firstRank = () => { if (!$("#maprows").children.length) rankMaps() };
+$("#t-maps").addEventListener("click", firstRank); if (!$("#maps").hidden) firstRank();
 })();

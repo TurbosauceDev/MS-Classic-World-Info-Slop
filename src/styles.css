@@ -6,15 +6,18 @@
   --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --shadow:0 1px 2px rgba(42,33,66,.05),0 6px 16px -10px rgba(85,56,160,.28); --tshadow:0 1px 1px rgba(125,88,214,.14);
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#1f1931; --panel:#2a2243; --ink:#f0eafd; --muted:#b6aad8; --line:#453a64;
   --accent:#d2bffb; --accent-soft:#41346a; --leaf:#7cc9a2; --leaf-soft:#1d3029;
-  --warn:#e2b44a; --warn-soft:#352b14; --bad:#ef7a70; color-scheme:dark}}
+  --warn:#e2b44a; --warn-soft:#352b14; --bad:#ef7a70; --shadow:0 1px 2px rgba(0,0,0,.22),0 8px 18px -12px rgba(0,0,0,.6); --tshadow:0 1px 2px rgba(0,0,0,.45);
+  color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1f1931; --panel:#2a2243; --ink:#f0eafd; --muted:#b6aad8; --line:#453a64;
   --accent:#d2bffb; --accent-soft:#41346a; --leaf:#7cc9a2; --leaf-soft:#1d3029;
-  --warn:#e2b44a; --warn-soft:#352b14; --bad:#ef7a70; color-scheme:dark}
+  --warn:#e2b44a; --warn-soft:#352b14; --bad:#ef7a70; --shadow:0 1px 2px rgba(0,0,0,.22),0 8px 18px -12px rgba(0,0,0,.6); --tshadow:0 1px 2px rgba(0,0,0,.45);
+  color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-body)}
 .wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:28px 60px}
 header h1{font:800 clamp(28px,4.4vw,44px)/1.05 var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
@@ -180,7 +183,7 @@ table.mini td,table.mini th{padding:6px 8px}
 #qtip li{margin:1px 0}
 .btn.tgl{align-self:flex-end;border-radius:999px}
 .btn.tgl[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--panel)}
-@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 .vwhy{font-size:12.5px;line-height:1.4;margin:3px 0 2px;max-width:46ch;color:var(--ink)}
 .vwhy a{color:var(--accent)}
 .vrow td{background:color-mix(in srgb,var(--accent-soft) 45%,transparent)}
@@ -487,13 +490,42 @@ details.sec>summary:hover h2{color:var(--accent)}
 .homecat:hover{border-color:var(--accent)}
 .homecat .hlinks{cursor:auto}
 .hbill{display:none}
-.homecat.big{grid-column:1/-1;order:-1;background:var(--accent-soft);border-color:var(--accent);padding:20px 22px}
-.homecat.big .hcat{font-size:28px}
-.homecat.big .hbill{display:block}
+.homecat.bill{grid-column:1/-1;order:-1;background:var(--accent-soft);border-color:var(--accent);padding:20px 22px}
+.homecat.bill .hcat{font-size:28px}
+.homecat.bill .hbill{display:block}
 .hbill p{margin:4px 0 12px;font:400 16px var(--f-body);line-height:1.55;color:var(--ink);max-width:70ch}
 .hbillact{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
 .hbillact .btn{text-decoration:none;margin:0}
-.homecat.big .hlinks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:0 24px}
-.homecat.big .hlink b{font-size:15.5px}
-.homecat.big .hlink span{font-size:13.5px}
+.homecat.bill .hlinks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:0 24px}
+.homecat.bill .hlink b{font-size:15.5px}
+.homecat.bill .hlink span{font-size:13.5px}
 ::view-transition-group(*){animation-duration:.35s;animation-timing-function:cubic-bezier(.2,.7,.2,1)}
+/* small polish: soft depth on panels, gentle motion on open/close and hover. All motion is off under prefers-reduced-motion
+   (rule above); nothing here touches the Home cards. */
+::selection{background:color-mix(in srgb,var(--accent) 30%,transparent);color:var(--ink)}
+html{scrollbar-color:color-mix(in srgb,var(--accent) 35%,var(--line)) var(--bg)}
+html *{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--accent) 35%,var(--line)) transparent}
+header h1,h2,.big,.mtop h2{text-shadow:var(--tshadow)}
+.controls,.card,.fact,.tblwrap,.howto,.navsteps>li,#wmcard,.chainbar{box-shadow:var(--shadow)}
+.card.hero{box-shadow:var(--shadow),inset 0 1px 0 color-mix(in srgb,#fff 18%,transparent)}
+@keyframes pagein{from{opacity:0;transform:translateY(5px)}}
+@keyframes tray{from{opacity:0;transform:translateY(-5px)}}
+@keyframes fadein{from{opacity:0}}
+@keyframes popin{from{opacity:0;transform:translateY(-6px) scale(.985)}}
+.wrap>section:not(#home):not([hidden]){animation:pagein .22s ease-out}
+details[open]>:not(summary){animation:tray .2s ease-out}
+.mpage{animation:pagein .2s ease-out}
+#qtip:not([hidden]){animation:fadein .12s ease-out}
+.srch:not([hidden]){animation:fadein .14s ease-out;backdrop-filter:blur(2px)}
+.srch:not([hidden]) .srchbox{animation:popin .18s ease-out}
+.btn,.seg button,nav button,.stepper button,.ri,.wmdot,select,input,.drop,.srchbox li,.hcat{transition:border-color .15s,background-color .15s,color .15s,box-shadow .15s,transform .12s}
+.btn:active,.seg button:active,.stepper button:not(:disabled):active,nav .cats button:active{transform:translateY(1px)}
+.ri:hover{transform:translateY(-1px)}
+select:focus,input[type=number]:focus,input[type=search]:focus,input[type=text]:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent);outline:none}
+select:focus-visible,input:focus-visible{outline:none}
+nav .cats button:not([aria-selected="true"]):hover,.seg button:not([aria-checked="true"]):hover{border-color:var(--accent);color:var(--ink)}
+nav .subs button:not([aria-selected="true"]):hover{color:var(--ink);border-bottom-color:var(--line)}
+.bar i{transition:width .3s ease-out}
+.tblwrap tbody tr:not(.branch):hover>td{background-image:linear-gradient(color-mix(in srgb,var(--accent-soft) 40%,transparent),color-mix(in srgb,var(--accent-soft) 40%,transparent))}
+input[type=file]::file-selector-button{font:600 13px var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:5px 11px;margin-right:10px;cursor:pointer;transition:border-color .15s}
+input[type=file]::file-selector-button:hover{border-color:var(--accent)}

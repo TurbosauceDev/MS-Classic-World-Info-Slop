@@ -15,6 +15,7 @@ Steps, in order (each adds keys to the data dict):
   worldmap  wmap                                          <- maplestory.io MCW CBT2 WorldMap000/001 (`build_data.py worldmap`)
   crafting  craft (+ items)                               <- crafting.json + Crafting quests (`build_data.py crafting` = this step only)
   itemdb    items/iicons for every item, ishop             <- items.json + meowdb shops (`build_data.py itemdb`)
+Then squash_images.py re-saves every embedded PNG as a smaller, pixel-identical PNG.
 """
 import base64, collections, json, os, pathlib, re, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -638,7 +639,8 @@ if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.arg
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)
     D = json.loads(json.dumps(D)); s = json.dumps(D, separators=(",", ":"))
     (ROOT / "data" / "data.json").write_text(s)
-    print(f"data/data.json {len(s)/1024:.0f} KB · steps: {' '.join(sys.argv[1:])}"); sys.exit()
+    print(f"data/data.json {len(s)/1024:.0f} KB · steps: {' '.join(sys.argv[1:])}")
+    import squash_images; squash_images.main(); sys.exit()   # lossless PNG shrink of new icons
 
 if __name__ == "__main__":
     D = step_base()
@@ -651,3 +653,4 @@ if __name__ == "__main__":
     s = json.dumps(D, separators=(",", ":"))
     (ROOT / "data" / "data.json").write_text(s)
     print(f"data/data.json {len(s)/1024:.0f} KB · {len(D['quests'])} quests · {len(D['citq'])} citizenship · {len(D['maps'])} maps · {len(D['weapons'])} weapons")
+    import squash_images; squash_images.main()   # lossless PNG shrink (~2 MB off the page)
