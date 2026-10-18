@@ -142,6 +142,13 @@ const path = require("path"), {chromium} = require("playwright");
   const status = await page.textContent("#status"), last = await page.textContent("#lastRun");
   await page.click("#histBtn"); await page.waitForTimeout(100);
   const hist = await page.textContent("#hist");
+  // compare: tick two sessions
+  await page.click("#histRows .cmp >> nth=0"); await page.click("#histRows .cmp >> nth=1");
+  const cmp = await page.textContent("#cmp");
+  if (!/B vs A/.test(cmp) || !/EXP\/hr/.test(cmp) || !/Pig Beach/.test(cmp)) throw new Error("compare: " + cmp);
+  // a watched item: the alert set finds it by part of its name
+  const watched = await page.evaluate(() => { settings.alertItems = "Horny Mushroom Cap"; return alertSet().has("4000019") });
+  if (!watched) throw new Error("item alert set");
   await page.click("#miniBtn"); const mini = await page.isVisible("#mini"), full = await page.isVisible("#go");
   await page.click("#mini"); const back = await page.isVisible("#go");
   if (!/Valuable drop: Horny Mushroom Cap/.test(status)) throw new Error("drop alert: " + status);

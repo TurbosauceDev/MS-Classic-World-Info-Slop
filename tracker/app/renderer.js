@@ -283,9 +283,20 @@ function beep(hz, sec){
 }
 // a beep when something worth at least the set amount is picked up
 let audio = null;
+// items picked by name in Settings (e.g. "Bronze Ore, Glove scroll"): a name matches every item that contains it
+let alertIds = null, alertKey = null;
+function alertSet(){
+  const key = settings.alertItems || "";
+  if (key !== alertKey){ alertKey = key; const parts = key.split(",").map(x => x.trim().toLowerCase()).filter(x => x.length >= 3);
+    alertIds = new Set(parts.length ? Object.entries(G.items).filter(([, it]) => parts.some(p => (it.n || "").toLowerCase().includes(p))).map(([id]) => id) : []) }
+  return alertIds;
+}
+function flash(){ $("#top").classList.remove("flash"); void $("#top").offsetWidth; $("#top").classList.add("flash") }
 function dropAlert(id){
   const min = +settings.alertWorth || 0, worth = G.pw?.[id]?.[0] ?? G.items[id]?.p ?? 0;
+  if (alertSet().has(String(id))){ beep(660, 0.15); setTimeout(() => beep(990, 0.25), 180); flash(); $("#status").textContent = `Drop you're watching for: ${G.items[id]?.n || "item " + id}`; return }
   if (!min || worth < min) return;
+  flash();
   beep(880, 0.25);
   $("#status").textContent = `Valuable drop: ${G.items[id]?.n || "item " + id} (worth ~${fmt(worth)})`;
 }
@@ -611,7 +622,7 @@ async function stopNow(){
   const a = snaps.start, b = snaps.end, snapExp = a && b && b.t > a.t ? GrindSession.expBetween(G, a, b) : null;
   const snapRec = snapExp != null ? {startLevel: a.level, startPct: a.pct, endLevel: b.level, endPct: b.pct, minutes: Math.round((b.t - a.t) / 6e3) / 10, exp: Math.round(snapExp)} : null;
   if (!snapRec && session?.state.events) $("#status").textContent = "Saved, but the start or end EXP reading is missing: History uses the live count for this one.";
-  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds} : null, levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
+  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds, best: kpq.times.length ? Math.round(Math.min(...kpq.times)) : null, avg: kpq.times.length ? Math.round(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length) : null} : null, lootValue: Math.round(session.stats().lootValue), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
   renderState(session?.stats());
 }
 $("#stopAnyway").onclick = () => timer != null && stop(true);
@@ -668,12 +679,14 @@ $("#guideShare").onclick = () => guideDone(true);
 $("#guideNo").onclick = () => guideDone(false);
 $("#stopBeep").onchange = e => host.settings({stopBeep: e.target.checked}).then(s => settings = s);
 $("#goal").onchange = e => { const v = Math.max(0, Math.min(200, Math.round(+e.target.value || 0))); host.settings({goal: v}).then(s => { settings = s; session?.setGoal(v) }) };
+$("#alertItems").onchange = e => host.settings({alertItems: e.target.value.slice(0, 500)}).then(s => { settings = s; const n = alertSet().size; $("#alertItemsNote").textContent = n ? n + " item" + (n > 1 ? "s" : "") + " watched" : "" });
 $("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.value || 0)}).then(s => settings = s);
 $("#miniBtn").onclick = () => { document.body.classList.add("mini"); host.mini(true) };
 $("#mini").onclick = () => { document.body.classList.remove("mini"); host.mini(false) };
 $("#histBtn").onclick = () => { showTab("hist"); loadHist() };
+let histList = [];
 async function loadHist(){
-  const list = await host.sessions();
+  const list = histList = await host.sessions(); $("#cmp").innerHTML = "";
   $("#recap").innerHTML = recap(list) + levelLog(list);
   $("#histRows").innerHTML = list.length ? list.slice(0, 30).map(x => { const h = (x.activeMin || 0) / 60;
     // EXP/hr from the start/end readings when the session has them (clock time), else the live count (farming time)
@@ -682,9 +695,29 @@ async function loadHist(){
     const rate = kq ? h ? fmt((sn ? sn.exp : x.exp) / h) : "-" : sn ? fmt(sn.exp / (sn.minutes / 60)) : h ? fmt(x.exp / h) : "-";
     const what = kq ? `KPQ (${kq.mode === "Rush" ? "Rush" : "Bonus"}) · ${+kq.rounds || 0} round${+kq.rounds === 1 ? "" : "s"}` : x.mapName || "";
     return `<tr><td>${esc(x.date)} ${esc(what)}</td><td class="n">${Math.round(sn && !kq ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${rate} EXP/hr</td>`
-      + `<td class="n"><button class="alt del" data-saved="${+x.saved}" title="Delete this session">×</button></td></tr>` }).join("")
+      + `<td class="n"><input type="checkbox" class="cmp" data-saved="${+x.saved}" title="Compare: tick two sessions"> <button class="alt del" data-saved="${+x.saved}" title="Delete this session">×</button></td></tr>` }).join("")
     : `<tr><td>No sessions yet: they're saved when you press Stop.</td></tr>`;
 }
+// compare: two ticked sessions side by side (per hour of farming time; loot at the prices saved with each session)
+function compare(a, b){
+  const h = x => (x.activeMin || 0) / 60, hr = (x, v) => h(x) && v != null ? v / h(x) : null;
+  const what = x => x.kpq && typeof x.kpq === "object" ? `KPQ · ${+x.kpq.rounds || 0} rounds` : x.mapName || "?";
+  const rows = [["Where", what], ["Date", x => x.date], ["Level", x => x.level], ["Party", x => x.party > 1 ? "party of " + x.party : "solo"], ["Farming time", x => Math.round(x.activeMin || 0) + " min", null],
+    ["EXP/hr", x => hr(x, x.snap && x.snap.minutes > 0 && !x.kpq ? x.snap.exp * h(x) / (x.snap.minutes / 60) : x.exp)], ["Mesos/hr", x => hr(x, x.mesos)], ["Loot/hr", x => hr(x, x.lootValue)],
+    ["Pots/ammo/hr", x => hr(x, x.usedCost)], ["Net/hr", x => x.lootValue == null ? null : hr(x, (x.mesos || 0) + x.lootValue - (x.usedCost || 0))], ["Kills/hr", x => hr(x, x.kills)], ["Deaths", x => x.deaths || 0],
+    ["KPQ best round", x => x.kpq?.best != null ? mss(x.kpq.best) : null]];
+  const cell = v => v == null ? "-" : typeof v === "number" ? fmt(v) : esc(String(v));
+  return `<div class="k">Compare</div><table><tr><td></td><td class="n">A</td><td class="n">B</td><td class="n">B vs A</td></tr>` + rows.map(([k, f]) => { const va = f(a), vb = f(b);
+    const diff = typeof va === "number" && typeof vb === "number" && va && k.endsWith("/hr") ? Math.round((vb / va - 1) * 100) : null;
+    return va == null && vb == null ? "" : `<tr><td>${k}</td><td class="n">${cell(va)}</td><td class="n">${cell(vb)}</td><td class="n ${diff > 0 ? "good" : diff < 0 ? "slow" : ""}">${diff == null ? "" : (diff > 0 ? "+" : "") + diff + "%"}</td></tr>` }).join("") + "</table>";
+}
+$("#histRows").addEventListener("change", e => {
+  if (!e.target.classList.contains("cmp")) return;
+  const on = [...$("#histRows").querySelectorAll(".cmp:checked")];
+  if (on.length > 2) on.filter(c => c !== e.target).slice(0, on.length - 2).forEach(c => c.checked = false);
+  const pick = [...$("#histRows").querySelectorAll(".cmp:checked")].map(c => histList.find(x => String(+x.saved) === c.dataset.saved)).filter(Boolean);
+  $("#cmp").innerHTML = pick.length === 2 ? compare(pick[1], pick[0]) : pick.length === 1 ? `<div class="note">Tick one more session to compare.</div>` : "";
+});
 // delete a session: × asks "Delete?" first (a second click within 4 s deletes), then History is redrawn
 $("#histRows").onclick = async e => {
   const b = e.target.closest("button.del"); if (!b) return;
@@ -762,6 +795,7 @@ $("#updGo").onclick = async () => {
   $("#job").value = settings.job || "";
   $("#ontop").checked = settings.onTop !== false; showArea();
   $("#alert").value = settings.alertWorth || 0;
+  $("#alertItems").value = settings.alertItems || "";
   $("#stopBeep").checked = settings.stopBeep !== false;
   $("#kpqAct").value = settings.kpqAct || "auto"; $("#kpqMode").value = settings.kpqMode === "Rush" ? "Rush" : "Bonus";
   $("#autoPause").checked = settings.autoPause !== false;   // on unless turned off   // on unless turned off
