@@ -241,7 +241,9 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
 { const s = createSession(G);
   s.add({t: sec(0), type: "inv", tab: "use", items: {"2060001": 2183}, stacks: {"2060001": 3}, partial: {"2060001": 1}, unknown: 1});
   s.add({t: sec(120), type: "inv", tab: "use", items: {"2060001": 2767}, stacks: {"2060001": 4}, unknown: 0});
-  assert.ok(!s.stats().inv.some(x => x.id === "2060001")) }
+  assert.ok(!s.stats().inv.some(x => x.id === "2060001"));
+  s.add({t: sec(240), type: "inv", tab: "use", items: {"2060001": 461}, stacks: {"2060001": 1}, unknown: 0});
+  assert.strictEqual(s.stats().inv.find(x => x.id === "2060001").n, 461 - 2183, "short at the first look: at least that many used") }
 // arrows left: every stack on the Use tab (not partial), quick-slot totals as they change; listed before any are used
 { const s = createSession(G);
   s.add({t: sec(0), type: "inv", tab: "use", items: {"2060001": 2775, "2000001": 22}, unknown: 0});

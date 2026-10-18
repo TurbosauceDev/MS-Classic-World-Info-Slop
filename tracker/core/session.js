@@ -85,8 +85,9 @@
           // gone from the tab while some slots didn't read: most likely one of those, not all used up (Danny's Lemons, 2026-10-18)
           // ...unless it went down while it still showed: that much was used (Danny's Warrior Potion 2 -> 1, then unread, 2026-10-18)
           if (!last.items[id] && last.unknown > 0){ const lo = low[id]; if (lo == null || lo >= (first.items[id] || 0)) continue; n = lo - first.items[id] }
-          // a stack of it didn't read at either look (and no earlier read of that slot to fill in): its total is short, not changed
-          if (first.partial[id] || last.partial[id]) continue;
+          // a stack of it didn't read (and no earlier read of that slot to fill in): that total is short. Short at the first
+          // look, a drop since is still at least that much used; short at the last look, nothing can be said
+          if (last.partial[id] || first.partial[id] && n > 0) continue;
           // one stack fewer and more slots unread than at the first look: a stack that didn't read, not used (Danny's arrows, 2026-10-18)
           if (n < 0 && last.unknown > first.unknown && (last.stacks[id] || 0) < (first.stacks[id] || 0)) continue;
           if (n && !(G.kpqItems || []).includes(id)) out.push({id, tab, n, was: first.items[id] || 0, now: last.items[id] || 0, alike: last.alike[id] || first.alike[id] || 1, name: G.items[id]?.n || "Item " + id});
