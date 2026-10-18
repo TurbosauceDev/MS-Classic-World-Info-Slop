@@ -493,7 +493,8 @@ details.sec>summary:hover h2{color:var(--accent)}
 /* small polish: soft depth on panels, gentle motion on open/close and hover. All motion is off under prefers-reduced-motion
    (rule above); nothing here touches the Home cards. */
 ::selection{background:color-mix(in srgb,var(--accent) 30%,transparent);color:var(--ink)}
-html{scrollbar-color:var(--line) transparent}
+html{scrollbar-color:color-mix(in srgb,var(--accent) 35%,var(--line)) var(--bg)}
+html *{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--accent) 35%,var(--line)) transparent}
 header h1,h2,.big,.mtop h2{text-shadow:var(--tshadow)}
 .controls,.card,.fact,.tblwrap,.howto,.navsteps>li,#wmcard,.chainbar{box-shadow:var(--shadow)}
 .card.hero{box-shadow:var(--shadow),inset 0 1px 0 color-mix(in srgb,#fff 18%,transparent)}
@@ -1392,7 +1393,7 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
 
   <div class="changelog">
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Fixes and polish</h3><span class="pill p-hot">update</span></div>
-      <p><b>Where to train</b> shows its ranking as soon as you open it (it was empty until you changed a setting). The site reopens on the page you last used instead of always on Home. Faster first load: Crafting and Keep or sell build their tables when you open them. Small touches: soft shadows on panels, gentle fade when pages and info boxes open, themed file buttons and focus rings. Motion is off if your system asks for reduced motion.</p></div>
+      <p><b>Where to train</b> shows its ranking as soon as you open it (it was empty until you changed a setting). The site reopens on the page you last used instead of always on Home. Faster first load: Crafting and Keep or sell build their tables when you open them. Small touches: soft shadows on panels, gentle fade when pages and info boxes open, themed file buttons, focus rings and scrollbars. Motion is off if your system asks for reduced motion.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Grind Tracker section</h3><span class="pill p-hot">new</span></div>
       <p>The <b>Grind Tracker</b> is now its own section, first in the menu and on Home: Overview (what it does and the download), How to use, Shared runs, and the KPQ leaderboard.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Search everything, more share links</h3><span class="pill p-hot">new</span></div>
