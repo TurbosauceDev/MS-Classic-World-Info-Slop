@@ -92,7 +92,7 @@ function reviewNote(){
   const geared = Object.keys(R.gear).length || R.weapon.length;
   return `${gl ? `Gear adds ${gl} (its base stats), taken off. ` : ""}AP for the builder: ${STATS.map(k => `${k} ${ap[k]}`).join(", ")} (${tot} of ${budget}).` +
     (over <= 0 ? "" : geared ? ` <span class="down">Still ${over} over level ${R.lvl}'s ${budget}: scrolls or above-average gear. ${over} comes off ${top} when applied; fix the numbers above if you know them.</span>`
-      : ` ${over} more than level ${R.lvl} gives: that's your gear. Add the <b>Equipment Inventory</b> screenshot and it's taken off.`);
+      : ` ${over} more than level ${R.lvl} gives: that's your gear. Add the <b>Equipment Inventory</b> screenshot and it's taken off (applied without it, ${over} comes off ${top}).`);
 }
 const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, t]) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
 function renderReview(){

@@ -165,6 +165,7 @@ table.mini td,table.mini th{padding:6px 8px}
 .ri:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .ri img{max-width:30px;max-height:30px;image-rendering:pixelated}
 .ri b{position:absolute;right:1px;bottom:0;font:700 10px var(--f-mono);color:var(--ink);text-shadow:0 0 2px var(--bg),0 0 2px var(--bg)}
+#ivbody td{vertical-align:middle} #ivbody .ri{vertical-align:middle;margin-right:6px}
 #qtip.itemtip{width:min(280px,calc(100vw - 16px));background:#15121f;color:#f2eefc;border:1px solid #5a4b8a;border-radius:6px;padding:10px 12px;font-size:12.5px}
 #qtip.itemtip .it-h{text-align:center;font:700 14px var(--f-body);color:#fff;padding-bottom:6px;border-bottom:1px dashed #4a3f72}
 #qtip.itemtip .it-h span{color:#c9b8ff;font-weight:600}
