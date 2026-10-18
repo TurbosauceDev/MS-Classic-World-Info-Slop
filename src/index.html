@@ -37,6 +37,7 @@
     <button role="tab" id="t-cit" aria-selected="false" data-tab="cit" data-cat="town" hidden>Citizenship</button>
     <button role="tab" id="t-craft" aria-selected="false" data-tab="craft" data-cat="town" hidden>Crafting</button>
     <button role="tab" id="t-keep" aria-selected="false" data-tab="keep" data-cat="town" hidden>Keep or sell</button>
+    <button role="tab" id="t-inv" aria-selected="false" data-tab="inv" data-cat="town" hidden>Price check</button>
     <button role="tab" id="t-log" aria-selected="false" data-tab="log" data-cat="more" hidden>Changelog</button>
     <button role="tab" id="t-credits" aria-selected="false" data-tab="credits" data-cat="more" hidden>Credits</button>
   </div>
@@ -66,6 +67,7 @@
       <button class="hlink" data-go="cit"><b>Citizenship</b><span>Town grades, citizenship quests and town shops.</span></button>
       <button class="hlink" data-go="craft"><b>Crafting</b><span>Professions, the cheapest way to level them, recipes and materials.</span></button>
       <button class="hlink" data-go="keep"><b>Keep or sell</b><span>Which loot quests and recipes still want, and what's safe to sell.</span></button>
+      <button class="hlink" data-go="inv"><b>Price check</b><span>Paste inventory screenshots, get every item listed with a player-shop price.</span></button>
     </div>
     <div class="homecat"><h2><button class="hcat" data-go-cat="more">More</button></h2>
       <button class="hlink" data-go="log"><b>Changelog</b><span>What changed and when.</span></button>
@@ -768,6 +770,28 @@
   </table></div>
 </section>
 
+<section id="inv" hidden>
+  <details class="howto">
+    <summary>How the price check works</summary>
+    <ul>
+      <li>Open your item inventory on the <b>Equip</b>, <b>Use</b> or <b>Etc</b> tab and take a screenshot (Win+Shift+S, PrtSc). One screenshot per tab; scroll and take another if a tab has more than one page.</li>
+      <li>Paste (Ctrl+V), drop or pick the screenshots below. Everything is read in your browser; nothing is uploaded.</li>
+      <li>Prices are the median player-shop sale on <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> (as of <span id="ivdate"></span>); half of sales landed in the range shown. Items with no player sales fall back to the NPC price. Prices move, so check before you list.</li>
+      <li>Equips are priced as plain ones: the reader can't see scrolls or stats, so good rolls are worth more.</li>
+      <li>Some items share one picture (scrolls of a kind, letters): pick yours from the list in that row. It starts on the one players sell most. A slot that didn't match any item counts as "not read".</li>
+    </ul>
+  </details>
+  <div class="card">
+    <div class="cardhead"><h3>Your inventory</h3><span id="ivst" class="pill"></span></div>
+    <label class="drop" id="ivdrop"><input type="file" id="ivfile" accept="image/*" multiple>
+      <span>Drop, pick or paste (Ctrl+V) screenshots of your inventory's <b>Equip</b>, <b>Use</b> and <b>Etc</b> tabs.</span></label>
+    <p id="ivreads"></p>
+    <div id="ivsum"></div>
+    <div class="tblwrap" id="ivtbl" hidden><table class="mini"><thead><tr><th>Item</th><th>Tab</th><th class="num">Count</th><th class="num">NPC pays</th><th>Suggested price</th><th class="num">Worth</th></tr></thead>
+      <tbody id="ivbody"></tbody></table></div>
+  </div>
+</section>
+
 <section id="log" hidden>
   <details class="howto">
     <summary>About this page</summary>
@@ -780,6 +804,8 @@
   <div class="changelog">
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Grind Tracker page</h3><span class="pill p-hot">new</span></div>
       <p>New <b>Grind Tracker</b> page under Your character: what our Windows grind tracker does, a download link, and everything its players have shared so far (EXP/hr and mesos/hr by map, confirmed drops by monster, best time of day to farm).</p></div>
+    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Inventory price check</h3><span class="pill p-hot">new</span></div>
+      <p>New <b>Towns and trade › Price check</b> page: paste screenshots of your inventory's Equip, Use and Etc tabs and it lists every item and count with a suggested player-shop price (meso.watch median, NPC price when there's no player data) and what the lot is worth. Uses the grind tracker's inventory reader, all in your browser.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Player-shop prices refreshed</h3><span class="pill p-hot">update</span></div>
       <p>Player-shop prices updated from a fresh <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> export: 824 items now have a price (up from 459), read Oct 17.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Real potion costs</h3><span class="pill p-hot">new</span></div>

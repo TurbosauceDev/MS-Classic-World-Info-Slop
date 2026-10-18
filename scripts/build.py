@@ -10,6 +10,8 @@ src = ROOT / "src"
 html = (src / "index.html").read_text()
 css = (src / "styles.css").read_text()
 js = "\n".join(p.read_text() for p in sorted((src / "js").glob("*.js")))
+# the grind tracker's screen readers (inventory price check uses them); one IIFE, exports window.GrindReaders
+js = js.replace("/*@READERS*/", (ROOT / "tracker" / "app" / "readers.js").read_text(), 1)
 data = (ROOT / "data" / "data.json").read_text()
 assert "/*@CSS*/" in html and "/*@JS*/" in html and "__DATA__" in js
 out = html.replace("/*@CSS*/", css).replace("/*@JS*/", js.replace("__DATA__", data, 1))

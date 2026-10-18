@@ -12,7 +12,7 @@ const path = require("path");
 
   // Home page + section nav: page buttons only show in their section, so open the section first
   const tab = async sel => { await p.click("#c-" + await p.$eval(sel, b => b.dataset.cat)); await p.click(sel) };
-  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 17, "home page lists every page");
+  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 18, "home page lists every page");
   await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && !(await p.isHidden("#t-items")) && await p.isHidden("#t-plan"), "home link opens its page and section");
   await p.click("#c-home"); check(!(await p.isHidden("#home")) && await p.isHidden("#mobs"), "Home button returns home");
   await p.click("#c-db"); check(!(await p.isHidden("#mobs")), "section remembers its last page");
@@ -181,6 +181,10 @@ const path = require("path");
   if (opt) { await p.selectOption('#pgear select[data-slot="Hat"]', opt); check(/1 piece/.test(await p.textContent("#pgearsum")), "armor slot equips"); await p.click("#pgearclear") }
   check(/mesos\/hr/.test(await p.textContent("#pcost")), "builder upkeep shown");
   await p.click("#pshare"); await p.waitForTimeout(200); check(!/NaN|undefined/.test(await p.textContent("#plan")), "copy build link");
+  // inventory price check: the grind tracker's Use-tab fixture (Danny's screenshot, game pixels)
+  await tab("#t-inv"); await p.setInputFiles("#ivfile", path.resolve(__dirname, "../tracker/tests/frames-inv/use-12162.png"));
+  await p.waitForFunction(() => /^Read$|had no/.test(document.querySelector("#ivst").textContent), null, {timeout: 60000});
+  check(/Lemon/.test(await p.textContent("#ivbody")) && /mesos/.test(await p.textContent("#ivsum")), "price check reads a Use tab");
   console.log(errs.length ? "\n" + errs.join("\n") : "\nall good");
   await b.close();
   process.exit(errs.length ? 1 : 0);
