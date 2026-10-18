@@ -37,7 +37,7 @@ app.on("second-instance", () => { if (win){ if (win.isMinimized()) win.restore()
 
 app.whenReady().then(() => {
   if (!firstCopy) return;   // quitting: no window
-  win = new BrowserWindow({width: 360, height: 600, title: "MS Classic Grind Tracker",
+  win = new BrowserWindow({...lastBounds(), title: "MS Classic Grind Tracker",
     // backgroundThrottling off: behind the game or minimized, Chromium would slow the frame timer to once a second and,
     // after 5 minutes, once a minute, so pickup lines would scroll away unread
     webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false}});
@@ -50,6 +50,10 @@ app.whenReady().then(() => {
   win.webContents.setWindowOpenHandler(() => ({action: "deny"}));
   win.webContents.on("will-navigate", e => e.preventDefault());
   win.loadFile(path.join(__dirname, "index.html"));
+  // where the window was: saved half a second after a move or resize, and on close
+  let saveT = null;
+  const keep = () => { clearTimeout(saveT); saveT = setTimeout(saveBounds, 500) };
+  win.on("moved", keep); win.on("resized", keep); win.on("close", () => { clearTimeout(saveT); saveBounds() });
   // our own menu instead of Electron's default (its Help menu only linked to Electron's site)
   const show = what => () => win && !win.isDestroyed() && win.webContents.send("menu", what);
   Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -201,8 +205,22 @@ ipcMain.handle("export-csv", () => {
 // mini bar: a small strip with just EXP/hr and time to level
 // back from the mini bar: the size the window had before, not the default (a player who made it bigger keeps that)
 let fullSize = null;
+// the window opens where it was last time (same monitor, spot and size) when that spot is still on a monitor, else the default
+function lastBounds(){
+  const b = readSettings().winBounds, {screen} = require("electron");
+  if (!b || ![b.x, b.y, b.width, b.height].every(Number.isFinite) || b.width < 200 || b.height < 100) return {width: 360, height: 600};
+  // its title bar has to be on a monitor, at least 80 px of it, or it couldn't be dragged back
+  const onScreen = screen.getAllDisplays().some(({workArea: w}) => Math.min(b.x + b.width, w.x + w.width) - Math.max(b.x, w.x) >= 80 && b.y >= w.y - 10 && b.y < w.y + w.height - 30);
+  return onScreen ? {x: Math.round(b.x), y: Math.round(b.y), width: Math.round(b.width), height: Math.round(b.height)} : {width: 360, height: 600};
+}
+function saveBounds(){
+  if (!win || win.isDestroyed() || win.isMinimized() || win.isMaximized() || win.isFullScreen()) return;
+  const b = win.getBounds();
+  if (fullSize) b.height = fullSize[1];   // mini bar: keep the full height, it opens full size
+  writeSettings({...readSettings(), winBounds: b});
+}
 ipcMain.handle("mini", (_, on) => {
-  if (win){ if (on){ fullSize = win.getSize(); win.setSize(fullSize[0], 128) } else win.setSize(...(fullSize || [360, 600])) }
+  if (win){ if (on){ fullSize = win.getSize(); win.setSize(fullSize[0], 128) } else { win.setSize(...(fullSize || [360, 600])); fullSize = null } }
   return !!on;
 });
 ipcMain.handle("share-run", async (_, run) => {
