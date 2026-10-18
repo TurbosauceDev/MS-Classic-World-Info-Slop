@@ -5543,7 +5543,8 @@ const lvl = v => Math.min(99, Math.max(1, Math.trunc(+v) || 1));
 function readExp(txt, L){
   const t = String(txt).replace(/[,\s]/g, ""); if (!t) return null;
   const m = t.match(/^(\d+(?:\.\d+)?)(%?)/); if (!m) return null;
-  return m[2] ? +m[1] / 100 * D.exp[L] : +m[1];
+  const e = m[2] ? +m[1] / 100 * D.exp[L] : +m[1];
+  return D.exp[L] && e >= D.exp[L] ? null : e;   // EXP into a level is always below what the level needs
 }
 const expBetween = (L0, e0, L1, e1) => { let g = e1 - e0; for (let l = L0; l < L1; l++) g += D.exp[l]; return g };
 const toLevel = (L, e, goal) => { let need = D.exp[L] - e; for (let l = L + 1; l < goal; l++) need += D.exp[l]; return need };
@@ -5588,7 +5589,7 @@ function calc(){
   const pct = rate / D.exp[L1] * 100, unsure = L1 >= EXP_SURE ? ' <span class="pill p-warn">estimated EXP table</span>' : "";
   $("#ecout").innerHTML = `<div class="card">
     <div class="big">${fmt(rate)} <small>EXP/hr</small></div>
-    <p>${fmt(gain)} EXP in ${+min.toFixed(1)} min · ${pct >= 10 ? Math.round(pct) : pct.toFixed(1)}% of level ${L1} per hour${card > 1 ? ` · ${fmt(rate / card)}/hr without the ${card}x card` : ""}</p>
+    <p>${fmt(gain)} EXP in ${min < 1 ? Math.round(min * 60) + " s" : +min.toFixed(1) + " min"} · ${pct >= 10 ? Math.round(pct) : pct.toFixed(1)}% of level ${L1} per hour${card > 1 ? ` · ${fmt(rate / card)}/hr without the ${card}x card` : ""}</p>
     <p>Next level: <b>${hrs(toLevel(L1, e1, L1 + 1) / perSec)}</b>${goal > L1 + 1 ? ` · Level ${goal}: <b>${hrs(toLevel(L1, e1, goal) / perSec)}</b>` : ""}${unsure}</p>
     ${mid ? `<p>${mapLink(mid, D.maps[mid][0])}: our estimate ${est != null ? `<b>${fmt(est)}</b>/hr (default ${esc(S.cls)} build${party > 1 ? `, party of ${party}` : ""}${card > 1 ? `, ×${card} card` : ""}). You got <b>${Math.round(rate / est * 100)}%</b> of it.` : "none (your build can't hit these monsters reliably by our model)."}</p>` : ""}
     <button class="btn primary" id="ecsave" type="button">Save session</button></div>`;
