@@ -824,10 +824,12 @@ $("#frames").onclick = async () => {
   $("#frames").disabled = true;   // one batch at a time
   try { if (!video?.srcObject?.active) await startCapture() }   // stopped tracks only give the last frame
   catch (err){ $("#frames").disabled = false; $("#status").textContent = "Couldn't capture the game: " + err.message; return }
-  let n = 0, dir = null;
+  let n = 0, dir = null, busy = false, over = false;
   // done: the capture closes again unless tracking runs on it
-  const done = () => { clearInterval(iv); $("#frames").disabled = false; if (timer == null) video?.srcObject?.getTracks().forEach(tr => tr.stop()) };
+  const done = () => { over = true; clearInterval(iv); $("#frames").disabled = false; if (timer == null) video?.srcObject?.getTracks().forEach(tr => tr.stop()) };
   const iv = setInterval(async () => {
+    if (busy || over) return;   // a slow PNG save (> 3 s) must not start a second one with the same frame number
+    busy = true;
     try {
       if (!video.videoWidth || !video.srcObject?.active) throw new Error("capture stopped (Stop pressed or game closed)");
       canvas.width = video.videoWidth; canvas.height = video.videoHeight; g.drawImage(video, 0, 0);
@@ -836,6 +838,7 @@ $("#frames").onclick = async () => {
       $("#status").textContent = `Saving sample frames: ${n + 1}/60`;
       if (++n >= 60){ done(); $("#status").textContent = "Frames saved."; host.openFolder(dir) }
     } catch (err){ done(); $("#status").textContent = `Stopped saving frames after ${n}: ${err.message}` }
+    finally { busy = false }
   }, 3000);
 };
 
