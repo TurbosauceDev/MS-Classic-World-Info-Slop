@@ -59,7 +59,7 @@ npm start           # run it (Windows, Electron)
   getting started, what the numbers mean, tabs, potions, party, window tips, bug reports, updates, privacy.
 - Updates (v0.2.17): checked at launch and every 6 h, downloaded in the background, installed on close (electron-updater,
   GitHub Releases). Settings > App has "Check for updates"; once downloaded, a banner on top offers "Restart and update"
-  (stops and saves a running session first, then installs silently and starts the app again).
+  (stops and saves a running session first, then installs silently and starts the app again). v0.2.20: an Install button next to "is ready" in Settings > App, and the banner stays on top while scrolling.
 - Window (v0.2.16): Start/Stop, tracking state and the 4 main numbers (EXP/hr, next level, mesos/hr, kills/hr) on top;
   tabs Session / Loot / Snapshots / History / Settings below (last tab remembered). Self-check is one line while
   checking, then only the readers that fail, with the fix.

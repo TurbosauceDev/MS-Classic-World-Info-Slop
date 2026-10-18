@@ -570,6 +570,7 @@ function showUpdate(u){
   if (note) $("#updNote").textContent = note;
   $("#updCheck").disabled = u.state === "checking" || u.state === "downloading";
   $("#updBanner").classList.toggle("hidden", u.state !== "ready");
+  $("#updInstall").classList.toggle("hidden", u.state !== "ready");
   $("#updText").textContent = `Update ${u.version || ""} is ready.`;
 }
 host.onUpdate?.(showUpdate);
@@ -590,10 +591,12 @@ host.onMenu?.(what => {
   else if (what === "update" || what === "report"){ showTab("settings"); (what === "update" ? $("#updCheck") : $("#reportNote")).scrollIntoView(); if (what === "update") $("#updCheck").click(); else $("#reportNote").focus() }
 });
 $("#updCheck").onclick = async () => { $("#updNote").textContent = "Checking..."; showUpdate(await host.updateCheck?.()) };
+// Install (Settings) and Restart and update (the banner, which stays on top while scrolling) do the same
+$("#updInstall").onclick = () => $("#updGo").click();
 $("#updGo").onclick = async () => {
-  $("#updGo").disabled = true;
+  $("#updGo").disabled = true; $("#updInstall").disabled = true; $("#updNote").textContent = "Installing... the tracker closes and opens again by itself.";
   if (timer != null){ $("#status").textContent = "Saving this session before the update..."; await stop() }
-  if (!await host.updateInstall?.()){ $("#updGo").disabled = false; $("#status").textContent = "The update isn't ready yet." }
+  if (!await host.updateInstall?.()){ $("#updGo").disabled = $("#updInstall").disabled = false; $("#status").textContent = "The update isn't ready yet." }
 };
 (async () => {
   host.version?.().then(v => { if (!v) return; $("#appVer").textContent = v; $("#helpVer").textContent = "MS Classic Grind Tracker " + v }).catch(() => {});

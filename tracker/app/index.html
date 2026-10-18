@@ -45,7 +45,7 @@
   #helpBtn { padding:5px 10px; font-size:12px; font-weight:600; }
   #help details { border-top:1px solid var(--line); padding:6px 0; } #help details:first-of-type { border-top:0; }
   #help summary { cursor:pointer; font-weight:600; } #help ul { margin:6px 0 2px; padding-left:18px; } #help li { margin:3px 0; }
-  #updBanner { display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-color:var(--accent); background:var(--accent-soft); } #updBanner b { flex:1; }
+  #updBanner { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-color:var(--accent); background:var(--accent-soft); } #updBanner b { flex:1; }
 </style>
 </head>
 <body>
@@ -198,7 +198,7 @@
       <label class="chk"><input type="checkbox" id="share"> <span>Share my sessions (anonymous: map, kills, drops; no character name)</span></label>
     </div>
     <div class="card"><h3>App</h3>
-      <div class="row"><span>Version <b id="appVer">-</b></span> <button id="updCheck" class="alt">Check for updates</button></div>
+      <div class="row"><span>Version <b id="appVer">-</b></span> <button id="updCheck" class="alt">Check for updates</button> <button id="updInstall" class="hidden">Install</button></div>
       <div class="note" id="updNote">Updates also download by themselves and install when you close the app.</div>
     </div>
     <div class="card"><h3>Something read wrong?</h3>

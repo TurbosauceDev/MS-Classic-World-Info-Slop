@@ -31,7 +31,7 @@ const path = require("path"), {chromium} = require("playwright");
   // updates: Check for updates -> downloading -> ready banner; Restart and update stops (saves) the session first
   await page.click(".tabs [data-tab=settings]"); await page.click("#updCheck"); await page.waitForTimeout(100);
   const up = await page.evaluate(() => [document.querySelector("#appVer").textContent, document.querySelector("#updNote").textContent, document.querySelector("#updText").textContent]);
-  if (up[0] !== "0.2.17" || !/0\.2\.18 is ready/.test(up[1]) || !await page.isVisible("#updBanner")) throw new Error("update: " + up);
+  if (up[0] !== "0.2.17" || !/0\.2\.18 is ready/.test(up[1]) || !await page.isVisible("#updBanner") || !await page.isVisible("#updInstall")) throw new Error("update: " + up);
   await page.click(".tabs [data-tab=session]");
   // the top card: tracking state and Stop; tabs switch sections
   const top = await page.evaluate(() => [document.querySelector("#stateText").textContent, document.querySelector("#go").textContent, document.querySelector("#go").classList.contains("on")]);
