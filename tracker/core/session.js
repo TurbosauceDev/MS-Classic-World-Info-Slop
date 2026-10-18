@@ -81,7 +81,7 @@
         if (last.t <= first.t) continue;
         for (const id of new Set([...Object.keys(first.items), ...Object.keys(last.items)])){
           const n = (last.items[id] || 0) - (first.items[id] || 0);
-          if (n && !(G.kpqItems || []).includes(id)) out.push({id, tab, n, alike: last.alike[id] || first.alike[id] || 1, name: G.items[id]?.n || "Item " + id});
+          if (n && !(G.kpqItems || []).includes(id)) out.push({id, tab, n, was: first.items[id] || 0, now: last.items[id] || 0, alike: last.alike[id] || first.alike[id] || 1, name: G.items[id]?.n || "Item " + id});
         }
       }
       return out.sort((a, b) => Math.abs(b.n) - Math.abs(a.n));

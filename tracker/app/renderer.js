@@ -1,5 +1,6 @@
 // Tracker window: grabs 2 frames a second from the game window, runs the readers, shows the session.
 const G = GAMEDATA, $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString();
+const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
 let FPS = 2;   // drops to 1 a second when reading a frame takes long (big screens, slow PCs)
 let session = null, slicer = null, engine = null, video = null, timer = null, settings = {};
 const canvas = document.createElement("canvas"), g = canvas.getContext("2d", {willReadFrequently: true});
@@ -92,7 +93,7 @@ function sameAsLast(f){
 
 // bug reports: the last 300 log lines and the last 8 frames (one every 3 s, so about 25 s back), saved by "Report a bug"
 const LOG = [], RECENT = [];
-let stopAsked = 0;   // when Stop asked for one more look at the inventory first
+let wrap = null, runT0 = 0;   // wrap: {t} after Stop, until End run (the end inventory look); runT0: when Start was pressed
 function log(kind, data){ LOG.push({t: Date.now(), kind, ...data}); if (LOG.length > 300) LOG.shift() }
 new MutationObserver(() => { const text = $("#status").textContent; if (LOG.findLast(l => l.kind === "status")?.text !== text) log("status", {text}) }).observe($("#status"), {childList: true, characterData: true, subtree: true});
 let lastKeep = 0;
@@ -157,12 +158,14 @@ function render(){
   $("#miniExp").textContent = fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent;
   $("#miniNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
   $("#lootHr").textContent = fmt(s.lootHr);
-  $("#usedHr").textContent = s.used.length ? fmt(s.usedCostHr) : "-";
-  $("#netHr").textContent = (s.used.length ? "net " + fmt(s.netHr) + " mesos/hr (mesos + loot - used)" : "from the quick-slot counts")
-    + (s.walletNet != null ? ` · inventory mesos ${s.walletNet >= 0 ? "+" : ""}${fmt(s.walletNet)} (${fmt(s.walletNetHr)}/hr, spending included)` : "");
-  $("#used").innerHTML = s.used.map(u => `<tr><td>${esc(u.name)}</td><td class="n">×${u.n}</td><td class="n">${u.total == null ? "price unknown" : fmt(u.total)}</td></tr>`).join("");
+  $("#usedHr").innerHTML = s.used.length ? sg(-s.usedCostHr) : "-";
+  $("#netHr").innerHTML = s.used.length ? "net " + sg(s.netHr) + " mesos/hr (mesos + loot - used)" : "from the quick-slot counts";
+  $("#used").innerHTML = s.used.length ? `<tr class="th"><td>Item</td><td class="n">Used</td><td class="n">Each</td><td class="n">Cost</td></tr>`
+    + s.used.map(u => `<tr><td>${esc(u.name)}</td><td class="n">×${fmt(u.n)}</td><td class="n dim">${u.each == null ? "?" : fmt(u.each)}</td><td class="n">${u.total == null ? "price unknown" : sg(-u.total)}</td></tr>`).join("")
+    + `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.used.reduce((a, u) => a + u.n, 0))}</td><td></td><td class="n">${sg(-s.usedCost)}</td></tr>` : "";
   $("#usedEmpty").classList.toggle("hidden", !!s.used.length);
-  $("#mesosNet").textContent = s.used.length ? "net " + fmt(s.netHr) + " after potions" : "";
+  $("#mesosNet").innerHTML = s.used.length ? "net " + sg(s.netHr) + " after potions" : "";
+  renderMesos(s);
   const bar = session.state.bar;
   $("#lvNow").textContent = s.level ? "Lv " + s.level + (bar ? " · " + bar.pct.toFixed(2) + "%" : "") : "";
   renderState(s);
@@ -184,11 +187,13 @@ function render(){
     settings.share && runInfo()].filter(Boolean).join(" · ");
   $("#mobsEmpty").classList.toggle("hidden", !!s.mobs.length); $("#itemsEmpty").classList.toggle("hidden", !!(s.items.length || s.unreadItems));
   $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${esc(m.name)}</td><td class="n">${m.kills} kills</td><td class="n">${fmt(m.mesoPerKill)} mesos/kill</td></tr>`).join("");
-  $("#items").innerHTML = s.items.map(i => `<tr><td>${esc(i.name)}${i.inv ? ` <span class="note">(${i.inv} from the inventory)</span>` : ""}</td><td class="n">×${i.n}</td><td class="n">${fmt(i.total)}</td></tr>`).join("")
+  $("#items").innerHTML = (s.items.length ? `<tr class="th"><td>Item</td><td class="n">Got</td><td class="n">Each</td><td class="n">Worth</td></tr>` : "")
+    + s.items.map(i => `<tr><td>${esc(i.name)}${i.inv ? ` <span class="note">(${i.inv} from the inventory)</span>` : ""}</td><td class="n">×${fmt(i.n)}</td><td class="n dim">${fmt(i.each)}</td><td class="n">${sg(i.total)}</td></tr>`).join("")
+    + (s.items.length ? `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.items.reduce((a, i) => a + i.n, 0))}</td><td></td><td class="n">${sg(s.lootValue)}</td></tr>` : "")
     + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet: ${(s.invTabs?.etc?.last || 0) > (s.invTabs?.etc?.first || 0)
       ? "the Etc tab doesn't show more than the pickup lines already counted, so they're probably Use items (potions) or a misread line. Report a bug right after one shows up so it can be fixed"
       : "open your Etc tab for a second to count them from the inventory"}</td></tr>` : "");
-  renderInv(s);
+  renderInv(s); renderWrap(s);
   $("#priceNote").textContent = G.pwRead ? `Worth = player-shop median from meso.watch (${G.pwRead}), else NPC price. Mesos/kill on maps with several monsters is a best guess.` : "";
   return s.exp;   // for renderSnaps
 }
@@ -203,18 +208,33 @@ function renderInv(s){
   const missing = timer != null ? INV_TABS.filter(([k]) => !tabs[k]).map(([, n]) => n) : [];
   $("#invAsk").classList.toggle("hidden", !missing.length);
   $("#invAsk").textContent = `Open your inventory and show the ${missing.join(", ")} tab${missing.length > 1 ? "s" : ""} for a second${missing.length > 1 ? " each" : ""}: that's the start count.`;
-  const g = s?.inv || [];
-  $("#invBox").classList.toggle("hidden", !Object.keys(tabs).length);
-  $("#invGain").innerHTML = g.slice(0, 40).map(x => `<tr><td>${esc(x.name)}${x.alike > 1 ? ` <span class="note">(or ${x.alike - 1} look-alike${x.alike > 2 ? "s" : ""})</span>` : ""}</td><td class="n">${x.n > 0 ? "+" : ""}${x.n}</td></tr>`).join("");
-  $("#invNote").textContent = g.length ? "Equip, Use and Etc read twice or more. Potions bought show up here too; loot counts only Etc items, equips and scrolls, and Use items that went down count as used up."
-    : "No change yet: open the same tab again later in the session.";
+}
+// a number with its sign, green when gained and red when lost or spent
+const sg = n => { n = Math.round(n || 0); return `<span class="${n > 0 ? "pos" : n < 0 ? "neg" : ""}">${n > 0 ? "+" : n < 0 ? "−" : ""}${fmt(Math.abs(n))}</span>` };
+// Loot tab: where the mesos came from and went
+const cell = (k, v, note = "") => `<div><div class="k">${k}</div><div class="v">${v}</div>${note ? `<div class="note">${note}</div>` : ""}</div>`;
+function renderMesos(s){
+  $("#mesoGrid").innerHTML = cell("Picked up", sg(s.mesos), fmt(s.mesosHr) + "/hr of farming") + cell("Per kill", fmt(s.mesoPerKill), s.kills + " kills")
+    + cell("Spent on consumables", s.used.length ? sg(-s.usedCost) : "-", s.used.length ? fmt(s.usedCostHr) + "/hr" : "")
+    + cell("Items looted are worth", sg(s.lootValue), "if sold at the prices below")
+    + cell("Net", sg(s.mesos + s.lootValue - s.usedCost), "picked up + items - consumables")
+    + cell("Inventory mesos", s.walletNet == null ? "-" : sg(s.walletNet), s.walletNet == null ? "open the inventory to read it" : "now vs. first look, shop trips included");
+}
+// after Stop: each inventory tab read since then (green), open on screen right now (amber) or not yet (grey)
+function renderWrap(s){
+  $("#wrap").classList.toggle("hidden", !wrap);
+  if (!wrap) return;
+  const tabs = (s || session?.stats())?.invTabs || {}, n = INV_TABS.filter(([k]) => tabs[k]?.last >= wrap.t).length;
+  $("#wrapTabs").innerHTML = INV_TABS.map(([k, name]) => { const done = tabs[k]?.last >= wrap.t, seeing = !done && lastInvTab === k && Date.now() - (tabs[k]?.last || 0) < 10e3;
+    return `<button class="chip ${done ? "ok" : seeing ? "half" : "need"}" data-tab="${k}" title="${done ? "Read after Stop" : "Not read since Stop. Click to read it now (have the " + name + " tab open in the game)"}">${done ? "✓" : seeing ? "…" : "○"} ${name}</button>` }).join(" ");
+  $("#wrapNote").textContent = n === 3 ? "All 3 tabs read: ready to end." : `${n} of 3 tabs read since Stop.`;
 }
 // the line next to Start/Stop: tracking or not, paused, for how long
 function renderState(s){
   const on = timer != null, paused = on && s?.paused;
-  $("#state").className = paused ? "paused" : on ? "on" : "";
-  $("#stateText").textContent = paused ? "Paused" : on ? "Tracking" + (s ? " · " + hm(s.activeMin / 60) + " farmed" : "") : s && s.activeMin ? "Stopped · " + hm(s.activeMin / 60) + " farmed" : "Not tracking";
-  $("#go").textContent = on ? "Stop" : "Start"; $("#go").classList.toggle("on", on);
+  $("#state").className = wrap ? "paused" : paused ? "paused" : on ? "on" : "";
+  $("#stateText").textContent = wrap ? "Stopped at " + clock(wrap.t) + " · wrapping up" : paused ? "Paused" : on ? "Tracking" + (s ? " · " + hm(s.activeMin / 60) + " farmed" : "") : s && s.activeMin ? "Stopped · " + hm(s.activeMin / 60) + " farmed" : "Not tracking";
+  $("#go").textContent = wrap ? "Resume" : on ? "Stop" : "Start"; $("#go").classList.toggle("on", on && !wrap);
 }
 // tabs under the numbers; the last one open is remembered
 function showTab(name){
@@ -223,6 +243,51 @@ function showTab(name){
   try { localStorage.setItem("tab", name) } catch {}
 }
 for (const b of document.querySelectorAll(".tabs button")) if (b.id !== "histBtn") b.onclick = () => showTab(b.dataset.tab);
+// boxes, like OBS sources: dragged by the ⠿ grip onto another box (above or below it), onto a tab (to the end of it), or onto
+// the strip above the tabs (pinned: shows on every tab); – folds one to its title. Saved in settings.layout (Danny, 2026-10-18)
+const BOXES = [...document.querySelectorAll("[data-box]")], BOX_HOME = BOXES.map(b => [b, b.parentElement, b.nextElementSibling]);
+const holderOf = el => el.closest("#dock") || el.closest("section[data-tab]");
+let dragBox = null;
+function layoutSave(){
+  const order = {};
+  for (const h of [$("#dock"), ...document.querySelectorAll("section[data-tab]")]) order[h.id || h.dataset.tab] = [...h.querySelectorAll(":scope > [data-box]")].map(b => b.dataset.box);
+  host.settings({layout: {order, folded: BOXES.filter(b => b.classList.contains("folded")).map(b => b.dataset.box)}}).then(x => settings = x);
+}
+function layoutLoad(l){
+  if (!l?.order) return;
+  for (const [k, ids] of Object.entries(l.order)){
+    const h = k === "dock" ? $("#dock") : document.querySelector(`section[data-tab="${k}"]`); if (!h) continue;
+    for (const id of ids){ const b = BOXES.find(x => x.dataset.box === id); if (b) h.appendChild(b) }
+  }
+  for (const b of BOXES) b.classList.toggle("folded", (l.folded || []).includes(b.dataset.box));
+}
+for (const b of BOXES){
+  b.classList.add("box");
+  const c = document.createElement("div"); c.className = "boxctl";
+  c.innerHTML = `<span class="btitle">${esc(b.dataset.title)}</span><span class="grip" title="Drag to move: onto another box, a tab, or the strip above the tabs">⠿</span><button class="fold" title="Fold or unfold">–</button>`;
+  b.prepend(c);
+  c.querySelector(".fold").onclick = () => { b.classList.toggle("folded"); c.querySelector(".fold").textContent = b.classList.contains("folded") ? "+" : "–"; layoutSave() };
+  c.querySelector(".grip").onmousedown = () => b.draggable = true;
+  b.ondragstart = e => { if (!b.draggable) return; dragBox = b; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", b.dataset.box); document.body.classList.add("dragging") };
+  b.ondragend = () => { b.draggable = false; dragBox = null; document.body.classList.remove("dragging"); dropMark(null) };
+}
+document.addEventListener("mouseup", () => { if (!dragBox) for (const b of BOXES) b.draggable = false });
+const dropTarget = e => { const t = e.target.closest?.("[data-box], #dock, section[data-tab], .tabs button"); if (!t || t === dragBox || dragBox?.contains(t)) return null;
+  if (t.matches(".tabs button") && !["session", "loot", "hist"].includes(t.dataset.tab)) return null; return t };
+function dropMark(t, below){
+  for (const x of document.querySelectorAll(".over-top, .over-bottom, .over-drop")) x.classList.remove("over-top", "over-bottom", "over-drop");
+  if (t) t.classList.add(t.matches("[data-box]") ? below ? "over-bottom" : "over-top" : "over-drop");
+}
+document.addEventListener("dragover", e => { if (!dragBox) return; const t = dropTarget(e); if (!t) return dropMark(null);
+  e.preventDefault(); const r = t.getBoundingClientRect(); dropMark(t, e.clientY > r.top + r.height / 2) });
+document.addEventListener("drop", e => {
+  if (!dragBox) return; const t = dropTarget(e); dropMark(null); if (!t) return; e.preventDefault();
+  if (t.matches("[data-box]")){ const r = t.getBoundingClientRect(); t.parentElement.insertBefore(dragBox, e.clientY > r.top + r.height / 2 ? t.nextSibling : t) }
+  else if (t.matches(".tabs button")) document.querySelector(`section[data-tab="${t.dataset.tab}"]`).appendChild(dragBox);
+  else t.appendChild(dragBox);
+  layoutSave();
+});
+$("#layoutReset").onclick = () => { for (const [b, p, next] of [...BOX_HOME].reverse()){ p.insertBefore(b, next); b.classList.remove("folded"); b.querySelector(".fold").textContent = "–" } layoutSave() };
 try { const t = localStorage.getItem("tab"); if (t && t !== "hist" && t !== "help" && document.querySelector(`section[data-tab="${t}"]`)) showTab(t) } catch {}
 
 // a crop (black-on-white RGBA) -> PNG bytes for the OCR in the main process
@@ -255,12 +320,11 @@ async function readMap(c, t){   // c: the minimap title crop (GrindReaders.mapTe
   if (check && sess === session){ if (!m) check.mapWhy = "Minimap found, but its name didn't read. Is something over the minimap title?"; else if (!check.map){ check.map = m.name || "map " + m.id; check.late = check.ended } }
   // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
   const same = (a, b) => a === b || a && b && !G.maps[a] && !G.maps[b] && GrindReaders.similar(a, b) >= 0.75;
-  if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e); kpqMap(m.id, t) }
+  if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session && !wrap){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e); kpqMap(m.id, t) }
   mapSeen = key;
 }
 
 // after each 15-minute run: how it compares with other players around your level (shared data)
-const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
 async function showSpeed(run){
   const sum = await host.summary(), sc = GrindSession.speedCheck(run, sum, G), box = $("#lastRun");
   // best time to farm this map: the 3 hours (your time) when players beat their own usual speed here the most
@@ -320,7 +384,7 @@ async function sendParty(){
 // EXP stopped: one low beep when no EXP for 2 minutes after some came in; again only after EXP comes back and stops again
 let stopWarned = false;
 function stopCheck(s){
-  if (settings.stopBeep === false || !s.lastExpT) return;
+  if (wrap || settings.stopBeep === false || !s.lastExpT) return;
   const quiet = Date.now() - s.lastExpT > 120e3;
   if (quiet && !stopWarned){ stopWarned = true; beep(330, 0.6); $("#status").textContent = "No EXP for 2 minutes. Died, disconnected, or someone took the map?" }
   if (!quiet) stopWarned = false;
@@ -350,7 +414,7 @@ function autoPause(minimap, info, t){   // minimap: the minimap is on screen (lo
 const KPQ_MAPS = new Set((G.kpq || []).map(String));
 let kpq = null;
 function pauseAt(t){ const e = {t: Math.max(t, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); log("event", e) }
-function kpqReset(){ kpq = {on: settings.kpqAct === "kpq", hold: false, inside: false, rounds: 0, left: null, leftT: 0, stage: null, round: null, times: [], stageTimes: {}} }
+function kpqReset(){ kpq = {on: settings.kpqAct === "kpq", hold: false, inside: false, rounds: 0, left: null, leftT: 0, stage: null, round: null, times: [], stageTimes: {}, stageExp: {}} }
 // stage and round times: from the KPQ clock ("Time Left", top middle) when it reads, else the PC clock
 const KPQ_STAGE = {"80000000": "1st", "80000100": "2nd", "80000200": "3rd", "80000300": "4th", "80000400": "Last", "80000500": "Bonus"};
 const kpqLeftAt = t => kpq.left === null ? null : kpq.left - (t - kpq.leftT) / 1000;
@@ -361,7 +425,7 @@ function kpqTime(left, t){
   for (const p of [kpq.stage, kpq.round]) if (p && p.left0 === null) p.left0 = left + (t - p.t0) / 1000;   // clock first seen mid-stage
 }
 function kpqEnd(t, round){
-  if (kpq.stage){ (kpq.stageTimes[kpq.stage.id] ||= []).push(kpqSince(kpq.stage, t)); kpq.stage = null }
+  if (kpq.stage){ const id = kpq.stage.id; (kpq.stageTimes[id] ||= []).push(kpqSince(kpq.stage, t)); kpq.stageExp[id] = (kpq.stageExp[id] || 0) + Math.max(0, (session?.stats().exp || 0) - kpq.stage.exp0); kpq.stage = null }
   if (round && kpq.round){ kpq.times.push(kpqSince(kpq.round, t)); kpq.round = null }
   if (round) kpq.left = null;   // each round's clock starts over
 }
@@ -375,7 +439,7 @@ function kpqMap(id, t){
     // a new stage: the last one's time is kept; the Exit map ends the round
     if (kpq.stage?.id !== String(id)){
       kpqEnd(t, String(id) === "80000600");
-      if (KPQ_STAGE[id]){ const p = {id: String(id), t0: t, left0: kpqLeftAt(t)}; kpq.stage = p; if (!kpq.round) kpq.round = {t0: t, left0: p.left0} }
+      if (KPQ_STAGE[id]){ const p = {id: String(id), t0: t, left0: kpqLeftAt(t), exp0: session?.stats().exp || 0}; kpq.stage = p; if (!kpq.round) kpq.round = {t0: t, left0: p.left0} }
     }
     kpq.inside = true;
     if (kpq.hold){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ round " + kpq.rounds + ": tracking again." }
@@ -398,7 +462,7 @@ function kpqSet(){
   if (!session || !kpq) return;
   const t = Date.now();
   if (settings.kpqAct === "kpq" && !kpq.on){ kpq.on = true; kpqMap(session.state.map, t) }
-  else if (settings.kpqAct === "grind" && kpq.on){ kpq.on = false; if (kpq.hold){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e) } }
+  else if (settings.kpqAct === "grind" && kpq.on && !wrap){ kpq.on = false; if (kpq.hold){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e) } }
 }
 $("#kpqAct").onchange = e => host.settings({kpqAct: e.target.value}).then(s => { settings = s; kpqSet(); if (session) render() });
 $("#kpqMode").onchange = e => host.settings({kpqMode: e.target.value}).then(s => { settings = s; if (session) render() });
@@ -433,6 +497,7 @@ async function tick(){
     if (timer == null || sess !== session || !r) throw null;   // stopped (or restarted) while reading, or the frame was lost
     if (r.scale){ scale = r.scale; fastLeft = 19 }   // also at 1x: finding the scale is the slow part, so it's checked every 20 frames only
     for (const e of r.ev){
+      if (wrap && e.type !== "inv" && e.type !== "wallet" && e.type !== "glyph") continue;   // after Stop: only the end inventory look counts
       if (e.type === "kpqtime"){ if (kpq) kpqTime(e.left, e.t); continue }
       // a pickup-line letter learned from an item name: kept for next time (at most 300)
       if (e.type === "glyph"){ const g = [...(settings.glyphs || []), {ch: e.ch, w: e.w, h: e.h, bits: e.bits}].slice(-300); host.settings({glyphs: g}).then(x => settings = x); log("glyph", {ch: e.ch}); continue }
@@ -449,7 +514,7 @@ async function tick(){
     const info = r.info; lastInvTab = info.inv || null;
     if (check && info.useSpots && !check.use){ check.use = info.useSpots + " item count" + (info.useSpots > 1 ? "s" : ""); check.late = check.ended }
     if (check && info.partyWindow > 1 && !check.party){ check.party = info.partyWindow; check.late = check.ended }
-    autoPause(r.minimap, info, t);
+    if (!wrap) autoPause(r.minimap, info, t);
     if (check && (!check.ended || check.late)){ check.late = false; renderCheck() }   // a ✗ turns ✓ when it starts working
     if (session.state.deaths > deathSeen){ deathSeen = session.state.deaths; deathPending = {t, tries: 0, last: 0} }
     const ocr = fn => { ocrBusy = true; fn.catch(() => {}).finally(() => ocrBusy = false) };
@@ -551,7 +616,7 @@ function showArea(){
 // a tab chip clicked: read that tab now. The inventory is looked for anywhere on screen (it can be moved during the
 // session); if it isn't found in 4 s, the player drags a box around it (snip window), saved as settings.invArea
 let lastInvTab = null;
-$("#invTabs").onclick = async e => {
+$("#invTabs").onclick = $("#wrapTabs").onclick = async e => {
   const b = e.target.closest("[data-tab]"); if (!b) return;
   const tab = b.dataset.tab, name = INV_TABS.find(x => x[0] === tab)[1], say = t => $("#status").textContent = t;
   if (timer == null || !engine?.invNow) return say("Press Start first, then click a tab to read it.");
@@ -559,7 +624,7 @@ $("#invTabs").onclick = async e => {
   const wait = async () => { const t0 = Date.now(); lastInvTab = null; engine.invNow();
     for (let i = 0; i < 16; i++){ await new Promise(r => setTimeout(r, 500)); if ((session?.stats().invTabs?.[tab]?.last || 0) >= t0) return true } return false };
   say(`Reading your ${name} tab: have it open in the game...`);
-  if (await wait()) return say(`${name} tab read.`);
+  if (await wait()){ render(); return say(`${name} tab read.`) }
   if (timer == null) return;
   if (lastInvTab) return say(`That's your ${INV_TABS.find(x => x[0] === lastInvTab)[1]} tab: switch the inventory to ${name} and click again.`);
   say("Couldn't find your inventory: drag a box around it (with the " + name + " tab open).");
@@ -583,7 +648,7 @@ async function start(){
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: settings.goal || 0}); stopWarned = false;
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
-  $("#stopAnyway").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
+  wrap = null; runT0 = Date.now(); $("#summary").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   kpqReset(); barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
   engine = makeEngine(ICONS, settings.countArea || null, settings.invArea || null, settings.glyphs || []); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
@@ -596,25 +661,38 @@ async function start(){
   if (!snaps.start) snap("start", null, false).catch(() => {});
 }
 let stopping = false;
-// the "Stop anyway" button sits under the status line, not where Start/Stop is: a double click on Stop can't confirm it,
-// and Start is locked for 3 s after a stop, so a double click doesn't start a new session (Danny, 2026-10-18)
-async function stop(force = false){
-  if (stopping) return;   // a double click saves one session, not two (the end picture takes a moment)
-  // a tab not read in the last 2 minutes: ask for one more look first (a second Stop within 20 s stops anyway)
-  // all 3 tabs, read in the last 2 minutes: the end count
-  const tabs = session?.stats().invTabs || {}, stale = INV_TABS.filter(([k]) => !tabs[k] || Date.now() - tabs[k].last > 120e3).map(([, n]) => n);
-  if (stale.length && !force){
-    stopAsked = Date.now(); $("#stopAnyway").classList.remove("hidden");
-    $("#status").textContent = `Before stopping: open your inventory's ${stale.join(", ")} tab${stale.length > 1 ? "s" : ""} for a second so the end count is right, then press Stop (or Stop anyway below).`;
-    return;
-  }
-  stopAsked = 0; $("#stopAnyway").classList.add("hidden");
-  stopping = true; $("#go").disabled = true;
-  try { await stopNow() } finally { stopping = false; setTimeout(() => $("#go").disabled = false, 3000) }
+// Stop: the timer stops (paused from now on) and the end EXP reading is taken; the wrap-up card then asks for one last look
+// at each inventory tab, and End run (in that card, away from Start/Stop, so a double click can't end it) saves the session
+// and shows the summary. Start/Resume is locked for 2-3 s after either (Danny, 2026-10-18)
+const lockGo = ms => { $("#go").disabled = true; setTimeout(() => $("#go").disabled = false, ms) };
+async function stop(){
+  if (stopping || wrap || timer == null) return;
+  stopping = true; lockGo(2000);
+  try {
+    const t = Date.now(); wrap = {t};
+    if (session.state.pausedAt === null) pauseAt(t);
+    if (kpq?.on) kpqEnd(t, true);
+    log("wrap", {});
+    if (video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {});
+    $("#status").textContent = "Stopped. Open your inventory on Equip, Use and Etc for a second each, then press End run.";
+    render();
+  } finally { stopping = false }
+}
+function resume(){
+  if (!wrap || timer == null) return;
+  const e = {t: Date.now(), type: "resume"}; session.add(e); slicer.add(e); log("event", e);
+  wrap = null; lockGo(1000); $("#status").textContent = "Tracking again."; render();
+}
+async function finish(){
+  if (stopping || timer == null) return;
+  stopping = true; $("#wrapEnd").disabled = true; lockGo(3000);
+  const t1 = wrap?.t || Date.now();
+  try { await stopNow() } finally { stopping = false; wrap = null; $("#wrapEnd").disabled = false; renderWrap(); renderState(session?.stats()) }
+  try { showSummary(t1) } catch (e){ log("summary", {err: e.message}) }
 }
 async function stopNow(){
   log("stop", {engine: engine?.kind, skipped});
-  if (video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {}); if (check && !check.ended){ check = null; renderCheck() }
+  if (!wrap && video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {}); if (check && !check.ended){ check = null; renderCheck() }
   clearTimeout(timer); timer = null; engine?.close(); $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   // a failed save (disk full, folder locked) must not leave the button saying Stop
@@ -625,8 +703,36 @@ async function stopNow(){
   if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds, best: kpq.times.length ? Math.round(Math.min(...kpq.times)) : null, avg: kpq.times.length ? Math.round(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length) : null} : null, lootValue: Math.round(session.stats().lootValue), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
   renderState(session?.stats());
 }
-$("#stopAnyway").onclick = () => timer != null && stop(true);
-$("#go").onclick = () => timer != null ? stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
+// the summary after End run: clock time vs farming, EXP per clock hour and per active minute (KPQ Bonus: the bonus stage
+// only, stages 1st-Last left out), mesos in and out, what the loot is worth, and the inventory before and after
+function showSummary(t1){
+  const s = session.stats(), a = snaps.start, b = snaps.end;
+  const snapExp = a && b && b.t > a.t && a.level != null && b.level != null ? GrindSession.expBetween(G, a, b) : null, exp = snapExp ?? s.exp;
+  const clockH = Math.max(1 / 60, (t1 - runT0) / 3.6e6), act = s.activeMin;
+  const bonus = kpq?.on && (settings.kpqMode || "Bonus") === "Bonus" ? {min: (kpq.stageTimes["80000500"] || []).reduce((x, y) => x + y, 0) / 60, exp: kpq.stageExp["80000500"] || 0} : null;
+  const perMin = bonus?.min > 0 ? bonus.exp / bonus.min : act > 0 ? exp / act : 0, net = s.mesos + s.lootValue - s.usedCost;
+  const inv = s.inv.filter(x => x.alike === 1).slice(0, 40), tabName = k => INV_TABS.find(x => x[0] === k)?.[1] || k;
+  $("#sumBody").innerHTML = `<div class="note">${clock(runT0)} → ${clock(t1)} · ${hm(clockH)} on the clock, ${hm(act / 60)} farming`
+      + (a?.level && b?.level ? ` · Lv ${a.level} ${a.pct?.toFixed(2)}% → Lv ${b.level} ${b.pct?.toFixed(2)}%` : "") + (s.mapName ? " · " + esc(s.mapName) : "") + "</div>"
+    + `<div class="sgrid">`
+    + cell("EXP gained", sg(exp), snapExp != null ? "from the start and end EXP bar" : "from the live count")
+    + cell("EXP/hr", fmt(exp / clockH), "over the whole run (" + hm(clockH) + ")")
+    + cell("EXP per active minute", fmt(perMin), bonus?.min > 0 ? `Bonus stage only: ${fmt(bonus.exp)} EXP in ${mss(bonus.min * 60)}` : "time spent farming only")
+    + cell("Kills · deaths", `${fmt(s.kills)} · <span class="${s.deaths ? "neg" : ""}">${s.deaths}</span>`, kpq?.on ? `KPQ ${settings.kpqMode || "Bonus"}: ${kpq.rounds} round${kpq.rounds === 1 ? "" : "s"}` : "")
+    + cell("Mesos looted", sg(s.mesos), fmt(s.mesos / clockH) + "/hr over the run")
+    + cell("Mesos used", s.used.length ? sg(-s.usedCost) : "-", s.used.length ? "potions, food, arrows" : "nothing counted")
+    + cell("Items looted are worth", `<span class="pos">~${fmt(s.lootValue)}</span>`, "approx., player-shop or NPC price")
+    + cell("Net", sg(net), sg(net / clockH) + "/hr · mesos + items - used")
+    + (s.walletNet != null ? cell("Inventory mesos", sg(s.walletNet), "first look vs. last look") : "")
+    + `</div>`
+    + (inv.length ? `<h3 style="margin-top:8px">Inventory: start → end</h3><table><tr class="th"><td>Item</td><td class="n">Start</td><td class="n">End</td><td class="n">Change</td></tr>`
+      + inv.map(x => `<tr><td>${esc(x.name)} <span class="note">${tabName(x.tab)}</span></td><td class="n dim">${fmt(x.was)}</td><td class="n">${fmt(x.now)}</td><td class="n">${sg(x.n)}</td></tr>`).join("") + "</table>"
+      : `<div class="note">No inventory before/after: a tab has to be read at the start and again at the end.</div>`);
+  $("#summary").classList.remove("hidden"); $("#summary").scrollIntoView({block: "nearest"});
+}
+$("#wrapEnd").onclick = () => finish();
+$("#sumClose").onclick = () => $("#summary").classList.add("hidden");
+$("#go").onclick = () => timer != null ? wrap ? resume() : stop() : start().catch(e => { $("#status").textContent = "Couldn't capture the game: " + e.message; $("#status").className = "bad" });
 
 // one full frame every 3 s for 3 minutes, saved as PNG: material for building and testing the readers
 $("#frames").onclick = async () => {
@@ -784,7 +890,7 @@ $("#updCheck").onclick = async () => { $("#updNote").textContent = "Checking..."
 $("#updInstall").onclick = () => $("#updGo").click();
 $("#updGo").onclick = async () => {
   $("#updGo").disabled = true; $("#updInstall").disabled = true; $("#updNote").textContent = "Installing... the tracker closes and opens again by itself.";
-  if (timer != null){ $("#status").textContent = "Saving this session before the update..."; await stop() }
+  if (timer != null){ $("#status").textContent = "Saving this session before the update..."; await finish() }
   if (!await host.updateInstall?.()){ $("#updGo").disabled = $("#updInstall").disabled = false; $("#status").textContent = "The update isn't ready yet." }
 };
 (async () => {
@@ -792,6 +898,7 @@ $("#updGo").onclick = async () => {
   host.updateState?.().then(u => u.state !== "idle" && showUpdate(u)).catch(() => {});
   settings = await host.settings();
   $("#share").checked = !!settings.share;
+  layoutLoad(settings.layout); for (const b of BOXES) b.querySelector(".fold").textContent = b.classList.contains("folded") ? "+" : "–";
   $("#job").value = settings.job || "";
   $("#ontop").checked = settings.onTop !== false; showArea();
   $("#alert").value = settings.alertWorth || 0;
