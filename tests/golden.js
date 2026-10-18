@@ -31,6 +31,8 @@ const path = require("path");
   // upkeep: 83 casts × 12 MP a minute ≈ 59,760 MP/hr + buffs (meowdb: "6.6 Lemons a minute")
   check(t[0].cost.mpHr > 59000 && t[0].cost.mpHr < 62000, "Fighter 70 MP upkeep ~60k/hr", Math.round(t[0].cost.mpHr));
   // Lucky Seven per cast (meowdb Thief guide, Lv 30: 139 LUK, 34 DEX, 5 STR, Adamantium Guards + Wolbi = 40 W.ATK): 366-622
+  const tab = id => p.evaluate(id => document.querySelector(id).click(), id);   // tabs sit behind the category nav
+  await tab("#t-plan");
   await p.click('#pclass button[data-v="Thief"]');
   // meowdb's totals include gear (+7 LUK, +4 DEX, +1 STR); as base AP they need a level-33 AP budget. Level doesn't enter damage.
   await p.fill("#plvl", "33"); await p.dispatchEvent("#plvl", "change");
@@ -46,7 +48,7 @@ const path = require("path");
   const sp = await p.textContent("#pdpsnote");
   check(/every ~0\.72 s/.test(sp), "Adamantium Guards (speed 4) attack time 720 ms", sp.slice(0, 80));
   // Path Planner pace check: COT2 testers took 3-4 h for 10->20 (meowdb EXP guide); the plan at 1.5x should be close
-  await p.click("#t-path"); await p.click('#xcls button[data-v="Warrior"]'); await p.click('#xmode button[data-v="mix"]');
+  await tab("#t-path"); await p.click('#xcls button[data-v="Warrior"]'); await p.click('#xmode button[data-v="mix"]');
   await p.selectOption("#xguide", "build"); await p.selectOption("#xpace", "1.5"); await p.fill("#xcur", "10"); await p.fill("#xgoal", "20"); await p.waitForTimeout(600);
   const h = +((await p.textContent("#xsum h3")).match(/([\d.]+) h/) || [])[1];
   check(h >= 2.5 && h <= 5.5, "Warrior 10->20 at average pace within 2.5-5.5 h (testers: 3-4 h)", h);
