@@ -161,7 +161,7 @@ function card(i, lone){
     return `<li>${mobLink(m)} <span>Lv ${x[1]} · ${fmt(x[2])} HP · ${fmt(x[3])} EXP · ×${c}</span></li>` }).join("");
   const svc = [cab ? "Cab" : "", ...pots.map(id => `Potions: ${npcLink(POT[id])} (${esc(mapName(id))})`)].filter(Boolean);
   return `<div class="qt-h"><b>${esc(mapName(main))}</b><span>${esc(island)}${t != null ? " · " + KIND[t] : ""}${mobRange(open) ? " · monsters " + mobRange(open) : ""}${open.length > 1 ? ` · ${open.length} maps` : ""}</span></div>
-    <div class="wmact">${sp && !lone && DRILL(sp) && S.sub == null ? `<button type="button" class="btn primary" style="margin:0" data-drill="${i}">Open ${esc(areaName(sp))} map</button>` : ""}<button type="button" class="btn" data-route="${main}">Route here</button>${svc.length ? `<span class="sub">${svc.join(" · ")}</span>` : ""}</div>
+    <div class="wmact">${sp && !lone && DRILL(sp) && S.sub == null ? `<button type="button" class="btn primary" style="margin:0" data-drill="${i}">Open ${esc(areaName(sp))} map</button>` : ""}<button type="button" class="btn" data-route="${main}">Route here</button><button type="button" class="btn" data-wshare="${lone || main}">Copy link</button>${svc.length ? `<span class="sub">${svc.join(" · ")}</span>` : ""}</div>
     ${uvOn() ? uvBox(open) : ""}
     ${rows ? `<div class="tblwrap"><table class="mini"><thead><tr><th>Map</th><th>Danger</th><th class="num">EXP/hr</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}
     ${rest.length ? `<h5>${fights.length ? "Other maps here" : "Maps here"}</h5><p class="wmnpcs">${rest.map(id => mapLink(id, mapName(id))).join(", ")}</p>` : ""}
@@ -253,6 +253,7 @@ map.addEventListener("click", e => {
 $("#wmcard").addEventListener("click", e => {
   const dr = e.target.closest("[data-drill]"); if (dr) return openArea(+dr.dataset.drill);
   const r = e.target.closest("[data-route]"); if (r) return navTo(r.dataset.route);
+  const sh = e.target.closest("[data-wshare]"); if (sh) return copyShare(sh, shareUrl("w", sh.dataset.wshare));
   const row = e.target.closest(".wmrow"); if (row && !e.target.closest(".mname")){ S.mm = row.dataset.map; if (typeof shown === "number") show(shown) } });
 // a map name anywhere on the page opens a card for that map here, with its world map spot pinned (clicking the dot shows the whole spot)
 const SPOT = {}; D.wmap.forEach(([, , , , , spots], isl) => spots.forEach(([, , , ids], i) => ids.forEach(id => { if (!(id in SPOT)) SPOT[id] = [isl, i] })));
@@ -264,4 +265,5 @@ const openMapInfo = id => { id = String(id); hideQtip(); $("#t-wmap").click(); c
   (innerWidth < 900 ? $("#wmcard") : $("#wmap")).scrollIntoView({block: "start"}) };
 document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".mname"); if (el) openMapInfo(el.dataset.map) });
 render();
+if (HASH.w && known(String(HASH.w))) openMapInfo(HASH.w);   // shared link
 })();

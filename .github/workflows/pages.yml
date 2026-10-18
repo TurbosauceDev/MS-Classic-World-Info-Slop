@@ -1,0 +1,38 @@
+# GitHub Pages: serve the built page at the site root (no /dist/ in the URL). Needs Settings > Pages > Source = "GitHub Actions"
+# (until then Pages keeps building from the branch, where the root index.html forwards to dist/). Old .../dist/ links get a
+# small page that forwards to the root, keeping the #share part.
+name: pages
+on:
+  push:
+    branches: ["claude/trusting-bell-fqgar6"]
+    paths: ["dist/index.html", ".github/workflows/pages.yml"]
+  workflow_run:   # the daily shared-data commit is pushed with GITHUB_TOKEN, which doesn't trigger push workflows
+    workflows: ["shared-data"]
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency: { group: pages, cancel-in-progress: true }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: "${{ steps.dep.outputs.page_url }}" }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: claude/trusting-bell-fqgar6 }
+      - name: Assemble site
+        run: |
+          mkdir -p site/dist
+          cp dist/index.html site/index.html
+          cat > site/dist/index.html <<'EOF'
+          <!doctype html><html lang="en"><head><meta charset="utf-8"><title>MS Classic World Data Slop</title>
+          <meta http-equiv="refresh" content="0; url=../"><script>location.replace("../" + location.hash)</script></head>
+          <body><p>Moved: <a href="../">open the planner</a></p></body></html>
+          EOF
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - id: dep
+        uses: actions/deploy-pages@v4

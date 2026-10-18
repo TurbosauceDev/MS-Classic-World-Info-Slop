@@ -52,6 +52,7 @@ src/js/62-expcalc.js   EXP/hr calculator: two EXP readings + time (or timer) -> 
 src/js/65-navigator.js Map Navigator: route between two maps (TRAVEL + Shanks' ship), exit numbers on minimaps; navTo(id) opens it
 src/js/66-worldmap.js  World Map: client world map (D.wmap) with a dot per spot; hover = card (maps, mobs, EXP/hr via mapRates, NPCs, quests, minimap); dungeon spots (Sleepywood) open a spring-layout sub-map of D.nav exits
 src/js/67-kpq.js     KPQ guide: stages with minimaps (D.kpq), Cloto's questions, puzzle combos, King Slime, box contents (meowdb KPQ guide)
+src/js/69-search.js  "Search everything" (Ctrl K or /): word-prefix search over mobs/items/maps/quests/skills, @mob/@item/@drop/@map/@quest/@skill; also #q/#t share links
 scripts/fetch_osms.sh pin + clone the OSMS export into vendor/
 scripts/analyze.py    step 1: map ranking, quest rows, 2008 diffs -> build/analysis.json
 scripts/build_data.py all data steps -> data/data.json (embedded in the page)

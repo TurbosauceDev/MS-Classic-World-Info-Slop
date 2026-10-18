@@ -1,4 +1,5 @@
 /* ---------------- skill database ---------------- */
+let openSkillPage;   // (key "job|id"): open that skill's page (used by Search everything)
 (() => {
 // every 1st and 2nd job skill in the launch game files (D.skills: job -> skills, D.icons: id -> png). Clicking a skill opens
 // its page: description, every level's effect, what it needs and what it unlocks.
@@ -94,6 +95,7 @@ $("#skpage").addEventListener("click", e => {
   if (e.target.id === "skshare") return copyShare(e.target, shareUrl("s", S.open));
   const l = e.target.closest("[data-skopen]"); if (l) openSkill(l.dataset.skopen);
 });
+openSkillPage = key => { if (!OPEN[key]) return; $("#t-skills").click(); openSkill(key) };
 if (HASH.s && OPEN[HASH.s]) S.open = String(HASH.s);
 show();
 })();

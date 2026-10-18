@@ -45,6 +45,10 @@ function confirmed(id){
     ${c.mesoDrops ? `<p class="sub">Mesos: ${fmt(Math.round(c.mesos / c.mesoDrops))} per pickup, ${fmt(Math.round(c.mesos / c.kills))} per kill</p>` : ""}
     <p class="sub">Only what the sharing player picked up themselves, so real drop rates are at least this.</p>`;
 }
+// drops split by inventory tab (Equip / Use / Etc) with quest-only items (4031xxx-4032xxx) on their own
+const DGRP = [["Equip", it => it.c === "Equipment"], ["Use", it => it.c === "Consumable" || it.c === "Scroll"], ["Quest", (it, id) => +id >= 4031000 && +id < 4033000], ["Etc", () => true]];
+const grouped = (list, drop, cls) => { const g = {}; for (const x of list){ const it = D.items[x[0]], k = it ? DGRP.find(([, f]) => f(it, x[0]))[0] : "Etc"; (g[k] = g[k] || []).push(x) }
+  return DGRP.filter(([k]) => g[k]).map(([k]) => `<div class="mdgrp"><span class="mdlab">${k}</span><div class="mdrops${cls}">${g[k].map(drop).join("")}</div></div>`).join("") };
 function page(o){
   const m = o.m, st = (k, v, t) => v == null ? "" : `<div${t ? ` title="${esc(t)}"` : ""}><dt>${k}</dt><dd>${v}</dd></div>`;
   const flags = [o.kind !== "field" && `<span class="pill ${KIND[o.kind][1]}">${KIND[o.kind][0]}</span>`,
@@ -82,8 +86,8 @@ function page(o){
     <div class="mcols">
       <div><h4>Every spawn place</h4><ul class="mlist">${maps}</ul></div>
       <div><h4>Drops <span class="sub">(meowdb player reports, + = net votes)</span></h4>
-        ${sure.length ? `<div class="mdrops">${sure.map(drop).join("")}</div>` : `<p class="sub">No confirmed drops reported yet.</p>`}
-        ${maybe.length ? `<p class="sub">Reported, not confirmed yet:</p><div class="mdrops dim">${maybe.map(drop).join("")}</div>` : ""}
+        ${sure.length ? grouped(sure, drop, "") : `<p class="sub">No confirmed drops reported yet.</p>`}
+        ${maybe.length ? `<p class="sub">Reported, not confirmed yet:</p>${grouped(maybe, drop, " dim")}` : ""}
         ${mats.length ? `<p class="sub">Crafting materials it's known for:</p><div class="ricons">${mats.map(i => icon(i)).join("")}</div>` : ""}
         <h4>Mesos</h4><p>${meso}</p>${confirmed(o.id)}</div>
       ${atk || skills || rev ? `<div><h4>Attacks and skills</h4><ul class="mlist">${atk}${skills}${rev ? `<li><b>When it dies</b> splits into ${rev}</li>` : ""}</ul>${!atk ? `<p class="sub">No special attacks: it only hurts on touch.</p>` : ""}</div>` : ""}

@@ -10,6 +10,7 @@
 <header>
   <h1>MS Classic World Data Slop</h1>
   <p>Planner and database for MapleStory Classic World, built from the launch game files. <a href="#credits" id="srclink">Sources</a></p>
+  <button class="btn srchbtn" id="srchopen" type="button">Search everything <kbd>Ctrl K</kbd></button>
 </header>
 
 <nav>
@@ -348,6 +349,7 @@
     <label>Evasion<input id="uavo" type="number" min="0" style="width:6em"></label>
     <label>Max HP<input id="uhp" type="number" min="1" style="width:6em"></label>
     <label>Weapon Def.<input id="uwdef" type="number" min="0" style="width:6em"></label>
+    <button class="btn" id="tshare" type="button" style="align-self:flex-end">Copy link</button>
   </div>
   <p class="note" id="mapnote"></p>
   <div class="tblwrap"><table>
@@ -474,6 +476,7 @@
     <button class="btn tgl" id="qval" aria-pressed="false">Valuable quests only</button>
     <button class="btn tgl" id="qcompact" aria-pressed="false">Fewer columns</button>
     <span class="pill p-hot" id="qcount" style="align-self:center"></span>
+    <button class="btn" id="qshare" type="button">Copy link</button>
   </div>
   <div class="chainbar" id="qchainbar" hidden></div>
   <div class="tblwrap"><table>
@@ -636,6 +639,7 @@
   <div class="controls">
     <label>From<input id="navfrom" type="search" list="navmaps" placeholder="starting map"></label>
     <button class="btn" id="navswap" type="button" style="align-self:flex-end">Swap</button>
+    <button class="btn" id="navshare" type="button" style="align-self:flex-end">Copy link</button>
     <label>To<input id="navto" type="search" list="navmaps" placeholder="destination map"></label>
     <label class="chk" style="align-self:center"><input id="navnocab" type="checkbox"> No taxi</label>
     <datalist id="navmaps"></datalist>
@@ -802,6 +806,9 @@
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Search everything, more share links</h3><span class="pill p-hot">new</span></div>
+      <p><b>Search everything</b> (top of the page, or press <b>Ctrl K</b> or <b>/</b>): monsters, items, maps, quests and skills in one box. Parts of words work, so "or mu cap" finds Orange Mushroom Cap. <b>@mob</b>, <b>@item</b>, <b>@map</b>, <b>@quest</b> and <b>@skill</b> narrow it, and <b>@drop</b> lists the monsters players have seen drop an item.
+      <b>Copy link</b> buttons now also on World Map cards, the Map Navigator, Where to train and the Quest Database. Monster drops are split into Equip, Use, Etc and Quest.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · KPQ leaderboard</h3><span class="pill p-hot">new</span></div>
       <p>The <b>Grind Tracker</b> page has a <b>KPQ leaderboard</b>: the fastest Kerning PQ clears by tracker players (1st stage to the end of the Last stage), split by Bonus and Rush, one line per party. Needs grind tracker 0.2.40 or newer with sharing on.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Grind Tracker page</h3><span class="pill p-hot">new</span></div>
@@ -1043,6 +1050,12 @@
 </section>
 
 </div>
+
+<div id="srch" class="srch" hidden><div class="srchbox" role="dialog" aria-modal="true" aria-label="Search">
+  <input id="srchq" type="search" autocomplete="off" spellcheck="false" placeholder="Monsters, items, maps, quests, skills">
+  <ul id="srchres" role="listbox"></ul>
+  <p class="tiny">Parts of words work ("or mu cap"). Start with <b>@mob</b>, <b>@item</b>, <b>@drop</b> (what drops it), <b>@map</b>, <b>@quest</b> or <b>@skill</b> to narrow it. ↑↓ pick · Enter open · Esc close</p>
+</div></div>
 
 <script>
 /*@JS*/

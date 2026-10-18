@@ -16,7 +16,7 @@ const mobLink = idOrName => { const id = D.mobs[idOrName] || D.mobdb[idOrName] ?
 const mobList = names => names.split(", ").map(mobLink).join(", ");
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-/* shareable links: #b=<build> or #p=<plan> (base64url JSON) open with those settings instead of the saved ones.
+/* shareable links: #b=<build>, #p=<plan>, #m/#i/#s=<monster/item/skill id>, #w=<map id>, #n=<route>, #t=<Where to train>, #q=<quest search> (base64url JSON) open with those settings instead of the saved ones.
    Inside the claude.ai artifact the page's own URL isn't shareable, so links point at the GitHub Pages copy. */
 const SHARE_BASE = "https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/";
 const HASH = (() => { const o = {}; try { for (const part of location.hash.slice(1).split("&")){ const [k, v] = part.split("=");
@@ -58,7 +58,7 @@ $("#home").addEventListener("click", e => { const g = e.target.closest("[data-go
   g.dataset.go ? $("#t-" + g.dataset.go).click() : goCat(g.dataset.goCat); window.scrollTo({top: $("nav").offsetTop - 8}) });
 $("header h1").addEventListener("click", goHome);
 goHome();
-try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : localStorage.getItem("tab"); if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
+try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : HASH.n ? "navi" : HASH.t ? "maps" : HASH.q ? "quests" : localStorage.getItem("tab"); if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
 $("#srclink").addEventListener("click", e => { e.preventDefault(); $("#t-credits").click(); $("#credits").scrollIntoView() });
 // "about 1 per X kills" for n picked up in k kills, plus a likely range (95% Wilson interval: a statistics estimate, wide

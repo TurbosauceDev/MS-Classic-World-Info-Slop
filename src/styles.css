@@ -300,6 +300,7 @@ input.khave{width:64px;text-align:right}
 .mskill{width:20px;height:20px;vertical-align:middle;margin-right:5px;image-rendering:pixelated}
 .mdrops{display:flex;flex-wrap:wrap;gap:6px 12px;margin:0 0 10px}
 .mdrops.dim{opacity:.6}
+.mdgrp .mdlab{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 3px}
 .mdrop{display:inline-flex;gap:6px;align-items:center;font-size:13.5px}
 .linkbtn{all:unset;cursor:pointer;color:var(--accent);text-decoration:underline}
 
@@ -461,3 +462,22 @@ details.sec>summary:hover h2{color:var(--accent)}
 .trkh3{font:800 17px/1.2 var(--f-display);margin:22px 0 0}
 .trkh4{font:700 15px var(--f-display);margin:18px 0 0}
 #trkkm{margin:10px 0 0}
+/* search everything (69-search.js) */
+.srchbtn{margin-top:12px;display:inline-flex;align-items:center;gap:10px;color:var(--muted)}
+.srchbtn kbd,.srch kbd{font:600 11px var(--f-body);border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--muted)}
+.srch{position:fixed;inset:0;z-index:50;background:rgba(20,14,36,.45);display:flex;justify-content:center;align-items:flex-start;padding:10vh 16px 16px}
+.srch[hidden]{display:none}
+.srchbox{width:min(640px,100%);max-height:80vh;display:flex;flex-direction:column;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:12px}
+.srchbox input{font:500 17px var(--f-body);width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.srchbox ul{list-style:none;margin:8px 0;padding:0;overflow-y:auto;min-height:0}
+.srchbox li{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;cursor:pointer;min-width:0}
+.srchtxt{flex:1;min-width:0;display:flex;align-items:baseline;gap:4px 10px}
+.srchtxt b,.srchtxt .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.srchtxt .sub{margin-left:auto;text-align:right}
+@media (max-width:560px){.srchtxt{flex-direction:column;gap:0}.srchtxt .sub{margin-left:0;text-align:left;max-width:100%}}
+.srchimg{flex:none;width:28px;height:28px;object-fit:contain;image-rendering:pixelated}
+.srchbox li[aria-selected="true"],.srchbox li[data-i]:hover{background:var(--accent-soft)}
+.srchbox li.none{color:var(--muted);cursor:default}
+.srchbox .pill{flex:none;min-width:56px;text-align:center}
+.srchbox .ri{flex:none}
+.srchbox p.tiny{margin:0;color:var(--muted)}
