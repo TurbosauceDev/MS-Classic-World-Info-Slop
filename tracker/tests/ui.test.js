@@ -264,8 +264,10 @@ const path = require("path"), {chromium} = require("playwright");
     return [r.className, [...r.children].map(x => x.dataset.box || x.className).join(), JSON.stringify(settings.layout.order.dock)] });
   if (row1[0] !== "boxrow" || row1[1] !== "used,split,items" || !row1[2].includes('{"row":["used","items"]')) throw new Error("row: " + row1);
   // the splitter only grabs with Shift (or Alt) held (Danny, 2026-10-19): a plain drag leaves the widths alone
-  const splitDrag = async () => { const s = await page.locator(".boxrow .split").boundingBox(); await page.mouse.move(s.x + 4, s.y + 20); await page.mouse.down();
-    await page.mouse.move(s.x + 104, s.y + 20, {steps: 4}); await page.mouse.up(); await page.waitForTimeout(50) };
+  // (grabbed at mid-height, not 20 px down: up there a plain drag could catch a box's title bar and drag the box out of the row,
+  // flaky in CI 2026-10-19)
+  const splitDrag = async () => { const s = await page.locator(".boxrow .split").boundingBox(), y = s.y + Math.max(20, s.height / 2); await page.mouse.move(s.x + 4, y); await page.mouse.down();
+    await page.mouse.move(s.x + 104, y, {steps: 4}); await page.mouse.up(); await page.waitForTimeout(50) };
   await splitDrag();
   if (await page.evaluate(() => settings.layout.order.dock.find(x => x.row).w.join()) !== "1,1") throw new Error("splitter grabbed without Shift");
   await page.keyboard.down("Shift"); await splitDrag(); await page.keyboard.up("Shift");
