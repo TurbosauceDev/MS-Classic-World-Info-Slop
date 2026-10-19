@@ -194,13 +194,26 @@ const mapPots = mid => { const out = new Set(); for (const [id] of D.maps[mid]?.
 // each at the chosen drop rate (default 5% per kill: Danny, 2026-10-08, judged 15% optimistic); ores, gems, equips and
 // scrolls drop too rarely to count. Sell price = the item's NPC price, or (Loot price = player shops) its meso.watch median
 // sale price when it has enough sales (else NPC price).
-// PW: meso.watch player-shop prices {itemId: [median, p25, p75, sales, flags 1 = low data / 2 = per set]}, read D.pw.read.
-const PW = D.pw?.it || {};
+// PW: meso.watch player-shop prices {itemId: [median, p25, p75, sales, flags 1 = low data / 2 = per set, trend]}, read D.pw.read.
+// trend = meso.watch's own recent price trend (fraction, -0.6 = 60% down); its window isn't published to us, so it's labelled
+// "recent". PWNOW: cheapest live Free Market listing per non-equip item {itemId: [price each, qty, channel, map, seller]}, as of
+// D.pw.listed (UTC), from meso.watch's live listings. Equips left out: rolls and scrolls make them incomparable (Danny, 2026-10-19).
+const PW = D.pw?.it || {}, PWNOW = D.pw?.now || {};
 const pwSolid = id => PW[id] && !(PW[id][4] & 1) ? PW[id][0] : 0;
+const pwTrend = id => { const p = PW[id], t = p?.[5]; if (t == null || p[4] & 1 || Math.abs(t) < 0.005) return "";
+  return `<span class="${t > 0 ? "up" : "down"}" title="Recent price trend (meso.watch)">${t > 0 ? "▲" : "▼"}${Math.round(Math.abs(t) * 100)}%</span>` };
+// listed now vs the usual (median) sale price; cheap = at least 20% under a solid median (our own cut-off)
+const pwNowRatio = id => PWNOW[id] && pwSolid(id) ? PWNOW[id][0] / pwSolid(id) : null;
+const pwCheap = id => { const r = pwNowRatio(id); return r != null && r <= 0.8 };
+function pwNowHtml(id){ const n = PWNOW[id]; if (!n) return "";
+  const r = pwNowRatio(id), where = [n[2] ? "ch " + n[2] : "", n[3]].filter(Boolean).join(", "),
+    vs = r == null ? "" : r < 0.995 ? ` · <span class="up">${Math.round((1 - r) * 100)}% under</span> the usual price` : r > 1.005 ? ` · ${Math.round((r - 1) * 100)}% over the usual price` : " · about the usual price";
+  return `Cheapest listed now: <b>${n[0] < 10 && n[0] % 1 ? n[0] : fmt(n[0])} mesos</b> each${n[1] > 1 ? ` (×${fmt(n[1])})` : ""}${where ? ` <span class="sub">${esc(where)}</span>` : ""}${n[4] ? ` <span class="sub">by ${esc(n[4])}</span>` : ""}${vs}<br><span class="sub">meso.watch live listings as of ${esc(D.pw.listed)} UTC. Shops open and close fast; it may be gone.</span>` }
 function pwHtml(id, long){ const p = PW[id]; if (!p) return "";
   const per = p[4] & 2 ? " per set" : "", low = p[4] & 1 ? ` <span class="pill p-warn" title="Fewer than 5 sales seen: rough">few sales</span>` : "";
-  return long ? `Player shops: about <b>${fmt(p[0])} mesos</b>${per} (median of ${fmt(p[3])} sale${p[3] === 1 ? "" : "s"} seen; half sold for ${fmt(p[1])}-${fmt(p[2])})${low}<br><span class="sub">meso.watch, as of ${D.pw.read}. Prices move; check before you sell.</span>`
-    : `players ~${fmt(p[0])}${per}${low}` }
+  const tr = pwTrend(id) ? " " + pwTrend(id) : "";
+  return long ? `Player shops: about <b>${fmt(p[0])} mesos</b>${per}${tr} (median of ${fmt(p[3])} sale${p[3] === 1 ? "" : "s"} seen; half sold for ${fmt(p[1])}-${fmt(p[2])})${low}<br><span class="sub">meso.watch, as of ${D.pw.read}. Prices move; check before you sell.</span>`
+    : `players ~${fmt(p[0])}${per}${tr}${low}` }
 const LOOT_BY_MOB = {}; for (const [it, ms] of Object.entries(D.drops || {})) if ((it.startsWith("4000") || POTION_IDS.includes(it)) && D.items[it]?.p) for (const [mob] of ms) (LOOT_BY_MOB[mob] ||= []).push(it);
 const lootKill = (mob, pw) => (LOOT_BY_MOB[mob] || []).reduce((a, it) => a + (pw && pwSolid(it) || D.items[it].p), 0);
 function lootHr(r, rate, pw){ let v = 0; for (const [id, c] of D.maps[r.id]?.[2] || []) v += c * r.rate / r.cyc * lootKill(id, pw); return v * rate * 3600 }

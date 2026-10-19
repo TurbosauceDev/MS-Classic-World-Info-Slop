@@ -616,10 +616,12 @@ def step_kpq(D):
     D["kpq"] = sorted(out, key=lambda o: int(o["id"]))
 
 def step_prices(D):
-    """pw {read: date, it: {itemId: [median, p25, p75, sales, flags (1 low data, 2 per set)]}}: meso.watch player-shop sale
+    """pw {read: date, it: {itemId: [median, p25, p75, sales, flags (1 low data, 2 per set), trend]}, listed, now}: meso.watch player-shop sale
     prices (scripts/fetch_mesowatch.py), items in D.items only."""
     j = json.load(open(ROOT / "data" / "sources" / "mesowatch_prices.json"))
     D["pw"] = {"read": j["read"], "it": {k: v for k, v in j["items"].items() if k in D["items"]}}
+    if "now" in j:   # cheapest live listing per non-equip item {itemId: [price each, qty, channel, map, seller]}, as of "listed"
+        D["pw"].update(listed=j["listed"], now={k: v for k, v in j["now"].items() if k in D["items"]})
 
 def step_shared(D):
     """shared {read, runs, players, hours, mobs: {mobId: {kills, mesos, mesoDrops, players, items: {itemId: n}}}}: what grind

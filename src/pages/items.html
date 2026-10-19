@@ -31,11 +31,12 @@
     <label>Used for<select id="ituse"><option value="">Anything</option><option value="craft">Crafting component</option><option value="quest">Quests ask for it</option></select></label>
     <label class="chk"><input type="checkbox" id="itsrc"> Has a known source</label>
     <label class="chk"><input type="checkbox" id="itnoq"> Hide quest items</label>
+    <label class="chk" title="Non-equipment with a live player-shop listing at least 20% under its usual (median) sale price. meso.watch live listings."><input type="checkbox" id="itcheap"> Cheap in shops now</label>
     <button class="btn" id="itreset" type="button" style="align-self:flex-end">Reset filters</button>
     <span class="pill p-hot" id="itcount" style="align-self:center"></span>
   </div>
   <div class="tblwrap"><table>
-    <thead id="ithead"><tr><th data-k="name"><button>Item</button></th><th data-k="type"><button>Type</button></th><th class="num" data-k="lv"><button>Lv</button></th><th>Job</th><th>Stats</th><th class="num" data-k="price"><button>NPC pays</button></th><th class="num" data-k="pw" title="Median player-shop sale price (meso.watch)"><button>Players</button></th><th>Get it from</th></tr></thead>
+    <thead id="ithead"><tr><th data-k="name"><button>Item</button></th><th data-k="type"><button>Type</button></th><th class="num" data-k="lv"><button>Lv</button></th><th>Job</th><th>Stats</th><th class="num" data-k="price"><button>NPC pays</button></th><th class="num" data-k="pw" title="Median player-shop sale price (meso.watch)"><button>Players</button></th><th class="num" data-k="trend" title="Recent player-shop price trend (meso.watch). Sort to see the biggest movers."><button>Trend</button></th><th>Get it from</th></tr></thead>
     <tbody id="itrows"></tbody>
   </table></div>
   <button class="btn" id="itmore" hidden></button>
