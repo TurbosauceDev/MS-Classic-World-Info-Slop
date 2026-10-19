@@ -50,6 +50,11 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
   { const {p, errs, ctx} = await page(); await p.goto(URL); await open(p, "maps");
     await p.fill("#lvl", "1e308"); await p.dispatchEvent("#lvl", "change"); await p.waitForTimeout(100);
     check(!errs.length && !BADTEXT.test(await p.innerText("#maps")), "Where to train level 1e308 is clamped (was 'accuracy Infinity')"); await ctx.close() }
+  // site monkey test (tests/monkey.js seed 4): 1e308 in a stat box printed a 300-digit number and the phone page scrolled sideways
+  for (const v of ["1e308", "-5"]){ const {p, errs, ctx} = await page({viewport: {width: 360, height: 800}}); await p.goto(URL); await open(p, "maps");
+    for (const s of ["#uacc", "#uavo", "#uhp", "#uwdef"]){ await p.fill(s, v); await p.dispatchEvent(s, "input") } await p.waitForTimeout(100);
+    const sw = await p.evaluate(() => document.documentElement.scrollWidth);
+    check(!errs.length && sw <= 360 && !BADTEXT.test(await p.innerText("#maps")), `Where to train stat boxes = ${v}: no sideways scroll at 360px (${sw})`); await ctx.close() }
 
   // 5. the tracker server's reply is outside data: markup can't get in, odd values don't print NaN or crash
   { const X = '<img src=x onerror="window.__x=1">';

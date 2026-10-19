@@ -153,7 +153,8 @@ function trainBuild(cls, L){
 }
 let DPS_FROM_BUILDER = null;   // the builder's exact damage (Final Attack, bleed etc.) while its numbers sit in the stat boxes
 const STAT_IN = ["#atk", "#umag", "#uint", "#uacc", "#uavo", "#uhp", "#uwdef"];
-const statNum = s => { const v = $(s).value.trim(); return v === "" ? null : +v };
+// typed stats are clamped to 0-99,999 (a sanity bound, not a game cap): 1e308 printed a 300-digit number off the phone screen
+const statNum = s => { const v = $(s).value.trim(); return v === "" || !isFinite(+v) ? null : Math.max(0, Math.min(99999, +v)) };
 function setTrainStats(S){   // from "Use this in Where to train"
   const w = S.win || {}, pm = (w.pct || 100) / 100;
   $("#atk").value = w.max ? `${Math.round(w.min / pm)}-${Math.round(w.max / pm)}` : "";
