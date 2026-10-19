@@ -1,0 +1,31 @@
+# OSMS export bumps rename things silently (Oct 19: "Arrow Bomb: Bow" -> "Arrow Bomb" broke the guides' builds). When
+# OSMS_REF or data/data.json changes, list skill/item/monster/map renames between the previous and the new data.json in
+# the job summary. Red = a skill or item was renamed or removed: check the code that names it. Not a required check.
+# Cheap: compares the two committed data.json files (git show), never fetches the OSMS export.
+name: osms-names
+on:
+  push:
+    branches: ["claude/trusting-bell-fqgar6"]
+    paths: ["scripts/fetch_osms.sh", "data/data.json", "scripts/name_diff.py", ".github/workflows/osms-names.yml"]
+  pull_request:
+    paths: ["scripts/fetch_osms.sh", "data/data.json", "scripts/name_diff.py"]
+  workflow_dispatch:
+    inputs:
+      base: { description: "commit to compare against", required: false }
+permissions:
+  contents: read
+jobs:
+  names:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 1 }
+      - run: python3 tests/name_diff_test.py
+      - name: Compare names with the previous data
+        env:
+          BASE: ${{ github.event.inputs.base || github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then BASE=HEAD~1; git fetch --quiet --depth=2 origin "$GITHUB_SHA"; else git fetch --quiet --depth=1 origin "$BASE"; fi
+          set +e; python3 scripts/name_diff.py "$BASE" > report.md; code=$?; set -e
+          cat report.md >> "$GITHUB_STEP_SUMMARY"; cat report.md
+          exit $code
