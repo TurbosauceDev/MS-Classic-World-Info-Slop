@@ -69,3 +69,13 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-19 Tracker KPQ: saved runs must let rounds/Bonus/next round be read straight off the log (Danny); added kpq.timeline.
 - 2026-10-19 Tracker History: compare more than two runs at once and flesh out History; Danny left the extra features to Claude ("i trust you to come up with ideas"). Pushed + released on his "push" / "publish if permission needed".
 - 2026-10-19 Tracker layout: a "line up every box" button (crisp shared column edges, same top/bottom per row, even gaps); auto-snap after drags is on by default (Settings > Layout to turn off). Danny OK'd push + release ("push and publish when done").
+
+## Data sync (meso.watch → GitHub)
+
+- 2026-10-19 CSV ingest of meso.watch into `data/sources/mesowatch_csv/` is sanctioned; Danny is friends with the meso.watch team and has verbal OK. Don't extend to per-item sales ledger or model training without checking.
+- 2026-10-19 Use side branch `data/mesowatch-sync` for the CSV push, NOT `claude/trusting-bell-fqgar6`. Avoids wasteful Pages/CI rebuilds and racing Danny's active pushes to the default branch.
+- 2026-10-19 Push via Git Data API only (no clone). force=false, retry on 422 race. Token in `/home/z/my-project/.secrets/gh-token` (fine-grained, scoped to this repo, Contents:write). Rotate via GitHub UI + overwrite the file; don't paste in chat.
+- 2026-10-19 Standing push/publish approval for CSV refreshes only — "i trust what we're doing here. i want our mesowatch item pricing to always be fairly accurate." (Danny). Still honor the in-thread `push` rule for anything else.
+- 2026-10-19 Poller is on-demand ("refresh" in chat), not scheduled. No cron/systemd in Danny's CLI sandbox. If Danny wants persistence, he copies the scripts to his own box and runs them on cron.
+- 2026-10-19 Two endpoints tracked: `data/market.json` (~daily, full pricing snapshot) and `data/fresh/Classic%20World.json` (~15 min, live FM listings). Each only triggers a CSV rewrite when its own `generated_at` advances — they update on different cadences.
+- 2026-10-19 localStorage is the transport between agent-browser's JS eval and the bash script. Blob-URL downloads dropped silently on the second invocation (Chrome bug, see handoff doc).
