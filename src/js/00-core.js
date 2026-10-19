@@ -129,8 +129,9 @@ try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "
 // Credits: when each data source was last read (build.py fills SRCDATES from fetch_osms.sh and data/sources/*.json)
 const SRCDATES = __SRCDATES__;
 { const day = s => { const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ""); return m ? new Date(Date.UTC(+m[1], m[2] - 1, +m[3])).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) : null };
-  const o = SRCDATES.osms || {}, rows = [
-    [`OSMS export ${esc((o.ref || "").slice(0, 7))}`, o.pinned ? `in use since ${day(o.pinned)}` : null, "game files: monsters, maps, items, skills, quests"],
+  const o = D.osms?.ref ? D.osms : SRCDATES.osms || {}, ref = /^[0-9a-f]{7,40}$/.test(o.ref || "") ? o.ref : "";
+  const rows = [
+    [`OSMS export <a href="https://github.com/ohmi69/osms_datamine_dashboard/commit/${ref}" target="_blank" rel="noopener">${ref.slice(0, 7)}</a>`, ref && (day(o.date) || "export date on GitHub"), "game files: monsters, maps, items, skills, quests"],
     ["meso.watch prices", day(D.pw?.read || SRCDATES.mesowatch_prices), "player-shop sale prices"],
     ["Shared runs", day(D.shared?.read || SRCDATES.shared_runs), "Grind Tracker runs; the tracker pages load live numbers when the server answers"],
     ["meowdb drops", day(SRCDATES.meowdb_drops), "player-reported drops"],
