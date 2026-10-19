@@ -250,6 +250,12 @@ const path = require("path");
       return [document.documentElement.scrollWidth, document.documentElement.clientWidth, (m.innerText.match(/.{0,30}\b(NaN|undefined|Infinity)\b.{0,20}/) || [""])[0]] });
     check(sw <= cw + 1 && !bad, `${id} at 390px (width ${sw}/${cw}${bad ? ", text: " + bad : ""})`);
   }
+  // site version stamp shows the viewer's local zone, UTC on hover (Danny 10-19: UTC was confusing)
+  { const c = await b.newContext({ timezoneId: "America/Los_Angeles" }), q = await c.newPage();
+    await q.goto("file://" + path.resolve(__dirname, "../dist/index.html"));
+    const [t, h] = await q.$eval(".sitever", e => [e.textContent, e.title]);
+    check(/^Site version: built \w{3} \d{1,2}, \d{4} · \d{1,2}:\d\d [AP]M P[DS]T$/.test(t) && / UTC$/.test(h), `site version in local time (${t} / ${h})`);
+    await c.close() }
   console.log(errs.length ? "\n" + errs.join("\n") : "\nall good");
   await b.close();
   process.exit(errs.length ? 1 : 0);

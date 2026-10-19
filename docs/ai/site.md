@@ -133,3 +133,6 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - `D.pw.it[id]` gained [5] trend and [6] sell-through (= sold/(sold+asks), checked on the CSV); `D.pw.now` = cheapest live listing per non-equip item (stars 207xxxx and per-set items excluded), `D.pw.listed` its UTC time. `refresh_mesowatch.sh` now feeds both CSVs.
 - 10-maps.js: `pwTrend`, `pwSellTag` (our cut-offs: 40%+ fast, <10% slow), `pwNowHtml`, `pwCheap` (<=0.8x a solid median). Items: Trend column, "Cheap in shops now" filter. Builder `avatar()` loads a live maplestory.io image, the page's one outside request; hidden on error (artifact sandbox may block it).
 - Trap: with vendor/ not cloned, `build_data.py prices` fails (analyze.py); inject pw into data.json in Python as the step does.
+
+## Site version stamp 2026-10-19
+- Home `.sitever` now shows the viewer's local time + zone (70-theme.js, from `data-built` ISO set by build.py); hover = UTC. The HTML text stays "built ... UTC", so curl/grep live checks still match; in a browser read the `title` for UTC. smoke.js checks it under America/Los_Angeles.

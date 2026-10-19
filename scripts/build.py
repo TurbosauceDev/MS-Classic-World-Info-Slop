@@ -29,9 +29,11 @@ assert "__SRCDATES__" in js
 js = js.replace("__SRCDATES__", json.dumps(srcd).replace("<", "\\u003c"), 1)
 assert "/*@CSS*/" in html and "/*@JS*/" in html and "__DATA__" in js
 # site version on Home = when this file was built (UTC), so a landed update is easy to spot
-ver = datetime.datetime.now(datetime.timezone.utc).strftime("%b %-d, %Y · %H:%M UTC")
-assert "__BUILD__" in html
-html = html.replace("__BUILD__", ver)
+# the page shows it in the viewer's own time zone (70-theme.js); the HTML keeps the UTC text for curl/live checks
+now = datetime.datetime.now(datetime.timezone.utc)
+ver = now.strftime("%b %-d, %Y · %H:%M UTC")
+assert "__BUILD__" in html and "__BUILDISO__" in html
+html = html.replace("__BUILDISO__", now.strftime("%Y-%m-%dT%H:%M:%SZ")).replace("__BUILD__", ver)
 # the data rides in a JSON <script> and is read with JSON.parse: V8 parses JSON much faster than the same 5.6 MB as a
 # JS object literal (page start ~0.4 s quicker). "<" -> \u003c (only inside strings) so no "</script>" can end it early.
 html = html.replace("<script>\n/*@JS*/", '<script type="application/json" id="sitedata">' + data.strip().replace("<", "\\u003c") + "</script>\n<script>\n/*@JS*/", 1)

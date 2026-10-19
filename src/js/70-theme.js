@@ -43,3 +43,13 @@
   // a light/dark theme (Default, Purple) follows the system setting live
   dq.addEventListener("change", () => { const t = now(); if (t !== TH.PRESETS[0]) siteTheme(t); if (!$("#thpop").hidden) draw() });
 })();
+
+// Home "Site version: built ...": the build stamps UTC; show it in the viewer's own time zone (Danny 10-19), exact UTC on hover
+(() => {
+  const el = document.querySelector(".sitever[data-built]"), d = el && new Date(el.dataset.built);
+  if (!d || isNaN(d)) return;
+  const day = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const tm = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+  el.title = el.textContent.replace("Site version: built ", "");
+  el.textContent = `Site version: built ${day} · ${tm}`;
+})();

@@ -86,3 +86,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-19 localStorage is the transport between agent-browser's JS eval and the bash script. Blob-URL downloads dropped silently on the second invocation (Chrome bug, see handoff doc).
 - 2026-10-19 Cloud threads consume the poller's CSVs (`./scripts/refresh_mesowatch.sh`); the poller itself (headless browser) stays in Danny's sandbox. Danny: "please just interact with this tool".
 - 2026-10-19 Build every idea from both 10-19 bug-hunt reports except tracker #3 (new frames from Danny; later). Danny: "implement all those suggested ideas".
+- 2026-10-19 Home "Site version" stamp shows the viewer's local time zone, not UTC. Danny: "I'm getting confused looking at UTC".
