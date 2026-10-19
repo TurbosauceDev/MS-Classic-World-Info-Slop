@@ -50,7 +50,7 @@ app.whenReady().then(() => {
   // (a theme picked in Settings sends its own two colours: themeBar)
   const bar = () => themeBar ? {...themeBar, height: 32} : nativeTheme.shouldUseDarkColors ? {color: "#2a2243", symbolColor: "#f0eafd", height: 32} : {color: "#f7f1ff", symbolColor: "#2a2142", height: 32};
   setBar = () => { if (win && !win.isDestroyed()) try { win.setTitleBarOverlay(bar()); if (themeBar) win.setBackgroundColor(themeBar.bg) } catch {} };
-  win = new BrowserWindow({...lastBounds(), title: "MS Classic Grind Tracker", titleBarStyle: "hidden", titleBarOverlay: bar(),
+  win = new BrowserWindow({...lastBounds(), title: "MS Classic Grind Tracker", icon: path.join(__dirname, "icon.ico"), titleBarStyle: "hidden", titleBarOverlay: bar(),
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#1f1931" : "#e7ddf9",
     // backgroundThrottling off: behind the game or minimized, Chromium would slow the frame timer to once a second and,
     // after 5 minutes, once a minute, so pickup lines would scroll away unread

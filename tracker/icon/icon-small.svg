@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- 16-32 px variant of icon.svg: fuller tile, bigger slime, no fine detail -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a77bff"/><stop offset=".55" stop-color="#6d3fd6"/><stop offset="1" stop-color="#3b1a87"/>
+    </linearGradient>
+    <radialGradient id="slime" cx=".38" cy=".3" r=".85">
+      <stop offset="0" stop-color="#c9ff8f"/><stop offset=".45" stop-color="#7fdc4c"/><stop offset="1" stop-color="#2f9a35"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="256" height="256" rx="48" fill="url(#tile)"/>
+  <path d="M128 18 C150 58 186 84 210 108 C246 144 248 214 210 226 C178 236 78 236 46 226 C8 214 10 144 46 108 C70 84 106 58 128 18 Z"
+        fill="url(#slime)" stroke="#1f6e27" stroke-width="14" stroke-linejoin="round"/>
+  <rect x="80" y="134" width="30" height="46" rx="15" fill="#152a10"/><rect x="146" y="134" width="30" height="46" rx="15" fill="#152a10"/>
+  <rect x="88" y="140" width="12" height="14" rx="6" fill="#fff"/><rect x="154" y="140" width="12" height="14" rx="6" fill="#fff"/>
+</svg>

@@ -1,7 +1,7 @@
 {
   "name": "ms-classic-grind-tracker",
   "productName": "MS Classic Grind Tracker",
-  "version": "0.2.63",
+  "version": "0.2.64",
   "description": "MS Classic Grind Tracker",
   "main": "app/main.js",
   "scripts": {
@@ -28,7 +28,8 @@
       "package.json"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "app/icon.ico"
     },
     "nsis": {
       "oneClick": true
