@@ -30,7 +30,7 @@
   document.addEventListener("click", e => { if (!e.composedPath().some(x => x.id === "thpop" || x.id === "thopen")) shut() });   // path, not closest(): a swatch click redraws the list
   $("#thadd").addEventListener("click", () => {
     const t = TH.decode($("#thcode").value);
-    if (!t) return msg("That isn't a theme code (they start with MSCT1.).");
+    if (!t) return msg(/MSCT1\./.test($("#thcode").value) ? "That code is damaged or incomplete: copy the whole line again." : "That isn't a theme code (they start with MSCT1.).");
     if (TH.PRESETS.some(p => p.name === t.name)) t.name += " (mine)";
     ls("themes", [...mine().filter(x => x.name !== t.name), t].slice(-20)); $("#thcode").value = "";
     use("u:" + t.name); msg(`Using "${t.name}".`);

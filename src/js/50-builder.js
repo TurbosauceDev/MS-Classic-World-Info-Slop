@@ -21,7 +21,7 @@ const JOBLABEL = {Warrior:"Warrior", Magician:"Mage", Bowman:"Bowman", Thief:"Th
 const PRIMARY = {Warrior:"STR", Magician:"INT", Bowman:"DEX", Thief:"LUK"};
 const SECONDARY = {Warrior:"DEX", Magician:"LUK", Bowman:"STR", Thief:"DEX"};
 const NEEDS_WEAPON = {"Arrow Blow":["Bow","Crossbow"],"Double Shot":["Bow","Crossbow"],"Power Knockback":["Bow","Crossbow"],
-  "Arrow Bomb: Bow":["Bow"],"Iron Arrow: Crossbow":["Crossbow"],"Lucky Seven":["Claw"],"Drain":["Claw"],
+  "Arrow Bomb":["Bow"],"Iron Arrow":["Crossbow"],"Lucky Seven":["Claw"],"Drain":["Claw"],
   "Double Stab":["Dagger"],"Savage Blow":["Dagger"],"Steal":["Dagger"]};
 const STAB_ONLY = new Set(["Double Stab","Savage Blow"]);
 const AMMO = {Claw:[["Subi Throwing Stars",15],["Wolbi Throwing Stars",17],["Mokbi Throwing Stars",19],["Kumbi Throwing Stars",21],["Tobi Throwing Stars",23],["Steely Throwing Knives",25],["Ilbi Throwing Stars",27]],
@@ -410,6 +410,7 @@ buildAt = (cls, branch, fam, lvl, aoe = false, obt = false, guide = false) => {
   if (guide && GUIDE[cls].claw && lvl < (GUIDE2[branch]?.reset?.at || 30)) fam = lvl < 30 ? "Claw" : fam;
   S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe, obt, gear:{}};
   try { applyDefaults(); if (guide) guideBuild(); else S.sp = autoSP(); const r = calc(S.sp);
+    if (aoe && !(r.dps > 0)) return buildAt(cls, branch, fam, lvl, false, obt, guide);   // area skill not learnable yet (Lv 10 Warrior: Slash Blast needs Power Strike 1)
     return {dps: r.dps, acc: r.acc, hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid, cost: r.cost, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo,
       min: r.min, max: r.max, pct: r.ai?.pct, hits: r.ai?.hits, interval: r.interval, crit: r.crit, critDmg: r.critDmg, mast: r.mast, magic: r.ai?.kind === "magic",
       basicIv: tierMs(r.w?.spd ?? 6, r.w?.type === "Crossbow" ? 2 : 0) / 1000, ammoPrice: AMMO_COST[S.ammo] || 0} }

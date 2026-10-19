@@ -179,4 +179,11 @@ $("#pimprev").addEventListener("click", e => {
   if (atk) BLD.apply(S => { S.skill = atk });
   $("#pimpst").textContent = "Applied"; $("#pimpst").className = "pill p-good";
 });
+// the first screenshot waited ~2.5 s while every skill and equipment icon was decoded: do that in idle time once the
+// Builder is open (shotIcon caches; awaits between icons keep the page responsive)
+let warmed = false;
+const warm = () => { if (warmed) return; warmed = true; setTimeout(() => (window.requestIdleCallback || setTimeout)(async () => {
+  const ids = [...Object.keys(SKJOB).filter(id => D.icons[id]).map(id => D.icons[id]), ...Object.keys(BLD.ARMOR).concat(Object.keys(WBYID)).filter(id => D.iicons[id]).map(id => D.iicons[id])];
+  for (const b64 of ids) await shotIcon(b64) }), 800) };
+$("#t-plan").addEventListener("click", warm); if (!$("#plan").hidden) warm();
 })();

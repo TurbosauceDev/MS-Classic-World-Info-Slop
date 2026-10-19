@@ -89,7 +89,7 @@ function mobKill(m, cls, L, dps, acc){
 // mapShare() of spawns are alive solo; capped at the skill's target count. reach = [front, back] px.
 const AOE = {};
 // damage lost per extra target: Iron Arrow pierces at 100/80/60/40% (meowdb damage formula)
-const AOE_FALL = {"Iron Arrow: Crossbow": 0.2};
+const AOE_FALL = {"Iron Arrow": 0.2};
 function aoeHits(mid, targets, reach, fall = 0){
   if (!targets || targets <= 1 || !reach) return 1;
   const key = `${mid}|${targets}|${reach}|${fall}`; if (AOE[key]) return AOE[key];
@@ -129,11 +129,15 @@ function mapRates(cls, L, dps, acc, floor = 12, aoe = null, party = 1){
 }
 // each class's area attack at a level ([job, skill]); Thieves and 1st job Magicians have no damaging one
 // (Double Shot isn't one: its 2 arrows split between targets, so total damage stays the same)
-const AOE_SKILL = {Warrior: () => ["Warrior", "Slash Blast"], Bowman: L => L >= 30 ? ["Hunter", "Arrow Bomb: Bow"] : null,
+const AOE_SKILL = {Warrior: () => ["Warrior", "Slash Blast"], Bowman: L => L >= 30 ? ["Hunter", "Arrow Bomb"] : null,
   "I/L Wizard": () => ["I/L Wizard", "Thunder Bolt"], "F/P Wizard": () => ["F/P Wizard", "Poison Breath"]};   // Holy Arrow: 3 arrows split, like Double Shot
 function classAoe(cls, L){
   const f = AOE_SKILL[cls], js = f && L >= 10 && f(L); if (!js) return null;
   const [job, name] = js, s = (D.skills[job] || []).find(x => x.n === name); if (!s || !s.rg) return null;
+  // not learnable yet: the skill plus its prerequisites cost more SP than the job has given by L (a Lv 10 Warrior has 1 SP;
+  // Slash Blast needs Power Strike 1 first, so it comes at 11). 1st job SP from 10, 2nd job from 30 (BLD spPool rule).
+  const from = ["Warrior", "Magician", "Archer", "Rogue"].includes(job) ? 10 : 30;
+  if (1 + 3 * (L - from) < 1 + (s.req || []).reduce((t, r) => t + r[1], 0)) return null;
   return {t: Array.isArray(s.mob) ? Math.max(...s.mob) : s.mob, r: s.rg, n: name};
 }
 let AOE_FROM_BUILDER = null;   // the builder's own attack {t, r, n}; cleared with ACC_FROM_BUILDER

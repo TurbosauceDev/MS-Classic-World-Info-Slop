@@ -58,6 +58,16 @@ const path = require("path");
   await p.selectOption("#xguide", "build"); await p.selectOption("#xpace", "1.5"); await p.fill("#xcur", "10"); await p.fill("#xgoal", "20"); await p.waitForTimeout(600);
   const h = +((await p.textContent("#xsum h3")).match(/([\d.]+) h/) || [])[1];
   check(h >= 2.5 && h <= 5.5, "Warrior 10->20 at average pace within 2.5-5.5 h (testers: 3-4 h)", h);
+  // skill names the code names by hand must exist in the export (OSMS c661434 renamed "Arrow Bomb: Bow" -> "Arrow Bomb" and
+  // "Iron Arrow: Crossbow" -> "Iron Arrow": Hunter/Crossbowman guides lost those SP and Where to train dropped Bowman AoE)
+  const nw = Object.keys(JSON.parse("{" + require("fs").readFileSync(path.resolve(__dirname, "../src/js/50-builder.js"), "utf8").match(/const NEEDS_WEAPON = \{([^}]*)\}/)[1] + "}"));
+  const lost = await p.evaluate(nw => { const names = new Set(Object.values(D.skills).flat().map(s => s.n)), out = new Set();
+    for (const g of [...Object.values(GUIDE), ...Object.values(GUIDE2)]) for (const lv of Object.values(g.sp || {})) for (const n of Object.keys(lv)) if (!names.has(n) && !/[{]|^__/.test(n)) out.add(n);   // "{W} Mastery" = weapon-family template
+    for (const n of [...nw, ...Object.keys(AOE_FALL), ...Object.values(AOE_SKILL).map(f => (f(30) || [])[1]).filter(Boolean)]) if (!names.has(n)) out.add(n);
+    return [...out] }, nw);
+  check(!lost.length, "every skill named in guides / AoE / weapon tables exists in the export", lost);
+  const aoe = await p.evaluate(() => [classAoe("Warrior", 10)?.n ?? null, classAoe("Warrior", 11)?.n, classAoe("Bowman", 45)?.n, buildAt("Warrior", "Fighter", "Sword", 10, true).dps > 0]);
+  check(aoe.join() === ",Slash Blast,Arrow Bomb,true", "area attacks: none at Warrior 10 (1 SP; Slash Blast needs Power Strike 1), Slash Blast at 11, Arrow Bomb at Bowman 45", aoe);
   console.log(errs.length ? "\n" + errs.join("\n") : "\nall reference numbers match");
   await b.close();
   process.exit(errs.length ? 1 : 0);

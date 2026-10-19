@@ -703,7 +703,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       </div>
     </div>
   </div>
-  <p class="sitever">Site version: built Oct 19, 2026 · 19:12 UTC</p>
+  <p class="sitever">Site version: built Oct 19, 2026 · 19:25 UTC</p>
 </section>
 
 <section id="plan" hidden>
@@ -1498,8 +1498,10 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3>Oct 19, 2026 · Hunter and Crossbowman area attacks back</h3><span class="pill p-good">fix</span></div>
+      <p>The Oct 17 game-file update renamed <b>Arrow Bomb</b> and <b>Iron Arrow</b> (they lost their ": Bow" / ": Crossbow" endings). Since then Where to train ranked Bowmen 30+ as single-target (a Lv 45 Bowman's top map went from about 137k to 285k EXP/hr now that Arrow Bomb counts again), and the Hunter and Crossbowman class-guide builds dropped the SP they put into those skills. Also: a Lv 10 Warrior can't have Slash Blast yet (1 SP, and it needs Power Strike 1 first), so Where to train and the Path Planner no longer count it at 10.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 19, 2026 · Sturdier, quicker, better on phones</h3><span class="pill p-good">fix</span></div>
-      <p><b>Phones:</b> the page now sizes itself to your screen (it used to load zoomed out at desktop width), and the section and page buttons are one swipeable row each, so content starts much higher. <b>Speed:</b> the page starts about 20% faster, and Crafting, Keep or sell and the Quest Database switch in 2-3× quicker (long tables draw as you scroll). <b>Fixes:</b> old saved settings or edited share links can no longer break Citizenship, the Character Builder, Path Planner, World Map, Crafting or a monster page; a huge level typed into Where to train is capped instead of breaking the accuracy line; the Grind Tracker pages ignore anything odd from the server; Price check says when a file isn't a picture and is ready sooner; Search puts monsters and real items ahead of the letter chairs and shows the ID when two items share a name; Esc closes the Theme box and Search hands focus back.</p></div>
+      <p><b>Phones:</b> the page now sizes itself to your screen (it used to load zoomed out at desktop width), and the section and page buttons are one swipeable row each, so content starts much higher. <b>Speed:</b> the page starts about 20% faster, and Crafting, Keep or sell and the Quest Database switch in 2-3× quicker (long tables draw as you scroll). <b>Fixes:</b> old saved settings or edited share links can no longer break Citizenship, the Character Builder, Path Planner, World Map, Crafting or a monster page; a huge level typed into Where to train is capped instead of breaking the accuracy line; the Grind Tracker pages ignore anything odd from the server; Price check says when a file isn't a picture, and it and the Builder's screenshot import read your first picture in about half a second instead of 2-5; Search puts monsters and real items ahead of the letter chairs and shows the ID when two items share a name; Esc or a click elsewhere closes the Theme box, a cut-off theme code says so, and Search hands focus back.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Back and Forward</h3><span class="pill p-hot">update</span></div>
       <p><b>← →</b> buttons left of the section buttons step back and forward through the pages and places you opened (a monster, item or skill page, a World Map island, area or card, a quest line). Your browser's Back button does the same now, instead of dropping you on Home.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Themes, same as the Grind Tracker</h3><span class="pill p-hot">update</span></div>
@@ -1981,7 +1983,7 @@ function mobKill(m, cls, L, dps, acc){
 // mapShare() of spawns are alive solo; capped at the skill's target count. reach = [front, back] px.
 const AOE = {};
 // damage lost per extra target: Iron Arrow pierces at 100/80/60/40% (meowdb damage formula)
-const AOE_FALL = {"Iron Arrow: Crossbow": 0.2};
+const AOE_FALL = {"Iron Arrow": 0.2};
 function aoeHits(mid, targets, reach, fall = 0){
   if (!targets || targets <= 1 || !reach) return 1;
   const key = `${mid}|${targets}|${reach}|${fall}`; if (AOE[key]) return AOE[key];
@@ -2021,11 +2023,15 @@ function mapRates(cls, L, dps, acc, floor = 12, aoe = null, party = 1){
 }
 // each class's area attack at a level ([job, skill]); Thieves and 1st job Magicians have no damaging one
 // (Double Shot isn't one: its 2 arrows split between targets, so total damage stays the same)
-const AOE_SKILL = {Warrior: () => ["Warrior", "Slash Blast"], Bowman: L => L >= 30 ? ["Hunter", "Arrow Bomb: Bow"] : null,
+const AOE_SKILL = {Warrior: () => ["Warrior", "Slash Blast"], Bowman: L => L >= 30 ? ["Hunter", "Arrow Bomb"] : null,
   "I/L Wizard": () => ["I/L Wizard", "Thunder Bolt"], "F/P Wizard": () => ["F/P Wizard", "Poison Breath"]};   // Holy Arrow: 3 arrows split, like Double Shot
 function classAoe(cls, L){
   const f = AOE_SKILL[cls], js = f && L >= 10 && f(L); if (!js) return null;
   const [job, name] = js, s = (D.skills[job] || []).find(x => x.n === name); if (!s || !s.rg) return null;
+  // not learnable yet: the skill plus its prerequisites cost more SP than the job has given by L (a Lv 10 Warrior has 1 SP;
+  // Slash Blast needs Power Strike 1 first, so it comes at 11). 1st job SP from 10, 2nd job from 30 (BLD spPool rule).
+  const from = ["Warrior", "Magician", "Archer", "Rogue"].includes(job) ? 10 : 30;
+  if (1 + 3 * (L - from) < 1 + (s.req || []).reduce((t, r) => t + r[1], 0)) return null;
   return {t: Array.isArray(s.mob) ? Math.max(...s.mob) : s.mob, r: s.rg, n: name};
 }
 let AOE_FROM_BUILDER = null;   // the builder's own attack {t, r, n}; cleared with ACC_FROM_BUILDER
@@ -2400,8 +2406,8 @@ const GUIDE2 = {
       60: ["The Faded Canopy", "Perilous Descent I"], 65: ["Perilous Descent III", "Perilous Descent II"], 70: ["The Forest of Evil II", "Perilous Descent III"]},
     note: "Rush, then Mastery, Final Attack, Booster and Iron Will. River or Scott sell the 30-35 spears; Axe Pole Arm, Crescent Polearm and The Nine Dragons are Weaponcrafting 7, 8 and 10."},
   Hunter: {ap: [[31, 70, {STR: 1, DEX: 4}]],
-    sp: {30: {"Arrow Bomb: Bow": 1}, 31: {"Bow Mastery": 3}, 32: {"Bow Mastery": 2, "Bow Booster": 1}, 33: {"Bow Booster": 3}, 34: {"Bow Booster": 1, "Soul Arrow: Bow": 1, "Bow Mastery": 1},
-      ...gRange(35, 38, {"Bow Mastery": 3}), 39: {"Bow Mastery": 2, "Final Attack: Bow": 1}, ...gRange(40, 48, {"Arrow Bomb: Bow": 3}), 49: {"Arrow Bomb: Bow": 2, "Final Attack: Bow": 1},
+    sp: {30: {"Arrow Bomb": 1}, 31: {"Bow Mastery": 3}, 32: {"Bow Mastery": 2, "Bow Booster": 1}, 33: {"Bow Booster": 3}, 34: {"Bow Booster": 1, "Soul Arrow: Bow": 1, "Bow Mastery": 1},
+      ...gRange(35, 38, {"Bow Mastery": 3}), 39: {"Bow Mastery": 2, "Final Attack: Bow": 1}, ...gRange(40, 48, {"Arrow Bomb": 3}), 49: {"Arrow Bomb": 2, "Final Attack: Bow": 1},
       ...gRange(50, 58, {"Final Attack: Bow": 3}), 59: {"Final Attack: Bow": 1, "Amazon's Judgement": 2}, ...gRange(60, 65, {"Amazon's Judgement": 3}), 66: {"Bow Booster": 3},
       67: {"Bow Booster": 2, "Soul Arrow: Bow": 1}, ...gRange(68, 70, {"Soul Arrow: Bow": 3})},
     weapons: {30: ["Ryden"], 35: ["Red Viper"], 40: ["Vaulter 2000"], 50: ["Olympus"], 60: ["Asianic Bow"], 70: ["Golden Hinkel"]},
@@ -2409,9 +2415,9 @@ const GUIDE2 = {
       70: ["Line 1 <Area 2>", "Monkey Forest II"]},
     note: "Arrow Bomb 1 first, then Mastery and Booster before maxing Arrow Bomb. No shop sells the 35-60 bows: Red Viper, Vaulter 2000 and Olympus are Woodcrafting 7, 8 and 10 crafts (start Woodcrafting by 25 for the Olympus)."},
   Crossbowman: {ap: [[31, 70, {STR: 1, DEX: 4}]],
-    sp: {30: {"Iron Arrow: Crossbow": 1}, 31: {"Crossbow Mastery": 3}, 32: {"Crossbow Mastery": 2, "Crossbow Booster": 1}, 33: {"Crossbow Booster": 2, "Final Attack: Crossbow": 1},
+    sp: {30: {"Iron Arrow": 1}, 31: {"Crossbow Mastery": 3}, 32: {"Crossbow Mastery": 2, "Crossbow Booster": 1}, 33: {"Crossbow Booster": 2, "Final Attack: Crossbow": 1},
       34: {"Crossbow Booster": 1, "Soul Arrow: Crossbow": 1, "Crossbow Mastery": 1}, ...gRange(35, 38, {"Crossbow Mastery": 3}), 39: {"Crossbow Mastery": 2, "Crossbow Booster": 1},
-      ...gRange(40, 48, {"Iron Arrow: Crossbow": 3}), 49: {"Iron Arrow: Crossbow": 2, "Amazon's Judgement": 1}, ...gRange(50, 55, {"Amazon's Judgement": 3}),
+      ...gRange(40, 48, {"Iron Arrow": 3}), 49: {"Iron Arrow": 2, "Amazon's Judgement": 1}, ...gRange(50, 55, {"Amazon's Judgement": 3}),
       56: {"Amazon's Judgement": 1, "Crossbow Booster": 2}, ...gRange(57, 60, {"Crossbow Booster": 3}), 61: {"Crossbow Booster": 1, "Soul Arrow: Crossbow": 2},
       ...gRange(62, 66, {"Soul Arrow: Crossbow": 3}), 67: {"Soul Arrow: Crossbow": 2, "Final Attack: Crossbow": 1}, ...gRange(68, 70, {"Final Attack: Crossbow": 3})},
     weapons: {30: ["Eagle Crow"], 40: ["Heckler"], 50: ["Rower"], 60: ["Golden Crow"], 70: ["Gross Jaeger"]},
@@ -3435,7 +3441,7 @@ const JOBLABEL = {Warrior:"Warrior", Magician:"Mage", Bowman:"Bowman", Thief:"Th
 const PRIMARY = {Warrior:"STR", Magician:"INT", Bowman:"DEX", Thief:"LUK"};
 const SECONDARY = {Warrior:"DEX", Magician:"LUK", Bowman:"STR", Thief:"DEX"};
 const NEEDS_WEAPON = {"Arrow Blow":["Bow","Crossbow"],"Double Shot":["Bow","Crossbow"],"Power Knockback":["Bow","Crossbow"],
-  "Arrow Bomb: Bow":["Bow"],"Iron Arrow: Crossbow":["Crossbow"],"Lucky Seven":["Claw"],"Drain":["Claw"],
+  "Arrow Bomb":["Bow"],"Iron Arrow":["Crossbow"],"Lucky Seven":["Claw"],"Drain":["Claw"],
   "Double Stab":["Dagger"],"Savage Blow":["Dagger"],"Steal":["Dagger"]};
 const STAB_ONLY = new Set(["Double Stab","Savage Blow"]);
 const AMMO = {Claw:[["Subi Throwing Stars",15],["Wolbi Throwing Stars",17],["Mokbi Throwing Stars",19],["Kumbi Throwing Stars",21],["Tobi Throwing Stars",23],["Steely Throwing Knives",25],["Ilbi Throwing Stars",27]],
@@ -3824,6 +3830,7 @@ buildAt = (cls, branch, fam, lvl, aoe = false, obt = false, guide = false) => {
   if (guide && GUIDE[cls].claw && lvl < (GUIDE2[branch]?.reset?.at || 30)) fam = lvl < 30 ? "Claw" : fam;
   S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe, obt, gear:{}};
   try { applyDefaults(); if (guide) guideBuild(); else S.sp = autoSP(); const r = calc(S.sp);
+    if (aoe && !(r.dps > 0)) return buildAt(cls, branch, fam, lvl, false, obt, guide);   // area skill not learnable yet (Lv 10 Warrior: Slash Blast needs Power Strike 1)
     return {dps: r.dps, acc: r.acc, hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid, cost: r.cost, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo,
       min: r.min, max: r.max, pct: r.ai?.pct, hits: r.ai?.hits, interval: r.interval, crit: r.crit, critDmg: r.critDmg, mast: r.mast, magic: r.ai?.kind === "magic",
       basicIv: tierMs(r.w?.spd ?? 6, r.w?.type === "Crossbow" ? 2 : 0) / 1000, ammoPrice: AMMO_COST[S.ammo] || 0} }
@@ -4332,6 +4339,13 @@ $("#pimprev").addEventListener("click", e => {
   if (atk) BLD.apply(S => { S.skill = atk });
   $("#pimpst").textContent = "Applied"; $("#pimpst").className = "pill p-good";
 });
+// the first screenshot waited ~2.5 s while every skill and equipment icon was decoded: do that in idle time once the
+// Builder is open (shotIcon caches; awaits between icons keep the page responsive)
+let warmed = false;
+const warm = () => { if (warmed) return; warmed = true; setTimeout(() => (window.requestIdleCallback || setTimeout)(async () => {
+  const ids = [...Object.keys(SKJOB).filter(id => D.icons[id]).map(id => D.icons[id]), ...Object.keys(BLD.ARMOR).concat(Object.keys(WBYID)).filter(id => D.iicons[id]).map(id => D.iicons[id])];
+  for (const b64 of ids) await shotIcon(b64) }), 800) };
+$("#t-plan").addEventListener("click", warm); if (!$("#plan").hidden) warm();
 })();
 
 /* ---------------- skill database ---------------- */
@@ -7016,7 +7030,7 @@ $("#t-maps").addEventListener("click", firstRank); if (!$("#maps").hidden) first
   document.addEventListener("click", e => { if (!e.composedPath().some(x => x.id === "thpop" || x.id === "thopen")) shut() });   // path, not closest(): a swatch click redraws the list
   $("#thadd").addEventListener("click", () => {
     const t = TH.decode($("#thcode").value);
-    if (!t) return msg("That isn't a theme code (they start with MSCT1.).");
+    if (!t) return msg(/MSCT1\./.test($("#thcode").value) ? "That code is damaged or incomplete: copy the whole line again." : "That isn't a theme code (they start with MSCT1.).");
     if (TH.PRESETS.some(p => p.name === t.name)) t.name += " (mine)";
     ls("themes", [...mine().filter(x => x.name !== t.name), t].slice(-20)); $("#thcode").value = "";
     use("u:" + t.name); msg(`Using "${t.name}".`);

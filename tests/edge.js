@@ -78,6 +78,8 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(await p.$$eval("#srchres li", l => l.filter(x => /Red Potion/.test(x.innerText) && /ID 200000[07]/.test(x.innerText)).length === 2), "two items named Red Potion show their IDs");
     await p.keyboard.press("Escape"); check(await p.evaluate(() => document.activeElement.id) !== "srchq", "Esc closes search and focus leaves the hidden box");
     await p.click("#thopen"); await p.click("#thsw button >> nth=0"); check(await p.isVisible("#thpop"), "picking a theme keeps the popup open");
+    await p.fill("#thcode", "MSCT1.AAAAAAAAAAAAAAAAAAAAAAAA"); await p.click("#thadd");
+    check(/damaged/.test(await p.textContent("#thmsg")), "a cut-off theme code says it's damaged (was: 'isn't a theme code')");
     await p.keyboard.press("Escape"); check(!(await p.isVisible("#thpop")), "Esc closes the theme popup"); await ctx.close() }
 
   // 8. big tables draw in chunks (tab switches were 150-400 ms): first rows now, every row after scrolling

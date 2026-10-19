@@ -100,6 +100,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - mapleexp.com drops are CMS v79 (China), not Classic: don't use. Its EXP table to Lv 100 is fine.
 - No drop rates exist anywhere (OSMS, meowdb have reports only); every rate on the page is an assumption, labelled.
 - Keep or sell skips quest items with the same test as Items "Hide quest items" (403xxxx ID block + quest start items; `QITEM` in 47-keep.js and 49-items.js, keep both in sync). Smoke: "keep list: no quest items".
+- OSMS c661434 also renamed "Arrow Bomb: Bow" -> "Arrow Bomb", "Iron Arrow: Crossbow" -> "Iron Arrow" (found 10-19). golden.js now fails if any skill named in GUIDE/GUIDE2 sp, AOE_SKILL, AOE_FALL or NEEDS_WEAPON is missing from D.skills.
 - OSMS export bumps can change skill wording/kinds silently. Oct 17: "success rate" became "trigger rate" (builder read 0% Final
   Attack) and Final Attacks became attack kinds (Crossbowman's guide cast Final Attack). `faStats` + `attackInfo1` in
   50-builder.js handle both; golden.js checks "Final Attack 25% proc ..." and "no Lv 50 guide build casts Final Attack".
@@ -114,5 +115,5 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Bug hunt 2026-10-19
 - `src/index.html` now starts with `<!doctype html>` + viewport meta (Pages was quirks mode, phones rendered at 980 px). Phone nav (<=600px): `.cats`/`.subs` are one horizontal-scroll row; `inRow()` keeps the picked button visible.
 - Big tables use `lazyRows(tbody, rowsHtml, emptyHtml)` (00-core.js): 60 rows, then 150 per scroll via IntersectionObserver. Tests counting rows must scroll first (edge.js does).
-- Tracker live summary goes through `trkClean()` (68-tracker.js) before rendering; never render server fields raw. Price check icon candidates preload on tab open (one shared promise).
+- Tracker live summary goes through `trkClean()` (68-tracker.js) before rendering; never render server fields raw. Price check icon candidates and the Builder import's icons (52-shotimport.js `warm`) preload in idle time when their tab opens.
 
