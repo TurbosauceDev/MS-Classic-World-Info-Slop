@@ -128,3 +128,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Pages deploy = `scripts/pages_site.py` (pages.yml): D.iicons/D.mmaps move to a hashed assets JSON fetched at start (`ASSETS` promise in 00-core.js; first load 3,081 -> 968 KB gzip), plus `src/pwa/` manifest, icons (Orange Mushroom sprite, mobimg 9, on --accent-soft) and sw.js (network-first, registers only on *.github.io). The artifact stays one file. Trap: code that needs every icon must `await ASSETS`; markup drawn before they land is patched by `fillIcons` (`.ri[data-item] > i`, items-list `.ibtn > i`) only, so a new icon spot needs that placeholder shape or a redraw.
 - Credits "Data last updated": build.py injects `SRCDATES` (fetch_osms.sh ref + data/sources "read" dates); the OSMS date is data.json `osms` (build_data.py `osms_info()`, set by hand to the Oct 17 export for c661434 until the next rebuild).
 - Monkey (tests/monkey.js) found: 1e308 in a Where to train stat box scrolled phones sideways (statNum now clamps 0-99,999; edge.js test).
+
+## Market data 2026-10-19
+- `D.pw.it[id]` gained [5] trend and [6] sell-through (= sold/(sold+asks), checked on the CSV); `D.pw.now` = cheapest live listing per non-equip item (stars 207xxxx and per-set items excluded), `D.pw.listed` its UTC time. `refresh_mesowatch.sh` now feeds both CSVs.
+- 10-maps.js: `pwTrend`, `pwSellTag` (our cut-offs: 40%+ fast, <10% slow), `pwNowHtml`, `pwCheap` (<=0.8x a solid median). Items: Trend column, "Cheap in shops now" filter. Builder `avatar()` loads a live maplestory.io image, the page's one outside request; hidden on error (artifact sandbox may block it).
+- Trap: with vendor/ not cloned, `build_data.py prices` fails (analyze.py); inject pw into data.json in Python as the step does.

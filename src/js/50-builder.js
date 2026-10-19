@@ -501,7 +501,10 @@ function avatar(w){
   const f = S.gender === "female", ids = [f ? 21000 : 20000, f ? 31000 : 30000, ...Object.values(S.gear), ...(w ? [w.id] : [])];
   const src = `https://maplestory.io/api/MCW/CBT2/character/2000/${ids.join(",")}/${w && w.id / 10000 >= 140 && w.id / 10000 < 145 ? "stand2" : "stand1"}/0`, img = $("#pavatar");
   if (img.dataset.src === src) return;
-  img.dataset.src = src; img.onload = () => img.hidden = false; img.onerror = () => img.hidden = true; img.src = src;
+  img.dataset.src = src; img.onload = () => img.hidden = false; img.onerror = () => img.hidden = true;
+  // set after the page's load event so a slow maplestory.io never holds up page load (tests wait on it)
+  const go = () => { if (img.dataset.src === src) img.src = src };
+  document.readyState === "complete" ? go() : addEventListener("load", go, {once: true});
 }
 function render(){
   const L = S.lvl, ap = S.ap, cls = S.cls, br = S.branch;
