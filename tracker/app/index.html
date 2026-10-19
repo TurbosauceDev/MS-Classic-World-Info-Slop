@@ -161,6 +161,10 @@
   .hsplit::after { content:""; position:absolute; left:30%; right:30%; top:4px; height:2px; border-radius:1px; background:var(--line); }
   .hsplit:hover::after, .hsplit.on::after { background:var(--accent); } body.resizing.rows, body.resizing.rows * { cursor:row-resize !important; }
   /* Settings > Theme: one swatch per theme (its boxes, accent and text), the editor's colour grid */
+  #setupPrev { border:1px solid var(--line); border-radius:8px; padding:8px; margin:6px 0; background:var(--bg); }
+  #spMap { display:flex; flex-direction:column; gap:3px; padding:6px; margin:4px 0; border-radius:6px; }
+  #spMap .r { display:flex; gap:3px; min-width:0; } #spMap .c { display:flex; flex-direction:column; gap:3px; min-width:0; }
+  #spMap b { display:block; flex:1; min-width:0; padding:3px 5px; border-radius:4px; font-size:11px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .sw { display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:6px; margin:4px 0 6px; }
   .sw button { display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:6px; border-radius:8px; border:2px solid var(--line); text-align:left; font-size:12px; min-width:0; }
   .sw button[aria-checked=true] { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
@@ -518,9 +522,17 @@
       <label class="chk"><input type="checkbox" id="fitWin"> <span>Window height follows the boxes: it grows and shrinks as boxes fold, lists fill up or you add and remove modules</span></label>
       <label class="chk"><input type="checkbox" id="snapBoxes"> <span>Keep box edges lined up: after you move or resize a box, edges that nearly line up snap into line</span></label>
       <div class="row"><button id="layoutAlign" class="alt">Line up every box now (Ctrl+Shift+L)</button> <button id="layoutFit" class="alt">Fit every box now</button> <button id="layoutReset" class="alt">Reset box layout</button></div>
-      <div class="k" style="margin-top:8px">Share your setup (layout and theme)</div>
-      <div class="row"><button id="setupCopy" class="alt" title="One line with your box layout and theme, to paste in Discord">Copy setup code</button>
-        <input id="setupCode" aria-label="Setup code" placeholder="Paste a setup code (MSCS1...)" style="flex:1;min-width:0"> <button id="setupPaste" class="alt">Use it</button></div>
+      <div class="k" style="margin-top:8px" id="profHead">Profiles: your whole setup (where boxes are, their sizes, the window size, the theme and the switches above)</div>
+      <div class="row"><select id="profSel" aria-label="Profile" style="flex:1;min-width:0"></select> <button id="profUse" class="alt">Switch to it</button> <button id="profDel" class="alt">Delete</button></div>
+      <div class="row"><input id="profName" aria-label="Profile name" maxlength="40" placeholder="Name, like KPQ or Grinding" style="flex:1;min-width:0"> <button id="profSave" class="alt" title="The same name replaces that profile">Save current setup as</button></div>
+      <div class="row"><button id="setupCopy" class="alt" title="One line with the current setup, to paste in Discord">Copy profile code</button>
+        <input id="setupCode" aria-label="Profile code" placeholder="Paste a friend's code (MSCS1... or a MSCT1 theme)" style="flex:1;min-width:0"> <button id="setupPaste" class="alt">Preview</button></div>
+      <div id="setupPrev" class="hidden" role="region" aria-label="Profile code preview">
+        <div class="k" id="spName"></div>
+        <div id="spMap" aria-hidden="true"></div>
+        <div class="note" id="spInfo"></div>
+        <div class="row"><button id="spUse">Use it</button> <button id="spKeep" class="alt">Only save it as a profile</button> <button id="spCancel" class="alt">Cancel</button></div>
+      </div>
       <div class="note" id="setupNote" role="status"></div>
       <div class="note">Boxes move by their ⠿ grip: onto the left or right of another box for side by side, or above or below it. The ▦ Modules toolbox adds and puts away boxes. Hold Shift (or Alt) to resize them; double-click a bar, or a box's title, to fit it again. "Fit every box now" undoes the widths and heights you set but keeps where the boxes are. "Line up every box now" snaps the edges of boxes side by side into shared columns, gives every box in a row the same top and bottom, and keeps the gaps even.</div>
     </div>

@@ -152,27 +152,111 @@ $("#thFile").onchange = async e => { const f = e.target.files?.[0]; e.target.val
   const text = await f.text(); let t = TH.decode(text); if (!t) try { t = TH.clean(JSON.parse(text)) } catch {}
   themeAdd(t, "file") };
 darkQ.addEventListener?.("change", () => { themeShow(); themeUi() });
-// setup code (layout + theme as one line, like the MSCT1 theme codes; themes.js cleans both ways): the saved layout and the
-// chosen theme (a preset by name, one of yours in full). Using one lays the boxes out, saves, and adds/picks the theme
+// profiles (0.2.61, Danny: "like ElvUI / Plater": a friend's code is plug and play): a profile is a whole setup, the saved
+// layout (order, widths, heights, folded), the theme (a preset by name, one of yours in full), Settings > Layout's switches,
+// the see-through level and the window size. Codes are the 0.2.60 MSCS1 setup codes with name/prefs/win added (themes.js
+// cleans both ways; old codes still work, an MSCT1 theme code is a theme-only setup). settings.profiles = cleaned setups with
+// a name, settings.profile = the one in use: switching away saves what's on screen into it first, so nothing set is lost.
+// A pasted code shows a preview (boxes drawn in its theme) before anything changes
 const boxIds = () => BOXES.map(b => b.dataset.box);
-function setupNow(){ const id = settings.theme || "p:" + TH.PRESETS[0].name;
-  return {layout: settings.layout || null, theme: id.startsWith("p:") ? {preset: id.slice(2)} : TH.clean(themeNow())} }
+const isMini = () => document.body.classList.contains("mini");
+function setupNow(name){ const id = settings.theme || "p:" + TH.PRESETS[0].name;
+  const x = {layout: settings.layout || null, theme: id.startsWith("p:") ? {preset: id.slice(2)} : TH.clean(themeNow()),
+    prefs: {fit: settings.fit !== false, fitWin: !!settings.fitWin, snap: settings.snap !== false, opacity: +settings.opacity || 1}};
+  if (!isMini()) x.win = {w: innerWidth, h: innerHeight};
+  if (name) x.name = name;
+  return x }
+const profs = () => (Array.isArray(settings.profiles) ? settings.profiles : []).map(p => TH.cleanSetup(p, boxIds())).filter(p => p?.name);
+async function profPut(p, list = profs()){ list = list.filter(x => x.name !== p.name); list.push(p); settings = await host.settings({profiles: list.slice(-30)}) }
+// what's on screen, into the profile in use (if it still exists)
+async function profKeep(){ const n = settings.profile; if (!n || !profs().some(p => p.name === n)) return;
+  const c = TH.cleanSetup(setupNow(n), boxIds()); if (c) await profPut(c) }
+const freeName = n => { const have = new Set(profs().map(p => p.name)); let r = n, i = 2; while (have.has(r)) r = `${n.slice(0, 34)} (${i++})`; return r };
+async function setupApply(x){
+  if (x.layout){ flip(() => layoutLoad(x.layout)); for (const b of BOXES) foldMark(b) }
+  const p = x.prefs || {};
+  if ("fit" in p){ flip(() => fitSet(p.fit)); $("#fitBoxes").checked = p.fit }
+  if ("snap" in p){ document.body.classList.toggle("snap", p.snap); $("#snapBoxes").checked = p.snap }
+  if ("fitWin" in p){ fitWinSet(p.fitWin); $("#fitWin").checked = p.fitWin }
+  if ("opacity" in p){ const op = Math.round(p.opacity * 100); $("#opacity").value = op; $("#opacityV").textContent = op + "%" }
+  if (Object.keys(p).length) settings = await host.settings(p);
+  if (x.win && !isMini()) await host.winSize?.(x.win.w, x.win.h);
+  if (x.layout) layoutSave();
+  if (x.theme?.preset) await themePick("p:" + x.theme.preset); else if (x.theme){ await themeSave(x.theme); themeShow(); themeUi() }
+}
+function profUi(){
+  const list = profs(), cur = settings.profile, sel = $("#profSel"), was = sel.value;
+  sel.innerHTML = list.length ? list.map(p => `<option value="${esc(p.name)}">${esc(p.name)}${p.name === cur ? " (in use)" : ""}</option>`).join("")
+    : `<option value="">No profiles yet: save one below</option>`;
+  sel.value = list.some(p => p.name === was) ? was : list.some(p => p.name === cur) ? cur : list[0]?.name || "";
+  $("#profUse").disabled = $("#profDel").disabled = !list.length;
+}
+$("#profSave").onclick = async () => {
+  const n = $("#profName").value.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40) || settings.profile || "My setup";
+  const c = TH.cleanSetup(setupNow(n), boxIds()); if (!c) return $("#setupNote").textContent = "Nothing to save yet.";
+  await profPut(c); settings = await host.settings({profile: n}); $("#profName").value = ""; profUi(); $("#profSel").value = n;
+  $("#setupNote").textContent = `Saved profile "${n}". Changes you make now go into it when you switch.`;
+};
+async function profSwitch(n){
+  const to = profs().find(p => p.name === n); if (!to) return;
+  if (n !== settings.profile) await profKeep();
+  await setupApply(to); settings = await host.settings({profile: n}); profUi();
+  $("#setupNote").textContent = `Switched to "${n}".`;
+}
+$("#profUse").onclick = () => profSwitch($("#profSel").value);
+$("#profDel").onclick = async () => { const n = $("#profSel").value; if (!n) return;
+  settings = await host.settings({profiles: profs().filter(p => p.name !== n), ...(settings.profile === n ? {profile: null} : {})}); profUi();
+  $("#setupNote").textContent = `Deleted profile "${n}". The boxes and theme on screen stay as they are.` };
 $("#setupCopy").onclick = async () => {
-  const code = TH.encodeSetup(setupNow(), boxIds()); if (!code) return $("#setupNote").textContent = "Nothing to share yet.";
+  const code = TH.encodeSetup(setupNow(settings.profile), boxIds()); if (!code) return $("#setupNote").textContent = "Nothing to share yet.";
   $("#setupCode").value = code;
-  try { await navigator.clipboard.writeText(code); $("#setupNote").textContent = "Setup code copied. Others paste it here and press Use it." }
+  try { await navigator.clipboard.writeText(code); $("#setupNote").textContent = "Profile code copied. Friends paste it here, press Preview, then Use it." }
   catch { $("#setupCode").select(); $("#setupNote").textContent = "Copy the code from the box (Ctrl+C)." }
 };
-async function setupUse(text){
-  const x = TH.decodeSetup(text, boxIds());
-  if (!x) return $("#setupNote").textContent = "That isn't a setup code (they start with MSCS1.).";
-  if (x.layout){ flip(() => layoutLoad(x.layout)); for (const b of BOXES) foldMark(b); layoutSave() }
-  if (x.theme?.preset) await themePick("p:" + x.theme.preset); else if (x.theme){ await themeSave(x.theme); themeShow(); themeUi() }
-  $("#setupNote").textContent = [x.layout && "Layout", x.theme && "theme"].filter(Boolean).join(" and ") + " set from the code.";
-  $("#setupCode").value = "";
+// the preview: the code's boxes as they'd sit (rows side by side, columns stacked, widths by weight) in the code's colours
+let spCode = null;
+function spMapHtml(x){
+  const t = x.theme?.preset ? TH.PRESETS.find(p => p.name === x.theme.preset) : x.theme || themeNow(), c = TH.resolve(t, darkQ.matches).c;
+  const title = id => BOXES.find(b => b.dataset.box === id)?.dataset.title || id, folded = new Set(x.layout?.folded || []);
+  const cell = (id, f) => `<b style="flex:${f || 1} 1 0;background:${c.panel};color:${c.ink};border:1px solid ${c.line}${folded.has(id) ? ";opacity:.6" : ""}">${esc(title(id))}${folded.has(id) ? " +" : ""}</b>`;
+  const items = x.layout?.order.dock || [];
+  const rows = items.map(it => typeof it === "string" ? `<div class="r">${cell(it)}</div>`
+    : `<div class="r">${it.row.map((p, i) => Array.isArray(p) ? `<div class="c" style="flex:${it.w[i] || 1} 1 0">${p.map(id => cell(id)).join("")}</div>` : cell(p, it.w[i])).join("")}</div>`).join("");
+  return {html: rows || `<span style="color:${c.muted}">Keeps your box layout (this code only has a theme)</span>`, bg: c.bg, accent: c.accent};
 }
-$("#setupPaste").onclick = () => setupUse($("#setupCode").value);
+function setupPreview(text){
+  const x = TH.decodeSetup(text, boxIds());
+  if (!x){ spCode = null; $("#setupPrev").classList.add("hidden"); return $("#setupNote").textContent = "That isn't a profile code (they start with MSCS1., or MSCT1. for a theme)." }
+  spCode = x; const m = spMapHtml(x), p = x.prefs || {}, onOff = v => v ? "on" : "off";
+  $("#spName").textContent = (x.name ? `"${x.name}"` : "A profile code") + (x.layout ? "" : " (theme only)");
+  $("#spMap").innerHTML = m.html; $("#spMap").style.background = m.bg; $("#spMap").style.outline = `1px solid ${m.accent}`;
+  const n = x.layout ? x.layout.order.dock.flat(2).flatMap(i => typeof i === "string" ? [i] : i.row.flat()).length : 0;
+  $("#spInfo").textContent = [
+    x.layout && `${n} box${n === 1 ? "" : "es"} (the rest go in the Modules toolbox)`,
+    x.theme && "Theme: " + (x.theme.preset || x.theme.name),
+    x.win && `Window ${x.win.w} × ${x.win.h}`,
+    "fit" in p && "Fit boxes " + onOff(p.fit), "fitWin" in p && "window follows boxes " + onOff(p.fitWin), "snap" in p && "line up " + onOff(p.snap),
+    p.opacity && p.opacity < 1 && `see-through ${Math.round(p.opacity * 100)}%`].filter(Boolean).join(" · ") + ".";
+  $("#setupPrev").classList.remove("hidden"); $("#setupNote").textContent = "";
+}
+$("#setupPaste").onclick = () => setupPreview($("#setupCode").value);
 $("#setupCode").onkeydown = e => { if (e.key === "Enter") $("#setupPaste").click() };
+$("#spCancel").onclick = () => { spCode = null; $("#setupPrev").classList.add("hidden"); $("#setupNote").textContent = "Nothing changed." };
+// a code you use becomes a profile; what you had is kept as your profile in use, or as "My old setup" when you had none
+async function spTake(use){
+  const x = spCode; if (!x) return; spCode = null; $("#setupPrev").classList.add("hidden");
+  if (use){ if (settings.profile && profs().some(p => p.name === settings.profile)) await profKeep();
+    else { const c = TH.cleanSetup(setupNow("My old setup"), boxIds()); if (c) await profPut(c) } }
+  const n = freeName(x.name || (x.layout ? "Friend's setup" : "Friend's theme")), full = {...x, name: n};
+  if (x.layout) await profPut(TH.cleanSetup(full, boxIds()));
+  if (use){ await setupApply(x); if (x.layout) settings = await host.settings({profile: n}) }
+  else if (!x.layout){ await themeSave(x.theme); themeShow(); themeUi() }
+  profUi(); $("#setupCode").value = "";
+  $("#setupNote").textContent = use ? (x.layout ? `Using "${n}". Your old setup is kept under Profiles.` : "Theme set from the code.")
+    : x.layout ? `Saved as profile "${n}". Pick it above and press Switch to it.` : "Theme added to your themes.";
+}
+$("#spUse").onclick = () => spTake(true);
+$("#spKeep").onclick = () => spTake(false);
 
 // Settings: keyboard shortcuts (they work from the game too; main.js registers them) and the see-through window
 const KEY_NAMES = {onTop: "Keep on top on/off", startStop: "Start / Stop", pause: "Pause / go on", mini: "Mini bar on/off", toolbox: "Modules toolbox open/close",
@@ -262,7 +346,7 @@ $("#updGo").onclick = async () => {
   $("#job").value = settings.job || "";
   $("#ontop").checked = settings.onTop !== false;
   const op = Math.round((+settings.opacity || 1) * 100); $("#opacity").value = op; $("#opacityV").textContent = op + "%";
-  keysSet(null); themeShow(); themeUi(); $("#muted").checked = !!settings.muted;
+  keysSet(null); themeShow(); themeUi(); profUi(); $("#muted").checked = !!settings.muted;
   // the old "Show me where my potions are" box (removed in 0.2.36): counts are looked for on the whole screen again
   if (settings.countArea) settings = await host.settings({countArea: null});
   $("#alert").value = settings.alertWorth || 0;

@@ -162,6 +162,10 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   sessionRecord() is the one History record (Finalize and autosave). History #today/#eta from core/history.js today()/goalEta()
   (EXP table = G.exp; maps 15+ min, KPQ left out). Setup codes MSCS1 (themes.js encodeSetup/decodeSetup/cleanLayout: known box
   ids only) in Settings > Layout. Browser checks in tests/extras.test.js, maths in core.test.js.
+- Profiles 0.2.61 (renderer-settings.js profUi/profSwitch/setupApply/spTake): settings.profiles (cleaned setups with a name, max 30),
+  settings.profile = in use; switching away first saves the screen into it (profKeep). Codes stay MSCS1, now with optional
+  name/prefs {fit, fitWin, snap, opacity}/win {w, h} (themes.js cleanSetup; old apps ignore them); decodeSetup also takes MSCT1
+  (theme only). Paste = preview (#setupPrev) only; IPC `win-size` sets content size (skipped in Mini). Tests: extras.test.js 4-5.
 - Traps: box h3/rows need 72 px right padding (⠿ – × = 63 px); `#hist > .row:first-child` never matched (.boxctl is first child).
   .feedlist height = calc(7.5em + 10px) = 5 whole lines; feedIn slides lines, so wait 400 ms before measuring them. Mini's zoom
   search is cached by content height + window size (miniKey).

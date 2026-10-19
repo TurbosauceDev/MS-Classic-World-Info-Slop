@@ -81,18 +81,30 @@
     if (l.h && typeof l.h === "object") for (const [k, v] of Object.entries(l.h)){ const n = num(v, 40, 4000); if (ok.has(k) && n) h[k] = n }
     return {v: 2, order: {dock}, folded: [...new Set(folded)], h};
   }
+  // profiles (0.2.61) add to the same code: name, prefs {fit, fitWin, snap: true/false, opacity 0.4-1} and win {w, h} (the
+  // window's content size). Older apps ignore them; older codes just don't have them
+  function cleanPrefs(p){
+    if (!p || typeof p !== "object") return null; const r = {};
+    for (const k of ["fit", "fitWin", "snap"]) if (typeof p[k] === "boolean") r[k] = p[k];
+    const o = +p.opacity; if (Number.isFinite(o) && o >= 0.4 && o <= 1) r.opacity = Math.round(o * 100) / 100;
+    return Object.keys(r).length ? r : null;
+  }
+  const cleanName = n => typeof n === "string" ? n.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40) || null : null;
   function cleanSetup(x, ids){
     if (!x || typeof x !== "object") return null;
     const layout = cleanLayout(x.layout, ids), p = x.theme && typeof x.theme === "object" ? x.theme : null;
     const theme = p && typeof p.preset === "string" ? (PRESETS.some(t => t.name === p.preset) ? {preset: p.preset} : null) : clean(p);
-    return layout || theme ? {layout, theme} : null;
+    if (!layout && !theme) return null;
+    const r = {layout, theme}, name = cleanName(x.name), prefs = cleanPrefs(x.prefs), w = num(x.win?.w, 200, 4000), h = num(x.win?.h, 100, 3000);
+    if (name) r.name = name; if (prefs) r.prefs = prefs; if (w && h) r.win = {w, h};
+    return r;
   }
   const encodeSetup = (x, ids) => { const c = cleanSetup(x, ids); return c ? "MSCS1." + btoa(unescape(encodeURIComponent(JSON.stringify(c)))) : null };
   function decodeSetup(s, ids){
     const m = /MSCS1\.([A-Za-z0-9+/=]{20,12000})/.exec(String(s || "").replace(/\s+/g, ""));
-    if (!m) return null;
+    if (!m){ const t = decode(s); return t ? {layout: null, theme: t, name: t.name} : null }   // a theme code (MSCT1) works here too
     try { return cleanSetup(JSON.parse(decodeURIComponent(escape(atob(m[1])))), ids) } catch { return null }
   }
-  const api = {TOKENS, PRESETS, clean, encode, decode, contrast, resolve, apply, cleanLayout, encodeSetup, decodeSetup};
+  const api = {TOKENS, PRESETS, clean, encode, decode, contrast, resolve, apply, cleanLayout, cleanSetup, encodeSetup, decodeSetup};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.TrackerThemes = api;
 })(typeof window !== "undefined" ? window : globalThis);

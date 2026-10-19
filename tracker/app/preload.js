@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld("host", {
   exportCsv: () => ipcRenderer.invoke("export-csv"),
   party: live => ipcRenderer.invoke("party", live),
   mini: (on, h) => ipcRenderer.invoke("mini", on, h),
+  winSize: (w, h) => ipcRenderer.invoke("win-size", w, h),
   menu: (label, x, y) => ipcRenderer.invoke("menu-popup", label, x, y),
   snip: url => ipcRenderer.invoke("snip", url),
   themeBar: c => ipcRenderer.invoke("theme-bar", c),

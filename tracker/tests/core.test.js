@@ -426,9 +426,17 @@ console.log("history ok");
     theme: {name: "<b>x</b>", mode: "dark", c: {bg: "red"}}}), ids);
   assert.deepStrictEqual(bad, {layout: {v: 2, order: {dock: ["main", "log", {row: ["mobs", "items"], w: [1, 1]}]}, folded: ["mobs"], h: {items: 99}}, theme: null});
   assert.equal(TH.decodeSetup(enc({layout: {order: {dock: ["nope"]}}, theme: {preset: "Not a preset"}}), ids), null, "nothing usable");
-  for (const junk of [null, "", "MSCS1.", "MSCS1.!!!!!!!!!!!!!!!!!!!!!!!!", "MSCS1." + "A".repeat(40), enc([1, 2]), enc("x"), TH.encode({name: "x", mode: "dark", c: TH.PRESETS[2].c})])
+  for (const junk of [null, "", "MSCS1.", "MSCS1.!!!!!!!!!!!!!!!!!!!!!!!!", "MSCS1." + "A".repeat(40), enc([1, 2]), enc("x")])
     assert.equal(TH.decodeSetup(junk, ids), null, "junk code: " + junk);
   assert.equal(TH.encodeSetup({layout: null, theme: null}, ids), null);
+  // profiles (0.2.61): name, prefs and window size ride along in the same MSCS1 code; junk in them is dropped, not fatal;
+  // a theme code (MSCT1) pasted in the setup box is a theme-only setup
+  const full = {layout, theme: {preset: "Slime"}, name: "Danny's KPQ", prefs: {fit: false, fitWin: true, snap: true, opacity: 0.85}, win: {w: 420, h: 900}};
+  assert.deepStrictEqual(TH.decodeSetup(TH.encodeSetup(full, ids), ids), full, "profile round trip");
+  assert.deepStrictEqual(TH.decodeSetup(enc({layout, name: "<x>\u0007" + "n".repeat(60), prefs: {fit: "yes", snap: 1, opacity: 0.1, evil: true}, win: {w: 1e9, h: 500}}), ids),
+    {layout, theme: null, name: "x" + "n".repeat(39)}, "profile junk dropped");
+  const thc = TH.decode(TH.encode({name: "x", mode: "dark", c: TH.PRESETS[2].c}));
+  assert.deepStrictEqual(TH.decodeSetup(TH.encode(thc), ids), {layout: null, theme: thc, name: "x"}, "theme code as a setup");
 }
 // crash recovery (0.2.60): the autosave is swapped in whole, read back, never listed as a session, and cleared
 { const A = require("../core/autosave.js"), fs = require("fs"), os = require("os"), path = require("path");
