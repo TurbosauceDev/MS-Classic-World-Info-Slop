@@ -5,6 +5,27 @@ const $ = s => document.querySelector(s);
 const EXP_SURE = 49, MAX_LEVEL = 100;
 for (let l = 71; l < MAX_LEVEL; l++) if (D.exp[l] == null) D.exp[l] = Math.trunc(D.exp[l - 1] * 1.0548);
 const fmt = n => n == null ? "–" : Math.round(n).toLocaleString();
+/* GitHub Pages copy only (scripts/pages_site.py sets D.lazy): item icons and minimaps come in a second file, fetched as the
+   page starts. ASSETS resolves when they're in D (at once in the artifact, where everything is inline); code that needs
+   every icon (screenshot readers) awaits it. Anything drawn before they arrive gets its icons patched in. */
+const ASSETS = !D.lazy ? Promise.resolve() : fetch(D.lazy.url).then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+  .then(a => { for (const k of D.lazy.keys) Object.assign(D[k] || (D[k] = {}), a[k]); assetsIn() })
+  .catch(e => { console.warn("icons file didn't load:", e) });
+function fillIcons(root){
+  if (!root.querySelectorAll) return;
+  for (const i of root.querySelectorAll(".ri[data-item] > i:first-child, tr[data-id] > td > .ibtn > i:first-child")){
+    const id = i.closest("[data-item]")?.dataset.item || i.closest("tr[data-id]").dataset.id, b = D.iicons[id];
+    if (!b) continue; const im = document.createElement("img"); im.src = "data:image/png;base64," + b; im.alt = ""; i.replaceWith(im) }
+}
+function assetsIn(){
+  fillIcons(document);
+  // rows drawn later from strings built before the icons came (lazyRows) get the same patch
+  new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) fillIcons(n) }).observe(document.body, {childList: true, subtree: true});
+  // an open item or monster page redraws (its big sprite, the spawn minimap)
+  for (const t of ["items", "mobs"]) if (!document.getElementById(t)?.hidden && NAVREG[t]) { const g = NAVREG[t].get(); if (g) NAVREG[t].set(g) }
+}
+// offline + "Add to Home Screen" (manifest and sw.js exist only in the Pages deploy, never in the artifact)
+if (D.lazy && "serviceWorker" in navigator && /\.github\.io$/.test(location.hostname)) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 // map name with the minimap hover card (card itself is built in 20-quests.js)
 const mapLink = (id, name) => `<span class="name mname" tabindex="0" data-map="${id}">${esc(name)}</span>`;
 // NPC and monster names with their hover cards (cards in 20-quests.js)

@@ -5,7 +5,7 @@ name: pages
 on:
   push:
     branches: ["claude/trusting-bell-fqgar6"]
-    paths: ["dist/index.html", ".github/workflows/pages.yml"]
+    paths: ["dist/index.html", "src/pwa/**", "scripts/pages_site.py", ".github/workflows/pages.yml"]
   workflow_run:   # the daily shared-data + per-update mesowatch-sync commits are pushed with GITHUB_TOKEN, which doesn't trigger push workflows
     workflows: ["shared-data", "mesowatch-sync"]
     types: [completed]
@@ -25,7 +25,8 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p site/dist
-          cp dist/index.html site/index.html
+          # page minus item icons/minimaps (fetched after start) + manifest, icons, offline service worker
+          python3 scripts/pages_site.py site
           cat > site/dist/index.html <<'EOF'
           <!doctype html><html lang="en"><head><meta charset="utf-8"><title>MS Classic World Data Slop</title>
           <meta http-equiv="refresh" content="0; url=../"><script>location.replace("../" + location.hash)</script></head>

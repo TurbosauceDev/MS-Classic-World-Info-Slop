@@ -5,7 +5,7 @@ name: Site tests
 on:
   push:
     branches: ["claude/trusting-bell-fqgar6"]
-    paths: ["dist/**", "src/**", "data/**", "tests/**", ".github/workflows/tests.yml"]
+    paths: ["dist/**", "src/**", "data/**", "tests/**", "scripts/pages_site.py", ".github/workflows/tests.yml"]
   pull_request:
   workflow_dispatch:
 
@@ -21,3 +21,4 @@ jobs:
       - run: node tests/golden.js
       - run: node tests/edge.js
       - run: node tests/features.js
+      - run: node tests/pages.js

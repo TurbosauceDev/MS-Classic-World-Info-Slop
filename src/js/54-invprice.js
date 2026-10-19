@@ -10,6 +10,7 @@ const TABOF = {Equipment: "equip", Consumable: "use", Scroll: "use", Etc: "etc"}
 // promise, so a screenshot dropped meanwhile waits for the full set instead of matching against half of it)
 let CANDS = null;
 const cands = () => CANDS || (CANDS = (async () => {
+  await ASSETS;   // Pages: the item icons arrive in a second file (00-core.js)
   const map = Object.fromEntries(Object.entries(D.iicons).filter(([id]) => TABOF[D.items[id]?.c])), out = {};
   for (const ic of await R.loadIcons(null, map)){ const tb = TABOF[D.items[ic.id].c]; (out[tb] = out[tb] || []).push(ic) }
   return out;

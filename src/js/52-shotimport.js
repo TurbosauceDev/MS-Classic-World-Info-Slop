@@ -12,6 +12,7 @@ let READS = [], R = null;   // READS: one result per screenshot; R: all of them 
 // one screenshot -> whatever it shows: {name, lvl, shown, skills, gear, weapon, what}
 async function readShot(f){
   const r = {name: f.name && f.name !== "image.png" ? f.name : "", lvl: null, shown: null, skills: {}, gear: {}, weapon: [], what: []};
+  await ASSETS;   // Pages: equipment icons arrive in a second file (00-core.js)
   const skIcons = Object.keys(SKJOB).filter(id => D.icons[id]).map(id => [id, D.icons[id]]);
   const eqIcons = Object.keys(BLD.ARMOR).concat(Object.keys(WBYID)).filter(id => D.iicons[id]).map(id => [id, D.iicons[id]]);
   const img = shotNative(await shotLoad(f));
@@ -183,6 +184,7 @@ $("#pimprev").addEventListener("click", e => {
 // Builder is open (shotIcon caches; awaits between icons keep the page responsive)
 let warmed = false;
 const warm = () => { if (warmed) return; warmed = true; setTimeout(() => (window.requestIdleCallback || setTimeout)(async () => {
+  await ASSETS;
   const ids = [...Object.keys(SKJOB).filter(id => D.icons[id]).map(id => D.icons[id]), ...Object.keys(BLD.ARMOR).concat(Object.keys(WBYID)).filter(id => D.iicons[id]).map(id => D.iicons[id])];
   for (const b64 of ids) await shotIcon(b64) }), 800) };
 $("#t-plan").addEventListener("click", warm); if (!$("#plan").hidden) warm();
