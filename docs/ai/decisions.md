@@ -82,3 +82,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-19 Two endpoints tracked: `https://meso.watch/data/market.json` (~daily, full pricing snapshot) and `https://meso.watch/data/fresh/Classic%20World.json` (~15 min, live FM listings). Each only triggers a CSV rewrite when its own `generated_at` advances — they update on different cadences.
 - 2026-10-19 localStorage is the transport between agent-browser's JS eval and the bash script. Blob-URL downloads dropped silently on the second invocation (Chrome bug, see handoff doc).
 - 2026-10-19 Cloud threads consume the poller's CSVs (`./scripts/refresh_mesowatch.sh`); the poller itself (headless browser) stays in Danny's sandbox. Danny: "please just interact with this tool".
+- 2026-10-19 Build every idea from both 10-19 bug-hunt reports except tracker #3 (new frames from Danny; later). Danny: "implement all those suggested ideas".
