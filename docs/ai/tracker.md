@@ -25,12 +25,13 @@ game window ─(Windows Graphics Capture)─► app/main.js ─frames─► app/
 | app/renderer-layout.js | 33 | Mini view, inventory/Loot tab, tabs, box docking (OBS-style rows/columns, splitter), fitting (fitRows, flip) |
 | app/renderer-live.js | 30 | per-frame/timer reads: OCR job/map, run compare, beeps, party, auto-pause, KPQ + leaderboard, level-ups, run log, snapshots, deaths |
 | app/renderer-run.js | 20 | Start/Stop, inventory tab chips, End run summary, run name, frame pictures, Report a bug |
-| app/renderer-history.js | 13 | History: goal, compare, delete, level-up log, last 7 days |
+| app/renderer-history.js | 22 | History UI: goal, filters, Maps, bests, trend, details + rename, compare 2-6, delete, level-up log, last 7 days |
 | app/renderer-settings.js | 20 | updates, Help, title bar, Settings popup, themes editor, sharing, shortcuts, Install |
 | app/readers.js | 68 | frame → events: EXP bar (BAR_FONT), pickup lines, party HP bars, inventory counts, KPQ clock. Also inlined into the site by build.py (`/*@READERS*/`) |
 | app/index.html | 34 | window markup + CSS |
 | app/main.js | 23 | Electron main: capture, OCR, updater, files, IPC |
 | core/session.js | 29 | pure: events → rates; `createRunSlicer` (15-min share runs) |
+| core/history.js | 7 | pure History maths (GrindHistory): metrics, compareRuns, perHour, byMap, bests, filterRuns; tested in core.test.js |
 | build_data.js | | data/data.json → app/gamedata.json; copies src/js/51-shot.js → app/shot.js |
 | server/src/index.js | 17 | Worker routes; `server/src/check.js` validates runs |
 
@@ -131,3 +132,8 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   own or earlier files at load time (ui.test.js catches a load-time ReferenceError).
 - `app/readers.js` 68 KB left whole: one IIFE closure loaded 5 ways (worker importScripts, require in tests, script tags,
   site `/*@READERS*/`); splitting needs a namespace rewrite. Grep + ranged reads instead.
+- History (10-19): maths in core/history.js (window.GrindHistory), UI in renderer-history.js. Compare state is `cmpSel` (saved
+  ids, any order; drawn oldest first as A-F, max 6) + `cmpBase`; rows/compare redraw from histList, so keep ids as strings
+  (`String(+x.saved)`). Rename/note = IPC `update-session` (main.js: name ≤60, note ≤1000, nothing else changes). The ui-host
+  stub's sessions() makes new `saved` ids every call, so open details/selection don't survive a loadHist in tests.
+  The compare table scrolls inside its box (head row in the table, sticky label column); ui.test.js checks a 400 px window.

@@ -1,4 +1,4 @@
-// Tracker window, History: goal, totals, compare, delete, level-up log, last 7 days (renderer.js is split in load order; all share one global scope, see renderer.js)
+// Tracker window, History: goal, filters, maps, personal bests, compare up to 6 runs, details, rename, delete, level-up log, last 7 days (maths in core/history.js; renderer.js is split in load order, all share one global scope)
 // goal: "next" (the default: the level after the one you're on), a typed level, or "off"
 const goalOf = () => settings.goal === "off" ? 0 : +settings.goal >= 2 ? +settings.goal : "next";
 function goalUi(){ const g = goalOf(); $("#goalNext").setAttribute("aria-pressed", String(g === "next")); $("#goalOff").setAttribute("aria-pressed", String(g === 0));
@@ -17,80 +17,167 @@ $("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.val
 $("#miniBtn").onclick = () => { document.body.classList.add("mini"); miniH = 0; if (session) renderMini(session.stats()); else miniFit(true) };
 $("#miniFull").onclick = () => { document.body.classList.remove("mini"); if (fitsWindow()) requestAnimationFrame(() => compactFit(true)); else host.mini(false) };
 $("#histBtn").onclick = () => { showTab("hist"); loadHist() };
-let histList = [];
-// total EXP of a run (the start/end readings when it has both, else the live count) and EXP per minute of farming
-const expOf = x => x.expTotal ?? (x.snap?.exp ?? x.exp ?? 0), apm = x => x.expPerActiveMin ?? (x.activeMin >= 1 ? expOf(x) / x.activeMin : null);
+// History (the maths is core/history.js): search and filters, Maps, personal bests, an EXP/hr trend for one map, rows with
+// details (monsters, loot, used, level-ups) and rename/note editing, and compare for up to 6 runs against a baseline
+const H = GrindHistory, hctx = {bestDrop: x => bestDrop(x)};
+let histList = [], histF = {q: "", map: "", player: "", kind: "", sort: "new"}, histShown = 30, histOpen = new Set(), cmpSel = [], cmpBase = null;
+const expOf = H.expOf, apm = x => H.metrics(x).apm;
 // a run's who and how: character, job, levels, party, kills, deaths, the monster killed most, clock time
 const who = x => [x.player, x.job, x.startLevel != null && x.endLevel != null && x.endLevel !== x.startLevel ? `Lv ${x.startLevel} → ${x.endLevel}` : x.level ? "Lv " + (x.endLevel ?? x.level) : null,
   x.party > 1 ? "party of " + x.party : "solo", x.kills != null && fmt(x.kills) + (x.kills === 1 ? " kill" : " kills"), (x.deaths || 0) + (x.deaths === 1 ? " death" : " deaths"),
   x.topMob && `mostly ${x.topMob.name}`, x.clockMin != null && `${Math.round(x.clockMin)} min on the clock`].filter(Boolean).join(" · ");
-async function loadHist(){
-  const list = histList = await host.sessions(); $("#cmp").innerHTML = list.length > 1 ? `<div class="note" style="margin:8px 0">Tick two sessions below to compare them.</div>` : "";
-  $("#recap").innerHTML = recap(list) + levelLog(list);
-  $("#histRows").innerHTML = list.length ? list.slice(0, 30).map(x => { const h = (x.activeMin || 0) / 60;
-    // EXP/hr from the start/end readings when the session has them (clock time), else the live count (farming time)
-    // KPQ: over time in the stages only (the readings' clock time includes the waits in Kerning)
-    const sn = x.snap && x.snap.minutes > 0 ? x.snap : null, kq = x.kpq && typeof x.kpq === "object" ? x.kpq : null;
-    const rate = kq ? h ? fmt((sn ? sn.exp : x.exp) / h) : "-" : sn ? fmt(sn.exp / (sn.minutes / 60)) : h ? fmt(x.exp / h) : "-";
-    const what = kq ? `KPQ (${kq.mode === "Rush" ? "Rush" : "Bonus"}) · ${+kq.rounds || 0} round${+kq.rounds === 1 ? "" : "s"}` : x.mapName || "";
-    return `<tr><td>${esc(when(x))} · ${x.name ? `<b>${esc(x.name)}</b> · ` : ""}${esc(what)}<div class="hsub">${esc(who(x))}</div>`
-      + `<div class="hsub"><b>${sg(expOf(x))} EXP</b>${apm(x) != null ? ` · ${fmt(apm(x))} EXP/min active` : ""} · ${mz(h ? (x.mesos || 0) / h : 0)}/hr`
-      + (x.lootValue != null ? ` · net ${sgm(h ? ((x.mesos || 0) + x.lootValue - (x.usedCost || 0)) / h : 0)}/hr` : "") + (x.items || x.bestDrop !== undefined ? ` · best drop: ${dropText(bestDrop(x))}` : "") + `</div>`
-      + `${x.note ? `<div class="hnote">${esc(x.note)}</div>` : ""}</td><td class="n">${Math.round(sn && !kq ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${rate} EXP/hr</td>`
-      + `<td class="n"><input type="checkbox" class="cmp" data-saved="${+x.saved}" title="Compare: tick two sessions"> <button class="alt del" data-saved="${+x.saved}" title="Delete this session">×</button></td></tr>` }).join("")
-    : `<tr><td>No sessions yet: they're saved when you press Stop.</td></tr>`;
-}
-// compare: two ticked sessions side by side, A the older and B the newer, per hour of farming time (loot at the prices
-// saved with each session). Grouped, with a bar per value and the change in green when B did better (less spent, fewer
-// deaths, a faster KPQ round count as better)
 const when = x => x.saved ? new Date(+x.saved).toLocaleString([], {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) : x.date;
-function compare(a, b){
-  const h = x => (x.activeMin || 0) / 60, hr = (x, v) => h(x) && v != null ? v / h(x) : null;
-  const what = x => x.kpq && typeof x.kpq === "object" ? `KPQ ${x.kpq.mode === "Rush" ? "Rush" : "Bonus"} · ${+x.kpq.rounds || 0} round${+x.kpq.rounds === 1 ? "" : "s"}` : x.mapName || "?";
-  // [label, value, lower is better, shown as]
-  const groups = [["Speed", [["EXP/hr", x => hr(x, x.snap && x.snap.minutes > 0 && !x.kpq ? x.snap.exp * h(x) / (x.snap.minutes / 60) : x.exp)], ["EXP gained (total)", x => expOf(x)], ["Active EXP/min", x => apm(x)], ["Kills/hr", x => hr(x, x.kills)]]],
-    ["Money per hour", [["Mesos picked up", x => hr(x, x.mesos), false, mz], ["Items looted (worth)", x => hr(x, x.lootValue), false, mz], ["Potions and arrows used", x => hr(x, x.usedCost), true, mz], ["Mesos per kill", x => x.kills ? (x.mesos || 0) / x.kills : null, false, mz],
-      ["Best drop (each)", x => bestDrop(x)?.each ?? null, false, mz],
-      ["Net", x => x.lootValue == null ? null : hr(x, (x.mesos || 0) + x.lootValue - (x.usedCost || 0)), false, mz]]],
-    ["Run", [["Farming time", x => x.activeMin || 0, null, v => Math.round(v) + " min"], ["Deaths", x => x.deaths || 0, true], ["KPQ best round", x => x.kpq?.best ?? null, true, mss]]]];
-  const head = (k, x) => `<div class="cmpWho ${k}"><b>${k.toUpperCase()}</b> ${esc(when(x))}${x.name ? ` · ${esc(x.name)}` : ""}<div class="note">${esc(what(x))} · ${Math.round(x.activeMin || 0)} min farming</div><div class="note">${esc(who(x))}</div>`
-    + (x.items || x.bestDrop !== undefined ? `<div class="note">Best drop: ${dropText(bestDrop(x))}</div>` : "") + `${x.note ? `<div class="hnote">${esc(x.note)}</div>` : ""}</div>`;
-  let up = 0, down = 0;
-  const body = groups.map(([g, rows]) => {
-    const tr = rows.map(([k, f, low, show]) => { const va = f(a), vb = f(b); if (va == null && vb == null) return "";
-      const txt = v => v == null ? "-" : show ? show(v) : fmt(v), max = Math.max(Math.abs(va || 0), Math.abs(vb || 0)) || 1;
-      const bar = (v, c) => `<div class="cbar ${c}"><i style="width:${v == null ? 0 : Math.round(Math.abs(v) / max * 100)}%"></i><span>${txt(v)}</span></div>`;
-      let d = "";
-      if (typeof va === "number" && typeof vb === "number" && low !== null && va !== vb){
-        const better = low ? vb < va : vb > va; better ? up++ : down++;
-        const pct = va ? Math.round((vb / va - 1) * 100) : null;
-        d = `<span class="${better ? "pos" : "neg"}">${vb > va ? "▲" : "▼"} ${pct == null ? txt(Math.abs(vb - va)) : Math.abs(pct) + "%"}</span>`;
-      }
-      return `<tr><td>${k}</td><td>${bar(va, "a")}${bar(vb, "b")}</td><td class="n">${d}</td></tr>` }).join("");
-    return tr && `<tr class="grp"><td colspan="3">${g}</td></tr>` + tr }).join("");
-  return `<div class="cmpBox"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Compare</h3><button class="alt" id="cmpClear">Clear</button></div>
-    <div class="cmpHead">${head("a", a)}${head("b", b)}</div>
-    <div class="note">B did better on <b class="pos">${up}</b> and worse on <b class="neg">${down}</b> of these. Green = B better than A.</div>
-    <table class="cmpT">${body}</table></div>`;
+const whatOf = x => H.isKpq(x) ? `KPQ (${x.kpq.mode === "Rush" ? "Rush" : "Bonus"}) · ${+x.kpq.rounds || 0} round${+x.kpq.rounds === 1 ? "" : "s"}` : x.mapName || "";
+const byId = id => histList.find(x => String(+x.saved) === String(id));
+const PB_NAMES = {expHr: "EXP/hr", mesosHr: "mesos/hr", netHr: "net/hr", killsHr: "kills/hr"};
+async function loadHist(){
+  histList = await host.sessions();
+  cmpSel = cmpSel.filter(byId); if (cmpBase != null && !byId(cmpBase)) cmpBase = null;
+  $("#recap").innerHTML = recap(histList) + levelLog(histList);
+  histFilters(); histMaps(); histDraw(); cmpDraw();
 }
-$("#histRows").addEventListener("change", e => { if (e.target.classList.contains("cmp")) cmpUpdate(e.target) });
-// Clear: untick both (it used to send a change event from the table itself, which the handler above ignored)
-$("#cmp").addEventListener("click", e => { if (e.target.id !== "cmpClear") return; for (const c of $("#histRows").querySelectorAll(".cmp:checked")) c.checked = false; cmpUpdate(null) });
-function cmpUpdate(changed){
-  const on = [...$("#histRows").querySelectorAll(".cmp:checked")];
-  if (on.length > 2) on.filter(c => c !== changed).slice(0, on.length - 2).forEach(c => c.checked = false);
-  const pick = [...$("#histRows").querySelectorAll(".cmp:checked")].map(c => histList.find(x => String(+x.saved) === c.dataset.saved)).filter(Boolean);
-  pick.sort((x, y) => +x.saved - +y.saved);
-  $("#cmp").innerHTML = pick.length === 2 ? compare(pick[0], pick[1]) : pick.length === 1 ? `<div class="note cmpBox">Tick one more session to compare.</div>` : `<div class="note" style="margin:8px 0">Tick two sessions below to compare them.</div>`;
-  for (const c of $("#histRows").querySelectorAll(".cmp")){ const i = pick.findIndex(x => String(+x.saved) === c.dataset.saved);
-    c.closest("tr").classList.toggle("pickA", pick.length === 2 && i === 0); c.closest("tr").classList.toggle("pickB", pick.length === 2 && i === 1) }
+// the filter bar: maps and characters come from the saved runs; a filter whose map or character is gone goes back to All
+function histFilters(){
+  const maps = [...new Set(histList.map(H.placeOf))].filter(m => m !== "?").sort(), people = [...new Set(histList.map(x => x.player).filter(Boolean))].sort();
+  if (histF.map && !maps.includes(histF.map)) histF.map = ""; if (histF.player && !people.includes(histF.player)) histF.player = "";
+  const opt = (v, t, on) => `<option value="${esc(v)}"${on ? " selected" : ""}>${esc(t)}</option>`;
+  $("#histMap").innerHTML = opt("", "All maps", !histF.map) + maps.map(m => opt(m, m, m === histF.map)).join("");
+  $("#histWho").innerHTML = opt("", "All characters", !histF.player) + people.map(p => opt(p, p, p === histF.player)).join("");
+  $("#histWho").hidden = people.length < 2 && !histF.player;
+  $("#histBar").hidden = histList.length < 2;
 }
-// delete a session: × asks "Delete?" first (a second click within 4 s deletes), then History is redrawn
+for (const [id, k] of [["#histQ", "q"], ["#histMap", "map"], ["#histWho", "player"], ["#histKind", "kind"], ["#histSort", "sort"]])
+  $(id).addEventListener(id === "#histQ" ? "input" : "change", e => { histF[k] = e.target.value; histShown = 30; histDraw() });
+// Maps: one line per map (KPQ as one), most farmed first; the name filters the list, Compare ticks its newest runs
+function histMaps(){
+  const rows = H.byMap(histList).filter(m => m.name !== "?");
+  $("#mapsBox").hidden = !rows.length;
+  $("#maps").innerHTML = rows.length ? `<table class="mapsT"><tr class="dim"><td>Map</td><td class="n">Runs</td><td class="n">Farming</td><td class="n" title="Every run's EXP/hr weighted by its farming time">EXP/hr</td><td class="n">Best</td><td class="n">Mesos/hr</td><td></td></tr>`
+    + rows.map(m => `<tr><td><button class="link mapPick" data-map="${esc(m.name)}" title="Show only these runs">${esc(m.name)}</button></td><td class="n">${m.runs}</td><td class="n">${esc(hm(m.min / 60))}</td>`
+      + `<td class="n">${m.expHr == null ? "-" : fmt(m.expHr)}</td><td class="n">${m.bestExpHr == null ? "-" : fmt(m.bestExpHr)}</td><td class="n">${m.mesosHr == null ? "-" : mz(m.mesosHr)}</td>`
+      + `<td class="n">${m.runs > 1 ? `<button class="alt mapCmp" data-map="${esc(m.name)}" title="Compare the newest ${Math.min(m.runs, H.MAX_CMP)} runs here">Compare</button>` : ""}</td></tr>`).join("") + "</table>" : "";
+}
+$("#maps").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.classList.contains("mapPick")){ histF.map = b.dataset.map; histShown = 30; histFilters(); histDraw() }
+  if (b.classList.contains("mapCmp")){ const m = H.byMap(histList).find(r => r.name === b.dataset.map); if (m){ cmpSel = m.ids.slice(0, H.MAX_CMP).map(String); cmpBase = null; cmpDraw(); histDraw(); $("#cmp").scrollIntoView?.({block: "nearest"}) } }
+});
+// the list: filtered and sorted, 30 at a time
+function histDraw(){
+  const list = H.filterRuns(histList, histF), pb = H.bests(histList);
+  const shown = list.slice(0, histShown);
+  $("#histCount").textContent = histList.length > 1 ? `${list.length === histList.length ? list.length : list.length + " of " + histList.length} sessions` : "";
+  $("#histRows").innerHTML = shown.length ? shown.map(x => histRow(x, pb)).join("")
+    : `<tr><td>${histList.length ? "No sessions match. " + `<button class="link" id="histReset">Show all</button>` : "No sessions yet: they're saved when you press Stop."}</td></tr>`;
+  $("#histMore").innerHTML = list.length > histShown ? `<button class="alt" id="histMoreBtn">Show ${Math.min(30, list.length - histShown)} more</button>` : "";
+  $("#cmpShown").hidden = list.length < 2;
+  $("#cmpShown").textContent = `Compare the top ${Math.min(list.length, H.MAX_CMP)}`;
+  trendDraw(list);
+}
+function histRow(x, pb){
+  const m = H.metrics(x, hctx), sn = x.snap && x.snap.minutes > 0 ? x.snap : null, kq = H.isKpq(x), id = String(+x.saved), on = cmpSel.indexOf(id);
+  const badges = Object.entries(pb).filter(([, s]) => String(+s) === id).map(([k]) => `<span class="pb" title="Your best ${PB_NAMES[k]} (runs with ${H.PB_MIN}+ min farming)">Best ${PB_NAMES[k]}</span>`).join("");
+  const open = histOpen.has(id);
+  return `<tr data-saved="${id}" class="${on >= 0 ? "pick cl" + cmpOrder().indexOf(id) : ""}"><td><button class="link det" aria-expanded="${open}" title="Details">${open ? "▾" : "▸"}</button> ${esc(when(x))} · ${x.name ? `<b>${esc(x.name)}</b> · ` : ""}${esc(whatOf(x))}${badges}<div class="hsub">${esc(who(x))}</div>`
+    + `<div class="hsub"><b>${sg(m.exp)} EXP</b>${m.apm != null ? ` · ${fmt(m.apm)} EXP/min active` : ""} · ${mz(m.mesosHr || 0)}/hr`
+    + (x.lootValue != null ? ` · net ${sgm(m.netHr || 0)}/hr` : "") + (x.items || x.bestDrop !== undefined ? ` · best drop: ${dropText(bestDrop(x))}` : "") + `</div>`
+    + `${x.note ? `<div class="hnote">${esc(x.note)}</div>` : ""}</td><td class="n">${Math.round(sn && !kq ? sn.minutes : x.activeMin || 0)} min</td><td class="n" title="${sn ? `Lv ${+sn.startLevel} ${+sn.startPct}% to Lv ${+sn.endLevel} ${+sn.endPct}%` : "live count"}">${m.expHr == null ? "-" : fmt(m.expHr)} EXP/hr</td>`
+    + `<td class="n"><input type="checkbox" class="cmp" data-saved="${id}"${on >= 0 ? " checked" : ""} title="Compare: tick 2 to ${H.MAX_CMP} sessions"> <button class="alt del" data-saved="${id}" title="Delete this session">×</button></td></tr>`
+    + (open ? `<tr class="hdet" data-saved="${id}"><td colspan="4">${histDetail(x)}</td></tr>` : "");
+}
+// details: what the session recorded, per hour of farming where it's a count
+function histDetail(x){
+  const h = (x.activeMin || 0) / 60, per = n => h ? ` <span class="dim">${fmt(n / h)}/hr</span>` : "";
+  const mobs = (Array.isArray(x.mobs) ? x.mobs : []).filter(m => m && m.kills > 0).sort((a, b) => b.kills - a.kills);
+  const items = Object.entries(x.items || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]), used = Object.entries(x.used || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+  const ups = (Array.isArray(x.levelUps) ? x.levelUps : []).filter(l => l && l.level);
+  const list = (title, rows) => rows.length ? `<div class="hcol"><div class="k">${title}</div>${rows.join("")}</div>` : "";
+  const same = histList.filter(y => H.placeOf(y) === H.placeOf(x) && y.saved < x.saved).sort((a, b) => b.saved - a.saved)[0];
+  return `<div class="hcols">` + list("Monsters", mobs.slice(0, 12).map(m => `<div>${esc(G.mobs[m.id]?.[0] || "Monster " + m.id)} ×${fmt(m.kills)}${per(m.kills)}</div>`))
+    + list("Loot", items.slice(0, 12).map(([id, n]) => `<div>${ico(id)}${esc(G.items[id]?.n || "Item " + id)} ×${fmt(n)}${per(n)}</div>`))
+    + list("Used", used.slice(0, 8).map(([id, n]) => `<div>${ico(id)}${esc(G.items[id]?.n || "Item " + id)} ×${fmt(n)}</div>`))
+    + list("Level-ups", ups.map(l => `<div>Lv ${+l.level - 1} → ${+l.level}${l.activeMin != null ? ` <span class="dim">${esc(hm(l.activeMin / 60))}</span>` : ""}</div>`)) + `</div>`
+    + (!mobs.length && !items.length && !used.length && !ups.length ? `<div class="note">No monster, loot or level-up detail saved with this session.</div>` : "")
+    + (x.readShare != null ? `<div class="note">${Math.round(x.readShare * 100)}% of the EXP bar's gain showed up as readable lines${x.readShare < 0.7 ? ": kills, mesos and drops are undercounted" : ""}.</div>` : "")
+    + `<div class="row">${same ? `<button class="alt cmpPrev" data-a="${+same.saved}" data-b="${+x.saved}">Compare with the run before it here (${esc(when(same))})</button>` : ""}</div>`
+    + (host.updateSession ? `<div class="row hedit"><input class="eName" maxlength="60" placeholder="Name (optional)" value="${esc(x.name || "")}" style="flex:1;min-width:0"></div>
+      <textarea class="eNote" maxlength="1000" rows="2" placeholder="Note (optional)" style="width:100%;box-sizing:border-box">${esc(x.note || "")}</textarea>
+      <div class="row"><button class="alt eSave" data-saved="${+x.saved}">Save name and note</button></div>` : "");
+}
+// EXP/hr run by run, oldest to newest, for one map (3+ runs with a rate)
+function trendDraw(list){
+  const pts = histF.map ? list.map(x => ({x, v: H.metrics(x).expHr})).filter(p => p.v != null).sort((a, b) => a.x.saved - b.x.saved) : [];
+  if (pts.length < 3){ $("#trend").innerHTML = ""; return }
+  const W = 300, Ht = 44, lo = Math.min(...pts.map(p => p.v)), hi = Math.max(...pts.map(p => p.v)), span = hi - lo || 1;
+  const xy = pts.map((p, i) => [Math.round(i / (pts.length - 1) * (W - 8) + 4), Math.round(Ht - 4 - (p.v - lo) / span * (Ht - 8))]);
+  $("#trend").innerHTML = `<div class="k">EXP/hr on ${esc(histF.map)}, run by run (${pts.length} runs)</div><svg class="trend" viewBox="0 0 ${W} ${Ht}" preserveAspectRatio="none" role="img" aria-label="EXP per hour per run">`
+    + `<polyline fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke" points="${xy.map(p => p.join(",")).join(" ")}"/>`
+    + xy.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="var(--accent)"><title>${esc(when(pts[i].x))}: ${fmt(pts[i].v)} EXP/hr</title></circle>`).join("") + `</svg>`
+    + `<div class="note">Lowest ${fmt(lo)} · highest ${fmt(hi)} · latest ${fmt(pts[pts.length - 1].v)} EXP/hr</div>`;
+}
+$("#histMore").addEventListener("click", e => { if (e.target.id === "histMoreBtn"){ histShown += 30; histDraw() } });
+$("#cmpShown").onclick = () => { cmpSel = H.filterRuns(histList, histF).slice(0, H.MAX_CMP).map(x => String(+x.saved)); cmpBase = null; cmpDraw(); histDraw() };
+// compare: the ticked runs oldest first (A, B, C...), each against the baseline (the oldest unless another is picked), per hour
+// of farming time (loot at the prices saved with each session). Green = better than the baseline (less spent, fewer deaths, a
+// faster KPQ round count as better), ★ = the best of them
+const cmpOrder = () => cmpSel.map(byId).filter(Boolean).sort((a, b) => a.saved - b.saved).map(x => String(+x.saved));
+const L = i => String.fromCharCode(65 + i);
+function compare(runs, base){
+  const r = H.compareRuns(runs, base, hctx), n = runs.length;
+  const show = (k, v) => v == null ? "-" : k === "meso" ? mz(v) : k === "min" ? Math.round(v) + " min" : k === "mss" ? mss(v) : k === "pct" ? Math.round(v * 100) + "%" : fmt(v);
+  const head = (x, i) => `<div class="cmpWho cl${i}"><b>${L(i)}</b> ${esc(when(x))}${x.name ? ` · ${esc(x.name)}` : ""}<button class="link cmpX" data-saved="${+x.saved}" title="Take out of the compare">×</button>`
+    + `<div class="note">${esc(whatOf(x) || "?")} · ${Math.round(x.activeMin || 0)} min farming</div><div class="note">${esc(who(x))}</div>`
+    + (x.items || x.bestDrop !== undefined ? `<div class="note">Best drop: ${dropText(bestDrop(x))}</div>` : "") + `${x.note ? `<div class="hnote">${esc(x.note)}</div>` : ""}`
+    + (n > 2 ? i === base ? `<div class="note"><b>Baseline</b></div>` : `<button class="link cmpBase" data-saved="${+x.saved}">Compare the others to this one</button>` : "") + `</div>`;
+  const cell = (row, v, i, max) => { const d = row.delta[i];
+    const ch = d ? `<span class="${d.better == null ? "dim" : d.better ? "pos" : "neg"}">${d.up ? "▲" : "▼"} ${d.pct == null ? show(row.show, Math.abs(d.diff)) : d.pct >= 900 ? "×" + fmt(d.pct / 100 + 1) : Math.abs(d.pct) + "%"}</span>` : "";
+    return `<td><div class="cbar cl${i}${row.best === i ? " top" : ""}"><i style="width:${v == null ? 0 : Math.round(Math.abs(v) / max * 100)}%"></i><span>${row.best === i ? "★ " : ""}${show(row.show, v)}</span></div>${ch ? `<div class="cd">${ch}</div>` : ""}</td>` };
+  const body = r.groups.map(g => `<tr class="grp"><td colspan="${n + 1}">${g.name}</td></tr>` + g.rows.map(row => { const max = Math.max(...row.vals.map(v => Math.abs(v || 0))) || 1;
+    return `<tr><td>${row.label}</td>${row.vals.map((v, i) => cell(row, v, i, max)).join("")}</tr>` }).join("")).join("");
+  // monsters and loot per hour: the ids that matter most across the runs
+  const per = (title, rows, name) => rows.length ? `<tr class="grp"><td colspan="${n + 1}">${title}</td></tr>` + rows.map(p => { const max = Math.max(...p.vals.map(v => v || 0)) || 1;
+    return `<tr><td>${name(p.id)}</td>${p.vals.map((v, i) => `<td><div class="cbar cl${i}"><i style="width:${v == null ? 0 : Math.round(v / max * 100)}%"></i><span>${v == null ? "-" : fmt(v)}</span></div></td>`).join("")}</tr>` }).join("") : "";
+  const extra = per("Kills per hour", H.perHour(runs, "mobs"), id => esc(G.mobs[id]?.[0] || "Monster " + id)) + per("Pickups per hour", H.perHour(runs, "items"), id => ico(id) + esc(G.items[id]?.n || "Item " + id));
+  const wins = r.wins.map((w, i) => `<b class="cl${i}t">${L(i)}</b> ${w}`).join(" · ");
+  return `<div class="cmpBox"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Compare ${n} runs</h3><button class="alt" id="cmpClear">Clear</button></div>
+    <div class="note">Best on (★): ${wins}. ▲▼ = change from <b>${L(base)}</b>, green when better.</div>
+    <div class="cmpScroll"><table class="cmpT n${n}"><tr class="cmpHead"><td></td>${runs.map((x, i) => `<td>${head(x, i)}</td>`).join("")}</tr>${body}${extra}</table></div></div>`;
+}
+$("#histRows").addEventListener("change", e => { if (e.target.classList.contains("cmp")) cmpTick(e.target.dataset.saved, e.target.checked) });
+function cmpTick(id, on){
+  cmpSel = cmpSel.filter(s => s !== id); if (on) cmpSel.push(id);
+  if (cmpSel.length > H.MAX_CMP){ cmpSel.shift(); $("#status").textContent = `Compare holds ${H.MAX_CMP} runs: the first one ticked was taken out.` }
+  if (cmpBase === id && !on) cmpBase = null;
+  cmpDraw(); histDraw();
+}
+function cmpDraw(){
+  const ids = cmpOrder(), runs = ids.map(byId), base = Math.max(0, ids.indexOf(String(cmpBase)));
+  $("#cmp").innerHTML = runs.length >= 2 ? compare(runs, base) : runs.length === 1 ? `<div class="note cmpBox">Tick one more session to compare (up to ${H.MAX_CMP}).</div>`
+    : histList.length > 1 ? `<div class="note" style="margin:8px 0">Tick 2 to ${H.MAX_CMP} sessions below to compare them.</div>` : "";
+}
+$("#cmp").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+  if (b.id === "cmpClear"){ cmpSel = []; cmpBase = null }
+  else if (b.classList.contains("cmpX")) cmpSel = cmpSel.filter(s => s !== b.dataset.saved);
+  else if (b.classList.contains("cmpBase")) cmpBase = b.dataset.saved;
+  else return;
+  cmpDraw(); histDraw() });
+// rows: details, compare with the run before, save name/note, delete (× asks "Delete?" first: a second click within 4 s deletes)
 $("#histRows").onclick = async e => {
+  if (e.target.id === "histReset"){ histF = {q: "", map: "", player: "", kind: "", sort: histF.sort}; $("#histQ").value = ""; $("#histKind").value = ""; histFilters(); histDraw(); return }
+  const det = e.target.closest("button.det");
+  if (det){ const id = det.closest("tr").dataset.saved; histOpen.has(id) ? histOpen.delete(id) : histOpen.add(id); histDraw(); return }
+  const prev = e.target.closest("button.cmpPrev");
+  if (prev){ cmpSel = [prev.dataset.a, prev.dataset.b]; cmpBase = null; cmpDraw(); histDraw(); $("#cmp").scrollIntoView?.({block: "nearest"}); return }
+  const sv = e.target.closest("button.eSave");
+  if (sv){ const tr = sv.closest("tr"), name = tr.querySelector(".eName").value.trim(), note = tr.querySelector(".eNote").value.trim();
+    sv.disabled = true;
+    if (await host.updateSession(sv.dataset.saved, {name, note})){ $("#status").textContent = "Session updated."; loadHist() }
+    else { sv.disabled = false; $("#status").textContent = "Couldn't update that session." }
+    return }
   const b = e.target.closest("button.del"); if (!b) return;
   if (!b.classList.contains("sure")){ b.classList.add("sure"); b.textContent = "Delete?"; setTimeout(() => { if (b.isConnected){ b.classList.remove("sure"); b.textContent = "×" } }, 4000); return }
   b.disabled = true;
-  if (await host.deleteSession?.(b.dataset.saved)){ $("#status").textContent = "Session deleted."; loadHist() }
+  if (await host.deleteSession?.(b.dataset.saved)){ $("#status").textContent = "Session deleted."; cmpSel = cmpSel.filter(s => s !== b.dataset.saved); histOpen.delete(b.dataset.saved); loadHist() }
   else { b.disabled = false; $("#status").textContent = "Couldn't delete that session." }
 };
 // level-up log: how long each level took (farming time in one session), newest first

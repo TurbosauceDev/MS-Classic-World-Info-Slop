@@ -67,3 +67,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-19 Tracker Event log: a second log beside the run log for everything that isn't loot/EXP (map, level, deaths, party, job, pauses, KPQ, app messages); "the two logs should be readable to recreate the run, like WoW dungeon/raid logs". Status line kept as the newest message.
 - 2026-10-19 Tracker party kills: EXP shares that fit several monsters stay a "Not told apart" row; no need to count every party kill per monster, the tracker is about the player's own performance (Danny).
 - 2026-10-19 Tracker KPQ: saved runs must let rounds/Bonus/next round be read straight off the log (Danny); added kpq.timeline.
+- 2026-10-19 Tracker History: compare more than two runs at once and flesh out History; Danny left the extra features to Claude ("i trust you to come up with ideas"). Pushed + released on his "push" / "publish if permission needed".

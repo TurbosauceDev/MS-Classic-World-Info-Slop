@@ -226,18 +226,33 @@
   @keyframes feedIn { from { opacity:0; transform:translateY(6px); } }
   .over-drop { background:var(--accent-soft) !important; }
   #hist > .row:first-child { padding-right:48px; }
-  /* History: compare two sessions */
+  /* History: filters, maps, compare */
+  #hist [hidden] { display:none !important; }
   #histRows, #recap { max-width:720px; }
   .cmpBox { margin:8px 0 10px; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); max-width:720px; }
-  .cmpHead { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 6px; }
-  .cmpWho { border-left:4px solid; padding:2px 8px; } .cmpWho.a { border-color:var(--accent); } .cmpWho.b { border-color:var(--warn); }
+  .cmpT tr.cmpHead td { padding-bottom:8px; } .cmpT td:first-child { position:sticky; left:0; z-index:1; background:var(--bg); } .cmpT .cmpWho { min-width:130px; } .cmpT .cbar { min-width:100px; }
+  .cmpWho { border-left:4px solid; padding:2px 8px; }
   .cmpWho b { margin-right:4px; }
-  .cmpT td { padding:5px 0; } .cmpT td:first-child { width:38%; padding-right:8px; } .cmpT td.n { width:72px; font-weight:600; }
+  .cmpT td { padding:5px 0; } .cmpT td:first-child { width:24%; min-width:110px; padding-right:8px; } .cmpT td.n { width:72px; font-weight:600; }
   .cmpT tr.grp td { color:var(--muted); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding-top:10px; border-bottom:0; }
   .cbar { position:relative; height:17px; margin:1px 0; font-variant-numeric:tabular-nums; font-size:12px; }
-  .cbar i { position:absolute; left:0; top:2px; bottom:2px; border-radius:3px; opacity:.35; } .cbar.a i { background:var(--accent); } .cbar.b i { background:var(--warn); }
+  .cbar i { position:absolute; left:0; top:2px; bottom:2px; border-radius:3px; opacity:.35; }
   .cbar span { position:relative; padding-left:6px; line-height:17px; }
-  tr.pickA td:first-child { box-shadow:inset 4px 0 var(--accent); padding-left:8px; } tr.pickB td:first-child { box-shadow:inset 4px 0 var(--warn); padding-left:8px; }
+  /* compare up to 6: run colours A-F */
+  .cl0 { --c:var(--accent); } .cl1 { --c:var(--warn); } .cl2 { --c:var(--leaf); } .cl3 { --c:var(--bad); } .cl4 { --c:#4a90c8; } .cl5 { --c:#c060a8; }
+  .cl0t { color:var(--accent); } .cl1t { color:var(--warn); } .cl2t { color:var(--leaf); } .cl3t { color:var(--bad); } .cl4t { color:#4a90c8; } .cl5t { color:#c060a8; }
+  .cmpWho { border-color:var(--c); } .cbar i { background:var(--c); } .cbar.top span { font-weight:700; }
+  .cmpScroll { overflow-x:auto; } .cmpT { min-width:100%; } .cmpT td { vertical-align:top; } .cmpT td:not(:first-child) { min-width:110px; padding-right:6px; }
+  .cmpT.n2 td:first-child { width:30%; } .cmpT td .cd { font-size:11px; padding-left:6px; font-weight:600; }
+  .cmpWho .cmpX { float:right; padding:0 4px; } .cmpWho .cmpBase { font-size:12px; padding:0; }
+  tr.pick td:first-child { box-shadow:inset 4px 0 var(--c); padding-left:8px; }
+  button.link { background:none; color:var(--accent); padding:0 2px; border-radius:4px; text-align:left; } button.link:hover { text-decoration:underline; }
+  button.det { color:var(--muted); width:18px; }
+  .pb { display:inline-block; margin-left:6px; padding:0 6px; border-radius:8px; font-size:11px; font-weight:600; background:var(--accent-soft); color:var(--ink); }
+  .histBar { flex-wrap:wrap; gap:6px; max-width:720px; } .histBar select { max-width:180px; }
+  #mapsBox { margin:8px 0; max-width:720px; } #mapsBox summary { cursor:pointer; font-weight:600; } .mapsT { width:100%; } .mapsT td { padding:3px 4px; }
+  tr.hdet > td { background:var(--bg); border-radius:8px; padding:8px; } .hcols { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12px; } .hcol { min-width:150px; } .hcol .ico { width:16px; height:16px; margin:-2px 4px -2px 0; }
+  svg.trend { width:100%; max-width:720px; height:44px; display:block; } #trend { margin:6px 0; }
   #updBanner { position:sticky; top:38px; z-index:5; display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-color:var(--accent); background:var(--accent-soft); } #updBanner b { flex:1; }
 </style>
 </head>
@@ -359,7 +374,14 @@
         <label class="chk freePots" title="Red, Orange, White and Blue Potions dropped by monsters or given by quests cost nothing here, so only what you buy (meat, lemons, Elixirs) is a cost"><input type="checkbox" id="meatOnly"> <span>Dropped potions are free</span></label></div></div>
   </section>
   <section data-tab="hist" class="hidden">
-    <div class="card" id="hist" data-box="hist" data-title="Past sessions"><div class="row" style="margin-top:0;padding-right:48px"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div><div id="cmp"></div><table id="histRows"></table></div>
+    <div class="card" id="hist" data-box="hist" data-title="Past sessions"><div class="row" style="margin-top:0;padding-right:48px"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div>
+      <details id="mapsBox" open hidden><summary>Maps</summary><div id="maps"></div></details>
+      <div class="row histBar" id="histBar" hidden><input id="histQ" type="search" aria-label="Search sessions" placeholder="Search name, map, note, monster" style="flex:1;min-width:140px">
+        <select id="histMap" aria-label="Map"></select><select id="histWho" aria-label="Character" hidden></select>
+        <select id="histKind" aria-label="Kind"><option value="">All runs</option><option value="grind">Grinding</option><option value="kpq">KPQ</option></select>
+        <select id="histSort" aria-label="Sort"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="expHr">Most EXP/hr</option><option value="mesosHr">Most mesos/hr</option><option value="netHr">Most net/hr</option><option value="min">Longest</option></select>
+        <button class="alt" id="cmpShown" hidden title="Tick the first sessions in the list below for Compare">Compare the top 6</button></div>
+      <div class="note" id="histCount"></div><div id="trend"></div><div id="cmp"></div><table id="histRows"></table><div id="histMore" class="row"></div></div>
   </section>
   <section data-tab="help" class="hidden">
     <div class="card" id="help"><div class="row"><h3 style="flex:1;margin:0">Help</h3><button id="helpClose" class="alt">Close</button></div>
@@ -397,7 +419,7 @@
           is just the newest one). Read with the run log, it tells the story of the run.</li>
         <li><b>Snapshots</b>: EXP/hr from just two readings of the EXP bar (start and now), like mapleexp.com. A good check
           on the live number. Type a level or % to fix one that read wrong.</li>
-        <li><b>History</b>: past sessions, your last 7 days, how long each level took, and Export CSV.</li>
+        <li><b>History</b>: past sessions, your last 7 days, how long each level took, Maps (EXP/hr per map), your best runs, search and filters, details per session (monsters, loot, potions used; rename and note), Compare (tick 2 to 6 sessions), and Export CSV.</li>
         <li><b>Settings</b> (File → Settings, or Ctrl+,): job, potion box, alerts, goal level, party code, sharing, updates and bug reports.</li>
       </ul></details>
       <details><summary>Potions or arrows not counted</summary><ul>
@@ -526,6 +548,7 @@
   <script src="shot.js"></script>
   <script src="../core/session.js"></script>
   <script src="../core/feed.js"></script>
+  <script src="../core/history.js"></script>
   <script src="readers.js"></script>
   <script src="themes.js"></script>
   <script src="renderer.js"></script>

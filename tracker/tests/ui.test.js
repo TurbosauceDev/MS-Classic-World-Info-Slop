@@ -289,11 +289,47 @@ const path = require("path"), {chromium} = require("playwright");
   const status = await page.textContent("#status"), last = await page.textContent("#lastRun");
   await page.click("#histBtn"); await page.waitForTimeout(100);
   const hist = await page.textContent("#hist");
-  // compare: tick two sessions
+  // compare (Danny, 2026-10-19: more than two at once): A = the oldest and the baseline; another baseline; take one out; Clear
   await page.click("#histRows .cmp >> nth=0"); await page.click("#histRows .cmp >> nth=1");
   const cmp = await page.textContent("#cmp");
+  if (!/Best on \(★\): A \d+ · B \d+/.test(cmp) || !/▲|▼/.test(cmp) || !/EXP\/hr/.test(cmp) || !/Pig Beach/.test(cmp) || !/Kills per hour|Pickups per hour/.test(cmp)) throw new Error("compare: " + cmp);
+  await page.click("#histRows .cmp >> nth=2");
+  const c3 = await page.$$eval("#cmp .cmpWho", w => w.map(x => x.textContent));
+  if (c3.length !== 3 || !/^A .*Old/.test(c3[0]) || !/^C .*Snail/.test(c3[2]) || !/Baseline/.test(c3[0])) throw new Error("compare 3: " + c3);
+  // a narrow window: the compare table scrolls inside its box, the page doesn't get wider
+  { const v0 = page.viewportSize(); await page.setViewportSize({width: 400, height: v0.height}); await page.waitForTimeout(100);
+    const wide = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth]); await page.setViewportSize(v0);
+    if (wide[0] > wide[1]) throw new Error("History wider than a 400 px window: " + wide) }
+  await page.click("#cmp .cmpBase >> nth=-1");
+  if (!/change from C/.test(await page.textContent("#cmp"))) throw new Error("compare baseline");
+  await page.click("#cmp .cmpX >> nth=0");
+  const c2 = await page.$$eval("#cmp .cmpWho", w => w.map(x => x.textContent));
+  if (c2.length !== 2 || c2.some(t => /Old/.test(t)) || !/change from B/.test(await page.textContent("#cmp")) || await page.isChecked("#histRows .cmp >> nth=2")) throw new Error("compare take out: " + c2);
   await page.click("#cmpClear"); if (await page.evaluate(() => document.querySelectorAll("#histRows .cmp:checked").length)) throw new Error("compare clear");
-  if (!/B did better on/.test(cmp) || !/▲|▼/.test(cmp) || !/EXP\/hr/.test(cmp) || !/Pig Beach/.test(cmp)) throw new Error("compare: " + cmp);
+  // History filters: search, map, sort; Maps; personal best badge; details (monsters, loot, level-ups) and rename/note
+  await page.fill("#histQ", "pig"); await page.waitForTimeout(50);
+  const hq = [await page.$$eval("#histRows tr", r => r.length), await page.textContent("#histRows"), await page.textContent("#histCount")];
+  if (hq[0] !== 1 || !/Pig Beach/.test(hq[1]) || !/1 of 3 sessions/.test(hq[2])) throw new Error("history search: " + hq);
+  await page.fill("#histQ", ""); await page.selectOption("#histSort", "expHr"); await page.waitForTimeout(50);
+  const hs = await page.$$eval("#histRows > tbody > tr, #histRows > tr", r => r.map(x => x.textContent));
+  if (!/Snail Hunting Ground III.*Best EXP\/hr/.test(hs[0]) || !/Pig Beach/.test(hs[1])) throw new Error("history sort/best: " + hs);
+  const maps = await page.$$eval("#maps tr", r => r.length);
+  if (maps !== 4) throw new Error("maps table rows: " + maps);
+  await page.click("#maps .mapPick >> text=Pig Beach"); await page.waitForTimeout(50);
+  if (await page.inputValue("#histMap") !== "Pig Beach" || await page.$$eval("#histRows tr", r => r.length) !== 1) throw new Error("maps filter");
+  await page.selectOption("#histMap", ""); await page.selectOption("#histSort", "new"); await page.waitForTimeout(50);
+  await page.click("#histRows button.det >> nth=0"); await page.waitForTimeout(50);
+  const hd = await page.textContent("#histRows tr.hdet");
+  if (!/Horny Mushroom Cap ×3/.test(hd) || !/Lv 21 → 22/.test(hd) || /Compare with the run before/.test(hd)) throw new Error("history details: " + hd);
+  await page.fill("#histRows .eName", "Snail rush"); await page.fill("#histRows .eNote", "ch 3"); await page.click("#histRows .eSave"); await page.waitForTimeout(50);
+  const upd = await page.evaluate(() => window.updated);
+  if (!upd || upd.name !== "Snail rush" || upd.note !== "ch 3" || !(upd.saved > 0)) throw new Error("rename session: " + JSON.stringify(upd));
+  // an older run on the same map: its details offer to compare the two
+  await page.evaluate(async () => { const s0 = host.sessions; window.s0 = s0; host.sessions = async () => [...await s0(), {saved: Date.now() - 20 * 864e5, date: "2026-09-29", mapName: "Snail Hunting Ground III", activeMin: 30, exp: 3000, mesos: 400}]; await loadHist() });
+  await page.click("#histRows button.det >> nth=0"); await page.click("#histRows button.cmpPrev"); await page.waitForTimeout(50);
+  const cp2 = await page.$$eval("#cmp .cmpWho", w => w.map(x => x.textContent));
+  if (cp2.length !== 2 || !/Snail/.test(cp2[0]) || !/Snail/.test(cp2[1])) throw new Error("compare with the run before: " + cp2);
+  await page.click("#cmpClear"); await page.evaluate(async () => { host.sessions = window.s0; histOpen.clear(); await loadHist() });
   // a watched item: the alert set finds it by part of its name
   const watched = await page.evaluate(() => { settings.alertItems = "Horny Mushroom Cap"; return alertSet().has("4000019") });
   if (!watched) throw new Error("item alert set");

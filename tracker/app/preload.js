@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("host", {
   summary: () => ipcRenderer.invoke("summary"),
   sessions: () => ipcRenderer.invoke("sessions"),
   deleteSession: saved => ipcRenderer.invoke("delete-session", saved),
+  updateSession: (saved, patch) => ipcRenderer.invoke("update-session", saved, patch),
   exportCsv: () => ipcRenderer.invoke("export-csv"),
   party: live => ipcRenderer.invoke("party", live),
   mini: (on, h) => ipcRenderer.invoke("mini", on, h),

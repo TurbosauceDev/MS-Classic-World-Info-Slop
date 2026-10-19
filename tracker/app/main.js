@@ -255,6 +255,14 @@ ipcMain.handle("delete-session", (_, saved) => {
   if (!/^\d{10,16}$/.test(String(saved))) return false;
   try { fs.unlinkSync(path.join(SESSIONS, saved + ".json")); return true } catch { return false }
 });
+// History's rename/note: only name and note change (trimmed, the same caps as the Start box and the note field; empty = none)
+ipcMain.handle("update-session", (_, saved, patch) => {
+  if (!/^\d{10,16}$/.test(String(saved)) || !patch || typeof patch !== "object") return false;
+  const file = path.join(SESSIONS, saved + ".json"), cut = (v, n) => typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null;
+  try { const x = JSON.parse(fs.readFileSync(file, "utf8"));
+    if ("name" in patch) x.name = cut(patch.name, 60); if ("note" in patch) x.note = cut(patch.note, 1000);
+    writeAtomic(file, JSON.stringify(x)); return true } catch { return false }
+});
 ipcMain.handle("export-csv", () => {
   // text starting with = + - @ would run as a formula in Excel (map names come from OCR): prefixed with '
   const q = v => { let t = String(v ?? ""); if (typeof v === "string" && /^[=+\-@]/.test(t)) t = "'" + t; return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t };

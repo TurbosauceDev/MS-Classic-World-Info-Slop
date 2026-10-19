@@ -334,3 +334,49 @@ console.log("feed ok");
   s.add({t: sec(2), type: "item", id: "2000002", qty: 15, src: "box"});
   assert.strictEqual(s.state.items["2000002"], 15); assert.deepStrictEqual(s.state.byMob["19"].items, {}, "box loot isn't a Horny Mushroom drop") }
 console.log("box ok");
+
+// History (core/history.js): rates from what each session recorded, compare 2-6 runs against a baseline, maps, bests, filters
+{
+  const Hi = require("../core/history.js");
+  const a = {saved: 1000, mapName: "Pig Beach", activeMin: 30, exp: 3000, kills: 60, mesos: 600, deaths: 2, lootValue: 300, usedCost: 100, player: "Turbow", name: "pigs", mobs: [{id: "1210100", kills: 60}], items: {"4000021": 10}};
+  const b = {saved: 2000, mapName: "Pig Beach", activeMin: 60, exp: 9000, kills: 150, mesos: 900, deaths: 0, lootValue: 600, usedCost: 50, player: "Turbow", snap: {exp: 10000, minutes: 50}, mobs: [{id: "1210100", kills: 150}], items: {"4000021": 40}};
+  const c = {saved: 3000, mapName: "Ant Tunnel I", activeMin: 10, exp: 4000, kills: 40, mesos: 100, deaths: 1, player: "Bo", note: "ch 3 crowded", kpq: null};
+  const k = {saved: 4000, mapName: "1st stage", activeMin: 20, exp: 5000, mesos: 0, kpq: {mode: "Rush", rounds: 2, best: 300}};
+  // EXP/hr: the start/end readings over their clock time when present; KPQ over farming time; net = mesos + loot - used
+  const ma = Hi.metrics(a), mb = Hi.metrics(b), mk = Hi.metrics(k);
+  assert.strictEqual(ma.expHr, 6000); assert.strictEqual(mb.expHr, 12000); assert.strictEqual(mk.expHr, 15000);
+  assert.strictEqual(ma.netHr, 1600); assert.strictEqual(ma.mesoPerKill, 10); assert.strictEqual(Hi.metrics(c).netHr, null);
+  // three runs: wins per run, the base's change, lower-is-better rows (deaths, used) and rows that rank nothing (farming time)
+  const r = Hi.compareRuns([a, b, c], 0), row = key => r.groups.flatMap(g => g.rows).find(x => x.key === key);
+  assert.deepStrictEqual(row("expHr").vals, [6000, 12000, 24000]); assert.strictEqual(row("expHr").best, 2);
+  assert.deepStrictEqual(row("expHr").delta.map(d => d && d.pct), [null, 100, 300]);
+  assert.strictEqual(row("deaths").best, 1); assert.strictEqual(row("deaths").delta[1].better, true); assert.strictEqual(row("deaths").delta[2].better, true);
+  assert.strictEqual(row("min").best, -1); assert.strictEqual(row("min").delta[1].better, null);
+  assert.strictEqual(row("kpqBest"), undefined);   // no KPQ run: the row is left out
+  assert.strictEqual(r.wins.reduce((s, w) => s + w, 0), r.groups.flatMap(g => g.rows).filter(x => x.best >= 0).length);
+  // a tie ranks nobody; another baseline moves the change
+  const t = Hi.compareRuns([a, {...a, saved: 1500}], 1); assert.ok(t.wins.every(w => w === 0)); assert.ok(t.groups.flatMap(g => g.rows).every(x => x.delta.every(d => d === null)));
+  assert.strictEqual(Hi.compareRuns([a, b], 1).groups[0].rows[0].delta[0].pct, -50);
+  // base 0 EXP: the change is the difference, not a percent
+  assert.deepStrictEqual(Hi.compareRuns([{...a, deaths: 0}, a]).groups.flatMap(g => g.rows).find(x => x.key === "deaths").delta[1], {pct: null, diff: 2, up: true, better: false});
+  // per hour by monster and item; a run with no farming time has no per-hour value
+  assert.deepStrictEqual(Hi.perHour([a, b, {saved: 5, activeMin: 0}], "mobs"), [{id: "1210100", vals: [120, 150, null]}]);
+  assert.deepStrictEqual(Hi.perHour([a, b], "items")[0], {id: "4000021", vals: [20, 40]});
+  // maps: EXP/hr weighted by farming time, the best run, newest first; KPQ as one place
+  const maps = Hi.byMap([a, b, c, k]), pig = maps.find(m => m.name === "Pig Beach");
+  assert.strictEqual(maps[0].name, "Pig Beach"); assert.strictEqual(pig.runs, 2); assert.strictEqual(pig.expHr, (6000 * 0.5 + 12000 * 1) / 1.5);
+  assert.strictEqual(pig.bestId, 2000); assert.deepStrictEqual(pig.ids, [2000, 1000]); assert.strictEqual(pig.mesosHr, 1000); assert.ok(maps.some(m => m.name === "KPQ"));
+  // bests: 15+ min farming only (Ant Tunnel's 24,000 EXP/hr over 10 min doesn't count)
+  assert.deepStrictEqual(Hi.bests([a, b, c, k]), {expHr: 4000, mesosHr: 1000, netHr: 1000, killsHr: 2000});
+  // filters and sorts
+  const ids = l => l.map(x => x.saved);
+  assert.deepStrictEqual(ids(Hi.filterRuns([a, b, c, k])), [4000, 3000, 2000, 1000]);
+  assert.deepStrictEqual(ids(Hi.filterRuns([a, b, c, k], {q: "CROWDED"})), [3000]);
+  assert.deepStrictEqual(ids(Hi.filterRuns([a, b, c, k], {map: "Pig Beach", sort: "old"})), [1000, 2000]);
+  assert.deepStrictEqual(ids(Hi.filterRuns([a, b, c, k], {kind: "kpq"})), [4000]);
+  assert.deepStrictEqual(ids(Hi.filterRuns([a, b, c, k], {kind: "grind", player: "Turbow", sort: "netHr"})), [1000, 2000]);
+  assert.deepStrictEqual(ids(Hi.filterRuns([a, b, c, k], {sort: "expHr"})), [3000, k.saved, 2000, 1000]);
+  // old sessions with missing fields don't throw
+  assert.doesNotThrow(() => { Hi.compareRuns([{saved: 1}, {saved: 2, mobs: "x", items: null}]); Hi.byMap([{saved: 1}]); Hi.perHour([{saved: 1, activeMin: 5, mobs: [null]}], "mobs") });
+}
+console.log("history ok");
