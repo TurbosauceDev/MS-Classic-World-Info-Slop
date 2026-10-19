@@ -59,6 +59,8 @@ EXP-bar crops at other window sizes; all read 68,601 [71.68%].
 | use-pointer-on-tabs.png | 225x300 | mouse hand over the red line | tab "use" |
 | meso-2700.png, meso-3210.png, meso-3510.png, meso-3560.png, meso-3571.png, meso-3590.png | ~300x90 | meso total strip, un-doubled | the number in the file name |
 | party-hp-bar.png | 80x26 | one party member's HP bar | stacked 1/2/3 copies -> no party / 2 / 3 |
+| party-4-out-of-range.png | 380x160 | 1440p party window, 3 of 4 out of range (grey, empty bars), drawn at (0,420) on 2560x1440 | 4 |
+| party-4-low-hp.png | 380x160 | 1440p party window, 4 in range, short red bars, drawn at (0,420) on 2560x1440 | 4 |
 | video-a.png | 360x200 | tracker's own (video) capture, Use tab + quick slots | quick slots White 24, Lemon 9, Orange 5; Use arrows 375+668, crossbow 765+1000, Red 20, Blue 18, Pure Water 10 |
 | minimap-kpq.png | 250x205 | KPQ minimap, two title lines bridged by icon | map text crop > 50 px tall |
 | minimap-folded-2x.png | 660x44 | minimap folded to one line | crop < 50 px |

@@ -270,23 +270,34 @@
     return out;
   }
 
-  // ---- party window: a column of HP bars (red runs with the same left edge, ~17 px apart) in the top-left area ----
+  // ---- party window: a column of HP bars (same left edge, ~17 px apart) in the top-left area. Counted by the bar's frame
+  // (black outline, white border), not its red fill: a member out of range (other map, other KPQ stage) has a grey name and an
+  // empty grey bar, and a member low on HP a short red run (Danny's party, 2026-10-19: "Party of 4 (was 3)" flapping)
   function readParty(img){
-    const X = Math.floor(img.w * 0.25), Y = Math.floor(img.h * 0.6), d = img.d, rows = [];
-    // the bar's rows: pure reds plus its light shine row (255,136,136), which would otherwise split one bar in two
-    const red = i => d[i] > 170 && d[i] - d[i + 1] > 100 && d[i] - d[i + 2] > 100;
-    for (let y = 0; y < Y; y++){
-      let x = 0;
-      while (x < X){ if (!red((y * img.w + x) * 4)){ x++; continue } const s = x; while (x < X && red((y * img.w + x) * 4)) x++; if (x - s >= 25) rows.push({y, x: s}) }
-    }
-    // bars line up on the left: rows starting within 4 px of each other (the rounded corner rows start a pixel or two later)
+    const X = Math.floor(img.w * 0.25), Y = Math.floor(img.h * 0.6), d = img.d, w = img.w;
+    const white = i => d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200, black = i => d[i] < 50 && d[i + 1] < 50 && d[i + 2] < 50;
+    // a frame edge: a white run of 25+ px with black all along the other side (above for the top edge, below for the bottom)
+    const edges = (dy) => {
+      const out = [];
+      for (let y = 1; y < Y - 1; y++){
+        let x = 0;
+        while (x < X){
+          if (!white((y * w + x) * 4)){ x++; continue }
+          const s = x; while (x < X && white((y * w + x) * 4)) x++;
+          if (x - s < 25) continue;
+          let k = 0; for (let i = s; i < x; i++) if (black(((y + dy) * w + i) * 4)) k++;
+          if (k >= (x - s) * 0.8) out.push({y, x: s, n: x - s});
+        }
+      }
+      return out;
+    };
+    const bottoms = edges(1);
+    // a bar = a top edge with a bottom edge of the same width and left edge 5-30 rows below it
+    const bars = edges(-1).filter(t => bottoms.some(b => b.y - t.y >= 5 && b.y - t.y <= 30 && Math.abs(b.x - t.x) <= 3 && Math.abs(b.n - t.n) <= 4));
     const byX = [];
-    for (const r of rows){ let b = byX.find(b => Math.abs(b.x - r.x) <= 4); if (!b) byX.push(b = {x: r.x, ys: []}); b.ys.push(r.y) }
+    for (const r of bars){ let g = byX.find(g => Math.abs(g.x - r.x) <= 4 && Math.abs(g.n - r.n) <= 4); if (!g) byX.push(g = {x: r.x, n: r.n, k: 0}); g.k++ }
     let best = 0;
-    for (const {ys} of byX){
-      const starts = ys.filter((y, i) => i === 0 || y - ys[i - 1] > 2);   // one bar = a few rows
-      if (starts.length >= 2 && starts.length <= 6) best = Math.max(best, starts.length);
-    }
+    for (const {k} of byX) if (k >= 2 && k <= 6) best = Math.max(best, k);
     return best || null;
   }
 

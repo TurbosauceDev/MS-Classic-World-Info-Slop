@@ -116,6 +116,9 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   top row away from the open tab's break. inventory.test.js isn't in CI (needs Chromium): run it after touching readers.
 - Pickup names: an unread `?` matches 1-2 letters ("Emerald Sta?" = Staff). Saved sessions' `used` = the Consumables used
   list (Use-tab drops included), not raw use events.
+- readParty counts party bars by their frame (black outline + white border, top and bottom edge), not red fill: a member
+  out of range (other map / KPQ stage) has an empty grey bar and a grey name. Counting red flapped "Party of 4 (was 3)"
+  (2026-10-19). Party size feeds EXP/hr compare, speed check and shared runs through the one `party` event.
 
 ## Splits
 - 10-18: `app/renderer.js` cut into 6 files at top-level boundaries, loaded in order by app/index.html (one shared global

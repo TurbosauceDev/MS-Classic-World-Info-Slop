@@ -51,6 +51,17 @@ const WANT = [[91, "2010003"], [85, "2010005"], [29, "2000002"], [8, "2000001"],
   }, bar);
   console.log("party HUD", JSON.stringify(party));
   if (JSON.stringify(party) !== "[null,2,3]"){ fail++; console.log("party FAIL") }
+  // Danny's 1440p party window (2026-10-19), placed where it was on screen: 3 of 4 out of range (grey names, empty bars),
+  // and 4 in range with short red runs. Both are a party of 4; counting red fill flapped "Party of 4 (was 3)" in the event log
+  for (const [f, want] of [["party-4-out-of-range.png", 4], ["party-4-low-hp.png", 4]]){
+    const got = await page.evaluate(async b64 => {
+      const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode();
+      const c = document.createElement("canvas"); c.width = 2560; c.height = 1440; const g = c.getContext("2d"); g.drawImage(im, 0, 420);
+      return GrindReaders.readParty({w: 2560, h: 1440, d: g.getImageData(0, 0, 2560, 1440).data});
+    }, fs.readFileSync(path.join(dir, f)).toString("base64"));
+    console.log(f, got);
+    if (got !== want){ fail++; console.log("party FAIL", f, "want", want) }
+  }
   // meso totals (bottom of Danny's inventory screenshots, un-doubled): the file name is the total shown
   const meso = [];
   for (const name of fs.readdirSync(dir).filter(f => /^meso-\d+\.png$/.test(f)).sort()){
