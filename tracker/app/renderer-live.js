@@ -141,7 +141,7 @@ $("#pauseBtn").onclick = () => {
   pauseUi(); render();
 };
 function pauseAt(t){ const e = {t: Math.max(t, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); log("event", e) }
-function kpqReset(){ kpq = {on: settings.kpqAct === "kpq", hold: false, inside: false, rounds: 0, left: null, leftT: 0, stage: null, round: null, times: [], stageTimes: {}, stageExp: {}} }
+function kpqReset(){ kpq = {on: settings.kpqAct === "kpq", hold: false, inside: false, rounds: 0, left: null, leftT: 0, stage: null, round: null, times: [], stageTimes: {}, stageExp: {}, history: []} }
 // stage and round times: from the KPQ clock ("Time Left", top middle) when it reads, else the PC clock
 const KPQ_STAGE = {"80000000": "1st", "80000100": "2nd", "80000200": "3rd", "80000300": "4th", "80000400": "Last", "80000500": "Bonus"};
 const kpqLeftAt = t => kpq.left === null ? null : kpq.left - (t - kpq.leftT) / 1000;
@@ -151,9 +151,9 @@ function kpqTime(left, t){
   kpq.left = left; kpq.leftT = t;
   for (const p of [kpq.stage, kpq.round]) if (p && p.left0 === null) p.left0 = left + (t - p.t0) / 1000;   // clock first seen mid-stage
 }
-function kpqEnd(t, round){
-  if (kpq.stage){ const id = kpq.stage.id; (kpq.stageTimes[id] ||= []).push(kpqSince(kpq.stage, t)); kpq.stageExp[id] = (kpq.stageExp[id] || 0) + Math.max(0, (session?.stats().exp || 0) - kpq.stage.exp0); kpq.stage = null }
-  if (round && kpq.round){ note(`KPQ round ${kpq.rounds} over: ${mss(kpqSince(kpq.round, t))}` + (kpq.round.clear != null ? `, cleared in ${mss(kpq.round.clear)}` : ", not cleared"), "kpq"); kpq.times.push(kpqSince(kpq.round, t)); kpqShare(kpq.round, t); kpq.round = null }
+function kpqEnd(t, round, end){
+  if (kpq.stage){ const id = kpq.stage.id, sec = kpqSince(kpq.stage, t); (kpq.stageTimes[id] ||= []).push(sec); kpq.round?.list.push([KPQ_STAGE[id], clockAt(kpq.stage.t0), Math.round(sec)]); kpq.stageExp[id] = (kpq.stageExp[id] || 0) + Math.max(0, (session?.stats().exp || 0) - kpq.stage.exp0); kpq.stage = null }
+  if (round && kpq.round){ note(`KPQ round ${kpq.rounds} over: ${mss(kpqSince(kpq.round, t))}` + (kpq.round.clear != null ? `, cleared in ${mss(kpq.round.clear)}` : ", not cleared"), "kpq"); kpq.times.push(kpqSince(kpq.round, t)); kpq.history.push(kpqRound(kpq.round, t, kpqShare(kpq.round, t), end)); kpq.round = null }
   if (round) kpq.left = null;   // each round's clock starts over
 }
 function kpqMap(id, t){
@@ -167,15 +167,15 @@ function kpqMap(id, t){
     if (kpq.stage?.id !== String(id)){
       // cleared: from the Last stage on to Bonus or Exit. Clear time = 1st stage to then (Bonus left out, so Bonus and Rush compare)
       if (kpq.stage?.id === "80000400" && kpq.round) kpq.round.clear = kpqSince(kpq.round, t);
-      kpqEnd(t, String(id) === "80000600");
-      if (KPQ_STAGE[id]){ const p = {id: String(id), t0: t, left0: kpqLeftAt(t), exp0: session?.stats().exp || 0}; kpq.stage = p; if (!kpq.round){ const st = session?.stats(); kpq.round = {t0: t, left0: p.left0, exp0: st?.exp || 0, mesos0: st?.mesos || 0, startStage: String(id), stages: {}} } }
+      kpqEnd(t, String(id) === "80000600", "Exit");
+      if (KPQ_STAGE[id]){ const p = {id: String(id), t0: t, left0: kpqLeftAt(t), exp0: session?.stats().exp || 0}; kpq.stage = p; if (!kpq.round){ const st = session?.stats(); kpq.round = {n: kpq.rounds, t0: t, left0: p.left0, exp0: st?.exp || 0, mesos0: st?.mesos || 0, startStage: String(id), stages: {}, list: []} } }
       if (KPQ_STAGE[id] && kpq.round) kpq.round.stages[String(id)] = 1;
       if (KPQ_STAGE[id]) note(`KPQ round ${kpq.rounds}: ${KPQ_STAGE[id]} stage` + (kpq.round && kpq.round.clear != null && String(id) === "80000500" ? ` (cleared in ${mss(kpq.round.clear)})` : ""), "kpq");
     }
     kpq.inside = true;
     if (kpq.hold && !held){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ round " + kpq.rounds + ": tracking again." }
   } else {
-    kpqEnd(t, true);
+    kpqEnd(t, true, "left");
     kpq.inside = false;
     if (!kpq.hold){ kpq.hold = true; if (session.state.pausedAt === null) pauseAt(t); $("#status").textContent = "KPQ: paused between rounds. Picks back up on the next stage." }
   }
@@ -184,7 +184,10 @@ function kpqMap(id, t){
 // Rounds joined mid-way or left before the Last stage was cleared aren't sent.
 let kpqSent = 0;
 function kpqShare(r, t){
-  if (!settings.share || r.clear == null || r.startStage !== "80000000" || !session) return;
+  if (!session) return "no session";
+  if (!settings.share) return "sharing off";
+  if (r.clear == null) return "Last stage not cleared";
+  if (r.startStage !== "80000000") return "joined at the " + KPQ_STAGE[r.startStage] + " stage";
   const s = session.stats(), st = {};
   for (const [id, a] of Object.entries(kpq.stageTimes)) if (r.stages[id]) st[id] = Math.round(a.at(-1));
   kpqSent++; note("KPQ round sent to the KPQ leaderboard", "kpq");
@@ -192,6 +195,20 @@ function kpqShare(r, t){
     party: s.party, level: s.level, job: s.job, clear: Math.round(r.clear), total: Math.round(kpqSince(r, t)), clock: r.left0 !== null,
     exp: Math.max(0, s.exp - r.exp0), mesos: Math.max(0, s.mesos - r.mesos0), stages: st, partyCode: settings.partyCode || null,
     name: settings.kpqName !== false && [settings.nick, charName].find(n => /^[A-Za-z0-9]{2,12}$/.test(n || "")) || kpqAlias(s.job)});   // KPQ board only; runs never carry the name
+  return "sent";
+}
+// the run's KPQ timeline, saved with the session: one entry per round with each stage's start (PC clock) and length, so the
+// rounds, the Bonus and the gaps can be read straight off the saved run (Danny, 2026-10-19). end: "Exit", "left" (out of
+// KPQ without Exit, e.g. Bonus timed out to Kerning) or "stopped" (still in it at Stop)
+const clockAt = t => new Date(t).toLocaleTimeString("en-GB");
+function kpqRound(r, t, sent, end){
+  return {n: r.n, start: clockAt(r.t0), stages: r.list.slice(), clear: r.clear == null ? null : Math.round(r.clear), total: Math.round(kpqSince(r, t)), end, sent: sent || null};
+}
+// for saving at Stop: the finished rounds plus the one still going
+function kpqTimeline(t){
+  if (!kpq?.on) return null;
+  const now = kpq.round && {...kpqRound(kpq.round, t, "not finished", "stopped"), stages: [...kpq.round.list, ...(kpq.stage ? [[KPQ_STAGE[kpq.stage.id], clockAt(kpq.stage.t0), Math.round(kpqSince(kpq.stage, t))]] : [])]};
+  return [...kpq.history, ...(now ? [now] : [])];
 }
 // name off (or none read): a made-up name like "Archer4821" (1st job + 4 digits from the install ID), saved the first time so
 // the player keeps the same one on the board after a job advance (Danny, 2026-10-18)

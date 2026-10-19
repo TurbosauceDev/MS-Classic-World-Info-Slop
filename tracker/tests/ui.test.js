@@ -133,7 +133,10 @@ const path = require("path"), {chromium} = require("playwright");
     // the KPQ clock: 30:00 left on the 1st stage, 29:00 a minute into the 2nd, Exit 60 s later = a 2:00 round
     kpqTime(1800, t + 5000); kpqMap("80000100", t + 65000); kpqTime(1740, t + 65000); kpqMap("80000600", t + 125000);
     const times = [...kpq.times], st = kpq.stageTimes["80000000"]; render();
-    return {times, st, off, r1, held, stillHeld, reheld, back, rounds: kpq.rounds, note: document.querySelector("#kpqNote").textContent, where: document.querySelector("#where").textContent} });
+    // the saved timeline (Danny, 2026-10-19: rounds and the Bonus readable off the saved run): 2 rounds, each to Exit
+    const tl = kpqTimeline(t + 126000).map(r => [r.n, r.end, r.stages.map(x => x[0] + " " + x[2]).join(", "), r.total]);
+    return {tl, times, st, off, r1, held, stillHeld, reheld, back, rounds: kpq.rounds, note: document.querySelector("#kpqNote").textContent, where: document.querySelector("#where").textContent} });
+  if (JSON.stringify(kq.tl) !== JSON.stringify([[1, "Exit", "1st 0, 2nd 0", 0], [2, "Exit", "1st 60, 2nd 60", 120]])) throw new Error("kpq timeline: " + JSON.stringify(kq.tl));
   if (kq.off || kq.r1 !== 1 || !kq.held || !kq.stillHeld || !kq.reheld || !kq.back || kq.rounds !== 2 || !/KPQ \(Bonus\): 2 rounds/.test(kq.note) || !/^KPQ \(Bonus\)/.test(kq.where) || kq.times.at(-1) !== 120 || kq.st?.at(-1) !== 60 || !/best round /.test(kq.note)) throw new Error("kpq: " + JSON.stringify(kq));
   // Grinding picked: KPQ stages don't turn it on
   const kg = await page.evaluate(async () => { const keep = kpq; settings = await host.settings({kpqAct: "grind"}); kpqReset(); kpqMap("80000000", Date.now() + 3e4); const on = kpq.on;
