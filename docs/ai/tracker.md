@@ -174,7 +174,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 ## Patch notes 2026-10-19 (0.2.62)
 - `tracker/app/changelog.js` = [version, date, text] newest first, backfilled 0.1.0-0.2.61 from git subjects. Shown in Help (#patchNotes,
   menu Help > Patch notes) and inlined by scripts/build.py into the site's Grind Tracker Overview (#trkpatch). README version log stays the dev log.
-- 0.2.64: app icon. Edit tracker/icon/icon.svg (48+ px) or icon-small.svg (16-32 px, simplified so it reads in the taskbar), then
-  `NODE_PATH=$(npm root -g) node tracker/icon/render.js <tmpdir> && python3 tracker/icon/make_ico.py <tmpdir>` rewrites app/icon.ico. No tray icon exists.
+- 0.2.64/0.2.65: app icon = game Slime sprite (data.json mobimg["7"]) on a purple gradient tile, sizes <=32 crop the antenna.
+  `python3 tracker/icon/make_icon.py [preview.png]` rewrites app/icon.ico (win.icon + BrowserWindow icon). No tray icon exists.
 - 0.2.63: monkey.test.js names the overflowing elements on a sideways-scroll failure. Flaky-test trap: drag tests must measure the
   target after the drag starts and settles (150 ms) and aim well inside it; edge-hugging targets miss on CI fonts/reflow.

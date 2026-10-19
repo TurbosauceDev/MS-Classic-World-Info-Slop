@@ -3,6 +3,7 @@
 // Releasing? Add a line for the new version at the top: tests/core.test.js fails if the top entry isn't package.json's version.
 (function (root){
   const LOG = [
+    ["0.2.65", "2026-10-19", "App icon is now the game's own Slime sprite on the purple tile."],
     ["0.2.64", "2026-10-19", "New app icon: a green slime on a purple tile (taskbar, Start menu, window and installer)."],
     ["0.2.63", "2026-10-19", "History in a narrow window: pressing × (Delete?) no longer pushes the list past the window edge."],
     ["0.2.62", "2026-10-19", "Patch notes: Help > Patch notes lists what changed in every version (also on the site's Grind Tracker page)."],
