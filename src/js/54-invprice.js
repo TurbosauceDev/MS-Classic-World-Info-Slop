@@ -6,14 +6,16 @@
 (() => {
 const R = window.GrindReaders;
 const TABOF = {Equipment: "equip", Consumable: "use", Scroll: "use", Etc: "etc"};
-let CANDS = null;   // tab -> icon candidates (loaded on the first screenshot)
-async function cands(){
-  if (CANDS) return CANDS;
-  const map = Object.fromEntries(Object.entries(D.iicons).filter(([id]) => TABOF[D.items[id]?.c]));
-  CANDS = {};
-  for (const ic of await R.loadIcons(null, map)){ const tb = TABOF[D.items[ic.id].c]; (CANDS[tb] = CANDS[tb] || []).push(ic) }
-  return CANDS;
-}
+// tab -> icon candidates. Decoding every icon takes ~5 s, so it starts in the background when the page opens (one shared
+// promise, so a screenshot dropped meanwhile waits for the full set instead of matching against half of it)
+let CANDS = null;
+const cands = () => CANDS || (CANDS = (async () => {
+  const map = Object.fromEntries(Object.entries(D.iicons).filter(([id]) => TABOF[D.items[id]?.c])), out = {};
+  for (const ic of await R.loadIcons(null, map)){ const tb = TABOF[D.items[ic.id].c]; (out[tb] = out[tb] || []).push(ic) }
+  return out;
+})());
+const warm = () => setTimeout(() => (window.requestIdleCallback || setTimeout)(() => cands()), 400);
+$("#t-inv").addEventListener("click", warm); if (!$("#inv").hidden) warm();
 let READS = [], PICK = {};   // READS: [{name, tab, slots: [{i, ids, n}], filled: [slot numbers], mesos, key}]; PICK: same-picture group (ids joined) -> the item the player picked
 let ALL = null;   // every item picture (the bank holds any kind of item)
 const st = $("#ivst");
@@ -50,9 +52,10 @@ async function handle(files){
   const imgs = [...files].filter(f => f.type.startsWith("image/"));
   if (!imgs.length) return;
   st.textContent = "Reading…"; st.className = "pill";
-  const C = await cands(); let bad = 0;
+  const C = await cands(); let bad = 0, broken = 0;
   for (const f of imgs){
-    const raw = await shotLoad(f), img = R.native(raw), bank = findBank(img), inv = bank || R.findInventory(img);
+    // a file that won't decode (renamed, cut-off download) or is too small to hold a window: count it, keep going
+    let img, bank, inv; try { img = R.native(await shotLoad(f)); bank = findBank(img); inv = bank || R.findInventory(img) } catch(e) { broken++; continue }
     if (!inv || !bank && !C[inv.tab]){ bad++; continue }
     if (bank && !ALL) ALL = Object.values(C).flat();
     const r = R.readInventory(img, inv, bank ? ALL : C[inv.tab]);
@@ -63,8 +66,9 @@ async function handle(files){
     if (READS.some(x => x.key === key)) continue;   // the same page pasted twice
     READS.push({name: f.name && f.name !== "image.png" ? f.name : "Pasted " + inv.tab, tab: r.tab, slots: r.slots, unknown: r.unknown, filled: filled(img, inv), mesos, key});
   }
-  st.textContent = bad ? `${bad} screenshot${bad > 1 ? "s" : ""} had no bank, or no Equip, Use or Etc tab open` : "Read";
-  st.className = "pill " + (bad ? "p-warn" : "p-good");
+  st.textContent = [broken ? `${broken} file${broken > 1 ? "s" : ""} couldn't be opened as a picture` : "",
+    bad ? `${bad} screenshot${bad > 1 ? "s" : ""} had no bank, or no Equip, Use or Etc tab open` : ""].filter(Boolean).join(" · ") || "Read";
+  st.className = "pill " + (bad || broken ? "p-warn" : "p-good");
   render();
 }
 /* Screenshots of one tab scrolled to different places overlap: line them up by their rows and count each slot once.

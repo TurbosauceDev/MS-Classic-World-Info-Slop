@@ -23,6 +23,14 @@ const BELOW = 5;          // quests more than 5 levels under your starting level
 try { const s = JSON.parse(localStorage.getItem("path") || "null"); if (s && s.cls) X = Object.assign(X, s) } catch(e) {}
 if (HASH.p && HASH.p.cls) X = Object.assign(X, HASH.p);   // shared link
 if (typeof X.guide !== "string") X.guide = "all";   // class guides: "all" = build + maps, "build", "" = off
+// stale or hand-edited saved state / shared link: back to valid values (the inputs only offer these)
+if (!Object.hasOwn(XB, X.cls = String(X.cls))) Object.assign(X, {cls:"Warrior", branch:"Fighter", fam:"Sword"});
+if (!["all","build",""].includes(X.guide)) X.guide = "all";
+if (!["mix","quests","grind","rewards"].includes(X.mode)) X.mode = "mix";
+if (![1, 1.5, 2].includes(+X.pace)) X.pace = 1.5; else X.pace = +X.pace;
+X.party = Math.min(6, Math.max(1, Math.round(+X.party) || 1));
+X.drop = Math.min(0.35, Math.max(0.1, +X.drop || 0.3));
+for (const k of ["fast","island","val","aoe"]) X[k] = !!X[k];
 
 // area attack of the character at a level, for mapRates / aoeHits (null = single target)
 const aoeOf = ch => ch.targets > 1 && ch.reach ? {t: ch.targets, r: ch.reach, n: ch.skill} : null;

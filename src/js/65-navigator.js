@@ -18,7 +18,7 @@ $("#navmaps").innerHTML = Object.values(LABEL).map(l => `<option value="${esc(l)
 $("#navtowns").innerHTML = [SOUTHPERRY, ...D.cabs].map(id => `<button type="button" data-id="${id}" aria-checked="false">${esc(mapName(id))}</button>`).join("");
 
 let S = {from: LITH, to: null, nocab: false};
-try { Object.assign(S, JSON.parse(localStorage.getItem("navi") || "{}")) } catch(e) {}
+try { Object.assign(S, savedState("navi", S)) } catch(e) {}
 const save = () => { try { localStorage.setItem("navi", JSON.stringify(S)) } catch(e) {} };
 
 // map-by-map hops of the planner's shortest trip: [[from, to, byCab], ...]; null when there's no walking/cab route

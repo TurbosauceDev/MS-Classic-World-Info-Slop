@@ -223,7 +223,7 @@ function bestTime(map){
 }
 const btLine = bt => bt ? `<div class="sub" title="Grind tracker runs on this map by time of day, each against the same player's usual speed there (${bt.players} players in the best 3 hours; ${bt.blocks} time blocks with 3+ players). Your time zone.">best time: ${bt.from}-${bt.to} (+${bt.pct}%)</div>` : "";
 function rankMaps(){
-  let cls = $("#cls").value, L = +$("#lvl").value || 25;
+  let cls = $("#cls").value, L = Math.min(MAX_LEVEL, Math.max(1, Math.round(+$("#lvl").value) || 25));
   const basic = $("#aoe").value === "basic", fb = trainBuild(cls, L), {dps, src} = trainDps(cls, L, fb, basic), frugal = $("#tmode").value === "frugal", pm = (fb.pct || 100) / 100;
   // placeholders = the numbers assumed when a box is empty
   const d0 = DEF_FROM_BUILDER || defaultDef(cls, L), acc0 = ACC_FROM_BUILDER ?? accFor(cls, L);

@@ -1,4 +1,5 @@
-# Site tests on every push/PR: smoke (every tab, 390px, no page errors) + golden (meowdb reference numbers).
+# Site tests on every push/PR: smoke (every tab, 390px, no page errors) + golden (meowdb reference numbers) + edge
+# (bad saved state / share links / server replies, phone layout, keyboard: the 2026-10-19 bug hunt).
 # Runs against the committed dist/index.html, so a push with a stale or broken build goes red here.
 name: Site tests
 on:
@@ -18,3 +19,4 @@ jobs:
       - run: npm i --no-save playwright && npx playwright install --with-deps chromium
       - run: node tests/smoke.js
       - run: node tests/golden.js
+      - run: node tests/edge.js

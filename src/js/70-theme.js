@@ -24,6 +24,10 @@
   const msg = s => $("#thmsg").textContent = s;
   $("#thsw").addEventListener("click", e => { const b = e.target.closest("[data-th]"); if (b) use(b.dataset.th) });
   $("#thopen").addEventListener("click", () => { const p = $("#thpop"), open = p.hidden; p.hidden = !open; $("#thopen").setAttribute("aria-expanded", open); if (open) draw() });
+  // Esc or a click elsewhere closes it too (it used to stay open until Theme was clicked again)
+  const shut = () => { if ($("#thpop").hidden) return; $("#thpop").hidden = true; $("#thopen").setAttribute("aria-expanded", false) };
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#thpop").hidden){ const inside = $("#thpop").contains(document.activeElement); shut(); if (inside) $("#thopen").focus() } });
+  document.addEventListener("click", e => { if (!e.composedPath().some(x => x.id === "thpop" || x.id === "thopen")) shut() });   // path, not closest(): a swatch click redraws the list
   $("#thadd").addEventListener("click", () => {
     const t = TH.decode($("#thcode").value);
     if (!t) return msg("That isn't a theme code (they start with MSCT1.).");

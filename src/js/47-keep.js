@@ -40,7 +40,7 @@ const LIST = [...K.values()].filter(o => !QITEM(o) && (o.recipes.size || o.price
 $("#kdisc").innerHTML += [...new Set(LIST.flatMap(o => o.discs))].sort().map(d => `<option>${esc(d)}</option>`).join("");
 
 let S = {q: "", by: "", disc: "", sort: "", need: false, only: false, done: true};
-try { Object.assign(S, JSON.parse(localStorage.getItem("keep") || "{}"), {q: ""}) } catch(e) {}
+try { Object.assign(S, savedState("keep", S), {q: ""}) } catch(e) {}
 let HAVE = {}; try { HAVE = JSON.parse(localStorage.getItem("keephave") || "{}") || {} } catch(e) {}
 const save = () => { try { localStorage.setItem("keep", JSON.stringify(S)); localStorage.setItem("keephave", JSON.stringify(HAVE)) } catch(e) {} };
 const doneSet = () => { try { return new Set(JSON.parse(localStorage.getItem("pathdone") || "[]")) } catch(e) { return new Set() } };
@@ -89,7 +89,7 @@ function render(){
       : a.j.v[2] - b.j.v[2] || Math.min(999, ...a.j.open.map(x => x[1].lvl || 1)) - Math.min(999, ...b.j.open.map(x => x[1].lvl || 1)) || a.o.name.localeCompare(b.o.name));
   const keepN = shown.filter(x => x.j.v[2] <= 2).length;
   $("#kcount").textContent = `${shown.length} items · ${keepN} to keep`;
-  $("#krows").innerHTML = shown.map(({o, j}, i) => `<tr data-i="${i}">${rowHtml(o, j)}</tr>`).join("") || `<tr><td colspan="7" class="empty">Nothing matches.</td></tr>`;
+  lazyRows($("#krows"), shown.map(({o, j}, i) => `<tr data-i="${i}">${rowHtml(o, j)}</tr>`), `<tr><td colspan="7" class="empty">Nothing matches.</td></tr>`);
 }
 // typing a count updates that row in place (keeps focus); the list re-sorts on the next filter change
 $("#krows").addEventListener("input", e => { if (!e.target.classList.contains("khave")) return;

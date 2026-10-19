@@ -15,9 +15,10 @@ const POT = Object.fromEntries(D.potshops.map(([npc, mid]) => [String(mid), npc]
 const qn = ([src, r]) => `<span class="name qname" tabindex="0" data-src="${src}" data-i="${(src === "cit" ? D.citq : D.quests).indexOf(r)}">${esc(r.name)}</span>`;
 
 let S = {isl: 1, cls: "Warrior", lv: 10, pin: null, mm: null, mob: null, sub: null, subPin: null, uv: false};
-try { Object.assign(S, JSON.parse(localStorage.getItem("wmap") || "{}")) } catch(e) {}
+try { Object.assign(S, savedState("wmap", S)) } catch(e) {}
 const save = () => { try { localStorage.setItem("wmap", JSON.stringify({isl: S.isl, cls: S.cls, lv: S.lv, mob: S.mob, uv: S.uv})) } catch(e) {} };
 S.pin = null; S.sub = null; S.subPin = null; if (!D.mobdb[S.mob]) S.mob = null;
+if (!D.wmap[S.isl]) S.isl = 1; if (![...$("#wmcls").options].some(o => o.value === S.cls)) S.cls = "Warrior"; S.lv = Math.max(1, Math.min(100, Math.round(S.lv) || 10));
 // spawn count of the searched monster in each map (export spawn list: every launch map, incl. bosses, KPQ, job test)
 const mobAt = id => S.mob ? (D.mobdb[S.mob].maps.filter(m => String(m[0]) === id).reduce((a, m) => a + (m[2] || 0), 0) || (D.mobdb[S.mob].maps.some(m => String(m[0]) === id) ? 1 : 0)) : 0;
 const spotMob = sp => sp[3].reduce((a, id) => a + mobAt(id), 0);

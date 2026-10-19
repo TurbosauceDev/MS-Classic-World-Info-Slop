@@ -70,6 +70,7 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-19 Tracker History: compare more than two runs at once and flesh out History; Danny left the extra features to Claude ("i trust you to come up with ideas"). Pushed + released on his "push" / "publish if permission needed".
 - 2026-10-19 Tracker layout: a "line up every box" button (crisp shared column edges, same top/bottom per row, even gaps); auto-snap after drags is on by default (Settings > Layout to turn off). Danny OK'd push + release ("push and publish when done").
 - 2026-10-19 Tracker: Session/Loot/History tabs and Compact view replaced by a pop-out Modules toolbox; drag modules in, × (or drag back) puts them away. Saved layouts migrate (nothing lost), History starts in the toolbox, Mini stays.
+- 2026-10-19 Site + tracker bug hunt: Danny OK'd pushing to the default branch and publishing the artifact without asking ("you are allowed to push and publish whenever you see fit"); still rebase, test, live-check every push.
 
 ## Data sync (meso.watch → GitHub)
 

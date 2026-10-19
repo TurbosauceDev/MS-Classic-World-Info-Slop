@@ -36,7 +36,7 @@ function renderQuests(){
     th.querySelector("button").dataset.arrow = on ? (dir > 0 ? "▲" : "▼") : "";
   });
   $("#qcount").textContent = `${q.length} of ${QLAUNCH.length} quests`;
-  $("#qrows").innerHTML = q.map(r => `<tr>
+  lazyRows($("#qrows"), q.map(r => `<tr>
     <td class="num">${r.lvl}</td>
     <td><span class="name qname" tabindex="0" data-src="q" data-i="${D.quests.indexOf(r)}">${esc(r.name)}</span> ${vPill(r.id)}${VALUE[r.id] ? `<div class="vwhy"><b>${esc(VALUE[r.id][1])}</b>${VALUE[r.id][3] ? ` · ${esc(VALUE[r.id][3])} only` : ""} · ${esc(VALUE[r.id][2])} <span class="sub">(${vSrc(VALUE[r.id])})</span></div>` : ""}<div class="sub">${npcLink(r.npc)} · ${esc(r.region || "")}${r.rep ? ` · <span class="pill p-warn">${r.rep}</span>` : ""}${r.region === "El Nath" || r.region === "Orbis" ? ` · <span class="pill p-bad">not in launch</span>` : r.region === "Forgotten Hollow" ? ` · <span class="pill p-warn">opens later</span>` : ""}</div></td>
     <td>${r.chain ? `<button class="chainbtn" data-chain="${esc(r.chain)}" title="Show the ${esc(r.chain)} questline">Yes</button><div class="sub">${r.cpos} of ${r.cn}</div>` : `<span class="sub">No</span>`}</td>
@@ -45,7 +45,7 @@ function renderQuests(){
     <td class="num">${r.pct_level ?? "–"}${r.pct_level != null ? "%" : ""}</td>
     <td class="num">${r.mult ? `<span class="pill ${r.mult >= 2 ? "p-hot" : "p-good"}">${r.mult.toFixed(1)}×</span>` : "–"}</td>
     <td class="sub">${r.eq_kills ? `${fmt(r.eq_kills)} ${mobLink(r.eq_mob)}` : "–"}</td>
-    <td>${rewardCell(r)}</td></tr>`).join("") || `<tr><td colspan="9" class="empty">No quests match. Widen the level range, clear the search or turn off "Equipment rewards only".</td></tr>`;
+    <td>${rewardCell(r)}</td></tr>`), `<tr><td colspan="9" class="empty">No quests match. Widen the level range, clear the search or turn off "Equipment rewards only".</td></tr>`);
 }
 /* quest detail tooltip: one floating box so the scrolling table can't clip it */
 const qtip = document.createElement("div");

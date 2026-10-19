@@ -21,6 +21,7 @@ const clean = s => String(s || "").replace(/ \(source n\/a\)/g, "");
 const qn = r => `<span class="name qname" tabindex="0" data-src="cit" data-i="${D.citq.indexOf(r)}">${esc(r.name)}</span>`;
 let town = "Henesys";
 try { town = localStorage.getItem("ctown") || "Henesys" } catch(e) {}
+if (!JOIN[town]) town = "Henesys";
 
 function render(){
   document.querySelectorAll("#ctown button").forEach(b => b.setAttribute("aria-checked", b.dataset.t === town));

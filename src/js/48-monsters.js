@@ -23,8 +23,9 @@ const DROPN = {}; for (const o of M) for (const [iid, n] of o.m.dr) ((DROPN[n.to
 $("#mbitemlist").innerHTML = [...new Set(M.flatMap(o => o.m.dr.map(x => x[1])))].sort().map(n => `<option value="${esc(n)}">`).join("");
 
 let S = {q: "", item: "", kind: "", weak: "", sort: "level", dir: 1, open: null, fc: "Warrior"};
-try { Object.assign(S, JSON.parse(localStorage.getItem("mobs") || "{}"), {q: "", item: "", open: null}) } catch(e) {}
+try { Object.assign(S, savedState("mobs", S), {q: "", item: "", open: null}) } catch(e) {}
 const save = () => { try { localStorage.setItem("mobs", JSON.stringify(S)) } catch(e) {} };
+if (!["Warrior","Bowman","Thief"].includes(S.fc) && !MAGIC.has(S.fc)) S.fc = "Warrior";
 $("#mbkind").value = S.kind; $("#mbweak").value = S.weak;
 
 const qn = ([src, r]) => `<span class="name qname" tabindex="0" data-src="${src}" data-i="${(src === "cit" ? D.citq : D.quests).indexOf(r)}">${esc(r.name)}</span>`;

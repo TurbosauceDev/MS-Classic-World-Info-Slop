@@ -52,7 +52,13 @@ function gearTotals(){
 }
 try { const saved = JSON.parse(localStorage.getItem("planner") || "null"); if (saved && saved.cls) S = Object.assign(S, saved) } catch(e) {}
 if (HASH.b && HASH.b.cls) S = Object.assign(S, HASH.b);   // shared link
-if (!S.sp) S.sp = {};
+// a saved state or shared link can be stale or hand-edited: put anything out of range back on a valid value
+{ const obj = v => !!v && typeof v === "object" && !Array.isArray(v);
+  S.cls = String(S.cls); if (!Object.hasOwn(BRANCHES, S.cls)) Object.assign(S, {cls:"Warrior", branch:null, fam:null});
+  S.lvl = Math.min(MAX_LEVEL, Math.max(10, Math.round(+S.lvl) || 30));
+  if (!obj(S.sp)) S.sp = {}; if (!obj(S.gear)) S.gear = {};
+  if (S.ap != null && !(obj(S.ap) && ["STR","DEX","INT","LUK"].every(k => Number.isFinite(S.ap[k])))) S.ap = null;
+  for (const k of ["weapon","skill","ammo","branch","fam"]) if (S[k] != null && typeof S[k] !== "string") S[k] = null }
 
 const apTotal = L => 5 * L + 20;
 // SP: +1 at each job advancement, +3 per level. 1st job gets levels 11-30 (61 total); 2nd job SP can't go into 1st job skills.

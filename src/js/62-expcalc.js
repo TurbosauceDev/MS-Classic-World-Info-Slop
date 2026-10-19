@@ -11,7 +11,7 @@ for (const [id, [name, open]] of Object.entries(D.maps).sort((a, b) => a[1][0].l
 $("#ecmaps").innerHTML = Object.values(MAPS).map(l => `<option value="${esc(l)}">`).join("");
 
 let S = {cls: "Warrior", l0: 25, l1: 25, e0: "", e1: "", min: "", map: "", pty: "1", card: "1", goal: "", t0: null, sort: "t", rec: []};
-try { Object.assign(S, JSON.parse(localStorage.getItem("expc") || "{}")) } catch(e) {}
+try { Object.assign(S, savedState("expc", S)) } catch(e) {}
 const save = () => { try { localStorage.setItem("expc", JSON.stringify(S)) } catch(e) {} };
 const F = {cls: "#eccls", l0: "#ecl0", l1: "#ecl1", e0: "#ece0", e1: "#ece1", min: "#ecmin", map: "#ecmap", pty: "#ecpty", card: "#eccard", goal: "#ecgoalL", sort: "#ecsort"};
 for (const [k, sel] of Object.entries(F)) $(sel).value = S[k] ?? "";

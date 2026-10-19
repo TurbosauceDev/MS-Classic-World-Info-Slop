@@ -44,7 +44,7 @@ const slotOpts = () => { const ok = SLOTS.filter(sl => I.some(o => o.it.c === "E
   $("#itslot").innerHTML = `<option value="">Any</option>` + ok.map(s => `<option>${esc(s)}</option>`).join(""); $("#itslot").value = S.slot };
 
 let S = {q: "", cat: "", slot: "", job: "", src: true, noq: true, from: "", use: "", sort: "name", dir: 1, open: null, all: false};
-try { Object.assign(S, JSON.parse(localStorage.getItem("items") || "{}"), {q: "", open: null, all: false}) } catch(e) {}
+try { Object.assign(S, savedState("items", S), {q: "", open: null, all: false}) } catch(e) {}
 const save = () => { try { localStorage.setItem("items", JSON.stringify(S)) } catch(e) {} };
 const DEF = {cat: "", slot: "", job: "", src: true, noq: true, from: "", use: "", sort: "name", dir: 1};
 const sync = () => { for (const [k, el] of [["cat", "#itcat"], ["job", "#itjob"], ["from", "#itfrom"], ["use", "#ituse"]]) $(el).value = S[k];

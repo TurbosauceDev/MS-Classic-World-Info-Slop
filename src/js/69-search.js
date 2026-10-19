@@ -5,10 +5,14 @@
 // the kinds; "@drop <item>" lists the monsters players reported dropping it (meowdb reports, as on the monster pages).
 const norm = s => String(s).toLowerCase().replace(/['’.]/g, "").replace(/[^a-z0-9%]+/g, " ").trim();
 const ROWS = [];
-const add = (kind, key, name, sub) => { const n = norm(name); ROWS.push({kind, key, name, sub, n, w: n.split(" ")}) };
+// low = ranked after everything else that matches as well (Setup items: the letter and number chairs, 'Red "A"', crowded out
+// Red Snail / Red Potion for "red")
+const add = (kind, key, name, sub, low = 0) => { const n = norm(name); ROWS.push({kind, key, name, sub, n, w: n.split(" "), low}) };
 for (const [id, m] of Object.entries(D.mobdb)) add("mob", id, m.name, `Lv ${m.level}`);
 const ICAT = {Equipment: "Equip", Consumable: "Use", Etc: "Etc", Setup: "Setup", Scroll: "Scroll"};
-for (const [id, it] of Object.entries(D.items)) add("item", id, it.n, it.c === "Equipment" ? (it.s === "Weapon" ? it.wt || "Weapon" : it.s) : ICAT[it.c] || it.c);
+// 36 names belong to more than one item (Red Potion 2000000 and 2000007): those rows show the item ID to tell them apart
+const NAMEN = {}; for (const it of Object.values(D.items)) NAMEN[it.n] = (NAMEN[it.n] || 0) + 1;
+for (const [id, it] of Object.entries(D.items)) add("item", id, it.n, (it.c === "Equipment" ? (it.s === "Weapon" ? it.wt || "Weapon" : it.s) : ICAT[it.c] || it.c) + (NAMEN[it.n] > 1 ? ` · ID ${id}` : ""), +(it.c === "Setup"));
 // maps: one row per name (several maps share one, e.g. Mushroom Town), preferring one with monsters
 const MAPN = {}; for (const [id, m] of Object.entries(D.maps)) if (m[0] && (!(m[0] in MAPN) || (!D.maps[MAPN[m[0]]][2]?.length && m[2]?.length))) MAPN[m[0]] = id;
 for (const [id, n] of Object.entries(D.mapnames)) if (!(n in MAPN)) MAPN[n] = id;
@@ -38,7 +42,7 @@ function find(raw){
   const toks = q.split(" "), hits = [];
   for (const r of ROWS){ if (kind && kind !== "drop" && r.kind !== kind) continue; if (kind === "drop" && (r.kind !== "item" || !DROPBY[r.key])) continue;
     const s = score(r, q, toks); if (s != null) hits.push([s, r]) }
-  hits.sort((a, b) => a[0] - b[0] || a[1].name.length - b[1].name.length || ORDER[a[1].kind] - ORDER[b[1].kind] || a[1].name.localeCompare(b[1].name));
+  hits.sort((a, b) => a[1].low - b[1].low || a[0] - b[0] || ORDER[a[1].kind] - ORDER[b[1].kind] || a[1].name.length - b[1].name.length || a[1].name.localeCompare(b[1].name));
   if (kind !== "drop") return hits.slice(0, 40).map(h => h[1]);
   // @drop: every monster reported dropping the best-matching items, confirmed reports first
   const out = [];
@@ -67,20 +71,22 @@ function go(r){
   else if (r.kind === "skill") openSkillPage(r.key);
   else if (r.kind === "quest") openQuests({s: QLAUNCH[r.key].name});
 }
-function open(){ box.hidden = false; inp.select(); draw(); inp.focus() }
-function close(){ box.hidden = true }
+// closing without picking (Esc, Ctrl K, a click outside) puts focus back where it was, so keyboard users don't land on a hidden box
+let back = null;
+function open(){ back = document.activeElement; box.hidden = false; inp.select(); draw(); inp.focus() }
+function close(refocus){ box.hidden = true; if (refocus === true){ const b = back?.isConnected && back.offsetParent ? back : $("#srchopen"); b.focus({preventScroll: true}) } }
 $("#srchopen").addEventListener("click", open);
 inp.addEventListener("input", () => { sel = 0; draw() });
 inp.addEventListener("keydown", e => {
   if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); if (res.length){ sel = (sel + (e.key === "ArrowDown" ? 1 : res.length - 1)) % res.length; mark() } }
   else if (e.key === "Enter"){ e.preventDefault(); if (res[sel]) go(res[sel]) }
-  else if (e.key === "Escape"){ e.preventDefault(); close() } });
+  else if (e.key === "Escape"){ e.preventDefault(); close(true) } });
 list.addEventListener("click", e => { const li = e.target.closest("li[data-i]"); if (li) go(res[+li.dataset.i]) });
-box.addEventListener("click", e => { if (e.target === box) close() });
+box.addEventListener("click", e => { if (e.target === box) close(true) });
 document.addEventListener("keydown", e => {
-  if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k"){ e.preventDefault(); box.hidden ? open() : close(); return }
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k"){ e.preventDefault(); box.hidden ? open() : close(true); return }
   if (e.key === "/" && box.hidden && !e.ctrlKey && !e.metaKey && !e.target.closest?.("input, textarea, select, [contenteditable]")){ e.preventDefault(); open() }
-  if (e.key === "Escape" && !box.hidden) close() });
+  if (e.key === "Escape" && !box.hidden) close(true) });
 
 // Quest Database: open with a search (also the #q share link); clears the questline view and the level/toggle filters
 function openQuests(o){

@@ -19,8 +19,29 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
 /* shareable links: #b=<build>, #p=<plan>, #m/#i/#s=<monster/item/skill id>, #w=<map id>, #n=<route>, #t=<Where to train>, #q=<quest search> (base64url JSON) open with those settings instead of the saved ones.
    Inside the claude.ai artifact the page's own URL isn't shareable, so links point at the GitHub Pages copy. */
 const SHARE_BASE = "https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/";
-const HASH = (() => { const o = {}; try { for (const part of location.hash.slice(1).split("&")){ const [k, v] = part.split("=");
-  if (v) o[k] = JSON.parse(decodeURIComponent(escape(atob(v.replace(/-/g, "+").replace(/_/g, "/"))))) } } catch(e) {} return o })();
+const HASH = (() => { const o = {}; for (const part of location.hash.slice(1).split("&")){ const [k, v] = part.split("=");
+  try { if (v) o[k] = JSON.parse(decodeURIComponent(escape(atob(v.replace(/-/g, "+").replace(/_/g, "/"))))) } catch(e) {} } return o })();
+// saved page state from localStorage, keeping only keys the defaults have, with a usable type (numbers and strings
+// convert to the default's type; null default = any string or number): old versions or hand edits must not crash a page
+const savedState = (key, def) => { let v; try { v = JSON.parse(localStorage.getItem(key) || "{}") } catch(e) {}
+  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+  const o = {}, scal = x => typeof x === "string" || typeof x === "number";
+  for (const [k, x] of Object.entries(v)){ if (!Object.hasOwn(def, k)) continue; const d = def[k];
+    if (d === null ? x === null || scal(x) : Array.isArray(d) ? Array.isArray(x) : typeof d === "object" ? x && typeof x === "object" && !Array.isArray(x) : typeof x === typeof d) o[k] = x;
+    else if (typeof d === "string" && typeof x === "number") o[k] = String(x);
+    else if (typeof d === "number" && typeof x === "string" && x.trim() !== "" && isFinite(x)) o[k] = +x }
+  return o };
+// big tables: draw the first rows now and the rest in chunks as the reader scrolls near the end. Showing a page with
+// thousands of laid-out cells cost 150-400 ms per tab switch (Crafting, Keep or sell, Quests).
+function lazyRows(tb, rows, empty, first = 60){
+  if (tb._lz) tb._lz.disconnect();
+  let at = first; tb.innerHTML = rows.slice(0, at).join("") || empty;
+  if (at >= rows.length) return;
+  const io = tb._lz = new IntersectionObserver(es => { if (!es.some(e => e.isIntersecting)) return;
+    io.disconnect(); tb.insertAdjacentHTML("beforeend", rows.slice(at, at += 150).join(""));
+    if (at < rows.length) io.observe(tb.lastElementChild) }, {rootMargin: "1200px 0px"});
+  io.observe(tb.lastElementChild);
+}
 const shareUrl = (k, obj) => {
   const enc = btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const own = /^https?:$/.test(location.protocol) && !/claude|usercontent|anthropic/.test(location.hostname);
@@ -41,14 +62,19 @@ const TABS = [...document.querySelectorAll("nav [data-tab]")], CATS = [...docume
 const LASTTAB = {};   // category -> last page opened in it
 const NAVREG = {};   // page -> {get, set} of its current place, for Back/Forward (75-history.js)
 const navReg = (tab, get, set) => { NAVREG[tab] = {get, set} };
+// on phones the section and page rows are one swipeable row each: keep the selected button scrolled into view
+const inRow = el => { const p = el?.parentElement; if (!p || p.scrollWidth <= p.clientWidth) return;
+  const r = el.getBoundingClientRect(), q = p.getBoundingClientRect();
+  if (r.left < q.left) p.scrollLeft += r.left - q.left - 12; else if (r.right > q.right) p.scrollLeft += r.right - q.right + 12 };
 const showCat = cat => {
   CATS.forEach(x => x.setAttribute("aria-selected", x.dataset.cat === cat));
   TABS.forEach(x => x.hidden = x.dataset.cat !== cat);
   $("nav .subs").hidden = cat === "home";
+  inRow(CATS.find(x => x.dataset.cat === cat));
 };
 TABS.forEach(b => b.addEventListener("click", () => {
   showCat(b.dataset.cat); LASTTAB[b.dataset.cat] = b.dataset.tab;
-  TABS.forEach(x => x.setAttribute("aria-selected", x === b));
+  TABS.forEach(x => x.setAttribute("aria-selected", x === b)); inRow(b);
   $("#home").hidden = true; TABS.forEach(x => $("#" + x.dataset.tab).hidden = x !== b);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
 }));

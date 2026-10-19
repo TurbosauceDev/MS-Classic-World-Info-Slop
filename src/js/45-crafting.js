@@ -98,7 +98,7 @@ renderLeveling();
 
 /* recipes */
 const S = {d: -1, type: "", cls: "", max: 10, q: "", sort: "lvl", dir: 1};
-try { Object.assign(S, JSON.parse(localStorage.getItem("craft") || "{}")) } catch(e) {}
+try { Object.assign(S, savedState("craft", S)) } catch(e) {}
 $("#crdisc").innerHTML = ["All", ...DISC].map((n, i) => `<button role="radio" aria-checked="false" data-d="${i - 1}">${esc(n)}</button>`).join("");
 $("#crtype").innerHTML = `<option value="">All</option>` + [...new Set(R.map(r => r.type))].sort().map(t => `<option>${esc(t)}</option>`).join("");
 const KEY = {lvl: r => r.lvl, name: r => r.it.n, mesos: r => r.mesos, exp: r => r.exp, req: r => r.it.st?.reqLevel || 0};
@@ -116,7 +116,7 @@ function renderRecipes(){
     th.setAttribute("aria-sort", on ? (S.dir > 0 ? "ascending" : "descending") : "none");
     th.querySelector("button").dataset.arrow = on ? (S.dir > 0 ? "▲" : "▼") : "" });
   $("#crcount").textContent = `${rows.length} recipes`;
-  $("#crrows").innerHTML = rows.map(r => {
+  lazyRows($("#crrows"), rows.map(r => {
     const s = r.ing.some(([x]) => pick(x)) ? scratch(r) : null;
     return `<tr><td class="num">${r.lvl}</td>
       <td><span class="ing">${itemIcon(r.id, 1)}<span><b>${esc(r.it.n)}</b>${r.n > 1 ? ` ×${r.n}` : ""}<div class="sub">${esc(DISC[r.d])} · ${esc(r.type)}${eqLine(r.it) ? " · " + esc(eqLine(r.it)) : ""}</div></span></span></td>
@@ -124,7 +124,7 @@ function renderRecipes(){
       <td class="num">${fmt(r.mesos)}</td><td class="num">${fmt(r.exp)}</td>
       <td>${s ? `<div class="ings">${[...s.need].map(([x, n]) => itemIcon(x, n, true)).join("")}</div>
         <div class="sub">${fmt(s.mesos)} mesos in all · also craft ${s.parts.map(([p, k]) => `${k}× ${esc(p.it.n)} (${esc(DISC[p.d])} Lv ${p.lvl})`).join(", ")}</div>` : `<span class="sub">same</span>`}</td></tr>`;
-  }).join("") || `<tr><td colspan="6" class="sub">No recipes match.</td></tr>`;
+  }), `<tr><td colspan="6" class="sub">No recipes match.</td></tr>`);
 }
 document.querySelectorAll("#crdisc button").forEach(b => b.addEventListener("click", () => { S.d = +b.dataset.d; renderRecipes() }));
 $("#crtype").addEventListener("change", e => { S.type = e.target.value; renderRecipes() });

@@ -3,15 +3,33 @@
 // opening the page we also ask the server for the latest (it allows any site; blocked in some previews, then the copy stays).
 const TRK_API = "https://ms-classic-tracker.maplestoryclassic.workers.dev/api/summary";
 // rows -> one shape: embedded rows are [map, party 0/1, level, EXP/hr, group, deaths/hr, pots/hr]; the server's are objects
-const trkRows = (rows, live) => (rows || []).map(r => live ? {map: String(r.map ?? ""), name: r.mapName, party: r.party > 1 ? 1 : 0, level: r.level, job: r.job,
-  expHr: r.expHr, mesosHr: r.mesosHr, killsHr: r.killsHr, deathsHr: r.deathsHr, usedHr: r.usedHr, group: r.group, runs: r.runs}
-  : {map: r[0], party: r[1], level: r[2], expHr: r[3], group: r[4], deathsHr: r[5], usedHr: r[6]}).filter(r => r.map && r.level);
+// the live summary is outside data: every number is forced to a finite number (or null) and every text to a string before
+// it reaches the page, so a bad or hostile reply can't inject markup or print NaN (bug hunt 2026-10-19)
+const tN = v => v == null || v === "" || !isFinite(v) ? null : +v, tI = v => tN(v) ?? 0, tS = v => v == null ? "" : String(v);
+const trkRows = (rows, live) => (Array.isArray(rows) ? rows : []).map(r => live ? {map: tS(r.map), name: tS(r.mapName), party: r.party > 1 ? 1 : 0, level: tN(r.level), job: tS(r.job),
+  expHr: tN(r.expHr), mesosHr: tN(r.mesosHr), killsHr: tN(r.killsHr), deathsHr: tN(r.deathsHr), usedHr: tN(r.usedHr), group: tS(r.group), runs: tI(r.runs)}
+  : {map: r[0], party: r[1], level: r[2], expHr: r[3], group: r[4], deathsHr: r[5], usedHr: r[6]}).filter(r => r.map && r.level > 0);
+function trkClean(d){
+  d = d && typeof d === "object" ? d : {};
+  const obj = v => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+  const mobs = {}; for (const [id, c0] of Object.entries(obj(d.mobs))){ const c = obj(c0), items = {};
+    for (const [i, n] of Object.entries(obj(c.items))) items[i] = tI(n);
+    mobs[id] = {kills: tI(c.kills), players: tI(c.players), mesos: tI(c.mesos), mesoDrops: tI(c.mesoDrops), items} }
+  const times = {}; for (const [map, t] of Object.entries(obj(d.times))){ const a = (Array.isArray(t) ? t : []).filter(x => Array.isArray(x) && isFinite(x[0]) && isFinite(x[1])).map(x => [+x[0], +x[1]]); if (a.length) times[map] = a }
+  const k = obj(d.kpq), board = {};
+  for (const m of ["Rush", "Bonus"]) if (Array.isArray(obj(k.board)[m])) board[m] = k.board[m].map(e0 => { const e = obj(e0);
+    return {best: tI(e.best), median: tI(e.median), rounds: tI(e.rounds), party: tI(e.party), level: tN(e.level), exp: tI(e.exp), mesos: tI(e.mesos), bonus: tN(e.bonus), clear: tI(e.clear),
+      clock: !!e.clock, names: (Array.isArray(e.names) ? e.names : []).map(tS), job: tS(e.job), date: tS(e.date)} });
+  const up = new Date(d.updated);
+  return {runs: tI(d.runs), players: tI(d.players), hours: tI(d.hours), updated: isNaN(up) ? null : up, rows: trkRows(d.rows, true), mobs, times,
+    kpq: {rounds: tI(k.rounds), groups: tI(k.groups), board}, live: true};
+}
 const trkMapName = r => D.mapnames[r.map] ?? D.maps[r.map]?.[0] ?? r.name ?? r.map;
 const trkMed = a => { const v = a.filter(x => x != null); return v.length ? median(v) : null };
 let TRK = null, TRK_ASKED = false;
 function trkRender(){
   const s = TRK || {...(D.shared || {}), rows: trkRows(D.shared?.rows, false), live: false};
-  const src = s.live ? `Live from the tracker server, updated ${esc(new Date(s.updated).toLocaleString())}.`
+  const src = s.live ? `Live from the tracker server${s.updated ? `, updated ${esc(s.updated.toLocaleString())}` : ""}.`
     : `Snapshot from the tracker server${s.read ? `, read ${esc(s.read)}` : ""}.${TRK_ASKED ? " The live server couldn't be reached from here." : ""}`;
   document.querySelectorAll(".trksrc").forEach(e => e.innerHTML = src);
   $("#trkkpqdata").innerHTML = trkKpq(s.kpq);
@@ -38,7 +56,7 @@ function trkRender(){
       <td class="num">${c.mesoDrops ? fmt(c.mesos / c.mesoDrops) : "–"}</td><td>${shown || '<span class="sub">none yet</span>'}${items.length > 6 ? ` <span class="sub">+${items.length - 6} more</span>` : ""}</td></tr>`;
   }).join("");
   // best time of day per map (3-hour blocks with 3+ players, each run against the player's own usual speed there)
-  const times = Object.entries(s.times || {}).map(([map, t]) => { const b = t.reduce((a, x) => x[1] > a[1] ? x : a); const w = t.reduce((a, x) => x[1] < a[1] ? x : a);
+  const times = Object.entries(s.times || {}).filter(([, t]) => t?.length).map(([map, t]) => { const b = t.reduce((a, x) => x[1] > a[1] ? x : a); const w = t.reduce((a, x) => x[1] < a[1] ? x : a);
     return `<tr><td>${known(map) ? mapLink(map, D.mapnames[map] ?? D.maps[map][0]) : esc(map)}</td><td>${localHour(b[0])}-${localHour((b[0] + 3) % 24)} <span class="sub">${b[1] >= 1 ? "+" : ""}${Math.round((b[1] - 1) * 100)}%</span></td>
       <td>${localHour(w[0])}-${localHour((w[0] + 3) % 24)} <span class="sub">${Math.round((w[1] - 1) * 100)}%</span></td></tr>` }).join("");
   $("#trkdata").innerHTML = `<div class="trkstats">
@@ -78,7 +96,7 @@ function trkKpq(k){
     : `<tr><td class="num">${rank(i)}</td><td class="num"><b>${fmt(e.best)}</b></td><td class="num">${fmt(e.exp)}</td><td class="num">${fmt(e.mesos)}</td><td class="num">${e.bonus ? mss(e.bonus) : "–"}</td><td class="num">${mss(e.clear)}${clockMark(e)}</td><td class="num">${e.rounds}</td><td>${who(e)}</td>${lj(e)}<td class="sub">${esc(e.date || "")}</td></tr>`).join("");
   const th = rush ? `<th class="num">Rank</th><th class="num">Best clear</th><th class="num">Typical</th><th class="num">Rounds</th><th>Who</th><th>Level and job</th><th>Date</th>`
     : `<th class="num">Rank</th><th class="num">EXP + mesos</th><th class="num">EXP</th><th class="num">Mesos</th><th class="num">Bonus time</th><th class="num">Rush clear</th><th class="num">Rounds</th><th>Who</th><th>Level and job</th><th>Date</th>`;
-  return head + `<p class="sub">${fmt(k.rounds)} rounds from ${fmt(k.groups)} parties and players.</p>${seg}
+  return head + `<p class="sub">${fmt(k.rounds)} round${k.rounds === 1 ? "" : "s"} from ${fmt(k.groups)} ${k.groups === 1 ? "party or player" : "parties and players"}.</p>${seg}
     <div class="tblwrap"><table><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table></div>
     <p class="sub">${rush ? "" : "EXP and mesos are what the tracker player who sent the best round gained in it. "}Level and job are that tracker player's. "~" = timed with the PC clock.</p>`;
 }
@@ -92,7 +110,7 @@ function trkOpen(){
   if (TRK_ASKED) return; TRK_ASKED = true;
   const ctl = new AbortController(); setTimeout(() => ctl.abort(), 8000);
   fetch(TRK_API, {signal: ctl.signal}).then(r => r.ok ? r.json() : Promise.reject()).then(d => {
-    TRK = {...d, rows: trkRows(d.rows, true), live: true}; trkRender();
+    TRK = trkClean(d); trkRender();
   }).catch(() => trkRender());
 }
 // the data pages ask the server once, on first open

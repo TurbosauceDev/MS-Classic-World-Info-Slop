@@ -23,7 +23,11 @@ assert "/*@CSS*/" in html and "/*@JS*/" in html and "__DATA__" in js
 ver = datetime.datetime.now(datetime.timezone.utc).strftime("%b %-d, %Y · %H:%M UTC")
 assert "__BUILD__" in html
 html = html.replace("__BUILD__", ver)
-out = html.replace("/*@CSS*/", css).replace("/*@JS*/", js.replace("__DATA__", data, 1))
+# the data rides in a JSON <script> and is read with JSON.parse: V8 parses JSON much faster than the same 5.6 MB as a
+# JS object literal (page start ~0.4 s quicker). "<" -> \u003c (only inside strings) so no "</script>" can end it early.
+html = html.replace("<script>\n/*@JS*/", '<script type="application/json" id="sitedata">' + data.strip().replace("<", "\\u003c") + "</script>\n<script>\n/*@JS*/", 1)
+assert 'id="sitedata"' in html
+out = html.replace("/*@CSS*/", css).replace("/*@JS*/", js.replace("__DATA__", 'JSON.parse(document.getElementById("sitedata").textContent)', 1))
 (ROOT / "dist").mkdir(exist_ok=True)
 (ROOT / "dist" / "index.html").write_text(out)
 print(f"dist/index.html  {len(out)/1024:.0f} KB  (data {len(data)/1024:.0f} KB)")

@@ -26,7 +26,7 @@ $("#sktype").innerHTML += [...new Set(K.map(o => o.type))].sort().map(t => `<opt
 
 const DEF = {q: "", cls: "", job: "", tier: "", type: "", sort: "job", dir: 1};
 let S = {...DEF, open: null};
-try { Object.assign(S, JSON.parse(localStorage.getItem("skills") || "{}"), {q: "", open: null}) } catch(e) {}
+try { Object.assign(S, savedState("skills", S), {q: "", open: null}) } catch(e) {}
 const save = () => { try { localStorage.setItem("skills", JSON.stringify(S)) } catch(e) {} };
 const FIELDS = [["cls", "#skcls"], ["job", "#skjob"], ["tier", "#sktier"], ["type", "#sktype"]];
 const sync = () => { $("#sksearch").value = S.q; for (const [k, el] of FIELDS) $(el).value = S[k] };

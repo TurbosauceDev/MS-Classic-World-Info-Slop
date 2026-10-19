@@ -555,3 +555,17 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
 .thsw .chips i:first-child{border-radius:3px 0 0 3px}.thsw .chips i:last-child{border-radius:0 3px 3px 0}
 .throw{display:flex;gap:8px;flex-wrap:wrap}
 .throw input{flex:1 1 240px;min-width:0;font:13px var(--f-mono);padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+/* phones: the header and the section/page rows took ~470px before any content; one swipeable row each instead of 4-5 wrapped rows */
+@media (max-width:600px){
+  .wrap{padding-block:16px 48px}
+  header p{font-size:14px;margin-top:.4em}
+  .srchbtn{margin-top:10px}
+  nav{margin:14px 0 12px}
+  nav .navrow{align-items:center}
+  nav .cats,nav .subs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  nav .cats::-webkit-scrollbar,nav .subs::-webkit-scrollbar{display:none}
+  nav .cats button,nav .subs button{flex:none;white-space:nowrap}
+  nav .cats button{padding:6px 12px}
+  nav .subs{margin-top:6px}
+  nav .subs button{padding:8px 10px}
+}

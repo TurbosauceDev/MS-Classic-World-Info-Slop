@@ -10,7 +10,7 @@ data/sources/*.json (meowdb, meso.watch,     ─┼─ scripts/build_data.py [st
   shared runs, maplestory.quest)              ┘
 src/index.html + styles.css + js/*.js (+ tracker/app/readers.js) ── scripts/build.py ──► dist/index.html (6.2 MB)
 ```
-- `build.py` concatenates `src/js/*.js` in filename order into ONE `<script>` (shared top-level scope), replaces
+- `build.py` puts data.json in `<script type="application/json" id="sitedata">` (`D = JSON.parse(...)`, ~20% faster start than a JS literal; `<` escaped as \u003c) and concatenates `src/js/*.js` in filename order into ONE `<script>` (shared top-level scope), replaces
   `/*@CSS*/`, `/*@JS*/`, `__DATA__` (in 00-core.js), `/*@READERS*/` (tracker readers), and stamps the Home build time.
 - `build_data.py` steps (run a subset by name, e.g. `build_data.py crafting extras`): base weapons skills quests rewards npcs
   mobimg nav weapon_sources crafting extras minimaps portals launch mobdb worldmap itemdb kpq prices shared.
@@ -22,6 +22,7 @@ src/index.html + styles.css + js/*.js (+ tracker/app/readers.js) ── scripts/
 python3 scripts/build.py | tail -3          # after any src/ change (no vendor needed)
 node tests/smoke.js | tail -5               # every tab, 390px overflow, NaN/undefined text; ~40 s
 node tests/golden.js | tail -3              # meowdb-published reference numbers; run after model changes
+node tests/edge.js | tail -5                # bad saved state/share links/server replies, phone nav, keyboard; ~80 s
 ./scripts/refresh_mesowatch.sh               # "refresh": poller CSV -> fetch_mesowatch -> prices -> build
 python3 scripts/fetch_shared.py             # shared tracker runs (daily CI job does this)
 node scripts/fetch_meowdb_drops.js          # then build_data.py extras mobdb
@@ -30,7 +31,7 @@ python3 scripts/launch_diff.py <ver>        # maplestory.io MCW client vs our da
 Playwright: global install works here (`NODE_PATH` set, browsers in /opt/pw-browsers). If `chromium.launch` can't find a
 browser: `CHROMIUM=/opt/pw-browsers/chromium` (tracker tests, fetch_meowdb_drops) or a `-r` preload shim that passes
 `executablePath`. Never `playwright install`.
-CI: `.github/workflows/tests.yml` runs smoke + golden on every push/PR to the default branch; `docs.yml` runs
+CI: `.github/workflows/tests.yml` runs smoke + golden + edge on every push/PR to the default branch; `docs.yml` runs
 `tests/docs.test.js` (paths/commands in these docs exist, every test image listed in [fixtures.md](fixtures.md)).
 
 ## Source map (bytes; grep before reading anything over ~15 KB)
@@ -75,7 +76,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - **Item count** asserted in smoke.js (2,221); update when items change.
 - **Tooltips:** one floating `#qtip`; classes `.qname` quest, `.ri` item icon, `.itname` item name, `.mname` map
   (`mapLink()`, click opens World Map card), `.nname` NPC (`npcLink()`), `.mobname` monster (`mobLink()`).
-- **Per-viewer state:** localStorage in try/catch. Keys in use: tab planner path pathdone qsort qeq qval ctown craft craftlv
+- **Per-viewer state:** localStorage in try/catch; load an object with `savedState(key, S)` (00-core.js: drops unknown keys and wrong types), then range-check enums/levels.
+  Share links (`HASH.x`) are just as untrusted: validate before use (see the sanitizers in 50-builder.js / 60-planner.js). Keys in use: tab planner path pathdone qsort qeq qval ctown craft craftlv
   qcompact keep keephave mobs items skills navi wmap expc theme themes themec.
 - **Explanations:** a closed `<details class="howto">` at the top of the tab, short bullets.
 - **Share links:** extend the existing `#key=value&` hash (69-search.js); never a new scheme.
@@ -108,3 +110,9 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Splits
 - 10-18: `src/index.html` split into `src/pages/<id>.html` (built dist identical). Edit a page's file, not the shell; build.py asserts every page file has a slot.
 - `50-builder.js` 43 KB and `60-planner.js` 42 KB are big but cohesive; grep + ranged reads are enough for now.
+
+## Bug hunt 2026-10-19
+- `src/index.html` now starts with `<!doctype html>` + viewport meta (Pages was quirks mode, phones rendered at 980 px). Phone nav (<=600px): `.cats`/`.subs` are one horizontal-scroll row; `inRow()` keeps the picked button visible.
+- Big tables use `lazyRows(tbody, rowsHtml, emptyHtml)` (00-core.js): 60 rows, then 150 per scroll via IntersectionObserver. Tests counting rows must scroll first (edge.js does).
+- Tracker live summary goes through `trkClean()` (68-tracker.js) before rendering; never render server fields raw. Price check icon candidates preload on tab open (one shared promise).
+
