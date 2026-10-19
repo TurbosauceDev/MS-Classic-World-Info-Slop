@@ -135,17 +135,21 @@ function render(){
     }
   }
   const all = Object.values(rows).map(o => Object.assign(o, advice(o.id), {npc: D.items[o.id].p || 0}));
-  all.forEach(o => { o.qty = o.n || (o.noN ? 1 : 0); o.tot = o.each * o.qty });
+  all.forEach(o => { o.qty = o.n || (o.noN ? 1 : 0); o.tot = o.each * o.qty; o.ks = KEEPSELL?.(o.id, o.qty) || null });
   all.sort((a, b) => b.tot - a.tot || D.items[a.id].n.localeCompare(D.items[b.id].n));
   const fm = all.reduce((a, o) => a + o.tot, 0), npc = all.reduce((a, o) => a + o.npc * o.qty, 0);
-  $("#ivsum").innerHTML = all.length ? `<p><b>${fmt(fm)} mesos</b> if you sell everything at these prices <span class="sub">(NPCs alone: ${fmt(npc)}${mesos != null ? ` · mesos in your inventory: ${fmt(mesos)}` : ""}${bankMesos != null ? ` · in the bank: ${fmt(bankMesos)}` : ""})</span>.${unknown ? ` <span class="pill p-warn">${unknown} slot${unknown > 1 ? "s" : ""} not read</span>` : ""}</p>` : "";
+  // Keep or sell rules on what you carry: "sell now" = the sell part of each row at the suggested price
+  const sells = all.filter(o => o.ks?.sell > 0), sellNow = sells.reduce((a, o) => a + o.each * o.ks.sell, 0), keeps = all.filter(o => o.ks?.keep > 0).length;
+  $("#ivsum").innerHTML = all.length ? `<p><b>${fmt(fm)} mesos</b> if you sell everything at these prices <span class="sub">(NPCs alone: ${fmt(npc)}${mesos != null ? ` · mesos in your inventory: ${fmt(mesos)}` : ""}${bankMesos != null ? ` · in the bank: ${fmt(bankMesos)}` : ""})</span>.${unknown ? ` <span class="pill p-warn">${unknown} slot${unknown > 1 ? "s" : ""} not read</span>` : ""}</p>
+    <p id="ivsell"><b>Sell now: ${fmt(sellNow)} mesos</b> for ${sells.length} item${sells.length === 1 ? "" : "s"} no open quest needs (<a href="#" id="ivkeep">Keep or sell</a> rules); keep ${keeps}. <span class="sub">Equips and potions nothing wants are your call. Counts come from the screenshots; quests ticked done in the Path Planner don't count.</span></p>` : "";
   $("#ivbody").innerHTML = all.map(o => { const it = D.items[o.id];
     return `<tr><td><span class="ri" tabindex="0" data-item="${o.id}" data-n="${o.qty}">${D.iicons[o.id] ? `<img src="data:image/png;base64,${D.iicons[o.id]}" alt="">` : "<i></i>"}</span>
       ${o.g ? `<select data-ivg="${o.g}" title="Several items share this picture: pick yours">${[...new Map(o.g.split(",").map(i => [D.items[i].n, i])).values()]
         .sort((a, b) => D.items[a].n.localeCompare(D.items[b].n)).map(i => `<option value="${i}"${i === o.id ? " selected" : ""}>${esc(D.items[i].n)}</option>`).join("")}</select>`
         : `<span class="itname" data-item="${o.id}" tabindex="0">${esc(it.n)}</span>`}</td>
       <td>${[...o.tabs].map(t => TABNAME[t]).join(", ")}</td><td class="num">${o.n ? fmt(o.n) : o.noN ? "?" : "–"}</td><td class="num">${o.npc ? fmt(o.npc) : "–"}</td>
-      <td class="${o.cls}">${o.how}</td><td class="num">${o.tot ? fmt(o.tot) : "–"}</td></tr>` }).join("");
+      <td class="${o.cls}">${o.how}</td><td class="num">${o.tot ? fmt(o.tot) : "–"}</td>
+      <td>${o.ks ? `<span class="pill ${o.ks.cls}">${esc(o.ks.v)}</span><div class="sub">${esc(o.ks.why)}</div>` : `<span class="sub">your call</span>`}</td></tr>` }).join("");
   $("#ivtbl").hidden = !all.length;
 }
 const drop = $("#ivdrop");
@@ -160,6 +164,7 @@ $("#ivreads").addEventListener("click", e => {
   else return;
   render();
 });
+$("#ivsum").addEventListener("click", e => { if (e.target.id !== "ivkeep") return; e.preventDefault(); $("#t-keep").click() });
 $("#ivbody").addEventListener("change", e => { const g = e.target.dataset.ivg; if (g){ PICK[g] = e.target.value; render() } });
 $("#ivdate").textContent = D.pw.read;
 })();

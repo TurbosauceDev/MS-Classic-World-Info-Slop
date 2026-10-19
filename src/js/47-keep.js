@@ -1,4 +1,5 @@
 /* ---------------- keep or sell ---------------- */
+let KEEPSELL = null;   // (itemId, count) -> keep/sell advice with this tab's rules; used by Price check (54-invprice.js)
 (() => {
 // every item a launch quest (incl. Citizenship) or a crafting recipe asks for: how many quests want, from which level, a
 // verdict, what an NPC pays, and where another comes from (quest data's monster, meowdb player drop reports, crafting
@@ -76,6 +77,22 @@ function rowHtml(o, j){
     <td class="num">${lo < Infinity ? lo : lo2 < Infinity ? `<span class="sub">craft Lv ${lo2}</span>` : "–"}</td>
     <td class="num">${o.price ? fmt(o.price) : "–"}${PW[o.id] ? `<div class="sub">${pwHtml(o.id)}</div>` : ""}</td><td class="sub">${where || `<span class="na">no known source yet</span>`}</td>`;
 }
+// Price check: the count in the screenshot stands in for "Have". Keep all while quests still want more (or weekly ones,
+// or nothing sells it), keep what open quests want and sell the rest, keep recipe items (your call); an Etc item no
+// launch quest or recipe wants is a sell. Equips and potions nothing wants get no verdict (you may use them).
+const BYID = new Map(LIST.map(o => [o.id, o]));
+KEEPSELL = (id, qty) => {
+  const o = BYID.get(id), it = D.items[id];
+  if (!o){ if (QITEM({id, name: it?.n})) return {v: "Quest item", cls: "p-warn", keep: qty, sell: 0, why: "quest items stay in your bag"};
+    return it?.c === "Etc" ? {v: "Sell", cls: "p-good", keep: 0, sell: qty, why: "no launch quest or recipe wants it"} : null }
+  const old = HAVE[o.k]; HAVE[o.k] = qty; const j = judge(o, doneSet()); if (old === undefined) delete HAVE[o.k]; else HAVE[o.k] = old;
+  const r = j.v[2];
+  if (r === 6) return {v: "Sell", cls: "p-good", keep: 0, sell: qty, why: j.v[3] || "no open quest wants it"};
+  if (r === 5){ const k = Math.min(qty, j.n); return {v: k === qty ? "Keep" : k ? `Keep ${fmt(k)}, sell ${fmt(qty - k)}` : "Sell", cls: "p-good", keep: k, sell: qty - k,
+    why: `open quests want ${fmt(j.n)}` + (o.recipes.size ? `; recipes use it too (${o.discs.join(", ")})` : "")} }
+  return {v: r === 4 ? "If you craft" : "Keep", cls: r === 4 ? "p-warn" : r === 0 ? "p-bad" : "p-hot", keep: qty, sell: 0,
+    why: r === 4 ? o.discs.join(", ") : r === 3 ? j.v[3] : r === 0 ? "nothing known drops or sells it" : `quests want ${fmt(j.n)}`};
+};
 let shown = [];
 function render(){
   const q = S.q.trim().toLowerCase(), DONE = doneSet();
