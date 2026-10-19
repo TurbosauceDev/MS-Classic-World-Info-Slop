@@ -139,3 +139,4 @@ npm start           # run it (Windows, Electron)
   runs); EXP/hr trend for one map; ▸ details per session (monsters, loot, used, level-ups, read share) with rename/note
   editing and "compare with the run before it here"; 30 rows at a time with Show more.
 - v0.2.55: Line up every box (View menu, Ctrl+Shift+L, Settings > Layout): the edges between side-by-side boxes snap into shared columns across rows (the pinned boxes and the open tab), every box in a row gets the same top and bottom, gaps stay even. "Keep box edges lined up" (on by default) snaps edges that land close after a move, a resize or a tab change.
+- v0.2.56: no "Not told apart" row in Monsters killed (from 0.2.53): party kills whose EXP share fits several monsters stay out of it (Danny).

@@ -124,7 +124,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   "earned" lines above "...Box xN has been lost" as rewards, items with src "box" (never a monster's drop).
 - KPQ timeline: saved runs carry kpq.timeline (per round: start clock, [stage, start, sec], clear, total, end Exit/left/
   stopped, sent or why not). kpqShare returns that reason. Read it before guessing why rounds are missing.
-- Party kills whose EXP share fits several monsters count in S.unknownKills ("Not told apart" row in Monsters killed).
+- Party kills whose EXP share fits several monsters count in S.unknownKills; Monsters killed leaves them out (Danny).
 - Pickup names: an unread `?` matches 1-2 letters ("Emerald Sta?" = Staff). Saved sessions' `used` = the Consumables used
   list (Use-tab drops included), not raw use events.
 - readParty counts party bars by their frame (black outline + white border, top and bottom edge), not red fill: a member
