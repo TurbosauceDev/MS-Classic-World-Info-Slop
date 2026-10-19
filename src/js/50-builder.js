@@ -120,6 +120,7 @@ function attackInfo1(s, l){
   if (s.id === "basic") return {kind:"phys", pct:100, hits:1, targets:1};
   const t = stat(s, l) || s.st[0];
   if (!["attack","action_hitbox","weapon_projectile","magic_projectile"].includes(s.k)) return null;
+  if (/^Final Attack/.test(s.n)) return null;   // a proc on other attacks, not a skill you cast (OSMS tags it as an attack since Oct 17)
   const ba = num(t, /Basic Attack (\d+)/);
   if (ba) return {kind:"magic", pct:ba, mast:num(t, /Mastery level (\d+)/), hits:at(s.att, l), targets:at(s.mob, l)};
   let m = t.match(/Attack (\d+)x with (\d+)% damage/);
@@ -166,6 +167,10 @@ const nearMobs = L => NEAR[L] || (NEAR[L] = (() => {
     .filter((m, i, arr) => arr.findIndex(x => x[0] === m[0]) === i).sort((a,b) => a[1] - b[1]).slice(0, 10);
   return {near, even: near.filter(m => Math.abs(m[1] - L) <= 3)};
 })());
+// Final Attack proc chance and damage from a skill-level line. OSMS wrote "success rate" before the Oct 17 export and
+// "trigger rate" since; missing both silently dropped Final Attack from every DPS figure (tests/golden.js).
+function faStats(t){ return [num(t, /(\d+)% (?:success|trigger) rate/), num(t, /damage (\d+)%/)] }
+
 /* the whole calculation as a pure function of the build, so the auto-build can try options */
 function calc(sp){
   const w = W.find(x => x.name === S.weapon) || null;
@@ -230,7 +235,7 @@ function calc(sp){
     min = mult * (0.8 + (prim * wmult * mast + sec) / 100 + atkB / 50) * watk;
     max = mult * (1.0 + (prim * wmult + sec) / 100 + atkB / 50) * watk;
     const fa = T("Final Attack: " + wk);
-    if (fa){ faRate = num(fa, /(\d+)% success rate/); faPct = num(fa, /damage (\d+)%/) }
+    if (fa) [faRate, faPct] = faStats(fa);
   }
   min = Math.min(min, 99999); max = Math.min(max, 99999);
   const avg = (min + max) / 2;
@@ -571,7 +576,7 @@ $("#psend").addEventListener("click", () => {
   document.querySelector('[data-tab="maps"]').click();
   rankMaps();
 });
-BLD = {get S(){ return S }, W, ARMOR, BRANCHES, JOBLABEL, PRIMARY, SLOTS, apTotal, kindOf, TWO_HANDED,
+BLD = {get S(){ return S }, W, ARMOR, BRANCHES, JOBLABEL, PRIMARY, SLOTS, apTotal, kindOf, faStats, TWO_HANDED,
   apply(fn){ fn(S); refresh() }};
 if (!Object.keys(S.sp).length) rebuild();
 refresh();

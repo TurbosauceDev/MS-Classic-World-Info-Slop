@@ -98,6 +98,9 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - mapleexp.com drops are CMS v79 (China), not Classic: don't use. Its EXP table to Lv 100 is fine.
 - No drop rates exist anywhere (OSMS, meowdb have reports only); every rate on the page is an assumption, labelled.
 - Keep or sell skips quest items with the same test as Items "Hide quest items" (403xxxx ID block + quest start items; `QITEM` in 47-keep.js and 49-items.js, keep both in sync). Smoke: "keep list: no quest items".
+- OSMS export bumps can change skill wording/kinds silently. Oct 17: "success rate" became "trigger rate" (builder read 0% Final
+  Attack) and Final Attacks became attack kinds (Crossbowman's guide cast Final Attack). `faStats` + `attackInfo1` in
+  50-builder.js handle both; golden.js checks "Final Attack 25% proc ..." and "no Lv 50 guide build casts Final Attack".
 - Back/Forward (75-history.js): after any click/change/Enter it compares {tab, place} with history.state and pushes if
   different (no URL change). A page with in-page places registers `navReg(tab, get, set)` (mobs, items, skills, wmap, quests);
   `get` must return JSON-comparable data or every click pushes. Smoke checks "browser Back ...", "a new step clears Forward".

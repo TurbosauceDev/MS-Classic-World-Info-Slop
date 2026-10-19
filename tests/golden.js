@@ -28,6 +28,12 @@ const path = require("path");
   // attack times: Fighter Lv 70 Chrono + Booster = 720 ms (83 Power Strikes/min, meowdb); spells always 810 ms
   const t = await p.evaluate(() => [buildAt("Warrior", "Fighter", "Axe", 70, false, true, true), buildAt("Magician", "I/L Wizard", null, 50, false, true, true)]);
   check(t[0].weapon === "Chrono" && t[0].skill === "Power Strike", "Fighter 70 guide build uses Chrono + Power Strike", [t[0].weapon, t[0].skill]);
+  // Final Attack: every one parses a 25% proc and its damage at max level (OSMS renamed "success rate" to "trigger rate"
+  // in the Oct 17 export and the builder read 0%, dropping Final Attack from all DPS; skills.json, e.g. id 3101000)
+  const fa = await p.evaluate(() => Object.values(D.skills).flat().filter(s => /^Final Attack/.test(s.n)).map(s => [s.n, ...BLD.faStats(s.st.at(-1))]));
+  check(fa.length === 8 && fa.every(f => f[1] === 25 && f[2] > 0), "Final Attack 25% proc + damage parsed for all 8", fa);
+  const xb = await p.evaluate(() => ["Hunter", "Crossbowman", "Fighter", "Page", "Spearman"].map(b => buildAt(b === "Hunter" || b === "Crossbowman" ? "Bowman" : "Warrior", b, null, 50, false, true, true).skill));
+  check(xb.every(s => !/^Final Attack/.test(s)), "no Lv 50 guide build casts Final Attack as its main skill", xb);
   // upkeep: 83 casts × 12 MP a minute ≈ 59,760 MP/hr + buffs (meowdb: "6.6 Lemons a minute")
   check(t[0].cost.mpHr > 59000 && t[0].cost.mpHr < 62000, "Fighter 70 MP upkeep ~60k/hr", Math.round(t[0].cost.mpHr));
   // Lucky Seven per cast (meowdb Thief guide, Lv 30: 139 LUK, 34 DEX, 5 STR, Adamantium Guards + Wolbi = 40 W.ATK): 366-622

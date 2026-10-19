@@ -686,7 +686,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       </div>
     </div>
   </div>
-  <p class="sitever">Site version: built Oct 18, 2026 · 21:59 UTC</p>
+  <p class="sitever">Site version: built Oct 19, 2026 · 15:17 UTC</p>
 </section>
 
 <section id="plan" hidden>
@@ -3486,6 +3486,7 @@ function attackInfo1(s, l){
   if (s.id === "basic") return {kind:"phys", pct:100, hits:1, targets:1};
   const t = stat(s, l) || s.st[0];
   if (!["attack","action_hitbox","weapon_projectile","magic_projectile"].includes(s.k)) return null;
+  if (/^Final Attack/.test(s.n)) return null;   // a proc on other attacks, not a skill you cast (OSMS tags it as an attack since Oct 17)
   const ba = num(t, /Basic Attack (\d+)/);
   if (ba) return {kind:"magic", pct:ba, mast:num(t, /Mastery level (\d+)/), hits:at(s.att, l), targets:at(s.mob, l)};
   let m = t.match(/Attack (\d+)x with (\d+)% damage/);
@@ -3532,6 +3533,10 @@ const nearMobs = L => NEAR[L] || (NEAR[L] = (() => {
     .filter((m, i, arr) => arr.findIndex(x => x[0] === m[0]) === i).sort((a,b) => a[1] - b[1]).slice(0, 10);
   return {near, even: near.filter(m => Math.abs(m[1] - L) <= 3)};
 })());
+// Final Attack proc chance and damage from a skill-level line. OSMS wrote "success rate" before the Oct 17 export and
+// "trigger rate" since; missing both silently dropped Final Attack from every DPS figure (tests/golden.js).
+function faStats(t){ return [num(t, /(\d+)% (?:success|trigger) rate/), num(t, /damage (\d+)%/)] }
+
 /* the whole calculation as a pure function of the build, so the auto-build can try options */
 function calc(sp){
   const w = W.find(x => x.name === S.weapon) || null;
@@ -3596,7 +3601,7 @@ function calc(sp){
     min = mult * (0.8 + (prim * wmult * mast + sec) / 100 + atkB / 50) * watk;
     max = mult * (1.0 + (prim * wmult + sec) / 100 + atkB / 50) * watk;
     const fa = T("Final Attack: " + wk);
-    if (fa){ faRate = num(fa, /(\d+)% success rate/); faPct = num(fa, /damage (\d+)%/) }
+    if (fa) [faRate, faPct] = faStats(fa);
   }
   min = Math.min(min, 99999); max = Math.min(max, 99999);
   const avg = (min + max) / 2;
@@ -3937,7 +3942,7 @@ $("#psend").addEventListener("click", () => {
   document.querySelector('[data-tab="maps"]').click();
   rankMaps();
 });
-BLD = {get S(){ return S }, W, ARMOR, BRANCHES, JOBLABEL, PRIMARY, SLOTS, apTotal, kindOf, TWO_HANDED,
+BLD = {get S(){ return S }, W, ARMOR, BRANCHES, JOBLABEL, PRIMARY, SLOTS, apTotal, kindOf, faStats, TWO_HANDED,
   apply(fn){ fn(S); refresh() }};
 if (!Object.keys(S.sp).length) rebuild();
 refresh();
@@ -4654,23 +4659,34 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
     return out;
   }
 
-  // ---- party window: a column of HP bars (red runs with the same left edge, ~17 px apart) in the top-left area ----
+  // ---- party window: a column of HP bars (same left edge, ~17 px apart) in the top-left area. Counted by the bar's frame
+  // (black outline, white border), not its red fill: a member out of range (other map, other KPQ stage) has a grey name and an
+  // empty grey bar, and a member low on HP a short red run (Danny's party, 2026-10-19: "Party of 4 (was 3)" flapping)
   function readParty(img){
-    const X = Math.floor(img.w * 0.25), Y = Math.floor(img.h * 0.6), d = img.d, rows = [];
-    // the bar's rows: pure reds plus its light shine row (255,136,136), which would otherwise split one bar in two
-    const red = i => d[i] > 170 && d[i] - d[i + 1] > 100 && d[i] - d[i + 2] > 100;
-    for (let y = 0; y < Y; y++){
-      let x = 0;
-      while (x < X){ if (!red((y * img.w + x) * 4)){ x++; continue } const s = x; while (x < X && red((y * img.w + x) * 4)) x++; if (x - s >= 25) rows.push({y, x: s}) }
-    }
-    // bars line up on the left: rows starting within 4 px of each other (the rounded corner rows start a pixel or two later)
+    const X = Math.floor(img.w * 0.25), Y = Math.floor(img.h * 0.6), d = img.d, w = img.w;
+    const white = i => d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200, black = i => d[i] < 50 && d[i + 1] < 50 && d[i + 2] < 50;
+    // a frame edge: a white run of 25+ px with black all along the other side (above for the top edge, below for the bottom)
+    const edges = (dy) => {
+      const out = [];
+      for (let y = 1; y < Y - 1; y++){
+        let x = 0;
+        while (x < X){
+          if (!white((y * w + x) * 4)){ x++; continue }
+          const s = x; while (x < X && white((y * w + x) * 4)) x++;
+          if (x - s < 25) continue;
+          let k = 0; for (let i = s; i < x; i++) if (black(((y + dy) * w + i) * 4)) k++;
+          if (k >= (x - s) * 0.8) out.push({y, x: s, n: x - s});
+        }
+      }
+      return out;
+    };
+    const bottoms = edges(1);
+    // a bar = a top edge with a bottom edge of the same width and left edge 5-30 rows below it
+    const bars = edges(-1).filter(t => bottoms.some(b => b.y - t.y >= 5 && b.y - t.y <= 30 && Math.abs(b.x - t.x) <= 3 && Math.abs(b.n - t.n) <= 4));
     const byX = [];
-    for (const r of rows){ let b = byX.find(b => Math.abs(b.x - r.x) <= 4); if (!b) byX.push(b = {x: r.x, ys: []}); b.ys.push(r.y) }
+    for (const r of bars){ let g = byX.find(g => Math.abs(g.x - r.x) <= 4 && Math.abs(g.n - r.n) <= 4); if (!g) byX.push(g = {x: r.x, n: r.n, k: 0}); g.k++ }
     let best = 0;
-    for (const {ys} of byX){
-      const starts = ys.filter((y, i) => i === 0 || y - ys[i - 1] > 2);   // one bar = a few rows
-      if (starts.length >= 2 && starts.length <= 6) best = Math.max(best, starts.length);
-    }
+    for (const {k} of byX) if (k >= 2 && k <= 6) best = Math.max(best, k);
     return best || null;
   }
 
@@ -4797,6 +4813,29 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
     const m = /lost\s*(\d[\d,. ]*\d|\d)\s*E\s*X\s*P?\s*f\w*\s*d\s*y/i.exec(String(text || "").replace(/\n/g, " "));
     return m ? +m[1].replace(/[,. ]/g, "") : null;
   }
+  /* Opening a box (Companion's Magic Box from KPQ) writes its rewards in the chat box, not as pickup lines: "[03:54] White
+     Potion x15 earned. (Use)", "[03:54] Red Potion x5 earned. (Use)", then "[03:54] Companion's Magic Box x1 has been lost.
+     (Use)" (Danny's frames, 2026-10-19). From the chat OCR: one group per "...Box xN has been lost" line, the "earned" lines
+     just above it. key = the group's lines as read (with the minute), so a group still on screen next time isn't counted
+     again. Names: exact, else the closest item of that tab (85%+ alike: OCR reads "Pation"). */
+  function boxFromText(text){
+    const lines = String(text || "").split("\n").map(l => l.trim()).filter(Boolean), out = [];
+    const EARN = /^\[(\d\d:\d\d)\]\s*(.+?)\s*x\s*(\d+)\s*earned\.?\s*\((\w+)\)/, tab = {Etc: ["Etc"], Use: ["Consumable", "Scroll"], Equip: ["Equipment"], Setup: ["Setup"]};
+    lines.forEach((l, i) => {
+      if (!/Box\s*x\s*\d+\s*has\s*been\s*lost/i.test(l)) return;
+      const items = [], keep = [l.replace(/\)\s*\S*$/, ")")];
+      for (let j = i - 1, m; j >= 0 && (m = EARN.exec(lines[j])) && !/Box$/i.test(m[2]); j--){
+        keep.unshift(m[0]);
+        let id = ITEMS ? itemByName(m[2], m[4]) : null;
+        if (!id && ITEMS){ const cats = tab[m[4]] || []; let best = 0, tie = false;
+          for (const [k, it] of ITEMS) if (!cats.length || cats.includes(it.c)){ const v = similar(m[2], it.n); if (v > best){ best = v; id = k; tie = false } else if (v === best) tie = true }
+          if (best < 0.85 || tie) id = null }
+        items.unshift({id, name: m[2], qty: +m[3]});
+      }
+      if (items.length) out.push({key: keep.join("|"), items});
+    });
+    return out;
+  }
   function jobFromText(text){
     const words = text.split(/[^A-Za-z]+/).filter(w => w.length >= 4);
     for (let i = 0; i < words.length; i++){
@@ -4848,10 +4887,11 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
   function itemByName(name, cat, all = false){
     if (!ITEMS) return all ? [] : null;
     const cut = /\.\.\.$/.test(name), core = name.replace(/\.\.\.$/, "");
-    const re = new RegExp("^" + core.split("").map(c => c === "?" ? "." : "ilI1".includes(c) ? "[ilI1]" : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + (cut ? "" : "$"));
+    const re = new RegExp("^" + core.split("").map(c => c === "?" ? ".{1,2}" : "ilI1".includes(c) ? "[ilI1]" : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + (cut ? "" : "$"));
     const tab = {Etc: ["Etc"], Use: ["Consumable", "Scroll"], Equip: ["Equipment"], Setup: ["Setup"]};
     const catRe = new RegExp("^" + cat.replace(/\?/g, ".") + "$"), cats = Object.keys(tab).filter(k => catRe.test(k)).flatMap(k => tab[k]);
-    // l and i look alike in the pickup font ("Biue Potion", Danny's report 2026-10-18): either matches either
+    // l and i look alike in the pickup font ("Biue Potion", Danny's report 2026-10-18): either matches either. An unread "?"
+    // may be two letters drawn as one glyph ("Emerald Sta?" = Staff, Danny's report 2026-10-19)
     let hits = ITEMS.filter(([id, it]) => re.test(it.n) && (!cats.length || cats.includes(it.c)));
     // the same name twice in the game data (Red Potion 2000000 / 2000007): the first one, which the shops sell
     if (hits.length > 1 && hits.every(h => h[1].n === hits[0][1].n)) hits = [hits[0]];
@@ -5036,12 +5076,19 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
         const more = (p, dir) => { for (let k = 1; k <= 24; k++){ const q = p + dir * k; if (q < 0 || q >= w) return p; if (red(q, y)) return q } return p };
         let a = x, b = x; for (let n; (n = more(a, -1)) !== a;) a = n; for (let n; (n = more(b, 1)) !== b;) b = n;
         x = b;
-        // the top row is darker and broken under a pale open tab (Danny's Etc tab): the line's full width may first show a row lower
-        const top = red(a + 5, y - 1) ? y - 1 : y;
+        // the top row is darker and broken under a pale open tab (Danny's Etc tab): the line's full width may first show a row lower.
+        // The break sits under the open tab, so look for the row above away from it too (Equip open: the left end, 2026-10-19)
+        const top = [5, 100, 195].some(o => red(a + o, y - 1)) ? y - 1 : y;
         if (b - a < 190 || b - a > 215 || !red(a + 5, top + 1) || !red(a + 5, top + 2) || red(a + 5, top - 1) || a + 200 >= w) continue;
-        for (const is of [pink, rose, pale]) for (let yy = top - 20; yy < top - 1; yy++) for (let xx = a; xx < a + 200; xx++) if (is(xx, yy) && is(xx + 1, yy) && is(xx + 2, yy)){
-          const off = xx - a, tab = INV_TABS.reduce((p, q) => Math.abs(q[1] - off) < Math.abs(p[1] - off) ? q : p);
-          return Math.abs(tab[1] - off) <= 8 ? {x: a, y: top, tab: tab[0]} : null;
+        // the tab with the most of that colour (3 in a row): a stray pinkish pixel where the open tab's edge blurs into the
+        // red line (video) no longer names the tab next to it (Equip read as Use, Danny's report 2026-10-19)
+        for (const is of [pink, rose, pale]){
+          const n = INV_TABS.map(() => 0);
+          for (let yy = top - 20; yy < top - 1; yy++) for (let xx = a; xx < a + 200; xx++) if (is(xx, yy) && is(xx + 1, yy) && is(xx + 2, yy)){
+            const off = xx - a; let k = 0; while (k + 1 < INV_TABS.length && off >= INV_TABS[k + 1][1] - 2) k++; n[k]++;
+          }
+          const k = n.indexOf(Math.max(...n));
+          if (n[k] >= 3) return {x: a, y: top, tab: INV_TABS[k][0]};
         }
         // the window, but no tab colour (the mouse pointer on the open tab, Danny's frame-014): where it is still counts
         return {x: a, y: top, tab: null};
@@ -5308,7 +5355,7 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
     if (want.chat) crops.chat = chatCrop(img);
     return {ev, info, crops, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {itemByName, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);
 
