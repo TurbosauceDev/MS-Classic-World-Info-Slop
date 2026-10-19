@@ -1,4 +1,4 @@
-// Tracker window, Mini view, inventory/Loot tab, tabs, box docking layout (renderer.js is split in load order; all share one global scope, see renderer.js)
+// Tracker window, Mini view, inventory boxes, Modules toolbox, box docking layout (renderer.js is split in load order; all share one global scope, see renderer.js)
 // Mini view (Danny, 2026-10-18): totals, times, the run log and the top 5 of each list; the window is sized to fit it
 const MINI_ROWS = 5;
 function miniList(rows, cell, empty){ if (!rows.length) return `<tr class="more"><td>${empty}</td></tr>`;
@@ -30,18 +30,13 @@ function miniFit(force){ if (!document.body.classList.contains("mini")) return c
 // refit in the resize event itself, before the frame paints (it waited a frame, so a window edge being dragged showed the
 // view a step behind: cut off growing, a gap shrinking)
 addEventListener("resize", () => { if (document.body.classList.contains("mini")) miniFit() });
-// Compact (Danny, 2026-10-18: a middle ground between everything and Mini): the tabs and their boxes are hidden, only the
-// boxes pinned above them show (the main card, the run log, whatever else is pinned), and the window fits their height.
-// Saved in settings.compact; View menu and a shortcut toggle it
 // "Window height follows the boxes" (settings.fitWin, Danny 2026-10-19: auto size): the full view gets the same fitting, so
 // folding a box, a list filling up or another tab grows or shrinks the window to what's there. Off: the player sizes it
-const fitsWindow = () => document.body.classList.contains("compact") || document.body.classList.contains("fitWin");
-function compactSet(on){ document.body.classList.toggle("compact", on); miniH = 0;
-  if (on || fitsWindow()) requestAnimationFrame(() => compactFit(true)); else if (!document.body.classList.contains("mini")) host.mini?.(false) }
+const fitsWindow = () => document.body.classList.contains("fitWin");
 function fitWinSet(on){ document.body.classList.toggle("fitWin", on); miniH = 0;
   if (fitsWindow()) requestAnimationFrame(() => compactFit(true)); else if (!document.body.classList.contains("mini")) host.mini?.(false) }
 function compactFit(force){ if (!fitsWindow() || document.body.classList.contains("mini")) return;
-  const B = document.body; B.classList.add("measure");   // natural height: the spare room above the tabs closed up
+  const B = document.body; B.classList.add("measure");   // natural height
   const h = Math.ceil(Math.max(...[...B.children].filter(e => e.offsetParent && getComputedStyle(e).position !== "fixed").map(e => e.getBoundingClientRect().bottom + scrollY)) + 10);
   B.classList.remove("measure");
   if (force || Math.abs(h - miniH) > 6){ miniH = h; host.mini?.(true, h) } }
@@ -92,21 +87,13 @@ function renderState(s){
   if (held && paused && !wrap) $("#stateText").textContent = "Paused by you";
   pauseUi();
 }
-// tabs under the numbers; the last one open is remembered
+// Help is the one page left under the layout (the Session/Loot/History tabs became modules, 2026-10-19); showTab("help") shows it, anything else hides it
 function showTab(name){
-  for (const b of document.querySelectorAll(".tabs button")){ b.classList.toggle("sel", b.dataset.tab === name); b.setAttribute("aria-selected", String(b.dataset.tab === name)); b.tabIndex = b.dataset.tab === name ? 0 : -1 }
   for (const sec of document.querySelectorAll("section[data-tab]")) sec.classList.toggle("hidden", sec.dataset.tab !== name);
-  try { localStorage.setItem("tab", name) } catch {}
-  fitRows(); if (snapOn()) alignRows(SNAP); requestAnimationFrame(() => compactFit());   // rows on the new tab fit before it paints; a fitted window follows its height
+  requestAnimationFrame(() => compactFit());
 }
-for (const b of document.querySelectorAll(".tabs button")){ b.setAttribute("role", "tab"); if (b.id !== "histBtn") b.onclick = () => showTab(b.dataset.tab) }
-for (const sec of document.querySelectorAll("section[data-tab]")) sec.setAttribute("role", "tabpanel");
-// left/right arrows move between the tabs (the usual tab-strip keys)
-$(".tabs").addEventListener("keydown", e => { if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-  const bs = [...document.querySelectorAll(".tabs button")], i = bs.indexOf(document.activeElement); if (i < 0) return;
-  const n = bs[(i + (e.key === "ArrowRight" ? 1 : bs.length - 1)) % bs.length]; n.click(); n.focus(); e.preventDefault() });
-// boxes, like OBS sources: dragged by the ⠿ grip or the title onto another box (above or below it), onto a tab (to the end of it), or onto
-// the strip above the tabs (pinned: shows on every tab); – folds one to its title. Saved in settings.layout (Danny, 2026-10-18).
+// boxes, like OBS sources: dragged by the ⠿ grip or the title onto another box (above or below it); – folds one to its title, ×
+// puts it away in the Modules toolbox. Saved in settings.layout (Danny, 2026-10-18).
 // Dropped on a box's left or right edge, it goes beside it in a row (Danny, 2026-10-18: "like OBS"); the splitter between them
 // resizes; dropped on the top or bottom of a box in a row, the two stack in a column inside the row
 function foldMark(b){ const f = b.querySelector(".fold"), on = b.classList.contains("folded"); f.textContent = on ? "+" : "–"; f.setAttribute("aria-expanded", String(!on)) }
@@ -132,21 +119,23 @@ function tidy(){
   }
   for (const e of document.querySelectorAll("[data-box], .boxcol")) if (!isRow(e.parentElement)) e.style.flex = "";
 }
-// saved as order[tab] = [box id | {row: [box id | [box ids (a column)]], w: [widths]}]; older saves (just ids) still load
+// saved as order.dock = [box id | {row: [box id | [box ids (a column)]], w: [widths]}], v: 2; a box not in it is in the toolbox.
+// Older saves (order per tab: dock, session, loot, hist) load with dock, Session and Loot in that order, History in the toolbox
 function layoutSave(){
   requestAnimationFrame(() => compactFit());
   tidy(); fitRows(); if (snapOn()) alignRows(SNAP); const order = {};
   const hOf = e => e.classList.contains("sized") ? parseFloat(e.style.getPropertyValue("--h")) || undefined : undefined;
   const ser = e => isRow(e) ? {row: parts(e).map(p => isCol(p) ? [...p.children].map(b => b.dataset.box) : p.dataset.box), w: parts(e).map(p => Math.round(grow(p)) || 1), h: hOf(e)} : e.dataset.box;
-  for (const h of [$("#dock"), ...document.querySelectorAll("section[data-tab]")]) order[h.id || h.dataset.tab] = [...h.querySelectorAll(":scope > [data-box], :scope > .boxrow")].map(ser);
+  order.dock = [...$("#dock").querySelectorAll(":scope > [data-box], :scope > .boxrow")].map(ser); tbRender();
   const h = {}; for (const b of BOXES){ const v = hOf(b); if (v) h[b.dataset.box] = v }   // heights set with the bar under a box
-  host.settings({layout: {order, folded: BOXES.filter(b => b.classList.contains("folded")).map(b => b.dataset.box), h}}).then(x => settings = x);
+  host.settings({layout: {v: 2, order, folded: BOXES.filter(b => b.classList.contains("folded")).map(b => b.dataset.box), h}}).then(x => settings = x);
 }
 function layoutLoad(l){
   if (!l?.order) return;
-  const box = id => BOXES.find(x => x.dataset.box === id);
-  for (const [k, items] of Object.entries(l.order)){
-    const h = k === "dock" ? $("#dock") : document.querySelector(`section[data-tab="${k}"]`); if (!h || !Array.isArray(items)) continue;
+  const box = id => BOXES.find(x => x.dataset.box === id), h = $("#dock");
+  // v2: what isn't listed is put away (the main card always stays: it has Start). Old saves: boxes they don't list stay at home
+  if (l.v >= 2) for (const b of BOXES) if (b.dataset.box !== "main") $("#shelf").appendChild(b);
+  for (const k of l.v >= 2 ? ["dock"] : ["dock", "session", "loot"]){ const items = l.order[k]; if (!Array.isArray(items)) continue;
     for (const it of items){
       if (typeof it === "string"){ const b = box(it); if (b) h.appendChild(b); continue }
       if (!Array.isArray(it?.row)) continue;
@@ -158,8 +147,11 @@ function layoutLoad(l){
       });
     }
   }
+  // an old save: the boxes it didn't list (new ones, or a tab it never saved) follow the ones it did, in their home order
+  if (!(l.v >= 2)){ const said = new Set(["dock", "session", "loot"].flatMap(k => JSON.stringify(l.order[k] || []).match(/"[a-z]+"/g) || []).map(x => x.slice(1, -1)));
+    for (const b of BOXES) if (b.parentElement === h && !said.has(b.dataset.box)) h.appendChild(b) }
   for (const b of BOXES){ b.classList.toggle("folded", (l.folded || []).includes(b.dataset.box)); const v = +l.h?.[b.dataset.box]; heightSet(b, v > 0 ? v : null) }
-  tidy(); fitRows();
+  tidy(); fitRows(); tbRender(); if ($("#hist").closest("#dock") && typeof loadHist === "function") loadHist();
 }
 // puts box b at side z (top, bottom, left, right) of target t (a box, or a row when dropped in a row's gap)
 function place(b, t, z){
@@ -179,8 +171,9 @@ function place(b, t, z){
 for (const b of BOXES){
   b.classList.add("box");
   const c = document.createElement("div"); c.className = "boxctl";
-  c.innerHTML = `<span class="btitle">${esc(b.dataset.title)}</span><span class="grip" tabindex="0" role="button" aria-label="Move ${esc(b.dataset.title)} (arrow keys)" title="Drag to move. Drop on the left or right side of another box to put them side by side, on its middle to go above or below; or onto a tab, or the strip above the tabs. Keys: focus it, then arrows (left/right puts it beside its neighbour)">⠿</span><button class="fold" aria-label="Fold ${esc(b.dataset.title)}" aria-expanded="true" title="Fold or unfold">–</button>`;
+  c.innerHTML = `<span class="btitle">${esc(b.dataset.title)}</span><span class="grip" tabindex="0" role="button" aria-label="Move ${esc(b.dataset.title)} (arrow keys)" title="Drag to move. Drop on the left or right side of another box to put them side by side, on its middle to go above or below; or onto a tab, or the strip above the tabs. Keys: focus it, then arrows (left/right puts it beside its neighbour)">⠿</span><button class="fold" aria-label="Fold ${esc(b.dataset.title)}" aria-expanded="true" title="Fold or unfold">–</button>${b.dataset.box === "main" ? "" : `<button class="shut" aria-label="Put ${esc(b.dataset.title)} away" title="Put away (back to the Modules toolbox)">×</button>`}`;
   b.prepend(c);
+  c.querySelector(".shut")?.addEventListener("click", () => shelve(b));
   c.querySelector(".fold").onclick = () => { flip(() => { b.classList.toggle("folded"); foldMark(b); fitRows() }); layoutSave() };
   // keyboard: arrow up/down on the grip moves the box past its neighbour (out of its row at a row's or column's end); left/right
   // moves it along its row, or puts a box that's on its own beside its neighbour
@@ -199,13 +192,18 @@ for (const b of BOXES){
 // grip or the box's title, moved 5 px: the box follows as a label under the pointer until it's let go
 let drag = null;
 document.addEventListener("pointerdown", e => {
+  const it = e.button === 0 && !e.target.closest("button") && e.target.closest(".tbItem");
+  if (it){ e.preventDefault(); drag = {b: BOXES.find(x => x.dataset.box === it.dataset.mod), item: it, x: e.clientX, y: e.clientY, on: false, el: null}; return }
   const h = e.button === 0 && e.target.closest(".grip, .box h3"), b = h?.closest("[data-box]");
   if (!b) return;
   e.preventDefault(); drag = {b, x: e.clientX, y: e.clientY, on: false, el: null};
 });
-const dropTarget = (x, y) => { const t = document.elementFromPoint(x, y)?.closest("[data-box], .boxrow, #dock, section[data-tab], .tabs button");
-  if (!t || t === dragBox || dragBox.contains(t)) return null;
-  if (t.matches(".tabs button") && !["session", "loot", "hist"].includes(t.dataset.tab)) return null; return t };
+// targets: a box or row in the layout, the layout itself, or the toolbox (= put away). From the toolbox, the empty space under
+// the layout counts as "the end of it", so a module dropped anywhere below the last box lands there
+const dropTarget = (x, y) => { const e = document.elementFromPoint(x, y), t = e?.closest("#toolbox, [data-box], .boxrow, #dock");
+  if (t?.id === "toolbox") return drag?.item ? null : t;
+  if (!t){ const d = $("#dock").getBoundingClientRect(); return drag?.item && e && !e.closest("#titlebar, .card") && y > d.bottom ? $("#dock") : null }
+  if (t === dragBox || dragBox.contains(t)) return null; return t };
 // which side of a box the pointer is on: its left or right third = beside it, the middle third = above or below. (It was the
 // left/right quarter, at most 90 px, marked by a 3 px line: Danny never found it, "i can only move things up and down",
 // 2026-10-18.) The ghost shows where the box will land: half the box for side by side, a bar for above or below
@@ -228,8 +226,8 @@ document.addEventListener("pointermove", e => {
   if (!drag) return;
   if (!drag.on){
     if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) < 5) return;
-    drag.on = true; dragBox = drag.b; dragBox.classList.add("moving"); document.body.classList.add("dragging");
-    drag.el = Object.assign(document.createElement("div"), {className: "dragLabel", innerHTML: `${esc(dragBox.dataset.title)}<small>left or right side of a box: side by side</small>`}); document.body.appendChild(drag.el);
+    drag.on = true; dragBox = drag.b; dragBox.classList.add("moving"); drag.item?.classList.add("moving"); document.body.classList.add("dragging");
+    drag.el = Object.assign(document.createElement("div"), {className: "dragLabel", innerHTML: `${esc(dragBox.dataset.title)}<small></small>`}); document.body.appendChild(drag.el);
     // near the window's top or bottom edge: the page scrolls, to reach boxes out of sight
     drag.iv = setInterval(() => { if (drag?.cy < 72) scrollBy(0, -15); else if (drag?.cy > innerHeight - 40) scrollBy(0, 15) }, 30);
   }
@@ -237,21 +235,21 @@ document.addEventListener("pointermove", e => {
   drag.el.style.left = Math.max(4, Math.min(e.clientX + 12, innerWidth - drag.el.offsetWidth - 4)) + "px"; drag.el.style.top = Math.min(e.clientY + 8, innerHeight - drag.el.offsetHeight - 4) + "px";
   const t = dropTarget(e.clientX, e.clientY);
   dropMark(t, t && dropZone(t, e.clientX, e.clientY));
-  // held over a tab for half a second: that tab opens, so the box can go between its boxes
-  if (t?.matches(".tabs button")){ if (drag.tab !== t){ drag.tab = t; drag.tabT = Date.now() } else if (Date.now() - drag.tabT > 500 && !t.classList.contains("sel")) showTab(t.dataset.tab) } else drag.tab = null;
+  drag.el.querySelector("small").textContent = t?.id === "toolbox" ? "let go: put away" : t?.id === "dock" ? "let go: add at the bottom" : t ? "left or right side of a box: side by side" : drag.item ? "drop it in your layout" : "";
 });
 const endDrag = (e, cancel) => {
   if (!drag) return; const d = drag; drag = null;
   if (!d.on) return;
   // the target is found while the page still looks as it did under the pointer: the pin strip shrinks away once dragging ends
   d.el.remove(); const t = !cancel && dropTarget(e.clientX, e.clientY), z = t && dropZone(t, e.clientX, e.clientY);
-  clearInterval(d.iv); d.b.classList.remove("moving"); document.body.classList.remove("dragging"); dropMark(null); dragBox = null;
+  clearInterval(d.iv); d.b.classList.remove("moving"); d.item?.classList.remove("moving"); document.body.classList.remove("dragging"); dropMark(null); dragBox = null;
   if (!t) return;
+  if (t.id === "toolbox") return shelve(d.b);
   flip(() => {
     if (t.matches("[data-box], .boxrow")) place(d.b, t, z);
-    else if (t.matches(".tabs button")){ document.querySelector(`section[data-tab="${t.dataset.tab}"]`).appendChild(d.b); showTab(t.dataset.tab) }
     else t.appendChild(d.b);
     tidy(); fitRows() });
+  if (d.item) added(d.b);
   layoutSave();
 };
 document.addEventListener("pointerup", e => endDrag(e, false));
@@ -267,7 +265,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && drag) endD
 let rs = null;
 const HMIN = 48;
 function rzBuild(){ const L = $("#rzLayer"); L.innerHTML = "";
-  for (const e of document.querySelectorAll("#dock > [data-box], #dock > .boxrow, section[data-tab] > [data-box], section[data-tab] > .boxrow, .boxcol > [data-box]:not(:last-child)")){
+  for (const e of document.querySelectorAll("#dock > [data-box], #dock > .boxrow, .boxcol > [data-box]:not(:last-child)")){
     if (!e.offsetParent || e.classList.contains("folded")) continue;
     const h = mk("hsplit"); h.rz = e; h.title = "Drag to change the height (double-click: back to fit)"; L.appendChild(h) }
   rzPlace() }
@@ -306,7 +304,7 @@ addEventListener("blur", () => rzOn(false));
 addEventListener("scroll", () => { if (document.body.classList.contains("rzKeys")) rzPlace() }, true);
 document.addEventListener("keydown", e => { if (!isSplit(e.target) || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
   e.preventDefault(); resize(e.target, e.key === "ArrowLeft" ? -24 : 24); layoutSave() });
-$("#layoutReset").onclick = () => { flip(() => { for (const [b, p, next, f] of [...BOX_HOME].reverse()){ p.insertBefore(b, next); b.classList.toggle("folded", f); heightSet(b, null); foldMark(b) } tidy(); fitRows() }); layoutSave() };
+$("#layoutReset").onclick = () => { flip(() => { for (const [b, p, next, f] of [...BOX_HOME].reverse()){ p.insertBefore(b, next?.parentElement === p ? next : null); b.classList.toggle("folded", f); heightSet(b, null); foldMark(b) } tidy(); fitRows() }); layoutSave() };
 
 // ---- fitting (Danny, 2026-10-19: "auto size the modules to properly fit ... properly resizing when the window is moved and
 // resized ... it should be smooth and flawless") ----
@@ -398,5 +396,28 @@ for (const f of [$("#feed"), $("#events"), $("#miniFeed")]){ f._stick = true;
     if (end) f._stick = true; else if (Date.now() - (f._user || 0) < 1500) f._stick = false }, {passive: true});
   new ResizeObserver(() => { if (f._stick) f.scrollTop = f.scrollHeight }).observe(f) }
 fitSet(true); document.body.classList.add("snap");   // on until settings say otherwise (renderer-settings.js)
-try { const t = localStorage.getItem("tab"); if (t && t !== "hist" && t !== "help" && document.querySelector(`section[data-tab="${t}"]`)) showTab(t) } catch {}
+
+// ---- Modules toolbox (Danny, 2026-10-19: "instead of the tabs and having a compact view to juggle, have the module selection
+// be a popout little toolbox that the user can drag and drop modules"; replaced the Session/Loot/History tabs and Compact).
+// Put-away boxes live in #shelf (hidden) and show here as cards: drag one into the layout (same drop targets and ghost as moving
+// a box), or + adds it at the bottom. × on a box, or a box dragged onto the toolbox, puts it back. Title bar ▦ Modules, View menu,
+// Ctrl+Shift+K (key "toolbox") open it; Esc or ✕ closes it
+function tbRender(){
+  const list = $("#tbList"), away = [...$("#shelf").children].filter(b => b.dataset.box);
+  list.innerHTML = away.length ? away.map(b => `<div class="tbItem" role="listitem" tabindex="0" data-mod="${esc(b.dataset.box)}" title="Drag into your layout, or press + (Enter)"><span class="g">⠿</span><span>${esc(b.dataset.title)}</span><button class="alt" aria-label="Add ${esc(b.dataset.title)}">+</button></div>`).join("")
+    : `<div id="tbEmpty">Every module is in your layout. Press × on a box to put it away here.</div>`;
+}
+function tbOpen(on = $("#toolbox").classList.contains("hidden")){ $("#toolbox").classList.toggle("hidden", !on); $("#tbBtn").setAttribute("aria-expanded", String(on)); if (on){ tbRender(); ($("#tbList .tbItem") || $("#tbClose")).focus() } }
+// a module just added: unfolded, scrolled into view, briefly lit; History loads its list when it arrives
+function added(b){ if (b.classList.contains("folded")){ b.classList.remove("folded"); foldMark(b) } if (b.dataset.box === "hist") loadHist();
+  requestAnimationFrame(() => { b.scrollIntoView({block: "nearest", behavior: calm.matches ? "auto" : "smooth"}); if (!calm.matches) b.animate([{boxShadow: "0 0 0 3px var(--accent)"}, {boxShadow: "0 0 0 0 transparent"}], {duration: 700}) }) }
+function addBox(id){ const b = BOXES.find(x => x.dataset.box === id); if (!b || !b.closest("#shelf")) return; flip(() => { $("#dock").appendChild(b); tidy(); fitRows() }); added(b); layoutSave() }
+function shelve(b){ if (b.dataset.box === "main") return; flip(() => { $("#shelf").appendChild(b); b.style.flex = ""; tidy(); fitRows() }); layoutSave(); tbRender() }
+$("#tbList").addEventListener("click", e => { const it = e.target.closest("button") && e.target.closest(".tbItem"); if (it) addBox(it.dataset.mod) });
+$("#tbList").addEventListener("keydown", e => { const it = e.target.closest(".tbItem"); if (!it) return;
+  if (e.key === "Enter" || e.key === " "){ e.preventDefault(); const n = it.nextElementSibling || it.previousElementSibling; addBox(it.dataset.mod); (n && $(`#tbList [data-mod="${n.dataset.mod}"]`) || $("#tbClose")).focus() }
+  else if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); (e.key === "ArrowDown" ? it.nextElementSibling : it.previousElementSibling)?.focus() } });
+$("#tbBtn").onclick = () => tbOpen(); $("#tbClose").onclick = () => tbOpen(false);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !drag && !$("#toolbox").classList.contains("hidden") && $("#prefsPop").classList.contains("hidden")) tbOpen(false) });
+tbRender();
 

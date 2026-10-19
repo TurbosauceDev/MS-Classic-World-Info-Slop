@@ -69,6 +69,7 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-19 Tracker KPQ: saved runs must let rounds/Bonus/next round be read straight off the log (Danny); added kpq.timeline.
 - 2026-10-19 Tracker History: compare more than two runs at once and flesh out History; Danny left the extra features to Claude ("i trust you to come up with ideas"). Pushed + released on his "push" / "publish if permission needed".
 - 2026-10-19 Tracker layout: a "line up every box" button (crisp shared column edges, same top/bottom per row, even gaps); auto-snap after drags is on by default (Settings > Layout to turn off). Danny OK'd push + release ("push and publish when done").
+<<<<<<< Updated upstream
 
 ## Data sync (meso.watch → GitHub)
 
@@ -79,3 +80,6 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-19 Poller is on-demand ("refresh" in chat), not scheduled. No cron/systemd in Danny's CLI sandbox. If Danny wants persistence, he copies the scripts to his own box and runs them on cron.
 - 2026-10-19 Two endpoints tracked: `data/market.json` (~daily, full pricing snapshot) and `data/fresh/Classic%20World.json` (~15 min, live FM listings). Each only triggers a CSV rewrite when its own `generated_at` advances — they update on different cadences.
 - 2026-10-19 localStorage is the transport between agent-browser's JS eval and the bash script. Blob-URL downloads dropped silently on the second invocation (Chrome bug, see handoff doc).
+=======
+- 2026-10-19 Tracker: Session/Loot/History tabs and Compact view replaced by a pop-out Modules toolbox; drag modules in, × (or drag back) puts them away. Saved layouts migrate (nothing lost), History starts in the toolbox, Mini stays.
+>>>>>>> Stashed changes

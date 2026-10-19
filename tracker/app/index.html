@@ -45,7 +45,6 @@
      button, Danny 2026-10-18: "make it look and fit better") */
   .usedFoot { display:flex; align-items:center; gap:8px 14px; flex-wrap:wrap; margin-top:8px; } .usedFoot .note { flex:1; min-width:160px; }
   label.chk.freePots { margin:0; font-size:12px; color:var(--muted); align-items:center; white-space:nowrap; } label.chk.freePots input { margin:0; }
-  body.compact > .tabs, body.compact > section[data-tab] { display:none !important; } body.compact { min-height:0; }
   #dummyBar { display:flex; align-items:center; gap:10px; border:1px dashed var(--warn); background:color-mix(in srgb, var(--warn) 14%, var(--panel)); padding:6px 10px; }
   #dummyBar b { color:var(--warn); } #dummyBar span { flex:1; font-size:12px; color:var(--muted); } #dummyBar button { padding:3px 10px; font-size:12px; }
   /* section headers (box titles, Mini's list titles): a soft outline and drop shadow (Danny, 2026-10-18) */
@@ -72,13 +71,7 @@
   .tile { background:var(--bg); border-radius:8px; padding:6px 8px; } .tile .v { font-size:20px; line-height:1.2; }
   .tile.main .v { color:var(--accent); }
   #where { margin-top:6px; }
-  /* tabs */
-  .tabs { display:flex; gap:2px; margin:0 0 8px; border-bottom:1px solid var(--line); }
-  /* a window taller than its boxes: the spare room opens above the tabs, so the tabs and their boxes follow the bottom edge
-     (Danny, 2026-10-18: "i expected the empty space to grow in the middle, not the bottom") */
-  body { min-height:100vh; display:flex; flex-direction:column; } body > * { flex:none; } body > .tabs { margin-top:auto; }
-  .tabs button { background:none; color:var(--muted); border-radius:6px 6px 0 0; padding:7px 8px; flex:1; font-size:13px; border-bottom:2px solid transparent; }
-  .tabs button.sel { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+  body { min-height:100vh; display:flex; flex-direction:column; } body > * { flex:none; }
   .row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:6px 0; }
   label.chk { display:flex; gap:6px; align-items:flex-start; margin:5px 0; } label.chk input { margin-top:3px; }
   #selfcheck td:first-child { width:42%; }
@@ -156,7 +149,7 @@
   .boxrow.wrapped > :not(.split) { flex:1 1 auto !important; width:min-content; } .boxrow.wrapped > .box.folded { align-self:stretch; }
   .box:not(.folded) > h3 { padding-right:46px; }   /* the title never runs under the grip and fold buttons */
   html { scrollbar-gutter:stable; }   /* the page's scrollbar coming and going no longer shifts every box by 10 px */
-  body.measure { min-height:0; } body.measure > .tabs { margin-top:0; }   /* natural height, for "window fits the boxes" */
+  body.measure { min-height:0; }   /* natural height, for "window fits the boxes" */
   .sized:not(.folded) { height:var(--h); } .boxcol > .box.sized:not(.folded) { flex:0 0 var(--h); } .box.sized:not(.folded) { overflow:auto; }
   :is(#logBox, #eventBox).sized:not(.folded) { display:flex; flex-direction:column; } :is(#logBox, #eventBox).sized .feedlist { flex:1 1 0px; height:auto; min-height:3em; }
   #rzLayer { position:fixed; inset:0; pointer-events:none; z-index:40; } body:not(.rzKeys):not(.resizing) #rzLayer { display:none; }
@@ -171,7 +164,7 @@
   .sw .nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .thGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:4px 10px; margin:6px 0; }
   .thGrid label { display:flex; align-items:center; gap:6px; font-size:12px; } .thGrid input[type=color] { width:34px; height:24px; padding:0 2px; cursor:pointer; }
-  /* Settings popup (File → Settings; was "Preferences" on the title bar, Danny 2026-10-18): settings over the panel, Session/Loot/History stay the tabs (Danny, 2026-10-18) */
+  /* Settings popup (File → Settings; was "Preferences" on the title bar, Danny 2026-10-18): settings over the panel */
   #prefsBack { position:fixed; inset:32px 0 0; z-index:56; background:rgba(0,0,0,.35); }
   #prefsPop { position:fixed; top:40px; left:8px; right:8px; bottom:8px; z-index:57; overflow:auto; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 10px; box-shadow:0 8px 28px rgba(0,0,0,.35); }
   #prefsPop .pophead { display:flex; align-items:center; justify-content:space-between; position:sticky; top:-8px; background:var(--bg); padding:4px 0 6px; z-index:1; }
@@ -209,8 +202,22 @@
   body.through #titlebar { box-shadow:inset 0 -2px 0 var(--warn); } body.through #titlebar .tbname::after { content:" · click-through"; color:var(--warn); }
   button.keyset { min-width:118px; padding:4px 10px; font-size:12px; } button.keyset.bad { outline:2px solid var(--bad); }
   body.dragging #dock { min-height:40px; border:2px dashed var(--accent); border-radius:10px; margin-bottom:8px; padding:4px; }
-  body.dragging #dock:empty::before { content:"Drop here to pin it above the tabs (shows on every tab)"; color:var(--muted); font-size:12px; }
-  body.dragging .tabs button[data-tab=session], body.dragging .tabs button[data-tab=loot], body.dragging .tabs button[data-tab=hist] { outline:1px dashed var(--accent); }
+  body.dragging #dock:empty::before { content:"Drop a module here"; color:var(--muted); font-size:12px; }
+  /* Modules toolbox (Danny, 2026-10-19: modules picked by drag and drop from a pop-out toolbox instead of tabs) */
+  #toolbox { position:fixed; right:10px; top:42px; z-index:50; width:230px; max-height:calc(100vh - 54px); display:flex; flex-direction:column; background:var(--panel);
+    border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.35); padding:8px; animation:tbIn .15s ease-out; }
+  @keyframes tbIn { from { opacity:0; transform:translateY(-6px) scale(.98); } } @media (prefers-reduced-motion: reduce){ #toolbox { animation:none; } }
+  #toolbox.hidden { display:none; } #toolbox .tbHead { display:flex; align-items:center; gap:6px; margin-bottom:4px; } #toolbox .tbHead b { flex:1; font-size:13px; }
+  #toolbox .tbHead button { background:none; color:var(--muted); padding:2px 8px; } #toolbox .tbHint { font-size:11px; color:var(--muted); margin:0 2px 6px; }
+  #tbList { overflow-y:auto; display:flex; flex-direction:column; gap:4px; min-height:36px; border-radius:8px; padding:2px; }
+  .tbItem { display:flex; align-items:center; gap:6px; padding:6px 6px 6px 8px; border:1px solid var(--line); border-radius:8px; background:var(--bg); cursor:grab;
+    font-size:12px; user-select:none; touch-action:none; transition:background .12s, border-color .12s, transform .12s; }
+  .tbItem:hover, .tbItem:focus-visible { border-color:var(--accent); background:var(--accent-soft); outline:none; } .tbItem .g { color:var(--muted); } .tbItem span:nth-child(2) { flex:1; }
+  .tbItem button { padding:0 7px; font-size:14px; line-height:20px; } .tbItem.moving { opacity:.4; }
+  #tbEmpty { font-size:12px; color:var(--muted); text-align:center; padding:10px 4px; }
+  body.dragging #toolbox #tbList { outline:2px dashed var(--accent); outline-offset:-2px; } #toolbox.over-drop #tbList { background:var(--accent-soft); }
+  body.dragging #toolbox #tbList::after { content:"Drop here to put it away"; font-size:11px; color:var(--muted); text-align:center; padding:4px; }
+  .boxctl .shut { background:none; color:var(--muted); padding:0 6px; font-size:14px; line-height:18px; } .boxctl .shut:hover { color:var(--bad); }
   /* the run log: a short window of lines, newest at the bottom, older ones scroll up */
   #logBox h3, #eventBox h3 { margin-bottom:4px; } #feed:not(:empty) + #feedEmpty { display:none; }
   /* a chat-box look: a darker well with a little inset (Danny, 2026-10-18) */
@@ -257,7 +264,7 @@
 </style>
 </head>
 <body>
-  <div id="titlebar"><span class="tbname">Grind Tracker</span><button data-menu="File">File</button><button data-menu="View">View</button><button data-menu="Help">Help</button></div>
+  <div id="titlebar"><span class="tbname">Grind Tracker</span><button data-menu="File">File</button><button data-menu="View">View</button><button data-menu="Help">Help</button><button id="tbBtn" aria-expanded="false" title="Modules toolbox: drag modules into your layout (Ctrl+Shift+K)">▦ Modules</button></div>
   <div class="card" id="mini">
     <div class="mhead"><span id="miniState"></span><button id="miniFull" class="alt" title="Back to the full window">Full view</button></div>
     <div class="mgrid">
@@ -308,24 +315,7 @@
     <div class="note" id="where"></div>
   </div>
     <div class="card" id="logBox" data-box="log" data-title="Run log"><h3>Run log</h3><div id="feed" class="feedlist" role="log" aria-label="Run log" tabindex="0"></div>
-    <div class="empty" id="feedEmpty">EXP, mesos and loot show up here every 2 seconds once you press Start.</div></div></div>
-  <div class="card hidden" id="wrap"><h3>Wrapping up</h3>
-    <div class="step">1. Show your inventory</div>
-    <div class="note">The timer is stopped. Open your inventory on each tab for a second so the end count is right; a tab turns green once
-      it was read after you pressed Stop. Click a tab to read it now.</div>
-    <div class="row" id="wrapTabs"></div><div class="note" id="wrapNote"></div>
-    <div class="step">2. Name and note (optional)</div>
-    <input id="wrapName" maxlength="60" aria-label="Run name" placeholder="Run name, e.g. KPQ run 1" style="width:100%">
-    <textarea id="runNote" maxlength="1000" rows="3" aria-label="Note about this run" placeholder="A note for later: party, channel, buffs, what went well or wrong..."></textarea>
-    <div class="row"><button id="wrapEnd" title="Saves the run to History and shows the summary">Finalize log</button></div></div>
-  <div class="card hidden" id="summary"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Run summary</h3><button id="sumImg" class="alt" title="Saves a picture of this summary and copies it, ready to paste">Save as image</button> <button id="sumClose" class="alt">Close</button></div>
-    <div id="sumBody"></div></div>
-  <div class="card hidden" id="selfcheck"></div>
-
-  <div class="tabs" role="tablist">
-    <button data-tab="session" class="sel">Session</button><button data-tab="loot">Loot</button><button data-tab="hist" id="histBtn">History</button>
-  </div>
-  <section data-tab="session">
+    <div class="empty" id="feedEmpty">EXP, mesos and loot show up here every 2 seconds once you press Start.</div></div>
     <div class="card" id="eventBox" data-box="events" data-title="Event log"><h3>Event log</h3><div id="events" class="feedlist" role="log" aria-label="Event log" tabindex="0"></div></div>
     <div class="card" data-box="stats" data-title="Session numbers"><h3>Session numbers</h3><div class="grid">
       <div><div class="k">EXP gained</div><div class="v" id="expTotal">-</div><div class="note" id="expPerMin"></div></div>
@@ -335,14 +325,11 @@
       <div><div class="k">Loot value/hr</div><div class="v" id="lootHr">-</div><div class="note">drops at player-shop or NPC price</div></div>
       <div><div class="k" id="goalK">Goal</div><div class="v" id="goalV">-</div><div class="note" id="goalAt"></div></div>
     </div></div>
-    <div class="card hidden" id="respawn"></div>
-    <div class="card hidden" id="partyBox"></div>
     <div class="card" data-box="mobs" data-title="Monsters killed"><h3>Monsters killed</h3><table id="mobs"></table><div class="empty" id="mobsEmpty">No kills yet.</div></div>
     <div class="card folded" id="kpqBox" data-box="kpq" data-title="KPQ"><h3>KPQ</h3>
       <div class="row"><label>Doing <select id="kpqAct"><option value="auto">Auto (spots KPQ)</option><option value="grind">Grinding</option><option value="kpq">KPQ</option></select></label>
         <label>Mode <select id="kpqMode"><option>Bonus</option><option>Rush</option></select></label></div>
       <div class="note" id="kpqNote">During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.</div></div>
-    <div class="card hidden" id="lastRun"></div>
     <div class="card folded" id="alertsBox" data-box="alerts" data-title="Alerts and goal"><h3>Alerts and goal</h3>
       <div class="row"><span>Goal:</span> <button id="goalNext" class="alt" aria-pressed="true" title="Always the level after the one you're on">Next level</button> <label>or level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="-"></label> <button id="goalOff" class="alt" aria-pressed="false">Off</button></div>
       <div class="row"><label>Beep for drops worth <input type="number" id="alert" min="0" step="1000"> mesos or more</label> <span class="note">0 = off</span></div>
@@ -358,8 +345,6 @@
       </table>
       <div class="v" id="snapRate" style="margin-top:6px">-</div><div class="note" id="snapNote"></div>
   </div>
-  </section>
-  <section data-tab="loot" class="hidden">
     <div class="card" id="invBox" data-box="invcheck" data-title="Inventory check"><h3>Inventory check</h3>
       <div class="note">Open your inventory on <b>Equip</b>, <b>Use</b> and <b>Etc</b> for a second each, after Start and again before Stop.
         The difference is your real loot, even when a pickup line was missed. Click a tab below to read it now. If your inventory isn't found, you drag a box around it once.</div>
@@ -372,8 +357,25 @@
       <div class="empty" id="usedEmpty">Nothing used yet. Counts come from your quick slots or the Use tab.</div>
       <div class="usedFoot"><span class="note">Potions, food and arrows, at the cheapest NPC shop price.</span>
         <label class="chk freePots" title="Red, Orange, White and Blue Potions dropped by monsters or given by quests cost nothing here, so only what you buy (meat, lemons, Elixirs) is a cost"><input type="checkbox" id="meatOnly"> <span>Dropped potions are free</span></label></div></div>
-  </section>
-  <section data-tab="hist" class="hidden">
+  </div>
+  <!-- status cards (not modules): they show under the layout when they have something -->
+  <div class="card hidden" id="respawn"></div>
+  <div class="card hidden" id="partyBox"></div>
+  <div class="card hidden" id="lastRun"></div>
+  <div class="card hidden" id="wrap"><h3>Wrapping up</h3>
+    <div class="step">1. Show your inventory</div>
+    <div class="note">The timer is stopped. Open your inventory on each tab for a second so the end count is right; a tab turns green once
+      it was read after you pressed Stop. Click a tab to read it now.</div>
+    <div class="row" id="wrapTabs"></div><div class="note" id="wrapNote"></div>
+    <div class="step">2. Name and note (optional)</div>
+    <input id="wrapName" maxlength="60" aria-label="Run name" placeholder="Run name, e.g. KPQ run 1" style="width:100%">
+    <textarea id="runNote" maxlength="1000" rows="3" aria-label="Note about this run" placeholder="A note for later: party, channel, buffs, what went well or wrong..."></textarea>
+    <div class="row"><button id="wrapEnd" title="Saves the run to History and shows the summary">Finalize log</button></div></div>
+  <div class="card hidden" id="summary"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Run summary</h3><button id="sumImg" class="alt" title="Saves a picture of this summary and copies it, ready to paste">Save as image</button> <button id="sumClose" class="alt">Close</button></div>
+    <div id="sumBody"></div></div>
+  <div class="card hidden" id="selfcheck"></div>
+  <!-- modules not in the layout: the Modules toolbox lists them (renderer-layout.js) -->
+  <div id="shelf" hidden>
     <div class="card" id="hist" data-box="hist" data-title="Past sessions"><div class="row" style="margin-top:0;padding-right:48px"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div>
       <details id="mapsBox" open hidden><summary>Maps</summary><div id="maps"></div></details>
       <div class="row histBar" id="histBar" hidden><input id="histQ" type="search" aria-label="Search sessions" placeholder="Search name, map, note, monster" style="flex:1;min-width:140px">
@@ -382,7 +384,10 @@
         <select id="histSort" aria-label="Sort"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="expHr">Most EXP/hr</option><option value="mesosHr">Most mesos/hr</option><option value="netHr">Most net/hr</option><option value="min">Longest</option></select>
         <button class="alt" id="cmpShown" hidden title="Tick the first sessions in the list below for Compare">Compare the top 6</button></div>
       <div class="note" id="histCount"></div><div id="trend"></div><div id="cmp"></div><table id="histRows"></table><div id="histMore" class="row"></div></div>
-  </section>
+  </div>
+  <div id="toolbox" class="hidden" role="dialog" aria-label="Modules toolbox"><div class="tbHead"><b>Modules</b><button id="tbClose" aria-label="Close the toolbox">✕</button></div>
+    <div class="tbHint">Drag a module into your layout, or press + to add it at the bottom. Press × on a box (or drag it here) to put it away.</div>
+    <div id="tbList" role="list"></div></div>
   <section data-tab="help" class="hidden">
     <div class="card" id="help"><div class="row"><h3 style="flex:1;margin:0">Help</h3><button id="helpClose" class="alt">Close</button></div>
       <details open><summary>Getting started</summary><ul>
@@ -404,10 +409,10 @@
         <li><b>Loot value/hr</b>: drops at player-shop prices (meso.watch), or the NPC price when there's none.</li>
         <li><b>Deaths</b>: the EXP bar dropping without a level-up, checked against the "You have lost ... EXP" chat line.</li>
       </ul></details>
-      <details><summary>The tabs</summary><ul>
-        <li><b>Session</b>: farming time, deaths, potion costs, your goal, party, boss respawns and monsters killed.</li>
-        <li><b>Loot</b>: mesos in and out, items looted and consumables used, each with a total.</li>
-        <li>Every box can be moved by its <b>⠿</b> grip (onto another box, onto a tab, or above the tabs to see it on every tab)
+      <details><summary>Modules and layout</summary><ul>
+        <li><b>▦ Modules</b> on the title bar (or View → Modules toolbox, Ctrl+Shift+K) opens the toolbox: drag a module from it into
+          your layout, or press <b>+</b> to add it at the bottom. Press <b>×</b> on a box, or drag it back onto the toolbox, to put it away.</li>
+        <li>Every box can be moved by its <b>⠿</b> grip (onto another box)
           and folded with <b>–</b>. Drop it on the left or right third of another box to put the two side by side (the dashed
           preview shows where it lands). Hold <b>Shift</b> (or <b>Alt</b>) to show the resize bars: drag the one between two
           boxes to share the width, or the one under a box to make it taller or shorter. Double-click a bar to undo it. With a
@@ -437,11 +442,11 @@
         <li>Loot = what's in Etc (plus equips and scrolls) now minus at the first look, or the pickup lines, whichever is more.
           That covers lines that didn't read; the lines cover loot you sold in between.</li>
         <li>Only the slots you can see are read: scroll to the top of a tab.</li>
-        <li>After Start the Inventory check box (Loot tab) asks for all 3 tabs until each was read; click a tab there to read it now. After Stop, each tab turns green once it was
+        <li>After Start the Inventory check box asks for all 3 tabs until each was read; click a tab there to read it now. After Stop, each tab turns green once it was
           read again; the run summary shows each item before and after.</li>
       </ul></details>
       <details><summary>KPQ runs</summary><ul>
-        <li>On <b>Auto</b>, KPQ turns on by itself once a KPQ stage shows on the minimap. Pick <b>KPQ</b> in the Session tab to
+        <li>On <b>Auto</b>, KPQ turns on by itself once a KPQ stage shows on the minimap. Pick <b>KPQ</b> in the KPQ box to
           also skip the wait in Kerning City before the first round.</li>
         <li>During KPQ the session pauses on any map that isn't a KPQ stage (Kerning City between rounds) and picks back up
           on the next stage. Each trip into the stages is one round.</li>
@@ -455,7 +460,7 @@
         <li><b>Pause</b> (next to Start while tracking) stops the clock for a break; nothing picked up counts until you press <b>Go on</b>.</li>
       </ul></details>
       <details><summary>Shortcuts and themes</summary><ul>
-        <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, Ctrl+Shift+S Start/Stop, P Pause, M Mini bar, K Compact view (hides the tabs; also in View), H hide/show, I read the open inventory tab, B report a bug,
+        <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, Ctrl+Shift+S Start/Stop, P Pause, M Mini bar, K Modules toolbox (also in View), H hide/show, I read the open inventory tab, B report a bug,
           X click-through (clicks go to the game under the window; the same keys turn it off), N mark the moment in the run note, G save the numbers as a picture, U mute sounds. Change or turn them off in Settings → Shortcuts and window.</li>
         <li>Settings → Theme: pick a colourway, or <b>Edit colours</b> and save your own. <b>Copy share code</b> gives a one-line code friends paste under Share a theme; <b>Save as file</b> makes a .mstheme file.</li>
         <li>Settings → Shortcuts and window → See-through window makes the tracker partly transparent over the game.</li>
@@ -499,10 +504,10 @@
     </div>
     <div class="card" data-nav="Layout"><h3>Layout</h3>
       <label class="chk"><input type="checkbox" id="fitBoxes"> <span>Fit boxes to their content: boxes side by side never cut off their numbers, and stack under each other when the window gets too narrow for them</span></label>
-      <label class="chk"><input type="checkbox" id="fitWin"> <span>Window height follows the boxes: it grows and shrinks as boxes fold, lists fill up or you change tabs</span></label>
-      <label class="chk"><input type="checkbox" id="snapBoxes"> <span>Keep box edges lined up: after you move or resize a box, or change tabs, edges that nearly line up snap into line</span></label>
+      <label class="chk"><input type="checkbox" id="fitWin"> <span>Window height follows the boxes: it grows and shrinks as boxes fold, lists fill up or you add and remove modules</span></label>
+      <label class="chk"><input type="checkbox" id="snapBoxes"> <span>Keep box edges lined up: after you move or resize a box, edges that nearly line up snap into line</span></label>
       <div class="row"><button id="layoutAlign" class="alt">Line up every box now (Ctrl+Shift+L)</button> <button id="layoutFit" class="alt">Fit every box now</button> <button id="layoutReset" class="alt">Reset box layout</button></div>
-      <div class="note">Boxes move by their ⠿ grip: onto the left or right of another box for side by side, onto a tab, or the strip above the tabs. Hold Shift (or Alt) to resize them; double-click a bar, or a box's title, to fit it again. "Fit every box now" undoes the widths and heights you set but keeps where the boxes are. "Line up every box now" snaps the edges of boxes side by side into shared columns, gives every box in a row the same top and bottom, and keeps the gaps even.</div>
+      <div class="note">Boxes move by their ⠿ grip: onto the left or right of another box for side by side, or above or below it. The ▦ Modules toolbox adds and puts away boxes. Hold Shift (or Alt) to resize them; double-click a bar, or a box's title, to fit it again. "Fit every box now" undoes the widths and heights you set but keeps where the boxes are. "Line up every box now" snaps the edges of boxes side by side into shared columns, gives every box in a row the same top and bottom, and keeps the gaps even.</div>
     </div>
     <div class="card" id="themeCard" data-nav="Theme"><h3>Theme</h3>
       <div class="sw" id="themeSw" role="radiogroup" aria-label="Theme"></div>

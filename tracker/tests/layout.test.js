@@ -15,7 +15,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   await page.click("#guideShare");
   await page.evaluate(() => { window.menu("dummy");
     // Danny's docked layout (his 10-18 screenshot): main card; Session numbers beside run log over Monsters; three Loot boxes in a row
-    layoutLoad({order: {dock: ["main", {row: ["stats", ["log", "mobs"]], w: [1, 1]}, {row: ["items", "mesos", "used"], w: [1, 1, 1]}]}, folded: [], h: {}});
+    layoutLoad({v: 2, order: {dock: ["main", {row: ["stats", ["log", "mobs"]], w: [1, 1]}, {row: ["items", "mesos", "used"], w: [1, 1, 1]}]}, folded: [], h: {}});
     document.querySelectorAll(".box.folded .fold").forEach(b => b.click()) });
   await page.waitForTimeout(200);
   // everything that went wrong while the edge moved, measured in one go
@@ -87,10 +87,10 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   if (await page.evaluate(() => $("#mesoBox").classList.contains("sized"))) fail("double-click title fits the box", 0);
   // Window height follows the boxes (Settings > Layout): the window is asked for the content's height, and a fold shrinks it
   const fw = await page.evaluate(async () => { const asked = []; host.mini = async (on, h) => (asked.push(on ? h : 0), true); const w = () => new Promise(r => setTimeout(r, 80));
-    $("#fitWin").click(); await w(); const a = asked.at(-1), natural = Math.ceil($(".tabs").getBoundingClientRect().bottom - document.querySelector(".tabs").getBoundingClientRect().top);
+    $("#fitWin").click(); await w(); const a = asked.at(-1);
     document.querySelector("#top .fold").click(); await w(); const b = asked.at(-1);
     document.querySelector("#top .fold").click(); await w();
-    $("#fitWin").click(); await w(); return [a, b, asked.at(-1), settings.fitWin, natural] });
+    $("#fitWin").click(); await w(); return [a, b, asked.at(-1), settings.fitWin] });
   if (!(fw[0] > 600) || !(fw[1] < fw[0] - 100) || fw[2] !== 0 || fw[3] !== false) fail("window follows the boxes", fw);
   // a drop glides into place (unless the system asks for less motion)
   await page.emulateMedia({reducedMotion: "no-preference"});
@@ -107,14 +107,14 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     if (z < z0 - 0.001 || bottom > h + 1) fail("mini zoom at " + h, {z, z0, bottom}); z0 = z }
   if (!(zs.at(-1) > zs[0]) || zs.some((z, i) => i && z - zs[i - 1] > 0.12)) fail("mini zoom steps", zs);
   // Line up every box (Danny, 2026-10-19, his screenshot): Session numbers / Event log / Run log pinned, Consumables / Mesos /
-  // Items looted on the Loot tab under them, the edges between the boxes off by up to 50 px, and a box with its own height
+  // Items looted under them, the edges between the boxes off by up to 50 px, and a box with its own height
   await page.evaluate(() => $("#miniFull").click()); await vp(900, 820);
   const edges = () => page.evaluate(() => { const R = id => document.querySelector(`[data-box=${id}]`).getBoundingClientRect();
     const a = ["stats", "events", "log"].map(R), b = ["used", "mesos", "items"].map(R), r = x => Math.round(x * 10) / 10;
     return {cols: [0, 1, 2].map(i => [r(a[i].left - b[i].left), r(a[i].right - b[i].right)]).flat(), tops: b.map(x => r(x.top - b[0].top)), bottoms: a.map(x => r(x.bottom - a[0].bottom)),
       gaps: [a[1].left - a[0].right, a[2].left - a[1].right, b[1].left - b[0].right, b[2].left - b[1].right].map(r), wrapped: document.querySelectorAll(".boxrow.wrapped").length} });
-  await page.evaluate(() => { showTab("loot");
-    layoutLoad({order: {dock: ["main", {row: ["stats", "events", "log"], w: [218, 205, 207]}], loot: [{row: ["used", "mesos", "items"], w: [250, 168, 200]}, "invcheck"]}, folded: [], h: {events: 260}}) });
+  await page.evaluate(() => {
+    layoutLoad({v: 2, order: {dock: ["main", {row: ["stats", "events", "log"], w: [218, 205, 207]}, {row: ["used", "mesos", "items"], w: [250, 168, 200]}, "invcheck"]}, folded: [], h: {events: 260}}) });
   await page.waitForTimeout(50);
   const before = await edges();
   if (before.cols.every(x => Math.abs(x) < 1) || before.bottoms.every(x => Math.abs(x) < 1)) fail("misaligned to start with", before);
@@ -126,9 +126,9 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   // the edges hold as the window narrows (while the rows still fit side by side)
   await vp(780, 820); const nar = await edges();
   if (!nar.wrapped && nar.cols.some(x => Math.abs(x) > 1)) fail("lined up at 780 px", nar);
-  await vp(1300, 1300);   // (wide and tall: the Loot row in view; wide: every box has room past its content, whatever fonts the machine has)
+  await vp(1300, 1300);   // (wide and tall: the second row in view; wide: every box has room past its content, whatever fonts the machine has)
   // Keep box edges lined up (on by default): a width bar let go near another row's edge snaps onto it; far from one, it stays
-  const bar2 = async dx => { await page.keyboard.down("Shift"); const l = page.locator("section[data-tab=loot] .boxrow .split >> nth=0"); await l.scrollIntoViewIfNeeded(); const s = await l.boundingBox();
+  const bar2 = async dx => { await page.keyboard.down("Shift"); const l = page.locator("[data-box=used] + .split"); await l.scrollIntoViewIfNeeded(); const s = await l.boundingBox();
     await page.mouse.move(s.x + 4, s.y + 20); await page.mouse.down(); await page.mouse.move(s.x + 4 + dx, s.y + 20, {steps: 4}); await page.mouse.up(); await page.keyboard.up("Shift"); return edges() };
   const near = await bar2(14);
   if (Math.abs(near.cols[1]) > 1) fail("bar snaps to the edge above", near);

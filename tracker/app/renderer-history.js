@@ -16,7 +16,6 @@ $("#alertItems").onchange = e => host.settings({alertItems: e.target.value.slice
 $("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.value || 0)}).then(s => settings = s);
 $("#miniBtn").onclick = () => { document.body.classList.add("mini"); miniH = 0; if (session) renderMini(session.stats()); else miniFit(true) };
 $("#miniFull").onclick = () => { document.body.classList.remove("mini"); if (fitsWindow()) requestAnimationFrame(() => compactFit(true)); else host.mini(false) };
-$("#histBtn").onclick = () => { showTab("hist"); loadHist() };
 // History (the maths is core/history.js): search and filters, Maps, personal bests, an EXP/hr trend for one map, rows with
 // details (monsters, loot, used, level-ups) and rename/note editing, and compare for up to 6 runs against a baseline
 const H = GrindHistory, hctx = {bestDrop: x => bestDrop(x)};

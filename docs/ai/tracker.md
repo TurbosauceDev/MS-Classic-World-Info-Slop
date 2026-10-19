@@ -71,18 +71,22 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   mesos. The tracker's Bonus/Rush pick is stored (mode) but no longer picks the board. Names: kpq_names table (schema.sql
   re-runs every deploy, so new columns go in side tables); tracker sends Name (Party card) else the OCR'd charName.
 - Settings is no longer a tab: it's a popup (#prefsPop, openPrefs/closePrefs; ids kept from "Preferences") opened from the
-  native File menu → Settings (Ctrl+,, main.js sends menu "settings"); no title-bar button. Panel tabs: Session, Loot,
-  History. Tests open it with `window.menu("settings")` and must close it (it covers the page). Its section chips
+  native File menu → Settings (Ctrl+,, main.js sends menu "settings"); no title-bar button. Tests open it with `window.menu("settings")` and must close it (it covers the page). Its section chips
   (#prefsNav) come from `data-nav` on each card: a new section needs that attribute. label.chk checkboxes are switches.
+- Modules (0.2.58, Danny 10-19): no panel tabs or Compact. Every box lives in #dock (one layout); put-away boxes sit in hidden
+  #shelf and show as .tbItem cards (data-mod, not data-box: dropTarget's closest() would hit them) in #toolbox (tbOpen/tbRender/
+  addBox/shelve, renderer-layout.js; ▦ #tbBtn, View menu + key `toolbox` Ctrl+Shift+K). Save = {v: 2, order: {dock}}; a box not
+  listed is put away. v1 saves load dock+session+loot in order, unlisted after, History put away. Main card has no ×.
+  #respawn/#partyBox/#lastRun are status cards, not modules: they sit under #dock. showTab only shows/hides Help now.
+  Tests: wait ~220 ms after a layout change before measuring a drag target (FLIP glide moves boxes).
 - Mini (#mini, renderMini): its own copies of numbers, run log (#miniFeed, mirrored in feedAdd) and top-5 lists; host.mini(on, h)
   sizes the window's content height to the view (miniFit). #miniFull goes back; the card itself isn't clickable any more.
-- Compact (body.compact, settings.compact, key `compact` Ctrl+Shift+K): hides .tabs + sections; compactFit sizes the window
-  via host.mini(true, h) like Mini (miniFit falls through to it). Adding a shortcut: KEYS (main.js), KEY_NAMES, and the
-  ui test's shortcut row count.
+- Compact view retired 0.2.58; compactFit stays as the "window height follows the boxes" sizer (fitWin). Adding a shortcut:
+  KEYS (main.js), KEY_NAMES, and the ui test's shortcut row count.
 - Dummy data: app/renderer-dummy.js (View menu "dummy" → dummyToggle via renderer-settings.js onMenu). It sets `session`
   with the timer off, so nothing reaches History or the slicer; Clear or the menu again wipes it in place. Use it for layout screenshots.
 - Rows stretch (`.boxrow` align-items:stretch); column boxes flex:1; #logBox's #feed flexes in a row/column.
-- body is a flex column with `.tabs { margin-top:auto }`: spare height opens above the tabs (Danny). Body children are
+- body is a flex column (the tabs that took the spare height are gone, 0.2.58). Body children are
   flex:none; don't give one flex-grow.
 - The main card (#top, box id `main`) lives in #dock with the run log, so it moves/docks/folds like any box (folded keeps
   its Start bar). #wrap/#summary/#selfcheck sit after #dock.
@@ -93,7 +97,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Run log (core/feed.js, box `log` pinned in #dock by default): diffs session.state every 2 s (feed.step), so it shows
   what the session counted, not raw events. Box ids saved in a user's layout.order win; an unsaved new box stays at home.
   The dock now holds a box, so drag tests that drop "onto the dock" land relative to #logBox.
-- Event log (box `events`, #events, home = top of the Session tab): feedAdd routes feed kinds map/level/death/party/job
+- Event log (box `events`, #events, home = under the run log): feedAdd routes feed kinds map/level/death/party/job
   (EV_KINDS) there, sep lines to both logs. A MutationObserver on #status logs every status write (eventStatus): no need to
   call anything new, just keep writing #status. `note(text, kind)` adds a line without touching the status. Traps: a write
   that only changes digits within 15 s updates the last line; `statusKind = "level"` before a level write; oneFrame's restore

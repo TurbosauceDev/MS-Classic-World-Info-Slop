@@ -12,9 +12,11 @@ const path = require("path"), {chromium} = require("playwright");
   if (!await page.isVisible("#guide")) throw new Error("guide not shown");
   await page.click("#guideShare");
   if (await page.isVisible("#guide") || !await page.isChecked("#share")) throw new Error("guide answer");
-  // default Session layout (Danny, 2026-10-18): numbers, monsters, then KPQ / Alerts and goal / Start and end folded
-  const lay0 = await page.evaluate(() => [...document.querySelectorAll('section[data-tab=session] > [data-box]')].map(b => b.dataset.box + (b.classList.contains("folded") ? "-" : "")).join());
-  if (lay0 !== "events,stats,mobs,kpq-,alerts-,snaps-") throw new Error("default layout: " + lay0);
+  // default layout: the old Session tab (numbers, monsters, then KPQ / Alerts and goal / Start and end folded) then the old Loot
+  // tab, all in one layout; History waits in the Modules toolbox (Danny, 2026-10-19: modules instead of tabs)
+  const lay0 = await page.evaluate(() => [[...document.querySelectorAll('#dock > [data-box]')].map(b => b.dataset.box + (b.classList.contains("folded") ? "-" : "")).join(),
+    [...document.querySelectorAll("#tbList .tbItem")].map(x => x.dataset.mod).join(), !!document.querySelector(".tabs, section[data-tab=session]")]);
+  if (lay0.join("|") !== "main,log,events,stats,mobs,kpq-,alerts-,snaps-,invcheck,mesos,items,used|hist|false") throw new Error("default layout: " + lay0);
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click()));
   // Dummy data (View menu): every box filled, marked, nothing saved or shared; Start wipes it and tracks for real
   await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(100);
@@ -58,7 +60,6 @@ const path = require("path"), {chromium} = require("playwright");
   const up = await page.evaluate(() => [document.querySelector("#appVer").textContent, document.querySelector("#updNote").textContent, document.querySelector("#updText").textContent]);
   if (up[0] !== "0.2.17" || !/0\.2\.18 is ready/.test(up[1]) || !await page.isVisible("#updBanner") || !await page.isVisible("#updInstall")) throw new Error("update: " + up);
   await page.click("#prefsClose");
-  await page.click(".tabs [data-tab=session]");
   // the top card: tracking state and Stop; tabs switch sections
   const top = await page.evaluate(() => [document.querySelector("#stateText").textContent, document.querySelector("#go").textContent, document.querySelector("#go").classList.contains("on")]);
   if (!/^Tracking/.test(top[0]) || top[1] !== "Stop" || !top[2]) throw new Error("top card: " + top);
@@ -68,15 +69,15 @@ const path = require("path"), {chromium} = require("playwright");
   await page.click("#pauseBtn"); await page.waitForTimeout(100);
   const ps2 = await page.evaluate(() => [document.querySelector("#pauseBtn").textContent, session.state.pausedAt === null]);
   if (ps.join() !== "Paused by you,Go on,true" || ps2.join() !== "Pause,true") throw new Error("pause: " + JSON.stringify({ps, ps2}));
-  await page.click(".tabs [data-tab=loot]");
-  if (!await page.isVisible("#priceNote, #itemsEmpty") || await page.isVisible("#mobsEmpty") || !await page.isVisible("#itemsEmpty")) throw new Error("loot tab");
-  // Help: the ? button opens it, Close goes back to Loot; F1 opens it too
+  
+  if (!await page.isVisible("#mobsEmpty") || !await page.isVisible("#itemsEmpty")) throw new Error("session and loot boxes in one layout");
+  // Help: the ? button opens it under the layout, Close hides it; F1 opens it too
   await page.click("#helpBtn");
-  if (!await page.isVisible("#help") || !/Getting started/.test(await page.textContent("#help")) || await page.isVisible("#itemsEmpty")) throw new Error("help open");
+  if (!await page.isVisible("#help") || !/Getting started/.test(await page.textContent("#help")) ) throw new Error("help open");
   await page.click("#helpClose");
   if (await page.isVisible("#help") || !await page.isVisible("#itemsEmpty")) throw new Error("help close");
   await page.keyboard.press("F1"); if (!await page.isVisible("#help")) throw new Error("F1 help");
-  await page.click(".tabs [data-tab=session]");
+  await page.click("#helpClose");
   const eng = await page.evaluate(() => [engine.kind, LOG.filter(l => l.kind === "event").length, LOG.filter(l => l.kind === "engine").map(l => l.kind + ":" + (l.why || "")).join()]);
   if (eng[0] !== (process.env.INLINE ? "window" : "worker")) throw new Error("reader engine: " + eng);
   const party = await page.textContent("#partyBox");
@@ -87,7 +88,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.waitForTimeout(800);
   const mobs = await page.textContent("#mobs"), items = await page.textContent("#items");
   // a goal level and a death from the EXP bar; EXP silent for 2+ minutes -> warning
-  await page.click(".tabs [data-tab=session]"); await page.fill("#goal", "23"); await page.dispatchEvent("#goal", "change");
+  await page.fill("#goal", "23"); await page.dispatchEvent("#goal", "change");
   const gl = await page.evaluate(() => { const t = Date.now() - 200e3; session.add({t, type: "bar", exp: 5000, pct: 5000 / GAMEDATA.exp[22] * 100, level: 22});
     session.add({t: t + 10e3, type: "bar", exp: 6000, pct: 6000 / GAMEDATA.exp[22] * 100, level: 22}); session.add({t: t + 20e3, type: "bar", exp: 5500, pct: 5500 / GAMEDATA.exp[22] * 100, level: 22});
     session.state.lastExpT = Date.now() - 130e3;   // last EXP over 2 minutes ago
@@ -170,25 +171,43 @@ const path = require("path"), {chromium} = require("playwright");
   if (!/✓✓ Etc/.test(iv.chips) || !/from the inventory/.test(iv.items) || !/Total/.test(iv.items) || /not read yet/.test(iv.items) || !/Finalize log/.test(iv.asked[0]) || !/show the Equip, Use tabs/.test(iv.ask) || !iv.asked2
     || !iv.asked[1] || !iv.asked[2] || iv.asked[3] !== "Resume" || iv.asked[4] !== 0 || !iv.asked[5] || iv.after[0] !== 3 || !/Finalize log/.test(iv.after[1])
     || iv.back[0] !== null || iv.back[1] !== "Stop" || !iv.back[2] || iv.back[3] !== null || !/Picked up\s*\+12/.test(iv.mesos)) throw new Error("inventory: " + JSON.stringify(iv));
-  // boxes: a saved layout puts the Mesos box in the pinned strip and folds Monsters; Reset puts them back
+  // boxes: an old (per-tab) save loads into the one layout: its dock list first, then Session's, then Loot's; Reset puts them back
   const lay = await page.evaluate(async () => { layoutLoad({order: {dock: ["mesos"]}, folded: ["mobs"]});
     const moved = [document.querySelector("#mesoBox").parentElement.id, document.querySelector("[data-box=mobs]").classList.contains("folded")];
     document.querySelector("#layoutReset").click(); await new Promise(r => setTimeout(r, 50));
-    return [...moved, document.querySelector("#mesoBox").parentElement.dataset.tab, document.querySelector("[data-box=mobs]").classList.contains("folded"), JSON.stringify(settings.layout.order.dock)] });
-  if (lay[0] !== "dock" || !lay[1] || lay[2] !== "loot" || lay[3] || lay[4] !== '["main","log"]') throw new Error("box layout: " + lay);
-  // dragged with the mouse: the Mesos box by its title onto the Session tab (moves there and opens it), then the Monsters
-  // box by its grip onto the top half of the Start and end box (goes above it)
-  // (the target is measured once the drag has started: the pin strip opening above the tabs moves things down)
+    return [...moved, document.querySelector("#mesoBox").previousElementSibling.id, document.querySelector("[data-box=mobs]").classList.contains("folded"), JSON.stringify(settings.layout.order.dock), settings.layout.v] });
+  if (lay[0] !== "dock" || !lay[1] || lay[2] !== "invBox" || lay[3] || lay[4] !== '["main","log","events","stats","mobs","kpq","alerts","snaps","invcheck","mesos","items","used"]' || lay[5] !== 2) throw new Error("box layout: " + lay);
+  { const old = await page.evaluate(() => { layoutLoad({order: {dock: ["main", "log"], session: ["stats", {row: ["mobs", "events"], w: [1, 1]}], loot: ["items"], hist: ["hist"]}});
+      const r = [JSON.stringify([...document.querySelectorAll("#dock > *")].slice(0, 6).map(e => e.dataset.box || [...e.children].map(x => x.dataset.box).join("+"))), !!document.querySelector("#hist").closest("#shelf")];
+      document.querySelector("#layoutReset").click(); return r });
+    if (old[0] !== '["main","log","stats","mobs++events","items","kpq"]' || !old[1]) throw new Error("old layout migrated: " + old) }
+  // Modules toolbox (Danny, 2026-10-19): History dragged from it onto the bottom of the run log lands under it; × puts it
+  // back; a box dragged onto the toolbox is put away, + adds it at the bottom. Then Monsters by its grip onto the top half of
+  // Start and end (goes above it). (The target is measured once the drag has started: the layout grows a drop border.)
   const dragTo = async (from, to, dy = 0) => { const a = await page.locator(from).boundingBox();
     await page.mouse.move(a.x + 10, a.y + a.height / 2); await page.mouse.down(); await page.mouse.move(a.x + 30, a.y + 20, {steps: 3});
     const b = await page.locator(to).boundingBox();
     await page.mouse.move(b.x + b.width / 2, b.y + (dy || b.height / 2), {steps: 5}); await page.mouse.up(); await page.waitForTimeout(50) };
-  await page.setViewportSize({width: 600, height: 2400}); await page.click(".tabs [data-tab=loot]");
-  await dragTo("#mesoBox h3", ".tabs [data-tab=session]");
+  await page.setViewportSize({width: 600, height: 2400}); 
+  await page.click("#tbBtn"); if (!await page.isVisible("#toolbox") || await page.textContent("#tbList") !== "⠿Past sessions+") throw new Error("toolbox open: " + await page.textContent("#tbList"));
+  { const a = await page.locator("#tbList .tbItem").boundingBox(); await page.mouse.move(a.x + 20, a.y + a.height / 2); await page.mouse.down(); await page.mouse.move(a.x - 20, a.y + 30, {steps: 3});
+    const b = await page.locator("#logBox").boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height - 4, {steps: 5});
+    const g = await page.evaluate(() => [document.querySelector(".dragLabel")?.textContent, document.querySelector(".dropGhost").textContent]);
+    await page.mouse.up(); await page.waitForTimeout(50);
+    const t = await page.evaluate(() => [document.querySelector("#logBox").nextElementSibling?.id, document.querySelector("#tbList").textContent, JSON.stringify(settings.layout.order.dock), !!document.querySelector(".moving, .dragLabel"), document.querySelector("#histRows").children.length]);
+    if (!/Past sessions/.test(g[0]) || !/Below/.test(g[1]) || t[0] !== "hist" || !/Every module is in your layout/.test(t[1]) || !t[2].startsWith('["main","log","hist","events"') || t[3] || !t[4]) throw new Error("toolbox drag in: " + JSON.stringify([g, t])) }
+  await page.click("#hist .shut");
+  { const t = await page.evaluate(() => [!!document.querySelector("#hist").closest("#shelf"), document.querySelector("#tbList").textContent, settings.layout.order.dock.includes("hist")]);
+    if (!t[0] || !/Past sessions/.test(t[1]) || t[2]) throw new Error("× puts away: " + t) }
+  await page.waitForTimeout(250); await dragTo("#mesoBox h3", "#tbList");   // (after the boxes stop gliding)
+  { const t = await page.evaluate(() => [!!document.querySelector("#mesoBox").closest("#shelf"), [...document.querySelectorAll("#tbList .tbItem")].map(x => x.dataset.mod).join(), !document.querySelector("#main .shut, #top .shut")]);
+    if (!t[0] || t[1] !== "hist,mesos" || !t[2]) throw new Error("dragged onto the toolbox: " + t) }
+  await page.click("#tbList [data-mod=mesos] button");
+  if (await page.evaluate(() => document.querySelector("#dock").lastElementChild.id) !== "mesoBox") throw new Error("+ adds at the bottom");
+  await page.click("#tbClose"); if (await page.isVisible("#toolbox")) throw new Error("toolbox close");
   await dragTo("[data-box=mobs] .grip", "#snaps", 10);
-  const dr = await page.evaluate(() => [document.querySelector("#mesoBox").parentElement.dataset.tab, document.querySelector(".tabs .sel").dataset.tab,
-    document.querySelector("[data-box=mobs]").nextElementSibling?.id, !!document.querySelector(".dragLabel, .moving"), JSON.stringify(settings.layout.order.session)]);
-  if (dr[0] !== "session" || dr[1] !== "session" || dr[2] !== "snaps" || dr[3] || !/mobs.*snaps/.test(dr[4])) throw new Error("mouse drag: " + dr);
+  const dr = await page.evaluate(() => [document.querySelector("[data-box=mobs]").nextElementSibling?.id, !!document.querySelector(".dragLabel, .moving"), JSON.stringify(settings.layout.order.dock)]);
+  if (dr[0] !== "snaps" || dr[1] || !/mobs.*snaps/.test(dr[2])) throw new Error("mouse drag: " + dr);
   // pinned: dropped on the strip above the tabs (it only has a size while dragging) the box lands there, not back in a tab
   { const a = await page.locator("[data-box=stats] .grip").boundingBox(); await page.mouse.move(a.x + 3, a.y + 3); await page.mouse.down(); await page.mouse.move(a.x + 20, a.y + 20, {steps: 3});
     const d = await page.locator("#logBox").boundingBox(); await page.mouse.move(d.x + d.width / 2, d.y + d.height - 4, {steps: 5});
@@ -197,43 +216,42 @@ const path = require("path"), {chromium} = require("playwright");
     if (g[0] || !/Below/.test(g[1])) throw new Error("ghost: " + g);
     await page.mouse.up(); await page.waitForTimeout(50) }
   const pin = await page.evaluate(() => [document.querySelector("[data-box=stats]").parentElement.id, JSON.stringify(settings.layout.order.dock), document.querySelector(".dropGhost").classList.contains("hidden")]);
-  if (pin[0] !== "dock" || pin[1] !== '["main","log","stats"]' || !pin[2]) throw new Error("pin: " + pin);
+  if (pin[0] !== "dock" || !pin[1].startsWith('["main","log","stats","events"') || !pin[2]) throw new Error("pin: " + pin);
   // keyboard: right arrow on a box on its own puts it beside its neighbour (the run log, above it)
   const kb = await page.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 30));
     document.querySelector("[data-box=stats] .grip").dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowRight"})); await w();
     const r = JSON.stringify(settings.layout.order.dock); document.querySelector("[data-box=stats] .grip").dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowDown"})); await w();
     return [r, JSON.stringify(settings.layout.order.dock)] });
-  if (!kb[0].startsWith('["main",{"row":["log","stats"]') || kb[1] !== '["main","log","stats"]') throw new Error("keyboard side by side: " + kb);
+  if (!kb[0].startsWith('["main",{"row":["log","stats"]') || !kb[1].startsWith('["main","log","stats","events"')) throw new Error("keyboard side by side: " + kb);
   // the main card is a box too (Danny, 2026-10-18): it goes beside the run log, and folded it keeps the Start bar
   const mc = await page.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 30)), g = document.querySelector("#top .grip");
     g.dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowRight"})); await w(); const r = JSON.stringify(settings.layout.order.dock);
     document.querySelector("#top .fold").click(); await w(); const go = !!document.querySelector("#go").offsetParent, tiles = !!document.querySelector("#expHr").offsetParent;
     document.querySelector("#top .fold").click(); g.dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowUp"})); await w();
     return [r, go, tiles, JSON.stringify(settings.layout.order.dock)] });
-  if (!mc[0].startsWith('[{"row":["log","main"]') || !mc[1] || mc[2] || mc[3] !== '["main","log","stats"]') throw new Error("main card: " + mc);
+  if (!mc[0].startsWith('[{"row":["log","main"]') || !mc[1] || mc[2] || !mc[3].startsWith('["main","log","stats","events"')) throw new Error("main card: " + mc);
   // side by side: Items looted dropped on the right edge of Consumables used makes a row; the splitter resizes it; the
   // Mesos box dropped on the bottom half of Items looted stacks under it in a column; saved and loaded back as rows
-  await page.click(".tabs [data-tab=loot]");
-  const edge = async (from, to, fx, fy) => { const a = await page.locator(from).boundingBox();
+  
+  const edge = async (from, to, fx, fy) => { await page.waitForTimeout(220); const a = await page.locator(from).boundingBox();
     await page.mouse.move(a.x + 3, a.y + 3); await page.mouse.down(); await page.mouse.move(a.x + 20, a.y + 20, {steps: 3});
     const b = await page.locator(to).boundingBox(); await page.mouse.move(b.x + b.width * fx, b.y + b.height * fy, {steps: 5}); await page.mouse.up(); await page.waitForTimeout(50) };
   await edge("[data-box=items] .grip", "#usedBox", 0.95, 0.5);
   const row1 = await page.evaluate(() => { const r = document.querySelector("#usedBox").parentElement;
-    return [r.className, [...r.children].map(x => x.dataset.box || x.className).join(), JSON.stringify(settings.layout.order.loot)] });
+    return [r.className, [...r.children].map(x => x.dataset.box || x.className).join(), JSON.stringify(settings.layout.order.dock)] });
   if (row1[0] !== "boxrow" || row1[1] !== "used,split,items" || !row1[2].includes('{"row":["used","items"]')) throw new Error("row: " + row1);
   // the splitter only grabs with Shift (or Alt) held (Danny, 2026-10-19): a plain drag leaves the widths alone
   const splitDrag = async () => { const s = await page.locator(".boxrow .split").boundingBox(); await page.mouse.move(s.x + 4, s.y + 20); await page.mouse.down();
     await page.mouse.move(s.x + 104, s.y + 20, {steps: 4}); await page.mouse.up(); await page.waitForTimeout(50) };
   await splitDrag();
-  if (await page.evaluate(() => settings.layout.order.loot.find(x => x.row).w.join()) !== "1,1") throw new Error("splitter grabbed without Shift");
+  if (await page.evaluate(() => settings.layout.order.dock.find(x => x.row).w.join()) !== "1,1") throw new Error("splitter grabbed without Shift");
   await page.keyboard.down("Shift"); await splitDrag(); await page.keyboard.up("Shift");
   // (Fit on: the bar stops where Items looted would cut its table off, not at 110 px)
-  const wd = await page.evaluate(() => { const it = document.querySelector("[data-box=items]"); return [document.querySelector("#usedBox").getBoundingClientRect().width, it.getBoundingClientRect().width, settings.layout.order.loot.find(x => x.row).w, it.scrollWidth - it.clientWidth] });
+  const wd = await page.evaluate(() => { const it = document.querySelector("[data-box=items]"); return [document.querySelector("#usedBox").getBoundingClientRect().width, it.getBoundingClientRect().width, settings.layout.order.dock.find(x => x.row).w, it.scrollWidth - it.clientWidth] });
   if (!(wd[0] > wd[1] + 20) || !(wd[2][0] > wd[2][1]) || wd[3] > 1) throw new Error("resize: " + JSON.stringify(wd));
-  await page.evaluate(() => document.querySelector("section[data-tab=loot]").appendChild(document.querySelector("#mesoBox")));   // (moved to Session above)
   await edge("#mesoBox h3", "[data-box=items]", 0.5, 0.9);
   const col = await page.evaluate(() => { const c = document.querySelector("#mesoBox").parentElement;
-    return [c.className, c.parentElement.className, [...c.children].map(x => x.dataset.box).join(), JSON.stringify(settings.layout.order.loot)] });
+    return [c.className, c.parentElement.className, [...c.children].map(x => x.dataset.box).join(), JSON.stringify(settings.layout.order.dock)] });
   if (col[0] !== "boxcol" || col[1] !== "boxrow" || col[2] !== "items,mesos" || !col[3].includes('["items","mesos"]')) throw new Error("column: " + col);
   // pulled back out: the column and then the row unwrap on their own
   const unw = await page.evaluate(async () => { const saved = JSON.parse(JSON.stringify(settings.layout));
@@ -262,7 +280,7 @@ const path = require("path"), {chromium} = require("playwright");
     set("#s1lv", 25); set("#s1pct", 71.40); return [document.querySelector("#snapRate").textContent, document.querySelector("#snapNote").textContent] });
   const want = Math.round(0.2479 * 47216 / (22 / 60));
   if (Math.abs(+sn[0].replace(/\D/g, "") - want) > want * 0.01 || !/22 min/.test(sn[1])) throw new Error("snapshots: " + JSON.stringify(sn) + " want ~" + want);
-  await page.click(".tabs [data-tab=session]"); await page.click("#snapEnd"); await page.waitForTimeout(200);   // a button snapshot from the (test) game picture: saved, replaces the typed end
+  await page.click("#snapEnd"); await page.waitForTimeout(200);   // a button snapshot from the (test) game picture: saved, replaces the typed end
   if (!(await page.evaluate(() => snaps.end.file && snaps.end.hand))) throw new Error("snap end button");
   await page.fill("#runName", "KPQ rush with randoms");
   await page.click("#go"); await page.waitForTimeout(200);
@@ -287,7 +305,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.evaluate(async () => { settings.alertWorth = 10; dropAlert(4000019);
     await showSpeed({exp: 1000, barExp: 1000, minutes: 15, level: 20, party: 1, map: 42}) });
   const status = await page.textContent("#status"), last = await page.textContent("#lastRun");
-  await page.click("#histBtn"); await page.waitForTimeout(100);
+  await page.evaluate(() => document.querySelector("#hist").closest("#dock") ? loadHist() : addBox("hist")); await page.waitForTimeout(100);
   const hist = await page.textContent("#hist");
   // compare (Danny, 2026-10-19: more than two at once): A = the oldest and the baseline; another baseline; take one out; Clear
   await page.click("#histRows .cmp >> nth=0"); await page.click("#histRows .cmp >> nth=1");
@@ -333,11 +351,12 @@ const path = require("path"), {chromium} = require("playwright");
   // a watched item: the alert set finds it by part of its name
   const watched = await page.evaluate(() => { settings.alertItems = "Horny Mushroom Cap"; return alertSet().has("4000019") });
   if (!watched) throw new Error("item alert set");
-  // Compact view (View menu / shortcut): the tabs hide, the pinned boxes stay, the window asked to fit; saved
-  const cp = await page.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 60)); let h = null; const m0 = host.mini; host.mini = async (on, x) => (h = on ? x : 0, true);
-    window.menu("compact"); await w(); const r = [!!document.querySelector(".tabs").offsetParent, !!document.querySelector("#go").offsetParent, h, settings.compact];
-    window.menu("compact"); await w(); r.push(!!document.querySelector(".tabs").offsetParent, h, settings.compact); host.mini = m0; return r });
-  if (cp[0] || !cp[1] || !(cp[2] > 100) || cp[3] !== true || !cp[4] || cp[5] !== 0 || cp[6] !== false) throw new Error("compact: " + cp);
+  // Modules toolbox by keyboard (View menu / Ctrl+Shift+K): focus lands on the first module, Enter adds it, Esc closes; saved
+  await page.click("[data-box=stats] .shut"); await page.evaluate(() => window.menu("toolbox")); await page.waitForTimeout(30);
+  const tf = await page.evaluate(() => [!document.querySelector("#toolbox").classList.contains("hidden"), document.activeElement.dataset.mod]);
+  await page.keyboard.press("Enter"); await page.keyboard.press("Escape");
+  const tk = await page.evaluate(() => [!!document.querySelector("[data-box=stats]").closest("#dock"), document.querySelector("#toolbox").classList.contains("hidden"), settings.layout.order.dock.includes("stats"), document.querySelector("#tbBtn").getAttribute("aria-expanded")]);
+  if (!tf[0] || tf[1] !== "stats" || tk.join() !== "true,true,true,false") throw new Error("toolbox keys: " + JSON.stringify([tf, tk]));
   await page.click("#miniBtn"); const mini = await page.isVisible("#mini"), full = await page.isVisible("#go");
   // Mini view (Danny, 2026-10-18): the totals and times, the run log and the three lists; the window asked to fit it
   const mv = await page.evaluate(() => ["#miniExp", "#miniMeso", "#miniTotal", "#miniActive", "#miniClock", "#miniTtl", "#miniItems", "#miniMobs", "#miniUsed"].filter(q => !document.querySelector(q).offsetParent));
@@ -369,14 +388,13 @@ const path = require("path"), {chromium} = require("playwright");
   if (!mini || full || !back) throw new Error("mini bar toggle");
   // History: × asks first, the second click deletes and the list is redrawn
   await page.evaluate(() => { host.deleteSession = async saved => (window.deleted = saved, true) });
-  await page.click("#histBtn"); await page.waitForTimeout(100);
+  await page.evaluate(() => document.querySelector("#hist").closest("#dock") ? loadHist() : addBox("hist")); await page.waitForTimeout(100);
   const del = "#histRows button.del >> nth=0"; await page.click(del);
   const ask = await page.textContent(del), before = await page.evaluate(() => window.deleted);
   await page.click(del); await page.waitForTimeout(100);
   if (ask !== "Delete?" || before || !(await page.evaluate(() => window.deleted > 0))) throw new Error("delete session: " + ask);
-  // Settings: a popup from File → Settings; the panel keeps only Session, Loot and History (Danny, 2026-10-18)
-  const tabs = await page.$$eval(".tabs button", b => b.map(x => x.dataset.tab).join());
-  if (tabs !== "session,loot,hist") throw new Error("panel tabs: " + tabs);
+  // Settings: a popup from File → Settings; no panel tabs any more (modules, 2026-10-19)
+  if (await page.$(".tabs")) throw new Error("panel tabs are back");
   await page.evaluate(() => window.menu("settings")); if (!await page.isVisible("#prefsPop #themeSw")) throw new Error("preferences popup not shown");
   await page.keyboard.press("Escape"); if (await page.isVisible("#prefsPop")) throw new Error("Esc didn't close preferences");
   // themes (Settings): a preset swatch recolours the page and the title bar; the editor saves your own; share code round trip
