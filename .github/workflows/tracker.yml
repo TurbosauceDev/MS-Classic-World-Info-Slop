@@ -30,3 +30,15 @@ jobs:
         env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
       - uses: actions/upload-artifact@v4
         with: { name: installer, path: tracker/dist/*.exe }
+  # the window's own tests in Chromium (Electron's host stubbed): every tab, the box layout and window resizing
+  ui:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: tracker } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-save --ignore-scripts playwright@1.56.1 && npx playwright install --with-deps chromium
+      - run: npm run data
+      - run: node tests/ui.test.js
+      - run: node tests/layout.test.js

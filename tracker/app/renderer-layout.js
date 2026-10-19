@@ -24,18 +24,26 @@ function miniFit(force){ if (!document.body.classList.contains("mini")) return c
   const h = Math.ceil(bottom(1));
   if (force || (h > innerHeight + 6 && Math.abs(h - miniH) > 6)){ miniH = h; miniZ = 1; B.classList.remove("measure"); host.mini?.(true, h); return }
   let lo = 1, hi = Math.max(1, Math.min(2.5, innerWidth / 340));
-  for (let i = 0; i < 8 && hi - lo > 0.02; i++){ const z = (lo + hi) / 2; if (bottom(z) <= innerHeight) lo = z; else hi = z }
-  miniZ = Math.floor(lo * 50) / 50; m.style.zoom = miniZ; B.classList.remove("measure");
+  for (let i = 0; i < 9 && hi - lo > 0.005; i++){ const z = (lo + hi) / 2; if (bottom(z) <= innerHeight) lo = z; else hi = z }
+  miniZ = Math.floor(lo * 200) / 200; m.style.zoom = miniZ; B.classList.remove("measure");   // fine steps: in 0.02 steps the text visibly jumped as the edge moved
 }
-let miniRaf = 0;
-addEventListener("resize", () => { if (document.body.classList.contains("mini") && !miniRaf) miniRaf = requestAnimationFrame(() => { miniRaf = 0; miniFit() }) });
+// refit in the resize event itself, before the frame paints (it waited a frame, so a window edge being dragged showed the
+// view a step behind: cut off growing, a gap shrinking)
+addEventListener("resize", () => { if (document.body.classList.contains("mini")) miniFit() });
 // Compact (Danny, 2026-10-18: a middle ground between everything and Mini): the tabs and their boxes are hidden, only the
 // boxes pinned above them show (the main card, the run log, whatever else is pinned), and the window fits their height.
 // Saved in settings.compact; View menu and a shortcut toggle it
+// "Window height follows the boxes" (settings.fitWin, Danny 2026-10-19: auto size): the full view gets the same fitting, so
+// folding a box, a list filling up or another tab grows or shrinks the window to what's there. Off: the player sizes it
+const fitsWindow = () => document.body.classList.contains("compact") || document.body.classList.contains("fitWin");
 function compactSet(on){ document.body.classList.toggle("compact", on); miniH = 0;
-  if (on) requestAnimationFrame(() => compactFit(true)); else if (!document.body.classList.contains("mini")) host.mini?.(false) }
-function compactFit(force){ if (!document.body.classList.contains("compact") || document.body.classList.contains("mini")) return;
-  const h = Math.ceil(Math.max(...[...document.body.children].filter(e => e.offsetParent && getComputedStyle(e).position !== "fixed").map(e => e.getBoundingClientRect().bottom + scrollY)) + 10);
+  if (on || fitsWindow()) requestAnimationFrame(() => compactFit(true)); else if (!document.body.classList.contains("mini")) host.mini?.(false) }
+function fitWinSet(on){ document.body.classList.toggle("fitWin", on); miniH = 0;
+  if (fitsWindow()) requestAnimationFrame(() => compactFit(true)); else if (!document.body.classList.contains("mini")) host.mini?.(false) }
+function compactFit(force){ if (!fitsWindow() || document.body.classList.contains("mini")) return;
+  const B = document.body; B.classList.add("measure");   // natural height: the spare room above the tabs closed up
+  const h = Math.ceil(Math.max(...[...B.children].filter(e => e.offsetParent && getComputedStyle(e).position !== "fixed").map(e => e.getBoundingClientRect().bottom + scrollY)) + 10);
+  B.classList.remove("measure");
   if (force || Math.abs(h - miniH) > 6){ miniH = h; host.mini?.(true, h) } }
 
 // inventory: which tabs were read and when (Session tab), and what changed since the first look (Loot tab)
@@ -89,6 +97,7 @@ function showTab(name){
   for (const b of document.querySelectorAll(".tabs button")){ b.classList.toggle("sel", b.dataset.tab === name); b.setAttribute("aria-selected", String(b.dataset.tab === name)); b.tabIndex = b.dataset.tab === name ? 0 : -1 }
   for (const sec of document.querySelectorAll("section[data-tab]")) sec.classList.toggle("hidden", sec.dataset.tab !== name);
   try { localStorage.setItem("tab", name) } catch {}
+  fitRows(); requestAnimationFrame(() => compactFit());   // rows on the new tab fit before it paints; a fitted window follows its height
 }
 for (const b of document.querySelectorAll(".tabs button")){ b.setAttribute("role", "tab"); if (b.id !== "histBtn") b.onclick = () => showTab(b.dataset.tab) }
 for (const sec of document.querySelectorAll("section[data-tab]")) sec.setAttribute("role", "tabpanel");
@@ -126,7 +135,7 @@ function tidy(){
 // saved as order[tab] = [box id | {row: [box id | [box ids (a column)]], w: [widths]}]; older saves (just ids) still load
 function layoutSave(){
   requestAnimationFrame(() => compactFit());
-  tidy(); const order = {};
+  tidy(); fitRows(); const order = {};
   const hOf = e => e.classList.contains("sized") ? parseFloat(e.style.getPropertyValue("--h")) || undefined : undefined;
   const ser = e => isRow(e) ? {row: parts(e).map(p => isCol(p) ? [...p.children].map(b => b.dataset.box) : p.dataset.box), w: parts(e).map(p => Math.round(grow(p)) || 1), h: hOf(e)} : e.dataset.box;
   for (const h of [$("#dock"), ...document.querySelectorAll("section[data-tab]")]) order[h.id || h.dataset.tab] = [...h.querySelectorAll(":scope > [data-box], :scope > .boxrow")].map(ser);
@@ -150,7 +159,7 @@ function layoutLoad(l){
     }
   }
   for (const b of BOXES){ b.classList.toggle("folded", (l.folded || []).includes(b.dataset.box)); const v = +l.h?.[b.dataset.box]; heightSet(b, v > 0 ? v : null) }
-  tidy();
+  tidy(); fitRows();
 }
 // puts box b at side z (top, bottom, left, right) of target t (a box, or a row when dropped in a row's gap)
 function place(b, t, z){
@@ -172,10 +181,10 @@ for (const b of BOXES){
   const c = document.createElement("div"); c.className = "boxctl";
   c.innerHTML = `<span class="btitle">${esc(b.dataset.title)}</span><span class="grip" tabindex="0" role="button" aria-label="Move ${esc(b.dataset.title)} (arrow keys)" title="Drag to move. Drop on the left or right side of another box to put them side by side, on its middle to go above or below; or onto a tab, or the strip above the tabs. Keys: focus it, then arrows (left/right puts it beside its neighbour)">⠿</span><button class="fold" aria-label="Fold ${esc(b.dataset.title)}" aria-expanded="true" title="Fold or unfold">–</button>`;
   b.prepend(c);
-  c.querySelector(".fold").onclick = () => { b.classList.toggle("folded"); foldMark(b); layoutSave() };
+  c.querySelector(".fold").onclick = () => { flip(() => { b.classList.toggle("folded"); foldMark(b); fitRows() }); layoutSave() };
   // keyboard: arrow up/down on the grip moves the box past its neighbour (out of its row at a row's or column's end); left/right
   // moves it along its row, or puts a box that's on its own beside its neighbour
-  c.querySelector(".grip").onkeydown = e => { const k = e.key, up = k === "ArrowUp" || k === "ArrowLeft"; if (!/^Arrow(Up|Down|Left|Right)$/.test(k)) return; e.preventDefault();
+  c.querySelector(".grip").onkeydown = e => { const k = e.key, up = k === "ArrowUp" || k === "ArrowLeft"; if (!/^Arrow(Up|Down|Left|Right)$/.test(k)) return; e.preventDefault(); const fm = flipFrom();
     const p = b.parentElement, side = x => { do x = up ? x.previousElementSibling : x.nextElementSibling; while (isSplit(x)); return x };
     if (k === "ArrowLeft" || k === "ArrowRight"){ const u = isCol(p) ? p : b;
       // not in a row yet: it goes beside the box above it (or below, when it's the first), making a row
@@ -184,7 +193,7 @@ for (const b of BOXES){
       else { const s = side(u); if (!s) return; up ? s.before(u) : s.after(u) } }
     else if (isRow(p)) up ? p.before(b) : p.after(b);
     else { const s = side(b); if (s?.matches("[data-box], .boxrow")) up ? s.before(b) : s.after(b); else if (isCol(p) && !s) up ? p.parentElement.before(b) : p.parentElement.after(b); else return }
-    c.querySelector(".grip").focus(); layoutSave() };
+    tidy(); fitRows(); flipTo(fm); c.querySelector(".grip").focus(); layoutSave() };
 }
 // mouse dragging (pointer events: the browser's own drag and drop didn't start in the app, Danny 2026-10-18). Held on the
 // grip or the box's title, moved 5 px: the box follows as a label under the pointer until it's let go
@@ -238,9 +247,11 @@ const endDrag = (e, cancel) => {
   d.el.remove(); const t = !cancel && dropTarget(e.clientX, e.clientY), z = t && dropZone(t, e.clientX, e.clientY);
   clearInterval(d.iv); d.b.classList.remove("moving"); document.body.classList.remove("dragging"); dropMark(null); dragBox = null;
   if (!t) return;
-  if (t.matches("[data-box], .boxrow")) place(d.b, t, z);
-  else if (t.matches(".tabs button")){ document.querySelector(`section[data-tab="${t.dataset.tab}"]`).appendChild(d.b); showTab(t.dataset.tab) }
-  else t.appendChild(d.b);
+  flip(() => {
+    if (t.matches("[data-box], .boxrow")) place(d.b, t, z);
+    else if (t.matches(".tabs button")){ document.querySelector(`section[data-tab="${t.dataset.tab}"]`).appendChild(d.b); showTab(t.dataset.tab) }
+    else t.appendChild(d.b);
+    tidy(); fitRows() });
   layoutSave();
 };
 document.addEventListener("pointerup", e => endDrag(e, false));
@@ -265,10 +276,12 @@ function rzPlace(){ for (const h of $("#rzLayer").children){ const r = h.rz.getB
 function rzOn(on){ if (on === document.body.classList.contains("rzKeys")) return; document.body.classList.toggle("rzKeys", on); if (on) rzBuild() }
 function heightSet(e, h){ if (h == null){ e.classList.remove("sized"); e.style.removeProperty("--h"); return }
   e.style.setProperty("--h", Math.max(HMIN, Math.round(h)) + "px"); e.classList.add("sized") }
-function widthBase(s){ for (const p of parts(s.parentElement)) p.style.flex = `${Math.round(p.getBoundingClientRect().width)} 1 0px`; return [grow(s.previousElementSibling), grow(s.nextElementSibling)] }
-function widthSet(s, wa, wb, dx){ const sum = wa + wb; if (sum < 220) return; const na = Math.max(110, Math.min(sum - 110, wa + dx));
+// with Fit on, neither side of the bar goes narrower than its content (it used to stop at 110 px and cut the table off)
+function widthBase(s){ const m = [s.previousElementSibling, s.nextElementSibling].map(e => fitOn() ? Math.max(110, minW(e)) : 110);
+  for (const p of parts(s.parentElement)) p.style.flex = `${Math.round(p.getBoundingClientRect().width)} 1 0px`; return [grow(s.previousElementSibling), grow(s.nextElementSibling), ...m] }
+function widthSet(s, wa, wb, dx, ma = 110, mb = 110){ const sum = wa + wb; if (sum < ma + mb) return; const na = Math.max(ma, Math.min(sum - mb, wa + dx));
   s.previousElementSibling.style.flex = `${Math.round(na)} 1 0px`; s.nextElementSibling.style.flex = `${Math.round(sum - na)} 1 0px` }
-function resize(s, dx){ const [wa, wb] = widthBase(s); widthSet(s, wa, wb, dx) }
+function resize(s, dx){ const [wa, wb, ma, mb] = widthBase(s); widthSet(s, wa, wb, dx, ma, mb) }
 document.addEventListener("pointerdown", e => { const s = e.button === 0 && e.target.closest?.(".split, .hsplit"); if (!s) return;
   e.preventDefault(); try { s.setPointerCapture(e.pointerId) } catch {}
   rs = s.rz ? {s, y: e.clientY, h: s.rz.getBoundingClientRect().height} : {s, x: e.clientX, w: widthBase(s)};
@@ -276,7 +289,7 @@ document.addEventListener("pointerdown", e => { const s = e.button === 0 && e.ta
 let rzRaf = 0;
 document.addEventListener("pointermove", e => {
   if (!rs){ rzOn(e.shiftKey || e.altKey); if (document.body.classList.contains("rzKeys") && !rzRaf) rzRaf = requestAnimationFrame(() => { rzRaf = 0; rzPlace() }); return }
-  if (rs.s.rz){ heightSet(rs.s.rz, rs.h + e.clientY - rs.y); rzPlace() } else { widthSet(rs.s, ...rs.w, e.clientX - rs.x); rzPlace() } });
+  if (rs.s.rz){ heightSet(rs.s.rz, rs.h + e.clientY - rs.y); rzPlace() } else { widthSet(rs.s, rs.w[0], rs.w[1], e.clientX - rs.x, rs.w[2], rs.w[3]); rzPlace() } });
 const endResize = () => { if (!rs) return; rs.s.classList.remove("on"); document.body.classList.remove("resizing", "rows"); rs = null; layoutSave(); requestAnimationFrame(rzPlace) };
 document.addEventListener("pointerup", endResize); document.addEventListener("pointercancel", endResize);
 document.addEventListener("dblclick", e => { const s = e.target.closest?.(".split, .hsplit"); if (!s) return;
@@ -288,6 +301,54 @@ addEventListener("blur", () => rzOn(false));
 addEventListener("scroll", () => { if (document.body.classList.contains("rzKeys")) rzPlace() }, true);
 document.addEventListener("keydown", e => { if (!isSplit(e.target) || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
   e.preventDefault(); resize(e.target, e.key === "ArrowLeft" ? -24 : 24); layoutSave() });
-$("#layoutReset").onclick = () => { for (const [b, p, next, f] of [...BOX_HOME].reverse()){ p.insertBefore(b, next); b.classList.toggle("folded", f); heightSet(b, null); foldMark(b) } layoutSave() };
+$("#layoutReset").onclick = () => { flip(() => { for (const [b, p, next, f] of [...BOX_HOME].reverse()){ p.insertBefore(b, next); b.classList.toggle("folded", f); heightSet(b, null); foldMark(b) } tidy(); fitRows() }); layoutSave() };
+
+// ---- fitting (Danny, 2026-10-19: "auto size the modules to properly fit ... properly resizing when the window is moved and
+// resized ... it should be smooth and flawless") ----
+// Fit (settings.fit, on unless turned off): body.fit gives every box side by side at least its content's width (index.html);
+// fitRows wraps a row whose boxes can't all fit side by side onto more lines (index.html .wrapped), and unwraps it once they do. It runs synchronously in the
+// window's resize event and after every layout change, so a row never paints a frame overflowing or half cut off.
+// Wrapping is decided by trying the row side by side and seeing if its parts add up wider than it: no stored threshold.
+const fitOn = () => document.body.classList.contains("fit");
+function fitRows(){
+  const rows = document.querySelectorAll(".boxrow");
+  if (!fitOn()){ for (const r of rows) r.classList.remove("wrapped"); return }
+  if (rs) return;   // mid width-drag: the bar keeps both sides at their content width already
+  for (const r of rows){ if (!r.offsetParent) continue;
+    r.classList.remove("wrapped");
+    // layout widths (offsetWidth), not scrollWidth: a box still gliding into place (flip) would read as overflow
+    if ([...r.children].reduce((a, x) => a + x.offsetWidth, 0) > r.clientWidth + 1) r.classList.add("wrapped") }
+  if (document.body.classList.contains("rzKeys")) rzPlace();
+}
+// a box's (or column's) narrowest width that still shows all of its content
+function minW(e){ const st = e.style.cssText; e.style.flex = "none"; e.style.width = "min-content"; const w = e.getBoundingClientRect().width; e.style.cssText = st; return Math.ceil(w) }
+function fitSet(on){ document.body.classList.toggle("fit", on); fitRows() }
+// "Fit every box now": widths and heights you set go back to fitting their content (the arrangement stays)
+function fitAll(){ flip(() => { for (const e of document.querySelectorAll(".sized")) heightSet(e, null);
+  for (const r of document.querySelectorAll(".boxrow")) for (const p of parts(r)) p.style.flex = ""; fitRows() }); layoutSave() }
+// double-clicking a box's title fits just that box: its own height, and the widths of the row it's in
+document.addEventListener("dblclick", e => { const t = e.target.closest?.(".box > h3, .box .btitle"), b = t?.closest("[data-box]"); if (!b) return;
+  flip(() => { heightSet(b, null); const r = b.closest(".boxrow"); if (r){ heightSet(r, null); for (const p of parts(r)) p.style.flex = "" } fitRows() }); layoutSave() });
+addEventListener("resize", () => { fitRows(); if (document.body.classList.contains("rzKeys")) rzPlace() });
+// content that grows or shrinks (lists filling up, a tab shown) refits on the next frame: a box's size changing is the signal
+let fitRaf = 0; const fitRO = new ResizeObserver(() => { if (!fitRaf) fitRaf = requestAnimationFrame(() => { fitRaf = 0; fitRows() }) });
+for (const b of BOXES) fitRO.observe(b);
+// moves animate: every box glides from where it was to where it lands (FLIP), so a drop, a fold or a row wrapping reads as
+// one motion instead of a jump. Off with the system's "reduce motion"; never during a window resize (that must track the edge)
+const calm = matchMedia("(prefers-reduced-motion: reduce)");
+function flipFrom(){ const m = new Map(); if (calm.matches) return m; for (const b of BOXES) if (b.offsetParent) m.set(b, b.getBoundingClientRect()); return m }
+function flipTo(m){ for (const [b, r] of m){ if (!b.offsetParent) continue; const n = b.getBoundingClientRect(), dx = r.left - n.left, dy = r.top - n.top;
+  if (Math.abs(dx) + Math.abs(dy) < 2) continue;
+  b.animate([{transform: `translate(${dx}px, ${dy}px)`}, {transform: "none"}], {duration: 180, easing: "cubic-bezier(.2,.7,.3,1)"}) } }
+function flip(fn){ const m = flipFrom(); fn(); flipTo(m) }
+// the run log (and Mini's copy) stays on its newest line through any resize, unless you scrolled up to read
+for (const f of [$("#feed"), $("#miniFeed")]){ f._stick = true;
+  // only your own scrolling (wheel, keys, the scrollbar) lets go of the newest line: a scroll the browser makes when the box
+  // changes size arrives a frame late, after the lines re-wrapped, and used to read as "scrolled up"
+  for (const ev of ["wheel", "pointerdown", "keydown", "touchstart"]) f.addEventListener(ev, () => f._user = Date.now(), {passive: true});
+  f.addEventListener("scroll", () => { if (!f.clientHeight) return; const end = f.scrollHeight - f.scrollTop - f.clientHeight < 24;
+    if (end) f._stick = true; else if (Date.now() - (f._user || 0) < 1500) f._stick = false }, {passive: true});
+  new ResizeObserver(() => { if (f._stick) f.scrollTop = f.scrollHeight }).observe(f) }
+fitSet(true);   // on until settings say otherwise (renderer-settings.js)
 try { const t = localStorage.getItem("tab"); if (t && t !== "hist" && t !== "help" && document.querySelector(`section[data-tab="${t}"]`)) showTab(t) } catch {}
 

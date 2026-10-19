@@ -43,6 +43,7 @@ host.onMenu?.(what => {
   if (what === "help") openHelp();
   else if (what === "settings") openPrefs();
   else if (what === "dummy") dummyToggle();
+  else if (what === "fit") fitAll();
   else if (what === "compact"){ const on = !document.body.classList.contains("compact"); compactSet(on); host.settings({compact: on}).then(x => settings = x) }
   else if (what === "mini") (document.body.classList.contains("mini") ? $("#miniFull") : $("#miniBtn")).click();
   else if (what === "report") openBugPop();
@@ -206,6 +207,9 @@ async function saveNumbers(){
 }
 const muteSet = on => host.settings({muted: !!on}).then(x => { settings = x; $("#muted").checked = !!on; $("#status").textContent = on ? "Sounds muted." : "Sounds on." });
 $("#muted").onchange = e => muteSet(e.target.checked);
+$("#fitBoxes").onchange = e => { flip(() => fitSet(e.target.checked)); host.settings({fit: e.target.checked}).then(x => settings = x) };
+$("#fitWin").onchange = e => { fitWinSet(e.target.checked); host.settings({fitWin: e.target.checked}).then(x => settings = x) };
+$("#layoutFit").onclick = () => fitAll();
 $("#updCheck").onclick = async () => { $("#updNote").textContent = "Checking..."; showUpdate(await host.updateCheck?.()) };
 // Install (Settings) and Restart and update (the banner, which stays on top while scrolling) do the same
 $("#updInstall").onclick = () => $("#updGo").click();
@@ -220,8 +224,9 @@ $("#updGo").onclick = async () => {
   settings = await host.settings();
   $("#share").checked = !!settings.share;
   $("#kpqName").checked = settings.kpqName !== false;
+  fitSet(settings.fit !== false); $("#fitBoxes").checked = settings.fit !== false; $("#fitWin").checked = !!settings.fitWin;
   layoutLoad(settings.layout); for (const b of BOXES) foldMark(b);
-  if (settings.compact) compactSet(true);
+  if (settings.compact) compactSet(true); if (settings.fitWin) fitWinSet(true);
   $("#job").value = settings.job || "";
   $("#ontop").checked = settings.onTop !== false;
   const op = Math.round((+settings.opacity || 1) * 100); $("#opacity").value = op; $("#opacityV").textContent = op + "%";

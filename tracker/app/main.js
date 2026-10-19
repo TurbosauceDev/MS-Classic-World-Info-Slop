@@ -79,7 +79,7 @@ app.whenReady().then(() => {
   const show = what => () => win && !win.isDestroyed() && win.webContents.send("menu", what);
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {label: "File", submenu: [{label: "Settings", accelerator: "CmdOrCtrl+,", click: show("settings")}, {type: "separator"}, {label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
-    {label: "View", submenu: [{label: "Compact view (hide the tabs)", click: show("compact")}, {label: "Mini bar", click: show("mini")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
+    {label: "View", submenu: [{label: "Compact view (hide the tabs)", click: show("compact")}, {label: "Mini bar", click: show("mini")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {label: "Fit every box to its content", click: show("fit")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
     {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Check for updates", click: show("update")},
       {label: "Report a bug", click: show("report")}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
   ]));
@@ -293,7 +293,10 @@ ipcMain.handle("menu-popup", (_, label, x, y) => {
 });
 ipcMain.handle("mini", (_, on, h) => {
   // on: h = the Mini view's height in page pixels (it changes as lists fill); the width stays
-  if (win){ if (on){ fullSize ||= win.getSize(); const z = win.webContents.getZoomFactor() || 1; win.setContentSize(win.getContentSize()[0], Math.max(140, Math.min(1400, Math.round((+h || 128) * z)))) }
+  // (fitted heights stop at the bottom of the monitor the window is on, so a long list never pushes it off screen)
+  if (win){ if (on){ fullSize ||= win.getSize(); const z = win.webContents.getZoomFactor() || 1, b = win.getBounds(), c = win.getContentSize();
+      const wa = require("electron").screen.getDisplayMatching(b).workArea, room = wa.y + wa.height - b.y - (b.height - c[1]);
+      win.setContentSize(c[0], Math.max(140, Math.min(1400, room, Math.round((+h || 128) * z)))) }
     else { win.setSize(...(fullSize || [360, 600])); fullSize = null } }
   return !!on;
 });

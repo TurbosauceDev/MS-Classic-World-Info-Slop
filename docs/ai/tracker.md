@@ -22,7 +22,7 @@ game window ─(Windows Graphics Capture)─► app/main.js ─frames─► app/
 | file | KB | what |
 |---|---|---|
 | app/renderer.js | 17 | window core: globals (G, $, settings, session), capture/grabFrame, reader worker, bug buffer, self-check, respawns |
-| app/renderer-layout.js | 21 | Mini view, inventory/Loot tab, tabs, box docking (OBS-style rows/columns, splitter) |
+| app/renderer-layout.js | 33 | Mini view, inventory/Loot tab, tabs, box docking (OBS-style rows/columns, splitter), fitting (fitRows, flip) |
 | app/renderer-live.js | 30 | per-frame/timer reads: OCR job/map, run compare, beeps, party, auto-pause, KPQ + leaderboard, level-ups, run log, snapshots, deaths |
 | app/renderer-run.js | 20 | Start/Stop, inventory tab chips, End run summary, run name, frame pictures, Report a bug |
 | app/renderer-history.js | 13 | History: goal, compare, delete, level-up log, last 7 days |
@@ -42,6 +42,7 @@ Symbol index: `grep -n "^function\|^async function" tracker/app/renderer*.js`; r
 npm run data                          # after build_data.py changes
 npm test | tail -5                    # core + fuzz (CI runs this in tracker.yml)
 node tests/ui.test.js | tail -5       # window in Chromium, fake game stream (CHROMIUM=/opt/pw-browsers/chromium if needed)
+node tests/layout.test.js | tail -3   # box fitting and window resizing (CI: tracker.yml job ui)
 node tests/readers.test.js | tail -5  # readers on real frames (tests/frames)
 node tests/inventory.test.js | tail -3; node tests/kpq.test.js | tail -3; node tests/snip.test.js | tail -3
 cd ../server && npm install && npm run data && npm test   # Node 22 (node:sqlite stands in for D1)
@@ -96,6 +97,13 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Resize (0.2.49): bars show/grab only with Shift or Alt held (body.rzKeys, also set from pointer modifier flags since the
   game usually has focus). Width bars are the row's .split; height bars are overlay .hsplit in #rzLayer (h.rz = target box
   or row), height in `--h` + class `sized`, saved as layout.h[id] / row object `h`. Widths are measured once per drag.
+- Fit (0.2.51, body.fit from settings.fit, on by default): `.boxrow > *` min-width:min-content plus a `::after` spacer of
+  `--floor` px (per box in index.html) so no box goes one-word-a-line; fitRows() adds `.wrapped` (flex-wrap) when a row's
+  children's offsetWidths add up wider than it (not scrollWidth: FLIP transforms fake overflow). It runs in the resize event
+  (same frame) and after layout changes; a ResizeObserver catches content growth. Run log stickiness: `#feed._stick`, only
+  user wheel/key/pointer scrolls clear it. settings.fitWin reuses compactFit (fitsWindow()); body.measure = natural height.
+- tests/layout.test.js (CI job `ui` in tracker.yml, with ui.test.js; host stub shared in tests/ui-host.js): sweeps the window
+  900→340 px over Danny's docked layout. Wait a frame after setViewportSize (resize events fire in the next frame).
 - Dummy data off no longer reloads (main.js will-navigate blocks reloads): dummyClear re-renders from the covered session.
 - Mini zooms #mini (miniZ, up to 2.5x) to fill a window bigger than its natural height; body.measure = natural size.
 - Running tests locally: `npm run data` first (core.test.js needs app/gamedata.json, not committed).

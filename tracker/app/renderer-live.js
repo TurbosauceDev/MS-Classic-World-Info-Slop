@@ -300,7 +300,7 @@ function feedLine(l){ const who = `<span class="who">${esc(l.who)}</span>`; let 
   else h = esc(l.text);
   return `<div class="fl ${l.kind}"><time>${clockS(l.t)}</time><span>${h}</span></div>` }
 function feedAdd(lines){ const el = $("#feed"); if (!lines?.length) return;
-  const stick = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+  const stick = el._stick ?? el.scrollHeight - el.scrollTop - el.clientHeight < 24;   // (_stick: renderer-layout.js, kept through resizes)
   const html = lines.map(feedLine).join("");
   el.insertAdjacentHTML("beforeend", html);
   while (el.children.length > 300) el.firstElementChild.remove();

@@ -59,13 +59,15 @@
   #mini .mlists table { width:100%; font-size:12px; border-collapse:collapse; } #mini .mlists td { padding:1px 0; border:0; } #mini .mlists td.n { text-align:right; white-space:nowrap; padding-left:6px; }
   #mini .mlists .ico { height:1.2em; width:auto; vertical-align:-0.25em; margin-right:3px; } #mini .mlists .more td { color:var(--muted); } .hidden { display:none !important; } @keyframes flash { from { box-shadow: 0 0 0 3px var(--accent, #a78bfa) } to { box-shadow: none } } .flash { animation: flash 1.2s ease-out } .good { color:var(--leaf); } .slow { color:var(--warn); }
   /* top: Start/Stop, what's going on, the four numbers that matter */
-  #top .bar { display:flex; align-items:center; gap:8px; padding-right:46px; }
+  #top .bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-right:46px; container-type:inline-size; }
   /* the main card is a box too (Danny, 2026-10-18); folded it keeps its Start bar */
   #top.box.folded > .bar { display:flex !important; } #top.folded .boxctl { position:absolute; } #top.folded .btitle { display:none; }
   #go { padding:9px 18px; font-weight:600; min-width:78px; } #go.on { background:var(--bad); }
   #state { font-weight:600; } #state .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--muted); margin-right:5px; vertical-align:1px; }
   #state.on .dot { background:var(--leaf); } #state.paused .dot { background:var(--warn); }
   #top .bar .grow { flex:1; min-width:0; } #miniBtn { padding:5px 9px; font-size:12px; }
+  /* a narrow main card: Start and the buttons on one line, what's going on under them (it was squeezed into a 100 px column) */
+  @container (max-width: 330px) { #top .bar > .grow { order:9; flex-basis:100%; } #helpBtn { margin-left:auto; } }
   .tiles { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
   .tile { background:var(--bg); border-radius:8px; padding:6px 8px; } .tile .v { font-size:20px; line-height:1.2; }
   .tile.main .v { color:var(--accent); }
@@ -140,6 +142,21 @@
   /* resize bars show and grab only while Shift or Alt is held (Danny, 2026-10-19) */
   .split { pointer-events:none; } .split::after { opacity:0; } body.rzKeys .split, .split.on { pointer-events:auto; }
   body.rzKeys .split::after, .split.on::after, .split:focus-visible::after { opacity:1; }
+  /* Fit (settings.fit, on unless turned off; Danny, 2026-10-19 "auto size the modules to properly fit"): a box side by side
+     is never narrower than its content (no cut-off numbers, no scrollbars inside), and a row that can't fit its boxes any
+     more wraps them onto more lines (fitRows) until the window is wide enough again */
+  body.fit .boxrow > :not(.split) { min-width:min-content; } body.fit .boxrow .box { overflow-x:visible; }
+  /* ...and never so narrow its text runs one word a line: an empty line at the box's foot as wide as --floor counts
+     toward its min-content, so a row wraps before a box goes under it */
+  body.fit .boxrow .box:not(.folded)::after { content:""; display:block; width:var(--floor, 190px); max-width:none; height:0; }
+  #top { --floor:300px; } [data-box=stats] { --floor:250px; } #logBox { --floor:220px; } [data-box=used], [data-box=items] { --floor:230px; }
+  /* wrapped like words on a line: each box starts at its narrowest, as many as fit share a line and grow to fill it, the
+     rest go to the next line (three boxes in a 700 px window: two and one, not three stacked) */
+  .boxrow.wrapped { flex-wrap:wrap; gap:8px; height:auto !important; } .boxrow.wrapped > .split { display:none; }
+  .boxrow.wrapped > :not(.split) { flex:1 1 auto !important; width:min-content; } .boxrow.wrapped > .box.folded { align-self:stretch; }
+  .box:not(.folded) > h3 { padding-right:46px; }   /* the title never runs under the grip and fold buttons */
+  html { scrollbar-gutter:stable; }   /* the page's scrollbar coming and going no longer shifts every box by 10 px */
+  body.measure { min-height:0; } body.measure > .tabs { margin-top:0; }   /* natural height, for "window fits the boxes" */
   .sized:not(.folded) { height:var(--h); } .boxcol > .box.sized:not(.folded) { flex:0 0 var(--h); } .box.sized:not(.folded) { overflow:auto; }
   #logBox.sized:not(.folded) { display:flex; flex-direction:column; } #logBox.sized #feed { flex:1 1 0px; height:auto; min-height:3em; }
   #rzLayer { position:fixed; inset:0; pointer-events:none; z-index:40; } body:not(.rzKeys):not(.resizing) #rzLayer { display:none; }
@@ -453,7 +470,12 @@
       <label class="chk"><input type="checkbox" id="ontop"> <span>Keep this window on top of everything</span></label>
       <label class="chk"><input type="checkbox" id="share"> <span>Share my sessions for the leaderboards (map, kills, drops, KPQ rounds)</span></label>
       <label class="chk"><input type="checkbox" id="kpqName"> <span>Show my character name on the KPQ board (the Name above if typed, else the name read from the status bar). Off: a made-up name that stays yours, like Archer4821</span></label>
-      <div class="row"><button id="layoutReset" class="alt">Reset box layout</button> <span class="note">Boxes move by their ⠿ grip: onto the left or right of another box for side by side, onto a tab, or the strip above the tabs. Hold Shift (or Alt) to resize them.</span></div>
+    </div>
+    <div class="card" data-nav="Layout"><h3>Layout</h3>
+      <label class="chk"><input type="checkbox" id="fitBoxes"> <span>Fit boxes to their content: boxes side by side never cut off their numbers, and stack under each other when the window gets too narrow for them</span></label>
+      <label class="chk"><input type="checkbox" id="fitWin"> <span>Window height follows the boxes: it grows and shrinks as boxes fold, lists fill up or you change tabs</span></label>
+      <div class="row"><button id="layoutFit" class="alt">Fit every box now</button> <button id="layoutReset" class="alt">Reset box layout</button></div>
+      <div class="note">Boxes move by their ⠿ grip: onto the left or right of another box for side by side, onto a tab, or the strip above the tabs. Hold Shift (or Alt) to resize them; double-click a bar, or a box's title, to fit it again. "Fit every box now" undoes the widths and heights you set but keeps where the boxes are.</div>
     </div>
     <div class="card" id="themeCard" data-nav="Theme"><h3>Theme</h3>
       <div class="sw" id="themeSw" role="radiogroup" aria-label="Theme"></div>

@@ -63,3 +63,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 Tracker: "I only buy meat and lemons" button becomes a small "Dropped potions are free" switch in the Consumables used footer (settings.meatOnly unchanged).
 - 2026-10-18 Tracker Compact view: a toggle between full and Mini that hides the Session/Loot/History tabs and shrinks the window to fit.
 - 2026-10-19 Tracker resize bars hidden until Shift/Alt is held; dragging the gap under a box changes its height. Mini content grows to fill a bigger window. Released on his go ("release when ready do not wait").
+- 2026-10-19 Tracker layout: Fit on by default (side-by-side boxes keep their content width, rows wrap when narrow); "window height follows the boxes" is an opt-in setting. Danny: "do more than you think you have to"; push + release OK'd in advance ("push and publish everything ... when finished").
