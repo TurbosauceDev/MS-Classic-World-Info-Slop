@@ -110,6 +110,15 @@
         <h3>Can you hit them?</h3>
         <div id="phits"></div>
       </div>
+      <div class="card" id="pcmp">
+        <div class="cardhead"><h3>Compare two jobs</h3><span class="pill">default builds</span></div>
+        <div class="row2"><label class="lab">Left<select id="pcmpa" aria-label="Left build"></select></label>
+          <label class="lab">Right<select id="pcmpb" aria-label="Right build"></select></label></div>
+        <div class="row2"><label class="lab">Level<input id="pcmplvl" type="number" min="10" max="100" value="45" inputmode="numeric"></label>
+          <label class="lab">Attack<select id="pcmpaoe"><option value="">Single target</option><option value="1">Area attack</option></select></label></div>
+        <div class="tblwrap"><table class="mini"><thead><tr id="pcmphead"></tr></thead><tbody id="pcmprows"></tbody></table></div>
+        <p class="tiny">Each job uses the builder's default build at that level (the best weapon it can use, AP into the main stat, the skill build that deals the most damage), the same model as Where to train. "This build" is the one above. Estimates from the client formulas; bold = better.</p>
+      </div>
     </div>
   </div>
 </section>
