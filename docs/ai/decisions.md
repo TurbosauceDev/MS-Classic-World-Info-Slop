@@ -62,3 +62,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 Tracker: Dummy data button to try layouts (never saved/shared); docked boxes fill in with no empty space; run log looks like a chat box.
 - 2026-10-18 Tracker: "I only buy meat and lemons" button becomes a small "Dropped potions are free" switch in the Consumables used footer (settings.meatOnly unchanged).
 - 2026-10-18 Tracker Compact view: a toggle between full and Mini that hides the Session/Loot/History tabs and shrinks the window to fit.
+- 2026-10-19 Tracker resize bars hidden until Shift/Alt is held; dragging the gap under a box changes its height. Mini content grows to fill a bigger window. Released on his go ("release when ready do not wait").

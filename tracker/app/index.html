@@ -52,6 +52,8 @@
   h3, .boxctl .btitle, #mini .mk { text-shadow:0 0 1px color-mix(in srgb, var(--bg) 85%, transparent), 0 1px 2px rgba(0,0,0,.35); }
   #mini .mk { color:var(--accent); }
   #mini .mk { margin:8px 0 2px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; font-size:11px; }
+  body.mini #mini { display:flex; flex-direction:column; flex:1 0 auto; } body.mini #mini > * { flex:none; } body.mini #miniFeed { flex:1 1 6em; }
+  body.mini.measure #mini { flex:none; } body.mini.measure #miniFeed { flex:none; }
   #miniFeed { height:6em; } #mini .mk:has(+ #miniFeed:empty) { display:none; }
   #mini .mlists { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:0 12px; }
   #mini .mlists table { width:100%; font-size:12px; border-collapse:collapse; } #mini .mlists td { padding:1px 0; border:0; } #mini .mlists td.n { text-align:right; white-space:nowrap; padding-left:6px; }
@@ -135,6 +137,15 @@
   .split::after { content:""; position:absolute; left:3px; top:25%; bottom:calc(25% + 8px); width:2px; border-radius:1px; background:var(--line); }
   .split:hover::after, .split.on::after, .split:focus-visible::after { background:var(--accent); }
   body.resizing, body.resizing * { cursor:col-resize !important; user-select:none; }
+  /* resize bars show and grab only while Shift or Alt is held (Danny, 2026-10-19) */
+  .split { pointer-events:none; } .split::after { opacity:0; } body.rzKeys .split, .split.on { pointer-events:auto; }
+  body.rzKeys .split::after, .split.on::after, .split:focus-visible::after { opacity:1; }
+  .sized:not(.folded) { height:var(--h); } .boxcol > .box.sized:not(.folded) { flex:0 0 var(--h); } .box.sized:not(.folded) { overflow:auto; }
+  #logBox.sized:not(.folded) { display:flex; flex-direction:column; } #logBox.sized #feed { flex:1 1 0px; height:auto; min-height:3em; }
+  #rzLayer { position:fixed; inset:0; pointer-events:none; z-index:40; } body:not(.rzKeys):not(.resizing) #rzLayer { display:none; }
+  .hsplit { position:absolute; height:10px; cursor:row-resize; pointer-events:auto; touch-action:none; }
+  .hsplit::after { content:""; position:absolute; left:30%; right:30%; top:4px; height:2px; border-radius:1px; background:var(--line); }
+  .hsplit:hover::after, .hsplit.on::after { background:var(--accent); } body.resizing.rows, body.resizing.rows * { cursor:row-resize !important; }
   /* Settings > Theme: one swatch per theme (its boxes, accent and text), the editor's colour grid */
   .sw { display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:6px; margin:4px 0 6px; }
   .sw button { display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:6px; border-radius:8px; border:2px solid var(--line); text-align:left; font-size:12px; min-width:0; }
@@ -246,6 +257,7 @@
   </div>
   <div class="card hidden" id="updBanner"><b id="updText"></b> <button id="updGo">Restart and update</button></div>
   <div class="card hidden" id="dummyBar" role="status"><b>Dummy data</b><span>Made up to try layouts. Never saved or shared.</span><button id="dummyClear" class="alt">Clear</button></div>
+  <div id="rzLayer" aria-hidden="true"></div>
   <div id="dock">
   <div class="card" id="top" data-box="main" data-title="Main numbers">
     <div class="bar"><button id="go">Start</button>
@@ -357,8 +369,9 @@
         <li><b>Loot</b>: mesos in and out, items looted and consumables used, each with a total.</li>
         <li>Every box can be moved by its <b>⠿</b> grip (onto another box, onto a tab, or above the tabs to see it on every tab)
           and folded with <b>–</b>. Drop it on the left or right third of another box to put the two side by side (the dashed
-          preview shows where it lands); drag the bar between them to resize. With the grip focused, the left and right arrow keys
-          do the same. Settings → Reset box layout puts them back.</li>
+          preview shows where it lands). Hold <b>Shift</b> (or <b>Alt</b>) to show the resize bars: drag the one between two
+          boxes to share the width, or the one under a box to make it taller or shorter. Double-click a bar to undo it. With a
+          side-by-side bar focused, the left and right arrow keys move it too. Settings → Reset box layout puts them back.</li>
         <li><b>Run log</b>: what you gained every 2 seconds (EXP and kills, mesos, loot, level ups, deaths, map changes), newest
           at the bottom. Scroll up to read back; it stays put until you scroll down again.</li>
         <li><b>Snapshots</b>: EXP/hr from just two readings of the EXP bar (start and now), like mapleexp.com. A good check
@@ -440,7 +453,7 @@
       <label class="chk"><input type="checkbox" id="ontop"> <span>Keep this window on top of everything</span></label>
       <label class="chk"><input type="checkbox" id="share"> <span>Share my sessions for the leaderboards (map, kills, drops, KPQ rounds)</span></label>
       <label class="chk"><input type="checkbox" id="kpqName"> <span>Show my character name on the KPQ board (the Name above if typed, else the name read from the status bar). Off: a made-up name that stays yours, like Archer4821</span></label>
-      <div class="row"><button id="layoutReset" class="alt">Reset box layout</button> <span class="note">Boxes move by their ⠿ grip: onto the left or right of another box for side by side, onto a tab, or the strip above the tabs.</span></div>
+      <div class="row"><button id="layoutReset" class="alt">Reset box layout</button> <span class="note">Boxes move by their ⠿ grip: onto the left or right of another box for side by side, onto a tab, or the strip above the tabs. Hold Shift (or Alt) to resize them.</span></div>
     </div>
     <div class="card" id="themeCard" data-nav="Theme"><h3>Theme</h3>
       <div class="sw" id="themeSw" role="radiogroup" aria-label="Theme"></div>

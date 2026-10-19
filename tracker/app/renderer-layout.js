@@ -13,10 +13,22 @@ function renderMini(s){
   const f = $("#miniFeed"); f.scrollTop = f.scrollHeight;   // (it can't scroll while hidden: set again once shown)
   miniFit();
 }
-// the window's height follows the Mini view's (only when it changed: setting it every tick would fight a user resizing)
-let miniH = 0;
+// the window fits the Mini view when it opens, and grows if the lists outgrow it (only when that changed: setting it every
+// tick would fight a user resizing). A window made bigger than that gets bigger content, not blank space (Danny, 2026-10-19:
+// "have the content grow to match its new container size"): the view is zoomed up as far as the window's height allows (to
+// 2.5x, keeping at least 340 px of layout width) and the run log takes what's left.
+let miniH = 0, miniZ = 1;
 function miniFit(force){ if (!document.body.classList.contains("mini")) return compactFit(force);
-  const h = Math.ceil($("#mini").getBoundingClientRect().bottom + 10); if (force || Math.abs(h - miniH) > 6){ miniH = h; host.mini?.(true, h) } }
+  const m = $("#mini"), B = document.body, bottom = z => (m.style.zoom = z, m.getBoundingClientRect().bottom + scrollY + 10);
+  B.classList.add("measure");   // natural height: no stretching
+  const h = Math.ceil(bottom(1));
+  if (force || (h > innerHeight + 6 && Math.abs(h - miniH) > 6)){ miniH = h; miniZ = 1; B.classList.remove("measure"); host.mini?.(true, h); return }
+  let lo = 1, hi = Math.max(1, Math.min(2.5, innerWidth / 340));
+  for (let i = 0; i < 8 && hi - lo > 0.02; i++){ const z = (lo + hi) / 2; if (bottom(z) <= innerHeight) lo = z; else hi = z }
+  miniZ = Math.floor(lo * 50) / 50; m.style.zoom = miniZ; B.classList.remove("measure");
+}
+let miniRaf = 0;
+addEventListener("resize", () => { if (document.body.classList.contains("mini") && !miniRaf) miniRaf = requestAnimationFrame(() => { miniRaf = 0; miniFit() }) });
 // Compact (Danny, 2026-10-18: a middle ground between everything and Mini): the tabs and their boxes are hidden, only the
 // boxes pinned above them show (the main card, the run log, whatever else is pinned), and the window fits their height.
 // Saved in settings.compact; View menu and a shortcut toggle it
@@ -115,9 +127,11 @@ function tidy(){
 function layoutSave(){
   requestAnimationFrame(() => compactFit());
   tidy(); const order = {};
-  const ser = e => isRow(e) ? {row: parts(e).map(p => isCol(p) ? [...p.children].map(b => b.dataset.box) : p.dataset.box), w: parts(e).map(p => Math.round(grow(p)) || 1)} : e.dataset.box;
+  const hOf = e => e.classList.contains("sized") ? parseFloat(e.style.getPropertyValue("--h")) || undefined : undefined;
+  const ser = e => isRow(e) ? {row: parts(e).map(p => isCol(p) ? [...p.children].map(b => b.dataset.box) : p.dataset.box), w: parts(e).map(p => Math.round(grow(p)) || 1), h: hOf(e)} : e.dataset.box;
   for (const h of [$("#dock"), ...document.querySelectorAll("section[data-tab]")]) order[h.id || h.dataset.tab] = [...h.querySelectorAll(":scope > [data-box], :scope > .boxrow")].map(ser);
-  host.settings({layout: {order, folded: BOXES.filter(b => b.classList.contains("folded")).map(b => b.dataset.box)}}).then(x => settings = x);
+  const h = {}; for (const b of BOXES){ const v = hOf(b); if (v) h[b.dataset.box] = v }   // heights set with the bar under a box
+  host.settings({layout: {order, folded: BOXES.filter(b => b.classList.contains("folded")).map(b => b.dataset.box), h}}).then(x => settings = x);
 }
 function layoutLoad(l){
   if (!l?.order) return;
@@ -127,7 +141,7 @@ function layoutLoad(l){
     for (const it of items){
       if (typeof it === "string"){ const b = box(it); if (b) h.appendChild(b); continue }
       if (!Array.isArray(it?.row)) continue;
-      const r = mk("boxrow"); h.appendChild(r);
+      const r = mk("boxrow"); h.appendChild(r); if (+it.h > 0) heightSet(r, +it.h);
       it.row.forEach((p, i) => { let e;
         if (Array.isArray(p)){ e = mk("boxcol"); for (const id of p){ const b = box(id); if (b) e.appendChild(b) } if (!e.children.length) return }
         else if (!(e = box(p))) return;
@@ -135,7 +149,7 @@ function layoutLoad(l){
       });
     }
   }
-  for (const b of BOXES) b.classList.toggle("folded", (l.folded || []).includes(b.dataset.box));
+  for (const b of BOXES){ b.classList.toggle("folded", (l.folded || []).includes(b.dataset.box)); const v = +l.h?.[b.dataset.box]; heightSet(b, v > 0 ? v : null) }
   tidy();
 }
 // puts box b at side z (top, bottom, left, right) of target t (a box, or a row when dropped in a row's gap)
@@ -232,20 +246,48 @@ const endDrag = (e, cancel) => {
 document.addEventListener("pointerup", e => endDrag(e, false));
 document.addEventListener("pointercancel", e => endDrag(e, true));
 document.addEventListener("keydown", e => { if (e.key === "Escape" && drag) endDrag(e, true) });
-// the splitter between two boxes in a row: dragged (or arrow keys) to share the row's width between them, each at least 110 px
+// resizing (Danny, 2026-10-19: "it should require something like a shift click or an alt click ... the adjustment bars
+// shouldn't be perpetually visible and grabbable"): bars show in the gaps only while Shift or Alt is held (the pointer's own
+// modifier flags count too, so it works while the game has the keyboard). The bar between two boxes side by side shares the
+// row's width (each at least 110 px); the bar under a box or a row sets its height, and the boxes beside or under it give way.
+// Double-click a bar to undo it. A focused side-by-side bar also takes the left and right arrow keys.
+// Widths are measured once at the start of a drag and moved by the pointer's total travel: re-measuring on every move (the
+// old way) drifted whenever a box's content was wider than its share, which is what made it feel buggy.
 let rs = null;
-function resize(s, dx){
-  for (const p of parts(s.parentElement)) p.style.flex = `${Math.round(p.getBoundingClientRect().width)} 1 0px`;
-  const a = s.previousElementSibling, b = s.nextElementSibling, wa = grow(a), sum = wa + grow(b), na = Math.max(110, Math.min(sum - 110, wa + dx));
-  if (sum < 220) return; a.style.flex = `${Math.round(na)} 1 0px`; b.style.flex = `${Math.round(sum - na)} 1 0px`;
-}
-document.addEventListener("pointerdown", e => { const s = e.button === 0 && e.target.closest?.(".split"); if (!s) return;
-  e.preventDefault(); rs = {s, x: e.clientX}; s.classList.add("on"); document.body.classList.add("resizing") });
-document.addEventListener("pointermove", e => { if (!rs) return; resize(rs.s, e.clientX - rs.x); rs.x = e.clientX });
-const endResize = () => { if (!rs) return; rs.s.classList.remove("on"); document.body.classList.remove("resizing"); rs = null; layoutSave() };
+const HMIN = 48;
+function rzBuild(){ const L = $("#rzLayer"); L.innerHTML = "";
+  for (const e of document.querySelectorAll("#dock > [data-box], #dock > .boxrow, section[data-tab] > [data-box], section[data-tab] > .boxrow, .boxcol > [data-box]:not(:last-child)")){
+    if (!e.offsetParent || e.classList.contains("folded")) continue;
+    const h = mk("hsplit"); h.rz = e; h.title = "Drag to change the height (double-click: back to fit)"; L.appendChild(h) }
+  rzPlace() }
+function rzPlace(){ for (const h of $("#rzLayer").children){ const r = h.rz.getBoundingClientRect();
+  h.classList.toggle("hidden", !r.height); Object.assign(h.style, {left: r.left + "px", width: r.width + "px", top: r.bottom - 1 + "px"}) } }
+function rzOn(on){ if (on === document.body.classList.contains("rzKeys")) return; document.body.classList.toggle("rzKeys", on); if (on) rzBuild() }
+function heightSet(e, h){ if (h == null){ e.classList.remove("sized"); e.style.removeProperty("--h"); return }
+  e.style.setProperty("--h", Math.max(HMIN, Math.round(h)) + "px"); e.classList.add("sized") }
+function widthBase(s){ for (const p of parts(s.parentElement)) p.style.flex = `${Math.round(p.getBoundingClientRect().width)} 1 0px`; return [grow(s.previousElementSibling), grow(s.nextElementSibling)] }
+function widthSet(s, wa, wb, dx){ const sum = wa + wb; if (sum < 220) return; const na = Math.max(110, Math.min(sum - 110, wa + dx));
+  s.previousElementSibling.style.flex = `${Math.round(na)} 1 0px`; s.nextElementSibling.style.flex = `${Math.round(sum - na)} 1 0px` }
+function resize(s, dx){ const [wa, wb] = widthBase(s); widthSet(s, wa, wb, dx) }
+document.addEventListener("pointerdown", e => { const s = e.button === 0 && e.target.closest?.(".split, .hsplit"); if (!s) return;
+  e.preventDefault(); try { s.setPointerCapture(e.pointerId) } catch {}
+  rs = s.rz ? {s, y: e.clientY, h: s.rz.getBoundingClientRect().height} : {s, x: e.clientX, w: widthBase(s)};
+  s.classList.add("on"); document.body.classList.add("resizing"); document.body.classList.toggle("rows", !!s.rz) });
+let rzRaf = 0;
+document.addEventListener("pointermove", e => {
+  if (!rs){ rzOn(e.shiftKey || e.altKey); if (document.body.classList.contains("rzKeys") && !rzRaf) rzRaf = requestAnimationFrame(() => { rzRaf = 0; rzPlace() }); return }
+  if (rs.s.rz){ heightSet(rs.s.rz, rs.h + e.clientY - rs.y); rzPlace() } else { widthSet(rs.s, ...rs.w, e.clientX - rs.x); rzPlace() } });
+const endResize = () => { if (!rs) return; rs.s.classList.remove("on"); document.body.classList.remove("resizing", "rows"); rs = null; layoutSave(); requestAnimationFrame(rzPlace) };
 document.addEventListener("pointerup", endResize); document.addEventListener("pointercancel", endResize);
+document.addEventListener("dblclick", e => { const s = e.target.closest?.(".split, .hsplit"); if (!s) return;
+  if (s.rz) heightSet(s.rz, null); else for (const p of parts(s.parentElement)) p.style.flex = "1 1 0px";
+  layoutSave(); requestAnimationFrame(rzPlace) });
+addEventListener("keydown", e => { if (e.key === "Shift" || e.key === "Alt"){ if (e.key === "Alt") e.preventDefault(); rzOn(true) } });   // Alt: not the menu bar
+addEventListener("keyup", e => { if (e.key === "Shift" || e.key === "Alt") rzOn(e.shiftKey || e.altKey) });
+addEventListener("blur", () => rzOn(false));
+addEventListener("scroll", () => { if (document.body.classList.contains("rzKeys")) rzPlace() }, true);
 document.addEventListener("keydown", e => { if (!isSplit(e.target) || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
   e.preventDefault(); resize(e.target, e.key === "ArrowLeft" ? -24 : 24); layoutSave() });
-$("#layoutReset").onclick = () => { for (const [b, p, next, f] of [...BOX_HOME].reverse()){ p.insertBefore(b, next); b.classList.toggle("folded", f); foldMark(b) } layoutSave() };
+$("#layoutReset").onclick = () => { for (const [b, p, next, f] of [...BOX_HOME].reverse()){ p.insertBefore(b, next); b.classList.toggle("folded", f); heightSet(b, null); foldMark(b) } layoutSave() };
 try { const t = localStorage.getItem("tab"); if (t && t !== "hist" && t !== "help" && document.querySelector(`section[data-tab="${t}"]`)) showTab(t) } catch {}
 

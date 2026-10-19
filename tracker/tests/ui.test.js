@@ -38,6 +38,15 @@ const path = require("path"), {chromium} = require("playwright");
   const dm = await page.evaluate(() => [!document.querySelector("#dummyBar").classList.contains("hidden"), document.querySelectorAll("#items tr").length, document.querySelectorAll("#mobs tr").length,
     document.querySelectorAll("#feed .fl").length, document.querySelector("#expHr").textContent, document.querySelector("#used").textContent, !!window.saved, document.querySelector("#go").textContent]);
   if (!dm[0] || dm[1] < 3 || dm[2] !== 3 || dm[3] < 3 || dm[4] === "-" || !/Red Potion/.test(dm[5]) || dm[6] || dm[7] !== "Start") throw new Error("dummy data: " + JSON.stringify(dm));
+  // turning it off (View menu again, or Clear) wipes it in place: it used to reload, which Electron blocks (Danny, 2026-10-19)
+  let reloaded = false; page.once("framenavigated", () => reloaded = true);
+  await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(100);
+  const dmOff = await page.evaluate(() => [document.querySelector("#dummyBar").classList.contains("hidden"), dummyOn, session, document.querySelector("#feed").textContent,
+    document.querySelectorAll("#mobs tr").length, document.querySelector("#expHr").textContent, document.querySelector("#stateText").textContent, document.querySelector("#miniState").textContent]);
+  if (reloaded || !dmOff[0] || dmOff[1] || dmOff[2] || /Dummy/.test(dmOff[3]) || dmOff[4] || dmOff[5] !== "0" || /Dummy/.test(dmOff[6] + dmOff[7])) throw new Error("dummy data off: " + JSON.stringify(dmOff));
+  await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(100); await page.click("#dummyClear");
+  if (!await page.evaluate(() => document.querySelector("#dummyBar").classList.contains("hidden") && !dummyOn)) throw new Error("dummy data Clear button");
+  await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(100);
   await page.dblclick("#go");
   await page.waitForTimeout(1500);
   const dm2 = await page.evaluate(() => [document.querySelector("#dummyBar").classList.contains("hidden"), /Dummy/.test(document.querySelector("#feed").textContent), session.state.kills]);
@@ -213,8 +222,12 @@ const path = require("path"), {chromium} = require("playwright");
   const row1 = await page.evaluate(() => { const r = document.querySelector("#usedBox").parentElement;
     return [r.className, [...r.children].map(x => x.dataset.box || x.className).join(), JSON.stringify(settings.layout.order.loot)] });
   if (row1[0] !== "boxrow" || row1[1] !== "used,split,items" || !row1[2].includes('{"row":["used","items"]')) throw new Error("row: " + row1);
-  { const s = await page.locator(".boxrow .split").boundingBox(); await page.mouse.move(s.x + 4, s.y + 20); await page.mouse.down();
-    await page.mouse.move(s.x + 104, s.y + 20, {steps: 4}); await page.mouse.up(); await page.waitForTimeout(50) }
+  // the splitter only grabs with Shift (or Alt) held (Danny, 2026-10-19): a plain drag leaves the widths alone
+  const splitDrag = async () => { const s = await page.locator(".boxrow .split").boundingBox(); await page.mouse.move(s.x + 4, s.y + 20); await page.mouse.down();
+    await page.mouse.move(s.x + 104, s.y + 20, {steps: 4}); await page.mouse.up(); await page.waitForTimeout(50) };
+  await splitDrag();
+  if (await page.evaluate(() => settings.layout.order.loot.find(x => x.row).w.join()) !== "1,1") throw new Error("splitter grabbed without Shift");
+  await page.keyboard.down("Shift"); await splitDrag(); await page.keyboard.up("Shift");
   const wd = await page.evaluate(() => [document.querySelector("#usedBox").getBoundingClientRect().width, document.querySelector("[data-box=items]").getBoundingClientRect().width, settings.layout.order.loot.find(x => x.row).w]);
   if (!(wd[0] > wd[1] + 150) || !(wd[2][0] > wd[2][1])) throw new Error("resize: " + JSON.stringify(wd));
   await page.evaluate(() => document.querySelector("section[data-tab=loot]").appendChild(document.querySelector("#mesoBox")));   // (moved to Session above)
@@ -293,7 +306,24 @@ const path = require("path"), {chromium} = require("playwright");
   // Mini view (Danny, 2026-10-18): the totals and times, the run log and the three lists; the window asked to fit it
   const mv = await page.evaluate(() => ["#miniExp", "#miniMeso", "#miniTotal", "#miniActive", "#miniClock", "#miniTtl", "#miniItems", "#miniMobs", "#miniUsed"].filter(q => !document.querySelector(q).offsetParent));
   if (mv.length) throw new Error("mini view hides: " + mv);
+  // a window bigger than the Mini view: the content grows to fill it, no blank space (Danny, 2026-10-19)
+  const vp = page.viewportSize(); await page.setViewportSize({width: 1276, height: 420}); await page.waitForTimeout(150);
+  const mz = await page.evaluate(() => [miniZ, document.querySelector("#mini").getBoundingClientRect().bottom, innerHeight]);
+  if (!(mz[0] > 1.3) || mz[1] < mz[2] - 30) throw new Error("mini fill: " + mz);
+  await page.setViewportSize(vp);
   await page.click("#miniFull"); const back = await page.isVisible("#go");
+  // resize bars (Danny, 2026-10-19): hidden and not grabbable until Shift or Alt is held; the bar under a box sets its height
+  const rz0 = await page.evaluate(() => [!!document.querySelector("#rzLayer").offsetParent, document.querySelector("#logBox").getBoundingClientRect().height]);
+  if (rz0[0]) throw new Error("resize bars show without a key");
+  await page.keyboard.down("Shift");
+  const hb = await page.evaluate(() => { const h = [...document.querySelectorAll(".hsplit")].find(x => x.rz.id === "logBox"); if (!h) return null; const r = h.getBoundingClientRect(); return [r.x + r.width / 2, r.y + 5] });
+  if (!hb) throw new Error("no resize bar under the run log");
+  await page.mouse.move(hb[0], hb[1]); await page.mouse.down(); await page.mouse.move(hb[0], hb[1] + 40, {steps: 3}); await page.mouse.move(hb[0], hb[1] + 80, {steps: 3}); await page.mouse.up();
+  await page.keyboard.up("Shift"); await page.waitForTimeout(100);
+  const rz1 = await page.evaluate(() => [document.querySelector("#logBox").getBoundingClientRect().height, settings.layout?.h?.log, !!document.querySelector("#rzLayer").offsetParent]);
+  if (Math.abs(rz1[0] - rz0[1] - 80) > 3 || Math.abs(rz1[1] - rz1[0]) > 2 || rz1[2]) throw new Error("resize run log: " + rz0 + " -> " + rz1);
+  await page.evaluate(() => { const h = [...document.querySelectorAll(".hsplit")].find(x => x.rz.id === "logBox"); h.dispatchEvent(new MouseEvent("dblclick", {bubbles: true})) }); await page.waitForTimeout(100);
+  if (await page.evaluate(() => document.querySelector("#logBox").classList.contains("sized") || settings.layout.h.log)) throw new Error("resize double-click undo");
   if (!/Valuable drop: Horny Mushroom Cap/.test(status)) throw new Error("drop alert: " + status);
   if (!/Best time here: .+ 20% faster than usual then \(4 players\)/.test(last)) throw new Error("best time: " + last);
   if (!/4,000 EXP\/hr/.test(last) || !/Not enough shared runs/.test(last)) throw new Error("speed card: " + last);

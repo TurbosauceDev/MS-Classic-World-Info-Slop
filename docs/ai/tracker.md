@@ -78,7 +78,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   via host.mini(true, h) like Mini (miniFit falls through to it). Adding a shortcut: KEYS (main.js), KEY_NAMES, and the
   ui test's shortcut row count.
 - Dummy data: app/renderer-dummy.js (View menu "dummy" → dummyToggle via renderer-settings.js onMenu). It sets `session`
-  with the timer off, so nothing reaches History or the slicer; Clear reloads the window. Use it for layout screenshots.
+  with the timer off, so nothing reaches History or the slicer; Clear or the menu again wipes it in place. Use it for layout screenshots.
 - Rows stretch (`.boxrow` align-items:stretch); column boxes flex:1; #logBox's #feed flexes in a row/column.
 - body is a flex column with `.tabs { margin-top:auto }`: spare height opens above the tabs (Danny). Body children are
   flex:none; don't give one flex-grow.
@@ -93,6 +93,11 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   The dock now holds a box, so drag tests that drop "onto the dock" land relative to #logBox.
 - Docking: dropZone = left/right third of a box → side by side; `.dropGhost` previews the landing spot. Danny never found
   the old quarter-width edge (his saved layout had no rows), so check discoverability, not just that the code works.
+- Resize (0.2.49): bars show/grab only with Shift or Alt held (body.rzKeys, also set from pointer modifier flags since the
+  game usually has focus). Width bars are the row's .split; height bars are overlay .hsplit in #rzLayer (h.rz = target box
+  or row), height in `--h` + class `sized`, saved as layout.h[id] / row object `h`. Widths are measured once per drag.
+- Dummy data off no longer reloads (main.js will-navigate blocks reloads): dummyClear re-renders from the covered session.
+- Mini zooms #mini (miniZ, up to 2.5x) to fill a window bigger than its natural height; body.measure = natural size.
 - Running tests locally: `npm run data` first (core.test.js needs app/gamedata.json, not committed).
 
 ## Splits

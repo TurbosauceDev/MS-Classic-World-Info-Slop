@@ -1,8 +1,8 @@
 // Dummy data (View → Dummy data on/off; Danny, 2026-10-18: "populate the app with dummy data to test your UI layout"): a
 // made-up 30-minute run on Snail Hunting Ground III fills every box, the run log and Mini. It never leaves this window: the
 // timer stays off (so there's no Stop or Finalize, nothing goes to History) and the run slicer never sees it (nothing is
-// shared). A banner says so; Clear (or Start) wipes it.
-let dummyOn = false;
+// shared). A banner says so; Clear, View → Dummy data again, or Start wipes it.
+let dummyOn = false, dummyPrev = null;   // dummyPrev: the session/runT0 it covered up (a stopped run's numbers), put back on Clear
 function dummyFill(){
   if (timer != null){ $("#status").textContent = "Dummy data only fills an idle tracker: stop tracking first."; return }
   const t0 = Date.now() - 30 * 60e3, s = GrindSession.createSession(G, {goalLevel: goalOf(), freeIds: freeIds()}), f = GrindFeed.createFeed(G);
@@ -18,7 +18,8 @@ function dummyFill(){
   ev.push(bar(t0 + 1795e3, 120, 11), {t: t0 + 1795e3, type: "have", items: {2000000: 41, 2060000: 1310}});
   const lines = [];
   for (const e of ev){ s.add(e); if (e.t >= t0 + 1740e3) lines.push(...f.step(s.state, e.t + 2000, feedWho())); else f.step(s.state, e.t, feedWho()) }
-  dummyClearFeeds(); session = s; runT0 = t0 - 120e3; dummyOn = true;
+  dummyPrev = {session, runT0, feed: $("#feed").innerHTML, mini: $("#miniFeed").innerHTML, state: $("#stateText").textContent};
+  dummyClearFeeds(); session = s; runT0 = t0 - 120e3; dummyOn = true; stopWarned = true;   // no "No EXP for 2 minutes" beep
   feedAdd([{t: t0, kind: "sep", text: "Dummy data (made up, not saved or shared)"}, ...lines]);
   $("#dummyBar").classList.remove("hidden");
   try { renderSnaps(render()) } catch (e){ $("#status").textContent = "Dummy data: " + e.message }
@@ -26,10 +27,21 @@ function dummyFill(){
   $("#stateText").textContent = "Dummy data"; $("#miniState").textContent = "Dummy data";
 }
 function dummyClearFeeds(){ $("#feed").innerHTML = ""; $("#miniFeed").innerHTML = "" }
-// a fresh window is the surest way to wipe every box the dummy run filled
-function dummyClear(){ if (dummyOn) location.reload() }
+// wipe it in place: it used to reload the window, which the main process blocks (will-navigate), so it never went away
+// (Danny, 2026-10-19). Every box is re-rendered from the run it covered, or from an empty session.
+function dummyClear(){
+  if (!dummyOn) return;
+  const p = dummyPrev || {session: null, runT0: 0, feed: "", mini: "", state: "Not tracking"};
+  dummyOn = false; dummyPrev = null;
+  $("#stateText").textContent = p.state;   // before render: renderMini copies it
+  session = p.session || GrindSession.createSession(G, {goalLevel: goalOf(), freeIds: freeIds()});
+  try { renderSnaps(render()) } catch (e){ $("#status").textContent = "Dummy data: " + e.message }
+  session = p.session; runT0 = p.runT0;
+  $("#feed").innerHTML = p.feed; $("#miniFeed").innerHTML = p.mini;
+  $("#dummyBar").classList.add("hidden");
+}
 $("#dummyClear").onclick = dummyClear;
 // Start with dummy data showing: the real run replaces it (its session, its own log)
-$("#go").addEventListener("click", () => { if (!dummyOn) return; dummyOn = false; session = null; dummyClearFeeds(); $("#dummyBar").classList.add("hidden") }, true);
+$("#go").addEventListener("click", () => { if (!dummyOn) return; dummyOn = false; dummyPrev = null; session = null; dummyClearFeeds(); $("#dummyBar").classList.add("hidden") }, true);
 // View → Dummy data on/off (the menu handler in renderer-settings.js calls this)
 function dummyToggle(){ dummyOn ? dummyClear() : dummyFill() }
