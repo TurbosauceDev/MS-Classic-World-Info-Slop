@@ -112,7 +112,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   settings.snap / body.snap on by default): rows with the same left/right edge (dock + open tab) cluster their part edges
   (manual tol W/8, auto 24 px; #dock rows lead, a just-dragged row follows) and get px flex weights. Trap: a box never flexes
   below its padding, so weight = width - padding (pad()), else rows with equal weights land ~1 px apart. Sized boxes in a row
-  hand their height to the row. Auto runs in layoutSave, endResize and showTab (showTab never saves: settings may not be loaded).
+  hand their height to the row. widthBase (0.2.57) reads every part's width before setting any, also minus pad(). Auto runs in layoutSave, endResize and showTab (showTab never saves: settings may not be loaded).
 - tests/layout.test.js (CI job `ui` in tracker.yml, with ui.test.js; host stub shared in tests/ui-host.js): sweeps the window
   900→340 px over Danny's docked layout. Wait a frame after setViewportSize (resize events fire in the next frame).
 - Dummy data off no longer reloads (main.js will-navigate blocks reloads): dummyClear re-renders from the covered session.

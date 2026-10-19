@@ -126,17 +126,20 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   // the edges hold as the window narrows (while the rows still fit side by side)
   await vp(780, 820); const nar = await edges();
   if (!nar.wrapped && nar.cols.some(x => Math.abs(x) > 1)) fail("lined up at 780 px", nar);
-  await vp(900, 820);
+  await vp(1300, 1300);   // (wide and tall: the Loot row in view; wide: every box has room past its content, whatever fonts the machine has)
   // Keep box edges lined up (on by default): a width bar let go near another row's edge snaps onto it; far from one, it stays
-  const bar2 = async dx => { await page.keyboard.down("Shift"); const s = await page.locator("section[data-tab=loot] .boxrow .split >> nth=0").boundingBox();
+  const bar2 = async dx => { await page.keyboard.down("Shift"); const l = page.locator("section[data-tab=loot] .boxrow .split >> nth=0"); await l.scrollIntoViewIfNeeded(); const s = await l.boundingBox();
     await page.mouse.move(s.x + 4, s.y + 20); await page.mouse.down(); await page.mouse.move(s.x + 4 + dx, s.y + 20, {steps: 4}); await page.mouse.up(); await page.keyboard.up("Shift"); return edges() };
   const near = await bar2(14);
   if (Math.abs(near.cols[1]) > 1) fail("bar snaps to the edge above", near);
-  const far = await bar2(-70);   // (Consumables stops at its content, about 30 px in)
-  if (Math.abs(far.cols[1]) < 24) fail("bar far from an edge stays put", far);
+  const far = await bar2(-70);
+  if (Math.abs(far.cols[1]) < 50) fail("bar far from an edge stays put", far);
   await page.evaluate(() => { window.menu("settings"); $("#snapBoxes").click(); $("#prefsClose").click() });
   const off2 = await bar2(58);
   if (Math.abs(off2.cols[1]) < 4 || await page.evaluate(() => settings.snap) !== false) fail("snap off", off2);
+  // grabbing a bar and letting go without moving changes nothing (the edges used to jump as a drag began)
+  const still = await bar2(0);
+  if (still.cols.some((x, i) => Math.abs(x - off2.cols[i]) > 1)) fail("a bar grabbed and let go", {off2, still});
   await browser.close();
   if (errors.length) fail("page errors", errors);
   console.log("layout test passed");

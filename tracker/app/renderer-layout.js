@@ -277,10 +277,14 @@ function rzOn(on){ if (on === document.body.classList.contains("rzKeys")) return
 function heightSet(e, h){ if (h == null){ e.classList.remove("sized"); e.style.removeProperty("--h"); return }
   e.style.setProperty("--h", Math.max(HMIN, Math.round(h)) + "px"); e.classList.add("sized") }
 // with Fit on, neither side of the bar goes narrower than its content (it used to stop at 110 px and cut the table off)
-function widthBase(s){ const m = [s.previousElementSibling, s.nextElementSibling].map(e => fitOn() ? Math.max(110, minW(e)) : 110);
-  for (const p of parts(s.parentElement)) p.style.flex = `${Math.round(p.getBoundingClientRect().width)} 1 0px`; return [grow(s.previousElementSibling), grow(s.nextElementSibling), ...m] }
+// weights are widths less padding (a box never flexes below its padding), so they share the row out 1:1 in px and a drag
+// starts where the bar is (whole widths, each read after the last was set, made the edges jump when a drag began)
+const r2 = v => Math.round(v * 100) / 100;
+function widthBase(s){ const m = [s.previousElementSibling, s.nextElementSibling].map(e => (fitOn() ? Math.max(110, minW(e)) : 110) - pad(e));
+  const ps = parts(s.parentElement), w = ps.map(p => p.getBoundingClientRect().width - pad(p));   // all read before any is set
+  ps.forEach((p, i) => p.style.flex = `${r2(w[i])} 1 0px`); return [grow(s.previousElementSibling), grow(s.nextElementSibling), ...m] }
 function widthSet(s, wa, wb, dx, ma = 110, mb = 110){ const sum = wa + wb; if (sum < ma + mb) return; const na = Math.max(ma, Math.min(sum - mb, wa + dx));
-  s.previousElementSibling.style.flex = `${Math.round(na)} 1 0px`; s.nextElementSibling.style.flex = `${Math.round(sum - na)} 1 0px` }
+  s.previousElementSibling.style.flex = `${r2(na)} 1 0px`; s.nextElementSibling.style.flex = `${r2(sum - na)} 1 0px` }
 function resize(s, dx){ const [wa, wb, ma, mb] = widthBase(s); widthSet(s, wa, wb, dx, ma, mb) }
 document.addEventListener("pointerdown", e => { const s = e.button === 0 && e.target.closest?.(".split, .hsplit"); if (!s) return;
   e.preventDefault(); try { s.setPointerCapture(e.pointerId) } catch {}
@@ -338,7 +342,7 @@ const pad = e => { const c = getComputedStyle(e); return ["paddingLeft", "paddin
 const snapOn = () => document.body.classList.contains("snap"), SNAP = 24;
 function alignRows(tol, lead){
   if (rs) return false;
-  const rows = [...document.querySelectorAll(".boxrow")].filter(r => r.offsetParent && !r.classList.contains("wrapped")), px = v => Math.round(v * 100) / 100;
+  const rows = [...document.querySelectorAll(".boxrow")].filter(r => r.offsetParent && !r.classList.contains("wrapped"));
   let moved = false;
   for (const r of rows){ const own = parts(r).filter(p => p.classList.contains("sized") && !p.classList.contains("folded")); if (!own.length) continue;
     const h = r.getBoundingClientRect().height; for (const p of own) heightSet(p, null); heightSet(r, h); moved = true }
@@ -363,7 +367,7 @@ function alignRows(tol, lead){
       const was = p.map(x => x.getBoundingClientRect().width);
       if (w.every((x, i) => Math.abs(x - was[i]) < 0.5)) continue;
       // a box never flexes below its padding, so only the width past it is shared out by weight
-      p.forEach((x, i) => x.style.flex = `${px(w[i] - pad(x))} 1 0px`); moved = true }
+      p.forEach((x, i) => x.style.flex = `${r2(w[i] - pad(x))} 1 0px`); moved = true }
   }
   if (moved) fitRows();
   return moved;
