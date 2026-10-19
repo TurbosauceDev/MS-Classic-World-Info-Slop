@@ -276,6 +276,8 @@ input.khave{width:64px;text-align:right}
 .changelog p{margin:0 0 8px;font-size:14px}
 .changelog ul{margin:0;padding-left:18px;font-size:14px;line-height:1.5}
 .changelog li{margin:3px 0}
+.changelog .ver,.trkpatch b{font:600 .85em var(--f-mono);color:var(--muted)}
+.trkpatch p{margin:0 0 6px;font-size:14px}
 
 /* monsters tab */
 .mbtn{all:unset;cursor:pointer;display:flex;gap:10px;align-items:center;min-width:180px}
@@ -706,7 +708,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       </div>
     </div>
   </div>
-  <p class="sitever" data-built="2026-10-19T21:29:45Z">Site version: built Oct 19, 2026 · 21:29 UTC</p>
+  <p class="sitever" data-built="2026-10-19T22:39:09Z" data-ver="0.7.1">Site version: v0.7.1 · built Oct 19, 2026 · 22:39 UTC</p>
 </section>
 
 <section id="plan" hidden>
@@ -1084,6 +1086,11 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <div class="fact"><h3>Screen-read only</h3><p>It only reads the game's picture, the same screen capture OBS and Discord use. It never touches game files or memory and never presses keys or clicks.</p></div>
     <div class="fact"><h3>Sharing is your choice</h3><p>Off until you say yes on first start. Shared runs carry map, level, job, party size, EXP, kills and drops. Never your character name.</p></div>
     <div class="fact"><h3>Updates itself</h3><p>New versions download in the background and install when you close it. Settings › Check for updates checks right away.</p></div>
+  </div>
+  <div class="card trkpatch" id="trkpatch" style="margin-top:16px">
+    <div class="cardhead"><h3>Patch notes</h3><span class="pill" id="trkpatchver"></span></div>
+    <div id="trkpatchnew"></div>
+    <details><summary>Older versions</summary><div id="trkpatchold"></div></details>
   </div>
 </section>
 <section id="trkhow" hidden>
@@ -1506,126 +1513,129 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <details class="howto">
     <summary>About this page</summary>
     <ul>
-      <li>What changed in this tool and why, newest first.</li>
+      <li>What changed in this site and why, newest first. Each entry is one site version (shown next to "Site version" on Home): the middle number goes up for a big addition, the last one for everything else.</li>
+      <li>The Grind Tracker app has its own patch notes: <a href="#" data-go="trk">Grind Tracker › Overview</a>, or Help › Patch notes in the app.</li>
       <li>Game changes come from the OSMS Data Explorer patch notes (COT2 → Public Release) and our own rebuild.</li>
     </ul>
   </details>
 
   <div class="changelog">
-    <div class="card"><div class="cardhead"><h3>Oct 19, 2026 · Phone app, faster first load, keep or sell in the price check</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.7.1</span> Oct 19, 2026 · Version numbers</h3><span class="pill p-hot">update</span></div>
+      <p>The site has a version number now, shown next to "Site version" on Home. Every entry in this changelog is one version, counted from the first build on Oct 6 (0.1.0) to today; the middle number went up for the big additions (monster and item databases, Home page, EXP/hr calculator, players' shared runs, Search everything, the phone app). The <b>Grind Tracker</b> app's own patch notes moved to <a href="#" data-go="trk">Grind Tracker › Overview</a> (and Help › Patch notes in the app), so this page is only about the site.</p></div>
+    <div class="card" data-minor><div class="cardhead"><h3><span class="ver">v0.7.0</span> Oct 19, 2026 · Phone app, faster first load, keep or sell in the price check</h3><span class="pill p-hot">update</span></div>
       <p><b>Phones:</b> "Add to Home Screen" on the GitHub Pages site now opens it full-screen like an app, and once opened it works offline. The page there loads about 3× less up front (item icons and minimaps follow a moment later). <b>Price check</b> marks every item <b>Keep</b> or <b>Sell</b> with the Keep or sell rules and adds up what you can <b>sell now</b>. <b>Character Builder:</b> compare two jobs side by side at one level (e.g. Fighter vs Page at 45). <b>Where to train</b> remembers its settings and your "Use this in Where to train" build after a reload. <b>Credits</b> lists when each data source was last updated. Typing a huge number in a Where to train stat box no longer breaks the phone layout.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 19, 2026 · Hunter and Crossbowman area attacks back</h3><span class="pill p-good">fix</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.6.12</span> Oct 19, 2026 · Hunter and Crossbowman area attacks back</h3><span class="pill p-good">fix</span></div>
       <p>The Oct 17 game-file update renamed <b>Arrow Bomb</b> and <b>Iron Arrow</b> (they lost their ": Bow" / ": Crossbow" endings). Since then Where to train ranked Bowmen 30+ as single-target (a Lv 45 Bowman's top map went from about 137k to 285k EXP/hr now that Arrow Bomb counts again), and the Hunter and Crossbowman class-guide builds dropped the SP they put into those skills. Also: a Lv 10 Warrior can't have Slash Blast yet (1 SP, and it needs Power Strike 1 first), so Where to train and the Path Planner no longer count it at 10.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 19, 2026 · Sturdier, quicker, better on phones</h3><span class="pill p-good">fix</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.6.11</span> Oct 19, 2026 · Sturdier, quicker, better on phones</h3><span class="pill p-good">fix</span></div>
       <p><b>Phones:</b> the page now sizes itself to your screen (it used to load zoomed out at desktop width), and the section and page buttons are one swipeable row each, so content starts much higher. <b>Speed:</b> the page starts about 20% faster, and Crafting, Keep or sell and the Quest Database switch in 2-3× quicker (long tables draw as you scroll). <b>Fixes:</b> old saved settings or edited share links can no longer break Citizenship, the Character Builder, Path Planner, World Map, Crafting or a monster page; a huge level typed into Where to train is capped instead of breaking the accuracy line; the Grind Tracker pages ignore anything odd from the server; Price check says when a file isn't a picture, and it and the Builder's screenshot import read your first picture in about half a second instead of 2-5; Search puts monsters and real items ahead of the letter chairs and shows the ID when two items share a name; Esc or a click elsewhere closes the Theme box, a cut-off theme code says so, and Search hands focus back.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Back and Forward</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.6.10</span> Oct 18, 2026 · Back and Forward</h3><span class="pill p-hot">update</span></div>
       <p><b>← →</b> buttons left of the section buttons step back and forward through the pages and places you opened (a monster, item or skill page, a World Map island, area or card, a quest line). Your browser's Back button does the same now, instead of dropping you on Home.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Themes, same as the Grind Tracker</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.6.9</span> Oct 18, 2026 · Themes, same as the Grind Tracker</h3><span class="pill p-hot">update</span></div>
       <p>A <b>Theme</b> button at the top lets you pick any of the Grind Tracker's colour themes, or paste a tracker theme code (MSCT1...) to wear your own. <b>Copy code</b> gives a code the tracker accepts. Default is this site's own look, and it's now the tracker's default too, so the two match side by side.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Little sprites on Home</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.6.8</span> Oct 18, 2026 · Little sprites on Home</h3><span class="pill p-hot">update</span></div>
       <p>Each Home card has a small in-game icon by its name, and an opened card shows one for every page in it (a Snail for the Grind Tracker, an Orange Mushroom for Monsters, Teleport for the Map Navigator and so on).</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Bank in the price check, easier screenshot import</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.6.7</span> Oct 18, 2026 · Bank in the price check, easier screenshot import</h3><span class="pill p-hot">update</span></div>
       <p><b>Price check</b> reads your <b>bank</b>: add screenshots scrolled down a bit at a time and the overlapping rows are counted once (same for scrolled inventory tabs). With the bank open, the inventory beside it is left out; bank mesos are shown. <b>Character Builder</b> import adds screenshots up in any order: equipment before the stat window no longer reads as "over the budget". Each screenshot gets a chip you can remove, and <b>Reset</b> clears them all. Worn gear counts at its base stats (an average drop); edit the numbers before applying if yours are better.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Site version on Home</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.6.6</span> Oct 18, 2026 · Site version on Home</h3><span class="pill p-hot">update</span></div>
       <p>The bottom of Home shows when this copy of the site was built, so you can tell at a glance that an update has reached you.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Respawns use each map's mob capacity</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.6.5</span> Oct 18, 2026 · Respawns use each map's mob capacity</h3><span class="pill p-hot">update</span></div>
       <p><b>Where to train</b>, the <b>Path Planner</b>, the World Map and monster pages now cap respawns with each map's <b>mob capacity</b> from the game files: how many monsters it keeps alive for one player (OSMS, worked out from map size and checked against in-game counts). We used to assume 75% of spawn points everywhere; most maps keep about half. Area-attack EXP/hr drops on big maps (for example a level 45 F/P Wizard on B2 Subway Depot, about 238k to 157k an hour), and the top maps reshuffle. Single-target builds barely change. Parties of up to 5 get no extra monsters (OSMS's estimate, not yet confirmed).</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Game data updated to the Oct 17 export</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.6.4</span> Oct 18, 2026 · Game data updated to the Oct 17 export</h3><span class="pill p-hot">update</span></div>
       <p>Rebuilt from the newest OSMS game-file export (Oct 17; was Oct 6). <b>The Filing Error</b> now asks for 25 Torn Ledger Pages (was 50). Coconut sells to NPCs for 10 mesos (was 145). Blue Mushroom in L Forest III has a 10-minute respawn, so it moves to timed spawns and out of Where to train. Wild Kargo's Area has 14 Wild Kargos (was 13). New item: Lie Detector Test. Small map, portal and skill-range fixes. Player drop reports and shop prices are unchanged.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Home cards grow when clicked</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.6.3</span> Oct 18, 2026 · Home cards grow when clicked</h3><span class="pill p-hot">new</span></div>
       <p>Click a section card on Home and it grows into a big card at the top with a short description and its pages (the Grind Tracker one has the download). Click it again to shrink it back.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Fixes and polish</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.6.2</span> Oct 18, 2026 · Fixes and polish</h3><span class="pill p-hot">update</span></div>
       <p><b>Where to train</b> shows its ranking as soon as you open it (it was empty until you changed a setting). The site reopens on the page you last used instead of always on Home. <b>Import from screenshots</b> now reads every skill level (The Eye of Amazon was missed). Faster first load: the page is about a quarter smaller (item, NPC and monster pictures re-saved smaller, pixel for pixel the same), and Crafting and Keep or sell build their tables when you open them. Small touches: soft shadows on panels, gentle fade when pages and info boxes open, themed file buttons, focus rings and scrollbars. Motion is off if your system asks for reduced motion.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Grind Tracker section</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.6.1</span> Oct 18, 2026 · Grind Tracker section</h3><span class="pill p-hot">new</span></div>
       <p>The <b>Grind Tracker</b> is now its own section, first in the menu and on Home: Overview (what it does and the download), How to use, Shared runs, and the KPQ leaderboard.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Search everything, more share links</h3><span class="pill p-hot">new</span></div>
+    <div class="card" data-minor><div class="cardhead"><h3><span class="ver">v0.6.0</span> Oct 18, 2026 · Search everything, more share links</h3><span class="pill p-hot">new</span></div>
       <p><b>Search everything</b> (top of the page, or press <b>Ctrl K</b> or <b>/</b>): monsters, items, maps, quests and skills in one box. Parts of words work, so "or mu cap" finds Orange Mushroom Cap. <b>@mob</b>, <b>@item</b>, <b>@map</b>, <b>@quest</b> and <b>@skill</b> narrow it, and <b>@drop</b> lists the monsters players have seen drop an item.
       <b>Copy link</b> buttons now also on World Map cards, the Map Navigator, Where to train and the Quest Database. Monster drops are split into Equip, Use, Etc and Quest.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · KPQ leaderboard</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.5.7</span> Oct 18, 2026 · KPQ leaderboard</h3><span class="pill p-hot">new</span></div>
       <p>The <b>Grind Tracker</b> page has a <b>KPQ leaderboard</b>: the fastest Kerning PQ clears by tracker players (1st stage to the end of the Last stage), split by Bonus and Rush, one line per party. Needs grind tracker 0.2.40 or newer with sharing on.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Grind Tracker page</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.5.6</span> Oct 18, 2026 · Grind Tracker page</h3><span class="pill p-hot">new</span></div>
       <p>New <b>Grind Tracker</b> page under Your character: what our Windows grind tracker does, a download link, and everything its players have shared so far (EXP/hr and mesos/hr by map, confirmed drops by monster, best time of day to farm).</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Inventory price check</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.5.5</span> Oct 18, 2026 · Inventory price check</h3><span class="pill p-hot">new</span></div>
       <p>New <b>Towns and trade › Price check</b> page: paste screenshots of your inventory's Equip, Use and Etc tabs and it lists every item and count with a suggested player-shop price (meso.watch median, NPC price when there's no player data) and what the lot is worth. Uses the grind tracker's inventory reader, all in your browser.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Player-shop prices refreshed</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.5.4</span> Oct 18, 2026 · Player-shop prices refreshed</h3><span class="pill p-hot">update</span></div>
       <p>Player-shop prices updated from a fresh <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> export: 824 items now have a price (up from 459), read Oct 17.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Real potion costs</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.5.3</span> Oct 17, 2026 · Real potion costs</h3><span class="pill p-hot">new</span></div>
       <p>Grind tracker 0.2.6 counts the potions, food and arrows players use (from their quick slots). Where to train and World Map cards add it to the <b>players:</b> line ("pots/ammo 1,200/hr"), and <b>Frugal</b> mode uses that real spending instead of its estimates on maps where 3+ players near your level shared runs, marked "(players' costs)".</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Best time to farm</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.5.2</span> Oct 17, 2026 · Best time to farm</h3><span class="pill p-hot">new</span></div>
       <p>Where to train and World Map cards get a <b>best time:</b> line (for example "9 PM-12 AM (+15%)"): the 3 hours of the day, in your time zone, when grind tracker players farm that map fastest compared with their own usual speed there. It appears once 3+ players have runs on the map in at least two time blocks (tracker 0.2.5 and later).</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Players' EXP/hr</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.5.1</span> Oct 17, 2026 · Players' EXP/hr</h3><span class="pill p-hot">new</span></div>
       <p>Where to train: under each map's estimated EXP/hr, a <b>players:</b> line shows what grind tracker players within 5 levels of you really got there (solo or party, like your setting). It only appears once 3+ different players or parties have shared runs on that map; runs under half or over double the typical one are left out. It also shows deaths per hour there (from tracker 0.2.2), and the same line is on World Map cards. New Mode <b>Farmed by players</b> lists only maps with players' runs, fastest for them first. Confirmed Drops now also give a likely range ("1 per 11 kills (likely 8-15)"), a statistics estimate that narrows as more kills are shared.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Confirmed Drops</h3><span class="pill p-hot">new</span></div>
+    <div class="card" data-minor><div class="cardhead"><h3><span class="ver">v0.5.0</span> Oct 17, 2026 · Confirmed Drops</h3><span class="pill p-hot">new</span></div>
       <p>Monster and item pages get a <b>Confirmed Drops</b> box once players of our grind tracker (a Windows app that reads the game screen) share their runs: kills counted and what they picked up, as "about 1 per X kills". It only sees the sharing player's own pickups, so real rates are at least that. Empty until runs come in.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · The List removed</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.4.7</span> Oct 17, 2026 · The List removed</h3><span class="pill p-hot">update</span></div>
       <p>The kill-stealer list tab is gone.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Collapsible crafting sections</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.4.6</span> Oct 17, 2026 · Collapsible crafting sections</h3><span class="pill p-hot">update</span></div>
       <p>Crafting: every section (Masters and profession quests, Craft levels, Cheapest way to level, Recipes, Raw materials) now folds up when you click its heading. Masters and profession quests starts folded.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 16, 2026 · Item and monster filters</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.4.5</span> Oct 16, 2026 · Item and monster filters</h3><span class="pill p-hot">update</span></div>
       <p>Items: the <b>Type</b> filter now also picks <b>Weapons</b>, <b>Armor</b> or <b>Accessories</b> (Slot then lists only that group's slots), and a <b>Reset filters</b> button puts every filter back to its default. Monsters: new <b>Weak to</b> filter (Fire, Ice, Lightning, Poison, Holy or no weakness), from the launch game files' element data; Reset filters clears it too.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 16, 2026 · Fresh meowdb drops</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.4.4</span> Oct 16, 2026 · Fresh meowdb drops</h3><span class="pill p-hot">update</span></div>
       <p>Monster drops re-pulled from meowdb player reports: 825 confirmed drops (was 708), 122 new reports across 66 monsters, 2 removed by meowdb (Mithril Ore from Fire Boar, Diamond Ore from Evil Eye). Shade has drops listed for the first time; Wraith, Zombie Lupin and Dark Stone Golem got the most new ones.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 14, 2026 · Skill database</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.4.3</span> Oct 14, 2026 · Skill database</h3><span class="pill p-hot">new</span></div>
       <p>New <b>Skills</b> page under Databases: all 90 1st and 2nd job skills from the launch game files, searchable by name, job or effect, with class, job, advancement and type filters. Click a skill for its page: description, effect at every level, the skill it needs and the skills it unlocks.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · Character Builder: import from screenshots</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.4.2</span> Oct 13, 2026 · Character Builder: import from screenshots</h3><span class="pill p-hot">new</span></div>
       <p>Drop, pick or paste screenshots of your <b>Character Stat</b>, <b>Equipment Inventory</b> and <b>Skill Inventory</b> windows into the new box at the top of the Character Builder. It reads level, STR/DEX/INT/LUK, worn items (by icon) and skill levels, shows them for a check, then fills the build. The stat window shows totals, so the read gear's base stats are taken off to get your AP. Reading happens in the page; nothing is uploaded.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · Monsters: find who drops an item</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.4.1</span> Oct 13, 2026 · Monsters: find who drops an item</h3><span class="pill p-hot">update</span></div>
       <p>The Monsters list has a <b>Drops item</b> box: type or pick an item and only the monsters players report dropping it stay (from meowdb drop reports; + = net confirmations). A <b>Reset filters</b> button clears search, type, item and sorting.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · EXP/hr calculator</h3><span class="pill p-hot">new</span></div>
+    <div class="card" data-minor><div class="cardhead"><h3><span class="ver">v0.4.0</span> Oct 13, 2026 · EXP/hr calculator</h3><span class="pill p-hot">new</span></div>
       <p>New <b>EXP/hr calculator</b> under Your character: note your EXP, start the timer, train, then type the new EXP. It gives your real EXP per hour, % of a level per hour, time to the next level (or a goal level) and how it compares with our Where to train estimate for that map. Sessions save in your browser. Idea from <a href="https://mapleexp.com/" target="_blank" rel="noopener">MapleEXP</a>.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 12, 2026 · Fresh meowdb drops</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.3.10</span> Oct 12, 2026 · Fresh meowdb drops</h3><span class="pill p-hot">update</span></div>
       <p>Monster drops re-pulled from meowdb player reports: 708 confirmed drops (was 580), 128 new reports across 65 monsters, none removed. New include Mano and Mushmom crafting catalysts, and many more equips, scrolls and ores.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 10, 2026 · Undervalued maps</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.3.9</span> Oct 10, 2026 · Undervalued maps</h3><span class="pill p-hot">new</span></div>
       <p>World Map has an <b>Undervalued maps</b> button: green dots are quieter training spots (maps guides call overflow, quieter or little-known, or that have the same monsters as a famous map), red rings are maps the guides call busy. Each card says why, what to go instead of, sources, and the dearest drops reported there. It ignores your class and level.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 9, 2026 · World Map: click, not hover</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.3.8</span> Oct 9, 2026 · World Map: click, not hover</h3><span class="pill p-hot">update</span></div>
       <p>On the World Map (and the Sleepywood map), hovering a dot now only shows its name and monster levels. The card on the right changes only when you click a dot, so brushing over other dots no longer replaces what you're reading.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 9, 2026 · Player-shop prices</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.3.7</span> Oct 9, 2026 · Player-shop prices</h3><span class="pill p-hot">new</span></div>
       <p>Items now show what players pay in player shops (median sale price from <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a>): a <b>Players</b> column in Items, a line on each item page, a "players ~" line and sort in Keep or sell, and a <b>Loot price</b> setting in Frugal mode to value loot at player prices instead of NPC prices.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Frugal mode counts loot</h3></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.3.6</span> Oct 8, 2026 · Frugal mode counts loot</h3></div>
       <p>Frugal mode's net now includes ETC items and potions sold to NPCs (meowdb drop reports, at an assumed 5% a kill each; 10%, 15% or off in the new <b>Loot sold to NPCs</b> setting).</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Potion drops in Frugal mode</h3></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.3.5</span> Oct 8, 2026 · Potion drops in Frugal mode</h3></div>
       <p>Frugal mode lists the healing and mana potions each map's monsters drop (meowdb player reports) under the map name.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Basic attacks, gentler hit costs</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.3.4</span> Oct 8, 2026 · Basic attacks, gentler hit costs</h3><span class="pill p-hot">new</span></div>
       <p>Where to train: <b>Basic attack (no skills)</b> under Attack ranks maps with plain hits (no MP; arrows and stars still cost). Frugal mode has a <b>Monsters that hit you</b> setting (default 1 in 4, was every one), so damage taken is less harsh.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Where to train uses your stat window</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.3.3</span> Oct 8, 2026 · Where to train uses your stat window</h3><span class="pill p-hot">new</span></div>
       <p>The damage-per-second box is gone. Type what your in-game stat window shows instead: Attack range, Accuracy, Evasion, Max HP and Weapon Def (Magicians: Magic and INT). Empty boxes fall back to the Character Builder's default build for your level, which is also better than the old 20 × level guess.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Frugal mode in Where to train</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.3.2</span> Oct 8, 2026 · Frugal mode in Where to train</h3><span class="pill p-hot">new</span></div>
       <p>Where to train has a <b>Mode</b> picker. <b>Frugal (meso positive)</b> shows only maps where monster mesos cover your potions and ammo, skips Danger/Lethal maps, and ranks what's left by EXP. Each map shows its net mesos per hour. Damage taken is an estimate; see the how-to box.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Shorter intro, closed how-to boxes</h3></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.3.1</span> Oct 8, 2026 · Shorter intro, closed how-to boxes</h3></div>
       <p>The text under the title is now one line. The how-to boxes at the top of each page start closed; click one to open it.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Home page and sections</h3><span class="pill p-hot">new</span></div>
+    <div class="card" data-minor><div class="cardhead"><h3><span class="ver">v0.3.0</span> Oct 8, 2026 · Home page and sections</h3><span class="pill p-hot">new</span></div>
       <p>New <b>Home</b> page with every tool and what it's for. The top bar now shows five sections (<b>Your character</b>, <b>Databases</b>, <b>World</b>, <b>Towns and trade</b>, <b>More</b>); pick one to see its pages. Clicking the site title goes home. Links between pages (map names, items, monsters, Route here) work as before.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · KPQ guide</h3><span class="pill p-hot">new tab</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.13</span> Oct 8, 2026 · KPQ guide</h3><span class="pill p-hot">new tab</span></div>
       <p>New <b>KPQ</b> tab: how to get in (4 players, level 21+, channels 3-5 only), Proof of Companionship, every stage with its minimap and monster spots, Cloto's coupon questions, all rope / platform / barrel combinations, King Slime's stats, the monsters inside and what players get from Companion's Magic Box. Game-file data plus meowdb's KPQ guide.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Sleepywood map easier to find</h3><span class="pill p-hot">fix</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.12</span> Oct 8, 2026 · Sleepywood map easier to find</h3><span class="pill p-hot">fix</span></div>
       <p>The Sleepywood area map now has a <b>Sleepywood area map</b> button above the World Map, an <b>Open Sleepywood map</b> label on the map itself and a button in Sleepywood's card, and it opens wider so the map names don't overlap. Before, it only opened by clicking the small square dot.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Sleepywood map</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.11</span> Oct 8, 2026 · Sleepywood map</h3><span class="pill p-hot">update</span></div>
       <p>On the World Map, clicking Sleepywood opens a map of the Sleepywood area: all its maps (dungeons, Ant Tunnel, Evil Eye caves, Sanctuary, Deep Forest of Patience) joined by their walkable exits, each with the usual hover card. Monster search lights up dots there too.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Map names open map info</h3><span class="pill p-hot">maps</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.10</span> Oct 8, 2026 · Map names open map info</h3><span class="pill p-hot">maps</span></div>
       <p>Clicking a map name anywhere on the site now opens that map's card on the <b>World Map</b> (monsters, EXP/hr, danger, NPCs, quests, minimap) instead of the navigator. Press <b>Route here</b> on the card for directions.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Fresh meowdb drop reports</h3><span class="pill p-hot">data</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.9</span> Oct 8, 2026 · Fresh meowdb drop reports</h3><span class="pill p-hot">data</span></div>
       <p>Re-pulled meowdb's player drop reports: 82 new confirmed drops, 3 no longer confirmed. Bosses, KPQ and jump-quest monsters now show their reports too (Mano, Mushmom, Zombie Mushmom, Jr. Balrog, King Slime and more had none before). Updates monster pages, item pages, Crafting and Keep or sell.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Items: new filters</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.8</span> Oct 8, 2026 · Items: new filters</h3><span class="pill p-hot">update</span></div>
       <p>Items tab has a <b>Get it from</b> filter (monster drops, NPC shops, crafting or quest rewards), a <b>Used for</b> filter (crafting components, items quests ask for) and a <b>Hide quest items</b> filter (on by default) for letters, proofs and other quest-only items. Quest item pages are tagged "quest item".</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Item database</h3><span class="pill p-hot">new</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.7</span> Oct 7, 2026 · Item database</h3><span class="pill p-hot">new</span></div>
       <p>New <b>Items</b> tab: all 2,220 items in the launch game files, searchable by name or by a monster that drops it, with type, slot, job and "has a known source" filters. Click any item (or any item icon or name anywhere on the site) for its page: stats, description, monsters that drop it, NPC shops, recipes, quest rewards, quests and recipes that want it, sell price and similar gear. Monster pages link their drops to item pages, and item pages link back to monster pages.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map monster search</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.6</span> Oct 7, 2026 · World map monster search</h3><span class="pill p-hot">update</span></div>
       <p>World Map has a <b>Find a monster</b> box: type a monster and every place it spawns lights up (other dots dim), with a count per island. Hovering a lit dot opens the minimap of the map where it spawns most.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map spawns</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.5</span> Oct 7, 2026 · World map spawns</h3><span class="pill p-hot">update</span></div>
       <p>The World Map card's minimap now shows where each monster spawns, one color per monster, with a legend. It sits right under the map list.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · World map</h3><span class="pill p-hot">new tab</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.4</span> Oct 7, 2026 · World map</h3><span class="pill p-hot">new tab</span></div>
       <p>New <b>World Map</b> tab: the game's own Maple Island and Victoria Island maps with a dot for every place. Hover a dot to see its maps, monsters (level, HP, EXP), danger and EXP/hr at your class and level (estimate), NPCs and their quests, cab and potion shop, and a minimap. Click to pin; map names open the Map Navigator.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Navigator: no taxi</h3><span class="pill p-hot">navigator</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.3</span> Oct 7, 2026 · Navigator: no taxi</h3><span class="pill p-hot">navigator</span></div>
       <p>Map Navigator has a <b>No taxi</b> box: tick it to get a walking-only route (fewest maps) instead of cab rides between towns.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Map navigator</h3><span class="pill p-hot">new tab</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.2</span> Oct 7, 2026 · Map navigator</h3><span class="pill p-hot">new tab</span></div>
       <p>New <b>Map Navigator</b> tab. Clicking any map name on the site now opens it as your destination: pick where you're starting (any map or a town) and it shows the quickest route map by map, with which numbered exit to take on each minimap, cab rides between towns and Shanks' ship off Maple Island. Travel time is an estimate (30 s a map, 45 s a cab), same as the Path Planner.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Monster pages</h3><span class="pill p-hot">monsters</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.2.1</span> Oct 7, 2026 · Monster pages</h3><span class="pill p-hot">monsters</span></div>
       <p>Clicking a monster (in the Monsters tab or any monster name on the site) now opens its own page: stats, every spawn place, drops, mesos, attacks and quests, plus <b>Best maps to farm it</b>: the maps it spawns on, ranked by how many you'd kill per hour at your class and level (estimate), with danger, EXP/hr and a minimap showing where it spawns. Each page has a shareable link.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Monster database</h3><span class="pill p-hot">new tab</span></div>
+    <div class="card" data-minor><div class="cardhead"><h3><span class="ver">v0.2.0</span> Oct 7, 2026 · Monster database</h3><span class="pill p-hot">new tab</span></div>
       <p>New <b>Monsters</b> tab: all 71 monsters you can meet at launch (field monsters, bosses, jump quests, KPQ, 2nd job test), searchable by name, map or drop. Each card shows every stat in the launch game files (HP, MP, EXP, attack, defense, accuracy, avoid, speed, knockback, regen, elements), its attacks and skills, every spawn map with respawn time, meowdb player drop and meso reports, and the quests and recipes that want it.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 6, 2026 · Backup grind maps</h3><span class="pill p-hot">planner</span></div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.1.1</span> Oct 6, 2026 · Backup grind maps</h3><span class="pill p-hot">planner</span></div>
       <p>Path Planner grind steps now list up to 2 backup maps for when the pick is crowded: monsters within 5 levels on average and at least 60% of the EXP/hr, with the percentage shown.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 6, 2026 · Launch game data</h3><span class="pill p-hot">data</span></div>
+    <div class="card" data-minor><div class="cardhead"><h3><span class="ver">v0.1.0</span> Oct 6, 2026 · Launch game data</h3><span class="pill p-hot">data</span></div>
       <p>Every tab now uses the OSMS <b>Public Release</b> export (Oct 6) instead of Closed Online Test 2.</p>
       <ul>
         <li><b>Quests:</b> EXP changed on 158 quests and mesos on 130. Examples: Jane's three Challenges 6,300 → 9,940 EXP; John's Deep Forest baskets 6,581 → 25,900; Jane and the Mushroom 2,021 → 1,610; Olaf's and Teo's early quests 84 → 124.</li>
@@ -7004,6 +7014,98 @@ function trkOpen(){
 }
 // the data pages ask the server once, on first open
 for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click", trkOpen); if (!$("#" + id).hidden) trkOpen() }
+// Patch notes on Overview: the app's own changelog (tracker/app/changelog.js, inlined by build.py; window.TrackerChangelog),
+// kept apart from the site's Changelog (Danny 10-19). Newest 5 shown, the rest under "Older versions".
+// Grind Tracker patch notes, newest first: [version, date, what changed]. Shown in the app (Help > Patch notes) and on the
+// site's Grind Tracker page (scripts/build.py inlines this file). Kept apart from the site's own changelog (Danny 10-19).
+// Releasing? Add a line for the new version at the top: tests/core.test.js fails if the top entry isn't package.json's version.
+(function (root){
+  const LOG = [
+    ["0.2.62", "2026-10-19", "Patch notes: Help > Patch notes lists what changed in every version (also on the site's Grind Tracker page)."],
+    ["0.2.61", "2026-10-19", "Profiles (Settings > Layout): save your whole setup under a name and switch between them. Copy profile code shares one with a friend, who can preview it before using it."],
+    ["0.2.60", "2026-10-19", "Finalize log from Mini. Crash recovery: a running session is saved every minute and offered back after a crash. History: Today card and goal ETA. Setup codes."],
+    ["0.2.59", "2026-10-19", "Bug hunt: Start no longer hangs when the game window sends no picture, wrap-up and Run summary show in view, a long idle stretch after Start isn't shared as a run."],
+    ["0.2.58", "2026-10-19", "Modules instead of tabs: every box sits in one layout, and the Modules toolbox adds or puts away boxes. Session/Loot/History tabs and Compact view retired."],
+    ["0.2.57", "2026-10-19", "Grabbing a width bar no longer makes the box edges jump."],
+    ["0.2.56", "2026-10-19", "No \"Not told apart\" row in Monsters killed: unmatched party kills stay out of it."],
+    ["0.2.55", "2026-10-19", "Line up every box (View menu, Ctrl+Shift+L): edges snap into shared columns, rows get the same top and bottom, gaps even out."],
+    ["0.2.54", "2026-10-19", "History reworked: compare 2 to 6 runs against a baseline, filters, Maps view, bests, trend, details and rename."],
+    ["0.2.53", "2026-10-19", "Companion's Magic Box rewards read from the chat box, party kills row, party size, KPQ timeline saved with each run."],
+    ["0.2.52", "2026-10-19", "Event log box: map changes, level ups, deaths, party, job, pauses, KPQ stages and rounds, run results."],
+    ["0.2.51", "2026-10-19", "Layout pass: boxes fit their content, rows wrap when the window is narrow, smoother window resizing."],
+    ["0.2.50", "2026-10-19", "Equip tab found and named right, staff pickups read, saved runs keep the consumables used."],
+    ["0.2.49", "2026-10-19", "Resize bars show while Shift or Alt is held (width and height), Dummy data turns off properly, Mini fills the window."],
+    ["0.2.48", "2026-10-18", "Compact view (hide the tabs, window fits), \"Dropped potions are free\" switch."],
+    ["0.2.47", "2026-10-18", "View > Dummy data to try layouts, docked boxes fill the space, chat-box style run log."],
+    ["0.2.46", "2026-10-18", "Main card is a movable box, Settings under File, Mini view, tabs follow the bottom edge."],
+    ["0.2.45", "2026-10-18", "Run log box: what changed every 2 s (EXP, kills, mesos, loot). Side-by-side docking easier to find."],
+    ["0.2.44", "2026-10-18", "Names on the KPQ board, separate Rush and Bonus boards, Preferences popup."],
+    ["0.2.43", "2026-10-18", "Fixes from KPQ runs: slot counts keep their last value on a missed read; shortcut capture times out; Help updated."],
+    ["0.2.42", "2026-10-18", "Boxes side by side, themed title bar and scrollbars, share wording."],
+    ["0.2.41", "2026-10-18", "Upload queue keeps at most the newest 200 runs; the server checks incoming numbers."],
+    ["0.2.40", "2026-10-18", "KPQ leaderboard: cleared rounds are sent (with sharing on) and shown on the site."],
+    ["0.2.39", "2026-10-18", "Run summary Save as image, meat-and-lemons switch, KPQ test-run fixes."],
+    ["0.2.38", "2026-10-18", "Inventory spot remembered, default Session layout, total EXP and active EXP/min in logs."],
+    ["0.2.37", "2026-10-18", "Task Manager shows the app as \"MS Classic Grind Tracker\"."],
+    ["0.2.36", "2026-10-18", "\"Show me where my potions are\" removed: counts are read everywhere on screen."],
+    ["0.2.35", "2026-10-18", "More detailed History: character name (kept on this PC), start and end level, best drop."],
+    ["0.2.34", "2026-10-18", "Run name at Start, note at wrap-up, Finalize log."],
+    ["0.2.33", "2026-10-18", "Goal: Next level button, on by default."],
+    ["0.2.32", "2026-10-18", "Readability and accessibility pass: bigger small text, visible keyboard focus, arrow keys on tabs."],
+    ["0.2.31", "2026-10-18", "Boxes drag with the mouse or pen more reliably; History compare redone."],
+    ["0.2.30", "2026-10-18", "Wrap-up after Stop (last look at each inventory tab), run summary, loot totals, movable boxes."],
+    ["0.2.29", "2026-10-18", "KPQ clock read off the screen (stage and round times, best and average round). EXP bar \"1,601\" no longer reads as 601."],
+    ["0.2.28", "2026-10-18", "Bug pass on 0.2.26-0.2.27: hidden items compare totals over all stacks, inventory chips confirm a read."],
+    ["0.2.27", "2026-10-18", "KPQ Pass/Coupon not counted as loot; arrows used while the Use tab was closed are counted."],
+    ["0.2.26", "2026-10-18", "Bug report hotkey (Ctrl+Shift+B): a popup grabs the last few frames at that moment."],
+    ["0.2.25", "2026-10-18", "Counts read over light icons; Start and Stop ask for a look at all 3 inventory tabs."],
+    ["0.2.24", "2026-10-18", "Inventory reader (Equip/Use/Etc), loot from inventory gains, KPQ kill fixes."],
+    ["0.2.23", "2026-10-18", "Reopens on the same monitor, spot and size."],
+    ["0.2.22", "2026-10-18", "KPQ mode: stages detected, pauses in Kerning between rounds, rounds with a Bonus/Rush label."],
+    ["0.2.21", "2026-10-18", "Delete a session from History (asks first); start and end readings in the Session tab."],
+    ["0.2.20", "2026-10-18", "Install button next to \"is ready\" in Settings; the update banner stays on top while scrolling."],
+    ["0.2.19", "2026-10-18", "Potion box opens on the game's monitor."],
+    ["0.2.18", "2026-10-18", "Help page (? button, F1, Help menu) and the app's own menu."],
+    ["0.2.17", "2026-10-18", "Check for updates button and Restart and update banner: updates install from inside the app."],
+    ["0.2.16", "2026-10-18", "Fixes from the bug hunt; Start/Stop and the 4 main numbers on top."],
+    ["0.2.15", "2026-10-18", "Faster frame reading."],
+    ["0.2.14", "2026-10-18", "\"Show me where my potions are\": draw a box over a frozen game picture, counts are read only there."],
+    ["0.2.13", "2026-10-18", "Deaths confirmed by the chat line \"You have lost N EXP for dying\", with the exact EXP lost."],
+    ["0.2.12", "2026-10-17", "Item icons no longer re-matched every frame; the end reading keeps the last good value when Stop's frame doesn't read."],
+    ["0.2.11", "2026-10-17", "Mini bar also shows the start-to-now EXP/hr."],
+    ["0.2.10", "2026-10-17", "EXP bar drops of over a fifth of a level without a level-up are misreads, not deaths."],
+    ["0.2.9", "2026-10-17", "Start and end readings (level + EXP %, saved pictures, editable) with EXP/hr from them."],
+    ["0.2.8", "2026-10-17", "EXP readings whose number and % disagree are thrown out; item counts read from video frames; always on top."],
+    ["0.2.7", "2026-10-17", "Meso total reads all ten digits."],
+    ["0.2.6", "2026-10-17", "Inventory meso total, potion/arrow costs in shared runs, faster frame reading."],
+    ["0.2.5", "2026-10-17", "Potions and arrows used (quick slots and Use tab), auto-pause, level-up log, party and potion self-check."],
+    ["0.2.4", "2026-10-17", "Self-check on Start, Report a bug, one player per home network in shared numbers."],
+    ["0.2.3", "2026-10-17", "Deep bug hunt."],
+    ["0.2.2", "2026-10-17", "Deaths, session goal, weekly recap, EXP-stopped beep."],
+    ["0.2.1", "2026-10-17", "Job read from the status bar, party total in the mini bar."],
+    ["0.2.0", "2026-10-17", "Party view, first-run guide."],
+    ["0.1.9", "2026-10-17", "Respawn timers, party codes, frame rate adapts to the game."],
+    ["0.1.8", "2026-10-17", "Speed check after each run, session history + CSV, drop alerts, mini bar."],
+    ["0.1.7", "2026-10-17", "Missed-kill estimate, last-5-min EXP/hr, keep-on-top switch, steadier bar, level-up and map reads."],
+    ["0.1.6", "2026-10-17", "KPQ stages known as maps, honest party kill matching, run progress."],
+    ["0.1.5", "2026-10-17", "Job picker, steadier map and party reads."],
+    ["0.1.4", "2026-10-17", "Shared 15-minute runs go to the live server."],
+    ["0.1.3", "2026-10-17", "Map name read from the minimap."],
+    ["0.1.2", "2026-10-17", "Screen readers built on real frames: EXP bar, pickup messages, items, party size."],
+    ["0.1.1", "2026-10-17", "Captures the game window, whole-screen fallback when frames come back black."],
+    ["0.1.0", "2026-10-17", "First build: session tracking, Windows app, auto-update."],
+  ];
+  if (typeof module !== "undefined" && module.exports) module.exports = LOG; else root.TrackerChangelog = LOG;
+})(typeof window !== "undefined" ? window : globalThis);
+
+(() => {
+  const L = window.TrackerChangelog || [], fmt = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const row = ([v, d, t]) => `<p><b>${esc(v)}</b> <span class="sub">${esc(fmt(d))}</span> · ${esc(t)}</p>`;
+  if (!L.length) return;
+  $("#trkpatchver").textContent = "latest " + L[0][0];
+  $("#trkpatchnew").innerHTML = L.slice(0, 5).map(row).join("");
+  $("#trkpatchold").innerHTML = L.slice(5).map(row).join("");
+})();
 
 /* ---------------- search everything (Ctrl K) + the share links for Where to train and the Quest Database ---------------- */
 (() => {
@@ -7203,19 +7305,31 @@ $("#t-maps").addEventListener("click", firstRank); if (!$("#maps").hidden) first
     if (l.h && typeof l.h === "object") for (const [k, v] of Object.entries(l.h)){ const n = num(v, 40, 4000); if (ok.has(k) && n) h[k] = n }
     return {v: 2, order: {dock}, folded: [...new Set(folded)], h};
   }
+  // profiles (0.2.61) add to the same code: name, prefs {fit, fitWin, snap: true/false, opacity 0.4-1} and win {w, h} (the
+  // window's content size). Older apps ignore them; older codes just don't have them
+  function cleanPrefs(p){
+    if (!p || typeof p !== "object") return null; const r = {};
+    for (const k of ["fit", "fitWin", "snap"]) if (typeof p[k] === "boolean") r[k] = p[k];
+    const o = +p.opacity; if (Number.isFinite(o) && o >= 0.4 && o <= 1) r.opacity = Math.round(o * 100) / 100;
+    return Object.keys(r).length ? r : null;
+  }
+  const cleanName = n => typeof n === "string" ? n.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40) || null : null;
   function cleanSetup(x, ids){
     if (!x || typeof x !== "object") return null;
     const layout = cleanLayout(x.layout, ids), p = x.theme && typeof x.theme === "object" ? x.theme : null;
     const theme = p && typeof p.preset === "string" ? (PRESETS.some(t => t.name === p.preset) ? {preset: p.preset} : null) : clean(p);
-    return layout || theme ? {layout, theme} : null;
+    if (!layout && !theme) return null;
+    const r = {layout, theme}, name = cleanName(x.name), prefs = cleanPrefs(x.prefs), w = num(x.win?.w, 200, 4000), h = num(x.win?.h, 100, 3000);
+    if (name) r.name = name; if (prefs) r.prefs = prefs; if (w && h) r.win = {w, h};
+    return r;
   }
   const encodeSetup = (x, ids) => { const c = cleanSetup(x, ids); return c ? "MSCS1." + btoa(unescape(encodeURIComponent(JSON.stringify(c)))) : null };
   function decodeSetup(s, ids){
     const m = /MSCS1\.([A-Za-z0-9+/=]{20,12000})/.exec(String(s || "").replace(/\s+/g, ""));
-    if (!m) return null;
+    if (!m){ const t = decode(s); return t ? {layout: null, theme: t, name: t.name} : null }   // a theme code (MSCT1) works here too
     try { return cleanSetup(JSON.parse(decodeURIComponent(escape(atob(m[1])))), ids) } catch { return null }
   }
-  const api = {TOKENS, PRESETS, clean, encode, decode, contrast, resolve, apply, cleanLayout, encodeSetup, decodeSetup};
+  const api = {TOKENS, PRESETS, clean, encode, decode, contrast, resolve, apply, cleanLayout, cleanSetup, encodeSetup, decodeSetup};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.TrackerThemes = api;
 })(typeof window !== "undefined" ? window : globalThis);
 
@@ -7260,14 +7374,14 @@ $("#t-maps").addEventListener("click", firstRank); if (!$("#maps").hidden) first
   dq.addEventListener("change", () => { const t = now(); if (t !== TH.PRESETS[0]) siteTheme(t); if (!$("#thpop").hidden) draw() });
 })();
 
-// Home "Site version: built ...": the build stamps UTC; show it in the viewer's own time zone (Danny 10-19), exact UTC on hover
+// Home "Site version: v0.x.y · built ...": number = newest changelog entry (build.py); the build stamps UTC; show it in the viewer's own time zone (Danny 10-19), exact UTC on hover
 (() => {
   const el = document.querySelector(".sitever[data-built]"), d = el && new Date(el.dataset.built);
   if (!d || isNaN(d)) return;
   const day = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const tm = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
-  el.title = el.textContent.replace("Site version: built ", "");
-  el.textContent = `Site version: built ${day} · ${tm}`;
+  el.title = el.textContent.replace(/^.*built /, "");
+  el.textContent = `Site version: v${el.dataset.ver} · built ${day} · ${tm}`;
 })();
 
 // Back / Forward (Danny, 2026-10-18): every page change, and every "place" inside a page (a monster, item or skill page,

@@ -53,7 +53,8 @@ cd ../server && npm install && npm run data && npm test   # Node 22 (node:sqlite
 ```
 
 ## Release / deploy
-- Tracker: bump `tracker/package.json` version, commit, push to the default branch, then GitHub `actions_run_trigger`
+- Tracker: bump `tracker/package.json` version, add its line at the top of `tracker/app/changelog.js` (patch notes; core.test.js
+  fails without it), commit, push to the default branch, then GitHub `actions_run_trigger`
   on tracker.yml with inputs `{release: true}` (tag pushes are blocked from cloud). Installed copies auto-update.
   Release only on Danny's "release"; pushing needs his "push". Bundle small fixes into one release.
 - Server: pushes touching `server/**` deploy via server.yml (repo secrets CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID).
@@ -169,3 +170,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Traps: box h3/rows need 72 px right padding (⠿ – × = 63 px); `#hist > .row:first-child` never matched (.boxctl is first child).
   .feedlist height = calc(7.5em + 10px) = 5 whole lines; feedIn slides lines, so wait 400 ms before measuring them. Mini's zoom
   search is cached by content height + window size (miniKey).
+
+## Patch notes 2026-10-19 (0.2.62)
+- `tracker/app/changelog.js` = [version, date, text] newest first, backfilled 0.1.0-0.2.61 from git subjects. Shown in Help (#patchNotes,
+  menu Help > Patch notes) and inlined by scripts/build.py into the site's Grind Tracker Overview (#trkpatch). README version log stays the dev log.

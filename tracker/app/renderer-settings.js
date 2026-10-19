@@ -17,6 +17,9 @@ function openHelp(){
   showTab("help"); $("#help").scrollIntoView();
 }
 $("#helpBtn").onclick = openHelp;
+// Patch notes (Help, or Help > Patch notes in the menu): changelog.js, newest first
+$("#patchList").innerHTML = (window.TrackerChangelog || []).map(([v, d, t]) => `<p><b>${esc(v)}</b> <span class="note">${esc(d)}</span> ${esc(t)}</p>`).join("");
+function openPatchNotes(){ $("#patchNotes").open = true; openHelp(); $("#patchNotes").scrollIntoView() }
 $("#helpClose").onclick = () => showTab(null);
 document.addEventListener("keydown", e => { if (e.key === "F1"){ e.preventDefault(); openHelp() } });
 // title bar: File / View / Help open the app's menus under the button
@@ -48,6 +51,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && !keyWait &
 for (const b of document.querySelectorAll("#titlebar [data-menu]")) b.onclick = () => { const r = b.getBoundingClientRect(); host.menu?.(b.dataset.menu, r.left, r.bottom) };
 host.onMenu?.(what => {
   if (what === "help") openHelp();
+  else if (what === "patchnotes") openPatchNotes();
   else if (what === "settings") openPrefs();
   else if (what === "dummy") dummyToggle();
   else if (what === "fit") fitAll();

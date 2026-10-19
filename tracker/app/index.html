@@ -87,6 +87,7 @@
   #helpBtn { padding:5px 10px; font-size:12px; font-weight:600; }
   #help details { border-top:1px solid var(--line); padding:6px 0; } #help details:first-of-type { border-top:0; }
   #help summary { cursor:pointer; font-weight:600; } #help ul { margin:6px 0 2px; padding-left:18px; } #help li { margin:3px 0; }
+  #patchList p { margin:4px 0; } #patchList b { font-variant-numeric:tabular-nums; }
   /* green = gained, red = lost or spent */
   .pos { color:var(--leaf); } .neg { color:var(--bad); }
   tr.th td { color:var(--muted); font-size:12px; border-bottom:1px solid var(--line); }
@@ -496,6 +497,7 @@
         <li>Sharing (your choice, Settings) sends map, level, job, EXP, kills and drops per 15 minutes, never your character name. The name only goes with KPQ rounds, for the KPQ board
           (Settings can turn that off).</li>
       </ul></details>
+      <details id="patchNotes"><summary>Patch notes</summary><div id="patchList"></div></details>
       <div class="note" id="helpVer"></div>
     </div>
   </section>
@@ -584,6 +586,7 @@
   <script src="../core/history.js"></script>
   <script src="readers.js"></script>
   <script src="themes.js"></script>
+  <script src="changelog.js"></script>
   <script src="renderer.js"></script>
   <script src="renderer-layout.js"></script>
   <script src="renderer-live.js"></script>

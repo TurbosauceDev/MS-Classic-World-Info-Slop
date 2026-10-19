@@ -17,6 +17,8 @@ js = "\n".join(p.read_text() for p in sorted((src / "js").glob("*.js")))
 js = js.replace("/*@READERS*/", (ROOT / "tracker" / "app" / "readers.js").read_text(), 1)
 # the tracker's themes (presets + MSCT1. share codes), so the site and the tracker can wear the same theme; window.TrackerThemes
 js = js.replace("/*@THEMES*/", (ROOT / "tracker" / "app" / "themes.js").read_text(), 1)
+# the tracker's patch notes for the Grind Tracker page (window.TrackerChangelog)
+js = js.replace("/*@TRKLOG*/", (ROOT / "tracker" / "app" / "changelog.js").read_text(), 1)
 data = (ROOT / "data" / "data.json").read_text()
 # "Data last updated" (Credits): the pinned OSMS export (fetch_osms.sh; its date comes from data.json "osms" once build_data.py
 # has run with it) + each data/sources file's "read" date
@@ -34,6 +36,23 @@ now = datetime.datetime.now(datetime.timezone.utc)
 ver = now.strftime("%b %-d, %Y · %H:%M UTC")
 assert "__BUILD__" in html and "__BUILDISO__" in html
 html = html.replace("__BUILDISO__", now.strftime("%Y-%m-%dT%H:%M:%SZ")).replace("__BUILD__", ver)
+# site version number (Danny 10-19) = changelog entries counted from the oldest (0.1.0): each card is one version, a card
+# marked data-minor starts the next 0.x.0. A new changelog card bumps it, nobody has to remember a number.
+head, rest = html.split('<section id="log"', 1)
+log, tail = rest.split("</section>", 1)
+card = r'(<div class="card"( data-minor)?><div class="cardhead"><h3>)'
+cards = list(re.finditer(card, log))
+assert cards and cards[-1].group(2), "oldest changelog card must be data-minor (0.1.0)"
+vers, mi, pa = [], 0, 0
+for c in reversed(cards):
+    mi, pa = (mi + 1, 0) if c.group(2) else (mi, pa + 1)
+    vers.append(f"0.{mi}.{pa}")
+vers.reverse()
+it = iter(vers)
+log = re.sub(card, lambda m: m.group(1) + f'<span class="ver">v{next(it)}</span> ', log)
+html = head + '<section id="log"' + log + "</section>" + tail
+assert "__SITEVER__" in html
+html = html.replace("__SITEVER__", vers[0])
 # the data rides in a JSON <script> and is read with JSON.parse: V8 parses JSON much faster than the same 5.6 MB as a
 # JS object literal (page start ~0.4 s quicker). "<" -> \u003c (only inside strings) so no "</script>" can end it early.
 html = html.replace("<script>\n/*@JS*/", '<script type="application/json" id="sitedata">' + data.strip().replace("<", "\\u003c") + "</script>\n<script>\n/*@JS*/", 1)

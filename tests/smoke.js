@@ -254,7 +254,12 @@ const path = require("path");
   { const c = await b.newContext({ timezoneId: "America/Los_Angeles" }), q = await c.newPage();
     await q.goto("file://" + path.resolve(__dirname, "../dist/index.html"));
     const [t, h] = await q.$eval(".sitever", e => [e.textContent, e.title]);
-    check(/^Site version: built \w{3} \d{1,2}, \d{4} · \d{1,2}:\d\d [AP]M P[DS]T$/.test(t) && / UTC$/.test(h), `site version in local time (${t} / ${h})`);
+    check(/^Site version: v0\.\d+\.\d+ · built \w{3} \d{1,2}, \d{4} · \d{1,2}:\d\d [AP]M P[DS]T$/.test(t) && / UTC$/.test(h), `site version in local time (${t} / ${h})`);
+    // version number = newest changelog entry (build.py numbers every card, Danny 10-19); tracker patch notes on its Overview
+    const vers = await q.$$eval("#log .changelog .ver", a => a.map(e => e.textContent));
+    check(vers.length > 50 && t.includes(vers[0] + " ·") && vers.at(-1) === "v0.1.0" && new Set(vers).size === vers.length, `site version matches the changelog (${vers[0]}, ${vers.length} entries)`);
+    const tp = await q.$$eval("#trkpatch p", a => a.length), tv = await q.$eval("#trkpatchver", e => e.textContent);
+    check(tp > 50 && /^latest 0\.\d+\.\d+$/.test(tv), `tracker patch notes on Overview (${tp}, ${tv})`);
     await c.close() }
   console.log(errs.length ? "\n" + errs.join("\n") : "\nall good");
   await b.close();

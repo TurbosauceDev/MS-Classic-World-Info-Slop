@@ -2,13 +2,16 @@
   <details class="howto">
     <summary>About this page</summary>
     <ul>
-      <li>What changed in this tool and why, newest first.</li>
+      <li>What changed in this site and why, newest first. Each entry is one site version (shown next to "Site version" on Home): the middle number goes up for a big addition, the last one for everything else.</li>
+      <li>The Grind Tracker app has its own patch notes: <a href="#" data-go="trk">Grind Tracker › Overview</a>, or Help › Patch notes in the app.</li>
       <li>Game changes come from the OSMS Data Explorer patch notes (COT2 → Public Release) and our own rebuild.</li>
     </ul>
   </details>
 
   <div class="changelog">
-    <div class="card"><div class="cardhead"><h3>Oct 19, 2026 · Phone app, faster first load, keep or sell in the price check</h3><span class="pill p-hot">update</span></div>
+    <div class="card"><div class="cardhead"><h3>Oct 19, 2026 · Version numbers</h3><span class="pill p-hot">update</span></div>
+      <p>The site has a version number now, shown next to "Site version" on Home. Every entry in this changelog is one version, counted from the first build on Oct 6 (0.1.0) to today; the middle number went up for the big additions (monster and item databases, Home page, EXP/hr calculator, players' shared runs, Search everything, the phone app). The <b>Grind Tracker</b> app's own patch notes moved to <a href="#" data-go="trk">Grind Tracker › Overview</a> (and Help › Patch notes in the app), so this page is only about the site.</p></div>
+    <div class="card" data-minor><div class="cardhead"><h3>Oct 19, 2026 · Phone app, faster first load, keep or sell in the price check</h3><span class="pill p-hot">update</span></div>
       <p><b>Phones:</b> "Add to Home Screen" on the GitHub Pages site now opens it full-screen like an app, and once opened it works offline. The page there loads about 3× less up front (item icons and minimaps follow a moment later). <b>Price check</b> marks every item <b>Keep</b> or <b>Sell</b> with the Keep or sell rules and adds up what you can <b>sell now</b>. <b>Character Builder:</b> compare two jobs side by side at one level (e.g. Fighter vs Page at 45). <b>Where to train</b> remembers its settings and your "Use this in Where to train" build after a reload. <b>Credits</b> lists when each data source was last updated. Typing a huge number in a Where to train stat box no longer breaks the phone layout.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 19, 2026 · Hunter and Crossbowman area attacks back</h3><span class="pill p-good">fix</span></div>
       <p>The Oct 17 game-file update renamed <b>Arrow Bomb</b> and <b>Iron Arrow</b> (they lost their ": Bow" / ": Crossbow" endings). Since then Where to train ranked Bowmen 30+ as single-target (a Lv 45 Bowman's top map went from about 137k to 285k EXP/hr now that Arrow Bomb counts again), and the Hunter and Crossbowman class-guide builds dropped the SP they put into those skills. Also: a Lv 10 Warrior can't have Slash Blast yet (1 SP, and it needs Power Strike 1 first), so Where to train and the Path Planner no longer count it at 10.</p></div>
@@ -34,7 +37,7 @@
       <p><b>Where to train</b> shows its ranking as soon as you open it (it was empty until you changed a setting). The site reopens on the page you last used instead of always on Home. <b>Import from screenshots</b> now reads every skill level (The Eye of Amazon was missed). Faster first load: the page is about a quarter smaller (item, NPC and monster pictures re-saved smaller, pixel for pixel the same), and Crafting and Keep or sell build their tables when you open them. Small touches: soft shadows on panels, gentle fade when pages and info boxes open, themed file buttons, focus rings and scrollbars. Motion is off if your system asks for reduced motion.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Grind Tracker section</h3><span class="pill p-hot">new</span></div>
       <p>The <b>Grind Tracker</b> is now its own section, first in the menu and on Home: Overview (what it does and the download), How to use, Shared runs, and the KPQ leaderboard.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · Search everything, more share links</h3><span class="pill p-hot">new</span></div>
+    <div class="card" data-minor><div class="cardhead"><h3>Oct 18, 2026 · Search everything, more share links</h3><span class="pill p-hot">new</span></div>
       <p><b>Search everything</b> (top of the page, or press <b>Ctrl K</b> or <b>/</b>): monsters, items, maps, quests and skills in one box. Parts of words work, so "or mu cap" finds Orange Mushroom Cap. <b>@mob</b>, <b>@item</b>, <b>@map</b>, <b>@quest</b> and <b>@skill</b> narrow it, and <b>@drop</b> lists the monsters players have seen drop an item.
       <b>Copy link</b> buttons now also on World Map cards, the Map Navigator, Where to train and the Quest Database. Monster drops are split into Equip, Use, Etc and Quest.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 18, 2026 · KPQ leaderboard</h3><span class="pill p-hot">new</span></div>
@@ -51,7 +54,7 @@
       <p>Where to train and World Map cards get a <b>best time:</b> line (for example "9 PM-12 AM (+15%)"): the 3 hours of the day, in your time zone, when grind tracker players farm that map fastest compared with their own usual speed there. It appears once 3+ players have runs on the map in at least two time blocks (tracker 0.2.5 and later).</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Players' EXP/hr</h3><span class="pill p-hot">new</span></div>
       <p>Where to train: under each map's estimated EXP/hr, a <b>players:</b> line shows what grind tracker players within 5 levels of you really got there (solo or party, like your setting). It only appears once 3+ different players or parties have shared runs on that map; runs under half or over double the typical one are left out. It also shows deaths per hour there (from tracker 0.2.2), and the same line is on World Map cards. New Mode <b>Farmed by players</b> lists only maps with players' runs, fastest for them first. Confirmed Drops now also give a likely range ("1 per 11 kills (likely 8-15)"), a statistics estimate that narrows as more kills are shared.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · Confirmed Drops</h3><span class="pill p-hot">new</span></div>
+    <div class="card" data-minor><div class="cardhead"><h3>Oct 17, 2026 · Confirmed Drops</h3><span class="pill p-hot">new</span></div>
       <p>Monster and item pages get a <b>Confirmed Drops</b> box once players of our grind tracker (a Windows app that reads the game screen) share their runs: kills counted and what they picked up, as "about 1 per X kills". It only sees the sharing player's own pickups, so real rates are at least that. Empty until runs come in.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 17, 2026 · The List removed</h3><span class="pill p-hot">update</span></div>
       <p>The kill-stealer list tab is gone.</p></div>
@@ -67,7 +70,7 @@
       <p>Drop, pick or paste screenshots of your <b>Character Stat</b>, <b>Equipment Inventory</b> and <b>Skill Inventory</b> windows into the new box at the top of the Character Builder. It reads level, STR/DEX/INT/LUK, worn items (by icon) and skill levels, shows them for a check, then fills the build. The stat window shows totals, so the read gear's base stats are taken off to get your AP. Reading happens in the page; nothing is uploaded.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · Monsters: find who drops an item</h3><span class="pill p-hot">update</span></div>
       <p>The Monsters list has a <b>Drops item</b> box: type or pick an item and only the monsters players report dropping it stay (from meowdb drop reports; + = net confirmations). A <b>Reset filters</b> button clears search, type, item and sorting.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 13, 2026 · EXP/hr calculator</h3><span class="pill p-hot">new</span></div>
+    <div class="card" data-minor><div class="cardhead"><h3>Oct 13, 2026 · EXP/hr calculator</h3><span class="pill p-hot">new</span></div>
       <p>New <b>EXP/hr calculator</b> under Your character: note your EXP, start the timer, train, then type the new EXP. It gives your real EXP per hour, % of a level per hour, time to the next level (or a goal level) and how it compares with our Where to train estimate for that map. Sessions save in your browser. Idea from <a href="https://mapleexp.com/" target="_blank" rel="noopener">MapleEXP</a>.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 12, 2026 · Fresh meowdb drops</h3><span class="pill p-hot">update</span></div>
       <p>Monster drops re-pulled from meowdb player reports: 708 confirmed drops (was 580), 128 new reports across 65 monsters, none removed. New include Mano and Mushmom crafting catalysts, and many more equips, scrolls and ores.</p></div>
@@ -89,7 +92,7 @@
       <p>Where to train has a <b>Mode</b> picker. <b>Frugal (meso positive)</b> shows only maps where monster mesos cover your potions and ammo, skips Danger/Lethal maps, and ranks what's left by EXP. Each map shows its net mesos per hour. Damage taken is an estimate; see the how-to box.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Shorter intro, closed how-to boxes</h3></div>
       <p>The text under the title is now one line. The how-to boxes at the top of each page start closed; click one to open it.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · Home page and sections</h3><span class="pill p-hot">new</span></div>
+    <div class="card" data-minor><div class="cardhead"><h3>Oct 8, 2026 · Home page and sections</h3><span class="pill p-hot">new</span></div>
       <p>New <b>Home</b> page with every tool and what it's for. The top bar now shows five sections (<b>Your character</b>, <b>Databases</b>, <b>World</b>, <b>Towns and trade</b>, <b>More</b>); pick one to see its pages. Clicking the site title goes home. Links between pages (map names, items, monsters, Route here) work as before.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 8, 2026 · KPQ guide</h3><span class="pill p-hot">new tab</span></div>
       <p>New <b>KPQ</b> tab: how to get in (4 players, level 21+, channels 3-5 only), Proof of Companionship, every stage with its minimap and monster spots, Cloto's coupon questions, all rope / platform / barrel combinations, King Slime's stats, the monsters inside and what players get from Companion's Magic Box. Game-file data plus meowdb's KPQ guide.</p></div>
@@ -117,11 +120,11 @@
       <p>New <b>Map Navigator</b> tab. Clicking any map name on the site now opens it as your destination: pick where you're starting (any map or a town) and it shows the quickest route map by map, with which numbered exit to take on each minimap, cab rides between towns and Shanks' ship off Maple Island. Travel time is an estimate (30 s a map, 45 s a cab), same as the Path Planner.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Monster pages</h3><span class="pill p-hot">monsters</span></div>
       <p>Clicking a monster (in the Monsters tab or any monster name on the site) now opens its own page: stats, every spawn place, drops, mesos, attacks and quests, plus <b>Best maps to farm it</b>: the maps it spawns on, ranked by how many you'd kill per hour at your class and level (estimate), with danger, EXP/hr and a minimap showing where it spawns. Each page has a shareable link.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 7, 2026 · Monster database</h3><span class="pill p-hot">new tab</span></div>
+    <div class="card" data-minor><div class="cardhead"><h3>Oct 7, 2026 · Monster database</h3><span class="pill p-hot">new tab</span></div>
       <p>New <b>Monsters</b> tab: all 71 monsters you can meet at launch (field monsters, bosses, jump quests, KPQ, 2nd job test), searchable by name, map or drop. Each card shows every stat in the launch game files (HP, MP, EXP, attack, defense, accuracy, avoid, speed, knockback, regen, elements), its attacks and skills, every spawn map with respawn time, meowdb player drop and meso reports, and the quests and recipes that want it.</p></div>
     <div class="card"><div class="cardhead"><h3>Oct 6, 2026 · Backup grind maps</h3><span class="pill p-hot">planner</span></div>
       <p>Path Planner grind steps now list up to 2 backup maps for when the pick is crowded: monsters within 5 levels on average and at least 60% of the EXP/hr, with the percentage shown.</p></div>
-    <div class="card"><div class="cardhead"><h3>Oct 6, 2026 · Launch game data</h3><span class="pill p-hot">data</span></div>
+    <div class="card" data-minor><div class="cardhead"><h3>Oct 6, 2026 · Launch game data</h3><span class="pill p-hot">data</span></div>
       <p>Every tab now uses the OSMS <b>Public Release</b> export (Oct 6) instead of Closed Online Test 2.</p>
       <ul>
         <li><b>Quests:</b> EXP changed on 158 quests and mesos on 130. Examples: Jane's three Challenges 6,300 → 9,940 EXP; John's Deep Forest baskets 6,581 → 25,900; Jane and the Mushroom 2,021 → 1,610; Olaf's and Teo's early quests 84 → 124.</li>

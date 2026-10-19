@@ -88,3 +88,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-19 Build every idea from both 10-19 bug-hunt reports except tracker #3 (new frames from Danny; later). Danny: "implement all those suggested ideas".
 - 2026-10-19 Home "Site version" stamp shows the viewer's local time zone, not UTC. Danny: "I'm getting confused looking at UTC".
 - 2026-10-19 Tracker profiles (0.2.61): save/switch named UI profiles (layout, box sizes, window size, theme, layout switches) and import a friend's code like ElvUI/Plater; extends MSCS1 setup codes, preview before applying.
+- 2026-10-19 Site gets a version number (0.x.y like the tracker), one per changelog entry since Oct 6, shown beside the Home stamp. Site and tracker changelogs kept separate (tracker: Help > Patch notes + Grind Tracker page). Danny asked for both.

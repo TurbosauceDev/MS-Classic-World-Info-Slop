@@ -80,6 +80,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   Give the `.hlink` an `<img class="hic" data-ic="i:<item>|m:<mob>|s:<skill>">` sprite (filled from D in 00-core.js,
   shown only when the card is a billboard) and bump the sprite count in smoke.js (27 = 6 headers + 21 links).
 - **Changelog:** every user-visible change gets a dated entry at the top of `#log` (grep `id="log"`, read ~20 lines there).
+  Each card = one site version, numbered by build.py (oldest = 0.1.0; `class="card" data-minor` starts the next 0.x.0, for a big addition).
+  Site-only: tracker app changes go in `tracker/app/changelog.js`.
 - **Item count** asserted in smoke.js (2,221); update when items change.
 - **Tooltips:** one floating `#qtip`; classes `.qname` quest, `.ri` item icon, `.itname` item name, `.mname` map
   (`mapLink()`, click opens World Map card), `.nname` NPC (`npcLink()`), `.mobname` monster (`mobLink()`).
@@ -136,3 +138,5 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 
 ## Site version stamp 2026-10-19
 - Home `.sitever` now shows the viewer's local time + zone (70-theme.js, from `data-built` ISO set by build.py); hover = UTC. The HTML text stays "built ... UTC", so curl/grep live checks still match; in a browser read the `title` for UTC. smoke.js checks it under America/Los_Angeles.
+- 10-19: stamp reads "Site version: v0.x.y · built ..." (`data-ver`, = newest changelog card); smoke.js checks the match and the tracker
+  patch notes on Grind Tracker Overview (`/*@TRKLOG*/` in 68-tracker.js).

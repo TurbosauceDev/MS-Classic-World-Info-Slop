@@ -81,7 +81,7 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {label: "File", submenu: [{label: "Settings", accelerator: "CmdOrCtrl+,", click: show("settings")}, {type: "separator"}, {label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
     {label: "View", submenu: [{label: "Modules toolbox", click: show("toolbox")}, {label: "Mini bar", click: show("mini")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {label: "Fit every box to its content", click: show("fit")}, {label: "Line up every box", accelerator: "CmdOrCtrl+Shift+L", click: show("align")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
-    {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Check for updates", click: show("update")},
+    {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Patch notes", click: show("patchnotes")}, {label: "Check for updates", click: show("update")},
       {label: "Report a bug", click: show("report")}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
   ]));
   pinOnTop(); applyOpacity();

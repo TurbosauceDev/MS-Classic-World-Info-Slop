@@ -454,3 +454,16 @@ console.log("history ok");
   fs.rmSync(path.dirname(dir), {recursive: true, force: true});
 }
 console.log("today, goal ETA, setup codes, autosave ok");
+
+// patch notes (changelog.js): the top entry is the version being built, so a release can't ship without its line
+{ const LOG = require("../app/changelog.js"), pkg = require("../package.json");
+  assert.equal(LOG[0][0], pkg.version, "add a changelog.js line for " + pkg.version);
+  const num = v => v.split(".").map(Number);
+  for (let i = 1; i < LOG.length; i++){
+    const [a, b] = [num(LOG[i - 1][0]), num(LOG[i][0])];
+    assert.ok(a[0] > b[0] || a[0] === b[0] && (a[1] > b[1] || a[1] === b[1] && a[2] > b[2]), "newest first: " + LOG[i - 1][0] + " before " + LOG[i][0]);
+    assert.ok(LOG[i - 1][1] >= LOG[i][1], "dates newest first at " + LOG[i][0]);
+  }
+  for (const [v, d, t] of LOG) assert.ok(/^\d+\.\d+\.\d+$/.test(v) && /^2026-\d\d-\d\d$/.test(d) && t.length > 5, "entry " + v);
+}
+console.log("patch notes ok");

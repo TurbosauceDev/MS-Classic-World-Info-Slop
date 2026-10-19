@@ -90,6 +90,8 @@ const path = require("path"), {chromium} = require("playwright");
   // Help: the ? button opens it under the layout, Close hides it; F1 opens it too
   await page.click("#helpBtn");
   if (!await page.isVisible("#help") || !/Getting started/.test(await page.textContent("#help")) ) throw new Error("help open");
+  // patch notes (changelog.js) listed in Help, newest = this version
+  if (await page.$$eval("#patchList p", a => a.length) < 50 || !(await page.textContent("#patchList p")).startsWith(require("../package.json").version + " ")) throw new Error("patch notes");
   await page.click("#helpClose");
   if (await page.isVisible("#help") || !await page.isVisible("#itemsEmpty")) throw new Error("help close");
   await page.keyboard.press("F1"); if (!await page.isVisible("#help")) throw new Error("F1 help");

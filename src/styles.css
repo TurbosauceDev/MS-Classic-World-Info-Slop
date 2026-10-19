@@ -268,6 +268,8 @@ input.khave{width:64px;text-align:right}
 .changelog p{margin:0 0 8px;font-size:14px}
 .changelog ul{margin:0;padding-left:18px;font-size:14px;line-height:1.5}
 .changelog li{margin:3px 0}
+.changelog .ver,.trkpatch b{font:600 .85em var(--f-mono);color:var(--muted)}
+.trkpatch p{margin:0 0 6px;font-size:14px}
 
 /* monsters tab */
 .mbtn{all:unset;cursor:pointer;display:flex;gap:10px;align-items:center;min-width:180px}

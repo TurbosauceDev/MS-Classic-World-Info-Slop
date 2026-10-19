@@ -115,3 +115,14 @@ function trkOpen(){
 }
 // the data pages ask the server once, on first open
 for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click", trkOpen); if (!$("#" + id).hidden) trkOpen() }
+// Patch notes on Overview: the app's own changelog (tracker/app/changelog.js, inlined by build.py; window.TrackerChangelog),
+// kept apart from the site's Changelog (Danny 10-19). Newest 5 shown, the rest under "Older versions".
+/*@TRKLOG*/
+(() => {
+  const L = window.TrackerChangelog || [], fmt = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const row = ([v, d, t]) => `<p><b>${esc(v)}</b> <span class="sub">${esc(fmt(d))}</span> · ${esc(t)}</p>`;
+  if (!L.length) return;
+  $("#trkpatchver").textContent = "latest " + L[0][0];
+  $("#trkpatchnew").innerHTML = L.slice(0, 5).map(row).join("");
+  $("#trkpatchold").innerHTML = L.slice(5).map(row).join("");
+})();
