@@ -1,8 +1,8 @@
 # When the meso.watch poller pushes a new CSV to data/mesowatch-sync, run Danny's
 # refresh_mesowatch.sh (fetch CSV -> fetch_mesowatch.py -> build_data.py prices
-# -> build.py), then ask Claude (Anthropic API) to write a commit message from
-# the diff, then commit + push to default branch. Pages redeploys via the
-# workflow_run hook added to pages.yml.
+# -> build.py), template a commit message from the diff (no LLM, no API key),
+# then commit + push to default branch. Pages redeploys via the workflow_run
+# hook added to pages.yml.
 #
 # Standing approval: per Danny, 2026-10-19, CSV refreshes are pre-approved for
 # push + publish. This workflow does not touch anything outside
@@ -38,18 +38,10 @@ jobs:
           else
             echo "changed=1" >> $GITHUB_OUTPUT
           fi
-      - name: Ask Claude for commit message
+      - name: Build commit message from diff
         if: steps.check.outputs.changed == '1'
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ANTHROPIC_MODEL: claude-sonnet-4-5
         run: |
-          python3 scripts/mesowatch_claude_review.py > /tmp/commit_msg.txt 2> /tmp/claude_err.txt
-          if [ ! -s /tmp/commit_msg.txt ]; then
-            echo "chore(mesowatch): refresh prices ($(date -u +%F))" > /tmp/commit_msg.txt
-            echo "[warn] Claude review returned empty, using fallback" >> /tmp/claude_err.txt
-          fi
-          cat /tmp/claude_err.txt || true
+          python3 scripts/mesowatch_claude_review.py > /tmp/commit_msg.txt
           echo "--- commit message ---"
           cat /tmp/commit_msg.txt
       - name: Commit + push
