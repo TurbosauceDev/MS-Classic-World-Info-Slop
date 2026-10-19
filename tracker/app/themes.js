@@ -59,6 +59,40 @@
     if (el) el.style.colorScheme = r.mode;
     return r;
   }
-  const api = {TOKENS, PRESETS, clean, encode, decode, contrast, resolve, apply};
+  // setup code (layout + theme in one line, for sharing a whole setup with friends): "MSCS1." + base64 of
+  // {layout: {v: 2, order: {dock}, folded, h}, theme: {preset: name} | {name, mode, c}}. Only what the window can use survives:
+  // box ids from `ids` (each once), rows of 2-8 parts, columns of 2-8 boxes, widths/heights as bounded numbers, a known preset
+  // or a theme clean() accepts. A code with no usable layout and no usable theme is null
+  const num = (v, lo, hi) => { v = +v; return Number.isFinite(v) && v >= lo && v <= hi ? Math.round(v) : undefined };
+  function cleanLayout(l, ids){
+    if (!l || typeof l !== "object" || !l.order || !Array.isArray(l.order.dock)) return null;
+    const ok = new Set(ids), seen = new Set(), id = v => typeof v === "string" && ok.has(v) && !seen.has(v) ? (seen.add(v), v) : null, dock = [];
+    for (const it of l.order.dock.slice(0, 64)){
+      if (typeof it === "string"){ const b = id(it); if (b) dock.push(b); continue }
+      if (!it || typeof it !== "object" || !Array.isArray(it.row)) continue;
+      const row = [], w = [];
+      it.row.slice(0, 8).forEach((p, i) => { let e = null;
+        if (Array.isArray(p)){ const c = p.slice(0, 8).map(id).filter(Boolean); e = c.length > 1 ? c : c[0] || null } else e = id(p);
+        if (e){ row.push(e); w.push(num(it.w?.[i], 1, 1e5) || 1) } });
+      if (row.length > 1){ const r = {row, w}, h = num(it.h, 40, 4000); if (h) r.h = h; dock.push(r) } else if (row.length) dock.push(...[].concat(row[0]));
+    }
+    if (!dock.length) return null;
+    const folded = (Array.isArray(l.folded) ? l.folded : []).filter(v => typeof v === "string" && ok.has(v)).slice(0, 64), h = {};
+    if (l.h && typeof l.h === "object") for (const [k, v] of Object.entries(l.h)){ const n = num(v, 40, 4000); if (ok.has(k) && n) h[k] = n }
+    return {v: 2, order: {dock}, folded: [...new Set(folded)], h};
+  }
+  function cleanSetup(x, ids){
+    if (!x || typeof x !== "object") return null;
+    const layout = cleanLayout(x.layout, ids), p = x.theme && typeof x.theme === "object" ? x.theme : null;
+    const theme = p && typeof p.preset === "string" ? (PRESETS.some(t => t.name === p.preset) ? {preset: p.preset} : null) : clean(p);
+    return layout || theme ? {layout, theme} : null;
+  }
+  const encodeSetup = (x, ids) => { const c = cleanSetup(x, ids); return c ? "MSCS1." + btoa(unescape(encodeURIComponent(JSON.stringify(c)))) : null };
+  function decodeSetup(s, ids){
+    const m = /MSCS1\.([A-Za-z0-9+/=]{20,12000})/.exec(String(s || "").replace(/\s+/g, ""));
+    if (!m) return null;
+    try { return cleanSetup(JSON.parse(decodeURIComponent(escape(atob(m[1])))), ids) } catch { return null }
+  }
+  const api = {TOKENS, PRESETS, clean, encode, decode, contrast, resolve, apply, cleanLayout, encodeSetup, decodeSetup};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.TrackerThemes = api;
 })(typeof window !== "undefined" ? window : globalThis);

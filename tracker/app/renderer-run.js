@@ -41,6 +41,7 @@ async function start(){
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   feed = GrindFeed.createFeed(G); feedSep("Started tracking");
+  clearInterval(autoTimer); autoTimer = setInterval(autosaveNow, 60e3);
   tick();
   renderState(null);
   // the start reading is taken right away (not only once the bar is read): its picture is the proof of where you started
@@ -87,8 +88,31 @@ async function stopNow(){
   const a = snaps.start, b = snaps.end, snapExp = a && b && b.t > a.t ? GrindSession.expBetween(G, a, b) : null;
   const snapRec = snapExp != null ? {startLevel: a.level, startPct: a.pct, endLevel: b.level, endPct: b.pct, minutes: Math.round((b.t - a.t) / 6e3) / 10, exp: Math.round(snapExp)} : null;
   if (!snapRec && session?.state.events) $("#status").textContent = "Saved, but the start or end EXP reading is missing: History uses the live count for this one.";
-  if (session && session.state.events) await host.saveSession({shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), name: runName() || null, note: $("#runNote").value.trim() || null, ...runExtras(), kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds, timeline: kpqTimeline(Date.now()), best: kpq.times.length ? Math.round(Math.min(...kpq.times)) : null, avg: kpq.times.length ? Math.round(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length) : null} : null, lootValue: Math.round(session.stats().lootValue), levelUps: session.state.levelUps.map(({t, ...l}) => l)}).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });
+  if (session && session.state.events) await host.saveSession(sessionRecord(snapRec)).catch(e => { $("#status").textContent = "Couldn't save this session: " + e.message });   // main.js drops the autosave once it's written
+  else host.autosave?.(null);   // nothing counted: nothing to recover either
+  clearInterval(autoTimer); autoTimer = null;
   renderState(session?.stats());
+}
+// what History keeps of a run (saved at Finalize log; the same thing autosaved every minute while tracking)
+function sessionRecord(snapRec){
+  return {shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), name: runName() || null, note: $("#runNote").value.trim() || null, ...runExtras(), kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds, timeline: kpqTimeline(Date.now()), best: kpq.times.length ? Math.round(Math.min(...kpq.times)) : null, avg: kpq.times.length ? Math.round(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length) : null} : null, lootValue: Math.round(session.stats().lootValue), levelUps: session.state.levelUps.map(({t, ...l}) => l)};
+}
+// crash recovery: while tracking, the run so far is written every minute (main.js: sessions/autosave.json, swapped in whole);
+// a normal save or a run with nothing in it removes it. On the next launch a left-over one is offered back (recoverCheck)
+let autoTimer = null;
+function autosaveNow(){
+  if (timer == null || !session?.state.events || dummyOn) return false;
+  try { host.autosave?.({...sessionRecord(null), autosaved: Date.now()})?.catch?.(() => {}); return true } catch (e){ log("autosave", {err: e.message}); return false }
+}
+async function recoverCheck(){
+  const x = await host.autosaveGet?.().catch(() => null); if (!x || typeof x !== "object") return;
+  const at = new Date(+x.autosaved || Date.now()).toLocaleString([], {weekday: "short", hour: "numeric", minute: "2-digit"});
+  $("#recoverText").textContent = `A run wasn't saved: the tracker closed while it was tracking (last saved ${at}). ${[x.mapName, Math.round(+x.activeMin || 0) + " min farming", fmt(+x.expTotal || +x.exp || 0) + " EXP", fmt(+x.mesos || 0) + " mesos"].filter(Boolean).join(" · ")}.`;
+  $("#recover").classList.remove("hidden");
+  $("#recoverSave").onclick = async () => { const {autosaved, ...rec} = x;
+    await host.saveSession({...rec, recovered: true, note: [rec.note, "Recovered after the tracker closed (up to the last minute's autosave)."].filter(Boolean).join("\n")});
+    $("#recover").classList.add("hidden"); $("#status").textContent = "Recovered run saved to History."; if ($("#hist").closest("#dock")) loadHist() };
+  $("#recoverDrop").onclick = async () => { await host.autosave?.(null); $("#recover").classList.add("hidden"); $("#status").textContent = "Unsaved run discarded." };
 }
 // more about the run for History: who played it, levels, clock time, the best drop, the monster killed most
 const worthOf = id => G.pw?.[id]?.[0] ?? G.items[id]?.p ?? 0;
@@ -138,6 +162,7 @@ function showSummary(t1){
   $("#summary").classList.remove("hidden"); $("#summary").scrollIntoView({block: "nearest"});
 }
 $("#wrapEnd").onclick = () => finish();
+$("#miniWrapEnd").onclick = () => { if (!$("#wrapEnd").disabled) finish() };
 // the run's name (top card, before or during the run; again in the wrap-up card) and the note written at wrap-up
 const runName = () => $("#runName").value.trim();
 $("#runName").oninput = () => { $("#wrapName").value = $("#runName").value };

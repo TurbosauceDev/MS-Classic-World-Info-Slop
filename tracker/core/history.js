@@ -6,6 +6,9 @@
    compareRuns(runs, base, ctx) -> {groups: [{name, rows: [{key, label, low, show, vals, best, delta}]}], wins}
    perHour(runs, "mobs" | "items", top) -> [{id, vals}]   kills or pickups per hour of farming, the top ids across the runs
    byMap(list) / bests(list) / filterRuns(list, f)
+   today(list, now) -> {runs, min, exp, mesos}   the runs saved on now's local calendar day
+   goalEta(list, {exp, goal, now}) -> {level, pct, goal, need, perDay, maps: [{name, expHr, hours, at}]} | {why}
+     exp = the EXP table the session uses (G.exp, from data.json); "at your <map> rate" from byMap's EXP/hr
    ctx.bestDrop(x) -> {each} | null (the renderer's, which knows item prices) */
 (function (root){
   const MAX_CMP = 6, PB_MIN = 15;   // compare up to 6 runs; personal bests only from runs with 15+ min farming (as Last 7 days' fastest map)
@@ -88,6 +91,34 @@
     else { const v = x => metrics(x)[s] ?? -Infinity; out = out.sort((a, b) => v(b) - v(a) || b.saved - a.saved) }
     return out;
   }
-  const api = {metrics, compareRuns, perHour, byMap, bests, filterRuns, placeOf, isKpq, expOf, GROUPS, MAX_CMP, PB_MIN};
+  // Today (top of History): the runs saved on the same local calendar day as now (by when they were saved, i.e. Stop)
+  const dayKey = t => { const d = new Date(+t); return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate() };
+  function today(list, now = Date.now()){
+    const k = dayKey(now), runs = list.filter(x => +x.saved && dayKey(x.saved) === k);
+    return {runs: runs.length, min: runs.reduce((a, x) => a + (+x.activeMin || 0), 0), exp: runs.reduce((a, x) => a + (+expOf(x) || 0), 0),
+      mesos: runs.reduce((a, x) => a + (+x.mesos || 0), 0)};
+  }
+  // Goal ETA: "Lv 30 by Thursday at your Pig Beach rate". Where you are = the newest run's end level (and its end EXP % when
+  // the end reading was on that level, else the start of the level); EXP left from the EXP table (past it: unknown, no
+  // guess); hours = EXP left / the map's EXP/hr (byMap: every run weighted by farming time, 15+ min there); the day = those
+  // hours at the farming time a day you played in the last 7 days (days with a run only)
+  function goalEta(list, o = {}){
+    const exp = o.exp || {}, now = o.now ?? Date.now();
+    const last = [...list].filter(x => +x.saved && (x.endLevel ?? x.level)).sort((a, b) => b.saved - a.saved)[0];
+    if (!last) return {why: "no level"};
+    const level = +(last.endLevel ?? last.level), pct = last.snap && +last.snap.endLevel === level && Number.isFinite(+last.snap.endPct) ? Math.min(100, Math.max(0, +last.snap.endPct)) : null;
+    const goal = o.goal === "next" ? level + 1 : +o.goal || 0;
+    if (!goal) return {why: "no goal"};
+    if (goal <= level) return {why: "reached", level, goal};
+    let need = 0;
+    for (let L = level; L < goal; L++){ const e = +exp[L]; if (!(e > 0)) return {why: "no table", level, goal}; need += L === level ? e * (1 - (pct || 0) / 100) : e }
+    const week = list.filter(x => +x.saved > now - 7 * 864e5 && +x.saved <= now), days = new Set(week.map(x => dayKey(x.saved))).size;
+    const perDay = days ? week.reduce((a, x) => a + (+x.activeMin || 0), 0) / 60 / days : null;   // hours a day you played
+    const maps = byMap(list).filter(m => m.name !== "?" && m.name !== "KPQ" && m.expHr > 0 && m.min >= PB_MIN)
+      .map(m => { const hours = need / m.expHr; return {name: m.name, expHr: m.expHr, hours, at: perDay > 0 ? now + hours / perDay * 864e5 : null} })
+      .sort((a, b) => a.hours - b.hours);
+    return {level, pct, goal, need, perDay, maps};
+  }
+  const api = {metrics, today, goalEta, compareRuns, perHour, byMap, bests, filterRuns, placeOf, isKpq, expOf, GROUPS, MAX_CMP, PB_MIN};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindHistory = api;
 })(typeof window !== "undefined" ? window : globalThis);

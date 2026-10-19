@@ -152,6 +152,27 @@ $("#thFile").onchange = async e => { const f = e.target.files?.[0]; e.target.val
   const text = await f.text(); let t = TH.decode(text); if (!t) try { t = TH.clean(JSON.parse(text)) } catch {}
   themeAdd(t, "file") };
 darkQ.addEventListener?.("change", () => { themeShow(); themeUi() });
+// setup code (layout + theme as one line, like the MSCT1 theme codes; themes.js cleans both ways): the saved layout and the
+// chosen theme (a preset by name, one of yours in full). Using one lays the boxes out, saves, and adds/picks the theme
+const boxIds = () => BOXES.map(b => b.dataset.box);
+function setupNow(){ const id = settings.theme || "p:" + TH.PRESETS[0].name;
+  return {layout: settings.layout || null, theme: id.startsWith("p:") ? {preset: id.slice(2)} : TH.clean(themeNow())} }
+$("#setupCopy").onclick = async () => {
+  const code = TH.encodeSetup(setupNow(), boxIds()); if (!code) return $("#setupNote").textContent = "Nothing to share yet.";
+  $("#setupCode").value = code;
+  try { await navigator.clipboard.writeText(code); $("#setupNote").textContent = "Setup code copied. Others paste it here and press Use it." }
+  catch { $("#setupCode").select(); $("#setupNote").textContent = "Copy the code from the box (Ctrl+C)." }
+};
+async function setupUse(text){
+  const x = TH.decodeSetup(text, boxIds());
+  if (!x) return $("#setupNote").textContent = "That isn't a setup code (they start with MSCS1.).";
+  if (x.layout){ flip(() => layoutLoad(x.layout)); for (const b of BOXES) foldMark(b); layoutSave() }
+  if (x.theme?.preset) await themePick("p:" + x.theme.preset); else if (x.theme){ await themeSave(x.theme); themeShow(); themeUi() }
+  $("#setupNote").textContent = [x.layout && "Layout", x.theme && "theme"].filter(Boolean).join(" and ") + " set from the code.";
+  $("#setupCode").value = "";
+}
+$("#setupPaste").onclick = () => setupUse($("#setupCode").value);
+$("#setupCode").onkeydown = e => { if (e.key === "Enter") $("#setupPaste").click() };
 
 // Settings: keyboard shortcuts (they work from the game too; main.js registers them) and the see-through window
 const KEY_NAMES = {onTop: "Keep on top on/off", startStop: "Start / Stop", pause: "Pause / go on", mini: "Mini bar on/off", toolbox: "Modules toolbox open/close",
@@ -253,6 +274,7 @@ $("#updGo").onclick = async () => {
   $("#pcode").value = settings.partyCode || "";
   $("#nick").value = settings.nick || "";
   $("#guide").classList.toggle("hidden", !!settings.guideDone);
+  recoverCheck().catch(() => {});   // a run left by a crash or power cut (its autosave)
   const found = await host.gameFound();
   $("#status").textContent = found ? "MapleStory window found." : "Start MapleStory, then press Start.";
 })();

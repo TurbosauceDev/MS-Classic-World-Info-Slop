@@ -74,10 +74,14 @@ function renderMesos(s){
 function renderWrap(s){
   $("#wrap").classList.toggle("hidden", !wrap);
   $("#nameRow").classList.toggle("hidden", !!wrap);   // asked in the wrap-up card instead
+  // Mini hides the wrap-up card (Stop from the shortcut while in Mini): one line there instead, with its own Finalize log
+  $("#miniWrap").classList.toggle("hidden", !wrap);
   if (!wrap) return;
   const tabs = (s || session?.stats())?.invTabs || {}, n = INV_TABS.filter(([k]) => tabs[k]?.last >= wrap.t).length;
   $("#wrapTabs").innerHTML = INV_TABS.map(([k, name]) => { const done = tabs[k]?.last >= wrap.t, seeing = !done && lastInvTab === k && Date.now() - (tabs[k]?.last || 0) < 10e3;
     return `<button class="chip ${done ? "ok" : seeing ? "half" : "need"}" data-tab="${k}" title="${done ? "Read after Stop" : "Not read since Stop. Click to read it now (have the " + name + " tab open in the game)"}">${done ? "✓" : seeing ? "…" : "○"} ${name}</button>` }).join(" ");
+  $("#miniWrapText").textContent = `Stopped: ${n} of 3 inventory tabs read. Show Equip, Use and Etc, then`;
+  if (n === 3) $("#miniWrapText").textContent = "Stopped: all 3 inventory tabs read.";
   $("#wrapNote").textContent = n === 3 ? "All 3 tabs read: add a name or note below if you like, then Finalize log." : `${n} of 3 tabs read since Stop.`;
   $("#wrapName").value = $("#runName").value;
   // all 3 tabs read: on to the name and note (once, and not while typing somewhere)

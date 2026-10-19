@@ -31,7 +31,8 @@ game window ─(Windows Graphics Capture)─► app/main.js ─frames─► app/
 | app/index.html | 34 | window markup + CSS |
 | app/main.js | 23 | Electron main: capture, OCR, updater, files, IPC |
 | core/session.js | 29 | pure: events → rates; `createRunSlicer` (15-min share runs) |
-| core/history.js | 7 | pure History maths (GrindHistory): metrics, compareRuns, perHour, byMap, bests, filterRuns; tested in core.test.js |
+| core/history.js | 10 | pure History maths (GrindHistory): metrics, compareRuns, perHour, byMap, bests, filterRuns, today, goalEta; tested in core.test.js |
+| core/autosave.js | 1 | crash-recovery file (Node, main.js): write/read/clear sessions/autosave.json |
 | build_data.js | | data/data.json → app/gamedata.json; copies src/js/51-shot.js → app/shot.js |
 | server/src/index.js | 17 | Worker routes; `server/src/check.js` validates runs |
 
@@ -45,6 +46,7 @@ npm test | tail -5                    # core + fuzz (CI runs this in tracker.yml
 node tests/ui.test.js | tail -5       # window in Chromium, fake game stream (CHROMIUM=/opt/pw-browsers/chromium if needed)
 node tests/layout.test.js | tail -3   # box fitting and window resizing (CI: tracker.yml job ui)
 node tests/monkey.test.js | tail -3   # random clicks/menus/typing/window sizes; no errors, sideways scroll or NaN (CI job ui; SEEDS=1,2 N=400)
+node tests/extras.test.js | tail -3   # Mini Finalize log, crash-recovery card, History Today/goal ETA, setup codes (CI job ui)
 node tests/readers.test.js | tail -5  # readers on real frames (tests/frames)
 node tests/inventory.test.js | tail -3; node tests/kpq.test.js | tail -3; node tests/snip.test.js | tail -3
 cd ../server && npm install && npm run data && npm test   # Node 22 (node:sqlite stands in for D1)
@@ -151,6 +153,12 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   before measuring boxes. openStream gives up after 5 s with no frame (play() never resolved: Start dead). Slicer counts a break from
   the run's start when nothing counted yet; server check.js "mostly idle" (activeMin < minutes/2). #go's capture listener only
   drops Dummy data on a starting click; dummyFill refuses while `starting`. Settings chips scroll by prefsGo (sticky header aware).
+- 0.2.60 (bug-hunt ideas 1,2,4,5,7): Mini shows #miniWrap (one line + Finalize log) while `wrap` is set (renderWrap). Crash
+  recovery: renderer autosaveNow() every 60 s while tracking → IPC `autosave` → core/autosave.js writes sessions/autosave.json
+  (tmp + rename; not <digits>.json so History never lists it); save-session clears it; recoverCheck() at launch shows #recover.
+  sessionRecord() is the one History record (Finalize and autosave). History #today/#eta from core/history.js today()/goalEta()
+  (EXP table = G.exp; maps 15+ min, KPQ left out). Setup codes MSCS1 (themes.js encodeSetup/decodeSetup/cleanLayout: known box
+  ids only) in Settings > Layout. Browser checks in tests/extras.test.js, maths in core.test.js.
 - Traps: box h3/rows need 72 px right padding (⠿ – × = 63 px); `#hist > .row:first-child` never matched (.boxctl is first child).
   .feedlist height = calc(7.5em + 10px) = 5 whole lines; feedIn slides lines, so wait 400 ms before measuring them. Mini's zoom
   search is cached by content height + window size (miniKey).

@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld("host", {
   wholeScreen: on => ipcRenderer.invoke("whole-screen", on),
   settings: s => ipcRenderer.invoke("settings", s),
   saveSession: summary => ipcRenderer.invoke("save-session", summary),
+  autosave: summary => ipcRenderer.invoke("autosave", summary),
+  autosaveGet: () => ipcRenderer.invoke("autosave-get"),
   saveFrame: (name, bytes) => ipcRenderer.invoke("save-frame", name, bytes),
   saveImage: (name, bytes, quiet) => ipcRenderer.invoke("save-image", name, bytes, quiet),
   saveReport: (frames, info) => ipcRenderer.invoke("save-report", frames, info),

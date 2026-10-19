@@ -385,3 +385,62 @@ console.log("box ok");
   assert.doesNotThrow(() => { Hi.compareRuns([{saved: 1}, {saved: 2, mobs: "x", items: null}]); Hi.byMap([{saved: 1}]); Hi.perHour([{saved: 1, activeMin: 5, mobs: [null]}], "mobs") });
 }
 console.log("history ok");
+
+// Today card (History, 0.2.60): only runs saved on now's local calendar day; EXP as History rows count it (start/end readings first)
+{ const Hi = require("../core/history.js"), now = new Date(2026, 9, 19, 15, 0).getTime(), mid = new Date(2026, 9, 19, 0, 0, 30).getTime();
+  const list = [{saved: now - 3600e3, activeMin: 40, exp: 4000, mesos: 900}, {saved: mid, activeMin: 20, exp: 1, snap: {exp: 2500, minutes: 20}, mesos: 100},
+    {saved: mid - 60e3, activeMin: 60, exp: 9999, mesos: 9999}, {saved: "x", activeMin: 5}, {activeMin: 5}];
+  assert.deepStrictEqual(Hi.today(list, now), {runs: 2, min: 60, exp: 6500, mesos: 1000}, "today: yesterday 23:59 and runs with no time stamp left out");
+  assert.deepStrictEqual(Hi.today([], now), {runs: 0, min: 0, exp: 0, mesos: 0});
+}
+// goal ETA (0.2.60): EXP left from the EXP table (G.exp = data.json), hours at each map's EXP/hr (15+ min there), the day at
+// the farming time a day played this week; past the table: no guess
+{ const Hi = require("../core/history.js"), now = new Date(2026, 9, 19, 15, 0).getTime(), D = 864e5;
+  const list = [{saved: now - 2 * D, mapName: "Pig Beach", activeMin: 30, exp: 3000, level: 21},
+    {saved: now - 3600e3, mapName: "Snail Hunting Ground III", activeMin: 60, exp: 3000, endLevel: 22, snap: {endLevel: 22, endPct: 50, exp: 3000, minutes: 60}},
+    {saved: now - 3 * D, mapName: "Tiny", activeMin: 5, exp: 9e6}, {saved: now - D, kpq: {rounds: 2}, activeMin: 30, exp: 9e6, level: 21}];
+  const e = Hi.goalEta(list, {exp: G.exp, goal: 24, now}), need = G.exp[22] * 0.5 + G.exp[23];
+  assert.equal(e.level, 22); assert.equal(e.pct, 50); assert.equal(e.need, need);
+  assert.deepStrictEqual(e.maps.map(m => m.name), ["Pig Beach", "Snail Hunting Ground III"], "fastest first; KPQ and maps under 15 min left out");
+  assert.ok(Math.abs(e.maps[0].hours - need / 6000) < 1e-9);
+  const perDay = 125 / 60 / 4; assert.ok(Math.abs(e.perDay - perDay) < 1e-9, "farming a day over the 4 days played: " + e.perDay);
+  assert.ok(Math.abs(e.maps[0].at - (now + need / 6000 / perDay * D)) < 1);
+  assert.equal(Hi.goalEta(list, {exp: G.exp, goal: "next", now}).need, G.exp[22] * 0.5);
+  assert.equal(Hi.goalEta(list, {exp: G.exp, goal: 0, now}).why, "no goal");
+  assert.equal(Hi.goalEta(list, {exp: G.exp, goal: 20, now}).why, "reached");
+  assert.equal(Hi.goalEta(list, {exp: {22: 100}, goal: 24, now}).why, "no table", "a level missing from the table: no estimate");
+  assert.equal(Hi.goalEta([{saved: 5}], {exp: G.exp, goal: 30, now}).why, "no level");
+  // no end reading on the run's level: from the start of the level
+  assert.equal(Hi.goalEta([{saved: now, mapName: "A", activeMin: 20, exp: 100, level: 10, snap: {endLevel: 9, endPct: 80}}], {exp: G.exp, goal: 11, now}).need, G.exp[10]);
+}
+// setup codes (layout + theme in one line, 0.2.60): round trip, and junk in a pasted code never reaches the layout
+{ const TH = require("../app/themes.js"), ids = ["main", "log", "mobs", "items", "hist"];
+  const layout = {v: 2, order: {dock: ["main", {row: ["log", ["mobs", "items"]], w: [2, 3], h: 300}]}, folded: ["log"], h: {main: 240}};
+  for (const theme of [{preset: "Slime"}, TH.clean({name: "Mine", mode: "light", c: TH.PRESETS[5].c})]){
+    const code = TH.encodeSetup({layout, theme}, ids); assert.ok(/^MSCS1\.[A-Za-z0-9+/=]+$/.test(code));
+    assert.deepStrictEqual(TH.decodeSetup("look: " + code + " (mine)", ids), {layout, theme}, "setup round trip") }
+  const enc = x => "MSCS1." + Buffer.from(JSON.stringify(x)).toString("base64");
+  const bad = TH.decodeSetup(enc({layout: {order: {dock: ["main", "main", "<img onerror=x>", 5, {row: ["log", "nope"], w: ["9e99"]}, {row: [["mobs", "mobs"], "items"], w: [-1, 1e9], h: "x"}, {row: "hist"}]}, folded: ["mobs", {}, "zzz"], h: {log: 1e9, items: 99, x: 50}},
+    theme: {name: "<b>x</b>", mode: "dark", c: {bg: "red"}}}), ids);
+  assert.deepStrictEqual(bad, {layout: {v: 2, order: {dock: ["main", "log", {row: ["mobs", "items"], w: [1, 1]}]}, folded: ["mobs"], h: {items: 99}}, theme: null});
+  assert.equal(TH.decodeSetup(enc({layout: {order: {dock: ["nope"]}}, theme: {preset: "Not a preset"}}), ids), null, "nothing usable");
+  for (const junk of [null, "", "MSCS1.", "MSCS1.!!!!!!!!!!!!!!!!!!!!!!!!", "MSCS1." + "A".repeat(40), enc([1, 2]), enc("x"), TH.encode({name: "x", mode: "dark", c: TH.PRESETS[2].c})])
+    assert.equal(TH.decodeSetup(junk, ids), null, "junk code: " + junk);
+  assert.equal(TH.encodeSetup({layout: null, theme: null}, ids), null);
+}
+// crash recovery (0.2.60): the autosave is swapped in whole, read back, never listed as a session, and cleared
+{ const A = require("../core/autosave.js"), fs = require("fs"), os = require("os"), path = require("path");
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "msct-")), "sessions");
+  assert.equal(A.read(dir), null, "nothing yet");
+  assert.ok(A.write(dir, {mapName: "Pig Beach", activeMin: 12, autosaved: 5})); assert.ok(A.write(dir, {mapName: "Pig Beach", activeMin: 13, autosaved: 6}));
+  assert.deepStrictEqual(A.read(dir), {mapName: "Pig Beach", activeMin: 13, autosaved: 6});
+  assert.deepStrictEqual(fs.readdirSync(dir), ["autosave.json"], "no temp file left, not a <digits>.json session");
+  fs.writeFileSync(path.join(dir, "autosave.json.tmp"), "{\"half"); assert.equal(A.read(dir).activeMin, 13, "a half-written temp file doesn't touch the last good copy");
+  for (const bad of [null, [1], "x", 5]) assert.equal(A.write(dir, bad), false);
+  fs.writeFileSync(path.join(dir, "autosave.json"), "{\"half"); assert.equal(A.read(dir), null, "a broken file reads as none");
+  fs.writeFileSync(path.join(dir, "autosave.json"), "[1]"); assert.equal(A.read(dir), null);
+  A.write(dir, {a: 1}); A.clear(dir); assert.equal(A.read(dir), null); assert.deepStrictEqual(fs.readdirSync(dir), [], "clear removes the temp file too");
+  assert.ok(A.clear(dir), "clearing twice is fine");
+  fs.rmSync(path.dirname(dir), {recursive: true, force: true});
+}
+console.log("today, goal ETA, setup codes, autosave ok");

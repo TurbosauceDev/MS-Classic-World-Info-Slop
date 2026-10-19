@@ -15,6 +15,7 @@ const QUEUE = path.join(app.getPath("userData"), "run-queue.json");
 const writeAtomic = (file, text) => { fs.writeFileSync(file + ".tmp", text); fs.renameSync(file + ".tmp", file) };
 const writeSettings = s => writeAtomic(SETTINGS, JSON.stringify(s, null, 1));
 const SESSIONS = path.join(app.getPath("userData"), "sessions");   // finished sessions, kept locally either way
+const AUTO = require("../core/autosave.js");   // the running session, autosaved there (crash recovery)
 
 // Windows Graphics Capture (what OBS uses) instead of the old GDI window grab, which gives black frames for DirectX games
 app.commandLine.appendSwitch("enable-features", "WebRtcAllowWgcWindowCapturer,WebRtcAllowWgcScreenCapturer,AllowWgcWindowCapturer,AllowWgcScreenCapturer");
@@ -315,8 +316,12 @@ ipcMain.handle("share-run", async (_, run) => {
 ipcMain.handle("save-session", (_, summary) => {   // kept on this PC only (shared numbers go up as 15-minute runs)
   fs.mkdirSync(SESSIONS, {recursive: true});
   fs.writeFileSync(path.join(SESSIONS, Date.now() + ".json"), JSON.stringify(summary));
+  AUTO.clear(SESSIONS);   // saved for real: nothing left to recover
   return true;
 });
+// crash recovery (core/autosave.js): the running session every minute, offered back on the next launch
+ipcMain.handle("autosave", (_, summary) => summary ? AUTO.write(SESSIONS, summary) : AUTO.clear(SESSIONS));
+ipcMain.handle("autosave-get", () => AUTO.read(SESSIONS));
 // party view: post this tracker's live numbers with the party code, get everyone with the same code (server keeps them an hour)
 ipcMain.handle("party", async (_, live) => {
   const st = readSettings();

@@ -9,7 +9,7 @@ const freeIds = () => settings.meatOnly ? FREE_POTS : [];
 // "Dropped potions are free" switch (was the "I only buy meat and lemons" button): the colour potions cost nothing
 function meatUi(){ $("#meatOnly").checked = !!settings.meatOnly }
 $("#meatOnly").onchange = () => host.settings({meatOnly: $("#meatOnly").checked}).then(s => { settings = s; session?.setFree(freeIds()); meatUi(); if (session) render() });
-const setGoal = v => host.settings({goal: v}).then(s => { settings = s; session?.setGoal(goalOf()); goalUi(); if (session) render() });
+const setGoal = v => host.settings({goal: v}).then(s => { settings = s; session?.setGoal(goalOf()); goalUi(); if (session) render(); if (typeof etaDraw === "function") etaDraw() });
 $("#goal").onchange = e => { const v = Math.round(+e.target.value || 0); setGoal(v >= 2 ? Math.min(200, v) : "next") };
 $("#goalNext").onclick = () => setGoal("next"); $("#goalOff").onclick = () => setGoal("off");
 $("#alertItems").onchange = e => host.settings({alertItems: e.target.value.slice(0, 500)}).then(s => { settings = s; const n = alertSet().size; $("#alertItemsNote").textContent = n ? n + " item" + (n > 1 ? "s" : "") + " watched" : "" });
@@ -32,7 +32,7 @@ const PB_NAMES = {expHr: "EXP/hr", mesosHr: "mesos/hr", netHr: "net/hr", killsHr
 async function loadHist(){
   histList = await host.sessions();
   cmpSel = cmpSel.filter(byId); if (cmpBase != null && !byId(cmpBase)) cmpBase = null;
-  $("#recap").innerHTML = recap(histList) + levelLog(histList);
+  todayDraw(); etaDraw(); $("#recap").innerHTML = recap(histList) + levelLog(histList);
   histFilters(); histMaps(); histDraw(); cmpDraw();
 }
 // the filter bar: maps and characters come from the saved runs; a filter whose map or character is gone goes back to All
@@ -180,6 +180,23 @@ $("#histRows").onclick = async e => {
   else { b.disabled = false; $("#status").textContent = "Couldn't delete that session." }
 };
 // level-up log: how long each level took (farming time in one session), newest first
+// Today: farming time, EXP and mesos over the runs saved today (local day, core/history.js today())
+function todayDraw(){
+  const d = H.today(histList);
+  $("#today").innerHTML = d.runs ? `<div class="todayCard"><b>Today:</b> ${esc(hm(d.min / 60))} farming · ${fmt(d.exp)} EXP · ${mz(d.mesos)} <span class="dim">(${d.runs} run${d.runs > 1 ? "s" : ""})</span></div>` : "";
+}
+// goal ETA per map: "Lv 30 in 6 h of farming at your Pig Beach rate, about Thursday" (core/history.js goalEta; the EXP
+// table is the session's G.exp from data.json, the rates are your own History)
+const dayName = t => { const d = new Date(t), n = new Date(), days = Math.round((new Date(d).setHours(0, 0, 0, 0) - new Date(n).setHours(0, 0, 0, 0)) / 864e5);
+  return days <= 0 ? "today" : days === 1 ? "tomorrow" : days < 7 ? d.toLocaleDateString([], {weekday: "long"}) : d.toLocaleDateString([], {month: "short", day: "numeric"}) };
+function etaDraw(){
+  const e = H.goalEta(histList, {exp: G.exp, goal: goalOf()});
+  if (!e.maps?.length){ $("#eta").innerHTML = e.why === "no table" ? `<div class="note">Lv ${e.goal}: past the EXP table, no estimate.</div>` : ""; return }
+  const from = e.pct == null ? `from the start of Lv ${e.level}` : `from Lv ${e.level} ${e.pct.toFixed(1)}%`;
+  $("#eta").innerHTML = `<div class="k">Goal: Lv ${e.goal} (${fmt(e.need)} EXP ${esc(from)}, your last run)</div><table class="etaT">` + e.maps.slice(0, 3).map(m =>
+    `<tr><td>${esc(m.name)}</td><td class="n">${esc(hm(m.hours))} farming</td><td class="note">${m.at ? "about " + esc(dayName(m.at)) : ""}</td></tr>`).join("") + "</table>"
+    + `<div class="note">At your EXP/hr on each map (15+ min there)${e.perDay ? `, ${esc(hm(e.perDay))} a day (your days played this week)` : ""}. An estimate: rates change as you level.</div>`;
+}
 function levelLog(list){
   const ups = list.flatMap(x => (Array.isArray(x.levelUps) ? x.levelUps : []).filter(l => l && l.activeMin != null).map(l => ({...l, date: x.date}))).slice(0, 10);
   return ups.length ? `<div class="k">Level-ups (farming time the level took)</div><table>` + ups.map(l => `<tr><td>Lv ${+l.level - 1} → ${+l.level}</td><td class="n">${esc(hm(l.activeMin / 60))}</td><td class="note">${esc(l.mapName || "")} ${esc(l.date)}</td></tr>`).join("") + "</table>" : "";

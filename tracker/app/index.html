@@ -55,6 +55,7 @@
   #mini .mk { margin:8px 0 2px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; font-size:11px; }
   body.mini #mini { display:flex; flex-direction:column; flex:1 0 auto; } body.mini #mini > * { flex:none; } body.mini #miniFeed { flex:1 1 6em; }
   body.mini.measure #mini { flex:none; } body.mini.measure #miniFeed { flex:none; }
+  #miniWrap { margin:0 0 6px; gap:6px; font-size:12px; } #miniWrap button { padding:2px 8px; }
   #miniFeed { height:6em; } #mini .mk:has(+ #miniFeed:empty) { display:none; }
   #mini .mlists { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:0 12px; }
   #mini .mlists table { width:100%; font-size:12px; border-collapse:collapse; } #mini .mlists td { padding:1px 0; border:0; } #mini .mlists td.n { text-align:right; white-space:nowrap; padding-left:6px; }
@@ -260,6 +261,7 @@
   button.det { color:var(--muted); width:18px; }
   .pb { display:inline-block; margin-left:6px; padding:0 6px; border-radius:8px; font-size:11px; font-weight:600; background:var(--accent-soft); color:var(--ink); }
   .histBar { flex-wrap:wrap; gap:6px; max-width:720px; } .histBar select { max-width:180px; }
+  .todayCard { margin:6px 0; padding:6px 10px; border-radius:8px; background:var(--accent-soft); overflow-wrap:anywhere; } .etaT td { padding:2px 4px; } #eta { margin:4px 0 8px; }
   #mapsBox { margin:8px 0; max-width:720px; } #mapsBox summary { cursor:pointer; font-weight:600; } .mapsT { width:100%; } .mapsT td { padding:3px 4px; }
   /* narrow window: Runs and Best go (the row's details have them), the rest still fits; past that it scrolls in its box */
   #maps { container-type:inline-size; overflow-x:auto; } @container (max-width: 400px){ .mapsT td:nth-child(2), .mapsT td:nth-child(5) { display:none; } }
@@ -272,6 +274,7 @@
   <div id="titlebar"><span class="tbname">Grind Tracker</span><button data-menu="File">File</button><button data-menu="View">View</button><button data-menu="Help">Help</button><button id="tbBtn" aria-expanded="false" title="Modules toolbox: drag modules into your layout (Ctrl+Shift+K)" aria-label="Modules">▦<span class="tbw"> Modules</span></button></div>
   <div class="card" id="mini">
     <div class="mhead"><span id="miniState"></span><button id="miniFull" class="alt" title="Back to the full window">Full view</button></div>
+    <div class="row hidden" id="miniWrap" role="status"><span id="miniWrapText" style="flex:1;min-width:0"></span><button id="miniWrapEnd" title="Saves the run to History (the summary waits in the full view)">Finalize log</button></div>
     <div class="mgrid">
       <div class="main"><div class="k">EXP/hr</div><div class="v" id="miniExp">-</div></div>
       <div><div class="k">Mesos/hr</div><div class="v" id="miniMeso">-</div></div>
@@ -302,6 +305,8 @@
   <div class="card hidden" id="updBanner"><b id="updText"></b> <button id="updGo">Restart and update</button></div>
   <div class="card hidden" id="dummyBar" role="status"><b>Dummy data</b><span>Made up to try layouts. Never saved or shared.</span><button id="dummyClear" class="alt">Clear</button></div>
   <!-- wrapping up and the run summary: above the layout, where Stop was pressed (under every module they were off screen) -->
+  <div class="card hidden" id="recover" role="alert"><h3>Unsaved run</h3><div class="note" id="recoverText"></div>
+    <div class="row"><button id="recoverSave">Save it to History</button> <button id="recoverDrop" class="alt">Discard</button></div></div>
   <div class="card hidden" id="wrap"><h3>Wrapping up</h3>
     <div class="step">1. Show your inventory</div>
     <div class="note">The timer is stopped. Open your inventory on each tab for a second so the end count is right; a tab turns green once
@@ -382,7 +387,7 @@
   <div class="card hidden" id="selfcheck"></div>
   <!-- modules not in the layout: the Modules toolbox lists them (renderer-layout.js) -->
   <div id="shelf" hidden>
-    <div class="card" id="hist" data-box="hist" data-title="Past sessions"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div>
+    <div class="card" id="hist" data-box="hist" data-title="Past sessions"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="today"></div><div id="eta"></div><div id="recap"></div>
       <details id="mapsBox" open hidden><summary>Maps</summary><div id="maps"></div></details>
       <div class="row histBar" id="histBar" hidden><input id="histQ" type="search" aria-label="Search sessions" placeholder="Search name, map, note, monster" style="flex:1;min-width:140px">
         <select id="histMap" aria-label="Map"></select><select id="histWho" aria-label="Character" hidden></select>
@@ -513,6 +518,10 @@
       <label class="chk"><input type="checkbox" id="fitWin"> <span>Window height follows the boxes: it grows and shrinks as boxes fold, lists fill up or you add and remove modules</span></label>
       <label class="chk"><input type="checkbox" id="snapBoxes"> <span>Keep box edges lined up: after you move or resize a box, edges that nearly line up snap into line</span></label>
       <div class="row"><button id="layoutAlign" class="alt">Line up every box now (Ctrl+Shift+L)</button> <button id="layoutFit" class="alt">Fit every box now</button> <button id="layoutReset" class="alt">Reset box layout</button></div>
+      <div class="k" style="margin-top:8px">Share your setup (layout and theme)</div>
+      <div class="row"><button id="setupCopy" class="alt" title="One line with your box layout and theme, to paste in Discord">Copy setup code</button>
+        <input id="setupCode" aria-label="Setup code" placeholder="Paste a setup code (MSCS1...)" style="flex:1;min-width:0"> <button id="setupPaste" class="alt">Use it</button></div>
+      <div class="note" id="setupNote" role="status"></div>
       <div class="note">Boxes move by their ⠿ grip: onto the left or right of another box for side by side, or above or below it. The ▦ Modules toolbox adds and puts away boxes. Hold Shift (or Alt) to resize them; double-click a bar, or a box's title, to fit it again. "Fit every box now" undoes the widths and heights you set but keeps where the boxes are. "Line up every box now" snaps the edges of boxes side by side into shared columns, gives every box in a row the same top and bottom, and keeps the gaps even.</div>
     </div>
     <div class="card" id="themeCard" data-nav="Theme"><h3>Theme</h3>
