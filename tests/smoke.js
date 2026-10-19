@@ -200,7 +200,7 @@ const path = require("path");
   await p.click('#wmcard [data-route]');
   check(!(await p.isHidden("#navi")) && (await p.inputValue("#navto")) !== "", "world map: Route here opens the navigator");
   await tab("#t-log"); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
-  await tab("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 7, "credits tab renders");
+  await tab("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 8 && await p.$$eval("#srcdates li", l => l.length) >= 3, "credits tab renders (7 sources + Data last updated)");
   await tab("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to craft Lv 10/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 10, "crafting leveling plan");
   await tab("#t-maps"); check(await p.$$eval("#timedrows tr", r => r.length) > 10 && /Mushmom/.test(await p.textContent("#timedrows")), "bosses and timed spawns");
   await tab("#t-quests"); await p.click("#qcompact"); await p.click("#qcompact"); check(await p.$$eval("#qrows tr", r => r.length) > 0, "quest compact toggle");

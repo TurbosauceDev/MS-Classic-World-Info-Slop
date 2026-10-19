@@ -105,6 +105,17 @@ let SAVEDTAB = null; try { SAVEDTAB = localStorage.getItem("tab") } catch(e) {}
 goHome();
 try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : HASH.n ? "navi" : HASH.t ? "maps" : HASH.q ? "quests" : SAVEDTAB; if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
+// Credits: when each data source was last read (build.py fills SRCDATES from fetch_osms.sh and data/sources/*.json)
+const SRCDATES = __SRCDATES__;
+{ const day = s => { const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ""); return m ? new Date(Date.UTC(+m[1], m[2] - 1, +m[3])).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) : null };
+  const o = SRCDATES.osms || {}, rows = [
+    [`OSMS export ${esc((o.ref || "").slice(0, 7))}`, o.pinned ? `in use since ${day(o.pinned)}` : null, "game files: monsters, maps, items, skills, quests"],
+    ["meso.watch prices", day(D.pw?.read || SRCDATES.mesowatch_prices), "player-shop sale prices"],
+    ["Shared runs", day(D.shared?.read || SRCDATES.shared_runs), "Grind Tracker runs; the tracker pages load live numbers when the server answers"],
+    ["meowdb drops", day(SRCDATES.meowdb_drops), "player-reported drops"],
+    ["meowdb shops, mesos, weapon drops", day(SRCDATES.meowdb_shops), "NPC shops, mesos per kill"],
+    ["maplestory.quest", day(SRCDATES.mq_mob_magic), "monster magic attack"]];
+  $("#srcdates").innerHTML = rows.filter(r => r[1]).map(([n, d, w]) => `<li><b>${n}:</b> ${d} <span class="sub">· ${w}</span></li>`).join("") }
 $("#srclink").addEventListener("click", e => { e.preventDefault(); $("#t-credits").click(); $("#credits").scrollIntoView() });
 // "about 1 per X kills" for n picked up in k kills, plus a likely range (95% Wilson interval: a statistics estimate, wide
 // while kills are few). Used on monster and item pages (48-monsters.js, 49-items.js).

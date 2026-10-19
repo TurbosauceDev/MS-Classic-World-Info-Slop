@@ -4,7 +4,7 @@ The page must stay one self-contained HTML file (it is published as a claude.ai 
 so CSS, JS and the data are inlined. JS files are concatenated in filename order into ONE <script>, so they share
 top-level scope: later files can use functions/consts from earlier ones (e.g. 50-builder.js uses hitProb and rankMaps).
 """
-import datetime, pathlib, re, sys
+import datetime, json, pathlib, re, subprocess, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 src = ROOT / "src"
 html = (src / "index.html").read_text()
@@ -18,6 +18,17 @@ js = js.replace("/*@READERS*/", (ROOT / "tracker" / "app" / "readers.js").read_t
 # the tracker's themes (presets + MSCT1. share codes), so the site and the tracker can wear the same theme; window.TrackerThemes
 js = js.replace("/*@THEMES*/", (ROOT / "tracker" / "app" / "themes.js").read_text(), 1)
 data = (ROOT / "data" / "data.json").read_text()
+# "Data last updated" (Credits): the pinned OSMS export (fetch_osms.sh, and when the pin last moved) + each source file's "read" date
+def git_day(*args):
+    try: return subprocess.run(["git", "log", "-1", "--format=%cs", *args], cwd=ROOT, capture_output=True, text=True, timeout=20).stdout.strip() or None
+    except Exception: return None
+ref = re.search(r'OSMS_REF:-([0-9a-f]{7,40})', (ROOT / "scripts" / "fetch_osms.sh").read_text()).group(1)
+srcd = {"osms": {"ref": ref, "pinned": git_day("-G", "OSMS_REF=", "--", "scripts/fetch_osms.sh")}}
+for f in sorted((ROOT / "data" / "sources").glob("*.json")):
+    try: srcd[f.stem] = json.loads(f.read_text()).get("read")
+    except Exception: pass
+assert "__SRCDATES__" in js
+js = js.replace("__SRCDATES__", json.dumps(srcd).replace("<", "\\u003c"), 1)
 assert "/*@CSS*/" in html and "/*@JS*/" in html and "__DATA__" in js
 # site version on Home = when this file was built (UTC), so a landed update is easy to spot
 ver = datetime.datetime.now(datetime.timezone.utc).strftime("%b %-d, %Y · %H:%M UTC")
