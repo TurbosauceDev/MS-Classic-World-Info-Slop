@@ -245,6 +245,7 @@ async function tick(){
     const want = {};
     if (!ocrBusy){
       if (deathPending && t - deathPending.last >= 1000){ deathPending.last = t; want.chat = true }
+      else if (boxPending && t - boxPending.last >= 1000){ boxPending.last = t; want.chat = true; want.box = true }
       else if (t - lastOcr > 5000){ lastOcr = t; want.map = true }
       else if ((!settings.job || !charName) && t - lastJob > 30e3){ lastJob = t; want.job = true }
     }
@@ -257,6 +258,8 @@ async function tick(){
       if (e.type === "kpqtime"){ if (kpq) kpqTime(e.left, e.t); continue }
       // a pickup-line letter learned from an item name: kept for next time (at most 300)
       if (e.type === "glyph"){ const g = [...(settings.glyphs || []), {ch: e.ch, w: e.w, h: e.h, bits: e.bits}].slice(-300); host.settings({glyphs: g}).then(x => settings = x); log("glyph", {ch: e.ch}); continue }
+      // a box (Companion's Magic Box) gone from the Use tab: it was opened, its rewards are in the chat box
+      if (e.type === "inv" && e.tab === "use"){ const n = +e.items[BOX] || 0; if (n < boxHad && !e.unknown) boxPending = {tries: 0, last: 0}; if (!e.partial?.[BOX]) boxHad = n }
       session.add(e); slicer.add(e); log("event", e);
       if (e.type === "item") dropAlert(e.id);
       if (e.type === "bar"){
@@ -277,7 +280,8 @@ async function tick(){
     if (check && (!check.ended || check.late)){ check.late = false; renderCheck() }   // a ✗ turns ✓ when it starts working
     if (session.state.deaths > deathSeen){ deathSeen = session.state.deaths; deathPending = {t, tries: 0, last: 0} }
     const ocr = fn => { ocrBusy = true; fn.catch(() => {}).finally(() => ocrBusy = false) };
-    if (want.chat) ocr(checkDeath(r.crops.chat, t));
+    if (want.box) ocr(checkBox(r.crops.chat, t));
+    else if (want.chat) ocr(checkDeath(r.crops.chat, t));
     else if (want.map) ocr(readMap(r.crops.map, t));
     else if (want.job) ocr(readJob(r.crops.job, t, r.crops.name));
     if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
@@ -395,6 +399,26 @@ for (const [i, k] of [[0, "start"], [1, "end"]]){
 // deaths: each EXP bar drop is checked against the chat box's "You have lost N EXP for dying" line (OCR, up to 3 tries a
 // second apart). Confirmed ones carry the exact EXP lost. The OCR text isn't logged: chat lines hold player names.
 let deathSeen = 0, deathPending = null;
+// boxes: a Companion's Magic Box that left the Use tab was opened; its rewards are read from the chat box (OCR, up to 3
+// tries a second apart). Each reward group counts once while it stays on screen (boxSeen: group -> times counted)
+const BOX = "2430000";
+let boxHad = 0, boxPending = null, boxSeen = new Map();
+async function checkBox(c, t){
+  const sess = session, groups = GrindReaders.boxFromText(await host.ocr(await toPng(c)));
+  if (sess !== session || !boxPending) return;
+  const n = new Map(); for (const g of groups) n.set(g.key, (n.get(g.key) || 0) + 1);
+  let got = 0;
+  for (const g of groups){
+    if ((boxSeen.get(g.key) || 0) >= n.get(g.key)) continue;
+    boxSeen.set(g.key, (boxSeen.get(g.key) || 0) + 1); got++;
+    for (const it of g.items){
+      if (!it.id){ log("boxraw", {name: it.name, qty: it.qty}); continue }
+      const e = {t, type: "item", id: it.id, qty: it.qty, src: "box"}; session.add(e); slicer.add(e); log("event", e);
+    }
+  }
+  if (got){ boxPending = null; note("Box opened: " + groups.slice(-got).flatMap(g => g.items.map(i => i.name + " ×" + i.qty)).join(", ")) }
+  else if (++boxPending.tries >= 3) boxPending = null;
+}
 const deaths = {confirmed: 0, lost: 0, unseen: 0};
 async function checkDeath(c, t){   // c: the chat box crop (GrindReaders.chatCrop)
   const sess = session, text = await host.ocr(await toPng(c)), lost = GrindReaders.deathFromText(text);

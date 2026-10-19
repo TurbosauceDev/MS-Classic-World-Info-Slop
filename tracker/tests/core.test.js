@@ -52,6 +52,9 @@ st = s.stats();
 assert.strictEqual(st.mapName, "1st Accompaniment <Bonus>");
 assert.strictEqual(st.kills, 3);
 assert.deepStrictEqual(st.mobs.map(m => [m.name, m.kills]), [["Horny Mushroom", 1]], "+33 is more than a Green Mushroom gives");
+// Danny's report 2026-10-19 ("monsters killed isn't tracking kills"): party shares (+5, +7, +10, +16) fit both mushrooms,
+// so they are kills with no monster; the Monsters box shows them as their own row
+assert.strictEqual(st.unknownKills, 2);
 
 // real readings (Danny's party grind, map not in our data): EXP from the bar, kills from EXP messages, level-up carried over
 s = createSession(G);
@@ -318,3 +321,16 @@ console.log("core tests passed");
   assert.deepStrictEqual(f.step(s.state, sec(10)).map(x => x.kind + ":" + x.text), ["job:You are a Hunter now", "party:You are solo now"]);
 }
 console.log("feed ok");
+// Companion's Magic Box opened (Danny's frame 2026-10-19 03:54, chat OCR as read; "Pation" is the OCR's): the "earned"
+// lines just above "...Box x1 has been lost" are its rewards; they're loot with no monster
+{ const R = require("../app/readers.js"); R.createReaders(G);
+  const ocr = "N H ne\n[03:54] White Pation x15 earned. (Use)\n[03:54] Red Potion x5 earned. (Use) [\n[03:54] Companion's Magic Box x1 has been lost. (Use) a\n5 = EE";
+  const g = R.boxFromText(ocr);
+  assert.strictEqual(g.length, 1);
+  assert.deepStrictEqual(g[0].items.map(i => [i.id, i.qty]), [["2000002", 15], ["2000000", 5]]);
+  assert.strictEqual(R.boxFromText("[03:54] You received EXP (+1,102)\n[03:54] Companion's Magic Box x1 earned. (Use)").length, 0, "getting a box isn't opening one");
+  const s = createSession(G);
+  s.add({t: sec(0), type: "map", id: 80000500}); s.add({t: sec(1), type: "exp", gain: 41});
+  s.add({t: sec(2), type: "item", id: "2000002", qty: 15, src: "box"});
+  assert.strictEqual(s.state.items["2000002"], 15); assert.deepStrictEqual(s.state.byMob["19"].items, {}, "box loot isn't a Horny Mushroom drop") }
+console.log("box ok");

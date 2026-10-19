@@ -424,6 +424,29 @@
     const m = /lost\s*(\d[\d,. ]*\d|\d)\s*E\s*X\s*P?\s*f\w*\s*d\s*y/i.exec(String(text || "").replace(/\n/g, " "));
     return m ? +m[1].replace(/[,. ]/g, "") : null;
   }
+  /* Opening a box (Companion's Magic Box from KPQ) writes its rewards in the chat box, not as pickup lines: "[03:54] White
+     Potion x15 earned. (Use)", "[03:54] Red Potion x5 earned. (Use)", then "[03:54] Companion's Magic Box x1 has been lost.
+     (Use)" (Danny's frames, 2026-10-19). From the chat OCR: one group per "...Box xN has been lost" line, the "earned" lines
+     just above it. key = the group's lines as read (with the minute), so a group still on screen next time isn't counted
+     again. Names: exact, else the closest item of that tab (85%+ alike: OCR reads "Pation"). */
+  function boxFromText(text){
+    const lines = String(text || "").split("\n").map(l => l.trim()).filter(Boolean), out = [];
+    const EARN = /^\[(\d\d:\d\d)\]\s*(.+?)\s*x\s*(\d+)\s*earned\.?\s*\((\w+)\)/, tab = {Etc: ["Etc"], Use: ["Consumable", "Scroll"], Equip: ["Equipment"], Setup: ["Setup"]};
+    lines.forEach((l, i) => {
+      if (!/Box\s*x\s*\d+\s*has\s*been\s*lost/i.test(l)) return;
+      const items = [], keep = [l.replace(/\)\s*\S*$/, ")")];
+      for (let j = i - 1, m; j >= 0 && (m = EARN.exec(lines[j])) && !/Box$/i.test(m[2]); j--){
+        keep.unshift(m[0]);
+        let id = ITEMS ? itemByName(m[2], m[4]) : null;
+        if (!id && ITEMS){ const cats = tab[m[4]] || []; let best = 0, tie = false;
+          for (const [k, it] of ITEMS) if (!cats.length || cats.includes(it.c)){ const v = similar(m[2], it.n); if (v > best){ best = v; id = k; tie = false } else if (v === best) tie = true }
+          if (best < 0.85 || tie) id = null }
+        items.unshift({id, name: m[2], qty: +m[3]});
+      }
+      if (items.length) out.push({key: keep.join("|"), items});
+    });
+    return out;
+  }
   function jobFromText(text){
     const words = text.split(/[^A-Za-z]+/).filter(w => w.length >= 4);
     for (let i = 0; i < words.length; i++){
@@ -943,6 +966,6 @@
     if (want.chat) crops.chat = chatCrop(img);
     return {ev, info, crops, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {itemByName, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {itemByName, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

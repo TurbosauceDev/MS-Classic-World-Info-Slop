@@ -192,8 +192,10 @@ function render(){
     kills(s.kills), mz(s.mesoPerKill) + "/kill",
     s.readShare != null && Math.round(s.readShare * 100) + "% of EXP seen as messages",
     settings.share && esc(runInfo())].filter(Boolean).join(" · ");
-  $("#mobsEmpty").classList.toggle("hidden", !!s.mobs.length); $("#itemsEmpty").classList.toggle("hidden", !!(s.items.length || s.unreadItems));
-  $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${esc(m.name)}</td><td class="n">${kills(m.kills)}</td><td class="n">${mz(m.mesoPerKill)}/kill</td></tr>`).join("");
+  $("#mobsEmpty").classList.toggle("hidden", !!(s.mobs.length || s.unknownKills)); $("#itemsEmpty").classList.toggle("hidden", !!(s.items.length || s.unreadItems));
+  $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${esc(m.name)}</td><td class="n">${kills(m.kills)}</td><td class="n">${mz(m.mesoPerKill)}/kill</td></tr>`).join("")
+    // in a party each kill's EXP is a share, which often fits more than one monster here (Danny's KPQ Bonus, 2026-10-19)
+    + (s.unknownKills ? `<tr><td class="dim">Not told apart${s.party > 1 ? " (party EXP share)" : ""}</td><td class="n">${kills(s.unknownKills)}</td><td></td></tr>` : "");
   $("#items").innerHTML = (s.items.length ? `<tr class="th"><td>Item</td><td class="n">Got</td><td class="n">Each</td><td class="n">Worth</td></tr>` : "")
     + s.items.map(i => `<tr><td>${ico(i.id)}${esc(i.name)}${i.inv ? ` <span class="note">(${i.inv} from the inventory)</span>` : ""}</td><td class="n">×${fmt(i.n)}</td><td class="n dim">${mz(i.each)}</td><td class="n">${sgm(i.total)}</td></tr>`).join("")
     + (s.items.length ? `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.items.reduce((a, i) => a + i.n, 0))}</td><td></td><td class="n">${sgm(s.lootValue)}</td></tr>` : "")

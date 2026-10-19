@@ -6,6 +6,7 @@
      {t, type: "exp",   gain}             one "You received EXP (+gain)" message = one kill (yours or a party member's)
      {t, type: "bonus", gain}             "Bonus EXP for PARTY (+gain)": EXP, not a kill
      {t, type: "bar",   exp, level?}      EXP bar reading: current EXP into the level (and level, when worked out)
+     {t, type: "item", id, qty?, src?}    an item picked up (src "box": a box's reward from the chat box, no monster)
      {t, type: "itemraw", text, qty?, cands?}  an item pickup line whose name fits several items (cands) or none; the one
                                           this map's monsters drop is taken when only one of them does
      {t, type: "inv", tab, items, alike?, stacks?, unknown}  the inventory's open tab (equip/use/etc): {id: count}; alike = how many
@@ -28,7 +29,7 @@
   function createSession(G, opts = {}){
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
-      msgExp: 0, barExp: 0, recent: [], kills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, itemT: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
+      msgExp: 0, barExp: 0, recent: [], kills: 0, unknownKills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, itemT: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
       pausedAt: null, held: false, pausedMs: 0, levelUps: [], levelAt: null, used: {}, have: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
@@ -96,7 +97,7 @@
       return out.sort((a, b) => Math.abs(b.n) - Math.abs(a.n));
     }
     // KPQ's Pass and Coupon only matter inside KPQ: not loot (Danny, 2026-10-18)
-    function gotItem(id, q, t){ id = String(id); if ((G.kpqItems || []).includes(id)) return; S.items[id] = (S.items[id] || 0) + q; (S.itemT[id] ||= {first: t}).last = t; if (S.lastKillMob){ const m = mob(S.lastKillMob); m.items[id] = (m.items[id] || 0) + q } }
+    function gotItem(id, q, t, src){ id = String(id); if ((G.kpqItems || []).includes(id)) return; S.items[id] = (S.items[id] || 0) + q; (S.itemT[id] ||= {first: t}).last = t; if (S.lastKillMob && !src){ const m = mob(S.lastKillMob); m.items[id] = (m.items[id] || 0) + q } }
     const mob = id => S.byMob[id] || (S.byMob[id] = {kills: 0, exp: 0, mesos: 0, mesoDrops: 0, items: {}});
 
     function add(e){
@@ -115,9 +116,9 @@
         case "job": S.job = e.name; break;
         case "exp": {
           S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t);
-          if (!G.maps[S.map]){ S.kills++; S.lastKillMob = null; break }   // map not known: a kill, monster unknown
+          if (!G.maps[S.map]){ S.kills++; S.unknownKills++; S.lastKillMob = null; break }   // map not known: a kill, monster unknown
           const id = matchMob(e.gain);
-          if (id === "?"){ S.kills++; S.lastKillMob = null }   // a party kill, monster unknown
+          if (id === "?"){ S.kills++; S.unknownKills++; S.lastKillMob = null }   // a party kill, monster unknown
           else if (id){ const m = mob(id); m.kills++; m.exp += e.gain; S.kills++; S.lastKillMob = id; if (timed(id)) S.timedKills[id] = e.t }
           else S.otherExp += e.gain;   // fits no monster here: quest reward etc.
           break;
@@ -192,7 +193,7 @@
           if (S.lastKillMob){ const m = mob(S.lastKillMob); m.mesos += e.amount; m.mesoDrops++ }
           break;
         case "item": {
-          gotItem(e.id, e.qty || 1, e.t);
+          gotItem(e.id, e.qty || 1, e.t, e.src);   // src "box": opened from a box, not a monster's drop
           break;
         }
       }
@@ -252,7 +253,7 @@
       const mobs = Object.entries(S.byMob).map(([id, m]) => ({id, name: G.mobs[id]?.[0] || "Monster " + id, ...m,
         mesoPerKill: m.kills ? m.mesos / m.kills : 0})).sort((a, b) => b.kills - a.kills);
       return {activeMin: S.activeMs / 6e4, map: S.map, mapName: G.mapnames?.[S.map] || G.maps[S.map]?.[0] || S.mapName || null, party: S.party,
-        job: S.job, level: S.level, kills: S.kills, killsHr: per(S.kills), exp, expHr, toLevelHrs, otherExp: S.otherExp,
+        job: S.job, level: S.level, kills: S.kills, unknownKills: S.unknownKills, killsHr: per(S.kills), exp, expHr, toLevelHrs, otherExp: S.otherExp,
         // share of the bar's EXP that showed up as readable messages: below ~70%, kills/mesos/drops are undercounted
         readShare: S.barExp > 0 ? Math.min(1, S.msgExp / S.barExp) : null,
         // kills if the missed lines were kills at the same rate as the ones read (an estimate; only from 20% read up)

@@ -114,6 +114,9 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Running tests locally: `npm run data` first (core.test.js needs app/gamedata.json, not committed).
 - findInventory picks the open tab by the most pink/rose/pale pixels per tab (not the first hit), and finds the red line's
   top row away from the open tab's break. inventory.test.js isn't in CI (needs Chromium): run it after touching readers.
+- Boxes: a Companion's Magic Box leaving the Use tab triggers chat OCR (checkBox, renderer-live.js); boxFromText takes the
+  "earned" lines above "...Box xN has been lost" as rewards, items with src "box" (never a monster's drop).
+- Party kills whose EXP share fits several monsters count in S.unknownKills ("Not told apart" row in Monsters killed).
 - Pickup names: an unread `?` matches 1-2 letters ("Emerald Sta?" = Staff). Saved sessions' `used` = the Consumables used
   list (Use-tab drops included), not raw use events.
 - readParty counts party bars by their frame (black outline + white border, top and bottom edge), not red fill: a member
