@@ -31,7 +31,8 @@ const SKIP = /csv|Install|updGo|Reset|delete|×|bugGo|sumImg/i;   // files, the 
       } catch {}   // covered or gone by the time it was clicked: fine, on to the next step
       steps.push(act); await page.waitForTimeout(pick([10, 50, 200]));
       const bad = await page.evaluate(() => { const o = [];
-        if (document.documentElement.scrollWidth > innerWidth + 1 && !document.body.classList.contains("mini")) o.push("sideways scroll " + document.documentElement.scrollWidth + " > " + innerWidth);
+        if (document.documentElement.scrollWidth > innerWidth + 1 && !document.body.classList.contains("mini")) o.push("sideways scroll " + document.documentElement.scrollWidth + " > " + innerWidth + " (" + [...document.querySelectorAll("body *")]
+          .filter(e => e.offsetParent && e.getBoundingClientRect().right > innerWidth + 1).slice(0, 4).map(e => e.tagName + (e.id ? "#" + e.id : "") + (typeof e.className === "string" && e.className ? "." + e.className.split(" ").join(".") : "") + " " + Math.round(e.getBoundingClientRect().right)).join(", ") + ")");
         for (const e of document.querySelectorAll("body *")) if (e.offsetParent) for (const t of e.childNodes) if (t.nodeType === 3 && /NaN|undefined|Infinity|\[object/.test(t.textContent)) o.push("on screen: " + t.textContent.slice(0, 80));
         return o });
       if (errors.length || bad.length) throw new Error(`seed ${seed0} step ${i} after ${steps.slice(-5).join(" | ")}: ${[...errors, ...bad].join("; ")}`);

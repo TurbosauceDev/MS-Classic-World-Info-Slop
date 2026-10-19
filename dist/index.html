@@ -708,7 +708,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       </div>
     </div>
   </div>
-  <p class="sitever" data-built="2026-10-19T22:39:09Z" data-ver="0.7.1">Site version: v0.7.1 · built Oct 19, 2026 · 22:39 UTC</p>
+  <p class="sitever" data-built="2026-10-19T23:14:22Z" data-ver="0.7.1">Site version: v0.7.1 · built Oct 19, 2026 · 23:14 UTC</p>
 </section>
 
 <section id="plan" hidden>
@@ -7021,6 +7021,7 @@ for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click",
 // Releasing? Add a line for the new version at the top: tests/core.test.js fails if the top entry isn't package.json's version.
 (function (root){
   const LOG = [
+    ["0.2.63", "2026-10-19", "History in a narrow window: pressing × (Delete?) no longer pushes the list past the window edge."],
     ["0.2.62", "2026-10-19", "Patch notes: Help > Patch notes lists what changed in every version (also on the site's Grind Tracker page)."],
     ["0.2.61", "2026-10-19", "Profiles (Settings > Layout): save your whole setup under a name and switch between them. Copy profile code shares one with a friend, who can preview it before using it."],
     ["0.2.60", "2026-10-19", "Finalize log from Mini. Crash recovery: a running session is saved every minute and offered back after a crash. History: Today card and goal ETA. Setup codes."],

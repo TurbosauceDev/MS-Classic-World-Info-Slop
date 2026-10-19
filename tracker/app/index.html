@@ -245,6 +245,7 @@
   /* History: filters, maps, compare */
   #hist [hidden] { display:none !important; }
   #histRows, #recap { max-width:720px; }
+  #histRows td.n { white-space:normal; }   /* narrow window: "EXP/hr" and "Delete?" wrap instead of scrolling the page sideways (monkey, 2026-10-19) */
   .cmpBox { margin:8px 0 10px; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); max-width:720px; }
   .cmpT tr.cmpHead td { padding-bottom:8px; } .cmpT td:first-child { position:sticky; left:0; z-index:1; background:var(--bg); } .cmpT .cmpWho { min-width:130px; } .cmpT .cbar { min-width:100px; }
   .cmpWho { border-left:4px solid; padding:2px 8px; }

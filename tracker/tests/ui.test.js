@@ -204,12 +204,17 @@ const path = require("path"), {chromium} = require("playwright");
   // Start and end (goes above it). (The target is measured once the drag has started: the layout grows a drop border.)
   const dragTo = async (from, to, dy = 0) => { const a = await page.locator(from).boundingBox();
     await page.mouse.move(a.x + 10, a.y + a.height / 2); await page.mouse.down(); await page.mouse.move(a.x + 30, a.y + 20, {steps: 3});
-    const b = await page.locator(to).boundingBox();
+    await page.waitForTimeout(150); const b = await page.locator(to).boundingBox();
     await page.mouse.move(b.x + b.width / 2, b.y + (dy || b.height / 2), {steps: 5}); await page.mouse.up(); await page.waitForTimeout(50) };
   await page.setViewportSize({width: 600, height: 2400}); 
   await page.click("#tbBtn"); if (!await page.isVisible("#toolbox") || await page.textContent("#tbList") !== "⠿Past sessions+") throw new Error("toolbox open: " + await page.textContent("#tbList"));
+  // (flaky in CI 2026-10-19: aiming 4 px above the run log's bottom edge missed it when the layout moved a few px after the drag
+  // began, and it fell through to "add at the bottom". Wait out the toolbox's open animation and the drag-start reflow, then aim
+  // well inside the box's lower half.)
+  await page.waitForTimeout(250);
   { const a = await page.locator("#tbList .tbItem").boundingBox(); await page.mouse.move(a.x + 20, a.y + a.height / 2); await page.mouse.down(); await page.mouse.move(a.x - 20, a.y + 30, {steps: 3});
-    const b = await page.locator("#logBox").boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height - 4, {steps: 5});
+    await page.waitForTimeout(150);
+    const b = await page.locator("#logBox").boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height * 0.75, {steps: 5});
     const g = await page.evaluate(() => [document.querySelector(".dragLabel")?.textContent, document.querySelector(".dropGhost").textContent]);
     await page.mouse.up(); await page.waitForTimeout(50);
     const t = await page.evaluate(() => [document.querySelector("#logBox").nextElementSibling?.id, document.querySelector("#tbList").textContent, JSON.stringify(settings.layout.order.dock), !!document.querySelector(".moving, .dragLabel"), document.querySelector("#histRows").children.length]);
@@ -482,6 +487,15 @@ const path = require("path"), {chromium} = require("playwright");
     if (chips.some(x => !x)) throw new Error("settings chips: " + chips) }
   await page.click("#prefsClose"); await page.click("#updGo"); await page.waitForTimeout(100);
   if (!await page.evaluate(() => window.installed)) throw new Error("restart and update");
+  // History at a 340 px window: the × turning into "Delete?" widened the list past the window (monkey seed 2 in CI, 2026-10-19)
+  { const p2 = await browser.newPage({viewport: {width: 340, height: 600}}); await p2.addInitScript(require("./ui-host"));
+    await p2.goto("file://" + path.join(__dirname, "../app/index.html")); await p2.click("#guideShare");
+    const r0 = await p2.evaluate(async () => { addBox("hist"); await loadHist(); return document.querySelector("#histRows").getBoundingClientRect().right });
+    await p2.locator("#histRows .del").first().click();
+    const w = await p2.evaluate(() => [document.querySelector("#histRows .del.sure")?.textContent, document.documentElement.scrollWidth, document.documentElement.clientWidth,
+      document.querySelector("#histRows").getBoundingClientRect().right]);
+    if (w[0] !== "Delete?" || w[1] > w[2] || w[3] > r0 + 1) throw new Error("history at 340 px: " + w + " (was " + r0 + ")");
+    await p2.close() }
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (!/Red Snail/.test(mobs) || !/Blue Snail/.test(mobs)) throw new Error("mobs table: " + mobs);
