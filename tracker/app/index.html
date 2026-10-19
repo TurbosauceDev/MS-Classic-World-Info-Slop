@@ -500,8 +500,9 @@
     <div class="card" data-nav="Layout"><h3>Layout</h3>
       <label class="chk"><input type="checkbox" id="fitBoxes"> <span>Fit boxes to their content: boxes side by side never cut off their numbers, and stack under each other when the window gets too narrow for them</span></label>
       <label class="chk"><input type="checkbox" id="fitWin"> <span>Window height follows the boxes: it grows and shrinks as boxes fold, lists fill up or you change tabs</span></label>
-      <div class="row"><button id="layoutFit" class="alt">Fit every box now</button> <button id="layoutReset" class="alt">Reset box layout</button></div>
-      <div class="note">Boxes move by their ⠿ grip: onto the left or right of another box for side by side, onto a tab, or the strip above the tabs. Hold Shift (or Alt) to resize them; double-click a bar, or a box's title, to fit it again. "Fit every box now" undoes the widths and heights you set but keeps where the boxes are.</div>
+      <label class="chk"><input type="checkbox" id="snapBoxes"> <span>Keep box edges lined up: after you move or resize a box, or change tabs, edges that nearly line up snap into line</span></label>
+      <div class="row"><button id="layoutAlign" class="alt">Line up every box now (Ctrl+Shift+L)</button> <button id="layoutFit" class="alt">Fit every box now</button> <button id="layoutReset" class="alt">Reset box layout</button></div>
+      <div class="note">Boxes move by their ⠿ grip: onto the left or right of another box for side by side, onto a tab, or the strip above the tabs. Hold Shift (or Alt) to resize them; double-click a bar, or a box's title, to fit it again. "Fit every box now" undoes the widths and heights you set but keeps where the boxes are. "Line up every box now" snaps the edges of boxes side by side into shared columns, gives every box in a row the same top and bottom, and keeps the gaps even.</div>
     </div>
     <div class="card" id="themeCard" data-nav="Theme"><h3>Theme</h3>
       <div class="sw" id="themeSw" role="radiogroup" aria-label="Theme"></div>

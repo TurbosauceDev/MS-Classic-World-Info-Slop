@@ -108,6 +108,11 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   children's offsetWidths add up wider than it (not scrollWidth: FLIP transforms fake overflow). It runs in the resize event
   (same frame) and after layout changes; a ResizeObserver catches content growth. Run log stickiness: `#feed._stick`, only
   user wheel/key/pointer scrolls clear it. settings.fitWin reuses compactFit (fitsWindow()); body.measure = natural height.
+- Line up (0.2.55, alignRows in renderer-layout.js; View "Line up every box" Ctrl+Shift+L = menu("align"), #layoutAlign,
+  settings.snap / body.snap on by default): rows with the same left/right edge (dock + open tab) cluster their part edges
+  (manual tol W/8, auto 24 px; #dock rows lead, a just-dragged row follows) and get px flex weights. Trap: a box never flexes
+  below its padding, so weight = width - padding (pad()), else rows with equal weights land ~1 px apart. Sized boxes in a row
+  hand their height to the row. Auto runs in layoutSave, endResize and showTab (showTab never saves: settings may not be loaded).
 - tests/layout.test.js (CI job `ui` in tracker.yml, with ui.test.js; host stub shared in tests/ui-host.js): sweeps the window
   900→340 px over Danny's docked layout. Wait a frame after setViewportSize (resize events fire in the next frame).
 - Dummy data off no longer reloads (main.js will-navigate blocks reloads): dummyClear re-renders from the covered session.

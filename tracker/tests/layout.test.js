@@ -106,6 +106,37 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     if (Math.abs(applied - z) > 0.001) fail("mini zoom applied at " + h, {z, applied});
     if (z < z0 - 0.001 || bottom > h + 1) fail("mini zoom at " + h, {z, z0, bottom}); z0 = z }
   if (!(zs.at(-1) > zs[0]) || zs.some((z, i) => i && z - zs[i - 1] > 0.12)) fail("mini zoom steps", zs);
+  // Line up every box (Danny, 2026-10-19, his screenshot): Session numbers / Event log / Run log pinned, Consumables / Mesos /
+  // Items looted on the Loot tab under them, the edges between the boxes off by up to 50 px, and a box with its own height
+  await page.evaluate(() => $("#miniFull").click()); await vp(900, 820);
+  const edges = () => page.evaluate(() => { const R = id => document.querySelector(`[data-box=${id}]`).getBoundingClientRect();
+    const a = ["stats", "events", "log"].map(R), b = ["used", "mesos", "items"].map(R), r = x => Math.round(x * 10) / 10;
+    return {cols: [0, 1, 2].map(i => [r(a[i].left - b[i].left), r(a[i].right - b[i].right)]).flat(), tops: b.map(x => r(x.top - b[0].top)), bottoms: a.map(x => r(x.bottom - a[0].bottom)),
+      gaps: [a[1].left - a[0].right, a[2].left - a[1].right, b[1].left - b[0].right, b[2].left - b[1].right].map(r), wrapped: document.querySelectorAll(".boxrow.wrapped").length} });
+  await page.evaluate(() => { showTab("loot");
+    layoutLoad({order: {dock: ["main", {row: ["stats", "events", "log"], w: [218, 205, 207]}], loot: [{row: ["used", "mesos", "items"], w: [250, 168, 200]}, "invcheck"]}, folded: [], h: {events: 260}}) });
+  await page.waitForTimeout(50);
+  const before = await edges();
+  if (before.cols.every(x => Math.abs(x) < 1) || before.bottoms.every(x => Math.abs(x) < 1)) fail("misaligned to start with", before);
+  await page.evaluate(() => window.menu("align")); await page.waitForTimeout(50);
+  const al = await edges();
+  if (al.wrapped || al.cols.some(x => Math.abs(x) > 1) || al.tops.some(x => Math.abs(x) > 1) || al.bottoms.some(x => Math.abs(x) > 1) || al.gaps.some(g => Math.abs(g - al.gaps[0]) > 1)) fail("line up every box", {before, al});
+  const saved = await page.evaluate(() => [JSON.stringify(settings.layout.h), settings.layout.order.dock.find(x => x.row).h > 0]);
+  if (saved[0] !== "{}" || !saved[1]) fail("line up saves the row height", saved);
+  // the edges hold as the window narrows (while the rows still fit side by side)
+  await vp(780, 820); const nar = await edges();
+  if (!nar.wrapped && nar.cols.some(x => Math.abs(x) > 1)) fail("lined up at 780 px", nar);
+  await vp(900, 820);
+  // Keep box edges lined up (on by default): a width bar let go near another row's edge snaps onto it; far from one, it stays
+  const bar2 = async dx => { await page.keyboard.down("Shift"); const s = await page.locator("section[data-tab=loot] .boxrow .split >> nth=0").boundingBox();
+    await page.mouse.move(s.x + 4, s.y + 20); await page.mouse.down(); await page.mouse.move(s.x + 4 + dx, s.y + 20, {steps: 4}); await page.mouse.up(); await page.keyboard.up("Shift"); return edges() };
+  const near = await bar2(14);
+  if (Math.abs(near.cols[1]) > 1) fail("bar snaps to the edge above", near);
+  const far = await bar2(-70);   // (Consumables stops at its content, about 30 px in)
+  if (Math.abs(far.cols[1]) < 24) fail("bar far from an edge stays put", far);
+  await page.evaluate(() => { window.menu("settings"); $("#snapBoxes").click(); $("#prefsClose").click() });
+  const off2 = await bar2(58);
+  if (Math.abs(off2.cols[1]) < 4 || await page.evaluate(() => settings.snap) !== false) fail("snap off", off2);
   await browser.close();
   if (errors.length) fail("page errors", errors);
   console.log("layout test passed");

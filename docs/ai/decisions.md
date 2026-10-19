@@ -68,3 +68,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-19 Tracker party kills: EXP shares that fit several monsters stay a "Not told apart" row; no need to count every party kill per monster, the tracker is about the player's own performance (Danny).
 - 2026-10-19 Tracker KPQ: saved runs must let rounds/Bonus/next round be read straight off the log (Danny); added kpq.timeline.
 - 2026-10-19 Tracker History: compare more than two runs at once and flesh out History; Danny left the extra features to Claude ("i trust you to come up with ideas"). Pushed + released on his "push" / "publish if permission needed".
+- 2026-10-19 Tracker layout: a "line up every box" button (crisp shared column edges, same top/bottom per row, even gaps); auto-snap after drags is on by default (Settings > Layout to turn off). Danny OK'd push + release ("push and publish when done").

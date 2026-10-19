@@ -97,7 +97,7 @@ function showTab(name){
   for (const b of document.querySelectorAll(".tabs button")){ b.classList.toggle("sel", b.dataset.tab === name); b.setAttribute("aria-selected", String(b.dataset.tab === name)); b.tabIndex = b.dataset.tab === name ? 0 : -1 }
   for (const sec of document.querySelectorAll("section[data-tab]")) sec.classList.toggle("hidden", sec.dataset.tab !== name);
   try { localStorage.setItem("tab", name) } catch {}
-  fitRows(); requestAnimationFrame(() => compactFit());   // rows on the new tab fit before it paints; a fitted window follows its height
+  fitRows(); if (snapOn()) alignRows(SNAP); requestAnimationFrame(() => compactFit());   // rows on the new tab fit before it paints; a fitted window follows its height
 }
 for (const b of document.querySelectorAll(".tabs button")){ b.setAttribute("role", "tab"); if (b.id !== "histBtn") b.onclick = () => showTab(b.dataset.tab) }
 for (const sec of document.querySelectorAll("section[data-tab]")) sec.setAttribute("role", "tabpanel");
@@ -135,7 +135,7 @@ function tidy(){
 // saved as order[tab] = [box id | {row: [box id | [box ids (a column)]], w: [widths]}]; older saves (just ids) still load
 function layoutSave(){
   requestAnimationFrame(() => compactFit());
-  tidy(); fitRows(); const order = {};
+  tidy(); fitRows(); if (snapOn()) alignRows(SNAP); const order = {};
   const hOf = e => e.classList.contains("sized") ? parseFloat(e.style.getPropertyValue("--h")) || undefined : undefined;
   const ser = e => isRow(e) ? {row: parts(e).map(p => isCol(p) ? [...p.children].map(b => b.dataset.box) : p.dataset.box), w: parts(e).map(p => Math.round(grow(p)) || 1), h: hOf(e)} : e.dataset.box;
   for (const h of [$("#dock"), ...document.querySelectorAll("section[data-tab]")]) order[h.id || h.dataset.tab] = [...h.querySelectorAll(":scope > [data-box], :scope > .boxrow")].map(ser);
@@ -290,7 +290,8 @@ let rzRaf = 0;
 document.addEventListener("pointermove", e => {
   if (!rs){ rzOn(e.shiftKey || e.altKey); if (document.body.classList.contains("rzKeys") && !rzRaf) rzRaf = requestAnimationFrame(() => { rzRaf = 0; rzPlace() }); return }
   if (rs.s.rz){ heightSet(rs.s.rz, rs.h + e.clientY - rs.y); rzPlace() } else { widthSet(rs.s, rs.w[0], rs.w[1], e.clientX - rs.x, rs.w[2], rs.w[3]); rzPlace() } });
-const endResize = () => { if (!rs) return; rs.s.classList.remove("on"); document.body.classList.remove("resizing", "rows"); rs = null; layoutSave(); requestAnimationFrame(rzPlace) };
+const endResize = () => { if (!rs) return; rs.s.classList.remove("on"); document.body.classList.remove("resizing", "rows"); const r = rs.s.rz ? null : rs.s.parentElement; rs = null;
+  if (snapOn() && r) alignRows(SNAP, r); layoutSave(); requestAnimationFrame(rzPlace) };
 document.addEventListener("pointerup", endResize); document.addEventListener("pointercancel", endResize);
 document.addEventListener("dblclick", e => { const s = e.target.closest?.(".split, .hsplit"); if (!s) return;
   if (s.rz) heightSet(s.rz, null); else for (const p of parts(s.parentElement)) p.style.flex = "1 1 0px";
@@ -326,6 +327,49 @@ function fitSet(on){ document.body.classList.toggle("fit", on); fitRows() }
 // "Fit every box now": widths and heights you set go back to fitting their content (the arrangement stays)
 function fitAll(){ flip(() => { for (const e of document.querySelectorAll(".sized")) heightSet(e, null);
   for (const r of document.querySelectorAll(".boxrow")) for (const p of parts(r)) p.style.flex = ""; fitRows() }); layoutSave() }
+// ---- lining up (Danny, 2026-10-19: "a button that would align all windows nicely ... crisp") ----
+// "Line up every box" (View menu, Ctrl+Shift+L, Settings > Layout): rows stacked over each other (same left and right edge:
+// the pinned strip and the open tab together) get the edges between their boxes snapped into shared columns, and a box in a
+// row that has its own height hands it to the row, so every box in a row shares its top and bottom. Gaps are the fixed 8 px
+// of index.html, so they come out even. The pinned strip leads (a tab's rows snap to it, so its columns stay put when you
+// change tabs); a row you just resized follows the others. Widths go back as px flex weights, so the edges hold as the window
+// resizes. settings.snap (on unless turned off): the same after every move, resize and tab change, for edges already close.
+const pad = e => { const c = getComputedStyle(e); return ["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"].reduce((a, k) => a + parseFloat(c[k]), 0) };
+const snapOn = () => document.body.classList.contains("snap"), SNAP = 24;
+function alignRows(tol, lead){
+  if (rs) return false;
+  const rows = [...document.querySelectorAll(".boxrow")].filter(r => r.offsetParent && !r.classList.contains("wrapped")), px = v => Math.round(v * 100) / 100;
+  let moved = false;
+  for (const r of rows){ const own = parts(r).filter(p => p.classList.contains("sized") && !p.classList.contains("folded")); if (!own.length) continue;
+    const h = r.getBoundingClientRect().height; for (const p of own) heightSet(p, null); heightSet(r, h); moved = true }
+  const groups = [];
+  for (const r of rows){ const b = r.getBoundingClientRect(); let g = groups.find(g => Math.abs(g.l - b.left) < 2 && Math.abs(g.r - b.right) < 2);
+    if (!g) groups.push(g = {l: b.left, r: b.right, rows: []}); g.rows.push(r) }
+  for (const g of groups){ if (g.rows.length < 2) continue;
+    const W = g.r - g.l, near = tol ?? W / 8, at = new Map(), pts = [];
+    // each edge between two boxes, as x from the rows' left
+    for (const r of g.rows){ const e = parts(r).slice(0, -1).map(p => p.getBoundingClientRect().right - g.l), rank = r === lead ? 0 : r.closest("#dock") ? 2 : 1;
+      at.set(r, e); e.forEach((x, i) => pts.push({r, i, x, rank})) }
+    pts.sort((a, b) => a.x - b.x);
+    // close edges (never two from one row) meet at the mean of the leading ones
+    let c = [];
+    const meet = () => { if (c.length > 1){ const top = Math.max(...c.map(p => p.rank)), ld = c.filter(p => p.rank === top), x = ld.reduce((a, p) => a + p.x, 0) / ld.length;
+      for (const p of c) at.get(p.r)[p.i] = x } c = [] };
+    for (const p of pts){ if (c.length && (p.x - c[0].x > near || c.some(q => q.r === p.r))) meet(); c.push(p) }
+    meet();
+    for (const r of g.rows){ const p = parts(r), e = at.get(r), gap = p.length > 1 ? p[1].getBoundingClientRect().left - p[0].getBoundingClientRect().right : 0;
+      const w = p.map((_, i) => (i < e.length ? e[i] : W) - (i ? e[i - 1] + gap : 0));
+      if (w.some(x => x < 40)) continue;
+      const was = p.map(x => x.getBoundingClientRect().width);
+      if (w.every((x, i) => Math.abs(x - was[i]) < 0.5)) continue;
+      // a box never flexes below its padding, so only the width past it is shared out by weight
+      p.forEach((x, i) => x.style.flex = `${px(w[i] - pad(x))} 1 0px`); moved = true }
+  }
+  if (moved) fitRows();
+  return moved;
+}
+function alignAll(){ flip(() => alignRows()); layoutSave() }
+function snapSet(on){ document.body.classList.toggle("snap", on); if (on) alignRows(SNAP) }
 // double-clicking a box's title fits just that box: its own height, and the widths of the row it's in
 document.addEventListener("dblclick", e => { const t = e.target.closest?.(".box > h3, .box .btitle"), b = t?.closest("[data-box]"); if (!b) return;
   flip(() => { heightSet(b, null); const r = b.closest(".boxrow"); if (r){ heightSet(r, null); for (const p of parts(r)) p.style.flex = "" } fitRows() }); layoutSave() });
@@ -349,6 +393,6 @@ for (const f of [$("#feed"), $("#events"), $("#miniFeed")]){ f._stick = true;
   f.addEventListener("scroll", () => { if (!f.clientHeight) return; const end = f.scrollHeight - f.scrollTop - f.clientHeight < 24;
     if (end) f._stick = true; else if (Date.now() - (f._user || 0) < 1500) f._stick = false }, {passive: true});
   new ResizeObserver(() => { if (f._stick) f.scrollTop = f.scrollHeight }).observe(f) }
-fitSet(true);   // on until settings say otherwise (renderer-settings.js)
+fitSet(true); document.body.classList.add("snap");   // on until settings say otherwise (renderer-settings.js)
 try { const t = localStorage.getItem("tab"); if (t && t !== "hist" && t !== "help" && document.querySelector(`section[data-tab="${t}"]`)) showTab(t) } catch {}
 
