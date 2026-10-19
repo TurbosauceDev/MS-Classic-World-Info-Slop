@@ -324,8 +324,10 @@ function fitRows(){
   if (rs) return;   // mid width-drag: the bar keeps both sides at their content width already
   for (const r of rows){ if (!r.offsetParent) continue;
     r.classList.remove("wrapped");
-    // layout widths (offsetWidth), not scrollWidth: a box still gliding into place (flip) would read as overflow
-    if ([...r.children].reduce((a, x) => a + x.offsetWidth, 0) > r.clientWidth + 1) r.classList.add("wrapped") }
+    // layout widths, not scrollWidth: a box still gliding into place (flip) would read as overflow. Fractional widths, not
+    // offsetWidth: 4 boxes and 3 bars each rounded up added 2-3 px at some window widths, so a row that fit was marked
+    // wrapped and its height bar did nothing (Danny, 2026-10-19: Event log, Mesos, Session numbers, Run log side by side)
+    if ([...r.children].reduce((a, x) => a + x.getBoundingClientRect().width, 0) > r.getBoundingClientRect().width + 1) r.classList.add("wrapped") }
   if (document.body.classList.contains("rzKeys")) rzPlace();
 }
 // a box's (or column's) narrowest width that still shows all of its content

@@ -145,6 +145,19 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   // grabbing a bar and letting go without moving changes nothing (the edges used to jump as a drag began)
   const still = await bar2(0);
   if (still.cols.some((x, i) => Math.abs(x - off2.cols[i]) > 1)) fail("a bar grabbed and let go", {off2, still});
+  // Danny's four boxes side by side (2026-10-19): the row fit on one line but rounding marked it wrapped at some widths, and
+  // a wrapped row ignores its height bar. At every width it's either really wrapped or its bar makes it taller
+  await page.evaluate(() => layoutLoad({v: 2, order: {dock: ["main", {row: ["events", "mesos", "stats", "log"], w: [1, 1, 1, 1]}, {row: ["used", "items", "mobs"], w: [1, 1, 1]}, "hist"]}, folded: [], h: {}}));
+  for (let w = 1600; w >= 1100; w -= 25){ await vp(w, 900);
+    const o = await page.evaluate(() => { const r = $("[data-box=events]").parentElement;
+      return {w: r.classList.contains("wrapped"), lines: new Set(parts(r).map(b => Math.round(b.getBoundingClientRect().top))).size} });
+    if (o.w && o.lines < 2) fail("one line marked wrapped at " + w + " px", o) }
+  await vp(1587, 900);
+  const tall = async () => page.evaluate(() => Math.round($("[data-box=events]").parentElement.getBoundingClientRect().height));
+  const h0 = await tall(); await page.keyboard.down("Shift");
+  const hb4 = await page.evaluate(() => { const h = [...document.querySelectorAll(".hsplit")].find(x => x.rz === $("[data-box=events]").parentElement); const r = h.getBoundingClientRect(); return [r.x + r.width / 2, r.y + 5] });
+  await page.mouse.move(...hb4); await page.mouse.down(); await page.mouse.move(hb4[0], hb4[1] + 100, {steps: 4}); await page.mouse.up(); await page.keyboard.up("Shift");
+  if (await tall() < h0 + 90) fail("four-box row taller", [h0, await tall()]);
   await browser.close();
   if (errors.length) fail("page errors", errors);
   console.log("layout test passed");
