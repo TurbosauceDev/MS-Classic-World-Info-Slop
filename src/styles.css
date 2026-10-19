@@ -117,9 +117,9 @@ h2{font:800 22px/1.2 var(--f-display);margin:28px 0 4px}
 .lab b{font:600 15px var(--f-mono);color:var(--ink);text-transform:none;letter-spacing:0}
 .lab select{width:100%}
 #pammowrap{margin-top:12px}
-input[type=range]{accent-color:var(--accent);width:100%}
+input[type=range]{accent-color:var(--accent);width:100%;margin-inline:0}
 .apgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.apgrid input{width:100%}
+.apgrid input{width:100%;box-sizing:border-box}
 @media (max-width:420px){.apgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .btn{font:600 14px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer}
@@ -457,7 +457,7 @@ header h1{cursor:pointer}
 .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
 .drop input{display:block;margin-bottom:6px;max-width:100%;font-size:13px}
 .pigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px}
-.pigrid input{width:100%}
+.pigrid input{width:100%;box-sizing:border-box}
 details.sec>summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:8px}
 details.sec>summary::-webkit-details-marker{display:none}
 details.sec>summary::before{content:"▸";color:var(--accent);font-size:16px;transition:transform .15s;display:inline-block}

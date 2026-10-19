@@ -249,7 +249,17 @@ const path = require("path");
     const [sw, cw, bad] = await p.evaluate(() => { const m = document.querySelector("main section:not([hidden])") || document.body;
       return [document.documentElement.scrollWidth, document.documentElement.clientWidth, (m.innerText.match(/.{0,30}\b(NaN|undefined|Infinity)\b.{0,20}/) || [""])[0]] });
     check(sw <= cw + 1 && !bad, `${id} at 390px (width ${sw}/${cw}${bad ? ", text: " + bad : ""})`);
+    const spill = await p.evaluate(spillingInputs);
+    check(!spill, `${id} at 390px: inputs stay inside their labels${spill ? " (" + spill + ")" : ""}`);
   }
+  // builder AP boxes overlapped each other at desktop width (Danny 10-19: width:100% + padding, no border-box)
+  await p.click("#c-" + await p.$eval("#t-plan", b => b.dataset.cat)); await p.click("#t-plan");
+  for (const w of [1280, 900, 700, 430]){
+    await p.setViewportSize({width: w, height: 800}); await p.waitForTimeout(100);
+    const spill = await p.evaluate(spillingInputs);
+    check(!spill, `builder at ${w}px: inputs stay inside their labels${spill ? " (" + spill + ")" : ""}`);
+  }
+  await p.setViewportSize({width: 390, height: 800});
   // site version stamp shows the viewer's local zone, UTC on hover (Danny 10-19: UTC was confusing)
   { const c = await b.newContext({ timezoneId: "America/Los_Angeles" }), q = await c.newPage();
     await q.goto("file://" + path.resolve(__dirname, "../dist/index.html"));
@@ -265,3 +275,11 @@ const path = require("path");
   await b.close();
   process.exit(errs.length ? 1 : 0);
 })();
+
+// inputs/selects that stick out of their .lab (overlap the next grid cell), e.g. "pSTR +20px"; "" if none
+function spillingInputs(){
+  return [...document.querySelectorAll("section:not([hidden]) .lab > :is(input,select)")].map(e => {
+    const r = e.getBoundingClientRect(), d = Math.round(r.right - e.parentElement.getBoundingClientRect().right);
+    return r.width && d > 1 ? (e.id || e.dataset.sk || e.tagName) + " +" + d + "px" : "";
+  }).filter(Boolean).join(", ");
+}

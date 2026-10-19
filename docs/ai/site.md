@@ -140,3 +140,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Home `.sitever` now shows the viewer's local time + zone (70-theme.js, from `data-built` ISO set by build.py); hover = UTC. The HTML text stays "built ... UTC", so curl/grep live checks still match; in a browser read the `title` for UTC. smoke.js checks it under America/Los_Angeles.
 - 10-19: stamp reads "Site version: v0.x.y · built ..." (`data-ver`, = newest changelog card); smoke.js checks the match and the tracker
   patch notes on Grind Tracker Overview (`/*@TRKLOG*/` in 68-tracker.js).
+
+## Input sizing 2026-10-19
+- Builder AP boxes overlapped: `.apgrid input{width:100%}` plus padding/border on content-box inputs = 20px wider than the grid cell. Fixed with `box-sizing:border-box` (also `.pigrid`); range sliders lost their 2px side margin.
+- smoke.js `spillingInputs()` fails any `.lab > input/select` wider than its label, every page at 390px and the builder at 1280/900/700/430. Trap: there is no `<main>`, select pages with `section:not([hidden])`. New `width:100%` inputs need `box-sizing:border-box`.
