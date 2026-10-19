@@ -23,6 +23,11 @@ python3 scripts/build.py | tail -3          # after any src/ change (no vendor n
 node tests/smoke.js | tail -5               # every tab, 390px overflow, NaN/undefined text; ~40 s
 node tests/golden.js | tail -3              # meowdb-published reference numbers; run after model changes
 node tests/edge.js | tail -5                # bad saved state/share links/server replies, phone nav, keyboard; ~80 s
+node tests/features.js | tail -5            # train hand-off reload, price check keep/sell, job compare, Credits dates
+node tests/pages.js | tail -5               # Pages split (late icons), manifest, offline service worker
+node tests/monkey.js | tail -3              # random clicks/typing/Back/window sizes; SEEDS=4,5 N=300 to vary; ~100 s
+python3 scripts/pages_site.py /tmp/site     # the Pages copy pages.yml deploys (prints first-load size)
+python3 scripts/name_diff.py <base-commit>  # skill/item/monster/map renames between two data.json (CI: osms-names.yml)
 ./scripts/refresh_mesowatch.sh               # "refresh": poller CSV -> fetch_mesowatch -> prices -> build
 python3 scripts/fetch_shared.py             # shared tracker runs (daily CI job does this)
 node scripts/fetch_meowdb_drops.js          # then build_data.py extras mobdb
@@ -31,7 +36,8 @@ python3 scripts/launch_diff.py <ver>        # maplestory.io MCW client vs our da
 Playwright: global install works here (`NODE_PATH` set, browsers in /opt/pw-browsers). If `chromium.launch` can't find a
 browser: `CHROMIUM=/opt/pw-browsers/chromium` (tracker tests, fetch_meowdb_drops) or a `-r` preload shim that passes
 `executablePath`. Never `playwright install`.
-CI: `.github/workflows/tests.yml` runs smoke + golden + edge on every push/PR to the default branch; `docs.yml` runs
+CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages + monkey on every push/PR to the default branch;
+`osms-names.yml` lists renames when `scripts/fetch_osms.sh` or data.json changes (red = a skill/item renamed or removed; not required); `docs.yml` runs
 `tests/docs.test.js` (paths/commands in these docs exist, every test image listed in [fixtures.md](fixtures.md)).
 
 ## Source map (bytes; grep before reading anything over ~15 KB)
@@ -54,7 +60,8 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge on every push/PR to
 | 51-shot.js | | screenshot reader core (un-double UI, icon pixel match, SHOT_FONT digits); also copied into tracker |
 | 52-shotimport.js | 11 | builder "Import from screenshots" |
 | 53-skills.js | | Skills tab |
-| 54-invprice.js | | Price check (inventory/bank screenshots → meso.watch `PW` prices) |
+| 54-invprice.js | | Price check (inventory/bank screenshots → meso.watch `PW` prices; Keep or sell column via `KEEPSELL` from 47-keep.js) |
+| 55-bcompare.js | | Builder "Compare two jobs" (buildAt per side, or "This build" = BLD.S) |
 | 60-planner.js | 42 | Path Planner; exports TRAVEL |
 | 62-expcalc.js | | EXP/hr calculator (ids `#ec*`) |
 | 64-undervalued.js | | UV_PICKS / UV_PACKED / UV_SRC (World Map toggle, "vibes", never tied to planner) |
@@ -78,7 +85,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   (`mapLink()`, click opens World Map card), `.nname` NPC (`npcLink()`), `.mobname` monster (`mobLink()`).
 - **Per-viewer state:** localStorage in try/catch; load an object with `savedState(key, S)` (00-core.js: drops unknown keys and wrong types), then range-check enums/levels.
   Share links (`HASH.x`) are just as untrusted: validate before use (see the sanitizers in 50-builder.js / 60-planner.js). Keys in use: tab planner path pathdone qsort qeq qval ctown craft craftlv
-  qcompact keep keephave mobs items skills navi wmap expc theme themes themec.
+  qcompact keep keephave mobs items skills navi wmap expc theme themes themec train (Where to train + Builder hand-off) bcmp (job compare).
 - **Explanations:** a closed `<details class="howto">` at the top of the tab, short bullets.
 - **Share links:** extend the existing `#key=value&` hash (69-search.js); never a new scheme.
 - **Themes:** `src/js/70-theme.js` + the `siteTheme` head script in index.html; presets/share codes come from
@@ -117,3 +124,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Big tables use `lazyRows(tbody, rowsHtml, emptyHtml)` (00-core.js): 60 rows, then 150 per scroll via IntersectionObserver. Tests counting rows must scroll first (edge.js does).
 - Tracker live summary goes through `trkClean()` (68-tracker.js) before rendering; never render server fields raw. Price check icon candidates and the Builder import's icons (52-shotimport.js `warm`) preload in idle time when their tab opens.
 
+## Ideas batch 2026-10-19
+- Pages deploy = `scripts/pages_site.py` (pages.yml): D.iicons/D.mmaps move to a hashed assets JSON fetched at start (`ASSETS` promise in 00-core.js; first load 3,081 -> 968 KB gzip), plus `src/pwa/` manifest, icons (Orange Mushroom sprite, mobimg 9, on --accent-soft) and sw.js (network-first, registers only on *.github.io). The artifact stays one file. Trap: code that needs every icon must `await ASSETS`; markup drawn before they land is patched by `fillIcons` (`.ri[data-item] > i`, items-list `.ibtn > i`) only, so a new icon spot needs that placeholder shape or a redraw.
+- Credits "Data last updated": build.py injects `SRCDATES` (fetch_osms.sh ref + data/sources "read" dates); the OSMS date is data.json `osms` (build_data.py `osms_info()`, set by hand to the Oct 17 export for c661434 until the next rebuild).
+- Monkey (tests/monkey.js) found: 1e308 in a Where to train stat box scrolled phones sideways (statNum now clamps 0-99,999; edge.js test).
