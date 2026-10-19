@@ -12,7 +12,11 @@ const canvas = document.createElement("canvas"), g = canvas.getContext("2d", {wi
 async function openStream(){
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   const stream = await navigator.mediaDevices.getDisplayMedia({video: {frameRate: FPS}, audio: false});
-  video = document.createElement("video"); video.srcObject = stream; video.muted = true; await video.play();
+  video = document.createElement("video"); video.srcObject = stream; video.muted = true;
+  // a capture that never sends a frame (a minimized game window) left play() waiting for good and Start dead (2026-10-19)
+  const play = video.play(); play.catch(() => {});
+  if (!await Promise.race([play.then(() => true), new Promise(r => setTimeout(r, 5000, false))])){
+    stream.getTracks().forEach(tr => tr.stop()); throw new Error("no picture from the game window. Is it minimized? Restore it and press Start again") }
   await new Promise(r => setTimeout(r, 700));   // first frames can be blank while capture starts
 }
 // a frame that is (almost) all black: the game window couldn't be captured

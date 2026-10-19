@@ -17,12 +17,17 @@ function renderMini(s){
 // tick would fight a user resizing). A window made bigger than that gets bigger content, not blank space (Danny, 2026-10-19:
 // "have the content grow to match its new container size"): the view is zoomed up as far as the window's height allows (to
 // 2.5x, keeping at least 340 px of layout width) and the run log takes what's left.
-let miniH = 0, miniZ = 1;
+let miniH = 0, miniZ = 1, miniKey = "";
 function miniFit(force){ if (!document.body.classList.contains("mini")) return compactFit(force);
   const m = $("#mini"), B = document.body, bottom = z => (m.style.zoom = z, m.getBoundingClientRect().bottom + scrollY + 10);
   B.classList.add("measure");   // natural height: no stretching
   const h = Math.ceil(bottom(1));
   if (force || (h > innerHeight + 6 && Math.abs(h - miniH) > 6)){ miniH = h; miniZ = 1; B.classList.remove("measure"); host.mini?.(true, h); return }
+  // same content height and window as last time: the same zoom (the search below lays the view out ~10 times; every tick
+  // in Mini took ~50 ms instead of ~5, 2026-10-19)
+  const key = h + "x" + innerWidth + "x" + innerHeight;
+  if (!force && key === miniKey){ m.style.zoom = miniZ; B.classList.remove("measure"); return }
+  miniKey = key;
   let lo = 1, hi = Math.max(1, Math.min(2.5, innerWidth / 340));
   for (let i = 0; i < 9 && hi - lo > 0.005; i++){ const z = (lo + hi) / 2; if (bottom(z) <= innerHeight) lo = z; else hi = z }
   miniZ = Math.floor(lo * 200) / 200; m.style.zoom = miniZ; B.classList.remove("measure");   // fine steps: in 0.02 steps the text visibly jumped as the edge moved

@@ -23,14 +23,24 @@ document.addEventListener("keydown", e => { if (e.key === "F1"){ e.preventDefaul
 // Settings: a popup from File → Settings (Ctrl+,). Was the Settings tab, then "Preferences" on the title bar; Danny 2026-10-18:
 // "rename preferences back to settings and have it live under file". Esc, ✕ or a click outside closes it
 let prefsFrom = null;
-function openPrefs(){ prefsFrom = document.activeElement; $("#prefsPop").classList.remove("hidden"); $("#prefsPop").scrollTop = 0; $("#prefsBack").classList.remove("hidden"); $("#prefsClose").focus(); prefsSpy() }
+function openPrefs(){ prefsFrom = document.activeElement; prefsPick = null; $("#prefsPop").classList.remove("hidden"); $("#prefsPop").scrollTop = 0; $("#prefsBack").classList.remove("hidden"); $("#prefsClose").focus(); prefsSpy() }
 function closePrefs(){ if ($("#prefsPop").classList.contains("hidden")) return; $("#prefsPop").classList.add("hidden"); $("#prefsBack").classList.add("hidden"); (prefsFrom?.isConnected ? prefsFrom : $("#titlebar [data-menu=File]")).focus?.() }
 // section chips at the top: jump to a section; the one in view is marked as you scroll
 const PREF_SECS = [...document.querySelectorAll("#prefsPop > [data-nav]")];
 $("#prefsNav").innerHTML = PREF_SECS.map((c, i) => `<button type="button" data-i="${i}">${esc(c.dataset.nav)}</button>`).join("");
-$("#prefsNav").onclick = e => { const b = e.target.closest("button"); if (b) PREF_SECS[+b.dataset.i].scrollIntoView({block: "start"}) };
-function prefsSpy(){ const top = $("#prefsPop").getBoundingClientRect().top + 110, pop = $("#prefsPop");
+// the header with the chips stays on top and wraps to 3 lines in a narrow window: sections land just under it (scrollIntoView
+// put them under it, and the chip marked was the section before, 2026-10-19)
+const prefsHead = () => $("#prefsNav").getBoundingClientRect().bottom;
+// the chip picked stays marked (the last short sections can't scroll up to the top, so the spy would mark the last one) until
+// the player scrolls by hand
+let prefsPick = null;
+function prefsGo(sec){ const pop = $("#prefsPop"); prefsPick = PREF_SECS.indexOf(sec); pop.scrollTop += sec.getBoundingClientRect().top - prefsHead() - 8; prefsSpy() }
+for (const k of ["wheel", "keydown", "touchstart"]) $("#prefsPop").addEventListener(k, () => { prefsPick = null }, {passive: true});
+$("#prefsPop").addEventListener("pointerdown", e => { if (e.target === $("#prefsPop")) prefsPick = null });   // its scrollbar
+$("#prefsNav").onclick = e => { const b = e.target.closest("button"); if (b) prefsGo(PREF_SECS[+b.dataset.i]) };
+function prefsSpy(){ const top = prefsHead() + 30, pop = $("#prefsPop");
   let i = PREF_SECS.findLastIndex(c => c.getBoundingClientRect().top <= top); if (pop.scrollTop + pop.clientHeight >= pop.scrollHeight - 4) i = PREF_SECS.length - 1;
+  if (prefsPick != null && prefsPick >= 0) i = prefsPick;
   $("#prefsNav").querySelectorAll("button").forEach((b, j) => b.setAttribute("aria-current", String(j === Math.max(0, i)))) }
 $("#prefsPop").addEventListener("scroll", prefsSpy, {passive: true});
 $("#prefsClose").onclick = closePrefs; $("#prefsBack").onclick = closePrefs;
@@ -54,7 +64,7 @@ host.onMenu?.(what => {
   else if (what === "startStop"){ if (!$("#go").disabled) $("#go").click() }
   else if (what === "pause") $("#pauseBtn").click();
   else if (what === "invNow"){ if (timer == null || !engine?.invNow) $("#status").textContent = "Press Start first."; else { engine.invNow(); $("#status").textContent = "Reading your open inventory tab: keep it open a few seconds..." } }
-  else if (what === "update"){ openPrefs(); $("#updCheck").scrollIntoView(); $("#updCheck").click() }
+  else if (what === "update"){ openPrefs(); prefsGo($("#updCheck").closest("[data-nav]")); $("#updCheck").click() }
 });
 // Theme (Settings): the presets (themes.js) and the player's own (settings.themes); settings.theme = "p:Name" or "u:Name".
 // Edit colours previews live; Save keeps it as one of yours; share as a one-line code or a .mstheme file

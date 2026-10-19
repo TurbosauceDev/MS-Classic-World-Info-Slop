@@ -4,7 +4,7 @@
 // shared). A banner says so; Clear, View → Dummy data again, or Start wipes it.
 let dummyOn = false, dummyPrev = null;   // dummyPrev: the session/runT0 it covered up (a stopped run's numbers), put back on Clear
 function dummyFill(){
-  if (timer != null){ $("#status").textContent = "Dummy data only fills an idle tracker: stop tracking first."; return }
+  if (timer != null || starting){ $("#status").textContent = "Dummy data only fills an idle tracker: stop tracking first."; return }
   const t0 = Date.now() - 30 * 60e3, s = GrindSession.createSession(G, {goalLevel: goalOf(), freeIds: freeIds()}), f = GrindFeed.createFeed(G);
   const drop = {2: 4000001, 4: 4000002, 8: 4000004}, bar = (t, exp, level) => ({t, type: "bar", exp, level, pct: Math.round(exp / G.exp[level] * 1e4) / 100});
   const ev = [{t: t0, type: "map", id: 42}, {t: t0, type: "job", name: settings.job || "Archer"}, bar(t0, 300, 10)];
@@ -42,6 +42,8 @@ function dummyClear(){
 }
 $("#dummyClear").onclick = dummyClear;
 // Start with dummy data showing: the real run replaces it (its session, its own log)
-$("#go").addEventListener("click", () => { if (!dummyOn) return; if (dummyPrev) $("#events").innerHTML = dummyPrev.events; dummyOn = false; dummyPrev = null; session = null; dummyClearFeeds(); $("#dummyBar").classList.add("hidden") }, true);
+function dummyDrop(){ if (!dummyOn) return; if (dummyPrev) $("#events").innerHTML = dummyPrev.events; dummyOn = false; dummyPrev = null; session = null; dummyClearFeeds(); $("#dummyBar").classList.add("hidden") }
+// only a click that starts: dummy data turned on while Start was opening the capture used to null the real run at Stop (2026-10-19)
+$("#go").addEventListener("click", () => { if (timer == null && !starting) dummyDrop() }, true);
 // View → Dummy data on/off (the menu handler in renderer-settings.js calls this)
 function dummyToggle(){ dummyOn ? dummyClear() : dummyFill() }

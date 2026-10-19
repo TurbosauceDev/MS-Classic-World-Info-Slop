@@ -28,6 +28,8 @@ export function cleanRun(r, G){
   // honesty: no farming at all; monsters that don't live on this map; EXP bar and EXP messages that disagree a lot
   let why = null;
   if (run.kills < 1 || run.exp <= 0) why = "no kills";
+  // farming time (breaks over a minute left out) under half the run: an idle stretch got into it (trackers before 0.2.59)
+  else if (num(r.activeMin, 0, 20) && r.activeMin < r.minutes / 2) why = "mostly idle";
   // every kill is an EXP message of at least 1, so kills can't be more than the messages' EXP
   else if (run.msg_exp > 0 && run.kills > run.msg_exp) why = "more kills than EXP";
   else if (map && mobs.some(m => !G.maps[map].includes(m.id))) why = "monster not on this map";

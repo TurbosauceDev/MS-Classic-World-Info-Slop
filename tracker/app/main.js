@@ -5,7 +5,7 @@ const fs = require("fs"), path = require("path");
 const {autoUpdater} = require("electron-updater");
 
 const SETTINGS = path.join(app.getPath("userData"), "settings.json");
-const readSettings = () => { try { return JSON.parse(fs.readFileSync(SETTINGS, "utf8")) } catch { return {share: false, idleSec: 60} } };   // sharing: the first-run guide asks
+const readSettings = () => { try { const s = JSON.parse(fs.readFileSync(SETTINGS, "utf8")); if (s && typeof s === "object" && !Array.isArray(s)) return s } catch {} return {share: false, idleSec: 60} };   // sharing: the first-run guide asks
 // shared runs go to our server (server/ in the repo); runs wait in the queue file until it answers
 // every request gives up after 10-20 s: a hung connection would otherwise keep the run queue busy until a restart
 const SERVER = "https://ms-classic-tracker.maplestoryclassic.workers.dev";
@@ -216,7 +216,7 @@ ipcMain.handle("settings", (_, s) => {
   return readSettings();
 });
 // a finished 15-minute run (sharing on): queue it, then send everything queued. Kept until the server answers.
-const readQueue = () => { try { return JSON.parse(fs.readFileSync(QUEUE, "utf8")) } catch { return [] } };
+const readQueue = () => { try { const q = JSON.parse(fs.readFileSync(QUEUE, "utf8")); return Array.isArray(q) ? q.filter(r => r && typeof r === "object") : [] } catch { return [] } };   // a broken file (null, {}) = nothing queued
 let flushing = false;
 async function flushRuns(){
   if (!SERVER || flushing || !readSettings().share) return;

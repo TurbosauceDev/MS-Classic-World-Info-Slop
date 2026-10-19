@@ -133,6 +133,11 @@ sl.add({t: sec(1300), type: "exp", gain: 8});   // after a 5-minute break: a new
 sl.add({t: sec(1310), type: "map", id: 41});    // map change: starts over again
 for (let i = 1; i <= 80; i++) sl.add({t: sec(1310 + i * 10), type: "exp", gain: 4});   // 13.3 min: not a run yet
 assert.strictEqual(runs.length, 1); assert.strictEqual(sl.current.stats().kills, 80); assert.strictEqual(sl.current.stats().map, "41");
+// Start, the map reads, 20 min idle, then farming: the idle time isn't a run (it made a 20-min run of one kill, 2026-10-19)
+const idle = [], si = require("../core/session.js").createRunSlicer(G, {onRun: r => idle.push(r)});
+si.add({t: sec(0), type: "map", id: 42}); si.add({t: sec(0), type: "party", size: 1});
+for (let i = 0; i < 200; i++) si.add({t: sec(1200 + i * 5), type: "exp", gain: 8});
+assert.deepStrictEqual(idle.map(r => [r.minutes, r.kills]), [[15, 181]], "idle start: " + JSON.stringify(idle.map(r => [r.minutes, r.activeMin, r.kills])));
 
 // respawn timer: Mano on Thicket Around the Beach III (60 min in the game data)
 s = createSession(G);

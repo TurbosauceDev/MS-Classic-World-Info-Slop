@@ -18,6 +18,11 @@ const path = require("path"), {chromium} = require("playwright");
     [...document.querySelectorAll("#tbList .tbItem")].map(x => x.dataset.mod).join(), !!document.querySelector(".tabs, section[data-tab=session]")]);
   if (lay0.join("|") !== "main,log,events,stats,mobs,kpq-,alerts-,snaps-,invcheck,mesos,items,used|hist|false") throw new Error("default layout: " + lay0);
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click()));
+  // a capture that never sends a frame (minimized game): Start says so instead of waiting for good, and works after (2026-10-19)
+  await page.evaluate(() => { window.gdm0 = navigator.mediaDevices.getDisplayMedia; navigator.mediaDevices.getDisplayMedia = async () => document.createElement("canvas").captureStream(4) });
+  await page.click("#go"); await page.waitForTimeout(6000);
+  const nf = await page.evaluate(() => { navigator.mediaDevices.getDisplayMedia = window.gdm0; return [$("#status").textContent, starting, timer] });
+  if (!/minimized/.test(nf[0]) || nf[1] || nf[2] != null) throw new Error("capture with no frames: " + JSON.stringify(nf));
   // Dummy data (View menu): every box filled, marked, nothing saved or shared; Start wipes it and tracks for real
   await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(100);
   const dm = await page.evaluate(() => [!document.querySelector("#dummyBar").classList.contains("hidden"), document.querySelectorAll("#items tr").length, document.querySelectorAll("#mobs tr").length,
@@ -31,6 +36,12 @@ const path = require("path"), {chromium} = require("playwright");
   if (reloaded || !dmOff[0] || dmOff[1] || dmOff[2] || /Dummy/.test(dmOff[3]) || dmOff[4] || dmOff[5] !== "0" || /Dummy/.test(dmOff[6] + dmOff[7])) throw new Error("dummy data off: " + JSON.stringify(dmOff));
   await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(100); await page.click("#dummyClear");
   if (!await page.evaluate(() => document.querySelector("#dummyBar").classList.contains("hidden") && !dummyOn)) throw new Error("dummy data Clear button");
+  // Dummy data has no run slicer: a job picked in Settings meanwhile threw; it can't be turned on while Start opens the capture
+  // (Stop then found no session). Both from the random-click test, 2026-10-19
+  await page.evaluate(() => { dummyFill(); const sel = $("#job"); sel.value = sel.options[1].value; sel.dispatchEvent(new Event("change")) });
+  await page.waitForTimeout(100);
+  const dj = await page.evaluate(() => { dummyClear(); starting = true; dummyFill(); const on = dummyOn; starting = false; return on });
+  await page.waitForTimeout(100); if (dj) throw new Error("dummy data while starting");
   await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(100);
   await page.dblclick("#go");
   await page.waitForTimeout(1500);
@@ -286,10 +297,17 @@ const path = require("path"), {chromium} = require("playwright");
   await page.click("#go"); await page.waitForTimeout(200);
   if (await page.isVisible("#runName")) throw new Error("name row shown while wrapping up");
   if (await page.evaluate(() => window.saved) || !await page.isVisible("#wrap")) throw new Error("stop: saved before End run");
+  // the wrap-up card shows above the layout, in view: under a dozen modules it was off the bottom (2026-10-19)
+  if (!await page.evaluate(() => { const r = $("#wrap").getBoundingClientRect(); return r.top < $("#dock").getBoundingClientRect().top && r.top < innerHeight })) throw new Error("wrap-up card not in view");
   // a name typed in the top card shows in the wrap-up card; a note written there; both saved and shown in the summary
   await page.fill("#runNote", "ch 4, lost 2 to <b>ers");
   if (await page.inputValue("#wrapName") !== "KPQ rush with randoms") throw new Error("wrap name");
   await page.click("#wrapEnd"); await page.waitForTimeout(200);
+  // a run name with no spaces (60 letters, the cap) wraps instead of running off a narrow window (random-click test, 2026-10-19)
+  { const vp0 = page.viewportSize(); await page.setViewportSize({width: 340, height: vp0.height});
+    const over = await page.evaluate(() => { const d = document.createElement("div"); d.textContent = "a".repeat(60); $("#sumBody").prepend(d);
+      const o = document.documentElement.scrollWidth > innerWidth; d.remove(); return o });
+    await page.setViewportSize(vp0); if (over) throw new Error("long run name overflows the summary") }
   { const nm = await page.evaluate(() => [window.saved?.name, window.saved?.note, document.querySelector("#runName").value, document.querySelector("#sumBody b, #sumBody .hnote")?.textContent, !!document.querySelector("#sumBody b b")]);
     if (nm[0] !== "KPQ rush with randoms" || nm[1] !== "ch 4, lost 2 to <b>ers" || nm[2] !== "" || nm[4]) throw new Error("name/note: " + nm);
     if (!/KPQ rush with randoms[\s\S]*ch 4, lost 2 to <b>ers/.test(await page.textContent("#sumBody"))) throw new Error("summary name/note") }
@@ -368,6 +386,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.setViewportSize(vp);
   await page.click("#miniFull"); const back = await page.isVisible("#go");
   // resize bars (Danny, 2026-10-19): hidden and not grabbable until Shift or Alt is held; the bar under a box sets its height
+  if (await page.isVisible("#sumClose")) await page.click("#sumClose");   // the run summary sits above the layout now
   const rz0 = await page.evaluate(() => [!!document.querySelector("#rzLayer").offsetParent, document.querySelector("#logBox").getBoundingClientRect().height]);
   if (rz0[0]) throw new Error("resize bars show without a key");
   await page.keyboard.down("Shift");
@@ -448,6 +467,12 @@ const path = require("path"), {chromium} = require("playwright");
   const rows = await page.$$eval("#keyRows [data-key]", b => b.length);
   if (!/\[.*\] mark/.test(note) || pic?.join() !== "true,true" || mute.join() !== "true,true" || await page.evaluate(() => window.st.muted) !== false || !thr[0] || !/Ctrl \+ Shift \+ X turns it off/.test(thr[1]) || rows !== 12)
     throw new Error("more shortcuts: " + JSON.stringify({note, pic, mute, thr, rows}));
+  // Settings chips in a narrow window (the header wraps to 3 lines): the section lands just under the header and its chip is
+  // marked, the short last ones too (they landed under it, the chip before was marked, 2026-10-19)
+  { const vp0 = page.viewportSize(); await page.emulateMedia({reducedMotion: "reduce"}); await page.setViewportSize({width: 360, height: 760});
+    const chips = await page.evaluate(() => [...$("#prefsNav").children].map((b, i) => { b.click(); return $("#prefsNav [aria-current=true]")?.dataset.i == i && PREF_SECS[i].getBoundingClientRect().top >= prefsHead() - 1 }));
+    await page.setViewportSize(vp0); await page.emulateMedia({reducedMotion: "no-preference"});
+    if (chips.some(x => !x)) throw new Error("settings chips: " + chips) }
   await page.click("#prefsClose"); await page.click("#updGo"); await page.waitForTimeout(100);
   if (!await page.evaluate(() => window.installed)) throw new Error("restart and update");
   await browser.close();

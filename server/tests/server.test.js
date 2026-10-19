@@ -27,6 +27,8 @@ assert.strictEqual(r.counted, false); assert.strictEqual(r.why, "monster not on 
 assert.strictEqual(r.why, "EXP bar and messages disagree");
 [s, r] = await post(run("cccccccccccccccc3", 9e6, {msgExp: 9e6, barExp: 9e6}));
 assert.strictEqual(r.why, "too much EXP for this level");
+[s, r] = await post(run("cccccccccccccccc3", 2000, {minutes: 18, activeMin: 0}));   // 20 min idle after Start, then 1 kill (2026-10-19)
+assert.strictEqual(r.why, "mostly idle", JSON.stringify([s, r]));
 [s, r] = await post(run("dddddddddddddddd4", 2000, {minutes: 3}));
 assert.strictEqual(s, 400);
 for (let i = 0; i < 7; i++) [s] = await post(run("eeeeeeeeeeeeeeee5", 500));

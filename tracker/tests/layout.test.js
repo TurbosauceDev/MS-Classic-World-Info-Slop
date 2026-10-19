@@ -15,7 +15,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   await page.click("#guideShare");
   await page.evaluate(() => { window.menu("dummy");
     // Danny's docked layout (his 10-18 screenshot): main card; Session numbers beside run log over Monsters; three Loot boxes in a row
-    layoutLoad({v: 2, order: {dock: ["main", {row: ["stats", ["log", "mobs"]], w: [1, 1]}, {row: ["items", "mesos", "used"], w: [1, 1, 1]}]}, folded: [], h: {}});
+    layoutLoad({v: 2, order: {dock: ["main", {row: ["stats", ["log", "mobs"]], w: [1, 1]}, {row: ["items", "mesos", "used"], w: [1, 1, 1]}, "hist"]}, folded: [], h: {}});
     document.querySelectorAll(".box.folded .fold").forEach(b => b.click()) });
   await page.waitForTimeout(200);
   // everything that went wrong while the edge moved, measured in one go
@@ -29,12 +29,17 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       feed: Math.round(f.scrollHeight - f.scrollTop - f.clientHeight),   // the run log's newest line in view
       title: vis.filter(b => { const t = h3(b); if (!t) return false; const r = document.createRange(); r.selectNodeContents(t);   // the title's text runs under ⠿ –
         return [...r.getClientRects()].some(x => x.right > ctl(b).left + 1 && x.top < ctl(b).bottom && x.bottom > ctl(b).top) }).map(b => b.dataset.box),
+      // a button, field or link under a box's ⠿ – × (History's Export CSV sat under them, 2026-10-19)
+      under: [...document.querySelectorAll("#dock .box")].filter(b => b.offsetParent && !b.classList.contains("folded")).flatMap(b => { const c = ctl(b);
+        return [...b.querySelectorAll("button, input, select, a")].filter(e => !e.closest(".boxctl") && e.offsetParent).filter(e => { const r = e.getBoundingClientRect();
+          return r.width && r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top }).map(e => b.dataset.box + ":" + (e.id || e.textContent.trim().slice(0, 20))) }),
+      bar: [...$("#titlebar").children].filter(e => e.offsetParent && e.getBoundingClientRect().height > 28).map(e => e.textContent),   // ▦ wrapped over "Modules"
       wrapped: [...document.querySelectorAll(".boxrow")].map(r => r.classList.contains("wrapped") ? "W" : "-").join("") } });
   // the window edge dragged in from 900 to 340 px and back, a step at a time
   const widths = []; for (let w = 900; w >= 340; w -= 20) widths.push(w); for (let w = 360; w <= 900; w += 40) widths.push(w);
   const seen = {};
   for (const w of widths){ await vp(w, 820); const p = await probe(); seen[w] = p.wrapped;
-    if (p.cut.length || p.thin.length || p.over || p.hscroll || p.feed > 2 || p.title.length) fail("at " + w + " px", p) }
+    if (p.cut.length || p.thin.length || p.over || p.hscroll || p.feed > 2 || p.title.length || p.under.length || p.bar.length) fail("at " + w + " px", p) }
   // wide: side by side; 700: the three Loot boxes go two and one; narrow: each on its own line; back wide: side by side again
   if (seen[900] !== "--" || seen[340] !== "WW") fail("rows wrapped", seen);
   await vp(700, 820);
@@ -81,7 +86,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   // Fit every box now (Settings and the View menu): widths and heights you set go, the arrangement stays
   await page.evaluate(() => { heightSet($("#logBox"), 300); layoutSave(); window.menu("fit") }); await page.waitForTimeout(50);
   const fa = await page.evaluate(() => [document.querySelectorAll(".sized").length, [...document.querySelectorAll(".boxrow > :not(.split)")].filter(p => p.style.flex).length, JSON.stringify(settings.layout.order.dock), JSON.stringify(settings.layout.h)]);
-  if (fa[0] || fa[1] || fa[2] !== '["main",{"row":["stats",["log","mobs"]],"w":[1,1]},{"row":["items","mesos","used"],"w":[1,1,1]}]' || fa[3] !== "{}") fail("fit every box now", fa);
+  if (fa[0] || fa[1] || fa[2] !== '["main",{"row":["stats",["log","mobs"]],"w":[1,1]},{"row":["items","mesos","used"],"w":[1,1,1]},"hist"]' || fa[3] !== "{}") fail("fit every box now", fa);
   // double-click a box's title: that box (and its row's widths) fit again
   await page.evaluate(() => heightSet($("#mesoBox"), 400)); await page.dblclick("#mesoBox h3");
   if (await page.evaluate(() => $("#mesoBox").classList.contains("sized"))) fail("double-click title fits the box", 0);

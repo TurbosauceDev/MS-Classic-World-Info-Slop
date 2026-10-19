@@ -301,7 +301,10 @@
         return;
       }
       const counts = ["exp", "bonus", "meso", "item", "itemraw", "bar"].includes(e.type);
-      if (!cur || counts && last !== null && e.t - last > idleMs) fresh(e.t, false);
+      // the break is from the last counted event, or (nothing counted yet: just started, or a new map) from the run's start
+      // (a map read, then 20 min idle, then farming made a 20-minute "run" of one kill, 2026-10-19)
+      const ref = last ?? cur?.state.start;
+      if (!cur || counts && ref != null && e.t - ref > idleMs) fresh(e.t, false);
       cur.add(e);
       if (counts) last = e.t;
       if (e.type === "bar") bar = e;

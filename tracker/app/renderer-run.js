@@ -25,7 +25,7 @@ $("#invTabs").onclick = $("#wrapTabs").onclick = async e => {
 let starting = false, ICONS = null;
 async function start(){
   if (starting) return;   // a double click starts one capture, not two
-  starting = true; $("#status").className = "";
+  starting = true; $("#status").className = ""; $("#status").textContent = "Opening the MapleStory window...";
   FPS = 2; slowTicks = 0;   // before the capture opens: it runs at FPS frames a second
   try { await startCapture(); ICONS ||= await GrindReaders.loadIcons(G).catch(() => []) }   // once: potion/arrow pictures for the counts
   finally { starting = false }
@@ -61,7 +61,7 @@ async function stop(){
     log("wrap", {}); feedAdd(feed?.step(session.state, t, feedWho(), true)); feedSep("Stopped");
     if (video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {});
     $("#status").textContent = "Stopped. Open your inventory on Equip, Use and Etc for a second each, then add a name or note if you like and press Finalize log.";
-    render();
+    render(); $("#wrap").scrollIntoView?.({block: "nearest"});
   } finally { stopping = false }
 }
 function resume(){

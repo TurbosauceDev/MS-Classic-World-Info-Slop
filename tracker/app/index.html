@@ -9,7 +9,7 @@
   :root { --bg:#e7ddf9; --panel:#f7f1ff; --ink:#2a2142; --muted:#685c94; --line:#cfbff0; --accent:#7d58d6; --accent-soft:#dccbfa; --on-accent:#f7f1ff; --leaf:#3d7a5c; --warn:#9a6a00; --bad:#a3322b; }
   @media (prefers-color-scheme: dark) { :root { --bg:#1f1931; --panel:#2a2243; --ink:#f0eafd; --muted:#b6aad8; --line:#453a64; --accent:#d2bffb; --accent-soft:#41346a; --on-accent:#2a2243; --leaf:#7cc9a2; --warn:#e2b44a; --bad:#ef7a70; } }
   * { box-sizing:border-box; }
-  body { margin:0; padding:42px 10px 10px; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
+  body { margin:0; padding:42px 10px 10px; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; overflow-wrap:break-word; }   /* a 60-letter run name with no spaces ran off the summary (2026-10-19) */
   .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; }
   .k { color:var(--muted); font-size:12px; } .v { font-size:18px; font-weight:600; font-variant-numeric:tabular-nums; }
@@ -27,7 +27,9 @@
   /* title bar: drawn by the page in the app's colours; the window's own buttons sit over its right end (titleBarOverlay) */
   #titlebar { position:fixed; top:0; left:0; right:0; height:32px; z-index:55; display:flex; align-items:center; gap:2px; padding:0 0 0 10px;
     padding-right:calc(100vw - env(titlebar-area-width, calc(100vw - 140px))); background:var(--panel); border-bottom:1px solid var(--line); -webkit-app-region:drag; user-select:none; }
-  #titlebar .tbname { font-size:12px; font-weight:600; color:var(--accent); margin-right:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #titlebar .tbname { font-size:12px; font-weight:600; color:var(--accent); margin-right:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex-shrink:1; }
+  /* a narrow window: the menus never wrap (▦ over "Modules"); the app name gives way first, then the word Modules */
+  #titlebar button { white-space:nowrap; flex-shrink:0; } @media (max-width: 460px){ #tbBtn .tbw { display:none; } }
   #titlebar button { -webkit-app-region:no-drag; background:none; color:var(--muted); padding:4px 8px; font-size:12px; border-radius:6px; }
   #titlebar button:hover, #titlebar button:focus-visible { background:var(--accent-soft); color:var(--ink); }
   /* scrollbars in the app's colours (the page's own one starts under the title bar) */
@@ -147,7 +149,7 @@
      rest go to the next line (three boxes in a 700 px window: two and one, not three stacked) */
   .boxrow.wrapped { flex-wrap:wrap; gap:8px; height:auto !important; } .boxrow.wrapped > .split { display:none; }
   .boxrow.wrapped > :not(.split) { flex:1 1 auto !important; width:min-content; } .boxrow.wrapped > .box.folded { align-self:stretch; }
-  .box:not(.folded) > h3 { padding-right:46px; }   /* the title never runs under the grip and fold buttons */
+  .box:not(.folded) > h3 { padding-right:72px; }   /* the title never runs under the grip, fold and × buttons (63 px) */
   html { scrollbar-gutter:stable; }   /* the page's scrollbar coming and going no longer shifts every box by 10 px */
   body.measure { min-height:0; }   /* natural height, for "window fits the boxes" */
   .sized:not(.folded) { height:var(--h); } .boxcol > .box.sized:not(.folded) { flex:0 0 var(--h); } .box.sized:not(.folded) { overflow:auto; }
@@ -232,7 +234,7 @@
   .feedlist .ic { height:1.25em; width:auto; vertical-align:-0.3em; image-rendering:pixelated; margin-right:1px; }
   @keyframes feedIn { from { opacity:0; transform:translateY(6px); } }
   .over-drop { background:var(--accent-soft) !important; }
-  #hist > .row:first-child { padding-right:48px; }
+  #hist > .row:has(> #csv) { padding-right:72px; }
   /* History: filters, maps, compare */
   #hist [hidden] { display:none !important; }
   #histRows, #recap { max-width:720px; }
@@ -258,13 +260,15 @@
   .pb { display:inline-block; margin-left:6px; padding:0 6px; border-radius:8px; font-size:11px; font-weight:600; background:var(--accent-soft); color:var(--ink); }
   .histBar { flex-wrap:wrap; gap:6px; max-width:720px; } .histBar select { max-width:180px; }
   #mapsBox { margin:8px 0; max-width:720px; } #mapsBox summary { cursor:pointer; font-weight:600; } .mapsT { width:100%; } .mapsT td { padding:3px 4px; }
+  /* narrow window: Runs and Best go (the row's details have them), the rest still fits; past that it scrolls in its box */
+  #maps { container-type:inline-size; overflow-x:auto; } @container (max-width: 400px){ .mapsT td:nth-child(2), .mapsT td:nth-child(5) { display:none; } }
   tr.hdet > td { background:var(--bg); border-radius:8px; padding:8px; } .hcols { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12px; } .hcol { min-width:150px; } .hcol .ico { width:16px; height:16px; margin:-2px 4px -2px 0; }
   svg.trend { width:100%; max-width:720px; height:44px; display:block; } #trend { margin:6px 0; }
   #updBanner { position:sticky; top:38px; z-index:5; display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-color:var(--accent); background:var(--accent-soft); } #updBanner b { flex:1; }
 </style>
 </head>
 <body>
-  <div id="titlebar"><span class="tbname">Grind Tracker</span><button data-menu="File">File</button><button data-menu="View">View</button><button data-menu="Help">Help</button><button id="tbBtn" aria-expanded="false" title="Modules toolbox: drag modules into your layout (Ctrl+Shift+K)">▦ Modules</button></div>
+  <div id="titlebar"><span class="tbname">Grind Tracker</span><button data-menu="File">File</button><button data-menu="View">View</button><button data-menu="Help">Help</button><button id="tbBtn" aria-expanded="false" title="Modules toolbox: drag modules into your layout (Ctrl+Shift+K)" aria-label="Modules">▦<span class="tbw"> Modules</span></button></div>
   <div class="card" id="mini">
     <div class="mhead"><span id="miniState"></span><button id="miniFull" class="alt" title="Back to the full window">Full view</button></div>
     <div class="mgrid">
@@ -296,6 +300,18 @@
   </div>
   <div class="card hidden" id="updBanner"><b id="updText"></b> <button id="updGo">Restart and update</button></div>
   <div class="card hidden" id="dummyBar" role="status"><b>Dummy data</b><span>Made up to try layouts. Never saved or shared.</span><button id="dummyClear" class="alt">Clear</button></div>
+  <!-- wrapping up and the run summary: above the layout, where Stop was pressed (under every module they were off screen) -->
+  <div class="card hidden" id="wrap"><h3>Wrapping up</h3>
+    <div class="step">1. Show your inventory</div>
+    <div class="note">The timer is stopped. Open your inventory on each tab for a second so the end count is right; a tab turns green once
+      it was read after you pressed Stop. Click a tab to read it now.</div>
+    <div class="row" id="wrapTabs"></div><div class="note" id="wrapNote"></div>
+    <div class="step">2. Name and note (optional)</div>
+    <input id="wrapName" maxlength="60" aria-label="Run name" placeholder="Run name, e.g. KPQ run 1" style="width:100%">
+    <textarea id="runNote" maxlength="1000" rows="3" aria-label="Note about this run" placeholder="A note for later: party, channel, buffs, what went well or wrong..."></textarea>
+    <div class="row"><button id="wrapEnd" title="Saves the run to History and shows the summary">Finalize log</button></div></div>
+  <div class="card hidden" id="summary"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Run summary</h3><button id="sumImg" class="alt" title="Saves a picture of this summary and copies it, ready to paste">Save as image</button> <button id="sumClose" class="alt">Close</button></div>
+    <div id="sumBody"></div></div>
   <div id="rzLayer" aria-hidden="true"></div>
   <div id="dock">
   <div class="card" id="top" data-box="main" data-title="Main numbers">
@@ -349,7 +365,7 @@
       <div class="note">Open your inventory on <b>Equip</b>, <b>Use</b> and <b>Etc</b> for a second each, after Start and again before Stop.
         The difference is your real loot, even when a pickup line was missed. Click a tab below to read it now. If your inventory isn't found, you drag a box around it once.</div>
       <div class="row" id="invTabs"></div><div class="ask hidden" id="invAsk"></div></div>
-    <div class="card" id="mesoBox" data-box="mesos" data-title="Mesos"><h3>Mesos</h3><div class="grid" id="mesoGrid"></div><div class="note" id="mesoNote"></div></div>
+    <div class="card" id="mesoBox" data-box="mesos" data-title="Mesos"><h3>Mesos</h3><div class="grid" id="mesoGrid"><div class="empty" style="grid-column:1/-1">Mesos picked up and spent, loot worth and net show here once you press Start.</div></div><div class="note" id="mesoNote"></div></div>
     <div class="card" data-box="items" data-title="Items looted"><h3>Items looted</h3><table id="items"></table><div class="empty" id="itemsEmpty">Nothing picked up yet.</div>
       <div class="note" id="priceNote"></div></div>
     <div class="card" id="usedBox" data-box="used" data-title="Consumables used"><h3>Consumables used</h3>
@@ -362,21 +378,10 @@
   <div class="card hidden" id="respawn"></div>
   <div class="card hidden" id="partyBox"></div>
   <div class="card hidden" id="lastRun"></div>
-  <div class="card hidden" id="wrap"><h3>Wrapping up</h3>
-    <div class="step">1. Show your inventory</div>
-    <div class="note">The timer is stopped. Open your inventory on each tab for a second so the end count is right; a tab turns green once
-      it was read after you pressed Stop. Click a tab to read it now.</div>
-    <div class="row" id="wrapTabs"></div><div class="note" id="wrapNote"></div>
-    <div class="step">2. Name and note (optional)</div>
-    <input id="wrapName" maxlength="60" aria-label="Run name" placeholder="Run name, e.g. KPQ run 1" style="width:100%">
-    <textarea id="runNote" maxlength="1000" rows="3" aria-label="Note about this run" placeholder="A note for later: party, channel, buffs, what went well or wrong..."></textarea>
-    <div class="row"><button id="wrapEnd" title="Saves the run to History and shows the summary">Finalize log</button></div></div>
-  <div class="card hidden" id="summary"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Run summary</h3><button id="sumImg" class="alt" title="Saves a picture of this summary and copies it, ready to paste">Save as image</button> <button id="sumClose" class="alt">Close</button></div>
-    <div id="sumBody"></div></div>
   <div class="card hidden" id="selfcheck"></div>
   <!-- modules not in the layout: the Modules toolbox lists them (renderer-layout.js) -->
   <div id="shelf" hidden>
-    <div class="card" id="hist" data-box="hist" data-title="Past sessions"><div class="row" style="margin-top:0;padding-right:48px"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div>
+    <div class="card" id="hist" data-box="hist" data-title="Past sessions"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="recap"></div>
       <details id="mapsBox" open hidden><summary>Maps</summary><div id="maps"></div></details>
       <div class="row histBar" id="histBar" hidden><input id="histQ" type="search" aria-label="Search sessions" placeholder="Search name, map, note, monster" style="flex:1;min-width:140px">
         <select id="histMap" aria-label="Map"></select><select id="histWho" aria-label="Character" hidden></select>

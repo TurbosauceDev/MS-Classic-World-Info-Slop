@@ -202,5 +202,5 @@ $("#share").onchange = e => host.settings({share: e.target.checked}).then(s => s
 $("#kpqName").onchange = e => host.settings({kpqName: e.target.checked}).then(s => settings = s);
 $("#job").onchange = e => host.settings({job: e.target.value}).then(s => {
   settings = s; jobNow = jobSeen = null; lastJob = 0;   // back on Auto: read it again soon
-  if (session){ const ev = {t: Date.now(), type: "job", name: s.job || null}; session.add(ev); slicer.add(ev) }
+  if (session){ const ev = {t: Date.now(), type: "job", name: s.job || null}; session.add(ev); slicer?.add(ev) }   // Dummy data has no slicer
 });
