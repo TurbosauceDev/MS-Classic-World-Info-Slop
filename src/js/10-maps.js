@@ -210,10 +210,14 @@ const pwSellTag = id => { const v = pwSell(id); return v == null ? "" : v >= 0.4
 // listed now vs the usual (median) sale price; cheap = at least 20% under a solid median (our own cut-off)
 const pwNowRatio = id => PWNOW[id] && pwSolid(id) ? PWNOW[id][0] / pwSolid(id) : null;
 const pwCheap = id => { const r = pwNowRatio(id); return r != null && r <= 0.8 };
+// "listings updated 3 h ago": D.pw.listed is "YYYY-MM-DD HH:MM" UTC; worked out when shown (Danny 2026-10-19: easier than a UTC time)
+const pwListedAgo = () => { const t = Date.parse((D.pw?.listed || "").replace(" ", "T") + "Z"); if (isNaN(t)) return "";
+  const m = Math.max(0, (Date.now() - t) / 6e4);
+  return m < 1 ? "just now" : m < 60 ? Math.round(m) + " min ago" : m < 48 * 60 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " days ago" };
 function pwNowHtml(id){ const n = PWNOW[id]; if (!n) return "";
   const r = pwNowRatio(id), where = [n[2] ? "ch " + n[2] : "", n[3]].filter(Boolean).join(", "),
     vs = r == null ? "" : r < 0.995 ? ` · <span class="up">${Math.round((1 - r) * 100)}% under</span> the usual price` : r > 1.005 ? ` · ${Math.round((r - 1) * 100)}% over the usual price` : " · about the usual price";
-  return `Cheapest listed now: <b>${n[0] < 10 && n[0] % 1 ? n[0] : fmt(n[0])} mesos</b> each${n[1] > 1 ? ` (×${fmt(n[1])})` : ""}${where ? ` <span class="sub">${esc(where)}</span>` : ""}${n[4] ? ` <span class="sub">by ${esc(n[4])}</span>` : ""}${vs}<br><span class="sub">meso.watch live listings as of ${esc(D.pw.listed)} UTC. Shops open and close fast; it may be gone.</span>` }
+  return `Cheapest listed now: <b>${n[0] < 10 && n[0] % 1 ? n[0] : fmt(n[0])} mesos</b> each${n[1] > 1 ? ` (×${fmt(n[1])})` : ""}${where ? ` <span class="sub">${esc(where)}</span>` : ""}${n[4] ? ` <span class="sub">by ${esc(n[4])}</span>` : ""}${vs}<br><span class="sub">Listings updated ${pwListedAgo()} (meso.watch). Shops open and close fast; it may be gone.</span>` }
 function pwHtml(id, long){ const p = PW[id]; if (!p) return "";
   const per = p[4] & 2 ? " per set" : "", low = p[4] & 1 ? ` <span class="pill p-warn" title="Fewer than 5 sales seen: rough">few sales</span>` : "";
   const tr = pwTrend(id) ? " " + pwTrend(id) : "", st = pwSellTag(id), sv = pwSell(id);

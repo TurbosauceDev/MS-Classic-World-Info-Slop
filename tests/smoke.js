@@ -157,7 +157,7 @@ const path = require("path");
   await p.click("#itcheap"); { const r = await p.$$eval("#itrows tr[data-id]", r => r.map(x => [x.children[2].textContent, x.children[6].textContent]));
     check(r.length > 5 && r.every(([lv, pw]) => lv === "" && /now [\d,]+/.test(pw)), "item list: cheap in shops now (non-equip, with listing)") }
   check(await p.$$eval("#itrows tr[data-id] td:nth-child(8)", c => c.some(x => /[▲▼]\d+%/.test(x.textContent))), "item list: trend column");
-  await p.click("#itrows .ibtn"); check(/Cheapest listed now: [\d,.]+ mesos/.test(await p.textContent("#itpage")) && !/NaN|undefined/.test(await p.textContent("#itpage")), "item page: cheapest live listing");
+  await p.click("#itrows .ibtn"); check(/Cheapest listed now: [\d,.]+ mesos/.test(await p.textContent("#itpage")) && /Listings updated (just now|\d+ (min|h|days) ago)/.test(await p.textContent("#itpage")) && !/NaN|undefined/.test(await p.textContent("#itpage")), "item page: cheapest live listing");
   await p.click("#itback"); await p.click("#itcheap");
   await p.fill("#itsearch", "snail shell"); await p.click("#itrows .ibtn");
   check(/Snail/.test(await p.textContent("#itpage .mlist")) && !/NaN|undefined/.test(await p.textContent("#items")), "item page: snail shell drops");

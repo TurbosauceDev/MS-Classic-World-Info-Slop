@@ -43,6 +43,7 @@ project memory; older dates are the day the call was recorded.
 
 - 2026-10-19 Senpai House report ideas: build cheapest-live-listing for non-equipment only (ignore rolls/scrolls), price trend, sell-through tags, tracker rough-price marks, Builder avatar. Relying on maplestory.io live at runtime is OK ("a fundamental site for the community").
 - 2026-10-19 Never use maplestory.market / classicrank.com data (bot + packet-sniffer sourced, no permission).
+- 2026-10-19 Cheapest listing shows "Listings updated X ago" (worked out in the browser), not a UTC time.
 
 ## Tracker and server
 - 2026-10-17 Build the screen reader anyway (no official Nexon rule found); it reads pixels only, no memory, files or input.
