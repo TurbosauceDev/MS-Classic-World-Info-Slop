@@ -189,6 +189,21 @@ const WANT = [[91, "2010003"], [85, "2010005"], [29, "2000002"], [8, "2000001"],
   const kaOk = ka.first === 2775 && ka.later === 2775 && ka.laterUnknown === 0 && ka.cold === 2183 && ka.coldPartial && ka.etc === "etc";
   console.log("arrow stacks + pulsing tab", kaOk ? "ok" : "FAIL " + JSON.stringify(ka));
   if (!kaOk) fail++;
+  // Danny's Equip tab bug report (2026-10-19, v0.2.48, "the tool cannot read the equip slot"): with Equip open the red
+  // line's top row is broken at its left end (not found at all on the 2x frame), and on the video frame a stray pink pixel
+  // at the tab's blurred edge named it Use
+  const eq = await page.evaluate(async files => {
+    const load = async b64 => { const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode(); return im };
+    const frame = (im, k) => { const c = document.createElement("canvas"); c.width = 1280; c.height = 720; const g = c.getContext("2d");
+      g.fillStyle = "#123"; g.fillRect(0, 0, 1280, 720); g.imageSmoothingEnabled = false; g.drawImage(im, 995, 190, im.width / k, im.height / k);
+      return {w: 1280, h: 720, d: g.getImageData(0, 0, 1280, 720).data, k: 1} };
+    const all = window.ALLI ||= await GrindReaders.loadIcons(GAMEDATA, GAMEDATA.iicons), eqIcons = all.filter(ic => GAMEDATA.items[ic.id].c === "Equipment");
+    const read = img => { const f = GrindReaders.findInventory(img); return f && {tab: f.tab, slots: GrindReaders.readInventory(img, f, eqIcons).slots.map(s => GAMEDATA.items[s.ids[0]].n).join(", ")} };
+    return {video: read(frame(await load(files.video), 1)), native: read(frame(await load(files.native), 2))};
+  }, {video: fs.readFileSync(path.join(dir, "equip-video-staff.png")).toString("base64"), native: fs.readFileSync(path.join(dir, "equip-native-staff-2x.png")).toString("base64")});
+  const eqOk = ["video", "native"].every(k => eq[k]?.tab === "equip" && eq[k].slots === "Sapphire Earrings, Emerald Staff");
+  console.log("Equip tab (staff)", eqOk ? "ok" : "FAIL " + JSON.stringify(eq));
+  if (!eqOk) fail++;
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (fail) throw new Error(fail + " frame(s) failed");

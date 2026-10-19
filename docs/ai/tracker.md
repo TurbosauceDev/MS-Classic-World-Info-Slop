@@ -99,6 +99,10 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Dummy data off no longer reloads (main.js will-navigate blocks reloads): dummyClear re-renders from the covered session.
 - Mini zooms #mini (miniZ, up to 2.5x) to fill a window bigger than its natural height; body.measure = natural size.
 - Running tests locally: `npm run data` first (core.test.js needs app/gamedata.json, not committed).
+- findInventory picks the open tab by the most pink/rose/pale pixels per tab (not the first hit), and finds the red line's
+  top row away from the open tab's break. inventory.test.js isn't in CI (needs Chromium): run it after touching readers.
+- Pickup names: an unread `?` matches 1-2 letters ("Emerald Sta?" = Staff). Saved sessions' `used` = the Consumables used
+  list (Use-tab drops included), not raw use events.
 
 ## Splits
 - 10-18: `app/renderer.js` cut into 6 files at top-level boundaries, loaded in order by app/index.html (one shared global

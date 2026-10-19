@@ -50,6 +50,8 @@ EXP-bar crops at other window sizes; all read 68,601 [71.68%].
 | inv-a.png, inv-b.png, inv-c.png | ~250-400 wide | Use tab + 3 quick-slot columns, three crops | 8 slot columns, wallet 4,685, White Potion "29"->"28" counted once |
 | use-12162.png | 208x288 | Use tab, 12,162 mesos | 21 slots, arrows 800x7+217; also site smoke Price check ("Lemon") |
 | equip-12162.png | 210x288 | Equip tab (no counts) | Squishy Shoes, Pig Illustrated |
+| equip-video-staff.png | 230x250 | tracker's video frame, Equip open, tab edge blurred (report 2026-10-19) | tab equip; Sapphire Earrings, Emerald Staff |
+| equip-native-staff-2x.png | 460x500 | same at 2x (native 1440), red line's top row broken at the left | drawn at 1/2: tab equip; same 2 items |
 | etc-12162.png | 211x291 | Etc tab, pale ores under counts | Bronze 3, Iron 1, Mithril 4, Adamantium 14, Silver 12, Orihalcon 2, ... |
 | etc-pale-tab.png | 225x300 | Etc tab drawn pale pink, broken red line (KPQ run) | 4000019 x121, 4010000 x26, 4000013 x13, 4000063 x4, 4010104 x19 |
 | etc-pulse-tab.png | 220x250 | Etc tab caught mid-pulse | tab still found |

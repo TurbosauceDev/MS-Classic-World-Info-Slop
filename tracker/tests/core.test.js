@@ -225,7 +225,13 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
   s.add({t: sec(60), type: "use", id: "2060000", n: 10});
   s.add({t: sec(120), type: "inv", tab: "use", items: {"2060000": 52, "2010001": 3}, unknown: 0});
   const u = Object.fromEntries(s.stats().used.map(x => [x.id, x.n]));
-  assert.strictEqual(u["2060000"], 48); assert.strictEqual(u["2010001"], 2) }
+  assert.strictEqual(u["2060000"], 48); assert.strictEqual(u["2010001"], 2);
+  // the saved session's "used" matches the Consumables used box (Danny's KPQ Test #2, 2026-10-18: arrows 1,011 saved, 1,576 shown)
+  assert.deepStrictEqual(s.shareable().used, {"2060000": 48, "2010001": 2}) }
+// pickup line with two letters drawn as one unread glyph: "Emerald Sta?" is the Emerald Staff (Danny's report, 2026-10-19)
+{ const R = require("../app/readers.js"); R.createReaders(G);
+  assert.deepStrictEqual(R.itemByName("Emerald Sta?", "Equip", true), ["1382002"]);
+  assert.deepStrictEqual(R.itemByName("Biue Potion", "Use", true), ["2000003"]) }
 // an item gone from the Use tab while a slot didn't read: not all used (Danny's 75 Lemons, 2026-10-18; 13 really eaten)
 { const s = createSession(G);
   s.add({t: sec(0), type: "inv", tab: "use", items: {"2010005": 75, "2010003": 75}, unknown: 0});

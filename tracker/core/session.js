@@ -269,7 +269,8 @@
       const s = stats();
       return {v: 1, deaths: S.deaths, date: localDate(S.start || Date.now()), map: s.map, mapName: s.mapName, party: s.party, job: s.job,
         level: s.level, activeMin: Math.round(s.activeMin * 10) / 10, kills: s.kills, exp: s.exp, mesos: s.mesos,
-        msgExp: S.msgExp, barExp: S.barExp, readShare: s.readShare, otherExp: S.otherExp, unreadItems: S.unreadItems, items: S.items, used: S.used,
+        msgExp: S.msgExp, barExp: S.barExp, readShare: s.readShare, otherExp: S.otherExp, unreadItems: S.unreadItems, items: S.items,
+        used: Object.fromEntries(s.used.filter(u => u.n > 0).map(u => [u.id, u.n])),   // as listed (Use-tab drops included), not just counted
         usedCost: S.useSeen || S.inv.use?.last.t > S.inv.use?.first.t ? Math.round(s.usedCost) : null,
         mobs: s.mobs.map(m => ({id: m.id, kills: m.kills, mesos: m.mesos, mesoDrops: m.mesoDrops, items: m.items}))};
     }

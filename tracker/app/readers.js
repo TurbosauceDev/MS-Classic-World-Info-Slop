@@ -464,10 +464,11 @@
   function itemByName(name, cat, all = false){
     if (!ITEMS) return all ? [] : null;
     const cut = /\.\.\.$/.test(name), core = name.replace(/\.\.\.$/, "");
-    const re = new RegExp("^" + core.split("").map(c => c === "?" ? "." : "ilI1".includes(c) ? "[ilI1]" : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + (cut ? "" : "$"));
+    const re = new RegExp("^" + core.split("").map(c => c === "?" ? ".{1,2}" : "ilI1".includes(c) ? "[ilI1]" : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + (cut ? "" : "$"));
     const tab = {Etc: ["Etc"], Use: ["Consumable", "Scroll"], Equip: ["Equipment"], Setup: ["Setup"]};
     const catRe = new RegExp("^" + cat.replace(/\?/g, ".") + "$"), cats = Object.keys(tab).filter(k => catRe.test(k)).flatMap(k => tab[k]);
-    // l and i look alike in the pickup font ("Biue Potion", Danny's report 2026-10-18): either matches either
+    // l and i look alike in the pickup font ("Biue Potion", Danny's report 2026-10-18): either matches either. An unread "?"
+    // may be two letters drawn as one glyph ("Emerald Sta?" = Staff, Danny's report 2026-10-19)
     let hits = ITEMS.filter(([id, it]) => re.test(it.n) && (!cats.length || cats.includes(it.c)));
     // the same name twice in the game data (Red Potion 2000000 / 2000007): the first one, which the shops sell
     if (hits.length > 1 && hits.every(h => h[1].n === hits[0][1].n)) hits = [hits[0]];
@@ -652,12 +653,19 @@
         const more = (p, dir) => { for (let k = 1; k <= 24; k++){ const q = p + dir * k; if (q < 0 || q >= w) return p; if (red(q, y)) return q } return p };
         let a = x, b = x; for (let n; (n = more(a, -1)) !== a;) a = n; for (let n; (n = more(b, 1)) !== b;) b = n;
         x = b;
-        // the top row is darker and broken under a pale open tab (Danny's Etc tab): the line's full width may first show a row lower
-        const top = red(a + 5, y - 1) ? y - 1 : y;
+        // the top row is darker and broken under a pale open tab (Danny's Etc tab): the line's full width may first show a row lower.
+        // The break sits under the open tab, so look for the row above away from it too (Equip open: the left end, 2026-10-19)
+        const top = [5, 100, 195].some(o => red(a + o, y - 1)) ? y - 1 : y;
         if (b - a < 190 || b - a > 215 || !red(a + 5, top + 1) || !red(a + 5, top + 2) || red(a + 5, top - 1) || a + 200 >= w) continue;
-        for (const is of [pink, rose, pale]) for (let yy = top - 20; yy < top - 1; yy++) for (let xx = a; xx < a + 200; xx++) if (is(xx, yy) && is(xx + 1, yy) && is(xx + 2, yy)){
-          const off = xx - a, tab = INV_TABS.reduce((p, q) => Math.abs(q[1] - off) < Math.abs(p[1] - off) ? q : p);
-          return Math.abs(tab[1] - off) <= 8 ? {x: a, y: top, tab: tab[0]} : null;
+        // the tab with the most of that colour (3 in a row): a stray pinkish pixel where the open tab's edge blurs into the
+        // red line (video) no longer names the tab next to it (Equip read as Use, Danny's report 2026-10-19)
+        for (const is of [pink, rose, pale]){
+          const n = INV_TABS.map(() => 0);
+          for (let yy = top - 20; yy < top - 1; yy++) for (let xx = a; xx < a + 200; xx++) if (is(xx, yy) && is(xx + 1, yy) && is(xx + 2, yy)){
+            const off = xx - a; let k = 0; while (k + 1 < INV_TABS.length && off >= INV_TABS[k + 1][1] - 2) k++; n[k]++;
+          }
+          const k = n.indexOf(Math.max(...n));
+          if (n[k] >= 3) return {x: a, y: top, tab: INV_TABS[k][0]};
         }
         // the window, but no tab colour (the mouse pointer on the open tab, Danny's frame-014): where it is still counts
         return {x: a, y: top, tab: null};
@@ -924,6 +932,6 @@
     if (want.chat) crops.chat = chatCrop(img);
     return {ev, info, crops, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {itemByName, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);
