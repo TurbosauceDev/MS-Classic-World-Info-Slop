@@ -94,7 +94,8 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   if (!(fw[0] > 600) || !(fw[1] < fw[0] - 100) || fw[2] !== 0 || fw[3] !== false) fail("window follows the boxes", fw);
   // a drop glides into place (unless the system asks for less motion)
   await page.emulateMedia({reducedMotion: "no-preference"});
-  const gl = await page.evaluate(() => { document.querySelector("[data-box=mesos] .fold").click(); return document.getAnimations().filter(a => a.effect?.target?.matches?.("[data-box]")).length });
+  const gl = await page.evaluate(() => { document.querySelector("#top .fold").click();   // (everything under the main card moves up)
+    return document.getAnimations().filter(a => a.effect?.target?.matches?.("[data-box]")).length });
   if (!gl) fail("boxes glide when the layout changes", gl);
   // Mini: the zoom follows the window edge in fine steps, never past the window, growing as the window grows
   await page.emulateMedia({reducedMotion: "reduce"});
