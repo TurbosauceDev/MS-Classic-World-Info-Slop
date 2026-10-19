@@ -3,7 +3,7 @@ const G = require("../app/gamedata.json"), {createSession, createRunSlicer, spee
 let seed = 1; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647, pick = a => a[Math.floor(rnd() * a.length)];
 const maps = Object.keys(G.maps), items = Object.keys(G.items), bad = [];
 const check = (o, path) => { for (const [k, v] of Object.entries(o || {})){ const p = path + "." + k;
-  if (typeof v === "number" && (!isFinite(v) || (v < 0 && !/dueIn|wallet/.test(k)))) bad.push(p + "=" + v);
+  if (typeof v === "number" && (!isFinite(v) || (v < 0 && !/dueIn|wallet/.test(k) && !/\.inv\.\d+\.n$/.test(p)))) bad.push(p + "=" + v);
   else if (v && typeof v === "object") check(v, p) } };
 for (let trial = 0; trial < 300; trial++){
   const runs = [], s = createSession(G, {goalLevel: pick([0, 5, 30, 250])}), sl = createRunSlicer(G, {onRun: r => runs.push(r)});
@@ -23,6 +23,7 @@ for (let trial = 0; trial < 300; trial++){
     else if (r < .97) e = {type: "itemraw", text: "?"};
     else if (r < .985) e = {type: pick(["pause", "resume", "useseen"])};
     else if (rnd() < .3) e = {type: "wallet", n: pick([0, 4685, 100000, -5, NaN])};
+    else if (rnd() < .4) e = {type: "inv", tab: pick(["equip", "use", "etc"]), items: {2000000: pick([0, 5, -1, NaN]), 4000019: pick([3, 9])}, unknown: pick([0, 2])};   // NaN reached "have", 2026-10-19
     else e = {type: "use", id: pick(["2000000", "2060000", "999", "2000004"]), n: pick([1, 3, 0, -2, 2.5])};
     e.t = t;
     try { s.add(e); sl.add(e) } catch (err){ bad.push("crash " + err.message + " " + JSON.stringify(e)); break }

@@ -127,10 +127,11 @@
         // the inventory's open tab read: kept as first and latest per tab (Equip, Use, Etc)
         case "inv": {
           if (!e.tab || !e.items) break;
-          const read = {t: e.t, items: e.items, alike: e.alike || {}, stacks: e.stacks || {}, partial: e.partial || {}, unknown: e.unknown || 0};
+          const items = Object.fromEntries(Object.entries(e.items).filter(([, n]) => Number.isFinite(n) && n >= 0));   // a count that didn't read is no count
+          const read = {t: e.t, items, alike: e.alike || {}, stacks: e.stacks || {}, partial: e.partial || {}, unknown: e.unknown || 0};
           const tab = S.inv[e.tab] ||= {first: read, low: {}}; tab.last = read;
-          for (const [id, n] of Object.entries(e.items)) if (n > 0 && !read.partial[id] && !(tab.low[id] <= n)) tab.low[id] = n;   // fewest seen per item
-          if (e.tab === "use"){ for (const id of Object.keys(S.have)) if (!(id in e.items) && !read.unknown) delete S.have[id]; for (const [id, n] of Object.entries(e.items)) if (!read.partial[id]) S.have[id] = n }
+          for (const [id, n] of Object.entries(items)) if (n > 0 && !read.partial[id] && !(tab.low[id] <= n)) tab.low[id] = n;   // fewest seen per item
+          if (e.tab === "use"){ for (const id of Object.keys(S.have)) if (!(id in items) && !read.unknown) delete S.have[id]; for (const [id, n] of Object.entries(items)) if (!read.partial[id]) S.have[id] = n }
           break;
         }
         case "itemraw": {

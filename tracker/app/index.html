@@ -224,7 +224,7 @@
   #logBox h3, #eventBox h3 { margin-bottom:4px; } #feed:not(:empty) + #feedEmpty { display:none; }
   /* a chat-box look: a darker well with a little inset (Danny, 2026-10-18) */
   .feedlist:not(:empty) { background:color-mix(in srgb, var(--bg) 70%, #000); border:1px solid color-mix(in srgb, var(--line) 60%, transparent); border-radius:7px; padding:4px 6px; box-shadow:inset 0 1px 3px rgba(0,0,0,.35); }
-  .feedlist { height:7.5em; overflow-y:auto; font-size:12px; line-height:1.5; font-variant-numeric:tabular-nums; overscroll-behavior:contain; }
+  .feedlist { height:calc(7.5em + 10px);   /* 5 whole lines inside the 4 px padding and border (7.5em showed 4.4: a half line at the top) */ overflow-y:auto; font-size:12px; line-height:1.5; font-variant-numeric:tabular-nums; overscroll-behavior:contain; }
   .feedlist:empty { display:none; }
   .feedlist .fl { display:flex; gap:7px; padding:0 2px; border-radius:4px; animation:feedIn .35s ease-out; }
   .feedlist .fl time { color:var(--muted); flex:none; } .feedlist .fl > span { min-width:0; }

@@ -46,7 +46,7 @@ function compactFit(force){ if (!fitsWindow() || document.body.classList.contain
   B.classList.remove("measure");
   if (force || Math.abs(h - miniH) > 6){ miniH = h; host.mini?.(true, h) } }
 
-// inventory: which tabs were read and when (Session tab), and what changed since the first look (Loot tab)
+// inventory: which tabs were read and when, and what changed since the first look
 const INV_TABS = [["equip", "Equip"], ["use", "Use"], ["etc", "Etc"]];
 function renderInv(s){
   const tabs = s?.invTabs || {}, at = t => new Date(t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
@@ -61,7 +61,7 @@ function renderInv(s){
 const sg = (n, coin) => { n = Math.round(n || 0); return `<span class="${n > 0 ? "pos" : n < 0 ? "neg" : ""}">${n > 0 ? "+" : n < 0 ? "−" : ""}${coin ? COIN : ""}${fmt(Math.abs(n))}</span>` };
 const kills = n => fmt(n) + (n === 1 ? " kill" : " kills");
 const sgm = n => sg(n, true), mz = n => COIN + fmt(n);
-// Loot tab: where the mesos came from and went
+// Mesos box: where the mesos came from and went
 const cell = (k, v, note = "") => `<div><div class="k">${k}</div><div class="v">${v}</div>${note ? `<div class="note">${note}</div>` : ""}</div>`;
 function renderMesos(s){
   $("#mesoGrid").innerHTML = cell("Picked up", sgm(s.mesos), mz(s.mesosHr) + "/hr of farming") + cell("Per kill", mz(s.mesoPerKill), kills(s.kills))

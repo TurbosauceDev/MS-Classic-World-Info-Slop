@@ -27,6 +27,11 @@ const path = require("path"), {chromium} = require("playwright");
   await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(100);
   const dm = await page.evaluate(() => [!document.querySelector("#dummyBar").classList.contains("hidden"), document.querySelectorAll("#items tr").length, document.querySelectorAll("#mobs tr").length,
     document.querySelectorAll("#feed .fl").length, document.querySelector("#expHr").textContent, document.querySelector("#used").textContent, !!window.saved, document.querySelector("#go").textContent]);
+  // on its own the run log shows whole lines at the newest (its 7.5em height left a half line at the top, 2026-10-19)
+  await page.waitForTimeout(400);   // the lines slide in (feedIn)
+  const half = await page.evaluate(() => { const f = $("#feed"), cs = getComputedStyle(f), top = f.getBoundingClientRect().top + parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop);
+    return [...f.children].filter(l => { const r = l.getBoundingClientRect(); return r.top < top - 0.5 && r.bottom > top + 0.5 }).length });
+  if (half) throw new Error("half a line at the top of the run log: " + half);
   if (!dm[0] || dm[1] < 3 || dm[2] !== 3 || dm[3] < 3 || dm[4] === "-" || !/Red Potion/.test(dm[5]) || dm[6] || dm[7] !== "Start") throw new Error("dummy data: " + JSON.stringify(dm));
   // turning it off (View menu again, or Clear) wipes it in place: it used to reload, which Electron blocks (Danny, 2026-10-19)
   let reloaded = false; page.once("framenavigated", () => reloaded = true);

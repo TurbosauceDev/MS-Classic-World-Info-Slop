@@ -126,7 +126,7 @@ function autoPause(minimap, info, t){   // minimap: the minimap is on screen (lo
     $("#status").textContent = "Paused: the game screen is gone (Cash Shop, changing channel or loading). Resumes by itself.";
   }
 }
-// KPQ: picked in the Session tab, or found by itself (Auto) once a KPQ stage is on the minimap. While it's on, any map that
+// KPQ: picked in the KPQ box, or found by itself (Auto) once a KPQ stage is on the minimap. While it's on, any map that
 // isn't a KPQ stage (Kerning City between rounds, a shop) pauses the session; the next stage picks it back up.
 // A round = coming into a KPQ stage from outside. Maps: G.kpq (80000000-80000600, from the site's KPQ data).
 const KPQ_MAPS = new Set((G.kpq || []).map(String));
