@@ -2,9 +2,9 @@
 """Build data/sources/mesowatch_prices.json from meso.watch player-shop prices. Used with the meso.watch creator's
 permission (Danny, 2026-10-09). Keeps only per-item summary stats, not the sales log.
 
-The site's /data/ is now behind a Cloudflare bot check, so the raw market.json can't be pulled from here. The dev
-hands Danny a CSV export (meso_watch_items-*.csv) instead. Both inputs are supported:
-  python3 scripts/fetch_mesowatch.py <export.csv>     # CSV export from the dev (current route)
+The site's /data/ is behind a Cloudflare bot check, so nothing here pulls it. Danny's poller pushes a CSV to branch
+data/mesowatch-sync; scripts/refresh_mesowatch.sh feeds it through this script. Both inputs are supported:
+  python3 scripts/fetch_mesowatch.py <export.csv>     # poller CSV, or a dev export Danny drops in chat
   python3 scripts/fetch_mesowatch.py <market.json>    # the raw market file, if a copy is available
 Then: python3 scripts/build_data.py prices && python3 scripts/build.py"""
 import csv, json, pathlib, sys

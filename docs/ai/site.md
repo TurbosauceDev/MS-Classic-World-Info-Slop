@@ -22,7 +22,7 @@ src/index.html + styles.css + js/*.js (+ tracker/app/readers.js) ── scripts/
 python3 scripts/build.py | tail -3          # after any src/ change (no vendor needed)
 node tests/smoke.js | tail -5               # every tab, 390px overflow, NaN/undefined text; ~40 s
 node tests/golden.js | tail -3              # meowdb-published reference numbers; run after model changes
-python3 scripts/build_data.py prices        # after fetch_mesowatch.py <dev CSV>
+./scripts/refresh_mesowatch.sh               # "refresh": poller CSV -> fetch_mesowatch -> prices -> build
 python3 scripts/fetch_shared.py             # shared tracker runs (daily CI job does this)
 node scripts/fetch_meowdb_drops.js          # then build_data.py extras mobdb
 python3 scripts/launch_diff.py <ver>        # maplestory.io MCW client vs our data -> docs/launch_diff.md
@@ -92,7 +92,9 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Known traps
 - `data.json` / `dist` are mostly one huge line: any Read/cat/grep floods context.
 - Smoke opens pages via `tab("#t-x")` (clicks the section first; hidden buttons can't be clicked).
-- meso.watch raw JSON is behind a Cloudflare check: never bypass. Refresh = Danny drops a dev CSV in chat.
+- meso.watch raw JSON is behind a Cloudflare check: cloud threads never fetch it. Refresh = `./scripts/refresh_mesowatch.sh`
+  (reads Danny's poller CSV on branch `data/mesowatch-sync`, see [mesowatch-sync.md](mesowatch-sync.md)); a dev CSV dropped
+  in chat still works via `python3 scripts/fetch_mesowatch.py <csv>`.
 - mapleexp.com drops are CMS v79 (China), not Classic: don't use. Its EXP table to Lv 100 is fine.
 - No drop rates exist anywhere (OSMS, meowdb have reports only); every rate on the page is an assumption, labelled.
 - Keep or sell skips quest items with the same test as Items "Hide quest items" (403xxxx ID block + quest start items; `QITEM` in 47-keep.js and 49-items.js, keep both in sync). Smoke: "keep list: no quest items".
