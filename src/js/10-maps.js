@@ -283,6 +283,7 @@ function rankMaps(){
     + (!frugal && COST_FROM_BUILDER ? ` Your build's potions and ammo: up to ${fmt(COST_FROM_BUILDER.mesoHr)} mesos/hr while attacking nonstop; on the top map you attack about ${Math.round((top[0]?.att ?? 1) * 100)}% of the time, so about ${fmt(COST_FROM_BUILDER.mesoHr * (top[0]?.att ?? 1))}/hr. "net" = mesos/hr minus that.` : "")
     + ` EXP/hr is a model estimate${party > 1 ? "" : ", solo"}.` + (D.shared?.rows?.length ? ` "players:" under it = what grind tracker players around your level really got there (median, shown once 3+ players or parties ran the map).` : "") + (Object.keys(D.shared?.times || {}).length ? ` "best time:" = the 3 hours of the day (your time) when tracker players farm that map fastest compared with their own usual speed there.` : "")
     + (far ? ` <b>No map has monsters within 12 levels of you</b> (Victoria Island tops out around level 60-75), so these are the best of the rest.` : "");
+  saveTrain();
 }
 ["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; AOE_FROM_BUILDER = null; DEF_FROM_BUILDER = null; COST_FROM_BUILDER = null; DPS_FROM_BUILDER = null; rankMaps() }));
 $("#cls").addEventListener("change", () => { STAT_IN.forEach(s => $(s).value = ""); rankMaps() });   // another class's stats don't carry over
@@ -294,6 +295,25 @@ $("#lootp").addEventListener("change", rankMaps);
 $("#aoe").addEventListener("change", rankMaps);
 STAT_IN.forEach(s => $(s).addEventListener("input", () => { DPS_FROM_BUILDER = null; rankMaps() }));
 $("#lvl").addEventListener("change", rankMaps);
+// Where to train settings + the Character Builder hand-off ("Use this in Where to train") survive a reload: saved after
+// every ranking under "train", loaded (and checked: hand edits, old versions) before the first ranking (69-search.js)
+const TRAIN = ["cls", "lvl", "party", "tmode", "aoe", "hitsh", "lootr", "lootp", "atk", "umag", "uint", "uacc", "uavo", "uhp", "uwdef"];
+const fin = x => typeof x === "number" && isFinite(x);
+const numObj = (o, keys) => o && typeof o === "object" && !Array.isArray(o) ? Object.fromEntries(keys.filter(k => fin(o[k])).map(k => [k, o[k]])) : null;
+function saveTrain(){
+  try { localStorage.setItem("train", JSON.stringify({v: Object.fromEntries(TRAIN.map(k => [k, $("#" + k).value])),
+    fb: {acc: ACC_FROM_BUILDER, aoe: AOE_FROM_BUILDER, def: DEF_FROM_BUILDER, cost: COST_FROM_BUILDER, dps: DPS_FROM_BUILDER}})) } catch(e) {}
+}
+function loadTrain(){
+  const o = savedState("train", {v: {}, fb: {}}), v = o.v || {}, fb = o.fb || {};
+  for (const k of TRAIN){ const x = v[k], el = $("#" + k); if (typeof x !== "string" || x.length > 20) continue;
+    if (el.options ? [...el.options].some(op => op.value === x) : k === "lvl" ? /^\d{1,3}$/.test(x) : /^[\d\s-]*$/.test(x)) el.value = x }
+  ACC_FROM_BUILDER = fin(fb.acc) ? fb.acc : null; DPS_FROM_BUILDER = fin(fb.dps) && fb.dps >= 0 ? fb.dps : null;
+  const d = numObj(fb.def, ["hp", "wdef", "mdef", "mult", "mmult", "avoid"]); DEF_FROM_BUILDER = d && fin(d.hp) && fin(d.wdef) ? d : null;
+  const c = numObj(fb.cost, ["mpHr", "hpHr", "ammoHr", "ammoPrice", "mesoHr"]); COST_FROM_BUILDER = c && fin(c.mesoHr) ? c : null;
+  const a = fb.aoe, r = Array.isArray(a?.r) && a.r.length <= 2 && a.r.every(fin) ? a.r : null;
+  AOE_FROM_BUILDER = a && fin(a.t) && a.t > 1 && a.t <= 15 && r && typeof a.n === "string" ? {t: a.t, r, n: a.n.slice(0, 40)} : null;
+}
 
 
 // bosses and timed spawns (D.timed from the export's spawn timers)
