@@ -44,6 +44,7 @@ npm run data                          # after build_data.py changes
 npm test | tail -5                    # core + fuzz (CI runs this in tracker.yml)
 node tests/ui.test.js | tail -5       # window in Chromium, fake game stream (CHROMIUM=/opt/pw-browsers/chromium if needed)
 node tests/layout.test.js | tail -3   # box fitting and window resizing (CI: tracker.yml job ui)
+node tests/monkey.test.js | tail -3   # random clicks/menus/typing/window sizes; no errors, sideways scroll or NaN (CI job ui; SEEDS=1,2 N=400)
 node tests/readers.test.js | tail -5  # readers on real frames (tests/frames)
 node tests/inventory.test.js | tail -3; node tests/kpq.test.js | tail -3; node tests/snip.test.js | tail -3
 cd ../server && npm install && npm run data && npm test   # Node 22 (node:sqlite stands in for D1)
@@ -89,7 +90,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - body is a flex column (the tabs that took the spare height are gone, 0.2.58). Body children are
   flex:none; don't give one flex-grow.
 - The main card (#top, box id `main`) lives in #dock with the run log, so it moves/docks/folds like any box (folded keeps
-  its Start bar). #wrap/#summary/#selfcheck sit after #dock.
+  its Start bar). #selfcheck sits after #dock; #wrap/#summary above it (0.2.59).
 - Leaderboards aren't anonymous: don't call sharing "anonymous" in the UI.
 - beanguri's /api/stats needs their permission; we only borrowed MIT reader ideas.
 - Themes: PRESETS[0] "Default" = the site's src/styles.css colours (light+dark); core.test.js fails if they drift, so a
@@ -146,3 +147,10 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   (`String(+x.saved)`). Rename/note = IPC `update-session` (main.js: name ≤60, note ≤1000, nothing else changes). The ui-host
   stub's sessions() makes new `saved` ids every call, so open details/selection don't survive a loadHist in tests.
   The compare table scrolls inside its box (head row in the table, sticky label column); ui.test.js checks a 400 px window.
+- Bug hunt 0.2.59 (10-19): #wrap/#summary now sit ABOVE #dock (under a dozen modules they were off screen); ui.test closes the summary
+  before measuring boxes. openStream gives up after 5 s with no frame (play() never resolved: Start dead). Slicer counts a break from
+  the run's start when nothing counted yet; server check.js "mostly idle" (activeMin < minutes/2). #go's capture listener only
+  drops Dummy data on a starting click; dummyFill refuses while `starting`. Settings chips scroll by prefsGo (sticky header aware).
+- Traps: box h3/rows need 72 px right padding (⠿ – × = 63 px); `#hist > .row:first-child` never matched (.boxctl is first child).
+  .feedlist height = calc(7.5em + 10px) = 5 whole lines; feedIn slides lines, so wait 400 ms before measuring them. Mini's zoom
+  search is cached by content height + window size (miniKey).
