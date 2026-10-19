@@ -41,6 +41,9 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 Share links extend the existing `#key=value&` hash; no new scheme. Search: Ctrl+K or `/`, @prefixes.
 - 2026-10-18 Universal Back/Forward buttons, tied to the browser Back/Forward: step through pages and places inside a page.
 
+- 2026-10-19 Senpai House report ideas: build cheapest-live-listing for non-equipment only (ignore rolls/scrolls), price trend, sell-through tags, tracker rough-price marks, Builder avatar. Relying on maplestory.io live at runtime is OK ("a fundamental site for the community").
+- 2026-10-19 Never use maplestory.market / classicrank.com data (bot + packet-sniffer sourced, no permission).
+
 ## Tracker and server
 - 2026-10-17 Build the screen reader anyway (no official Nexon rule found); it reads pixels only, no memory, files or input.
 - 2026-10-18 Release only on his "release", push only on his "push"; bundle small fixes into one release. He updates in-app.

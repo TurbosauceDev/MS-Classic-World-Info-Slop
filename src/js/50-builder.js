@@ -493,6 +493,16 @@ function renderSkills(){
     }).join("") }).join("");
 }
 
+// the character wearing the picked gear, drawn live by maplestory.io from its Classic World (MCW, CBT2) client data. Danny OK'd
+// relying on it (2026-10-19), the one outside request the page makes; if it fails or is blocked the picture just stays hidden.
+// Default face/hair per gender (20000/30000 male, 21000/31000 female), light skin (2000). Two-handed swords/axes/BWs, spears
+// and polearms (140-144xxxx) only show in the two-handed pose (stand2).
+function avatar(w){
+  const f = S.gender === "female", ids = [f ? 21000 : 20000, f ? 31000 : 30000, ...Object.values(S.gear), ...(w ? [w.id] : [])];
+  const src = `https://maplestory.io/api/MCW/CBT2/character/2000/${ids.join(",")}/${w && w.id / 10000 >= 140 && w.id / 10000 < 145 ? "stand2" : "stand1"}/0`, img = $("#pavatar");
+  if (img.dataset.src === src) return;
+  img.dataset.src = src; img.onload = () => img.hidden = false; img.onerror = () => img.hidden = true; img.src = src;
+}
 function render(){
   const L = S.lvl, ap = S.ap, cls = S.cls, br = S.branch;
   const r = calc(S.sp), w = r.w;
@@ -507,6 +517,7 @@ function render(){
   renderSkills();
 
   const skName = r.sk ? r.sk.n : "no attack";
+  avatar(w);
   $("#psicon").innerHTML = (w ? itemIcon(w.id) : "") + (r.sk && D.icons[r.sk.id] ? `<img src="data:image/png;base64,${D.icons[r.sk.id]}" alt="" width="32" height="32">` : "");
   $("#psummary").textContent = `Level ${L} ${br} · ${w ? w.name : "no weapon"} · ${skName}${r.sk && r.sk.id !== "basic" ? " " + r.sl : ""}`;
   $("#pdps").textContent = r.ai ? fmt(r.dps) : "0";

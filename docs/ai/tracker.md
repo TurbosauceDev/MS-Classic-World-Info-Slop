@@ -138,6 +138,9 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   out of range (other map / KPQ stage) has an empty grey bar and a grey name. Counting red flapped "Party of 4 (was 3)"
   (2026-10-19). Party size feeds EXP/hr compare, speed check and shared runs through the one `party` event.
 
+- Loot value (session.js `worth`): meso.watch median, else NPC price. stats() also returns lootLo/lootHi (p25-p75) and lootRough
+  (value from low-data prices); the Loot table marks rough prices "?" and shows the range under Total (2026-10-19).
+
 ## Splits
 - 10-18: `app/renderer.js` cut into 6 files at top-level boundaries, loaded in order by app/index.html (one shared global
   scope, so no imports). A new file goes in index.html's script list; top-level code may only call functions from its

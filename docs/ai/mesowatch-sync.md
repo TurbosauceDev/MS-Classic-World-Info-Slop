@@ -11,7 +11,7 @@ repo via the GitHub Git Data API (no clone). Runs on Danny's chat-driven
 pushed to `data/mesowatch-sync`, runs `python3 scripts/fetch_mesowatch.py` -> `python3 scripts/build_data.py prices` ->
 `python3 scripts/build.py`, and prints "unchanged" when the market snapshot didn't move. Then the usual site flow (push
 on Danny's word, republish the artifact). Cloud threads don't run the poller (no agent-browser, no token there); the
-poller pushes, the cloud thread consumes. Nothing on the site reads the live-listings CSV yet.
+poller pushes, the cloud thread consumes. The site reads the live-listings CSV as D.pw.now (cheapest non-equip listing, docs/ai/site.md "Market data").
 
 You're reading this from `docs/ai/mesowatch-sync.md` in the project repo. The
 pipeline runs in a **separate chat-CLI sandbox** (paths under `/home/z/my-project/`)

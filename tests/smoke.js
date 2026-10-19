@@ -143,6 +143,7 @@ const path = require("path");
   await p.fill("#sksearch", "magic claw"); await p.click("#skrows .skbtn");
   check(/Magic Claw/.test(await p.textContent("#skpage h2")) && await p.$$eval("#skpage tbody tr", r => r.length) === 20 && /Energy Bolt/.test(await p.textContent("#skpage .mcols")), "skill page: levels and requirements");
   await p.click("#skback"); await p.click("#skreset"); check(/^90 /.test(await p.textContent("#skcount")) && !/NaN|undefined/.test(await p.textContent("#skills")), "skill list: reset filters");
+  check(/^https:\/\/maplestory\.io\/api\/MCW\/CBT2\/character\/2000\/\d+,\d+.*\/stand[12]\/0$/.test(await p.$eval("#pavatar", i => i.dataset.src || "")), "builder: avatar URL (maplestory.io MCW)");
   await tab("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); if (await p.isChecked("#itnoq")) await p.click("#itnoq"); check(/^2,221 /.test(await p.textContent("#itcount")), "item database lists 2,221 items");
   await p.click("#itsrc"); check(/^[\d,]+ /.test(await p.textContent("#itcount")) && !/^2,221/.test(await p.textContent("#itcount")), "item list: known-source filter");
   { const n = await p.textContent("#itcount"); await p.click("#itnoq"); await p.fill("#itsearch", "letter");
@@ -152,6 +153,12 @@ const path = require("path");
   await p.selectOption("#ituse", "craft"); check(/Ore|Ingot|Plank|Leather/.test(await p.textContent("#itrows")) && !/Gladius/.test(await p.textContent("#itrows")), "item list: crafting component filter"); await p.selectOption("#ituse", "");
   await p.selectOption("#itcat", "Equip"); await p.selectOption("#itjob", "Warrior"); check(await p.$$eval("#itrows tr[data-id]", r => r.length) > 50, "item filters: warrior equipment");
   await p.selectOption("#itcat", ""); await p.selectOption("#itjob", "");
+  // meso.watch live listings + trend (2026-10-19): cheap filter is non-equipment only, sorted by how far under the median
+  await p.click("#itcheap"); { const r = await p.$$eval("#itrows tr[data-id]", r => r.map(x => [x.children[2].textContent, x.children[6].textContent]));
+    check(r.length > 5 && r.every(([lv, pw]) => lv === "" && /now [\d,]+/.test(pw)), "item list: cheap in shops now (non-equip, with listing)") }
+  check(await p.$$eval("#itrows tr[data-id] td:nth-child(8)", c => c.some(x => /[▲▼]\d+%/.test(x.textContent))), "item list: trend column");
+  await p.click("#itrows .ibtn"); check(/Cheapest listed now: [\d,.]+ mesos/.test(await p.textContent("#itpage")) && !/NaN|undefined/.test(await p.textContent("#itpage")), "item page: cheapest live listing");
+  await p.click("#itback"); await p.click("#itcheap");
   await p.fill("#itsearch", "snail shell"); await p.click("#itrows .ibtn");
   check(/Snail/.test(await p.textContent("#itpage .mlist")) && !/NaN|undefined/.test(await p.textContent("#items")), "item page: snail shell drops");
   await p.click("#itpage .mobname"); check(!(await p.isHidden("#mbpage")), "item page monster link opens the monster page");

@@ -216,7 +216,7 @@ function pwNowHtml(id){ const n = PWNOW[id]; if (!n) return "";
   return `Cheapest listed now: <b>${n[0] < 10 && n[0] % 1 ? n[0] : fmt(n[0])} mesos</b> each${n[1] > 1 ? ` (×${fmt(n[1])})` : ""}${where ? ` <span class="sub">${esc(where)}</span>` : ""}${n[4] ? ` <span class="sub">by ${esc(n[4])}</span>` : ""}${vs}<br><span class="sub">meso.watch live listings as of ${esc(D.pw.listed)} UTC. Shops open and close fast; it may be gone.</span>` }
 function pwHtml(id, long){ const p = PW[id]; if (!p) return "";
   const per = p[4] & 2 ? " per set" : "", low = p[4] & 1 ? ` <span class="pill p-warn" title="Fewer than 5 sales seen: rough">few sales</span>` : "";
-  const tr = pwTrend(id) ? " " + pwTrend(id) : "";, st = pwSellTag(id), sv = pwSell(id);
+  const tr = pwTrend(id) ? " " + pwTrend(id) : "", st = pwSellTag(id), sv = pwSell(id);
   return long ? `Player shops: about <b>${fmt(p[0])} mesos</b>${per}${tr} (median of ${fmt(p[3])} sale${p[3] === 1 ? "" : "s"} seen; half sold for ${fmt(p[1])}-${fmt(p[2])}${sv != null ? `; ${Math.round(sv * 100)}% of units put up for sale were bought` : ""})${low}${st}<br><span class="sub">meso.watch, as of ${D.pw.read}. Prices move; check before you sell.</span>`
     : `players ~${fmt(p[0])}${per}${tr}${low}${st}` }
 const LOOT_BY_MOB = {}; for (const [it, ms] of Object.entries(D.drops || {})) if ((it.startsWith("4000") || POTION_IDS.includes(it)) && D.items[it]?.p) for (const [mob] of ms) (LOOT_BY_MOB[mob] ||= []).push(it);
