@@ -10,7 +10,7 @@ let lastJob = 0, jobSeen = null, jobNow = null, charName = null, charSeen = null
 async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders.jobTextCrop), or null; nc: the name crop
   const sess = session, sl = slicer;
   // the character name (History, KPQ board): taken once the same name reads twice in a row
-  if (nc){ const n = GrindReaders.nameFromText(await host.ocr(await toPng(nc))); if (n && n === charSeen) charName = n; charSeen = n }
+  if (nc){ const n = GrindReaders.nameFromText(await host.ocr(await toPng(nc))); if (n && n === charSeen && n !== charName){ charName = n; note("Character: " + n) } charSeen = n }
   if (settings.job) return;
   if (!c){ if (check && !check.job) check.jobWhy = "The level and job text on the status bar wasn't found."; return }
   const text = await host.ocr(await toPng(c)), job = GrindReaders.jobFromText(text);
@@ -25,7 +25,7 @@ let ocrBusy = false, lastOcr = 0, mapSeen = null, mapNow = null, mapMissing = 0;
 async function readMap(c, t){   // c: the minimap title crop (GrindReaders.mapTextCrop), or null
   const sess = session, sl = slicer;   // an OCR that finishes after Stop/Start belongs to the old session
   // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
-  if (!c){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
+  if (!c){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; note("Map name not seen for 30 s (minimap closed or covered): map unknown until it's back.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
   mapMissing = 0;
   const text = await host.ocr(await toPng(c)), m = GrindReaders.mapFromText(text, G), key = m && (m.id || m.name);
   log("map", {text, id: m?.id ?? null, name: m?.name ?? null});
@@ -44,6 +44,7 @@ async function showSpeed(run){
   const lh = h => new Date(Date.UTC(2026, 0, 1, h)).toLocaleTimeString([], {hour: "numeric"});
   const bt = best && best[1] >= 1.05 ? `<div class="note">Best time here: ${lh(best[0])}-${lh((best[0] + 3) % 24)}, players farm it ${Math.round((best[1] - 1) * 100)}% faster than usual then (${best[2]} players).</div>` : "";
   box.classList.remove("hidden");
+  note(`15-minute run done: ${fmt(sc.expHr)} EXP/hr` + (sc.verdict ? `, ${sc.verdict} (typical ${fmt(sc.ref)})` : "") + (settings.share && !kpq?.on ? ", shared" : ""), "run");
   const band = run.level ? `Lv ${Math.max(1, run.level - 5)}-${run.level + 5} ${run.party > 1 ? "in a party" : "solo"}` : "";
   box.innerHTML = `<div class="k">Last 15-minute run</div><div class="v">${fmt(sc.expHr)} EXP/hr</div>` + (sc.verdict
     ? `<div class="${/good|fast/.test(sc.verdict) ? "good" : sc.verdict === "slow" ? "slow" : ""}">${esc(sc.verdict)} for ${esc(band)} (typical ${fmt(sc.ref)}, ${sc.peers} players)</div>`
@@ -79,7 +80,7 @@ function dropAlert(id){
 }
 
 // party view: every minute, our numbers go up with the party code and everyone's come back
-let lastParty = 0, partyBusy = false;
+let lastParty = 0, partyBusy = false, partyNames = null;   // partyNames: the other trackers on the party code last time (event log joins/leaves)
 async function sendParty(){
   const s = session.stats(), box = $("#partyBox");
   const r = await host.party({job: s.job, level: s.level, mapName: s.mapName, expHr: s.expHr, expHr5: s.expHr5, killsHr: s.killsHr, mesosHr: s.mesosHr,
@@ -88,6 +89,9 @@ async function sendParty(){
   box.classList.remove("hidden"); $("#miniParty").textContent = "";
   if (r.error){ box.innerHTML = `<div class="k">Party</div><div class="note">${r.why === "party full" ? "Party full: 6 trackers already use this code." : r.why === "too often" ? "Waiting a moment before updating." : "Party view didn't answer (" + esc(r.why || r.error) + ")."}</div>`; return }
   $("#miniParty").textContent = `party: ${fmt(r.expHr)} EXP/hr together (${r.members.length})`;
+  const names = r.members.filter(m => !m.you).map(m => m.nick || m.job || "a member");
+  if (partyNames){ for (const n of names) if (!partyNames.includes(n)) note(`${n} joined party "${settings.partyCode}"`, "party"); for (const n of partyNames) if (!names.includes(n)) note(`${n} left party "${settings.partyCode}"`, "party") }
+  partyNames = names;
   box.innerHTML = `<div class="k">Party "${esc(settings.partyCode)}": ${fmt(r.expHr)} EXP/hr together</div><table>` + r.members.map(m =>
     `<tr><td>${m.you ? "<b>you</b>" : esc(m.nick || m.job || "member")}${m.nick && !m.you && m.job ? ` <span class="note">${esc(m.job)}</span>` : ""}${m.level ? " Lv " + m.level : ""}</td>
     <td class="n">${fmt(m.expHr || 0)}/hr</td><td class="n note">${m.expHr5 != null ? "5 min: " + fmt(m.expHr5) : ""}</td></tr>`).join("")
@@ -149,7 +153,7 @@ function kpqTime(left, t){
 }
 function kpqEnd(t, round){
   if (kpq.stage){ const id = kpq.stage.id; (kpq.stageTimes[id] ||= []).push(kpqSince(kpq.stage, t)); kpq.stageExp[id] = (kpq.stageExp[id] || 0) + Math.max(0, (session?.stats().exp || 0) - kpq.stage.exp0); kpq.stage = null }
-  if (round && kpq.round){ kpq.times.push(kpqSince(kpq.round, t)); kpqShare(kpq.round, t); kpq.round = null }
+  if (round && kpq.round){ note(`KPQ round ${kpq.rounds} over: ${mss(kpqSince(kpq.round, t))}` + (kpq.round.clear != null ? `, cleared in ${mss(kpq.round.clear)}` : ", not cleared"), "kpq"); kpq.times.push(kpqSince(kpq.round, t)); kpqShare(kpq.round, t); kpq.round = null }
   if (round) kpq.left = null;   // each round's clock starts over
 }
 function kpqMap(id, t){
@@ -166,6 +170,7 @@ function kpqMap(id, t){
       kpqEnd(t, String(id) === "80000600");
       if (KPQ_STAGE[id]){ const p = {id: String(id), t0: t, left0: kpqLeftAt(t), exp0: session?.stats().exp || 0}; kpq.stage = p; if (!kpq.round){ const st = session?.stats(); kpq.round = {t0: t, left0: p.left0, exp0: st?.exp || 0, mesos0: st?.mesos || 0, startStage: String(id), stages: {}} } }
       if (KPQ_STAGE[id] && kpq.round) kpq.round.stages[String(id)] = 1;
+      if (KPQ_STAGE[id]) note(`KPQ round ${kpq.rounds}: ${KPQ_STAGE[id]} stage` + (kpq.round && kpq.round.clear != null && String(id) === "80000500" ? ` (cleared in ${mss(kpq.round.clear)})` : ""), "kpq");
     }
     kpq.inside = true;
     if (kpq.hold && !held){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ round " + kpq.rounds + ": tracking again." }
@@ -182,7 +187,7 @@ function kpqShare(r, t){
   if (!settings.share || r.clear == null || r.startStage !== "80000000" || !session) return;
   const s = session.stats(), st = {};
   for (const [id, a] of Object.entries(kpq.stageTimes)) if (r.stages[id]) st[id] = Math.round(a.at(-1));
-  kpqSent++;
+  kpqSent++; note("KPQ round sent to the KPQ leaderboard", "kpq");
   host.shareRun({kpq: true, v: 1, date: new Date(r.t0).toLocaleDateString("sv"), hour: new Date(r.t0).getUTCHours(), mode: settings.kpqMode === "Rush" ? "Rush" : "Bonus",
     party: s.party, level: s.level, job: s.job, clear: Math.round(r.clear), total: Math.round(kpqSince(r, t)), clock: r.left0 !== null,
     exp: Math.max(0, s.exp - r.exp0), mesos: Math.max(0, s.mesos - r.mesos0), stages: st, partyCode: settings.partyCode || null,
@@ -221,7 +226,7 @@ let levelsShown = 0;
 function levelNote(s){
   if (s.levelUps.length <= levelsShown) return;
   const l = s.levelUps.at(-1); levelsShown = s.levelUps.length;
-  $("#status").textContent = `Level ${l.level}!` + (l.activeMin != null ? ` Level ${l.level - 1} took ${hm(l.activeMin / 60)} of farming.` : "");
+  statusKind = "level"; $("#status").textContent = `Level ${l.level}!` + (l.activeMin != null ? ` Level ${l.level - 1} took ${hm(l.activeMin / 60)} of farming.` : "");
 }
 const hm = h => h < 1 ? Math.round(h * 60) + " min" : h.toFixed(1) + " h";
 
@@ -299,15 +304,45 @@ function feedLine(l){ const who = `<span class="who">${esc(l.who)}</span>`; let 
     ...(l.unread ? [`<span class="dim">${l.unread} that didn't read</span>`] : [])].join(", ");
   else h = esc(l.text);
   return `<div class="fl ${l.kind}"><time>${clockS(l.t)}</time><span>${h}</span></div>` }
-function feedAdd(lines){ const el = $("#feed"); if (!lines?.length) return;
-  const stick = el._stick ?? el.scrollHeight - el.scrollTop - el.clientHeight < 24;   // (_stick: renderer-layout.js, kept through resizes)
+function feedAdd(lines){ if (!lines?.length) return;
+  // map changes, level-ups, deaths, party and job go to the event log; Started/Stopped lines to both
+  const ev = lines.filter(l => EV_KINDS.has(l.kind) || l.kind === "sep"), run = lines.filter(l => !EV_KINDS.has(l.kind));
+  ev.forEach(eventAdd);
   const html = lines.map(feedLine).join("");
-  el.insertAdjacentHTML("beforeend", html);
-  while (el.children.length > 300) el.firstElementChild.remove();
-  if (stick) el.scrollTop = el.scrollHeight;
+  if (run.length) logAppend($("#feed"), run.map(feedLine).join(""));
   // the Mini view has its own copy (always at the newest line)
   const m = $("#miniFeed"); m.insertAdjacentHTML("beforeend", html); while (m.children.length > 60) m.firstElementChild.remove(); m.scrollTop = m.scrollHeight }
 const feedSep = text => feedAdd([{t: Date.now(), kind: "sep", text}]);
+function logAppend(el, html){
+  const stick = el._stick ?? el.scrollHeight - el.scrollTop - el.clientHeight < 24;   // (_stick: renderer-layout.js, kept through resizes)
+  el.insertAdjacentHTML("beforeend", html);
+  while (el.children.length > 300) el.firstElementChild.remove();
+  if (stick) el.scrollTop = el.scrollHeight }
+
+// the event log (Danny 2026-10-19: "describing things that happen like map changes, level ups, status changes ... that's also
+// where messages for the user should go"): every #status message lands here too, so the one line under Start is just the newest
+const EV_KINDS = new Set(["map", "level", "death", "party", "job"]);
+const note = (text, kind = "info") => eventAdd({t: Date.now(), kind, text});   // a line in the event log only (the status line stays)
+let statusKind = "", statusUndo = false;   // statusKind: set right before a #status write that's a level-up; statusUndo: oneFrame putting the old line back
+function eventAdd(l){ const el = $("#events"), last = el.lastElementChild;
+  // the same level twice (the level-up message and the run log's "reached level"): keep the first
+  const lv = l.kind === "level" && (String(l.text).match(/level (\d+)/i) || [])[1];
+  if (lv && [...el.children].slice(-4).some(x => x.dataset.lv === lv)) return;
+  // a message that only changed its numbers (a frame counter, "Saving 12/60") updates its line instead of adding one
+  const key = String(l.text).replace(/\d[\d,.:]*/g, "#");
+  if (l.kind === "msg" || l.kind === "bad"){
+    if (last?.dataset.key === key && l.t - +last.dataset.t < 15000){ last.outerHTML = eventLine(l, key, lv); return }
+  }
+  logAppend(el, eventLine(l, key, lv)) }
+const eventLine = (l, key, lv) => feedLine(l).replace('<div ', `<div data-key="${esc(key)}" data-txt="${esc(l.text)}" data-t="${l.t}"${lv ? ` data-lv="${lv}"` : ""} `);
+function eventStatus(){ const el = $("#status"), text = el.textContent.trim();
+  const last = $("#events").lastElementChild;
+  if (statusUndo){ statusUndo = false; if (/^Reading the MapleStory/.test(last?.dataset.txt || "")) last.remove(); return }
+  const kind = statusKind || (el.classList.contains("bad") ? "bad" : "msg"); statusKind = "";
+  if (!text || last?.dataset.txt === text) return;
+  eventAdd({t: Date.now(), kind, text}) }
+new MutationObserver(eventStatus).observe($("#status"), {childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class"]});
+eventStatus();   // the first line ("Looking for the MapleStory window...")
 
 // start/end snapshots: {t, level, pct, exp?, file?, hand?}; a hand-fixed or button snapshot isn't replaced by the automatic ones
 const snaps = {start: null, end: null};
@@ -364,7 +399,7 @@ const deaths = {confirmed: 0, lost: 0, unseen: 0};
 async function checkDeath(c, t){   // c: the chat box crop (GrindReaders.chatCrop)
   const sess = session, text = await host.ocr(await toPng(c)), lost = GrindReaders.deathFromText(text);
   if (sess !== session || !deathPending) return;
-  if (lost){ deaths.confirmed++; deaths.lost += lost; deathPending = null; log("death", {lost}) }
+  if (lost){ deaths.confirmed++; deaths.lost += lost; deathPending = null; log("death", {lost}); note(`Death confirmed in chat: lost ${fmt(lost)} EXP`, "death") }
   else if (++deathPending.tries >= 3){ deaths.unseen++; deathPending = null; log("death", {lost: null}) }
 }
 

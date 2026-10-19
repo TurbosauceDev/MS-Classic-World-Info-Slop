@@ -18,7 +18,7 @@ function dummyFill(){
   ev.push(bar(t0 + 1795e3, 120, 11), {t: t0 + 1795e3, type: "have", items: {2000000: 41, 2060000: 1310}});
   const lines = [];
   for (const e of ev){ s.add(e); if (e.t >= t0 + 1740e3) lines.push(...f.step(s.state, e.t + 2000, feedWho())); else f.step(s.state, e.t, feedWho()) }
-  dummyPrev = {session, runT0, feed: $("#feed").innerHTML, mini: $("#miniFeed").innerHTML, state: $("#stateText").textContent};
+  dummyPrev = {session, runT0, events: $("#events").innerHTML, feed: $("#feed").innerHTML, mini: $("#miniFeed").innerHTML, state: $("#stateText").textContent};
   dummyClearFeeds(); session = s; runT0 = t0 - 120e3; dummyOn = true; stopWarned = true;   // no "No EXP for 2 minutes" beep
   feedAdd([{t: t0, kind: "sep", text: "Dummy data (made up, not saved or shared)"}, ...lines]);
   $("#dummyBar").classList.remove("hidden");
@@ -37,11 +37,11 @@ function dummyClear(){
   session = p.session || GrindSession.createSession(G, {goalLevel: goalOf(), freeIds: freeIds()});
   try { renderSnaps(render()) } catch (e){ $("#status").textContent = "Dummy data: " + e.message }
   session = p.session; runT0 = p.runT0;
-  $("#feed").innerHTML = p.feed; $("#miniFeed").innerHTML = p.mini;
+  $("#feed").innerHTML = p.feed; $("#miniFeed").innerHTML = p.mini; if (p.events != null) $("#events").innerHTML = p.events;
   $("#dummyBar").classList.add("hidden");
 }
 $("#dummyClear").onclick = dummyClear;
 // Start with dummy data showing: the real run replaces it (its session, its own log)
-$("#go").addEventListener("click", () => { if (!dummyOn) return; dummyOn = false; dummyPrev = null; session = null; dummyClearFeeds(); $("#dummyBar").classList.add("hidden") }, true);
+$("#go").addEventListener("click", () => { if (!dummyOn) return; if (dummyPrev) $("#events").innerHTML = dummyPrev.events; dummyOn = false; dummyPrev = null; session = null; dummyClearFeeds(); $("#dummyBar").classList.add("hidden") }, true);
 // View → Dummy data on/off (the menu handler in renderer-settings.js calls this)
 function dummyToggle(){ dummyOn ? dummyClear() : dummyFill() }

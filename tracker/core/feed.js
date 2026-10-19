@@ -2,7 +2,7 @@
    session's state (core/session.js createSession().state) every few seconds and turns what changed into lines, so a
    busy map gives one line per kind per batch instead of a line per kill or pickup. No DOM; core.test.js runs it in Node.
 
-   step(S, t, who) -> [{t, kind, text, who?, n?, detail?, parts?, unread?}]   kind: exp | meso | loot | level | death | map
+   step(S, t, who) -> [{t, kind, text, who?, n?, detail?, parts?, unread?}]   kind: exp | meso | loot | level | death | map | party | job (the last five go to the event log)
      text is the whole line; the other fields let the window style it (parts: [{id, n, name}] for item icons) */
 (function (root){
   const EVERY = 2000;
@@ -11,7 +11,7 @@
     const every = opts.every || EVERY;
     let prev = null, lastT = 0;
     const snap = S => ({exp: S.msgExp, kills: S.kills, mob: Object.fromEntries(Object.entries(S.byMob).map(([k, m]) => [k, m.kills])),
-      mesos: S.mesos, items: {...S.items}, unread: S.unreadItems, level: S.level, deaths: S.deaths, map: S.map, mapName: S.mapName});
+      mesos: S.mesos, items: {...S.items}, unread: S.unreadItems, level: S.level, deaths: S.deaths, map: S.map, mapName: S.mapName, party: S.party, job: S.job});
     const mobName = id => G.mobs[id]?.[0] || "Monster " + id, itemName = id => G.items[id]?.n || "Item " + id;
     // "5 Blue Snails, 3 Snails, 1 more": at most three names, most killed first
     const list = (pairs, name) => { pairs.sort((a, b) => b[1] - a[1]); const shown = pairs.slice(0, 3).map(([id, n]) => n + " " + name(id)), more = pairs.slice(3).reduce((a, p) => a + p[1], 0);
@@ -23,6 +23,8 @@
       lastT = t;
       // a map change first: what follows happened on the new map
       if (now.map !== prev.map && (now.map || now.mapName)) out.push({t, kind: "map", text: `${who} entered ${G.mapnames?.[now.map] || G.maps[now.map]?.[0] || now.mapName || "a new map"}`});
+      if (now.job && now.job !== prev.job) out.push({t, kind: "job", text: prev.job ? `${who} ${you ? "are" : "is"} a ${now.job} now` : `Job: ${now.job}`});
+      if (now.party !== prev.party) out.push({t, kind: "party", n: now.party, text: now.party > 1 ? `Party of ${now.party}` + (prev.party > 1 ? ` (was ${prev.party})` : "") : `${who} ${you ? "are" : "is"} solo now`});
       const exp = now.exp - prev.exp, kills = now.kills - prev.kills;
       if (exp > 0){
         const ks = Object.entries(now.mob).map(([id, n]) => [id, n - (prev.mob[id] || 0)]).filter(p => p[1] > 0), named = ks.reduce((a, p) => a + p[1], 0);

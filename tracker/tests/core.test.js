@@ -311,5 +311,10 @@ console.log("core tests passed");
   const m = f.step(s.state, sec(6));
   assert.strictEqual(m[0].kind, "map"); assert.ok(m[0].text.startsWith("You entered "));
   assert.ok(/^You gained 999,999 EXP/.test(m[1].text), m[1].text);
+  // event log lines (Danny 2026-10-19): job read, job advance, party size
+  s.add({t: sec(7), type: "job", name: "Archer"}); s.add({t: sec(7), type: "party", size: 3});
+  assert.deepStrictEqual(f.step(s.state, sec(8), "Danny").map(x => x.text), ["Job: Archer", "Party of 3"]);
+  s.add({t: sec(9), type: "job", name: "Hunter"}); s.add({t: sec(9), type: "party", size: 1});
+  assert.deepStrictEqual(f.step(s.state, sec(10)).map(x => x.kind + ":" + x.text), ["job:You are a Hunter now", "party:You are solo now"]);
 }
 console.log("feed ok");

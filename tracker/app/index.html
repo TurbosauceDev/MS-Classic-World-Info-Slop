@@ -133,7 +133,7 @@
   .boxrow { display:flex; align-items:stretch; margin-bottom:8px; } .boxrow > .box, .boxcol > .box { margin-bottom:0; }
   .boxrow > .box.folded { align-self:flex-start; }
   .boxcol > .box:not(.folded) { flex:1 1 auto; } .boxcol > .box + .box { margin-top:8px; }
-  .boxrow #logBox:not(.folded), .boxcol #logBox:not(.folded) { display:flex; flex-direction:column; } .boxrow #feed, .boxcol #feed { flex:1 1 0px; height:auto; min-height:7.5em; } .boxrow > :not(.split) { flex:1 1 0px; min-width:0; }
+  .boxrow :is(#logBox, #eventBox):not(.folded), .boxcol :is(#logBox, #eventBox):not(.folded) { display:flex; flex-direction:column; } .boxrow :is(#feed, #events), .boxcol :is(#feed, #events) { flex:1 1 0px; height:auto; min-height:7.5em; } .boxrow > :not(.split) { flex:1 1 0px; min-width:0; }
   .boxcol { display:flex; flex-direction:column; } .boxrow .box { overflow-x:auto; }
   .split { flex:0 0 8px; align-self:stretch; cursor:col-resize; position:relative; touch-action:none; }
   .split::after { content:""; position:absolute; left:3px; top:25%; bottom:calc(25% + 8px); width:2px; border-radius:1px; background:var(--line); }
@@ -149,7 +149,7 @@
   /* ...and never so narrow its text runs one word a line: an empty line at the box's foot as wide as --floor counts
      toward its min-content, so a row wraps before a box goes under it */
   body.fit .boxrow .box:not(.folded)::after { content:""; display:block; width:var(--floor, 190px); max-width:none; height:0; }
-  #top { --floor:300px; } [data-box=stats] { --floor:250px; } #logBox { --floor:220px; } [data-box=used], [data-box=items] { --floor:230px; }
+  #top { --floor:300px; } [data-box=stats] { --floor:250px; } #logBox, #eventBox { --floor:220px; } [data-box=used], [data-box=items] { --floor:230px; }
   /* wrapped like words on a line: each box starts at its narrowest, as many as fit share a line and grow to fill it, the
      rest go to the next line (three boxes in a 700 px window: two and one, not three stacked) */
   .boxrow.wrapped { flex-wrap:wrap; gap:8px; height:auto !important; } .boxrow.wrapped > .split { display:none; }
@@ -158,7 +158,7 @@
   html { scrollbar-gutter:stable; }   /* the page's scrollbar coming and going no longer shifts every box by 10 px */
   body.measure { min-height:0; } body.measure > .tabs { margin-top:0; }   /* natural height, for "window fits the boxes" */
   .sized:not(.folded) { height:var(--h); } .boxcol > .box.sized:not(.folded) { flex:0 0 var(--h); } .box.sized:not(.folded) { overflow:auto; }
-  #logBox.sized:not(.folded) { display:flex; flex-direction:column; } #logBox.sized #feed { flex:1 1 0px; height:auto; min-height:3em; }
+  :is(#logBox, #eventBox).sized:not(.folded) { display:flex; flex-direction:column; } :is(#logBox, #eventBox).sized .feedlist { flex:1 1 0px; height:auto; min-height:3em; }
   #rzLayer { position:fixed; inset:0; pointer-events:none; z-index:40; } body:not(.rzKeys):not(.resizing) #rzLayer { display:none; }
   .hsplit { position:absolute; height:10px; cursor:row-resize; pointer-events:auto; touch-action:none; }
   .hsplit::after { content:""; position:absolute; left:30%; right:30%; top:4px; height:2px; border-radius:1px; background:var(--line); }
@@ -212,7 +212,7 @@
   body.dragging #dock:empty::before { content:"Drop here to pin it above the tabs (shows on every tab)"; color:var(--muted); font-size:12px; }
   body.dragging .tabs button[data-tab=session], body.dragging .tabs button[data-tab=loot], body.dragging .tabs button[data-tab=hist] { outline:1px dashed var(--accent); }
   /* the run log: a short window of lines, newest at the bottom, older ones scroll up */
-  #logBox h3 { margin-bottom:4px; } #feed:not(:empty) + #feedEmpty { display:none; }
+  #logBox h3, #eventBox h3 { margin-bottom:4px; } #feed:not(:empty) + #feedEmpty { display:none; }
   /* a chat-box look: a darker well with a little inset (Danny, 2026-10-18) */
   .feedlist:not(:empty) { background:color-mix(in srgb, var(--bg) 70%, #000); border:1px solid color-mix(in srgb, var(--line) 60%, transparent); border-radius:7px; padding:4px 6px; box-shadow:inset 0 1px 3px rgba(0,0,0,.35); }
   .feedlist { height:7.5em; overflow-y:auto; font-size:12px; line-height:1.5; font-variant-numeric:tabular-nums; overscroll-behavior:contain; }
@@ -221,7 +221,7 @@
   .feedlist .fl time { color:var(--muted); flex:none; } .feedlist .fl > span { min-width:0; }
   .feedlist .fl b { font-weight:600; } .feedlist .who { color:var(--accent); font-weight:600; } .feedlist .dim { color:var(--muted); }
   .feedlist .fl.exp > span { color:var(--leaf); } .feedlist .fl.meso > span { color:var(--warn); } .feedlist .fl.exp .dim, .feedlist .fl.meso .dim { color:inherit; } .feedlist .fl.level { background:var(--accent-soft); } .feedlist .fl.death span { color:var(--bad); }
-  .feedlist .fl.map, .feedlist .fl.sep { color:var(--muted); font-style:italic; }
+  .feedlist .fl.map, .feedlist .fl.sep { color:var(--muted); font-style:italic; } .feedlist .fl.bad span { color:var(--bad); } .feedlist .fl.kpq > span, .feedlist .fl.run > span { color:var(--accent); }
   .feedlist .ic { height:1.25em; width:auto; vertical-align:-0.3em; image-rendering:pixelated; margin-right:1px; }
   @keyframes feedIn { from { opacity:0; transform:translateY(6px); } }
   .over-drop { background:var(--accent-soft) !important; }
@@ -311,6 +311,7 @@
     <button data-tab="session" class="sel">Session</button><button data-tab="loot">Loot</button><button data-tab="hist" id="histBtn">History</button>
   </div>
   <section data-tab="session">
+    <div class="card" id="eventBox" data-box="events" data-title="Event log"><h3>Event log</h3><div id="events" class="feedlist" role="log" aria-label="Event log" tabindex="0"></div></div>
     <div class="card" data-box="stats" data-title="Session numbers"><h3>Session numbers</h3><div class="grid">
       <div><div class="k">EXP gained</div><div class="v" id="expTotal">-</div><div class="note" id="expPerMin"></div></div>
       <div><div class="k">Farming time</div><div class="v" id="active">-</div><div class="note">breaks over a minute left out</div></div>
@@ -389,8 +390,11 @@
           preview shows where it lands). Hold <b>Shift</b> (or <b>Alt</b>) to show the resize bars: drag the one between two
           boxes to share the width, or the one under a box to make it taller or shorter. Double-click a bar to undo it. With a
           side-by-side bar focused, the left and right arrow keys move it too. Settings → Reset box layout puts them back.</li>
-        <li><b>Run log</b>: what you gained every 2 seconds (EXP and kills, mesos, loot, level ups, deaths, map changes), newest
+        <li><b>Run log</b>: what you gained every 2 seconds (EXP and kills, mesos, loot), newest
           at the bottom. Scroll up to read back; it stays put until you scroll down again.</li>
+        <li><b>Event log</b>: everything else that happened, with the time: map changes, level ups, deaths, party and job,
+          pauses, KPQ stages and rounds, 15-minute run results, and every message the tracker shows you (the line under Start
+          is just the newest one). Read with the run log, it tells the story of the run.</li>
         <li><b>Snapshots</b>: EXP/hr from just two readings of the EXP bar (start and now), like mapleexp.com. A good check
           on the live number. Type a level or % to fix one that read wrong.</li>
         <li><b>History</b>: past sessions, your last 7 days, how long each level took, and Export CSV.</li>

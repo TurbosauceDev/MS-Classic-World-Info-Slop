@@ -342,7 +342,7 @@ function flipTo(m){ for (const [b, r] of m){ if (!b.offsetParent) continue; cons
   b.animate([{transform: `translate(${dx}px, ${dy}px)`}, {transform: "none"}], {duration: 180, easing: "cubic-bezier(.2,.7,.3,1)"}) } }
 function flip(fn){ const m = flipFrom(); fn(); flipTo(m) }
 // the run log (and Mini's copy) stays on its newest line through any resize, unless you scrolled up to read
-for (const f of [$("#feed"), $("#miniFeed")]){ f._stick = true;
+for (const f of [$("#feed"), $("#events"), $("#miniFeed")]){ f._stick = true;
   // only your own scrolling (wheel, keys, the scrollbar) lets go of the newest line: a scroll the browser makes when the box
   // changes size arrives a frame late, after the lines re-wrapped, and used to read as "scrolled up"
   for (const ev of ["wheel", "pointerdown", "keydown", "touchstart"]) f.addEventListener(ev, () => f._user = Date.now(), {passive: true});

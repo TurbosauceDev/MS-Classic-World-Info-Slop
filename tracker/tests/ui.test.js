@@ -14,7 +14,7 @@ const path = require("path"), {chromium} = require("playwright");
   if (await page.isVisible("#guide") || !await page.isChecked("#share")) throw new Error("guide answer");
   // default Session layout (Danny, 2026-10-18): numbers, monsters, then KPQ / Alerts and goal / Start and end folded
   const lay0 = await page.evaluate(() => [...document.querySelectorAll('section[data-tab=session] > [data-box]')].map(b => b.dataset.box + (b.classList.contains("folded") ? "-" : "")).join());
-  if (lay0 !== "stats,mobs,kpq-,alerts-,snaps-") throw new Error("default layout: " + lay0);
+  if (lay0 !== "events,stats,mobs,kpq-,alerts-,snaps-") throw new Error("default layout: " + lay0);
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click()));
   // Dummy data (View menu): every box filled, marked, nothing saved or shared; Start wipes it and tracks for real
   await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(100);
@@ -40,6 +40,19 @@ const path = require("path"), {chromium} = require("playwright");
     feedAdd(f.step(s.state, t + 2500, "Danny"));
     return [...document.querySelectorAll("#feed .fl")].map(l => l.className + ":" + l.textContent).join("|") });
   if (!/^fl sep:.*Started tracking\|fl exp:.*Danny gained 40 EXP from 2 kills\|fl meso:.*Danny picked up 55\|fl loot:.*Danny looted 1 Red Potion/.test(fd)) throw new Error("run log: " + fd);
+  // event log (Danny 2026-10-19): map/level/party lines and every status message land here, not in the run log; a message
+  // that only changes its numbers updates its line; a red (bad) message stays red; the level-up isn't logged twice
+  const ev = await page.evaluate(async () => {
+    const tick = () => new Promise(r => setTimeout(r, 0)), t = Date.now(), st = $("#status"), n0 = $("#events").children.length;
+    feedAdd([{t, kind: "map", text: "Danny entered Henesys"}, {t, kind: "party", text: "Party of 3"}, {t, kind: "exp", who: "Danny", n: 5, text: "Danny gained 5 EXP"}]);
+    st.textContent = "Saving sample frames: 1/60"; await tick(); st.textContent = "Saving sample frames: 2/60"; await tick();
+    st.textContent = "Couldn't capture the game: test"; st.className = "bad"; await tick(); st.className = "";
+    statusKind = "level"; st.textContent = "Level 11! Level 10 took 20 min of farming."; await tick();
+    feedAdd([{t, kind: "level", text: "Danny has reached level 11!"}]);
+    const lines = [...document.querySelectorAll("#events .fl")].slice(n0).map(l => l.className + ":" + l.querySelector("span").textContent);
+    return [lines.join("|"), /Henesys|Party of 3/.test($("#feed").textContent), /gained 5 EXP/.test($("#events").textContent), st.textContent] });
+  if (ev[0] !== "fl map:Danny entered Henesys|fl party:Party of 3|fl msg:Saving sample frames: 2/60|fl bad:Couldn't capture the game: test|fl level:Level 11! Level 10 took 20 min of farming."
+    || ev[1] || ev[2] || !/^Level 11/.test(ev[3])) throw new Error("event log: " + ev);
   // updates: Check for updates -> downloading -> ready banner; Restart and update stops (saves) the session first
   await page.evaluate(() => window.menu("settings")); await page.click("#updCheck"); await page.waitForTimeout(100);
   const up = await page.evaluate(() => [document.querySelector("#appVer").textContent, document.querySelector("#updNote").textContent, document.querySelector("#updText").textContent]);

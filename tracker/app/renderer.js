@@ -36,7 +36,7 @@ async function oneFrame(){
   if (timer != null && video?.srcObject?.active && video.videoWidth) return grab();
   const st = $("#status").textContent;
   await startCapture();
-  try { return grab() } finally { if (timer == null){ video?.srcObject?.getTracks().forEach(tr => tr.stop()); if (/^Reading the MapleStory/.test($("#status").textContent)) $("#status").textContent = st } }
+  try { return grab() } finally { if (timer == null){ video?.srcObject?.getTracks().forEach(tr => tr.stop()); if (/^Reading the MapleStory/.test($("#status").textContent) && st !== $("#status").textContent){ statusUndo = true; $("#status").textContent = st } } }
 }
 function grab(){
   // resize only when the window size changed: setting it every frame reallocates the canvas twice a second

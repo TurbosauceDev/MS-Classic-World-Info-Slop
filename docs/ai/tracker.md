@@ -92,6 +92,11 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Run log (core/feed.js, box `log` pinned in #dock by default): diffs session.state every 2 s (feed.step), so it shows
   what the session counted, not raw events. Box ids saved in a user's layout.order win; an unsaved new box stays at home.
   The dock now holds a box, so drag tests that drop "onto the dock" land relative to #logBox.
+- Event log (box `events`, #events, home = top of the Session tab): feedAdd routes feed kinds map/level/death/party/job
+  (EV_KINDS) there, sep lines to both logs. A MutationObserver on #status logs every status write (eventStatus): no need to
+  call anything new, just keep writing #status. `note(text, kind)` adds a line without touching the status. Traps: a write
+  that only changes digits within 15 s updates the last line; `statusKind = "level"` before a level write; oneFrame's restore
+  sets statusUndo. The event log isn't cleared by Start (it's the app's history); Dummy data saves/restores it.
 - Docking: dropZone = left/right third of a box → side by side; `.dropGhost` previews the landing spot. Danny never found
   the old quarter-width edge (his saved layout had no rows), so check discoverability, not just that the code works.
 - Resize (0.2.49): bars show/grab only with Shift or Alt held (body.rzKeys, also set from pointer modifier flags since the
