@@ -199,8 +199,9 @@ function render(){
   $("#mobsEmpty").classList.toggle("hidden", !!s.mobs.length); $("#itemsEmpty").classList.toggle("hidden", !!(s.items.length || s.unreadItems));
   $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${esc(m.name)}</td><td class="n">${kills(m.kills)}</td><td class="n">${mz(m.mesoPerKill)}/kill</td></tr>`).join("");   // party kills whose EXP share fits several monsters aren't listed (Danny, 2026-10-19)
   $("#items").innerHTML = (s.items.length ? `<tr class="th"><td>Item</td><td class="n">Got</td><td class="n">Each</td><td class="n">Worth</td></tr>` : "")
-    + s.items.map(i => `<tr><td>${ico(i.id)}${esc(i.name)}${i.inv ? ` <span class="note">(${i.inv} from the inventory)</span>` : ""}</td><td class="n">×${fmt(i.n)}</td><td class="n dim">${mz(i.each)}</td><td class="n">${sgm(i.total)}</td></tr>`).join("")
-    + (s.items.length ? `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.items.reduce((a, i) => a + i.n, 0))}</td><td></td><td class="n">${sgm(s.lootValue)}</td></tr>` : "")
+    + s.items.map(i => `<tr><td>${ico(i.id)}${esc(i.name)}${i.inv ? ` <span class="note">(${i.inv} from the inventory)</span>` : ""}</td><td class="n">×${fmt(i.n)}</td><td class="n dim">${mz(i.each)}${i.rough ? `<span class="note" title="Few player-shop sales seen (meso.watch): rough price">?</span>` : ""}</td><td class="n">${sgm(i.total)}</td></tr>`).join("")
+    + (s.items.length ? `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.items.reduce((a, i) => a + i.n, 0))}</td><td></td><td class="n">${sgm(s.lootValue)}</td></tr>`
+      + (s.lootHi > s.lootLo ? `<tr><td colspan="4" class="note">Likely worth ${mz(s.lootLo)} to ${mz(s.lootHi)} (middle half of player-shop sales, meso.watch)${s.lootRough ? `; ${mz(s.lootRough)} of it is priced from few sales (?)` : ""}</td></tr>` : "") : "")
     + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet: ${(s.invTabs?.etc?.last || 0) > (s.invTabs?.etc?.first || 0)
       ? "the Etc tab doesn't show more than the pickup lines already counted, so they're probably Use items (potions) or a misread line. Report a bug right after one shows up so it can be fixed"
       : "open your Etc tab for a second to count them from the inventory"}</td></tr>` : "");

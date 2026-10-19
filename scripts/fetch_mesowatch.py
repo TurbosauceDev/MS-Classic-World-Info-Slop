@@ -18,10 +18,12 @@ src = pathlib.Path(sys.argv[1])
 num = lambda x: float(x) if x not in (None, "") else None
 
 
-def row(iid, price, p25, p75, sold, low, per_set, trend=None):
-    # [median sale price, 25th pct, 75th pct, sales seen, flags: 1 = low data, 2 = priced per set, meso.watch trend or null]
+def row(iid, price, p25, p75, sold, low, per_set, trend=None, sell=None):
+    # [median sale price, 25th pct, 75th pct, sales seen, flags: 1 = low data, 2 = priced per set, meso.watch trend or null,
+    #  sell-through or null (= sold / (sold + asks): share of units put up that sold, checked against the CSV 2026-10-19)]
     return iid, [round(price), round(p25 if p25 is not None else price), round(p75 if p75 is not None else price),
-                 int(sold), (1 if low else 0) | (2 if per_set else 0), None if trend is None else round(trend, 3)]
+                 int(sold), (1 if low else 0) | (2 if per_set else 0), None if trend is None else round(trend, 3),
+                 None if sell is None else round(sell, 3)]
 
 
 out, generated = {}, None
@@ -31,7 +33,7 @@ if src.suffix.lower() == ".csv":
         kind, _, n = r["id"].partition(":")
         if kind != "basil" or not int(r.get("sold") or 0): continue   # cash-shop items aren't in our item list
         iid, v = row(str(int(n)), num(r["price"]), num(r["p25"]), num(r["p75"]), r["sold"],
-                     r.get("lowData") == "true", r.get("unitBasis") == "set", num(r.get("trend")))
+                     r.get("lowData") == "true", r.get("unitBasis") == "set", num(r.get("trend")), num(r.get("sellThrough")))
         out[iid] = v
 else:
     d = json.load(open(src)); generated = d.get("generated_at")
@@ -39,7 +41,7 @@ else:
         kind, _, n = it["id"].partition(":")
         if kind != "basil" or not it.get("sold"): continue
         iid, v = row(str(int(n)), it["price"], it.get("p25"), it.get("p75"), it["sold"],
-                     it.get("lowData"), it.get("unitBasis") == "set", it.get("trend"))
+                     it.get("lowData"), it.get("unitBasis") == "set", it.get("trend"), it.get("sellThrough"))
         out[iid] = v
 
 j = {"source": "https://meso.watch/", "read": (generated or "")[:10], "market": "Classic World", "items": out}

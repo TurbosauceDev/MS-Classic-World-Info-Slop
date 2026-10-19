@@ -202,6 +202,11 @@ const PW = D.pw?.it || {}, PWNOW = D.pw?.now || {};
 const pwSolid = id => PW[id] && !(PW[id][4] & 1) ? PW[id][0] : 0;
 const pwTrend = id => { const p = PW[id], t = p?.[5]; if (t == null || p[4] & 1 || Math.abs(t) < 0.005) return "";
   return `<span class="${t > 0 ? "up" : "down"}" title="Recent price trend (meso.watch)">${t > 0 ? "▲" : "▼"}${Math.round(Math.abs(t) * 100)}%</span>` };
+// sell-through = sold / (sold + asks): the share of units put up for sale that were bought (meso.watch). Tags use our own
+// cut-offs (about the top and bottom tenth of items with enough sales on 2026-10-17): 40%+ sells fast, under 10% slow.
+const pwSell = id => { const p = PW[id], v = p?.[6]; return v == null || p[4] & 1 ? null : v };
+const pwSellTag = id => { const v = pwSell(id); return v == null ? "" : v >= 0.4 ? ` <span class="pill p-good" title="${Math.round(v * 100)}% of units put up for sale were bought (meso.watch)">sells fast</span>`
+  : v < 0.1 ? ` <span class="pill p-bad" title="Only ${Math.round(v * 100)}% of units put up for sale were bought (meso.watch)">slow seller</span>` : "" };
 // listed now vs the usual (median) sale price; cheap = at least 20% under a solid median (our own cut-off)
 const pwNowRatio = id => PWNOW[id] && pwSolid(id) ? PWNOW[id][0] / pwSolid(id) : null;
 const pwCheap = id => { const r = pwNowRatio(id); return r != null && r <= 0.8 };
@@ -211,9 +216,9 @@ function pwNowHtml(id){ const n = PWNOW[id]; if (!n) return "";
   return `Cheapest listed now: <b>${n[0] < 10 && n[0] % 1 ? n[0] : fmt(n[0])} mesos</b> each${n[1] > 1 ? ` (×${fmt(n[1])})` : ""}${where ? ` <span class="sub">${esc(where)}</span>` : ""}${n[4] ? ` <span class="sub">by ${esc(n[4])}</span>` : ""}${vs}<br><span class="sub">meso.watch live listings as of ${esc(D.pw.listed)} UTC. Shops open and close fast; it may be gone.</span>` }
 function pwHtml(id, long){ const p = PW[id]; if (!p) return "";
   const per = p[4] & 2 ? " per set" : "", low = p[4] & 1 ? ` <span class="pill p-warn" title="Fewer than 5 sales seen: rough">few sales</span>` : "";
-  const tr = pwTrend(id) ? " " + pwTrend(id) : "";
-  return long ? `Player shops: about <b>${fmt(p[0])} mesos</b>${per}${tr} (median of ${fmt(p[3])} sale${p[3] === 1 ? "" : "s"} seen; half sold for ${fmt(p[1])}-${fmt(p[2])})${low}<br><span class="sub">meso.watch, as of ${D.pw.read}. Prices move; check before you sell.</span>`
-    : `players ~${fmt(p[0])}${per}${tr}${low}` }
+  const tr = pwTrend(id) ? " " + pwTrend(id) : "";, st = pwSellTag(id), sv = pwSell(id);
+  return long ? `Player shops: about <b>${fmt(p[0])} mesos</b>${per}${tr} (median of ${fmt(p[3])} sale${p[3] === 1 ? "" : "s"} seen; half sold for ${fmt(p[1])}-${fmt(p[2])}${sv != null ? `; ${Math.round(sv * 100)}% of units put up for sale were bought` : ""})${low}${st}<br><span class="sub">meso.watch, as of ${D.pw.read}. Prices move; check before you sell.</span>`
+    : `players ~${fmt(p[0])}${per}${tr}${low}${st}` }
 const LOOT_BY_MOB = {}; for (const [it, ms] of Object.entries(D.drops || {})) if ((it.startsWith("4000") || POTION_IDS.includes(it)) && D.items[it]?.p) for (const [mob] of ms) (LOOT_BY_MOB[mob] ||= []).push(it);
 const lootKill = (mob, pw) => (LOOT_BY_MOB[mob] || []).reduce((a, it) => a + (pw && pwSolid(it) || D.items[it].p), 0);
 function lootHr(r, rate, pw){ let v = 0; for (const [id, c] of D.maps[r.id]?.[2] || []) v += c * r.rate / r.cyc * lootKill(id, pw); return v * rate * 3600 }

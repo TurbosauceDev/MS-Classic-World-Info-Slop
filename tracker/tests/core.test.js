@@ -19,6 +19,8 @@ assert.strictEqual(st.mobs.find(m => m.name === "Blue Snail").items["4000019"], 
 assert.ok(Math.abs(st.activeMin - 591 / 60) < 1e-9, "active time from first to last pickup");
 assert.ok(Math.abs(st.killsHr - 60 / (591 / 3600)) < 1e-6);
 assert.strictEqual(st.lootValue, 10 * G.pw["4000019"][0], "Horny Mushroom Cap at its meso.watch median");
+assert.ok(st.lootLo === 10 * G.pw["4000019"][1] && st.lootHi === 10 * G.pw["4000019"][2], "loot range = meso.watch p25-p75");
+assert.strictEqual(st.lootRough, G.pw["4000019"][4] & 1 ? st.lootValue : 0, "rough part = items flagged low data");
 assert.ok(st.toLevelHrs > 0 && st.toLevelHrs < 100);
 
 // idle: a 5-minute AFK gap adds nothing to active time

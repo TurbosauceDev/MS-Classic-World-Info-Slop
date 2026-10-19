@@ -203,8 +203,11 @@
       return S;
     }
 
-    // market value of one item: player-shop median (meso.watch), else NPC sell price
+    // market value of one item: player-shop median (meso.watch), else NPC sell price. rough = meso.watch flags it low data
+    // (few sales seen); lo/hi = the middle half of its sales (p25-p75), the NPC price when it has no player-shop sales
     const worth = id => G.pw?.[id]?.[0] ?? G.items[id]?.p ?? 0;
+    const rough = id => !!(G.pw?.[id]?.[4] & 1);
+    const worthLo = id => G.pw?.[id]?.[1] ?? worth(id), worthHi = id => G.pw?.[id]?.[2] ?? worth(id);
 
     // EXP/hr over the last 5 minutes (wall time, breaks included): how you're doing right now
     function recentExpHr(){
@@ -235,10 +238,11 @@
       // pickup: the inventory is right, a line read twice (Danny's one Mace counted 2, 2026-10-18)
       for (const g of inv){ const t = S.itemT[g.id], tab = S.inv[g.tab];
         if (g.n > 0 && g.alike === 1 && t && g.n < (seenN[g.id] || 0) && !tab.first.unknown && !tab.last.unknown && tab.first.t < t.first && tab.last.t > t.last) seenN[g.id] = g.n }
-      const items = Object.entries(seenN).map(([id, n]) => ({id, name: G.items[id]?.n || "Item " + id, n, each: worth(id), total: worth(id) * n, inv: filled[id] || 0}))
+      const items = Object.entries(seenN).map(([id, n]) => ({id, name: G.items[id]?.n || "Item " + id, n, each: worth(id), total: worth(id) * n, lo: worthLo(id) * n, hi: worthHi(id) * n, rough: rough(id), inv: filled[id] || 0}))
         .sort((a, b) => b.total - a.total);
       const unreadLeft = Math.max(0, S.unreadItems - Object.values(filled).reduce((a, b) => a + b, 0));
-      const lootValue = items.reduce((a, b) => a + b.total, 0);
+      const lootValue = items.reduce((a, b) => a + b.total, 0), lootLo = items.reduce((a, b) => a + b.lo, 0), lootHi = items.reduce((a, b) => a + b.hi, 0),
+        lootRough = items.reduce((a, b) => a + (b.rough ? b.total : 0), 0);   // part of the value priced from few sales
       // used up: NPC shop price (cheapest shop), else the player-shop median; unknown price = left out of the cost
       // Use-tab items that went down between inventory looks count as used too (max of the two, like loot above)
       const usedN = {...S.used};
@@ -260,7 +264,7 @@
         // kills if the missed lines were kills at the same rate as the ones read (an estimate; only from 20% read up)
         killsEstHr: S.barExp > 0 && S.msgExp / S.barExp >= 0.2 && S.msgExp < S.barExp ? per(S.kills * S.barExp / S.msgExp) : null,
         expHr5: recentExpHr(), deaths: S.deaths, paused: S.pausedAt !== null, levelUps: S.levelUps, toGoalHrs, goalLevel: goal || null, lastExpT: S.lastExpT,
-        mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: unreadLeft, unreadLines: S.unreadItems, inv, invTabs: Object.fromEntries(Object.entries(S.inv).map(([k, v]) => [k, {first: v.first.t, last: v.last.t}])), lootValue, lootHr: per(lootValue), items, mobs,
+        mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: unreadLeft, unreadLines: S.unreadItems, inv, invTabs: Object.fromEntries(Object.entries(S.inv).map(([k, v]) => [k, {first: v.first.t, last: v.last.t}])), lootValue, lootLo, lootHi, lootRough, lootHr: per(lootValue), items, mobs,
         used, usedCost, usedCostHr: per(usedCost), netHr: per(S.mesos + lootValue - usedCost),
         // inventory mesos now minus at the first read: real money in or out, shop trips included (loot not sold yet isn't in it)
         walletNet: S.walletFirst === null ? null : S.walletLast - S.walletFirst, walletNetHr: S.walletFirst === null ? null : per(S.walletLast - S.walletFirst)};
