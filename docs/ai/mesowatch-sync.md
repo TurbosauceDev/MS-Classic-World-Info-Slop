@@ -7,6 +7,12 @@ repo via the GitHub Git Data API (no clone). Runs on Danny's chat-driven
 
 ## For future Claude Code threads working on this repo
 
+**Cloud project threads: "refresh" = `./scripts/refresh_mesowatch.sh`.** It reads the newest items CSV the poller
+pushed to `data/mesowatch-sync`, runs `python3 scripts/fetch_mesowatch.py` -> `python3 scripts/build_data.py prices` ->
+`python3 scripts/build.py`, and prints "unchanged" when the market snapshot didn't move. Then the usual site flow (push
+on Danny's word, republish the artifact). Cloud threads don't run the poller (no agent-browser, no token there); the
+poller pushes, the cloud thread consumes. Nothing on the site reads the live-listings CSV yet.
+
 You're reading this from `docs/ai/mesowatch-sync.md` in the project repo. The
 pipeline runs in a **separate chat-CLI sandbox** (paths under `/home/z/my-project/`)
 that you don't have access to from a local Claude Code clone. Two contexts:
@@ -50,7 +56,7 @@ git show data/mesowatch-sync:data/sources/mesowatch_csv/meso_watch_items.csv | h
 
 ## Data sourcing & licensing — read this first
 
-The `meso.watch` `market.json` carries this notice verbatim:
+`https://meso.watch/data/market.json` carries this notice verbatim:
 
 > Data (c) MesoWatch (meso.watch). Read from public streams by MesoWatch. Not
 > licensed for copying, redistribution, resale or model training. No permission
@@ -95,19 +101,19 @@ data/sources/mesowatch_csv/meso_watch_items.csv          (~340 KB, 1752 items)
 data/sources/mesowatch_csv/meso_watch_fresh_listings.csv  (~93 KB, 800 live listings)
 ```
 
-## File map (in Danny's CLI sandbox at /home/z/my-project)
+## File map (Danny's CLI sandbox; repo copies in `scripts/mesowatch-sync/`)
 
 | Path | Role |
 |---|---|
-| `.secrets/gh-token` | Fine-grained PAT, scoped to this repo, Contents:write. chmod 600. |
-| `scripts/meso_watch_poll.sh` | Orchestrator. Open page → fetch → diff → CSV → push. |
-| `scripts/items_to_csv.py` | Convert market.json items[] → meso_watch_items.csv. |
-| `scripts/fresh_to_csv.py` | Convert fresh.json rows[] → meso_watch_fresh_listings.csv. |
-| `scripts/gh_push_files.py` | Generic `--file LOCAL:REPO --branch B --message M` pusher. |
-| `tmp/items.json` `tmp/fresh.json` | Last-extracted payloads (the JS-extracted subset of market.json). |
-| `tmp/last_market_at.txt` `tmp/last_fresh_at.txt` | Last-processed `generated_at` timestamps (state files). |
-| `worklog.md` | Append-only run log, one section per poller tick. |
-| `download/meso_watch_items.csv` `download/meso_watch_fresh_listings.csv` | Local CSV copies. |
+| `/home/z/my-project/.secrets/gh-token` | Fine-grained PAT, scoped to this repo, Contents:write. chmod 600. |
+| `/home/z/my-project/scripts/meso_watch_poll.sh` | Orchestrator. Open page → fetch → diff → CSV → push. |
+| `/home/z/my-project/scripts/items_to_csv.py` | Convert market.json items[] → meso_watch_items.csv. |
+| `/home/z/my-project/scripts/fresh_to_csv.py` | Convert fresh.json rows[] → meso_watch_fresh_listings.csv. |
+| `/home/z/my-project/scripts/gh_push_files.py` | Generic `--file LOCAL:REPO --branch B --message M` pusher. |
+| `/home/z/my-project/tmp/items.json` `/home/z/my-project/tmp/fresh.json` | Last-extracted payloads (the JS-extracted subset of market.json). |
+| `/home/z/my-project/tmp/last_market_at.txt` `/home/z/my-project/tmp/last_fresh_at.txt` | Last-processed `generated_at` timestamps (state files). |
+| `/home/z/my-project/worklog.md` | Append-only run log, one section per poller tick. |
+| `/home/z/my-project/download/meso_watch_items.csv` `/home/z/my-project/download/meso_watch_fresh_listings.csv` | Local CSV copies. |
 
 ## How to invoke
 
@@ -115,8 +121,7 @@ data/sources/mesowatch_csv/meso_watch_fresh_listings.csv  (~93 KB, 800 live list
 Claude runs `bash /home/z/my-project/scripts/meso_watch_poll.sh` and reports what changed. No new code, no
 clone, no PAT prompts — the standing approval covers fetch + CSV + push.
 
-**Manually (Danny's own machine, persistent cron):** copy `.secrets/gh-token` + `scripts/meso_watch_poll.sh` +
-the two `*_to_csv.py` files + `gh_push_files.py` + install `agent-browser` (`npm install -g agent-browser &&
+**Manually (Danny's own machine, persistent cron):** copy the token + everything in `scripts/mesowatch-sync/` + install `agent-browser` (`npm install -g agent-browser &&
 agent-browser install`), then add a crontab entry like `*/15 * * * * /path/to/meso_watch_poll.sh >> /tmp/poller.log 2>&1`.
 
 ## Branch strategy & race safety
@@ -131,7 +136,7 @@ CSVs live on `data/mesowatch-sync` (a long-lived side branch), NOT on `claude/tr
 - The side branch is created from the default branch's HEAD on first push. To merge into the
   default branch later (e.g. for a tagged release), open a PR `data/mesowatch-sync → claude/trusting-bell-fqgar6`.
 
-`gh_push_files.py` retries up to 3 times on HTTP 422 (branch moved under us) by re-fetching HEAD and
+`scripts/mesowatch-sync/gh_push_files.py` retries up to 3 times on HTTP 422 (branch moved under us) by re-fetching HEAD and
 re-creating the commit with the new parent. force is always `false` — we never overwrite someone else's work.
 
 ## Token rotation
@@ -156,7 +161,7 @@ The PAT was pasted in chat once (chat logs are the exposure surface). To rotate:
 - **GitHub PATCH endpoint is `git/refs/heads/{branch}` (plural `refs`).** The singular `git/ref/heads/{branch}`
   works for GET but returns 404 for PATCH. Don't URL-encode the slash in `claude/trusting-bell-fqgar6`
   either — GitHub treats the encoded form as a different branch name.
-- **`market.json` is Cloudflare-cached.** Cache-busting with `?v=<timestamp>` does NOT help — the
+- **market.json is Cloudflare-cached.** Cache-busting with `?v=<timestamp>` does NOT help — the
   file genuinely is only regenerated once a day. The live listings endpoint `fresh/Classic%20World.json`
   updates roughly every 15 minutes. Don't expect both CSVs to advance on the same cadence.
 - **`window.__foo` set in one `agent-browser eval` call is not reliably visible to a later eval call.**
@@ -171,7 +176,7 @@ The PAT was pasted in chat once (chat logs are the exposure surface). To rotate:
 | `https://meso.watch/data/fresh/Classic%20World.json` | ~every 15 min | 124 KB | `generated_at`, `rows[].{id,seller,price,qty,stock,map,room,channel,seen,market}` |
 | `https://meso.watch/data/markets/index.json` | (not polled, only used in manual debugging) | 600 B | Live sales counts per market |
 
-The poller doesn't fetch `data/markets/index.json` for state tracking because the index can advance
+The poller doesn't fetch the markets index for state tracking because the index can advance
 even when neither underlying payload has new `generated_at` (index shows live sales counts that
 increment continuously, separate from the snapshot timestamps we diff against).
 
