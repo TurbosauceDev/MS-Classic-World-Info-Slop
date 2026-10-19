@@ -6,8 +6,8 @@ on:
   push:
     branches: ["claude/trusting-bell-fqgar6"]
     paths: ["dist/index.html", ".github/workflows/pages.yml"]
-  workflow_run:   # the daily shared-data commit is pushed with GITHUB_TOKEN, which doesn't trigger push workflows
-    workflows: ["shared-data"]
+  workflow_run:   # the daily shared-data + per-update mesowatch-sync commits are pushed with GITHUB_TOKEN, which doesn't trigger push workflows
+    workflows: ["shared-data", "mesowatch-sync"]
     types: [completed]
   workflow_dispatch:
 permissions:
