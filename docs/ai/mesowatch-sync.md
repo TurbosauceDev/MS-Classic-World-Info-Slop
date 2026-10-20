@@ -18,7 +18,7 @@ pipeline runs entirely in GitHub Actions (`.github/workflows/mesowatch-poll.yml`
 | **Chat CLI (manual override)** | Danny's chat tool says "refresh" → triggers `workflow_dispatch` on the same workflow | Same as above, just on-demand instead of scheduled. Uses a PAT in `/home/z/my-project/.secrets/gh-token`. |
 
 The scripts are mirrored in this repo at `scripts/mesowatch-sync/`:
-- `scripts/mesowatch-sync/mesowatch_poll_ci.sh` — the actual CI poller (fetches meso.watch, runs `scripts/refresh_mesowatch.sh`, commits to `main` if changed)
+- `scripts/mesowatch-sync/mesowatch_poll_ci.sh` — the actual CI poller (fetches meso.watch, runs `scripts/fetch_mesowatch.py` + `scripts/build_data.py` prices + `scripts/build.py` directly, commits to `main` if changed)
 - `scripts/mesowatch-sync/fresh_to_csv.py` — converts fresh.json → CSV (called by the CI poller)
 - `scripts/mesowatch-sync/meso_watch_poll.sh` — chat-CLI trigger (1-line wrapper around `workflow_dispatch`)
 - `scripts/mesowatch-sync/gh_push_files.py` — Git Data API pusher (supports --file and --delete). Used for one-off file pushes from chat (e.g. this handoff doc update). CI doesn't use it.

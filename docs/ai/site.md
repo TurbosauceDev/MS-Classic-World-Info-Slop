@@ -28,7 +28,6 @@ node tests/pages.js | tail -5               # Pages split (late icons), manifest
 node tests/monkey.js | tail -3              # random clicks/typing/Back/window sizes; SEEDS=4,5 N=300 to vary; ~100 s
 python3 scripts/pages_site.py /tmp/site     # the Pages copy pages.yml deploys (prints first-load size)
 python3 scripts/name_diff.py <base-commit>  # skill/item/monster/map renames between two data.json (CI: osms-names.yml)
-./scripts/refresh_mesowatch.sh               # "refresh": poller CSV -> fetch_mesowatch -> prices -> build
 python3 scripts/fetch_shared.py             # shared tracker runs (daily CI job does this)
 node scripts/fetch_meowdb_drops.js          # then build_data.py extras mobdb
 python3 scripts/launch_diff.py <ver>        # maplestory.io MCW client vs our data -> docs/launch_diff.md
@@ -108,9 +107,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   reports), party bonus +5%/attacker. Crafting capped at CRAFT_CAP = 8 in 00-core.js (filters D.craft.rec for every tab).
 - `data.json` / `dist` are mostly one huge line: any Read/cat/grep floods context.
 - Smoke opens pages via `tab("#t-x")` (clicks the section first; hidden buttons can't be clicked).
-- meso.watch raw JSON is behind a Cloudflare check: cloud threads never fetch it. Refresh = `./scripts/refresh_mesowatch.sh`
-  (reads Danny's poller CSV on branch `data/mesowatch-sync`, see [mesowatch-sync.md](mesowatch-sync.md)); a dev CSV dropped
-  in chat still works via `python3 scripts/fetch_mesowatch.py <csv>`.
+- meso.watch prices refresh automatically (`.github/workflows/mesowatch-poll.yml`, every 30 min at minute 7 and 37, commits to `main`); to force a run, trigger that workflow via the Actions UI or Danny's chat "refresh" trigger. Claude threads never fetch meso.watch themselves (Cloudflare check + sandbox can't reach it). A dev CSV dropped in chat still works via `python3 scripts/fetch_mesowatch.py <market.json> [listings.csv]`.
 - mapleexp.com drops are CMS v79 (China), not Classic: don't use. Its EXP table to Lv 100 is fine.
 - No drop rates exist anywhere (OSMS, meowdb have reports only); every rate on the page is an assumption, labelled.
 - Keep or sell skips quest items with the same test as Items "Hide quest items" (403xxxx ID block + quest start items; `QITEM` in 47-keep.js and 49-items.js, keep both in sync). Smoke: "keep list: no quest items".
@@ -141,7 +138,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Monkey (tests/monkey.js) found: 1e308 in a Where to train stat box scrolled phones sideways (statNum now clamps 0-99,999; edge.js test).
 
 ## Market data 2026-10-19
-- `D.pw.it[id]` gained [5] trend and [6] sell-through (= sold/(sold+asks), checked on the CSV); `D.pw.now` = cheapest live listing per non-equip item (stars 207xxxx and per-set items excluded), `D.pw.listed` its UTC time. `refresh_mesowatch.sh` now feeds both CSVs.
+- `D.pw.it[id]` gained [5] trend and [6] sell-through (= sold/(sold+asks), checked on the CSV); `D.pw.now` = cheapest live listing per non-equip item (stars 207xxxx and per-set items excluded), `D.pw.listed` its UTC time. the poller (now `scripts/mesowatch-sync/mesowatch_poll_ci.sh`, was refresh_mesowatch.sh until 2026-10-20) feeds both payloads.
 - 10-maps.js: `pwTrend`, `pwSellTag` (our cut-offs: 40%+ fast, <10% slow), `pwNowHtml`, `pwCheap` (<=0.8x a solid median). Items: Trend column, "Cheap in shops now" filter. Builder `avatar()` loads a live maplestory.io image, the page's one outside request; hidden on error (artifact sandbox may block it).
 - Trap: with vendor/ not cloned, `build_data.py prices` fails (analyze.py); inject pw into data.json in Python as the step does.
 
