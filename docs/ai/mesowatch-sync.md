@@ -1,62 +1,36 @@
 # meso.watch sync cheatsheet (for Claude threads)
 
-Automated pipeline that polls `meso.watch` for new market snapshots, regenerates
-two CSVs locally, and pushes them to the `data/mesowatch-sync` branch in this
-repo via the GitHub Git Data API (no clone). Runs on Danny's chat-driven
-"refresh" trigger (no scheduler in his sandbox — see "How to invoke" below).
+Automated pipeline that polls `meso.watch` every 30 min via a scheduled GitHub
+Actions workflow, regenerates `mesowatch_prices.json` from the latest pricing
+data, commits to `main` if anything changed, and Pages redeploys automatically.
+The chat-CLI trigger (Danny says "refresh") fires the same workflow on demand
+for an instant update outside the 30-min cron cadence.
 
 ## For future Claude Code threads working on this repo
 
-**Cloud project threads: "refresh" = `./scripts/refresh_mesowatch.sh`.** It reads the newest items CSV the poller
-pushed to `data/mesowatch-sync`, runs `python3 scripts/fetch_mesowatch.py` -> `python3 scripts/build_data.py prices` ->
-`python3 scripts/build.py`, and prints "unchanged" when the market snapshot didn't move. Then the usual site flow (push
-on Danny's word, republish the artifact). Cloud threads don't run the poller (no agent-browser, no token there); the
-poller pushes, the cloud thread consumes. The site reads the live-listings CSV as D.pw.now (cheapest non-equip listing, docs/ai/site.md "Market data").
-
 You're reading this from `docs/ai/mesowatch-sync.md` in the project repo. The
-pipeline runs in a **separate chat-CLI sandbox** (paths under `/home/z/my-project/`)
-that you don't have access to from a local Claude Code clone. Two contexts:
+pipeline runs entirely in GitHub Actions (`.github/workflows/mesowatch-poll.yml`)
+— no chat-CLI dependency, no PAT in CI, no side branch.
 
 | Context | Where | What it can do |
 |---|---|---|
-| **Chat CLI sandbox** | `/home/z/my-project/` on Danny's chat tool | Run poller, push CSVs, hold token + state files. Danny triggers by saying "refresh" in chat. |
-| **Local Claude Code** | Your clone of this repo | Read handoff (this doc), read CSVs from `data/mesowatch-sync` branch, run the scripts locally if Danny asks you to refresh from your side. |
+| **GitHub Actions (primary)** | `meso.watch poll` workflow, runs every 30 min on cron `0,30 * * * *` | Fetches meso.watch, regenerates prices, commits to `main`, Pages redeploys. Uses `GITHUB_TOKEN` (auto-injected). |
+| **Chat CLI (on-demand)** | Danny's chat tool says "refresh" → triggers `workflow_dispatch` on the same workflow | Same as above, just on-demand instead of scheduled. Uses a PAT in `/home/z/my-project/.secrets/gh-token`. |
 
-The scripts are **mirrored in this repo** at `scripts/mesowatch-sync/` — same code
-as the chat-CLI sandbox, but all paths are parameterized via the `$MESO_WATCH_ROOT`
-env var so they work in either context. To run a refresh from a local Claude Code
-session:
+The scripts are mirrored in this repo at `scripts/mesowatch-sync/`:
+- `mesowatch_poll_ci.sh` — the actual CI poller (fetches meso.watch, runs `refresh_mesowatch.sh`, commits to `main` if changed)
+- `fresh_to_csv.py` — converts fresh.json → CSV (called by the CI poller)
+- `meso_watch_poll.sh` — chat-CLI trigger (1-line wrapper around `workflow_dispatch`)
 
-```bash
-# One-time setup on Danny's machine (or your local clone)
-export MESO_WATCH_ROOT="$HOME/.meso-watch"
-mkdir -p "$MESO_WATCH_ROOT"/{tmp,download,.secrets,scripts}
-cp scripts/mesowatch-sync/*.sh scripts/mesowatch-sync/*.py "$MESO_WATCH_ROOT/scripts/"
-chmod +x "$MESO_WATCH_ROOT/scripts/"*.sh
-# Drop a fine-grained PAT at $MESO_WATCH_ROOT/.secrets/gh-token (chmod 600).
-# Scope: this repo, Contents:write only. Get it from Danny — don't paste in chat.
-npm install -g agent-browser && agent-browser install --with-deps   # needs Chrome
-
-# Trigger a refresh
-bash "$MESO_WATCH_ROOT/scripts/meso_watch_poll.sh"
-```
-
-**Standing approval** (per Danny, 2026-10-19): CSV refreshes are pre-approved
-for push + publish to `data/mesowatch-sync`. You don't need to ask before
-running the poller or pushing CSV updates. Anything beyond items pricing +
-live FM listings (e.g. pulling the per-item sales ledger, model training,
-new endpoints) — **ask Danny in-thread first**.
-
-If you only need to **read** the latest data (not trigger a refresh), pull
-the side branch:
-```bash
-git fetch origin data/mesowatch-sync
-git show data/mesowatch-sync:data/sources/mesowatch_csv/meso_watch_items.csv | head
-```
+**Standing approval** (per Danny, 2026-10-19, reaffirmed 2026-10-20):
+CSV/pricing refreshes are pre-approved for push + publish to `main`. You
+don't need to ask before the workflow runs or pushes CSV updates. Anything
+beyond items pricing + live FM listings (e.g. pulling the per-item sales
+ledger, model training, new endpoints) — **ask Danny in-thread first**.
 
 ## Data sourcing & licensing — read this first
 
-`https://meso.watch/data/market.json` carries this notice verbatim:
+The `meso.watch` `market.json` carries this notice verbatim:
 
 > Data (c) MesoWatch (meso.watch). Read from public streams by MesoWatch. Not
 > licensed for copying, redistribution, resale or model training. No permission
@@ -74,70 +48,63 @@ with him first.
 ## Flow
 
 ```
-meso.watch (Cloudflare-protected SPA)
+GitHub Actions cron (every 30 min) OR chat-CLI "refresh" trigger
    │
-   ▼  agent-browser (headless Chrome)
-   │     1. GET https://meso.watch
-   │     2. wait networkidle + 5s settle (pass Cloudflare)
-   │     3. eval (try/catch): fetch /data/market.json + /data/fresh/Classic%20World.json in parallel
-   │        parse, extract pricing fields per item, stash in localStorage
-   │     4. agent-browser storage local <key>  →  stdout (bypasses Chrome's broken 2nd-blob-download)
+   ▼  .github/workflows/mesowatch-poll.yml
+   │     1. checkout main (full history for git show HEAD:...)
+   │     2. setup Node 22 + Python 3.12
+   │     3. pip install Pillow (for squash_images.py)
+   │     4. npm install -g agent-browser + agent-browser install --with-deps
+   │     5. actions/cache@v4 restore vendor/osms_datamine_dashboard (keyed on OSMS_REF)
+   │     6. fetch_osms.sh (only if cache miss)
+   │     7. run scripts/mesowatch-sync/mesowatch_poll_ci.sh:
+   │        a. agent-browser: open https://meso.watch, pass Cloudflare
+   │        b. fetch /data/market.json + /data/fresh/Classic World.json in parallel
+   │           (stored in localStorage to sidestep Chrome's broken 2nd-blob-download bug)
+   │        c. extract localStorage values to /tmp/mesowatch-ci/tmp/
+   │        d. python3 fresh_to_csv.py  →  fresh CSV (for fetch_mesowatch.py's listings arg)
+   │        e. python3 fetch_mesowatch.py market.json fresh.csv
+   │           → updates data/sources/mesowatch_prices.json
+   │        f. git diff --quiet -- mesowatch_prices.json → if no change, exit
+   │        g. python3 build_data.py prices  →  updates data/data.json
+   │        h. python3 build.py  →  rebuilds dist/index.html
+   │        i. python3 mesowatch_claude_review.py  →  templated commit message
+   │        j. git commit -F /tmp/commit_msg.txt + git push origin HEAD:main
+   │           (commits as 'meso.watch helper <actions@github.com>')
    │
-   ▼  scripts/meso_watch_poll.sh (orchestrator)
-   │     - Compare generated_at against /home/z/my-project/tmp/last_market_at.txt + last_fresh_at.txt
-   │     - If either advanced: regenerate that CSV via scripts/items_to_csv.py or scripts/fresh_to_csv.py
-   │     - If any CSV regenerated: call scripts/gh_push_files.py
-   │
-   ▼  scripts/gh_push_files.py (Git Data API pusher, no clone)
-   │     - GET /git/ref/heads/data/mesowatch-sync  (or create branch from default if 404)
-   │     - GET /git/commits/{sha}  →  tree SHA
-   │     - POST /git/blobs  (one per file)
-   │     - POST /git/trees  (base_tree = current HEAD tree; add the new blobs)
-   │     - POST /git/commits  (parent = current HEAD; tree = new tree)
-   │     - PATCH /git/refs/heads/data/mesowatch-sync  (force=false → race-safe)
+   ▼  .github/workflows/pages.yml
+   │     workflow_run trigger: fires when 'meso.watch poll' completes
+   │     → assembles site/index.html from dist/index.html
+   │     → uploads to GitHub Pages → live site updates
    │
    ▼
-data/sources/mesowatch_csv/meso_watch_items.csv          (~340 KB, 1752 items)
-data/sources/mesowatch_csv/meso_watch_fresh_listings.csv  (~93 KB, 800 live listings)
+https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/
+   shows new prices within ~90s of the cron tick (or "refresh" trigger)
 ```
 
-## File map (Danny's CLI sandbox; repo copies in `scripts/mesowatch-sync/`)
+## File map (in Danny's chat-CLI sandbox at /home/z/my-project)
 
 | Path | Role |
 |---|---|
-| `/home/z/my-project/.secrets/gh-token` | Fine-grained PAT, scoped to this repo, Contents:write. chmod 600. |
-| `/home/z/my-project/scripts/meso_watch_poll.sh` | Orchestrator. Open page → fetch → diff → CSV → push. |
-| `/home/z/my-project/scripts/items_to_csv.py` | Convert market.json items[] → meso_watch_items.csv. |
-| `/home/z/my-project/scripts/fresh_to_csv.py` | Convert fresh.json rows[] → meso_watch_fresh_listings.csv. |
-| `/home/z/my-project/scripts/gh_push_files.py` | Generic `--file LOCAL:REPO --branch B --message M` pusher. |
-| `/home/z/my-project/tmp/items.json` `/home/z/my-project/tmp/fresh.json` | Last-extracted payloads (the JS-extracted subset of market.json). |
-| `/home/z/my-project/tmp/last_market_at.txt` `/home/z/my-project/tmp/last_fresh_at.txt` | Last-processed `generated_at` timestamps (state files). |
-| `/home/z/my-project/worklog.md` | Append-only run log, one section per poller tick. |
-| `/home/z/my-project/download/meso_watch_items.csv` `/home/z/my-project/download/meso_watch_fresh_listings.csv` | Local CSV copies. |
+| `.secrets/gh-token` | Fine-grained PAT, scoped to this repo. chmod 600. Used only by the chat-CLI trigger script (CI uses GITHUB_TOKEN). |
+| `scripts/meso_watch_poll.sh` | Chat-CLI trigger — 1-line wrapper around workflow_dispatch. (Mirror of scripts/mesowatch-sync/meso_watch_poll.sh in the repo.) |
+| `scripts/gh_push_files.py` | Git Data API pusher (supports --file and --delete). Used for one-off file pushes from chat (e.g. this handoff doc update). CI doesn't use it. |
+| `tmp/last_market_at.txt` `tmp/last_fresh_at.txt` | (Legacy) State files from the old chat-CLI poller architecture. Not used by the new CI workflow — CI uses `git diff` against existing `mesowatch_prices.json` instead. Kept for historical reference. |
+| `worklog.md` | Append-only run log, one section per chat-CLI poller tick. (Legacy.) |
 
 ## How to invoke
 
-**From chat (Danny's preferred path):** say any of `refresh`, `update mesowatch`, `meso.watch update please`.
-Claude runs `bash /home/z/my-project/scripts/meso_watch_poll.sh` and reports what changed. No new code, no
-clone, no PAT prompts — the standing approval covers fetch + CSV + push.
+**From chat (Danny's preferred path):** say any of `refresh`, `update mesowatch`,
+`meso.watch update please`. Claude runs `bash /home/z/my-project/scripts/meso_watch_poll.sh`,
+which triggers `workflow_dispatch` on the `meso.watch poll` workflow. ~60s later
+the workflow commits to `main` (if anything changed) and Pages redeploys.
 
-**Manually (Danny's own machine, persistent cron):** copy the token + everything in `scripts/mesowatch-sync/` + install `agent-browser` (`npm install -g agent-browser &&
-agent-browser install`), then add a crontab entry like `*/15 * * * * /path/to/meso_watch_poll.sh >> /tmp/poller.log 2>&1`.
+**Autonomously (no human needed):** GitHub Actions cron `0,30 * * * *` fires
+the same workflow every 30 min, on the hour and half-hour UTC.
 
-## Branch strategy & race safety
-
-CSVs live on `data/mesowatch-sync` (a long-lived side branch), NOT on `main`. Reasoning:
-
-- `main` is the production branch (Pages + CI run from it). Pushing CSVs there
-  triggers wasteful rebuilds of the site (the build doesn't read these CSVs anyway — only `data/data.json`
-  and `data/sources/*.json` go into `dist/`).
-- Danny pushes actively to the default branch. A race between his push and the poller's PATCH
-  would fail the poller (force=false is correct), but poller still burns API calls before noticing.
-- The side branch is created from the default branch's HEAD on first push. To merge into the
-  default branch later (e.g. for a tagged release), open a PR `data/mesowatch-sync → main`.
-
-`scripts/mesowatch-sync/gh_push_files.py` retries up to 3 times on HTTP 422 (branch moved under us) by re-fetching HEAD and
-re-creating the commit with the new parent. force is always `false` — we never overwrite someone else's work.
+**Manual trigger via UI:** https://github.com/TurbosauceDev/MS-Classic-World-Info-Slop/actions/workflows/mesowatch-poll.yml
+→ click "Run workflow" button → pick branch `main` → click "Run workflow".
+Uses your GitHub session auth (no PAT needed).
 
 ## Token rotation
 
@@ -145,28 +112,41 @@ The PAT was pasted in chat once (chat logs are the exposure surface). To rotate:
 
 1. Revoke the old token at https://github.com/settings/personal-access-tokens
 2. Generate a new fine-grained PAT: owner=TurbosauceDev, repo=MS-Classic-World-Info-Slop, expiration 30-90d,
-   Contents: Read and write, all other permissions No access.
-3. Write it to `/home/z/my-project/.secrets/gh-token` (just the token string, no quoting, no trailing newline
-   needed — the scripts `.strip()` it). DO NOT paste in chat — just overwrite the file directly.
+   Contents: Read and write, Workflows: Read and write, Actions: Read and write.
+   All other permissions: No access.
+3. Write it to `/home/z/my-project/.secrets/gh-token` (just the token string,
+   no quoting). DO NOT paste in chat — overwrite the file directly.
 
 ## Traps (real bugs we hit; do not regress on these)
 
-- **Chrome silently drops the second blob download.** If you `a.click()` two blob URLs in the same
-  page session back-to-back, the second one never saves. Workaround: store the data in `localStorage`
-  inside the eval, then read it back via `agent-browser storage local <key>`. Do NOT go back to
-  blob-URL downloads.
-- **agent-browser eval returns `{}` for unhandled Promise rejections.** Always wrap async IIFEs in
-  `try { ... } catch (e) { return 'ERR ' + e.message; }`. Otherwise a thrown fetch/parse error
-  looks like the eval returned an empty object and you'll chase the wrong thing.
-- **GitHub PATCH endpoint is `git/refs/heads/{branch}` (plural `refs`).** The singular `git/ref/heads/{branch}`
-  works for GET but returns 404 for PATCH. Don't URL-encode a slash in a branch name (e.g. the old `claude/trusting-bell-fqgar6`)
-  either — GitHub treats the encoded form as a different branch name.
-- **market.json is Cloudflare-cached.** Cache-busting with `?v=<timestamp>` does NOT help — the
-  file genuinely is only regenerated once a day. The live listings endpoint `fresh/Classic%20World.json`
-  updates roughly every 15 minutes. Don't expect both CSVs to advance on the same cadence.
-- **`window.__foo` set in one `agent-browser eval` call is not reliably visible to a later eval call.**
-  Each eval should re-fetch its own data instead of reading a window variable set by a previous eval.
-  (The localStorage approach sidesteps this — localStorage IS persistent across evals in the same session.)
+- **Chrome silently drops the second blob download.** If you `a.click()` two
+  blob URLs in the same page session back-to-back, the second one never saves.
+  Workaround: store the data in `localStorage` inside the eval, then read it
+  back via `agent-browser storage local <key>`. See `mesowatch_poll_ci.sh`.
+- **agent-browser eval returns `{}` for unhandled Promise rejections.** Always
+  wrap async IIFEs in `try { ... } catch (e) { return 'ERR ' + e.message; }`.
+- **GitHub PATCH endpoint is `git/refs/heads/{branch}` (plural `refs`).** The
+  singular `git/ref/heads/{branch}` works for GET but returns 404 for PATCH.
+  Don't URL-encode the slash in `main` (or any branch name) either — GitHub
+  treats the encoded form as a different branch name.
+- **`market.json` is Cloudflare-cached.** Cache-busting with `?v=<timestamp>`
+  does NOT help — the file genuinely is only regenerated once a day. The live
+  listings endpoint `fresh/Classic%20World.json` updates roughly every 15 min.
+  Don't expect both CSVs to advance on the same cadence.
+- **Git Data API ref updates don't fire push events.** Only `git push` via
+  HTTPS/SSH or the Contents API does. This bit us when the chat-CLI poller
+  pushed CSVs to a side branch and expected the workflow's `on: push` trigger
+  to fire — it didn't. The new architecture sidesteps this by running the
+  fetch+build+commit all inside one workflow.
+- **`window.__foo` set in one `agent-browser eval` call is not reliably visible
+  to a later eval call.** Each eval should re-fetch its own data instead of
+  reading a window variable set by a previous eval. (localStorage sidesteps
+  this — localStorage IS persistent across evals in the same session.)
+- **`build_data.py` partial rebuild needs OSMS data even though only the prices
+  step is being run.** `build_data.py prices` imports `analyze.py` at module
+  level, which reads `vendor/osms_datamine_dashboard/data/current/monsters.json`
+  on import. CI workflow runs `fetch_osms.sh` once, then `actions/cache` persists
+  `vendor/osms_datamine_dashboard` across runs (keyed on `OSMS_REF`).
 
 ## Endpoints polled
 
@@ -174,13 +154,8 @@ The PAT was pasted in chat once (chat logs are the exposure surface). To rotate:
 |---|---|---|---|
 | `https://meso.watch/data/market.json` | ~daily | 22 MB | `generated_at`, `items[].{id,name,category,classes,unitBasis,level,price,p25,p75,low,high,priceAll,priceBasis,priceSales,trend,sold,askMedian,asks,sellThrough,lastSold,lowData,scrolled,scrolledOnly,listings,listingShops,history,market}` |
 | `https://meso.watch/data/fresh/Classic%20World.json` | ~every 15 min | 124 KB | `generated_at`, `rows[].{id,seller,price,qty,stock,map,room,channel,seen,market}` |
-| `https://meso.watch/data/markets/index.json` | (not polled, only used in manual debugging) | 600 B | Live sales counts per market |
-
-The poller doesn't fetch the markets index for state tracking because the index can advance
-even when neither underlying payload has new `generated_at` (index shows live sales counts that
-increment continuously, separate from the snapshot timestamps we diff against).
 
 ## Decisions log
 
-See `docs/ai/decisions.md` section `## Data sync (meso.watch → GitHub)` for dated one-liners on every
-non-trivial call Danny made on this pipeline (token approach, branch target, push policy, etc).
+See `docs/ai/decisions.md` section `## Data sync (meso.watch → GitHub)` for
+dated one-liners on every non-trivial call Danny made on this pipeline.
