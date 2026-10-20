@@ -116,3 +116,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-20 Header "Theme" button becomes a cogwheel (aria-label "Settings") opening a Settings modal over a blurred backdrop; the word "Theme" wasn't obvious enough (Danny).
 - 2026-10-20 ElvUI (WoW UI addon) is one of Danny's core style inspirations: sleek, smooth, simple. Its /moveui "Toggle anchors" mover mode is the model for the site's anchor mode, first scoped to the Search everything bar and the Settings cog only (Danny).
 - 2026-10-20 Anchor mode: Danny picked option A (ElvUI movers on a grid: labelled movers, grid 8/16/32, nudge box, Search resize, Lock / Reset all) over snap slots and smart guides.
+- 2026-10-20 Anchor mode round 2 (Danny): add C's smart guide lines to A, scale per part, theme (colour) editor lives in the anchor editor ("Colours"), Esc = Done, F1 opens it (Chrome's F1 help kept opening by accident).

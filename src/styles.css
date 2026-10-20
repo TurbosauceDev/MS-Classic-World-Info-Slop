@@ -744,6 +744,7 @@ kbd{font:600 12px var(--f-mono);padding:1px 5px;border:1px solid var(--line);bor
 /* Toggle anchors (72-anchors.js, ElvUI /moveui style): header gets a grid, labelled movers sit over Search and the cog,
    the rest of the page blurs back; bar fixed at the bottom of the window */
 #srchopen,#thopen{transition:transform .2s cubic-bezier(.2,.8,.2,1),width .2s,border-color .15s,background-color .15s,color .15s,box-shadow .15s}
+#srchopen,#thopen{transform-origin:0 0}
 #srchopen.anchdrag,#thopen.anchdrag{transition:none}
 #srchopen{white-space:nowrap;overflow:hidden;justify-content:center;box-sizing:border-box}
 html.anchoring header{z-index:30;border-radius:12px;background-color:color-mix(in srgb,var(--accent) 7%,transparent);background-image:linear-gradient(color-mix(in srgb,var(--accent) 18%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--accent) 18%,transparent) 1px,transparent 1px);background-size:var(--anchgrid,16px) var(--anchgrid,16px);outline:1px dashed color-mix(in srgb,var(--accent) 55%,transparent);animation:fadein .2s ease-out}
@@ -766,3 +767,25 @@ html.anchoring .wrap>:not(header):not(.srch){filter:blur(2px);opacity:.5;pointer
 .anchbar .btn{background:transparent;color:inherit;border-color:color-mix(in srgb,currentColor 30%,transparent)}
 .anchbar .btn[aria-pressed="true"],.anchbar .btn.pri{background:var(--bg);color:var(--ink)}
 @media (max-width:760px){#srchopen,#thopen{transform:none!important}}
+.anchsc{position:absolute;right:-5px;bottom:-5px;width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid var(--panel);cursor:nwse-resize}
+.anchguide{position:absolute;z-index:5;background:var(--accent);pointer-events:none;box-shadow:0 0 0 1px color-mix(in srgb,var(--panel) 60%,transparent)}
+.anchguide[hidden]{display:none}
+.anchguide.v{width:1px;top:-8px;bottom:-8px}.anchguide.h{height:1px;left:-8px;right:-8px}
+.anchnudge .sc{grid-column:1/-1;display:flex;align-items:center;gap:8px}
+.anchnudge .sc input{flex:1;width:auto;padding:0}
+.anchnudge output{font:500 13px var(--f-mono);min-width:44px;text-align:right}
+.anchcol{position:fixed;z-index:61;left:max(16px,env(safe-area-inset-left,0px));bottom:76px;width:min(340px,calc(100vw - 32px));max-height:calc(100vh - 110px);overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:12px 14px;animation:popin .18s ease-out;font-size:14.5px}
+.anchcol[hidden]{display:none}
+.anchcol .thnote{color:var(--muted);font-size:13.5px;margin:0}
+.anchcolhd{display:flex;justify-content:space-between;align-items:center}
+.anchcolhd b{font:700 19px var(--f-display)}
+.anchcolhd .btn{width:32px;height:32px;padding:0;font-size:20px;line-height:1}
+.anchcol .nm{display:flex;align-items:center;gap:8px;font-weight:600}
+.anchcol .nm input{flex:1}
+.anchcolgrid{display:grid;grid-template-columns:1fr;gap:6px}
+.anchcolgrid label{display:flex;align-items:center;gap:6px;min-width:0;font-size:13.5px}
+.anchcolgrid input{width:28px;height:28px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer;flex:none}
+.anchcolgrid span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.anchcolgrid code{font:12px var(--f-mono);color:var(--muted)}
+.anchwarn{color:var(--bad)!important}
+.anchcol .throw .btn{margin:0}

@@ -43,6 +43,15 @@
     try { await navigator.clipboard.writeText(code); msg("Code copied: paste it in the tracker under Settings > Theme > Share a theme.") }
     catch { $("#thcode").value = code; msg("Copy the code from the box above.") }
   });
+  // for the colour editor in anchor mode (72-anchors.js): the theme in use as plain colours, preview, keep as one of "mine"
+  window.SITETHEME = {
+    now: () => TH.resolve(now(), dq.matches),
+    preview: t => siteTheme(t),
+    revert: () => { const t = now(); siteTheme(t === TH.PRESETS[0] ? null : t) },
+    save: t => { t = TH.clean(t); if (!t) return null; if (TH.PRESETS.some(p => p.name === t.name)) t.name += " (mine)";
+      ls("themes", [...mine().filter(x => x.name !== t.name), t].slice(-20)); use("u:" + t.name); return t.name },
+    code: t => TH.encode(t), TOKENS: TH.TOKENS,
+  };
   // a light/dark theme (Default, Purple) follows the system setting live
   dq.addEventListener("change", () => { const t = now(); if (t !== TH.PRESETS[0]) siteTheme(t); if (!pop.hidden) draw() });
 })();

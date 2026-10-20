@@ -115,6 +115,29 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.evaluate(() => localStorage.setItem("anchors", JSON.stringify({search: {x: 0.1, y: 10}}))); await p.setViewportSize({width: 600, height: 900}); await p.reload(); await p.waitForTimeout(300);
     check(await p.$eval("#srchopen", e => getComputedStyle(e).transform) === "none" && await p.isDisabled("#anchtog"), "anchors: phones keep the default header, Toggle anchors off");
     check(!errs.length, "anchors: no JS errors " + errs.join(" | ")); await ctx.close() }
+  // anchors round 2 (Danny 10-20): F1 toggles (no browser help), smart guides, scale, Colours theme editor
+  { const {p, errs, ctx} = await page({viewport: {width: 1800, height: 1000}}); await p.goto(URL); await p.waitForTimeout(300);
+    await p.keyboard.press("F1"); const f1 = await p.evaluate(() => document.documentElement.classList.contains("anchoring"));
+    // drag the cog to roughly under the header's middle: its center sticks to the center line, the guide shows mid-drag
+    const m = await (await p.$(".anchmv[data-id=cog]")).boundingBox(), hr = await (await p.$("header")).boundingBox();
+    await p.mouse.move(m.x + m.width / 2, m.y + m.height / 2); await p.mouse.down();
+    await p.mouse.move(hr.x + hr.width / 2 + 3, m.y + m.height / 2 + 30, {steps: 10});
+    const guide = await p.isVisible(".anchguide.v"); await p.mouse.up();
+    const c = await p.$eval("#thopen", e => { const r = e.getBoundingClientRect(); return r.x + r.width / 2 });
+    check(f1 && guide && Math.abs(c - (hr.x + hr.width / 2)) < 1.5, `anchors: F1 opens, cog snaps to the center guide (${c} vs ${hr.x + hr.width / 2})`);
+    await p.click(".anchmv[data-id=cog]"); await p.$eval(".anchnudge input[type=range]", e => { e.value = 150; e.dispatchEvent(new Event("input", {bubbles: true})); e.dispatchEvent(new Event("change", {bubbles: true})) });
+    await p.waitForTimeout(350); const sc = await p.evaluate(() => JSON.parse(localStorage.getItem("anchors")).cog.s), big = await p.$eval("#thopen", e => e.getBoundingClientRect().width / e.offsetWidth);
+    check(sc === 1.5 && big > 1.6, `anchors: scale 150% saved and drawn (${sc}, ${big.toFixed(2)})`);
+    await p.click(".anchbar [data-cols]"); await p.$eval('.anchcol [data-tok="bg"]', e => { e.value = "#123456"; e.dispatchEvent(new Event("input", {bubbles: true})) });
+    const live = await p.evaluate(() => document.documentElement.style.getPropertyValue("--bg"));
+    await p.click(".anchcol [data-undo]"); const undone = await p.evaluate(() => document.documentElement.style.getPropertyValue("--bg"));
+    await p.$eval('.anchcol [data-tok="accent"]', e => { e.value = "#ff00aa"; e.dispatchEvent(new Event("input", {bubbles: true})) });
+    await p.fill(".anchcol [data-name]", "Edge pink"); await p.click(".anchcol [data-save]");
+    await p.keyboard.press("Escape"); const done = await p.evaluate(() => !document.documentElement.classList.contains("anchoring") && document.querySelector(".anchcol").hidden);
+    await p.reload(); await p.waitForTimeout(300);
+    const kept = await p.evaluate(() => [document.documentElement.style.getPropertyValue("--accent"), localStorage.getItem("theme")].join());
+    check(live === "#123456" && undone === "" && done && kept === "#ff00aa,\"u:Edge pink\"", `anchors: Colours previews live, Undo reverts, Save keeps it as my theme, Esc = Done (${live} | ${undone} | ${kept})`);
+    check(!errs.length, "anchors round 2: no JS errors " + errs.join(" | ")); await ctx.close() }
 
   // 8. big tables draw in chunks (tab switches were 150-400 ms): first rows now, every row after scrolling
   { const {p, ctx} = await page(); await p.goto(URL); await open(p, "craft"); await p.waitForTimeout(100);
