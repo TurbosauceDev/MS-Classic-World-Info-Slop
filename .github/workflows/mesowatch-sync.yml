@@ -62,7 +62,7 @@ jobs:
       - name: Commit + push
         if: steps.check.outputs.changed == '1'
         run: |
-          git config user.name "meso.watch bot"
+          git config user.name "meso.watch helper"
           git config user.email "actions@github.com"
           git add data/sources/mesowatch_prices.json data/data.json dist/index.html
           git commit -F /tmp/commit_msg.txt
