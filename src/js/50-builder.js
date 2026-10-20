@@ -222,9 +222,9 @@ function calc(sp){
   let min = 0, max = 0, mast = 0, faRate = 0, faPct = 0;
   if (ai && ai.kind === "magic"){
     const magic = Math.floor(ap.INT / 2) + (w?.mad || 0) + matkB;
-    mast = (0.1 + ai.mast / 10) * 0.8;
-    min = ai.pct / 100 * magic * (ap.INT * mast / 100 + 1);
-    max = ai.pct / 100 * magic * (ap.INT / 100 + 1);
+    mast = (0.1 + ai.mast / 10) * 0.7;   // launch client: mastery ×0.7, INT/125 (OSMS formulas page)
+    min = ai.pct / 100 * magic * (ap.INT * mast / 125 + 1);
+    max = ai.pct / 100 * magic * (ap.INT / 125 + 1);
   } else if (ai && w){
     const ammo = (AMMO[w.type] || []).find(a => a[0] === S.ammo)?.[1] || 0;
     const watk = w.pad + ammo;
@@ -236,7 +236,7 @@ function calc(sp){
     else if (ranged) wmult = wm[2];
     else if (STAB_ONLY.has(sk.n)) wmult = wm[1];
     else { const sw = SWING_SHARE[w.type] ?? 0.6; wmult = wm[0]*sw + wm[1]*(1-sw) }
-    mast = sk.n === "Lucky Seven" ? 0.5 : (0.1 + mastLv / 10) * 0.8;
+    mast = sk.n === "Lucky Seven" ? 0.5 : (0.1 + mastLv / 10) * 0.7;
     const mult = ai.pct / 100;
     min = mult * (0.8 + (prim * wmult * mast + sec) / 100 + atkB / 50) * watk;
     max = mult * (1.0 + (prim * wmult + sec) / 100 + atkB / 50) * watk;
@@ -363,14 +363,14 @@ function applyDefaults(){
   return {bl, fams, wl, w, al, am};
 }
 // Beginner (below 10): basic attack, Wooden Club then Razor from level 5, creation + level AP all in the future main stat
-// (meowdb beginner guide). STR/DEX drive a Beginner's basic attack; accuracy uses the Warrior formula (Beginner's isn't known).
+// (meowdb beginner guide). STR/DEX drive a Beginner's basic attack; accuracy = trunc(common / 2.5 + 5) (OSMS launch client).
 function beginnerAt(cls, L){
   const ap = {STR:4, DEX:4, INT:4, LUK:4}; ap[PRIMARY[cls]] += apTotal(L) - 16;
   const w = W.find(x => x.name === (L >= 5 ? "Razor" : "Wooden Club")), wm = WMULT[w.type], sw = SWING_SHARE[w.type] ?? 0.6;
-  const wmult = wm[0] * sw + wm[1] * (1 - sw), mast = 0.08;
+  const wmult = wm[0] * sw + wm[1] * (1 - sw), mast = 0.07;
   const min = (0.8 + (ap.STR * wmult * mast + ap.DEX) / 100) * w.pad, max = (1 + (ap.STR * wmult + ap.DEX) / 100) * w.pad;
   const critF = 0.95 + 0.05 * 1.2, interval = 0.42 + 0.06 * w.spd;
-  return {dps: (min + max) / 2 * critF / interval, acc: (ap.DEX * 1.2 + L * 2 + ap.LUK * 0.6) / 2.5 + 10, branch: "Beginner", weapon: w.name, wid: w.id, skill: "Basic attack"};
+  return {dps: (min + max) / 2 * critF / interval, acc: Math.trunc((ap.DEX * 1.2 + L * 2 + ap.LUK * 0.6) / 2.5 + 5), branch: "Beginner", weapon: w.name, wid: w.id, skill: "Basic attack"};
 }
 // class guide build (16-guides.js): first-job SP in the guide's order (kept above 30, 2nd-job SP auto), and up to 30 the
 // guide's AP and weapons; the attack is whichever of the skilled ones does most (AoE build: as if ~3 monsters are in reach)

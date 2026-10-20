@@ -15,12 +15,16 @@ const path = require("path");
     const got = await p.evaluate(([c, l]) => hpmpAt(c, l), [cls, L]);
     check(got[0] === want[0] && got[1] === want[1], `${cls} ${L} HP/MP ${want.join("/")}`, got);
   }
-  // EXP table: 1-49 confirmed, 50 and 99 from the formula (meowdb EXP guide)
-  const exp = await p.evaluate(() => [D.exp[10], D.exp[49], D.exp[50], D.exp[99]]);
-  check(exp.join() === [1716, 655200, 709716, 9692044].join(), "EXP to next at 10 / 49 / 50 / 99", exp);
-  // monster mesos: Ribbon Pig 18-23 per kill (meowdb player report), unreported ones ~2 per level
-  const ms = await p.evaluate(() => [mesoKill("10"), D.mesok]);
-  check(ms[0] === 20.5 && ms[1] === 2, "mesos per kill: Ribbon Pig 20.5, estimate 2 per level", ms);
+  // EXP table: launch client (OSMS formulas page): 1-50 closed form, 51-89 ×1.0548, 90-99 ×2.1 (Lv 90 needs 11,938,059)
+  const exp = await p.evaluate(() => [D.exp[10], D.exp[49], D.exp[50], D.exp[90], D.exp[99]]);
+  check(exp.join() === [1716, 655200, 709716, 11938059, 9482161548].join(), "EXP to next at 10 / 49 / 50 / 90 / 99", exp);
+  // monster mesos (OSMS formulas page): Ribbon Pig Lv 10 base 24, drops 21-26 on 67% of kills -> 15.76 avg per kill
+  const ms = await p.evaluate(() => [Math.round(mesoKill("10") * 100) / 100, mesoRange(10).join("-")]);
+  check(ms[0] === 15.76 && ms[1] === "21-26", "mesos per kill: Ribbon Pig 21-26 on 67% of kills = 15.76", ms);
+  // launch-client formulas (OSMS formulas page): damage taken, party bonus (all members hitting), Iron Arrow 0.8^k
+  const lc = await p.evaluate(() => [hitTaken(100, 50, 30), ...[2, 4, 6].map(n => Math.round(partyBonus(n) * 100)), D.craft.rec.every(r => r[2] <= 8)]);
+  check(lc.join() === [114, 15, 45, 55, true].join(),
+    "damage taken Atk 100 DEF 50 Lv 30 = 114; party bonus 2/4/6 = 15/45/55%; crafting capped at Lv 8", lc);
   // portals to the nearest potion NPC (meowdb class guides)
   const pots = await p.evaluate(() => { const id = n => Object.keys(D.maps).find(k => D.maps[k][0].trim() === n && D.maps[k][1]);
     return ["Line 1 <Area 1>", "Transfer Area", "Tree Dungeon, Forest Up North IV", "Ant Tunnel III"].map(n => POTS[id(n)]?.[0]) });

@@ -31,7 +31,8 @@ function hpmpAt(cls, L, hpPct = 0, mpPct = 0, second = L >= 30){
 // (Invincible cuts physical only; Magic Guard both). Monsters with a magic attack (maplestory.quest raw client: only
 // Tauromacis and Taurospear at launch) also hit with Magic Attack against M.DEF; the worse of the two counts.
 // Armor isn't counted (we don't model it), so real danger is lower. meowdb labels: <10% Safe, 10-24% Caution, 25-49% Danger, 50%+ Lethal.
-const hitTaken = (atk, def, L) => { const raw = atk * 1.3; return Math.max(1, Math.trunc(raw * (1 - def / (def + 5 * (L + 40) + 1.2 * raw)))) };
+// launch client (OSMS formulas page, damage taken): I × (1 − D / (D + 2I + 300)) − D/25 − Level/10, I = Atk × 1.3 on average
+const hitTaken = (atk, def, L) => { const raw = atk * 1.3; return Math.max(1, Math.trunc(raw * (1 - def / (def + 2 * raw + 300)) - def / 25 - L / 10)) };
 function touchPct(mobId, L, d){
   const a = D.mobatk?.[mobId]; if (!a || !d.hp) return 0;
   const phys = hitTaken(a[0], d.wdef, L) * (d.mult ?? 1), mag = a[3] ? hitTaken(a[2], d.mdef || 0, L) * (d.mmult ?? d.mult ?? 1) : 0;
@@ -65,7 +66,8 @@ const POTS = (() => { const out = {}, q = [];
   return out })();
 const potsText = mid => { const p = POTS[mid]; return p ? `${p[0]} portal${p[0] === 1 ? "" : "s"} to ${p[1]}` : "" };
 // party (meowdb EXP guide): +10/20/30% bonus EXP at 2/3/4+ players. Assumes equal players sharing the kills and the EXP evenly.
-const partyBonus = n => [0, 0, 0.1, 0.2, 0.3, 0.3, 0.3][n] || 0;
+// OSMS party EXP (azzy): min(30%, 10% × (eligible − 1)) + 5% × (members who hit it − 1); assumes everyone hits
+const partyBonus = n => n > 1 ? Math.min(0.3, 0.1 * (n - 1)) + 0.05 * (n - 1) : 0;
 // share of a map's spawn points alive at once: its mob capacity (OSMS maps.json: solo target from map size, checked in game)
 // over its spawn points, at most 1. Players on the map add floor(0.75 × (players − 5)) (OSMS theory from 3 counts, unverified),
 // so a party of up to 5 gets no more monsters than solo. Maps without a capacity: meowdb's 75% solo, +5% a player.
@@ -75,8 +77,13 @@ const mapShare = (mid, n = 1) => { const m = D.maps[mid]; if (!m) return 0.75;
 let ACC_FROM_BUILDER = null; // set by "Use this in Where to train"; cleared when class or level is changed here
 const accFor = (cls, L) => classAcc(MAGIC.has(cls) ? "Magician" : cls, L);
 // seconds to kill one monster (HP / damage after hit chance, defense, level penalty, element) + 1 s walking and aiming
-// mesos one kill drops: community reports on meowdb (D.meso), else D.mesok × level (the reported monsters' median, ~2 per level)
-const mesoKill = id => D.meso?.[id]?.[0] ?? (D.mesok || 0) * (D.mobs[id]?.[1] || 0);
+// mesos one kill drops, OSMS formulas page (azzy, fitted to captures): base = floor(2.1 × level) + 3, each drop floor(base ×
+// rand(90..110) / 100), dropped on ~67% of kills. Returns the expected mesos per kill.
+const MESO_CHANCE = 0.67;
+const mesoRange = L => { const b = Math.floor(21 * L / 10) + 3; return [Math.floor(b * 90 / 100), Math.floor(b * 110 / 100)] };
+const mesoAvg = L => { if (!L) return 0; const b = Math.floor(21 * L / 10) + 3;
+  let s = 0; for (let r = 90; r <= 110; r++) s += Math.floor(b * r / 100); return MESO_CHANCE * s / 21 };
+const mesoKill = id => mesoAvg(D.mobs[id]?.[1]);
 function mobKill(m, cls, L, dps, acc){
   const [nm, lv, hp, ex, eva, pdd, mdd, el] = m, magic = MAGIC.has(cls), els = ELEMS[cls] || [];
   const diff = lv - L, hit = hitProb(acc, eva, diff);
@@ -88,8 +95,8 @@ function mobKill(m, cls, L, dps, acc){
 // the others on the same platform (within 60 px up/down) inside the attack's reach, facing the busier side; the map's
 // mapShare() of spawns are alive solo; capped at the skill's target count. reach = [front, back] px.
 const AOE = {};
-// damage lost per extra target: Iron Arrow pierces at 100/80/60/40% (meowdb damage formula)
-const AOE_FALL = {"Iron Arrow": 0.2};
+// damage kept per extra target: Iron Arrow pierces at 0.8^k (1, 0.8, 0.64, 0.512; OSMS launch client)
+const AOE_FALL = {"Iron Arrow": 0.8};
 function aoeHits(mid, targets, reach, fall = 0){
   if (!targets || targets <= 1 || !reach) return 1;
   const key = `${mid}|${targets}|${reach}|${fall}`; if (AOE[key]) return AOE[key];
@@ -101,7 +108,7 @@ function aoeHits(mid, targets, reach, fall = 0){
       if (dx >= 0 && dx <= reach[0]) r++; if (dx <= 0 && -dx <= reach[0]) l++;
       if (dx < 0 && -dx <= reach[1]) rb++; if (dx > 0 && dx <= reach[1]) lb++; });
     const n = Math.min(targets, 1 + alive * Math.max(r + rb, l + lb));
-    sum += n - fall / 2 * n * (n - 1);   // n targets at 1, 1 - fall, 1 - 2·fall, ... (fractional n interpolates)
+    sum += fall ? (1 - fall ** n) / (1 - fall) : n;   // n targets at 1, fall, fall², ... (fractional n interpolates)
   });
   return AOE[key] = sum / P.length;
 }
@@ -123,7 +130,7 @@ function mapRates(cls, L, dps, acc, floor = 12, aoe = null, party = 1){
     const avg = lvSum / n; if (avg < L - floor) continue;
     const raw = Math.min(party * exp / time, exp * mapShare(mid, party) / 7.56) / party, rate = raw * (1 + partyBonus(party));
     // att = share of the time you're attacking (not walking, not waiting for respawns): for potion/ammo upkeep
-    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate, cyc: exp, hits, meso: rate * mes / exp, att: Math.min(1, raw * time / exp) * (time - walk) / time});   // kills/s of a mob = count × rate / cyc
+    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate, cyc: exp, hits, meso: raw * mes / exp, att: Math.min(1, raw * time / exp) * (time - walk) / time});   // kills/s of a mob = count × rate / cyc
   }
   return rows.sort((a,b) => b.rate - a.rate);
 }
@@ -173,7 +180,7 @@ function trainDps(cls, L, b, basic){
     return b.max && !b.magic ? {dps: per((b.min + b.max) / 2 / p0), src: "default"} : {dps: 20 * L, src: "guess"} }
   if (DPS_FROM_BUILDER) return {dps: DPS_FROM_BUILDER, src: "builder"};
   if (b.magic){ const mag = statNum("#umag"), int = statNum("#uint");
-    if (mag && int != null) return {dps: per(mag * (int * (b.mast || 0) / 100 + 1 + int / 100 + 1) / 2), src: "you"} }
+    if (mag && int != null) return {dps: per(mag * (int * (b.mast || 0) / 125 + 1 + int / 125 + 1) / 2), src: "you"} }
   else { const m = $("#atk").value.match(/(\d+)\D+(\d+)/); if (m) return {dps: per((+m[1] + +m[2]) / 2), src: "you"} }
   return b.dps > 0 ? {dps: b.dps, src: "default"} : {dps: 20 * L, src: "guess"};
 }
@@ -295,12 +302,12 @@ function rankMaps(){
   $("#mapnote").innerHTML = `Damage: <b>${fmt(Math.round(dps))}</b>/s ${src === "builder" ? "from your Character Builder setup" : src === "you" ? `from your ${magIn ? "Magic and INT" : "Attack range"} with ${how}, from the default build at your level` : src === "default" ? `from the Character Builder's default build at level ${L} (${esc(fb.weapon || "")}, ${basic ? "basic attacks" : esc(fb.skill || "")}); type your stat-window ${magIn ? "Magic and INT" : "Attack range"} for your own` : `a rough guess (20 × level)${basic && fb.magic ? "; type your stat-window Attack range for wand or staff hits" : ""}`}. `
     + (statNum("#uacc") != null ? `Accuracy <b>${Math.round(acc)}</b> as typed.` : ACC_FROM_BUILDER != null ? `Accuracy <b>${Math.round(acc)}</b> from your Character Builder setup.`
     : `Assumed accuracy at level ${L}: <b>${Math.round(acc)}</b> (all AP in your main stat, secondary stat equal to your level, no accuracy gear${cls==="Warrior"&&L>=15?", Precise Strikes maxed":cls==="Thief"&&L>=15?", Nimble Body maxed":""}).`)
-    + (need ? ` Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP.` : "") + (L > EXP_SURE && need ? ` EXP needed above level ${EXP_SURE} is meowdb's historical table (not yet confirmed in Classic).` : "")
+    + (need ? ` Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP.` : "") + ""
     + (area ? ` Attack: <b>${esc(area.n)}</b>, up to ${area.t} monsters within ${area.r[0]}${area.r[1] ? ` / ${area.r[1]}` : ""} px; hits per cast are estimated from each map's spawn points.`
       : basic ? ` Basic attacks only (100%, one hit${fb.weapon ? `, ${esc(fb.weapon)} speed` : ""}).` : $("#aoe").value ? ` ${esc(cls)} has no area attack at level ${L}, so this is single target.` : ` Single target.`)
     + (party > 1 ? ` Party of ${party}: your share of the EXP plus the ${Math.round(partyBonus(party) * 100)}% party bonus, map capacity +${Math.max(0, Math.floor(0.75 * (party - 5)))} monsters (OSMS theory, unverified; assumes equal players splitting kills).` : "")
     + ` Danger: one touch from the map's hardest hitter as a share of ${DEF_FROM_BUILDER || statNum("#uhp") != null ? "your" : "a typical"} Max HP (${fmt(def.hp)}), before armor.`
-    + ` Mesos/hr = monster meso drops: player reports on meowdb for ${Object.keys(D.meso || {}).length} monsters, the rest estimated at ${D.mesok} mesos per monster level (what the reported ones average). Loot sold to NPCs isn't counted.`
+    + ` Mesos/hr = monster meso drops: floor(2.1 × monster level) + 3, ±10%, on about 67% of kills (OSMS formulas page); a party splits them evenly on average. Loot sold to NPCs isn't counted.`
     + (frugal ? ` <b>Frugal:</b> only maps that pay for themselves and aren't Danger/Lethal, fastest EXP first. Net = mesos/hr minus ${basic ? (ammoP ? `ammo for basic attacks` : "nothing for basic attacks") : COST_FROM_BUILDER ? "your build's skill potions and ammo" : `a default ${esc(cls)} build's skill potions and ammo`} (${fmt(cost?.mesoHr || 0)}/hr attacking nonstop, times the time spent attacking) minus Red Potions for getting hit (estimate: ${({"0.1": "1 in 10", "0.25": "1 in 4", "0.5": "half", "1": "every one"})[$("#hitsh").value]} of the monsters you kill attack${hitsh === 1 ? "s" : ""} you once, at their hit chance against your avoid, no armor). ${+$("#lootr").value ? `Plus loot sold to NPCs: each monster's reported ETC item and potion drops (meowdb player reports) at ${Math.round($("#lootr").value * 100)}% per kill each (an assumption: drop rates aren't in the game files), ${$("#lootp").value === "pw" ? "at the median player-shop sale price (meso.watch, " + D.pw.read + ") where it has 5+ sales, else NPC sell price; selling to players takes a shop and time" : "at NPC sell price"}; ores, gems, equips and scrolls aren't counted.` : "Loot sold to NPCs isn't counted."} Potions its monsters drop are listed under the map name.${rows.some(r => r.real != null) ? ` "(players' costs)": instead of both estimates, what grind tracker players near your level really spent there on potions, food and ammo (median, 3+ players).` : ""}`
       + (loss ? ` <b>No map comes out meso positive at this level and damage</b>; these lose the least.` : "") : "")
     + (!frugal && COST_FROM_BUILDER ? ` Your build's potions and ammo: up to ${fmt(COST_FROM_BUILDER.mesoHr)} mesos/hr while attacking nonstop; on the top map you attack about ${Math.round((top[0]?.att ?? 1) * 100)}% of the time, so about ${fmt(COST_FROM_BUILDER.mesoHr * (top[0]?.att ?? 1))}/hr. "net" = mesos/hr minus that.` : "")

@@ -2,8 +2,8 @@
 (() => {
 const C = D.craft, DISC = C.disc.map(d => d[0]);
 // craft level -> [craft EXP to finish it, character level needed to reach it]. Not in the export's data files: from the OSMS
-// Data Explorer crafting tab (tabs/crafting.js, CRAFT_LEVELS_COT2), read from the COT2 client. Gate = 5 x craft level.
-const CRAFT_LV = [[50, null], [166, 10], [319, 15], [521, 20], [787, 25], [1138, 30], [1602, 35], [2214, 40], [3022, 45], [4089, 50]];
+// Data Explorer formulas page (Tables & Progression, CRAFT_LEVELS), read from the launch client. Gate = 5 x craft level, cap Lv 8.
+const CRAFT_LV = [[50, null], [166, 10], [319, 15], [521, 20], [787, 25], [1138, 30], [1602, 35], [2214, 40]];
 const R = C.rec.map(([d, type, lvl, id, n, exp, mesos, ing], i) => ({i, d, type, lvl, id, n, exp, mesos, ing, it: D.items[id] || {n: "?"}}));
 const BYOUT = {};
 for (const r of R) (BYOUT[r.id] = BYOUT[r.id] || []).push(r);
@@ -91,13 +91,13 @@ function renderLeveling(){
       <td class="num">${fmt(k)}</td><td class="num">${fmt(k * b.cost)}</td>
       <td><div class="ings">${[...b.s.need].map(([x, n]) => itemIcon(x, n * k, true)).join("")}</div>${b.s.parts.length ? `<div class="sub">also craft ${b.s.parts.map(([p, m]) => `${fmt(m * k)}× ${esc(p.it.n)}`).join(", ")}</div>` : ""}</td></tr>`;
   }).join("");
-  $("#crlvtot").textContent = `≈ ${fmt(total)} mesos to craft Lv 10`;
+  $("#crlvtot").textContent = `≈ ${fmt(total)} mesos to finish craft Lv ${CRAFT_CAP} (the cap)`;
 }
 $("#crlvdisc").addEventListener("change", renderLeveling);
 renderLeveling();
 
 /* recipes */
-const S = {d: -1, type: "", cls: "", max: 10, q: "", sort: "lvl", dir: 1};
+const S = {d: -1, type: "", cls: "", max: CRAFT_CAP, q: "", sort: "lvl", dir: 1};
 try { Object.assign(S, savedState("craft", S)) } catch(e) {}
 $("#crdisc").innerHTML = ["All", ...DISC].map((n, i) => `<button role="radio" aria-checked="false" data-d="${i - 1}">${esc(n)}</button>`).join("");
 $("#crtype").innerHTML = `<option value="">All</option>` + [...new Set(R.map(r => r.type))].sort().map(t => `<option>${esc(t)}</option>`).join("");
@@ -129,7 +129,7 @@ function renderRecipes(){
 document.querySelectorAll("#crdisc button").forEach(b => b.addEventListener("click", () => { S.d = +b.dataset.d; renderRecipes() }));
 $("#crtype").addEventListener("change", e => { S.type = e.target.value; renderRecipes() });
 $("#crcls").addEventListener("change", e => { S.cls = e.target.value; renderRecipes() });
-$("#crmax").addEventListener("change", e => { S.max = Math.min(10, Math.max(1, +e.target.value || 10)); renderRecipes() });
+$("#crmax").addEventListener("change", e => { S.max = Math.min(CRAFT_CAP, Math.max(1, +e.target.value || CRAFT_CAP)); renderRecipes() });
 $("#crsearch").addEventListener("input", e => { S.q = e.target.value; renderRecipes() });
 document.querySelectorAll("#crhead th[data-k] button").forEach(b => b.addEventListener("click", () => {
   const k = b.parentElement.dataset.k; S.dir = S.sort === k ? -S.dir : (k === "exp" || k === "mesos" ? -1 : 1); S.sort = k; renderRecipes();
@@ -151,7 +151,7 @@ const renderMats = () => { $("#crmats").innerHTML = Object.entries(USE).sort((a,
     <td class="sub">${where.join("<br>") || `<span class="na">not in the game files (no drop tables)</span>`}</td><td class="num">${fmt(it.p)}</td></tr>`;
 }).join("") };
 $("#crmats").addEventListener("click", e => { const b = e.target.closest(".crfind"); if (!b) return;
-  Object.assign(S, {d: -1, type: "", cls: "", max: 10, q: b.dataset.q}); renderRecipes(); $("#crrecipes").open = true; $("#crrecipes").scrollIntoView({behavior: "smooth"}) });
+  Object.assign(S, {d: -1, type: "", cls: "", max: CRAFT_CAP, q: b.dataset.q}); renderRecipes(); $("#crrecipes").open = true; $("#crrecipes").scrollIntoView({behavior: "smooth"}) });
 // the two big tables (~15k elements) are built on first open, not on page load
 let built = false; const build = () => { if (built) return; built = true; renderMats(); renderRecipes() };
 $("#t-craft").addEventListener("click", build); if (!$("#craft").hidden) build();

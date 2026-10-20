@@ -13,8 +13,8 @@
       <div>
         <h4>Leveling a profession</h4>
         <ul>
-          <li>Every craft costs mesos and gives craft EXP (columns below). Craft levels go 1 to 10.</li>
-          <li>Each craft level also needs a character level: 5 × the craft level (Lv 2 at 10, Lv 10 at 50).</li>
+          <li>Every craft costs mesos and gives craft EXP (columns below). Craft levels go 1 to 8 (the launch client's cap; the game files still list some Lv 9-10 recipes, hidden here).</li>
+          <li>Each craft level also needs a character level: 5 × the craft level (Lv 2 at 10, Lv 8 at 40).</li>
           <li><b>Kits</b> (weekly "in Need of Help" quests, craft Lv 2+): +10% craft EXP for 15 min.</li>
           <li><b>Catalysts</b> (craft Lv 5 quests): use while crafting for a chance to change a weapon's or armor's bonus stats, or to turn a Lesser scroll into an Intermediate, Greater or Chaos one. The odds aren't in the game files.</li>
           <li>The six weekly help quests share one pool: 1 is offered per week.</li>
@@ -61,7 +61,7 @@
     <div class="controls" style="margin-top:12px">
       <label>Type<select id="crtype"></select></label>
       <label>Equipment for<select id="crcls"><option value="">Any class</option><option>Warrior</option><option>Magician</option><option>Bowman</option><option>Thief</option></select></label>
-      <label>Up to craft Lv<input id="crmax" type="number" min="1" max="10" value="10"></label>
+      <label>Up to craft Lv<input id="crmax" type="number" min="1" max="8" value="8"></label>
       <label>Search<input id="crsearch" type="search" placeholder="item or material"></label>
       <span class="pill p-hot" id="crcount" style="align-self:center"></span>
     </div>

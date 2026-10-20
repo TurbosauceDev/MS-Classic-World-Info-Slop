@@ -16,7 +16,7 @@ const QUEST_SEC = 60, SAME_NPC_SEC = 30, NO_SPOT_SEC = 180, WALK_SEC = 30, TAXI_
 const RESPAWN = 7.56;   // respawn timer; share of spawns alive solo = mapShare() (same as Where to train)
 const STICK = 0.9;       // keep the current map while it's within 10% of the best
 const BACKUP_LV = 5, BACKUP_RATE = 0.6;   // backup maps: monsters within 5 levels on average, at least 60% of the EXP/hr
-const MAXL = MAX_LEVEL;   // level cap (EXP above 49 is meowdb's historical reference, see 00-core.js)
+const MAXL = MAX_LEVEL;   // level cap (EXP table: see 00-core.js)
 
 let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true, drop:0.3, aoe:true, guide:"all", party:1};
 const BELOW = 5;          // quests more than 5 levels under your starting level count as done or skipped
@@ -351,7 +351,7 @@ function render(){
     [stop ? `Stops at level ${stop.L}` : `About ${hm(P.t)} to level ${X.goal}`,
       stop ? (stop.k === "stop" ? `Quests that can be timed run out at level ${stop.L}${X.goal > stop.L ? `, ${X.goal - stop.L} short of your goal. Switch to "Quests + grinding" to finish.` : "."}` : `No training map fits level ${stop.L}.`)
            : `From level ${X.cur} at ${X.pace === 1 ? "perfect-play" : X.pace === 2 ? "relaxed" : "average"} pace. Estimate.`],
-    [`Mesos: about ${net >= 0 ? "+" : "−"}${fmt(Math.abs(net))} overall`, `Earned about ${fmt(P.drops)} from monster meso drops and ${fmt(P.mesos)} from quests. Spent ${fmt(P.spend)} on weapons (NPC shop prices) and up to ${fmt(P.upkeep)} on potions and ammo while grinding (skills on every attack, at shop prices)${P.qpots ? `, of which quest potions cover about ${fmt(Math.min(P.qpots, P.upkeep))}` : ""}. Monster mesos are player reports on meowdb, estimated at ${D.mesok} per monster level where nobody has reported yet. Selling loot and getting hit aren't counted.`],
+    [`Mesos: about ${net >= 0 ? "+" : "−"}${fmt(Math.abs(net))} overall`, `Earned about ${fmt(P.drops)} from monster meso drops and ${fmt(P.mesos)} from quests. Spent ${fmt(P.spend)} on weapons (NPC shop prices) and up to ${fmt(P.upkeep)} on potions and ammo while grinding (skills on every attack, at shop prices)${P.qpots ? `, of which quest potions cover about ${fmt(Math.min(P.qpots, P.upkeep))}` : ""}. Monster mesos: floor(2.1 × monster level) + 3, ±10%, on about 67% of kills (OSMS formulas page). Selling loot and getting hit aren't counted.`],
     ...(X.mode === "rewards" ? [[`${fmt(P.mesos)} mesos + items worth ≈ ${fmt(P.items)} to NPCs`, `From ${nq} quests, ${S.filter(s => s.k === "quest" && vTier(s.r) === 1).length} of them rated Must do. NPC sell value is a floor: rated items (Sauna Robe, scrolls) sell for far more to players.`]] : []),
     [`${nq} quests · ${maps} training map${maps === 1 ? "" : "s"}${nv ? ` · ${nv} valuable side quests` : ""}`, tot ? `${Math.round(100 * P.qExp / tot)}% of the EXP from quests (including the kills they ask for), ${Math.round(100 * P.gExp / tot)}% from grinding.` : ""],
     ...(G && !stop && !G.steps.some(s => s.k === "nomap") && nq ? [[`Grinding only: ${hm(G.t)}`, P.t > G.t

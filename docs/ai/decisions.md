@@ -26,6 +26,7 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 Builder screenshot import counts gear at base stats ("average drop").
 - 2026-10-18 Daily shared-data.yml job may commit shared tracker runs to the default branch.
 - 2026-10-18 beanguri's overlay: MIT reader ideas only; their shared data/API needs their permission.
+- 2026-10-20 "You can trust everything from OSMS": OSMS Data Explorer formulas (client-read and its capture-fitted mesos/party EXP) override meowdb/COT2 numbers.
 
 ## Site
 - 2026-10-08 Clicking a map name opens its World Map card, not the Map Navigator (directions live behind "Route here").

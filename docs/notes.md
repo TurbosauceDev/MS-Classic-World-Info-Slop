@@ -24,7 +24,7 @@ Credited on the page in the Credits tab (src/index.html #credits); add new sourc
 No drop tables exist in the export, so nothing depends on drop rates ("source n/a" on quest items).
 
 ## Client formulas (COT2)
-COT2 client. The launch client changed some of these: see "OSMS formulas page, launch client" below.
+COT2 client, kept for reference. The site now uses the launch-client changes in "OSMS formulas page, launch client" below.
 - Accuracy, common = DEX×1.2 + Level×2 + LUK×0.6. Warrior common/2.5+10 · Bowman common/4.8+20 · Thief common/4+15 ·
   Magician (INT×1.2 + L×2 + LUK×0.6)/5.1+20. Skill bonuses from per-level skill tables (Precise Strikes max +20, Nimble Body +15, Focus, Bless).
 - Avoid = trunc(LUK/3) + trunc(DEX/6) + 5 (+ skills).
@@ -77,7 +77,7 @@ Source: https://osmsdataexplorer.com/#formulas (tabs/formulas*.js, repo ohmi69/o
 The main page now describes the **current (Steam launch) client**; the COT2 version above is kept there as a frozen
 snapshot (`tabs/formulas-cot2.js`). Our data (OSMS c661434) is already the launch export; the formulas in "Client
 formulas (COT2)" are not. Status per line: CONFIRMS = matches our notes/data; NEW; CONFLICTS = differs from what the site uses.
-Nothing below is applied to the site yet unless it says so (Danny's call, thread "osmsdataexplorer formulas").
+All CONFLICTS below were applied 2026-10-20 (Danny: "you can trust everything from OSMS"); golden.js checks them.
 - CONFIRMS: accuracy per class (now trunc()), avoid, hit check (`#formulas?page=accuracy`); weapon multipliers and
   60/40 swing/stab, crossbow 50/50, Double Stab/Savage Blow always stab, Rush = Other; defense ×100/(def+100); level
   penalty; elements 0/0.75/1/1.25; 99,999 clamp; crit roll (`?page=dealing-damage`). Invincible 1-20% (our skill data
@@ -198,7 +198,8 @@ Nothing below is applied to the site yet unless it says so (Danny's call, thread
   step = cost/hr × model hours × att. Budget = weapons at cheapest meowdb shop price (free/crafted/quest/drop = 0) + upkeep;
   income = quest mesos + quest potions (D.potval, "get" rewards at cheapest meowdb shop price, capped at the upkeep they replace)
   + monster mesos.
-- Monster mesos (2026-10-06): drop tables are server-side (not in the export; maplestory.quest has none). meowdb monster pages
+- Monster mesos (2026-10-06; since 2026-10-20 the model uses the OSMS meso formula, mesoAvg in 10-maps.js, and D.meso is only
+  shown as meowdb reports on monster pages): drop tables are server-side (not in the export; maplestory.quest has none). meowdb monster pages
   collect player reports: API `meowdb.com/msclassic/api/mesos-reports?monsterId=<id>` (meowdb ids = game mob ids; Cloudflare,
   so fetch from inside a headless-Chromium page). Saved to data/sources/meowdb_mesos.json (19 monsters, 1-2 trusted reports
   each, all say 100% drop chance). D.meso {mobId: [median (min+max)/2 × chance, reports]}; D.mesok = median mesos/level over

@@ -708,7 +708,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       </div>
     </div>
   </div>
-  <p class="sitever" data-built="2026-10-20T04:21:29Z" data-ver="0.7.2">Site version: v0.7.2 · built Oct 20, 2026 · 04:21 UTC</p>
+  <p class="sitever" data-built="2026-10-20T04:48:17Z" data-ver="0.7.3">Site version: v0.7.3 · built Oct 20, 2026 · 04:48 UTC</p>
 </section>
 
 <section id="plan" hidden>
@@ -867,7 +867,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
           <li><b>Mesos:</b> monster meso drops (player reports on meowdb, ~2 per monster level where nobody has reported) and quest mesos, against weapons at NPC shop prices and potions and ammo while grinding. The potion bill assumes skills on every attack; quest potions are taken off it. Selling loot isn't counted.</li>
           <li><b>Copy link</b> makes a link that opens this exact plan.</li>
           <li><b>Party:</b> grinding uses your share of the map plus the party EXP bonus (see Where to train). Quests stay solo. The Kerning Party Quest shows up at 21 as an optional step.</li>
-          <li>Goes up to the level-100 cap with 2nd job (3rd job isn't at launch). EXP per level above 49 is meowdb's historical table, not yet confirmed in Classic.</li>
+          <li>Goes up to the level-100 cap with 2nd job (3rd job isn't at launch). EXP per level is the launch client's table (levels 90-99 cost 2.1× the level before).</li>
         </ul>
       </div>
       <div>
@@ -888,7 +888,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
         <ul>
           <li>Quests needing items with no known drop source (NPC-made or unclear). They're listed under the plan, and quests that come after them in a chain are skipped too.</li>
           <li>Event, crafting, repeatable and Citizenship quests; Casey's Omok and Match Cards sets (very rare drops); Orbis, El Nath and Forgotten Hollow.</li>
-          <li>Buying gear. 3rd job (not at launch): the plan keeps 2nd job up to the level-100 cap. EXP per level above 49 is meowdb's historical table, not yet confirmed in Classic.</li>
+          <li>Buying gear. 3rd job (not at launch): the plan keeps 2nd job up to the level-100 cap.</li>
         </ul>
       </div>
     </div>
@@ -939,7 +939,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
           <li><b>Area attacks by default:</b> Slash Blast, Arrow Bomb, Thunder Bolt, Poison Breath (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, with the map's mob capacity alive: an estimate. Iron Arrow loses 20% per extra monster. Double Shot and Holy Arrow split a fixed number of arrows, so they count as single target. Thieves, 1st job Bowmen and 1st job Magicians have no area attack.</li>
           <li><b>Danger:</b> one hit from the map's hardest hitter as a share of your Max HP: its touch against your W.DEF, or for Tauromacis and Taurospear (the only launch monsters with a magic attack) the magic attack against your M.DEF (meowdb's labels: under 10% Safe, 10–24% Caution, 25–49% Danger, 50%+ Lethal). Armor isn't counted, so it reads a little high. "Hits you" is the chance its attack lands against your avoid (meowdb's formula).</li>
           <li><b>To potions:</b> portals to the nearest NPC selling potions (meowdb's shop list). A far refill eats into the real EXP/hr.</li>
-          <li><b>Mesos/hr:</b> monster meso drops at that kill speed. Per-kill amounts are player reports on meowdb (17 monsters so far); the rest are estimated at 2 mesos per monster level, which is what the reported ones average. With a Character Builder setup, "net" takes off your potions and ammo.</li>
+          <li><b>Mesos/hr:</b> monster meso drops at that kill speed. Per kill: floor(2.1 × monster level) + 3 mesos, ±10%, dropped on about 67% of kills (OSMS formulas page, fitted to in-game captures). With a Character Builder setup, "net" takes off your potions and ammo.</li>
           <li><b>Party:</b> your share of the map plus the measured party bonus (+10/20/30% at 2/3/4+). Spawns grow 5% per extra player up to 100% at 6 (meowdb: not fully confirmed). Assumes equal players.</li>
         </ul>
       </div>
@@ -967,7 +967,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       <div>
         <h4>Left out</h4>
         <ul>
-          <li>Map layout and climbing, item drops and selling loot (except in Frugal mode), crowding. EXP needed above level 49 is meowdb's historical table.</li>
+          <li>Map layout and climbing, item drops and selling loot (except in Frugal mode), crowding.</li>
           <li>EXP/hr is an estimate. Use it to shortlist maps, then pick the one that feels best.</li>
         </ul>
       </div>
@@ -1017,7 +1017,6 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       <li>EXP boxes take the number, the percentage (45.67%) or the whole bar text. Or skip the timer and type the minutes.</li>
       <li>Pick the map, party and EXP card to compare with our <b>Where to train</b> estimate for that map (default build for your class and level). Our estimate counts no EXP card, so it's multiplied by your card here.</li>
       <li><b>Save</b> keeps the session in this browser only. Sort by date or EXP/hr to compare maps.</li>
-      <li>EXP needed above level 49 is meowdb's historical table (not confirmed in game), so time to level is an estimate there.</li>
     </ul>
   </details>
   <div class="controls">
@@ -1406,7 +1405,8 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
         <h4>Where the numbers come from</h4>
         <ul>
           <li><b>Game files (launch, Oct 6):</b> quests, EXP, mesos, contribution per quest and item rewards.</li>
-          <li><b>meowdb's Citizenship page:</b> grade levels and totals, discounts, storage fees, how to join, shop lists.</li>
+          <li><b>OSMS Data Explorer (launch client):</b> contribution needed for each grade.</li>
+          <li><b>meowdb's Citizenship page:</b> grade levels, discounts, storage fees, how to join, shop lists.</li>
           <li>meowdb says its info is from the second closed test. Housing, daily contribution limits and reactivation fees aren't confirmed yet.</li>
         </ul>
       </div>
@@ -1520,6 +1520,8 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.7.3</span> Oct 20, 2026 · Launch-client formulas</h3><span class="pill p-hot">update</span></div>
+      <p>Damage, defense, EXP and meso numbers now follow the launch game client instead of the second closed test, as read by the <a href="https://osmsdataexplorer.com/#formulas" target="_blank" rel="noopener">OSMS Data Explorer</a> formulas page. <b>Mastery</b> counts ×0.7 (was ×0.8), so minimum hits are a bit lower. <b>Magic</b> damage uses INT/125 (was /100), about 10% less at 100 INT. <b>Damage taken</b> (Danger) uses the new defense formula with flat DEF/25 and level/10 cuts. <b>Iron Arrow</b> loses 20% per extra target, compounding (1, 0.8, 0.64, 0.512). <b>EXP</b> for levels 90-99 is 2.1× the level before (Lv 90 needs 11.9M), and the whole table counts as confirmed now. <b>Mesos</b> per kill are floor(2.1 × monster level) + 3, ±10%, on about 67% of kills (fitted to in-game captures by azzy), roughly 30% less than the old estimate. <b>Party</b> EXP bonus adds 5% for each extra member who hits the monster (4 players: 45%, was 30%). <b>Crafting</b> stops at Lv 8, and <b>Citizenship</b> grades need 1,500 to 32,000 contribution.</p></div>
     <div class="card"><div class="cardhead"><h3><span class="ver">v0.7.2</span> Oct 19, 2026 · Ability point boxes fixed</h3><span class="pill p-good">fix</span></div>
       <p><b>Character Builder:</b> the STR, DEX, INT and LUK boxes no longer overlap each other or run past the edge of the card. The same fix covers the skill boxes in "Import from screenshots".</p></div>
     <div class="card"><div class="cardhead"><h3><span class="ver">v0.7.1</span> Oct 19, 2026 · Version numbers</h3><span class="pill p-hot">update</span></div>
@@ -1729,8 +1731,8 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       <div>
         <h4>Leveling a profession</h4>
         <ul>
-          <li>Every craft costs mesos and gives craft EXP (columns below). Craft levels go 1 to 10.</li>
-          <li>Each craft level also needs a character level: 5 × the craft level (Lv 2 at 10, Lv 10 at 50).</li>
+          <li>Every craft costs mesos and gives craft EXP (columns below). Craft levels go 1 to 8 (the launch client's cap; the game files still list some Lv 9-10 recipes, hidden here).</li>
+          <li>Each craft level also needs a character level: 5 × the craft level (Lv 2 at 10, Lv 8 at 40).</li>
           <li><b>Kits</b> (weekly "in Need of Help" quests, craft Lv 2+): +10% craft EXP for 15 min.</li>
           <li><b>Catalysts</b> (craft Lv 5 quests): use while crafting for a chance to change a weapon's or armor's bonus stats, or to turn a Lesser scroll into an Intermediate, Greater or Chaos one. The odds aren't in the game files.</li>
           <li>The six weekly help quests share one pool: 1 is offered per week.</li>
@@ -1777,7 +1779,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <div class="controls" style="margin-top:12px">
       <label>Type<select id="crtype"></select></label>
       <label>Equipment for<select id="crcls"><option value="">Any class</option><option>Warrior</option><option>Magician</option><option>Bowman</option><option>Thief</option></select></label>
-      <label>Up to craft Lv<input id="crmax" type="number" min="1" max="10" value="10"></label>
+      <label>Up to craft Lv<input id="crmax" type="number" min="1" max="8" value="8"></label>
       <label>Search<input id="crsearch" type="search" placeholder="item or material"></label>
       <span class="pill p-hot" id="crcount" style="align-self:center"></span>
     </div>
@@ -1809,10 +1811,12 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 <script>
 const D = JSON.parse(document.getElementById("sitedata").textContent);
 const $ = s => document.querySelector(s);
-// level cap is 100 at launch (Nexon's Founder's Access notes, via meowdb). The EXP table we embed stops at 70; meowdb's EXP
-// guide gives the rest: every level from 51 costs 5.48% more than the one before (historical reference; confirmed to 49).
-const EXP_SURE = 49, MAX_LEVEL = 100;
-for (let l = 71; l < MAX_LEVEL; l++) if (D.exp[l] == null) D.exp[l] = Math.trunc(D.exp[l - 1] * 1.0548);
+// level cap is 100 at launch. The EXP table we embed stops at 70; the launch client builds the rest (OSMS formulas page):
+// levels 51-89 cost ×1.0548 the level before, 90-99 ×2.1.
+const EXP_SURE = 100, MAX_LEVEL = 100;   // whole 1-99 table read from the launch client (OSMS formulas page)
+for (let l = 71; l < MAX_LEVEL; l++) if (D.exp[l] == null) D.exp[l] = Math.trunc(D.exp[l - 1] * (l < 90 ? 1.0548 : 2.1));
+// crafting caps at Lv 8 in the launch client (OSMS formulas page); the export still lists Lv 9-10 recipes, so they're hidden
+const CRAFT_CAP = 8; D.craft.rec = D.craft.rec.filter(r => r[2] <= CRAFT_CAP);
 const fmt = n => n == null ? "–" : Math.round(n).toLocaleString();
 /* GitHub Pages copy only (scripts/pages_site.py sets D.lazy): item icons and minimaps come in a second file, fetched as the
    page starts. ASSETS resolves when they're in D (at once in the artifact, where everything is inline); code that needs
@@ -1990,7 +1994,8 @@ function hpmpAt(cls, L, hpPct = 0, mpPct = 0, second = L >= 30){
 // (Invincible cuts physical only; Magic Guard both). Monsters with a magic attack (maplestory.quest raw client: only
 // Tauromacis and Taurospear at launch) also hit with Magic Attack against M.DEF; the worse of the two counts.
 // Armor isn't counted (we don't model it), so real danger is lower. meowdb labels: <10% Safe, 10-24% Caution, 25-49% Danger, 50%+ Lethal.
-const hitTaken = (atk, def, L) => { const raw = atk * 1.3; return Math.max(1, Math.trunc(raw * (1 - def / (def + 5 * (L + 40) + 1.2 * raw)))) };
+// launch client (OSMS formulas page, damage taken): I × (1 − D / (D + 2I + 300)) − D/25 − Level/10, I = Atk × 1.3 on average
+const hitTaken = (atk, def, L) => { const raw = atk * 1.3; return Math.max(1, Math.trunc(raw * (1 - def / (def + 2 * raw + 300)) - def / 25 - L / 10)) };
 function touchPct(mobId, L, d){
   const a = D.mobatk?.[mobId]; if (!a || !d.hp) return 0;
   const phys = hitTaken(a[0], d.wdef, L) * (d.mult ?? 1), mag = a[3] ? hitTaken(a[2], d.mdef || 0, L) * (d.mmult ?? d.mult ?? 1) : 0;
@@ -2024,7 +2029,8 @@ const POTS = (() => { const out = {}, q = [];
   return out })();
 const potsText = mid => { const p = POTS[mid]; return p ? `${p[0]} portal${p[0] === 1 ? "" : "s"} to ${p[1]}` : "" };
 // party (meowdb EXP guide): +10/20/30% bonus EXP at 2/3/4+ players. Assumes equal players sharing the kills and the EXP evenly.
-const partyBonus = n => [0, 0, 0.1, 0.2, 0.3, 0.3, 0.3][n] || 0;
+// OSMS party EXP (azzy): min(30%, 10% × (eligible − 1)) + 5% × (members who hit it − 1); assumes everyone hits
+const partyBonus = n => n > 1 ? Math.min(0.3, 0.1 * (n - 1)) + 0.05 * (n - 1) : 0;
 // share of a map's spawn points alive at once: its mob capacity (OSMS maps.json: solo target from map size, checked in game)
 // over its spawn points, at most 1. Players on the map add floor(0.75 × (players − 5)) (OSMS theory from 3 counts, unverified),
 // so a party of up to 5 gets no more monsters than solo. Maps without a capacity: meowdb's 75% solo, +5% a player.
@@ -2034,8 +2040,13 @@ const mapShare = (mid, n = 1) => { const m = D.maps[mid]; if (!m) return 0.75;
 let ACC_FROM_BUILDER = null; // set by "Use this in Where to train"; cleared when class or level is changed here
 const accFor = (cls, L) => classAcc(MAGIC.has(cls) ? "Magician" : cls, L);
 // seconds to kill one monster (HP / damage after hit chance, defense, level penalty, element) + 1 s walking and aiming
-// mesos one kill drops: community reports on meowdb (D.meso), else D.mesok × level (the reported monsters' median, ~2 per level)
-const mesoKill = id => D.meso?.[id]?.[0] ?? (D.mesok || 0) * (D.mobs[id]?.[1] || 0);
+// mesos one kill drops, OSMS formulas page (azzy, fitted to captures): base = floor(2.1 × level) + 3, each drop floor(base ×
+// rand(90..110) / 100), dropped on ~67% of kills. Returns the expected mesos per kill.
+const MESO_CHANCE = 0.67;
+const mesoRange = L => { const b = Math.floor(21 * L / 10) + 3; return [Math.floor(b * 90 / 100), Math.floor(b * 110 / 100)] };
+const mesoAvg = L => { if (!L) return 0; const b = Math.floor(21 * L / 10) + 3;
+  let s = 0; for (let r = 90; r <= 110; r++) s += Math.floor(b * r / 100); return MESO_CHANCE * s / 21 };
+const mesoKill = id => mesoAvg(D.mobs[id]?.[1]);
 function mobKill(m, cls, L, dps, acc){
   const [nm, lv, hp, ex, eva, pdd, mdd, el] = m, magic = MAGIC.has(cls), els = ELEMS[cls] || [];
   const diff = lv - L, hit = hitProb(acc, eva, diff);
@@ -2047,8 +2058,8 @@ function mobKill(m, cls, L, dps, acc){
 // the others on the same platform (within 60 px up/down) inside the attack's reach, facing the busier side; the map's
 // mapShare() of spawns are alive solo; capped at the skill's target count. reach = [front, back] px.
 const AOE = {};
-// damage lost per extra target: Iron Arrow pierces at 100/80/60/40% (meowdb damage formula)
-const AOE_FALL = {"Iron Arrow": 0.2};
+// damage kept per extra target: Iron Arrow pierces at 0.8^k (1, 0.8, 0.64, 0.512; OSMS launch client)
+const AOE_FALL = {"Iron Arrow": 0.8};
 function aoeHits(mid, targets, reach, fall = 0){
   if (!targets || targets <= 1 || !reach) return 1;
   const key = `${mid}|${targets}|${reach}|${fall}`; if (AOE[key]) return AOE[key];
@@ -2060,7 +2071,7 @@ function aoeHits(mid, targets, reach, fall = 0){
       if (dx >= 0 && dx <= reach[0]) r++; if (dx <= 0 && -dx <= reach[0]) l++;
       if (dx < 0 && -dx <= reach[1]) rb++; if (dx > 0 && dx <= reach[1]) lb++; });
     const n = Math.min(targets, 1 + alive * Math.max(r + rb, l + lb));
-    sum += n - fall / 2 * n * (n - 1);   // n targets at 1, 1 - fall, 1 - 2·fall, ... (fractional n interpolates)
+    sum += fall ? (1 - fall ** n) / (1 - fall) : n;   // n targets at 1, fall, fall², ... (fractional n interpolates)
   });
   return AOE[key] = sum / P.length;
 }
@@ -2082,7 +2093,7 @@ function mapRates(cls, L, dps, acc, floor = 12, aoe = null, party = 1){
     const avg = lvSum / n; if (avg < L - floor) continue;
     const raw = Math.min(party * exp / time, exp * mapShare(mid, party) / 7.56) / party, rate = raw * (1 + partyBonus(party));
     // att = share of the time you're attacking (not walking, not waiting for respawns): for potion/ammo upkeep
-    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate, cyc: exp, hits, meso: rate * mes / exp, att: Math.min(1, raw * time / exp) * (time - walk) / time});   // kills/s of a mob = count × rate / cyc
+    rows.push({id: mid, name, open, mobs:[...names].join(", "), n, avg, hit: hitSum / n, rate, cyc: exp, hits, meso: raw * mes / exp, att: Math.min(1, raw * time / exp) * (time - walk) / time});   // kills/s of a mob = count × rate / cyc
   }
   return rows.sort((a,b) => b.rate - a.rate);
 }
@@ -2132,7 +2143,7 @@ function trainDps(cls, L, b, basic){
     return b.max && !b.magic ? {dps: per((b.min + b.max) / 2 / p0), src: "default"} : {dps: 20 * L, src: "guess"} }
   if (DPS_FROM_BUILDER) return {dps: DPS_FROM_BUILDER, src: "builder"};
   if (b.magic){ const mag = statNum("#umag"), int = statNum("#uint");
-    if (mag && int != null) return {dps: per(mag * (int * (b.mast || 0) / 100 + 1 + int / 100 + 1) / 2), src: "you"} }
+    if (mag && int != null) return {dps: per(mag * (int * (b.mast || 0) / 125 + 1 + int / 125 + 1) / 2), src: "you"} }
   else { const m = $("#atk").value.match(/(\d+)\D+(\d+)/); if (m) return {dps: per((+m[1] + +m[2]) / 2), src: "you"} }
   return b.dps > 0 ? {dps: b.dps, src: "default"} : {dps: 20 * L, src: "guess"};
 }
@@ -2254,12 +2265,12 @@ function rankMaps(){
   $("#mapnote").innerHTML = `Damage: <b>${fmt(Math.round(dps))}</b>/s ${src === "builder" ? "from your Character Builder setup" : src === "you" ? `from your ${magIn ? "Magic and INT" : "Attack range"} with ${how}, from the default build at your level` : src === "default" ? `from the Character Builder's default build at level ${L} (${esc(fb.weapon || "")}, ${basic ? "basic attacks" : esc(fb.skill || "")}); type your stat-window ${magIn ? "Magic and INT" : "Attack range"} for your own` : `a rough guess (20 × level)${basic && fb.magic ? "; type your stat-window Attack range for wand or staff hits" : ""}`}. `
     + (statNum("#uacc") != null ? `Accuracy <b>${Math.round(acc)}</b> as typed.` : ACC_FROM_BUILDER != null ? `Accuracy <b>${Math.round(acc)}</b> from your Character Builder setup.`
     : `Assumed accuracy at level ${L}: <b>${Math.round(acc)}</b> (all AP in your main stat, secondary stat equal to your level, no accuracy gear${cls==="Warrior"&&L>=15?", Precise Strikes maxed":cls==="Thief"&&L>=15?", Nimble Body maxed":""}).`)
-    + (need ? ` Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP.` : "") + (L > EXP_SURE && need ? ` EXP needed above level ${EXP_SURE} is meowdb's historical table (not yet confirmed in Classic).` : "")
+    + (need ? ` Level ${L}→${L+1} needs <b>${fmt(need)}</b> EXP.` : "") + ""
     + (area ? ` Attack: <b>${esc(area.n)}</b>, up to ${area.t} monsters within ${area.r[0]}${area.r[1] ? ` / ${area.r[1]}` : ""} px; hits per cast are estimated from each map's spawn points.`
       : basic ? ` Basic attacks only (100%, one hit${fb.weapon ? `, ${esc(fb.weapon)} speed` : ""}).` : $("#aoe").value ? ` ${esc(cls)} has no area attack at level ${L}, so this is single target.` : ` Single target.`)
     + (party > 1 ? ` Party of ${party}: your share of the EXP plus the ${Math.round(partyBonus(party) * 100)}% party bonus, map capacity +${Math.max(0, Math.floor(0.75 * (party - 5)))} monsters (OSMS theory, unverified; assumes equal players splitting kills).` : "")
     + ` Danger: one touch from the map's hardest hitter as a share of ${DEF_FROM_BUILDER || statNum("#uhp") != null ? "your" : "a typical"} Max HP (${fmt(def.hp)}), before armor.`
-    + ` Mesos/hr = monster meso drops: player reports on meowdb for ${Object.keys(D.meso || {}).length} monsters, the rest estimated at ${D.mesok} mesos per monster level (what the reported ones average). Loot sold to NPCs isn't counted.`
+    + ` Mesos/hr = monster meso drops: floor(2.1 × monster level) + 3, ±10%, on about 67% of kills (OSMS formulas page); a party splits them evenly on average. Loot sold to NPCs isn't counted.`
     + (frugal ? ` <b>Frugal:</b> only maps that pay for themselves and aren't Danger/Lethal, fastest EXP first. Net = mesos/hr minus ${basic ? (ammoP ? `ammo for basic attacks` : "nothing for basic attacks") : COST_FROM_BUILDER ? "your build's skill potions and ammo" : `a default ${esc(cls)} build's skill potions and ammo`} (${fmt(cost?.mesoHr || 0)}/hr attacking nonstop, times the time spent attacking) minus Red Potions for getting hit (estimate: ${({"0.1": "1 in 10", "0.25": "1 in 4", "0.5": "half", "1": "every one"})[$("#hitsh").value]} of the monsters you kill attack${hitsh === 1 ? "s" : ""} you once, at their hit chance against your avoid, no armor). ${+$("#lootr").value ? `Plus loot sold to NPCs: each monster's reported ETC item and potion drops (meowdb player reports) at ${Math.round($("#lootr").value * 100)}% per kill each (an assumption: drop rates aren't in the game files), ${$("#lootp").value === "pw" ? "at the median player-shop sale price (meso.watch, " + D.pw.read + ") where it has 5+ sales, else NPC sell price; selling to players takes a shop and time" : "at NPC sell price"}; ores, gems, equips and scrolls aren't counted.` : "Loot sold to NPCs isn't counted."} Potions its monsters drop are listed under the map name.${rows.some(r => r.real != null) ? ` "(players' costs)": instead of both estimates, what grind tracker players near your level really spent there on potions, food and ammo (median, 3+ players).` : ""}`
       + (loss ? ` <b>No map comes out meso positive at this level and damage</b>; these lose the least.` : "") : "")
     + (!frugal && COST_FROM_BUILDER ? ` Your build's potions and ammo: up to ${fmt(COST_FROM_BUILDER.mesoHr)} mesos/hr while attacking nonstop; on the top map you attack about ${Math.round((top[0]?.att ?? 1) * 100)}% of the time, so about ${fmt(COST_FROM_BUILDER.mesoHr * (top[0]?.att ?? 1))}/hr. "net" = mesos/hr minus that.` : "")
@@ -2808,11 +2819,12 @@ renderQuests();
 
 /* ---------------- citizenship ---------------- */
 (() => {
-// from meowdb.com/msclassic/citizenship (COT2)
-const GRADES = [["Traveler",12,"from quest",5,5,95],["Visitor",17,1000,7,10,90],["Helpful Stranger",22,2000,9,15,85],
-  ["Recognized Guest",27,3000,11,20,80],["Town Resident",32,4000,13,25,75],["Trusted Neighbor",37,5000,15,30,70],
-  ["Distinguished Citizen",42,6000,17,35,65],["Town Patron",47,7000,19,40,60],["Guardian of the Village",52,8000,21,45,55],
-  ["Citizen of Honor",57,10000,25,50,50]];
+// meowdb.com/msclassic/citizenship (COT2); contribution needed per grade replaced with the launch client's (OSMS formulas page,
+// Tables & Progression; level gates unchanged)
+const GRADES = [["Traveler",12,"from quest",5,5,95],["Visitor",17,1500,7,10,90],["Helpful Stranger",22,3500,9,15,85],
+  ["Recognized Guest",27,6000,11,20,80],["Town Resident",32,9000,13,25,75],["Trusted Neighbor",37,12500,15,30,70],
+  ["Distinguished Citizen",42,16500,17,35,65],["Town Patron",47,21000,19,40,60],["Guardian of the Village",52,26000,21,45,55],
+  ["Citizen of Honor",57,32000,25,50,50]];
 // [shop, npc, items: [name, price, min grade (1-10), effect]]
 const SHOPS = {
   "Henesys": [
@@ -2892,8 +2904,8 @@ render();
 (() => {
 const C = D.craft, DISC = C.disc.map(d => d[0]);
 // craft level -> [craft EXP to finish it, character level needed to reach it]. Not in the export's data files: from the OSMS
-// Data Explorer crafting tab (tabs/crafting.js, CRAFT_LEVELS_COT2), read from the COT2 client. Gate = 5 x craft level.
-const CRAFT_LV = [[50, null], [166, 10], [319, 15], [521, 20], [787, 25], [1138, 30], [1602, 35], [2214, 40], [3022, 45], [4089, 50]];
+// Data Explorer formulas page (Tables & Progression, CRAFT_LEVELS), read from the launch client. Gate = 5 x craft level, cap Lv 8.
+const CRAFT_LV = [[50, null], [166, 10], [319, 15], [521, 20], [787, 25], [1138, 30], [1602, 35], [2214, 40]];
 const R = C.rec.map(([d, type, lvl, id, n, exp, mesos, ing], i) => ({i, d, type, lvl, id, n, exp, mesos, ing, it: D.items[id] || {n: "?"}}));
 const BYOUT = {};
 for (const r of R) (BYOUT[r.id] = BYOUT[r.id] || []).push(r);
@@ -2981,13 +2993,13 @@ function renderLeveling(){
       <td class="num">${fmt(k)}</td><td class="num">${fmt(k * b.cost)}</td>
       <td><div class="ings">${[...b.s.need].map(([x, n]) => itemIcon(x, n * k, true)).join("")}</div>${b.s.parts.length ? `<div class="sub">also craft ${b.s.parts.map(([p, m]) => `${fmt(m * k)}× ${esc(p.it.n)}`).join(", ")}</div>` : ""}</td></tr>`;
   }).join("");
-  $("#crlvtot").textContent = `≈ ${fmt(total)} mesos to craft Lv 10`;
+  $("#crlvtot").textContent = `≈ ${fmt(total)} mesos to finish craft Lv ${CRAFT_CAP} (the cap)`;
 }
 $("#crlvdisc").addEventListener("change", renderLeveling);
 renderLeveling();
 
 /* recipes */
-const S = {d: -1, type: "", cls: "", max: 10, q: "", sort: "lvl", dir: 1};
+const S = {d: -1, type: "", cls: "", max: CRAFT_CAP, q: "", sort: "lvl", dir: 1};
 try { Object.assign(S, savedState("craft", S)) } catch(e) {}
 $("#crdisc").innerHTML = ["All", ...DISC].map((n, i) => `<button role="radio" aria-checked="false" data-d="${i - 1}">${esc(n)}</button>`).join("");
 $("#crtype").innerHTML = `<option value="">All</option>` + [...new Set(R.map(r => r.type))].sort().map(t => `<option>${esc(t)}</option>`).join("");
@@ -3019,7 +3031,7 @@ function renderRecipes(){
 document.querySelectorAll("#crdisc button").forEach(b => b.addEventListener("click", () => { S.d = +b.dataset.d; renderRecipes() }));
 $("#crtype").addEventListener("change", e => { S.type = e.target.value; renderRecipes() });
 $("#crcls").addEventListener("change", e => { S.cls = e.target.value; renderRecipes() });
-$("#crmax").addEventListener("change", e => { S.max = Math.min(10, Math.max(1, +e.target.value || 10)); renderRecipes() });
+$("#crmax").addEventListener("change", e => { S.max = Math.min(CRAFT_CAP, Math.max(1, +e.target.value || CRAFT_CAP)); renderRecipes() });
 $("#crsearch").addEventListener("input", e => { S.q = e.target.value; renderRecipes() });
 document.querySelectorAll("#crhead th[data-k] button").forEach(b => b.addEventListener("click", () => {
   const k = b.parentElement.dataset.k; S.dir = S.sort === k ? -S.dir : (k === "exp" || k === "mesos" ? -1 : 1); S.sort = k; renderRecipes();
@@ -3041,7 +3053,7 @@ const renderMats = () => { $("#crmats").innerHTML = Object.entries(USE).sort((a,
     <td class="sub">${where.join("<br>") || `<span class="na">not in the game files (no drop tables)</span>`}</td><td class="num">${fmt(it.p)}</td></tr>`;
 }).join("") };
 $("#crmats").addEventListener("click", e => { const b = e.target.closest(".crfind"); if (!b) return;
-  Object.assign(S, {d: -1, type: "", cls: "", max: 10, q: b.dataset.q}); renderRecipes(); $("#crrecipes").open = true; $("#crrecipes").scrollIntoView({behavior: "smooth"}) });
+  Object.assign(S, {d: -1, type: "", cls: "", max: CRAFT_CAP, q: b.dataset.q}); renderRecipes(); $("#crrecipes").open = true; $("#crrecipes").scrollIntoView({behavior: "smooth"}) });
 // the two big tables (~15k elements) are built on first open, not on page load
 let built = false; const build = () => { if (built) return; built = true; renderMats(); renderRecipes() };
 $("#t-craft").addEventListener("click", build); if (!$("#craft").hidden) build();
@@ -3245,7 +3257,8 @@ function page(o){
   const drop = x => D.items[x[0]] ? `<span class="mdrop">${icon(x[0])}<span><span class="itname" tabindex="0" data-item="${x[0]}">${esc(x[1])}</span>${x[2] >= 1 ? ` <span class="sub">+${x[2]}</span>` : ""}</span></span>` : `<span class="mdrop"><span>${esc(x[1])}${x[2] >= 1 ? ` <span class="sub">+${x[2]}</span>` : ""}</span></span>`;
   const qk = QK[o.id] || [], qi = QI[o.id] || [], mats = MAT[o.id] || [];
   const quests = [...qk.map(x => `<li>${qn(x)} <span class="sub">hunt ${fmt(x[2])}</span></li>`), ...qi.map(x => `<li>${qn(x)} <span class="sub">${esc(x[3])} ×${fmt(x[2])}</span></li>`)].join("");
-  const meso = m.meso ? `${fmt(m.meso[0])} <span class="sub">avg per kill (${m.meso[2]}–${m.meso[3]} mesos, ${m.meso[4]}% of kills, ${m.meso[1]} report${m.meso[1] > 1 ? "s" : ""})</span>` : `<span class="sub">no player reports yet</span>`;
+  const mr = mesoRange(m.level || 0), meso = `${fmt(Math.round(mesoAvg(m.level)))} <span class="sub">avg per kill (${mr[0]}–${mr[1]} mesos on ~67% of kills, OSMS formula)</span>`
+    + (m.meso ? `<br><span class="sub">meowdb reports: ${m.meso[2]}–${m.meso[3]} mesos, ${m.meso[4]}% of kills (${m.meso[1]} report${m.meso[1] > 1 ? "s" : ""})</span>` : "");
   const topDrop = sure[0] || maybe[0];
   return `<div class="mpage">
     <div class="mpbar"><button class="btn" id="mbback">← All monsters</button><button class="btn" id="mbshare">Copy link</button></div>
@@ -3769,9 +3782,9 @@ function calc(sp){
   let min = 0, max = 0, mast = 0, faRate = 0, faPct = 0;
   if (ai && ai.kind === "magic"){
     const magic = Math.floor(ap.INT / 2) + (w?.mad || 0) + matkB;
-    mast = (0.1 + ai.mast / 10) * 0.8;
-    min = ai.pct / 100 * magic * (ap.INT * mast / 100 + 1);
-    max = ai.pct / 100 * magic * (ap.INT / 100 + 1);
+    mast = (0.1 + ai.mast / 10) * 0.7;   // launch client: mastery ×0.7, INT/125 (OSMS formulas page)
+    min = ai.pct / 100 * magic * (ap.INT * mast / 125 + 1);
+    max = ai.pct / 100 * magic * (ap.INT / 125 + 1);
   } else if (ai && w){
     const ammo = (AMMO[w.type] || []).find(a => a[0] === S.ammo)?.[1] || 0;
     const watk = w.pad + ammo;
@@ -3783,7 +3796,7 @@ function calc(sp){
     else if (ranged) wmult = wm[2];
     else if (STAB_ONLY.has(sk.n)) wmult = wm[1];
     else { const sw = SWING_SHARE[w.type] ?? 0.6; wmult = wm[0]*sw + wm[1]*(1-sw) }
-    mast = sk.n === "Lucky Seven" ? 0.5 : (0.1 + mastLv / 10) * 0.8;
+    mast = sk.n === "Lucky Seven" ? 0.5 : (0.1 + mastLv / 10) * 0.7;
     const mult = ai.pct / 100;
     min = mult * (0.8 + (prim * wmult * mast + sec) / 100 + atkB / 50) * watk;
     max = mult * (1.0 + (prim * wmult + sec) / 100 + atkB / 50) * watk;
@@ -3910,14 +3923,14 @@ function applyDefaults(){
   return {bl, fams, wl, w, al, am};
 }
 // Beginner (below 10): basic attack, Wooden Club then Razor from level 5, creation + level AP all in the future main stat
-// (meowdb beginner guide). STR/DEX drive a Beginner's basic attack; accuracy uses the Warrior formula (Beginner's isn't known).
+// (meowdb beginner guide). STR/DEX drive a Beginner's basic attack; accuracy = trunc(common / 2.5 + 5) (OSMS launch client).
 function beginnerAt(cls, L){
   const ap = {STR:4, DEX:4, INT:4, LUK:4}; ap[PRIMARY[cls]] += apTotal(L) - 16;
   const w = W.find(x => x.name === (L >= 5 ? "Razor" : "Wooden Club")), wm = WMULT[w.type], sw = SWING_SHARE[w.type] ?? 0.6;
-  const wmult = wm[0] * sw + wm[1] * (1 - sw), mast = 0.08;
+  const wmult = wm[0] * sw + wm[1] * (1 - sw), mast = 0.07;
   const min = (0.8 + (ap.STR * wmult * mast + ap.DEX) / 100) * w.pad, max = (1 + (ap.STR * wmult + ap.DEX) / 100) * w.pad;
   const critF = 0.95 + 0.05 * 1.2, interval = 0.42 + 0.06 * w.spd;
-  return {dps: (min + max) / 2 * critF / interval, acc: (ap.DEX * 1.2 + L * 2 + ap.LUK * 0.6) / 2.5 + 10, branch: "Beginner", weapon: w.name, wid: w.id, skill: "Basic attack"};
+  return {dps: (min + max) / 2 * critF / interval, acc: Math.trunc((ap.DEX * 1.2 + L * 2 + ap.LUK * 0.6) / 2.5 + 5), branch: "Beginner", weapon: w.name, wid: w.id, skill: "Basic attack"};
 }
 // class guide build (16-guides.js): first-job SP in the guide's order (kept above 30, 2nd-job SP auto), and up to 30 the
 // guide's AP and weapons; the attack is whichever of the skilled ones does most (AoE build: as if ~3 monsters are in reach)
@@ -5803,7 +5816,7 @@ const QUEST_SEC = 60, SAME_NPC_SEC = 30, NO_SPOT_SEC = 180, WALK_SEC = 30, TAXI_
 const RESPAWN = 7.56;   // respawn timer; share of spawns alive solo = mapShare() (same as Where to train)
 const STICK = 0.9;       // keep the current map while it's within 10% of the best
 const BACKUP_LV = 5, BACKUP_RATE = 0.6;   // backup maps: monsters within 5 levels on average, at least 60% of the EXP/hr
-const MAXL = MAX_LEVEL;   // level cap (EXP above 49 is meowdb's historical reference, see 00-core.js)
+const MAXL = MAX_LEVEL;   // level cap (EXP table: see 00-core.js)
 
 let X = {cls:"Warrior", branch:"Fighter", fam:"Sword", cur:10, goal:30, mode:"mix", pace:1.5, fast:false, island:true, val:true, drop:0.3, aoe:true, guide:"all", party:1};
 const BELOW = 5;          // quests more than 5 levels under your starting level count as done or skipped
@@ -6138,7 +6151,7 @@ function render(){
     [stop ? `Stops at level ${stop.L}` : `About ${hm(P.t)} to level ${X.goal}`,
       stop ? (stop.k === "stop" ? `Quests that can be timed run out at level ${stop.L}${X.goal > stop.L ? `, ${X.goal - stop.L} short of your goal. Switch to "Quests + grinding" to finish.` : "."}` : `No training map fits level ${stop.L}.`)
            : `From level ${X.cur} at ${X.pace === 1 ? "perfect-play" : X.pace === 2 ? "relaxed" : "average"} pace. Estimate.`],
-    [`Mesos: about ${net >= 0 ? "+" : "−"}${fmt(Math.abs(net))} overall`, `Earned about ${fmt(P.drops)} from monster meso drops and ${fmt(P.mesos)} from quests. Spent ${fmt(P.spend)} on weapons (NPC shop prices) and up to ${fmt(P.upkeep)} on potions and ammo while grinding (skills on every attack, at shop prices)${P.qpots ? `, of which quest potions cover about ${fmt(Math.min(P.qpots, P.upkeep))}` : ""}. Monster mesos are player reports on meowdb, estimated at ${D.mesok} per monster level where nobody has reported yet. Selling loot and getting hit aren't counted.`],
+    [`Mesos: about ${net >= 0 ? "+" : "−"}${fmt(Math.abs(net))} overall`, `Earned about ${fmt(P.drops)} from monster meso drops and ${fmt(P.mesos)} from quests. Spent ${fmt(P.spend)} on weapons (NPC shop prices) and up to ${fmt(P.upkeep)} on potions and ammo while grinding (skills on every attack, at shop prices)${P.qpots ? `, of which quest potions cover about ${fmt(Math.min(P.qpots, P.upkeep))}` : ""}. Monster mesos: floor(2.1 × monster level) + 3, ±10%, on about 67% of kills (OSMS formulas page). Selling loot and getting hit aren't counted.`],
     ...(X.mode === "rewards" ? [[`${fmt(P.mesos)} mesos + items worth ≈ ${fmt(P.items)} to NPCs`, `From ${nq} quests, ${S.filter(s => s.k === "quest" && vTier(s.r) === 1).length} of them rated Must do. NPC sell value is a floor: rated items (Sauna Robe, scrolls) sell for far more to players.`]] : []),
     [`${nq} quests · ${maps} training map${maps === 1 ? "" : "s"}${nv ? ` · ${nv} valuable side quests` : ""}`, tot ? `${Math.round(100 * P.qExp / tot)}% of the EXP from quests (including the kills they ask for), ${Math.round(100 * P.gExp / tot)}% from grinding.` : ""],
     ...(G && !stop && !G.steps.some(s => s.k === "nomap") && nq ? [[`Grinding only: ${hm(G.t)}`, P.t > G.t

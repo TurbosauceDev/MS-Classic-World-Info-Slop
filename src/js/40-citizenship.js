@@ -1,10 +1,11 @@
 /* ---------------- citizenship ---------------- */
 (() => {
-// from meowdb.com/msclassic/citizenship (COT2)
-const GRADES = [["Traveler",12,"from quest",5,5,95],["Visitor",17,1000,7,10,90],["Helpful Stranger",22,2000,9,15,85],
-  ["Recognized Guest",27,3000,11,20,80],["Town Resident",32,4000,13,25,75],["Trusted Neighbor",37,5000,15,30,70],
-  ["Distinguished Citizen",42,6000,17,35,65],["Town Patron",47,7000,19,40,60],["Guardian of the Village",52,8000,21,45,55],
-  ["Citizen of Honor",57,10000,25,50,50]];
+// meowdb.com/msclassic/citizenship (COT2); contribution needed per grade replaced with the launch client's (OSMS formulas page,
+// Tables & Progression; level gates unchanged)
+const GRADES = [["Traveler",12,"from quest",5,5,95],["Visitor",17,1500,7,10,90],["Helpful Stranger",22,3500,9,15,85],
+  ["Recognized Guest",27,6000,11,20,80],["Town Resident",32,9000,13,25,75],["Trusted Neighbor",37,12500,15,30,70],
+  ["Distinguished Citizen",42,16500,17,35,65],["Town Patron",47,21000,19,40,60],["Guardian of the Village",52,26000,21,45,55],
+  ["Citizen of Honor",57,32000,25,50,50]];
 // [shop, npc, items: [name, price, min grade (1-10), effect]]
 const SHOPS = {
   "Henesys": [
