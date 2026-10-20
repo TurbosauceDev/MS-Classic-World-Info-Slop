@@ -1,0 +1,69 @@
+# Scheduled meso.watch poller: runs every 30 min, fetches meso.watch via
+# agent-browser (headless Chrome passes the Cloudflare check), regenerates
+# mesowatch_prices.json, commits to main if anything changed. Pages redeploys
+# via pages.yml workflow_run trigger.
+#
+# Cron is disabled initially for testing — push the file, trigger
+# workflow_dispatch to verify end-to-end, then uncomment the schedule block.
+#
+# Uses GITHUB_TOKEN (auto-injected, no PAT needed). Commits as 'meso.watch helper'.
+# OSMS data export is cached across runs (keyed on OSMS_REF).
+
+name: meso.watch poll
+
+on:
+  # schedule:
+  #   - cron: "0,30 * * * *"   # every 30 min, on the hour and half-hour (UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Don't run two polls at once — if a new one starts (e.g. manual dispatch
+# overlaps with a scheduled run), cancel the older one.
+concurrency:
+  group: mesowatch-poll
+  cancel-in-progress: true
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OSMS_REF: c661434d86c0fe2c9baae974d509d3498f97df62
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need full history for `git show HEAD:<path>` in mesowatch_claude_review.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Pillow (for squash_images.py)
+        run: pip install --quiet Pillow
+
+      - name: Install agent-browser + Chrome deps
+        run: |
+          npm install -g agent-browser
+          agent-browser install --with-deps
+
+      - name: Restore OSMS data export cache
+        id: osms-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor/osms_datamine_dashboard
+          key: osms-${{ env.OSMS_REF }}
+
+      - name: Fetch OSMS data (if cache miss or partial)
+        if: steps.osms-cache.outputs.cache-hit != 'true'
+        run: bash scripts/fetch_osms.sh
+
+      - name: Run meso.watch poll
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/mesowatch-sync/mesowatch_poll_ci.sh
