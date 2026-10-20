@@ -265,6 +265,9 @@ const path = require("path");
     await q.goto("file://" + path.resolve(__dirname, "../dist/index.html"));
     const [t, h] = await q.$eval(".sitever", e => [e.textContent, e.title]);
     check(/^Site version: v0\.\d+\.\d+ · built \w{3} \d{1,2}, \d{4} · \d{1,2}:\d\d [AP]M P[DS]T$/.test(t) && / UTC$/.test(h), `site version in local time (${t} / ${h})`);
+    // meso.watch data state under the version (Danny 10-20): price count, sale date, live listings with relative age
+    const pws = await q.$eval("#pwstate", e => e.hidden ? "" : e.textContent);
+    check(/^meso\.watch: [\d,]+ item prices \(sales up to \w{3} \d{1,2}\)( · [\d,]+ live listings, updated (just now|\d+ (min|h|days) ago))?$/.test(pws), `meso.watch state on Home (${pws})`);
     // version number = newest changelog entry (build.py numbers every card, Danny 10-19); tracker patch notes on its Overview
     const vers = await q.$$eval("#log .changelog .ver", a => a.map(e => e.textContent));
     check(vers.length > 50 && t.includes(vers[0] + " ·") && vers.at(-1) === "v0.1.0" && new Set(vers).size === vers.length, `site version matches the changelog (${vers[0]}, ${vers.length} entries)`);

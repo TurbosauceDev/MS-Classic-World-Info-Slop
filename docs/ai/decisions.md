@@ -96,3 +96,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-20 Ship Danny's own profile code as a built-in profile "Danny's Default" (tracker 0.2.67).
 - 2026-10-20 Site favicon: keep the Orange Mushroom ("cute"), soften the corners, more interesting colour (Danny). Shipped as the tracker Slime's purple gradient tile so they read as a set.
 - 2026-10-20 Default branch renamed to `main` (Danny, on GitHub); workflows, CLAUDE.md and the meso.watch scripts point at it. Enforce HTTPS on for the custom domain.
+- 2026-10-20 Home footer shows meso.watch data state next to the site version: price count, sales-up-to date, live listings with relative age (Danny asked; relative time per his 10-19 call).

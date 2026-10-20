@@ -119,6 +119,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Back/Forward (75-history.js): after any click/change/Enter it compares {tab, place} with history.state and pushes if
   different (no URL change). A page with in-page places registers `navReg(tab, get, set)` (mobs, items, skills, wmap, quests);
   `get` must return JSON-comparable data or every click pushes. Smoke checks "browser Back ...", "a new step clears Forward".
+- Home `#pwstate` (70-theme.js, under `.sitever`): meso.watch state from `D.pw` (`it` count, `read` date, `now` count + `pwListedAgo()`),
+  redrawn each minute. Smoke "meso.watch state on Home" pins the text; keep `.sitever` the first match (smoke reads the version from it).
 - Unset path vars write to a literal folder named "undefined" (the 10-06 Credits screenshots landed at repo root). Gitignored now; save screenshots to the scratchpad.
 
 ## Splits
