@@ -24,7 +24,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
   { const {p, ctx} = await page({viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true});
     await p.goto(URL);
     check(await p.evaluate(() => document.compatMode) === "CSS1Compat" && await p.evaluate(() => document.documentElement.clientWidth) === 390, "standards mode + viewport tag (phone layout width 390)");
-    await open(p, "credits"); const r = await p.evaluate(() => ({cats: document.querySelector("nav .cats").getBoundingClientRect().height, sw: document.documentElement.scrollWidth,
+    await open(p, "cit"); const r = await p.evaluate(() => ({cats: document.querySelector("nav .cats").getBoundingClientRect().height, sw: document.documentElement.scrollWidth,
       sel: (() => { const s = document.querySelector("nav .cats [aria-selected=true]").getBoundingClientRect(), c = document.querySelector("nav .cats").getBoundingClientRect(); return s.left >= c.left - 1 && s.right <= c.right + 1 })()}));
     check(r.cats < 50 && r.sw === 390 && r.sel, `phone nav is one swipeable row and keeps the picked section in view (${JSON.stringify(r)})`);
     await ctx.close() }

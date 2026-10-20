@@ -70,15 +70,17 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 67-kpq.js | 13 | KPQ guide (D.kpq) |
 | 68-tracker.js | 11 | Grind Tracker pages (live /api/summary, D.shared fallback); trkKpq = Rush/Bonus KPQ boards |
 | 69-search.js | | Ctrl K / `/` search, `#key=value&` share links |
+| 71-navside.js | | sidebar nav: random sprite pools per page (MESO_ICONS inlined), footer links, Theme popup Layout + Page size |
 | 75-history.js | | Back/Forward: history entry per page/place change, nav ← → buttons |
 
 Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `python3 -c "import json;d=json.load(open('data/data.json'));print(list(d))"`.
 
 ## Recipes
-- **New page/tab:** markup `<section id="x" hidden>` in src/pages/x.html + a `<!--@page x-->` slot in index.html; button `#t-x` with `data-cat` in `.subs`; `.hlink`
-  on the Home card; bump the home-link count in tests/smoke.js (21 now) and add a click-through check.
+- **New page/tab:** markup `<section id="x" hidden>` in src/pages/x.html + a `<!--@page x-->` slot in index.html; button `#t-x` with `data-cat` in `.subs`
+  (under its section's `.sgh` title, with `<img class="nic" data-pool="x">` and a pool `P.x` in 71-navside.js); `.hlink`
+  on the Home card; bump the home-link count in tests/smoke.js (21 now) and the sidebar page count (19), add a click-through check.
   Give the `.hlink` an `<img class="hic" data-ic="i:<item>|m:<mob>|s:<skill>">` sprite (filled from D in 00-core.js,
-  shown only when the card is a billboard) and bump the sprite count in smoke.js (27 = 6 headers + 21 links).
+  shown only when the card is a billboard) and bump the sprite count in smoke.js (28 = 7 headers + 21 links).
 - **Changelog:** every user-visible change gets a dated entry at the top of `#log` (grep `id="log"`, read ~20 lines there).
   Each card = one site version, numbered by build.py (oldest = 0.1.0; `class="card" data-minor` starts the next 0.x.0, for a big addition).
   Site-only: tracker app changes go in `tracker/app/changelog.js`.
@@ -151,3 +153,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Input sizing 2026-10-19
 - Builder AP boxes overlapped: `.apgrid input{width:100%}` plus padding/border on content-box inputs = 20px wider than the grid cell. Fixed with `box-sizing:border-box` (also `.pigrid`); range sliders lost their 2px side margin.
 - smoke.js `spillingInputs()` fails any `.lab > input/select` wider than its label, every page at 390px and the builder at 1280/900/700/430. Trap: there is no `<main>`, select pages with `section:not([hidden])`. New `width:100%` inputs need `box-sizing:border-box`.
+
+## Nav redesign 2026-10-20
+- Default layout = sidebar (html without data-nav, >=761px): .wrap is a 2-column grid, nav sticky in column 1. `data-nav="basic"` = plain sidebar, `"rows"` = old two rows (also always on phones). showCat() unhides every page button when `sideNav()`; tests click `#c-x` only when it's visible.
+- `data-size` 1-5 (default 3) zooms `.wrap` with CSS `zoom` only at >=1700px; max-width is divided by the zoom. Changelog/Credits live in `.sitefoot` (cat "more" is hidden everywhere).
+- Spec and Danny's picks: /mnt/project-files/reports/nav-redesign-spec-2026-10-20.md (mockup artifact C9RkvgB6VWPbqjyD6ss4RG).

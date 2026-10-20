@@ -10,16 +10,28 @@ const path = require("path");
   await p.goto("file://" + path.resolve(__dirname, "../dist/index.html"));
   const check = (ok, msg) => { if (!ok) errs.push("FAILED: " + msg); else console.log("ok  " + msg) };
 
-  // Home page + section nav: page buttons only show in their section, so open the section first
-  const tab = async sel => { await p.click("#c-" + await p.$eval(sel, b => b.dataset.cat)); await p.click(sel) };
+  // Home page + section nav. Sidebar layout (default, wider than a phone): every page button shows; the two-row layout and
+  // phones show one section's pages at a time, so open the section first when its button is showing
+  const tab = async sel => { const c = "#c-" + await p.$eval(sel, b => b.dataset.cat); if (await p.isVisible(c)) await p.click(c); await p.click(sel) };
   check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 21, "home page lists every page");
-  check(await p.$$eval("#home img.hic", l => l.length === 27 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "home sprites all load (27)");
-  await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && !(await p.isHidden("#t-items")) && await p.isHidden("#t-plan"), "home link opens its page and section");
-  await p.click("#c-home"); check(!(await p.isHidden("#home")) && await p.isHidden("#mobs"), "Home button returns home");
-  await p.click("#c-db"); check(!(await p.isHidden("#mobs")), "section remembers its last page");
+  check(await p.$$eval("#home img.hic", l => l.length === 28 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "home sprites all load (28)");
+  await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && await p.getAttribute("#t-mobs", "aria-selected") === "true", "home link opens its page");
+  const side = await p.evaluate(() => ({pages: [...document.querySelectorAll("nav .subs [data-tab]")].filter(b => b.offsetParent).length,
+    titles: [...document.querySelectorAll("nav .sgh")].filter(b => b.offsetParent).map(b => b.textContent.trim()).join("|"),
+    sprites: [...document.querySelectorAll("nav img.nic")].filter(i => i.offsetParent).every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0),
+    cats: !!document.querySelector("nav .cats").offsetParent}));
+  check(side.pages === 19 && side.titles === "Grind Tracker|My Character|Training|Victoria Island|Maple Database|Mesos and Trade" && side.sprites && !side.cats,
+    `sidebar lists every page under its section, each with a sprite (${JSON.stringify(side)})`);
+  await p.click("#sbhome"); check(!(await p.isHidden("#home")) && await p.isHidden("#mobs"), "sidebar Home returns home");
+  // Theme popup: Two rows and Basic mode
+  const layout = async nv => { await p.click("#thopen"); await p.click(`#navmode [data-nv="${nv}"]`); await p.click("#thopen") };
+  await layout("rows"); await p.click("#c-db"); check(!(await p.isHidden("#mobs")) && await p.isHidden("#t-plan") && await p.isVisible("#c-db"), "two rows: section remembers its last page, other sections' pages hidden");
+  await layout("basic"); check(await p.isVisible("#t-plan") && await p.isHidden("nav img.nic >> nth=0") && await p.evaluate(() => localStorage.getItem("navmode")) === "basic", "basic mode: plain sidebar, no sprites, remembered");
+  await layout("side"); check(await p.isVisible("nav img.nic >> nth=1") && await p.evaluate(() => !document.documentElement.hasAttribute("data-nav")), "back to the sidebar");
+  await p.click('.sitefoot [data-foot="log"]'); check(!(await p.isHidden("#log")), "footer: Changelog");
   // Back / Forward (75-history.js): pages and places inside them are browser history entries
   await tab("#t-mobs"); await p.click("#mbrows .mbtn"); const mob1 = await p.textContent("#mbpage h2");
-  await tab("#t-items"); await p.click("#c-world"); await p.waitForTimeout(50);
+  await tab("#t-items"); await tab("#t-wmap"); await p.waitForTimeout(50);
   await p.goBack(); await p.waitForTimeout(50); check(!(await p.isHidden("#items")) && await p.isHidden("#wmap"), "browser Back returns to the previous page");
   await p.click("#navback"); await p.waitForTimeout(50);
   check(!(await p.isHidden("#mbpage")) && await p.textContent("#mbpage h2") === mob1, "site Back reopens the monster page");
@@ -206,8 +218,8 @@ const path = require("path");
   check(!/NaN|undefined/.test(await p.textContent("#wmcard")) && (await p.textContent("#wmcard")).length > 20, "world map: Maple Island card");
   await p.click('#wmcard [data-route]');
   check(!(await p.isHidden("#navi")) && (await p.inputValue("#navto")) !== "", "world map: Route here opens the navigator");
-  await tab("#t-log"); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
-  await tab("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 8 && await p.$$eval("#srcdates li", l => l.length) >= 3, "credits tab renders (7 sources + Data last updated)");
+  await p.click('.sitefoot [data-foot="log"]'); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
+  await p.click('.sitefoot [data-foot="credits"]'); check(await p.$$eval("#credits .card", c => c.length) === 8 && await p.$$eval("#srcdates li", l => l.length) >= 3, "credits tab renders (7 sources + Data last updated)");
   await tab("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to finish craft Lv 8/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 8, "crafting leveling plan");
   await tab("#t-maps"); check(await p.$$eval("#timedrows tr", r => r.length) > 10 && /Mushmom/.test(await p.textContent("#timedrows")), "bosses and timed spawns");
   await tab("#t-quests"); await p.click("#qcompact"); await p.click("#qcompact"); check(await p.$$eval("#qrows tr", r => r.length) > 0, "quest compact toggle");
@@ -245,7 +257,7 @@ const path = require("path");
   // every page at phone width: no sideways scroll, no NaN/undefined text
   await p.setViewportSize({width: 390, height: 800});
   for (const [id, cat] of await p.$$eval(".subs button[id^=t-]", bs => bs.map(b => [b.id, b.dataset.cat]))){
-    await p.click("#c-" + cat); await p.click("#" + id); await p.waitForTimeout(200);
+    if (cat === "more") await p.click(`.sitefoot [data-foot="${id.slice(2)}"]`); else { await p.click("#c-" + cat); await p.click("#" + id) } await p.waitForTimeout(200);
     const [sw, cw, bad] = await p.evaluate(() => { const m = document.querySelector("main section:not([hidden])") || document.body;
       return [document.documentElement.scrollWidth, document.documentElement.clientWidth, (m.innerText.match(/.{0,30}\b(NaN|undefined|Infinity)\b.{0,20}/) || [""])[0]] });
     check(sw <= cw + 1 && !bad, `${id} at 390px (width ${sw}/${cw}${bad ? ", text: " + bad : ""})`);
@@ -254,6 +266,10 @@ const path = require("path");
   }
   // builder AP boxes overlapped each other at desktop width (Danny 10-19: width:100% + padding, no border-box)
   await p.click("#c-" + await p.$eval("#t-plan", b => b.dataset.cat)); await p.click("#t-plan");
+  // page size (Theme popup) only applies on wide windows: default 3 = 82% of the window, 15% bigger
+  await p.setViewportSize({width: 1900, height: 900}); await p.waitForTimeout(100);
+  const wide = await p.evaluate(() => { const w = document.querySelector(".wrap"); return [getComputedStyle(w).zoom, Math.round(w.getBoundingClientRect().width)] });
+  check(wide[0] === "1.15" && Math.abs(wide[1] - 1595) < 8, `page size 3 at 1900px: zoom 1.15, 82% wide (${wide})`);
   for (const w of [1280, 900, 700, 430]){
     await p.setViewportSize({width: w, height: 800}); await p.waitForTimeout(100);
     const spill = await p.evaluate(spillingInputs);

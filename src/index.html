@@ -24,6 +24,11 @@ window.siteTheme = function (t){
   el.setAttribute("data-theme", mode === "light" ? "light" : "dark");
 };
 try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) siteTheme(t0) } catch (e) {}
+// Layout and page size (Theme popup, 71-navside.js), also before the page draws: nav = side (default) | basic | rows; size 1-5 (default 3)
+(function (){ var el = document.documentElement, nv = null, sz = null;
+  try { nv = localStorage.getItem("navmode"); sz = localStorage.getItem("pagesize") } catch (e) {}
+  if (nv === "basic" || nv === "rows") el.setAttribute("data-nav", nv);
+  el.setAttribute("data-size", /^[1-5]$/.test(sz || "") ? sz : "3"); })();
 </script>
 
 <div class="wrap">
@@ -39,6 +44,11 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <div class="throw"><input id="thcode" type="text" placeholder="Paste a tracker theme code (MSCT1...)" aria-label="Theme share code" spellcheck="false">
       <button class="btn" id="thadd" type="button">Use code</button><button class="btn" id="thcopy" type="button">Copy code</button></div>
     <p class="thnote" id="thmsg" aria-live="polite"></p>
+    <h3 class="thsub">Layout</h3>
+    <div class="seg small" id="navmode" role="radiogroup" aria-label="Layout"><button type="button" role="radio" data-nv="side">Sidebar</button><button type="button" role="radio" data-nv="basic">Basic mode</button><button type="button" role="radio" data-nv="rows">Two rows</button></div>
+    <h3 class="thsub">Page size on wide screens</h3>
+    <div class="seg small" id="pagesize" role="radiogroup" aria-label="Page size on wide screens"><button type="button" role="radio" data-sz="1">1</button><button type="button" role="radio" data-sz="2">2</button><button type="button" role="radio" data-sz="3">3</button><button type="button" role="radio" data-sz="4">4</button><button type="button" role="radio" data-sz="5">5</button></div>
+    <p class="thnote" id="sznote"></p>
   </div>
 </header>
 
@@ -47,34 +57,43 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <div class="cats" role="tablist" aria-label="Sections">
     <button role="tab" id="c-home" aria-selected="false" data-cat="home">Home</button>
     <button role="tab" id="c-trk" aria-selected="false" data-cat="trk">Grind Tracker</button>
-    <button role="tab" id="c-char" aria-selected="false" data-cat="char">Your character</button>
-    <button role="tab" id="c-db" aria-selected="false" data-cat="db">Databases</button>
-    <button role="tab" id="c-world" aria-selected="false" data-cat="world">World</button>
-    <button role="tab" id="c-town" aria-selected="false" data-cat="town">Towns and trade</button>
+    <button role="tab" id="c-char" aria-selected="false" data-cat="char">My Character</button>
+    <button role="tab" id="c-train" aria-selected="false" data-cat="train">Training</button>
+    <button role="tab" id="c-world" aria-selected="false" data-cat="world">Victoria Island</button>
+    <button role="tab" id="c-db" aria-selected="false" data-cat="db">Maple Database</button>
+    <button role="tab" id="c-town" aria-selected="false" data-cat="town">Mesos and Trade</button>
     <button role="tab" id="c-more" aria-selected="false" data-cat="more">More</button>
   </div></div>
+  <!-- sidebar layout (default, 71-navside.js): every page listed under its section title; the two-row layout shows one section at a time -->
   <div class="subs" role="tablist" aria-label="Pages">
-    <button role="tab" id="t-trk" aria-selected="false" data-tab="trk" data-cat="trk" hidden>Overview</button>
-    <button role="tab" id="t-trkhow" aria-selected="false" data-tab="trkhow" data-cat="trk" hidden>How to use</button>
-    <button role="tab" id="t-trkruns" aria-selected="false" data-tab="trkruns" data-cat="trk" hidden>Shared runs</button>
-    <button role="tab" id="t-trkkpq" aria-selected="false" data-tab="trkkpq" data-cat="trk" hidden>KPQ leaderboard</button>
-    <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="char" hidden>Character Builder</button>
-    <button role="tab" id="t-path" aria-selected="false" data-tab="path" data-cat="char" hidden>Path Planner</button>
-    <button role="tab" id="t-maps" aria-selected="false" data-tab="maps" data-cat="char" hidden>Where to train</button>
-    <button role="tab" id="t-expc" aria-selected="false" data-tab="expc" data-cat="char" hidden>EXP/hr calculator</button>
-    <button role="tab" id="t-quests" aria-selected="false" data-tab="quests" data-cat="db" hidden>Quest Database</button>
-    <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs" data-cat="db" hidden>Monsters</button>
-    <button role="tab" id="t-items" aria-selected="false" data-tab="items" data-cat="db" hidden>Items</button>
-    <button role="tab" id="t-skills" aria-selected="false" data-tab="skills" data-cat="db" hidden>Skills</button>
-    <button role="tab" id="t-wmap" aria-selected="false" data-tab="wmap" data-cat="world" hidden>World Map</button>
-    <button role="tab" id="t-navi" aria-selected="false" data-tab="navi" data-cat="world" hidden>Map Navigator</button>
-    <button role="tab" id="t-kpq" aria-selected="false" data-tab="kpq" data-cat="world" hidden>KPQ</button>
-    <button role="tab" id="t-cit" aria-selected="false" data-tab="cit" data-cat="town" hidden>Citizenship</button>
-    <button role="tab" id="t-craft" aria-selected="false" data-tab="craft" data-cat="town" hidden>Crafting</button>
-    <button role="tab" id="t-keep" aria-selected="false" data-tab="keep" data-cat="town" hidden>Keep or sell</button>
-    <button role="tab" id="t-inv" aria-selected="false" data-tab="inv" data-cat="town" hidden>Price check</button>
-    <button role="tab" id="t-log" aria-selected="false" data-tab="log" data-cat="more" hidden>Changelog</button>
-    <button role="tab" id="t-credits" aria-selected="false" data-tab="credits" data-cat="more" hidden>Credits</button>
+    <button class="sbhome" id="sbhome" type="button" data-go-cat="home"><img class="nic" data-pool="home" alt="">Home</button>
+    <div class="sgh" data-cat="trk"><img class="nic" data-pool="g_trk" alt="">Grind Tracker</div>
+    <button role="tab" id="t-trk" aria-selected="false" data-tab="trk" data-cat="trk" hidden><img class="nic" data-pool="trk" alt="">Overview</button>
+    <button role="tab" id="t-trkhow" aria-selected="false" data-tab="trkhow" data-cat="trk" hidden><img class="nic" data-pool="trkhow" alt="">How to use</button>
+    <button role="tab" id="t-trkruns" aria-selected="false" data-tab="trkruns" data-cat="trk" hidden><img class="nic" data-pool="trkruns" alt="">Shared runs</button>
+    <button role="tab" id="t-trkkpq" aria-selected="false" data-tab="trkkpq" data-cat="trk" hidden><img class="nic" data-pool="trkkpq" alt="">KPQ leaderboard</button>
+    <div class="sgh" data-cat="char"><img class="nic" data-pool="g_char" alt="">My Character</div>
+    <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="char" hidden><img class="nic" data-pool="plan" alt="">Character Builder</button>
+    <button role="tab" id="t-skills" aria-selected="false" data-tab="skills" data-cat="char" hidden><img class="nic" data-pool="skills" alt="">Skills</button>
+    <div class="sgh" data-cat="train"><img class="nic" data-pool="g_train" alt="">Training</div>
+    <button role="tab" id="t-maps" aria-selected="false" data-tab="maps" data-cat="train" hidden><img class="nic" data-pool="maps" alt="">Where to train</button>
+    <button role="tab" id="t-path" aria-selected="false" data-tab="path" data-cat="train" hidden><img class="nic" data-pool="path" alt="">Path Planner</button>
+    <button role="tab" id="t-expc" aria-selected="false" data-tab="expc" data-cat="train" hidden><img class="nic" data-pool="expc" alt="">EXP/hr calculator</button>
+    <button role="tab" id="t-kpq" aria-selected="false" data-tab="kpq" data-cat="train" hidden><img class="nic" data-pool="kpq" alt="">Kerning PQ</button>
+    <div class="sgh" data-cat="world"><img class="nic" data-pool="g_world" alt="">Victoria Island</div>
+    <button role="tab" id="t-wmap" aria-selected="false" data-tab="wmap" data-cat="world" hidden><img class="nic" data-pool="wmap" alt="">World Map</button>
+    <button role="tab" id="t-navi" aria-selected="false" data-tab="navi" data-cat="world" hidden><img class="nic" data-pool="navi" alt="">Map Navigator</button>
+    <div class="sgh" data-cat="db"><img class="nic" data-pool="g_db" alt="">Maple Database</div>
+    <button role="tab" id="t-items" aria-selected="false" data-tab="items" data-cat="db" hidden><img class="nic" data-pool="items" alt="">Items</button>
+    <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs" data-cat="db" hidden><img class="nic" data-pool="mobs" alt="">Monsters</button>
+    <button role="tab" id="t-quests" aria-selected="false" data-tab="quests" data-cat="db" hidden><img class="nic" data-pool="quests" alt="">Quests</button>
+    <div class="sgh" data-cat="town"><img class="nic" data-pool="g_town" alt="">Mesos and Trade</div>
+    <button role="tab" id="t-inv" aria-selected="false" data-tab="inv" data-cat="town" hidden><img class="nic" data-pool="inv" alt="">Price check</button>
+    <button role="tab" id="t-keep" aria-selected="false" data-tab="keep" data-cat="town" hidden><img class="nic" data-pool="keep" alt="">Keep or sell</button>
+    <button role="tab" id="t-craft" aria-selected="false" data-tab="craft" data-cat="town" hidden><img class="nic" data-pool="craft" alt="">Crafting</button>
+    <button role="tab" id="t-cit" aria-selected="false" data-tab="cit" data-cat="town" hidden><img class="nic" data-pool="cit" alt="">Citizenship</button>
+    <button role="tab" id="t-log" aria-selected="false" data-tab="log" data-cat="more" hidden><img class="nic" data-pool="log" alt="">Changelog</button>
+    <button role="tab" id="t-credits" aria-selected="false" data-tab="credits" data-cat="more" hidden><img class="nic" data-pool="credits" alt="">Credits</button>
   </div>
 </nav>
 
@@ -118,6 +137,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 
 <!--@page craft-->
 
+<footer class="sitefoot"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button></footer>
 </div>
 
 <div id="srch" class="srch" hidden><div class="srchbox" role="dialog" aria-modal="true" aria-label="Search">

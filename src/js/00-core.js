@@ -80,7 +80,8 @@ async function copyShare(btn, url){
   setTimeout(() => { btn.textContent = old }, 2500);
 }
 
-/* tabs: category row (.cats) + that category's pages (.subs); Home is a category with no pages. Page buttons keep
+/* tabs: category row (.cats) + that category's pages (.subs); Home is a category with no pages. That's the "Two rows"
+   layout and phones; the default sidebar layout lists every page under its section title (71-navside.js, styles.css). Page buttons keep
    their #t-<id> ids, so code elsewhere can still open a page with $("#t-items").click(). */
 const TABS = [...document.querySelectorAll("nav [data-tab]")], CATS = [...document.querySelectorAll("nav .cats button")];
 const LASTTAB = {};   // category -> last page opened in it
@@ -90,10 +91,14 @@ const navReg = (tab, get, set) => { NAVREG[tab] = {get, set} };
 const inRow = el => { const p = el?.parentElement; if (!p || p.scrollWidth <= p.clientWidth) return;
   const r = el.getBoundingClientRect(), q = p.getBoundingClientRect();
   if (r.left < q.left) p.scrollLeft += r.left - q.left - 12; else if (r.right > q.right) p.scrollLeft += r.right - q.right + 12 };
+// sidebar layout: wider than a phone and not "Two rows" (Theme popup); it lists every page (71-navside.js re-runs showCat on a switch)
+const SIDEMQ = matchMedia("(min-width:761px)"), sideNav = () => SIDEMQ.matches && document.documentElement.getAttribute("data-nav") !== "rows";
 const showCat = cat => {
+  const side = sideNav();
   CATS.forEach(x => x.setAttribute("aria-selected", x.dataset.cat === cat));
-  TABS.forEach(x => x.hidden = x.dataset.cat !== cat);
-  $("nav .subs").hidden = cat === "home";
+  TABS.forEach(x => x.hidden = side ? x.dataset.cat === "more" : x.dataset.cat !== cat);
+  $("nav .subs").hidden = !side && cat === "home";
+  $("#sbhome").setAttribute("aria-selected", cat === "home");
   inRow(CATS.find(x => x.dataset.cat === cat));
 };
 TABS.forEach(b => b.addEventListener("click", () => {
