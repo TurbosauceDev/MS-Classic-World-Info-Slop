@@ -1,5 +1,5 @@
 # MS Classic World Data Slop
-Planner for MapleStory Classic World built from the COT2 game files: character builder, training-map ranking,
+Planner for MapleStory Classic World built from the launch (Steam) client game files via the OSMS export (pinned commit c661434, Oct 17 2026): character builder, training-map ranking,
 quest database, citizenship. See CLAUDE.md for layout/workflow and docs/notes.md for formulas and sources.
 
 ```

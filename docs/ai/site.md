@@ -182,3 +182,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - During a scroll check `INVP.live` gets scroll slots only (Danny 10-20); grid cells are border-box 40x40 (dashed borders made rows uneven), no hover scale (it made a sideways scrollbar).
 - Trap: bullet() returns every light-blue dot (inventory items match too); tooltip() keeps the one with the best name line. Artifact has no screen capability: the button says "open the site".
 - Testing pass 10-20: features.js sweeps all 208 scrolls through `SCAN.match` with unread letters (never wrong; ties broken by glyph width, "?o?" = Bow vs Gloves), covers a top-row scroll (tooltip hides the red line: readFrame keeps the last window when a tooltip reads) and a tab scrolled one row. UI: live "Reading:" line (`#sshint`), scanned total, Start over.
+
+## Gemini formula check 2026-10-20
+- Outside handoff checked against OSMS formulas page: mastery 0.7 (not its 0.8), Lucky Seven, floor(INT/2), ammo-in-WA already right; StatDiv 300 only fires when meleeing with bow/crossbow/claw or Prone Stab, which the builder never models.
+- Fixed: `classAcc` (Where to train, EXP calc) now uses the Beginner formula below Lv 10 (golden.js). README and plan.html no longer say COT2 formulas.

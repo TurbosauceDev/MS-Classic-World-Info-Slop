@@ -136,7 +136,7 @@ All CONFLICTS below were applied 2026-10-20 (Danny: "you can trust everything fr
   Item-quest items with no drop source count as handed out (Pio's come from island boxes); drop items are shown "not timed".
 - Beginner damage (below 10): basic attack, STR primary / DEX secondary, mastery 0.08, swing/stab 60/40. Checked against
   meowdb's table (13 STR, level 1 Snail, 45 HP): Club 3/3/2 hits min/avg/max, Sword and Hand Axe 4/3/3, matching exactly.
-  Beginner accuracy uses the Warrior formula (Beginner's is unknown); island monsters have 0 avoid so it doesn't matter there.
+  Beginner accuracy = trunc(common/2.5 + 5) (OSMS formulas page): builder, planner and Where to train (classAcc below 10).
 - Quest time = 3 min walking/talking (1 min if same NPC as the previous quest; guesses) + kills × `mobKill` time;
   quest EXP includes the kills' EXP. 0-EXP quests are skipped unless another quest needs them.
   Only quests with no item requirements are timed (no drop rates); item quests are listed under the plan, and their chain
