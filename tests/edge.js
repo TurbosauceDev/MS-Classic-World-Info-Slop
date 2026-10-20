@@ -5,7 +5,7 @@ const { chromium } = require("playwright");
 const path = require("path");
 const URL = "file://" + path.resolve(__dirname, "../dist/index.html");
 const TABS = ["trk", "trkhow", "trkruns", "trkkpq", "plan", "path", "maps", "expc", "quests", "mobs", "items", "skills", "wmap", "navi", "kpq", "cit", "craft", "keep", "inv", "log", "credits"];
-const KEYS = "tab planner path pathdone qsort qeq qval ctown craft craftlv qcompact keep keephave mobs items skills navi wmap expc theme themes themec train bcmp".split(" ");
+const KEYS = "tab planner path pathdone qsort qeq qval ctown craft craftlv qcompact keep keephave mobs items skills navi wmap expc theme themes themec train bcmp anchors".split(" ");
 const BADTEXT = /.{0,30}(NaN|undefined|Infinity|\[object).{0,30}/;
 const enc = o => Buffer.from(JSON.stringify(o)).toString("base64").replace(/\+/g, "-").replace(/\//g, "_");
 let fails = 0;
@@ -97,6 +97,24 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.keyboard.press("Escape"); check(!(await p.isVisible("#thpop")) && await p.evaluate(() => document.activeElement.id) === "thopen", "Esc closes Settings, focus back on the cog");
     check(await p.getAttribute("#thopen", "aria-label") === "Settings", "cog button is labelled Settings");
     await p.click("#thopen"); await p.mouse.click(5, 5); check(!(await p.isVisible("#thpop")), "a click on the backdrop closes Settings"); await ctx.close() }
+  // Toggle anchors (Settings): drag Search in the header, kept after reload, Reset all puts it back, hand-edited values ignored, phones keep the default
+  { const {p, errs, ctx} = await page({viewport: {width: 1800, height: 1000}}); await p.goto(URL); await p.waitForTimeout(300);
+    const at = () => p.$eval("#srchopen", e => { const r = e.getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y)] });
+    const home = await at(); await p.click("#thopen"); await p.click("#anchtog");
+    const m = await (await p.$(".anchmv[data-id=search]")).boundingBox();
+    await p.mouse.move(m.x + m.width / 2, m.y + m.height / 2); await p.mouse.down(); await p.mouse.move(m.x + m.width / 2 - 300, m.y + m.height / 2 - 40, {steps: 8}); await p.mouse.up();
+    const moved = await at(), saved = await p.evaluate(() => JSON.parse(localStorage.getItem("anchors")));
+    await p.keyboard.press("Escape"); const off = await p.evaluate(() => !document.documentElement.classList.contains("anchoring"));
+    await p.reload(); await p.waitForTimeout(300); const kept = await at();
+    check(moved[0] < home[0] - 200 && saved?.search?.y >= 0 && off && kept.join() === moved.join(), `anchors: Search moves, Esc locks, kept after reload (${home} -> ${moved} -> ${kept})`);
+    await p.click("#thopen"); await p.click("#anchtog"); await p.click(".anchbar [data-reset]"); await p.waitForTimeout(300);
+    check((await at()).join() === home.join() && await p.evaluate(() => localStorage.getItem("anchors")) === null, "anchors: Reset all puts Search back and forgets it");
+    await p.click(".anchbar [data-lock]");
+    await p.evaluate(() => localStorage.setItem("anchors", JSON.stringify({search: {x: 9, y: -5}, cog: {x: "a", y: 1}, evil: {x: 0, y: 0}}))); await p.reload(); await p.waitForTimeout(300);
+    check((await at()).join() === home.join(), "anchors: out-of-range saved values are ignored");
+    await p.evaluate(() => localStorage.setItem("anchors", JSON.stringify({search: {x: 0.1, y: 10}}))); await p.setViewportSize({width: 600, height: 900}); await p.reload(); await p.waitForTimeout(300);
+    check(await p.$eval("#srchopen", e => getComputedStyle(e).transform) === "none" && await p.isDisabled("#anchtog"), "anchors: phones keep the default header, Toggle anchors off");
+    check(!errs.length, "anchors: no JS errors " + errs.join(" | ")); await ctx.close() }
 
   // 8. big tables draw in chunks (tab switches were 150-400 ms): first rows now, every row after scrolling
   { const {p, ctx} = await page(); await p.goto(URL); await open(p, "craft"); await p.waitForTimeout(100);

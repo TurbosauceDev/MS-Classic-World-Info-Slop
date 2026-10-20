@@ -740,3 +740,29 @@ kbd{font:600 12px var(--f-mono);padding:1px 5px;border:1px solid var(--line);bor
 @media (max-width:600px){.snmode{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.snmode button{flex:none}}
 .sntripg .cardhead{flex-wrap:wrap;gap:4px 12px}
 @media (max-width:600px){.sntriptbl td:nth-child(3){display:none}.sntriptbl td{padding:6px 4px}.snmode{margin-right:-16px}}
+
+/* Toggle anchors (72-anchors.js, ElvUI /moveui style): header gets a grid, labelled movers sit over Search and the cog,
+   the rest of the page blurs back; bar fixed at the bottom of the window */
+#srchopen,#thopen{transition:transform .2s cubic-bezier(.2,.8,.2,1),width .2s,border-color .15s,background-color .15s,color .15s,box-shadow .15s}
+#srchopen.anchdrag,#thopen.anchdrag{transition:none}
+#srchopen{white-space:nowrap;overflow:hidden;justify-content:center;box-sizing:border-box}
+html.anchoring header{z-index:30;border-radius:12px;background-color:color-mix(in srgb,var(--accent) 7%,transparent);background-image:linear-gradient(color-mix(in srgb,var(--accent) 18%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--accent) 18%,transparent) 1px,transparent 1px);background-size:var(--anchgrid,16px) var(--anchgrid,16px);outline:1px dashed color-mix(in srgb,var(--accent) 55%,transparent);animation:fadein .2s ease-out}
+html.anchoring .wrap>:not(header):not(.srch){filter:blur(2px);opacity:.5;pointer-events:none;transition:filter .25s,opacity .25s}
+.anchmv{position:absolute;z-index:3;box-sizing:border-box;border-radius:9px;background:color-mix(in srgb,var(--accent) 22%,transparent);outline:1.5px solid color-mix(in srgb,var(--accent) 85%,transparent);display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;user-select:none;animation:fadein .18s ease-out}
+.anchmv[hidden]{display:none}
+.anchmv.drag{cursor:grabbing;outline-width:2px}
+.anchmv.sel,.anchmv:focus-visible{outline:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 32%,transparent)}
+.anchmv span{font:600 12px var(--f-body);color:var(--ink);background:var(--panel);border-radius:4px;padding:1px 5px;max-width:calc(100% - 6px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-shadow:var(--shadow);pointer-events:none}
+.anchrs{position:absolute;right:-6px;top:50%;width:10px;height:24px;margin-top:-12px;border-radius:4px;background:var(--accent);cursor:ew-resize}
+.anchnudge{position:absolute;z-index:4;display:grid;grid-template-columns:auto auto;gap:6px 8px;align-items:center;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.28);padding:8px 10px;font:600 13px var(--f-body);animation:popin .15s ease-out}
+.anchnudge[hidden]{display:none}
+.anchnudge b{grid-column:1/-1}
+.anchnudge input{width:64px;font:500 13px var(--f-mono);padding:3px 6px}
+.anchnudge .arr{grid-column:1/-1;display:flex;gap:4px}
+.anchnudge .btn,.anchbar .btn{padding:3px 9px;font-size:13px;margin:0}
+.anchbar{position:fixed;z-index:60;left:50%;bottom:max(16px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 32px);box-sizing:border-box;background:var(--ink);color:var(--bg);border-radius:10px;padding:6px 8px;font:600 13px var(--f-body);box-shadow:0 8px 24px rgba(0,0,0,.3);animation:fadein .2s ease-out}
+.anchbar[hidden]{display:none}
+.anchbar .lbl{opacity:.75;padding:0 4px}
+.anchbar .btn{background:transparent;color:inherit;border-color:color-mix(in srgb,currentColor 30%,transparent)}
+.anchbar .btn[aria-pressed="true"],.anchbar .btn.pri{background:var(--bg);color:var(--ink)}
+@media (max-width:760px){#srchopen,#thopen{transform:none!important}}
