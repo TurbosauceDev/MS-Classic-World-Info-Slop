@@ -3,8 +3,12 @@
 # mesowatch_prices.json, commits to main if anything changed. Pages redeploys
 # via pages.yml workflow_run trigger.
 #
-# Cron schedule: every 30 min, at minute 7 and 37 (off the high-load hour/
-# half-hour marks — GitHub warns 0/30 are delayed). Verified
+# Cron schedule: TWO cron entries at off-minute marks (7,37 and 13,43) so
+# GitHub's flaky scheduler can skip either one without missing the window.
+# GitHub warns 0/30 are high-load marks — never use those. If both fire in
+# the same 6-min window, the concurrency block below queues the second
+# behind the first (cancel-in-progress: false) so we don't lose a
+# half-finished commit.
 #
 # Uses GITHUB_TOKEN (auto-injected, no PAT needed). Commits as 'meso.watch helper'.
 # OSMS data export is cached across runs (keyed on OSMS_REF).
@@ -13,17 +17,20 @@ name: meso.watch poll
 
 on:
   schedule:
-    - cron: "7,37 * * * *"   # every 30 min, at minute 7 and 37 (off high-load marks)
+    - cron: "7,37 * * * *"    # primary — every 30 min at minute 7 and 37
+    - cron: "13,43 * * * *"   # fallback — every 30 min at minute 13 and 43
   workflow_dispatch:
 
 permissions:
   contents: write
 
-# Don't run two polls at once — if a new one starts (e.g. manual dispatch
-# overlaps with a scheduled run), cancel the older one.
+# If a scheduled run and a manual dispatch overlap, OR if both crons fire
+# close together, queue the second behind the first (don't cancel — we'd
+# lose a half-finished commit). Workflow runtime is ~60s, so this rarely
+# matters, but the queueing is safer than canceling.
 concurrency:
   group: mesowatch-poll
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   poll:
@@ -67,5 +74,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash scripts/mesowatch-sync/mesowatch_poll_ci.sh
+
 
 
