@@ -210,6 +210,13 @@ agent-browser close >/dev/null 2>&1
 # Target: data/mesowatch-sync side branch (NOT the default branch) to avoid
 # racing Danny's active pushes + wasteful Pages/CI rebuilds. The branch is
 # created on first push from the default branch HEAD.
+#
+# IMPORTANT: pushes via the Git Data API (blob/tree/commit/ref) do NOT fire
+# GitHub Actions push events — only `git push` via HTTPS/SSH or the Contents
+# API does. So after the push succeeds, we explicitly trigger workflow_dispatch
+# on the mesowatch-sync workflow to run refresh_mesowatch.sh. This needs
+# Actions:write permission on the PAT (Danny added it 2026-10-19).
+PUSHED_SOMETHING=0
 if [ $MARKET_CHANGED -eq 1 ] || [ $FRESH_CHANGED -eq 1 ]; then
   if [ -f "$PROJECT_ROOT/.secrets/gh-token" ]; then
     log "Pushing regenerated CSVs to data/mesowatch-sync branch..."
@@ -220,11 +227,33 @@ if [ $MARKET_CHANGED -eq 1 ] || [ $FRESH_CHANGED -eq 1 ]; then
         --file "$DOWNLOAD_DIR/meso_watch_fresh_listings.csv:data/sources/mesowatch_csv/meso_watch_fresh_listings.csv" \
         2>&1 | tail -10; then
       log "GitHub push complete."
+      PUSHED_SOMETHING=1
     else
       log "ERROR: GitHub push failed (see output above)"
     fi
   else
     log "No GitHub token found at $PROJECT_ROOT/.secrets/gh-token — skipping push."
+  fi
+fi
+
+# --- Trigger the mesowatch-sync workflow so refresh_mesowatch.sh runs ---
+# This is necessary because Git Data API ref updates don't fire push events
+# (only git push via HTTPS/SSH or the Contents API does). We rely on
+# workflow_dispatch + Actions:write permission on the PAT instead.
+if [ $PUSHED_SOMETHING -eq 1 ]; then
+  log "Triggering workflow_dispatch on mesowatch-sync..."
+  HTTP_CODE=$(curl -sS -o /tmp/_dispatch_resp.txt -w "%{http_code}" \
+    -X POST \
+    -H "Authorization: Bearer $(cat "$PROJECT_ROOT/.secrets/gh-token")" \
+    -H "Accept: application/vnd.github+json" \
+    -H "Content-Type: application/json" \
+    -d '{"ref":"claude/trusting-bell-fqgar6"}' \
+    "https://api.github.com/repos/TurbosauceDev/MS-Classic-World-Info-Slop/actions/workflows/mesowatch-sync.yml/dispatches")
+  if [ "$HTTP_CODE" = "204" ]; then
+    log "workflow_dispatch accepted (HTTP 204). Workflow should fire shortly."
+  else
+    log "ERROR: workflow_dispatch failed (HTTP $HTTP_CODE)"
+    cat /tmp/_dispatch_resp.txt
   fi
 fi
 
