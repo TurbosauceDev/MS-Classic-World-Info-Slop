@@ -44,7 +44,7 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 Universal Back/Forward buttons, tied to the browser Back/Forward: step through pages and places inside a page.
 
 - 2026-10-19 Senpai House report ideas: build cheapest-live-listing for non-equipment only (ignore rolls/scrolls), price trend, sell-through tags, tracker rough-price marks, Builder avatar. Relying on maplestory.io live at runtime is OK ("a fundamental site for the community").
-- 2026-10-19 Never use classicrank.com data (bot + packet-sniffer sourced, no permission). (maplestory.market was on this line; lifted 10-20, see below.)
+- 2026-10-19 (Superseded 10-20, see below.) Old ban on maplestory.market / classicrank.com data.
 - 2026-10-19 Cheapest listing shows "Listings updated X ago" (worked out in the browser), not a UTC time.
 - 2026-10-20 FM Sniper page (Mesos and Trade): live listings vs the meso.watch median, sort by mesos under or % of value; under 100% = deal, over 100% = not a deal or a sign the price is rising with demand (marked "rising" when meso.watch's trend is up). Built overnight on his OK to push and publish.
 - 2026-10-20 FM Sniper round 2: Danny approved every idea in reports/fm-sniper-ideas-2026-10-20.md (NPC flag, flip, shopping trip, crafting flips, targets + alerts, sell helper, movers, mood, volatility, presets, keys, needed by me) and deal lifetime stats (from the poll's git history). Discord pings deferred ("later"); phone push: remind him later. Pipeline asks (all listings, seen time, askMedian, history) approved, routed via Danny.
@@ -205,3 +205,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - After implementation, `data/sources/mesowatch_prices.json` will have new keys. The site's `build_data.py prices` step already passes the entire `data/sources/mesowatch_prices.json` into `D.pw` (via `step_prices(D)`), so the new keys will automatically appear in `D.pw.asks`, `D.pw.seen`, `D.pw.hist`, and `D.pw.it[iid][7]`.
 - 2026-10-20 Default wide header = Danny's screenshot: Search on the left above the sidebar (same width), small Settings cog on the right in that row. Edit mode expanded "to as many things as you could come up with": title, tagline, sidebar width/side, sidebar section order, Home card order/width.
 - 2026-10-20 maplestory.market embargo lifted (Danny 2026-10-20). Normal rules still apply: source every number, never bypass Cloudflare.
+- 2026-10-20 classicrank.com is a trusted source (not just un-banned); its author nxneko is a friend of the project (Danny 2026-10-20). Cite it like any source; never bypass Cloudflare.
