@@ -8,6 +8,14 @@
 # push + publish. This workflow does not touch anything outside
 # data/sources/mesowatch_prices.json, data/data.json, dist/index.html.
 # Anything else (new endpoints, schema changes, OSMS bumps) is out of scope.
+#
+# Dependencies in CI:
+#   - OSMS data export at vendor/osms_datamine_dashboard/ (scripts/fetch_osms.sh)
+#     Required because build_data.py imports analyze.py at module level, and
+#     analyze.py reads vendor/.../current/monsters.json etc. on import.
+#     ~100MB shallow+sparse+blob-filtered fetch; takes 30-60s.
+#   - Pillow (PIL) for scripts/squash_images.py, which build_data.py prices
+#     calls at the end to re-shrink any new PNGs.
 
 name: mesowatch-sync
 on:
@@ -27,6 +35,13 @@ jobs:
         with:
           ref: claude/trusting-bell-fqgar6
           fetch-depth: 0   # git log + git show HEAD:<path> need full history of the default branch
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Pillow (for squash_images.py)
+        run: pip install --quiet Pillow
+      - name: Fetch OSMS data export (needed by build_data.py via analyze.py)
+        run: bash scripts/fetch_osms.sh
       - name: Run refresh script
         run: bash scripts/refresh_mesowatch.sh
       - name: Check for changes
