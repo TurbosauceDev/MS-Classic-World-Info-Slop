@@ -24,6 +24,7 @@ Credited on the page in the Credits tab (src/index.html #credits); add new sourc
 No drop tables exist in the export, so nothing depends on drop rates ("source n/a" on quest items).
 
 ## Client formulas (COT2)
+COT2 client. The launch client changed some of these: see "OSMS formulas page, launch client" below.
 - Accuracy, common = DEX×1.2 + Level×2 + LUK×0.6. Warrior common/2.5+10 · Bowman common/4.8+20 · Thief common/4+15 ·
   Magician (INT×1.2 + L×2 + LUK×0.6)/5.1+20. Skill bonuses from per-level skill tables (Precise Strikes max +20, Nimble Body +15, Focus, Bless).
 - Avoid = trunc(LUK/3) + trunc(DEX/6) + 5 (+ skills).
@@ -70,6 +71,46 @@ No drop tables exist in the export, so nothing depends on drop rates ("source n/
   guides' counts (Line 1 <Area 1> 3, Transfer Area 4, FUN IV 5, Ant Tunnel III 5). Shown only, not scored.
 - Level cap 100: D.exp 71-99 = previous × 1.0548 (meowdb; matches our table for 51-70 exactly); EXP_SURE = 49 is the last
   level meowdb says is confirmed. Where to train falls back to the best map of the rest when nothing is within 12 levels.
+
+## OSMS formulas page, launch client (read 2026-10-20)
+Source: https://osmsdataexplorer.com/#formulas (tabs/formulas*.js, repo ohmi69/osms_datamine_dashboard @ 2ba79e7, Oct 19).
+The main page now describes the **current (Steam launch) client**; the COT2 version above is kept there as a frozen
+snapshot (`tabs/formulas-cot2.js`). Our data (OSMS c661434) is already the launch export; the formulas in "Client
+formulas (COT2)" are not. Status per line: CONFIRMS = matches our notes/data; NEW; CONFLICTS = differs from what the site uses.
+Nothing below is applied to the site yet unless it says so (Danny's call, thread "osmsdataexplorer formulas").
+- CONFIRMS: accuracy per class (now trunc()), avoid, hit check (`#formulas?page=accuracy`); weapon multipliers and
+  60/40 swing/stab, crossbow 50/50, Double Stab/Savage Blow always stab, Rush = Other; defense ×100/(def+100); level
+  penalty; elements 0/0.75/1/1.25; 99,999 clamp; crit roll (`?page=dealing-damage`). Invincible 1-20% (our skill data
+  already says 1-20%, code reads it). EXP table 1-89 matches ours exactly (`?page=progression`).
+- CONFLICTS, client-read: **MasteryMult = (0.1 + lvl/10) × 0.7** (0.07 unlearned, 0.77 max), was 0.8 (50-builder.js:225,239).
+  **Magic MIN/MAX use INT/125**, was INT/100 (50-builder.js:226-227, 10-maps.js:176); Poison Breath DoT /125 already right.
+  **Iron Arrow falloff 0.8^n** (1, 0.8, 0.64, 0.512), was linear 1/0.8/0.6/0.4 (AOE_FALL, 10-maps.js:92).
+  **Damage taken = I × (1 − D/(D + 2I + 300)) − D/25 − Level/10**, I = Atk × (1.1 + 0.4 rand) (mean 1.3, same), trunc,
+  min 1; was COT2's I/(1 + D/(5L + 200 + 1.2I)) (hitTaken, 10-maps.js:34). E.g. Atk 100, DEF 50, Lv 30: 118 → 114.
+  **EXP 90-99 = previous × 2.1** (Lv 90 needs 11,938,059, not 5,996,316); 51-89 ×1.0548 as ours (00-core.js:6). The
+  whole 1-99 table is client-read, so EXP_SURE = 49 could go to 99.
+  **Crafting caps at Lv 8** (Lv 1-8 EXP and character gates unchanged); the Crafting tab still lists Lv 9-10 (CRAFT_LV,
+  45-crafting.js:6). **Citizenship contribution per grade 2-10 = 1,500 / 3,500 / 6,000 / 9,000 / 12,500 / 16,500 /
+  21,000 / 26,000 / 32,000** (level gates 17-57 unchanged); ours is meowdb's COT2 1,000 ... 8,000, 10,000 (GRADES,
+  40-citizenship.js:4), which OSMS's COT2 snapshot also has.
+- CONFLICTS, capture-fitted (credited "azzy", Discord; server rules, not client):
+  **Meso drop**: Base = floor(2.1 × MobLevel) + 3, Amount = floor(Base × rand(90..110) / 100), drops ~67% of kills
+  (`?page=mesos`; verified only on mobs Lv 1-22). Ours: D.mesok = 2.0 × level at 100% (meowdb reports). Checked against
+  data/sources/meowdb_mesos.json: 15 of 16 reports sit ~10% under the formula's range (Horny Mushroom 22: formula 44-53,
+  report 40-48; Lupin 37: 72-88 vs 68-81) and all say 100% drop chance. Unresolved.
+  **Party meso split**: looter gets Amount − (N−1) × floor(0.8 × Amount / N), others floor(0.8 × Amount / N); N = party
+  on the map at pickup. NEW (we don't model party mesos).
+  **Party EXP** (`?page=party-exp`): Pool = MobEXP × PartyDamage / MaxHP; Share = max(1, round(Pool × (0.8 × Lv/ΣLv +
+  0.2 × Dmg/PartyDmg))); Bonus = min(0.3, 0.1 × (Eligible − 1)) + 0.05 × (Attackers − 1). Eligible = on the map and
+  active (attacked, hit, or skill) in the last 10 s. The 10/20/30% part matches ours (partyBonus, 10-maps.js:68);
+  the +5% per extra attacker is NEW: a 4-player party all hitting gets 45%, not 30%.
+- Mob spawning (`?page=mob-spawning`): CONFIRMS mob_capacity formula; W = xmax − xmin − 40, H = ymax − ymin + 330 over
+  non-vertical footholds. Refill timer "~7 s" (ours 7.56 s, meowdb). Full maps keep the timer ready, so a kill on a
+  full map can respawn near-instantly; spawn points without a cooldown are blocked by a mob within 100 px.
+- NEW, not modeled: monster hit check (EffectiveAvoid = Avoid / (Avoid/80 + 1) / (gap/40 + 1), rescue 2-3%, 8%
+  fallback); shield guard max(5%, ShieldDEF/(ShieldDEF + 500)); Claw Guard 3-5% only with no shield; Heal vs undead
+  rewritten (Roll 0.1-1.2, /1000 + 2.5, no Bless term); Bleed total = % × ((2·Prim + Sec)/100 + 1 + AP/50) × WA, DoT
+  and bleed use the linear level penalty; StatDiv 300 / AtkDiv 150 when meleeing with bow/crossbow/claw; Meso Explosion.
 
 ## Estimates the page makes (flagged in its "How" boxes)
 - **Ammo attack** (stars, arrows): old-game values; Subi +15, Wolbi +17, Bronze arrows +1 confirmed by the meowdb class guides.
