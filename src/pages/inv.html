@@ -15,11 +15,12 @@
   <div class="card" id="sscard">
     <div class="cardhead"><h3>Scroll check</h3><span id="ssst" class="pill">Live from your screen</span></div>
     <p class="sub">Scrolls of one tier all look the same, so a screenshot can't name them. Share your game window, open the <b>Use</b> tab and rest the mouse on each scroll for a moment: its tooltip is read and the slot turns green. Everything stays in your browser.</p>
-    <div class="ssctl"><button class="btn" id="ssgo">Share game window</button><button class="btn sm" id="ssstop" hidden>Stop sharing</button></div>
+    <div class="ssctl"><button class="btn" id="ssgo">Share game window</button><button class="btn sm" id="ssstop" hidden>Stop sharing</button><button class="btn sm" id="ssreset" hidden title="Forget the scanned scrolls and read the tab again">Start over</button></div>
     <div id="sslive" hidden>
       <ol id="sssteps"><li>Share the game window</li><li>Open the Use tab</li><li>Hover each scroll <b id="sscount">0 of 0</b></li></ol>
       <div class="sstrack"><i id="ssbar"></i></div>
-      <div class="ssbody"><div id="ssgrid" aria-label="Your Use tab"></div><ul id="sslist"></ul></div>
+      <p id="sshint" class="sshint" aria-live="polite"></p>
+      <div class="ssbody"><div id="ssgrid" aria-label="Your Use tab"></div><div class="sscol"><p id="sssum" class="sub">Scanned scrolls show up here.</p><ul id="sslist"></ul></div></div>
     </div>
   </div>
 <style>
@@ -44,14 +45,20 @@
 .sscell.sc{border:1.5px dashed var(--accent);animation:sswait 2.4s ease-in-out infinite}
 .sscell.hov{box-shadow:0 0 0 3px var(--accent-soft);transform:scale(1.06)}
 .sscell .ssok{position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--leaf);color:var(--on-accent,var(--panel));font-size:11px;font-weight:700;display:grid;place-items:center;opacity:0;transform:scale(.4);transition:opacity .2s,transform .3s cubic-bezier(.3,1.6,.5,1)}
-.sscell.ok{border:1.5px solid var(--leaf);animation:none}
+.sscell.ok{border:1.5px solid var(--leaf);animation:sspop .35s ease-out}
 .sscell.ok .ssok{opacity:1;transform:scale(1)}
 @keyframes sswait{50%{border-color:var(--line)}}
-#sslist{list-style:none;margin:0;padding:0;flex:1;min-width:220px;max-height:340px;overflow:auto}
+.sscol{flex:1;min-width:220px}
+#sssum{margin:0 0 6px}
+#sslist{list-style:none;margin:0;padding:0;max-height:310px;overflow:auto}
+.sshint{min-height:18px;margin:-4px 0 10px;font-size:13px;color:var(--muted);opacity:0;transition:opacity .2s}
+.sshint.on{opacity:1;color:var(--ink)}
+.sshint.warn{opacity:1;color:var(--warn)}
+@keyframes sspop{40%{transform:scale(1.14)}}
 #sslist li{display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--line);animation:ssin .35s ease-out}
 #sslist .ssp{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
 @keyframes ssin{from{opacity:0;transform:translateY(-6px)}}
-@media (prefers-reduced-motion:reduce){.sscell,.sscell .ssok,.sstrack i{transition:none}.sscell.sc,#sslist li{animation:none}}
+@media (prefers-reduced-motion:reduce){.sscell,.sscell .ssok,.sstrack i{transition:none}.sscell.sc,#sslist li,.sscell.ok{animation:none}}
 </style>
   <div class="card">
     <div class="cardhead"><h3>Your inventory and bank</h3><span id="ivst" class="pill"></span></div>

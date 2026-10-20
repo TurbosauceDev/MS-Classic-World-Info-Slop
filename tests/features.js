@@ -88,17 +88,35 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
         out.push(t?.m ? D.items[t.m.id].n : `none (${t?.tip?.name?.text} / ${t?.tip?.desc.map(l => l.text).join(" ")})`) }
       return out }, TIPS.map(([f]) => [f, b64(`fixtures/${f}.png`)]));
     check(TIPS.every(([, n], k) => read[k] === n), `scroll check: Danny's tooltips read (${read.join(" · ")})`);
+    // every scroll in the game data, read with the letters the tables don't have yet as "?" (and some touching pairs as one
+    // glyph): never the wrong scroll; with the description in view, always the right one
+    const sweep = await p.evaluate(() => {
+      const ids = Object.keys(D.items).filter(i => D.items[i].c === "Scroll"), bad = [], miss = [];
+      const nameCh = new Set(SCAN.FONT.filter(g => /1/.test(g.bits)).map(g => g.ch)), descCh = new Set(SCAN.FONT.filter(g => !/1/.test(g.bits)).map(g => g.ch));
+      const blur = (t, set, merge, nm) => { const chars = [], glyphs = []; for (const c of t){ if (c === " ") continue;
+          if (set.has(c)){ chars.push(c); glyphs.push({w: 6, bits: nm ? "1" : "2"}) }
+          else if (merge && chars.at(-1) === "?" && glyphs.at(-1).w < 14) glyphs.at(-1).w += 7; else { chars.push("?"); glyphs.push({w: 7, bits: nm ? "1" : "2"}) } }
+        return {text: chars.join(""), chars, glyphs} };
+      for (const id of ids){ const it = D.items[id], d = (it.d || "").split("\n");
+        for (const tip of [{name: blur(it.n, nameCh, false, 1), desc: d.map(t => blur(t, descCh, false))}, {name: blur(it.n, nameCh, true, 1), desc: d.map(t => blur(t, descCh, true))},
+          {name: blur(it.n, nameCh, true, 1), desc: []}, {name: {text: "???"}, desc: d.map(t => blur(t, descCh, true))}]){
+          const m = SCAN.match(tip); if (m && D.items[m.id].n !== it.n) bad.push(it.n + " -> " + D.items[m.id].n); else if (!m && tip.desc.length) miss.push(it.n) } }
+      return {n: ids.length, bad, miss} });
+    check(sweep.n > 200 && !sweep.bad.length && !sweep.miss.length, `scroll check: ${sweep.n} scrolls with unread letters: none named wrong, all named from the description (${sweep.bad.slice(0, 3).join(", ")}${sweep.miss.slice(0, 3).join(", ")})`);
     const inv = b64("../tracker/tests/frames-inv/use-12162.png");
     await p.evaluate(async inv => {
       const load = async b => { const im = new Image(); im.src = "data:image/png;base64," + b; await im.decode(); return im };
       const im = await load(inv), les = await load(D.iicons["2040000"]), mid = await load(D.iicons["2040001"]);
       const W = 640, H = 480, c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
       const big = document.createElement("canvas"); big.width = W * 2; big.height = H * 2; const bg = big.getContext("2d"); bg.imageSmoothingEnabled = false;
-      window.scene = tip => {
+      // tip: [fixture, slot on screen]; scrolled: the tab scrolled down one row (rows 1-5 move up, an empty row comes in)
+      window.scene = (tip, scrolled) => {
         g.fillStyle = "rgb(90,120,160)"; g.fillRect(0, 0, W, H); g.drawImage(im, 60, 40);
         const at = i => ({sx: 68 + 36 * (i % 5), cy: 119 + 34 * Math.floor(i / 5)});
-        for (const [i, ic] of [[21, les], [22, mid], [23, mid]]){ const {sx, cy} = at(i); g.drawImage(ic, sx + 16 - (ic.width >> 1), cy + 3 - ic.height) }
-        if (tip){ const [f, , k] = tip, T = TIPIMG[f], {sx, cy} = at(k), bx = sx + 16 + 17, by = cy - 13 - 38;
+        { const e = at(29), s2 = at(2); g.drawImage(c, e.sx, e.cy - 30, 33, 34, s2.sx, s2.cy - 30, 33, 34) }   // slot 2 emptied (an empty slot copied in)
+        for (const [i, ic] of [[2, mid], [21, les], [22, mid], [23, mid]]){ const {sx, cy} = at(i); g.drawImage(ic, sx + 16 - (ic.width >> 1), cy + 3 - ic.height) }
+        if (scrolled){ const a = at(5), z = at(30); g.drawImage(c, 63, a.cy - 30, 192, z.cy - a.cy, 63, a.cy - 64, 192, z.cy - a.cy) }
+        if (tip){ const [f, k] = tip, T = TIPIMG[f], {sx, cy} = at(k), bx = sx + 16 + 17, by = cy - 13 - 38;
           g.drawImage(T.c, T.b.x - 6, T.b.y - 9, T.c.width, T.c.height, bx - 6, by - 9, T.c.width, T.c.height) }
         bg.drawImage(c, 0, 0, W * 2, H * 2) };
       scene(null);
@@ -106,17 +124,27 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       setInterval(() => { const v = big.getContext("2d"); v.fillStyle = "rgba(0,0,0,0)"; v.fillRect(0, 0, 1, 1) }, 50);   // keep frames flowing
     }, inv);
     await p.click("#ssgo");
-    await p.waitForFunction(() => document.querySelectorAll("#ssgrid .sscell.sc").length === 4, null, {timeout: 60000}).catch(() => {});
+    await p.waitForFunction(() => document.querySelectorAll("#ssgrid .sscell.sc").length === 5, null, {timeout: 60000}).catch(() => {});
     const before = await p.evaluate(() => ({sc: document.querySelectorAll("#ssgrid .sscell.sc").length, st: $("#ssst").textContent}));
-    check(!errs.length && before.sc === 4 && /0 of 4/.test(before.st), `scroll check: 4 scrolls waiting (${JSON.stringify(before)})`);
-    for (const t of TIPS){
-      await p.evaluate(t => scene(t), t);
-      await p.waitForFunction(k => document.querySelector(`#ssgrid .sscell[data-i="${k}"]`)?.classList.contains("ok"), t[2], {timeout: 8000}).catch(() => {});
+    check(!errs.length && before.sc === 5 && /0 of 5/.test(before.st), `scroll check: 5 scrolls waiting (${JSON.stringify(before)})`);
+    // [fixture, slot on screen, scrolled, slot in the whole tab]: slot 2 is the top row, where the tooltip covers the window's
+    // red line; then the tab scrolled one row down, so screen slot 17 is the tab's 22
+    for (const [f, k, sc, at] of [[TIPS[0][0], 21, false, 21], [TIPS[1][0], 2, false, 2], [TIPS[1][0], 17, true, 22], [TIPS[2][0], 18, true, 23]]){
+      await p.evaluate(sc => scene(null, sc), sc); await p.waitForTimeout(700);
+      await p.evaluate(([f, k, sc]) => scene([f, k], sc), [f, k, sc]);
+      await p.waitForFunction(k => document.querySelector(`#ssgrid .sscell[data-i="${k}"]`)?.classList.contains("ok"), at, {timeout: 8000}).catch(() => {});
     }
-    await p.evaluate(() => scene(null)); await p.waitForTimeout(600);
+    const hint = await p.textContent("#sshint");
+    check(/^Reading: One-Handed Sword Attack Scroll: Intermediate$/.test(hint), `scroll check: live line names the hovered scroll (${hint})`);
+    await p.evaluate(() => scene(null)); await p.waitForTimeout(700);
     const r = await p.evaluate(() => ({ok: [...document.querySelectorAll("#ssgrid .sscell.ok")].map(e => +e.dataset.i), st: $("#ssst").textContent,
       list: [...document.querySelectorAll("#sslist .itname")].map(e => e.textContent), table: [...document.querySelectorAll("#ivbody .itname")].map(e => e.textContent)}));
-    check(!errs.length && r.ok.join() === "21,22,23" && /3 of 4/.test(r.st), `scroll check: each tooltip ticks its own slot (${JSON.stringify(r.ok)}, ${r.st})`);
+    check(!errs.length && r.ok.join() === "2,21,22,23" && /4 of 5/.test(r.st), `scroll check: each tooltip ticks its own slot (${JSON.stringify(r.ok)}, ${r.st})`);
+    const sum = await p.textContent("#sssum");
+    check(/^4 scanned · worth ~[\d,]+ mesos/.test(sum), `scroll check: scanned total (${sum})`);
+    await p.click("#ssreset"); await p.waitForTimeout(800);
+    const reset = await p.evaluate(() => ({ok: document.querySelectorAll("#ssgrid .sscell.ok").length, li: document.querySelectorAll("#sslist li").length}));
+    check(!reset.ok && !reset.li, `scroll check: Start over forgets the scans (${JSON.stringify(reset)})`);
     check(TIPS.every(([, n]) => r.list.includes(n) && r.table.includes(n)), `scroll check: names in the list and the price table (${r.table.filter(n => /Scroll:/.test(n)).join(" · ")})`);
     await p.click("#ssstop");
     check(!(await p.isHidden("#ssgo")) && errs.length === 0, `scroll check: stop sharing (${errs.join(" | ")})`);

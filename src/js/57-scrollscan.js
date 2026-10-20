@@ -22,19 +22,29 @@ LEARNT = LEARNT.filter(g => g && typeof g.ch === "string" && g.ch.length === 1 &
 const FONT = [...Object.entries(NAMEFONT).flatMap(([ch, v]) => v.map(s => glyph(ch, s, true))),
   ...Object.entries(DESCMORE).map(([ch, s]) => glyph(ch, s, false)),
   ...R.msgGlyphs().filter(g => g.ch.length === 1).map(g => ({...g, bits: g.bits.replace(/1/g, "2")})), ...LEARNT];
-const lineRe = (t, end = "$") => new RegExp("^" + [...t].map(c => c === "?" ? ".{1,3}" : "ilI1|".includes(c) ? "[ilI1|]" : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + end);
-const known = t => t.replace(/[?\s]/g, "").length;
-/* {name: line, desc: [lines]} -> {id, score} or null. The name counts 2 when it fits a scroll's name whole ("?" = 1-3 unread
-   letters, or touching letters read as one), the description 1 when the lines joined fit its start (the last line may run past the frame). Clear winner only: a description alone names most scrolls. */
+const esc1 = c => "ilI1|".includes(c) ? "[ilI1|]" : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&");
+/* read lines -> regex source; "?" = an unread glyph: 1-3 letters (touching letters read as one: tt, At). strict: a glyph no
+   wider than one wide letter (bold name font 10 px for m, chat font 9 for m and %) is one letter, used to break ties
+   ("?o?" fits Bow and Gloves). Without glyphs (a plain text line) "?" is always 1-3. Spaces are dropped (gaps make them). */
+const linePat = (lines, strict) => lines.map(l => l.glyphs ? l.chars.map((c, k) => c !== "?" ? [...c].map(esc1).join("")
+    : strict && l.glyphs[k].w <= (/1/.test(l.glyphs[k].bits) ? 10 : 9) ? "." : ".{1,3}").join("")
+  : [...l.text.replace(/ /g, "")].map(c => c === "?" ? ".{1,3}" : esc1(c)).join("")).join("");
+const known = lines => lines.reduce((a, l) => a + (l.chars ? l.chars.filter(c => c !== "?").length : l.text.replace(/[?\s]/g, "").length), 0);
+/* {name: line, desc: [lines]} -> {id, score} or null. The name counts 2 when it fits a scroll's name whole, the description
+   1 when the lines joined fit its start (the last line may run past the frame); a tie goes to the one that also fits with
+   the strict widths. Clear winner only: a description alone names most scrolls. */
 function match(tip, ids = SCROLLS){
-  const n = tip.name ? tip.name.text.replace(/ /g, "") : "", d = tip.desc.map(l => l.text).join("").replace(/ /g, "");
-  const nre = known(n) >= 4 && lineRe(n), dre = known(d) >= 8 && lineRe(d, "");
-  if (!nre && !dre) return null;
+  const nl = tip.name ? [tip.name] : [], kn = known(nl) >= 4, kd = known(tip.desc) >= 8;
+  if (!kn && !kd) return null;
+  const re = strict => [kn && new RegExp("^" + linePat(nl, strict) + "$"), kd && new RegExp("^" + linePat(tip.desc, strict))];
+  const [nre, dre] = re(false), [nst, dst] = re(true);
   let best = null, tie = false;
   for (const id of ids){
     const [N, Dd] = TEXT[id], sc = (nre && nre.test(N) ? 2 : 0) + (dre && dre.test(Dd) ? 1 : 0);
     if (!sc) continue;
-    if (!best || sc > best.score){ best = {id, score: sc}; tie = false } else if (sc === best.score) tie = true;
+    const st = (nst && nst.test(N) ? 2 : 0) + (dst && dst.test(Dd) ? 1 : 0);
+    if (!best || sc > best.score || sc === best.score && st > best.st){ best = {id, score: sc, st}; tie = false }
+    else if (sc === best.score && st === best.st) tie = true;
   }
   return best && !tie ? best : null;
 }
@@ -100,7 +110,7 @@ function hovered(inv, slots, id, b){
 // a tooltip anywhere in a frame -> {b, tip, m} (also run on the fixtures)
 function tooltip(img, box = {x0: 0, x1: img.w, y0: 0, y1: img.h}){
   let b = null, tip = null;
-  for (const c of bullet(img, box)){ const t = readTip(img, c); if (t && (!tip || known(t.name.text) > known(tip.name.text))){ b = c; tip = t } }
+  for (const c of bullet(img, box)){ const t = readTip(img, c); if (t && (!tip || known([t.name]) > known([tip.name]))){ b = c; tip = t } }
   if (!tip) return null;
   const m = match(tip);
   if (m) learn(tip, m);
@@ -109,6 +119,8 @@ function tooltip(img, box = {x0: 0, x1: img.w, y0: 0, y1: img.h}){
 // one frame -> {inv, read, filled, tip}
 function readFrame(img, C, cache, near){
   let inv = near && R.findInventory(img, {x0: near.x - 12, x1: near.x + 230, y0: near.y - 3, y1: near.y + 4}) || R.findInventory(img);
+  // a tooltip over the top row's scrolls covers the window's red line: the window is still where it was
+  if (!inv && near?.tab === "use"){ const t = tooltip(img, {x0: near.x - 40, x1: near.x + 260, y0: near.y - 30, y1: near.y + 260}); if (t?.m) inv = near }
   if (!inv) return {inv: null};
   if (!inv.tab && near?.tab) inv = {...inv, tab: near.tab};   // the pointer on the open tab hides its colour
   if (inv.tab !== "use") return {inv};
@@ -147,9 +159,9 @@ async function start(){
   catch(e){ st.textContent = e.name === "NotAllowedError" ? "Sharing cancelled" : "This page can't share your screen here: open the site in your browser"; st.className = "pill p-warn"; return }
   const video = document.createElement("video"); video.muted = true; video.playsInline = true; video.srcObject = stream;
   try { await video.play() } catch(e) {}
-  S = {stream, video, canvas: document.createElement("canvas"), cache: new Map(), grid: [], counts: [], names: {}, last: null, inv: null, hov: null, lastKey: "", busy: false, seen: 0};
+  S = {stream, video, canvas: document.createElement("canvas"), cache: new Map(), grid: [], counts: [], names: {}, last: null, inv: null, hov: null, lastKey: "", busy: false, seen: 0, unread: 0};
   stream.getVideoTracks()[0].addEventListener("ended", stop);
-  $s("ssgo").hidden = true; $s("ssstop").hidden = false; $s("sslive").hidden = false;
+  $s("ssgo").hidden = true; $s("ssstop").hidden = false; $s("ssreset").hidden = false; $s("sslive").hidden = false;
   st.textContent = "Loading item pictures…"; st.className = "pill";
   S.C = await INVP.cands();
   if (!S) return;
@@ -159,7 +171,7 @@ function stop(){
   if (!S) return;
   clearInterval(S.timer); S.stream.getTracks().forEach(t => t.stop());
   S = null;
-  $s("ssgo").hidden = false; $s("ssstop").hidden = true;
+  $s("ssgo").hidden = false; $s("ssstop").hidden = true; $s("ssreset").hidden = true; $s("sshint").className = "sshint";
   $s("ssst").textContent = "Stopped: scanned scrolls stay in the table below"; $s("ssst").className = "pill";
   steps(null);
 }
@@ -201,6 +213,11 @@ function step(img){
     if (S.last === key && S.names[at]?.id !== m.id){ S.names[at] = {id: m.id, tok: tok(S.counts[at]), t: ++S.seen} }
     S.last = key;
   } else S.last = null;
+  // what the tooltip under the mouse says, live; one that stays unread for a second gets a hint
+  const hint = $s("sshint");
+  if (m){ S.unread = 0; hint.textContent = slot ? "Reading: " + D.items[m.id].n : D.items[m.id].n + ": move onto the scroll's slot"; hint.className = "sshint on" }
+  else if (f.tip?.tip){ if (++S.unread >= 4){ hint.textContent = "Can't read this tooltip yet: pick that scroll in the table below"; hint.className = "sshint warn" } }
+  else { S.unread = 0; hint.className = "sshint" }
   draw();
 }
 
@@ -235,14 +252,20 @@ function draw(){
     if (!!c.name !== el.classList.contains("ok")) el.classList.toggle("ok", !!c.name);
     el.title = c.name ? D.items[c.name.id].n : c.sc ? "Rest the mouse on this scroll in the game" : c.s ? D.items[c.s.ids[0]].n : "";
   }
-  // scanned list, newest first
-  const list = $s("sslist"), have = new Set([...list.children].map(li => li.dataset.k));
-  const items = done.slice().sort((a, b) => b.name.t - a.name.t);
-  for (const c of items){ const k = c.i + ":" + c.name.id; if (have.has(k)) continue;
-    const id = c.name.id, a = INVP.advice(id), li = document.createElement("li"); li.dataset.k = k;
-    li.innerHTML = `<span class="ri" data-item="${id}"><img src="data:image/png;base64,${D.iicons[id] || ""}" alt=""></span><span class="itname" data-item="${id}" tabindex="0">${esc(D.items[id].n)}</span>${c.s?.n > 1 ? ` <span class="sub">×${c.s.n}</span>` : ""}<span class="ssp">${a.each ? fmt(a.each) + " each" : "no sales"}</span>`;
-    list.prepend(li) }
-  const keep = new Set(items.map(c => c.i + ":" + c.name.id)); [...list.children].forEach(li => { if (!keep.has(li.dataset.k)) li.remove() });
+  // scanned list, one row per scroll (slots of the same scroll added up), newest first
+  const list = $s("sslist"), by = new Map();
+  for (const c of done.slice().sort((a, b) => b.name.t - a.name.t)){ const o = by.get(c.name.id) || {id: c.name.id, n: 0}; o.n += c.s?.n || 1; by.set(c.name.id, o) }
+  const items = [...by.values()];
+  items.forEach((o, k) => {
+    let li = list.querySelector(`li[data-k="${o.id}"]`);
+    if (!li){ const a = INVP.advice(o.id); li = document.createElement("li"); li.dataset.k = o.id;
+      li.innerHTML = `<span class="ri" data-item="${o.id}"><img src="data:image/png;base64,${D.iicons[o.id] || ""}" alt=""></span><span class="itname" data-item="${o.id}" tabindex="0">${esc(D.items[o.id].n)}</span> <span class="sub ssx"></span><span class="ssp">${a.each ? fmt(a.each) + " each" : "no sales"}</span>` }
+    li.querySelector(".ssx").textContent = o.n > 1 ? "×" + fmt(o.n) : "";
+    if (list.children[k] !== li) list.insertBefore(li, list.children[k] || null);
+  });
+  const keep = new Set(items.map(o => o.id)); [...list.children].forEach(li => { if (!keep.has(li.dataset.k)) li.remove() });
+  const worth = items.reduce((a, o) => a + INVP.advice(o.id).each * o.n, 0);
+  $s("sssum").innerHTML = done.length ? `<b>${done.length} scanned</b> · worth ~${fmt(worth)} mesos at usual prices` : "Scanned scrolls show up here.";
   // the table: the whole tab as one read, scanned slots named
   const slots = [], filled = [];
   cells.forEach(c => { if (!c.s) { if (S.grid[Math.floor(c.i / 5)][c.i % 5] === "?") filled.push(c.i); return } filled.push(c.i); slots.push({i: c.i, ids: c.s.ids, n: c.s.n, ...(c.name ? {id: c.name.id} : {})}) });
@@ -251,6 +274,7 @@ function draw(){
 }
 $s("ssgo").addEventListener("click", start);
 $s("ssstop").addEventListener("click", stop);
+$s("ssreset").addEventListener("click", () => { if (!S) return; S.names = {}; S.grid = []; S.counts = []; S.lastKey = ""; $s("sslist").innerHTML = ""; draw() });
 if (!navigator.mediaDevices?.getDisplayMedia){ $s("ssgo").disabled = true; $s("ssst").textContent = "Needs a desktop browser"; }
-return {match, tooltip, readTip, readFrame, place, frameRows, start, stop, step, get S(){ return S }};
+return {FONT, match, tooltip, readTip, readFrame, place, frameRows, start, stop, step, get S(){ return S }};
 })();
