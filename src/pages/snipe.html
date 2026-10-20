@@ -6,50 +6,129 @@
         <li><b>Listed now:</b> the cheapest live Free Market listing of each item on <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> (one per item; equips, stars and items sold by the set are left out, since their value depends on rolls or set size).</li>
         <li><b>Usual price:</b> the median player-shop sale on meso.watch (sales up to <span id="sndate"></span>), and the range half of all sales landed in. <b>Compare with</b> can switch to the low end of that range (the 25th percentile) for a stricter test.</li>
         <li><b>% of value</b> = listed price ÷ usual price. 40% means it's listed at under half what it usually sells for. <b>Mesos under</b> is the gap per item; for a stack, the whole stack's gap shows under it. Fees, if any, aren't taken off.</li>
+        <li><b>Under NPC price:</b> listed for less than an NPC pays for it (game files), so buying and vendoring it is profit even with no player sales. <b>Shop sells it for</b> = an NPC shop (meowdb shop list) is cheaper than this listing.</li>
         <li>Over 100% isn't a deal. When meso.watch's trend for the item is up, it's marked <b>rising</b>: the usual price may be catching up with demand.</li>
       </ul></div>
       <div><h4>How much to trust it</h4><ul>
-        <li><b>Sales seen</b> is how many sales the median comes from. Under 5 (meso.watch's "low data") is marked <b>rough</b>: one odd sale can make anything look cheap.</li>
-        <li><b>Deal</b> labels and <b>Best deal</b> sort are our own cut-offs, not meso.watch's: Steal at 50% or less, Great to 70%, Good to 85%, Small under 100%. Best deal = how far under × trust, where trust grows with sales seen (full at 100+) and is halved for rough prices.</li>
+        <li><b>Sales seen</b> is how many sales the median comes from. Under 5 (meso.watch's "low data") is marked <b>rough</b>. <b>Volatile</b> = the middle half of sales spans more than 60% of the usual price (our cut-off): the "usual" is shaky.</li>
+        <li><b>Deal</b> labels, <b>Best deal</b> and <b>Best flip</b> are this site's own cut-offs, not meso.watch's: Steal at 50% or less, Great to 70%, Good to 85%, Small under 100%. Best deal = how far under × trust (grows with sales seen, full at 100+, halved for rough). Best flip = mesos under × sell-through (the share of units put up for sale that sold), so things people actually buy come first.</li>
         <li><b>Way under</b> (below 25%) or <b>way over</b> (over 3×): often a typo, a bait price or the wrong item. Check in game.</li>
-        <li>Listings update about every 30 minutes; shops open and close fast, so a deal may be gone. The website copy checks for a newer list on its own while this page is open.</li>
-        <li><b>☆ Watch</b> items you want (saved in this browser). <b>Watched only</b> shows them in any view, and when a newer list arrives the page names any watched item now under its usual price. <b>New</b> = a listing that wasn't in the list you saw here last time.</li>
+        <li>Listings update about every 30 minutes; shops open and close fast. <b>On the list since</b> and <b>Deal lifetimes</b> come from every past listing snapshot, so they're only as fine as the gaps between them.</li>
+        <li><b>☆ Watch</b> items (saved in this browser), give them a target price on <b>Watch list</b>, and turn on alerts there. <b>New</b> = a listing that wasn't in the list you saw here last time. Keys on the list: <kbd>j</kbd>/<kbd>k</kbd> move, <kbd>w</kbd> watch, <kbd>c</kbd> copy, <kbd>Enter</kbd> open the item.</li>
       </ul></div>
     </div>
   </details>
 
   <div class="snstats" id="snstats" aria-live="polite"></div>
-  <div id="sntop" class="sntop"></div>
 
-  <div class="controls snctl">
-    <div class="seg small" id="snview" role="radiogroup" aria-label="Show">
-      <button role="radio" data-v="deal" aria-checked="true">Deals</button>
-      <button role="radio" data-v="over" aria-checked="false">Over value</button>
-      <button role="radio" data-v="all" aria-checked="false">Everything listed</button>
-    </div>
-    <label>Search<input id="snq" type="search" placeholder="item or seller"></label>
-    <label>Type<select id="sncat"><option value="">All</option></select></label>
-    <label>Sort<select id="snsort">
-      <option value="score">Best deal</option><option value="pct">Lowest % of value</option><option value="gap">Most mesos under</option>
-      <option value="stack">Biggest stack gap</option><option value="price">Cheapest</option><option value="usual">Highest usual price</option>
-      <option value="sales">Most sales seen</option><option value="sell">Sells fastest</option><option value="name">Name</option></select></label>
-    <label>Compare with<select id="snbasis"><option value="med">Usual price (median)</option><option value="p25">Low end (25th percentile)</option></select></label>
-    <label>Max price each<input id="snmax" type="number" min="0" step="1000" inputmode="numeric" placeholder="any"></label>
-    <label>At least<select id="snmin"><option value="0">Any discount</option><option value="10">10% under</option><option value="20">20% under</option><option value="30">30% under</option><option value="50">50% under</option></select></label>
-    <label>Sales seen<select id="snsales"><option value="0">Any</option><option value="5">5 or more</option><option value="20">20 or more</option><option value="100">100 or more</option></select></label>
-    <button class="btn tgl" id="snrough" aria-pressed="false">Hide rough prices</button>
-    <button class="btn tgl" id="snwatch" aria-pressed="false">Watched only</button>
-    <button class="btn tgl" id="snnew" aria-pressed="false">New only</button>
-    <button class="btn" id="snreset">Reset filters</button>
-    <button class="btn" id="snshare">Copy link</button>
-    <span class="pill p-hot" id="sncount" style="align-self:center"></span>
+  <div class="seg snmode" id="snmode" role="tablist" aria-label="Tool">
+    <button role="tab" data-m="list" aria-selected="true">Deals list</button>
+    <button role="tab" data-m="trip" aria-selected="false">Shopping trip</button>
+    <button role="tab" data-m="craft" aria-selected="false">Crafting flips</button>
+    <button role="tab" data-m="sell" aria-selected="false">Sell yours</button>
+    <button role="tab" data-m="watch" aria-selected="false">Watch list <span class="sncnt" id="snwcnt"></span></button>
+    <button role="tab" data-m="move" aria-selected="false">Movers</button>
+    <button role="tab" data-m="life" aria-selected="false">Deal lifetimes</button>
   </div>
 
-  <div class="tblwrap"><table class="sntbl">
-    <thead><tr><th data-s="name">Item</th><th data-s="price">Listed now</th><th class="num" data-s="usual">Usual price</th><th>Where it sits</th>
-      <th class="num"><span data-s="pct">% of value</span><br><span data-s="gap">mesos under</span></th><th data-s="score">Deal</th><th aria-label="Watch, copy"></th></tr></thead>
-    <tbody id="snrows"></tbody>
-  </table></div>
+  <div class="snpanel" id="snp-list">
+    <div id="sntop" class="sntop"></div>
+    <div class="controls snctl">
+      <div class="seg small" id="snview" role="radiogroup" aria-label="Show">
+        <button role="radio" data-v="deal" aria-checked="true">Deals</button>
+        <button role="radio" data-v="over" aria-checked="false">Over value</button>
+        <button role="radio" data-v="all" aria-checked="false">Everything listed</button>
+      </div>
+      <label>Preset<select id="snpreset"><option value="">Pick one…</option></select></label>
+      <label>Search<input id="snq" type="search" placeholder="item or seller"></label>
+      <label>Type<select id="sncat"><option value="">All</option></select></label>
+      <label>Sort<select id="snsort">
+        <option value="score">Best deal</option><option value="flip">Best flip</option><option value="pct">Lowest % of value</option><option value="gap">Most mesos under</option>
+        <option value="stack">Biggest stack gap</option><option value="npc">Most over NPC price</option><option value="price">Cheapest</option><option value="usual">Highest usual price</option>
+        <option value="sales">Most sales seen</option><option value="sell">Sells fastest</option><option value="since">Newest on the list</option><option value="name">Name</option></select></label>
+      <label>Compare with<select id="snbasis"><option value="med">Usual price (median)</option><option value="p25">Low end (25th percentile)</option></select></label>
+      <label>Max price each<input id="snmax" type="number" min="0" step="1000" inputmode="numeric" placeholder="any"></label>
+      <label>At least<select id="snmin"><option value="0">Any discount</option><option value="10">10% under</option><option value="20">20% under</option><option value="30">30% under</option><option value="50">50% under</option></select></label>
+      <label>Sales seen<select id="snsales"><option value="0">Any</option><option value="5">5 or more</option><option value="20">20 or more</option><option value="100">100 or more</option></select></label>
+      <button class="btn tgl" id="snrough" aria-pressed="false">Hide rough prices</button>
+      <button class="btn tgl" id="snvol" aria-pressed="false">Hide volatile</button>
+      <button class="btn tgl" id="snnpc" aria-pressed="false">Under NPC price</button>
+      <button class="btn tgl" id="snneed" aria-pressed="false">Needed by me</button>
+      <button class="btn tgl" id="snmine" aria-pressed="false">Scrolls for my weapon</button>
+      <button class="btn tgl" id="snwatch" aria-pressed="false">Watched only</button>
+      <button class="btn tgl" id="snnew" aria-pressed="false">New only</button>
+      <button class="btn" id="snreset">Reset filters</button>
+      <button class="btn" id="snsave">Save as preset</button>
+      <span class="snsavebox" id="snsavebox" hidden><input id="snpname" type="text" maxlength="30" placeholder="preset name" aria-label="Preset name"><button class="btn" id="snsaveok">Save</button></span>
+      <button class="btn" id="snshare">Copy link</button>
+      <span class="pill p-hot" id="sncount" style="align-self:center"></span>
+    </div>
+    <div class="tblwrap"><table class="sntbl">
+      <thead><tr><th data-s="name">Item</th><th data-s="price">Listed now</th><th class="num" data-s="usual">Usual price</th><th>Where it sits</th>
+        <th class="num"><span data-s="pct">% of value</span><br><span data-s="gap">mesos under</span></th><th data-s="score">Deal</th><th aria-label="Watch, copy"></th></tr></thead>
+      <tbody id="snrows"></tbody>
+    </table></div>
+  </div>
+
+  <div class="snpanel" id="snp-trip" hidden>
+    <div class="controls snctl">
+      <label>I have (mesos)<input id="sntbud" type="number" min="0" step="10000" inputmode="numeric" placeholder="e.g. 200000"></label>
+      <label>Pick by<select id="sntrank"><option value="roi">Most profit per meso</option><option value="flip">Best flip (sells fast)</option><option value="gap">Most mesos under</option></select></label>
+      <button class="btn tgl" id="sntrough" aria-pressed="false">Include rough prices</button>
+      <button class="btn" id="sntcopy">Copy the list</button>
+    </div>
+    <div id="sntrip"></div>
+  </div>
+
+  <div class="snpanel" id="snp-craft" hidden>
+    <div class="controls snctl">
+      <label>Profession<select id="sncdisc"><option value="">Any</option></select></label>
+      <label>Sort<select id="sncsort"><option value="profit">Most profit per craft</option><option value="roi">Best return</option><option value="lvl">Craft level</option></select></label>
+      <button class="btn tgl" id="snclive" aria-pressed="true">Uses a live listing</button>
+      <button class="btn tgl" id="sncrough" aria-pressed="false">Hide rough prices</button>
+      <span class="pill p-hot" id="snccount" style="align-self:center"></span>
+    </div>
+    <div class="tblwrap"><table class="sntbl sncraft">
+      <thead><tr><th>Makes</th><th>Buy</th><th class="num">Cost</th><th class="num">Sells for</th><th class="num">Profit</th></tr></thead>
+      <tbody id="sncrows"></tbody>
+    </table></div>
+    <p class="note">Recipes and fees from the game files (crafting, up to craft Lv <span id="snccap"></span>). Ingredients are priced at the cheapest live listing for as many as it holds, then the cheaper of an NPC shop (meowdb) and the usual player price; the result at its usual player price. Unpriced ingredients leave a recipe out.</p>
+  </div>
+
+  <div class="snpanel" id="snp-sell" hidden>
+    <div class="controls snctl">
+      <label>What are you selling?<input id="snsitem" type="search" list="snslist" placeholder="item name" autocomplete="off"></label>
+      <datalist id="snslist"></datalist>
+      <div class="snchips" id="snsrecent"></div>
+    </div>
+    <div id="snsell"></div>
+  </div>
+
+  <div class="snpanel" id="snp-watch" hidden>
+    <div class="card snalerts">
+      <div class="cardhead"><h3>Alerts</h3><span class="sub" id="snalst"></span></div>
+      <div class="snalrow">
+        <label class="chk"><input type="checkbox" id="snabadge"> Count hits in the tab title</label>
+        <label class="chk"><input type="checkbox" id="snanote"> Browser notification</label>
+        <label class="chk"><input type="checkbox" id="snasound"> Sound</label>
+        <button class="btn" id="snatest">Test</button>
+      </div>
+      <p class="sub">A hit = a watched item listed at or under your target (or under its usual price when you leave the target empty). On the website, with alerts on, the page keeps checking for newer lists even in a background tab.</p>
+    </div>
+    <div class="tblwrap"><table class="sntbl snwtbl">
+      <thead><tr><th>Item</th><th class="num">Target</th><th>Listed now</th><th class="num">Usual price</th><th>Status</th><th></th></tr></thead>
+      <tbody id="snwrows"></tbody>
+    </table></div>
+  </div>
+
+  <div class="snpanel" id="snp-move" hidden>
+    <div class="grid2 snmoves"><div class="card"><div class="cardhead"><h3>Rising</h3><span class="sub">meso.watch trend</span></div><div id="snup"></div></div>
+      <div class="card"><div class="cardhead"><h3>Falling</h3><span class="sub">meso.watch trend</span></div><div id="sndown"></div></div></div>
+    <p class="note">Items with 5+ sales seen, by meso.watch's price trend. A rising item listed under its usual price may be cheap twice over; a falling one may still drop.</p>
+  </div>
+
+  <div class="snpanel" id="snp-life" hidden><div id="snlife"></div></div>
+
   <p class="note" id="snfoot"></p>
   <div class="sntoast" id="sntoast" role="status" hidden></div>
 </section>

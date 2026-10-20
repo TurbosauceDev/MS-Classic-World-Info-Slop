@@ -232,8 +232,8 @@ const path = require("path");
   // inventory price check: the grind tracker's Use-tab fixture (Danny's screenshot, game pixels)
   // FM Sniper on the build's real meso.watch list (logic with fixed numbers: tests/snipe.js)
   await tab("#t-snipe"); await p.click('#snview [data-v="deal"]');
-  { const r = await p.$$eval("#snrows tr .snpct", l => l.map(x => parseInt(x.textContent.replace("<", ""))));
-    check(r.length > 0 && r.every(v => v < 100) && await p.$$eval("#snstats .sntile", l => l.length) === 5, `FM Sniper: deals all under 100% of value (${r.length} rows)`) }
+  { const r = await p.$$eval("#snrows tr", l => l.map(x => [parseInt((x.querySelector(".snpct") || {}).textContent?.replace("<", "") ?? "NaN"), /under NPC/i.test(x.textContent)]));
+    check(r.length > 0 && r.every(([v, npc]) => v < 100 || npc) && await p.$$eval("#snstats .sntile", l => l.length) === 6, `FM Sniper: deals all under 100% of value or under the NPC price (${r.length} rows)`) }
   await tab("#t-inv"); await p.setInputFiles("#ivfile", path.resolve(__dirname, "../tracker/tests/frames-inv/use-12162.png"));
   await p.waitForFunction(() => /^Read$|had no/.test(document.querySelector("#ivst").textContent), null, {timeout: 60000});
   check(/Lemon/.test(await p.textContent("#ivbody")) && /mesos/.test(await p.textContent("#ivsum")), "price check reads a Use tab");

@@ -25,7 +25,8 @@ node tests/golden.js | tail -3              # meowdb-published reference numbers
 node tests/edge.js | tail -5                # bad saved state/share links/server replies, phone nav, keyboard; ~80 s
 node tests/features.js | tail -5            # train hand-off reload, price check keep/sell, job compare, Credits dates
 node tests/pages.js | tail -5               # Pages split (late icons), manifest, offline service worker
-node tests/snipe.js | tail -5               # FM Sniper on a fixture market.json: deal maths, views, filters, watch, new, live refresh
+node tests/snipe.js | tail -5               # FM Sniper on a fixture market.json: deal maths, views, filters, watch, new, live refresh, tools
+python3 tests/deal_life_test.py             # FM Sniper deal lifetimes from a fake snapshot git history
 node tests/monkey.js | tail -3              # random clicks/typing/Back/window sizes; SEEDS=4,5 N=300 to vary; ~100 s
 python3 scripts/pages_site.py /tmp/site     # the Pages copy pages.yml deploys (prints first-load size)
 python3 scripts/name_diff.py <base-commit>  # skill/item/monster/map renames between two data.json (CI: osms-names.yml)
@@ -63,7 +64,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 54-invprice.js | | Price check (inventory/bank screenshots → meso.watch `PW` prices; Keep or sell column via `KEEPSELL` from 47-keep.js) |
 | 57-scrollscan.js | | Price check › Scroll check: getDisplayMedia, live Use tab grid, tooltip read (readers.js `readTextLines`) matched to scroll name/desc, slot = nearest to tooltip corner; feeds 54 via `INVP.live` |
 | 55-bcompare.js | | Builder "Compare two jobs" (buildAt per side, or "This build" = BLD.S) |
-| 56-snipe.js | 20 | FM Sniper: PWNOW vs PW, deal grades/score (ours), views, watch list, new badges, live market.json refresh |
+| 56-snipe.js | 48 | FM Sniper: PWNOW vs PW, deal grades/score (ours), views, watch list, new badges, live market.json refresh, tools (trip, craft, sell, watch alerts, movers, lifetimes) |
 | 60-planner.js | 42 | Path Planner; exports TRAVEL |
 | 62-expcalc.js | | EXP/hr calculator (ids `#ec*`) |
 | 64-undervalued.js | | UV_PICKS / UV_PACKED / UV_SRC (World Map toggle, "vibes", never tied to planner) |
@@ -92,7 +93,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   (`mapLink()`, click opens World Map card), `.nname` NPC (`npcLink()`), `.mobname` monster (`mobLink()`).
 - **Per-viewer state:** localStorage in try/catch; load an object with `savedState(key, S)` (00-core.js: drops unknown keys and wrong types), then range-check enums/levels.
   Share links (`HASH.x`) are just as untrusted: validate before use (see the sanitizers in 50-builder.js / 60-planner.js). Keys in use: tab planner path pathdone qsort qeq qval ctown craft craftlv
-  qcompact keep keephave mobs items skills navi wmap expc theme themes themec train (Where to train + Builder hand-off) bcmp (job compare) snipe snipewatch snipeseen (FM Sniper).
+  qcompact keep keephave mobs items skills navi wmap expc theme themes themec train (Where to train + Builder hand-off) bcmp (job compare) snipe snipewatch snipeseen snipetarget snipetools snipealert snipepresets (FM Sniper).
 - **Explanations:** a closed `<details class="howto">` at the top of the tab, short bullets.
 - **Share links:** extend the existing `#key=value&` hash (69-search.js); never a new scheme.
 - **Themes:** `src/js/70-theme.js` + the `siteTheme` head script in index.html; presets/share codes come from
@@ -168,6 +169,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Live refresh: `scripts/pages_site.py` writes `market.json` (= D.pw) next to the Pages copy; the page fetches it on open and every 3 min while visible (only when `D.lazy`, so never in the artifact/file://), and if `listed` is newer, swaps PW/PWNOW contents in place (Items tab and footer follow; footer listens for `pwupdate`). Trap: PW/PWNOW are mutated, never reassigned.
 - Tests: `tests/snipe.js` serves a fixture market.json (fixed numbers, so meso.watch poll commits can't break it); smoke.js only checks invariants on the real list. Fixture sellers must not match real ones (the "new" check compares item|price|seller).
 
+- Round 2 (v0.10.0): tool tabs (`S.m`: list, trip, craft, sell, watch, move, life), each a `#snp-<m>` panel drawn by `render()`. NPC price = `D.items[id].p` (Under NPC grade/filter, counts as a deal), shop = `D.ishop` min; Best flip = gap x sell-through (rough = 0) or the NPC gain. Crafting flips use `D.craft.rec` (equip outputs skipped); "Needed by me" reads `KEEPNEED()` (47-keep.js). Storage adds snipetarget snipetools snipealert snipepresets.
+- Deal lifetimes: `scripts/deal_life.py` (called by build_data.py prices -> `D.pw.life`) replays the git history of mesowatch_prices.json; needs the poll's fetch-depth 0, finds fewer snapshots in a shallow clone. Test: `python3 tests/deal_life_test.py`. Trap: redrawing the watch table removes the focused target box, whose blur fires `change` again mid-redraw (guarded by `wdraw`).
 - Same push: Builder AP boxes cap at 9999 (input sanity, not a game limit); monkey seed 3 found DEX 1e308 printing "4.8e+307" accuracy and scrolling phones sideways (edge.js test). Adding a nav page reshuffles the monkey's random walk, so run monkey.js before pushing one.
 
 ## Scroll check 2026-10-20

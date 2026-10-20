@@ -16,8 +16,11 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
     "4000013": [22, 20, 31, 262, 0, 0.128, 0.056], "2000000": [45, 40, 45, 316, 0, 0.125, 0.33], "2061000": [0, 0, 0, 957, 0, -0.167, 0.169]},
   now: {"4020100": [450, 1, 18, "Kerning City Construction Site", "Seller1"], "4020000": [300, 3, 5, "Free Market <3>", "Seller2"],
     "2043702": [75000, 1, 20, "", "Rough1"], "2002009": [12000, 1, 19, "", "Up1"], "4000002": [29999, 1, 20, "", "Bait1"],
-    "4000019": [21, 1, 2, "", "Over1"], "4000013": [4, 1, 1, "", "Typo"], "2000000": [45, 1, 3, "", "Even1"],
-    "2061000": [0.4, 1000, 18, "", "Arrows"], "4000005": [30, 1, 4, "", "NoSales"], "9999999": [1, 1, 1, "", "Unknown item"]}};
+    "4000019": [23, 1, 2, "", "Over1"], "4000013": [4, 1, 1, "", "Typo"], "2000000": [45, 1, 3, "", "Even1"],
+    "2061000": [0.4, 1000, 18, "", "Arrows"], "4000005": [30, 1, 4, "", "NoSales"], "4000016": [10, 5, 6, "", "Vendor1"], "9999999": [1, 1, 1, "", "Unknown item"]},
+  // deal lifetimes (scripts/deal_life.py): g: {grade: [listings, gone, median min lo, hi]}, it: {id: [deals, lo, hi]}, since: {item|price|seller: first seen}
+  life: {snaps: 6, from: "2098-12-31 21:30", to: "2099-01-01 00:00", gap: 30, g: {steal: [4, 3, 0, 30], over: [10, 5, 30, 60]},
+    it: {"4020100": [3, 0, 30]}, since: {"4020100|450|Seller1": "2098-12-31 22:00", "4020000|300|Seller2": ""}}};
 
 (async () => {
   execFileSync("python3", [path.join(ROOT, "scripts/pages_site.py"), OUT]);
@@ -41,10 +44,10 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
   await p.goto(URL); await open();
   await p.waitForFunction(() => !document.querySelector("#sntoast").hidden, null, {timeout: 10000});
   check(hits === 1 && /New listings/.test(await p.textContent("#sntoast")), "first open fetches market.json, a newer list shows a toast");
-  check(/10 live listings/.test(await p.textContent("#pwstate")), "footer meso.watch line counts the new list (unknown item ids dropped)");
+  check(/11 live listings/.test(await p.textContent("#pwstate")), "footer meso.watch line counts the new list (unknown item ids dropped)");
 
   // Deals view, Best deal sort: how far under x trust (sales seen, halved when rough)
-  check(JSON.stringify(await names()) === JSON.stringify(["Green Mushroom Cap", "Garnet", "Garnet Ore", "Wand Magic Attack Scroll: Greater"]),
+  check(JSON.stringify(await names()) === JSON.stringify(["Green Mushroom Cap", "Garnet", "Blue Mushroom Cap", "Garnet Ore", "Wand Magic Attack Scroll: Greater"]),
     `deals = listings under the usual price, best first (${await names()})`);
   const garnet = await row("Garnet");
   check(/450/.test(garnet) && /45%/.test(garnet) && /550 under/.test(garnet) && /Steal/.test(garnet) && /cheaper than|below 3 in 4/.test(garnet), `Garnet: 45% of value, 550 under, Steal (${garnet.replace(/\s+/g, " ")})`);
@@ -53,20 +56,20 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
   check(/check it/.test(await row("Green Mushroom Cap")), "under 25% of value is flagged to check");
   check(/rough/.test(await row("Wand Magic Attack Scroll: Greater")), "low-data price is marked rough");
   check(/2 sale|1 sale/.test(await row("Wand Magic Attack Scroll: Greater")), "sales seen shown");
-  { const t = await p.$$eval("#sntop .sncard .itname", l => l.map(x => x.textContent)); check(t.join() === "Green Mushroom Cap,Garnet,Garnet Ore", `top 3 cards (${t})`) }
-  { const s = await p.textContent("#snstats"); check(/Listed now\s*9/.test(s) && /Under value\s*4/.test(s), `stat tiles count the list (${s.replace(/\s+/g, " ").slice(0, 120)})`) }
+  { const t = await p.$$eval("#sntop .sncard .itname", l => l.map(x => x.textContent)); check(t.join() === "Green Mushroom Cap,Garnet,Blue Mushroom Cap", `top 3 cards (${t})`) }
+  { const s = await p.textContent("#snstats"); check(/Listed now\s*10/.test(s) && /Under value\s*5/.test(s) && /2 under NPC price/.test(s), `stat tiles count the list (${s.replace(/\s+/g, " ").slice(0, 120)})`) }
 
   // sorts
-  await p.selectOption("#snsort", "pct"); check((await names()).join() === "Green Mushroom Cap,Garnet,Wand Magic Attack Scroll: Greater,Garnet Ore", "sort: lowest % of value");
+  await p.selectOption("#snsort", "pct"); check((await names()).join() === "Green Mushroom Cap,Garnet,Wand Magic Attack Scroll: Greater,Garnet Ore,Blue Mushroom Cap", `sort: lowest % of value, no-sales last (${await names()})`);
   await p.selectOption("#snsort", "gap"); check((await names())[0] === "Wand Magic Attack Scroll: Greater", "sort: most mesos under");
   await p.selectOption("#snsort", "stack"); check((await names())[0] === "Wand Magic Attack Scroll: Greater" && (await names())[1] === "Garnet", "sort: biggest stack gap");
   await p.click('#snipe thead [data-s="price"]'); check((await names())[0] === "Green Mushroom Cap" && await p.inputValue("#snsort") === "price", "header click sorts (cheapest)");
   await p.selectOption("#snsort", "score");
 
   // filters
-  await p.click("#snrough"); check(!(await names()).includes("Wand Magic Attack Scroll: Greater") && (await names()).length === 3, "Hide rough prices");
+  await p.click("#snrough"); check(!(await names()).includes("Wand Magic Attack Scroll: Greater") && (await names()).length === 4, "Hide rough prices");
   await p.click("#snrough");
-  await p.fill("#snmax", "500"); check((await names()).sort().join() === "Garnet,Garnet Ore,Green Mushroom Cap", "Max price each");
+  await p.fill("#snmax", "500"); check((await names()).sort().join() === "Blue Mushroom Cap,Garnet,Garnet Ore,Green Mushroom Cap", "Max price each");
   await p.fill("#snmax", "");
   await p.selectOption("#snmin", "50"); check((await names()).sort().join() === "Garnet,Green Mushroom Cap", "At least 50% under");
   await p.selectOption("#snmin", "0");
@@ -79,6 +82,43 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
   await p.selectOption("#snbasis", "p25"); check(/50%/.test(await row("Garnet")) && /low end 900/.test(await row("Garnet")), "Compare with the low end (25th percentile)");
   await p.selectOption("#snbasis", "med");
 
+  // round 2: NPC price, flip, presets, lifetimes on rows, keys
+  check(/Under NPC/.test(await row("Blue Mushroom Cap")) && /vendor it: \+9 each/.test(await row("Blue Mushroom Cap")) && /under NPC price/.test(await row("Green Mushroom Cap")), "listings under what an NPC pays: graded (no sales) or tagged");
+  await p.click("#snnpc"); check((await names()).sort().join() === "Blue Mushroom Cap,Green Mushroom Cap", `Under NPC price filter (${await names()})`); await p.click("#snnpc");
+  await p.selectOption("#snsort", "flip"); check((await names()).join() === "Garnet,Garnet Ore,Green Mushroom Cap,Blue Mushroom Cap,Wand Magic Attack Scroll: Greater", `Best flip = gap x sell-through or the NPC gain; rough = 0 (${await names()})`);
+  await p.selectOption("#snsort", "score");
+  check(/on the list about 2 h/.test(await row("Garnet")) && /before our records/.test(await row("Garnet Ore")), "on the list since, from deal lifetimes");
+  await p.selectOption("#snpreset", "b:npc"); check(await p.getAttribute("#snnpc", "aria-pressed") === "true", "preset sets its filters");
+  await p.click("#snreset"); check(await p.getAttribute("#snnpc", "aria-pressed") === "false" && (await names()).length === 5, "reset clears a preset");
+  await p.evaluate(() => document.activeElement && document.activeElement.blur());
+  await p.keyboard.press("j"); await p.keyboard.press("j");
+  check(await p.$eval("#snrows tr.snfoc .itname", e => e.textContent).catch(() => "") === "Garnet", "j moves the focused row");
+  await p.keyboard.press("w"); check(await p.getAttribute('#snrows [data-w="4020100"]', "aria-pressed") === "true", "w watches the focused row");
+
+  // tools
+  const mode = async m => { await p.click(`#snmode [data-m="${m}"]`); await p.waitForTimeout(40) };
+  await mode("trip"); await p.fill("#sntbud", "2000"); await p.waitForTimeout(40);
+  { const t = await p.textContent("#sntrip"); check(/Garnet/.test(t) && /ch 18/.test(t) && !/Wand Magic/.test(t), `shopping trip fits the budget, grouped by channel (${t.replace(/\s+/g, " ").slice(0, 140)})`) }
+  await mode("craft");
+  { const r = await p.$$eval("#sncrows tr", l => l.map(x => x.textContent.replace(/\s+/g, " "))), g = r.find(x => /^Garnet(?! Ore)/.test(x.trim())) || "";
+    check(/Garnet Ore ×1/.test(g) && /\+500/.test(g), `crafting flip: 1 ore at 300 + 200 fee -> Garnet at 1,000 = +500 (${g})`) }
+  await mode("sell"); await p.fill("#snsitem", "Garnet");
+  { const t = await p.textContent("#snsell"); check(/449/.test(t) && /1,000/.test(t) && /200/.test(t), "sell yours: be the cheapest 449, usual 1,000, NPC 200") }
+  await mode("watch");
+  await p.fill('[data-tg="4020100"]', "500"); await p.dispatchEvent('[data-tg="4020100"]', "change"); await p.waitForTimeout(40);
+  check(await p.$eval('[data-tg="4020100"]', e => !!e.closest("tr.snhit")) && await p.textContent("#snwcnt") === "1", "watch target hit (450 <= 500), counted on the tab");
+  await p.fill('[data-tg="4020100"]', "100"); await p.dispatchEvent('[data-tg="4020100"]', "change"); await mode("watch");
+  check(!(await p.$eval('[data-tg="4020100"]', e => !!e.closest("tr.snhit"))) && await p.textContent("#snwcnt") === "", "target under the listing: no hit");
+  await p.fill('[data-tg="4020100"]', ""); await p.dispatchEvent('[data-tg="4020100"]', "change");
+  { const t0 = await p.title();
+    await p.evaluate(() => Object.defineProperty(document, "hidden", {configurable: true, get: () => true})); await p.click("#snatest");
+    const t1 = await p.title(), tt = await p.textContent("#sntoast");
+    await p.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event("visibilitychange")) });
+    check(t1 === "(1) " + t0 && /Test alert/.test(tt) && await p.title() === t0, `alert test: tab title badge while hidden, cleared on return (${t1})`) }
+  await mode("move"); check(/Tailoring Kit/.test(await p.textContent("#snup")) && /Blue Snail Shell/.test(await p.textContent("#sndown")), "movers: rising and falling by trend");
+  await mode("life"); { const t = await p.textContent("#snlife"); check(/Steal/.test(t) && /75%/.test(t) && /under 30 min/.test(t) && /Garnet/.test(t), "deal lifetimes: grade table and items") }
+  await mode("list"); await p.click('#snrows [data-w="4020100"]');
+
   // Over value view: rising (trend up) vs over, way over; at-usual and no-sales rows only under Everything
   await view("over");
   check((await names()).sort().join() === "Blue Snail Shell,Horny Mushroom Cap,Tailoring Kit", `over value view (${await names()})`);
@@ -86,10 +126,10 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
   check(await p.$eval("#sntop", e => e.hidden), "top cards only in the Deals view");
   await view("all");
   const all = await names();
-  check(all.length === 9 && !all.includes("Arrows for Crossbows") && /No sales yet/.test(await row("Tree Branch")) && /At usual/.test(await row("Red Potion")),
-    `everything: 9 rows, arrows (under 1 meso) and unknown items left out (${all.length})`);
-  check((await p.$$eval("#snrows .snnew", l => l.length)) === 9, "every listing in a newer list is new");
-  await p.click("#snnew"); check((await names()).length === 9, "New only"); await p.click("#snnew");
+  check(all.length === 10 && !all.includes("Arrows for Crossbows") && /No sales yet/.test(await row("Tree Branch")) && /At usual/.test(await row("Red Potion")),
+    `everything: 10 rows, arrows (under 1 meso) and unknown items left out (${all.length})`);
+  check((await p.$$eval("#snrows .snnew", l => l.length)) === 10, "every listing in a newer list is new");
+  await p.click("#snnew"); check((await names()).length === 10, "New only"); await p.click("#snnew");
 
   // watch list: star persists, Watched only ignores the view
   await p.click('#snrows [data-w="4020000"]');

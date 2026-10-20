@@ -622,6 +622,11 @@ def step_prices(D):
     D["pw"] = {"read": j["read"], "it": {k: v for k, v in j["items"].items() if k in D["items"]}}
     if "now" in j:   # cheapest live listing per non-equip item {itemId: [price each, qty, channel, map, seller]}, as of "listed"
         D["pw"].update(listed=j["listed"], now={k: v for k, v in j["now"].items() if k in D["items"]})
+    try:   # FM Sniper deal lifetimes from this file's git history (scripts/deal_life.py); never fails the price step
+        import deal_life
+        D["pw"]["life"] = deal_life.life(ROOT)
+    except Exception as e:
+        print("deal_life skipped:", e)
 
 def step_shared(D):
     """shared {read, runs, players, hours, mobs: {mobId: {kills, mesos, mesoDrops, players, items: {itemId: n}}}}: what grind

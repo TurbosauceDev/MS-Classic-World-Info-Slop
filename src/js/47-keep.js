@@ -1,5 +1,6 @@
 /* ---------------- keep or sell ---------------- */
 let KEEPSELL = null;   // (itemId, count) -> keep/sell advice with this tab's rules; used by Price check (54-invprice.js)
+let KEEPNEED = null;   // () -> {itemId: [still needed, verdict]} with this tab's Have counts; FM Sniper "Needed by me"
 (() => {
 // every item a launch quest (incl. Citizenship) or a crafting recipe asks for: how many quests want, from which level, a
 // verdict, what an NPC pays, and where another comes from (quest data's monster, meowdb player drop reports, crafting
@@ -93,6 +94,8 @@ KEEPSELL = (id, qty) => {
   return {v: r === 4 ? "If you craft" : "Keep", cls: r === 4 ? "p-warn" : r === 0 ? "p-bad" : "p-hot", keep: qty, sell: 0,
     why: r === 4 ? o.discs.join(", ") : r === 3 ? j.v[3] : r === 0 ? "nothing known drops or sells it" : `quests want ${fmt(j.n)}`};
 };
+KEEPNEED = () => { const DONE = doneSet(), out = {};
+  for (const o of LIST){ if (!o.id) continue; const j = judge(o, DONE); if (j.need > 0) out[o.id] = [j.need, j.v[0]] } return out };
 let shown = [];
 function render(){
   const q = S.q.trim().toLowerCase(), DONE = doneSet();
