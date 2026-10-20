@@ -31,7 +31,7 @@ ledger, model training, new endpoints) — **ask Danny in-thread first**.
 
 ## Data sourcing & licensing — read this first
 
-The `meso.watch` `market.json` carries this notice verbatim:
+The meso.watch market.json file carries this notice verbatim:
 
 > Data (c) MesoWatch (meso.watch). Read from public streams by MesoWatch. Not
 > licensed for copying, redistribution, resale or model training. No permission
@@ -171,9 +171,9 @@ The PAT was pasted in chat once (chat logs are the exposure surface). To rotate:
   or add multiple cron entries at different minutes.
 - **`tests/docs.test.js` checks that every path mentioned in backticks or
   markdown table cells in `docs/ai/*.md` exists in the repo.** Bare filenames
-  like `foo.py` (without a directory prefix) get checked against `BASES`
+  like foo.py (without a directory prefix) get checked against `BASES`
   (`scripts/`, `tracker/`, etc.) and fail if they don't match. Always use
-  full repo paths (e.g., `scripts/mesowatch-sync/foo.py`) or absolute sandbox
+  full repo paths (e.g. scripts/mesowatch-sync/foo.py — but only if it exists) or absolute sandbox
   paths (e.g., `/home/z/my-project/scripts/foo.py`) — the latter is skipped
   because it starts with `/`.
 
