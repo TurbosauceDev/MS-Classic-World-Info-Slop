@@ -1,14 +1,20 @@
-# Scheduled meso.watch poller: runs every 30 min, fetches meso.watch via
+# Scheduled meso.watch poller: runs every 10 min, fetches meso.watch via
 # agent-browser (headless Chrome passes the Cloudflare check), regenerates
 # mesowatch_prices.json, commits to main if anything changed. Pages redeploys
 # via pages.yml workflow_run trigger.
 #
-# Cron schedule: TWO cron entries at off-minute marks (7,37 and 13,43) so
-# GitHub's flaky scheduler can skip either one without missing the window.
-# GitHub warns 0/30 are high-load marks — never use those. If both fire in
-# the same 6-min window, the concurrency block below queues the second
-# behind the first (cancel-in-progress: false) so we don't lose a
-# half-finished commit.
+# Cron schedule: SIX separate cron entries at off-minute marks (7, 17, 27,
+# 37, 47, 57). GitHub's scheduler is flaky and silently skips scheduled
+# runs during high-load periods; 6 independent entries per hour give us
+# 6 chances to fire. GitHub warns 0/30 are high-load marks — never use
+# those. If two entries fire close together, the concurrency block below
+# queues the second behind the first (cancel-in-progress: false) so we
+# don't lose a half-finished commit.
+#
+# Why 6 separate entries instead of one '7,17,27,37,47,57 * * * *'? Each
+# entry is a separate schedule event in GitHub's scheduler — if one is
+# skipped, the others still fire. A comma-separated list is one event;
+# if GitHub skips it, all 6 minute marks are skipped.
 #
 # Uses GITHUB_TOKEN (auto-injected, no PAT needed). Commits as 'meso.watch helper'.
 # OSMS data export is cached across runs (keyed on OSMS_REF).
@@ -17,14 +23,18 @@ name: meso.watch poll
 
 on:
   schedule:
-    - cron: "7,37 * * * *"    # primary — every 30 min at minute 7 and 37
-    - cron: "13,43 * * * *"   # fallback — every 30 min at minute 13 and 43
+    - cron: "7 * * * *"
+    - cron: "17 * * * *"
+    - cron: "27 * * * *"
+    - cron: "37 * * * *"
+    - cron: "47 * * * *"
+    - cron: "57 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
-# If a scheduled run and a manual dispatch overlap, OR if both crons fire
+# If a scheduled run and a manual dispatch overlap, OR if two crons fire
 # close together, queue the second behind the first (don't cancel — we'd
 # lose a half-finished commit). Workflow runtime is ~60s, so this rarely
 # matters, but the queueing is safer than canceling.
@@ -74,6 +84,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash scripts/mesowatch-sync/mesowatch_poll_ci.sh
+
 
 
 
