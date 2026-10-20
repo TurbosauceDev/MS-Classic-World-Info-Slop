@@ -61,13 +61,16 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     const replies = {empty: {}, emptyTimes: {runs: 3, players: 2, hours: 1, rows: [{map: "100000000", party: 1, level: 20, expHr: 1000, group: "a"}], times: {"100000000": []}},
       hostile: {runs: X, players: X, hours: "x", updated: X, rows: [{map: X, mapName: X, party: X, level: X, expHr: X, group: X}, {map: 100000000, level: -5, expHr: 1e308}],
         mobs: {[X]: {kills: X, players: X, items: {[X]: X}}, "100100": {kills: 5, players: X, items: {"2000000": 1e9}}},
-        kpq: {rounds: X, groups: X, board: {Rush: [{best: null, median: X, rounds: X, names: [X, 5], party: X, level: X, job: X, date: X}], Bonus: [{best: X, rounds: X, names: X, level: X}]}}}};
+        kpq: {rounds: X, groups: X, board: {Rush: [{best: null, median: X, rounds: X, names: [X, 5], party: X, level: X, job: X, date: X}], Bonus: [{best: X, rounds: X, names: X, level: X}]}}},
+      hostileName: {runs: 3, players: 1, hours: 1, rows: [], kpq: {rounds: 2, groups: 1, board: {Bonus: [{best: 5000, exp: 4000, mesos: 1000, clear: 600, rounds: 1, names: [X]}]}}}};
     for (const [name, body] of Object.entries(replies)){
       const {p, errs, ctx} = await page();
       await p.route("**/api/summary", r => r.fulfill({status: 200, contentType: "application/json", body: JSON.stringify(body), headers: {"access-control-allow-origin": "*"}}));
       await p.goto(URL); for (const t of ["trkruns", "trkkpq"]){ await open(p, t); await p.waitForTimeout(400); await p.evaluate(() => document.querySelectorAll("#trkkm button").forEach(b => b.click())) }
-      const r = await p.evaluate(re => ({x: window.__x, live: /Live from/.test(document.body.innerText), bad: (document.querySelector("#trkruns").innerText + document.querySelector("#trkkpq").innerText).match(new RegExp(re))?.[0]}), BADTEXT.source);
-      check(!errs.length && !r.x && r.live && !r.bad, `tracker server reply "${name}" (${JSON.stringify(r)} ${errs.join("; ")})`); await ctx.close() } }
+      const r = await p.evaluate(re => ({x: window.__x, live: /Live from/.test(document.body.innerText), bad: (document.querySelector("#trkruns").innerText + document.querySelector("#trkkpq").innerText).match(new RegExp(re))?.[0],
+        asText: document.querySelector("#trkkpq").innerText.includes('<img src=x onerror="window.__x=1">')}), BADTEXT.source);
+      // a hostile player name shows up as the literal text, not as markup and not dropped
+      check(!errs.length && !r.x && r.live && !r.bad && (name !== "hostileName" || r.asText), `tracker server reply "${name}" (${JSON.stringify(r)} ${errs.join("; ")})`); await ctx.close() } }
 
   // 6. Price check: a file that isn't a picture is reported, not left on "Reading…"
   { const {p, errs, ctx} = await page(); await p.goto(URL); await open(p, "inv");

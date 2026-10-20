@@ -1,4 +1,4 @@
-// Service worker for the GitHub Pages copy only (registered from 00-core.js when the host is *.github.io; the claude.ai
+// Service worker for the GitHub Pages copy only (registered from 00-core.js on https when the data loads lazily; the claude.ai
 // artifact never loads it). Network first, so an update shows up on the next visit; the cache is only the offline copy.
 // Same-origin GETs only: Google Fonts and the tracker's /api/summary go to the network as usual.
 const CACHE = "mscw-1";

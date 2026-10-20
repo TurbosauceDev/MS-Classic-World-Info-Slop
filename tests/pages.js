@@ -53,7 +53,7 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
 
   // 3. offline: once the service worker has the page, it opens with no network, icons and all
   { const {p, errs, ctx} = await page(); await p.goto(URL);
-    check(await p.evaluate(() => navigator.serviceWorker.getRegistrations().then(r => r.length)) === 0, "no service worker outside *.github.io (localhost here)");
+    check(await p.evaluate(() => navigator.serviceWorker.getRegistrations().then(r => r.length)) === 0, "no service worker on plain http (localhost here)");
     await p.evaluate(() => navigator.serviceWorker.register("sw.js").then(() => navigator.serviceWorker.ready));
     await p.reload(); await p.evaluate(() => ASSETS); await p.waitForTimeout(300);   // controlled now: page + icons file cached
     await ctx.setOffline(true); await p.reload(); await p.evaluate(() => ASSETS); await open(p, "items"); await p.waitForTimeout(100);

@@ -26,8 +26,9 @@ function assetsIn(){
   // an open item or monster page redraws (its big sprite, the spawn minimap)
   for (const t of ["items", "mobs"]) if (!document.getElementById(t)?.hidden && NAVREG[t]) { const g = NAVREG[t].get(); if (g) NAVREG[t].set(g) }
 }
-// offline + "Add to Home Screen" (manifest and sw.js exist only in the Pages deploy, never in the artifact)
-if (D.lazy && "serviceWorker" in navigator && /\.github\.io$/.test(location.hostname)) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+// offline + "Add to Home Screen" (manifest and sw.js exist only in the Pages deploy, never in the artifact; any https host,
+// so the custom domain gets it too, not only *.github.io)
+if (D.lazy && "serviceWorker" in navigator && location.protocol === "https:") addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 // map name with the minimap hover card (card itself is built in 20-quests.js)
 const mapLink = (id, name) => `<span class="name mname" tabindex="0" data-map="${id}">${esc(name)}</span>`;
 // NPC and monster names with their hover cards (cards in 20-quests.js)
