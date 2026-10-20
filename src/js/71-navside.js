@@ -59,6 +59,10 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
     ls("navmode", b.dataset.nv); const cur = TABS.find(x => x.getAttribute("aria-selected") === "true"); showCat(cur ? cur.dataset.cat : "home"); drawSet() });
   $("#pagesize").addEventListener("click", e => { const b = e.target.closest("[data-sz]"); if (!b) return;
     el.setAttribute("data-size", b.dataset.sz); ls("pagesize", b.dataset.sz); drawSet() });
-  zoom5(); addEventListener("resize", zoom5); drawSet();
+  // a sidebar taller than the window sticks by its bottom edge (negative top), so Citizenship is always reachable and the
+  // footer starts below the whole sidebar (Danny 10-20)
+  const nav = $("nav"), stick = () => { const z = parseFloat(getComputedStyle($(".wrap")).zoom) || 1;
+    nav.style.top = Math.min(10, Math.floor(innerHeight / z - nav.offsetHeight - 10)) + "px" };
+  zoom5(); stick(); addEventListener("resize", () => { zoom5(); stick() }); new ResizeObserver(stick).observe(nav); drawSet();
   SIDEMQ.addEventListener("change", () => { const cur = TABS.find(x => x.getAttribute("aria-selected") === "true"); showCat(cur ? cur.dataset.cat : "home") });
 })();

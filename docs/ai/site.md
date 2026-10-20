@@ -156,6 +156,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 
 ## Nav redesign 2026-10-20
 - Default layout = sidebar (html without data-nav, >=761px): .wrap is a 2-column grid, nav sticky in column 1. `data-nav="basic"` = plain sidebar, `"rows"` = old two rows (also always on phones). showCat() unhides every page button when `sideNav()`; tests click `#c-x` only when it's visible.
+- Sidebar sits in `.navcol` (grid column, rows 2-401) so the sticky nav can't slide over the full-width footer (row 402); 71-navside.js gives a nav taller than the window a negative `top` so its bottom stays reachable.
 - Site version + meso.watch lines live in `.sitefoot` (bottom of every page, Danny 10-20), not in #home.
 - `data-size` 1-5 (default 3) zooms `.wrap` with CSS `zoom` only at >=1700px; max-width is divided by the zoom. Changelog/Credits live in `.sitefoot` (cat "more" is hidden everywhere).
 - Spec and Danny's picks: /mnt/project-files/reports/nav-redesign-spec-2026-10-20.md (mockup artifact C9RkvgB6VWPbqjyD6ss4RG).

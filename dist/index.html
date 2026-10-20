@@ -595,7 +595,9 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
   html:not([data-nav="rows"]) .wrap{display:grid;grid-template-columns:clamp(228px,18vw,268px) minmax(0,1fr);column-gap:34px;align-items:start}
   html:not([data-nav="rows"]) .wrap>*{grid-column:2;min-width:0}
   html:not([data-nav="rows"]) .wrap>header{grid-column:1/-1}
-  html:not([data-nav="rows"]) .wrap>nav{grid-column:1;grid-row:2/span 400;position:sticky;top:10px;max-height:calc(100vh - 20px);overflow-y:auto;scrollbar-width:thin;margin:6px 0 0;padding:0 10px 18px 0;border-right:1px solid var(--line)}
+  html:not([data-nav="rows"]) .wrap>footer{grid-column:1/-1;grid-row:402}   /* full width, below the sidebar (which spans rows 2-401) */
+  html:not([data-nav="rows"]) .wrap>.navcol{grid-column:1;grid-row:2/span 400;align-self:stretch}   /* sticky nav stays inside this column, so it never slides over the footer */
+  html:not([data-nav="rows"]) .navcol>nav{position:sticky;top:10px;margin:6px 0 0;padding:0 10px 18px 0;border-right:1px solid var(--line)}
   html:not([data-nav="rows"]) nav .cats{display:none}
   html:not([data-nav="rows"]) nav .navrow{margin-bottom:6px}
   html:not([data-nav="rows"]) nav .subs,html:not([data-nav="rows"]) nav .subs[hidden]{display:flex;flex-direction:column;flex-wrap:nowrap;gap:2px;margin:0;border:0}
@@ -680,7 +682,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </div>
 </header>
 
-<nav>
+<div class="navcol"><nav>
   <div class="navrow"><div class="navhist"><button class="btn" id="navback" type="button" title="Back (also the browser's Back)" aria-label="Back" disabled>←</button><button class="btn" id="navfwd" type="button" title="Forward" aria-label="Forward" disabled>→</button></div>
   <div class="cats" role="tablist" aria-label="Sections">
     <button role="tab" id="c-home" aria-selected="false" data-cat="home">Home</button>
@@ -723,7 +725,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="t-log" aria-selected="false" data-tab="log" data-cat="more" hidden><img class="nic" data-pool="log" alt="">Changelog</button>
     <button role="tab" id="t-credits" aria-selected="false" data-tab="credits" data-cat="more" hidden><img class="nic" data-pool="credits" alt="">Credits</button>
   </div>
-</nav>
+</nav></div>
 
 <section id="home">
   <div class="homegrid">
@@ -1880,7 +1882,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot"><div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button></div>
-  <p class="sitever" data-built="2026-10-20T07:44:35Z" data-ver="0.8.0">Site version: v0.8.0 · built Oct 20, 2026 · 07:44 UTC</p>
+  <p class="sitever" data-built="2026-10-20T07:56:26Z" data-ver="0.8.0">Site version: v0.8.0 · built Oct 20, 2026 · 07:56 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
 </footer>
 </div>
@@ -7581,7 +7583,11 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
     ls("navmode", b.dataset.nv); const cur = TABS.find(x => x.getAttribute("aria-selected") === "true"); showCat(cur ? cur.dataset.cat : "home"); drawSet() });
   $("#pagesize").addEventListener("click", e => { const b = e.target.closest("[data-sz]"); if (!b) return;
     el.setAttribute("data-size", b.dataset.sz); ls("pagesize", b.dataset.sz); drawSet() });
-  zoom5(); addEventListener("resize", zoom5); drawSet();
+  // a sidebar taller than the window sticks by its bottom edge (negative top), so Citizenship is always reachable and the
+  // footer starts below the whole sidebar (Danny 10-20)
+  const nav = $("nav"), stick = () => { const z = parseFloat(getComputedStyle($(".wrap")).zoom) || 1;
+    nav.style.top = Math.min(10, Math.floor(innerHeight / z - nav.offsetHeight - 10)) + "px" };
+  zoom5(); stick(); addEventListener("resize", () => { zoom5(); stick() }); new ResizeObserver(stick).observe(nav); drawSet();
   SIDEMQ.addEventListener("change", () => { const cur = TABS.find(x => x.getAttribute("aria-selected") === "true"); showCat(cur ? cur.dataset.cat : "home") });
 })();
 

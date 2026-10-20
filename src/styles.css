@@ -587,7 +587,9 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
   html:not([data-nav="rows"]) .wrap{display:grid;grid-template-columns:clamp(228px,18vw,268px) minmax(0,1fr);column-gap:34px;align-items:start}
   html:not([data-nav="rows"]) .wrap>*{grid-column:2;min-width:0}
   html:not([data-nav="rows"]) .wrap>header{grid-column:1/-1}
-  html:not([data-nav="rows"]) .wrap>nav{grid-column:1;grid-row:2/span 400;position:sticky;top:10px;max-height:calc(100vh - 20px);overflow-y:auto;scrollbar-width:thin;margin:6px 0 0;padding:0 10px 18px 0;border-right:1px solid var(--line)}
+  html:not([data-nav="rows"]) .wrap>footer{grid-column:1/-1;grid-row:402}   /* full width, below the sidebar (which spans rows 2-401) */
+  html:not([data-nav="rows"]) .wrap>.navcol{grid-column:1;grid-row:2/span 400;align-self:stretch}   /* sticky nav stays inside this column, so it never slides over the footer */
+  html:not([data-nav="rows"]) .navcol>nav{position:sticky;top:10px;margin:6px 0 0;padding:0 10px 18px 0;border-right:1px solid var(--line)}
   html:not([data-nav="rows"]) nav .cats{display:none}
   html:not([data-nav="rows"]) nav .navrow{margin-bottom:6px}
   html:not([data-nav="rows"]) nav .subs,html:not([data-nav="rows"]) nav .subs[hidden]{display:flex;flex-direction:column;flex-wrap:nowrap;gap:2px;margin:0;border:0}
