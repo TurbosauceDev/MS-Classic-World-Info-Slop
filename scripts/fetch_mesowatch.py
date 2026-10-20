@@ -2,12 +2,14 @@
 """Build data/sources/mesowatch_prices.json from meso.watch player-shop prices. Used with the meso.watch creator's
 permission (Danny, 2026-10-09). Keeps only per-item summary stats, not the sales log.
 
-The site's /data/ is behind a Cloudflare bot check, so nothing here pulls it. Danny's poller pushes a CSV to branch
-data/mesowatch-sync; scripts/refresh_mesowatch.sh feeds it through this script. Both inputs are supported:
-  python3 scripts/fetch_mesowatch.py <export.csv> [listings.csv]   # poller CSVs, or a dev export Danny drops in chat
-  python3 scripts/fetch_mesowatch.py <market.json>    # the raw market file, if a copy is available
-listings.csv = the poller's live Free Market listings (meso_watch_fresh_listings.csv): keeps the cheapest listing per
-non-equipment item ("now"), since equips vary by roll and scrolls (Danny, 2026-10-19).
+The site's /data/ is behind a Cloudflare bot check, so nothing here pulls it. The CI poller in
+.github/workflows/mesowatch-poll.yml fetches meso.watch via agent-browser (headless Chrome), extracts
+the payloads to localStorage, reads them back to disk, then runs this script on them. Both inputs
+are supported:
+  python3 scripts/fetch_mesowatch.py <export.csv> [listings.csv]   # a dev export Danny drops in chat
+  python3 scripts/fetch_mesowatch.py <market.json> [listings.csv]  # the raw market file + fresh listings CSV
+listings.csv = the live Free Market listings (meso_watch_fresh_listings.csv format): keeps the cheapest listing per
+non-equipment item ("now"), since equips vary by rolls and scrolls (Danny, 2026-10-19).
 Then: python3 scripts/build_data.py prices && python3 scripts/build.py"""
 import csv, json, pathlib, sys
 
@@ -62,3 +64,4 @@ dst = ROOT / "data" / "sources" / "mesowatch_prices.json"
 dst.write_text(json.dumps(j, separators=(",", ":")))
 print(f"{len(out)} items with sales ({sum(not v[4] & 1 for v in out.values())} solid) as of {generated}"
       + (f", {len(j['now'])} listed now as of {j['listed']}" if "now" in j else "") + f" -> {dst}")
+
