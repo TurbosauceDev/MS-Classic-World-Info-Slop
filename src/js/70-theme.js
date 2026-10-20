@@ -1,4 +1,4 @@
-// Theme picker (header "Theme"): the Grind Tracker's presets and MSCT1. share codes (tracker/app/themes.js, inlined by
+// Theme picker (header cog > Settings): the Grind Tracker's presets and MSCT1. share codes (tracker/app/themes.js, inlined by
 // build.py), so the site can wear whatever the tracker wears (Danny, 2026-10-18). Default = styles.css as is.
 // localStorage: theme = "p:Name" (preset) or "u:Name" (pasted), themes = pasted ones, themec = the theme object the
 // <head> script applies before the page draws (siteTheme in index.html).
@@ -23,11 +23,14 @@
   const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[ch]);
   const msg = s => $("#thmsg").textContent = s;
   $("#thsw").addEventListener("click", e => { const b = e.target.closest("[data-th]"); if (b) use(b.dataset.th) });
-  $("#thopen").addEventListener("click", () => { const p = $("#thpop"), open = p.hidden; p.hidden = !open; $("#thopen").setAttribute("aria-expanded", open); if (open) draw() });
-  // Esc or a click elsewhere closes it too (it used to stay open until Theme was clicked again)
-  const shut = () => { if ($("#thpop").hidden) return; $("#thpop").hidden = true; $("#thopen").setAttribute("aria-expanded", false) };
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#thpop").hidden){ const inside = $("#thpop").contains(document.activeElement); shut(); if (inside) $("#thopen").focus() } });
-  document.addEventListener("click", e => { if (!e.composedPath().some(x => x.id === "thpop" || x.id === "thopen")) shut() });   // path, not closest(): a swatch click redraws the list
+  // Settings (header cog, Danny 10-20): an inset modal over a blurred backdrop like Search. Esc, × or a click on the backdrop closes it
+  const pop = $("#thpop"), cog = $("#thopen");
+  const open = () => { pop.hidden = false; cog.setAttribute("aria-expanded", true); draw(); $("#thclose").focus({preventScroll: true}) };
+  const shut = () => { if (pop.hidden) return; const inside = pop.contains(document.activeElement); pop.hidden = true; cog.setAttribute("aria-expanded", false); if (inside) cog.focus({preventScroll: true}) };
+  cog.addEventListener("click", () => pop.hidden ? open() : shut());
+  $("#thclose").addEventListener("click", shut);
+  pop.addEventListener("click", e => { if (e.target === pop) shut() });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !pop.hidden) shut() });
   $("#thadd").addEventListener("click", () => {
     const t = TH.decode($("#thcode").value);
     if (!t) return msg(/MSCT1\./.test($("#thcode").value) ? "That code is damaged or incomplete: copy the whole line again." : "That isn't a theme code (they start with MSCT1.).");
@@ -41,7 +44,7 @@
     catch { $("#thcode").value = code; msg("Copy the code from the box above.") }
   });
   // a light/dark theme (Default, Purple) follows the system setting live
-  dq.addEventListener("change", () => { const t = now(); if (t !== TH.PRESETS[0]) siteTheme(t); if (!$("#thpop").hidden) draw() });
+  dq.addEventListener("change", () => { const t = now(); if (t !== TH.PRESETS[0]) siteTheme(t); if (!pop.hidden) draw() });
 })();
 
 // Home "Site version: v0.x.y · built ...": number = newest changelog entry (build.py); the build stamps UTC; show it in the viewer's own time zone (Danny 10-19), exact UTC on hover

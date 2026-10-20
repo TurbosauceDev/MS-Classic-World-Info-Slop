@@ -25,8 +25,8 @@ const path = require("path");
   { const [nb, ft] = await p.evaluate(() => { scrollTo(0, 1e6); return [document.querySelector("nav").getBoundingClientRect().bottom, document.querySelector(".sitefoot").getBoundingClientRect().top] }); await p.evaluate(() => scrollTo(0, 0));
     check(ft >= nb, `footer starts below the whole sidebar (nav bottom ${Math.round(nb)}, footer top ${Math.round(ft)})`) }   // Danny 10-20: it slid over the footer
   await p.click("#sbhome"); check(!(await p.isHidden("#home")) && await p.isHidden("#mobs"), "sidebar Home returns home");
-  // Theme popup: Two rows and Basic mode
-  const layout = async nv => { await p.click("#thopen"); await p.click(`#navmode [data-nv="${nv}"]`); await p.click("#thopen") };
+  // Settings (cog): Two rows and Basic mode
+  const layout = async nv => { await p.click("#thopen"); await p.click(`#navmode [data-nv="${nv}"]`); await p.click("#thclose") };
   await layout("rows"); await p.click("#c-db"); check(!(await p.isHidden("#mobs")) && await p.isHidden("#t-plan") && await p.isVisible("#c-db"), "two rows: section remembers its last page, other sections' pages hidden");
   await layout("basic"); check(await p.isVisible("#t-plan") && await p.isHidden("nav img.nic >> nth=0") && await p.evaluate(() => localStorage.getItem("navmode")) === "basic", "basic mode: plain sidebar, no sprites, remembered");
   await layout("side"); check(await p.isVisible("nav img.nic >> nth=1") && await p.evaluate(() => !document.documentElement.hasAttribute("data-nav")), "back to the sidebar");
@@ -256,7 +256,7 @@ const path = require("path");
     await p.reload(); await p.waitForTimeout(300);
     const kept = await p.evaluate(() => document.documentElement.style.getPropertyValue("--accent"));
     await p.click("#thopen"); await p.click('#thsw [data-th="p:Default"]'); const def = await bg();
-    await p.fill("#thcode", "nope"); await p.click("#thadd"); const bad = await p.textContent("#thmsg"); await p.click("#thopen");
+    await p.fill("#thcode", "nope"); await p.click("#thadd"); const bad = await p.textContent("#thmsg"); await p.click("#thclose");
     check(slime === "#111a14,dark" && pink === "#ff00aa,light" && kept === "#ff00aa" && def === "," && /isn't a theme/.test(bad),
       `theme picker (${slime} | ${pink} | ${kept} | ${def})`);
   }

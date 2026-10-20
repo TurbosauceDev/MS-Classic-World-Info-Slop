@@ -94,7 +94,9 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.click("#thopen"); await p.click("#thsw button >> nth=0"); check(await p.isVisible("#thpop"), "picking a theme keeps the popup open");
     await p.fill("#thcode", "MSCT1.AAAAAAAAAAAAAAAAAAAAAAAA"); await p.click("#thadd");
     check(/damaged/.test(await p.textContent("#thmsg")), "a cut-off theme code says it's damaged (was: 'isn't a theme code')");
-    await p.keyboard.press("Escape"); check(!(await p.isVisible("#thpop")), "Esc closes the theme popup"); await ctx.close() }
+    await p.keyboard.press("Escape"); check(!(await p.isVisible("#thpop")) && await p.evaluate(() => document.activeElement.id) === "thopen", "Esc closes Settings, focus back on the cog");
+    check(await p.getAttribute("#thopen", "aria-label") === "Settings", "cog button is labelled Settings");
+    await p.click("#thopen"); await p.mouse.click(5, 5); check(!(await p.isVisible("#thpop")), "a click on the backdrop closes Settings"); await ctx.close() }
 
   // 8. big tables draw in chunks (tab switches were 150-400 ms): first rows now, every row after scrolling
   { const {p, ctx} = await page(); await p.goto(URL); await open(p, "craft"); await p.waitForTimeout(100);

@@ -36,20 +36,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <h1>MS Classic World Data Slop</h1>
   <p>Planner and database for MapleStory Classic World, built from the launch game files.</p>
   <button class="btn srchbtn" id="srchopen" type="button">Search everything <kbd>Ctrl K</kbd></button>
-  <button class="btn srchbtn thbtn" id="thopen" type="button" aria-expanded="false" aria-controls="thpop">Theme</button>
-  <div id="thpop" class="card" hidden>
-    <h3>Theme</h3>
-    <p class="thnote">Same themes and share codes as the Grind Tracker, so the two can sit side by side. Default follows your system's light/dark setting.</p>
-    <div id="thsw" class="thsw" role="radiogroup" aria-label="Theme"></div>
-    <div class="throw"><input id="thcode" type="text" placeholder="Paste a tracker theme code (MSCT1...)" aria-label="Theme share code" spellcheck="false">
-      <button class="btn" id="thadd" type="button">Use code</button><button class="btn" id="thcopy" type="button">Copy code</button></div>
-    <p class="thnote" id="thmsg" aria-live="polite"></p>
-    <h3 class="thsub">Layout</h3>
-    <div class="seg small" id="navmode" role="radiogroup" aria-label="Layout"><button type="button" role="radio" data-nv="side">Sidebar</button><button type="button" role="radio" data-nv="basic">Basic mode</button><button type="button" role="radio" data-nv="rows">Two rows</button></div>
-    <h3 class="thsub">Page size on wide screens</h3>
-    <div class="seg small" id="pagesize" role="radiogroup" aria-label="Page size on wide screens"><button type="button" role="radio" data-sz="1">1</button><button type="button" role="radio" data-sz="2">2</button><button type="button" role="radio" data-sz="3">3</button><button type="button" role="radio" data-sz="4">4</button><button type="button" role="radio" data-sz="5">5</button></div>
-    <p class="thnote" id="sznote"></p>
-  </div>
+  <button class="btn srchbtn thbtn" id="thopen" type="button" aria-expanded="false" aria-controls="thpop" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7 7 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.84a.5.5 0 0 0-.49.42l-.36 2.54a7 7 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.67 8.48a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.39 1.05.7 1.63.94l.36 2.54c.04.24.25.42.49.42h3.84c.24 0 .45-.18.49-.42l.36-2.54a7 7 0 0 0 1.63-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg></button>
 </header>
 
 <div class="navcol"><nav>
@@ -146,6 +133,21 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button></div>
 </footer>
 </div>
+
+<div id="thpop" class="srch setm" hidden><div class="srchbox setbox" role="dialog" aria-modal="true" aria-labelledby="sethd">
+  <div class="sethead"><h2 id="sethd">Settings</h2><button class="btn setx" id="thclose" type="button" aria-label="Close settings" title="Close (Esc)">×</button></div>
+    <h3 class="thsub">Theme</h3>
+    <p class="thnote">Same themes and share codes as the Grind Tracker, so the two can sit side by side. Default follows your system's light/dark setting.</p>
+    <div id="thsw" class="thsw" role="radiogroup" aria-label="Theme"></div>
+    <div class="throw"><input id="thcode" type="text" placeholder="Paste a tracker theme code (MSCT1...)" aria-label="Theme share code" spellcheck="false">
+      <button class="btn" id="thadd" type="button">Use code</button><button class="btn" id="thcopy" type="button">Copy code</button></div>
+    <p class="thnote" id="thmsg" aria-live="polite"></p>
+    <h3 class="thsub">Layout</h3>
+    <div class="seg small" id="navmode" role="radiogroup" aria-label="Layout"><button type="button" role="radio" data-nv="side">Sidebar</button><button type="button" role="radio" data-nv="basic">Basic mode</button><button type="button" role="radio" data-nv="rows">Two rows</button></div>
+    <h3 class="thsub">Page size on wide screens</h3>
+    <div class="seg small" id="pagesize" role="radiogroup" aria-label="Page size on wide screens"><button type="button" role="radio" data-sz="1">1</button><button type="button" role="radio" data-sz="2">2</button><button type="button" role="radio" data-sz="3">3</button><button type="button" role="radio" data-sz="4">4</button><button type="button" role="radio" data-sz="5">5</button></div>
+    <p class="thnote" id="sznote"></p>
+</div></div>
 
 <div id="srch" class="srch" hidden><div class="srchbox" role="dialog" aria-modal="true" aria-label="Search">
   <input id="srchq" type="search" autocomplete="off" spellcheck="false" placeholder="Monsters, items, maps, quests, skills">

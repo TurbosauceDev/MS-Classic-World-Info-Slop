@@ -544,7 +544,7 @@ details[open]>:not(summary){animation:tray .2s ease-out}
 .mpage{animation:pagein .2s ease-out}
 #qtip:not([hidden]){animation:fadein .12s ease-out}
 .srch:not([hidden]){animation:fadein .14s ease-out;backdrop-filter:blur(2px)}
-.srch:not([hidden]) .srchbox{animation:popin .18s ease-out}
+.srch:not([hidden]) .srchbox,.srch:not([hidden]) .setbox{animation:popin .18s ease-out}
 .btn,.seg button,nav button,.stepper button,.ri,.wmdot,select,input,.drop,.srchbox li,.hcat{transition:border-color .15s,background-color .15s,color .15s,box-shadow .15s,transform .12s}
 .btn:active,.seg button:active,.stepper button:not(:disabled):active,nav .cats button:active{transform:translateY(1px)}
 .ri:hover{transform:translateY(-1px)}
@@ -559,7 +559,11 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
 .sitever{margin:18px 0 0;text-align:center;font:500 13px var(--f-mono);color:var(--muted);opacity:.85}
 .sitever.pwstate{margin-top:4px}
 /* Theme picker (70-theme.js): the tracker's presets as swatches + its share codes */
-#thpop{margin-top:12px;max-width:760px}
+.setbox{width:min(760px,100%);max-height:84vh;overflow-y:auto;padding:16px 18px;text-align:left}
+.sethead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+.sethead h2{margin:0;font:700 22px var(--f-display)}
+.setx{font-size:22px;line-height:1;width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+#thpop .thsub:first-of-type{margin-top:4px}
 #thpop .thnote{color:var(--muted);font-size:14.5px;margin:0 0 10px}
 .thsw{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 .thsw button{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:112px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);font:600 14px var(--f-body);cursor:pointer}
@@ -636,11 +640,12 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
   html[data-size="4"] .wrap{zoom:1.22;max-width:calc(88vw / 1.22)}
   html[data-size="5"] .wrap{zoom:var(--z5,1);max-width:calc(94vw / var(--z5,1))}
 }
-/* header: centered title/tagline/search; Theme sits in the top-right corner (Danny 10-20) */
+/* header: centered title/tagline/search; the Settings cog sits in the top-right corner (Danny 10-20) */
 header{position:relative;text-align:center;padding-bottom:10px}
 header p{margin-left:auto;margin-right:auto}
-header .thbtn{position:absolute;top:0;right:0;margin:0}
-#thpop{margin-left:auto;margin-right:auto;text-align:left}
+header .thbtn{position:absolute;top:0;right:0;margin:0;width:42px;height:42px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+header .thbtn svg{transition:transform .35s ease}
+header .thbtn:hover svg,header .thbtn[aria-expanded="true"] svg{transform:rotate(60deg)}
 @media (max-width:760px){header .thbtn{position:static;margin-top:10px}}
 
 /* FM Sniper (56-snipe.js): stat tiles, top-3 cards, price strip, toast */
@@ -773,20 +778,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <h1>MS Classic World Data Slop</h1>
   <p>Planner and database for MapleStory Classic World, built from the launch game files.</p>
   <button class="btn srchbtn" id="srchopen" type="button">Search everything <kbd>Ctrl K</kbd></button>
-  <button class="btn srchbtn thbtn" id="thopen" type="button" aria-expanded="false" aria-controls="thpop">Theme</button>
-  <div id="thpop" class="card" hidden>
-    <h3>Theme</h3>
-    <p class="thnote">Same themes and share codes as the Grind Tracker, so the two can sit side by side. Default follows your system's light/dark setting.</p>
-    <div id="thsw" class="thsw" role="radiogroup" aria-label="Theme"></div>
-    <div class="throw"><input id="thcode" type="text" placeholder="Paste a tracker theme code (MSCT1...)" aria-label="Theme share code" spellcheck="false">
-      <button class="btn" id="thadd" type="button">Use code</button><button class="btn" id="thcopy" type="button">Copy code</button></div>
-    <p class="thnote" id="thmsg" aria-live="polite"></p>
-    <h3 class="thsub">Layout</h3>
-    <div class="seg small" id="navmode" role="radiogroup" aria-label="Layout"><button type="button" role="radio" data-nv="side">Sidebar</button><button type="button" role="radio" data-nv="basic">Basic mode</button><button type="button" role="radio" data-nv="rows">Two rows</button></div>
-    <h3 class="thsub">Page size on wide screens</h3>
-    <div class="seg small" id="pagesize" role="radiogroup" aria-label="Page size on wide screens"><button type="button" role="radio" data-sz="1">1</button><button type="button" role="radio" data-sz="2">2</button><button type="button" role="radio" data-sz="3">3</button><button type="button" role="radio" data-sz="4">4</button><button type="button" role="radio" data-sz="5">5</button></div>
-    <p class="thnote" id="sznote"></p>
-  </div>
+  <button class="btn srchbtn thbtn" id="thopen" type="button" aria-expanded="false" aria-controls="thpop" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7 7 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.84a.5.5 0 0 0-.49.42l-.36 2.54a7 7 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.67 8.48a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.39 1.05.7 1.63.94l.36 2.54c.04.24.25.42.49.42h3.84c.24 0 .45-.18.49-.42l.36-2.54a7 7 0 0 0 1.63-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg></button>
 </header>
 
 <div class="navcol"><nav>
@@ -1893,6 +1885,11 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.10.4</span> Oct 20, 2026 · Settings cog</h3></div>
+      <p>The <b>Theme</b> button in the top-right corner is now a <b>cogwheel</b> that opens <b>Settings</b> as a pop-up over a blurred page, like Search. Same options as before: theme, share codes, layout and page size. Esc, × or a click outside closes it.</p>
+    </div>
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.10.3</span> Oct 20, 2026 · Scroll check fixes</h3><span class="pill p-good">fix</span></div>
+      <p><b>Scroll check:</b> the scroll you hover is the one that ticks (it used to tick a slot lower down), and a scroll the mouse already covered when you started sharing scans too. The price table now lists only scrolls during a scroll check; the picture upload still prices everything. The tab grid has no sideways scrollbar, every slot is the same size, and it follows the scroll you hover. Long scroll names no longer push the prices out of the list.</p></div>
     <div class="card"><div class="cardhead"><h3><span class="ver">v0.10.2</span> Oct 20, 2026 · Scroll check polish</h3></div>
       <p><b>Scroll check:</b> a live line says which scroll the tooltip under your mouse is (or that it can't read that one yet, so you can pick it in the table), the scanned list adds up repeats (×2) and shows what the scanned scrolls are worth, and <b>Start over</b> clears the scans. Fixed: scrolls in the top row of the Use tab couldn't be scanned (their tooltip covers the window's edge). Tested against every scroll in the game files, and with the tab scrolled.</p>
     </div>
@@ -2195,11 +2192,26 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-20T18:31:14Z" data-ver="0.10.2">Site version: v0.10.2 · built Oct 20, 2026 · 18:31 UTC</p>
+  <p class="sitever" data-built="2026-10-20T18:46:30Z" data-ver="0.10.4">Site version: v0.10.4 · built Oct 20, 2026 · 18:46 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button></div>
 </footer>
 </div>
+
+<div id="thpop" class="srch setm" hidden><div class="srchbox setbox" role="dialog" aria-modal="true" aria-labelledby="sethd">
+  <div class="sethead"><h2 id="sethd">Settings</h2><button class="btn setx" id="thclose" type="button" aria-label="Close settings" title="Close (Esc)">×</button></div>
+    <h3 class="thsub">Theme</h3>
+    <p class="thnote">Same themes and share codes as the Grind Tracker, so the two can sit side by side. Default follows your system's light/dark setting.</p>
+    <div id="thsw" class="thsw" role="radiogroup" aria-label="Theme"></div>
+    <div class="throw"><input id="thcode" type="text" placeholder="Paste a tracker theme code (MSCT1...)" aria-label="Theme share code" spellcheck="false">
+      <button class="btn" id="thadd" type="button">Use code</button><button class="btn" id="thcopy" type="button">Copy code</button></div>
+    <p class="thnote" id="thmsg" aria-live="polite"></p>
+    <h3 class="thsub">Layout</h3>
+    <div class="seg small" id="navmode" role="radiogroup" aria-label="Layout"><button type="button" role="radio" data-nv="side">Sidebar</button><button type="button" role="radio" data-nv="basic">Basic mode</button><button type="button" role="radio" data-nv="rows">Two rows</button></div>
+    <h3 class="thsub">Page size on wide screens</h3>
+    <div class="seg small" id="pagesize" role="radiogroup" aria-label="Page size on wide screens"><button type="button" role="radio" data-sz="1">1</button><button type="button" role="radio" data-sz="2">2</button><button type="button" role="radio" data-sz="3">3</button><button type="button" role="radio" data-sz="4">4</button><button type="button" role="radio" data-sz="5">5</button></div>
+    <p class="thnote" id="sznote"></p>
+</div></div>
 
 <div id="srch" class="srch" hidden><div class="srchbox" role="dialog" aria-modal="true" aria-label="Search">
   <input id="srchq" type="search" autocomplete="off" spellcheck="false" placeholder="Monsters, items, maps, quests, skills">
@@ -8488,7 +8500,7 @@ const firstRank = () => { if (!$("#maprows").children.length) rankMaps() };
 $("#t-maps").addEventListener("click", firstRank); if (!$("#maps").hidden) firstRank();
 })();
 
-// Theme picker (header "Theme"): the Grind Tracker's presets and MSCT1. share codes (tracker/app/themes.js, inlined by
+// Theme picker (header cog > Settings): the Grind Tracker's presets and MSCT1. share codes (tracker/app/themes.js, inlined by
 // build.py), so the site can wear whatever the tracker wears (Danny, 2026-10-18). Default = styles.css as is.
 // localStorage: theme = "p:Name" (preset) or "u:Name" (pasted), themes = pasted ones, themec = the theme object the
 // <head> script applies before the page draws (siteTheme in index.html).
@@ -8633,11 +8645,14 @@ $("#t-maps").addEventListener("click", firstRank); if (!$("#maps").hidden) first
   const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[ch]);
   const msg = s => $("#thmsg").textContent = s;
   $("#thsw").addEventListener("click", e => { const b = e.target.closest("[data-th]"); if (b) use(b.dataset.th) });
-  $("#thopen").addEventListener("click", () => { const p = $("#thpop"), open = p.hidden; p.hidden = !open; $("#thopen").setAttribute("aria-expanded", open); if (open) draw() });
-  // Esc or a click elsewhere closes it too (it used to stay open until Theme was clicked again)
-  const shut = () => { if ($("#thpop").hidden) return; $("#thpop").hidden = true; $("#thopen").setAttribute("aria-expanded", false) };
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#thpop").hidden){ const inside = $("#thpop").contains(document.activeElement); shut(); if (inside) $("#thopen").focus() } });
-  document.addEventListener("click", e => { if (!e.composedPath().some(x => x.id === "thpop" || x.id === "thopen")) shut() });   // path, not closest(): a swatch click redraws the list
+  // Settings (header cog, Danny 10-20): an inset modal over a blurred backdrop like Search. Esc, × or a click on the backdrop closes it
+  const pop = $("#thpop"), cog = $("#thopen");
+  const open = () => { pop.hidden = false; cog.setAttribute("aria-expanded", true); draw(); $("#thclose").focus({preventScroll: true}) };
+  const shut = () => { if (pop.hidden) return; const inside = pop.contains(document.activeElement); pop.hidden = true; cog.setAttribute("aria-expanded", false); if (inside) cog.focus({preventScroll: true}) };
+  cog.addEventListener("click", () => pop.hidden ? open() : shut());
+  $("#thclose").addEventListener("click", shut);
+  pop.addEventListener("click", e => { if (e.target === pop) shut() });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !pop.hidden) shut() });
   $("#thadd").addEventListener("click", () => {
     const t = TH.decode($("#thcode").value);
     if (!t) return msg(/MSCT1\./.test($("#thcode").value) ? "That code is damaged or incomplete: copy the whole line again." : "That isn't a theme code (they start with MSCT1.).");
@@ -8651,7 +8666,7 @@ $("#t-maps").addEventListener("click", firstRank); if (!$("#maps").hidden) first
     catch { $("#thcode").value = code; msg("Copy the code from the box above.") }
   });
   // a light/dark theme (Default, Purple) follows the system setting live
-  dq.addEventListener("change", () => { const t = now(); if (t !== TH.PRESETS[0]) siteTheme(t); if (!$("#thpop").hidden) draw() });
+  dq.addEventListener("change", () => { const t = now(); if (t !== TH.PRESETS[0]) siteTheme(t); if (!pop.hidden) draw() });
 })();
 
 // Home "Site version: v0.x.y · built ...": number = newest changelog entry (build.py); the build stamps UTC; show it in the viewer's own time zone (Danny 10-19), exact UTC on hover

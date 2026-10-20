@@ -73,7 +73,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 67-kpq.js | 13 | KPQ guide (D.kpq) |
 | 68-tracker.js | 11 | Grind Tracker pages (live /api/summary, D.shared fallback); trkKpq = Rush/Bonus KPQ boards |
 | 69-search.js | | Ctrl K / `/` search, `#key=value&` share links |
-| 71-navside.js | | sidebar nav: random sprite pools per page (MESO_ICONS inlined), footer links, Theme popup Layout + Page size |
+| 71-navside.js | | sidebar nav: random sprite pools per page (MESO_ICONS inlined), footer links, Settings Layout + Page size |
 | 75-history.js | | Back/Forward: history entry per page/place change, nav ← → buttons |
 
 Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `python3 -c "import json;d=json.load(open('data/data.json'));print(list(d))"`.
@@ -96,6 +96,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   qcompact keep keephave mobs items skills navi wmap expc theme themes themec train (Where to train + Builder hand-off) bcmp (job compare) snipe snipewatch snipeseen snipetarget snipetools snipealert snipepresets (FM Sniper).
 - **Explanations:** a closed `<details class="howto">` at the top of the tab, short bullets.
 - **Share links:** extend the existing `#key=value&` hash (69-search.js); never a new scheme.
+- **Settings (cog `#thopen`, Danny 10-20):** `#thpop` is an inset modal (`.srch.setm` > `.srchbox.setbox`) next to `#srch` near the end of index.html, not inside the header (`.wrap` zoom); tests close it with `#thclose` (the backdrop covers the cog, so clicking `#thopen` again times out). Anchor mode (move Search + cog, ElvUI /moveui style) planned next.
 - **Themes:** `src/js/70-theme.js` + the `siteTheme` head script in index.html; presets/share codes come from
   `tracker/app/themes.js` (build.py `/*@THEMES*/`). Text on accent: `var(--on-accent,var(--panel))`. Default sets nothing,
   so styles.css :root stays the source; tracker core.test.js fails if the tracker's Default drifts from it.
