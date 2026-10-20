@@ -137,7 +137,10 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 
 <!--@page craft-->
 
-<footer class="sitefoot"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button></footer>
+<footer class="sitefoot"><div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button></div>
+  <p class="sitever" data-built="__BUILDISO__" data-ver="__SITEVER__">Site version: v__SITEVER__ · built __BUILD__</p>
+  <p class="sitever pwstate" id="pwstate" hidden></p>
+</footer>
 </div>
 
 <div id="srch" class="srch" hidden><div class="srchbox" role="dialog" aria-modal="true" aria-label="Search">
