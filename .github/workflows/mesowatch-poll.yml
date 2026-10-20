@@ -3,8 +3,8 @@
 # mesowatch_prices.json, commits to main if anything changed. Pages redeploys
 # via pages.yml workflow_run trigger.
 #
-# Cron schedule: every 30 min, on the hour and half-hour (UTC). Verified
-# working via workflow_dispatch testing on 2026-10-19 (PT).
+# Cron schedule: every 30 min, at minute 7 and 37 (off the high-load hour/
+# half-hour marks — GitHub warns 0/30 are delayed). Verified
 #
 # Uses GITHUB_TOKEN (auto-injected, no PAT needed). Commits as 'meso.watch helper'.
 # OSMS data export is cached across runs (keyed on OSMS_REF).
@@ -13,7 +13,7 @@ name: meso.watch poll
 
 on:
   schedule:
-    - cron: "0,30 * * * *"   # every 30 min, on the hour and half-hour (UTC)
+    - cron: "7,37 * * * *"   # every 30 min, at minute 7 and 37 (off high-load marks)
   workflow_dispatch:
 
 permissions:
@@ -67,4 +67,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash scripts/mesowatch-sync/mesowatch_poll_ci.sh
+
 
