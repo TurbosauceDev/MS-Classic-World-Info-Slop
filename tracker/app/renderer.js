@@ -210,3 +210,37 @@ function render(){
   return s.exp;   // for renderSnaps
 }
 
+// pop-ups (Settings, Help + Patch notes, Report a bug) share one look (Danny, 2026-10-19: "far too professional for what it
+// is"): a card inset from the window edges over a dimmed, blurred backdrop, a short fade/scale in and out (off with the system's
+// "reduce motion"). They float over the layout and scroll inside, so opening one never resizes the window (Help used to open
+// under the layout and the window grew to fit it). Esc or a click on the backdrop closes the top one; Tab stays inside it.
+const MODALS = [], modalCalm = matchMedia("(prefers-reduced-motion: reduce)");
+const modalIsOpen = el => MODALS.includes(el);
+function modalSync(){ const top = MODALS.at(-1), back = $("#modalBack");
+  MODALS.forEach((m, i) => m.style.zIndex = 57 + 2 * i);
+  if (top){ back.style.zIndex = +top.style.zIndex - 1; back.classList.remove("hidden", "closing") }
+  else if (!back.classList.contains("hidden")) modalHide(back) }
+function modalHide(el){ clearTimeout(el._t);
+  if (modalCalm.matches) return el.classList.add("hidden");
+  el.classList.add("closing"); el._t = setTimeout(() => { el.classList.remove("closing"); el.classList.add("hidden") }, 140) }
+// Mini view can't show one, so opening a pop-up goes back to the full window first. focus: the element to focus (default the dialog); the element focused before opening gets focus back on close
+function modalOpen(el, focus){
+  if (document.body.classList.contains("mini")){ document.body.classList.remove("mini"); host.mini?.(false) }   // Mini hides everything else
+  clearTimeout(el._t); el.classList.remove("hidden", "closing");
+  if (!modalIsOpen(el)){ el._from = document.activeElement; MODALS.push(el) }
+  modalSync(); (focus || el).focus?.({preventScroll: true}) }
+function modalClose(el, fallback){
+  if (!modalIsOpen(el)) return; MODALS.splice(MODALS.indexOf(el), 1); modalSync(); modalHide(el);
+  const to = el._from?.isConnected && !el.contains(el._from) ? el._from : fallback; el._from = null; to?.focus?.({preventScroll: true}) }
+const modalCloseTop = () => { const m = MODALS.at(-1); if (m) (m._close || modalClose)(m) };
+$("#modalBack").onclick = modalCloseTop;
+$("#modalBack").addEventListener("wheel", e => e.preventDefault(), {passive: false});   // the page under it stays put
+document.addEventListener("keydown", e => {
+  if (!MODALS.length || e.defaultPrevented || keyWait || drag) return;
+  if (e.key === "Escape"){ e.preventDefault(); modalCloseTop() }
+  else if (e.key === "Tab"){   // keep Tab inside the top pop-up
+    const m = MODALS.at(-1), f = [...m.querySelectorAll("button, input, select, textarea, summary, a[href], [tabindex]:not([tabindex='-1'])")].filter(x => !x.disabled && x.offsetParent);
+    if (!f.length) return e.preventDefault();
+    const i = f.indexOf(document.activeElement);
+    if (e.shiftKey && i <= 0){ e.preventDefault(); f.at(-1).focus() } else if (!e.shiftKey && (i < 0 || i === f.length - 1)){ e.preventDefault(); f[0].focus() } }
+});

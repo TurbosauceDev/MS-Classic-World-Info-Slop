@@ -11,23 +11,23 @@ function showUpdate(u){
   $("#updText").textContent = `Update ${u.version || ""} is ready.`;
 }
 host.onUpdate?.(showUpdate);
-// Help: the ? button, F1 or Help in the menu; it opens under the layout, Close hides it
+// Help: the ? button, F1 or Help in the menu; a pop-up over the layout (renderer.js modalOpen), ✕, Esc or a click outside closes it
 function openHelp(){
-  document.body.classList.remove("mini"); host.mini?.(false);
-  showTab("help"); $("#help").scrollIntoView();
+  $("#helpPop").scrollTop = 0; modalOpen($("#helpPop"), $("#helpClose"));
 }
 $("#helpBtn").onclick = openHelp;
 // Patch notes (Help, or Help > Patch notes in the menu): changelog.js, newest first
 $("#patchList").innerHTML = (window.TrackerChangelog || []).map(([v, d, t]) => `<p><b>${esc(v)}</b> <span class="note">${esc(d)}</span> ${esc(t)}</p>`).join("");
-function openPatchNotes(){ $("#patchNotes").open = true; openHelp(); $("#patchNotes").scrollIntoView() }
-$("#helpClose").onclick = () => showTab(null);
+function openPatchNotes(){ $("#patchNotes").open = true; openHelp(); $("#helpPop").scrollTop += $("#patchNotes").getBoundingClientRect().top - $("#helpPop .pophead").getBoundingClientRect().bottom - 6 }
+$("#helpPop")._close = el => modalClose(el, $("#helpBtn"));
+$("#helpClose").onclick = () => modalClose($("#helpPop"), $("#helpBtn"));
 document.addEventListener("keydown", e => { if (e.key === "F1"){ e.preventDefault(); openHelp() } });
 // title bar: File / View / Help open the app's menus under the button
 // Settings: a popup from File → Settings (Ctrl+,). Was the Settings tab, then "Preferences" on the title bar; Danny 2026-10-18:
 // "rename preferences back to settings and have it live under file". Esc, ✕ or a click outside closes it
-let prefsFrom = null;
-function openPrefs(){ prefsFrom = document.activeElement; prefsPick = null; $("#prefsPop").classList.remove("hidden"); $("#prefsPop").scrollTop = 0; $("#prefsBack").classList.remove("hidden"); $("#prefsClose").focus(); prefsSpy() }
-function closePrefs(){ if ($("#prefsPop").classList.contains("hidden")) return; $("#prefsPop").classList.add("hidden"); $("#prefsBack").classList.add("hidden"); (prefsFrom?.isConnected ? prefsFrom : $("#titlebar [data-menu=File]")).focus?.() }
+function openPrefs(){ prefsPick = null; $("#prefsPop").scrollTop = 0; modalOpen($("#prefsPop"), $("#prefsClose")); prefsSpy() }
+function closePrefs(){ modalClose($("#prefsPop"), $("#titlebar [data-menu=File]")) }
+$("#prefsPop")._close = closePrefs;
 // section chips at the top: jump to a section; the one in view is marked as you scroll
 const PREF_SECS = [...document.querySelectorAll("#prefsPop > [data-nav]")];
 $("#prefsNav").innerHTML = PREF_SECS.map((c, i) => `<button type="button" data-i="${i}">${esc(c.dataset.nav)}</button>`).join("");
@@ -46,8 +46,7 @@ function prefsSpy(){ const top = prefsHead() + 30, pop = $("#prefsPop");
   if (prefsPick != null && prefsPick >= 0) i = prefsPick;
   $("#prefsNav").querySelectorAll("button").forEach((b, j) => b.setAttribute("aria-current", String(j === Math.max(0, i)))) }
 $("#prefsPop").addEventListener("scroll", prefsSpy, {passive: true});
-$("#prefsClose").onclick = closePrefs; $("#prefsBack").onclick = closePrefs;
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !keyWait && !drag && $("#bugPop").classList.contains("hidden") && !$("#prefsPop").classList.contains("hidden")) closePrefs() });
+$("#prefsClose").onclick = closePrefs;
 for (const b of document.querySelectorAll("#titlebar [data-menu]")) b.onclick = () => { const r = b.getBoundingClientRect(); host.menu?.(b.dataset.menu, r.left, r.bottom) };
 host.onMenu?.(what => {
   if (what === "help") openHelp();

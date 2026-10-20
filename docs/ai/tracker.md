@@ -81,7 +81,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   #shelf and show as .tbItem cards (data-mod, not data-box: dropTarget's closest() would hit them) in #toolbox (tbOpen/tbRender/
   addBox/shelve, renderer-layout.js; ▦ #tbBtn, View menu + key `toolbox` Ctrl+Shift+K). Save = {v: 2, order: {dock}}; a box not
   listed is put away. v1 saves load dock+session+loot in order, unlisted after, History put away. Main card has no ×.
-  #respawn/#partyBox/#lastRun are status cards, not modules: they sit under #dock. showTab only shows/hides Help now.
+  #respawn/#partyBox/#lastRun are status cards, not modules: they sit under #dock.
   Tests: wait ~220 ms after a layout change before measuring a drag target (FLIP glide moves boxes).
 - Mini (#mini, renderMini): its own copies of numbers, run log (#miniFeed, mirrored in feedAdd) and top-5 lists; host.mini(on, h)
   sizes the window's content height to the view (miniFit). #miniFull goes back; the card itself isn't clickable any more.
@@ -120,7 +120,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   settings.snap / body.snap on by default): rows with the same left/right edge (dock + open tab) cluster their part edges
   (manual tol W/8, auto 24 px; #dock rows lead, a just-dragged row follows) and get px flex weights. Trap: a box never flexes
   below its padding, so weight = width - padding (pad()), else rows with equal weights land ~1 px apart. Sized boxes in a row
-  hand their height to the row. widthBase (0.2.57) reads every part's width before setting any, also minus pad(). Auto runs in layoutSave, endResize and showTab (showTab never saves: settings may not be loaded).
+  hand their height to the row. widthBase (0.2.57) reads every part's width before setting any, also minus pad(). Auto runs in layoutSave and endResize.
 - tests/layout.test.js (CI job `ui` in tracker.yml, with ui.test.js; host stub shared in tests/ui-host.js): sweeps the window
   900→340 px over Danny's docked layout. Wait a frame after setViewportSize (resize events fire in the next frame).
 - Dummy data off no longer reloads (main.js will-navigate blocks reloads): dummyClear re-renders from the covered session.
@@ -178,3 +178,10 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   `python3 tracker/icon/make_icon.py [preview.png]` rewrites app/icon.ico (win.icon + BrowserWindow icon). No tray icon exists.
 - 0.2.63: monkey.test.js names the overflowing elements on a sideways-scroll failure. Flaky-test trap: drag tests must measure the
   target after the drag starts and settles (150 ms) and aim well inside it; edge-hugging targets miss on CI fonts/reflow.
+
+## Pop-ups 2026-10-20 (0.2.66)
+- One modal system (renderer.js modalOpen/modalClose/MODALS, CSS `.modal`, shared #modalBack: blur + dim, fade/scale, reduced motion
+  respected): Settings #prefsPop, Help #helpPop (was section[data-tab=help] under the layout; showTab is gone), Report a bug #bugPop.
+  Esc/backdrop close the top one (el._close), Tab is trapped, opening from Mini leaves Mini. A new pop-up = `class="modal hidden"` + modalOpen.
+- Closing animates 140 ms with `.closing` (pointer-events off): tests that check `isVisible` after a close wait ~250 ms. ui.test.js
+  checks every pop-up is inset, blurred and never calls host.mini/winSize or changes the page height (fitWin on).

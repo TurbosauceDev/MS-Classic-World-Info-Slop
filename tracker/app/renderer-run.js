@@ -225,13 +225,14 @@ let bugFrames = null;
 function openBugPop(){
   bugFrames = RECENT.slice();
   $("#bugPopInfo").textContent = bugFrames.length ? `The last ${bugFrames.length} game pictures (~${bugFrames.length * 3} s) were grabbed just now.` : "No game pictures yet (press Start first); the log is still saved.";
-  $("#bugPop").classList.remove("hidden"); $("#bugPopNote").focus();
+  modalOpen($("#bugPop"), $("#bugPopNote"));
 }
-const closeBugPop = () => { $("#bugPop").classList.add("hidden"); $("#bugPopNote").value = ""; bugFrames = null };
+const closeBugPop = () => { modalClose($("#bugPop"), $("#bugBtn")); $("#bugPopNote").value = ""; bugFrames = null };
+$("#bugPop")._close = closeBugPop;
 $("#bugBtn").onclick = openBugPop;
 $("#bugPopCancel").onclick = closeBugPop;
 $("#bugPopSave").onclick = () => { const f = bugFrames || [], n = $("#bugPopNote").value; closeBugPop(); saveReport(f, n) };
-$("#bugPopNote").onkeydown = e => { if (e.key === "Escape") closeBugPop(); else if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); $("#bugPopSave").click() } };
+$("#bugPopNote").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); $("#bugPopSave").click() } };
 
 $("#pcode").onchange = e => host.settings({partyCode: e.target.value.trim().slice(0, 20)}).then(s => { settings = s; lastParty = 0; if (!s.partyCode){ $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "" } });
 $("#nick").onchange = e => host.settings({nick: e.target.value.trim().slice(0, 12)}).then(s => settings = s);

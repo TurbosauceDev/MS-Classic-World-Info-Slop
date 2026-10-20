@@ -96,11 +96,6 @@ function renderState(s){
   if (held && paused && !wrap) $("#stateText").textContent = "Paused by you";
   pauseUi();
 }
-// Help is the one page left under the layout (the Session/Loot/History tabs became modules, 2026-10-19); showTab("help") shows it, anything else hides it
-function showTab(name){
-  for (const sec of document.querySelectorAll("section[data-tab]")) sec.classList.toggle("hidden", sec.dataset.tab !== name);
-  requestAnimationFrame(() => compactFit());
-}
 // boxes, like OBS sources: dragged by the ⠿ grip or the title onto another box (above or below it); – folds one to its title, ×
 // puts it away in the Modules toolbox. Saved in settings.layout (Danny, 2026-10-18).
 // Dropped on a box's left or right edge, it goes beside it in a row (Danny, 2026-10-18: "like OBS"); the splitter between them
@@ -429,6 +424,6 @@ $("#tbList").addEventListener("keydown", e => { const it = e.target.closest(".tb
   if (e.key === "Enter" || e.key === " "){ e.preventDefault(); const n = it.nextElementSibling || it.previousElementSibling; addBox(it.dataset.mod); (n && $(`#tbList [data-mod="${n.dataset.mod}"]`) || $("#tbClose")).focus() }
   else if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); (e.key === "ArrowDown" ? it.nextElementSibling : it.previousElementSibling)?.focus() } });
 $("#tbBtn").onclick = () => tbOpen(); $("#tbClose").onclick = () => tbOpen(false);
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !drag && !$("#toolbox").classList.contains("hidden") && $("#prefsPop").classList.contains("hidden")) tbOpen(false) });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !e.defaultPrevented && !drag && !$("#toolbox").classList.contains("hidden") && !MODALS.length) tbOpen(false) });
 tbRender();
 

@@ -87,15 +87,15 @@ const path = require("path"), {chromium} = require("playwright");
   if (ps.join() !== "Paused by you,Go on,true" || ps2.join() !== "Pause,true") throw new Error("pause: " + JSON.stringify({ps, ps2}));
   
   if (!await page.isVisible("#mobsEmpty") || !await page.isVisible("#itemsEmpty")) throw new Error("session and loot boxes in one layout");
-  // Help: the ? button opens it under the layout, Close hides it; F1 opens it too
+  // Help: the ? button opens it as a pop-up over the layout, ✕ closes it; F1 opens it too
   await page.click("#helpBtn");
   if (!await page.isVisible("#help") || !/Getting started/.test(await page.textContent("#help")) ) throw new Error("help open");
   // patch notes (changelog.js) listed in Help, newest = this version
   if (await page.$$eval("#patchList p", a => a.length) < 50 || !(await page.textContent("#patchList p")).startsWith(require("../package.json").version + " ")) throw new Error("patch notes");
-  await page.click("#helpClose");
+  await page.click("#helpClose"); await page.waitForTimeout(250);
   if (await page.isVisible("#help") || !await page.isVisible("#itemsEmpty")) throw new Error("help close");
   await page.keyboard.press("F1"); if (!await page.isVisible("#help")) throw new Error("F1 help");
-  await page.click("#helpClose");
+  await page.click("#helpClose"); await page.waitForTimeout(250);
   const eng = await page.evaluate(() => [engine.kind, LOG.filter(l => l.kind === "event").length, LOG.filter(l => l.kind === "engine").map(l => l.kind + ":" + (l.why || "")).join()]);
   if (eng[0] !== (process.env.INLINE ? "window" : "worker")) throw new Error("reader engine: " + eng);
   const party = await page.textContent("#partyBox");
@@ -429,7 +429,23 @@ const path = require("path"), {chromium} = require("playwright");
   // Settings: a popup from File → Settings; no panel tabs any more (modules, 2026-10-19)
   if (await page.$(".tabs")) throw new Error("panel tabs are back");
   await page.evaluate(() => window.menu("settings")); if (!await page.isVisible("#prefsPop #themeSw")) throw new Error("preferences popup not shown");
-  await page.keyboard.press("Escape"); if (await page.isVisible("#prefsPop")) throw new Error("Esc didn't close preferences");
+  await page.keyboard.press("Escape"); await page.waitForTimeout(250); if (await page.isVisible("#prefsPop")) throw new Error("Esc didn't close preferences");
+  // pop-ups (Settings, Help, Patch notes, Report a bug) float over the layout: inset from the window edges, blurred backdrop,
+  // and opening or closing one never resizes the window (Help used to open under the layout and the window grew, Danny 2026-10-19)
+  await page.evaluate(() => { fitWinSet(true); window.resized = []; for (const k of ["mini", "winSize"]){ const f = host[k]; host[k] = (...a) => (resized.push(k + ":" + a), f?.(...a)) } });
+  await page.waitForTimeout(300); await page.evaluate(() => { resized.length = 0; window.docH = document.documentElement.scrollHeight });
+  for (const [open, sel] of [["settings", "#prefsPop"], ["help", "#helpPop"], ["patchnotes", "#helpPop"], ["report", "#bugPop"]]){
+    await page.evaluate(m => window.menu(m), open); await page.waitForTimeout(350);
+    const m = await page.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(), b = document.querySelector("#modalBack");
+      return {l: r.left, t: r.top, r: innerWidth - r.right, b: innerHeight - r.bottom, back: getComputedStyle(b).display !== "none" && /blur/.test(getComputedStyle(b).backdropFilter), docH: document.documentElement.scrollHeight} }, sel);
+    if (Math.min(m.l, m.r, m.b) < 10 || m.t < 40 || !m.back) throw new Error(`${open} pop-up not inset over a blurred backdrop: ` + JSON.stringify(m));
+    if (open === "patchnotes" && !await page.evaluate(() => { const r = document.querySelector("#patchNotes").getBoundingClientRect(), p = document.querySelector("#helpPop").getBoundingClientRect(); return document.querySelector("#patchNotes").open && r.top >= p.top && r.top < p.bottom - 40 })) throw new Error("patch notes not scrolled into view");
+    await page.keyboard.press("Escape"); await page.waitForTimeout(250);
+    const after = await page.evaluate(s => [document.querySelector(s).classList.contains("hidden"), document.querySelector("#modalBack").classList.contains("hidden"), resized.join(), document.documentElement.scrollHeight - docH], sel);
+    if (!after[0] || !after[1]) throw new Error(`Esc didn't close the ${open} pop-up`);
+    if (after[2] || after[3] || m.docH !== await page.evaluate(() => docH)) throw new Error(`${open} pop-up resized the window: ` + JSON.stringify({calls: after[2], docH: [m.docH, after[3]]}));
+  }
+  await page.evaluate(() => fitWinSet(!!settings.fitWin));
   // themes (Settings): a preset swatch recolours the page and the title bar; the editor saves your own; share code round trip
   await page.evaluate(() => window.menu("settings"));
   const sw = await page.$$eval("#themeSw [data-th]", b => b.map(x => x.dataset.th));
