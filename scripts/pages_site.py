@@ -23,7 +23,7 @@ def split(html):
     data = json.dumps(D, separators=(",", ":")).replace("<", "\\u003c")
     out = html[:m.start(2)] + data + html[m.end(2):]
     head = ('<link rel="manifest" href="manifest.webmanifest">\n<meta name="theme-color" content="#7d58d6">\n'
-            '<link rel="icon" href="icon-192.png">\n<link rel="apple-touch-icon" href="icon-192.png">\n'
+            '<link rel="icon" href="icon-32.png" sizes="32x32">\n<link rel="icon" href="icon-192.png" sizes="192x192">\n<link rel="apple-touch-icon" href="icon-maskable.png">\n'
             '<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n'
             '<meta name="apple-mobile-web-app-title" content="MS Classic">\n')
     assert "<title>" in out
@@ -35,7 +35,7 @@ def main(dst):
     html = (ROOT / "dist" / "index.html").read_text()
     out, name, blob = split(html)
     (dst / "index.html").write_text(out); (dst / name).write_text(blob)
-    for f in ("manifest.webmanifest", "sw.js", "icon-192.png", "icon-512.png"): shutil.copy(ROOT / "src" / "pwa" / f, dst / f)
+    for f in ("manifest.webmanifest", "sw.js", "icon-32.png", "icon-192.png", "icon-512.png", "icon-maskable.png"): shutil.copy(ROOT / "src" / "pwa" / f, dst / f)
     kb = lambda s: f"{len(s.encode()) / 1024:.0f} KB ({len(gzip.compress(s.encode())) / 1024:.0f} KB gzip)"
     print(f"first load: {kb(html)} -> {kb(out)}; {name} {kb(blob)} fetched after start")
 
