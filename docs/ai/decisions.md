@@ -207,3 +207,11 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-20 maplestory.market embargo lifted (Danny 2026-10-20). Normal rules still apply: source every number, never bypass Cloudflare.
 - 2026-10-20 classicrank.com is a trusted source (not just un-banned); its author nxneko is a friend of the project (Danny 2026-10-20). Cite it like any source; never bypass Cloudflare.
 - 2026-10-20 Character Builder moves to Training (after Where to train), Skills to Maple Database; My Character section removed since it was left empty (Danny 2026-10-20).
+
+
+## maplestory.market data embargo lifted (2026-10-20)
+
+- 2026-10-20 **OVERRIDE**: the 2026-10-19 decision "Never use maplestory.market / classicrank.com data (bot + packet-sniffer sourced, no permission)" is superseded for maplestory.market. Danny has confirmed permission is granted and the embargo is lifted. maplestory.market prices may be used as an additional pricing source alongside meso.watch.
+- 2026-10-20 maplestory.market has an authenticated REST API at https://maplestory.market/api/ (Cloudflare-fronted but no bot challenge — direct curl works). Endpoints discovered: /api/items, /api/items/{id}/history, /api/prices, /api/listings, /api/listings/changes, /api/stores, /api/stores/{id}, /api/deals, /api/market/overview, /api/owners/{name}, /api/status. All require a session: POST /api/session with {"token": "<API_KEY>"} returns a session token, then GET requests use Authorization: Bearer <session_token> header. API key is stored client-side in localStorage as mm.apiKey.
+- 2026-10-20 Plan: fetch maplestory.market data alongside meso.watch in the CI poller, output data/sources/maplestory_market_prices.json, and build a cross-marketplace price comparison page on the site showing per-item prices from both sources side by side. Blocked on obtaining an API key from maplestory.market's settings page.
+- 2026-10-20 classicrank.com embargo remains in effect — only maplestory.market is unblocked.
