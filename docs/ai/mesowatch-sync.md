@@ -94,17 +94,25 @@ https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/
 
 ## How to invoke
 
-**From chat (Danny's preferred path):** say any of `refresh`, `update mesowatch`,
-`meso.watch update please`. Claude runs `bash /home/z/my-project/scripts/meso_watch_poll.sh`,
-which triggers `workflow_dispatch` on the `meso.watch poll` workflow. ~60s later
-the workflow commits to `main` (if anything changed) and Pages redeploys.
+**Primary path (autonomous, no human needed):** GitHub Actions cron
+`0,30 * * * *` fires the workflow every 30 min, on the hour and half-hour UTC.
+This is Danny's preferred path — the pipeline is meant to run unattended. No
+chat trigger, no manual intervention. ~60s after each cron tick, the workflow
+has fetched meso.watch, regenerated prices, committed to `main` (if anything
+changed), and Pages has redeployed.
 
-**Autonomously (no human needed):** GitHub Actions cron `0,30 * * * *` fires
-the same workflow every 30 min, on the hour and half-hour UTC.
+**Manual override (chat "refresh"):** say any of `refresh`, `update mesowatch`,
+`meso.watch update please` in chat. Claude runs
+`bash /home/z/my-project/scripts/meso_watch_poll.sh`, which fires
+`workflow_dispatch` on the same workflow. Same end result, just on-demand
+outside the 30-min cadence. Use this for instant updates (e.g., you just
+saw a price change on meso.watch and don't want to wait for the next tick),
+or for testing when you've changed something in the pipeline.
 
 **Manual trigger via UI:** https://github.com/TurbosauceDev/MS-Classic-World-Info-Slop/actions/workflows/mesowatch-poll.yml
 → click "Run workflow" button → pick branch `main` → click "Run workflow".
-Uses your GitHub session auth (no PAT needed).
+Uses your GitHub session auth (no PAT needed). Same as the chat trigger,
+just from the browser instead of chat.
 
 ## Token rotation
 
