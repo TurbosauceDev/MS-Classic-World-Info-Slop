@@ -6,8 +6,8 @@ on:
   push:
     branches: ["main"]
     paths: ["dist/index.html", "src/pwa/**", "scripts/pages_site.py", ".github/workflows/pages.yml"]
-  workflow_run:   # the daily shared-data + per-update mesowatch-sync commits are pushed with GITHUB_TOKEN, which doesn't trigger push workflows
-    workflows: ["shared-data", "mesowatch-sync"]
+  workflow_run:   # the daily shared-data + per-update meso.watch commits are pushed with GITHUB_TOKEN, which doesn't trigger push workflows
+    workflows: ["shared-data", "mesowatch-sync", "meso.watch poll"]
     types: [completed]
   workflow_dispatch:
 permissions:
@@ -37,3 +37,4 @@ jobs:
         with: { path: site }
       - id: dep
         uses: actions/deploy-pages@v4
+
