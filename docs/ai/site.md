@@ -101,6 +101,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Don't add back: "The List" tab, hover-to-select on World Map, map-name click → navigator (it opens the map card).
 
 ## Known traps
+- Site formulas are the COT2 client; the launch client changed mastery (×0.7), magic INT/125, damage taken, Iron Arrow
+  falloff, EXP 90+, crafting cap, citizenship thresholds. List with line refs: docs/notes.md "## OSMS formulas page, launch client".
 - `data.json` / `dist` are mostly one huge line: any Read/cat/grep floods context.
 - Smoke opens pages via `tab("#t-x")` (clicks the section first; hidden buttons can't be clicked).
 - meso.watch raw JSON is behind a Cloudflare check: cloud threads never fetch it. Refresh = `./scripts/refresh_mesowatch.sh`
