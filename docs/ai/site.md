@@ -61,6 +61,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 52-shotimport.js | 11 | builder "Import from screenshots" |
 | 53-skills.js | | Skills tab |
 | 54-invprice.js | | Price check (inventory/bank screenshots → meso.watch `PW` prices; Keep or sell column via `KEEPSELL` from 47-keep.js) |
+| 57-scrollscan.js | | Price check › Scroll check: getDisplayMedia, live Use tab grid, tooltip read (readers.js `readTextLines`) matched to scroll name/desc, slot = nearest to tooltip corner; feeds 54 via `INVP.live` |
 | 55-bcompare.js | | Builder "Compare two jobs" (buildAt per side, or "This build" = BLD.S) |
 | 56-snipe.js | 20 | FM Sniper: PWNOW vs PW, deal grades/score (ours), views, watch list, new badges, live market.json refresh |
 | 60-planner.js | 42 | Path Planner; exports TRAVEL |
@@ -168,3 +169,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Tests: `tests/snipe.js` serves a fixture market.json (fixed numbers, so meso.watch poll commits can't break it); smoke.js only checks invariants on the real list. Fixture sellers must not match real ones (the "new" check compares item|price|seller).
 
 - Same push: Builder AP boxes cap at 9999 (input sanity, not a game limit); monkey seed 3 found DEX 1e308 printing "4.8e+307" accuracy and scrolling phones sideways (edge.js test). Adding a nav page reshuffles the monkey's random walk, so run monkey.js before pushing one.
+
+## Scroll check 2026-10-20
+- 57-scrollscan.js: scrolls share 4 pictures (one per tier, 52 each), so names come from the hovered tooltip. Lines read with MSG_FONT via `GrindReaders.readTextLines` (blob-based, so window frames don't merge bands); unknown letters "?" = 1-2 chars; matched against D.items n + d (spaces dropped). Letters learned from matched names go to localStorage `scanglyphs`.
+- Trap: the test tooltip in features.js is SYNTHETIC (MSG glyphs + made-up glyphs). Tooltip colours, font (bold name?) and the cursor offset (`hovered()`, nearest slot to the tooltip's top corners) are guesses until Danny's real frames land; then add them as fixtures and tune.
+- Artifact has no screen capability: the button reports "open the site". Live slot rows are whole-tab (lineUp in 54 handles > 6 rows); `s.id` on a slot = scanned name, skips the picker.

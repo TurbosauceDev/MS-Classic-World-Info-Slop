@@ -77,7 +77,8 @@ async function handle(files){
    Reads that share no row are taken as different pages, one after the other. Returns [{read, slots: [{i (in the whole tab), ...}]}] */
 function lineUp(reads){
   const rows = r => { const by = Object.fromEntries(r.slots.map(s => [s.i, s.ids[0] + "x" + s.n])), out = [];
-    for (let k = 0; k < 6; k++) out.push([0, 1, 2, 3, 4].map(c => by[k * 5 + c] || (r.filled.includes(k * 5 + c) ? "?" : "")));
+    const nr = Math.max(6, Math.ceil((Math.max(-1, ...r.slots.map(s => s.i), ...r.filled) + 1) / 5));   // the scroll check's live read holds the whole tab
+    for (let k = 0; k < nr; k++) out.push([0, 1, 2, 3, 4].map(c => by[k * 5 + c] || (r.filled.includes(k * 5 + c) ? "?" : "")));
     while (out.length && out.at(-1).every(v => !v)) out.pop();
     return out };
   const same = (a, b) => a.every((v, c) => v === b[c] || v === "?" && b[c] || b[c] === "?" && v);
@@ -118,7 +119,7 @@ function advice(id){
 const TABNAME = {equip: "Equip", use: "Use", etc: "Etc", bank: "Bank"};
 function render(){
   const list = $("#ivreads");
-  list.innerHTML = READS.map((r, k) => `<span class="pill">${esc(TABNAME[r.tab])}: ${r.slots.length} slot${r.slots.length === 1 ? "" : "s"}${r.unknown ? `, ${r.unknown} not read` : ""}
+  list.innerHTML = READS.map((r, k) => `<span class="pill">${r.live ? "Scroll check" : esc(TABNAME[r.tab])}: ${r.slots.length} slot${r.slots.length === 1 ? "" : "s"}${r.unknown ? `, ${r.unknown} not read` : ""}
     <button class="linkbtn" data-ivdel="${k}" title="Remove">✕</button></span>`).join(" ") + (READS.length ? ` <button class="btn sm" id="ivclear">Clear all</button>` : "");
   const rows = {};   // item id -> {n, g, tabs, noN}
   let unknown = 0, mesos = null, bankMesos = null;
@@ -128,8 +129,9 @@ function render(){
     const lu = lineUp(tr); unknown += lu.unknown;
     for (const s of lu.slots){
       // one picture, several differently named items (scrolls): a choice, defaulting to the one players sell most
-      const names = new Set(s.ids.map(i => D.items[i].n)), g = names.size > 1 ? s.ids.join(",") : "";
-      const id = g ? PICK[g] || s.ids.reduce((a, b) => (PW[b]?.[3] || 0) > (PW[a]?.[3] || 0) ? b : a) : s.ids[0];
+      // s.id: the scroll check read this slot's tooltip
+      const names = new Set(s.ids.map(i => D.items[i].n)), g = !s.id && names.size > 1 ? s.ids.join(",") : "";
+      const id = s.id || g ? s.id || PICK[g] || s.ids.reduce((a, b) => (PW[b]?.[3] || 0) > (PW[a]?.[3] || 0) ? b : a) : s.ids[0];
       const o = rows[id] || (rows[id] = {id, n: 0, g, tabs: new Set(), noN: 0});
       o.tabs.add(tab);
       if (s.n == null) o.noN++; else o.n += s.n;
@@ -168,4 +170,12 @@ $("#ivreads").addEventListener("click", e => {
 $("#ivsum").addEventListener("click", e => { if (e.target.id !== "ivkeep") return; e.preventDefault(); $("#t-keep").click() });
 $("#ivbody").addEventListener("change", e => { const g = e.target.dataset.ivg; if (g){ PICK[g] = e.target.value; render() } });
 $("#ivdate").textContent = D.pw.read;
+// for the scroll check (57-scrollscan.js): the icon set, the empty-slot test, and its live Use tab read in the table
+window.INVP = {cands, filled, advice, live(read){
+  const k = READS.findIndex(r => r.live);
+  if (!read){ if (k >= 0){ READS.splice(k, 1); render() } return }
+  read.live = true; read.name = "Scroll check"; read.key = "live";
+  if (k >= 0) READS[k] = read; else READS.push(read);
+  render();
+}};
 })();

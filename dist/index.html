@@ -1692,9 +1692,51 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       <li>Prices are the median player-shop sale on <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> (as of <span id="ivdate"></span>); half of sales landed in the range shown. Items with no player sales fall back to the NPC price. Prices move, so check before you list.</li>
       <li><b>Keep or sell</b> column: the Keep or sell tab's rules with your screenshots' counts. What open quests still want is kept (extras are sold), recipe items are your call, Etc items nothing wants are sold. "Sell now" adds up the sold part at the suggested price.</li>
       <li>Equips are priced as plain ones: the reader can't see scrolls or stats, so good rolls are worth more.</li>
+      <li><b>Scroll check:</b> scrolls share one picture per tier, so the screenshot reader can only guess which one you have. "Share game window" reads your screen live instead (Chrome, Edge or Firefox on a computer): open the Use tab and rest the mouse on each scroll until its slot turns green. The names go straight into the table.</li>
       <li>Some items share one picture (scrolls of a kind, letters): pick yours from the list in that row. It starts on the one players sell most. A slot that didn't match any item counts as "not read".</li>
     </ul>
   </details>
+  <div class="card" id="sscard">
+    <div class="cardhead"><h3>Scroll check</h3><span id="ssst" class="pill">Live from your screen</span></div>
+    <p class="sub">Scrolls of one tier all look the same, so a screenshot can't name them. Share your game window, open the <b>Use</b> tab and rest the mouse on each scroll for a moment: its tooltip is read and the slot turns green. Everything stays in your browser.</p>
+    <div class="ssctl"><button class="btn" id="ssgo">Share game window</button><button class="btn sm" id="ssstop" hidden>Stop sharing</button></div>
+    <div id="sslive" hidden>
+      <ol id="sssteps"><li>Share the game window</li><li>Open the Use tab</li><li>Hover each scroll <b id="sscount">0 of 0</b></li></ol>
+      <div class="sstrack"><i id="ssbar"></i></div>
+      <div class="ssbody"><div id="ssgrid" aria-label="Your Use tab"></div><ul id="sslist"></ul></div>
+    </div>
+  </div>
+<style>
+#sscard .cardhead{flex-wrap:wrap;gap:6px}
+#ssst{white-space:normal;max-width:100%}
+#sscard .ssctl{display:flex;gap:8px;align-items:center;margin:8px 0}
+#sssteps{display:flex;flex-wrap:wrap;gap:6px 18px;list-style:none;padding:0;margin:10px 0 8px;counter-reset:ss;font-size:13px;color:var(--muted)}
+#sssteps li{counter-increment:ss;display:flex;align-items:center;gap:6px;transition:color .25s}
+#sssteps li::before{content:counter(ss);display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--line);font-size:11px;transition:background .25s,border-color .25s,color .25s}
+#sssteps li.now{color:var(--ink)}
+#sssteps li.now::before{border-color:var(--accent);color:var(--accent)}
+#sssteps li.done::before{content:"✓";background:var(--leaf);border-color:var(--leaf);color:var(--on-accent,var(--panel))}
+.sstrack{height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-bottom:12px}
+.sstrack i{display:block;height:100%;width:0;background:var(--leaf);transition:width .4s cubic-bezier(.2,.8,.2,1)}
+.ssbody{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+#ssgrid{display:grid;grid-template-columns:repeat(5,40px);grid-auto-rows:40px;align-content:start;gap:4px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg);max-height:340px;overflow:auto}
+.sscell{position:relative;width:40px;height:40px;border-radius:7px;background:var(--panel);display:grid;place-items:center;border:1px solid var(--line);transition:opacity .25s,border-color .25s,box-shadow .25s,transform .2s}
+.sscell.empty{background:transparent;border-style:dotted;opacity:.5}
+.sscell img{max-width:32px;max-height:32px;image-rendering:pixelated}
+.sscell.dim{opacity:.38}
+.sscell .ssn{position:absolute;right:2px;bottom:0;font-size:10px;font-weight:600;color:var(--ink);text-shadow:0 0 2px var(--panel)}
+.sscell.sc{border:1.5px dashed var(--accent);animation:sswait 2.4s ease-in-out infinite}
+.sscell.hov{box-shadow:0 0 0 3px var(--accent-soft);transform:scale(1.06)}
+.sscell .ssok{position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--leaf);color:var(--on-accent,var(--panel));font-size:11px;font-weight:700;display:grid;place-items:center;opacity:0;transform:scale(.4);transition:opacity .2s,transform .3s cubic-bezier(.3,1.6,.5,1)}
+.sscell.ok{border:1.5px solid var(--leaf);animation:none}
+.sscell.ok .ssok{opacity:1;transform:scale(1)}
+@keyframes sswait{50%{border-color:var(--line)}}
+#sslist{list-style:none;margin:0;padding:0;flex:1;min-width:220px;max-height:340px;overflow:auto}
+#sslist li{display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--line);animation:ssin .35s ease-out}
+#sslist .ssp{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+@keyframes ssin{from{opacity:0;transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){.sscell,.sscell .ssok,.sstrack i{transition:none}.sscell.sc,#sslist li{animation:none}}
+</style>
   <div class="card">
     <div class="cardhead"><h3>Your inventory and bank</h3><span id="ivst" class="pill"></span></div>
     <label class="drop" id="ivdrop"><input type="file" id="ivfile" accept="image/*" multiple>
@@ -1717,6 +1759,9 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.9.1</span> Oct 20, 2026 · Scroll check</h3><span class="pill p-hot">new</span></div>
+      <p><b>Price check › Scroll check:</b> scrolls of one tier share a single picture (Lesser, Intermediate, Greater, Chaos: 52 each in the game files), so screenshots could only guess which one you had. Now you can share your game window with the page, open the <b>Use</b> tab and rest the mouse on each scroll: its tooltip is read, the slot gets a green tick, and the named scroll lands in the price table with its meso.watch price. Nothing leaves your browser. Works in Chrome, Edge and Firefox on a computer; tuned on drawn tooltips for now, real game tooltips next.</p>
+    </div>
     <div class="card" data-minor><div class="cardhead"><h3><span class="ver">v0.9.0</span> Oct 20, 2026 · FM Sniper</h3><span class="pill p-hot">new</span></div>
       <p><b>FM Sniper</b> (Mesos and Trade): every item meso.watch sees listed in the Free Market right now, next to what it usually sells for. Each row shows the listed price, the usual price and the range half of sales landed in, a small bar of where the listing sits in that range, the <b>% of value</b> and how many <b>mesos under</b> (and the whole stack's gap). The best three deals sit on top as cards; tiles up top count what's under value and show the best find and the biggest gap.</p>
       <p><b>Views:</b> Deals, Over value (listings over the usual price are marked <b>rising</b> when meso.watch's trend is up: demand may be catching up) and Everything listed. <b>Filters:</b> type, max price, at least N% under, sales seen, hide rough prices, compare with the low end instead of the median. <b>Sorts:</b> best deal, lowest % of value, most mesos under, biggest stack gap, cheapest, sells fastest and more; click a column title to sort by it.</p>
@@ -2007,7 +2052,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-20T17:10:55Z" data-ver="0.9.0">Site version: v0.9.0 · built Oct 20, 2026 · 17:10 UTC</p>
+  <p class="sitever" data-built="2026-10-20T17:11:21Z" data-ver="0.9.1">Site version: v0.9.1 · built Oct 20, 2026 · 17:11 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button></div>
 </footer>
@@ -5039,6 +5084,45 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
     }
     return lines;
   }
+  // any light text in a box (the scroll check's item tooltips, 54-invprice.js/57-scrollscan.js), wherever it sits: other
+  // light things in the box (window frames, icons) would merge whole-row bands, so the ink is first split into blobs, blobs
+  // of letter size near each other (same middle within 7 rows, under 10 px apart) make a line, and each line 7-13 rows tall
+  // is cut into glyphs and matched against the message font. Returns [{x, x1, y, text, glyphs, chars}]; unread glyphs are "?"
+  function readTextLines(img, box, isInk){
+    const x0 = Math.max(0, box.x0), y0 = Math.max(0, box.y0), M = mask(img, x0, y0, Math.min(img.w, box.x1), Math.min(img.h, box.y1), isInk), {W, H, m} = M;
+    const lab = new Int32Array(W * H), blobs = [];
+    for (let p0 = 0; p0 < W * H; p0++){
+      if (!m[p0] || lab[p0]) continue;
+      const b = {x: W, x1: 0, y: H, y1: 0, n: 0}, st = [p0]; lab[p0] = blobs.length + 1;
+      while (st.length){ const q = st.pop(), x = q % W, y = (q - x) / W; b.n++;
+        if (x < b.x) b.x = x; if (x > b.x1) b.x1 = x; if (y < b.y) b.y = y; if (y > b.y1) b.y1 = y;
+        if (b.n > 400) continue;
+        for (const r of [q - 1, q + 1, q - W, q + W]){ if (r < 0 || r >= W * H || !m[r] || lab[r] || (r === q - 1 && x === 0) || (r === q + 1 && x === W - 1)) continue; lab[r] = blobs.length + 1; st.push(r) } }
+      blobs.push(b);
+    }
+    const small = blobs.filter(b => b.n <= 400 && b.y1 - b.y < 13 && b.x1 - b.x < 16).sort((a, b) => a.x - b.x), used = new Set(), out = [];
+    for (const s0 of small){
+      if (used.has(s0)) continue;
+      const line = [s0]; used.add(s0); let x1 = s0.x1, cy = (s0.y + s0.y1) / 2;
+      for (const b of small){ if (used.has(b) || b.x < s0.x) continue; if (b.x - x1 >= 10) continue; if (Math.abs((b.y + b.y1) / 2 - cy) > 7) continue; line.push(b); used.add(b); x1 = Math.max(x1, b.x1) }
+      const ya = Math.min(...line.map(b => b.y)), yb = Math.max(...line.map(b => b.y1)) + 1;
+      if (line.length < 3 || yb - ya < 7 || yb - ya > 13) continue;
+      // glyphs: column runs inside the line's box
+      const gl = []; let x = s0.x;
+      const colInk = x => { for (let y = ya; y < yb; y++) if (m[y * W + x]) return true; return false };
+      while (x <= x1){
+        if (!colInk(x)){ x++; continue }
+        const s = x; while (x <= x1 && colInk(x)) x++;
+        let t = yb, bt = ya; for (let y = ya; y < yb; y++) for (let xx = s; xx < x; xx++) if (m[y * W + xx]){ t = Math.min(t, y); bt = Math.max(bt, y) }
+        let bits = ""; for (let y = t; y <= bt; y++) for (let xx = s; xx < x; xx++) bits += m[y * W + xx] ? "1" : "0";
+        gl.push({x: s, w: x - s, h: bt - t + 1, top: t, bits});
+      }
+      let str = "", last = null; const chars = gl.map(g => match(g, MSG) || "?");
+      gl.forEach((g, i) => { if (last !== null && g.x - last >= 4) str += " "; str += chars[i]; last = g.x + g.w });
+      out.push({x: x0 + gl[0].x, x1: x0 + x1 + 1, y: y0 + ya, text: str, glyphs: gl, chars});
+    }
+    return out.sort((a, b) => a.y - b.y || a.x - b.x);
+  }
   /* KPQ's "Time Left" clock, top middle of the screen: cream dot-matrix digits, 5x7 dots each, one dot every 5 px (game
      pixels), laid out MM.SS as digit, digit, 4 columns, digit, digit. Read from Danny's KPQ frames (2026-10-18), where the
      dot grid sat at x = middle - 37 + 5*col, y = 44 + 5*row. 6 and 9 weren't in those frames: they're the font's usual
@@ -5796,7 +5880,7 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
     if (want.chat) crops.chat = chatCrop(img);
     return {ev, info, crops, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {itemByName, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {itemByName, readTextLines, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);
 
@@ -5874,7 +5958,8 @@ async function handle(files){
    Reads that share no row are taken as different pages, one after the other. Returns [{read, slots: [{i (in the whole tab), ...}]}] */
 function lineUp(reads){
   const rows = r => { const by = Object.fromEntries(r.slots.map(s => [s.i, s.ids[0] + "x" + s.n])), out = [];
-    for (let k = 0; k < 6; k++) out.push([0, 1, 2, 3, 4].map(c => by[k * 5 + c] || (r.filled.includes(k * 5 + c) ? "?" : "")));
+    const nr = Math.max(6, Math.ceil((Math.max(-1, ...r.slots.map(s => s.i), ...r.filled) + 1) / 5));   // the scroll check's live read holds the whole tab
+    for (let k = 0; k < nr; k++) out.push([0, 1, 2, 3, 4].map(c => by[k * 5 + c] || (r.filled.includes(k * 5 + c) ? "?" : "")));
     while (out.length && out.at(-1).every(v => !v)) out.pop();
     return out };
   const same = (a, b) => a.every((v, c) => v === b[c] || v === "?" && b[c] || b[c] === "?" && v);
@@ -5915,7 +6000,7 @@ function advice(id){
 const TABNAME = {equip: "Equip", use: "Use", etc: "Etc", bank: "Bank"};
 function render(){
   const list = $("#ivreads");
-  list.innerHTML = READS.map((r, k) => `<span class="pill">${esc(TABNAME[r.tab])}: ${r.slots.length} slot${r.slots.length === 1 ? "" : "s"}${r.unknown ? `, ${r.unknown} not read` : ""}
+  list.innerHTML = READS.map((r, k) => `<span class="pill">${r.live ? "Scroll check" : esc(TABNAME[r.tab])}: ${r.slots.length} slot${r.slots.length === 1 ? "" : "s"}${r.unknown ? `, ${r.unknown} not read` : ""}
     <button class="linkbtn" data-ivdel="${k}" title="Remove">✕</button></span>`).join(" ") + (READS.length ? ` <button class="btn sm" id="ivclear">Clear all</button>` : "");
   const rows = {};   // item id -> {n, g, tabs, noN}
   let unknown = 0, mesos = null, bankMesos = null;
@@ -5925,8 +6010,9 @@ function render(){
     const lu = lineUp(tr); unknown += lu.unknown;
     for (const s of lu.slots){
       // one picture, several differently named items (scrolls): a choice, defaulting to the one players sell most
-      const names = new Set(s.ids.map(i => D.items[i].n)), g = names.size > 1 ? s.ids.join(",") : "";
-      const id = g ? PICK[g] || s.ids.reduce((a, b) => (PW[b]?.[3] || 0) > (PW[a]?.[3] || 0) ? b : a) : s.ids[0];
+      // s.id: the scroll check read this slot's tooltip
+      const names = new Set(s.ids.map(i => D.items[i].n)), g = !s.id && names.size > 1 ? s.ids.join(",") : "";
+      const id = s.id || g ? s.id || PICK[g] || s.ids.reduce((a, b) => (PW[b]?.[3] || 0) > (PW[a]?.[3] || 0) ? b : a) : s.ids[0];
       const o = rows[id] || (rows[id] = {id, n: 0, g, tabs: new Set(), noN: 0});
       o.tabs.add(tab);
       if (s.n == null) o.noN++; else o.n += s.n;
@@ -5965,6 +6051,14 @@ $("#ivreads").addEventListener("click", e => {
 $("#ivsum").addEventListener("click", e => { if (e.target.id !== "ivkeep") return; e.preventDefault(); $("#t-keep").click() });
 $("#ivbody").addEventListener("change", e => { const g = e.target.dataset.ivg; if (g){ PICK[g] = e.target.value; render() } });
 $("#ivdate").textContent = D.pw.read;
+// for the scroll check (57-scrollscan.js): the icon set, the empty-slot test, and its live Use tab read in the table
+window.INVP = {cands, filled, advice, live(read){
+  const k = READS.findIndex(r => r.live);
+  if (!read){ if (k >= 0){ READS.splice(k, 1); render() } return }
+  read.live = true; read.name = "Scroll check"; read.key = "live";
+  if (k >= 0) READS[k] = read; else READS.push(read);
+  render();
+}};
 })();
 
 /* ---------------- Character Builder: compare two jobs side by side ---------------- */
@@ -6230,6 +6324,220 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && !$
 setInterval(() => { if ($("#snipe").hidden || document.hidden) return; if (Date.now() - lastPoll >= 18e4) poll(); stats() }, 6e4);
 render(); if (!$("#snipe").hidden) onShow();
 ASSETS.then(() => { if (!$("#snipe").hidden) render() });
+})();
+
+/* Scroll check (Price check tab): the game window shared with the page (getDisplayMedia, nothing leaves the browser), read
+   4 times a second. Scrolls of one tier share one picture (Lesser / Intermediate / Greater / Chaos, 52 each in the OSMS
+   export), so the inventory grid alone can't tell them apart: the player rests the mouse on each one and its tooltip is
+   read with the game's message font (readers.js readTextLines), then matched against that kind's names and descriptions
+   (D.items n, d). Letters the font table doesn't have yet are learned from tooltips that matched anyway (saved per viewer).
+   Each scanned slot feeds the Price check table as the live Use tab read (INVP.live in 54-invprice.js). */
+const SCAN = (() => {
+const R = window.GrindReaders;
+// scroll id -> its tooltip text, spaces dropped (the font's spaces are a guess from glyph gaps)
+const SCROLLS = Object.keys(D.items).filter(id => D.items[id].c === "Scroll");
+const TEXT = Object.fromEntries(SCROLLS.map(id => [id, [D.items[id].n, ...(D.items[id].d || "").split("\n")].map(t => t.replace(/\s+/g, "")).filter(Boolean)]));
+const lineRe = t => new RegExp("^" + [...t].map(c => c === "?" ? ".{1,2}" : "ilI1|".includes(c) ? "[ilI1|]" : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + "$");
+/* tooltip lines -> {id, score, name: the line that is the name, hits: the lines that matched} or null. A read line counts when 4+ of its letters were read
+   and it fits one of a scroll's lines whole ("?" = 1-2 unread letters); the name counts double. One clear winner only. */
+function match(lines, ids = SCROLLS){
+  const reads = lines.map(l => ({l, t: l.text.replace(/ /g, "")})).filter(r => r.t.replace(/\?/g, "").length >= 4).map(r => ({...r, re: lineRe(r.t)}));
+  if (!reads.length) return null;
+  let best = null, tie = false;
+  for (const id of ids){
+    const T = TEXT[id], hits = []; let sc = 0, name = null;
+    for (const r of reads){ const k = T.findIndex(c => r.re.test(c)); if (k < 0) continue; sc += k ? 1 : 2; if (!k) name = r.l; hits.push(r.l) }
+    if (!sc) continue;
+    if (!best || sc > best.score){ best = {id, score: sc, name, hits}; tie = false } else if (sc === best.score) tie = true;
+  }
+  return best && !tie && best.score >= 2 ? best : null;
+}
+// letters this viewer's tooltips taught the reader (the name line of a scroll that matched, letter for letter)
+let LEARNT = []; try { LEARNT = JSON.parse(localStorage.getItem("scanglyphs") || "[]"); if (!Array.isArray(LEARNT)) LEARNT = [] } catch(e) {}
+R.addGlyphs(LEARNT);
+function learn(lines, m){
+  const name = D.items[m.id].n.replace(/ /g, ""), top = m.name || lines[0];
+  if (!top || top.chars.length !== name.length || !top.chars.every(c => c.length === 1) || !top.chars.includes("?")) return;
+  if (top.chars.some((c, i) => c !== "?" && c !== name[i] && !("ilI1".includes(c) && "ilI1".includes(name[i])))) return;
+  const add = R.addGlyphs(top.chars.map((c, i) => c === "?" ? {ch: name[i], w: top.glyphs[i].w, h: top.glyphs[i].h, bits: top.glyphs[i].bits} : null).filter(Boolean));
+  if (!add.length) return;
+  LEARNT = LEARNT.concat(add).slice(-400);
+  try { localStorage.setItem("scanglyphs", JSON.stringify(LEARNT)) } catch(e) {}
+}
+// tooltip text: light, with the tooltip's dark fill right next to it (the inventory's beige is never this light)
+const tipInk = (r, g, b) => Math.min(r, g, b) >= 228 && Math.max(r, g, b) - Math.min(r, g, b) <= 40;
+const dark = (img, x, y) => { if (x < 0 || y < 0 || x >= img.w || y >= img.h) return false; const i = (y * img.w + x) * 4; return Math.max(img.d[i], img.d[i + 1], img.d[i + 2]) < 110 };
+// the tooltip's top corners: from the topmost read line, walk out through the dark fill just above the text
+function corners(img, top){
+  const y = Math.max(0, top.y - 2), run = (x, dx) => { let k = 0; while (k < 400 && (dark(img, x + dx, y) || dark(img, x + 2 * dx, y))) { x += dx; k++ } return x };
+  const x0 = run(top.x, -1), x1 = run(top.x1, 1);
+  let y0 = y; while (y0 > 0 && y - y0 < 120 && (dark(img, x0 + 4, y0 - 1) || dark(img, x0 + 4, y0 - 2))) y0--;
+  return {x0, x1, y0};
+}
+/* which slot the mouse is on: the tooltip opens next to the pointer, so the slot nearest its top left corner (or top right,
+   when it opened to the left near the screen edge) among the slots holding that scroll's picture */
+function hovered(img, inv, slots, id, lines){   // lines: the tooltip's own (match().hits)
+  const top = lines.reduce((a, l) => l.y < a.y ? l : a), c = corners(img, top);
+  let best = null, bd = 70;
+  for (const s of slots){
+    if (!s.ids.includes(id)) continue;
+    const sx = inv.x + 5 + 36 * (s.i % 5) + 16, sy = inv.y + 37 + 34 * Math.floor(s.i / 5) - 13;
+    const dd = Math.min(Math.hypot(sx - c.x0, sy - c.y0), Math.hypot(sx - c.x1, sy - c.y0));
+    if (dd < bd){ bd = dd; best = s }
+  }
+  return best;
+}
+// one frame -> {inv, read, lines, hit: {slot, id} | null}
+function readFrame(img, C, cache, near){
+  let inv = near && R.findInventory(img, {x0: near.x - 12, x1: near.x + 230, y0: near.y - 3, y1: near.y + 4}) || R.findInventory(img);
+  if (!inv) return {inv: null};
+  if (!inv.tab && near?.tab) inv = {...inv, tab: near.tab};   // the pointer on the open tab hides its colour
+  if (inv.tab !== "use") return {inv};
+  const read = R.readInventory(img, inv, C.use, cache), filled = INVP.filled(img, inv);
+  const lines = R.readTextLines(img, {x0: inv.x - 320, x1: inv.x + 560, y0: inv.y - 40, y1: inv.y + 440}, tipInk)
+    .filter(l => l.glyphs.some((g, k) => { const x = l.x + g.x - l.glyphs[0].x; return dark(img, x - 1, l.y + 3) || dark(img, x - 2, l.y + 3) }));
+  const m = lines.length ? match(lines) : null;
+  const slot = m && hovered(img, inv, read.slots, m.id, m.hits);
+  if (m && slot) learn(lines, m);
+  return {inv, read, filled, lines, m, hit: slot ? {slot, id: m.id} : null};
+}
+
+/* ---- the whole Use tab across scrolling: rows of 5 tokens ("id x n", "" empty, "?" filled but covered or not matched),
+   a new frame placed where every shared row agrees (the tooltip covers slots, so "?" fits anything) ---- */
+const tok = s => s.ids[0] + "x" + s.n;
+function frameRows(read, filled){
+  const by = Object.fromEntries(read.slots.map(s => [s.i, tok(s)])), out = [];
+  for (let r = 0; r < 6; r++) out.push([0, 1, 2, 3, 4].map(c => by[r * 5 + c] || (filled.includes(r * 5 + c) ? "?" : "")));
+  return out;
+}
+const fits = (a, b) => a.every((v, c) => v === b[c] || v === "?" || b[c] === "?");
+function place(grid, rows){
+  if (!grid.length) return 0;
+  let best = null;
+  for (let off = -5; off < grid.length; off++){
+    let hit = 0, ok = true;
+    rows.forEach((row, k) => { const g = grid[off + k]; if (!ok || !g) return; if (!fits(row, g)) ok = false; else hit += row.filter(v => v && v !== "?").length });
+    if (ok && hit && (!best || hit > best.hit)) best = {off, hit};
+  }
+  return best ? best.off : null;
+}
+
+/* ---- the live session ---- */
+let S = null;
+const $s = id => document.getElementById(id);
+async function start(){
+  const st = $s("ssst");
+  if (!navigator.mediaDevices?.getDisplayMedia){ st.textContent = "Needs a desktop browser (Chrome, Edge, Firefox)"; st.className = "pill p-warn"; return }
+  let stream;
+  try { stream = await navigator.mediaDevices.getDisplayMedia({video: {frameRate: 10}, audio: false}) }
+  catch(e){ st.textContent = e.name === "NotAllowedError" ? "Sharing cancelled" : "This page can't share your screen here: open the site in your browser"; st.className = "pill p-warn"; return }
+  const video = document.createElement("video"); video.muted = true; video.playsInline = true; video.srcObject = stream;
+  try { await video.play() } catch(e) {}
+  S = {stream, video, canvas: document.createElement("canvas"), cache: new Map(), grid: [], counts: [], names: {}, last: null, inv: null, hov: null, lastKey: "", busy: false, seen: 0};
+  stream.getVideoTracks()[0].addEventListener("ended", stop);
+  $s("ssgo").hidden = true; $s("ssstop").hidden = false; $s("sslive").hidden = false;
+  st.textContent = "Loading item pictures…"; st.className = "pill";
+  S.C = await INVP.cands();
+  if (!S) return;
+  S.timer = setInterval(tick, 250); tick();
+}
+function stop(){
+  if (!S) return;
+  clearInterval(S.timer); S.stream.getTracks().forEach(t => t.stop());
+  S = null;
+  $s("ssgo").hidden = false; $s("ssstop").hidden = true;
+  $s("ssst").textContent = "Stopped: scanned scrolls stay in the table below"; $s("ssst").className = "pill";
+  steps(null);
+}
+function grab(){
+  const v = S.video, c = S.canvas; if (!v.videoWidth) return null;
+  if (c.width !== v.videoWidth || c.height !== v.videoHeight){ c.width = v.videoWidth; c.height = v.videoHeight }
+  const g = c.getContext("2d", {willReadFrequently: true}); g.drawImage(v, 0, 0);
+  return {w: c.width, h: c.height, d: g.getImageData(0, 0, c.width, c.height).data};
+}
+function tick(){
+  if (!S || S.busy) return;
+  S.busy = true;
+  try { const raw = grab(); if (raw) step(R.native(raw, true)) } finally { if (S) S.busy = false }
+}
+// one native frame into the session (also called by tests with a picture)
+function step(img){
+  const f = readFrame(img, S.C, S.cache, S.inv);
+  if (!f.inv){ S.miss = (S.miss || 0) + 1; if (S.miss > 3) steps("tab", "Open your inventory"); return }
+  S.miss = 0; S.inv = f.inv;
+  if (f.inv.tab !== "use"){ steps("tab", "Switch your inventory to the Use tab"); return }
+  const rows = frameRows(f.read, f.filled), off = place(S.grid, rows);
+  // nothing known on screen (all covered), or no overlap while a tooltip covers part of it: wait for a better frame.
+  // No overlap on a clean frame: another page of the tab, below the ones seen
+  if (!rows.some(r => r.some(v => v && v !== "?"))) return;
+  if (off === null && f.lines.length && S.grid.length) return;
+  const o = off ?? S.grid.length;
+  if (o < 0){ S.grid.unshift(...Array(-o).fill(null).map(() => ["", "", "", "", ""])); S.counts.unshift(...Array(-o * 5).fill(null)); const n = {}; for (const [k, v] of Object.entries(S.names)) n[+k - o * 5] = v; S.names = n }
+  const base = Math.max(0, o);
+  rows.forEach((row, k) => { const g = S.grid[base + k]; S.grid[base + k] = g ? row.map((v, c) => v === "?" ? g[c] : v) : row });
+  for (const s of f.read.slots) S.counts[base * 5 + s.i] = s;
+  // a slot whose item changed loses its scan
+  for (const [k, v] of Object.entries(S.names)){ const t = S.grid[Math.floor(k / 5)]?.[k % 5]; if (t !== "?" && t !== v.tok) delete S.names[k] }
+  // a tooltip on the same slot twice in a row counts (the first frame may catch the mouse moving)
+  S.hov = null;
+  if (f.hit){
+    const at = base * 5 + f.hit.slot.i, key = at + ":" + f.hit.id;
+    S.hov = at;
+    if (S.last === key && S.names[at]?.id !== f.hit.id){ S.names[at] = {id: f.hit.id, tok: tok(f.hit.slot), t: ++S.seen} }
+    S.last = key;
+  } else S.last = null;
+  draw();
+}
+
+/* ---- view: the tab drawn as a grid, scroll slots waiting (dashed) or scanned (green tick), the hovered one lit ---- */
+function steps(at, msg){
+  const order = ["share", "tab", "hover"], k = at ? order.indexOf(at) : -1;
+  document.querySelectorAll("#sssteps li").forEach((li, i) => { li.className = k < 0 ? "" : i < k ? "done" : i === k ? "now" : "" });
+  if (msg){ $s("ssst").textContent = msg; $s("ssst").className = "pill" }
+}
+function draw(){
+  const cells = [];
+  S.grid.forEach((row, r) => row.forEach((t, c) => { const i = r * 5 + c, s = S.counts[i];
+    const sc = s && s.ids.length > 1 && s.ids.some(id => D.items[id].c === "Scroll") && t !== "";
+    cells.push({i, s: t === "" ? null : s, sc, name: S.names[i]}) }));
+  const todo = cells.filter(c => c.sc), done = todo.filter(c => c.name);
+  steps(todo.length && done.length === todo.length ? null : "hover");
+  const st = $s("ssst");
+  if (!todo.length){ st.textContent = "No scrolls on this page of the Use tab"; st.className = "pill" }
+  else if (done.length === todo.length){ st.textContent = `All ${todo.length} scroll${todo.length > 1 ? "s" : ""} scanned`; st.className = "pill p-good" }
+  else { st.textContent = `Rest the mouse on each scroll · ${done.length} of ${todo.length}`; st.className = "pill" }
+  $s("sscount").textContent = `${done.length} of ${todo.length}`;
+  $s("ssbar").style.width = (todo.length ? 100 * done.length / todo.length : 0) + "%";
+  const grid = $s("ssgrid"), key = cells.map(c => c.s ? tok(c.s) : "").join("|");
+  if (key !== S.lastKey){
+    S.lastKey = key;
+    grid.innerHTML = cells.map(c => `<div class="sscell${c.s ? "" : " empty"}" data-i="${c.i}">${c.s ? `<img src="data:image/png;base64,${D.iicons[c.s.ids[0]] || ""}" alt="">${c.s.n > 1 ? `<span class="ssn">${c.s.n}</span>` : ""}<span class="ssok" aria-hidden="true">✓</span>` : ""}</div>`).join("");
+  }
+  for (const c of cells){
+    const el = grid.children[c.i]; if (!el) continue;
+    el.classList.toggle("sc", !!c.sc); el.classList.toggle("dim", !!c.s && !c.sc);
+    el.classList.toggle("hov", S.hov === c.i);
+    if (!!c.name !== el.classList.contains("ok")) el.classList.toggle("ok", !!c.name);
+    el.title = c.name ? D.items[c.name.id].n : c.sc ? "Rest the mouse on this scroll in the game" : c.s ? D.items[c.s.ids[0]].n : "";
+  }
+  // scanned list, newest first
+  const list = $s("sslist"), have = new Set([...list.children].map(li => li.dataset.k));
+  const items = done.slice().sort((a, b) => b.name.t - a.name.t);
+  for (const c of items){ const k = c.i + ":" + c.name.id; if (have.has(k)) continue;
+    const id = c.name.id, a = INVP.advice(id), li = document.createElement("li"); li.dataset.k = k;
+    li.innerHTML = `<span class="ri" data-item="${id}"><img src="data:image/png;base64,${D.iicons[id] || ""}" alt=""></span><span class="itname" data-item="${id}" tabindex="0">${esc(D.items[id].n)}</span>${c.s?.n > 1 ? ` <span class="sub">×${c.s.n}</span>` : ""}<span class="ssp">${a.each ? fmt(a.each) + " each" : "no sales"}</span>`;
+    list.prepend(li) }
+  const keep = new Set(items.map(c => c.i + ":" + c.name.id)); [...list.children].forEach(li => { if (!keep.has(li.dataset.k)) li.remove() });
+  // the table: the whole tab as one read, scanned slots named
+  const slots = [], filled = [];
+  cells.forEach(c => { if (!c.s) { if (S.grid[Math.floor(c.i / 5)][c.i % 5] === "?") filled.push(c.i); return } filled.push(c.i); slots.push({i: c.i, ids: c.s.ids, n: c.s.n, ...(c.name ? {id: c.name.id} : {})}) });
+  const lk = JSON.stringify(slots);
+  if (lk !== S.liveKey){ S.liveKey = lk; INVP.live({tab: "use", slots, filled, unknown: 0, mesos: null}) }
+}
+$s("ssgo").addEventListener("click", start);
+$s("ssstop").addEventListener("click", stop);
+if (!navigator.mediaDevices?.getDisplayMedia){ $s("ssgo").disabled = true; $s("ssst").textContent = "Needs a desktop browser"; }
+return {match, readFrame, place, frameRows, start, stop, step, get S(){ return S }};
 })();
 
 /* ---------------- path planner ---------------- */

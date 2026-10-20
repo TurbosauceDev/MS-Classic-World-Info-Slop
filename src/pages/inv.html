@@ -8,9 +8,51 @@
       <li>Prices are the median player-shop sale on <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> (as of <span id="ivdate"></span>); half of sales landed in the range shown. Items with no player sales fall back to the NPC price. Prices move, so check before you list.</li>
       <li><b>Keep or sell</b> column: the Keep or sell tab's rules with your screenshots' counts. What open quests still want is kept (extras are sold), recipe items are your call, Etc items nothing wants are sold. "Sell now" adds up the sold part at the suggested price.</li>
       <li>Equips are priced as plain ones: the reader can't see scrolls or stats, so good rolls are worth more.</li>
+      <li><b>Scroll check:</b> scrolls share one picture per tier, so the screenshot reader can only guess which one you have. "Share game window" reads your screen live instead (Chrome, Edge or Firefox on a computer): open the Use tab and rest the mouse on each scroll until its slot turns green. The names go straight into the table.</li>
       <li>Some items share one picture (scrolls of a kind, letters): pick yours from the list in that row. It starts on the one players sell most. A slot that didn't match any item counts as "not read".</li>
     </ul>
   </details>
+  <div class="card" id="sscard">
+    <div class="cardhead"><h3>Scroll check</h3><span id="ssst" class="pill">Live from your screen</span></div>
+    <p class="sub">Scrolls of one tier all look the same, so a screenshot can't name them. Share your game window, open the <b>Use</b> tab and rest the mouse on each scroll for a moment: its tooltip is read and the slot turns green. Everything stays in your browser.</p>
+    <div class="ssctl"><button class="btn" id="ssgo">Share game window</button><button class="btn sm" id="ssstop" hidden>Stop sharing</button></div>
+    <div id="sslive" hidden>
+      <ol id="sssteps"><li>Share the game window</li><li>Open the Use tab</li><li>Hover each scroll <b id="sscount">0 of 0</b></li></ol>
+      <div class="sstrack"><i id="ssbar"></i></div>
+      <div class="ssbody"><div id="ssgrid" aria-label="Your Use tab"></div><ul id="sslist"></ul></div>
+    </div>
+  </div>
+<style>
+#sscard .cardhead{flex-wrap:wrap;gap:6px}
+#ssst{white-space:normal;max-width:100%}
+#sscard .ssctl{display:flex;gap:8px;align-items:center;margin:8px 0}
+#sssteps{display:flex;flex-wrap:wrap;gap:6px 18px;list-style:none;padding:0;margin:10px 0 8px;counter-reset:ss;font-size:13px;color:var(--muted)}
+#sssteps li{counter-increment:ss;display:flex;align-items:center;gap:6px;transition:color .25s}
+#sssteps li::before{content:counter(ss);display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--line);font-size:11px;transition:background .25s,border-color .25s,color .25s}
+#sssteps li.now{color:var(--ink)}
+#sssteps li.now::before{border-color:var(--accent);color:var(--accent)}
+#sssteps li.done::before{content:"✓";background:var(--leaf);border-color:var(--leaf);color:var(--on-accent,var(--panel))}
+.sstrack{height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-bottom:12px}
+.sstrack i{display:block;height:100%;width:0;background:var(--leaf);transition:width .4s cubic-bezier(.2,.8,.2,1)}
+.ssbody{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+#ssgrid{display:grid;grid-template-columns:repeat(5,40px);grid-auto-rows:40px;align-content:start;gap:4px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg);max-height:340px;overflow:auto}
+.sscell{position:relative;width:40px;height:40px;border-radius:7px;background:var(--panel);display:grid;place-items:center;border:1px solid var(--line);transition:opacity .25s,border-color .25s,box-shadow .25s,transform .2s}
+.sscell.empty{background:transparent;border-style:dotted;opacity:.5}
+.sscell img{max-width:32px;max-height:32px;image-rendering:pixelated}
+.sscell.dim{opacity:.38}
+.sscell .ssn{position:absolute;right:2px;bottom:0;font-size:10px;font-weight:600;color:var(--ink);text-shadow:0 0 2px var(--panel)}
+.sscell.sc{border:1.5px dashed var(--accent);animation:sswait 2.4s ease-in-out infinite}
+.sscell.hov{box-shadow:0 0 0 3px var(--accent-soft);transform:scale(1.06)}
+.sscell .ssok{position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--leaf);color:var(--on-accent,var(--panel));font-size:11px;font-weight:700;display:grid;place-items:center;opacity:0;transform:scale(.4);transition:opacity .2s,transform .3s cubic-bezier(.3,1.6,.5,1)}
+.sscell.ok{border:1.5px solid var(--leaf);animation:none}
+.sscell.ok .ssok{opacity:1;transform:scale(1)}
+@keyframes sswait{50%{border-color:var(--line)}}
+#sslist{list-style:none;margin:0;padding:0;flex:1;min-width:220px;max-height:340px;overflow:auto}
+#sslist li{display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--line);animation:ssin .35s ease-out}
+#sslist .ssp{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+@keyframes ssin{from{opacity:0;transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){.sscell,.sscell .ssok,.sstrack i{transition:none}.sscell.sc,#sslist li{animation:none}}
+</style>
   <div class="card">
     <div class="cardhead"><h3>Your inventory and bank</h3><span id="ivst" class="pill"></span></div>
     <label class="drop" id="ivdrop"><input type="file" id="ivfile" accept="image/*" multiple>
