@@ -617,8 +617,10 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
   html:not([data-nav]) nav .nic.big{width:30px;height:30px;margin:-4px}
   html:not([data-nav]) nav .nic.npc{object-fit:cover;object-position:50% 0}
   html:not([data-nav]) nav button:hover .nic{transform:translateY(-1px) scale(1.08)}
-  html:not([data-nav]) nav .sgh .nic{width:26px;height:26px;margin:0}
-  html:not([data-nav]) nav .sgh{font:800 21.5px/1.1 var(--f-display);letter-spacing:-.01em;color:var(--accent)}
+  /* hanging indent (Danny 10-20, option B): page links step in, the bigger section icon hangs left of them */
+  html:not([data-nav]) nav .subs button[data-tab]{margin-left:20px;width:calc(100% - 20px)}
+  html:not([data-nav]) nav .sgh .nic{width:36px;height:36px;margin:-5px 0 -5px -8px}
+  html:not([data-nav]) nav .sgh{font:800 21.5px/1.1 var(--f-display);letter-spacing:-.01em;color:var(--accent);margin-top:22px}   /* a bit more air between sections (Danny 10-20) */
   html:not([data-nav]) nav .subs button[data-tab],html:not([data-nav]) nav .sbhome{font:700 14.5px var(--f-display);letter-spacing:.01em;color:#fff;
     text-shadow:-1.3px -1.3px 0 #2a2142,0 -1.3px 0 #2a2142,1.3px -1.3px 0 #2a2142,-1.3px 0 0 #2a2142,1.3px 0 0 #2a2142,-1.3px 1.3px 0 #2a2142,0 1.3px 0 #2a2142,1.3px 1.3px 0 #2a2142,0 2px 6px rgba(23,17,42,.4),0 0 1px #2a2142}
   html:not([data-nav]) nav .subs button[aria-selected="true"]{color:#fff}
@@ -1972,6 +1974,8 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.10.7</span> Oct 20, 2026 · Sidebar indent</h3></div>
+      <p>Sidebar pages now sit indented under their section, the section icons are bigger and hang slightly left, and sections have a little more space between them, so the groups read at a glance.</p></div>
     <div class="card"><div class="cardhead"><h3><span class="ver">v0.10.6</span> Oct 20, 2026 · Builder and Skills moved</h3></div>
       <p><b>Character Builder</b> is now under <b>Training</b> (after Where to train) and <b>Skills</b> under <b>Maple Database</b>. The My Character section is gone. Old links still work, and a sidebar or Home order you saved in edit mode is kept.</p></div>
     <div class="card"><div class="cardhead"><h3><span class="ver">v0.10.5</span> Oct 20, 2026 · New header layout, bigger edit mode</h3></div>
@@ -2287,7 +2291,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-20T23:07:52Z" data-ver="0.10.6">Site version: v0.10.6 · built Oct 20, 2026 · 23:07 UTC</p>
+  <p class="sitever" data-built="2026-10-20T23:53:49Z" data-ver="0.10.7">Site version: v0.10.7 · built Oct 20, 2026 · 23:53 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button></div>
 </footer>

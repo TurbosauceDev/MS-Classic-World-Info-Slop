@@ -609,8 +609,10 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
   html:not([data-nav]) nav .nic.big{width:30px;height:30px;margin:-4px}
   html:not([data-nav]) nav .nic.npc{object-fit:cover;object-position:50% 0}
   html:not([data-nav]) nav button:hover .nic{transform:translateY(-1px) scale(1.08)}
-  html:not([data-nav]) nav .sgh .nic{width:26px;height:26px;margin:0}
-  html:not([data-nav]) nav .sgh{font:800 21.5px/1.1 var(--f-display);letter-spacing:-.01em;color:var(--accent)}
+  /* hanging indent (Danny 10-20, option B): page links step in, the bigger section icon hangs left of them */
+  html:not([data-nav]) nav .subs button[data-tab]{margin-left:20px;width:calc(100% - 20px)}
+  html:not([data-nav]) nav .sgh .nic{width:36px;height:36px;margin:-5px 0 -5px -8px}
+  html:not([data-nav]) nav .sgh{font:800 21.5px/1.1 var(--f-display);letter-spacing:-.01em;color:var(--accent);margin-top:22px}   /* a bit more air between sections (Danny 10-20) */
   html:not([data-nav]) nav .subs button[data-tab],html:not([data-nav]) nav .sbhome{font:700 14.5px var(--f-display);letter-spacing:.01em;color:#fff;
     text-shadow:-1.3px -1.3px 0 #2a2142,0 -1.3px 0 #2a2142,1.3px -1.3px 0 #2a2142,-1.3px 0 0 #2a2142,1.3px 0 0 #2a2142,-1.3px 1.3px 0 #2a2142,0 1.3px 0 #2a2142,1.3px 1.3px 0 #2a2142,0 2px 6px rgba(23,17,42,.4),0 0 1px #2a2142}
   html:not([data-nav]) nav .subs button[aria-selected="true"]{color:#fff}

@@ -217,3 +217,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-20 classicrank.com embargo remains in effect — only maplestory.market is unblocked.
 
 - 2026-10-20 **classicrank.com also unblocked**: Danny confirms classicrank.com is trusted and considered a friend, same status as maplestory.market and meso.watch. The 2026-10-19 embargo ("bot + packet-sniffer sourced, no permission") is superseded for classicrank.com. All three pricing sources (meso.watch, maplestory.market, classicrank.com) are now sanctioned for ingestion into the planner site.
+- 2026-10-20 Sidebar hanging indent (option B of A/B/C mockup): links indented 20px, section icons 36px nudged left, slightly more space between sections ("just a bit, no large gaps").
