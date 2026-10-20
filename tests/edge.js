@@ -56,6 +56,12 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     const sw = await p.evaluate(() => document.documentElement.scrollWidth);
     check(!errs.length && sw <= 360 && !BADTEXT.test(await p.innerText("#maps")), `Where to train stat boxes = ${v}: no sideways scroll at 360px (${sw})`); await ctx.close() }
 
+  // site monkey test (seed 3, 2026-10-20): DEX 1e308 in the Builder printed "4.8e+307" accuracy and scrolled phones sideways
+  { const {p, errs, ctx} = await page({viewport: {width: 360, height: 800}}); await p.goto(URL); await open(p, "plan");
+    await p.fill("#pDEX", "1e308"); await p.dispatchEvent("#pDEX", "input"); await p.waitForTimeout(100);
+    const sw = await p.evaluate(() => document.documentElement.scrollWidth), t = await p.innerText("#pstats");
+    check(!errs.length && sw <= 360 && !/e\+\d/.test(t), `Builder DEX = 1e308: clamped, no sideways scroll at 360px (${sw})`); await ctx.close() }
+
   // 5. the tracker server's reply is outside data: markup can't get in, odd values don't print NaN or crash
   { const X = '<img src=x onerror="window.__x=1">';
     const replies = {empty: {}, emptyTimes: {runs: 3, players: 2, hours: 1, rows: [{map: "100000000", party: 1, level: 20, expHr: 1000, group: "a"}], times: {"100000000": []}},

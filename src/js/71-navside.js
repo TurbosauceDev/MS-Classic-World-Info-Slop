@@ -23,6 +23,8 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
     wmap: I(["2030000", "2030001", "2030002", "2030003", "2030004", "2030005", "2030006"]),   // launch towns only
     navi: [...skill("Teleport"), ...skill("Haste"), "i:2030000"],
     items: I(known), mobs, quests: I(Object.keys(D.items).filter(i => i.startsWith("403") && (dropped.has(i) || qtext.includes(D.items[i].n)))),
+    // FM Sniper: what meso.watch has listed right now, and meso bags
+    snipe: [...I(Object.keys(PWNOW)), "x:1", "x:2", "x:3"],
     inv: ["x:0", "x:1", "x:2", "x:3"],
     keep: I([...dropped].filter(i => i.startsWith("400") && D.items[i]?.c === "Etc")),
     craft: I([...ingr].filter(i => i.startsWith("4") && (dropped.has(i) || D.ishop?.[i] || crafted.has(i)))),
@@ -30,7 +32,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
     cit: [...new Set(D.citq.map(q => q.npc))].filter(n => n && D.npcid[n] && D.npcimg[D.npcid[n]]).map(n => "n:" + D.npcid[n]).concat(["i:2030004", "i:2030005"]),
   };
   Object.assign(P, { g_trk: [...P.trk, ...kpq], g_char: [...P.plan, ...P.skills], g_train: [...P.maps, ...P.path, ...kpq],
-    g_world: [...P.wmap, ...P.navi], g_db: [...P.items, ...P.mobs, ...P.quests], g_town: [...P.inv, ...P.craft, ...P.keep] });
+    g_world: [...P.wmap, ...P.navi], g_db: [...P.items, ...P.mobs, ...P.quests], g_town: [...P.snipe, ...P.inv, ...P.craft, ...P.keep] });
   const src = k => { const [t, id] = k.split(":"), b = t === "x" ? MESO_ICONS[id] : {i: D.iicons, m: D.mobimg, s: D.icons, n: D.npcimg}[t]?.[id];
     return b ? "data:image/png;base64," + b : null };
   const fill = () => { for (const im of document.querySelectorAll("img.nic:not([src])")){

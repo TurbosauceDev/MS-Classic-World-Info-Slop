@@ -58,10 +58,9 @@
 // listings (D.pw.now, updated D.pw.listed UTC), age shown relative like the item pages; refreshed each minute
 (() => {
   const el = document.getElementById("pwstate"); if (!el || !D.pw?.it) return;
-  const n = Object.keys(D.pw.it).length, live = Object.keys(D.pw.now || {}).length;
-  const read = D.pw.read ? new Date(D.pw.read + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : "";
-  const draw = () => { const ago = pwListedAgo();
+  const draw = () => { const ago = pwListedAgo(), n = Object.keys(D.pw.it).length, live = Object.keys(D.pw.now || {}).length;   // FM Sniper can swap in a newer list
+    const read = D.pw.read ? new Date(D.pw.read + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : "";
     el.textContent = `meso.watch: ${fmt(n)} item prices${read ? ` (sales up to ${read})` : ""}${live && ago ? ` · ${fmt(live)} live listings, updated ${ago}` : ""}`;
     el.title = D.pw.listed ? `Listings updated ${D.pw.listed} UTC` : "" };
-  draw(); el.hidden = false; setInterval(draw, 6e4);
+  draw(); el.hidden = false; setInterval(draw, 6e4); document.addEventListener("pwupdate", draw);
 })();

@@ -3,7 +3,9 @@
 dist/index.html stays the one self-contained file (claude.ai artifact, file://). For Pages this script:
   - moves the item icons and minimaps (D.iicons, D.mmaps: about half the page) into assets-<hash>.json, which the page
     fetches right after it starts (00-core.js, D.lazy) and patches into anything already drawn. Icons Home shows stay inline.
-  - adds the web app manifest, home-screen icons and the offline service worker (src/pwa/; sw.js registers only on *.github.io).
+  - adds the web app manifest, home-screen icons and the offline service worker (src/pwa/; sw.js registers on any https host).
+  - writes market.json = D.pw (meso.watch prices + live listings), which the FM Sniper page re-reads while it's open
+    (56-snipe.js), so a deploy from the meso.watch poll reaches an open tab without a reload.
 Prints first-load sizes (raw and gzip) before/after.
 """
 import gzip, hashlib, json, pathlib, re, shutil, sys
@@ -28,13 +30,13 @@ def split(html):
             '<meta name="apple-mobile-web-app-title" content="MS Classic">\n')
     assert "<title>" in out
     out = out.replace("<title>", head + "<title>", 1)
-    return out, name, blob
+    return out, name, blob, json.dumps(D.get("pw") or {}, separators=(",", ":"))
 
 def main(dst):
     dst = pathlib.Path(dst); dst.mkdir(parents=True, exist_ok=True)
     html = (ROOT / "dist" / "index.html").read_text()
-    out, name, blob = split(html)
-    (dst / "index.html").write_text(out); (dst / name).write_text(blob)
+    out, name, blob, market = split(html)
+    (dst / "index.html").write_text(out); (dst / name).write_text(blob); (dst / "market.json").write_text(market)
     for f in ("manifest.webmanifest", "sw.js", "icon-32.png", "icon-192.png", "icon-512.png", "icon-maskable.png"): shutil.copy(ROOT / "src" / "pwa" / f, dst / f)
     kb = lambda s: f"{len(s.encode()) / 1024:.0f} KB ({len(gzip.compress(s.encode())) / 1024:.0f} KB gzip)"
     print(f"first load: {kb(html)} -> {kb(out)}; {name} {kb(blob)} fetched after start")

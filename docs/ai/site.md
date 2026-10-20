@@ -25,6 +25,7 @@ node tests/golden.js | tail -3              # meowdb-published reference numbers
 node tests/edge.js | tail -5                # bad saved state/share links/server replies, phone nav, keyboard; ~80 s
 node tests/features.js | tail -5            # train hand-off reload, price check keep/sell, job compare, Credits dates
 node tests/pages.js | tail -5               # Pages split (late icons), manifest, offline service worker
+node tests/snipe.js | tail -5               # FM Sniper on a fixture market.json: deal maths, views, filters, watch, new, live refresh
 node tests/monkey.js | tail -3              # random clicks/typing/Back/window sizes; SEEDS=4,5 N=300 to vary; ~100 s
 python3 scripts/pages_site.py /tmp/site     # the Pages copy pages.yml deploys (prints first-load size)
 python3 scripts/name_diff.py <base-commit>  # skill/item/monster/map renames between two data.json (CI: osms-names.yml)
@@ -61,6 +62,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 53-skills.js | | Skills tab |
 | 54-invprice.js | | Price check (inventory/bank screenshots → meso.watch `PW` prices; Keep or sell column via `KEEPSELL` from 47-keep.js) |
 | 55-bcompare.js | | Builder "Compare two jobs" (buildAt per side, or "This build" = BLD.S) |
+| 56-snipe.js | 20 | FM Sniper: PWNOW vs PW, deal grades/score (ours), views, watch list, new badges, live market.json refresh |
 | 60-planner.js | 42 | Path Planner; exports TRAVEL |
 | 62-expcalc.js | | EXP/hr calculator (ids `#ec*`) |
 | 64-undervalued.js | | UV_PICKS / UV_PACKED / UV_SRC (World Map toggle, "vibes", never tied to planner) |
@@ -77,9 +79,9 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Recipes
 - **New page/tab:** markup `<section id="x" hidden>` in src/pages/x.html + a `<!--@page x-->` slot in index.html; button `#t-x` with `data-cat` in `.subs`
   (under its section's `.sgh` title, with `<img class="nic" data-pool="x">` and a pool `P.x` in 71-navside.js); `.hlink`
-  on the Home card; bump the home-link count in tests/smoke.js (21 now) and the sidebar page count (19), add a click-through check.
+  on the Home card; bump the home-link count in tests/smoke.js (22 now) and the sidebar page count (20), Home sprites in tests/pages.js (29), add a click-through check.
   Give the `.hlink` an `<img class="hic" data-ic="i:<item>|m:<mob>|s:<skill>">` sprite (filled from D in 00-core.js,
-  shown only when the card is a billboard) and bump the sprite count in smoke.js (28 = 7 headers + 21 links).
+  shown only when the card is a billboard) and bump the sprite count in smoke.js (29 = 7 headers + 22 links).
 - **Changelog:** every user-visible change gets a dated entry at the top of `#log` (grep `id="log"`, read ~20 lines there).
   10-20 audit: 5 small ships (footer move, favicon, offline on custom domain, builder avatar, "listings updated ago") had no card; caught up as v0.8.1. Add only at the top: a card inserted lower renumbers every newer version.
   Each card = one site version, numbered by build.py (oldest = 0.1.0; `class="card" data-minor` starts the next 0.x.0, for a big addition).
@@ -89,7 +91,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   (`mapLink()`, click opens World Map card), `.nname` NPC (`npcLink()`), `.mobname` monster (`mobLink()`).
 - **Per-viewer state:** localStorage in try/catch; load an object with `savedState(key, S)` (00-core.js: drops unknown keys and wrong types), then range-check enums/levels.
   Share links (`HASH.x`) are just as untrusted: validate before use (see the sanitizers in 50-builder.js / 60-planner.js). Keys in use: tab planner path pathdone qsort qeq qval ctown craft craftlv
-  qcompact keep keephave mobs items skills navi wmap expc theme themes themec train (Where to train + Builder hand-off) bcmp (job compare).
+  qcompact keep keephave mobs items skills navi wmap expc theme themes themec train (Where to train + Builder hand-off) bcmp (job compare) snipe snipewatch snipeseen (FM Sniper).
 - **Explanations:** a closed `<details class="howto">` at the top of the tab, short bullets.
 - **Share links:** extend the existing `#key=value&` hash (69-search.js); never a new scheme.
 - **Themes:** `src/js/70-theme.js` + the `siteTheme` head script in index.html; presets/share codes come from
@@ -159,3 +161,10 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - `data-size` 1-5 (default 3) zooms `.wrap` with CSS `zoom` only at >=1700px; max-width is divided by the zoom. Changelog/Credits live in `.sitefoot` (cat "more" is hidden everywhere).
 - Spec and Danny's picks: /mnt/project-files/reports/nav-redesign-spec-2026-10-20.md (mockup artifact C9RkvgB6VWPbqjyD6ss4RG).
 - 2026-10-20: header centered (title, tagline, Search); Sources link removed (Credits is in the footer); Theme button `.thbtn` sits absolute top-right of the header (static next to Search on phones).
+
+## FM Sniper 2026-10-20
+- `src/js/56-snipe.js` + `src/pages/snipe.html`: rows = PWNOW (cheapest live listing per non-equip item) vs PW median (or p25 via Compare with). Grades (Steal <=50%, Great <=70%, Good <=85%, Small <100%, Rising/Over/Way over >3x, check it <25%) and Best deal = (1 - ratio) x min(1, log10(1+sales)/2), halved for low data: our cut-offs, stated in the howto. Listings under 1 meso (arrows) and unknown ids are skipped. Share key `#f=`.
+- Live refresh: `scripts/pages_site.py` writes `market.json` (= D.pw) next to the Pages copy; the page fetches it on open and every 3 min while visible (only when `D.lazy`, so never in the artifact/file://), and if `listed` is newer, swaps PW/PWNOW contents in place (Items tab and footer follow; footer listens for `pwupdate`). Trap: PW/PWNOW are mutated, never reassigned.
+- Tests: `tests/snipe.js` serves a fixture market.json (fixed numbers, so meso.watch poll commits can't break it); smoke.js only checks invariants on the real list. Fixture sellers must not match real ones (the "new" check compares item|price|seller).
+
+- Same push: Builder AP boxes cap at 9999 (input sanity, not a game limit); monkey seed 3 found DEX 1e308 printing "4.8e+307" accuracy and scrolling phones sideways (edge.js test). Adding a nav page reshuffles the monkey's random walk, so run monkey.js before pushing one.

@@ -573,7 +573,7 @@ $("#pgear").addEventListener("change", e => { const sl = e.target.dataset.slot; 
 $("#pgender").addEventListener("change", () => { S.gender = $("#pgender").value; for (const [k, id] of Object.entries(S.gear)) if (ARMOR[id]?.[5] && S.gender && ARMOR[id][5] !== S.gender) delete S.gear[k]; fillGear(); render() });
 $("#pgearclear").addEventListener("click", () => { S.gear = {}; fillGear(); render() });
 $("#pbuffs").addEventListener("change", () => { S.buffs = $("#pbuffs").checked; render() });
-for (const k of ["STR","DEX","INT","LUK"]) $("#p" + k).addEventListener("input", () => { S.ap[k] = Math.max(4, +$("#p" + k).value || 4); render() });
+for (const k of ["STR","DEX","INT","LUK"]) $("#p" + k).addEventListener("input", () => { S.ap[k] = Math.min(9999, Math.max(4, Math.floor(+$("#p" + k).value) || 4)); render() });   // 9999: input sanity cap (1e308 scrolled phones sideways), not a game limit
 $("#pauto").addEventListener("click", () => { S.ap = autoAP(W.find(x => x.name === S.weapon)); refresh() });
 $("#pspauto").addEventListener("click", () => { S.sp = autoSP(); render() });
 $("#pspreset").addEventListener("click", () => { S.sp = {}; render() });

@@ -22,4 +22,5 @@ jobs:
       - run: node tests/edge.js
       - run: node tests/features.js
       - run: node tests/pages.js
+      - run: node tests/snipe.js
       - run: node tests/monkey.js
