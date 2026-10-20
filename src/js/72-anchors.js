@@ -10,7 +10,7 @@
   const hd = $("header"), wide = matchMedia("(min-width: 761px)");
   const IT = {title: {el: $("header h1"), name: "Title"}, tag: {el: $("header > p"), name: "Tagline"},
     search: {el: $("#srchopen"), name: "Search everything", rz: true}, cog: {el: $("#thopen"), name: "Settings"}};
-  const CATS = ["trk", "char", "train", "world", "db", "town"], SECS = [...document.querySelectorAll(".homegrid > .homecat[data-sec]")].map(e => e.dataset.sec);
+  const CATS = ["trk", "train", "world", "db", "town"], SECS = [...document.querySelectorAll(".homegrid > .homecat[data-sec]")].map(e => e.dataset.sec);
   const ls = (v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem("anchors") || "null"); if (v) localStorage.setItem("anchors", JSON.stringify(v)); else localStorage.removeItem("anchors") } catch { return null } };
   const num = v => typeof v === "number" && isFinite(v);
   const SMIN = 0.5, SMAX = 2.5, SNAPPX = 6;
@@ -20,7 +20,10 @@
       o[id] = {x: p.x, y: p.y}; if (IT[id].rz && num(p.w) && p.w >= 120 && p.w <= 2000) o[id].w = p.w; if (num(p.s) && p.s >= SMIN && p.s <= SMAX) o[id].s = p.s }
     // page layout: sidebar width/side, sidebar section order, Home card order and width (same limits as the <head> script)
     if (s.sb && typeof s.sb === "object"){ const b = {}; if (num(s.sb.w) && s.sb.w >= 180 && s.sb.w <= 420) b.w = Math.round(s.sb.w); if (s.sb.right === true) b.right = true; if (Object.keys(b).length) o.sb = b }
-    const order = (a, all) => Array.isArray(a) && a.length === all.length && all.every(x => a.includes(x)) ? [...a] : null;
+    // saved before a section was added or removed (My Character, 10-20): drop gone ids, put new ones at their default spot
+    const order = (a, all) => { if (!Array.isArray(a) || new Set(a).size !== a.length || !a.every(x => typeof x === "string")) return null;
+      const o = a.filter(x => all.includes(x)); if (!o.length) return null;
+      all.forEach((x, i) => { if (!o.includes(x)) o.splice(Math.min(i, o.length), 0, x) }); return o };
     if (order(s.secs, CATS)) o.secs = order(s.secs, CATS); if (order(s.home, SECS)) o.home = order(s.home, SECS);
     if (num(s.hcw) && s.hcw >= 220 && s.hcw <= 520) o.hcw = Math.round(s.hcw);
     return o };

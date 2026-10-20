@@ -51,7 +51,6 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <div class="cats" role="tablist" aria-label="Sections">
     <button role="tab" id="c-home" aria-selected="false" data-cat="home">Home</button>
     <button role="tab" id="c-trk" aria-selected="false" data-cat="trk">Grind Tracker</button>
-    <button role="tab" id="c-char" aria-selected="false" data-cat="char">My Character</button>
     <button role="tab" id="c-train" aria-selected="false" data-cat="train">Training</button>
     <button role="tab" id="c-world" aria-selected="false" data-cat="world">Victoria Island</button>
     <button role="tab" id="c-db" aria-selected="false" data-cat="db">Maple Database</button>
@@ -66,11 +65,9 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="t-trkhow" aria-selected="false" data-tab="trkhow" data-cat="trk" hidden><img class="nic" data-pool="trkhow" alt="">How to use</button>
     <button role="tab" id="t-trkruns" aria-selected="false" data-tab="trkruns" data-cat="trk" hidden><img class="nic" data-pool="trkruns" alt="">Shared runs</button>
     <button role="tab" id="t-trkkpq" aria-selected="false" data-tab="trkkpq" data-cat="trk" hidden><img class="nic" data-pool="trkkpq" alt="">KPQ leaderboard</button>
-    <div class="sgh" data-cat="char"><img class="nic" data-pool="g_char" alt="">My Character</div>
-    <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="char" hidden><img class="nic" data-pool="plan" alt="">Character Builder</button>
-    <button role="tab" id="t-skills" aria-selected="false" data-tab="skills" data-cat="char" hidden><img class="nic" data-pool="skills" alt="">Skills</button>
     <div class="sgh" data-cat="train"><img class="nic" data-pool="g_train" alt="">Training</div>
     <button role="tab" id="t-maps" aria-selected="false" data-tab="maps" data-cat="train" hidden><img class="nic" data-pool="maps" alt="">Where to train</button>
+    <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="train" hidden><img class="nic" data-pool="plan" alt="">Character Builder</button>
     <button role="tab" id="t-path" aria-selected="false" data-tab="path" data-cat="train" hidden><img class="nic" data-pool="path" alt="">Path Planner</button>
     <button role="tab" id="t-expc" aria-selected="false" data-tab="expc" data-cat="train" hidden><img class="nic" data-pool="expc" alt="">EXP/hr calculator</button>
     <button role="tab" id="t-kpq" aria-selected="false" data-tab="kpq" data-cat="train" hidden><img class="nic" data-pool="kpq" alt="">Kerning PQ</button>
@@ -81,6 +78,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="t-items" aria-selected="false" data-tab="items" data-cat="db" hidden><img class="nic" data-pool="items" alt="">Items</button>
     <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs" data-cat="db" hidden><img class="nic" data-pool="mobs" alt="">Monsters</button>
     <button role="tab" id="t-quests" aria-selected="false" data-tab="quests" data-cat="db" hidden><img class="nic" data-pool="quests" alt="">Quests</button>
+    <button role="tab" id="t-skills" aria-selected="false" data-tab="skills" data-cat="db" hidden><img class="nic" data-pool="skills" alt="">Skills</button>
     <div class="sgh" data-cat="town"><img class="nic" data-pool="g_town" alt="">Mesos and Trade</div>
     <button role="tab" id="t-snipe" aria-selected="false" data-tab="snipe" data-cat="town" hidden><img class="nic" data-pool="snipe" alt="">FM Sniper</button>
     <button role="tab" id="t-inv" aria-selected="false" data-tab="inv" data-cat="town" hidden><img class="nic" data-pool="inv" alt="">Price check</button>

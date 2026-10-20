@@ -81,7 +81,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Recipes
 - **New page/tab:** markup `<section id="x" hidden>` in src/pages/x.html + a `<!--@page x-->` slot in index.html; button `#t-x` with `data-cat` in `.subs`
   (under its section's `.sgh` title, with `<img class="nic" data-pool="x">` and a pool `P.x` in 71-navside.js); `.hlink`
-  on the Home card; bump the home-link count in tests/smoke.js (22 now) and the sidebar page count (20), Home sprites in tests/pages.js (29), add a click-through check.
+  on the Home card; bump the home-link count in tests/smoke.js (22 now) and the sidebar page count (20), Home sprites in tests/pages.js + smoke.js (28), add a click-through check.
   Give the `.hlink` an `<img class="hic" data-ic="i:<item>|m:<mob>|s:<skill>">` sprite (filled from D in 00-core.js,
   shown only when the card is a billboard) and bump the sprite count in smoke.js (29 = 7 headers + 22 links).
 - **Changelog:** every user-visible change gets a dated entry at the top of `#log` (grep `id="log"`, read ~20 lines there).
@@ -166,6 +166,9 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - `data-size` 1-5 (default 3) zooms `.wrap` with CSS `zoom` only at >=1700px; max-width is divided by the zoom. Changelog/Credits live in `.sitefoot` (cat "more" is hidden everywhere).
 - Spec and Danny's picks: /mnt/project-files/reports/nav-redesign-spec-2026-10-20.md (mockup artifact C9RkvgB6VWPbqjyD6ss4RG).
 - 2026-10-20: header centered (title, tagline, Search); Sources link removed (Credits is in the footer); Theme button `.thbtn` sits absolute top-right of the header (static next to Search on phones).
+
+- 10-20 (v-next): Builder moved to Training (2nd, so the section still opens on Where to train), Skills to Maple Database; My Character section/Home card gone. Sections are now trk train world db town (+more).
+- Trap: 72-anchors.js `order()` migrates saved `secs`/`home` (drops unknown ids, inserts new ones at their default spot, rejects duplicates), so adding/removing a section keeps users' edit-mode order. edge.js checks a pre-10-20 layout with "char".
 
 ## FM Sniper 2026-10-20
 - `src/js/56-snipe.js` + `src/pages/snipe.html`: rows = PWNOW (cheapest live listing per non-equip item) vs PW median (or p25 via Compare with). Grades (Steal <=50%, Great <=70%, Good <=85%, Small <100%, Rising/Over/Way over >3x, check it <25%) and Best deal = (1 - ratio) x min(1, log10(1+sales)/2), halved for low data: our cut-offs, stated in the howto. Listings under 1 meso (arrows) and unknown ids are skipped. Share key `#f=`.

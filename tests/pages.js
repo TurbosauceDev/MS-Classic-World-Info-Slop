@@ -35,7 +35,7 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
     const home = await p.$$eval("#home img[data-ic]", l => l.length);
     await open(p, "items"); const early = await icons(p);
     await p.evaluate(() => ASSETS); await p.waitForTimeout(50); const late = await icons(p);
-    check(!errs.length && home === 29 && early.img < early.rows && late.img === late.rows, `items list gets its icons when the file lands (Home sprites ${home}; before ${JSON.stringify(early)}, after ${JSON.stringify(late)})`);
+    check(!errs.length && home === 28 && early.img < early.rows && late.img === late.rows, `items list gets its icons when the file lands (Home sprites ${home}; before ${JSON.stringify(early)}, after ${JSON.stringify(late)})`);
     await p.click("#itrows .ibtn >> nth=0"); await p.waitForTimeout(100);
     check(await p.$$eval("#items .mtop img.sprite", l => l.length) === 1, "item page shows its sprite");
     await open(p, "quests"); await p.waitForTimeout(100);

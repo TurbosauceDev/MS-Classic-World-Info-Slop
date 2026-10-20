@@ -206,3 +206,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-20 Default wide header = Danny's screenshot: Search on the left above the sidebar (same width), small Settings cog on the right in that row. Edit mode expanded "to as many things as you could come up with": title, tagline, sidebar width/side, sidebar section order, Home card order/width.
 - 2026-10-20 maplestory.market embargo lifted (Danny 2026-10-20). Normal rules still apply: source every number, never bypass Cloudflare.
 - 2026-10-20 classicrank.com is a trusted source (not just un-banned); its author nxneko is a friend of the project (Danny 2026-10-20). Cite it like any source; never bypass Cloudflare.
+- 2026-10-20 Character Builder moves to Training (after Where to train), Skills to Maple Database; My Character section removed since it was left empty (Danny 2026-10-20).

@@ -880,7 +880,6 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <div class="cats" role="tablist" aria-label="Sections">
     <button role="tab" id="c-home" aria-selected="false" data-cat="home">Home</button>
     <button role="tab" id="c-trk" aria-selected="false" data-cat="trk">Grind Tracker</button>
-    <button role="tab" id="c-char" aria-selected="false" data-cat="char">My Character</button>
     <button role="tab" id="c-train" aria-selected="false" data-cat="train">Training</button>
     <button role="tab" id="c-world" aria-selected="false" data-cat="world">Victoria Island</button>
     <button role="tab" id="c-db" aria-selected="false" data-cat="db">Maple Database</button>
@@ -895,11 +894,9 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="t-trkhow" aria-selected="false" data-tab="trkhow" data-cat="trk" hidden><img class="nic" data-pool="trkhow" alt="">How to use</button>
     <button role="tab" id="t-trkruns" aria-selected="false" data-tab="trkruns" data-cat="trk" hidden><img class="nic" data-pool="trkruns" alt="">Shared runs</button>
     <button role="tab" id="t-trkkpq" aria-selected="false" data-tab="trkkpq" data-cat="trk" hidden><img class="nic" data-pool="trkkpq" alt="">KPQ leaderboard</button>
-    <div class="sgh" data-cat="char"><img class="nic" data-pool="g_char" alt="">My Character</div>
-    <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="char" hidden><img class="nic" data-pool="plan" alt="">Character Builder</button>
-    <button role="tab" id="t-skills" aria-selected="false" data-tab="skills" data-cat="char" hidden><img class="nic" data-pool="skills" alt="">Skills</button>
     <div class="sgh" data-cat="train"><img class="nic" data-pool="g_train" alt="">Training</div>
     <button role="tab" id="t-maps" aria-selected="false" data-tab="maps" data-cat="train" hidden><img class="nic" data-pool="maps" alt="">Where to train</button>
+    <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="train" hidden><img class="nic" data-pool="plan" alt="">Character Builder</button>
     <button role="tab" id="t-path" aria-selected="false" data-tab="path" data-cat="train" hidden><img class="nic" data-pool="path" alt="">Path Planner</button>
     <button role="tab" id="t-expc" aria-selected="false" data-tab="expc" data-cat="train" hidden><img class="nic" data-pool="expc" alt="">EXP/hr calculator</button>
     <button role="tab" id="t-kpq" aria-selected="false" data-tab="kpq" data-cat="train" hidden><img class="nic" data-pool="kpq" alt="">Kerning PQ</button>
@@ -910,6 +907,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="t-items" aria-selected="false" data-tab="items" data-cat="db" hidden><img class="nic" data-pool="items" alt="">Items</button>
     <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs" data-cat="db" hidden><img class="nic" data-pool="mobs" alt="">Monsters</button>
     <button role="tab" id="t-quests" aria-selected="false" data-tab="quests" data-cat="db" hidden><img class="nic" data-pool="quests" alt="">Quests</button>
+    <button role="tab" id="t-skills" aria-selected="false" data-tab="skills" data-cat="db" hidden><img class="nic" data-pool="skills" alt="">Skills</button>
     <div class="sgh" data-cat="town"><img class="nic" data-pool="g_town" alt="">Mesos and Trade</div>
     <button role="tab" id="t-snipe" aria-selected="false" data-tab="snipe" data-cat="town" hidden><img class="nic" data-pool="snipe" alt="">FM Sniper</button>
     <button role="tab" id="t-inv" aria-selected="false" data-tab="inv" data-cat="town" hidden><img class="nic" data-pool="inv" alt="">Price check</button>
@@ -932,17 +930,11 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       <button class="hlink" data-go="trkkpq"><img class="hic" data-ic="m:800003" alt=""><b>KPQ leaderboard</b><span>Fastest Kerning PQ clears by tracker parties.</span></button>
       </div>
     </div>
-    <div class="homecat" data-sec="char"><h2><button class="hcat" data-big="char" aria-expanded="false"><img class="hic" data-ic="i:1002084" alt="">My Character</button></h2>
-      <div class="hbill"><p>Plan a character from level 1 to 100: AP, skills and damage for any class and level, and every 1st and 2nd job skill.</p><div class="hbillact"><button class="btn hopen" data-go-cat="char">Open My Character →</button></div></div>
-      <div class="hlinks">
-      <button class="hlink" data-go="plan"><img class="hic" data-ic="s:1001001" alt=""><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
-      <button class="hlink" data-go="skills"><img class="hic" data-ic="s:2001003" alt=""><b>Skills</b><span>Every 1st and 2nd job skill: what it does at each level and what it needs.</span></button>
-      </div>
-    </div>
     <div class="homecat" data-sec="train"><h2><button class="hcat" data-big="train" aria-expanded="false"><img class="hic" data-ic="m:10" alt="">Training</button></h2>
-      <div class="hbill"><p>Where to grind for your build, a level-by-level plan with quests, how fast you really level, and the Kerning Party Quest stage by stage.</p><div class="hbillact"><button class="btn hopen" data-go-cat="train">Open Training →</button></div></div>
+      <div class="hbill"><p>Where to grind for your build, a Character Builder for AP, skills and damage, a level-by-level plan with quests, how fast you really level, and the Kerning Party Quest stage by stage.</p><div class="hbillact"><button class="btn hopen" data-go-cat="train">Open Training →</button></div></div>
       <div class="hlinks">
       <button class="hlink" data-go="maps"><img class="hic" data-ic="m:10" alt=""><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
+      <button class="hlink" data-go="plan"><img class="hic" data-ic="s:1001001" alt=""><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
       <button class="hlink" data-go="path"><img class="hic" data-ic="i:2010000" alt=""><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
       <button class="hlink" data-go="expc"><img class="hic" data-ic="s:4101001" alt=""><b>EXP/hr calculator</b><span>Time a session, get your real EXP per hour and time to level.</span></button>
       <button class="hlink" data-go="kpq"><img class="hic" data-ic="m:29" alt=""><b>Kerning PQ</b><span>Kerning Party Quest stage by stage: puzzles, answers and rewards.</span></button>
@@ -956,11 +948,12 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       </div>
     </div>
     <div class="homecat" data-sec="db"><h2><button class="hcat" data-big="db" aria-expanded="false"><img class="hic" data-ic="i:4001007" alt="">Maple Database</button></h2>
-      <div class="hbill"><p>Everything in the launch game files, cross-linked: every item, monster and quest. Search them all at once with Ctrl K.</p><div class="hbillact"><button class="btn hopen" data-go-cat="db">Open Maple Database →</button></div></div>
+      <div class="hbill"><p>Everything in the launch game files, cross-linked: every item, monster, quest and 1st/2nd job skill. Search them all at once with Ctrl K.</p><div class="hbillact"><button class="btn hopen" data-go-cat="db">Open Maple Database →</button></div></div>
       <div class="hlinks">
       <button class="hlink" data-go="items"><img class="hic" data-ic="i:2000000" alt=""><b>Items</b><span>Every item: stats, who drops it, shops, recipes and quests that use it.</span></button>
       <button class="hlink" data-go="mobs"><img class="hic" data-ic="m:9" alt=""><b>Monsters</b><span>Stats, spawns, drops and the best maps to farm each monster.</span></button>
       <button class="hlink" data-go="quests"><img class="hic" data-ic="i:4031001" alt=""><b>Quests</b><span>Every launch quest with level, rewards, questlines and community picks.</span></button>
+      <button class="hlink" data-go="skills"><img class="hic" data-ic="s:2001003" alt=""><b>Skills</b><span>Every 1st and 2nd job skill: what it does at each level and what it needs.</span></button>
       </div>
     </div>
     <div class="homecat" data-sec="town"><h2><button class="hcat" data-big="town" aria-expanded="false"><img class="hic" data-ic="i:3994011" alt="">Mesos and Trade</button></h2>
@@ -1979,6 +1972,8 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.10.6</span> Oct 20, 2026 · Builder and Skills moved</h3></div>
+      <p><b>Character Builder</b> is now under <b>Training</b> (after Where to train) and <b>Skills</b> under <b>Maple Database</b>. The My Character section is gone. Old links still work, and a sidebar or Home order you saved in edit mode is kept.</p></div>
     <div class="card"><div class="cardhead"><h3><span class="ver">v0.10.5</span> Oct 20, 2026 · New header layout, bigger edit mode</h3></div>
       <p><b>Header:</b> on wider screens <b>Search everything</b> now sits on the left above the sidebar (and as wide as it), with a smaller <b>Settings</b> cog on the right in the same row.</p>
       <p><b>Edit mode</b> (F1, or Settings › Toggle anchors) can now also move and scale the <b>title</b> and <b>tagline</b>, change the <b>sidebar's width</b> (drag the bar on its edge), put the <b>sidebar on the right</b>, drag <b>sidebar sections</b> and <b>Home cards</b> into your own order, and set how wide <b>Home cards</b> are. <b>Reset all</b> puts everything back.</p>
@@ -2292,7 +2287,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-20T22:16:07Z" data-ver="0.10.5">Site version: v0.10.5 · built Oct 20, 2026 · 22:16 UTC</p>
+  <p class="sitever" data-built="2026-10-20T23:07:52Z" data-ver="0.10.6">Site version: v0.10.6 · built Oct 20, 2026 · 23:07 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button></div>
 </footer>
@@ -8839,8 +8834,8 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
     // Henesys / Kerning City townsfolk from the citizenship quests, and the two towns' return scrolls
     cit: [...new Set(D.citq.map(q => q.npc))].filter(n => n && D.npcid[n] && D.npcimg[D.npcid[n]]).map(n => "n:" + D.npcid[n]).concat(["i:2030004", "i:2030005"]),
   };
-  Object.assign(P, { g_trk: [...P.trk, ...kpq], g_char: [...P.plan, ...P.skills], g_train: [...P.maps, ...P.path, ...kpq],
-    g_world: [...P.wmap, ...P.navi], g_db: [...P.items, ...P.mobs, ...P.quests], g_town: [...P.snipe, ...P.inv, ...P.craft, ...P.keep] });
+  Object.assign(P, { g_trk: [...P.trk, ...kpq], g_train: [...P.maps, ...P.plan, ...P.path, ...kpq],
+    g_world: [...P.wmap, ...P.navi], g_db: [...P.items, ...P.mobs, ...P.quests, ...P.skills], g_town: [...P.snipe, ...P.inv, ...P.craft, ...P.keep] });
   const src = k => { const [t, id] = k.split(":"), b = t === "x" ? MESO_ICONS[id] : {i: D.iicons, m: D.mobimg, s: D.icons, n: D.npcimg}[t]?.[id];
     return b ? "data:image/png;base64," + b : null };
   const fill = () => { for (const im of document.querySelectorAll("img.nic:not([src])")){
@@ -8889,7 +8884,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
   const hd = $("header"), wide = matchMedia("(min-width: 761px)");
   const IT = {title: {el: $("header h1"), name: "Title"}, tag: {el: $("header > p"), name: "Tagline"},
     search: {el: $("#srchopen"), name: "Search everything", rz: true}, cog: {el: $("#thopen"), name: "Settings"}};
-  const CATS = ["trk", "char", "train", "world", "db", "town"], SECS = [...document.querySelectorAll(".homegrid > .homecat[data-sec]")].map(e => e.dataset.sec);
+  const CATS = ["trk", "train", "world", "db", "town"], SECS = [...document.querySelectorAll(".homegrid > .homecat[data-sec]")].map(e => e.dataset.sec);
   const ls = (v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem("anchors") || "null"); if (v) localStorage.setItem("anchors", JSON.stringify(v)); else localStorage.removeItem("anchors") } catch { return null } };
   const num = v => typeof v === "number" && isFinite(v);
   const SMIN = 0.5, SMAX = 2.5, SNAPPX = 6;
@@ -8899,7 +8894,10 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
       o[id] = {x: p.x, y: p.y}; if (IT[id].rz && num(p.w) && p.w >= 120 && p.w <= 2000) o[id].w = p.w; if (num(p.s) && p.s >= SMIN && p.s <= SMAX) o[id].s = p.s }
     // page layout: sidebar width/side, sidebar section order, Home card order and width (same limits as the <head> script)
     if (s.sb && typeof s.sb === "object"){ const b = {}; if (num(s.sb.w) && s.sb.w >= 180 && s.sb.w <= 420) b.w = Math.round(s.sb.w); if (s.sb.right === true) b.right = true; if (Object.keys(b).length) o.sb = b }
-    const order = (a, all) => Array.isArray(a) && a.length === all.length && all.every(x => a.includes(x)) ? [...a] : null;
+    // saved before a section was added or removed (My Character, 10-20): drop gone ids, put new ones at their default spot
+    const order = (a, all) => { if (!Array.isArray(a) || new Set(a).size !== a.length || !a.every(x => typeof x === "string")) return null;
+      const o = a.filter(x => all.includes(x)); if (!o.length) return null;
+      all.forEach((x, i) => { if (!o.includes(x)) o.splice(Math.min(i, o.length), 0, x) }); return o };
     if (order(s.secs, CATS)) o.secs = order(s.secs, CATS); if (order(s.home, SECS)) o.home = order(s.home, SECS);
     if (num(s.hcw) && s.hcw >= 220 && s.hcw <= 520) o.hcw = Math.round(s.hcw);
     return o };
