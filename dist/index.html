@@ -708,7 +708,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       </div>
     </div>
   </div>
-  <p class="sitever" data-built="2026-10-19T23:55:14Z" data-ver="0.7.2">Site version: v0.7.2 · built Oct 19, 2026 · 23:55 UTC</p>
+  <p class="sitever" data-built="2026-10-20T00:21:42Z" data-ver="0.7.2">Site version: v0.7.2 · built Oct 20, 2026 · 00:21 UTC</p>
 </section>
 
 <section id="plan" hidden>
@@ -7027,6 +7027,8 @@ for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click",
 // Releasing? Add a line for the new version at the top: tests/core.test.js fails if the top entry isn't package.json's version.
 (function (root){
   const LOG = [
+    ["0.2.67", "2026-10-20", "Built-in profile \"Danny's Default\" under Settings > Layout > Profiles. A profile's window size now always fits your screen."],
+    ["0.2.66", "2026-10-20", "Settings, Help (F1), Patch notes and Report a bug open as pop-ups over a blurred backdrop with a little space around them and a smooth open and close; Help no longer opens under the layout or resizes the window."],
     ["0.2.65", "2026-10-19", "App icon is now the game's own Slime sprite on the purple tile."],
     ["0.2.64", "2026-10-19", "New app icon: a green slime on a purple tile (taskbar, Start menu, window and installer)."],
     ["0.2.63", "2026-10-19", "History in a narrow window: pressing × (Delete?) no longer pushes the list past the window edge."],
@@ -7338,7 +7340,17 @@ $("#t-maps").addEventListener("click", firstRank); if (!$("#maps").hidden) first
     if (!m){ const t = decode(s); return t ? {layout: null, theme: t, name: t.name} : null }   // a theme code (MSCT1) works here too
     try { return cleanSetup(JSON.parse(decodeURIComponent(escape(atob(m[1])))), ids) } catch { return null }
   }
-  const api = {TOKENS, PRESETS, clean, encode, decode, contrast, resolve, apply, cleanLayout, cleanSetup, encodeSetup, decodeSetup};
+  // built-in profiles (Danny, 2026-10-20): shown under Profiles for everyone, can't be deleted or overwritten
+  const BUILTIN = ["MSCS1.eyJsYXlvdXQiOnsidiI6Miwib3JkZXIiOnsiZG9jayI6WyJtYWluIiwiaW52Y2hlY2siLHsicm93IjpbImV2ZW50cyIsIm1lc29zIiwic3RhdHMiLCJsb2ciXSwidyI6WzEsMSwxLDFdLCJoIjoyOTZ9LHsicm93IjpbInVzZWQiLCJpdGVtcyIsIm1vYnMiXSwidyI6WzEsMSwxXSwiaCI6MTcwfSx7InJvdyI6WyJzbmFwcyIsImFsZXJ0cyIsImtwcSJdLCJ3IjpbMSwxLDFdLCJoIjoyNDN9XX0sImZvbGRlZCI6W10sImgiOnsibWFpbiI6MjY1LCJpbnZjaGVjayI6Nzh9fSwidGhlbWUiOnsicHJlc2V0IjoiRGVmYXVsdCJ9LCJuYW1lIjoiRGFubnkncyBEZWZhdWx0IiwicHJlZnMiOnsiZml0Ijp0cnVlLCJmaXRXaW4iOnRydWUsInNuYXAiOnRydWUsIm9wYWNpdHkiOjF9LCJ3aW4iOnsidyI6MjU2MCwiaCI6MTM5Mn19"];
+  const builtins = ids => BUILTIN.map(c => decodeSetup(c, ids)).filter(p => p?.name);
+  // a profile's window size (page px) on this monitor: zoomed, never bigger than the work area (a 2560-wide profile on a
+  // 1920 screen gets the whole width, not more), and moved so all of it is on screen. b/c = window bounds/content size
+  function winFit(want, z, b, c, wa){
+    const fw = b.width - c[0], fh = b.height - c[1];
+    const w = Math.max(240, Math.min(wa.width - fw, Math.round((+want.w || c[0] / z) * z))), h = Math.max(140, Math.min(wa.height - fh, Math.round((+want.h || c[1] / z) * z)));
+    return {w, h, x: Math.min(Math.max(b.x, wa.x), wa.x + wa.width - w - fw), y: Math.min(Math.max(b.y, wa.y), wa.y + wa.height - h - fh)};
+  }
+  const api = {TOKENS, PRESETS, clean, encode, decode, contrast, resolve, apply, cleanLayout, cleanSetup, encodeSetup, decodeSetup, builtins, winFit};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.TrackerThemes = api;
 })(typeof window !== "undefined" ? window : globalThis);
 

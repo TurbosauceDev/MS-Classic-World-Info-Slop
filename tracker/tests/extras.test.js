@@ -116,6 +116,20 @@ const path = require("path"), {chromium} = require("playwright");
   if (pf.b[0] !== "p:Henesys" || pf.b[1] !== false || pf.b[2] !== "KPQ" || pf.b[3] !== "Ellinia") fail("profile keeps changes on switch", pf);
   if (pf.left.includes("Grind") || pf.used !== "KPQ") fail("profile delete", pf);
   if (!/theme only/.test(pf.tinfo) || !/Keeps your box layout/.test(pf.tinfo) || !/Kerning neon/.test(pf.theme2)) fail("theme code in the profile box", pf);
+  // 6. built-in profile (Danny's Default): listed under Built in, can't be deleted, applies his layout, theme and window size,
+  // and changes made while it's in use never go into it
+  const bi = await page.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    $("#profSel").value = "b:Danny's Default"; $("#profSel").dispatchEvent(new Event("change"));
+    const del = $("#profDel").disabled; $("#profUse").click(); await wait(250);
+    const got = {theme: settings.theme, profile: settings.profile, win: window.winSized, dock: [...$("#dock").querySelectorAll("[data-box]")].map(b => b.dataset.box).sort().join(),
+      hist: !!BOXES.find(b => b.dataset.box === "hist").closest("#shelf"), note: $("#setupNote").textContent};
+    await themePick("p:Midnight"); $("#profSel").value = "KPQ"; $("#profUse").click(); await wait(250);
+    const again = TH.builtins(boxIds())[0].theme.preset, kept = settings.profiles.some(p => /Danny/.test(p.name));
+    return {del, got, again, kept, opt: [...$("#profSel").querySelectorAll("optgroup")].map(g => g.label).join()} });
+  if (!bi.del || bi.got.theme !== "p:Default" || bi.got.profile !== "b:Danny's Default" || String(bi.got.win) !== "2560,1392" || !bi.got.hist
+    || bi.got.dock !== "alerts,events,invcheck,items,kpq,log,main,mesos,mobs,snaps,stats,used" || !/built in/.test(bi.got.note)) fail("built-in profile", bi);
+  if (bi.again !== "Default" || bi.kept || bi.opt !== "Yours,Built in") fail("built-in profile stays as shipped", bi);
 
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));

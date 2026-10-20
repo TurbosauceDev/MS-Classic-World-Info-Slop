@@ -437,6 +437,16 @@ console.log("history ok");
     {layout, theme: null, name: "x" + "n".repeat(39)}, "profile junk dropped");
   const thc = TH.decode(TH.encode({name: "x", mode: "dark", c: TH.PRESETS[2].c}));
   assert.deepStrictEqual(TH.decodeSetup(TH.encode(thc), ids), {layout: null, theme: thc, name: "x"}, "theme code as a setup");
+  // built-in profiles (Danny's Default, 2026-10-20): decode against the real box ids with every box Danny placed; a
+  // profile's window size never leaves the monitor (his 2560x1392 on a 1920x1040 work area, zoom 1 and 1.25, off to the right)
+  { const fs = require("fs"), path = require("path"), real = [...fs.readFileSync(path.join(__dirname, "../app/index.html"), "utf8").matchAll(/data-box="([a-z]+)"/g)].map(m => m[1]), B = TH.builtins(real);
+    assert.ok(B.length >= 1 && B[0].name === "Danny's Default" && B[0].win.w === 2560 && B[0].theme.preset === "Default", "built-in decodes");
+    assert.equal(B[0].layout.order.dock.flatMap(i => typeof i === "string" ? [i] : i.row.flat()).length, 12, "every box Danny placed survives");
+    const wa = {x: 0, y: 0, width: 1920, height: 1040}, b = {x: 1500, y: 300, width: 376, height: 640}, c = [360, 600];
+    for (const z of [1, 1.25]){ const f = TH.winFit(B[0].win, z, b, c, wa);
+      assert.deepStrictEqual([f.w + 16, f.h + 40, f.x, f.y], [1920, 1040, 0, 0], "fits the work area at zoom " + z) }
+    assert.deepStrictEqual(TH.winFit({w: 400, h: 500}, 1, b, c, wa), {w: 400, h: 500, x: 1500, y: 300}, "a small size stays put");
+    assert.deepStrictEqual(TH.winFit({w: 400, h: 500}, 1, {...b, x: 1800}, c, {...wa, x: -1920}), {w: 400, h: 500, x: -416, y: 300}, "pulled back onto a left monitor") }
 }
 // crash recovery (0.2.60): the autosave is swapped in whole, read back, never listed as a session, and cleared
 { const A = require("../core/autosave.js"), fs = require("fs"), os = require("os"), path = require("path");

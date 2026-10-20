@@ -105,6 +105,16 @@
     if (!m){ const t = decode(s); return t ? {layout: null, theme: t, name: t.name} : null }   // a theme code (MSCT1) works here too
     try { return cleanSetup(JSON.parse(decodeURIComponent(escape(atob(m[1])))), ids) } catch { return null }
   }
-  const api = {TOKENS, PRESETS, clean, encode, decode, contrast, resolve, apply, cleanLayout, cleanSetup, encodeSetup, decodeSetup};
+  // built-in profiles (Danny, 2026-10-20): shown under Profiles for everyone, can't be deleted or overwritten
+  const BUILTIN = ["MSCS1.eyJsYXlvdXQiOnsidiI6Miwib3JkZXIiOnsiZG9jayI6WyJtYWluIiwiaW52Y2hlY2siLHsicm93IjpbImV2ZW50cyIsIm1lc29zIiwic3RhdHMiLCJsb2ciXSwidyI6WzEsMSwxLDFdLCJoIjoyOTZ9LHsicm93IjpbInVzZWQiLCJpdGVtcyIsIm1vYnMiXSwidyI6WzEsMSwxXSwiaCI6MTcwfSx7InJvdyI6WyJzbmFwcyIsImFsZXJ0cyIsImtwcSJdLCJ3IjpbMSwxLDFdLCJoIjoyNDN9XX0sImZvbGRlZCI6W10sImgiOnsibWFpbiI6MjY1LCJpbnZjaGVjayI6Nzh9fSwidGhlbWUiOnsicHJlc2V0IjoiRGVmYXVsdCJ9LCJuYW1lIjoiRGFubnkncyBEZWZhdWx0IiwicHJlZnMiOnsiZml0Ijp0cnVlLCJmaXRXaW4iOnRydWUsInNuYXAiOnRydWUsIm9wYWNpdHkiOjF9LCJ3aW4iOnsidyI6MjU2MCwiaCI6MTM5Mn19"];
+  const builtins = ids => BUILTIN.map(c => decodeSetup(c, ids)).filter(p => p?.name);
+  // a profile's window size (page px) on this monitor: zoomed, never bigger than the work area (a 2560-wide profile on a
+  // 1920 screen gets the whole width, not more), and moved so all of it is on screen. b/c = window bounds/content size
+  function winFit(want, z, b, c, wa){
+    const fw = b.width - c[0], fh = b.height - c[1];
+    const w = Math.max(240, Math.min(wa.width - fw, Math.round((+want.w || c[0] / z) * z))), h = Math.max(140, Math.min(wa.height - fh, Math.round((+want.h || c[1] / z) * z)));
+    return {w, h, x: Math.min(Math.max(b.x, wa.x), wa.x + wa.width - w - fw), y: Math.min(Math.max(b.y, wa.y), wa.y + wa.height - h - fh)};
+  }
+  const api = {TOKENS, PRESETS, clean, encode, decode, contrast, resolve, apply, cleanLayout, cleanSetup, encodeSetup, decodeSetup, builtins, winFit};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.TrackerThemes = api;
 })(typeof window !== "undefined" ? window : globalThis);

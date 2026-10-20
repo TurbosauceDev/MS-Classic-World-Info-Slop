@@ -167,6 +167,9 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   settings.profile = in use; switching away first saves the screen into it (profKeep). Codes stay MSCS1, now with optional
   name/prefs {fit, fitWin, snap, opacity}/win {w, h} (themes.js cleanSetup; old apps ignore them); decodeSetup also takes MSCT1
   (theme only). Paste = preview (#setupPrev) only; IPC `win-size` sets content size (skipped in Mini). Tests: extras.test.js 4-5.
+  Built-in profiles (0.2.67): codes in themes.js BUILTIN, TH.builtins(ids); select value "b:<name>", never saved into or
+  deleted. Window size goes through TH.winFit (zoom, clamp to work area, pull on screen), used by main.js `win-size`; core.test.
+  flipTo sets body.gliding for 220 ms (#dock overflow-x:clip) so a box gliding in from the right never flashes a sideways scrollbar.
 - Traps: box h3/rows need 72 px right padding (⠿ – × = 63 px); `#hist > .row:first-child` never matched (.boxctl is first child).
   .feedlist height = calc(7.5em + 10px) = 5 whole lines; feedIn slides lines, so wait 400 ms before measuring them. Mini's zoom
   search is cached by content height + window size (miniKey).

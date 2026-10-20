@@ -92,3 +92,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-19 Site gets a version number (0.x.y like the tracker), one per changelog entry since Oct 6, shown beside the Home stamp. Site and tracker changelogs kept separate (tracker: Help > Patch notes + Grind Tracker page). Danny asked for both.
 - 2026-10-19 Tracker icon: cute green slime on a purple gradient tile, not a flat fill (Danny). Danny then: use the game's sprite (like the site favicon), not drawn art.
 - 2026-10-20 Tracker pop-ups (Settings, Help/F1, Patch notes, bug report): inset card over a blurred backdrop with subtle open/close animation, never appended under the layout and never resizing the window. Goal: look and feel "far too professional for what it is" (Danny).
+- 2026-10-20 Ship Danny's own profile code as a built-in profile "Danny's Default" (tracker 0.2.67).

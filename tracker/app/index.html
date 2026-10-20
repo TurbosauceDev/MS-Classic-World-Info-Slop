@@ -162,6 +162,7 @@
   .hsplit::after { content:""; position:absolute; left:30%; right:30%; top:4px; height:2px; border-radius:1px; background:var(--line); }
   .hsplit:hover::after, .hsplit.on::after { background:var(--accent); } body.resizing.rows, body.resizing.rows * { cursor:row-resize !important; }
   /* Settings > Theme: one swatch per theme (its boxes, accent and text), the editor's colour grid */
+  body.gliding #dock { overflow-x:clip; }
   #setupPrev { border:1px solid var(--line); border-radius:8px; padding:8px; margin:6px 0; background:var(--bg); }
   #spMap { display:flex; flex-direction:column; gap:3px; padding:6px; margin:4px 0; border-radius:6px; }
   #spMap .r { display:flex; gap:3px; min-width:0; } #spMap .c { display:flex; flex-direction:column; gap:3px; min-width:0; }

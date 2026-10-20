@@ -389,7 +389,10 @@ for (const b of BOXES) fitRO.observe(b);
 // one motion instead of a jump. Off with the system's "reduce motion"; never during a window resize (that must track the edge)
 const calm = matchMedia("(prefers-reduced-motion: reduce)");
 function flipFrom(){ const m = new Map(); if (calm.matches) return m; for (const b of BOXES) if (b.offsetParent) m.set(b, b.getBoundingClientRect()); return m }
-function flipTo(m){ for (const [b, r] of m){ if (!b.offsetParent) continue; const n = b.getBoundingClientRect(), dx = r.left - n.left, dy = r.top - n.top;
+// while boxes glide, #dock clips sideways: a box sliding in from the right would flash a sideways scrollbar (monkey seed 1, 2026-10-20)
+let glideT = 0;
+function flipTo(m){ if (m.size){ document.body.classList.add("gliding"); clearTimeout(glideT); glideT = setTimeout(() => document.body.classList.remove("gliding"), 220) }
+  for (const [b, r] of m){ if (!b.offsetParent) continue; const n = b.getBoundingClientRect(), dx = r.left - n.left, dy = r.top - n.top;
   if (Math.abs(dx) + Math.abs(dy) < 2) continue;
   b.animate([{transform: `translate(${dx}px, ${dy}px)`}, {transform: "none"}], {duration: 180, easing: "cubic-bezier(.2,.7,.3,1)"}) } }
 function flip(fn){ const m = flipFrom(); fn(); flipTo(m) }

@@ -312,10 +312,8 @@ ipcMain.handle("mini", (_, on, h) => {
 // a profile's window size (page pixels, as window.innerWidth/innerHeight saw it), kept on the monitor the window is on
 ipcMain.handle("win-size", (_, w, h) => {
   if (!win || win.isDestroyed() || fullSize || win.isMaximized() || win.isFullScreen()) return false;
-  const z = win.webContents.getZoomFactor() || 1, b = win.getBounds(), c = win.getContentSize(), wa = require("electron").screen.getDisplayMatching(b).workArea;
-  const cw = Math.max(240, Math.min(wa.width - (b.width - c[0]), Math.round((+w || c[0] / z) * z))), ch = Math.max(140, Math.min(wa.height - (b.height - c[1]), Math.round((+h || c[1] / z) * z)));
-  win.setContentSize(cw, ch); const n = win.getBounds();
-  win.setPosition(Math.min(Math.max(n.x, wa.x), wa.x + wa.width - n.width), Math.min(Math.max(n.y, wa.y), wa.y + wa.height - n.height));
+  const b = win.getBounds(), f = require("./themes.js").winFit({w, h}, win.webContents.getZoomFactor() || 1, b, win.getContentSize(), require("electron").screen.getDisplayMatching(b).workArea);
+  win.setContentSize(f.w, f.h); win.setPosition(f.x, f.y);
   return true;
 });
 ipcMain.handle("share-run", async (_, run) => {

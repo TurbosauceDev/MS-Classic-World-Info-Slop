@@ -187,31 +187,38 @@ async function setupApply(x){
   if (x.layout) layoutSave();
   if (x.theme?.preset) await themePick("p:" + x.theme.preset); else if (x.theme){ await themeSave(x.theme); themeShow(); themeUi() }
 }
+// built-in profiles (themes.js BUILTIN) sit under their own heading as "b:<name>": switching to one works like any other,
+// but nothing is ever saved into it (profKeep only writes your own); Save current setup as makes your own copy
+const profFind = v => v?.startsWith("b:") ? TH.builtins(boxIds()).find(p => p.name === v.slice(2)) : profs().find(p => p.name === v);
+const profLabel = v => v?.startsWith("b:") ? v.slice(2) : v;
 function profUi(){
-  const list = profs(), cur = settings.profile, sel = $("#profSel"), was = sel.value;
-  sel.innerHTML = list.length ? list.map(p => `<option value="${esc(p.name)}">${esc(p.name)}${p.name === cur ? " (in use)" : ""}</option>`).join("")
-    : `<option value="">No profiles yet: save one below</option>`;
-  sel.value = list.some(p => p.name === was) ? was : list.some(p => p.name === cur) ? cur : list[0]?.name || "";
-  $("#profUse").disabled = $("#profDel").disabled = !list.length;
+  const list = profs(), built = TH.builtins(boxIds()), cur = settings.profile, sel = $("#profSel"), was = sel.value;
+  const opt = (v, n) => `<option value="${esc(v)}">${esc(n)}${v === cur ? " (in use)" : ""}</option>`;
+  sel.innerHTML = (list.length ? `<optgroup label="Yours">${list.map(p => opt(p.name, p.name)).join("")}</optgroup>` : `<option value="" disabled>No profiles of yours yet: save one below</option>`)
+    + `<optgroup label="Built in">${built.map(p => opt("b:" + p.name, p.name)).join("")}</optgroup>`;
+  const vals = [...sel.options].filter(o => !o.disabled).map(o => o.value);
+  sel.value = vals.includes(was) ? was : vals.includes(cur) ? cur : vals[0] || "";
+  $("#profUse").disabled = !sel.value; $("#profDel").disabled = !sel.value || sel.value.startsWith("b:");
 }
+$("#profSel").onchange = () => { $("#profDel").disabled = !$("#profSel").value || $("#profSel").value.startsWith("b:") };
 $("#profSave").onclick = async () => {
-  const n = $("#profName").value.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40) || settings.profile || "My setup";
+  const n = $("#profName").value.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40) || profLabel(settings.profile) || "My setup";
   const c = TH.cleanSetup(setupNow(n), boxIds()); if (!c) return $("#setupNote").textContent = "Nothing to save yet.";
   await profPut(c); settings = await host.settings({profile: n}); $("#profName").value = ""; profUi(); $("#profSel").value = n;
   $("#setupNote").textContent = `Saved profile "${n}". Changes you make now go into it when you switch.`;
 };
-async function profSwitch(n){
-  const to = profs().find(p => p.name === n); if (!to) return;
-  if (n !== settings.profile) await profKeep();
-  await setupApply(to); settings = await host.settings({profile: n}); profUi();
-  $("#setupNote").textContent = `Switched to "${n}".`;
+async function profSwitch(v){
+  const to = profFind(v); if (!to) return;
+  if (v !== settings.profile) await profKeep();
+  await setupApply(to); settings = await host.settings({profile: v}); profUi();
+  $("#setupNote").textContent = `Switched to "${to.name}".` + (v.startsWith("b:") ? " It's built in: to keep changes, save them under a name of your own." : "");
 }
 $("#profUse").onclick = () => profSwitch($("#profSel").value);
-$("#profDel").onclick = async () => { const n = $("#profSel").value; if (!n) return;
+$("#profDel").onclick = async () => { const n = $("#profSel").value; if (!n || n.startsWith("b:")) return;
   settings = await host.settings({profiles: profs().filter(p => p.name !== n), ...(settings.profile === n ? {profile: null} : {})}); profUi();
   $("#setupNote").textContent = `Deleted profile "${n}". The boxes and theme on screen stay as they are.` };
 $("#setupCopy").onclick = async () => {
-  const code = TH.encodeSetup(setupNow(settings.profile), boxIds()); if (!code) return $("#setupNote").textContent = "Nothing to share yet.";
+  const code = TH.encodeSetup(setupNow(profLabel(settings.profile)), boxIds()); if (!code) return $("#setupNote").textContent = "Nothing to share yet.";
   $("#setupCode").value = code;
   try { await navigator.clipboard.writeText(code); $("#setupNote").textContent = "Profile code copied. Friends paste it here, press Preview, then Use it." }
   catch { $("#setupCode").select(); $("#setupNote").textContent = "Copy the code from the box (Ctrl+C)." }
