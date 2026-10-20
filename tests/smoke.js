@@ -113,7 +113,7 @@ const path = require("path");
   // Crafting
   await tab("#t-craft");
   check(await p.$$eval("#crmasters .fact", r => r.length) === 6, "six profession masters");
-  check(/^348 /.test(await p.textContent("#crcount")), "all 348 recipes listed");
+  check(/^290 /.test(await p.textContent("#crcount")), "all 290 recipes up to the craft Lv 8 cap listed");
   await p.click('#crdisc button[data-d="4"]'); await p.selectOption("#crcls", "Thief");
   check(await p.$$eval("#crrows tr", r => r.length) > 0, "Leatherworking Thief filter");
   await p.click("#crmats .crfind >> nth=0");
@@ -208,7 +208,7 @@ const path = require("path");
   check(!(await p.isHidden("#navi")) && (await p.inputValue("#navto")) !== "", "world map: Route here opens the navigator");
   await tab("#t-log"); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
   await tab("#t-credits"); check(await p.$$eval("#credits .card", c => c.length) === 8 && await p.$$eval("#srcdates li", l => l.length) >= 3, "credits tab renders (7 sources + Data last updated)");
-  await tab("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to craft Lv 10/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 10, "crafting leveling plan");
+  await tab("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to finish craft Lv 8/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 8, "crafting leveling plan");
   await tab("#t-maps"); check(await p.$$eval("#timedrows tr", r => r.length) > 10 && /Mushmom/.test(await p.textContent("#timedrows")), "bosses and timed spawns");
   await tab("#t-quests"); await p.click("#qcompact"); await p.click("#qcompact"); check(await p.$$eval("#qrows tr", r => r.length) > 0, "quest compact toggle");
   await tab("#t-plan"); const opt = await p.$eval('#pgear select[data-slot="Hat"]', s => s.options[1]?.value);

@@ -1,9 +1,11 @@
 const D = __DATA__;
 const $ = s => document.querySelector(s);
-// level cap is 100 at launch (Nexon's Founder's Access notes, via meowdb). The EXP table we embed stops at 70; meowdb's EXP
-// guide gives the rest: every level from 51 costs 5.48% more than the one before (historical reference; confirmed to 49).
-const EXP_SURE = 49, MAX_LEVEL = 100;
-for (let l = 71; l < MAX_LEVEL; l++) if (D.exp[l] == null) D.exp[l] = Math.trunc(D.exp[l - 1] * 1.0548);
+// level cap is 100 at launch. The EXP table we embed stops at 70; the launch client builds the rest (OSMS formulas page):
+// levels 51-89 cost ×1.0548 the level before, 90-99 ×2.1.
+const EXP_SURE = 100, MAX_LEVEL = 100;   // whole 1-99 table read from the launch client (OSMS formulas page)
+for (let l = 71; l < MAX_LEVEL; l++) if (D.exp[l] == null) D.exp[l] = Math.trunc(D.exp[l - 1] * (l < 90 ? 1.0548 : 2.1));
+// crafting caps at Lv 8 in the launch client (OSMS formulas page); the export still lists Lv 9-10 recipes, so they're hidden
+const CRAFT_CAP = 8; D.craft.rec = D.craft.rec.filter(r => r[2] <= CRAFT_CAP);
 const fmt = n => n == null ? "–" : Math.round(n).toLocaleString();
 /* GitHub Pages copy only (scripts/pages_site.py sets D.lazy): item icons and minimaps come in a second file, fetched as the
    page starts. ASSETS resolves when they're in D (at once in the artifact, where everything is inline); code that needs

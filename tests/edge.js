@@ -92,7 +92,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     const first = await p.$$eval("#crrows tr", r => r.length);
     for (let i = 0; i < 12; i++){ await p.evaluate(() => document.querySelector("#crrows").lastElementChild.scrollIntoView()); await p.waitForTimeout(80) }
     const all = await p.$$eval("#crrows tr", r => r.length);
-    check(first <= 60 && all === 348, `crafting recipes: ${first} rows at first, ${all} after scrolling`); await ctx.close() }
+    check(first <= 60 && all === 290, `crafting recipes: ${first} rows at first, ${all} after scrolling`); await ctx.close() }
 
   await b.close();
   console.log(fails ? `\n${fails} failed` : "\nall good"); process.exit(fails ? 1 : 0);
