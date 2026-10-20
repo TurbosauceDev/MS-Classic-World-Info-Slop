@@ -146,7 +146,6 @@ const SRCDATES = __SRCDATES__;
     ["meowdb shops, mesos, weapon drops", day(SRCDATES.meowdb_shops), "NPC shops, mesos per kill"],
     ["maplestory.quest", day(SRCDATES.mq_mob_magic), "monster magic attack"]];
   $("#srcdates").innerHTML = rows.filter(r => r[1]).map(([n, d, w]) => `<li><b>${n}:</b> ${d} <span class="sub">· ${w}</span></li>`).join("") }
-$("#srclink").addEventListener("click", e => { e.preventDefault(); $("#t-credits").click(); $("#credits").scrollIntoView() });
 // "about 1 per X kills" for n picked up in k kills, plus a likely range (95% Wilson interval: a statistics estimate, wide
 // while kills are few). Used on monster and item pages (48-monsters.js, 49-items.js).
 function dropRate(n, k){

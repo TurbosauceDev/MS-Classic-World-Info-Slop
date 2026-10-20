@@ -160,3 +160,4 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Site version + meso.watch lines live in `.sitefoot` (bottom of every page, Danny 10-20), not in #home.
 - `data-size` 1-5 (default 3) zooms `.wrap` with CSS `zoom` only at >=1700px; max-width is divided by the zoom. Changelog/Credits live in `.sitefoot` (cat "more" is hidden everywhere).
 - Spec and Danny's picks: /mnt/project-files/reports/nav-redesign-spec-2026-10-20.md (mockup artifact C9RkvgB6VWPbqjyD6ss4RG).
+- 2026-10-20: header centered (title, tagline, Search); Sources link removed (Credits is in the footer); Theme button `.thbtn` sits absolute top-right of the header (static next to Search on phones).

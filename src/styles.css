@@ -262,7 +262,7 @@ table.qcompact th:nth-child(7),table.qcompact td:nth-child(7),table.qcompact th:
 .srcdate{margin-top:16px}
 .srcdate ul{margin:0;padding-left:18px;font-size:15px;line-height:1.5}
 .srcdate .tiny{margin:8px 0 0}
-.credits a,#srclink{color:var(--accent);overflow-wrap:anywhere}
+.credits a{color:var(--accent);overflow-wrap:anywhere}
 input.khave{width:64px;text-align:right}
 .changelog{display:grid;gap:14px;margin-top:16px;max-width:900px}
 .changelog p{margin:0 0 8px;font-size:15px}
@@ -628,3 +628,9 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
   html[data-size="4"] .wrap{zoom:1.22;max-width:calc(88vw / 1.22)}
   html[data-size="5"] .wrap{zoom:var(--z5,1);max-width:calc(94vw / var(--z5,1))}
 }
+/* header: centered title/tagline/search; Theme sits in the top-right corner (Danny 10-20) */
+header{position:relative;text-align:center;padding-bottom:10px}
+header p{margin-left:auto;margin-right:auto}
+header .thbtn{position:absolute;top:0;right:0;margin:0}
+#thpop{margin-left:auto;margin-right:auto;text-align:left}
+@media (max-width:760px){header .thbtn{position:static;margin-top:10px}}

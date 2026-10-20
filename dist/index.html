@@ -270,7 +270,7 @@ table.qcompact th:nth-child(7),table.qcompact td:nth-child(7),table.qcompact th:
 .srcdate{margin-top:16px}
 .srcdate ul{margin:0;padding-left:18px;font-size:15px;line-height:1.5}
 .srcdate .tiny{margin:8px 0 0}
-.credits a,#srclink{color:var(--accent);overflow-wrap:anywhere}
+.credits a{color:var(--accent);overflow-wrap:anywhere}
 input.khave{width:64px;text-align:right}
 .changelog{display:grid;gap:14px;margin-top:16px;max-width:900px}
 .changelog p{margin:0 0 8px;font-size:15px}
@@ -636,6 +636,12 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
   html[data-size="4"] .wrap{zoom:1.22;max-width:calc(88vw / 1.22)}
   html[data-size="5"] .wrap{zoom:var(--z5,1);max-width:calc(94vw / var(--z5,1))}
 }
+/* header: centered title/tagline/search; Theme sits in the top-right corner (Danny 10-20) */
+header{position:relative;text-align:center;padding-bottom:10px}
+header p{margin-left:auto;margin-right:auto}
+header .thbtn{position:absolute;top:0;right:0;margin:0}
+#thpop{margin-left:auto;margin-right:auto;text-align:left}
+@media (max-width:760px){header .thbtn{position:static;margin-top:10px}}
 
 </style>
 <script>
@@ -664,9 +670,9 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 <div class="wrap">
 <header>
   <h1>MS Classic World Data Slop</h1>
-  <p>Planner and database for MapleStory Classic World, built from the launch game files. <a href="#credits" id="srclink">Sources</a></p>
+  <p>Planner and database for MapleStory Classic World, built from the launch game files.</p>
   <button class="btn srchbtn" id="srchopen" type="button">Search everything <kbd>Ctrl K</kbd></button>
-  <button class="btn srchbtn" id="thopen" type="button" aria-expanded="false" aria-controls="thpop">Theme</button>
+  <button class="btn srchbtn thbtn" id="thopen" type="button" aria-expanded="false" aria-controls="thpop">Theme</button>
   <div id="thpop" class="card" hidden>
     <h3>Theme</h3>
     <p class="thnote">Same themes and share codes as the Grind Tracker, so the two can sit side by side. Default follows your system's light/dark setting.</p>
@@ -1795,7 +1801,6 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       <ul><li>The Maple Island quest order and the beginner's route to level 10, together with meowdb's beginner guide.</li></ul></div>
   </div>
 
-  <p class="note">Also checked but no data used yet: the Maple Community API (api.maple.community). Built by Danny with help from Claude. If you made one of these and want something changed or removed, let Danny know.</p>
 </section>
 
 <section id="craft" hidden>
@@ -1882,7 +1887,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-20T08:11:32Z" data-ver="0.8.0">Site version: v0.8.0 · built Oct 20, 2026 · 08:11 UTC</p>
+  <p class="sitever" data-built="2026-10-20T08:18:39Z" data-ver="0.8.0">Site version: v0.8.0 · built Oct 20, 2026 · 08:18 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button></div>
 </footer>
@@ -2044,7 +2049,6 @@ const SRCDATES = {"osms": {"ref": "c661434d86c0fe2c9baae974d509d3498f97df62"}, "
     ["meowdb shops, mesos, weapon drops", day(SRCDATES.meowdb_shops), "NPC shops, mesos per kill"],
     ["maplestory.quest", day(SRCDATES.mq_mob_magic), "monster magic attack"]];
   $("#srcdates").innerHTML = rows.filter(r => r[1]).map(([n, d, w]) => `<li><b>${n}:</b> ${d} <span class="sub">· ${w}</span></li>`).join("") }
-$("#srclink").addEventListener("click", e => { e.preventDefault(); $("#t-credits").click(); $("#credits").scrollIntoView() });
 // "about 1 per X kills" for n picked up in k kills, plus a likely range (95% Wilson interval: a statistics estimate, wide
 // while kills are few). Used on monster and item pages (48-monsters.js, 49-items.js).
 function dropRate(n, k){
