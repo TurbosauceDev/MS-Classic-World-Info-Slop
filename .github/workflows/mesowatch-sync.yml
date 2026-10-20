@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: claude/trusting-bell-fqgar6
+          ref: main
           fetch-depth: 0   # git log + git show HEAD:<path> need full history of the default branch
       - uses: actions/setup-python@v5
         with:
@@ -66,4 +66,4 @@ jobs:
           git config user.email "actions@github.com"
           git add data/sources/mesowatch_prices.json data/data.json dist/index.html
           git commit -F /tmp/commit_msg.txt
-          git push origin HEAD:claude/trusting-bell-fqgar6
+          git push origin HEAD:main

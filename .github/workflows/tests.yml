@@ -4,7 +4,7 @@
 name: Site tests
 on:
   push:
-    branches: ["claude/trusting-bell-fqgar6"]
+    branches: ["main"]
     paths: ["dist/**", "src/**", "data/**", "tests/**", "scripts/pages_site.py", ".github/workflows/tests.yml"]
   pull_request:
   workflow_dispatch:

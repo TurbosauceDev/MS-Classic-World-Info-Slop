@@ -95,3 +95,4 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-20 Tracker pop-ups (Settings, Help/F1, Patch notes, bug report): inset card over a blurred backdrop with subtle open/close animation, never appended under the layout and never resizing the window. Goal: look and feel "far too professional for what it is" (Danny).
 - 2026-10-20 Ship Danny's own profile code as a built-in profile "Danny's Default" (tracker 0.2.67).
 - 2026-10-20 Site favicon: keep the Orange Mushroom ("cute"), soften the corners, more interesting colour (Danny). Shipped as the tracker Slime's purple gradient tile so they read as a set.
+- 2026-10-20 Default branch renamed to `main` (Danny, on GitHub); workflows, CLAUDE.md and the meso.watch scripts point at it. Enforce HTTPS on for the custom domain.

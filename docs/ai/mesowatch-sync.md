@@ -126,15 +126,15 @@ agent-browser install`), then add a crontab entry like `*/15 * * * * /path/to/me
 
 ## Branch strategy & race safety
 
-CSVs live on `data/mesowatch-sync` (a long-lived side branch), NOT on `claude/trusting-bell-fqgar6`. Reasoning:
+CSVs live on `data/mesowatch-sync` (a long-lived side branch), NOT on `main`. Reasoning:
 
-- `claude/trusting-bell-fqgar6` is the production branch (Pages + CI run from it). Pushing CSVs there
+- `main` is the production branch (Pages + CI run from it). Pushing CSVs there
   triggers wasteful rebuilds of the site (the build doesn't read these CSVs anyway — only `data/data.json`
   and `data/sources/*.json` go into `dist/`).
 - Danny pushes actively to the default branch. A race between his push and the poller's PATCH
   would fail the poller (force=false is correct), but poller still burns API calls before noticing.
 - The side branch is created from the default branch's HEAD on first push. To merge into the
-  default branch later (e.g. for a tagged release), open a PR `data/mesowatch-sync → claude/trusting-bell-fqgar6`.
+  default branch later (e.g. for a tagged release), open a PR `data/mesowatch-sync → main`.
 
 `scripts/mesowatch-sync/gh_push_files.py` retries up to 3 times on HTTP 422 (branch moved under us) by re-fetching HEAD and
 re-creating the commit with the new parent. force is always `false` — we never overwrite someone else's work.
@@ -159,7 +159,7 @@ The PAT was pasted in chat once (chat logs are the exposure surface). To rotate:
   `try { ... } catch (e) { return 'ERR ' + e.message; }`. Otherwise a thrown fetch/parse error
   looks like the eval returned an empty object and you'll chase the wrong thing.
 - **GitHub PATCH endpoint is `git/refs/heads/{branch}` (plural `refs`).** The singular `git/ref/heads/{branch}`
-  works for GET but returns 404 for PATCH. Don't URL-encode the slash in `claude/trusting-bell-fqgar6`
+  works for GET but returns 404 for PATCH. Don't URL-encode a slash in a branch name (e.g. the old `claude/trusting-bell-fqgar6`)
   either — GitHub treats the encoded form as a different branch name.
 - **market.json is Cloudflare-cached.** Cache-busting with `?v=<timestamp>` does NOT help — the
   file genuinely is only regenerated once a day. The live listings endpoint `fresh/Classic%20World.json`

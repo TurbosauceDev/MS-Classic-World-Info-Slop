@@ -36,9 +36,9 @@ it from [docs/ai/fixtures.md](docs/ai/fixtures.md) instead of opening images.
 - Don't read the live artifact back; publish dist straight to it.
 
 ## Branches, deploy
-- Default branch: `claude/trusting-bell-fqgar6` (no `main`). Site, tracker, server, CI all run from it.
+- Default branch: `main` (renamed from `claude/trusting-bell-fqgar6` 2026-10-20). Site, tracker, server, CI all run from it.
 - Pushing to it = production (Pages redeploys). Needs Danny's in-thread "push" unless the brief says he OK'd it.
-- Before pushing: `git fetch origin claude/trusting-bell-fqgar6 && git rebase origin/claude/trusting-bell-fqgar6`.
+- Before pushing: `git fetch origin main && git rebase origin/main`.
   Build/publish the artifact only from that latest base, so another thread's newer version isn't overwritten.
 - After pushing: wait for pages.yml, check the Home "Site version: built ..." stamp on
   https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/, smoke test green, then report once.

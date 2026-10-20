@@ -5,7 +5,7 @@
 name: osms-names
 on:
   push:
-    branches: ["claude/trusting-bell-fqgar6"]
+    branches: ["main"]
     paths: ["scripts/fetch_osms.sh", "data/data.json", "scripts/name_diff.py", ".github/workflows/osms-names.yml"]
   pull_request:
     paths: ["scripts/fetch_osms.sh", "data/data.json", "scripts/name_diff.py"]

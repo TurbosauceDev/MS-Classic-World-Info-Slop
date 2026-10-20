@@ -247,7 +247,7 @@ if [ $PUSHED_SOMETHING -eq 1 ]; then
     -H "Authorization: Bearer $(cat "$PROJECT_ROOT/.secrets/gh-token")" \
     -H "Accept: application/vnd.github+json" \
     -H "Content-Type: application/json" \
-    -d '{"ref":"claude/trusting-bell-fqgar6"}' \
+    -d '{"ref":"main"}' \
     "https://api.github.com/repos/TurbosauceDev/MS-Classic-World-Info-Slop/actions/workflows/mesowatch-sync.yml/dispatches")
   if [ "$HTTP_CODE" = "204" ]; then
     log "workflow_dispatch accepted (HTTP 204). Workflow should fire shortly."

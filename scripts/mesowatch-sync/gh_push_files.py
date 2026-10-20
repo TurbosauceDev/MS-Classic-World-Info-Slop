@@ -11,7 +11,7 @@ Usage:
       --file <local_path>:<repo_path> [--file <local_path>:<repo_path> ...]
 
 If the target branch doesn't exist, it's created from the default branch
-(`claude/trusting-bell-fqgar6`) HEAD.
+(`main`) HEAD.
 
 Requires /home/z/my-project/.secrets/gh-token (fine-grained PAT with
 Contents:write on the target repo).
@@ -28,7 +28,7 @@ from pathlib import Path
 
 OWNER = "TurbosauceDev"
 REPO = "MS-Classic-World-Info-Slop"
-DEFAULT_BRANCH = "claude/trusting-bell-fqgar6"
+DEFAULT_BRANCH = "main"
 TOKEN_FILE = os.environ.get("MESO_WATCH_GH_TOKEN_FILE",
                str(Path(os.environ.get("MESO_WATCH_ROOT", "/home/z/my-project")) / ".secrets" / "gh-token"))
 API = "https://api.github.com"

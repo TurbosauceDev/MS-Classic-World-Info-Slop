@@ -4,7 +4,7 @@
 name: server
 on:
   push:
-    branches: ["claude/trusting-bell-fqgar6"]
+    branches: ["main"]
     paths: ["server/**", ".github/workflows/server.yml"]
   workflow_dispatch:
 jobs:

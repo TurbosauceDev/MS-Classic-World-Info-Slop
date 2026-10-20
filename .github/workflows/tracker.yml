@@ -5,7 +5,7 @@ name: tracker
 on:
   push:
     tags: ["tracker-v*"]
-    branches: ["claude/trusting-bell-fqgar6"]   # test builds while the tracker is in progress
+    branches: ["main"]   # test builds while the tracker is in progress
     paths: ["tracker/**", ".github/workflows/tracker.yml"]
   workflow_dispatch:
     inputs:

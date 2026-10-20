@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { ref: claude/trusting-bell-fqgar6 }
+        with: { ref: main }
       - run: python3 scripts/fetch_shared.py
       - run: python3 scripts/build.py | tail -3
       - name: Commit if changed
@@ -19,4 +19,4 @@ jobs:
           git add data/sources/shared_runs.json data/data.json dist/index.html
           if git diff --cached --quiet; then echo "no change"; exit 0; fi
           git -c user.name="shared-data bot" -c user.email="actions@github.com" commit -m "Shared runs refresh $(date -u +%F)"
-          git push origin HEAD:claude/trusting-bell-fqgar6
+          git push origin HEAD:main

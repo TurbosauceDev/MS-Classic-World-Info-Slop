@@ -3,7 +3,7 @@
 name: Docs check
 on:
   push:
-    branches: ["claude/trusting-bell-fqgar6"]
+    branches: ["main"]
   pull_request:
   workflow_dispatch:
 
