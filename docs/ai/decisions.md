@@ -117,3 +117,88 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-20 ElvUI (WoW UI addon) is one of Danny's core style inspirations: sleek, smooth, simple. Its /moveui "Toggle anchors" mover mode is the model for the site's anchor mode, first scoped to the Search everything bar and the Settings cog only (Danny).
 - 2026-10-20 Anchor mode: Danny picked option A (ElvUI movers on a grid: labelled movers, grid 8/16/32, nudge box, Search resize, Lock / Reset all) over snap slots and smart guides.
 - 2026-10-20 Anchor mode round 2 (Danny): add C's smart guide lines to A, scale per part, theme (colour) editor lives in the anchor editor ("Colours"), Esc = Done, F1 opens it (Chrome's F1 help kept opening by accident).
+
+
+## meso.watch pipeline schema additions (2026-10-20, per FM Sniper round 2 approval)
+
+Per Gemini team handoff (2026-10-20), Danny approved 4 pipeline enhancements for `scripts/fetch_mesowatch.py` → `data/sources/mesowatch_prices.json`. JSON key shapes proposed here so the frontend thread can wire `src/js/56-snipe.js` and `tests/snipe.js` in lockstep before implementation.
+
+### 1. `all listings` — top/all live listings per item (not just cheapest)
+
+**Current**: `D.pw.now[iid] = [price, qty, channel, map, seller]` — single cheapest live listing per non-equip item.
+
+**Proposed**: Add a new key `D.pw.asks[iid]` = array of all live listings, sorted by price ascending. Keep `D.pw.now[iid]` as the cheapest (= first element of `asks[iid]`) for backward compat.
+
+```json
+"D.pw.asks": {
+  "4010001": [
+    [430, 1, 19, "Free Market <9>", "yeos"],
+    [450, 1, 11, "Free Market <1>", "sirpoo"],
+    [499, 1, 17, "Free Market <5>", "Pinachy"]
+  ]
+}
+```
+
+Use case: FM Sniper's Shopping Trip (`#snp-trip`) and Flip calculator can sum stack depth across multiple stalls (e.g., "Item X has 50 units at 430 + 100 units at 450 = 150 buyable at <460 each").
+
+### 2. `seen time` — when the current cheapest listing was first observed
+
+**Proposed**: Add `D.pw.seen[iid]` = UTC timestamp string (same `YYYY-MM-DD HH:MM` format as `D.pw.listed`) of when the current cheapest listing (matching `now[iid]`'s price + seller) was first observed.
+
+```json
+"D.pw.seen": {
+  "4010001": "2026-10-20 14:25"
+}
+```
+
+Implementation: `fetch_mesowatch.py` reads the previous `data/sources/mesowatch_prices.json` before overwriting. For each item, if `(now[iid][0], now[iid][4])` (price, seller) matches the previous `now[iid]`, preserve the previous `seen[iid]`. Otherwise, set `seen[iid]` to the current fresh.json `generated_at` timestamp.
+
+Use case: UI shows how long a listing has been sitting in the Free Market vs. newly listed. A listing sitting at the cheapest price for 3+ days might indicate stale inventory; a listing that just dropped to cheapest might indicate a firesale.
+
+### 3. `askMedian` — median of current active ask prices (alongside sold median)
+
+**Current**: `D.pw.it[iid] = [price, p25, p75, sold, flags, trend, sell_through]` — 7 elements. `price` is the sold median.
+
+**Proposed**: Extend the array to 8 elements — add `askMedian` at index 7.
+
+```json
+"D.pw.it": {
+  "4010001": [479, 419, 500, 4691, 0, -0.04, 0.512, 550]
+}
+```
+
+Index 7 = `askMedian` (median of current active ask prices for this item, sourced from market.json's `askMedian` field). Null if no active listings.
+
+Use case: Sell Helper (`#snp-sell`) and deal grader compare what sellers are currently asking (askMedian) against what actually sells (price = sold median). Wide gap = buyers' market; narrow gap = sellers' market.
+
+### 4. `history` — compact rolling snapshot per item
+
+**Proposed**: Add `D.pw.hist[iid]` = array of `[date_string, median_price, units_sold]` tuples, last 7 days (rolling).
+
+```json
+"D.pw.hist": {
+  "4010001": [
+    ["2026-10-14", 500, 324],
+    ["2026-10-15", 500, 198],
+    ["2026-10-16", 499, 155],
+    ["2026-10-17", 478, 98]
+  ]
+}
+```
+
+Capped at 7 days to keep file size manageable (~3 numbers × 7 days × 900 items ≈ 50 KB added to the existing ~30 KB = ~80 KB total). Sourced from market.json's `history[]` array per item (already has date + median + sold).
+
+Use case: Week-over-week trend baselines without depending on git clone depth. FM Sniper's Movers/Mood/Volatility (`#snp-move`) and deal lifetime (`#snp-life`) can use this directly instead of replaying git history via `scripts/deal_life.py`.
+
+### Implementation order (proposed)
+
+1. **askMedian** (easiest — just pass through market.json's existing field, no state needed)
+2. **all listings** (medium — restructure fetch_mesowatch.py's `now` logic to keep all listings, not just cheapest)
+3. **history** (medium — pass through market.json's `history[]` array, capped at 7 days)
+4. **seen time** (hardest — requires reading previous mesowatch_prices.json before overwriting, comparing price+seller per item)
+
+### Coordination
+
+- Schema shapes above are PROPOSED. If the frontend thread needs different shapes (e.g., different key names, different array structures), ping Danny to route back to me before implementation.
+- Implementation will modify `scripts/fetch_mesowatch.py` (Danny's script — coordinate via Danny). The CI poller (`scripts/mesowatch-sync/mesowatch_poll_ci.sh`) doesn't need changes — it just runs `fetch_mesowatch.py` and lets it produce whatever shape it produces.
+- After implementation, `data/sources/mesowatch_prices.json` will have new keys. The site's `build_data.py prices` step already passes the entire `data/sources/mesowatch_prices.json` into `D.pw` (via `step_prices(D)`), so the new keys will automatically appear in `D.pw.asks`, `D.pw.seen`, `D.pw.hist`, and `D.pw.it[iid][7]`.
