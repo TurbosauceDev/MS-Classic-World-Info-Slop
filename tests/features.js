@@ -70,7 +70,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
   // 5. Scroll check. a) Danny's tooltip frames (tests/fixtures/tip-*.png, 2x crops, 2026-10-20) read to the right scroll; the
   // sword one is a holdout (its name font letters weren't copied into the table). b) a shared "game window" (a canvas stream
   // standing in for getDisplayMedia): the Use tab fixture with a Greater scroll of its own plus 3 drawn in, each hovered in turn
-  // with one of Danny's tooltips placed where the game puts it (bullet 17 px right of and 38 px above the pointer)
+  // with one of Danny's tooltips placed where the game puts it (hover-blunt-greater: below the pointer)
   const TIPS = [["tip-hat-accuracy-lesser", "Hat Accuracy Scroll: Lesser", 21], ["tip-earring-str-intermediate", "Earring STR Scroll: Intermediate", 22],
     ["tip-1h-sword-attack-intermediate", "One-Handed Sword Attack Scroll: Intermediate", 23]];
   { const {p, errs, ctx} = await page(); await p.goto(URL); await open(p, "inv");
@@ -88,6 +88,20 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
         out.push(t?.m ? D.items[t.m.id].n : `none (${t?.tip?.name?.text} / ${t?.tip?.desc.map(l => l.text).join(" ")})`) }
       return out }, TIPS.map(([f]) => [f, b64(`fixtures/${f}.png`)]));
     check(TIPS.every(([, n], k) => read[k] === n), `scroll check: Danny's tooltips read (${read.join(" · ")})`);
+    // Danny's live frames (hover-*.png, 2x, 2026-10-20): the hovered slot is the one above the tooltip, not one below it (the
+    // old rule ticked slot 18 for 8); a slot the glove covered from the start (no picture seen) is still taken
+    const HOV = [["hover-blunt-greater", 21], ["hover-hat-acc-lesser", 7], ["hover-hat-acc-greater", 8]];
+    const hov = await p.evaluate(async fr => { const C = await INVP.cands(), out = [];
+      for (const [b, want] of fr){ const im = new Image(); im.src = "data:image/png;base64," + b; await im.decode();
+        const c = document.createElement("canvas"); c.width = im.width; c.height = im.height; const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+        const raw = g.getImageData(0, 0, c.width, c.height).data, W = c.width >> 1, H = c.height >> 1, d = new Uint8ClampedArray(W * H * 4);
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++){ const i = (y * 2 * c.width + x * 2) * 4; d.set(raw.subarray(i, i + 4), (y * W + x) * 4) }
+        const f = SCAN.readFrame({w: W, h: H, d, k: 2}, C, null, null), id = f.tip?.m?.id;
+        if (!id){ out.push("unread"); continue }
+        const at = (unk) => SCAN.hovered(f.inv, [...Array(30).keys()].map(i => ({i, ids: unk || i !== want ? [] : [id], unk: unk && i === want})), id, f.tip.b, f.tip.tip, f.h)?.i;
+        out.push(at(false) + "/" + at(true)) }
+      return out }, HOV.map(([f, w]) => [b64(`fixtures/${f}.png`), w]));
+    check(HOV.every(([, w], k) => hov[k] === w + "/" + w), `scroll check: hovered slot from Danny's frames (${hov.join(" · ")})`);
     // every scroll in the game data, read with the letters the tables don't have yet as "?" (and some touching pairs as one
     // glyph): never the wrong scroll; with the description in view, always the right one
     const sweep = await p.evaluate(() => {
@@ -116,7 +130,8 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
         { const e = at(29), s2 = at(2); g.drawImage(c, e.sx, e.cy - 30, 33, 34, s2.sx, s2.cy - 30, 33, 34) }   // slot 2 emptied (an empty slot copied in)
         for (const [i, ic] of [[2, mid], [21, les], [22, mid], [23, mid]]){ const {sx, cy} = at(i); g.drawImage(ic, sx + 16 - (ic.width >> 1), cy + 3 - ic.height) }
         if (scrolled){ const a = at(5), z = at(30); g.drawImage(c, 63, a.cy - 30, 192, z.cy - a.cy, 63, a.cy - 64, 192, z.cy - a.cy) }
-        if (tip){ const [f, k] = tip, T = TIPIMG[f], {sx, cy} = at(k), bx = sx + 16 + 17, by = cy - 13 - 38;
+        // the bullet 16 px right of and 43 px under the pointer's tip, here the slot's middle (the tooltip opens below the pointer)
+        if (tip){ const [f, k] = tip, T = TIPIMG[f], {sx, cy} = at(k), bx = sx + 16 + 16, by = cy - 13 + 43;
           g.drawImage(T.c, T.b.x - 6, T.b.y - 9, T.c.width, T.c.height, bx - 6, by - 9, T.c.width, T.c.height) }
         bg.drawImage(c, 0, 0, W * 2, H * 2) };
       scene(null);
@@ -138,7 +153,12 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(/^Reading: One-Handed Sword Attack Scroll: Intermediate$/.test(hint), `scroll check: live line names the hovered scroll (${hint})`);
     await p.evaluate(() => scene(null)); await p.waitForTimeout(700);
     const r = await p.evaluate(() => ({ok: [...document.querySelectorAll("#ssgrid .sscell.ok")].map(e => +e.dataset.i), st: $("#ssst").textContent,
-      list: [...document.querySelectorAll("#sslist .itname")].map(e => e.textContent), table: [...document.querySelectorAll("#ivbody .itname")].map(e => e.textContent)}));
+      list: [...document.querySelectorAll("#sslist .itname")].map(e => e.textContent), table: [...document.querySelectorAll("#ivbody .itname")].map(e => e.textContent),
+      wide: $("#ssgrid").scrollWidth - $("#ssgrid").clientWidth, cells: [...new Set([...document.querySelectorAll("#ssgrid .sscell")].map(e => e.offsetWidth + "x" + e.offsetHeight))]}));
+    // Danny 10-20: a scroll check prices scrolls only (the picture check does the rest); the grid has no sideways scroll and
+    // every cell is the same size whatever its border
+    check(r.table.length && r.table.every(n => / Scroll/.test(n)), `scroll check: the price table holds scrolls only (${r.table.length})`);
+    check(r.wide <= 0 && r.cells.join() === "40x40", `scroll check: grid cells even, no sideways scroll (${r.wide}, ${r.cells})`);
     check(!errs.length && r.ok.join() === "2,21,22,23" && /4 of 5/.test(r.st), `scroll check: each tooltip ticks its own slot (${JSON.stringify(r.ok)}, ${r.st})`);
     const sum = await p.textContent("#sssum");
     check(/^4 scanned · worth ~[\d,]+ mesos/.test(sum), `scroll check: scanned total (${sum})`);

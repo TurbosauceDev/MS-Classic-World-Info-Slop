@@ -25,6 +25,9 @@ that's gone.
 | bank-inv.png | 846x735 | bank with inventory open beside it | inventory side ignored (no "Equip:" read) |
 | tip-hat-accuracy-lesser.png | 604x263 | 2x crop: scroll tooltip (bullet, bold name, picture box, chat-font description) | features.js: Hat Accuracy Scroll: Lesser |
 | tip-earring-str-intermediate.png | 588x245 | same, scenery behind | Earring STR Scroll: Intermediate |
+| hover-blunt-greater.png | 950x868 | 2x live frame: full Use tab, glove on slot 21, tooltip below it | features.js: hovered slot 21 |
+| hover-hat-acc-lesser.png | 1451x1119 | 2x live frame: glove on slot 7, tooltip below-right | hovered slot 7 (old rule failed) |
+| hover-hat-acc-greater.png | 1037x723 | 2x live frame: glove on slot 8 above the tooltip | hovered slot 8 (old rule ticked 18) |
 | tip-1h-sword-attack-intermediate.png | 748x232 | same, wrapped description, glove pointer in view (pointer offset source); name font holdout | One-Handed Sword Attack Scroll: Intermediate |
 
 ## tracker/tests/frames/ (tracker/tests/readers.test.js: EXP bar, level, pickup lines, map name)

@@ -94,18 +94,20 @@ function readTip(img, b){
   }
   return {name, desc};
 }
-/* which slot the mouse is on: the tooltip opens beside the pointer, which sat 17 px left of the bullet and 38 below it in
-   Danny's frame with the glove in view (tip-1h-sword-attack-intermediate). The slot holding that scroll's picture nearest there.
+/* which slot the mouse is on. The tooltip box starts 10 px left of its bullet, and the pointer's tip sits 6 px left of the box:
+   x = bullet - 16 in both of Danny's frames with the glove in view. Normally the box opens under the pointer (tip 43 px above
+   the bullet: hover-blunt-greater); near the bottom of the screen it is pushed up and the pointer ends up 38 px below the
+   bullet (tip-1h-sword-attack-intermediate): pushed up when its text ends near the bottom of the screen (img.h), else the
+   pushed-up point is only a fallback. The slot under the point that holds this scroll's picture.
    slots: [{i (0-29 on screen), ids}], from the whole tab seen so far: the tooltip itself often covers the slot under the pointer */
-function hovered(inv, slots, id, b){
-  const px = b.x - 17, py = b.y + 38;
-  let best = null, bd = 48;
-  for (const s of slots){
-    if (!s.ids.includes(id)) continue;
-    const sx = inv.x + 5 + 36 * (s.i % 5) + 16, sy = inv.y + 37 + 34 * Math.floor(s.i / 5) - 13, dd = Math.hypot(sx - px, sy - py);
-    if (dd < bd){ bd = dd; best = s }
-  }
-  return best;
+function hovered(inv, slots, id, b, tip = null, h = Infinity){
+  const px = b.x - 16, at = (x, y, any) => slots.find(s => { if (!(any ? s.unk : s.ids.includes(id))) return false;
+    const sx = inv.x + 5 + 36 * (s.i % 5), top = inv.y + 37 + 34 * Math.floor(s.i / 5) - 30;
+    return x >= sx - 2 && x < sx + 34 && y >= top - 2 && y < top + 34 });
+  const low = tip ? Math.max(tip.name.y, ...tip.desc.map(l => l.y)) + 30 >= h : false;
+  const [p, q] = low ? [b.y + 38, b.y - 43] : [b.y - 43, b.y + 38];
+  // a slot the glove or tooltip has covered since the start has no picture yet: the one under the mouse is taken
+  return at(px, p) || at(px, q) || at(px, p, 1) || null;
 }
 // a tooltip anywhere in a frame -> {b, tip, m} (also run on the fixtures)
 function tooltip(img, box = {x0: 0, x1: img.w, y0: 0, y1: img.h}){
@@ -125,7 +127,7 @@ function readFrame(img, C, cache, near){
   if (!inv.tab && near?.tab) inv = {...inv, tab: near.tab};   // the pointer on the open tab hides its colour
   if (inv.tab !== "use") return {inv};
   const read = R.readInventory(img, inv, C.use, cache), filled = INVP.filled(img, inv);
-  return {inv, read, filled, tip: tooltip(img, {x0: inv.x - 40, x1: inv.x + 260, y0: inv.y - 30, y1: inv.y + 260})};
+  return {inv, read, filled, h: img.h, tip: tooltip(img, {x0: inv.x - 40, x1: inv.x + 260, y0: inv.y - 30, y1: inv.y + 260})};
 }
 
 /* ---- the whole Use tab across scrolling: rows of 5 tokens ("id x n", "" empty, "?" filled but covered or not matched),
@@ -203,14 +205,17 @@ function step(img){
   rows.forEach((row, k) => { const g = S.grid[base + k]; S.grid[base + k] = g ? row.map((v, c) => v === "?" ? g[c] : v) : row });
   for (const s of f.read.slots) S.counts[base * 5 + s.i] = s;
   // a slot whose item changed loses its scan
-  for (const [k, v] of Object.entries(S.names)){ const t = S.grid[Math.floor(k / 5)]?.[k % 5]; if (t !== "?" && t !== v.tok) delete S.names[k] }
+  for (const [k, v] of Object.entries(S.names)){ const t = S.grid[Math.floor(k / 5)]?.[k % 5]; if (t === "?" || t === v.tok) continue;
+    // a guessed slot, seen clean at last: kept when it shows that scroll
+    if (v.tok === null && S.counts[k]?.ids.includes(v.id)) v.tok = t; else delete S.names[k] }
   // a tooltip on the same slot twice in a row counts (the first frame may catch the mouse moving)
   S.hov = null;
-  const m = f.tip?.m, slot = m && hovered(f.inv, [...Array(30).keys()].map(i => ({i, ids: S.counts[base * 5 + i]?.ids || []})), m.id, f.tip.b);
+  const m = f.tip?.m, slot = m && hovered(f.inv, [...Array(30).keys()].map(i => ({i, ids: S.counts[base * 5 + i]?.ids || [], unk: !S.counts[base * 5 + i] && S.grid[base + Math.floor(i / 5)]?.[i % 5] === "?"})), m.id, f.tip.b, f.tip.tip, f.h);
   if (slot){
     const at = base * 5 + slot.i, key = at + ":" + m.id;
     S.hov = at;
-    if (S.last === key && S.names[at]?.id !== m.id){ S.names[at] = {id: m.id, tok: tok(S.counts[at]), t: ++S.seen} }
+    if (slot.unk) S.counts[at] = {i: slot.i, ids: [m.id], n: 1, guess: 1};
+    if (S.last === key && S.names[at]?.id !== m.id){ S.names[at] = {id: m.id, tok: S.counts[at].guess ? null : tok(S.counts[at]), t: ++S.seen} }
     S.last = key;
   } else S.last = null;
   // what the tooltip under the mouse says, live; one that stays unread for a second gets a hint
@@ -230,7 +235,7 @@ function steps(at, msg){
 function draw(){
   const cells = [];
   S.grid.forEach((row, r) => row.forEach((t, c) => { const i = r * 5 + c, s = S.counts[i];
-    const sc = s && s.ids.length > 1 && s.ids.some(id => D.items[id].c === "Scroll") && t !== "";
+    const sc = s && (s.guess || s.ids.length > 1) && s.ids.some(id => D.items[id].c === "Scroll") && t !== "";
     cells.push({i, s: t === "" ? null : s, sc, name: S.names[i]}) }));
   const todo = cells.filter(c => c.sc), done = todo.filter(c => c.name);
   steps(todo.length && done.length === todo.length ? null : "hover");
@@ -249,6 +254,9 @@ function draw(){
     const el = grid.children[c.i]; if (!el) continue;
     el.classList.toggle("sc", !!c.sc); el.classList.toggle("dim", !!c.s && !c.sc);
     el.classList.toggle("hov", S.hov === c.i);
+    // the hovered slot kept in view inside the grid (never scrolls the page)
+    if (S.hov === c.i && S.shown !== c.i){ S.shown = c.i; const t = el.offsetTop, pad = 9;
+      if (t < grid.scrollTop + pad || t + 40 > grid.scrollTop + grid.clientHeight - pad) grid.scrollTop = t - (grid.clientHeight - 40) / 2 }
     if (!!c.name !== el.classList.contains("ok")) el.classList.toggle("ok", !!c.name);
     el.title = c.name ? D.items[c.name.id].n : c.sc ? "Rest the mouse on this scroll in the game" : c.s ? D.items[c.s.ids[0]].n : "";
   }
@@ -266,9 +274,9 @@ function draw(){
   const keep = new Set(items.map(o => o.id)); [...list.children].forEach(li => { if (!keep.has(li.dataset.k)) li.remove() });
   const worth = items.reduce((a, o) => a + INVP.advice(o.id).each * o.n, 0);
   $s("sssum").innerHTML = done.length ? `<b>${done.length} scanned</b> · worth ~${fmt(worth)} mesos at usual prices` : "Scanned scrolls show up here.";
-  // the table: the whole tab as one read, scanned slots named
+  // the table: the tab's scrolls only (other items are priced by the picture check), scanned slots named
   const slots = [], filled = [];
-  cells.forEach(c => { if (!c.s) { if (S.grid[Math.floor(c.i / 5)][c.i % 5] === "?") filled.push(c.i); return } filled.push(c.i); slots.push({i: c.i, ids: c.s.ids, n: c.s.n, ...(c.name ? {id: c.name.id} : {})}) });
+  cells.forEach(c => { if (!c.sc) return; filled.push(c.i); slots.push({i: c.i, ids: c.s.ids, n: c.s.n, ...(c.name ? {id: c.name.id} : {})}) });
   const lk = JSON.stringify(slots);
   if (lk !== S.liveKey){ S.liveKey = lk; INVP.live({tab: "use", slots, filled, unknown: 0, mesos: null}) }
 }
@@ -276,5 +284,5 @@ $s("ssgo").addEventListener("click", start);
 $s("ssstop").addEventListener("click", stop);
 $s("ssreset").addEventListener("click", () => { if (!S) return; S.names = {}; S.grid = []; S.counts = []; S.lastKey = ""; $s("sslist").innerHTML = ""; draw() });
 if (!navigator.mediaDevices?.getDisplayMedia){ $s("ssgo").disabled = true; $s("ssst").textContent = "Needs a desktop browser"; }
-return {FONT, match, tooltip, readTip, readFrame, place, frameRows, start, stop, step, get S(){ return S }};
+return {FONT, hovered, match, tooltip, readTip, readFrame, place, frameRows, start, stop, step, get S(){ return S }};
 })();

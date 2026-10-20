@@ -37,19 +37,19 @@
 .sstrack{height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-bottom:12px}
 .sstrack i{display:block;height:100%;width:0;background:var(--leaf);transition:width .4s cubic-bezier(.2,.8,.2,1)}
 .ssbody{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
-#ssgrid{display:grid;grid-template-columns:repeat(5,40px);grid-auto-rows:40px;align-content:start;gap:4px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg);max-height:340px;overflow:auto}
-.sscell{position:relative;width:40px;height:40px;border-radius:7px;background:var(--panel);display:grid;place-items:center;border:1px solid var(--line);transition:opacity .25s,border-color .25s,box-shadow .25s,transform .2s}
+#ssgrid{position:relative;display:grid;grid-template-columns:repeat(5,40px);grid-auto-rows:40px;align-content:start;gap:4px;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--bg);max-height:340px;scroll-behavior:smooth;overflow:hidden auto;scrollbar-gutter:stable}
+.sscell{position:relative;box-sizing:border-box;width:40px;height:40px;border-radius:7px;background:var(--panel);display:grid;place-items:center;border:1px solid var(--line);transition:opacity .25s,border-color .25s,box-shadow .25s,transform .2s}
 .sscell.empty{background:transparent;border-style:dotted;opacity:.5}
 .sscell img{max-width:32px;max-height:32px;image-rendering:pixelated}
 .sscell.dim{opacity:.38}
 .sscell .ssn{position:absolute;right:2px;bottom:0;font-size:10px;font-weight:600;color:var(--ink);text-shadow:0 0 2px var(--panel)}
 .sscell.sc{border:1.5px dashed var(--accent);animation:sswait 2.4s ease-in-out infinite}
-.sscell.hov{box-shadow:0 0 0 3px var(--accent-soft);transform:scale(1.06)}
+.sscell.hov{box-shadow:0 0 0 3px var(--accent-soft)}
 .sscell .ssok{position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--leaf);color:var(--on-accent,var(--panel));font-size:11px;font-weight:700;display:grid;place-items:center;opacity:0;transform:scale(.4);transition:opacity .2s,transform .3s cubic-bezier(.3,1.6,.5,1)}
 .sscell.ok{border:1.5px solid var(--leaf);animation:sspop .35s ease-out}
 .sscell.ok .ssok{opacity:1;transform:scale(1)}
 @keyframes sswait{50%{border-color:var(--line)}}
-.sscol{flex:1;min-width:220px}
+.sscol{flex:1 1 220px;min-width:0}
 #sssum{margin:0 0 6px}
 #sslist{list-style:none;margin:0;padding:0;max-height:310px;overflow:auto}
 .sshint{min-height:18px;margin:-4px 0 10px;font-size:13px;color:var(--muted);opacity:0;transition:opacity .2s}
@@ -57,7 +57,9 @@
 .sshint.warn{opacity:1;color:var(--warn)}
 @keyframes sspop{40%{transform:scale(1.14)}}
 #sslist li{display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--line);animation:ssin .35s ease-out}
-#sslist .ssp{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+#sslist .itname{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sslist .ssx,#sslist .ri{flex:none}
+#sslist .ssp{flex:none;white-space:nowrap;margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
 @keyframes ssin{from{opacity:0;transform:translateY(-6px)}}
 @media (prefers-reduced-motion:reduce){.sscell,.sscell .ssok,.sstrack i{transition:none}.sscell.sc,#sslist li,.sscell.ok{animation:none}}
 </style>
