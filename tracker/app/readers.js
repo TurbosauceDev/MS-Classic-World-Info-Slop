@@ -74,7 +74,7 @@
   function mask(img, x0, y0, x1, y1, isInk){
     const W = Math.max(0, x1 - x0), H = Math.max(0, y1 - y0), m = new Uint8Array(W * H), d = img.d;   // tiny images: empty box
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++){
-      const i = ((y + y0) * img.w + x + x0) * 4; m[y * W + x] = isInk(d[i], d[i + 1], d[i + 2]) ? 1 : 0;
+      const i = ((y + y0) * img.w + x + x0) * 4; m[y * W + x] = +isInk(d[i], d[i + 1], d[i + 2]) || 0;   // ink level: true/1, or 2 for the tooltip reader's full ink
     }
     return {W, H, m, x0, y0};
   }
@@ -213,25 +213,32 @@
   // light things in the box (window frames, icons) would merge whole-row bands, so the ink is first split into blobs, blobs
   // of letter size near each other (same middle within 7 rows, under 10 px apart) make a line, and each line 7-13 rows tall
   // is cut into glyphs and matched against the message font. Returns [{x, x1, y, text, glyphs, chars}]; unread glyphs are "?"
-  function readTextLines(img, box, isInk){
+  // opt (the tooltip font, 57-scrollscan.js): {font: [{ch, w, h, bits}] with bits as ink levels "0"/"1"/"2" (isInk returns 0-2),
+  // minH/maxH line height, space: gap that makes a space}; glyphs then match with a few levels off (video capture)
+  function readTextLines(img, box, isInk, opt = {}){
+    const FONT = opt.font || MSG, minH = opt.minH || 7, maxH = opt.maxH || 13, SP = opt.space || 4;
+    const near = (g, f) => { if (f.w !== g.w || f.h !== g.h) return Infinity; let dd = 0; for (let i = 0; i < g.bits.length; i++) if (g.bits[i] !== f.bits[i]) dd += Math.abs(g.bits.charCodeAt(i) - f.bits.charCodeAt(i)); return dd };
+    const pick = g => { if (!opt.font) return match(g, MSG); let ch = null, bd = Math.max(2, g.bits.length * 0.06); for (const f of FONT){ const dd = near(g, f); if (dd < bd){ bd = dd; ch = f.ch } } return ch };
     const x0 = Math.max(0, box.x0), y0 = Math.max(0, box.y0), M = mask(img, x0, y0, Math.min(img.w, box.x1), Math.min(img.h, box.y1), isInk), {W, H, m} = M;
     const lab = new Int32Array(W * H), blobs = [];
     for (let p0 = 0; p0 < W * H; p0++){
       if (!m[p0] || lab[p0]) continue;
-      const b = {x: W, x1: 0, y: H, y1: 0, n: 0}, st = [p0]; lab[p0] = blobs.length + 1;
-      while (st.length){ const q = st.pop(), x = q % W, y = (q - x) / W; b.n++;
+      const b = {x: W, x1: 0, y: H, y1: 0, n: 0, full: 0}, st = [p0]; lab[p0] = blobs.length + 1;
+      while (st.length){ const q = st.pop(), x = q % W, y = (q - x) / W; b.n++; if (m[q] > 1) b.full++;
         if (x < b.x) b.x = x; if (x > b.x1) b.x1 = x; if (y < b.y) b.y = y; if (y > b.y1) b.y1 = y;
         if (b.n > 400) continue;
         for (const r of [q - 1, q + 1, q - W, q + W]){ if (r < 0 || r >= W * H || !m[r] || lab[r] || (r === q - 1 && x === 0) || (r === q + 1 && x === W - 1)) continue; lab[r] = blobs.length + 1; st.push(r) } }
       blobs.push(b);
     }
-    const small = blobs.filter(b => b.n <= 400 && b.y1 - b.y < 13 && b.x1 - b.x < 16).sort((a, b) => a.x - b.x), used = new Set(), out = [];
+    // with ink levels, a letter has full ink somewhere: faint-only blobs are a bright background showing through the tooltip
+    const small = blobs.filter(b => b.n <= 400 && b.y1 - b.y < maxH && b.x1 - b.x < 16 && (!opt.font || b.full)).sort((a, b) => a.x - b.x), used = new Set(), out = [];
     for (const s0 of small){
       if (used.has(s0)) continue;
       const line = [s0]; used.add(s0); let x1 = s0.x1, cy = (s0.y + s0.y1) / 2;
-      for (const b of small){ if (used.has(b) || b.x < s0.x) continue; if (b.x - x1 >= 10) continue; if (Math.abs((b.y + b.y1) / 2 - cy) > 7) continue; line.push(b); used.add(b); x1 = Math.max(x1, b.x1) }
+      for (const b of small){ if (used.has(b) || b.x < s0.x) continue; if (b.x - x1 >= 10) continue; if (Math.abs((b.y + b.y1) / 2 - cy) > 7 || b.y < cy - maxH * 0.7 || b.y1 > cy + maxH * 0.7) continue; line.push(b); used.add(b); x1 = Math.max(x1, b.x1) }
       const ya = Math.min(...line.map(b => b.y)), yb = Math.max(...line.map(b => b.y1)) + 1;
-      if (line.length < 3 || yb - ya < 7 || yb - ya > 13) continue;
+      // not a line: its blobs stay free for a line starting further right (an icon left of a name, Danny's tooltip 2026-10-20)
+      if (line.length < 3 || yb - ya < minH || yb - ya > maxH){ for (const b of line) if (b !== s0) used.delete(b); continue }
       // glyphs: column runs inside the line's box
       const gl = []; let x = s0.x;
       const colInk = x => { for (let y = ya; y < yb; y++) if (m[y * W + x]) return true; return false };
@@ -239,11 +246,11 @@
         if (!colInk(x)){ x++; continue }
         const s = x; while (x <= x1 && colInk(x)) x++;
         let t = yb, bt = ya; for (let y = ya; y < yb; y++) for (let xx = s; xx < x; xx++) if (m[y * W + xx]){ t = Math.min(t, y); bt = Math.max(bt, y) }
-        let bits = ""; for (let y = t; y <= bt; y++) for (let xx = s; xx < x; xx++) bits += m[y * W + xx] ? "1" : "0";
-        gl.push({x: s, w: x - s, h: bt - t + 1, top: t, bits});
+        let bits = ""; for (let y = t; y <= bt; y++) for (let xx = s; xx < x; xx++) bits += m[y * W + xx];
+        gl.push({x: s, w: x - s, h: bt - t + 1, top: t - ya, bits});
       }
-      let str = "", last = null; const chars = gl.map(g => match(g, MSG) || "?");
-      gl.forEach((g, i) => { if (last !== null && g.x - last >= 4) str += " "; str += chars[i]; last = g.x + g.w });
+      let str = "", last = null; const chars = gl.map(g => pick(g) || "?");
+      gl.forEach((g, i) => { if (last !== null && g.x - last >= SP) str += " "; str += chars[i]; last = g.x + g.w });
       out.push({x: x0 + gl[0].x, x1: x0 + x1 + 1, y: y0 + ya, text: str, glyphs: gl, chars});
     }
     return out.sort((a, b) => a.y - b.y || a.x - b.x);
@@ -1005,6 +1012,6 @@
     if (want.chat) crops.chat = chatCrop(img);
     return {ev, info, crops, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {itemByName, readTextLines, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

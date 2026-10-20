@@ -23,6 +23,9 @@ that's gone.
 | bow-stat2.png | 745x573 | Archer stats, uploaded after equip2 | weapon Battle Bow, no "over budget" note |
 | bank-0.png, bank-1.png, bank-2.png, bank-3.png, bank-4.png | ~425x730 | bank window scrolled 0-4 rows | together: Green Mushroom Cap 387, Arrows for Bows 1,970, Set of Match Cards 3, bank 5,825 mesos |
 | bank-inv.png | 846x735 | bank with inventory open beside it | inventory side ignored (no "Equip:" read) |
+| tip-hat-accuracy-lesser.png | 604x263 | 2x crop: scroll tooltip (bullet, bold name, picture box, chat-font description) | features.js: Hat Accuracy Scroll: Lesser |
+| tip-earring-str-intermediate.png | 588x245 | same, scenery behind | Earring STR Scroll: Intermediate |
+| tip-1h-sword-attack-intermediate.png | 748x232 | same, wrapped description, glove pointer in view (pointer offset source); name font holdout | One-Handed Sword Attack Scroll: Intermediate |
 
 ## tracker/tests/frames/ (tracker/tests/readers.test.js: EXP bar, level, pickup lines, map name)
 Full 2560x1440 frames, playfield blanked, KPQ Bonus map. EXP bar bottom middle, pickup lines bottom right, map name top left.

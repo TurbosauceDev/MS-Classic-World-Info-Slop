@@ -67,52 +67,57 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(!errs.length && /OSMS export [0-9a-f]{7}/.test(t) && /meso\.watch prices: \w+ \d+, 20\d\d/.test(t) && /Shared runs: \w+ \d+, 20\d\d/.test(t) && !/undefined|NaN|Invalid/.test(t), `Credits lists source dates (${t.replace(/\n/g, " | ")})`);
     await ctx.close() }
 
-  // 5. Scroll check: a shared "game window" (a canvas stream standing in for getDisplayMedia) with a Use tab holding a
-  // Greater scroll (the fixture's own) and three same-picture Lesser ones drawn in; each tooltip names its slot. SYNTHETIC: the tooltip is drawn here with the message font
-  // (unknown letters as made-up glyphs) until Danny's real tooltip frames replace it.
+  // 5. Scroll check. a) Danny's tooltip frames (tests/fixtures/tip-*.png, 2x crops, 2026-10-20) read to the right scroll; the
+  // sword one is a holdout (its name font letters weren't copied into the table). b) a shared "game window" (a canvas stream
+  // standing in for getDisplayMedia): the Use tab fixture with a Greater scroll of its own plus 3 drawn in, each hovered in turn
+  // with one of Danny's tooltips placed where the game puts it (bullet 17 px right of and 38 px above the pointer)
+  const TIPS = [["tip-hat-accuracy-lesser", "Hat Accuracy Scroll: Lesser", 21], ["tip-earring-str-intermediate", "Earring STR Scroll: Intermediate", 22],
+    ["tip-1h-sword-attack-intermediate", "One-Handed Sword Attack Scroll: Intermediate", 23]];
   { const {p, errs, ctx} = await page(); await p.goto(URL); await open(p, "inv");
-    const src = fs.readFileSync(path.resolve(__dirname, "../tracker/app/readers.js"), "utf8");
-    const MSG = eval("(" + src.match(/const MSG_FONT = (\{[\s\S]*?\});/)[1] + ")");
-    const inv = fs.readFileSync(path.resolve(__dirname, "../tracker/tests/frames-inv/use-12162.png")).toString("base64");
-    await p.evaluate(async ({inv, MSG}) => {
-      const dec = ([w, h, hex]) => [...hex].map(c => parseInt(c, 16).toString(2).padStart(4, "0")).join("").slice(-w * h).padStart(w * h, "0");
-      const im = new Image(); im.src = "data:image/png;base64," + inv; await im.decode();
-      const ic = new Image(); ic.src = "data:image/png;base64," + D.iicons["2040000"]; await ic.decode();
-      const text = (g, s, x, y) => { for (const ch of s){ if (ch === " "){ x += 4; continue }
-        const f = MSG[ch], [w, h] = f || [5, 9], top = f ? (h === 7 ? 2 : h === 11 ? -1 : 0) : 0;
-        const bits = f ? dec(f) : "1".repeat(5) + [...Array(35)].map((_, k) => ((ch.charCodeAt(0) * 2654435761 >>> (k % 29)) ^ k) & 1 ? "1" : "0").join("") + "11111";
-        g.fillStyle = "#fff"; for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) if (bits[yy * w + xx] === "1") g.fillRect(x + xx, y + top + yy, 1, 1);
-        x += w + 1 } };
+    const b64 = f => fs.readFileSync(path.resolve(__dirname, f)).toString("base64");
+    const read = await p.evaluate(async tips => {
+      const load = async b => { const im = new Image(); im.src = "data:image/png;base64," + b; await im.decode(); return im };
+      const nat = im => { const c = document.createElement("canvas"); c.width = im.width; c.height = im.height; const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+        return GrindReaders.native({w: c.width, h: c.height, d: g.getImageData(0, 0, c.width, c.height).data}) };
+      window.TIPIMG = {};
+      const out = [];
+      for (const [f, b] of tips){ const img = nat(await load(b)), t = SCAN.tooltip(img);
+        // the tooltip box (from just left of and above its bullet), as a native-size canvas to paste into the scene
+        const c = document.createElement("canvas"); c.width = img.w; c.height = img.h; const id = new ImageData(new Uint8ClampedArray(img.d), img.w, img.h); c.getContext("2d").putImageData(id, 0, 0);
+        TIPIMG[f] = {c, b: t?.b};
+        out.push(t?.m ? D.items[t.m.id].n : `none (${t?.tip?.name?.text} / ${t?.tip?.desc.map(l => l.text).join(" ")})`) }
+      return out }, TIPS.map(([f]) => [f, b64(`fixtures/${f}.png`)]));
+    check(TIPS.every(([, n], k) => read[k] === n), `scroll check: Danny's tooltips read (${read.join(" · ")})`);
+    const inv = b64("../tracker/tests/frames-inv/use-12162.png");
+    await p.evaluate(async inv => {
+      const load = async b => { const im = new Image(); im.src = "data:image/png;base64," + b; await im.decode(); return im };
+      const im = await load(inv), les = await load(D.iicons["2040000"]), mid = await load(D.iicons["2040001"]);
       const W = 640, H = 480, c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
       const big = document.createElement("canvas"); big.width = W * 2; big.height = H * 2; const bg = big.getContext("2d"); bg.imageSmoothingEnabled = false;
-      window.scene = (tipSlot, id) => {
+      window.scene = tip => {
         g.fillStyle = "rgb(90,120,160)"; g.fillRect(0, 0, W, H); g.drawImage(im, 60, 40);
         const at = i => ({sx: 68 + 36 * (i % 5), cy: 119 + 34 * Math.floor(i / 5)});
-        for (const i of [21, 22, 23]){ const {sx, cy} = at(i); g.drawImage(ic, sx + 16 - (ic.width >> 1), cy + 3 - ic.height) }
-        if (tipSlot != null){ const {sx, cy} = at(tipSlot), x = sx + 20, y = cy - 4, it = D.items[id], ls = it.d.split("\n");
-          g.fillStyle = "rgba(10,12,30,0.9)"; g.fillRect(x, y, 250, 30 + 14 * ls.length);
-          text(g, it.n, x + 10, y + 6); ls.forEach((l, k) => text(g, l, x + 10, y + 24 + 14 * k)) }
+        for (const [i, ic] of [[21, les], [22, mid], [23, mid]]){ const {sx, cy} = at(i); g.drawImage(ic, sx + 16 - (ic.width >> 1), cy + 3 - ic.height) }
+        if (tip){ const [f, , k] = tip, T = TIPIMG[f], {sx, cy} = at(k), bx = sx + 16 + 17, by = cy - 13 - 38;
+          g.drawImage(T.c, T.b.x - 6, T.b.y - 9, T.c.width, T.c.height, bx - 6, by - 9, T.c.width, T.c.height) }
         bg.drawImage(c, 0, 0, W * 2, H * 2) };
       scene(null);
       navigator.mediaDevices.getDisplayMedia = async () => big.captureStream(10);
       setInterval(() => { const v = big.getContext("2d"); v.fillStyle = "rgba(0,0,0,0)"; v.fillRect(0, 0, 1, 1) }, 50);   // keep frames flowing
-    }, {inv, MSG});
+    }, inv);
     await p.click("#ssgo");
     await p.waitForFunction(() => document.querySelectorAll("#ssgrid .sscell.sc").length === 4, null, {timeout: 60000}).catch(() => {});
     const before = await p.evaluate(() => ({sc: document.querySelectorAll("#ssgrid .sscell.sc").length, st: $("#ssst").textContent}));
     check(!errs.length && before.sc === 4 && /0 of 4/.test(before.st), `scroll check: 4 scrolls waiting (${JSON.stringify(before)})`);
-    const want = [[20, "2040802"], [21, "2040004"], [22, "2040000"], [23, "2040308"]];
-    for (const [k, id] of want){
-      await p.evaluate(([k, id]) => scene(k, id), [k, id]);
-      await p.waitForFunction(k => document.querySelector(`#ssgrid .sscell[data-i="${k}"]`)?.classList.contains("ok"), k, {timeout: 8000}).catch(() => {});
+    for (const t of TIPS){
+      await p.evaluate(t => scene(t), t);
+      await p.waitForFunction(k => document.querySelector(`#ssgrid .sscell[data-i="${k}"]`)?.classList.contains("ok"), t[2], {timeout: 8000}).catch(() => {});
     }
     await p.evaluate(() => scene(null)); await p.waitForTimeout(600);
     const r = await p.evaluate(() => ({ok: [...document.querySelectorAll("#ssgrid .sscell.ok")].map(e => +e.dataset.i), st: $("#ssst").textContent,
-      list: [...document.querySelectorAll("#sslist .itname")].map(e => e.textContent), table: [...document.querySelectorAll("#ivbody .itname")].map(e => e.textContent),
-      pickers: document.querySelectorAll("#ivbody select").length}));
-    check(!errs.length && r.ok.join() === "20,21,22,23" && /All 4 scrolls scanned/.test(r.st), `scroll check: each tooltip ticks its own slot (${JSON.stringify(r.ok)}, ${r.st})`);
-    check(["Gloves Attack Scroll: Greater", "Hat HP Scroll: Lesser", "Hat Accuracy Scroll: Lesser", "Earring INT Scroll: Lesser"].every(n => r.list.includes(n) && r.table.includes(n)) && !r.pickers,
-      `scroll check: names in the list and the price table, no picker left (${r.table.filter(n => /Scroll/.test(n)).join(" · ")})`);
+      list: [...document.querySelectorAll("#sslist .itname")].map(e => e.textContent), table: [...document.querySelectorAll("#ivbody .itname")].map(e => e.textContent)}));
+    check(!errs.length && r.ok.join() === "21,22,23" && /3 of 4/.test(r.st), `scroll check: each tooltip ticks its own slot (${JSON.stringify(r.ok)}, ${r.st})`);
+    check(TIPS.every(([, n]) => r.list.includes(n) && r.table.includes(n)), `scroll check: names in the list and the price table (${r.table.filter(n => /Scroll:/.test(n)).join(" · ")})`);
     await p.click("#ssstop");
     check(!(await p.isHidden("#ssgo")) && errs.length === 0, `scroll check: stop sharing (${errs.join(" | ")})`);
     await ctx.close() }

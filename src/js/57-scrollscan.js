@@ -1,77 +1,119 @@
 /* Scroll check (Price check tab): the game window shared with the page (getDisplayMedia, nothing leaves the browser), read
    4 times a second. Scrolls of one tier share one picture (Lesser / Intermediate / Greater / Chaos, 52 each in the OSMS
    export), so the inventory grid alone can't tell them apart: the player rests the mouse on each one and its tooltip is
-   read with the game's message font (readers.js readTextLines), then matched against that kind's names and descriptions
-   (D.items n, d). Letters the font table doesn't have yet are learned from tooltips that matched anyway (saved per viewer).
-   Each scanned slot feeds the Price check table as the live Use tab read (INVP.live in 54-invprice.js). */
+   read, then matched against the scrolls' names and descriptions (D.items n, d). Letters not in the tables yet are learned
+   from tooltips that matched anyway (saved per viewer). Each scanned slot feeds the Price check table as the live Use tab
+   read (INVP.live in 54-invprice.js).
+   The tooltip (Danny's frames 2026-10-20, tests/fixtures/tip-*.png): translucent navy box, a light blue bullet (85,204,255)
+   before the name, the name in a smooth bold font (white, soft edges), the scroll's picture in a light box under it, and the
+   description to its right in the game's chat font (readers.js MSG_FONT), wrapped onto 2-3 lines. */
 const SCAN = (() => {
 const R = window.GrindReaders;
-// scroll id -> its tooltip text, spaces dropped (the font's spaces are a guess from glyph gaps)
 const SCROLLS = Object.keys(D.items).filter(id => D.items[id].c === "Scroll");
-const TEXT = Object.fromEntries(SCROLLS.map(id => [id, [D.items[id].n, ...(D.items[id].d || "").split("\n")].map(t => t.replace(/\s+/g, "")).filter(Boolean)]));
-const lineRe = t => new RegExp("^" + [...t].map(c => c === "?" ? ".{1,2}" : "ilI1|".includes(c) ? "[ilI1|]" : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + "$");
-/* tooltip lines -> {id, score, name: the line that is the name, hits: the lines that matched} or null. A read line counts when 4+ of its letters were read
-   and it fits one of a scroll's lines whole ("?" = 1-2 unread letters); the name counts double. One clear winner only. */
-function match(lines, ids = SCROLLS){
-  const reads = lines.map(l => ({l, t: l.text.replace(/ /g, "")})).filter(r => r.t.replace(/\?/g, "").length >= 4).map(r => ({...r, re: lineRe(r.t)}));
-  if (!reads.length) return null;
+// scroll id -> [name, description], spaces dropped (spaces read from glyph gaps are a guess; wrapped lines join up)
+const TEXT = Object.fromEntries(SCROLLS.map(id => [id, [D.items[id].n, D.items[id].d || ""].map(t => t.replace(/\s+/g, ""))]));
+// the name font, copied from Danny's frames (w,h,ink levels 0-2 per pixel; a letter's soft edge shifts a little with its
+// place on screen, so a letter may have several copies), and the chat font's letters the tracker's table lacked
+const NAMEFONT = {"H":["8,10,22000022220000222200002222000022222222222222222222000022220000222200002222000022"],"a":["6,8,012210122221000022000122020022120022122212012102","7,8,01221001222210000022000112200210220220022012222200121021","6,8,012210122221000022001122021022220022122212012102"],"t":["5,10,00100022002222222222022000220002200022000122000121"],"A":["9,10,000222000000222000001212100002202200002101200002000210012222210022222220020000021120000021"],"c":["6,8,002210022220120021220000220000120022022221002200","6,8,001200022220120021220000220000120021022220001200","6,8,002210022220120021220000220000120022022221001210","6,8,002210022220120021220000220000120022022221002210"],"u":["7,8,22000222200022220002222000222200022220002212222220121022"],"r":["5,8,2202122221221002200022000220002200022000","5,8,2201122220220002200022000220002200022000"],"y":["7,11,12000210200020021012002101200120210002120000222000022200001210000120000211000"],"S":["7,10,0012200022222022000221200000022220000122200000022120002202222210012100","7,10,0012100022222022000211200000022220000122200000022120002202222200012100"],"o":["7,8,00121000222220120002122000222200022120002102222200012100"],"l":["2,10,22222222222222222222"],":":["2,8,2222000000002222"],"L":["7,10,2200000220000022000002200000220000022000002200000220000022222222222222"],"e":["7,8,00121000222220120002122222212222222120000002222210012100","7,8,00121000222220120002122222222222222120000002222210012210","7,8,00121000222220120002022222212222222120000002222210012100"],"s":["6,8,012210122221220000022100001121000022122221012210","6,8,012210122221220000022100001121000022122221002200"],"E":["7,10,2222222222222222000002200000222222222222222200000220000022222222222222"],"i":["2,10,22002222222222222222"],"n":["7,8,22012102222221220002222000222200022220002222000222200022","7,8,22012102222221221002222000222200022220002222000222200022"],"g":["7,11,00110220222122120002222000222200022120002202221220011022220002102222200022100"],"T":["8,10,22222222222222220002200000022000000220000002200000022000000220000002200000022000"],"R":["8,10,22222200222222202200002222000021222222202222210022001200220002202200002122000012"],"I":["2,10,22222222222222222222"],"m":["10,8,22011002102222212221220022002222002200222200220022220022002222002200222200220022"],"d":["7,10,0000022000002200110220222222120002222000222200022120002202222220011022"]};
+const DESCMORE = {"0":"5,9,011101000110001100011000110001100011000101110","1":"3,9,001011101001001001001001001","2":"5,9,011101000100001000010001000010001000100011111","6":"5,9,011101000110000101101100110001100011000101110","I":"1,9,111111111","m":"9,7,101100110110011001100010001100010001100010001100010001100010001","p":"5,9,101101100110001100011000111001101101000010000","r":"3,7,101110100100100100100","o":"5,7,01110100011000110001100011000101110","v":"5,7,10001100010101001010010100010000100","e":"5,7,01110100011000111111100001000101110","s":"5,7,01110100011000001110000011000101110","A":"7,9,000100000101000010100001010001000100111110010001010000011000001","c":"4,7,0110100110001000100010010110","u":"5,7,10001100011000110001100011000101111","a":"5,7,01110100010000101111100011001101101","y":"5,9,100011000101010010100101000100001000010001000","n":"5,7,10110110011000110001100011000110001","h":"5,9,100001000010110110011000110001100011000110001","t":"3,9,010010111010010010010010011",".":"1,1,1","S":"6,9,011110100001100001100000011110000001100001100001011110",":":"1,7,1000001","%":"9,9,011000100100101000100101000100110000011010110000011001000101001000101001001000110",",":"1,3,111","+":"5,5,0010000100111110010000100","g":"5,9,011011001110001100011000110011011010000111110","i":"1,9,101111111","T":"7,9,111111100010000001000000100000010000001000000100000010000001000","R":"7,9,111111010000011000001100000111111101000100100001010000101000001"};
+const glyph = (ch, s, lv) => { const [w, h, bits] = s.split(","); return {ch, w: +w, h: +h, bits: lv ? bits : bits.replace(/1/g, "2")} };
+let LEARNT = []; try { LEARNT = JSON.parse(localStorage.getItem("scanglyphs2") || "[]"); if (!Array.isArray(LEARNT)) LEARNT = [] } catch(e) {}
+LEARNT = LEARNT.filter(g => g && typeof g.ch === "string" && g.ch.length === 1 && /^[012]+$/.test(g.bits || "") && g.bits.length === g.w * g.h);
+const FONT = [...Object.entries(NAMEFONT).flatMap(([ch, v]) => v.map(s => glyph(ch, s, true))),
+  ...Object.entries(DESCMORE).map(([ch, s]) => glyph(ch, s, false)),
+  ...R.msgGlyphs().filter(g => g.ch.length === 1).map(g => ({...g, bits: g.bits.replace(/1/g, "2")})), ...LEARNT];
+const lineRe = (t, end = "$") => new RegExp("^" + [...t].map(c => c === "?" ? ".{1,3}" : "ilI1|".includes(c) ? "[ilI1|]" : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + end);
+const known = t => t.replace(/[?\s]/g, "").length;
+/* {name: line, desc: [lines]} -> {id, score} or null. The name counts 2 when it fits a scroll's name whole ("?" = 1-3 unread
+   letters, or touching letters read as one), the description 1 when the lines joined fit its start (the last line may run past the frame). Clear winner only: a description alone names most scrolls. */
+function match(tip, ids = SCROLLS){
+  const n = tip.name ? tip.name.text.replace(/ /g, "") : "", d = tip.desc.map(l => l.text).join("").replace(/ /g, "");
+  const nre = known(n) >= 4 && lineRe(n), dre = known(d) >= 8 && lineRe(d, "");
+  if (!nre && !dre) return null;
   let best = null, tie = false;
   for (const id of ids){
-    const T = TEXT[id], hits = []; let sc = 0, name = null;
-    for (const r of reads){ const k = T.findIndex(c => r.re.test(c)); if (k < 0) continue; sc += k ? 1 : 2; if (!k) name = r.l; hits.push(r.l) }
+    const [N, Dd] = TEXT[id], sc = (nre && nre.test(N) ? 2 : 0) + (dre && dre.test(Dd) ? 1 : 0);
     if (!sc) continue;
-    if (!best || sc > best.score){ best = {id, score: sc, name, hits}; tie = false } else if (sc === best.score) tie = true;
+    if (!best || sc > best.score){ best = {id, score: sc}; tie = false } else if (sc === best.score) tie = true;
   }
-  return best && !tie && best.score >= 2 ? best : null;
+  return best && !tie ? best : null;
 }
-// letters this viewer's tooltips taught the reader (the name line of a scroll that matched, letter for letter)
-let LEARNT = []; try { LEARNT = JSON.parse(localStorage.getItem("scanglyphs") || "[]"); if (!Array.isArray(LEARNT)) LEARNT = [] } catch(e) {}
-R.addGlyphs(LEARNT);
-function learn(lines, m){
-  const name = D.items[m.id].n.replace(/ /g, ""), top = m.name || lines[0];
-  if (!top || top.chars.length !== name.length || !top.chars.every(c => c.length === 1) || !top.chars.includes("?")) return;
-  if (top.chars.some((c, i) => c !== "?" && c !== name[i] && !("ilI1".includes(c) && "ilI1".includes(name[i])))) return;
-  const add = R.addGlyphs(top.chars.map((c, i) => c === "?" ? {ch: name[i], w: top.glyphs[i].w, h: top.glyphs[i].h, bits: top.glyphs[i].bits} : null).filter(Boolean));
-  if (!add.length) return;
-  LEARNT = LEARNT.concat(add).slice(-400);
-  try { localStorage.setItem("scanglyphs", JSON.stringify(LEARNT)) } catch(e) {}
+// unread letters of a matched tooltip, letter for letter where the line's glyphs and the text line up one to one
+function learn(tip, m){
+  const add = [], take = (chars, glyphs, text) => {
+    if (chars.length !== text.length || !chars.every(c => c.length === 1)) return;
+    if (chars.some((c, i) => c !== "?" && c !== text[i] && !("ilI1".includes(c) && "ilI1".includes(text[i])))) return;
+    chars.forEach((c, i) => { if (c === "?") add.push({ch: text[i], w: glyphs[i].w, h: glyphs[i].h, bits: glyphs[i].bits}) }) };
+  const [N, Dd] = TEXT[m.id];
+  if (tip.name) take(tip.name.chars, tip.name.glyphs, N);
+  take(tip.desc.flatMap(l => l.chars), tip.desc.flatMap(l => l.glyphs), Dd.slice(0, tip.desc.reduce((a, l) => a + l.chars.length, 0)));
+  const fresh = add.filter(g => !FONT.some(f => f.w === g.w && f.h === g.h && f.bits === g.bits));
+  if (!fresh.length) return;
+  FONT.push(...fresh); LEARNT = LEARNT.concat(fresh).slice(-400);
+  try { localStorage.setItem("scanglyphs2", JSON.stringify(LEARNT)) } catch(e) {}
 }
-// tooltip text: light, with the tooltip's dark fill right next to it (the inventory's beige is never this light)
-const tipInk = (r, g, b) => Math.min(r, g, b) >= 228 && Math.max(r, g, b) - Math.min(r, g, b) <= 40;
-const dark = (img, x, y) => { if (x < 0 || y < 0 || x >= img.w || y >= img.h) return false; const i = (y * img.w + x) * 4; return Math.max(img.d[i], img.d[i + 1], img.d[i + 2]) < 110 };
-// the tooltip's top corners: from the topmost read line, walk out through the dark fill just above the text
-function corners(img, top){
-  const y = Math.max(0, top.y - 2), run = (x, dx) => { let k = 0; while (k < 400 && (dark(img, x + dx, y) || dark(img, x + 2 * dx, y))) { x += dx; k++ } return x };
-  const x0 = run(top.x, -1), x1 = run(top.x1, 1);
-  let y0 = y; while (y0 > 0 && y - y0 < 120 && (dark(img, x0 + 4, y0 - 1) || dark(img, x0 + 4, y0 - 2))) y0--;
-  return {x0, x1, y0};
+// ink levels: 2 = the letters' white, 1 = their soft edge (the navy fill and the world behind it stay darker)
+const LV = (r, g, b) => { const v = Math.min(r, g, b); return v >= 200 ? 2 : v >= 130 ? 1 : 0 };
+// tooltip bullets: light blue dots, 2-8 px across, in the box around the inventory (other light blue things too: the caller
+// keeps the one with a name beside it)
+function bullet(img, box){
+  const {w, d} = img, X0 = Math.max(0, box.x0), X1 = Math.min(w - 1, box.x1), Y0 = Math.max(0, box.y0), Y1 = Math.min(img.h - 1, box.y1);
+  const out = [], is = (x, y) => { const i = (y * w + x) * 4; return Math.abs(d[i] - 85) < 35 && Math.abs(d[i + 1] - 204) < 35 && d[i + 2] > 220 };
+  for (let y = Y0; y < Y1; y++) for (let x = X0; x < X1; x++){
+    if (!is(x, y)) continue;
+    let x1 = x; while (x1 < X1 && is(x1 + 1, y)) x1++;
+    let y1 = y; while (y1 < Y1 && is(x, y1 + 1)) y1++;
+    const bw = x1 - x + 1;
+    if (bw >= 2 && bw <= 8 && y1 - y <= 8){ const cx = x + (bw >> 1); let yy = y; while (yy < Y1 && is(cx, yy + 1)) yy++;
+      if (!out.some(o => Math.abs(o.x - cx) < 10 && Math.abs(o.y - y) < 10)) out.push({x: cx, y: Math.round((y + yy) / 2)});
+      if (out.length >= 12) return out }
+    x = x1;
+  }
+  return out;
 }
-/* which slot the mouse is on: the tooltip opens next to the pointer, so the slot nearest its top left corner (or top right,
-   when it opened to the left near the screen edge) among the slots holding that scroll's picture */
-function hovered(img, inv, slots, id, lines){   // lines: the tooltip's own (match().hits)
-  const top = lines.reduce((a, l) => l.y < a.y ? l : a), c = corners(img, top);
-  let best = null, bd = 70;
+// a tooltip at bullet b: the name line through it, the description lines right of the picture box under it
+function readTip(img, b){
+  const lines = R.readTextLines(img, {x0: b.x + 2, x1: b.x + 470, y0: b.y - 12, y1: b.y + 110}, LV, {font: FONT, minH: 5, maxH: 15, space: 3});
+  const name = lines.find(l => l.y <= b.y + 2 && l.y + 12 >= b.y && l.x <= b.x + 12);
+  if (!name) return null;
+  const desc = [];
+  for (const l of lines.filter(l => l.y > name.y + 10 && l.x >= name.x + 30 && l.x <= name.x + 110).sort((a, c) => a.y - c.y)){
+    if (desc.length && (l.y - desc.at(-1).y > 24 || Math.abs(l.x - desc[0].x) > 3)) break;
+    if (!desc.length && l.y - name.y > 40) break;
+    desc.push(l);
+  }
+  return {name, desc};
+}
+/* which slot the mouse is on: the tooltip opens beside the pointer, which sat 17 px left of the bullet and 38 below it in
+   Danny's frame with the glove in view (tip-1h-sword-attack-intermediate). The slot holding that scroll's picture nearest there.
+   slots: [{i (0-29 on screen), ids}], from the whole tab seen so far: the tooltip itself often covers the slot under the pointer */
+function hovered(inv, slots, id, b){
+  const px = b.x - 17, py = b.y + 38;
+  let best = null, bd = 48;
   for (const s of slots){
     if (!s.ids.includes(id)) continue;
-    const sx = inv.x + 5 + 36 * (s.i % 5) + 16, sy = inv.y + 37 + 34 * Math.floor(s.i / 5) - 13;
-    const dd = Math.min(Math.hypot(sx - c.x0, sy - c.y0), Math.hypot(sx - c.x1, sy - c.y0));
+    const sx = inv.x + 5 + 36 * (s.i % 5) + 16, sy = inv.y + 37 + 34 * Math.floor(s.i / 5) - 13, dd = Math.hypot(sx - px, sy - py);
     if (dd < bd){ bd = dd; best = s }
   }
   return best;
 }
-// one frame -> {inv, read, lines, hit: {slot, id} | null}
+// a tooltip anywhere in a frame -> {b, tip, m} (also run on the fixtures)
+function tooltip(img, box = {x0: 0, x1: img.w, y0: 0, y1: img.h}){
+  let b = null, tip = null;
+  for (const c of bullet(img, box)){ const t = readTip(img, c); if (t && (!tip || known(t.name.text) > known(tip.name.text))){ b = c; tip = t } }
+  if (!tip) return null;
+  const m = match(tip);
+  if (m) learn(tip, m);
+  return {b, tip, m};
+}
+// one frame -> {inv, read, filled, tip}
 function readFrame(img, C, cache, near){
   let inv = near && R.findInventory(img, {x0: near.x - 12, x1: near.x + 230, y0: near.y - 3, y1: near.y + 4}) || R.findInventory(img);
   if (!inv) return {inv: null};
   if (!inv.tab && near?.tab) inv = {...inv, tab: near.tab};   // the pointer on the open tab hides its colour
   if (inv.tab !== "use") return {inv};
   const read = R.readInventory(img, inv, C.use, cache), filled = INVP.filled(img, inv);
-  const lines = R.readTextLines(img, {x0: inv.x - 320, x1: inv.x + 560, y0: inv.y - 40, y1: inv.y + 440}, tipInk)
-    .filter(l => l.glyphs.some((g, k) => { const x = l.x + g.x - l.glyphs[0].x; return dark(img, x - 1, l.y + 3) || dark(img, x - 2, l.y + 3) }));
-  const m = lines.length ? match(lines) : null;
-  const slot = m && hovered(img, inv, read.slots, m.id, m.hits);
-  if (m && slot) learn(lines, m);
-  return {inv, read, filled, lines, m, hit: slot ? {slot, id: m.id} : null};
+  return {inv, read, filled, tip: tooltip(img, {x0: inv.x - 40, x1: inv.x + 260, y0: inv.y - 30, y1: inv.y + 260})};
 }
 
 /* ---- the whole Use tab across scrolling: rows of 5 tokens ("id x n", "" empty, "?" filled but covered or not matched),
@@ -142,7 +184,7 @@ function step(img){
   // nothing known on screen (all covered), or no overlap while a tooltip covers part of it: wait for a better frame.
   // No overlap on a clean frame: another page of the tab, below the ones seen
   if (!rows.some(r => r.some(v => v && v !== "?"))) return;
-  if (off === null && f.lines.length && S.grid.length) return;
+  if (off === null && f.tip?.b && S.grid.length) return;
   const o = off ?? S.grid.length;
   if (o < 0){ S.grid.unshift(...Array(-o).fill(null).map(() => ["", "", "", "", ""])); S.counts.unshift(...Array(-o * 5).fill(null)); const n = {}; for (const [k, v] of Object.entries(S.names)) n[+k - o * 5] = v; S.names = n }
   const base = Math.max(0, o);
@@ -152,10 +194,11 @@ function step(img){
   for (const [k, v] of Object.entries(S.names)){ const t = S.grid[Math.floor(k / 5)]?.[k % 5]; if (t !== "?" && t !== v.tok) delete S.names[k] }
   // a tooltip on the same slot twice in a row counts (the first frame may catch the mouse moving)
   S.hov = null;
-  if (f.hit){
-    const at = base * 5 + f.hit.slot.i, key = at + ":" + f.hit.id;
+  const m = f.tip?.m, slot = m && hovered(f.inv, [...Array(30).keys()].map(i => ({i, ids: S.counts[base * 5 + i]?.ids || []})), m.id, f.tip.b);
+  if (slot){
+    const at = base * 5 + slot.i, key = at + ":" + m.id;
     S.hov = at;
-    if (S.last === key && S.names[at]?.id !== f.hit.id){ S.names[at] = {id: f.hit.id, tok: tok(f.hit.slot), t: ++S.seen} }
+    if (S.last === key && S.names[at]?.id !== m.id){ S.names[at] = {id: m.id, tok: tok(S.counts[at]), t: ++S.seen} }
     S.last = key;
   } else S.last = null;
   draw();
@@ -209,5 +252,5 @@ function draw(){
 $s("ssgo").addEventListener("click", start);
 $s("ssstop").addEventListener("click", stop);
 if (!navigator.mediaDevices?.getDisplayMedia){ $s("ssgo").disabled = true; $s("ssst").textContent = "Needs a desktop browser"; }
-return {match, readFrame, place, frameRows, start, stop, step, get S(){ return S }};
+return {match, tooltip, readTip, readFrame, place, frameRows, start, stop, step, get S(){ return S }};
 })();
