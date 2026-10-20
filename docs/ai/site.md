@@ -119,6 +119,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Back/Forward (75-history.js): after any click/change/Enter it compares {tab, place} with history.state and pushes if
   different (no URL change). A page with in-page places registers `navReg(tab, get, set)` (mobs, items, skills, wmap, quests);
   `get` must return JSON-comparable data or every click pushes. Smoke checks "browser Back ...", "a new step clears Forward".
+- Unset path vars write to a literal folder named "undefined" (the 10-06 Credits screenshots landed at repo root). Gitignored now; save screenshots to the scratchpad.
 
 ## Splits
 - 10-18: `src/index.html` split into `src/pages/<id>.html` (built dist identical). Edit a page's file, not the shell; build.py asserts every page file has a slot.
