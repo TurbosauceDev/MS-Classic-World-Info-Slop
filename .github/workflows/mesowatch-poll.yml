@@ -34,12 +34,12 @@ on:
 permissions:
   contents: write
 
-# If a scheduled run and a manual dispatch overlap, OR if two crons fire
-# close together, queue the second behind the first (don't cancel — we'd
-# lose a half-finished commit). Workflow runtime is ~60s, so this rarely
-# matters, but the queueing is safer than canceling.
+# Shared concurrency group across all workflows that commit to main (poll +
+# site builds). Queue instead of cancel so we don't lose a half-finished
+# commit on dist/index.html. Workflow runtime is ~60s, so queueing is a
+# no-op in practice.
 concurrency:
-  group: mesowatch-poll
+  group: main-pipeline
   cancel-in-progress: false
 
 jobs:
@@ -84,6 +84,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash scripts/mesowatch-sync/mesowatch_poll_ci.sh
+
 
 
 
