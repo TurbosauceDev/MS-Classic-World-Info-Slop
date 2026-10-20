@@ -442,7 +442,7 @@ nav .subs{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;border-bottom:1px 
 nav .subs[hidden]{display:none}
 nav button[hidden]{display:none}
 header h1{cursor:pointer}
-.homegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.homegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--hcw,300px)),1fr));gap:14px}
 .homecat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
 .homecat h2{margin:0 0 6px}
 .hcat{font:800 21.5px var(--f-display);color:var(--ink);background:none;border:0;padding:0;cursor:pointer}
@@ -588,7 +588,7 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
 .sitefoot .linkbtn:hover{color:var(--ink)}
 #thpop .thsub{font:600 15px var(--f-display);margin:14px 0 8px}
 @media (min-width:761px){
-  html:not([data-nav="rows"]) .wrap{display:grid;grid-template-columns:clamp(228px,18vw,268px) minmax(0,1fr);column-gap:34px;align-items:start}
+  html:not([data-nav="rows"]) .wrap{display:grid;grid-template-columns:var(--sbw,clamp(228px,18vw,268px)) minmax(0,1fr);column-gap:34px;align-items:start}
   html:not([data-nav="rows"]) .wrap>*{grid-column:2;min-width:0}
   html:not([data-nav="rows"]) .wrap>header{grid-column:1/-1}
   html:not([data-nav="rows"]) .wrap>footer{grid-column:1/-1;grid-row:402}   /* full width, below the sidebar (which spans rows 2-401) */
@@ -743,12 +743,11 @@ kbd{font:600 12px var(--f-mono);padding:1px 5px;border:1px solid var(--line);bor
 
 /* Toggle anchors (72-anchors.js, ElvUI /moveui style): header gets a grid, labelled movers sit over Search and the cog,
    the rest of the page blurs back; bar fixed at the bottom of the window */
-#srchopen,#thopen{transition:transform .2s cubic-bezier(.2,.8,.2,1),width .2s,border-color .15s,background-color .15s,color .15s,box-shadow .15s}
+#srchopen,#thopen{transition:transform .2s cubic-bezier(.2,.8,.2,1),border-color .15s,background-color .15s,color .15s,box-shadow .15s}
 #srchopen,#thopen{transform-origin:0 0}
 #srchopen.anchdrag,#thopen.anchdrag{transition:none}
 #srchopen{white-space:nowrap;overflow:hidden;justify-content:center;box-sizing:border-box}
 html.anchoring header{z-index:30;border-radius:12px;background-color:color-mix(in srgb,var(--accent) 7%,transparent);background-image:linear-gradient(color-mix(in srgb,var(--accent) 18%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--accent) 18%,transparent) 1px,transparent 1px);background-size:var(--anchgrid,16px) var(--anchgrid,16px);outline:1px dashed color-mix(in srgb,var(--accent) 55%,transparent);animation:fadein .2s ease-out}
-html.anchoring .wrap>:not(header):not(.srch){filter:blur(2px);opacity:.5;pointer-events:none;transition:filter .25s,opacity .25s}
 .anchmv{position:absolute;z-index:3;box-sizing:border-box;border-radius:9px;background:color-mix(in srgb,var(--accent) 22%,transparent);outline:1.5px solid color-mix(in srgb,var(--accent) 85%,transparent);display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;user-select:none;animation:fadein .18s ease-out}
 .anchmv[hidden]{display:none}
 .anchmv.drag{cursor:grabbing;outline-width:2px}
@@ -789,3 +788,42 @@ html.anchoring .wrap>:not(header):not(.srch){filter:blur(2px);opacity:.5;pointer
 .anchcolgrid code{font:12px var(--f-mono);color:var(--muted)}
 .anchwarn{color:var(--bad)!important}
 .anchcol .throw .btn{margin:0}
+
+/* Default header on wide screens (Danny 10-20 screenshot): Search sits on the left over the sidebar and as wide as it, the
+   cog is small on the right in the same row. Edit mode moves both from here. */
+@media (min-width:761px){
+  header h1,header>p{width:fit-content;margin-left:auto;margin-right:auto}
+  header #srchopen{display:flex;width:fit-content;margin:14px 0 0}
+  html:not([data-nav="rows"]) header #srchopen{width:var(--sbw,clamp(228px,18vw,268px))}
+  header .thbtn{top:auto;bottom:16px;width:30px;height:30px;border-radius:7px}
+  header .thbtn svg{width:16px;height:16px}
+  /* sidebar on the right (edit mode) */
+  html[data-sbside="right"]:not([data-nav="rows"]) .wrap{grid-template-columns:minmax(0,1fr) var(--sbw,clamp(228px,18vw,268px))}
+  html[data-sbside="right"]:not([data-nav="rows"]) .wrap>*{grid-column:1}
+  html[data-sbside="right"]:not([data-nav="rows"]) .wrap>header,html[data-sbside="right"]:not([data-nav="rows"]) .wrap>footer{grid-column:1/-1}
+  html[data-sbside="right"]:not([data-nav="rows"]) .wrap>.navcol{grid-column:2}
+  html[data-sbside="right"]:not([data-nav="rows"]) .navcol>nav{border-right:0;border-left:1px solid var(--line);padding:0 0 18px 10px}
+  html[data-sbside="right"]:not([data-nav="rows"]) header #srchopen{margin-left:auto}
+  html[data-sbside="right"]:not([data-nav="rows"]) header .thbtn{right:auto;left:0}
+}
+
+/* Edit mode, page parts (72-anchors.js): title + tagline move like Search/cog; sidebar width handle; sections and Home
+   cards drag into a new order */
+header h1,header>p{transform-origin:0 0;transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+header h1.anchdrag,header>p.anchdrag{transition:none}
+@media (max-width:760px){header h1,header>p{transform:none!important}}
+@media (min-width:761px){header #srchopen{justify-content:flex-start}}
+html.anchoring .wrap>:is(section:not(#home),footer){filter:blur(2px);opacity:.5;pointer-events:none;transition:filter .25s,opacity .25s}
+html.anchoring .navcol{position:relative}
+.anchsbw{display:none;position:absolute;top:0;bottom:0;right:-21px;width:8px;border-radius:4px;background:color-mix(in srgb,var(--accent) 45%,transparent);cursor:ew-resize;touch-action:none;z-index:6}
+.anchsbw:hover{background:var(--accent)}
+html.anchoring:not([data-nav="rows"]) .anchsbw{display:block;animation:fadein .2s ease-out}
+html[data-sbside="right"] .anchsbw{right:auto;left:-21px}
+html.anchoring:not([data-nav="rows"]) nav .sgh{outline:1px dashed color-mix(in srgb,var(--accent) 60%,transparent);outline-offset:3px;border-radius:6px;cursor:grab;touch-action:none;user-select:none}
+html.anchoring:not([data-nav="rows"]) nav .sgh::after{content:"⠿";margin-left:auto;padding-right:4px;font-size:16px;opacity:.6}
+html.anchoring .homegrid>.homecat{outline:1.5px dashed color-mix(in srgb,var(--accent) 60%,transparent);outline-offset:2px;cursor:grab;touch-action:none;user-select:none}
+.anchlift{opacity:.75;box-shadow:0 12px 30px rgba(0,0,0,.28)!important;cursor:grabbing!important}
+html.anchoring .homegrid>.homecat.anchlift{outline:2px solid var(--accent)}
+.anchbar label.lbl{display:inline-flex;align-items:center;gap:6px}
+.anchbar input[type=range]{width:90px;accent-color:var(--bg)}
+html.anchoring :is(.navcol,.homegrid){user-select:none}

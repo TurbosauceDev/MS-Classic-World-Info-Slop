@@ -450,7 +450,7 @@ nav .subs{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;border-bottom:1px 
 nav .subs[hidden]{display:none}
 nav button[hidden]{display:none}
 header h1{cursor:pointer}
-.homegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.homegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--hcw,300px)),1fr));gap:14px}
 .homecat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
 .homecat h2{margin:0 0 6px}
 .hcat{font:800 21.5px var(--f-display);color:var(--ink);background:none;border:0;padding:0;cursor:pointer}
@@ -596,7 +596,7 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
 .sitefoot .linkbtn:hover{color:var(--ink)}
 #thpop .thsub{font:600 15px var(--f-display);margin:14px 0 8px}
 @media (min-width:761px){
-  html:not([data-nav="rows"]) .wrap{display:grid;grid-template-columns:clamp(228px,18vw,268px) minmax(0,1fr);column-gap:34px;align-items:start}
+  html:not([data-nav="rows"]) .wrap{display:grid;grid-template-columns:var(--sbw,clamp(228px,18vw,268px)) minmax(0,1fr);column-gap:34px;align-items:start}
   html:not([data-nav="rows"]) .wrap>*{grid-column:2;min-width:0}
   html:not([data-nav="rows"]) .wrap>header{grid-column:1/-1}
   html:not([data-nav="rows"]) .wrap>footer{grid-column:1/-1;grid-row:402}   /* full width, below the sidebar (which spans rows 2-401) */
@@ -751,12 +751,11 @@ kbd{font:600 12px var(--f-mono);padding:1px 5px;border:1px solid var(--line);bor
 
 /* Toggle anchors (72-anchors.js, ElvUI /moveui style): header gets a grid, labelled movers sit over Search and the cog,
    the rest of the page blurs back; bar fixed at the bottom of the window */
-#srchopen,#thopen{transition:transform .2s cubic-bezier(.2,.8,.2,1),width .2s,border-color .15s,background-color .15s,color .15s,box-shadow .15s}
+#srchopen,#thopen{transition:transform .2s cubic-bezier(.2,.8,.2,1),border-color .15s,background-color .15s,color .15s,box-shadow .15s}
 #srchopen,#thopen{transform-origin:0 0}
 #srchopen.anchdrag,#thopen.anchdrag{transition:none}
 #srchopen{white-space:nowrap;overflow:hidden;justify-content:center;box-sizing:border-box}
 html.anchoring header{z-index:30;border-radius:12px;background-color:color-mix(in srgb,var(--accent) 7%,transparent);background-image:linear-gradient(color-mix(in srgb,var(--accent) 18%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--accent) 18%,transparent) 1px,transparent 1px);background-size:var(--anchgrid,16px) var(--anchgrid,16px);outline:1px dashed color-mix(in srgb,var(--accent) 55%,transparent);animation:fadein .2s ease-out}
-html.anchoring .wrap>:not(header):not(.srch){filter:blur(2px);opacity:.5;pointer-events:none;transition:filter .25s,opacity .25s}
 .anchmv{position:absolute;z-index:3;box-sizing:border-box;border-radius:9px;background:color-mix(in srgb,var(--accent) 22%,transparent);outline:1.5px solid color-mix(in srgb,var(--accent) 85%,transparent);display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;user-select:none;animation:fadein .18s ease-out}
 .anchmv[hidden]{display:none}
 .anchmv.drag{cursor:grabbing;outline-width:2px}
@@ -798,6 +797,45 @@ html.anchoring .wrap>:not(header):not(.srch){filter:blur(2px);opacity:.5;pointer
 .anchwarn{color:var(--bad)!important}
 .anchcol .throw .btn{margin:0}
 
+/* Default header on wide screens (Danny 10-20 screenshot): Search sits on the left over the sidebar and as wide as it, the
+   cog is small on the right in the same row. Edit mode moves both from here. */
+@media (min-width:761px){
+  header h1,header>p{width:fit-content;margin-left:auto;margin-right:auto}
+  header #srchopen{display:flex;width:fit-content;margin:14px 0 0}
+  html:not([data-nav="rows"]) header #srchopen{width:var(--sbw,clamp(228px,18vw,268px))}
+  header .thbtn{top:auto;bottom:16px;width:30px;height:30px;border-radius:7px}
+  header .thbtn svg{width:16px;height:16px}
+  /* sidebar on the right (edit mode) */
+  html[data-sbside="right"]:not([data-nav="rows"]) .wrap{grid-template-columns:minmax(0,1fr) var(--sbw,clamp(228px,18vw,268px))}
+  html[data-sbside="right"]:not([data-nav="rows"]) .wrap>*{grid-column:1}
+  html[data-sbside="right"]:not([data-nav="rows"]) .wrap>header,html[data-sbside="right"]:not([data-nav="rows"]) .wrap>footer{grid-column:1/-1}
+  html[data-sbside="right"]:not([data-nav="rows"]) .wrap>.navcol{grid-column:2}
+  html[data-sbside="right"]:not([data-nav="rows"]) .navcol>nav{border-right:0;border-left:1px solid var(--line);padding:0 0 18px 10px}
+  html[data-sbside="right"]:not([data-nav="rows"]) header #srchopen{margin-left:auto}
+  html[data-sbside="right"]:not([data-nav="rows"]) header .thbtn{right:auto;left:0}
+}
+
+/* Edit mode, page parts (72-anchors.js): title + tagline move like Search/cog; sidebar width handle; sections and Home
+   cards drag into a new order */
+header h1,header>p{transform-origin:0 0;transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+header h1.anchdrag,header>p.anchdrag{transition:none}
+@media (max-width:760px){header h1,header>p{transform:none!important}}
+@media (min-width:761px){header #srchopen{justify-content:flex-start}}
+html.anchoring .wrap>:is(section:not(#home),footer){filter:blur(2px);opacity:.5;pointer-events:none;transition:filter .25s,opacity .25s}
+html.anchoring .navcol{position:relative}
+.anchsbw{display:none;position:absolute;top:0;bottom:0;right:-21px;width:8px;border-radius:4px;background:color-mix(in srgb,var(--accent) 45%,transparent);cursor:ew-resize;touch-action:none;z-index:6}
+.anchsbw:hover{background:var(--accent)}
+html.anchoring:not([data-nav="rows"]) .anchsbw{display:block;animation:fadein .2s ease-out}
+html[data-sbside="right"] .anchsbw{right:auto;left:-21px}
+html.anchoring:not([data-nav="rows"]) nav .sgh{outline:1px dashed color-mix(in srgb,var(--accent) 60%,transparent);outline-offset:3px;border-radius:6px;cursor:grab;touch-action:none;user-select:none}
+html.anchoring:not([data-nav="rows"]) nav .sgh::after{content:"⠿";margin-left:auto;padding-right:4px;font-size:16px;opacity:.6}
+html.anchoring .homegrid>.homecat{outline:1.5px dashed color-mix(in srgb,var(--accent) 60%,transparent);outline-offset:2px;cursor:grab;touch-action:none;user-select:none}
+.anchlift{opacity:.75;box-shadow:0 12px 30px rgba(0,0,0,.28)!important;cursor:grabbing!important}
+html.anchoring .homegrid>.homecat.anchlift{outline:2px solid var(--accent)}
+.anchbar label.lbl{display:inline-flex;align-items:center;gap:6px}
+.anchbar input[type=range]{width:90px;accent-color:var(--bg)}
+html.anchoring :is(.navcol,.homegrid){user-select:none}
+
 </style>
 <script>
 // Theme (Settings > Theme, 70-theme.js): applied before the page draws so a picked theme doesn't flash the default first.
@@ -820,6 +858,13 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   try { nv = localStorage.getItem("navmode"); sz = localStorage.getItem("pagesize") } catch (e) {}
   if (nv === "basic" || nv === "rows") el.setAttribute("data-nav", nv);
   el.setAttribute("data-size", /^[1-5]$/.test(sz || "") ? sz : "3"); })();
+// Edit mode (72-anchors.js) sidebar width/side and Home card width, also before the page draws (no jump on load)
+(function (){ var el = document.documentElement, a = null;
+  try { a = JSON.parse(localStorage.getItem("anchors") || "null") } catch (e) {}
+  if (!a || typeof a !== "object") return;
+  if (a.sb && typeof a.sb.w === "number" && a.sb.w >= 180 && a.sb.w <= 420) el.style.setProperty("--sbw", Math.round(a.sb.w) + "px");
+  if (a.sb && a.sb.right === true) el.setAttribute("data-sbside", "right");
+  if (typeof a.hcw === "number" && a.hcw >= 220 && a.hcw <= 520) el.style.setProperty("--hcw", Math.round(a.hcw) + "px"); })();
 </script>
 
 <div class="wrap">
@@ -1934,6 +1979,10 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.10.5</span> Oct 20, 2026 · New header layout, bigger edit mode</h3></div>
+      <p><b>Header:</b> on wider screens <b>Search everything</b> now sits on the left above the sidebar (and as wide as it), with a smaller <b>Settings</b> cog on the right in the same row.</p>
+      <p><b>Edit mode</b> (F1, or Settings › Toggle anchors) can now also move and scale the <b>title</b> and <b>tagline</b>, change the <b>sidebar's width</b> (drag the bar on its edge), put the <b>sidebar on the right</b>, drag <b>sidebar sections</b> and <b>Home cards</b> into your own order, and set how wide <b>Home cards</b> are. <b>Reset all</b> puts everything back.</p>
+    </div>
     <div class="card"><div class="cardhead"><h3><span class="ver">v0.10.4</span> Oct 20, 2026 · Settings cog and Toggle anchors</h3></div>
       <p>The <b>Theme</b> button in the top-right corner is now a <b>cogwheel</b> that opens <b>Settings</b> as a pop-up over a blurred page, like Search. Same options as before: theme, share codes, layout and page size. Esc, × or a click outside closes it.</p>
       <p><b>Toggle anchors</b> (in Settings, inspired by the ElvUI addon's /moveui): move <b>Search everything</b> and the <b>Settings</b> cog anywhere in the header. Labelled movers, a grid to snap to (8, 16 or 32), click a mover for exact X/Y and arrow nudges, drag Search's right edge to resize it, <b>Reset all</b> and <b>Lock</b>. Saved in your browser; phones keep the default header.</p>
@@ -2243,7 +2292,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-20T21:55:50Z" data-ver="0.10.4">Site version: v0.10.4 · built Oct 20, 2026 · 21:55 UTC</p>
+  <p class="sitever" data-built="2026-10-20T21:56:14Z" data-ver="0.10.5">Site version: v0.10.5 · built Oct 20, 2026 · 21:56 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button></div>
 </footer>
@@ -8834,14 +8883,22 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
 // width, y and w in px, s = scale. Wide screens only (the 760px phone layout keeps the default); Colours works everywhere.
 (() => {
   const hd = $("header"), wide = matchMedia("(min-width: 761px)");
-  const IT = {search: {el: $("#srchopen"), name: "Search everything", rz: true}, cog: {el: $("#thopen"), name: "Settings"}};
+  const IT = {title: {el: $("header h1"), name: "Title"}, tag: {el: $("header > p"), name: "Tagline"},
+    search: {el: $("#srchopen"), name: "Search everything", rz: true}, cog: {el: $("#thopen"), name: "Settings"}};
+  const CATS = ["trk", "char", "train", "world", "db", "town"], SECS = [...document.querySelectorAll(".homegrid > .homecat[data-sec]")].map(e => e.dataset.sec);
   const ls = (v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem("anchors") || "null"); if (v) localStorage.setItem("anchors", JSON.stringify(v)); else localStorage.removeItem("anchors") } catch { return null } };
   const num = v => typeof v === "number" && isFinite(v);
   const SMIN = 0.5, SMAX = 2.5, SNAPPX = 6;
   // untrusted (edited by hand, older version): keep only well-formed entries
   const clean = s => { const o = {}; if (!s || typeof s !== "object") return o;
     for (const id in IT){ const p = s[id]; if (!(p && num(p.x) && num(p.y) && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y < 2000)) continue;
-      o[id] = {x: p.x, y: p.y}; if (IT[id].rz && num(p.w) && p.w >= 120 && p.w <= 2000) o[id].w = p.w; if (num(p.s) && p.s >= SMIN && p.s <= SMAX) o[id].s = p.s } return o };
+      o[id] = {x: p.x, y: p.y}; if (IT[id].rz && num(p.w) && p.w >= 120 && p.w <= 2000) o[id].w = p.w; if (num(p.s) && p.s >= SMIN && p.s <= SMAX) o[id].s = p.s }
+    // page layout: sidebar width/side, sidebar section order, Home card order and width (same limits as the <head> script)
+    if (s.sb && typeof s.sb === "object"){ const b = {}; if (num(s.sb.w) && s.sb.w >= 180 && s.sb.w <= 420) b.w = Math.round(s.sb.w); if (s.sb.right === true) b.right = true; if (Object.keys(b).length) o.sb = b }
+    const order = (a, all) => Array.isArray(a) && a.length === all.length && all.every(x => a.includes(x)) ? [...a] : null;
+    if (order(s.secs, CATS)) o.secs = order(s.secs, CATS); if (order(s.home, SECS)) o.home = order(s.home, SECS);
+    if (num(s.hcw) && s.hcw >= 220 && s.hcw <= 520) o.hcw = Math.round(s.hcw);
+    return o };
   let S = clean(ls()), on = false, grid = 16, snap = true, sel = null, drag = null;
   const cur = {};
   const zoom = () => hd.getBoundingClientRect().width / hd.offsetWidth || 1;   // .wrap is zoomed on wide screens (Page size)
@@ -8871,10 +8928,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
   const gv = document.createElement("div"), gh = document.createElement("div");
   gv.className = "anchguide v"; gh.className = "anchguide h"; hd.append(gv, gh);
   function lines(id){
-    const z = zoom(), hr = hd.getBoundingClientRect(), xs = [0, W() / 2, W()], ys = [0, Hh()];
-    for (const q of ["h1", "header > p"]){ const e = hd.querySelector(q); if (!e) continue;
-      const r = document.createRange(); r.selectNodeContents(e); const b = r.getBoundingClientRect();
-      xs.push((b.left - hr.left) / z, (b.right - hr.left) / z); ys.push((b.top - hr.top) / z, (b.bottom - hr.top) / z) }
+    const xs = [0, W() / 2, W()], ys = [0, Hh()];
     for (const o in IT) if (o !== id){ const b = box(o); xs.push(b.x, b.x + b.w / 2, b.x + b.w); ys.push(b.y, b.y + b.h / 2, b.y + b.h) }
     return {xs, ys};
   }
@@ -8899,7 +8953,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
   const drawMovers = () => { fit(); drawNudge() };
   function drawBar(){
     bar.innerHTML = `<span class="lbl">Anchors</span><span class="lbl">Grid</span>${[8, 16, 32].map(n => `<button type="button" class="btn" data-grid="${n}" aria-pressed="${n === grid}">${n}</button>`).join("")}
-      <button type="button" class="btn" data-snap aria-pressed="${snap}" title="Snap to guide lines and the grid (hold Alt while dragging to place freely)">Snap</button><button type="button" class="btn" data-cols aria-pressed="${!col.hidden}">Colours</button><button type="button" class="btn" data-reset>Reset all</button><button type="button" class="btn pri" data-lock title="Done (Esc)">Done</button>`;
+      <button type="button" class="btn" data-snap aria-pressed="${snap}" title="Snap to guide lines and the grid (hold Alt while dragging to place freely)">Snap</button><button type="button" class="btn" data-side aria-pressed="${!!S.sb?.right}" title="Put the sidebar on the other side">Sidebar right</button><label class="lbl" title="How wide Home cards are before they wrap">Cards <input type="range" data-hcw min="220" max="520" step="10" value="${S.hcw || 300}"></label><button type="button" class="btn" data-cols aria-pressed="${!col.hidden}">Colours</button><button type="button" class="btn" data-reset>Reset all</button><button type="button" class="btn pri" data-lock title="Done (Esc)">Done</button>`;
     hd.style.setProperty("--anchgrid", grid + "px");
   }
   function drawNudge(){
@@ -8960,11 +9014,13 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
     setPos(sel, b.x, b.y, {s}); e.target.nextElementSibling.textContent = Math.round(s * 100) + "%"; fit(); placeNudge() });
   nudge.addEventListener("change", e => { const ax = e.target.dataset.ax; if (!ax || !sel) return; if (ax === "s"){ save(); return }
     const b = box(sel), v = Math.round(+e.target.value || 0); setPos(sel, ax === "x" ? v : b.x, ax === "y" ? v : b.y); save(); drawMovers() });
+  bar.addEventListener("input", e => { if (!e.target.hasAttribute("data-hcw")) return; S.hcw = +e.target.value; if (S.hcw === 300) delete S.hcw; layout(); save() });
   bar.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
     if (b.dataset.grid){ grid = +b.dataset.grid; drawBar() }
     else if (b.hasAttribute("data-snap")){ snap = !snap; drawBar() }
     else if (b.hasAttribute("data-cols")){ cols(col.hidden); drawBar() }
-    else if (b.hasAttribute("data-reset")){ S = {}; save(); sel = null; putAll() }
+    else if (b.hasAttribute("data-side")){ S.sb = {...S.sb, right: !S.sb?.right}; if (!S.sb.right) delete S.sb.right; if (!Object.keys(S.sb).length) delete S.sb; layout(true); save(); drawBar() }
+    else if (b.hasAttribute("data-reset")){ S = {}; save(); sel = null; layout(true); putAll(); drawBar() }
     else if (b.hasAttribute("data-lock")) setOn(false) });
   // a click on the page outside the movers, the nudge box, the bar and Colours drops the selection
   document.addEventListener("pointerdown", e => { if (on && sel && !e.composedPath().some(x => x === nudge || x === bar || x === col || x.classList?.contains("anchmv"))){ sel = null; drawMovers() } });
@@ -8973,6 +9029,68 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
     if (e.key === "F1"){ e.preventDefault(); if (!$("#thpop").hidden) $("#thclose").click(); if (on) setOn(false); else if (wide.matches) setOn(true); else cols(col.hidden); return }
     if (e.key !== "Escape" || !$("#thpop").hidden || !$("#srch").hidden) return;
     if (on) setOn(false); else if (!col.hidden) cols(false) });
+
+  // Page layout. Sidebar: width (drag the bar on its edge), side (bar button). Sidebar sections and Home cards: drag into
+  // a new order (the moved ones glide to their new spots). Clicks on links there do nothing while editing.
+  const root = document.documentElement, subs = $("nav .subs"), cats = $("nav .cats"), hgrid = $(".homegrid"), navcol = $(".navcol");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+  const group = c => [...subs.querySelectorAll(`[data-cat="${c}"]`)];
+  const curSecs = () => [...subs.querySelectorAll(".sgh[data-cat]")].map(e => e.dataset.cat);
+  const curHome = () => [...hgrid.children].map(e => e.dataset.sec).filter(Boolean);
+  // move elements, then play each one from where it was (FLIP), so nothing jumps
+  function flip(els, change){
+    const z = zoom(), was = new Map(els.map(e => [e, e.getBoundingClientRect()])); change();
+    if (reduce.matches) return;
+    for (const e of els){ const a = was.get(e), b = e.getBoundingClientRect(), dx = (a.left - b.left) / z, dy = (a.top - b.top) / z;
+      if ((dx || dy) && b.width) e.animate([{transform: `translate(${dx}px,${dy}px)`}, {transform: "none"}], {duration: 200, easing: "cubic-bezier(.2,.8,.2,1)"}) }
+  }
+  function layout(anim){
+    root.style.setProperty("--sbw", S.sb?.w ? S.sb.w + "px" : ""); if (!S.sb?.w) root.style.removeProperty("--sbw");
+    if (S.sb?.right) root.setAttribute("data-sbside", "right"); else root.removeAttribute("data-sbside");
+    if (S.hcw) root.style.setProperty("--hcw", S.hcw + "px"); else root.style.removeProperty("--hcw");
+    const secs = S.secs || CATS, home = S.home || SECS, more = subs.querySelector('[data-cat="more"]');
+    const go = () => { for (const c of secs){ for (const e of group(c)) subs.insertBefore(e, more); cats.insertBefore($("#c-" + c), $("#c-more")) }
+      for (const h of home){ const e = hgrid.querySelector(`:scope > [data-sec="${h}"]`); if (e) hgrid.append(e) } };
+    if (anim) flip([...subs.children, ...hgrid.children], go); else go();
+    requestAnimationFrame(putAll);
+  }
+  // sidebar width handle
+  let sbd = null; const sbw = document.createElement("div"); sbw.className = "anchsbw"; sbw.title = "Drag to change the sidebar's width"; navcol.append(sbw);
+  sbw.addEventListener("pointerdown", e => { if (!on || e.button) return; e.preventDefault(); sbw.setPointerCapture(e.pointerId);
+    sbd = {sx: e.clientX, w0: navcol.getBoundingClientRect().width / zoom(), z: zoom()} });
+  sbw.addEventListener("pointermove", e => { if (!sbd) return; const d = (e.clientX - sbd.sx) / sbd.z * (S.sb?.right ? -1 : 1);
+    S.sb = {...S.sb, w: Math.round(Math.max(180, Math.min(420, sbd.w0 + d)))}; root.style.setProperty("--sbw", S.sb.w + "px"); putAll() });
+  const sbEnd = () => { if (!sbd) return; sbd = null; save() };
+  sbw.addEventListener("pointerup", sbEnd); sbw.addEventListener("pointercancel", sbEnd);
+  // drag to reorder: a sidebar section (by its title) or a Home card
+  let rd = null;
+  document.addEventListener("pointerdown", e => {
+    if (!on || e.button) return; const sh = e.target.closest("nav .sgh[data-cat]"), hc = !sh && e.target.closest(".homegrid > .homecat");
+    if (!sh && !hc) return; e.preventDefault();
+    rd = sh ? {kind: "secs", id: sh.dataset.cat, els: () => group(sh.dataset.cat)} : {kind: "home", id: hc.dataset.sec, els: () => [hc]};
+    rd.els().forEach(x => x.classList.add("anchlift"));
+  }, true);
+  document.addEventListener("pointermove", e => {
+    if (!rd) return; const mine = rd.els(), t = document.elementsFromPoint(e.clientX, e.clientY).find(x => !mine.some(d => d.contains(x)));   // under the one being dragged (it may still be gliding)
+    if (rd.kind === "secs"){
+      const over = t?.closest("nav .subs [data-cat]"), c = over?.dataset.cat; if (!c || c === rd.id || !CATS.includes(c)) return;
+      const list = curSecs(), from = list.indexOf(rd.id), to = list.indexOf(c);
+      // only once the pointer is past the middle of that section, so two sections of different heights don't flip back and forth
+      const g = group(c).filter(x => x.offsetParent).map(x => x.getBoundingClientRect()), mid = (g[0].top + g[g.length - 1].bottom) / 2;
+      if (to > from ? e.clientY < mid : e.clientY > mid) return;
+      list.splice(from, 1); list.splice(to, 0, rd.id);
+      S.secs = list; layout(true);
+    } else {
+      const over = t?.closest(".homegrid > .homecat"), h = over?.dataset.sec; if (!h || h === rd.id) return;
+      const r = over.getBoundingClientRect(); if (Math.abs(e.clientX - (r.left + r.width / 2)) > r.width / 4 || Math.abs(e.clientY - (r.top + r.height / 2)) > r.height / 3) return;
+      const list = curHome(), from = list.indexOf(rd.id), to = list.indexOf(h); list.splice(from, 1); list.splice(to, 0, rd.id);
+      S.home = list; layout(true);
+    }
+  });
+  document.addEventListener("pointerup", () => { if (!rd) return; rd.els().forEach(x => x.classList.remove("anchlift"));
+    if (S.secs?.join() === CATS.join()) delete S.secs; if (S.home?.join() === SECS.join()) delete S.home; rd = null; save() });
+  // while editing, links in the sidebar and on Home don't navigate
+  document.addEventListener("click", e => { if (on && e.target.closest(".navcol, .homegrid")){ e.preventDefault(); e.stopPropagation() } }, true);
 
   // Colours: the theme editor (Danny 10-20: "this is also where the theme editor should live now"). Starts from the theme
   // in use, previews live, nothing is kept until Save (then it's one of "my themes" in Settings, same as a pasted code).
@@ -9011,14 +9129,14 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
 
   // Settings: Toggle anchors and Edit colours close Settings first
   const tog = $("#anchtog"), note = $("#anchnote");
-  const wideNote = () => { tog.disabled = !wide.matches; note.textContent = wide.matches ? "Move and scale Search everything and the Settings cog, and edit colours (Colours on the bar). F1 opens and closes it, Esc is Done. Saved in this browser." : "Moving things is for wider screens: phones keep the default header." };
+  const wideNote = () => { tog.disabled = !wide.matches; note.textContent = wide.matches ? "Move and scale the title, tagline, Search and the Settings cog; resize the sidebar or move it to the right; drag sidebar sections and Home cards into your order; Home card width; colours. F1 opens and closes it, Esc is Done. Saved in this browser." : "Edit mode is for wider screens: phones keep the default layout." };
   tog.addEventListener("click", () => { $("#thclose").click(); setOn(true) });
   $("#thedit").addEventListener("click", () => { $("#thclose").click(); cols(true) });
   wide.addEventListener("change", () => { if (!wide.matches && on) setOn(false); wideNote(); putAll() });
   addEventListener("resize", () => requestAnimationFrame(putAll));
   new MutationObserver(() => requestAnimationFrame(putAll)).observe(document.documentElement, {attributes: true, attributeFilter: ["data-size", "data-nav"]});
-  wideNote(); putAll(); document.fonts?.ready.then(putAll);
-  window.ANCH = {set: v => { S = clean(v); save(); putAll() }, get: () => S, on: setOn, cols};   // tests
+  wideNote(); layout(); putAll(); document.fonts?.ready.then(putAll);
+  window.ANCH = {set: v => { S = clean(v); save(); layout(); putAll() }, get: () => S, on: setOn, cols};   // tests
 })();
 
 // Back / Forward (Danny, 2026-10-18): every page change, and every "place" inside a page (a monster, item or skill page,

@@ -29,6 +29,13 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   try { nv = localStorage.getItem("navmode"); sz = localStorage.getItem("pagesize") } catch (e) {}
   if (nv === "basic" || nv === "rows") el.setAttribute("data-nav", nv);
   el.setAttribute("data-size", /^[1-5]$/.test(sz || "") ? sz : "3"); })();
+// Edit mode (72-anchors.js) sidebar width/side and Home card width, also before the page draws (no jump on load)
+(function (){ var el = document.documentElement, a = null;
+  try { a = JSON.parse(localStorage.getItem("anchors") || "null") } catch (e) {}
+  if (!a || typeof a !== "object") return;
+  if (a.sb && typeof a.sb.w === "number" && a.sb.w >= 180 && a.sb.w <= 420) el.style.setProperty("--sbw", Math.round(a.sb.w) + "px");
+  if (a.sb && a.sb.right === true) el.setAttribute("data-sbside", "right");
+  if (typeof a.hcw === "number" && a.hcw >= 220 && a.hcw <= 520) el.style.setProperty("--hcw", Math.round(a.hcw) + "px"); })();
 </script>
 
 <div class="wrap">

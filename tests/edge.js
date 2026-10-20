@@ -102,11 +102,11 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     const at = () => p.$eval("#srchopen", e => { const r = e.getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y)] });
     const home = await at(); await p.click("#thopen"); await p.click("#anchtog");
     const m = await (await p.$(".anchmv[data-id=search]")).boundingBox();
-    await p.mouse.move(m.x + m.width / 2, m.y + m.height / 2); await p.mouse.down(); await p.mouse.move(m.x + m.width / 2 - 300, m.y + m.height / 2 - 40, {steps: 8}); await p.mouse.up();
+    await p.mouse.move(m.x + m.width / 2, m.y + m.height / 2); await p.mouse.down(); await p.mouse.move(m.x + m.width / 2 + 300, m.y + m.height / 2 - 40, {steps: 8}); await p.mouse.up();
     const moved = await at(), saved = await p.evaluate(() => JSON.parse(localStorage.getItem("anchors")));
     await p.keyboard.press("Escape"); const off = await p.evaluate(() => !document.documentElement.classList.contains("anchoring"));
     await p.reload(); await p.waitForTimeout(300); const kept = await at();
-    check(moved[0] < home[0] - 200 && saved?.search?.y >= 0 && off && kept.join() === moved.join(), `anchors: Search moves, Esc locks, kept after reload (${home} -> ${moved} -> ${kept})`);
+    check(moved[0] > home[0] + 200 && saved?.search?.y >= 0 && off && kept.join() === moved.join(), `anchors: Search moves, Esc locks, kept after reload (${home} -> ${moved} -> ${kept})`);
     await p.click("#thopen"); await p.click("#anchtog"); await p.click(".anchbar [data-reset]"); await p.waitForTimeout(300);
     check((await at()).join() === home.join() && await p.evaluate(() => localStorage.getItem("anchors")) === null, "anchors: Reset all puts Search back and forgets it");
     await p.click(".anchbar [data-lock]");
@@ -138,6 +138,36 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     const kept = await p.evaluate(() => [document.documentElement.style.getPropertyValue("--accent"), localStorage.getItem("theme")].join());
     check(live === "#123456" && undone === "" && done && kept === "#ff00aa,\"u:Edge pink\"", `anchors: Colours previews live, Undo reverts, Save keeps it as my theme, Esc = Done (${live} | ${undone} | ${kept})`);
     check(!errs.length, "anchors round 2: no JS errors " + errs.join(" | ")); await ctx.close() }
+  // round 3 (Danny 10-20): his screenshot is the default (Search on the left over the sidebar and as wide, small cog on the right
+  // in the same row); edit mode also moves the title, resizes the sidebar or puts it right, reorders sidebar sections and Home cards
+  { const {p, errs, ctx} = await page({viewport: {width: 1550, height: 1400}}); await p.goto(URL); await p.waitForTimeout(300);
+    const r = s => p.$eval(s, e => { const b = e.getBoundingClientRect(); return {x: b.x, y: b.y, w: b.width, h: b.height, r: b.right} });
+    const sr = await r("#srchopen"), nv = await r(".navcol"), cg = await r("#thopen"), hd = await r("header");
+    check(Math.abs(sr.x - nv.x) < 2 && Math.abs(sr.w - nv.w) < 3 && Math.abs(cg.r - hd.r) < 2 && Math.abs((cg.y + cg.h / 2) - (sr.y + sr.h / 2)) < 4 && cg.w < 40,
+      `default header: Search over the sidebar, small cog right in the same row (${JSON.stringify({sr, nv, cg})})`);
+    await p.keyboard.press("F1");
+    const drag = async (from, to, steps = 14) => { await p.mouse.move(from[0], from[1]); await p.mouse.down();   // a hand's pace: ~60 moves a second
+      for (let i = 1; i <= steps; i++){ await p.mouse.move(from[0] + (to[0] - from[0]) * i / steps, from[1] + (to[1] - from[1]) * i / steps); await p.waitForTimeout(16) }
+      await p.waitForTimeout(250); await p.mouse.up(); await p.waitForTimeout(300) };
+    const t0 = await r("header h1"); await drag([t0.x + 30, t0.y + 20], [t0.x - 200, t0.y + 20]);
+    const t1 = await r("header h1");
+    const s1 = await r("nav .sgh[data-cat=db]"), s2 = await r("nav .sgh[data-cat=trk]"); await drag([s1.x + 30, s1.y + 8], [s2.x + 30, s2.y + 2], 20);
+    const a = await r(".homecat[data-sec=town]"), b = await r(".homecat[data-sec=trk]"); await drag([a.x + 40, a.y + 20], [b.x + b.w / 2, b.y + b.h / 2], 20);
+    const h = await r(".anchsbw"); await drag([h.x + 4, h.y + 50], [h.x + 64, h.y + 50], 6);
+    await p.click(".anchbar [data-side]"); await p.keyboard.press("Escape");
+    const st = await p.evaluate(() => JSON.parse(localStorage.getItem("anchors")));
+    await p.reload(); await p.waitForTimeout(300);
+    const after = await p.evaluate(() => ({secs: [...document.querySelectorAll("nav .sgh")].map(e => e.dataset.cat).join(), home: [...document.querySelectorAll(".homegrid>.homecat")].map(e => e.dataset.sec).join(),
+      side: document.documentElement.dataset.sbside, sbw: getComputedStyle(document.documentElement).getPropertyValue("--sbw"), nav: document.querySelector(".navcol").getBoundingClientRect().x > innerWidth / 2 }));
+    check(t1.x < t0.x - 150 && st.title && st.secs?.[0] === "db" && st.home?.[0] === "town" && st.sb?.w > 280 && st.sb?.right && after.secs.startsWith("db,") && after.home.startsWith("town,") && after.side === "right" && after.nav && /px/.test(after.sbw),
+      `edit mode: title moves, sections + Home cards reorder, sidebar wider + on the right, all kept after reload (${JSON.stringify({st, after})})`);
+    await p.keyboard.press("F1"); await p.click(".anchbar [data-reset]"); await p.keyboard.press("Escape");
+    const back = await p.evaluate(() => [[...document.querySelectorAll("nav .sgh")].map(e => e.dataset.cat).join(), [...document.querySelectorAll(".homegrid>.homecat")].map(e => e.dataset.sec)[0], document.documentElement.dataset.sbside || "", localStorage.getItem("anchors")].join("|"));
+    check(back === "trk,char,train,world,db,town|trk||", `Reset all puts the page back (${back})`);
+    await p.goto(URL + "#"); await p.evaluate(() => localStorage.setItem("anchors", JSON.stringify({secs: ["db", "db"], home: "x", sb: {w: 9999, right: "yes"}, hcw: 5})));
+    await p.reload(); await p.waitForTimeout(300);
+    check(await p.evaluate(() => !document.documentElement.dataset.sbside && !document.documentElement.style.getPropertyValue("--sbw") && document.querySelector("nav .sgh").dataset.cat === "trk"), "edit mode: bad saved layout ignored");
+    check(!errs.length, "anchors round 3: no JS errors " + errs.join(" | ")); await ctx.close() }
 
   // 8. big tables draw in chunks (tab switches were 150-400 ms): first rows now, every row after scrolling
   { const {p, ctx} = await page(); await p.goto(URL); await open(p, "craft"); await p.waitForTimeout(100);
