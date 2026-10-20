@@ -186,3 +186,4 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Gemini formula check 2026-10-20
 - Outside handoff checked against OSMS formulas page: mastery 0.7 (not its 0.8), Lucky Seven, floor(INT/2), ammo-in-WA already right; StatDiv 300 only fires when meleeing with bow/crossbow/claw or Prone Stab, which the builder never models.
 - Fixed: `classAcc` (Where to train, EXP calc) now uses the Beginner formula below Lv 10 (golden.js). README and plan.html no longer say COT2 formulas.
+- `classAcc` truncs the base like the client (skill bonuses added after). cit.html / craft.html source notes say which numbers are launch vs COT2.

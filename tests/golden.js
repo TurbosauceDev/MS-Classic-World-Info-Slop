@@ -26,9 +26,9 @@ const path = require("path");
   check(lc.join() === [114, 15, 45, 55, true].join(),
     "damage taken Atk 100 DEF 50 Lv 30 = 114; party bonus 2/4/6 = 15/45/55%; crafting capped at Lv 8", lc);
   // Beginner accuracy below 10 (OSMS formulas page): trunc(common / 2.5 + 5) whatever the planned class. Warrior Lv 5 with
-  // the assumed stats (DEX 5, LUK 4): trunc((6 + 10 + 2.4) / 2.5 + 5) = 12; Lv 10 switches to the Warrior branch (no trunc yet)
+  // the assumed stats (DEX 5, LUK 4): trunc((6 + 10 + 2.4) / 2.5 + 5) = 12; Lv 10 switches to the Warrior branch, also truncated
   const bacc = await p.evaluate(() => [classAcc("Warrior", 5), classAcc("Bowman", 5), Math.round(classAcc("Warrior", 10) * 100) / 100]);
-  check(bacc.join() === [12, 25, 23.76].join(), "Beginner accuracy Lv 5 Warrior/Bowman = 12/25; Warrior Lv 10 = 23.76", bacc);
+  check(bacc.join() === [12, 25, 23].join(), "Beginner accuracy Lv 5 Warrior/Bowman = 12/25; Warrior Lv 10 = trunc(23.76) = 23", bacc);
   // portals to the nearest potion NPC (meowdb class guides)
   const pots = await p.evaluate(() => { const id = n => Object.keys(D.maps).find(k => D.maps[k][0].trim() === n && D.maps[k][1]);
     return ["Line 1 <Area 1>", "Transfer Area", "Tree Dungeon, Forest Up North IV", "Ant Tunnel III"].map(n => POTS[id(n)]?.[0]) });

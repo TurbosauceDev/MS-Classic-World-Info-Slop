@@ -15,10 +15,11 @@ function classAcc(cls, L){
   // below 10 everyone is a Beginner: trunc(common / 2.5 + 5) (OSMS formulas page, launch client), same assumed stats
   if (L < 10){ const dex = cls === "Bowman" ? prim : cls === "Magician" ? 4 : sec, luk = cls === "Thief" ? prim : cls === "Magician" ? sec : 4;
     return Math.trunc((dex*1.2 + L*2 + luk*0.6)/2.5 + 5) }
-  if (cls === "Warrior") return (sec*1.2 + L*2 + 2.4)/2.5 + 10 + (L >= 15 ? 20 : 0);
-  if (cls === "Bowman")  return (prim*1.2 + L*2 + 2.4)/4.8 + 20;
-  if (cls === "Thief")   return (sec*1.2 + L*2 + prim*0.6)/4 + 15 + (L >= 15 ? 15 : 0);
-  return (prim*1.2 + L*2 + sec*0.6)/5.1 + 20;
+  // client truncs the base before skill bonuses (OSMS formulas page); +20 / +15 = maxed Precise Strikes / Nimble Body
+  if (cls === "Warrior") return Math.trunc((sec*1.2 + L*2 + 2.4)/2.5 + 10) + (L >= 15 ? 20 : 0);
+  if (cls === "Bowman")  return Math.trunc((prim*1.2 + L*2 + 2.4)/4.8 + 20);
+  if (cls === "Thief")   return Math.trunc((sec*1.2 + L*2 + prim*0.6)/4 + 15) + (L >= 15 ? 15 : 0);
+  return Math.trunc((prim*1.2 + L*2 + sec*0.6)/5.1 + 20);
 }
 
 // Max HP / MP from level and job (meowdb HP/MP guide, COT2-measured): 50 HP / 5 MP at level 1, Beginner +16/+12 a level,
