@@ -38,6 +38,8 @@ input[type=number]{width:96px}
 table{border-collapse:collapse;width:100%;font-size:15px}
 th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
 th{font:600 12px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--bg);position:sticky;top:0;white-space:nowrap}
+/* wide tables: multi-word headers wrap so the table fits its card at 1300 px (tests/boxgaps.js) */
+.thwrap th{white-space:normal}.thwrap th,.thwrap td{padding-inline:10px}
 tr:last-child td{border-bottom:0}
 .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .mono{font-family:var(--f-mono);font-size:14px}
@@ -45,6 +47,7 @@ tr:last-child td{border-bottom:0}
 .sub{color:var(--muted);font-size:13.5px}
 .bar{position:relative;height:8px;width:90px;background:var(--line);border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:8px}
 .bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:4px}
+.bar.relbar{display:block;width:100%;max-width:90px;height:4px;margin:4px 0 0 auto}
 .pill{display:inline-block;font:600 12px var(--f-body);padding:2px 7px;border-radius:999px;white-space:nowrap}
 .p-good{background:var(--leaf-soft);color:var(--leaf)}
 .p-warn{background:var(--warn-soft);color:var(--warn)}

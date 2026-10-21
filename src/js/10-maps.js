@@ -53,8 +53,9 @@ function mobHits(mobId, L, eva){
   return cand + (1 - cand) * 0.08;
 }
 const DANGER = [[0.5, "Lethal", "p-bad"], [0.25, "Danger", "p-bad"], [0.1, "Caution", "p-warn"], [0, "Safe", "p-good"]];
-const dangerPill = o => { const f = o.f ?? o, d = DANGER.find(x => f >= x[0]), h = o.hit != null ? ` · hits you ${Math.round(o.hit * 100)}%` : "";
-  return `<span class="pill ${d[2]}" title="One hit from its hardest hitter takes about ${Math.round(f * 100)}% of your Max HP (no armor counted)${o.hit != null ? `; it lands about ${Math.round(o.hit * 100)}% of the time against your avoid` : ""}">${d[1]} ${Math.round(f * 100)}%${h}</span>` };
+// stack: hit chance on its own line under the pill (Where to train, so the table fits its card at 1300 px)
+const dangerPill = (o, stack) => { const f = o.f ?? o, d = DANGER.find(x => f >= x[0]), hp = o.hit != null ? Math.round(o.hit * 100) : null;
+  return `<span class="pill ${d[2]}" title="One hit from its hardest hitter takes about ${Math.round(f * 100)}% of your Max HP (no armor counted)${hp != null ? `; it lands about ${hp}% of the time against your avoid` : ""}">${d[1]} ${Math.round(f * 100)}%${hp != null && !stack ? ` · hits you ${hp}%` : ""}</span>${hp != null && stack ? `<div class="sub">hits you ${hp}%</div>` : ""}` };
 // a character's defensive numbers when only class and level are known (Where to train): no skills, no armor, AP as classAcc assumes
 const defaultDef = (cls, L) => { const prim = 5 * L + 20 - L - 8, luk = cls === "Thief" ? prim : MAGIC.has(cls) ? L : 4, dex = cls === "Bowman" ? prim : cls === "Magician" || MAGIC.has(cls) ? 4 : L;
   return {hp: hpmpAt(cls, L)[0], wdef: Math.floor((cls === "Warrior" ? prim : cls === "Bowman" ? L : 4) / 4), mdef: Math.floor((MAGIC.has(cls) ? prim : 4) / 4), mult: 1, mmult: 1,
@@ -382,16 +383,15 @@ function rankMaps(){
   const top = rows.slice(0, 15), best = Math.max(...top.map(r => r.rate), 1e-9), need = D.exp[L];
   $("#maprows").innerHTML = top.length ? top.map((r,i) => `<tr>
     <td class="num">${i+1}</td>
-    <td>${mapLink(r.id, r.name)}${r.open ? "" : ' <span class="pill p-warn">opens later</span>'}${area ? `<div class="sub">hits ~${r.hits.toFixed(1)} per cast</div>` : ""}${frugal && mapPots(r.id).length ? `<div class="sub">drops ${mapPots(r.id).map(p => `<span class="itname" tabindex="0" data-item="${p}">${esc(D.items[p]?.n || p)}</span>`).join(", ")}</div>` : ""}</td>
+    <td>${mapLink(r.id, r.name)}${r.open ? "" : ' <span class="pill p-warn">opens later</span>'}${area ? `<div class="sub">hits ~${r.hits.toFixed(1)} per cast</div>` : ""}<div class="sub">${esc(potsText(r.id))}</div>${frugal && mapPots(r.id).length ? `<div class="sub">drops ${mapPots(r.id).map(p => `<span class="itname" tabindex="0" data-item="${p}">${esc(D.items[p]?.n || p)}</span>`).join(", ")}</div>` : ""}</td>
     <td class="sub">${mobList(r.mobs)}${kbpHtml(r.id, L, R, acc, cls)}</td>
     <td class="num">${r.n}</td><td class="num">${r.avg.toFixed(1)}</td>
     <td class="num">${r.hit < .9 ? `<span class="pill p-warn">${Math.round(r.hit*100)}%</span>` : Math.round(r.hit*100) + "%"}${r.hit < 0.995 ? (n => n ? `<div class="sub" title="Accuracy to hit every monster here 100% of the time">+${n} Acc → 100%</div>` : "")(accNeed(r.id, L, acc)) : ""}</td>
-    <td>${dangerPill(r.dng || mapDanger(r.id, L, def))}</td><td class="sub">${esc(potsText(r.id))}</td>
-    <td><span class="bar"><i style="width:${Math.round(100*r.rate/best)}%"></i></span><span class="mono">${Math.round(100*r.rate/best)}</span></td>
-    <td class="num">${fmt(r.rate*3600)}${(pe => pe ? peLine(pe, party) : "")(r.pe || playersExp(r.id, L, party))}${btLine(bestTime(r.id))}</td>
+    <td>${dangerPill(r.dng || mapDanger(r.id, L, def), 1)}</td>
+    <td class="num">${fmt(r.rate*3600)}<span class="bar relbar" title="${Math.round(100*r.rate/best)}% of the best map's EXP/hr"><i style="width:${Math.round(100*r.rate/best)}%"></i></span>${(pe => pe ? peLine(pe, party) : "")(r.pe || playersExp(r.id, L, party))}${btLine(bestTime(r.id))}</td>
     <td class="num">${fmt(r.meso*3600)}${frugal ? `<div class="sub" title="Mesos ${fmt(r.meso * 3600)} + loot sold ${fmt(r.loot)} − ${r.real != null ? `potions/food/ammo players really used ${fmt(r.real)}` : `upkeep ${fmt(r.up)} − getting hit ${fmt(r.hitc)}`} per hr">net <b${r.net > 0 ? "" : ' style="color:var(--bad)"'}>${r.net > 0 ? "+" : ""}${fmt(r.net)}</b>${r.real != null ? " (players' costs)" : ""}</div>` : cost ? `<div class="sub">net ${fmt(r.meso*3600 - cost.mesoHr * (r.att ?? 1))}</div>` : ""}</td>
     <td class="num">${need ? (need/(r.rate*3600)).toFixed(1) : "–"}</td></tr>`).join("")
-    : `<tr><td colspan="12" class="empty">${byPlayers ? `No map has runs from 3+ grind tracker players or parties within 5 levels of ${L} (${party > 1 ? "party" : "solo"}) yet.` : "No map fits this level and class. Try a different level."}</td></tr>`;
+    : `<tr><td colspan="10" class="empty">${byPlayers ? `No map has runs from 3+ grind tracker players or parties within 5 levels of ${L} (${party > 1 ? "party" : "solo"}) yet.` : "No map fits this level and class. Try a different level."}</td></tr>`;
   const how = basic ? `basic attacks (100%, one hit), ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${esc(fb.weapon || "a default weapon")}'s speed`
     : `${esc(fb.skill || "a basic attack")}${fb.pct && fb.pct !== 100 ? ` (${fb.pct}%${fb.hits > 1 ? ` × ${fb.hits}` : ""})` : ""}, ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${fb.magic ? "spell speed" : `its weapon's speed (${esc(fb.weapon || "?")})`}`;
   const note1 = `Damage: <b>${fmt(Math.round(dps))}</b>/s ${src === "builder" ? "from your Character Builder setup" : src === "you" ? `from your ${magIn ? "Magic and INT" : "Attack range"} with ${how}, from the default build at your level` : src === "default" ? `from the Character Builder's default build at level ${L} (${esc(fb.weapon || "")}, ${basic ? "basic attacks" : esc(fb.skill || "")}); type your stat-window ${magIn ? "Magic and INT" : "Attack range"} for your own` : `a rough guess (20 × level)${basic && fb.magic ? "; type your stat-window Attack range for wand or staff hits" : ""}`}. `

@@ -10,7 +10,7 @@
           <li>Maps need 8+ monsters; bosses are left out. Hit below 90% is flagged.</li>
           <li><b>Area attacks by default:</b> Slash Blast, Arrow Bomb, Thunder Bolt, Poison Breath (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, with the map's mob capacity alive: an estimate. Iron Arrow loses 20% per extra monster. Double Shot and Holy Arrow split a fixed number of arrows, so they count as single target. Thieves, 1st job Bowmen and 1st job Magicians have no area attack.</li>
           <li><b>Danger:</b> one hit from the map's hardest hitter as a share of your Max HP: its touch against your W.DEF, or for Tauromacis and Taurospear (the only launch monsters with a magic attack) the magic attack against your M.DEF (meowdb's labels: under 10% Safe, 10–24% Caution, 25–49% Danger, 50%+ Lethal). Armor isn't counted, so it reads a little high. "Hits you" is the chance its attack lands against your avoid (meowdb's formula).</li>
-          <li><b>To potions:</b> portals to the nearest NPC selling potions (meowdb's shop list). A far refill eats into the real EXP/hr.</li>
+          <li><b>Potions</b> (under the map name): portals to the nearest NPC selling potions (meowdb's shop list). A far refill eats into the real EXP/hr.</li>
           <li><b>Mesos/hr:</b> monster meso drops at that kill speed. Per kill: floor(2.1 × monster level) + 3 mesos, ±10%, dropped on about 67% of kills (OSMS formulas page, fitted to in-game captures). With a Character Builder setup, "net" takes off your potions and ammo.</li>
           <li><b>Party:</b> your share of the map plus the measured party bonus (+10/20/30% at 2/3/4+). Spawns grow 5% per extra player up to 100% at 6 (meowdb: not fully confirmed). Assumes equal players.</li>
         </ul>
@@ -69,8 +69,8 @@
     <button class="btn" id="tshare" type="button" style="align-self:flex-end">Copy link</button>
   </div>
   <div class="note" id="mapnote"></div>
-  <div class="tblwrap"><table>
-    <thead><tr><th>#</th><th>Map</th><th>Monsters</th><th class="num">Mobs</th><th class="num">Avg lvl</th><th class="num">Hit</th><th>Danger</th><th>To potions</th><th>Relative</th><th class="num">Est. EXP/hr</th><th class="num">Mesos/hr</th><th class="num">Hrs / level</th></tr></thead>
+  <div class="tblwrap thwrap"><table>
+    <thead><tr><th>#</th><th>Map</th><th>Monsters</th><th class="num">Mobs</th><th class="num">Avg lvl</th><th class="num">Hit</th><th>Danger</th><th class="num">Est. EXP/hr</th><th class="num">Mesos/hr</th><th class="num">Hrs / level</th></tr></thead>
     <tbody id="maprows"></tbody>
   </table></div>
   <h2>Bosses and timed spawns</h2>

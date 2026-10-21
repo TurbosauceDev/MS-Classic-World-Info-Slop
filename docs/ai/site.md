@@ -294,3 +294,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## mesoindex.com prices + listings 2026-10-21
 - `scripts/fetch_mesoindex.py` (build_data.py step `mesoindex`, test `tests/mesoindex_test.py`) -> `data/sources/mesoindex.json` -> `D.mi` (`/api/catalog` one call, real item ids in `game`; `/api/item?game=<id>` per-item shop slots with channel, room, shop, title). Workflow `mesoindex-poll.yml` every 3 h; listing calls only where the catalog row moved, busiest first, 15 min budget per run (~700 calls; the next run does the rest). UI `src/js/14-mesoindex.js`: `PRICE_SRC` row + `LIST_SRC` shops seen in the last day. `pwPrice` unchanged.
 - Traps: the HTML page is behind Vercel's checkpoint (never bypass), `/api/*` isn't. Catalog `id` is meowdb's id, use `game`. `npc` = game-file NPC sell price. `room` is null for shops outside the FM (map name kept instead). `trend` baseline unknown, not shown. Prices are mostly cozy.markets scans (`src` counts).
+
+## Tables fit at 1300 px 2026-10-21
+- smoke.js now checks every page at 1300 px: no `.tblwrap` may scroll sideways (Where to train hid EXP/hr, Mesos/hr, Hrs/level).
+- Where to train: potions line under the map name, `dangerPill(o, 1)` puts "hits you N%" under the pill, relative bar under EXP/hr. `.thwrap` lets headers wrap + 10px cell padding (Where to train, Items, Citizenship).
+- Trap: a new column on those tables can push them past 910 px again; the smoke check will say which page. Monster pages' best-maps table (next to the minimap) still scrolls; not covered.

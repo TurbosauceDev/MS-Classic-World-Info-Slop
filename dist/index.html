@@ -46,6 +46,8 @@ input[type=number]{width:96px}
 table{border-collapse:collapse;width:100%;font-size:15px}
 th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
 th{font:600 12px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--bg);position:sticky;top:0;white-space:nowrap}
+/* wide tables: multi-word headers wrap so the table fits its card at 1300 px (tests/boxgaps.js) */
+.thwrap th{white-space:normal}.thwrap th,.thwrap td{padding-inline:10px}
 tr:last-child td{border-bottom:0}
 .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .mono{font-family:var(--f-mono);font-size:14px}
@@ -53,6 +55,7 @@ tr:last-child td{border-bottom:0}
 .sub{color:var(--muted);font-size:13.5px}
 .bar{position:relative;height:8px;width:90px;background:var(--line);border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:8px}
 .bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:4px}
+.bar.relbar{display:block;width:100%;max-width:90px;height:4px;margin:4px 0 0 auto}
 .pill{display:inline-block;font:600 12px var(--f-body);padding:2px 7px;border-radius:999px;white-space:nowrap}
 .p-good{background:var(--leaf-soft);color:var(--leaf)}
 .p-warn{background:var(--warn-soft);color:var(--warn)}
@@ -1458,7 +1461,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
           <li>Maps need 8+ monsters; bosses are left out. Hit below 90% is flagged.</li>
           <li><b>Area attacks by default:</b> Slash Blast, Arrow Bomb, Thunder Bolt, Poison Breath (or your Character Builder skill). Hits per cast come from each map's spawn points within the skill's reach, with the map's mob capacity alive: an estimate. Iron Arrow loses 20% per extra monster. Double Shot and Holy Arrow split a fixed number of arrows, so they count as single target. Thieves, 1st job Bowmen and 1st job Magicians have no area attack.</li>
           <li><b>Danger:</b> one hit from the map's hardest hitter as a share of your Max HP: its touch against your W.DEF, or for Tauromacis and Taurospear (the only launch monsters with a magic attack) the magic attack against your M.DEF (meowdb's labels: under 10% Safe, 10–24% Caution, 25–49% Danger, 50%+ Lethal). Armor isn't counted, so it reads a little high. "Hits you" is the chance its attack lands against your avoid (meowdb's formula).</li>
-          <li><b>To potions:</b> portals to the nearest NPC selling potions (meowdb's shop list). A far refill eats into the real EXP/hr.</li>
+          <li><b>Potions</b> (under the map name): portals to the nearest NPC selling potions (meowdb's shop list). A far refill eats into the real EXP/hr.</li>
           <li><b>Mesos/hr:</b> monster meso drops at that kill speed. Per kill: floor(2.1 × monster level) + 3 mesos, ±10%, dropped on about 67% of kills (OSMS formulas page, fitted to in-game captures). With a Character Builder setup, "net" takes off your potions and ammo.</li>
           <li><b>Party:</b> your share of the map plus the measured party bonus (+10/20/30% at 2/3/4+). Spawns grow 5% per extra player up to 100% at 6 (meowdb: not fully confirmed). Assumes equal players.</li>
         </ul>
@@ -1517,8 +1520,8 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button class="btn" id="tshare" type="button" style="align-self:flex-end">Copy link</button>
   </div>
   <div class="note" id="mapnote"></div>
-  <div class="tblwrap"><table>
-    <thead><tr><th>#</th><th>Map</th><th>Monsters</th><th class="num">Mobs</th><th class="num">Avg lvl</th><th class="num">Hit</th><th>Danger</th><th>To potions</th><th>Relative</th><th class="num">Est. EXP/hr</th><th class="num">Mesos/hr</th><th class="num">Hrs / level</th></tr></thead>
+  <div class="tblwrap thwrap"><table>
+    <thead><tr><th>#</th><th>Map</th><th>Monsters</th><th class="num">Mobs</th><th class="num">Avg lvl</th><th class="num">Hit</th><th>Danger</th><th class="num">Est. EXP/hr</th><th class="num">Mesos/hr</th><th class="num">Hrs / level</th></tr></thead>
     <tbody id="maprows"></tbody>
   </table></div>
   <h2>Bosses and timed spawns</h2>
@@ -1924,7 +1927,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
     <button class="btn" id="itreset" type="button" style="align-self:flex-end">Reset filters</button>
     <span class="pill p-hot" id="itcount" style="align-self:center"></span>
   </div>
-  <div class="tblwrap"><table>
+  <div class="tblwrap thwrap"><table>
     <thead id="ithead"><tr><th data-k="name"><button>Item</button></th><th data-k="type"><button>Type</button></th><th class="num" data-k="lv"><button>Lv</button></th><th>Job</th><th>Stats</th><th class="num" data-k="price"><button>NPC pays</button></th><th class="num" data-k="pw" title="Median player-shop sale price (meso.watch)"><button>Players</button></th><th class="num" data-k="trend" title="Recent player-shop price trend (meso.watch). Sort to see the biggest movers."><button>Trend</button></th><th>Get it from</th></tr></thead>
     <tbody id="itrows"></tbody>
   </table></div>
@@ -2077,28 +2080,28 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 
   <h2>Grades</h2>
   <p class="note">Contribution is the total you need for that grade. Daily and weekly amounts come from the game files; contribution comes from the launch client (OSMS formulas page); level gates (unchanged at launch per OSMS) and discounts from meowdb's citizenship page; shop prices from meowdb's NPC shop list (re-read at launch except Max's store, still COT2).</p>
-  <div class="tblwrap"><table>
+  <div class="tblwrap thwrap"><table>
     <thead><tr><th class="num">#</th><th>Grade</th><th class="num">Level</th><th class="num">Contribution</th><th class="num">Shop discount</th><th class="num">Storage</th><th class="num">Per daily</th><th class="num">Best weekly</th><th>Unlocks</th></tr></thead>
     <tbody id="cgrades"></tbody>
   </table></div>
 
   <h2>Town story quests</h2>
   <p class="note">One-time quests that unlock at grade 2 and grade 4. Hover a name for the full quest.</p>
-  <div class="tblwrap"><table>
+  <div class="tblwrap thwrap"><table>
     <thead><tr><th class="num">Lv</th><th class="num">Grade</th><th>Quest</th><th>Asks for</th><th class="num">EXP</th><th class="num">Mesos</th><th class="num">Contribution</th><th>Item reward</th></tr></thead>
     <tbody id="cstory"></tbody>
   </table></div>
 
   <h2>Daily board</h2>
   <p class="note" id="cdailynote"></p>
-  <div class="tblwrap"><table>
+  <div class="tblwrap thwrap"><table>
     <thead><tr><th class="num">Grade</th><th>Resident</th><th>First time</th><th>Repeat (daily)</th></tr></thead>
     <tbody id="cdaily"></tbody>
   </table></div>
 
   <h2>Weekly donations</h2>
   <p class="note">Bring 100 of one monster drop. Higher grades unlock bigger donations. The board offers one per week from the pool your grade can do.</p>
-  <div class="tblwrap"><table>
+  <div class="tblwrap thwrap"><table>
     <thead><tr><th class="num">Grade</th><th>Donate</th><th class="num">EXP</th><th class="num">Mesos</th><th class="num">Contribution</th><th>Item reward</th></tr></thead>
     <tbody id="cweekly"></tbody>
   </table></div>
@@ -2413,6 +2416,9 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   </details>
 
   <div class="changelog">
+    <div class="card" data-t="2026-10-21T20:06:28Z"><div class="cardhead"><h3><span class="ver">v0.13.7</span> Oct 21, 2026 · Where to train fits on a normal screen</h3></div>
+      <p>At desktop width the Where to train table no longer hides <b>Est. EXP/hr</b>, <b>Mesos/hr</b> and <b>Hrs / level</b> off to the side. The potions trip moved under the map name, the hit chance sits under the danger pill and the relative bar sits under EXP/hr. Items and Citizenship tables also fit their cards now.</p>
+    </div>
     <div class="card" data-t="2026-10-21T19:43:52Z"><div class="cardhead"><h3><span class="ver">v0.13.6</span> Oct 21, 2026 · mesoindex.com prices + shops</h3></div>
       <p>Item pages get a <b>mesoindex.com</b> row in <b>Prices</b> (its usual price for about 1,000 items, the range half of sales fell in, cheapest ask, sales in the last 7 days), and <b>Where to buy</b> now lists mesoindex shops seen in the last day with channel, FM room (or the map, for shops outside the FM) and seller. mesoindex reads Free Market shops from players' scans (mostly via cozy.markets). Used with the owner's OK.</p>
     </div>
@@ -2904,7 +2910,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-21T19:44:00Z" data-ver="0.13.6">Site version: v0.13.6 · built Oct 21, 2026 · 19:44 UTC</p>
+  <p class="sitever" data-built="2026-10-21T20:06:37Z" data-ver="0.13.7">Site version: v0.13.7 · built Oct 21, 2026 · 20:06 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -3209,8 +3215,9 @@ function mobHits(mobId, L, eva){
   return cand + (1 - cand) * 0.08;
 }
 const DANGER = [[0.5, "Lethal", "p-bad"], [0.25, "Danger", "p-bad"], [0.1, "Caution", "p-warn"], [0, "Safe", "p-good"]];
-const dangerPill = o => { const f = o.f ?? o, d = DANGER.find(x => f >= x[0]), h = o.hit != null ? ` · hits you ${Math.round(o.hit * 100)}%` : "";
-  return `<span class="pill ${d[2]}" title="One hit from its hardest hitter takes about ${Math.round(f * 100)}% of your Max HP (no armor counted)${o.hit != null ? `; it lands about ${Math.round(o.hit * 100)}% of the time against your avoid` : ""}">${d[1]} ${Math.round(f * 100)}%${h}</span>` };
+// stack: hit chance on its own line under the pill (Where to train, so the table fits its card at 1300 px)
+const dangerPill = (o, stack) => { const f = o.f ?? o, d = DANGER.find(x => f >= x[0]), hp = o.hit != null ? Math.round(o.hit * 100) : null;
+  return `<span class="pill ${d[2]}" title="One hit from its hardest hitter takes about ${Math.round(f * 100)}% of your Max HP (no armor counted)${hp != null ? `; it lands about ${hp}% of the time against your avoid` : ""}">${d[1]} ${Math.round(f * 100)}%${hp != null && !stack ? ` · hits you ${hp}%` : ""}</span>${hp != null && stack ? `<div class="sub">hits you ${hp}%</div>` : ""}` };
 // a character's defensive numbers when only class and level are known (Where to train): no skills, no armor, AP as classAcc assumes
 const defaultDef = (cls, L) => { const prim = 5 * L + 20 - L - 8, luk = cls === "Thief" ? prim : MAGIC.has(cls) ? L : 4, dex = cls === "Bowman" ? prim : cls === "Magician" || MAGIC.has(cls) ? 4 : L;
   return {hp: hpmpAt(cls, L)[0], wdef: Math.floor((cls === "Warrior" ? prim : cls === "Bowman" ? L : 4) / 4), mdef: Math.floor((MAGIC.has(cls) ? prim : 4) / 4), mult: 1, mmult: 1,
@@ -3538,16 +3545,15 @@ function rankMaps(){
   const top = rows.slice(0, 15), best = Math.max(...top.map(r => r.rate), 1e-9), need = D.exp[L];
   $("#maprows").innerHTML = top.length ? top.map((r,i) => `<tr>
     <td class="num">${i+1}</td>
-    <td>${mapLink(r.id, r.name)}${r.open ? "" : ' <span class="pill p-warn">opens later</span>'}${area ? `<div class="sub">hits ~${r.hits.toFixed(1)} per cast</div>` : ""}${frugal && mapPots(r.id).length ? `<div class="sub">drops ${mapPots(r.id).map(p => `<span class="itname" tabindex="0" data-item="${p}">${esc(D.items[p]?.n || p)}</span>`).join(", ")}</div>` : ""}</td>
+    <td>${mapLink(r.id, r.name)}${r.open ? "" : ' <span class="pill p-warn">opens later</span>'}${area ? `<div class="sub">hits ~${r.hits.toFixed(1)} per cast</div>` : ""}<div class="sub">${esc(potsText(r.id))}</div>${frugal && mapPots(r.id).length ? `<div class="sub">drops ${mapPots(r.id).map(p => `<span class="itname" tabindex="0" data-item="${p}">${esc(D.items[p]?.n || p)}</span>`).join(", ")}</div>` : ""}</td>
     <td class="sub">${mobList(r.mobs)}${kbpHtml(r.id, L, R, acc, cls)}</td>
     <td class="num">${r.n}</td><td class="num">${r.avg.toFixed(1)}</td>
     <td class="num">${r.hit < .9 ? `<span class="pill p-warn">${Math.round(r.hit*100)}%</span>` : Math.round(r.hit*100) + "%"}${r.hit < 0.995 ? (n => n ? `<div class="sub" title="Accuracy to hit every monster here 100% of the time">+${n} Acc → 100%</div>` : "")(accNeed(r.id, L, acc)) : ""}</td>
-    <td>${dangerPill(r.dng || mapDanger(r.id, L, def))}</td><td class="sub">${esc(potsText(r.id))}</td>
-    <td><span class="bar"><i style="width:${Math.round(100*r.rate/best)}%"></i></span><span class="mono">${Math.round(100*r.rate/best)}</span></td>
-    <td class="num">${fmt(r.rate*3600)}${(pe => pe ? peLine(pe, party) : "")(r.pe || playersExp(r.id, L, party))}${btLine(bestTime(r.id))}</td>
+    <td>${dangerPill(r.dng || mapDanger(r.id, L, def), 1)}</td>
+    <td class="num">${fmt(r.rate*3600)}<span class="bar relbar" title="${Math.round(100*r.rate/best)}% of the best map's EXP/hr"><i style="width:${Math.round(100*r.rate/best)}%"></i></span>${(pe => pe ? peLine(pe, party) : "")(r.pe || playersExp(r.id, L, party))}${btLine(bestTime(r.id))}</td>
     <td class="num">${fmt(r.meso*3600)}${frugal ? `<div class="sub" title="Mesos ${fmt(r.meso * 3600)} + loot sold ${fmt(r.loot)} − ${r.real != null ? `potions/food/ammo players really used ${fmt(r.real)}` : `upkeep ${fmt(r.up)} − getting hit ${fmt(r.hitc)}`} per hr">net <b${r.net > 0 ? "" : ' style="color:var(--bad)"'}>${r.net > 0 ? "+" : ""}${fmt(r.net)}</b>${r.real != null ? " (players' costs)" : ""}</div>` : cost ? `<div class="sub">net ${fmt(r.meso*3600 - cost.mesoHr * (r.att ?? 1))}</div>` : ""}</td>
     <td class="num">${need ? (need/(r.rate*3600)).toFixed(1) : "–"}</td></tr>`).join("")
-    : `<tr><td colspan="12" class="empty">${byPlayers ? `No map has runs from 3+ grind tracker players or parties within 5 levels of ${L} (${party > 1 ? "party" : "solo"}) yet.` : "No map fits this level and class. Try a different level."}</td></tr>`;
+    : `<tr><td colspan="10" class="empty">${byPlayers ? `No map has runs from 3+ grind tracker players or parties within 5 levels of ${L} (${party > 1 ? "party" : "solo"}) yet.` : "No map fits this level and class. Try a different level."}</td></tr>`;
   const how = basic ? `basic attacks (100%, one hit), ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${esc(fb.weapon || "a default weapon")}'s speed`
     : `${esc(fb.skill || "a basic attack")}${fb.pct && fb.pct !== 100 ? ` (${fb.pct}%${fb.hits > 1 ? ` × ${fb.hits}` : ""})` : ""}, ${fb.crit || 0}% crit for +${fb.critDmg || 0}% and ${fb.magic ? "spell speed" : `its weapon's speed (${esc(fb.weapon || "?")})`}`;
   const note1 = `Damage: <b>${fmt(Math.round(dps))}</b>/s ${src === "builder" ? "from your Character Builder setup" : src === "you" ? `from your ${magIn ? "Magic and INT" : "Attack range"} with ${how}, from the default build at your level` : src === "default" ? `from the Character Builder's default build at level ${L} (${esc(fb.weapon || "")}, ${basic ? "basic attacks" : esc(fb.skill || "")}); type your stat-window ${magIn ? "Magic and INT" : "Attack range"} for your own` : `a rough guess (20 × level)${basic && fb.magic ? "; type your stat-window Attack range for wand or staff hits" : ""}`}. `

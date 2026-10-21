@@ -302,6 +302,14 @@ const boxGaps = require("./boxgaps");
     check(slime === "#111a14,dark" && pink === "#ff00aa,light" && kept === "#ff00aa" && def === "," && /isn't a theme/.test(bad),
       `theme picker (${slime} | ${pink} | ${kept} | ${def})`);
   }
+  // every page at 1300px: no table scrolls sideways inside its card (Danny 10-21, second audit #2: Where to train hid EXP/hr)
+  await p.setViewportSize({width: 1300, height: 900});
+  for (const [id, cat] of await p.$$eval(".subs button[id^=t-]", bs => bs.map(b => [b.id, b.dataset.cat]))){
+    if (cat === "more") await p.click(`.sitefoot [data-foot="${id.slice(2)}"]`); else await tab("#" + id); await p.waitForTimeout(200);
+    const wide = await p.evaluate(() => [...document.querySelectorAll(".tblwrap")].filter(w => w.offsetParent && w.scrollWidth > w.clientWidth + 1)
+      .map(w => (w.closest("[id]") || {}).id + " " + w.scrollWidth + "/" + w.clientWidth));
+    check(!wide.length, `${id} at 1300px: tables fit their card${wide.length ? " (" + wide.slice(0, 3).join(" | ") + ")" : ""}`);
+  }
   // every page at phone width: no sideways scroll, no NaN/undefined text
   await p.setViewportSize({width: 390, height: 800});
   for (const [id, cat] of await p.$$eval(".subs button[id^=t-]", bs => bs.map(b => [b.id, b.dataset.cat]))){
