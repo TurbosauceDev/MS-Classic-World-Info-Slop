@@ -18,3 +18,15 @@ for p in ["/api/me", "/api/v1/owl/status", "/api/prices/recent?limit=5", "/api/p
     except urllib.error.HTTPError as e:   # error code/message are the site's own text, safe to print
         b = json.loads(e.read() or b"{}") if e.code < 500 else {}; print(p, e.code, b.get("code"), str(b.get("error"))[:160])
     except Exception as e: print(p, "failed:", type(e).__name__)
+# where classicmarket's own prices come from (source names, not values), and how many items it has
+import collections
+def get(p):
+    req = urllib.request.Request("https://classicmarket.kr" + p, headers={"Cookie": CK, "Accept": "application/json", "User-Agent": "ms-classic-world-info site build (price summary)"})
+    with urllib.request.urlopen(req, timeout=30) as r: return json.load(r)
+try:
+    j = get("/api/prices/recent?limit=100")
+    print("recent total:", j.get("total"), "| sources:", collections.Counter(x.get("source") for x in j["items"]), "| sourceUrls:", collections.Counter(x.get("sourceUrl") for x in j["items"]))
+    print("days:", collections.Counter(x.get("day") for x in j["items"]).most_common(3), "| estimated flags:", "n/a")
+    g = get("/api/prices/now?ids=2040801,4010001,2000002,1082002")
+    print("now (public item prices, to compare with meso.watch):", [(x["itemId"], x["source"], x["day"], x["median"], x["low"], x["high"], x["sold"], x["sample"], x["forSale"]) for x in g["prices"]])
+except Exception as e: print("sources check failed:", type(e).__name__, e)
