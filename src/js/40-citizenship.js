@@ -1,7 +1,7 @@
 /* ---------------- citizenship ---------------- */
 (() => {
 // meowdb.com/msclassic/citizenship (COT2); contribution needed per grade replaced with the launch client's (OSMS formulas page,
-// Tables & Progression; level gates unchanged)
+// Tables & Progression; level gates unchanged). SHOPS prices: meowdb NPC shop list, launch re-read 2026-10-21 (tests/meowdb_test.py)
 const GRADES = [["Traveler",12,"from quest",5,5,95],["Visitor",17,1500,7,10,90],["Helpful Stranger",22,3500,9,15,85],
   ["Recognized Guest",27,6000,11,20,80],["Town Resident",32,9000,13,25,75],["Trusted Neighbor",37,12500,15,30,70],
   ["Distinguished Citizen",42,16500,17,35,65],["Town Patron",47,21000,19,40,60],["Guardian of the Village",52,26000,21,45,55],
@@ -10,12 +10,12 @@ const GRADES = [["Traveler",12,"from quest",5,5,95],["Visitor",17,1500,7,10,90],
 const SHOPS = {
   "Henesys": [
     ["Town General Store","Raymond",[["Fried Chicken",60,1,""],["Hot Dog",180,1,""],["Salad",220,2,""],["Pizza",252,4,""],["Hamburger",350,5,""],["Mrs. Ming Ming's Stew",480,6,"300 HP + 300 MP"],["Orange Juice",540,6,"450 MP"],["Supreme Sniper Potion",600,1,"Accuracy +7, 15 min"],["Sharpness Potion",750,3,"Crit rate +3%, 15 min"],["Fat Sausage",800,7,"800 HP"],["Unagi",1000,8,""],["Grape Juice",1260,9,"550 MP"],["Elixir",3000,10,"35% HP + MP"],["Orange Mushroom Daydream",500,10,"Untradeable"],["Bronze Arrows for Bows",2,3,"ATK +1"],["Bronze Arrows for Crossbows",2,3,"ATK +1"]]],
-    ["Town Furnishings","Oak",[["Henesys Resident's Chair",10000,2,"+20 HP / 5 MP per 10 s seated"]]],
-    ["Town Scroll Shop (100% scrolls)","Flint",[["Earring Crit. Damage Scroll: Lesser",50000,3,""],["Topwear DEF Scroll: Lesser",25000,5,"W.DEF +2"],["Bottomwear DEF Scroll: Lesser",25000,5,"W.DEF +2"],["Overall Armor DEX Scroll: Lesser",35000,7,""],["Overall Armor STR Scroll: Lesser",35000,7,""],["Gloves Attack Scroll: Lesser",50000,9,""],["Gloves Magic Attack Scroll: Lesser",50000,9,""]]]],
+    ["Town Furnishings","Oak",[["Henesys Resident's Chair",500000,2,"+20 HP / 5 MP per 10 s seated"]]],
+    ["Town Scroll Shop (100% scrolls)","Flint",[["Earring Crit. Damage Scroll: Lesser",40000,3,""],["Topwear DEF Scroll: Lesser",20000,5,"W.DEF +2"],["Bottomwear DEF Scroll: Lesser",20000,5,"W.DEF +2"],["Overall Armor DEX Scroll: Lesser",40000,7,""],["Overall Armor STR Scroll: Lesser",40000,7,""],["Gloves Attack Scroll: Lesser",40000,9,""],["Gloves Magic Attack Scroll: Lesser",40000,9,""]]]],
   "Kerning City": [
     ["City General Store","Max",[["Fried Chicken",60,1,""],["Dried Squid",180,1,""],["Salad",220,2,"200 MP"],["Pizza",252,4,""],["Hamburger",350,5,""],["Andre's Seafood Soup",480,6,"300 HP + 300 MP"],["Orange Juice",540,6,""],["Supreme Dexterity Potion",600,1,"Avoid +7, 15 min"],["Destructive Potion",750,3,"Crit damage +3%, 15 min"],["Fat Sausage",800,7,""],["Wolbi Throwing Stars",1000,3,"ATK +17"],["Unagi",1000,8,""],["Grape Juice",1260,9,""],["Elixir",3000,10,"35% HP + MP"],["Ribbon Pig Daydream",500,10,"Untradeable"]]],
-    ["City Furnishings","Weston",[["Kerning City Resident's Chair",10000,2,"+20 HP / 5 MP per 10 s seated"]]],
-    ["City Scroll Shop (100% scrolls)","Ben",[["Earring Evasion Scroll: Lesser",25000,3,""],["Topwear DEF Scroll: Lesser",25000,5,"W.DEF +2"],["Bottomwear DEF Scroll: Lesser",25000,5,"W.DEF +2"],["Overall Armor LUK Scroll: Lesser",35000,7,""],["Overall Armor INT Scroll: Lesser",35000,7,""],["Gloves Attack Scroll: Lesser",50000,9,""],["Gloves Magic Attack Scroll: Lesser",50000,9,""]]]]
+    ["City Furnishings","Weston",[["Kerning City Resident's Chair",500000,2,"+20 HP / 5 MP per 10 s seated"]]],
+    ["City Scroll Shop (100% scrolls)","Ben",[["Earring Evasion Scroll: Lesser",40000,3,""],["Topwear DEF Scroll: Lesser",20000,5,"W.DEF +2"],["Bottomwear DEF Scroll: Lesser",20000,5,"W.DEF +2"],["Overall Armor LUK Scroll: Lesser",40000,7,""],["Overall Armor INT Scroll: Lesser",40000,7,""],["Gloves Attack Scroll: Lesser",40000,9,""],["Gloves Magic Attack Scroll: Lesser",40000,9,""]]]]
 };
 const JOIN = {"Henesys":"Arthur in Henesys Town Hall", "Kerning City":"Roxy in the Kerning City Civic Center"};
 const clean = s => String(s || "").replace(/ \(source n\/a\)/g, "");

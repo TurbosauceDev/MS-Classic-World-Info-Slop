@@ -145,7 +145,7 @@ function rowHtml(x, i){
   const gapc = x.r == null ? "" : x.gap >= 0 ? `<span class="up">${money(x.gap)} under</span>` : `<span class="down">${money(-x.gap)} over</span>`;
   const il = LIFE().it?.[x.id], lt = il ? `${fmt(il[0])} past deals on this item were gone within about ${dur(il[2])}` : "";
   const tags = [x.npcGain && x.r != null ? `<span class="pill p-good" title="An NPC pays ${fmt(x.npc)} each (game files)">under NPC price</span>` : "",
-    x.shop && x.shop < n[0] ? `<span class="pill p-warn" title="Cheapest NPC shop price (meowdb shop list)">shop sells it for ${fmt(x.shop)}</span>` : "",
+    x.shop && x.shop < n[0] ? `<span class="pill p-warn" title="Cheapest NPC shop price (meowdb shop list): buy it there instead">NPC sells for less: ${fmt(x.shop)}</span>` : "",
     x.r != null && x.r < 0.25 ? `<span class="pill p-warn" title="Under a quarter of the usual price: often a typo or the wrong item">check it</span>` : ""].filter(Boolean);
   return `<tr data-k="${esc(x.key)}" data-i="${i}"${WATCH.has(x.id) ? ` class="snw"` : ""}><td>${nameCell(x)}</td>
     <td><b class="mono snprice">${money(n[0])}</b>${q > 1 ? ` <span class="sub">×${fmt(q)} = ${money(n[0] * q)}</span>` : ""}${w ? `<div class="sub snwhere">${esc(w)}</div>` : ""}${n[4] ? `<div class="sub">by ${esc(n[4])}</div>` : ""}${sinceTxt(x) ? `<div class="sub snsince"${lt ? ` title="${lt}"` : ""}>${sinceTxt(x)}</div>` : ""}</td>

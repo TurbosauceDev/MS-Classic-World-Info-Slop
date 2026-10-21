@@ -381,7 +381,7 @@ def step_extras(D):
     for mid, rows in json.load(open(ROOT / "data" / "sources" / "meowdb_drops.json"))["mobs"].items():
         if mid not in D["mobs"] and mid not in mob: continue   # field monsters + bosses/KPQ/JQ; step_mobdb drops non-launch ones
         for iid, _, up, down in rows:
-            if up - down >= 1: dr.setdefault(str(iid), []).append([mid, up - down])
+            if up - down >= 1: dr.setdefault(str(iid), []).append([mid, max(1, round(up - down))])   # meowdb weights votes (51.25): whole numbers
     D["drops"] = {k: sorted(v, key=lambda x: -x[1]) for k, v in dr.items()}
     # potval {itemId: cheapest meowdb shop price} for HP/MP consumables a quest hands out (counted as potions you don't buy)
     price = {}
@@ -531,7 +531,7 @@ def step_mobdb(D):
         k = str(m["id"]); o = {f: v for f, v in m.items() if f not in SKIP and v not in (None, [], {})}
         o["maps"] = sorted(maps, key=lambda x: (x[4] != "", -x[2]))
         o["sp"] = spots.get(k, {})
-        o["dr"] = sorted(([i, n, up - dn] for i, n, up, dn in drops.get(k, []) if up - dn >= 0), key=lambda x: -x[2])
+        o["dr"] = sorted(([i, n, max(1, round(up - dn)) if up - dn >= 1 else 0] for i, n, up, dn in drops.get(k, []) if up - dn >= 0), key=lambda x: -x[2])
         sm = mesos.get(k, {}).get("summary") or {}
         if sm.get("trustedCount"):
             o["meso"] = [round((sm["medianMin"] + sm["medianMax"]) / 2 * sm["medianDropChancePct"] / 100, 1), sm["trustedCount"], sm["medianMin"], sm["medianMax"], sm["medianDropChancePct"]]
@@ -570,7 +570,8 @@ def step_worldmap(D):
 
 def step_itemdb(D):
     """Item database: every item in the export (items + scrolls) gets a D.items entry and icon (add_items), g = gender
-    for gender-locked equipment, and ishop {itemId: [[npc, mapId, mapName, price]]} = every meowdb NPC shop that sells it."""
+    for gender-locked equipment, and ishop {itemId: [[npc, mapId, mapName, price, test]]} = every meowdb NPC shop that sells it; test = "COT2"
+    when meowdb's price for that shop was last read in a test, "" when re-read at launch."""
     add_items(D, ITEM)
     for iid, i in ITEM.items():
         if i.get("gender"): D["items"][iid]["g"] = i["gender"]
@@ -585,7 +586,8 @@ def step_itemdb(D):
             ids = byname.get(nm, [])
             if len(ids) > 1 and not all(ITEM[i].get("gender") for i in ids):   # same name: male + female versions both sold; else the sellable one
                 ids = [i for i in ids if (ITEM[i].get("price") or 0) > 0][:1] or ids[:1]
-            for iid in ids: out.setdefault(iid, []).append([s["npc"], mapid.get(s["map"], ""), s["map"], price])
+            tag = "" if s.get("prices", "").startswith("Launch") else s.get("prices", "").split()[0]
+            for iid in ids: out.setdefault(iid, []).append([s["npc"], s.get("mapId") or mapid.get(s["map"], ""), s["map"], price, tag])
     D["ishop"] = out
 
 def step_kpq(D):
@@ -654,7 +656,7 @@ def osms_info():
         return {"ref": h, "date": d}
     except Exception: return None
 
-PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: step_cmarket(D))}   # (key it owns, step)
+PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: step_cmarket(D)), "weapon_sources": ("wsrc", lambda D: step_weapon_sources(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)

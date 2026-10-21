@@ -87,7 +87,9 @@ function trkKpq(k){
   if (!modes.includes(TRK_KMODE.v)) TRK_KMODE.v = modes[0];
   const rush = TRK_KMODE.v === "Rush";
   const seg = `<div class="seg" role="radiogroup" id="trkkm">${["Rush", "Bonus"].map(m => `<button role="radio" aria-checked="${m === TRK_KMODE.v}" data-m="${m}"${modes.includes(m) ? "" : " disabled"}>${m}</button>`).join("")}</div>`;
-  const who = e => (e.names?.length ? `<b>${e.names.map(esc).join(", ")}</b> <span class="sub">` : "<span>") + (e.party > 1 ? "party of " + e.party : "solo") + "</span>";
+  // names link to their classicrank.com profile (trusted source, Danny 2026-10-20) when they look like an in-game name
+  const crank = n => /^[A-Za-z0-9]{2,13}$/.test(n) ? `<a href="https://classicrank.com/user/${n}" target="_blank" rel="noopener" title="${n} on classicrank.com">${n}</a>` : esc(n);
+  const who = e => (e.names?.length ? `<b>${e.names.map(crank).join(", ")}</b> <span class="sub">` : "<span>") + (e.party > 1 ? "party of " + e.party : "solo") + "</span>";
   const rank = i => i < 3 ? `<span class="pill ${i ? "p-hot" : "p-good"}">#${i + 1}</span>` : "#" + (i + 1);
   const clockMark = e => e.clock ? "" : ' <span class="sub" title="Timed with the PC clock: the KPQ clock wasn\'t read">~</span>';
   const lj = e => `<td>${e.level ? "Lv " + e.level : "–"}${e.job ? ` <span class="sub">${esc(e.job)}</span>` : ""}</td>`;

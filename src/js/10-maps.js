@@ -229,6 +229,23 @@ function pwNowHtml(id){ const n = PWNOW[id]; if (!n) return "";
   const r = pwNowRatio(id), where = [n[2] ? "ch " + n[2] : "", n[3]].filter(Boolean).join(", "),
     vs = r == null ? "" : r < 0.995 ? ` · <span class="up">${Math.round((1 - r) * 100)}% under</span> the usual price` : r > 1.005 ? ` · ${Math.round((r - 1) * 100)}% over the usual price` : " · about the usual price";
   return `Cheapest listed now: <b>${n[0] < 10 && n[0] % 1 ? n[0] : fmt(n[0])} mesos</b> each${n[1] > 1 ? ` (×${fmt(n[1])})` : ""}${where ? ` <span class="sub">${esc(where)}</span>` : ""}${n[4] ? ` <span class="sub">by ${esc(n[4])}</span>` : ""}${vs}<br><span class="sub">Listings updated ${pwListedAgo()} (meso.watch). Shops open and close fast; it may be gone.</span>` }
+// meowdb drop report confidence: net votes (players confirming minus disputing; meowdb weights some votes, rounded in the build)
+const votesHtml = v => `<span class="sub" title="Net player votes on meowdb's drop report: players who confirmed it minus those who disputed it">${fmt(v)} confirmed</span>`;
+// Cheapest NPC shop that sells an item: [npc, mapId, mapName, price, test] (meowdb shop list: D.ishop, + D.shopsell for quest items)
+const shopBest = id => { const ss = D.shopsell?.[id];
+  return [...(D.ishop?.[id] || []), ...(ss ? [[ss[0], "", ss[1], ss[2], ""]] : [])].filter(s => s[3] > 0).sort((a, b) => a[3] - b[3] || !!a[4] - !!b[4])[0] || null };   // ties: launch-read price first
+// "NPC sells for less": the cheapest NPC shop beats the cheapest live listing (or the usual player price when nothing is listed)
+const npcCheaper = id => { const s = shopBest(id), n = PWNOW[id]?.[0] || PW[id]?.[0]; return s && n > s[3] ? s : null };
+const npcCheaperPill = id => { const s = npcCheaper(id);
+  return s ? `<span class="pill p-warn" title="${esc(s[0])} (${esc(s[2])}) sells it for ${fmt(s[3])} mesos, under the player-shop price (meowdb shop list${s[4] ? ", " + s[4] + " price" : ""})">NPC sells for less</span>` : "" };
+// Every price we know for one item, one line per source (Items page "Prices"). A new price source adds a line by pushing
+// a function id -> [label, html] (or null when it has nothing for that item; label "" when the html names itself) onto PRICE_SRC.
+const PRICE_SRC = [
+  id => { const s = shopBest(id); return s && ["NPC shop", `<b>${fmt(s[3])} mesos</b> <span class="sub">${esc(s[0])}, ${esc(s[2])}${s[4] ? ` · ${s[4]} price, not re-read at launch` : ""} (meowdb)</span>`] },
+  id => ["", PW[id] ? pwHtml(id, true) : `Player shops: <span class="sub">no sales seen yet (meso.watch, ${D.pw.read}).</span>`],
+  id => PWNOW[id] ? ["", pwNowHtml(id)] : null,
+  id => ["NPC buys it for", D.items[id]?.p ? `${fmt(D.items[id].p)} mesos <span class="sub">(game files)</span>` : `<span class="sub">can't be sold to NPCs (or no price in the game files)</span>`]];
+const priceRows = id => PRICE_SRC.map(f => f(id)).filter(Boolean).map(([l, h]) => `<p class="prow">${l ? `<span class="sub">${l}:</span> ` : ""}${h}</p>`).join("");
 function pwHtml(id, long){ const p = PW[id]; if (!p) return "";
   const per = p[4] & 2 ? " per set" : "", low = p[4] & 1 ? ` <span class="pill p-warn" title="Fewer than 5 sales seen: rough">few sales</span>` : "";
   const tr = pwTrend(id) ? " " + pwTrend(id) : "", st = pwSellTag(id), sv = pwSell(id);

@@ -1,12 +1,14 @@
 {
  "source": "https://meowdb.com/msclassic/npc-shops",
- "read": "2026-10-06",
+ "read": "2026-10-21",
+ "note": "prices = meowdb's tag per shop: Launch (re-read in the live game) or COT2/COT1 (last read in that test)",
  "shops": [
   {
    "npc": "Lucy",
    "kind": "Grocer",
    "prices": "COT2 prices",
    "map": "Amherst Department Store",
+   "mapId": "1013",
    "items": [
     [
      "Red Potion",
@@ -45,6 +47,7 @@
    "kind": "Armor Seller",
    "prices": "COT2 prices",
    "map": "Southperry Armor Store",
+   "mapId": "61",
    "items": [
     [
      "White Undershirt",
@@ -118,6 +121,7 @@
    "kind": "Weapon Seller",
    "prices": "COT2 prices",
    "map": "Amherst Weapon Store",
+   "mapId": "1011",
    "items": [
     [
      "Sword",
@@ -142,38 +146,11 @@
    ]
   },
   {
-   "npc": "Razor\t500mesos",
-   "kind": "Lith Harbor",
-   "prices": "Jane",
-   "map": "Lith Harbor",
-   "items": [
-    [
-     "White Potion",
-     0,
-     null
-    ],
-    [
-     "Unagi",
-     0,
-     null
-    ],
-    [
-     "Pure Water",
-     0,
-     null
-    ],
-    [
-     "Watermelon",
-     0,
-     null
-    ]
-   ]
-  },
-  {
    "npc": "Mina",
    "kind": "Grocer",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Lith Harbor Department Store",
+   "mapId": "10000002",
    "items": [
     [
      "Sky-blue Wooden Chair",
@@ -213,11 +190,6 @@
     [
      "Apple",
      20,
-     null
-    ],
-    [
-     "Egg",
-     30,
      null
     ],
     [
@@ -264,14 +236,20 @@
      "Subi Throwing-Stars",
      500,
      null
+    ],
+    [
+     "Egg",
+     30,
+     null
     ]
    ]
   },
   {
    "npc": "Natasha",
    "kind": "Armor Seller",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Lith Harbor Armor Shop",
+   "mapId": "10000001",
    "items": [
     [
      "Brown Skullcap",
@@ -413,8 +391,9 @@
   {
    "npc": "Silver",
    "kind": "Weapon Seller",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Lith Harbor Weapon Shop",
+   "mapId": "10000003",
    "items": [
     [
      "Stolen Fence",
@@ -466,8 +445,9 @@
   {
    "npc": "Doofus",
    "kind": "Pet Food Merchant",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Henesys Market",
+   "mapId": "10001040",
    "items": [
     [
      "Pet Food",
@@ -479,42 +459,43 @@
   {
    "npc": "Flint",
    "kind": "Town Scroll Shop",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Henesys Town Hall",
+   "mapId": "10001007",
    "items": [
     [
      "Topwear DEF Scroll: Lesser",
-     25000,
+     20000,
      "Town Resident"
     ],
     [
      "Bottomwear DEF Scroll: Lesser",
-     25000,
+     20000,
      "Town Resident"
     ],
     [
      "Overall Armor DEX Scroll: Lesser",
-     35000,
+     40000,
      "Distinguished Citizen"
     ],
     [
      "Overall Armor STR Scroll: Lesser",
-     35000,
+     40000,
      "Distinguished Citizen"
     ],
     [
      "Earring Crit. Damage Scroll: Lesser",
-     50000,
+     40000,
      "Helpful Stranger"
     ],
     [
      "Gloves Attack Scroll: Lesser",
-     50000,
+     40000,
      "Guardian of the Village"
     ],
     [
      "Gloves Magic Attack Scroll: Lesser",
-     50000,
+     40000,
      "Guardian of the Village"
     ]
    ]
@@ -522,8 +503,9 @@
   {
    "npc": "Karl",
    "kind": "Weapon Seller",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Henesys Weapon Store",
+   "mapId": "10001041",
    "items": [
     [
      "War Bow",
@@ -546,11 +528,6 @@
      null
     ],
     [
-     "Ryden",
-     26000,
-     null
-    ],
-    [
      "Crossbow",
      5000,
      null
@@ -568,11 +545,6 @@
     [
      "Mountain Crossbow",
      16500,
-     null
-    ],
-    [
-     "Eagle Crow",
-     26000,
      null
     ],
     [
@@ -605,8 +577,9 @@
   {
    "npc": "Luna",
    "kind": "Grocer",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Henesys Department Store",
+   "mapId": "10001042",
    "items": [
     [
      "Red Potion",
@@ -646,11 +619,6 @@
     [
      "Apple",
      20,
-     null
-    ],
-    [
-     "Egg",
-     30,
      null
     ],
     [
@@ -704,13 +672,13 @@
      null
     ],
     [
-     "Return Scroll to Henesys",
-     500,
+     "Arrow for Bow",
+     1,
      null
     ],
     [
-     "Arrow for Bow",
-     1,
+     "Return Scroll to Henesys",
+     500,
      null
     ],
     [
@@ -722,18 +690,24 @@
      "Subi Throwing-Star",
      500,
      null
+    ],
+    [
+     "Egg",
+     30,
+     null
     ]
    ]
   },
   {
    "npc": "Oak",
    "kind": "Town Furnishings",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Henesys Town Hall",
+   "mapId": "10001007",
    "items": [
     [
      "Henesys Resident's Chair",
-     10000,
+     500000,
      "Visitor"
     ]
    ]
@@ -741,8 +715,9 @@
   {
    "npc": "Raymond",
    "kind": "Town General Store",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Henesys Town Hall",
+   "mapId": "10001007",
    "items": [
     [
      "Bronze Arrows for Bows",
@@ -829,8 +804,9 @@
   {
    "npc": "Sam",
    "kind": "Armor Seller",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Henesys Weapon Store",
+   "mapId": "10001041",
    "items": [
     [
      "Single Earring",
@@ -963,16 +939,6 @@
      null
     ],
     [
-     "Green Hawkeye",
-     7200,
-     null
-    ],
-    [
-     "Dark Hawkeye",
-     7200,
-     null
-    ],
-    [
      "Green Archer Top (M)",
      2000,
      null
@@ -1018,16 +984,6 @@
      null
     ],
     [
-     "Green Hunter's Armor (M)",
-     12000,
-     null
-    ],
-    [
-     "Dark Hunter's Armor (M)",
-     12000,
-     null
-    ],
-    [
      "Green Avelin (F)",
      2000,
      null
@@ -1068,33 +1024,8 @@
      null
     ],
     [
-     "Green Bennis Chainmail (F)",
-     7500,
-     null
-    ],
-    [
-     "Blue Bennis Chainmail (F)",
-     7500,
-     null
-    ],
-    [
-     "Red Bennis Chainmail (F)",
-     7500,
-     null
-    ],
-    [
      "Yellow Bennis Chainmail (F)",
      7500,
-     null
-    ],
-    [
-     "Green Huntress Armor (F)",
-     12000,
-     null
-    ],
-    [
-     "Black Huntress Armor (F)",
-     12000,
      null
     ],
     [
@@ -1110,16 +1041,6 @@
     [
      "Bennis Chain Pants",
      6000,
-     null
-    ],
-    [
-     "Green Hunter's Pants",
-     9600,
-     null
-    ],
-    [
-     "Dark Hunter's Pants",
-     9600,
      null
     ],
     [
@@ -1160,16 +1081,6 @@
     [
      "Purple Shivermail Skirt (F)",
      4800,
-     null
-    ],
-    [
-     "Green Huntress Pants (F)",
-     9600,
-     null
-    ],
-    [
-     "Black Huntress Pants (F)",
-     9600,
      null
     ],
     [
@@ -1236,28 +1147,20 @@
      "Blue Whitebottom Boots",
      4680,
      null
-    ]
-   ]
-  },
-  {
-   "npc": "Blue Whitebottom Boots\t4,680mesos",
-   "kind": "Ellinia",
-   "prices": "Arwen the Fairy",
-   "map": "Ellinia",
-   "items": [
+    ],
     [
-     "Moon Rock",
-     0,
+     "Green Bennis Chainmail (F)",
+     7500,
      null
     ],
     [
-     "Star Rock",
-     0,
+     "Blue Bennis Chainmail (F)",
+     7500,
      null
     ],
     [
-     "Black Feather",
-     0,
+     "Red Bennis Chainmail (F)",
+     7500,
      null
     ]
    ]
@@ -1265,8 +1168,9 @@
   {
    "npc": "Flora the Fairy",
    "kind": "Weapon Seller",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Ellinia Weapon Store",
+   "mapId": "10002001",
    "items": [
     [
      "Wooden Wand",
@@ -1289,18 +1193,13 @@
      null
     ],
     [
-     "Mithril Wand",
-     22000,
+     "Sapphire Staff",
+     5000,
      null
     ],
     [
      "Wooden Staff",
      3000,
-     null
-    ],
-    [
-     "Sapphire Staff",
-     5000,
      null
     ],
     [
@@ -1343,8 +1242,9 @@
   {
    "npc": "Len the Fairy",
    "kind": "Grocer",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Ellinia Department Store",
+   "mapId": "10002002",
    "items": [
     [
      "Red Potion",
@@ -1362,11 +1262,6 @@
      null
     ],
     [
-     "Blue Potion",
-     220,
-     null
-    ],
-    [
      "Magic Potion",
      500,
      null
@@ -1377,13 +1272,13 @@
      null
     ],
     [
-     "Apple",
-     20,
+     "Blue Potion",
+     220,
      null
     ],
     [
-     "Egg",
-     30,
+     "Apple",
+     20,
      null
     ],
     [
@@ -1455,14 +1350,20 @@
      "Subi Throwing-Star",
      500,
      null
+    ],
+    [
+     "Egg",
+     30,
+     null
     ]
    ]
   },
   {
    "npc": "Serabi the Fairy",
    "kind": "Armor Seller",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Ellinia Weapon Store",
+   "mapId": "10002001",
    "items": [
     [
      "Weighted Earrings",
@@ -1485,12 +1386,12 @@
      null
     ],
     [
-     "Blue Apprentice Hat",
+     "Red Apprentice Hat",
      1200,
      null
     ],
     [
-     "Red Apprentice Hat",
+     "Blue Apprentice Hat",
      1200,
      null
     ],
@@ -1532,16 +1433,6 @@
     [
      "Green Wizardry Hat",
      3600,
-     null
-    ],
-    [
-     "Blue Jester",
-     7200,
-     null
-    ],
-    [
-     "Green Jester",
-     7200,
      null
     ],
     [
@@ -1615,16 +1506,6 @@
      null
     ],
     [
-     "Blue Fairy Top",
-     12000,
-     null
-    ],
-    [
-     "Green Fairy Top",
-     12000,
-     null
-    ],
-    [
      "Beige Plain Robe",
      5400,
      null
@@ -1657,16 +1538,6 @@
     [
      "White Doros Robe",
      13500,
-     null
-    ],
-    [
-     "Blue Wizard Robe",
-     21600,
-     null
-    ],
-    [
-     "Green Wizard Robe",
-     21600,
      null
     ],
     [
@@ -1730,28 +1601,18 @@
      null
     ],
     [
-     "Yellow Arianne Skirt",
-     2400,
-     null
-    ],
-    [
      "White Split Skirt",
      4800,
      null
     ],
     [
+     "Yellow Arianne Skirt",
+     2400,
+     null
+    ],
+    [
      "Black Split Skirt",
      4800,
-     null
-    ],
-    [
-     "Blue Fairy Skirt",
-     9600,
-     null
-    ],
-    [
-     "Green Fairy Skirt",
-     9600,
      null
     ],
     [
@@ -1814,8 +1675,9 @@
   {
    "npc": "Arturo",
    "kind": "Grocer",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Perion Department Store",
+   "mapId": "10004002",
    "items": [
     [
      "Red Potion",
@@ -1855,11 +1717,6 @@
     [
      "Apple",
      20,
-     null
-    ],
-    [
-     "Egg",
-     30,
      null
     ],
     [
@@ -1931,14 +1788,20 @@
      "Subi Throwing-Star",
      500,
      null
+    ],
+    [
+     "Egg",
+     30,
+     null
     ]
    ]
   },
   {
    "npc": "Harry",
    "kind": "Armor Seller",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Perion Weapon Store",
+   "mapId": "10004001",
    "items": [
     [
      "Bronze Koif",
@@ -1971,13 +1834,8 @@
      null
     ],
     [
-     "Iron Burgernet Helm",
+     "Iron Burgonet Helm",
      4500,
-     null
-    ],
-    [
-     "Jousting Helmet",
-     7200,
      null
     ],
     [
@@ -2023,16 +1881,6 @@
     [
      "Dark Master Sergeant (M)",
      7500,
-     null
-    ],
-    [
-     "Red Hwarang Shirt (M)",
-     12000,
-     null
-    ],
-    [
-     "Green Hwarang Shirt (M)",
-     12000,
      null
     ],
     [
@@ -2091,33 +1939,8 @@
      null
     ],
     [
-     "Black Dragon Robe (M)",
-     21600,
-     null
-    ],
-    [
      "Steel Fitted Mail (F)",
      5400,
-     null
-    ],
-    [
-     "Dark Engrit (F)",
-     21600,
-     null
-    ],
-    [
-     "Red Engrit (F)",
-     21600,
-     null
-    ],
-    [
-     "Blue Engrit (F)",
-     21600,
-     null
-    ],
-    [
-     "Yellow Engrit (F)",
-     21600,
      null
     ],
     [
@@ -2156,33 +1979,8 @@
      null
     ],
     [
-     "Orihalcon Master Sergeant Kilt (M)",
-     6000,
-     null
-    ],
-    [
      "Dark Master Sergeant Kilt (M)",
      6000,
-     null
-    ],
-    [
-     "Red Martial Arts Pants (M)",
-     9600,
-     null
-    ],
-    [
-     "Brown Martial Arts Pants (M)",
-     9600,
-     null
-    ],
-    [
-     "Black Martial Arts Pants (M)",
-     9600,
-     null
-    ],
-    [
-     "White Martial Arts Pants (M)",
-     9600,
      null
     ],
     [
@@ -2249,14 +2047,20 @@
      "Blue High Boots",
      3600,
      null
+    ],
+    [
+     "Orihalcon Master Sergeant Kilt (M)",
+     6000,
+     null
     ]
    ]
   },
   {
    "npc": "River",
    "kind": "Weapon Seller",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Perion Weapon Store",
+   "mapId": "10004001",
    "items": [
     [
      "Long Sword",
@@ -2284,11 +2088,6 @@
      null
     ],
     [
-     "Gladius",
-     22000,
-     null
-    ],
-    [
      "Field Dagger",
      5000,
      null
@@ -2304,11 +2103,6 @@
      null
     ],
     [
-     "Cass",
-     22000,
-     null
-    ],
-    [
      "Battle Axe",
      5000,
      null
@@ -2316,11 +2110,6 @@
     [
      "Mithril Axe",
      13500,
-     null
-    ],
-    [
-     "Fireman's Axe",
-     22000,
      null
     ],
     [
@@ -2339,11 +2128,6 @@
      null
     ],
     [
-     "War Hammer",
-     22000,
-     null
-    ],
-    [
      "Wooden Sword",
      5000,
      null
@@ -2356,11 +2140,6 @@
     [
      "Broadsword",
      16500,
-     null
-    ],
-    [
-     "Scimitar",
-     26000,
      null
     ],
     [
@@ -2379,11 +2158,6 @@
      null
     ],
     [
-     "Blue Axe",
-     26000,
-     null
-    ],
-    [
      "Wooden Mallet",
      5000,
      null
@@ -2399,11 +2173,6 @@
      null
     ],
     [
-     "Mithril Maul",
-     26000,
-     null
-    ],
-    [
      "Spear",
      5000,
      null
@@ -2411,11 +2180,6 @@
     [
      "Fork on a Stick",
      7000,
-     null
-    ],
-    [
-     "Forked Spear",
-     26000,
      null
     ],
     [
@@ -2434,18 +2198,8 @@
      null
     ],
     [
-     "Mithril Pole Arm",
-     26000,
-     null
-    ],
-    [
      "Wooden Buckler",
      4000,
-     null
-    ],
-    [
-     "Steel Shield",
-     6000,
      null
     ],
     [
@@ -2454,13 +2208,13 @@
      null
     ],
     [
-     "Red Triangular Shield",
-     15000,
+     "Steel Shield",
+     6000,
      null
     ],
     [
-     "Red Cross Shield",
-     24000,
+     "Red Triangular Shield",
+     15000,
      null
     ]
    ]
@@ -2468,42 +2222,43 @@
   {
    "npc": "Ben",
    "kind": "City Scroll Shop",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Kerning City Civic Center",
+   "mapId": "10003007",
    "items": [
     [
      "Earring Evasion Scroll: Lesser",
-     25000,
+     40000,
      "Helpful Stranger"
     ],
     [
      "Topwear DEF Scroll: Lesser",
-     25000,
+     20000,
      "Town Resident"
     ],
     [
      "Bottomwear DEF Scroll: Lesser",
-     25000,
+     20000,
      "Town Resident"
     ],
     [
      "Overall Armor LUK Scroll: Lesser",
-     35000,
+     40000,
      "Distinguished Citizen"
     ],
     [
      "Overall Armor INT Scroll: Lesser",
-     35000,
+     40000,
      "Distinguished Citizen"
     ],
     [
      "Gloves Attack Scroll: Lesser",
-     50000,
+     40000,
      "Guardian of the Village"
     ],
     [
      "Gloves Magic Attack Scroll: Lesser",
-     50000,
+     40000,
      "Guardian of the Village"
     ]
    ]
@@ -2511,8 +2266,9 @@
   {
    "npc": "Cutthroat Manny",
    "kind": "Weapon Seller",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Kerning City Self-Defence Item Store",
+   "mapId": "10003001",
    "items": [
     [
      "Long Sword",
@@ -2522,11 +2278,6 @@
     [
      "Square Shovel",
      6200,
-     null
-    ],
-    [
-     "Pointed Shovel",
-     11700,
      null
     ],
     [
@@ -2542,6 +2293,11 @@
     [
      "Triple-Tipped Zamadar",
      5800,
+     null
+    ],
+    [
+     "Pointed Shovel",
+     11700,
      null
     ],
     [
@@ -2562,11 +2318,6 @@
     [
      "Forked Dagger",
      14700,
-     null
-    ],
-    [
-     "Reef Claw",
-     22000,
      null
     ],
     [
@@ -2618,32 +2369,18 @@
      "Meba",
      16500,
      null
-    ],
-    [
-     "Adamantium Guards",
-     27600,
-     null
     ]
    ]
   },
   {
    "npc": "Don Hwang",
    "kind": "Armor Seller",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Kerning City Self-Defence Item Store",
+   "mapId": "10003001",
    "items": [
     [
-     "White Bandana",
-     1200,
-     null
-    ],
-    [
      "Red Bandana",
-     1200,
-     null
-    ],
-    [
-     "Blue Bandana",
      1200,
      null
     ],
@@ -2659,6 +2396,16 @@
     ],
     [
      "Red Ghetto Beanie",
+     1200,
+     null
+    ],
+    [
+     "Blue Bandana",
+     1200,
+     null
+    ],
+    [
+     "White Bandana",
      1200,
      null
     ],
@@ -2763,16 +2510,6 @@
      null
     ],
     [
-     "Red Guise",
-     7200,
-     null
-    ],
-    [
-     "Dark Guise",
-     7200,
-     null
-    ],
-    [
      "Red Cloth Vest",
      2000,
      null
@@ -2828,31 +2565,6 @@
      null
     ],
     [
-     "Dark Silver Stealer",
-     12000,
-     null
-    ],
-    [
-     "Red Gold Stealer",
-     12000,
-     null
-    ],
-    [
-     "Red Cloth Vest",
-     2000,
-     null
-    ],
-    [
-     "Blue Cloth Vest",
-     2000,
-     null
-    ],
-    [
-     "Black Cloth Vest",
-     2000,
-     null
-    ],
-    [
      "Red Nightshift",
      3000,
      null
@@ -2873,11 +2585,6 @@
      null
     ],
     [
-     "Blue Qi Pao",
-     6000,
-     null
-    ],
-    [
      "Blood Sneak",
      7500,
      null
@@ -2893,18 +2600,13 @@
      null
     ],
     [
+     "Blue Qi Pao",
+     6000,
+     null
+    ],
+    [
      "Dark Sneak",
      7500,
-     null
-    ],
-    [
-     "Red Steal",
-     12000,
-     null
-    ],
-    [
-     "Black Steal",
-     12000,
      null
     ],
     [
@@ -2968,31 +2670,6 @@
      null
     ],
     [
-     "Red / Gold Stealer Pants",
-     9600,
-     null
-    ],
-    [
-     "Silver / Black Stealer Pants",
-     9600,
-     null
-    ],
-    [
-     "Red Cloth Pants",
-     1600,
-     null
-    ],
-    [
-     "Blue Cloth Pants",
-     1600,
-     null
-    ],
-    [
-     "Black Cloth Pants",
-     1600,
-     null
-    ],
-    [
      "Red Nightshift Pants",
      2400,
      null
@@ -3050,16 +2727,6 @@
     [
      "Dark Sneak Pants",
      6000,
-     null
-    ],
-    [
-     "Red Steal Pants",
-     9600,
-     null
-    ],
-    [
-     "Black Steal Pants",
-     9600,
      null
     ],
     [
@@ -3121,14 +2788,45 @@
      "Black Enamel Boots",
      3600,
      null
+    ],
+    [
+     "Red Cloth Vest",
+     2000,
+     null
+    ],
+    [
+     "Blue Cloth Vest",
+     2000,
+     null
+    ],
+    [
+     "Black Cloth Vest",
+     2000,
+     null
+    ],
+    [
+     "Red Cloth Pants",
+     1600,
+     null
+    ],
+    [
+     "Blue Cloth Pants",
+     1600,
+     null
+    ],
+    [
+     "Black Cloth Pants",
+     1600,
+     null
     ]
    ]
   },
   {
    "npc": "Dr. Faymus",
    "kind": "Grocer",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Kerning City Pharmacy",
+   "mapId": "10003002",
    "items": [
     [
      "Red Potion",
@@ -3146,11 +2844,6 @@
      null
     ],
     [
-     "Blue Potion",
-     220,
-     null
-    ],
-    [
      "Warrior Potion",
      500,
      null
@@ -3161,6 +2854,11 @@
      null
     ],
     [
+     "Blue Potion",
+     220,
+     null
+    ],
+    [
      "Speed Potion",
      500,
      null
@@ -3168,11 +2866,6 @@
     [
      "Apple",
      20,
-     null
-    ],
-    [
-     "Egg",
-     30,
      null
     ],
     [
@@ -3244,6 +2937,11 @@
      "Subi Throwing-Star",
      500,
      null
+    ],
+    [
+     "Egg",
+     30,
+     null
     ]
    ]
   },
@@ -3252,6 +2950,7 @@
    "kind": "City General Store",
    "prices": "COT2 prices",
    "map": "Kerning City Civic Center",
+   "mapId": "10003007",
    "items": [
     [
      "Fried Chicken",
@@ -3333,12 +3032,13 @@
   {
    "npc": "Weston",
    "kind": "City Furnishings",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Kerning City Civic Center",
+   "mapId": "10003007",
    "items": [
     [
      "Kerning City Resident's Chair",
-     10000,
+     500000,
      "Visitor"
     ]
    ]
@@ -3346,8 +3046,9 @@
   {
    "npc": "Valen",
    "kind": "Grocer",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Florina Beach",
+   "mapId": "10007000",
    "items": [
     [
      "Red Potion",
@@ -3479,8 +3180,9 @@
   {
    "npc": "Mr. Sweatbottom",
    "kind": "Sauna Manager",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Regular Sauna",
+   "mapId": "10005002",
    "items": [
     [
      "Red Potion",
@@ -3505,11 +3207,6 @@
     [
      "Apple",
      20,
-     null
-    ],
-    [
-     "Egg",
-     30,
      null
     ],
     [
@@ -3561,14 +3258,20 @@
      "Subi Throwing-Stars",
      500,
      null
+    ],
+    [
+     "Egg",
+     30,
+     null
     ]
    ]
   },
   {
    "npc": "24 Hr Mobile Store",
    "kind": "Mobile Store",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "Ant Tunnel Park",
+   "mapId": "10005070",
    "items": [
     [
      "Fried Chicken",
@@ -3611,13 +3314,13 @@
      null
     ],
     [
-     "Cake",
-     150,
+     "Return Scroll - Nearest Town",
+     400,
      null
     ],
     [
-     "Return Scroll - Nearest Town",
-     400,
+     "Cake",
+     150,
      null
     ],
     [
@@ -3642,6 +3345,7 @@
    "kind": "Grocer",
    "prices": "COT2 prices",
    "map": "Cave Fairy Department Store",
+   "mapId": "10006002",
    "items": [
     [
      "Red Potion",
@@ -3713,62 +3417,63 @@
   {
    "npc": "Tulcus",
    "kind": "Scroll Seller",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "The Swamp of Despair II",
+   "mapId": "10003091",
    "items": [
     [
      "Hat Accuracy Scroll: Lesser",
-     15000,
+     20000,
      null
     ],
     [
      "Hat HP Scroll: Lesser",
-     15000,
+     20000,
      null
     ],
     [
      "Hat MP Scroll: Lesser",
-     15000,
+     20000,
      null
     ],
     [
      "Topwear DEF Scroll: Lesser",
-     15000,
+     20000,
      null
     ],
     [
      "Overall Armor DEF Scroll: Lesser",
-     15000,
+     40000,
      null
     ],
     [
      "Bottomwear DEF Scroll: Lesser",
-     15000,
+     20000,
      null
     ],
     [
      "Shoes Evasion Scroll: Lesser",
-     15000,
+     40000,
      null
     ],
     [
      "Shield DEF Scroll: Lesser",
-     15000,
+     20000,
      null
     ],
     [
      "Cape Weapon Def. Scroll: Lesser",
-     15000,
+     40000,
      null
     ],
     [
      "Cape Magic Def. Scroll: Lesser",
-     15000,
+     40000,
      null
     ],
     [
      "Cape Accuracy Scroll: Lesser",
-     15000,
+     40000,
      null
     ]
    ]
@@ -3776,77 +3481,78 @@
   {
    "npc": "El Moth",
    "kind": "Scroll Seller",
-   "prices": "COT2 prices",
+   "prices": "Launch prices",
    "map": "The Tree That Grew III",
+   "mapId": "10002062",
    "items": [
     [
      "One-Handed Sword Attack Scroll: Lesser",
-     25000,
+     30000,
      null
     ],
     [
      "One-Handed Axe Attack Scroll: Lesser",
-     25000,
+     30000,
      null
     ],
     [
      "One-Handed Blunt Weapon Attack Scroll: Lesser",
-     25000,
+     30000,
      null
     ],
     [
      "Dagger Attack Scroll: Lesser",
-     25000,
+     30000,
      null
     ],
     [
      "Wand Magic Attack Scroll: Lesser",
-     25000,
+     60000,
      null
     ],
     [
      "Staff Magic Attack Scroll: Lesser",
-     25000,
+     60000,
      null
     ],
     [
      "Two-handed Sword Attack Scroll: Lesser",
-     50000,
+     60000,
      null
     ],
     [
      "Two-handed Axe Attack Scroll: Lesser",
-     50000,
+     60000,
      null
     ],
     [
      "Two-handed Blunt Weapon Attack Scroll: Lesser",
-     50000,
+     60000,
      null
     ],
     [
      "Spear Attack Scroll: Lesser",
-     50000,
+     60000,
      null
     ],
     [
      "Polearm Attack Scroll: Lesser",
-     50000,
+     60000,
      null
     ],
     [
      "Bow Attack Scroll: Lesser",
-     50000,
+     60000,
      null
     ],
     [
      "Crossbow Attack Scroll: Lesser",
-     50000,
+     60000,
      null
     ],
     [
      "Claw Attack Scroll: Lesser",
-     50000,
+     60000,
      null
     ]
    ]

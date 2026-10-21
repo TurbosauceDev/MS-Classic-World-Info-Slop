@@ -74,14 +74,13 @@ function page(o){
       ...Object.entries(STATNAME).map(([k, l]) => st(l, s[k] ? "+" + s[k] : null)), st("Attack speed", it.spd), st("Upgrade slots", s.tuc, "Scrolls you can use on it")].join("")
     : [...Object.entries(it.sp || {}).filter(([k]) => SPEC[k]).map(([k, v]) => st("Effect", SPEC[k].replace("{}", fmt(v)))),
       st("Lasts", it.sp?.time ? Math.round(it.sp.time / 60000) + " min" : null), st("Stack size", s.slotMax)].join("");
-  const sell = it.p ? `${fmt(it.p)} mesos` : `<span class="sub">can't be sold to NPCs (or no price in the game files)</span>`;
   const sure = o.drops.filter(x => x[1] >= 1);
-  const drops = [...sure.sort((a, b) => b[1] - a[1]).map(([m, v]) => `<li>${mob(m)} <span class="sub">+${v}</span></li>`),
+  const drops = [...sure.sort((a, b) => b[1] - a[1]).map(([m, v]) => `<li>${mob(m)} ${votesHtml(v)}</li>`),
     ...o.named.map(m => `<li>${mob(m)} <span class="sub">${D.craft.src[o.id]?.meow?.includes(m) ? "meowdb farming guide" : "named after it in the game files"}</span></li>`),
     ...o.wdrop.filter(x => !sure.some(y => y[0] === x[0])).map(([m, n, lv]) => `<li>${m ? mob(m) : `${esc(n)} <span class="sub">Lv ${lv}</span>`} <span class="sub">${WSRC_BY_ID[o.id].dropsFrom === "msea" ? "old MapleSEA list, likely" : "player report"}</span></li>`)].join("");
   const cdrop = (CDROP[o.id] || []).filter(([m]) => D.mobdb[m]).sort((a, b) => b[1] / b[2] - a[1] / a[2])
     .map(([m, n, k]) => `<li>${mob(m)} <span class="sub">×${fmt(n)} in ${fmt(k)} kills, ${dropRate(n, k)}</span></li>`).join("");
-  const shops = o.shop.sort((a, b) => a[3] - b[3]).map(x => `<li>${place(x)} <span class="sub">${fmt(x[3])} mesos</span></li>`).join("");
+  const shops = o.shop.sort((a, b) => a[3] - b[3]).map(x => `<li>${place(x)} <span class="sub">${fmt(x[3])} mesos${x[4] ? ` (${esc(x[4])} price)` : ""}</span></li>`).join("");
   const recipe = r => `<li><b>${esc(DISC[r[0]])}</b> <span class="sub">craft Lv ${r[2]} · ${fmt(r[6])} mesos${r[4] > 1 ? ` · makes ${r[4]}` : ""}</span><div class="ilist">${r[7].map(([id, n]) => iname(id, n)).join("")}</div></li>`;
   const rew = o.rew.map(([src, r, n, ch, k, job]) => `<li>${qn([src, r])} <span class="sub">${[n > 1 && "×" + fmt(n), k, ch != null && ch + "% chance", job && job !== "Any Class" && job].filter(Boolean).map(esc).join(" · ")}</span></li>`).join("");
   const want = wantsOf(o.id, it), uses = USE[o.id] || [];
@@ -100,7 +99,7 @@ function page(o){
     ${stats ? `<h3 class="msec">Stats</h3><dl class="stats mgrid">${stats}</dl>` : ""}
     <h3 class="msec">Where to get it</h3>
     <div class="mcols">
-      ${card(`Monster drops <span class="sub">(meowdb player reports, + = net votes)</span>`, drops, "No drop reports yet.")}
+      ${card(`Monster drops <span class="sub">(meowdb player reports; confirmed = net player votes)</span>`, drops, "No drop reports yet.")}
       ${cdrop ? card(`Confirmed Drops <span class="sub">(grind tracker players' own pickups, read ${esc(D.shared.read)}; real rates are at least this)</span>`, cdrop) : ""}
       ${card("Sold by", shops, "No NPC shop sells it (meowdb shop list).")}
       ${card("Crafted", (o.make).map(recipe).join(""), "No recipe makes it.")}
@@ -110,7 +109,7 @@ function page(o){
     <div class="mcols">
       ${card("Quests that want it", wants, "No quest asks for it.")}
       ${card("Crafting recipes that use it", makes, "No recipe uses it.")}
-      <div><h4>Selling</h4><p>NPC shops: ${sell}</p><p>${PW[o.id] ? pwHtml(o.id, true) : `<span class="sub">No player-shop sales seen yet (meso.watch, ${D.pw.read}).</span>`}</p>${PWNOW[o.id] ? `<p>${pwNowHtml(o.id)}</p>` : ""}</div>
+      <div id="itprices"><h4>Prices ${npcCheaperPill(o.id)}</h4>${priceRows(o.id)}</div>
     </div>
     ${like.length ? `<h3 class="msec">Similar ${esc(typeOf(it))} for ${esc(it.job && it.job !== "All" ? it.job : "any job")}</h3><div class="tblwrap"><table class="mini"><thead><tr><th>Item</th><th class="num">Lv</th><th>Stats</th><th>Get it</th></tr></thead>
       <tbody>${like.map(x => `<tr><td><button class="linkbtn" data-iopen="${x.id}">${esc(x.it.n)}</button>${x.it.g ? ` <span class="sub">${esc(x.it.g)}</span>` : ""}</td><td class="num">${x.lv}</td><td class="sub">${esc(keyStats(x.it))}</td><td>${srcPills(x)}</td></tr>`).join("")}</tbody></table></div>` : ""}
@@ -131,7 +130,7 @@ function render(){
   const cap = S.all ? rows.length : 150;
   $("#itrows").innerHTML = rows.slice(0, cap).map(o => `<tr data-id="${o.id}"><td><button class="mbtn ibtn">${D.iicons[o.id] ? `<img src="data:image/png;base64,${D.iicons[o.id]}" alt="">` : "<i></i>"}<span><b>${esc(o.it.n)}</b>${o.it.g ? ` <span class="sub">${esc(o.it.g)}</span>` : ""}</span></button></td>
       <td>${esc(typeOf(o.it))}</td><td class="num">${o.it.c === "Equipment" ? o.lv : ""}</td><td class="sub">${o.it.c === "Equipment" ? esc(o.it.job || "All") : ""}</td>
-      <td class="sub">${esc(keyStats(o.it))}</td><td class="num">${o.it.p ? fmt(o.it.p) : "–"}</td><td class="num">${PW[o.id] ? fmt(PW[o.id][0]) + (PW[o.id][4] & 1 ? "?" : "") : "–"}${pwCheap(o.id) ? `<div class="sub up" title="Cheapest live listing (meso.watch, listings updated ${pwListedAgo()})">now ${fmt(PWNOW[o.id][0])}</div>` : ""}</td><td class="num">${pwTrend(o.id) || "–"}</td><td>${srcPills(o)}</td></tr>`).join("")
+      <td class="sub">${esc(keyStats(o.it))}</td><td class="num">${o.it.p ? fmt(o.it.p) : "–"}</td><td class="num">${PW[o.id] ? fmt(PW[o.id][0]) + (PW[o.id][4] & 1 ? "?" : "") : "–"}${pwCheap(o.id) ? `<div class="sub up" title="Cheapest live listing (meso.watch, listings updated ${pwListedAgo()})">now ${fmt(PWNOW[o.id][0])}</div>` : ""}</td><td class="num">${pwTrend(o.id) || "–"}</td><td>${srcPills(o)} ${npcCheaperPill(o.id)}</td></tr>`).join("")
     || `<tr><td colspan="9" class="sub">No item matches.</td></tr>`;
   $("#itmore").hidden = rows.length <= cap; $("#itmore").textContent = `Show all ${fmt(rows.length)}`;
 }

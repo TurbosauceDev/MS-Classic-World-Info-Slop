@@ -177,6 +177,20 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(!errs.length && w <= 360 && /share your screen/.test(await p.textContent("#ssst")), `scroll check: refused share fits a phone (${w}px)`);
     await ctx.close() }
 
+  // meowdb refresh 2026-10-21: Items page "Prices" lists every source (NPC shop from meowdb's launch list first) and flags
+  // items an NPC sells for less than player shops; drop reports say "N confirmed"
+  { const {p, errs, ctx} = await page(); await p.goto(URL); await open(p, "items");
+    await p.evaluate(() => { const e = document.createElement("span"); e.className = "itname"; e.dataset.item = "2000000"; document.querySelector("#items").prepend(e); e.click() }); await p.waitForTimeout(150);
+    const t = await p.evaluate(() => document.querySelector("#itprices")?.innerText || "");
+    check(!errs.length && /^Prices/i.test(t) && /NPC shop: 50 mesos/.test(t) && /NPC buys it for: 5 mesos/.test(t) && /Player shops: /.test(t), `items: price lines for Red Potion (${t.replace(/\s+/g, " ").slice(0, 160)})`);
+    const r = await p.evaluate(() => { const keep = PWNOW["2000000"], out = [];
+      PWNOW["2000000"] = [999, 1, 1, "", ""]; out.push(!!npcCheaper("2000000"), /NPC sells for less/.test(npcCheaperPill("2000000")));
+      PWNOW["2000000"] = [20, 1, 1, "", ""]; out.push(!!npcCheaper("2000000"));
+      if (keep) PWNOW["2000000"] = keep; else delete PWNOW["2000000"]; return out });
+    check(JSON.stringify(r) === "[true,true,false]", `items: "NPC sells for less" only when the shop beats the listing (${r})`);
+    check(/\d+ confirmed/.test(await p.evaluate(() => votesHtml(12))), "drop reports read \"N confirmed\"");
+    await ctx.close() }
+
   await b.close();
   console.log(fails ? `\n${fails} failed` : "\nall good"); process.exit(fails ? 1 : 0);
 })();

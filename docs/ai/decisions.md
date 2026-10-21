@@ -227,3 +227,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-21 Character Builder (Danny): pasted screenshots apply at once, no "Apply" button; Undo/Redo + Reset on the builder; show what was read; one full-screen shot must build the character, asking only for SP the screenshots can't show.
 - 2026-10-21 Danny: footer Privacy page covering what we collect + fan-site/no-warranty disclaimers.
 - 2026-10-21 classicmarket.kr: Layer A only (public trade posts, build-time); the Discord-login Minerva's Owl prices (Layer B) are skipped, offered as an option. No scroll simulator (declined earlier).
+- 2026-10-21 meowdb endpoint guessing is fine: meowdb knows and the community shares data (Danny). Refresh meowdb data incl. shops; NPC shop row + "NPC sells for less" badge; drop votes as "N confirmed". FM 3% tax waits on Danny's in-game check; FM room tip skipped (one unverifiable snapshot).

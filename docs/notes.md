@@ -69,8 +69,8 @@ COT2 client, kept for reference. The site now uses the launch-client changes in 
   Checked: Fighter 35 Ant Tunnel II 8% (meowdb 7% with gear), Magician 20 Transfer Area Caution (meowdb Caution).
 - Portals to potions: BFS over `nav` from `potshops` (meowdb shops selling HP/MP potions, civic shops included). Matches the
   guides' counts (Line 1 <Area 1> 3, Transfer Area 4, FUN IV 5, Ant Tunnel III 5). Shown only, not scored.
-- Level cap 100: D.exp 71-99 = previous × 1.0548 (meowdb; matches our table for 51-70 exactly); EXP_SURE = 49 is the last
-  level meowdb says is confirmed. Where to train falls back to the best map of the rest when nothing is within 12 levels.
+- Level cap 100: D.exp 71-99 = previous × 1.0548 (meowdb; matches our table for 51-70 exactly); EXP_SURE = 100 now: the whole
+  1-99 table is read from the launch client (OSMS formulas page). Where to train falls back to the best map of the rest when nothing is within 12 levels.
 
 ## OSMS formulas page, launch client (read 2026-10-20)
 Source: https://osmsdataexplorer.com/#formulas (tabs/formulas*.js, repo ohmi69/osms_datamine_dashboard @ 2ba79e7, Oct 19).
@@ -290,7 +290,7 @@ All CONFLICTS below were applied 2026-10-20 (Danny: "you can trust everything fr
   kl [[mobId, n]], il [[item, n, sourceMobId|null]], pre [questId],
   chain, cpos, cn, ri (reward groups {k: get|pick|rand, job, it: [[itemId, count, chance%]]}), info (tooltip: d, req, mesos, items, start, prev, next, chain, rep, contrib, eq)
 - `items` {itemId: {n, c category, s sub, st stats, job, p price, d desc, wt weapon type, spd, sp spec, g gender}}; `iicons` {itemId: base64}.
-  Every item in the export (2,221 incl. scrolls) since the `itemdb` step (Items tab). `ishop` {itemId: [[npc, mapId, mapName, price]]}:
+  Every item in the export (2,221 incl. scrolls) since the `itemdb` step (Items tab). `ishop` {itemId: [[npc, mapId, mapName, price, test ("COT2" = meowdb price not re-read at launch, else "")]]}:
   every meowdb NPC shop that sells it (same-name items: both genders of gendered gear, else the one with a sell price).
 - `mmaps` {mapId: base64 minimap, open maps only}, `mmapType` "webp" | "png" (WebP needs Pillow at data-build time)
 - `mmdim` {mapId: [w, h]} minimap pixels; `portals` {mapId: [[x, y, destMapId, hidden]]} x/y as 0-1 fractions of the minimap;

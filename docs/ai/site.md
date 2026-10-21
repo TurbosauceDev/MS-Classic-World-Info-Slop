@@ -31,7 +31,9 @@ node tests/monkey.js | tail -3              # random clicks/typing/Back/window s
 python3 scripts/pages_site.py /tmp/site     # the Pages copy pages.yml deploys (prints first-load size)
 python3 scripts/name_diff.py <base-commit>  # skill/item/monster/map renames between two data.json (CI: osms-names.yml)
 python3 scripts/fetch_shared.py             # shared tracker runs (daily CI job does this)
-node scripts/fetch_meowdb_drops.js          # then build_data.py extras mobdb
+node scripts/fetch_meowdb_drops.js          # drops + mesos; then build_data.py extras mobdb
+node scripts/fetch_meowdb_shops.js          # NPC shops; then build_data.py extras crafting itemdb weapon_sources
+python3 tests/meowdb_test.py                # meowdb source shape + Citizenship shop prices = meowdb launch prices
 python3 scripts/launch_diff.py <ver>        # maplestory.io MCW client vs our data -> docs/launch_diff.md
 ```
 Playwright: global install works here (`NODE_PATH` set, browsers in /opt/pw-browsers). If `chromium.launch` can't find a
@@ -223,3 +225,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - `scripts/fetch_classicmarket_listings.py` pulls classicmarket.kr's public `/api/listings` (JSON, real item ids, price is per unit) -> `data/sources/classicmarket_prices.json` + `D.cm.it[id] = [askMin, askMedian, askN, bidMax, bidMedian, bidN]`. Workflow `classicmarket-poll.yml` every 2 h (own workflow, meso.watch poll untouched); build_data.py step `cmarket`.
 - Counted: use/etc posts, and equips with 0 upgrades and an "exact" roll (buy posts with no roll too). Dropped: scrolled, upper/lower/unknown rolls, Cash, placeholder prices (0, all-same digits like 9999/99999, 123456), posts 10x off the median, bids over 2x the ask median. Author, Discord id and note are never stored.
 - Traps: the outside handoff's note rules (drop cheap posts saying 귓 "whisper") would drop real stackables (Iron Ore 300 "귓주세용"); price is already "each" (개당), no total parsing. Tests: `python3 tests/classicmarket_test.py` on `tests/fixtures/classicmarket_listings.json` (real posts).
+
+## meowdb refresh 2026-10-21
+- Shops come from `scripts/fetch_meowdb_shops.js` (JSON in the npc-shops page's `self.__next_f` flight payload; no API). Each shop has `prices` "Launch prices"/"COT2 prices" + `mapId`; `D.ishop` rows gain a 5th field ("COT2" or ""). `fetch_meowdb_drops.js` also refreshes mesos. Run the fetchers with the global Playwright (a local `npm i playwright` pins a browser build /opt/pw-browsers doesn't have).
+- Item page "Prices" = `PRICE_SRC`/`priceRows()` in 10-maps.js (shared; classicmarket thread pushes its own line). `npcCheaper`/`npcCheaperPill` = cheapest shop under the cheapest listing (or median); `votesHtml(v)` = "N confirmed". meowdb votes are weighted floats: build rounds them.
+- Trap: 40-citizenship.js SHOPS is a hand copy of meowdb prices; tests/meowdb_test.py fails when a launch-priced shop differs. Endpoint map for Z.ai: /mnt/project-files/reports/meowdb-endpoints-2026-10-21.md (market summary/listings work without login).
