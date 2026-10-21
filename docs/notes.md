@@ -4,7 +4,7 @@
 Credited on the page in the Credits tab (src/index.html #credits); add new sources there too.
 | What | Source |
 |---|---|
-| Monsters, maps, spawns, quests, items, skills, icons, citizenship quests | OSMS Data Explorer COT2 export — github.com/ohmi69/osms_datamine_dashboard (pinned in scripts/fetch_osms.sh) |
+| Monsters, maps, spawns, quests, items, skills, icons, citizenship quests | OSMS Data Explorer launch (Public Release) export, commit c661434 of 2026-10-17 — github.com/ohmi69/osms_datamine_dashboard (pinned in scripts/fetch_osms.sh; pin history COT2 d744a66 → launch d9e2263 10-06 → c661434 10-17). Checked 2026-10-21: OSMS commits up to 245f968 (10-20) change only its site JS/CSS, not data/current, so no bump needed |
 | 2008 comparison (tab removed 2026-10-06) | same repo, `data/patches/v49`; analyze.py still computes mob/skill diffs, build_data drops them |
 | EXP table 1–70 | maplestory.quest (checked: 10→30 = 545,290; 30→40 = 1,713,976) |
 | Accuracy / hit / damage / defense formulas | COT2 client audit published on maplestory.quest / OSMS `tabs/formulas.js` |
