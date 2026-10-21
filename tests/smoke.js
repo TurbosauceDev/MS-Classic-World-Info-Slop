@@ -227,6 +227,8 @@ const path = require("path");
     await p.route("**/api/feedback", r => { sent.push(JSON.parse(r.request().postData() || "{}")); r.fulfill({status: code, contentType: "application/json", body: "{}", headers: {"access-control-allow-origin": "*"}}) });
     await p.click('.sitefoot [data-foot="feedback"]');
     check(!(await p.isHidden("#feedback")) && await p.isDisabled("#fbsend"), "feedback: page opens, Send waits for a note");
+    { const w = await p.evaluate(() => ["#feedback .howto", ".fbcard", ".fbadmin"].map(e => { const r = document.querySelector(e).getBoundingClientRect(); return [Math.round(r.left), Math.round(r.right)] }));
+      check(w.every(x => x[0] === w[0][0] && x[1] === w[0][1]), "feedback: About box and form share one column, no long tail (" + JSON.stringify(w) + ")") }
     await p.click('#fbkind [data-k="Bug"]'); await p.fill("#fbmsg", "Snail EXP looks off"); await p.fill("#fbcontact", "Turbow");
     code = 429; await p.click("#fbsend"); await p.waitForSelector("#fbstat.bad");
     check(/try again later/.test(await p.textContent("#fbstat")) && await p.inputValue("#fbmsg") === "Snail EXP looks off", "feedback: a refused note keeps the text and says why");
