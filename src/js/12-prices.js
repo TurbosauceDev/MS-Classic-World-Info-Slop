@@ -21,11 +21,11 @@ function priceBox(id){
   const sells = all.filter(x => !x.buy).sort((a, b) => a.v - b.v || (b.t || 0) - (a.t || 0)), buys = all.filter(x => x.buy).sort((a, b) => b.v - a.v);
   const shop = shopBest(id), cheap = sells[0], usual = best && !best.per ? best.v : null;
   const vs = v => { if (!usual) return ""; const r = v / usual; return r < 0.995 ? `<span class="up">${Math.round((1 - r) * 100)}% under usual</span>` : r > 1.005 ? `${Math.round((r - 1) * 100)}% over usual` : "about usual" };
-  const unit = {"meso.watch": "sales", meowdb: "prices"}[best?.src] || "posts";
+  const unit = {"meso.watch": "sales", "classicmarket.kr market": "sold", meowdb: "prices"}[best?.src] || "posts";
   const tile = (k, v, sub, tip) => `<div class="pxt"${tip ? ` title="${esc(tip)}"` : ""}><span class="pxk">${k}</span><b class="pxv">${v}</b><span class="pxs">${sub}</span></div>`;
   const tiles = `<div class="pxtiles">
     ${tile("Usual price", best ? fmt(best.v) + (best.per ? `<small> per set</small>` : "") : "–", best ? `${esc(best.src)} · ${fmt(best.n)} ${unit}${best.rough ? ` <span class="pill p-warn">rough</span>` : ""}` : "no player prices yet",
-      best ? `The price the rest of the site uses: meso.watch sales first, then meowdb, then classicmarket.kr` : "")}
+      best ? `The price the rest of the site uses: meso.watch sales first, then classicmarket.kr market, then meowdb, then classicmarket.kr posts` : "")}
     ${tile("Cheapest listed", cheap ? pxEach(cheap.v) : "–", cheap ? `${pxWhere(cheap)}${vs(cheap.v) ? " · " + vs(cheap.v) : ""}` : "no live listing with a place")}
     ${tile("NPC shop", shop ? fmt(shop[3]) : "–", shop ? esc(shop[0]) + (shop[4] ? ` · ${shop[4]} price` : "") : "no shop sells it", shop ? `${shop[0]}, ${shop[2]} (meowdb shop list)` : "")}
     ${tile("NPC buys", it?.p ? fmt(it.p) : "–", it?.p ? "game files" : "can't be sold to NPCs")}</div>`;

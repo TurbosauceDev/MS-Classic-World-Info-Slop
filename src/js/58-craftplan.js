@@ -22,7 +22,7 @@ const shopMin = id => { const a = [...(D.ishop?.[id] || []).map(s => s[3]), D.sh
 // (flag 2) have no per-item price, so they fall back to the NPC price. No meso.watch sales: classicmarket.kr asks, then buy orders (pwPrice).
 const worth = id => { const f = pwPrice(id), med = f && !f.per ? f.v : 0; return Math.max(med, D.items[id]?.p || 0) };
 const rough = id => { const f = pwPrice(id); return !!(f && f.rough && f.v > (D.items[id]?.p || 0)) };
-const roughWhy = id => { const f = pwPrice(id); return f?.src === "meso.watch" ? "Under 5 sales seen" : f?.src === "meowdb" ? `Only meowdb (${fmt(f.n)} player prices, under 5 of them sales)` : `Only ${f?.src || "rough"} (${fmt(f?.n || 0)} posts): asking prices, not sales` };
+const roughWhy = id => { const f = pwPrice(id); return f?.src === "meso.watch" ? "Under 5 sales seen" : f?.src === "classicmarket.kr market" ? `Only classicmarket.kr market: under 5 sales (${fmt(f.n)})` : f?.src === "meowdb" ? `Only meowdb (${fmt(f.n)} player prices, under 5 of them sales)` : `Only ${f?.src || "rough"} (${fmt(f?.n || 0)} posts): asking prices, not sales` };
 // cheapest way to buy one: a live listing, an NPC shop or the usual price
 // (no meso.watch price: the cheapest classicmarket.kr sell post)
 const cmAsk = id => !PW[id] && CM[id]?.[2] ? CM[id][0] : 0;

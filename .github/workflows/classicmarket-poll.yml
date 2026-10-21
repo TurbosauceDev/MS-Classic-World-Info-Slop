@@ -19,19 +19,22 @@ jobs:
         with: { ref: main }
       - run: python3 tests/classicmarket_test.py
       - name: Fetch, build, commit if changed
+        env:
+          CLASSICMARKET_COOKIE: ${{ secrets.CLASSICMARKET_COOKIE }}
         # on a push race (meso.watch poll commits often), start again from the new main, never merge data.json
         run: |
           python3 scripts/fetch_classicmarket_listings.py > /tmp/cm.log; cat /tmp/cm.log
+          python3 scripts/fetch_classicmarket_market.py   # Layer B: needs the cookie; warns and skips without it
           [ -f data/sources/classicmarket_prices.json ] || exit 0   # first fetch failed
-          cp data/sources/classicmarket_prices.json /tmp/cm.json
+          cp data/sources/classicmarket_prices.json /tmp/cm.json; cp data/sources/classicmarket_market.json /tmp/cmp.json 2>/dev/null || true
           for i in 1 2 3; do
             python3 scripts/build.py | tail -2
-            git add data/sources/classicmarket_prices.json data/data.json dist/index.html
+            git add data/sources/classicmarket_prices.json data/sources/classicmarket_market.json data/data.json dist/index.html 2>/dev/null || git add data/sources/classicmarket_prices.json data/data.json dist/index.html
             if git diff --cached --quiet; then echo "no change"; exit 0; fi
             git -c user.name="classicmarket bot" -c user.email="actions@github.com" commit -qm "classicmarket.kr prices $(date -u '+%F %H:%M')"
             git push origin HEAD:main && exit 0
             sleep $((i*15)); git fetch -q origin main; git reset -q --hard origin/main
-            cp /tmp/cm.json data/sources/classicmarket_prices.json
-            python3 -c "import sys,json;sys.path.insert(0,'scripts');import fetch_classicmarket_listings as c;D=json.load(open('data/data.json'));c.step(D);open('data/data.json','w').write(json.dumps(D,separators=(',',':')))"
+            cp /tmp/cm.json data/sources/classicmarket_prices.json; cp /tmp/cmp.json data/sources/classicmarket_market.json 2>/dev/null || true
+            python3 -c "import sys,json;sys.path.insert(0,'scripts');import fetch_classicmarket_listings as c,fetch_classicmarket_market as m;D=json.load(open('data/data.json'));c.step(D);m.step(D);open('data/data.json','w').write(json.dumps(D,separators=(',',':')))"
           done
           exit 1

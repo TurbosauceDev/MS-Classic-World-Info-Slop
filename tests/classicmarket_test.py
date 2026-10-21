@@ -50,5 +50,13 @@ check(cm.aggregate([{"kind": "sell", "itemId": 4011000, "category": "Etc", "pric
                     {"kind": "buy", "itemId": 4011000, "category": "Etc", "price": 900, "status": "open"},
                     {"kind": "buy", "itemId": 4011000, "category": "Etc", "price": 350, "status": "open"}])["4011000"] == [400, 400, 1, 350, 350, 1], "bid over 2x ask")
 
+# Layer B (scripts/fetch_classicmarket_market.py): their combined prices; values from the 2026-10-21 probe run
+import fetch_classicmarket_market as cmm
+R = cmm.rows([{"itemId": 2040801, "day": "2026-10-21", "median": 650000, "low": 599999, "high": 1499999, "sold": 30, "sample": 420, "forSale": 410},
+              {"itemId": 4010001, "day": "2026-10-20", "median": 400, "low": 100, "high": 750, "sold": 9, "sample": 99, "forSale": 1},
+              {"itemId": 4010001, "day": "2026-10-21", "median": 449, "low": 100, "high": 750, "sold": 2246, "sample": 2461, "forSale": 2316},
+              {"itemId": 2000002, "day": "2026-10-21", "median": 0, "sold": 0, "sample": 0}, {"itemId": None, "median": 5}])
+check(R == {"2040801": [650000, 599999, 1499999, 30, 420, 410, "2026-10-21"], "4010001": [449, 100, 750, 2246, 2461, 2316, "2026-10-21"]}, f"Layer B rows {R}")
+
 print("classicmarket:", "OK" if not fails else f"{fails} failed", f"({len(P)} posts, {len(IT)} items)")
 sys.exit(1 if fails else 0)

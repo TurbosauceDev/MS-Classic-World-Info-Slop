@@ -654,8 +654,9 @@ def step_shared(D):
 def step_cmarket(D):
     """cm {read, posts, it: {itemId: [askMin, askMedian, askN, bidMax, bidMedian, bidN]}}: classicmarket.kr trade posts
     (scripts/fetch_classicmarket_listings.py)."""
-    import fetch_classicmarket_listings
+    import fetch_classicmarket_listings, fetch_classicmarket_market
     fetch_classicmarket_listings.step(D)
+    fetch_classicmarket_market.step(D)   # cmp {read, it: {itemId: [median, low, high, sold, seen, forSaleNow, day]}}: their combined prices
 
 def step_mdbmarket(D):
     """mdb {read, it, ls}: meowdb Free Market price summaries + live listings (scripts/meowdb_market.py)."""
@@ -675,7 +676,7 @@ def osms_info():
         return {"ref": h, "date": d}
     except Exception: return None
 
-PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: step_cmarket(D)), "shopscans": ("mw", lambda D: step_shopscans(D)), "mdbmarket": ("mdb", lambda D: step_mdbmarket(D)), "reqitems": ("_none", lambda D: step_reqitems(D)), "weapon_sources": ("wsrc", lambda D: step_weapon_sources(D))}   # (key it owns, step)
+PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: (D.pop("cmp", None), step_cmarket(D))), "shopscans": ("mw", lambda D: step_shopscans(D)), "mdbmarket": ("mdb", lambda D: step_mdbmarket(D)), "reqitems": ("_none", lambda D: step_reqitems(D)), "weapon_sources": ("wsrc", lambda D: step_weapon_sources(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)

@@ -112,7 +112,7 @@ function advice(id){
   const it = D.items[id], npc = it.p || 0, p = PW[id];
   if (!npc && (!p || !p[0]) && !CM[id] && !MDB[id]) return {each: 0, how: "Worth next to nothing.", cls: "na"};
   const f = !p && pwPrice(id);   // no meso.watch sales: meowdb usual price, then classicmarket.kr asks, then buy orders
-  if (f && f.v > npc) return {each: f.v, how: `No player-shop sales seen. ${f.src}: ~<b>${fmt(f.v)}</b> (median of ${fmt(f.n)} ${f.src === "meowdb" ? "player price" : "post"}${f.n === 1 ? "" : "s"}${CM[id]?.[5] ? `; buy orders up to ${fmt(CM[id][3])}` : ""}).${npc ? ` NPC pays ${fmt(npc)}.` : ""} <span class="pill p-warn" title="${f.src === "meowdb" ? "meowdb's usual price mixes asking prices seen in shops with sales players reported" : "Asking prices on classicmarket.kr, not sales"}">rough</span>`, cls: ""};
+  if (f && f.v > npc) return {each: f.v, how: `No player-shop sales seen. ${f.src}: ~<b>${fmt(f.v)}</b> (median of ${fmt(f.n)} ${f.unit}${f.n === 1 ? "" : "s"}${CM[id]?.[5] ? `; buy orders up to ${fmt(CM[id][3])}` : ""}).${npc ? ` NPC pays ${fmt(npc)}.` : ""}${f.src === "classicmarket.kr market" && !f.rough ? "" : ` <span class="pill p-warn" title="${f.src === "classicmarket.kr market" ? "Under 5 sales on classicmarket.kr" : f.src === "meowdb" ? "meowdb's usual price mixes asking prices seen in shops with sales players reported" : "Asking prices on classicmarket.kr, not sales"}">rough</span>`}`, cls: ""};
   if (!p) return {each: npc, how: npc ? `No player sales seen. NPC pays ${fmt(npc)}.` : "No player sales seen, NPC buys it for nothing.", cls: "na"};
   const per = p[4] & 2 ? " per set" : "", low = p[4] & 1;
   if (npc >= p[0]) return {each: npc, how: `Sell to an NPC: it pays ${fmt(npc)}, players ~${fmt(p[0])}${per}.`, cls: ""};

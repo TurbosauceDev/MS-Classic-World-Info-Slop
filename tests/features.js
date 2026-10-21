@@ -190,16 +190,17 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(JSON.stringify(r) === "[true,true,false]", `items: "NPC sells for less" only when the shop beats the listing (${r})`);
     check(/\d+ confirmed/.test(await p.evaluate(() => votesHtml(12))), "drop reports read \"N confirmed\"");
     // classicmarket.kr + meowdb 2026-10-21: a Prices row per source with its sample count; pwPrice falls back
-    // meso.watch -> meowdb usual -> classicmarket.kr asks -> buy orders
-    const c = await p.evaluate(() => { const id = "2000000", kp = PW[id], kc = CM[id], km = MDB[id], out = [];
-      CM[id] = [40, 45, 3, 30, 28, 2]; MDB[id] = [55, 20, 7, 50, null, 4, null, 0, null, 0]; const rows = PRICE_SRC.map(f => f(id)).filter(Boolean);
-      out.push(rows.some(r => r.src === "classicmarket.kr" && r.v === 45 && /3 posts/.test(r.n)) && rows.some(r => r.buy && r.v === 28) && rows.some(r => r.src === "meowdb" && r.v === 55 && /20 asks \+ 7 sales/.test(r.n)));
+    // meso.watch -> classicmarket.kr market (combined, Layer B) -> meowdb usual -> classicmarket.kr asks -> buy orders
+    const c = await p.evaluate(() => { const id = "2000000", kp = PW[id], kc = CM[id], km = MDB[id], kk = CMP[id], out = [];
+      CM[id] = [40, 45, 3, 30, 28, 2]; CMP[id] = [65, 50, 90, 12, 40, 3, "2026-10-21"]; MDB[id] = [55, 20, 7, 50, null, 4, null, 0, null, 0]; const rows = PRICE_SRC.map(f => f(id)).filter(Boolean);
+      out.push(rows.some(r => r.src === "classicmarket.kr" && r.v === 45 && /3 posts/.test(r.n)) && rows.some(r => r.buy && r.v === 28) && rows.some(r => r.src === "meowdb" && r.v === 55 && /20 asks \+ 7 sales/.test(r.n)) && rows.some(r => r.src === "classicmarket.kr" && r.v === 65 && /12 sold · 40 seen/.test(r.n) && /50-90 · 3 for sale now/.test(r.detail)));
       PW[id] = [60, 50, 70, 9, 0]; out.push(pwPrice(id).src);
       delete PW[id]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
+      delete CMP[id]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
       delete MDB[id]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
       CM[id] = [null, null, 0, 30, 28, 2]; out.push(pwPrice(id).src);
-      if (kp) PW[id] = kp; if (kc) CM[id] = kc; else delete CM[id]; if (km) MDB[id] = km; return out });
-    check(JSON.stringify(c) === '[true,"meso.watch","meowdb 55","classicmarket.kr asks 45","classicmarket.kr buy orders"]', `prices: source rows + fallback order (${c})`);
+      if (kp) PW[id] = kp; if (kc) CM[id] = kc; else delete CM[id]; if (km) MDB[id] = km; if (kk) CMP[id] = kk; return out });
+    check(JSON.stringify(c) === '[true,"meso.watch","classicmarket.kr market 65","meowdb 55","classicmarket.kr asks 45","classicmarket.kr buy orders"]', `prices: source rows + fallback order (${c})`);
     // Danny 2026-10-21: "Where to buy" lists every listing with a place (meso.watch cheapest + meowdb posts), cheapest first
     await p.evaluate(() => { const id = "2000000", kn = PWNOW[id], kl = MDBL[id], now = Math.round(Date.now() / 6e4);
       PWNOW[id] = [70, 5, 6, "Free Market <4>", "CINDY"];
