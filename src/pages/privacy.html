@@ -1,0 +1,63 @@
+<section id="privacy" class="narrowpage" hidden>
+  <details class="howto" open>
+    <summary>About this page</summary>
+    <ul>
+      <li>What this site and the Grind Tracker app keep about you, where it goes, and the usual disclaimers, in plain words. Last updated Oct 21, 2026.</li>
+      <li>Short version: no accounts, no ads, no analytics, no tracking cookies. Your settings stay in your browser. Only what you choose to send (a Feedback note, a shared tracker run) reaches our server.</li>
+    </ul>
+  </details>
+
+  <div class="privacy">
+    <div class="card"><div class="cardhead"><h3>Stored in your browser only</h3></div>
+      <ul>
+        <li>Your settings, theme, layout, builds, plans, profiles, watch lists and the last page you opened are saved in your browser's local storage on this device. They never leave it unless you copy a share link or share code yourself.</li>
+        <li>Share links put the build or plan in the link itself (after the #). Whoever you send it to sees what's in it; nothing is stored on our side.</li>
+        <li>Clear it any time: your browser's "clear site data" for this site removes all of it.</li>
+        <li>The site works offline through a service worker, which caches the site's own files on your device.</li>
+      </ul></div>
+
+    <div class="card"><div class="cardhead"><h3>Screenshots and screen sharing</h3></div>
+      <ul>
+        <li>Screenshots you paste or drop (Character Builder, Price check, Craft planner) are read on your device, in the page. They are not uploaded anywhere.</li>
+        <li>Scroll check's screen share is read frame by frame in the page and never recorded or sent. Stop sharing and it's gone.</li>
+      </ul></div>
+
+    <div class="card"><div class="cardhead"><h3>What reaches our server</h3></div>
+      <p>Our server is a small Cloudflare Worker with a database. It only gets what you send it:</p>
+      <ul>
+        <li><b>Feedback notes:</b> the note, its type, the contact name if you add one, the page you came from and the site version. To stop spam, a one-way hash of your IP address mixed with the date and a secret is kept with the note; the IP itself is not stored and the hash can't be turned back into it.</li>
+        <li><b>Grind Tracker shared runs and KPQ rounds</b> (opt-in, off unless you turn it on in the app): the run's numbers (map, level, EXP, mesos, drops, time, party size), a random install ID made by the app, and the label you choose. The same daily IP hash limits spam. Shared runs are public: they feed the leaderboards and the "players" numbers on this site.</li>
+        <li><b>Party live view</b> (tracker, when you join a party code): your live numbers for the party, plus a hashed IP to cap copies per machine. These rows only last while the party is live.</li>
+        <li>No names, emails, accounts or game logins are ever asked for or kept.</li>
+      </ul></div>
+
+    <div class="card"><div class="cardhead"><h3>Other sites this page talks to</h3></div>
+      <p>Like any web page, these see your IP address and browser when your browser fetches from them. We don't send them anything else about you.</p>
+      <ul>
+        <li><b>GitHub Pages</b> hosts the site and keeps standard server logs (<a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub privacy statement</a>).</li>
+        <li><b>Cloudflare</b> runs our server and may keep standard request logs (<a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare privacy policy</a>).</li>
+        <li><b>Google Fonts</b> serves the site's fonts (<a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google privacy policy</a>).</li>
+        <li><b>maplestory.io</b> draws character previews and some world map images.</li>
+        <li>Links to other sites (OSMS Data Explorer, meowdb, meso.watch and others) follow their own policies once you click them.</li>
+      </ul></div>
+
+    <div class="card"><div class="cardhead"><h3>The Grind Tracker app</h3></div>
+      <ul>
+        <li>The app only reads the game window's pixels on your PC to count EXP, mesos and drops. It doesn't read game memory, change the game or send inputs.</li>
+        <li>Runs, settings and saved frames stay on your PC unless you turn on sharing. Update checks ask GitHub for the latest release.</li>
+        <li>Whether screen-reading tools are allowed is up to Nexon's rules; you use it at your own risk.</li>
+      </ul></div>
+
+    <div class="card"><div class="cardhead"><h3>Disclaimers</h3></div>
+      <ul>
+        <li><b>Unofficial fan site.</b> Not made, endorsed or supported by NEXON. MapleStory, its names, game data and art are trademarks and property of NEXON.</li>
+        <li><b>No accuracy guarantee.</b> Data comes from the OSMS game-file export, meowdb, meso.watch and the other sources on the Credits page, and can be wrong or out of date. Prices, drop odds, EXP/hour and times are estimates.</li>
+        <li><b>No warranty.</b> The site and app are free and provided as is. We're not responsible for lost mesos, items, time or accounts from decisions made with them.</li>
+        <li><b>Not for children under 13.</b> The site doesn't knowingly collect anything from them; ask us and we'll remove a note or shared run.</li>
+        <li>This page may change; the date at the top says when it last did.</li>
+      </ul></div>
+
+    <div class="card"><div class="cardhead"><h3>Questions or removal</h3></div>
+      <p>Send a note on the <a href="#" data-go="feedback">Feedback</a> page (add a way to reach you). We can delete a Feedback note or shared run on request.</p></div>
+  </div>
+</section>

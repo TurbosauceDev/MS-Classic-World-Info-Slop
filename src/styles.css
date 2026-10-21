@@ -893,6 +893,9 @@ html.anchoring .homegrid>.homecat.anchlift{outline:2px solid var(--accent)}
 html.anchoring :is(.navcol,.homegrid){user-select:none}
 /* a page whose content is one narrow column: About box and content share its width, centered right of the sidebar (Danny 10-21) */
 .narrowpage{width:100%;max-width:760px;margin-inline:auto;box-sizing:border-box}
+/* Privacy page (src/pages/privacy.html; .narrowpage column) */
+.privacy{display:grid;gap:14px;margin-top:14px}
+.privacy ul{margin:6px 0 0;padding-left:20px}.privacy li{margin:4px 0}
 /* Feedback page (73-feedback.js) */
 .fbcard{box-sizing:border-box;box-shadow:var(--shadow)}
 .fbto{margin:0}

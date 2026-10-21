@@ -252,6 +252,8 @@ const boxGaps = require("./boxgaps");
     check(b.kind === "Bug" && b.msg === "Snail EXP looks off" && b.contact === "Turbow" && b.website === "" && b.page === "credits" && /^\d+\.\d+\.\d+$/.test(b.ver), "feedback: note sent (" + JSON.stringify(b) + ")");
     await p.click("#fbagain"); check(await p.inputValue("#fbmsg") === "" && !(await p.isHidden("#fbform")), "feedback: Send another clears the form");
     await p.unroute("**/api/feedback");
+    await p.click('.sitefoot [data-foot="privacy"]');
+    check(!(await p.isHidden("#privacy")) && /not uploaded/.test(await p.textContent("#privacy")) && /NEXON/.test(await p.textContent("#privacy")), "privacy: footer link opens the policy");
   }
   await tab("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to finish craft Lv 8/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 8, "crafting leveling plan");
   await tab("#t-maps"); check(await p.$$eval("#timedrows tr", r => r.length) > 10 && /Mushmom/.test(await p.textContent("#timedrows")), "bosses and timed spawns");

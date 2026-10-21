@@ -225,3 +225,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-21: Screenshot-reading pages show a hover/popup inventory grid of what was scanned (Danny).
 - 2026-10-21 Site gets profiles like the app (save/switch/share MSCS1 codes) and an app-style Settings; built-ins Default (site as it comes) and Danny's Default (his screenshot layout). Codes swap themes with the app (Danny).
 - 2026-10-21 Character Builder (Danny): pasted screenshots apply at once, no "Apply" button; Undo/Redo + Reset on the builder; show what was read; one full-screen shot must build the character, asking only for SP the screenshots can't show.
+- 2026-10-21 Danny: footer Privacy page covering what we collect + fan-site/no-warranty disclaimers.

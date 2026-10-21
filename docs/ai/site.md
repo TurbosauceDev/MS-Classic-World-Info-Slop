@@ -215,3 +215,6 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - 10-21 builder pass: screenshots apply on paste (`applyR` in 52-shotimport.js, wrapped in `BLD.group` so one paste = one Undo step); the review form is gone, the builder's own controls are the edit form. Undo/Redo/Reset live in 50-builder.js (`HIST`, `track()` at the end of `render()`); the import's READS ride along via `BLD.extra`. Only typing in AP boxes coalesces steps.
 - Trap: anything that changes S in several `BLD.apply` calls must go through `BLD.group`, or Undo needs two presses. Reset = default S with an auto skill build (sp `{__auto:1}`), not empty SP.
 - Each read keeps `marks` (native-pixel boxes) and a `thumb` crop of just the read windows; a full 2560x1440 frame reads fine at 2x (bow-full.png).
+## Privacy page 2026-10-21
+- `src/pages/privacy.html` (footer "Privacy", More › Privacy): static, plain-language policy + disclaimers, verified from code (localStorage only, screenshots/screen share never uploaded, Worker keeps only Feedback notes, opt-in runs/KPQ, party_live 1 h, salted IP-day hashes). Smoke checks the footer link.
+- Trap: if a feature starts sending or storing anything new (server field, external fetch, analytics), update this page in the same push.

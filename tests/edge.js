@@ -4,7 +4,7 @@
 const { chromium } = require("playwright");
 const path = require("path");
 const URL = "file://" + path.resolve(__dirname, "../dist/index.html");
-const TABS = ["trk", "trkhow", "trkruns", "trkkpq", "plan", "path", "maps", "expc", "quests", "mobs", "items", "skills", "wmap", "navi", "kpq", "cit", "craft", "keep", "inv", "log", "credits", "feedback"];
+const TABS = ["trk", "trkhow", "trkruns", "trkkpq", "plan", "path", "maps", "expc", "quests", "mobs", "items", "skills", "wmap", "navi", "kpq", "cit", "craft", "keep", "inv", "log", "credits", "feedback", "privacy"];
 const KEYS = "tab planner path pathdone qsort qeq qval ctown craft craftlv qcompact keep keephave mobs items skills navi wmap expc theme themes themec train bcmp anchors".split(" ");
 const BADTEXT = /.{0,30}(NaN|undefined|Infinity|\[object).{0,30}/;
 const enc = o => Buffer.from(JSON.stringify(o)).toString("base64").replace(/\+/g, "-").replace(/\//g, "_");
