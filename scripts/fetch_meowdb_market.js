@@ -1,0 +1,54 @@
+// meowdb Free Market (no login): per-item price summary + live player listings -> data/sources/meowdb_market.json.
+// meowdb's "usual price" = 14-day median of players' price checks ("seen in a shop" asks + "sold for" reports) and trades
+// finished on meowdb; asks = priceChecks - soldChecks, sales = soldChecks + finishedTrades (meowdb's own UI math).
+// Listings are posted by meowdb users (channel, FM room, spot, username), so they can be stale: bumpedAt says when.
+// Items fetched = any item with a live meowdb listing + every item meso.watch or classicmarket.kr prices.
+// Run: CHROMIUM=/opt/pw-browsers/chromium node scripts/fetch_meowdb_market.js   then   python3 scripts/meowdb_market.py
+// A failed fetch exits 0 and keeps the old file (the workflow then commits nothing).
+const { chromium } = require("playwright"), fs = require("fs"), path = require("path");
+const ROOT = path.resolve(__dirname, ".."), DST = path.join(ROOT, "data/sources/meowdb_market.json");
+const KEEP_DAYS = 7, SELLS = 12, BUYS = 5;   // listings not bumped in a week are dropped; cheapest 12 asks, best 5 buy orders per item
+(async () => {
+  const D = JSON.parse(fs.readFileSync(path.join(ROOT, "data/data.json")));
+  const want = new Set([...Object.keys(D.pw?.it || {}), ...Object.keys(D.pw?.now || {}), ...Object.keys(D.cm?.it || {})]);
+  let b;
+  try {
+    b = await chromium.launch(process.env.CHROMIUM ? {executablePath: process.env.CHROMIUM} : {});
+    const p = await b.newPage();
+    await p.goto("https://meowdb.com/msclassic", {timeout: 60000});
+    const got = await p.evaluate(async ({want, KEEP_DAYS}) => {
+      const nap = () => new Promise(z => setTimeout(z, 250));
+      const get = async u => { for (let i = 0; i < 3; i++){ const r = await fetch(u); if (r.ok) return r.json(); await new Promise(z => setTimeout(z, 2000 * (i + 1))) } throw new Error(u) };
+      const pages = async (u, key, more) => { const out = []; for (let i = 1; i < 400; i++){ const j = await get(u + (u.includes("?") ? "&" : "?") + "page=" + i);
+        out.push(...j[key]); if (!more(j, i)) break; await nap() } return out };
+      const cat = await pages("/msclassic/api/items", "items", j => j.hasMore);                       // meowdb id <-> game id (iconKey)
+      const game = Object.fromEntries(cat.map(x => [x.id, x.iconKey])), mdb = Object.fromEntries(cat.map(x => [x.iconKey, x.id]));
+      const live = [...await pages("/msclassic/api/market-listings/browse", "rows", (j, i) => i < j.pages),
+        ...await pages("/msclassic/api/market-listings/browse?side=buy", "rows", (j, i) => i < j.pages)];
+      const listed = new Set(live.map(x => x.itemId)), ids = new Set([...listed, ...want.map(g => mdb[g]).filter(Boolean)]);
+      const it = {}, ls = {}, cut = Date.now() - KEEP_DAYS * 864e5;
+      for (const id of ids){ const g = game[id]; if (!g) continue;
+        const s = await get(`/msclassic/api/item-market-summary?itemId=${id}&condition=clean`); await nap();
+        if (s.usual != null || s.cheapestSell != null) it[g] = s;
+        if (!listed.has(id)) continue;
+        const l = await get("/msclassic/api/market-listings?itemId=" + id); await nap();
+        ls[g] = (l.listings || []).filter(x => x.status === "active" && x.price > 0 && Date.parse(x.bumpedAt.replace(" ", "T") + "Z") >= cut) }
+      return {cat: cat.length, live: live.length, it, ls} }, {want: [...want], KEEP_DAYS});
+    await b.close();
+    const t = s => Math.round(Date.parse(s.replace(" ", "T") + "Z") / 6e4);   // UTC minutes since 1970
+    const st = o => Object.entries(o || {}).filter(([, v]) => typeof v === "number" && v).map(([k, v]) => k + " " + v).join(", ");
+    const row = x => [x.side === "buy" ? 1 : 0, x.price, x.quantity || 1, x.channel || 0, x.fmRoom || 0, (x.location || "").slice(0, 60),
+      x.username || "", t(x.bumpedAt), x.tradeMethod === "direct" ? 1 : 0, x.condition === "scrolled" ? "scrolled" + (st(x.stats) ? ": " + st(x.stats) : "") : st(x.stats)];
+    const it = {}, ls = {};
+    for (const [g, s] of Object.entries(got.it)) it[g] = [s.usual, s.priceChecks - Math.min(s.priceChecks, s.soldChecks || 0), Math.min(s.priceChecks, s.soldChecks || 0) + (s.finishedTrades || 0),
+      s.cheapestSell, s.bestBuy, s.forSale || 0, s.last24h?.median ?? null, s.last24h?.count || 0, s.last7d?.median ?? null, s.last7d?.count || 0];
+    for (const [g, a] of Object.entries(got.ls)){
+      const r = [...a.filter(x => x.side !== "buy").sort((x, y) => x.price - y.price).slice(0, SELLS), ...a.filter(x => x.side === "buy").sort((x, y) => y.price - x.price).slice(0, BUYS)].map(row);
+      if (r.length) ls[g] = r }
+    const j = {source: "https://meowdb.com/msclassic/free-market", read: new Date().toISOString().slice(0, 16).replace("T", " "),
+      fields: {it: "usual, asks, sales, cheapestSell, bestBuy, forSale, median24h, n24h, median7d, n7d",
+        ls: "buy 0/1, price each, qty, channel, FM room, spot, meowdb user, bumped (UTC min), direct trade 0/1, stats"}, it, ls};
+    fs.writeFileSync(DST, JSON.stringify(j));
+    console.log(`${got.cat} catalog items, ${got.live} live listings; ${Object.keys(it).length} items priced, ${Object.keys(ls).length} with listings -> ${DST}`);
+  } catch (e) { console.log("meowdb market fetch failed, keeping the old file:", e.message); if (b) await b.close() }
+})();

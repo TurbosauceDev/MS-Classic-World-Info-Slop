@@ -182,21 +182,34 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
   { const {p, errs, ctx} = await page(); await p.goto(URL); await open(p, "items");
     await p.evaluate(() => { const e = document.createElement("span"); e.className = "itname"; e.dataset.item = "2000000"; document.querySelector("#items").prepend(e); e.click() }); await p.waitForTimeout(150);
     const t = await p.evaluate(() => document.querySelector("#itprices")?.innerText || "");
-    check(!errs.length && /^Prices/i.test(t) && /NPC shop: 50 mesos/.test(t) && /NPC buys it for: 5 mesos/.test(t) && /Player shops: /.test(t), `items: price lines for Red Potion (${t.replace(/\s+/g, " ").slice(0, 160)})`);
+    check(!errs.length && /Usual price/i.test(t) && /NPC shop\s*50\b/i.test(t) && /NPC buys\s*5\b/i.test(t) && /Where to buy/i.test(t), `items: price tiles for Red Potion (${t.replace(/\s+/g, " ").slice(0, 160)})`);
     const r = await p.evaluate(() => { const keep = PWNOW["2000000"], out = [];
       PWNOW["2000000"] = [999, 1, 1, "", ""]; out.push(!!npcCheaper("2000000"), /NPC sells for less/.test(npcCheaperPill("2000000")));
       PWNOW["2000000"] = [20, 1, 1, "", ""]; out.push(!!npcCheaper("2000000"));
       if (keep) PWNOW["2000000"] = keep; else delete PWNOW["2000000"]; return out });
     check(JSON.stringify(r) === "[true,true,false]", `items: "NPC sells for less" only when the shop beats the listing (${r})`);
     check(/\d+ confirmed/.test(await p.evaluate(() => votesHtml(12))), "drop reports read \"N confirmed\"");
-    // classicmarket.kr 2026-10-21: a Prices line with source + post counts; pwPrice falls back meso.watch -> asks -> buy orders
-    const c = await p.evaluate(() => { const id = "2000000", kp = PW[id], kc = CM[id], out = [];
-      CM[id] = [40, 45, 3, 30, 28, 2]; out.push(PRICE_SRC.map(f => f(id)).some(r => r && /classicmarket\.kr: sellers ask from <b>40<\/b>.*3 posts.*buy orders up to <b>30<\/b>.*2 posts/.test(r[1])));
+    // classicmarket.kr + meowdb 2026-10-21: a Prices row per source with its sample count; pwPrice falls back
+    // meso.watch -> meowdb usual -> classicmarket.kr asks -> buy orders
+    const c = await p.evaluate(() => { const id = "2000000", kp = PW[id], kc = CM[id], km = MDB[id], out = [];
+      CM[id] = [40, 45, 3, 30, 28, 2]; MDB[id] = [55, 20, 7, 50, null, 4, null, 0, null, 0]; const rows = PRICE_SRC.map(f => f(id)).filter(Boolean);
+      out.push(rows.some(r => r.src === "classicmarket.kr" && r.v === 45 && /3 posts/.test(r.n)) && rows.some(r => r.buy && r.v === 28) && rows.some(r => r.src === "meowdb" && r.v === 55 && /20 asks \+ 7 sales/.test(r.n)));
       PW[id] = [60, 50, 70, 9, 0]; out.push(pwPrice(id).src);
       delete PW[id]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
+      delete MDB[id]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
       CM[id] = [null, null, 0, 30, 28, 2]; out.push(pwPrice(id).src);
-      if (kp) PW[id] = kp; if (kc) CM[id] = kc; else delete CM[id]; return out });
-    check(JSON.stringify(c) === '[true,"meso.watch","classicmarket.kr asks 45","classicmarket.kr buy orders"]', `classicmarket: price line + fallback order (${c})`);
+      if (kp) PW[id] = kp; if (kc) CM[id] = kc; else delete CM[id]; if (km) MDB[id] = km; return out });
+    check(JSON.stringify(c) === '[true,"meso.watch","meowdb 55","classicmarket.kr asks 45","classicmarket.kr buy orders"]', `prices: source rows + fallback order (${c})`);
+    // Danny 2026-10-21: "Where to buy" lists every listing with a place (meso.watch cheapest + meowdb posts), cheapest first
+    await p.evaluate(() => { const id = "2000000", kn = PWNOW[id], kl = MDBL[id], now = Math.round(Date.now() / 6e4);
+      PWNOW[id] = [70, 5, 6, "Free Market <4>", "CINDY"];
+      MDBL[id] = [[0, 90, 10, 3, 0, "Kerning bottom left", "Jayce", now - 30, 0, ""], [0, 60, 1, 7, 7, "middle", "ChadX", now - 5, 0, ""], [1, 40, 100, 0, 0, "", "Buyer", now, 1, ""]];
+      window._pxkeep = [kn, kl]; const e = document.createElement("span"); e.className = "itname"; e.dataset.item = id; document.querySelector("#items").prepend(e); e.click() });
+    await p.waitForTimeout(150);
+    const w = await p.evaluate(() => { const id = "2000000", [kn, kl] = window._pxkeep, t = [...document.querySelectorAll("#itprices .pxls")].map(e => e.innerText.replace(/\s+/g, " "));
+      if (kn) PWNOW[id] = kn; else delete PWNOW[id]; if (kl) MDBL[id] = kl; else delete MDBL[id]; return t });
+    check(w.length === 2 && /^Each.*60 cheapest.*Ch 7 · FM 7 · middle ChadX.*70.*Ch 6 · FM 4 CINDY.*90.*Ch 3 · Kerning bottom left Jayce/i.test(w[0]) && /40.*×100.*whisper \/ meet up Buyer/.test(w[1]),
+      `prices: where to buy sorted, buy orders apart (${w.join(" | ").slice(0, 300)})`);
     await ctx.close() }
 
   await b.close();

@@ -94,9 +94,11 @@ function page(o){
   return `<div class="mpage">
     <div class="mpbar"><button class="btn" id="itback">← All items</button><button class="btn" id="itshare">Copy link</button></div>
     <div class="mtop">${D.iicons[o.id] ? `<img class="sprite" src="data:image/png;base64,${D.iicons[o.id]}" alt="">` : ""}<div><h2>${esc(it.n)}</h2>
-      <p class="sub">${esc(typeOf(it))}${isEq ? ` · level ${s.reqLevel || 0}+` : ""} · NPC pays ${it.p ? fmt(it.p) + " mesos" : "–"}${PW[o.id] ? ` · ${pwHtml(o.id)}` : ""} · item ID ${o.id}${others ? ` · same name: ${others}` : ""}</p><p class="mflags">${flags}</p></div></div>
+      <p class="sub">${esc(typeOf(it))}${isEq ? ` · level ${s.reqLevel || 0}+` : ""} · item ID ${o.id}${others ? ` · same name: ${others}` : ""}</p><p class="mflags">${flags}</p></div></div>
     ${it.d ? `<p class="idesc">${esc(it.d).replace(/\n/g, "<br>")}</p>` : ""}
     ${stats ? `<h3 class="msec">Stats</h3><dl class="stats mgrid">${stats}</dl>` : ""}
+    <h3 class="msec">Prices ${npcCheaperPill(o.id)}</h3>
+    <div id="itprices">${priceBox(o.id)}</div>
     <h3 class="msec">Where to get it</h3>
     <div class="mcols">
       ${card(`Monster drops <span class="sub">(meowdb player reports; confirmed = net player votes)</span>`, drops, "No drop reports yet.")}
@@ -109,7 +111,6 @@ function page(o){
     <div class="mcols">
       ${card("Quests that want it", wants, "No quest asks for it.")}
       ${card("Crafting recipes that use it", makes, "No recipe uses it.")}
-      <div id="itprices"><h4>Prices ${npcCheaperPill(o.id)}</h4>${priceRows(o.id)}</div>
     </div>
     ${like.length ? `<h3 class="msec">Similar ${esc(typeOf(it))} for ${esc(it.job && it.job !== "All" ? it.job : "any job")}</h3><div class="tblwrap"><table class="mini"><thead><tr><th>Item</th><th class="num">Lv</th><th>Stats</th><th>Get it</th></tr></thead>
       <tbody>${like.map(x => `<tr><td><button class="linkbtn" data-iopen="${x.id}">${esc(x.it.n)}</button>${x.it.g ? ` <span class="sub">${esc(x.it.g)}</span>` : ""}</td><td class="num">${x.lv}</td><td class="sub">${esc(keyStats(x.it))}</td><td>${srcPills(x)}</td></tr>`).join("")}</tbody></table></div>` : ""}
@@ -156,6 +157,7 @@ $("#itpage").addEventListener("click", e => {
   if (e.target.id === "itback"){ S.open = null; save(); show(); return }
   if (e.target.id === "itshare") return copyShare(e.target, shareUrl("i", S.open));
   const l = e.target.closest("[data-iopen]"); if (l) openItem(l.dataset.iopen);
+  const m = e.target.closest("[data-pxall]"); if (m){ m.previousElementSibling.classList.add("open"); m.remove() }
 });
 // any item icon or item name on the page (quests, monsters, crafting, keep or sell...) opens its page here; not when the
 // icon sits inside a control that does something else

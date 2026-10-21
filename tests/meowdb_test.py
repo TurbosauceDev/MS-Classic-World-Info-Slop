@@ -32,4 +32,12 @@ drops = json.load(open(src / "meowdb_drops.json"))["mobs"]
 check(len(drops) >= 60 and all(len(r) == 4 for v in drops.values() for r in v), f"drops: {len(drops)} monsters, rows [icon, name, up, down]")
 mesos = json.load(open(src / "meowdb_mesos.json"))["monsters"]
 check(len(mesos) >= 19 and all({"medianMin", "medianMax", "medianDropChancePct", "trustedCount"} <= set(v["summary"]) for v in mesos.values()), f"mesos: {len(mesos)} monsters with a summary")
+
+# 2026-10-21 Free Market (scripts/fetch_meowdb_market.js): price rows [usual, asks, sales, ...10] and listings [...10] with
+# price each > 0; the Items page "Where to buy" list reads channel/FM room/spot/user from fixed slots
+mk = json.load(open(src / "meowdb_market.json"))
+check(len(mk["it"]) >= 100 and all(len(r) == 10 and r[1] >= 0 and r[2] >= 0 for r in mk["it"].values()), f"market: {len(mk['it'])} items priced, rows of 10")
+ls = [r for a in mk["ls"].values() for r in a]
+check(len(ls) >= 500 and all(len(r) == 10 and r[0] in (0, 1) and r[1] > 0 and isinstance(r[3], int) and isinstance(r[6], str) and r[7] > 2.9e7 for r in ls),
+      f"market: {len(ls)} listings, rows [buy, price, qty, ch, room, spot, user, bumped, direct, stats]")
 print(f"\n{fails} failed" if fails else "\nall good"); raise SystemExit(1 if fails else 0)
