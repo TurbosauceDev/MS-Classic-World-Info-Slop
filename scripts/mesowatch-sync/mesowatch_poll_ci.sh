@@ -43,26 +43,37 @@ agent-browser wait 5000 >/dev/null 2>&1   # let Cloudflare check settle
 # needed for the items side). The fresh.json is stored raw — fresh_to_csv.py
 # converts it to CSV before fetch_mesowatch.py reads it (the listings arg
 # must be CSV format).
-log "Fetching /data/market.json + /data/fresh/Classic World.json..."
+# NOTE: Switched from /data/market.json to /data/list.json on 2026-10-21.
+# list.json is version 2 of meso.watch's data format: 13x smaller (1.7 MB vs 22.5 MB),
+# updates hourly (vs market.json's ~daily), items is a list (array, 1758 items) vs
+# dict (1752 keys), and includes askMedian + history + 7 NEW fields not in market.json.
+# fetch_mesowatch.py's JSON branch handles both list and dict items.
+log "Fetching /data/list.json + /data/fresh/Classic World.json..."
 FETCH_RESULT=$(agent-browser eval "(async () => {
   try {
     const [m, f] = await Promise.all([
-      fetch('/data/market.json').then(r=>r.text()),
+      fetch('/data/list.json').then(r=>r.text()),
       fetch('/data/fresh/Classic%20World.json').then(r=>r.text())
     ]);
     const mj = JSON.parse(m);
     const fj = JSON.parse(f);
-    // Wrap extracted items as a market.json-shaped object for fetch_mesowatch.py
+    // Wrap extracted items + totals as a fetch_mesowatch.py-compatible object.
+    // list.json's items is a list (array); market.json's was a dict. Both work
+    // with fetch_mesowatch.py's `for it in d["items"]` branch.
+    // list.json also has `totals` (market-wide stats) — include it for future use.
     const extracted = JSON.stringify({
       items: mj.items,
       generated_at: mj.generated_at,
-      market: mj.market
+      market: mj.market,
+      totals: mj.totals
     });
     localStorage.setItem('mw_market', extracted);
     localStorage.setItem('mw_fresh', f);
     localStorage.setItem('mw_market_ts', mj.generated_at);
     localStorage.setItem('mw_fresh_ts', fj.generated_at);
-    return 'OK|market_ts=' + mj.generated_at + '|fresh_ts=' + fj.generated_at + '|items=' + Object.keys(mj.items||{}).length + '|rows=' + (fj.rows||[]).length;
+    // items is a list in list.json, so use .length instead of Object.keys().length
+    const itemCount = Array.isArray(mj.items) ? mj.items.length : Object.keys(mj.items||{}).length;
+    return 'OK|market_ts=' + mj.generated_at + '|fresh_ts=' + fj.generated_at + '|items=' + itemCount + '|rows=' + (fj.rows||[]).length;
   } catch (e) {
     return 'ERR|' + (e && e.message ? e.message : String(e));
   }
@@ -104,7 +115,7 @@ fi
 
 MARKET_SIZE=$(stat -c %s "$WORKDIR/tmp/market.json")
 FRESH_SIZE=$(stat -c %s "$WORKDIR/tmp/fresh.json")
-log "Extracted: market.json=$MARKET_SIZE bytes, fresh.json=$FRESH_SIZE bytes"
+log "Extracted: list.json payload=$MARKET_SIZE bytes, fresh.json=$FRESH_SIZE bytes"
 
 agent-browser close >/dev/null 2>&1
 
@@ -154,3 +165,4 @@ git commit -F /tmp/commit_msg.txt
 git push origin HEAD:main
 
 log "Done. Pages will redeploy via pages.yml workflow_run trigger."
+
