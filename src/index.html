@@ -144,22 +144,40 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </footer>
 </div>
 
-<div id="thpop" class="srch setm" hidden><div class="srchbox setbox" role="dialog" aria-modal="true" aria-labelledby="sethd">
-  <div class="sethead"><h2 id="sethd">Settings</h2><button class="btn setx" id="thclose" type="button" aria-label="Close settings" title="Close (Esc)">×</button></div>
-    <h3 class="thsub">Theme</h3>
-    <p class="thnote">Same themes and share codes as the Grind Tracker, so the two can sit side by side. Default follows your system's light/dark setting.</p>
-    <div id="thsw" class="thsw" role="radiogroup" aria-label="Theme"></div>
-    <div class="throw"><input id="thcode" type="text" placeholder="Paste a tracker theme code (MSCT1...)" aria-label="Theme share code" spellcheck="false">
-      <button class="btn" id="thadd" type="button">Use code</button><button class="btn" id="thcopy" type="button">Copy code</button><button class="btn" id="thedit" type="button">Edit colours</button></div>
-    <p class="thnote" id="thmsg" aria-live="polite"></p>
-    <h3 class="thsub">Layout</h3>
+<div id="thpop" class="srch setm" hidden><div class="srchbox setbox" role="dialog" aria-modal="true" aria-labelledby="sethd" tabindex="-1">
+  <div class="sethead"><h2 id="sethd">Settings</h2><button class="btn setx" id="thclose" type="button" aria-label="Close settings" title="Close (Esc)">✕</button>
+    <div class="pnav" id="setnav" role="navigation" aria-label="Settings sections"></div></div>
+  <div class="setcard" data-nav="Layout"><h3>Layout</h3>
+    <div class="k">Menu</div>
     <div class="seg small" id="navmode" role="radiogroup" aria-label="Layout"><button type="button" role="radio" data-nv="side">Sidebar</button><button type="button" role="radio" data-nv="basic">Basic mode</button><button type="button" role="radio" data-nv="rows">Two rows</button></div>
-    <h3 class="thsub">Page size on wide screens</h3>
+    <div class="k">Page size on wide screens</div>
     <div class="seg small" id="pagesize" role="radiogroup" aria-label="Page size on wide screens"><button type="button" role="radio" data-sz="1">1</button><button type="button" role="radio" data-sz="2">2</button><button type="button" role="radio" data-sz="3">3</button><button type="button" role="radio" data-sz="4">4</button><button type="button" role="radio" data-sz="5">5</button></div>
     <p class="thnote" id="sznote"></p>
-    <h3 class="thsub">Header</h3>
+    <div class="k">Header and sidebar</div>
     <div class="throw"><button class="btn" id="anchtog" type="button">Toggle anchors</button></div>
     <p class="thnote" id="anchnote"></p>
+    <div class="k" id="profHead">Profiles: your whole setup (where the header parts sit, the sidebar, page size, menu style and the theme)</div>
+    <div class="throw"><select id="profSel" aria-label="Profile"></select><button class="btn" id="profUse" type="button">Switch to it</button><button class="btn" id="profDel" type="button">Delete</button></div>
+    <div class="throw"><input id="profName" aria-label="Profile name" maxlength="40" placeholder="Name, like Wide or Trading" spellcheck="false"><button class="btn" id="profSave" type="button" title="The same name replaces that profile">Save current setup as</button></div>
+    <div class="throw"><button class="btn" id="setupCopy" type="button" title="One line with the current setup, to paste in Discord">Copy profile code</button><input id="setupCode" aria-label="Profile code" placeholder="Paste a friend's code (MSCS1... or a MSCT1 theme)" spellcheck="false"><button class="btn" id="setupPaste" type="button">Preview</button></div>
+    <div id="setupPrev" hidden role="region" aria-label="Profile code preview">
+      <div class="k" id="spName"></div>
+      <div id="spMap" aria-hidden="true"></div>
+      <p class="thnote" id="spInfo"></p>
+      <div class="throw"><button class="btn primary" id="spUse" type="button">Use it</button><button class="btn" id="spKeep" type="button">Only save it as a profile</button><button class="btn" id="spCancel" type="button">Cancel</button></div>
+    </div>
+    <p class="thnote" id="setupNote" role="status"></p>
+    <p class="thnote">Profile codes work in the Grind Tracker too: the app takes the theme from a site code, and the site takes the theme from an app code (box layouts only fit the app). Profiles are kept in this browser only.</p>
+  </div>
+  <div class="setcard" data-nav="Theme"><h3>Theme</h3>
+    <p class="thnote">Same themes and share codes as the Grind Tracker, so the two can sit side by side. Default follows your system's light/dark setting.</p>
+    <div id="thsw" class="thsw" role="radiogroup" aria-label="Theme"></div>
+    <div class="throw"><button class="btn" id="thedit" type="button">Edit colours</button></div>
+    <div class="k">Share a theme</div>
+    <div class="throw"><button class="btn" id="thcopy" type="button" title="A one-line code to paste in Discord">Copy share code</button></div>
+    <div class="throw"><input id="thcode" type="text" placeholder="Paste a share code (MSCT1...)" aria-label="Theme share code" spellcheck="false"><button class="btn" id="thadd" type="button">Add</button></div>
+    <p class="thnote" id="thmsg" aria-live="polite"></p>
+  </div>
 </div></div>
 
 <div id="srch" class="srch" hidden><div class="srchbox" role="dialog" aria-modal="true" aria-label="Search">

@@ -51,6 +51,9 @@
     save: t => { t = TH.clean(t); if (!t) return null; if (TH.PRESETS.some(p => p.name === t.name)) t.name += " (mine)";
       ls("themes", [...mine().filter(x => x.name !== t.name), t].slice(-20)); use("u:" + t.name); return t.name },
     code: t => TH.encode(t), TOKENS: TH.TOKENS,
+    // for profiles (74-profiles.js): the theme in use as a setup code wants it ({preset} or a full theme), and back
+    setup: () => cur.startsWith("p:") && TH.PRESETS.some(p => "p:" + p.name === cur) ? {preset: cur.slice(2)} : TH.clean(now()),
+    take: t => { if (t?.preset){ if (TH.PRESETS.some(p => p.name === t.preset)) use("p:" + t.preset) } else if (t) window.SITETHEME.save(t) },
   };
   // a light/dark theme (Default, Purple) follows the system setting live
   dq.addEventListener("change", () => { const t = now(); if (t !== TH.PRESETS[0]) siteTheme(t); if (!pop.hidden) draw() });

@@ -138,6 +138,36 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     const kept = await p.evaluate(() => [document.documentElement.style.getPropertyValue("--accent"), localStorage.getItem("theme")].join());
     check(live === "#123456" && undone === "" && done && kept === "#ff00aa,\"u:Edge pink\"", `anchors: Colours previews live, Undo reverts, Save keeps it as my theme, Esc = Done (${live} | ${undone} | ${kept})`);
     check(!errs.length, "anchors round 2: no JS errors " + errs.join(" | ")); await ctx.close() }
+  // profiles (Danny 10-21, like the app's Settings > Layout > Profiles): built-ins, save/switch keeps edits, codes both ways with the app
+  { const {p, errs, ctx} = await page({viewport: {width: 1800, height: 1000}}); await p.goto(URL); await p.waitForTimeout(300);
+    const st = () => p.evaluate(() => ({a: localStorage.getItem("anchors"), prof: localStorage.getItem("profile"), size: document.documentElement.getAttribute("data-size"),
+      secs: [...document.querySelectorAll("nav .sgh[data-cat]")].map(e => e.dataset.cat).join()}));
+    await p.click("#thopen"); const opts = await p.$$eval("#profSel option", o => o.map(x => x.value));
+    check(opts.includes("b:Default") && opts.includes("b:Danny's Default") && /Default \(in use\)/.test(await p.textContent("#profSel")), `profiles: two built-ins, Default in use for a new visitor (${opts})`);
+    await p.selectOption("#profSel", "b:Danny's Default"); check(await p.isDisabled("#profDel"), "profiles: a built-in can't be deleted");
+    await p.click("#profUse"); await p.waitForTimeout(300); const dd = await st();
+    check(/"search"/.test(dd.a) && dd.secs.startsWith("trk,town") && dd.prof === '"b:Danny\'s Default"', `profiles: Danny's Default moves the header and puts Mesos and Trade second (${dd.secs})`);
+    await p.fill("#profName", "Big"); await p.click("#profSave"); await p.click('#pagesize [data-sz="5"]');   // an edit after saving goes into "Big" on switch
+    await p.selectOption("#profSel", "b:Default"); await p.click("#profUse"); await p.waitForTimeout(300); const def = await st();
+    check(def.a === null && def.size === "3" && def.secs === "trk,train,world,db,town", `profiles: Default puts the site back as it comes (${JSON.stringify(def)})`);
+    await p.selectOption("#profSel", "Big"); await p.click("#profUse"); await p.waitForTimeout(300);
+    check((await st()).size === "5" && /"search"/.test((await st()).a), "profiles: switching away saved the page size change into Big");
+    await p.click("#setupCopy"); const code = await p.inputValue("#setupCode");
+    const app = await p.evaluate(c => TrackerThemes.decodeSetup(c, ["main"]), code);
+    check(/^MSCS1\./.test(code) && app?.theme?.preset === "Default" && app.layout === null && app.name === "Big", "profiles: the app reads a site code as a theme-only setup");
+    const tc = await p.evaluate(() => TrackerThemes.encodeSetup({layout: {v: 2, order: {dock: ["main"]}}, theme: {preset: "Slime"}, name: "App"}, ["main"]));
+    await p.fill("#setupCode", tc); await p.click("#setupPaste");
+    check(/theme only here/.test(await p.textContent("#spName")) && /for the app/.test(await p.textContent("#spInfo")), "profiles: an app code previews as theme only");
+    await p.click("#spUse"); await p.waitForTimeout(200);
+    check(await p.evaluate(() => localStorage.getItem("theme")) === '"p:Slime"' && /"search"/.test((await st()).a), "profiles: using an app code sets its theme and keeps the site layout");
+    await p.fill("#setupCode", "MSCS1.eyJzaXRlIjp7Im5hdiI6Im5vcGUiLCJzaXplIjo5fX0="); await p.click("#setupPaste");
+    check(/isn't a profile code/.test(await p.textContent("#setupNote")), "profiles: a code with only bad values is refused");
+    await p.evaluate(() => localStorage.setItem("profiles", JSON.stringify([{name: "<b>x", site: {size: 9}}, 5, {name: "ok", site: {size: 2}}]))); await p.reload(); await p.waitForTimeout(300);
+    await p.click("#thopen"); const left = await p.$$eval("#profSel optgroup[label=Yours] option", o => o.map(x => x.value));
+    check(left.join() === "ok", `profiles: broken saved profiles are dropped (${left})`);
+    const chip = await p.$$eval("#setnav button", b => b.map(x => x.textContent)); await p.click("#setnav button >> text=Theme"); await p.waitForTimeout(500);
+    check(chip.join() === "Layout,Theme" && await p.getAttribute("#setnav button >> text=Theme", "aria-current") === "true", "settings: section chips like the app's, Theme marked after a jump");
+    check(!errs.length, "profiles: no JS errors " + errs.join(" | ")); await ctx.close() }
   // round 3 (Danny 10-20): his screenshot is the default (Search on the left over the sidebar and as wide, small cog on the right
   // in the same row); edit mode also moves the title, resizes the sidebar or puts it right, reorders sidebar sections and Home cards
   { const {p, errs, ctx} = await page({viewport: {width: 1550, height: 1400}}); await p.goto(URL); await p.waitForTimeout(300);

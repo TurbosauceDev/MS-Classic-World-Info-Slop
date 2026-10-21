@@ -223,3 +223,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-21 Pages with one narrow column: About box and content share the content width, centered right of the sidebar; no long empty tail (Danny, Feedback page).
 - 2026-10-21 Danny: always padding between nested boxes and their container; nothing flush to or past a card edge. Stacked cards get a gap too (Craft planner fix; tests/boxgaps.js).
 - 2026-10-21: Screenshot-reading pages show a hover/popup inventory grid of what was scanned (Danny).
+- 2026-10-21 Site gets profiles like the app (save/switch/share MSCS1 codes) and an app-style Settings; built-ins Default (site as it comes) and Danny's Default (his screenshot layout). Codes swap themes with the app (Danny).

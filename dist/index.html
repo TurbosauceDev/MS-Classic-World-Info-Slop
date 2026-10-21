@@ -565,21 +565,41 @@ input[type=file]::file-selector-button{font:600 14px var(--f-body);color:var(--i
 input[type=file]::file-selector-button:hover{border-color:var(--accent)}
 .sitever{margin:18px 0 0;text-align:center;font:500 13px var(--f-mono);color:var(--muted);opacity:.85}
 .sitever.pwstate{margin-top:4px}
-/* Theme picker (70-theme.js): the tracker's presets as swatches + its share codes */
-.setbox{width:min(760px,100%);max-height:84vh;overflow-y:auto;padding:16px 18px;text-align:left}
-.sethead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
-.sethead h2{margin:0;font:700 22px var(--f-display)}
-.setx{font-size:22px;line-height:1;width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center}
-#thpop .thsub:first-of-type{margin-top:4px}
-#thpop .thnote{color:var(--muted);font-size:14.5px;margin:0 0 10px}
-.thsw{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
-.thsw button{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:112px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);font:600 14px var(--f-body);cursor:pointer}
-.thsw button[aria-checked="true"]{outline:2px solid var(--accent);outline-offset:1px}
-.thsw .chips{display:flex;width:100%}
-.thsw .chips i{flex:1;height:10px}
-.thsw .chips i:first-child{border-radius:3px 0 0 3px}.thsw .chips i:last-child{border-radius:0 3px 3px 0}
-.throw{display:flex;gap:8px;flex-wrap:wrap}
-.throw input{flex:1 1 240px;min-width:0;font:14px var(--f-mono);padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+/* Settings (70-theme.js, 74-profiles.js): built like the Grind Tracker's Settings pop-up (tracker/app/index.html #prefsPop,
+   .modal) so the two feel like one product (Danny 10-21): inset over a blurred backdrop, sticky title with section chips,
+   one card per section with an accent heading and a rule, swatch grid, on-bg page with panel cards */
+.srch.setm{background:color-mix(in srgb,var(--bg) 35%,rgba(0,0,0,.45));padding:clamp(10px,5vh,44px) clamp(10px,5vw,56px)}
+.srch.setm:not([hidden]){backdrop-filter:blur(7px) saturate(.85)}
+.setbox{width:min(780px,100%);max-height:calc(100vh - 2 * clamp(10px,5vh,44px));overflow-y:auto;overscroll-behavior:contain;padding:0 16px 16px;text-align:left;background:var(--bg);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.42),0 2px 8px rgba(0,0,0,.18);outline:none}
+.sethead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:1;background:var(--bg);padding:12px 0 10px;margin-bottom:4px;border-bottom:1px solid var(--line)}
+.sethead h2{margin:0;font:700 17px var(--f-display);color:var(--accent)}
+.setx{font-size:15px;line-height:1;padding:5px 11px;border-radius:8px;margin:0}
+.pnav{display:flex;flex-wrap:wrap;gap:4px;order:3;flex-basis:100%}
+.pnav button{background:none;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font:500 13px var(--f-body);cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.pnav button:hover{color:var(--ink);border-color:var(--accent)}.pnav button[aria-current="true"]{background:var(--accent-soft);color:var(--ink);border-color:var(--accent)}
+.setcard{background:var(--panel);border-radius:10px;padding:14px 16px;margin:10px 0 0;box-shadow:0 1px 0 var(--line)}
+.setcard h3{color:var(--accent);font:700 15.5px var(--f-display);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.setcard h3::after{content:"";flex:1;height:1px;background:var(--line)}
+.setcard .k{font-weight:600;font-size:14.5px;margin:12px 0 6px}.setcard h3+.k{margin-top:0}
+#thpop .thnote{color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0;max-width:68ch}#thpop .thnote:empty{display:none}
+#thpop .btn{margin:0}
+.thsw{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;margin:8px 0 8px}
+.thsw button{display:flex;flex-direction:column;align-items:stretch;gap:5px;min-width:0;padding:6px 8px;border-radius:8px;border:2px solid var(--line);font:600 13px var(--f-body);text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thsw button[aria-checked="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.thsw .chips{display:flex;height:12px;border-radius:4px;overflow:hidden}
+.thsw .chips i{flex:1}
+.throw{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.throw input,.throw select{flex:1 1 220px;min-width:0;font:14px var(--f-body);padding:6px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink)}
+.throw input[id$="code"],.throw input#setupCode{font-family:var(--f-mono)}
+.throw input:focus,.throw select:focus{border-color:var(--accent);outline:none}
+#setupPrev{border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0;background:var(--bg)}
+#setupPrev .k{margin-top:0}
+#spMap{display:grid;grid-template-columns:30% 1fr;grid-template-rows:auto 1fr;gap:4px;padding:6px;margin:4px 0;border-radius:6px;min-height:96px;font-size:11px;font-weight:600}
+#spMap>.hd{grid-column:1/-1;display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:4px;min-width:0}
+#spMap>.hd i{display:block;height:9px;border-radius:3px;font-style:normal}
+#spMap>.sb{display:flex;flex-direction:column;gap:3px;min-width:0}
+#spMap>.sb b,#spMap>.mn{padding:3px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#spMap.right>.sb{order:2}
 /* phones: the header and the section/page rows took ~470px before any content; one swipeable row each instead of 4-5 wrapped rows */
 @media (max-width:600px){
   .wrap{padding-block:16px 48px}
@@ -601,7 +621,6 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
 .sitefoot .footlinks{display:flex;justify-content:center;gap:18px;margin-top:14px}
 .sitefoot .linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font:inherit}
 .sitefoot .linkbtn:hover{color:var(--ink)}
-#thpop .thsub{font:600 15px var(--f-display);margin:14px 0 8px}
 @media (min-width:761px){
   html:not([data-nav="rows"]) .wrap{display:grid;grid-template-columns:var(--sbw,clamp(228px,18vw,268px)) minmax(0,1fr);column-gap:34px;align-items:start}
   html:not([data-nav="rows"]) .wrap>*{grid-column:2;min-width:0}
@@ -2455,28 +2474,46 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-21T04:59:05Z" data-ver="0.11.3">Site version: v0.11.3 · built Oct 21, 2026 · 04:59 UTC</p>
+  <p class="sitever" data-built="2026-10-21T05:06:17Z" data-ver="0.11.3">Site version: v0.11.3 · built Oct 21, 2026 · 05:06 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button></div>
 </footer>
 </div>
 
-<div id="thpop" class="srch setm" hidden><div class="srchbox setbox" role="dialog" aria-modal="true" aria-labelledby="sethd">
-  <div class="sethead"><h2 id="sethd">Settings</h2><button class="btn setx" id="thclose" type="button" aria-label="Close settings" title="Close (Esc)">×</button></div>
-    <h3 class="thsub">Theme</h3>
-    <p class="thnote">Same themes and share codes as the Grind Tracker, so the two can sit side by side. Default follows your system's light/dark setting.</p>
-    <div id="thsw" class="thsw" role="radiogroup" aria-label="Theme"></div>
-    <div class="throw"><input id="thcode" type="text" placeholder="Paste a tracker theme code (MSCT1...)" aria-label="Theme share code" spellcheck="false">
-      <button class="btn" id="thadd" type="button">Use code</button><button class="btn" id="thcopy" type="button">Copy code</button><button class="btn" id="thedit" type="button">Edit colours</button></div>
-    <p class="thnote" id="thmsg" aria-live="polite"></p>
-    <h3 class="thsub">Layout</h3>
+<div id="thpop" class="srch setm" hidden><div class="srchbox setbox" role="dialog" aria-modal="true" aria-labelledby="sethd" tabindex="-1">
+  <div class="sethead"><h2 id="sethd">Settings</h2><button class="btn setx" id="thclose" type="button" aria-label="Close settings" title="Close (Esc)">✕</button>
+    <div class="pnav" id="setnav" role="navigation" aria-label="Settings sections"></div></div>
+  <div class="setcard" data-nav="Layout"><h3>Layout</h3>
+    <div class="k">Menu</div>
     <div class="seg small" id="navmode" role="radiogroup" aria-label="Layout"><button type="button" role="radio" data-nv="side">Sidebar</button><button type="button" role="radio" data-nv="basic">Basic mode</button><button type="button" role="radio" data-nv="rows">Two rows</button></div>
-    <h3 class="thsub">Page size on wide screens</h3>
+    <div class="k">Page size on wide screens</div>
     <div class="seg small" id="pagesize" role="radiogroup" aria-label="Page size on wide screens"><button type="button" role="radio" data-sz="1">1</button><button type="button" role="radio" data-sz="2">2</button><button type="button" role="radio" data-sz="3">3</button><button type="button" role="radio" data-sz="4">4</button><button type="button" role="radio" data-sz="5">5</button></div>
     <p class="thnote" id="sznote"></p>
-    <h3 class="thsub">Header</h3>
+    <div class="k">Header and sidebar</div>
     <div class="throw"><button class="btn" id="anchtog" type="button">Toggle anchors</button></div>
     <p class="thnote" id="anchnote"></p>
+    <div class="k" id="profHead">Profiles: your whole setup (where the header parts sit, the sidebar, page size, menu style and the theme)</div>
+    <div class="throw"><select id="profSel" aria-label="Profile"></select><button class="btn" id="profUse" type="button">Switch to it</button><button class="btn" id="profDel" type="button">Delete</button></div>
+    <div class="throw"><input id="profName" aria-label="Profile name" maxlength="40" placeholder="Name, like Wide or Trading" spellcheck="false"><button class="btn" id="profSave" type="button" title="The same name replaces that profile">Save current setup as</button></div>
+    <div class="throw"><button class="btn" id="setupCopy" type="button" title="One line with the current setup, to paste in Discord">Copy profile code</button><input id="setupCode" aria-label="Profile code" placeholder="Paste a friend's code (MSCS1... or a MSCT1 theme)" spellcheck="false"><button class="btn" id="setupPaste" type="button">Preview</button></div>
+    <div id="setupPrev" hidden role="region" aria-label="Profile code preview">
+      <div class="k" id="spName"></div>
+      <div id="spMap" aria-hidden="true"></div>
+      <p class="thnote" id="spInfo"></p>
+      <div class="throw"><button class="btn primary" id="spUse" type="button">Use it</button><button class="btn" id="spKeep" type="button">Only save it as a profile</button><button class="btn" id="spCancel" type="button">Cancel</button></div>
+    </div>
+    <p class="thnote" id="setupNote" role="status"></p>
+    <p class="thnote">Profile codes work in the Grind Tracker too: the app takes the theme from a site code, and the site takes the theme from an app code (box layouts only fit the app). Profiles are kept in this browser only.</p>
+  </div>
+  <div class="setcard" data-nav="Theme"><h3>Theme</h3>
+    <p class="thnote">Same themes and share codes as the Grind Tracker, so the two can sit side by side. Default follows your system's light/dark setting.</p>
+    <div id="thsw" class="thsw" role="radiogroup" aria-label="Theme"></div>
+    <div class="throw"><button class="btn" id="thedit" type="button">Edit colours</button></div>
+    <div class="k">Share a theme</div>
+    <div class="throw"><button class="btn" id="thcopy" type="button" title="A one-line code to paste in Discord">Copy share code</button></div>
+    <div class="throw"><input id="thcode" type="text" placeholder="Paste a share code (MSCT1...)" aria-label="Theme share code" spellcheck="false"><button class="btn" id="thadd" type="button">Add</button></div>
+    <p class="thnote" id="thmsg" aria-live="polite"></p>
+  </div>
 </div></div>
 
 <div id="srch" class="srch" hidden><div class="srchbox" role="dialog" aria-modal="true" aria-label="Search">
@@ -9143,6 +9180,9 @@ $("#t-maps").addEventListener("click", firstRank); if (!$("#maps").hidden) first
     save: t => { t = TH.clean(t); if (!t) return null; if (TH.PRESETS.some(p => p.name === t.name)) t.name += " (mine)";
       ls("themes", [...mine().filter(x => x.name !== t.name), t].slice(-20)); use("u:" + t.name); return t.name },
     code: t => TH.encode(t), TOKENS: TH.TOKENS,
+    // for profiles (74-profiles.js): the theme in use as a setup code wants it ({preset} or a full theme), and back
+    setup: () => cur.startsWith("p:") && TH.PRESETS.some(p => "p:" + p.name === cur) ? {preset: cur.slice(2)} : TH.clean(now()),
+    take: t => { if (t?.preset){ if (TH.PRESETS.some(p => p.name === t.preset)) use("p:" + t.preset) } else if (t) window.SITETHEME.save(t) },
   };
   // a light/dark theme (Default, Purple) follows the system setting live
   dq.addEventListener("change", () => { const t = now(); if (t !== TH.PRESETS[0]) siteTheme(t); if (!pop.hidden) draw() });
@@ -9507,7 +9547,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
   addEventListener("resize", () => requestAnimationFrame(putAll));
   new MutationObserver(() => requestAnimationFrame(putAll)).observe(document.documentElement, {attributes: true, attributeFilter: ["data-size", "data-nav"]});
   wideNote(); layout(); putAll(); document.fonts?.ready.then(putAll);
-  window.ANCH = {set: v => { S = clean(v); save(); layout(); putAll() }, get: () => S, on: setOn, cols};   // tests
+  window.ANCH = {set: v => { S = clean(v); save(); layout(true); putAll() }, get: () => S, clean, on: setOn, cols};   // tests, profiles (74-profiles.js)
 })();
 
 // Feedback page (Danny 2026-10-21): visitors leave a note, the tracker's Worker keeps it (POST /api/feedback, see
@@ -9592,6 +9632,161 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
   });
   const saved = lg("fbkey");
   if (saved){ $("#fbkey").value = saved; $("#fbadmin").addEventListener("toggle", () => { if ($("#fbadmin").open && !notes.length) load() }) }
+})();
+
+// Settings: section chips + Profiles (Danny 2026-10-21: "identical to the one in our desktop app"). Same model as the Grind
+// Tracker's Settings > Layout > Profiles (tracker/app/renderer-settings.js profUi/profSwitch/spTake): localStorage "profiles" =
+// your setups with a name (max 30), "profile" = the one in use ("b:<name>" = built in, never saved into or deleted); switching
+// away first saves what's on screen into the one in use. Codes are the app's MSCS1 setup codes with a "site" part added
+// ({nav, size, anchors}); the app ignores "site" and takes the theme, the site ignores the app's box layout and takes the theme
+// (themes.js decodeSetup cleans both, so an MSCT1 theme code works here too). A pasted code shows a preview before anything changes.
+(() => {
+  const TH = window.TrackerThemes, ST = window.SITETHEME, A = window.ANCH, root = document.documentElement, dq = matchMedia("(prefers-color-scheme: dark)");
+  const ls = (k, v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)) } catch { return null } };
+  const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[ch]);
+  const CATS = ["trk", "train", "world", "db", "town"], NAV = {side: "Sidebar", basic: "Basic mode", rows: "Two rows"};
+  // built in: Default = the site as a new visitor sees it; Danny's Default = his 10-21 screenshot (Title, Tagline and a 1.35x
+  // Search centered over the page column, cog top right, Mesos and Trade second, sidebar 285 px), measured on a 1961 px header
+  const BUILTIN = [
+    {name: "Default", theme: {preset: "Default"}, site: {nav: "side", size: 3, anchors: {}}},
+    {name: "Danny's Default", theme: {preset: "Default"}, site: {nav: "side", size: 3, anchors: {
+      title: {x: 0.4368, y: 0}, tag: {x: 0.4142, y: 48}, search: {x: 0.3987, y: 84, w: 526, s: 1.35}, cog: {x: 0.9761, y: 6, s: 1.1},
+      sb: {w: 285}, secs: ["trk", "town", "train", "world", "db"]}}},
+  ];
+  const cleanName = n => typeof n === "string" ? n.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40) || null : null;
+  function cleanSite(s){
+    if (!s || typeof s !== "object") return null; const r = {};
+    if (NAV[s.nav] && typeof s.nav === "string") r.nav = s.nav;
+    if (Number.isInteger(s.size) && s.size >= 1 && s.size <= 5) r.size = s.size;
+    if (s.anchors && typeof s.anchors === "object") r.anchors = A.clean(s.anchors);
+    return Object.keys(r).length ? r : null;
+  }
+  // untrusted (a pasted code, hand-edited storage): name, theme (themes.js rules), site; null if nothing usable
+  function clean(x){
+    if (!x || typeof x !== "object") return null;
+    const t = TH.cleanSetup({theme: x.theme}, [])?.theme || null, site = cleanSite(x.site);
+    if (!t && !site) return null;
+    const r = {theme: t, site}, n = cleanName(x.name); if (n) r.name = n; return r;
+  }
+  const encode = x => "MSCS1." + btoa(unescape(encodeURIComponent(JSON.stringify({name: x.name, theme: x.theme, site: x.site}))));
+  function decode(s){
+    const m = /MSCS1\.([A-Za-z0-9+/=]{20,12000})/.exec(String(s || "").replace(/\s+/g, ""));
+    if (!m){ const t = TH.decodeSetup(s, []); return t ? {theme: t.theme, site: null, name: t.name} : null }   // MSCT1 theme code
+    let raw; try { raw = JSON.parse(decodeURIComponent(escape(atob(m[1])))) } catch { return null }
+    const r = clean(raw); if (r && raw.layout) r.app = true; return r;
+  }
+  const now = name => { const x = {theme: ST.setup(), site: {nav: root.getAttribute("data-nav") || "side", size: +(root.getAttribute("data-size") || 3), anchors: A.get()}};
+    if (name) x.name = name; return clean(x) };
+  const profs = () => (Array.isArray(ls("profiles")) ? ls("profiles") : []).map(clean).filter(p => p?.name);
+  const put = (p, list = profs()) => { list = list.filter(x => x.name !== p.name); list.push(p); ls("profiles", list.slice(-30)) };
+  const using = () => { const v = ls("profile"); return typeof v === "string" ? v : "b:Default" };
+  const find = v => v?.startsWith("b:") ? BUILTIN.find(p => p.name === v.slice(2)) : profs().find(p => p.name === v);
+  const label = v => v?.startsWith("b:") ? v.slice(2) : v;
+  // what's on screen, into the profile in use (if it's one of yours and still exists)
+  const keep = () => { const n = using(); if (n.startsWith("b:") || !profs().some(p => p.name === n)) return; const c = now(n); if (c) put(c) };
+  const freeName = n => { const have = new Set(profs().map(p => p.name)); let r = n, i = 2; while (have.has(r)) r = `${n.slice(0, 34)} (${i++})`; return r };
+  function apply(x){
+    if (x.theme) ST.take(x.theme);
+    const s = x.site; if (!s) return;
+    const nav = s.nav || "side", size = String(s.size || 3);
+    if ((root.getAttribute("data-nav") || "side") !== nav) $(`#navmode [data-nv="${nav}"]`).click();
+    if ((root.getAttribute("data-size") || "3") !== size) $(`#pagesize [data-sz="${size}"]`).click();
+    A.set(s.anchors || {});
+  }
+  const note = t => $("#setupNote").textContent = t;
+  const sel = $("#profSel");
+  function ui(){
+    const list = profs(), cur = using(), was = sel.value;
+    const opt = (v, n) => `<option value="${esc(v)}">${esc(n)}${v === cur ? " (in use)" : ""}</option>`;
+    sel.innerHTML = (list.length ? `<optgroup label="Yours">${list.map(p => opt(p.name, p.name)).join("")}</optgroup>` : `<option value="" disabled>No profiles of yours yet: save one below</option>`)
+      + `<optgroup label="Built in">${BUILTIN.map(p => opt("b:" + p.name, p.name)).join("")}</optgroup>`;
+    const vals = [...sel.options].filter(o => !o.disabled).map(o => o.value);
+    sel.value = vals.includes(was) ? was : vals.includes(cur) ? cur : vals[0] || "";
+    $("#profUse").disabled = !sel.value; $("#profDel").disabled = !sel.value || sel.value.startsWith("b:");
+  }
+  sel.addEventListener("change", () => { $("#profDel").disabled = !sel.value || sel.value.startsWith("b:") });
+  $("#profSave").addEventListener("click", () => {
+    const n = cleanName($("#profName").value) || (using().startsWith("b:") ? "My setup" : using()), c = now(n);
+    if (!c) return note("Nothing to save yet.");
+    put(c); ls("profile", n); $("#profName").value = ""; ui(); sel.value = n;
+    note(`Saved profile "${n}". Changes you make now go into it when you switch.`);
+  });
+  function switchTo(v){
+    const to = find(v); if (!to) return;
+    if (v !== using()) keep();
+    apply(to); ls("profile", v); ui();
+    note(`Switched to "${to.name}".` + (v.startsWith("b:") ? " It's built in: to keep changes, save them under a name of your own." : ""));
+  }
+  $("#profUse").addEventListener("click", () => switchTo(sel.value));
+  $("#profDel").addEventListener("click", () => { const n = sel.value; if (!n || n.startsWith("b:")) return;
+    ls("profiles", profs().filter(p => p.name !== n)); if (using() === n) ls("profile", null); ui();
+    note(`Deleted profile "${n}". The layout and theme on screen stay as they are.`) });
+  $("#setupCopy").addEventListener("click", async () => {
+    const c = now(label(using())); if (!c) return note("Nothing to share yet.");
+    const code = encode(c); $("#setupCode").value = code;
+    try { await navigator.clipboard.writeText(code); note("Profile code copied. Friends paste it here (or in the Grind Tracker's Settings > Layout), press Preview, then Use it.") }
+    catch { $("#setupCode").select(); note("Copy the code from the box (Ctrl+C).") }
+  });
+  // the preview: the code's page drawn small in its own colours (header, sidebar sections in its order, on its side)
+  let sp = null;
+  function mapHtml(x){
+    const t = x.theme?.preset ? TH.PRESETS.find(p => p.name === x.theme.preset) : x.theme || TH.clean(ST.now()), c = TH.resolve(t || TH.PRESETS[0], dq.matches).c;
+    const a = x.site?.anchors || {}, secs = a.secs || CATS, side = x.site?.nav !== "rows";
+    const cell = `background:${c.panel};color:${c.ink};border:1px solid ${c.line}`;
+    const name = id => $(`nav .sgh[data-cat="${id}"]`)?.textContent.trim() || $("#c-" + id)?.textContent.trim() || id;
+    return {cls: a.sb?.right ? "right" : "", bg: c.bg, accent: c.accent, html: `<div class="hd" style="${cell}"><i style="width:34%;background:${c.accent}"></i><i style="width:22%;background:${c.line}"></i></div>`
+      + (side ? `<div class="sb">${secs.map(id => `<b style="${cell}">${esc(name(id))}</b>`).join("")}</div><div class="mn" style="${cell}"></div>`
+        : `<div class="mn" style="${cell};grid-column:1/-1">${secs.map(id => esc(name(id))).join(" · ")}</div>`)};
+  }
+  function preview(text){
+    const x = decode(text);
+    if (!x){ sp = null; $("#setupPrev").hidden = true; return note("That isn't a profile code (they start with MSCS1., or MSCT1. for a theme).") }
+    sp = x; const m = mapHtml(x), s = x.site, a = s?.anchors || {}, IT = {title: "Title", tag: "Tagline", search: "Search", cog: "Settings cog"};
+    $("#spName").textContent = (x.name ? `"${x.name}"` : "A profile code") + (s ? "" : x.app ? " (from the Grind Tracker: theme only here)" : " (theme only)");
+    $("#spMap").innerHTML = m.html; $("#spMap").className = m.cls; $("#spMap").style.background = m.bg; $("#spMap").style.outline = `1px solid ${m.accent}`;
+    const moved = Object.keys(IT).filter(k => a[k]).map(k => IT[k]);
+    $("#spInfo").textContent = [
+      x.theme && "Theme: " + (x.theme.preset || x.theme.name),
+      s?.nav && "Menu: " + NAV[s.nav], s?.size && "Page size " + s.size,
+      s && (moved.length ? "Moved: " + moved.join(", ") : "Header as it comes"),
+      a.sb?.w && `Sidebar ${a.sb.w} px${a.sb.right ? " on the right" : ""}`, a.sb?.right && !a.sb.w && "Sidebar on the right",
+      a.secs && "Own section order", a.home && "Own Home card order",
+      x.app && "Its box layout is for the app, so it's left out"].filter(Boolean).join(" · ") + ".";
+    $("#setupPrev").hidden = false; note("");
+  }
+  $("#setupPaste").addEventListener("click", () => preview($("#setupCode").value));
+  $("#setupCode").addEventListener("keydown", e => { if (e.key === "Enter") preview($("#setupCode").value) });
+  $("#spCancel").addEventListener("click", () => { sp = null; $("#setupPrev").hidden = true; note("Nothing changed.") });
+  // a code you use becomes a profile; what you had is kept as your profile in use, or as "My old setup" when you had none
+  function take(use){
+    const x = sp; if (!x) return; sp = null; $("#setupPrev").hidden = true;
+    if (use){ if (profs().some(p => p.name === using())) keep(); else { const c = now(freeName("My old setup")); if (c) put(c) } }
+    const n = freeName(x.name || (x.site ? "Friend's setup" : "Friend's theme"));
+    if (x.site) put(clean({...x, name: n}));
+    if (use){ apply(x); if (x.site) ls("profile", n) }
+    else if (!x.site && x.theme && !x.theme.preset) ST.save(x.theme);
+    ui(); $("#setupCode").value = "";
+    note(use ? (x.site ? `Using "${n}". Your old setup is kept under Profiles.` : "Theme set from the code.")
+      : x.site ? `Saved as profile "${n}". Pick it above and press Switch to it.` : "Theme added to your themes.");
+  }
+  $("#spUse").addEventListener("click", () => take(true));
+  $("#spKeep").addEventListener("click", () => take(false));
+
+  // section chips under the title (the app's #prefsNav): jump to a section; the one in view is marked as you scroll
+  const box = $("#thpop .setbox"), SECS = [...box.querySelectorAll(".setcard[data-nav]")], chips = $("#setnav");
+  chips.innerHTML = SECS.map((c, i) => `<button type="button" data-i="${i}">${esc(c.dataset.nav)}</button>`).join("");
+  const head = () => chips.getBoundingClientRect().bottom;
+  let pick = null;
+  const spy = () => { let i = SECS.findLastIndex(c => c.getBoundingClientRect().top <= head() + 30);
+    if (box.scrollTop + box.clientHeight >= box.scrollHeight - 4) i = SECS.length - 1; if (pick != null) i = pick;
+    chips.querySelectorAll("button").forEach((b, j) => b.setAttribute("aria-current", String(j === Math.max(0, i)))) };
+  chips.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; pick = +b.dataset.i;
+    box.scrollTo({top: box.scrollTop + SECS[pick].getBoundingClientRect().top - head() - 8, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"}); spy() });
+  for (const k of ["wheel", "keydown", "touchstart"]) box.addEventListener(k, () => { pick = null }, {passive: true});
+  box.addEventListener("scroll", spy, {passive: true});
+  $("#thopen").addEventListener("click", () => { if ($("#thpop").hidden) return; pick = null; box.scrollTop = 0; ui(); spy() });
+  ui();
+  window.PROFILES = {encode, decode, clean, now, BUILTIN};   // tests
 })();
 
 // Back / Forward (Danny, 2026-10-18): every page change, and every "place" inside a page (a monster, item or skill page,

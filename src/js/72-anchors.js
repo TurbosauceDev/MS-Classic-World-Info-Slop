@@ -264,5 +264,5 @@
   addEventListener("resize", () => requestAnimationFrame(putAll));
   new MutationObserver(() => requestAnimationFrame(putAll)).observe(document.documentElement, {attributes: true, attributeFilter: ["data-size", "data-nav"]});
   wideNote(); layout(); putAll(); document.fonts?.ready.then(putAll);
-  window.ANCH = {set: v => { S = clean(v); save(); layout(); putAll() }, get: () => S, on: setOn, cols};   // tests
+  window.ANCH = {set: v => { S = clean(v); save(); layout(true); putAll() }, get: () => S, clean, on: setOn, cols};   // tests, profiles (74-profiles.js)
 })();
