@@ -265,3 +265,6 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - `src/pages/kpqt.html` + `src/js/68-trkkpq.js` (KPQT, after 68-tracker.js: needs TRK_API/mss): Space splits stages (Enter ends, Backspace undo, Esc throw away + Undo), rounds in localStorage `kpqt`, settings `kpqtset` (install id `site-<24 hex>`), live round `kpqtcur`. Screen share feeds `readKpqTimer` into `KPQT.feed(left, t)`: armed after 3 s with no clock, starts on 2 agreeing reads. Sends to /api/kpq with `src: "site"`, no EXP (Rush board only).
 - KPQ leaderboard: KPQB (same file) renders from `summary.kpq.list` (filters party/job class/period/timing, saved in `trkkf`); old snapshots without a list use trkKpq's board. Both go through `trkKpqClean`. trkOpen at load runs in a microtask so KPQB exists. Test: `node tests/kpq.js` (uses page.clock; `clock.install` must come after goto or the page hangs).
 
+
+## CI red fix 2026-10-21
+- bf2672f left an empty duplicate "classicmarket.kr market prices" card (no `</div>`) at the top of log.html: every older card nested inside it, smoke "t-log at 390px" failed, and since smoke is the first CI step every later suite was skipped from 69c3e09 on while Pages kept deploying. build.py now asserts `<div>`/`</div>` counts match in each `src/pages/*.html`.

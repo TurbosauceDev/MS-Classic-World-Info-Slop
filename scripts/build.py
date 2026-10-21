@@ -11,6 +11,9 @@ html = (src / "index.html").read_text()
 # each page's <section> lives in src/pages/<id>.html (so a thread reads only the page it touches); <!--@page id--> marks its slot
 html = re.sub(r"<!--@page ([\w-]+)-->", lambda m: (src / "pages" / f"{m.group(1)}.html").read_text().rstrip("\n"), html)
 assert not set(p.stem for p in (src / "pages").glob("*.html")) - set(re.findall(r'<section id="([\w-]+)"', html)), "page file not in index.html"
+# an unclosed <div> nests every later box inside it (10-21: a stray changelog card swallowed all older ones, smoke red)
+for p in (src / "pages").glob("*.html"):
+    t = p.read_text(); assert len(re.findall(r"<div\b", t)) == t.count("</div>"), f"{p.name}: <div> and </div> counts differ"
 css = (src / "styles.css").read_text()
 js = "\n".join(p.read_text() for p in sorted((src / "js").glob("*.js")))
 # the grind tracker's screen readers (inventory price check uses them); one IIFE, exports window.GrindReaders
