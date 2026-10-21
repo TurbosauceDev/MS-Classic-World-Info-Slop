@@ -52,6 +52,8 @@ jobs:
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python3 tests/shopscans_test.py
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: python3 tests/mesoindex_test.py
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python3 tests/meowdb_test.py
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python3 tests/mesowatch_fresh_test.py

@@ -44,5 +44,5 @@ function priceBox(id){
   const where = sells.length ? ltab(sells, "Where to buy", sells.length === 1 ? "listing" : "listings, cheapest first")
     : `<h4 class="pxh">Where to buy</h4><p class="sub">No live listing with a channel or FM room right now.</p>`;
   return `${tiles}${src}${where}${buys.length ? ltab(buys, "Buy orders", buys.length === 1 ? "player wants it" : "players want it, best offer first") : ""}
-    <p class="sub pxfoot">Listings come from meso.watch (cheapest per item only, from streams, updated ${pwListedAgo() || "–"}) and meowdb (players post their own shops, updated ${mdbAgo() || "–"}; gone after 7 days without a bump). classicmarket.kr posts have no location. Shops open and close fast: if one is gone, try the next.</p>`;
+    <p class="sub pxfoot">Listings come from meso.watch (cheapest per item only, from streams, updated ${pwListedAgo() || "–"}), meowdb (players post their own shops, updated ${mdbAgo() || "–"}; gone after 7 days without a bump), and maplestory.watch + mesoindex.com shop scans (seen in the last day). classicmarket.kr posts have no location. Shops open and close fast: if one is gone, try the next.</p>`;
 }

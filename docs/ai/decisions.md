@@ -243,3 +243,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-21 Danny: KPQ leaderboard floor = 4 minutes (server check.js KPQ_MIN 240 s); faster rounds are kept but never counted.
 - 2026-10-21 Danny OK'd: price polls stop committing dist/index.html; Pages builds the page itself.
 - 2026-10-21 Danny: build a character lookup from classicrank.com's API ("Load by IGN"). Keyless browser call on user action is an approved runtime fetch; no read key needed for single lookups, /jobs, /stats.
+- 2026-10-21 Danny: work mesoindex.com into item pages: Prices row + Where to buy shops (channel, FM room, seller). pwPrice / FM Sniper stay on meso.watch.

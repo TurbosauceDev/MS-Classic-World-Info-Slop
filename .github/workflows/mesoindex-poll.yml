@@ -1,0 +1,36 @@
+# Every 3 hours: mesoindex.com prices (/api/catalog) + per-item shop listings (/api/item?game=, only items whose catalog row
+# moved) -> data/sources/mesoindex.json + D.mi, commit to main when changed (pages.yml builds the page). Owner OK'd use 2026-10-20.
+# A failed fetch exits 0 and commits nothing. No vendor/ needed. Own workflow; same concurrency group as the other polls.
+name: mesoindex poll
+on:
+  schedule: [{cron: "33 2-23/3 * * *"}]   # off the other polls' minutes and hours (tests/cron.test.js)
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: main-pipeline
+  cancel-in-progress: false
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - run: python3 tests/mesoindex_test.py
+      - name: Fetch, build, commit if changed
+        # on a push race, start again from the new main, never merge data.json
+        run: |
+          python3 scripts/fetch_mesoindex.py > /tmp/mi.log; cat /tmp/mi.log
+          [ -f data/sources/mesoindex.json ] || exit 0   # first fetch failed
+          cp data/sources/mesoindex.json /tmp/mi.json
+          for i in 1 2 3; do
+            git add data/sources/mesoindex.json data/data.json
+            if git diff --cached --quiet; then echo "no change"; exit 0; fi
+            git -c user.name="mesoindex poll" -c user.email="actions@github.com" commit -qm "mesoindex.com prices $(date -u '+%F %H:%M')"
+            git push origin HEAD:main && exit 0
+            sleep $((i*15)); git fetch -q origin main; git reset -q --hard origin/main
+            cp /tmp/mi.json data/sources/mesoindex.json
+            python3 -c "import sys,json;sys.path.insert(0,'scripts');import fetch_mesoindex as c;D=json.load(open('data/data.json'));c.step(D);open('data/data.json','w').write(json.dumps(D,separators=(',',':')))"
+          done
+          exit 1
