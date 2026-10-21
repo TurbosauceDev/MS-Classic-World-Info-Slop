@@ -2403,6 +2403,9 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   </details>
 
   <div class="changelog">
+    <div class="card" data-t="2026-10-21T17:44:47Z"><div class="cardhead"><h3><span class="ver">v0.13.3</span> Oct 21, 2026 · Home cards close up on wide screens</h3></div>
+      <p>On screens 1,700 px and wider, Home left big empty gaps under each card (bigger under taller cards, and bigger at larger page sizes). Cards in a column now sit one small gap apart at every width and page size.</p>
+    </div>
     <div class="card" data-t="2026-10-21T17:37:39Z"><div class="cardhead"><h3><span class="ver">v0.13.2</span> Oct 21, 2026 · Page names in the browser tab, page links, KPQ timer on Home</h3></div>
       <p>The browser tab now names the page you're on (like "Items · MS Classic World Data Slop"), so several open tabs and your history are easy to tell apart.</p>
       <ul><li>Links can open one page: add <b>#g=</b> and the page, like <b>#g=kpqt</b> for the KPQ timer.</li>
@@ -2882,7 +2885,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-21T17:39:01Z" data-ver="0.13.2">Site version: v0.13.2 · built Oct 21, 2026 · 17:39 UTC</p>
+  <p class="sitever" data-built="2026-10-21T17:44:47Z" data-ver="0.13.3">Site version: v0.13.3 · built Oct 21, 2026 · 17:44 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -11011,8 +11014,10 @@ if (HASH.L && Object.hasOwn(PAGECTL, HASH.L.p) && HASH.L.v && typeof HASH.L.v ==
 
 // Home: masonry. Each card spans as many 1 px grid rows as it is tall, so short cards don't sit over blank space (audit 10-21).
 // Order, the billboard (full row, first) and edit-mode reorders stay plain grid; a ResizeObserver keeps spans current.
+// offsetHeight, not getBoundingClientRect: at 1700px+ .wrap is CSS-zoomed (Page size), and the zoomed height left
+// (zoom - 1) x card height of blank space under every card (10-21, Danny's 2000px screenshots).
 { const grid = document.querySelector(".homegrid"), GAP = 14;
-  const fit = () => { if (!grid) return; for (const c of grid.children) c.style.gridRowEnd = `span ${Math.max(1, Math.ceil(c.getBoundingClientRect().height + GAP))}` };
+  const fit = () => { if (!grid) return; for (const c of grid.children) c.style.gridRowEnd = `span ${Math.max(1, Math.ceil(c.offsetHeight + GAP))}` };
   if (grid && "ResizeObserver" in window){ grid.classList.add("masonry"); const ro = new ResizeObserver(fit);
     for (const c of grid.children) ro.observe(c); ro.observe(grid) } }
 

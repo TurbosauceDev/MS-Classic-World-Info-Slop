@@ -47,6 +47,13 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       stretch: c.filter(x => x.getBoundingClientRect().height - x.scrollHeight > 4).length,
       more: [...document.querySelectorAll('.homecat[data-sec="more"] .hlink')].map(x => x.dataset.go).join()} });
   check(h.mas && !h.stretch && h.more === "log,credits,feedback,privacy", `home: masonry, no stretched cards, More links (${JSON.stringify(h)})`);
+  // stacked cards sit one gap apart at every width, incl. 1700px+ where .wrap is CSS-zoomed (10-21: zoomed heights left 55-95px holes)
+  for (const [w, size] of [[1300, null], [2000, null], [2000, "5"]]){
+    const q = await b.newPage({viewport: {width: w, height: 1200}}); if (size) await q.addInitScript(v => localStorage.setItem("pagesize", v), size);
+    await q.goto(URL); await q.waitForTimeout(600);
+    const gaps = await q.evaluate(() => { const cols = {}; for (const c of document.querySelectorAll(".homegrid > .homecat")){ const r = c.getBoundingClientRect(); (cols[Math.round(r.left)] ||= []).push(r) }
+      return Object.values(cols).flatMap(l => l.sort((a, b) => a.top - b.top).slice(1).map((r, i) => Math.round(r.top - l[i].bottom))) });
+    check(gaps.length && gaps.every(g => g >= 8 && g <= 30), `home: stacked cards one gap apart at ${w}px${size ? " size " + size : ""} (${gaps})`); await q.close() }
 
   // 6. Changelog: every version has its ship time (data-t, backfilled from git), days folded, newest day open
   await open("log"); await p.waitForTimeout(100);

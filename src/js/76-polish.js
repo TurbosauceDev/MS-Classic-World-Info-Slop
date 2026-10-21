@@ -15,8 +15,10 @@ if (HASH.L && Object.hasOwn(PAGECTL, HASH.L.p) && HASH.L.v && typeof HASH.L.v ==
 
 // Home: masonry. Each card spans as many 1 px grid rows as it is tall, so short cards don't sit over blank space (audit 10-21).
 // Order, the billboard (full row, first) and edit-mode reorders stay plain grid; a ResizeObserver keeps spans current.
+// offsetHeight, not getBoundingClientRect: at 1700px+ .wrap is CSS-zoomed (Page size), and the zoomed height left
+// (zoom - 1) x card height of blank space under every card (10-21, Danny's 2000px screenshots).
 { const grid = document.querySelector(".homegrid"), GAP = 14;
-  const fit = () => { if (!grid) return; for (const c of grid.children) c.style.gridRowEnd = `span ${Math.max(1, Math.ceil(c.getBoundingClientRect().height + GAP))}` };
+  const fit = () => { if (!grid) return; for (const c of grid.children) c.style.gridRowEnd = `span ${Math.max(1, Math.ceil(c.offsetHeight + GAP))}` };
   if (grid && "ResizeObserver" in window){ grid.classList.add("masonry"); const ro = new ResizeObserver(fit);
     for (const c of grid.children) ro.observe(c); ro.observe(grid) } }
 
