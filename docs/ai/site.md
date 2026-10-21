@@ -53,7 +53,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 10-maps.js | 31 | client formulas (hitProb, lvlPen, classAcc), hpmpAt, touchPct, POTS, party, mobKill, mapShare, mapRates, rankMaps (Where to train) |
 | 15-valuable.js | | VALUE: community-picked quests (not game data) |
 | 16-guides.js | 26 | GUIDE (1-30) + GUIDE2 (2nd job 30-70) from meowdb class guides |
-| 20-quests.js | 18 | Quest Database, `#qtip` tooltips, rewardCell() |
+| 20-quests.js | 18 | Quest Database, `#qtip` tooltips, rewardCell(), questMarket/marketCell, stackWith/stackCell |
 | 40-citizenship.js | | GRADES + SHOPS (meowdb) |
 | 45-crafting.js | 14 | Crafting (CRAFT_LV from OSMS dashboard) |
 | 47-keep.js | | Keep or sell |
@@ -231,3 +231,5 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Item page "Prices" = `PRICE_SRC`/`priceRows()` in 10-maps.js (shared; classicmarket thread pushes its own line). `npcCheaper`/`npcCheaperPill` = cheapest shop under the cheapest listing (or median); `votesHtml(v)` = "N confirmed". meowdb votes are weighted floats: build rounds them.
 - Trap: 40-citizenship.js SHOPS is a hand copy of meowdb prices; tests/meowdb_test.py fails when a launch-priced shop differs. Endpoint map for Z.ai: /mnt/project-files/reports/meowdb-endpoints-2026-10-21.md (market summary/listings work without login).
 - UI (src/js/11-cmarket.js): `CM`, `pwPrice(id)` (meso.watch -> cm ask median -> cm bid median, `{v, src, n, rough}`), `cmHtml`/`cmShort`; adds a row to `PRICE_SRC` (Items "Prices"). Used by Price check `advice()`, Keep or sell, Craft planner `worth`/`buyEach`, FM Sniper Sell helper ("Fill a buy order"). FM Sniper deal grading stays meso.watch only (asks aren't sales). Test: features.js "classicmarket".
+- Quest turn-in value (v0.12.5): quest `il` rows are `[name, n, sourceMob, itemId]` (`build_data.py reqitems` patches an old data.json and adds the turn-in items to D.items). `questMarket` prices turn-ins vs rewards with `pwPrice` (skips 403xxxx quest items and per-set prices), NPC floor alongside; net tag only when all priced. `stackWith`: kl mobs + il source mob + D.drops mobs, ±10 levels. Test: `node tests/questvalue.js` (fake prices).
+- Trap: craftplan.js "padding" check already failed on main 40200c3 before this change (not from quests).

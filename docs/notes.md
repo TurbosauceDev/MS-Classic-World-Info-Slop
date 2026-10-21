@@ -146,7 +146,8 @@ All CONFLICTS below were applied 2026-10-20 (Danny: "you can trust everything fr
   grinding speed almost no quest beats grinding on EXP/hr (e.g. lv 40: ~140k/h grinding vs 50–105k/h for the best quests).
 - Pace multipliers 1 / 1.5 / 2 on all times are guesses (crowding, potions, breaks).
 - Reward value column = quest mesos + NPC sell price of its items (get: all; pick: best; random: expected/average). A floor,
-  not market value.
+  not market value. Quests/Citizenship also show market value (pwPrice: meso.watch median, else classicmarket.kr ask/bid median)
+  of turn-in items vs rewards; class-only groups count the best class; 403xxxx quest items are untradeable and skipped.
 - Item drops (Danny's assumption, 2026-10-06): 30% per kill, or 15% "cautious". Quest cost = kill reqs + ceil(missing / rate)
   kills of the source monster, overlapping per monster. Items with no known source (NPC-made, boxes) stay untimed.
 - Travel (estimates): walk 30 s per map crossed, cab 45 s between the 6 cab towns, NPC talk 60 s (30 s same NPC again; 180 s

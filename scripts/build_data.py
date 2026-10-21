@@ -135,12 +135,12 @@ def quest_row(q, prev):
 def step_quests(D):
     prev = {i["next_quest"]: i["name"] for i in QUESTS if i.get("next_quest")}
     rows = [quest_row(q, prev) for q in QUESTS]
-    # structured requirements for the Path Planner: kl [[mobId, n]], il [[item, n, sourceMobId|None]], pre [questId]
+    # structured requirements for the Path Planner: kl [[mobId, n]], il [[item, n, sourceMobId|None, itemId]], pre [questId]
     byid = {q["id"]: q for q in QUESTS}
     for r in rows:
         reqs = byid[r["id"]].get("requirements_list") or []
         r["kl"] = [[str(x["id"]), x["count"]] for x in reqs if x["type"] == "mob"]
-        r["il"] = [[x["name"], x["count"], (lambda s: str(s["id"]) if s else None)(a.item_source(x["name"]))] for x in reqs if x["type"] == "item"]
+        r["il"] = [[x["name"], x["count"], (lambda s: str(s["id"]) if s else None)(a.item_source(x["name"])), str(x["id"])] for x in reqs if x["type"] == "item"]
         r["pre"] = [str(x["id"]) for x in reqs if x["type"] == "quest"]
     D["quests"] = [r for r in rows if r["region"] != "Citizenship"]
     D["citq"] = [r for r in rows if r["region"] == "Citizenship"]
@@ -183,6 +183,15 @@ def step_rewards(D):
     need |= {"1032021", "1032022"}  # Henesys / Kerning City Earrings (grade 10 Citizenship reward, shown on that tab)
     D["items"], D["iicons"] = {}, {}
     add_items(D, need)
+    step_reqitems(D)
+
+def step_reqitems(D):
+    """turn-in items (il[3]) get D.items rows too: Quests / Citizenship market turn-in value and tooltips need them."""
+    byq = {q["id"]: [y for y in q.get("requirements_list") or [] if y["type"] == "item"] for q in QUESTS}
+    for r in D["quests"] + D["citq"]:   # partial rebuild: data.json from before il carried the id
+        for x, y in zip(r["il"], byq[r["id"]]):
+            if len(x) < 4: x.append(str(y["id"]))
+    add_items(D, {x[3] for r in D["quests"] + D["citq"] for x in r["il"] if x[3] in ITEM})
 
 def add_items(D, ids):
     """items {itemId: tooltip info} + iicons {itemId: base64 png} for every id not there yet."""
@@ -656,7 +665,7 @@ def osms_info():
         return {"ref": h, "date": d}
     except Exception: return None
 
-PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: step_cmarket(D)), "weapon_sources": ("wsrc", lambda D: step_weapon_sources(D))}   # (key it owns, step)
+PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: step_cmarket(D)), "reqitems": ("_none", lambda D: step_reqitems(D)), "weapon_sources": ("wsrc", lambda D: step_weapon_sources(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)

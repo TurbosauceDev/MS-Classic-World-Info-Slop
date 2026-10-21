@@ -40,12 +40,12 @@ function renderQuests(){
     <td class="num">${r.lvl}</td>
     <td><span class="name qname" tabindex="0" data-src="q" data-i="${D.quests.indexOf(r)}">${esc(r.name)}</span> ${vPill(r.id)}${VALUE[r.id] ? `<div class="vwhy"><b>${esc(VALUE[r.id][1])}</b>${VALUE[r.id][3] ? ` · ${esc(VALUE[r.id][3])} only` : ""} · ${esc(VALUE[r.id][2])} <span class="sub">(${vSrc(VALUE[r.id])})</span></div>` : ""}<div class="sub">${npcLink(r.npc)} · ${esc(r.region || "")}${r.rep ? ` · <span class="pill p-warn">${r.rep}</span>` : ""}${r.region === "El Nath" || r.region === "Orbis" ? ` · <span class="pill p-bad">not in launch</span>` : r.region === "Forgotten Hollow" ? ` · <span class="pill p-warn">opens later</span>` : ""}</div></td>
     <td>${r.chain ? `<button class="chainbtn" data-chain="${esc(r.chain)}" title="Show the ${esc(r.chain)} questline">Yes</button><div class="sub">${r.cpos} of ${r.cn}</div>` : `<span class="sub">No</span>`}</td>
-    <td class="sub">${reqHTML(r)}</td>
+    <td class="sub">${reqHTML(r)}${stackCell(r)}</td>
     <td class="num">${fmt(r.exp)}</td>
     <td class="num">${r.pct_level ?? "–"}${r.pct_level != null ? "%" : ""}</td>
     <td class="num">${r.mult ? `<span class="pill ${r.mult >= 2 ? "p-hot" : "p-good"}">${r.mult.toFixed(1)}×</span>` : "–"}</td>
     <td class="sub">${r.eq_kills ? `${fmt(r.eq_kills)} ${mobLink(r.eq_mob)}` : "–"}</td>
-    <td>${rewardCell(r)}</td></tr>`), `<tr><td colspan="9" class="empty">No quests match. Widen the level range, clear the search or turn off "Equipment rewards only".</td></tr>`);
+    <td>${rewardCell(r)}${marketCell(r)}</td></tr>`), `<tr><td colspan="9" class="empty">No quests match. Widen the level range, clear the search or turn off "Equipment rewards only".</td></tr>`);
 }
 /* quest detail tooltip: one floating box so the scrolling table can't clip it */
 const qtip = document.createElement("div");
@@ -62,6 +62,63 @@ function questTip(r){
     <h5>Rewards</h5><ul>${li(rewards)}${li(i.items || [])}</ul>
     ${VALUE[r.id] ? `<h5>Why players do it · ${VTIER[VALUE[r.id][0]][0]}</h5><p>${esc(VALUE[r.id][2])} <span style="opacity:.7">(${VALUE[r.id][4].map(k => esc(VSRC[k][0])).join("; ")})</span></p>` : ""}
     ${i.prev || i.next ? `<h5>Quest chain${i.chain ? ": " + esc(i.chain) : ""}</h5><ul>${i.prev ? `<li>After: ${esc(i.prev)}</li>` : ""}${i.next ? `<li>Leads to: ${esc(i.next)}</li>` : ""}</ul>` : ""}`;
+}
+/* market value: turn-in items vs rewards at player prices (pwPrice: meso.watch sales, then classicmarket.kr posts),
+   next to the NPC-sell floor (mesos + what the reward items sell to NPCs). 403xxxx quest items can't be traded, so they don't count. */
+const QONLY = id => +id >= 4031000 && +id < 4033000;
+const mktP = id => { const f = pwPrice(id); return f && !f.per && f.v > 0 ? f : null };
+function questMarket(r){
+  const seen = new Map(), price = id => { if (!seen.has(id)) seen.set(id, mktP(id)); return seen.get(id) };
+  let cost = 0, ctot = 0, cok = 0;
+  for (const [, n, , id] of r.il || []){ if (!id || QONLY(id)) continue; ctot++; const f = price(id); if (f){ cok++; cost += f.v * n } }
+  // reward groups: get = all, pick 1 = the best, random = expected value; class-only groups: the best class
+  let rtot = 0, rok = 0, rew = 0, npc = r.mesos || 0, bestJob = {}, bestNpc = {};
+  for (const g of r.ri || []){
+    const it = g.it.filter(([id]) => !QONLY(id));
+    const val = (f, [id, n, ch]) => f(id) * n * (ch != null ? ch / 100 : 1);
+    const sum = f => { const v = it.map(x => val(f, x));
+      return g.k === "pick" ? Math.max(0, ...v) : g.k === "rand" && !it.some(x => x[2] != null) ? v.reduce((a, b) => a + b, 0) / (v.length || 1) : v.reduce((a, b) => a + b, 0) };
+    for (const [id] of it){ rtot++; if (price(id)) rok++ }
+    const m = sum(id => price(id)?.v || 0), p = sum(id => D.items[id]?.p || 0);
+    if (g.job && g.job !== "Any Class"){ bestJob[g.k] = Math.max(bestJob[g.k] || 0, m); bestNpc[g.k] = Math.max(bestNpc[g.k] || 0, p) }
+    else { rew += m; npc += p }
+  }
+  for (const k in bestJob){ rew += bestJob[k]; npc += bestNpc[k] }
+  const src = {};
+  for (const f of seen.values()) if (f){ const s = src[f.src] = src[f.src] || {items: 0, n: 0}; s.items++; s.n += f.n || 0 }
+  return {cost, ctot, cok, rew: rew + (r.mesos || 0), rtot, rok, npc, src, all: cok === ctot && rok === rtot,
+    rough: [...seen.values()].some(f => f && f.rough)};
+}
+// one compact block under a quest's rewards: market turn-in vs reward, net when everything is priced, else "x/y priced"
+function marketCell(r){
+  const m = questMarket(r), tot = m.ctot + m.rtot, ok = m.cok + m.rok;
+  if (!tot || !ok) return "";
+  const net = m.rew - m.cost, srcs = Object.entries(m.src).map(([s, v]) => `${s} (${fmt(v.n)} ${s === "meso.watch" ? "sales" : "posts"})`).join(", ");
+  const tip = `Player prices: ${srcs}${m.rough ? ". Few sales or asking prices only: rough" : ""}. Reward = quest mesos + items (pick 1: the best, random: expected value).`;
+  const badge = !m.all ? `<span class="pill p-warn">${ok}/${tot} priced</span>`
+    : m.ctot ? `<span class="pill ${net >= 0 ? "p-good" : "p-bad"}" title="${net >= 0 ? "Doing the quest beats selling the items" : "Selling the turn-in items pays more than the reward"}">net ${net >= 0 ? "+" : "−"}${fmt(Math.abs(Math.round(net)))}</span>` : "";
+  return `<div class="qmkt sub" title="${esc(tip)}">${m.ctot ? `Turn-in ~${fmt(Math.round(m.cost))} · ` : ""}Reward ~${fmt(Math.round(m.rew))} ${badge}
+    <br>NPC floor ${fmt(Math.round(m.npc))} · ${esc(srcs)}${m.rough ? " · rough" : ""}</div>`;
+}
+/* "Stack with": other quests within 10 levels that need the same monster (a kill, or a monster that drops a turn-in item) */
+const qMobs = r => new Set([...(r.kl || []).map(([m]) => String(m)),
+  ...(r.il || []).flatMap(([, , s, id]) => [s, ...(D.drops[id] || []).map(([m]) => m)]).filter(Boolean).map(String)]);
+const QSTACK_POOL = () => [...QLAUNCH.filter(r => r.region !== "Event").map(r => ["q", r]), ...D.citq.map(r => ["cit", r])];
+let QSM = null;
+function stackWith(r){
+  if (!QSM) QSM = QSTACK_POOL().map(([src, q]) => [src, q, qMobs(q)]);
+  const mine = qMobs(r); if (!mine.size) return [];
+  const seen = new Set([r.name]), out = [];
+  for (const [src, q, ms] of QSM){
+    if (q === r || seen.has(q.name) || Math.abs(q.lvl - r.lvl) > 10 || ![...ms].some(m => mine.has(m))) continue;
+    seen.add(q.name); out.push([src, q]);
+  }
+  return out.sort((a, b) => a[1].lvl - b[1].lvl);
+}
+const qref = (src, q) => `<span class="name qname" tabindex="0" data-src="${src}" data-i="${(src === "cit" ? D.citq : D.quests).indexOf(q)}">${esc(q.name)}</span>`;
+function stackCell(r){
+  const s = stackWith(r); if (!s.length) return "";
+  return `<div class="qstack sub">Stack with: ${s.slice(0, 3).map(([src, q]) => `${qref(src, q)} <span class="tiny">Lv ${q.lvl}</span>`).join(", ")}${s.length > 3 ? ` <span title="${esc(s.slice(3).map(([, q]) => q.name).join(", "))}">+${s.length - 3} more</span>` : ""}</div>`;
 }
 /* item rewards: icons with in-game style tooltips */
 function rewardCell(r){
