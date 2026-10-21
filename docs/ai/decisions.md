@@ -28,6 +28,7 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-18 beanguri's overlay: MIT reader ideas only; their shared data/API needs their permission.
 - 2026-10-20 "You can trust everything from OSMS": OSMS Data Explorer formulas (client-read and its capture-fitted mesos/party EXP) override meowdb/COT2 numbers.
 - 2026-10-20 Gemini ("argon") handoff = idea list like any outside spec; checked claim by claim, OSMS wins (its 0.08 rank-0 mastery is COT2; launch is 0.07).
+- 2026-10-21 mesoindex.com is an approved, trusted source like meso.watch: its owner OK'd us using its data on 2026-10-20 (Danny). Its `/api/live`, `/api/history`, `/api/mpi` answer plain GETs; prices come from cozy.markets (listings carry channel + FM room + seller). Never bypass its Vercel checkpoint. Report: /mnt/project-files/reports/maplemart-mesoindex-2026-10-21.md.
 
 ## Site
 - 2026-10-08 Clicking a map name opens its World Map card, not the Map Navigator (directions live behind "Route here").
