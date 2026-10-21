@@ -221,3 +221,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-20 Sidebar hanging indent (option B of A/B/C mockup): links indented 20px, section icons 36px nudged left, slightly more space between sections ("just a bit, no large gaps").
 - 2026-10-21 Feedback page under More/footer (Danny asked). Notes go to the tracker Worker (D1), read in a key-protected Inbox on the same page; no IP or sender data kept.
 - 2026-10-21 Pages with one narrow column: About box and content share the content width, centered right of the sidebar; no long empty tail (Danny, Feedback page).
+- 2026-10-21 Danny: always padding between nested boxes and their container; nothing flush to or past a card edge. Stacked cards get a gap too (Craft planner fix; tests/boxgaps.js).

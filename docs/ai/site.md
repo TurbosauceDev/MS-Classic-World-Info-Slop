@@ -107,6 +107,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Conventions
 - CSS tokens only: --bg --panel --ink --muted --line --accent --accent-soft --leaf --warn --bad. Lavender/purple/grey.
   Light + dark must both work; no horizontal scroll at 390px (smoke checks).
+- Padding (Danny 10-21): nested boxes keep padding from their container on every side, nothing flush to or past a card edge;
+  stacked cards get a gap (`section>.card+.card` 14px, `.pcol`/`.grid2` gaps). `tests/boxgaps.js` checks it (smoke: every page at 390px; craftplan.js filled page).
 - Plain player language; say when a number is estimated (assumed drop rates: 5% loot default, 30% quest items).
 - Don't add back: "The List" tab, hover-to-select on World Map, map-name click → navigator (it opens the map card).
 
@@ -198,6 +200,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - `src/js/58-craftplan.js` + `src/pages/cplan.html` (layout A of the mockups, artifact WNSNUN8SWR16sf7k8CkQrw). Inventory = 54-invprice.js `tally()` (shared with Price check: drop on either page) + hand items (localStorage `cplan`). `make()` crafts parts on the way with the 45-crafting.js recipe rule (lowest level, biggest batch), only for recipes your levels allow; otherwise the part is "missing".
 - Value = max(meso.watch median, NPC price); per-set (flag 2) items fall back to NPC. Held materials cost what they'd sell for unless "nothing". Farming: D.drops + D.craft.src mobs × 5%/kill, or D.shared.mobs real count at 100+ kills; kills/hr from `mapRates` with the default build (not Where to train's typed stats). Test: `node tests/craftplan.js` (CI) checks invariants only, since prices move every poll.
 - Trap: crafting success rates aren't in the files; every craft is taken as a success (said in the howto).
+- 10-21 padding fix: cards were stacked flush and `.cpset`/`.cpadd`/`.cpbig` had no CSS (end of styles.css now). `#cpitem` needs type=text for the input styles.
 
 ## Feedback page 2026-10-21
 - `src/pages/feedback.html` + `src/js/73-feedback.js`: footer link + `#t-feedback` (cat "more"). POSTs {kind, msg, contact, website (honeypot), page = last page open, ver} to the Worker's `/api/feedback` (URL from TRK_API). Owner inbox in the same page: key = Worker secret FEEDBACK_KEY, kept in localStorage `fbkey`.

@@ -3,6 +3,7 @@
 // meso.watch data, which the poll changes every 30 min, so only invariants are checked against them. Run: node tests/craftplan.js
 const { chromium } = require("playwright");
 const path = require("path");
+const boxGaps = require("./boxgaps");
 const URL = "file://" + path.resolve(__dirname, "../dist/index.html");
 let fails = 0;
 const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; console.log("FAILED: " + msg) } };
@@ -62,6 +63,19 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(/over the craft fees/.test(await p.textContent("#cptot")), "materials as free: total says over the fees");
     await p.click('[data-cprm="4010006"]');
     check(!/Gold Ore ×10/.test(await p.textContent("#cpinv")), "hand item removed");
+    check(!errs.length, "no JS errors " + errs.join(" | "));
+    await ctx.close() }
+
+  // Danny 10-21: cards stacked flush, inner tables/inputs touching. Filled page, desktop and phone: every box padded, no touching
+  { const {p, errs, ctx} = await page();
+    await p.evaluate(() => localStorage.setItem("cplan", JSON.stringify({lv: [3, 3, 3, 3, 3, 3], hand: {4010001: 40, 4010000: 40, 1002029: 3, 4000021: 50, 4003000: 30, 4000003: 30}})));
+    await p.reload(); await p.evaluate(() => { const b = document.querySelector("#t-cplan"); document.querySelector("#c-" + b.dataset.cat).click(); b.click() });
+    for (const w of [1300, 390]){
+      await p.setViewportSize({width: w, height: 900}); await p.waitForTimeout(150);
+      const g = await p.evaluate(boxGaps, [6, "cplan"]), rows = await p.$$eval("#cpnow tr, #cpalm tr", r => r.filter(x => !x.querySelector(".empty")).length);
+      const add = await p.evaluate(() => { const [a, c] = [...document.querySelectorAll(".cpadd input")].map(e => e.getBoundingClientRect()); return c.top >= a.bottom || c.left - a.right >= 8 });
+      check(rows >= 2 && !g.length && add, `padding at ${w}px: ${rows} rows, ${g.length ? g.slice(0, 3).join(" | ") : "no box flush or touching"}${add ? "" : ", item and count inputs touch"}`);
+    }
     check(!errs.length, "no JS errors " + errs.join(" | "));
     await ctx.close() }
 

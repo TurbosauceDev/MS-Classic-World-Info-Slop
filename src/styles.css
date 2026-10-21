@@ -109,6 +109,7 @@ h2{font:800 24px/1.2 var(--f-display);margin:28px 0 4px}
 .card h3{font:700 17.5px var(--f-display);margin:0 0 10px}
 .cardhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
 .cardhead h3{margin:0}
+section>.card+.card{margin-top:14px}   /* Danny 10-21: stacked cards never touch (tests/smoke.js boxGaps) */
 .hero{background:var(--accent-soft);border-color:var(--accent-soft)}
 .big{font:800 clamp(37px,6vw,52px)/1.05 var(--f-display);margin:6px 0;color:var(--ink)}
 .big small{font:500 16px var(--f-body);color:var(--muted)}
@@ -870,3 +871,13 @@ html.anchoring :is(.navcol,.homegrid){user-select:none}
 .fbwho{color:var(--ink);font-weight:600}
 .fbtext{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px}
 .fbnote .btnrow{margin-top:8px}
+/* Craft planner */
+.cpset{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;margin-bottom:12px}
+.cpset .lab{flex:0 1 auto}
+.cpadd{margin:12px 0 0}
+.cpadd .lab:first-child{flex:1 1 240px}
+.cpadd input[type=text]{width:100%;box-sizing:border-box}
+#cpinv{margin:10px 0 0}
+#cpnowx{margin:10px 0 0}
+#cpst:empty,#cpnowc:empty,#cpnowx:empty{display:none}
+.cpbig{font-size:16px;margin:0 0 4px}

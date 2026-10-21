@@ -117,6 +117,7 @@ h2{font:800 24px/1.2 var(--f-display);margin:28px 0 4px}
 .card h3{font:700 17.5px var(--f-display);margin:0 0 10px}
 .cardhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
 .cardhead h3{margin:0}
+section>.card+.card{margin-top:14px}   /* Danny 10-21: stacked cards never touch (tests/smoke.js boxGaps) */
 .hero{background:var(--accent-soft);border-color:var(--accent-soft)}
 .big{font:800 clamp(37px,6vw,52px)/1.05 var(--f-display);margin:6px 0;color:var(--ink)}
 .big small{font:500 16px var(--f-body);color:var(--muted)}
@@ -878,6 +879,16 @@ html.anchoring :is(.navcol,.homegrid){user-select:none}
 .fbwho{color:var(--ink);font-weight:600}
 .fbtext{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px}
 .fbnote .btnrow{margin-top:8px}
+/* Craft planner */
+.cpset{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;margin-bottom:12px}
+.cpset .lab{flex:0 1 auto}
+.cpadd{margin:12px 0 0}
+.cpadd .lab:first-child{flex:1 1 240px}
+.cpadd input[type=text]{width:100%;box-sizing:border-box}
+#cpinv{margin:10px 0 0}
+#cpnowx{margin:10px 0 0}
+#cpst:empty,#cpnowc:empty,#cpnowx:empty{display:none}
+.cpbig{font-size:16px;margin:0 0 4px}
 
 </style>
 <script>
@@ -1953,7 +1964,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <label class="drop" id="cpdrop"><input type="file" id="cpfile" accept="image/*" multiple>
       <span>Drop, pick or paste (Ctrl+V) inventory or bank screenshots. Read in your browser; nothing is uploaded.</span></label>
     <div class="cpset cpadd">
-      <label class="lab">Add by hand<input id="cpitem" list="cpitems" placeholder="Item name" autocomplete="off"></label>
+      <label class="lab">Add by hand<input id="cpitem" type="text" list="cpitems" placeholder="Item name" autocomplete="off"></label>
       <label class="lab">Count<input id="cpn" type="number" min="1" max="9999" value="1"></label>
       <button class="btn sm" id="cpaddb" type="button">Add</button>
       <datalist id="cpitems"></datalist>
@@ -2067,6 +2078,8 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.11.3</span> Oct 21, 2026 · Craft planner spacing</h3></div>
+      <p>Craft planner cards no longer sit flush against each other, and the level, class and add-by-hand fields line up in rows with room between them.</p></div>
     <div class="card"><div class="cardhead"><h3><span class="ver">v0.11.2</span> Oct 21, 2026 · Smoother Home cards</h3></div>
       <p>Clicking a Home section card no longer flashes: the cards glide into place with sharp text instead of stretching and blinking.</p></div>
     <div class="card"><div class="cardhead"><h3><span class="ver">v0.11.1</span> Oct 21, 2026 · Feedback page</h3></div>
@@ -2436,7 +2449,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-21T02:49:51Z" data-ver="0.11.2">Site version: v0.11.2 · built Oct 21, 2026 · 02:49 UTC</p>
+  <p class="sitever" data-built="2026-10-21T04:20:58Z" data-ver="0.11.3">Site version: v0.11.3 · built Oct 21, 2026 · 04:20 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button></div>
 </footer>
@@ -2605,7 +2618,7 @@ goHome();
 try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : HASH.n ? "navi" : HASH.t ? "maps" : HASH.q ? "quests" : HASH.f ? "snipe" : SAVEDTAB; if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
 // Credits: when each data source was last read (build.py fills SRCDATES from fetch_osms.sh and data/sources/*.json)
-const SRCDATES = {"osms": {"ref": "c661434d86c0fe2c9baae974d509d3498f97df62"}, "meowdb_drops": "2026-10-16", "meowdb_material_drops": "2026-10-06", "meowdb_mesos": "2026-10-06", "meowdb_shops": "2026-10-06", "meowdb_weapon_drops": "2026-10-06", "mesowatch_prices": "2026-10-17", "mq_mob_magic": "2026-10-06", "shared_runs": "2026-10-19"};
+const SRCDATES = {"osms": {"ref": "c661434d86c0fe2c9baae974d509d3498f97df62"}, "classicmarket_items": null, "meowdb_drops": "2026-10-16", "meowdb_material_drops": "2026-10-06", "meowdb_mesos": "2026-10-06", "meowdb_shops": "2026-10-06", "meowdb_weapon_drops": "2026-10-06", "mesowatch_prices": "2026-10-17", "mq_mob_magic": "2026-10-06", "shared_runs": "2026-10-19"};
 { const day = s => { const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ""); return m ? new Date(Date.UTC(+m[1], m[2] - 1, +m[3])).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) : null };
   const o = D.osms?.ref ? D.osms : SRCDATES.osms || {}, ref = /^[0-9a-f]{7,40}$/.test(o.ref || "") ? o.ref : "";
   const rows = [

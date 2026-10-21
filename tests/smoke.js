@@ -2,6 +2,7 @@
 // fail on any page error. Run: npm i -D playwright && node tests/smoke.js
 const { chromium } = require("playwright");
 const path = require("path");
+const boxGaps = require("./boxgaps");
 (async () => {
   const b = await chromium.launch();
   const p = await b.newPage({ viewport: { width: 1300, height: 900 } });
@@ -285,6 +286,8 @@ const path = require("path");
     check(sw <= cw + 1 && !bad, `${id} at 390px (width ${sw}/${cw}${bad ? ", text: " + bad : ""})`);
     const spill = await p.evaluate(spillingInputs);
     check(!spill, `${id} at 390px: inputs stay inside their labels${spill ? " (" + spill + ")" : ""}`);
+    const gaps = await p.evaluate(boxGaps, [6, id.slice(2)]);
+    check(!gaps.length, `${id} at 390px: boxes padded from their card, cards don't touch${gaps.length ? " (" + gaps.slice(0, 3).join(" | ") + ")" : ""}`);   // Danny 10-21, Craft planner
   }
   // builder AP boxes overlapped each other at desktop width (Danny 10-19: width:100% + padding, no border-box)
   await p.click("#c-" + await p.$eval("#t-plan", b => b.dataset.cat)); await p.click("#t-plan");
