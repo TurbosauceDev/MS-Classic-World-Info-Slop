@@ -48,6 +48,7 @@ project memory; older dates are the day the call was recorded.
 - 2026-10-19 Cheapest listing shows "Listings updated X ago" (worked out in the browser), not a UTC time.
 - 2026-10-20 FM Sniper page (Mesos and Trade): live listings vs the meso.watch median, sort by mesos under or % of value; under 100% = deal, over 100% = not a deal or a sign the price is rising with demand (marked "rising" when meso.watch's trend is up). Built overnight on his OK to push and publish.
 - 2026-10-20 FM Sniper round 2: Danny approved every idea in reports/fm-sniper-ideas-2026-10-20.md (NPC flag, flip, shopping trip, crafting flips, targets + alerts, sell helper, movers, mood, volatility, presets, keys, needed by me) and deal lifetime stats (from the poll's git history). Discord pings deferred ("later"); phone push: remind him later. Pipeline asks (all listings, seen time, askMedian, history) approved, routed via Danny.
+- 2026-10-21 Craft planner (Mesos and Trade): inventory screenshots + craft levels -> craft now for profit, almost (farm maps with estimated time at 5%/kill, or buy), total from inventory. Layout A (three stacked groups) picked from an A/B/C mockup.
 
 ## Tracker and server
 - 2026-10-17 Build the screen reader anyway (no official Nexon rule found); it reads pixels only, no memory, files or input.

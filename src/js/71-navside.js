@@ -28,6 +28,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
     inv: ["x:0", "x:1", "x:2", "x:3"],
     keep: I([...dropped].filter(i => i.startsWith("400") && D.items[i]?.c === "Etc")),
     craft: I([...ingr].filter(i => i.startsWith("4") && (dropped.has(i) || D.ishop?.[i] || crafted.has(i)))),
+    cplan: I([...crafted].filter(i => i.startsWith("40") && PW[i])),
     // Henesys / Kerning City townsfolk from the citizenship quests, and the two towns' return scrolls
     cit: [...new Set(D.citq.map(q => q.npc))].filter(n => n && D.npcid[n] && D.npcimg[D.npcid[n]]).map(n => "n:" + D.npcid[n]).concat(["i:2030004", "i:2030005"]),
   };

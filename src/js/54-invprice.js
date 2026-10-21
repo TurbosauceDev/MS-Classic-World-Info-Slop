@@ -117,10 +117,8 @@ function advice(id){
   return {each: p[0], how: `List at ~<b>${fmt(p[0])}</b>${per} (half sold for ${fmt(p[1])}-${fmt(p[2])}).${low ? ` <span class="pill p-warn" title="Fewer than 5 sales seen: rough">few sales</span>` : ""}`, cls: ""};
 }
 const TABNAME = {equip: "Equip", use: "Use", etc: "Etc", bank: "Bank"};
-function render(){
-  const list = $("#ivreads");
-  list.innerHTML = READS.map((r, k) => `<span class="pill">${r.live ? "Scroll check" : esc(TABNAME[r.tab])}: ${r.slots.length} slot${r.slots.length === 1 ? "" : "s"}${r.unknown ? `, ${r.unknown} not read` : ""}
-    <button class="linkbtn" data-ivdel="${k}" title="Remove">✕</button></span>`).join(" ") + (READS.length ? ` <button class="btn sm" id="ivclear">Clear all</button>` : "");
+// every item read, once ({id, n, g, tabs, noN}), slots not read and the meso totals; the Craft planner reads it too
+function tally(){
   const rows = {};   // item id -> {n, g, tabs, noN}
   let unknown = 0, mesos = null, bankMesos = null;
   for (const r of READS) if (r.mesos != null){ if (r.tab === "bank") bankMesos = r.mesos; else mesos = r.mesos }
@@ -137,7 +135,14 @@ function render(){
       if (s.n == null) o.noN++; else o.n += s.n;
     }
   }
-  const all = Object.values(rows).map(o => Object.assign(o, advice(o.id), {npc: D.items[o.id].p || 0}));
+  return {rows: Object.values(rows), unknown, mesos, bankMesos};
+}
+function render(){
+  const list = $("#ivreads");
+  list.innerHTML = READS.map((r, k) => `<span class="pill">${r.live ? "Scroll check" : esc(TABNAME[r.tab])}: ${r.slots.length} slot${r.slots.length === 1 ? "" : "s"}${r.unknown ? `, ${r.unknown} not read` : ""}
+    <button class="linkbtn" data-ivdel="${k}" title="Remove">✕</button></span>`).join(" ") + (READS.length ? ` <button class="btn sm" id="ivclear">Clear all</button>` : "");
+  const {rows, unknown, mesos, bankMesos} = tally();
+  const all = rows.map(o => Object.assign(o, advice(o.id), {npc: D.items[o.id].p || 0}));
   all.forEach(o => { o.qty = o.n || (o.noN ? 1 : 0); o.tot = o.each * o.qty; o.ks = KEEPSELL?.(o.id, o.qty) || null });
   all.sort((a, b) => b.tot - a.tot || D.items[a.id].n.localeCompare(D.items[b.id].n));
   const fm = all.reduce((a, o) => a + o.tot, 0), npc = all.reduce((a, o) => a + o.npc * o.qty, 0);
@@ -154,6 +159,7 @@ function render(){
       <td class="${o.cls}">${o.how}</td><td class="num">${o.tot ? fmt(o.tot) : "–"}</td>
       <td>${o.ks ? `<span class="pill ${o.ks.cls}">${esc(o.ks.v)}</span><div class="sub">${esc(o.ks.why)}</div>` : `<span class="sub">your call</span>`}</td></tr>` }).join("");
   $("#ivtbl").hidden = !all.length;
+  document.dispatchEvent(new Event("invupdate"));   // the Craft planner (58-craftplan.js) uses the same screenshots
 }
 const drop = $("#ivdrop");
 drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over") });
@@ -171,7 +177,10 @@ $("#ivsum").addEventListener("click", e => { if (e.target.id !== "ivkeep") retur
 $("#ivbody").addEventListener("change", e => { const g = e.target.dataset.ivg; if (g){ PICK[g] = e.target.value; render() } });
 $("#ivdate").textContent = D.pw.read;
 // for the scroll check (57-scrollscan.js): the icon set, the empty-slot test, and its live Use tab read in the table
-window.INVP = {cands, filled, advice, live(read){
+// counts(): item id -> how many (a slot with no count read is 1); handle(files): read screenshots dropped on another page
+window.INVP = {cands, filled, advice, handle, reads: () => READS.length,
+  counts: () => Object.fromEntries(tally().rows.map(o => [o.id, o.n || (o.noN ? 1 : 0)]).filter(x => x[1] > 0)),
+  clear(){ READS = []; render() }, live(read){
   const k = READS.findIndex(r => r.live);
   if (!read){ if (k >= 0){ READS.splice(k, 1); render() } return }
   read.live = true; read.name = "Scroll check"; read.key = "live";

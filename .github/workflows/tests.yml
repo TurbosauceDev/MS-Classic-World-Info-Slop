@@ -23,5 +23,6 @@ jobs:
       - run: node tests/features.js
       - run: node tests/pages.js
       - run: node tests/snipe.js
+      - run: node tests/craftplan.js
       - run: python3 tests/deal_life_test.py
       - run: node tests/monkey.js

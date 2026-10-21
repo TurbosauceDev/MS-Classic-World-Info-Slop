@@ -1,0 +1,49 @@
+<section id="cplan" hidden>
+  <details class="howto">
+    <summary>How the Craft planner works</summary>
+    <ul>
+      <li>Set your craft level in each profession (0 = not learned; crafting caps at Lv <span id="cpcap"></span> at launch) and add your inventory: the same <b>Equip</b>, <b>Use</b>, <b>Etc</b> and <b>bank</b> screenshots the <a href="#" data-cpgo="inv">Price check</a> reads (drop them on either page, both see them), or type items in by hand.</li>
+      <li><b>Craft now</b>: recipes your levels allow and your materials cover, with how many times you could make each on its own. Parts you can craft yourself (ore into ingots, say) are made on the way. <b>Profit</b> = what the result sells for (median player-shop sale on <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a>, as of <span id="cpdate"></span>, or what an NPC pays if that's more) minus the craft fee (game files) minus what your materials would sell for. Switch <b>My materials cost</b> to "nothing" to count them as free.</li>
+      <li><b>Almost</b>: recipes where you have some of the materials. Each missing item shows the cheapest way to buy it (live listing, NPC shop or usual price) and the best maps to farm it with an <b>estimated</b> time.</li>
+      <li>Farming times are estimates. No drop rates exist in the game files or anywhere else, so every reported drop (meowdb player reports, or a monster the item is named after) is taken as <b>5% per kill</b> (this site's assumption). Where grind tracker players shared 100+ kills of a monster, their real drop count is used instead. Kills per hour come from Where to train's model: your class and level with the default build, killing alone.</li>
+      <li><b>From your inventory</b>: the best mix of crafts using only what you hold, best profit per craft first. Equips are valued as plain ones (median sale); good rolls sell for more, bad ones for less. Crafting success rates aren't in the files, so every craft is taken as a success.</li>
+    </ul>
+  </details>
+
+  <div class="card">
+    <div class="cardhead"><h3>Your crafting</h3><span id="cpst" class="pill"></span></div>
+    <div class="cpset" id="cplv"></div>
+    <div class="cpset">
+      <label class="lab">Class (for farming)<select id="cpcls"><option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option><option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
+      <label class="lab">Level<input id="cplvl" type="number" min="1" max="100" value="25"></label>
+      <label class="lab">My materials cost<select id="cpfree"><option value="0">what they'd sell for</option><option value="1">nothing (I farmed them)</option></select></label>
+    </div>
+    <label class="drop" id="cpdrop"><input type="file" id="cpfile" accept="image/*" multiple>
+      <span>Drop, pick or paste (Ctrl+V) inventory or bank screenshots. Read in your browser; nothing is uploaded.</span></label>
+    <div class="cpset cpadd">
+      <label class="lab">Add by hand<input id="cpitem" list="cpitems" placeholder="Item name" autocomplete="off"></label>
+      <label class="lab">Count<input id="cpn" type="number" min="1" max="9999" value="1"></label>
+      <button class="btn sm" id="cpaddb" type="button">Add</button>
+      <datalist id="cpitems"></datalist>
+    </div>
+    <p id="cpinv" class="sub"></p>
+  </div>
+
+  <div class="card">
+    <div class="cardhead"><h3>Craft now</h3><span id="cpnowc" class="pill p-good"></span></div>
+    <div class="tblwrap"><table class="mini"><thead><tr><th>Make</th><th>Uses (each)</th><th class="num">Times</th><th class="num">Profit each</th><th class="num">Total</th></tr></thead>
+      <tbody id="cpnow"></tbody></table></div>
+    <p class="sub" id="cpnowx"></p>
+  </div>
+
+  <div class="card">
+    <div class="cardhead"><h3>Almost</h3><span class="pill p-warn">times are estimates</span></div>
+    <div class="tblwrap"><table class="mini"><thead><tr><th>Make</th><th>Missing (once)</th><th>Farm it</th><th class="num">Profit if farmed</th><th class="num">If bought</th></tr></thead>
+      <tbody id="cpalm"></tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="cardhead"><h3>From your inventory</h3></div>
+    <div id="cptot"></div>
+  </div>
+</section>

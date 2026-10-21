@@ -62,6 +62,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 52-shotimport.js | 11 | builder "Import from screenshots" |
 | 53-skills.js | | Skills tab |
 | 54-invprice.js | | Price check (inventory/bank screenshots → meso.watch `PW` prices; Keep or sell column via `KEEPSELL` from 47-keep.js) |
+| 58-craftplan.js | | Craft planner (Mesos and Trade): craft levels + Price check's screenshot reads (`INVP.counts()`, `invupdate` event) + hand entry → craft now / almost (farm maps, buy cost) / best mix; `window.CPLAN` for tests |
 | 57-scrollscan.js | | Price check › Scroll check: getDisplayMedia, live Use tab grid, tooltip read (readers.js `readTextLines`) matched to scroll name/desc, slot = nearest to tooltip corner; feeds 54 via `INVP.live` |
 | 55-bcompare.js | | Builder "Compare two jobs" (buildAt per side, or "This build" = BLD.S) |
 | 56-snipe.js | 48 | FM Sniper: PWNOW vs PW, deal grades/score (ours), views, watch list, new badges, live market.json refresh, tools (trip, craft, sell, watch alerts, movers, lifetimes) |
@@ -81,7 +82,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Recipes
 - **New page/tab:** markup `<section id="x" hidden>` in src/pages/x.html + a `<!--@page x-->` slot in index.html; button `#t-x` with `data-cat` in `.subs`
   (under its section's `.sgh` title, with `<img class="nic" data-pool="x">` and a pool `P.x` in 71-navside.js); `.hlink`
-  on the Home card; bump the home-link count in tests/smoke.js (22 now) and the sidebar page count (20), Home sprites in tests/pages.js + smoke.js (28), add a click-through check.
+  on the Home card; bump the home-link count in tests/smoke.js (23 now) and the sidebar page count (21), Home sprites in tests/pages.js + smoke.js (29), the nav page count in tests/edge.js "My Character still loads" (23), add a click-through check.
   Give the `.hlink` an `<img class="hic" data-ic="i:<item>|m:<mob>|s:<skill>">` sprite (filled from D in 00-core.js,
   shown only when the card is a billboard) and bump the sprite count in smoke.js (29 = 7 headers + 22 links).
 - **Changelog:** every user-visible change gets a dated entry at the top of `#log` (grep `id="log"`, read ~20 lines there).
@@ -93,7 +94,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   (`mapLink()`, click opens World Map card), `.nname` NPC (`npcLink()`), `.mobname` monster (`mobLink()`).
 - **Per-viewer state:** localStorage in try/catch; load an object with `savedState(key, S)` (00-core.js: drops unknown keys and wrong types), then range-check enums/levels.
   Share links (`HASH.x`) are just as untrusted: validate before use (see the sanitizers in 50-builder.js / 60-planner.js). Keys in use: tab planner path pathdone qsort qeq qval ctown craft craftlv
-  qcompact keep keephave mobs items skills navi wmap expc theme themes themec anchors train (Where to train + Builder hand-off) bcmp (job compare) snipe snipewatch snipeseen snipetarget snipetools snipealert snipepresets (FM Sniper).
+  qcompact keep keephave mobs items skills navi wmap expc theme themes themec anchors train (Where to train + Builder hand-off) bcmp (job compare) snipe snipewatch snipeseen snipetarget snipetools snipealert snipepresets (FM Sniper) cplan (Craft planner).
 - **Explanations:** a closed `<details class="howto">` at the top of the tab, short bullets.
 - **Share links:** extend the existing `#key=value&` hash (69-search.js); never a new scheme.
 - **Settings (cog `#thopen`, Danny 10-20):** `#thpop` is an inset modal (`.srch.setm` > `.srchbox.setbox`) next to `#srch` near the end of index.html, not inside the header (`.wrap` zoom); tests close it with `#thclose` (the backdrop covers the cog, so clicking `#thopen` again times out). Toggle anchors (`src/js/72-anchors.js`, option A of the mockups): movers over `#srchopen`/`#thopen` move them by `transform` from their natural spot (layout never shifts), localStorage `anchors` = {id: {x share of header width, y px, w px once resized}}, cleaned on load; off under 761px. `window.ANCH` for tests. tests/edge.js "anchors:" checks drag/reload/reset/bad values/phone, F1, center guide, scale, Colours.
@@ -191,3 +192,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Outside handoff checked against OSMS formulas page: mastery 0.7 (not its 0.8), Lucky Seven, floor(INT/2), ammo-in-WA already right; StatDiv 300 only fires when meleeing with bow/crossbow/claw or Prone Stab, which the builder never models.
 - Fixed: `classAcc` (Where to train, EXP calc) now uses the Beginner formula below Lv 10 (golden.js). README and plan.html no longer say COT2 formulas.
 - `classAcc` truncs the base like the client (skill bonuses added after). cit.html / craft.html source notes say which numbers are launch vs COT2.
+
+## Craft planner 2026-10-21
+- `src/js/58-craftplan.js` + `src/pages/cplan.html` (layout A of the mockups, artifact WNSNUN8SWR16sf7k8CkQrw). Inventory = 54-invprice.js `tally()` (shared with Price check: drop on either page) + hand items (localStorage `cplan`). `make()` crafts parts on the way with the 45-crafting.js recipe rule (lowest level, biggest batch), only for recipes your levels allow; otherwise the part is "missing".
+- Value = max(meso.watch median, NPC price); per-set (flag 2) items fall back to NPC. Held materials cost what they'd sell for unless "nothing". Farming: D.drops + D.craft.src mobs × 5%/kill, or D.shared.mobs real count at 100+ kills; kills/hr from `mapRates` with the default build (not Where to train's typed stats). Test: `node tests/craftplan.js` (CI) checks invariants only, since prices move every poll.
+- Trap: crafting success rates aren't in the files; every craft is taken as a success (said in the howto).

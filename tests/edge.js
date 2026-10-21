@@ -172,7 +172,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.reload(); await p.waitForTimeout(300);
     const old = await p.evaluate(() => [[...document.querySelectorAll("nav .sgh")].map(e => e.dataset.cat).join(), [...document.querySelectorAll(".homegrid>.homecat")].map(e => e.dataset.sec).join(),
       document.querySelectorAll("nav .subs [data-tab]").length, document.querySelector("#t-plan").dataset.cat + document.querySelector("#t-skills").dataset.cat].join("|"));
-    check(old === "db,trk,train,world,town|town,trk,train,world,db,more|22|traindb", `edit mode: layout saved with My Character still loads (${old})`);
+    check(old === "db,trk,train,world,town|town,trk,train,world,db,more|23|traindb", `edit mode: layout saved with My Character still loads (${old})`);
     await p.evaluate(() => localStorage.setItem("tab", "plan")); await p.goto(URL + "#"); await p.reload(); await p.waitForTimeout(300);
     const bt = await p.evaluate(() => !document.querySelector("#plan").hidden && document.querySelector("#c-train").getAttribute("aria-selected") === "true");
     await p.goto(URL + "#s=" + Buffer.from("{}").toString("base64")); await p.reload(); await p.waitForTimeout(300);
