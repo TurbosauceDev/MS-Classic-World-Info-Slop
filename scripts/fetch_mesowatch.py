@@ -64,44 +64,39 @@ if sys.argv[2:]:
     # ALSO: "seen" — parallel array to asks, first-seen Unix-min for each (price, seller) pair.
     #   Carried forward from the previous mesowatch_prices.json so listings that have been up
     #   for days are identifiable as stale inventory (held stock, not moving). (2026-10-22)
-    now, asks, at = {}, {}, None
-    prev_seen = {}
-    prev_asks = {}
+    from datetime import datetime, timezone
+    def tmin(v):
+        # ISO text or Unix s/ms -> Unix minutes (None if unreadable)
+        v = (v or "").strip()
+        try:
+            if v.isdigit(): return int(int(v) / (60000 if int(v) > 1e11 else 60))
+            if not v: return None
+            d = datetime.fromisoformat(v.replace("Z", "+00:00").replace(" ", "T"))
+            return int((d if d.tzinfo else d.replace(tzinfo=timezone.utc)).timestamp() / 60)
+        except ValueError: return None
+    # "live" listings older than this before the price read are dropped: the market.json fallback (2026-10-21) carried
+    # meso.watch's 10-17 listings, which FM Sniper graded as deals 4 days later
+    LIVE_MIN = 6 * 60
+    ref = tmin(generated) or int(time.time() / 60)
+    now, asks, at, newest, stale = {}, {}, None, None, 0
+    # first-seen carry-forward: {iid: {(price, seller): unixMin}} from the previous file. seen[iid] is either parallel
+    # to asks[iid] ([t0, t1, ...], current shape) or the pre-10-22 [[price, seller, t], ...]
+    prev_seen_int = {}
     prev_path = ROOT / "data" / "sources" / "mesowatch_prices.json"
     if prev_path.exists():
         try:
             prev = json.load(open(prev_path))
-            # Old shape (pre-2026-10-22) stored seen[iid] as [[price, seller, t], ...].
-            # New shape stores seen[iid] = [t0, t1, ...] parallel to asks[iid].
-            # Detect old shape by peeking at the first entry — if it's a list/tuple, it's the old shape.
-            prev_seen = prev.get("seen", {})
-            prev_asks = prev.get("asks", {})
-            for iid, arr in list(prev_seen.items()):
-                if arr and isinstance(arr[0], (list, tuple)):
-                    # Old shape: convert to {(price, seller): t} map keyed by index in prev_asks
-                    prev_asks_arr = prev_asks.get(iid, [])
-                    new_arr = []
-                    for i, entry in enumerate(arr):
-                        if i < len(prev_asks_arr):
-                            pa = prev_asks_arr[i]
-                            new_arr.append((pa[0], pa[4], entry[2] if len(entry) > 2 else None))
-                        else:
-                            new_arr.append(tuple(entry))
-                    prev_seen[iid] = new_arr
+            for iid, arr in (prev.get("seen") or {}).items():
+                pa, m = (prev.get("asks") or {}).get(iid, []), {}
+                for i, e in enumerate(arr or []):
+                    if isinstance(e, (list, tuple)) and len(e) == 3: p_, s_, t_ = e
+                    elif isinstance(e, (int, float)) and i < len(pa): p_, s_, t_ = pa[i][0], pa[i][4], e
+                    else: continue
+                    if t_ is not None: m[(p_, s_)] = t_
+                if m: prev_seen_int[iid] = m
         except Exception as e:
             print(f"[warn] could not read prev mesowatch_prices.json for seen carry-forward: {e}", file=sys.stderr)
-            prev_seen, prev_asks = {}, {}
-    # prev_seen_int: {iid: {(price, seller): unixMin}}
-    prev_seen_int = {}
-    for iid, arr in prev_seen.items():
-        m = {}
-        for entry in arr:
-            if isinstance(entry, (list, tuple)) and len(entry) == 3:
-                p, s, t = entry
-                if t is not None:
-                    m[(p, s)] = t
-        if m:
-            prev_seen_int[iid] = m
+            prev_seen_int = {}
 
     for r in csv.DictReader(open(sys.argv[2], newline="")):
         at = at or r.get("generated_at")
@@ -109,6 +104,9 @@ if sys.argv[2:]:
         if kind != "basil" or not n.isdigit() or int(n) // 1000000 == 1 or int(n) // 10000 == 207 or (out.get(str(int(n))) or [0] * 5)[4] & 2: continue
         iid, p = str(int(n)), num(r["price"])
         if p is None: continue
+        t = tmin(r.get("seen")) or tmin(r.get("generated_at"))
+        if t is not None and ref - t > LIVE_MIN: stale += 1; continue
+        if t is not None: newest = max(newest or t, t)
         seller = r.get("seller") or ""
         qty = int(r.get("qty") or 1)
         ch = r["channel"] if (r.get("channel") or "").isdigit() else None
@@ -118,28 +116,15 @@ if sys.argv[2:]:
         if iid not in now or p < now[iid][0]:
             now[iid] = entry
     for iid in asks: asks[iid].sort(key=lambda x: x[0])
+    if stale: print(f"[fresh] WARNING: dropped {stale} listings last seen over {LIVE_MIN // 60} h before the price read", file=sys.stderr)
 
-    # Build seen[itemId] parallel to asks[itemId]: same length, same order (post-sort),
-    # each entry = first_seen_unix_min for the (price, seller) at the same index in asks.
-    # Compact shape: seen[iid] = [t0, t1, t2, ...]. To get (price, seller) for index i,
-    # the frontend looks at asks[iid][i] = [price, qty, ch, map, seller].
-    # Carry forward: if (price, seller) was seen in the previous run, keep its timestamp.
-    # Otherwise, use the current run's `at` (listed) timestamp as the first-seen time.
-    seen = {}
-    default_t = None
-    if at:
-        # at is "YYYY-MM-DD HH:MM" UTC (the generated_at trimmed). Convert to unix minutes.
-        try:
-            from datetime import datetime, timezone
-            default_t = int(datetime.strptime(at, "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc).timestamp() / 60)
-        except Exception:
-            default_t = None
-    if default_t is None:
-        default_t = int(time.time() / 60)
-    for iid, arr in asks.items():
-        prev_map = prev_seen_int.get(iid, {})
-        seen[iid] = [prev_map.get((entry[0], entry[4]), default_t) for entry in arr]
-    j["now"], j["asks"], j["listed"], j["seen"] = now, asks, (at or "")[:16].replace("T", " "), seen
+    # seen[iid]: parallel to asks[iid], first time we saw each (price, seller), carried forward from the previous file;
+    # a new one gets the time this listing data was made
+    default_t = newest or tmin(at) or int(time.time() / 60)
+    seen = {iid: [prev_seen_int.get(iid, {}).get((e[0], e[4]), default_t) for e in arr] for iid, arr in asks.items()}
+    # listed = when this listing data is from (newest listing seen, else the file's time); "" when every listing was stale
+    listed = datetime.fromtimestamp(newest * 60, timezone.utc).strftime("%Y-%m-%d %H:%M") if newest else (at or "")[:16].replace("T", " ") if asks else ""
+    j["now"], j["asks"], j["listed"], j["seen"] = now, asks, listed, seen
     # Health check: detect fresh.json empty-state by looking at the CSV's `map` column.
     # The market.json fallback CSV has no FM room/channel info (every map is empty).
     # Real fresh.json rows have a non-empty `map`. Warn loudly so this stays visible.

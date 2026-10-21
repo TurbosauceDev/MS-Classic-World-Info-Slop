@@ -192,3 +192,6 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Closing animates 140 ms with `.closing` (pointer-events off): tests that check `isVisible` after a close wait ~250 ms. ui.test.js
   checks every pop-up is inset, blurred and never calls host.mini/winSize or changes the page height (fitWin on).
 - 2026-10-21 Feedback: `feedback` table (schema.sql), POST /api/feedback (5-2000 chars, 5/hour and 20/day per ipday, 300/day total, honeypot `website`), GET /api/feedback + POST /api/feedback/done need `Authorization: Bearer FEEDBACK_KEY` (503 until the secret exists). server.yml puts the repo secret FEEDBACK_KEY into the Worker after deploy.
+
+## Summary rebuild 2026-10-21
+- `/api/summary`: when the stored copy is stale, the first request claims meta `summary_lock` and rebuilds; others within 60 s get the stale copy (was: every request rebuilt). Past 1.5 MB `kpq.list` is cut to 1000 then 0 rounds so it can still be stored. server.test.js checks the lock. `server/package-lock.json` now pins wrangler's tree.

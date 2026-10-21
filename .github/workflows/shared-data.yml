@@ -6,17 +6,26 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+# same group as the price polls, which commit to main every few minutes
+concurrency:
+  group: main-pipeline
+  cancel-in-progress: false
 jobs:
   refresh:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: { ref: main }
-      - run: python3 scripts/fetch_shared.py
-      - run: python3 scripts/build.py | tail -3
-      - name: Commit if changed
+      - name: Fetch, build, commit if changed
+        # on a push race, start again from the new main (never merge data.json)
         run: |
-          git add data/sources/shared_runs.json data/data.json dist/index.html
-          if git diff --cached --quiet; then echo "no change"; exit 0; fi
-          git -c user.name="shared-data bot" -c user.email="actions@github.com" commit -m "Shared runs refresh $(date -u +%F)"
-          git push origin HEAD:main
+          for i in 1 2 3; do
+            python3 scripts/fetch_shared.py
+            python3 scripts/build.py | tail -3
+            git add data/sources/shared_runs.json data/data.json dist/index.html
+            if git diff --cached --quiet; then echo "no change"; exit 0; fi
+            git -c user.name="shared-data bot" -c user.email="actions@github.com" commit -qm "Shared runs refresh $(date -u +%F)"
+            git push origin HEAD:main && exit 0
+            sleep $((i*15)); git fetch -q origin main; git reset -q --hard origin/main
+          done
+          exit 1

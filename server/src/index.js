@@ -255,8 +255,16 @@ async function route(req, env){
     const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary'").first();
     let body = row?.v;
     if (!body || Date.now() - Date.parse(JSON.parse(body).updated) > 5 * 60e3){
-      body = JSON.stringify(await summary(env.DB));
-      if (body.length < 1.5e6) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").bind(body).run();   // D1 rows max out at 2 MB
+      // one rebuild at a time: while another request is working it out (claimed in the last minute), the old copy is served
+      const lock = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary_lock'").first();
+      if (!body || !lock || Date.now() - Number(lock.v) > 60e3){
+        await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary_lock', ?)").bind(String(Date.now())).run();
+        const s = await summary(env.DB);
+        body = JSON.stringify(s);
+        // D1 rows max out at 2 MB: past 1.5 MB keep fewer KPQ rounds for the filters, so the copy can still be stored
+        for (const n of [1000, 0]) if (body.length >= 1.5e6 && s.kpq.list.length > n){ s.kpq.list = n ? s.kpq.list.slice(-n) : []; body = JSON.stringify(s) }
+        if (body.length < 1.5e6) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").bind(body).run();
+      }
     }
     return new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=300", ...CORS}});
   }

@@ -237,3 +237,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-21 Audit (Danny): build items 1-15 of the improvement audit; Map Navigator gets centered as one column instead of opening on an example route. Changelog shows each version's time, backfilled. Run the same audit again after the release (fresh thread). Phone table cards split to thread "Phone-friendly tables"; KPQ board + KPQ clock digits to "KPQ tracker and leaderboards".
 - 2026-10-21 Danny OK'd audit #3: on phones, wide tables become compact stacked rows (cards with labelled values) instead of sideways scroll.
 - 2026-10-21 Danny: a KPQ tracker on the site plus sturdier, more polished KPQ leaderboards (built as the KPQ timer page + board filters; site rounds marked, Rush only).
+- 2026-10-21 Danny (review thread): push the review fixes to main and keep fixing (CI gating, stale meso.watch listings, summary rebuild lock).

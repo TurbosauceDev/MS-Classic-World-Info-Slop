@@ -90,6 +90,12 @@ assert.deepStrictEqual(us.map(x => x.usedHr), [1600], JSON.stringify(us));
 assert.strictEqual(s, 200);
 const cached = await (await worker.fetch(new Request("https://x/api/summary"), env)).json();
 assert.strictEqual(cached.mobs["3"], undefined, "summary kept for 5 minutes");
+// a stale copy with a rebuild claimed in the last minute is served as is (no pile-up of rebuilds); an old claim is ignored
+sql.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").run(JSON.stringify({updated: "2026-01-01T00:00:00Z", stale: 1}));
+sql.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary_lock', ?)").run(String(Date.now()));
+assert.strictEqual((await (await worker.fetch(new Request("https://x/api/summary"), env)).json()).stale, 1, "stale copy served while another request rebuilds");
+sql.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary_lock', ?)").run(String(Date.now() - 120e3));
+assert.strictEqual((await (await worker.fetch(new Request("https://x/api/summary"), env)).json()).stale, undefined, "an old rebuild claim doesn't block");
 const bad = (await fresh()).mobs["3"];
 assert.strictEqual(bad.kills, 100); assert.strictEqual(bad.mesos, 0); assert.deepStrictEqual(bad.items, {"4000001": 2});
 // attack-style input: "__proto__" ids on an unknown map, non-text names. Never crashes the summary or touches Object.prototype
