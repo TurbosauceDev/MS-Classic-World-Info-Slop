@@ -1,0 +1,21 @@
+# Pipeline watchdog (2026-10-21): checks the meso.watch data from OUTSIDE the poll (a check inside it can't see its own
+# skipped or broken runs) and keeps one "[watchdog]" issue open while something is wrong. Reads only: no fetch, no build,
+# no commit. Checks and thresholds: scripts/watchdog.py.
+name: watchdog
+on:
+  schedule: [{cron: "13 * * * *"}, {cron: "43 * * * *"}]   # off the polls' minute marks
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  issues: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - run: python3 tests/watchdog_test.py
+      - run: python3 scripts/watchdog.py
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }

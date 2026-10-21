@@ -632,7 +632,7 @@ def step_prices(D):
     j = json.load(open(ROOT / "data" / "sources" / "mesowatch_prices.json"))
     D["pw"] = {"read": j["read"], "it": {k: v for k, v in j["items"].items() if k in D["items"]}}
     if "now" in j:   # cheapest live listing per non-equip item {itemId: [price each, qty, channel, map, seller]}, as of "listed"
-        D["pw"].update(listed=j["listed"], now={k: v for k, v in j["now"].items() if k in D["items"]})
+        D["pw"].update(listed=j["listed"], srclisted=j.get("src_listed", ""), now={k: v for k, v in j["now"].items() if k in D["items"]})
     try:   # FM Sniper deal lifetimes from this file's git history (scripts/deal_life.py); never fails the price step
         import deal_life
         D["pw"]["life"] = deal_life.life(ROOT)

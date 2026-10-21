@@ -25,6 +25,7 @@ def poll(rows, gen):
 # 1. market.json fallback shape: file generated 4 days before the price read, listings last seen then -> all dropped
 j = poll([(2000000, "Old", 50, "", "2026-10-17T12:04:00Z")], "2026-10-17T12:04:00Z")
 check(j["now"] == {} and j["asks"] == {} and j["listed"] == "", f"4-day-old listings kept: {j['now']} listed={j['listed']!r}")
+check(j.get("src_listed") == "2026-10-17 12:04", f"src_listed keeps the listing file's own time: {j.get('src_listed')!r}")
 # 2. stale file time but a fresh per-listing time: kept, listed = the listing's time
 j = poll([(2000000, "Fresh", 50, "", "2026-10-21T11:50:00Z"), (4010001, "Old", 60, "", "2026-10-17T12:00:00Z")], "2026-10-17T12:04:00Z")
 check(list(j["now"]) == ["2000000"], f"fresh kept, stale dropped: {list(j['now'])}")

@@ -24,6 +24,7 @@ YYYY-MM-DD HH:MMZ | <agent-name> | <one-line summary> | <commit hash or files to
 
 ## Recent
 
+2026-10-21 18:30Z | claude (review) | watchdog workflow + src_listed/generated fields + "no live listings" message; reviewed openclaw's outage proposal (mailbox) | watchdog.yml, fetch_mesowatch.py
 2026-10-21 18:00Z | openclaw | new agent: audited the meso.watch pipeline (0 listings kept after a699477, Step 10 can't fire), wrote the maintenance-detection design | docs/design/maintenance-detection.md, docs/ai/agent-mailbox.md
 2026-10-21 18:00Z | claude (review) | Home masonry zoom fix (v0.13.3); asked in mailbox about 2 unused scripts | 2743654
 2026-10-21 17:20Z | claude (review) | review fixes: CI red (changelog div), Pages smoke gate, stale listings + seen fix, summary lock, pins, item page order, Settings Reset | a934f82..57f0a2c

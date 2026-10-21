@@ -75,7 +75,7 @@
   const el = document.getElementById("pwstate"); if (!el || !D.pw?.it) return;
   const draw = () => { const ago = pwListedAgo(), n = Object.keys(D.pw.it).length, live = Object.keys(D.pw.now || {}).length;   // FM Sniper can swap in a newer list
     const read = D.pw.read ? new Date(D.pw.read + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : "";
-    el.textContent = `meso.watch: ${fmt(n)} item prices${read ? ` (sales up to ${read})` : ""}${live && ago ? ` · ${fmt(live)} live listings, updated ${ago}` : ""}`;
+    el.textContent = `meso.watch: ${fmt(n)} item prices${read ? ` (sales up to ${read})` : ""}${live && ago ? ` · ${fmt(live)} live listings, updated ${ago}` : !live ? ` · ${pwNoLive()}` : ""}`;
     el.title = D.pw.listed ? `Listings updated ${D.pw.listed} UTC` : "" };
   draw(); el.hidden = false; setInterval(draw, 6e4); document.addEventListener("pwupdate", draw);
 })();

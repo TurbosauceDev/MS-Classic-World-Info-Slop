@@ -43,6 +43,8 @@ jobs:
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python3 tests/deal_life_test.py
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: python3 tests/watchdog_test.py
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python3 tests/classicmarket_test.py
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python3 tests/shopscans_test.py

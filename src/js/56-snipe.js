@@ -200,7 +200,7 @@ function drawList(){
   $("#sncount").textContent = `${fmt(shown.length)} listing${shown.length === 1 ? "" : "s"}${S.v !== "deal" && deals ? ` · ${fmt(deals)} under value` : ""}`;
   const empty = S.watch && !WATCH.size ? "No watched items yet: press ☆ on a row to watch it."
     : S.need && !Object.keys(NEED).length ? "Keep or sell says you don't need anything right now (type your Have counts there)."
-    : S.mine && !WT ? "Pick a weapon in the Character Builder first." : "Nothing matches these filters right now. Listings change every half hour.";
+    : S.mine && !WT ? "Pick a weapon in the Character Builder first." : !ROWS.length ? pwNoLive()[0].toUpperCase() + pwNoLive().slice(1) + ", so there is nothing to compare. Prices on item pages still work." : "Nothing matches these filters right now. Listings change every half hour.";
   lazyRows($("#snrows"), shown.map(rowHtml), `<tr><td colspan="7" class="empty">${empty}</td></tr>`);
   top3(shown);
   const b = $("#snmine"); b.textContent = WT ? `Scrolls for my weapon (${WT})` : "Scrolls for my weapon"; b.title = WT ? "Weapon scrolls for the Character Builder's weapon type" : "Pick a weapon in the Character Builder first";
@@ -467,7 +467,7 @@ function apply(j){
   for (const [id, v] of Object.entries(j.now)) if (D.items[id] && okNow(v)) now[id] = [v[0], Math.max(1, Math.floor(+v[1]) || 1), Number.isInteger(v[2]) ? v[2] : null, typeof v[3] === "string" ? v[3].slice(0, 80) : "", typeof v[4] === "string" ? v[4].slice(0, 40) : ""];
   if (j.it && typeof j.it === "object" && typeof j.read === "string" && j.read >= (D.pw.read || "")) for (const [id, v] of Object.entries(j.it)) if (D.items[id] && okIt(v)) it[id] = v;
   if (Object.keys(it).length){ for (const k of Object.keys(PW)) delete PW[k]; Object.assign(PW, it); D.pw.read = j.read }
-  for (const k of Object.keys(PWNOW)) delete PWNOW[k]; Object.assign(PWNOW, now); D.pw.listed = j.listed;
+  for (const k of Object.keys(PWNOW)) delete PWNOW[k]; Object.assign(PWNOW, now); D.pw.listed = j.listed; D.pw.srclisted = typeof j.srclisted === "string" ? j.srclisted : "";
   if (okLife(j.life)) D.pw.life = j.life;
   build();
   const fresh = ROWS.filter(x => !before.has(x.key));

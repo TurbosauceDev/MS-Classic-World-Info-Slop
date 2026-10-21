@@ -211,25 +211,5 @@ else
   log "Done. Pages will redeploy via pages.yml workflow_run trigger."
 fi
 
-# --- Step 10: Data-freshness health check ---
-# Warn loudly if the most recent 'meso.watch helper' commit is >2h old.
-# This catches cron-skipping issues + the rare case where a commit was
-# rejected due to push race (the concurrency group queues but eventually
-# one wins, so a >2h gap means something is genuinely wrong).
-LAST_HELPER_DATE=$(git log -1 --format=%cI --author="meso.watch helper" 2>/dev/null || true)
-if [ -n "$LAST_HELPER_DATE" ]; then
-  LAST_HELPER_EPOCH=$(date -u -d "$LAST_HELPER_DATE" +%s 2>/dev/null || true)
-  NOW_EPOCH=$(date -u +%s)
-  if [ -n "$LAST_HELPER_EPOCH" ]; then
-    AGE_S=$((NOW_EPOCH - LAST_HELPER_EPOCH))
-    AGE_H=$((AGE_S / 3600))
-    AGE_M=$(((AGE_S % 3600) / 60))
-    if [ "$AGE_H" -ge 2 ]; then
-      log "WARNING: last 'meso.watch helper' commit was ${AGE_H}h ${AGE_M}m ago (>2h threshold). Cron entries may be getting skipped. See docs/ai/mesowatch-sync.md"
-    else
-      log "Freshness OK: last 'meso.watch helper' commit was ${AGE_H}h ${AGE_M}m ago"
-    fi
-  fi
-fi
-
-
+# Step 10 (freshness check) moved out to .github/workflows/watchdog.yml (2026-10-21): it measured the commit this run had
+# just made, so it always read "0h 0m ago" and could never see skipped runs.

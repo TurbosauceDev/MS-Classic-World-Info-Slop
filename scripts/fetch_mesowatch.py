@@ -54,7 +54,7 @@ else:
         h = it.get("history")
         if h: hist[iid] = [[e.get("date",""), round(e["median"]) if e.get("median") is not None else None, e.get("sold",0)] for e in h]
 
-j = {"source": "https://meso.watch/", "read": (generated or "")[:10], "market": "Classic World", "items": out}
+j = {"source": "https://meso.watch/", "read": (generated or "")[:10], "generated": generated or "", "market": "Classic World", "items": out}   # generated: full time (scripts/watchdog.py)
 if hist: j["hist"] = hist
 if totals: j["totals"] = totals
 if sys.argv[2:]:
@@ -125,6 +125,9 @@ if sys.argv[2:]:
     # listed = when this listing data is from (newest listing seen, else the file's time); "" when every listing was stale
     listed = datetime.fromtimestamp(newest * 60, timezone.utc).strftime("%Y-%m-%d %H:%M") if newest else (at or "")[:16].replace("T", " ") if asks else ""
     j["now"], j["asks"], j["listed"], j["seen"] = now, asks, listed, seen
+    # src_listed: when meso.watch made the listing file we read (fresh.json, or market.json in the fallback), even if every
+    # listing was too old to keep: the site says "meso.watch's newest list is from Oct 17" instead of only showing none
+    j["src_listed"] = (at or "")[:16].replace("T", " ")
     # Health check: detect fresh.json empty-state by looking at the CSV's `map` column.
     # The market.json fallback CSV has no FM room/channel info (every map is empty).
     # Real fresh.json rows have a non-empty `map`. Warn loudly so this stays visible.

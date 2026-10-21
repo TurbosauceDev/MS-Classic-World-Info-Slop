@@ -295,6 +295,9 @@ const pwCheap = id => { const r = pwNowRatio(id); return r != null && r <= 0.8 }
 const pwListedAgo = () => { const t = Date.parse((D.pw?.listed || "").replace(" ", "T") + "Z"); if (isNaN(t)) return "";
   const m = Math.max(0, (Date.now() - t) / 6e4);
   return m < 1 ? "just now" : m < 60 ? Math.round(m) + " min ago" : m < 48 * 60 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " days ago" };
+// no live listings: why, from the listing file's own time (D.pw.srclisted, scripts/fetch_mesowatch.py src_listed); "" when there are some
+const pwNoLive = () => { if (Object.keys(PWNOW).length) return ""; const t = Date.parse((D.pw?.srclisted || "").replace(" ", "T") + "Z");
+  return isNaN(t) ? "no live listings from meso.watch right now" : `no live listings: meso.watch's newest list is from ${new Date(t).toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"})}` };
 // meowdb drop report confidence: net votes (players confirming minus disputing; meowdb weights some votes, rounded in the build)
 const votesHtml = v => `<span class="sub" title="Net player votes on meowdb's drop report: players who confirmed it minus those who disputed it">${fmt(v)} confirmed</span>`;
 // Cheapest NPC shop that sells an item: [npc, mapId, mapName, price, test] (meowdb shop list: D.ishop, + D.shopsell for quest items)
