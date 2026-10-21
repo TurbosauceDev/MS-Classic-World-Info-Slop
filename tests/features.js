@@ -268,6 +268,18 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(/letters and numbers/.test(await p.innerText('.crl[data-for="maps"] .crlout')), "Load by IGN: unknown name and bad input say so");
     await p.reload(); await open(p, "plan");
     check(await p.inputValue('.crl[data-for="plan"] input') === "Sneaky" && /Sneaky/.test(await p.innerText('.crl[data-for="plan"] .crlout')), "Load by IGN: last character remembered after reload");
+    // @char in Ctrl K: one request after typing stops (300 ms), Enter loads it into the open page (Builder here)
+    let asked = []; p.on("request", r => { if (/\/api\/v1\/characters\//.test(r.url())) asked.push(r.url().split("?")[0].split("/").pop()) });
+    await p.keyboard.press("Control+k"); await p.type("#srchq", "@char GGboom", {delay: 40});
+    await p.waitForFunction(() => /Overall #3/.test(document.querySelector("#srchres").innerText));
+    const row = await p.innerText("#srchres li"); await p.keyboard.press("Enter"); await p.waitForTimeout(100);
+    const sc = await p.evaluate(() => ({S: BLD.S.cls + "|" + BLD.S.branch + "|" + BLD.S.lvl, plan: !$("#plan").hidden, open: !$("#srch").hidden}));
+    check(!errs.length && asked.join() === "GGboom" && /Character/.test(row) && sc.S === "Warrior|Spearman|74" && sc.plan && !sc.open, `@char search asks once and loads the builder (${asked.join()}; ${row.replace(/\s+/g, " ")}; ${JSON.stringify(sc)})`);
+    // job census card (D.crank): every launch job with players listed, the builder's job highlighted and summed up
+    const cen = await p.evaluate(() => ({rows: document.querySelectorAll("#pcensusbody tbody tr").length, want: D.crank.jobs.filter(j => j[3] > 0 && j[1] <= 2).length,
+      hi: document.querySelector("#pcensusbody tr.vrow td")?.innerText, line: document.querySelector("#pcensusbody p")?.innerText, badge: document.querySelector('.crl[data-for="plan"] .crlout').innerText}));
+    check(cen.rows === cen.want && cen.rows >= 10 && /^Spearman/.test(cen.hi) && /^Spearman is the .*most played 2nd job of \d+: [\d,]+ characters/.test(cen.line) && /Spearman #1 of [\d,]+/.test(cen.badge),
+      `job census card + "of N" on the badge (${JSON.stringify(cen)})`);
     await ctx.close() }
 
   await b.close();

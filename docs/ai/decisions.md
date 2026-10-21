@@ -247,3 +247,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-21 Second audit (Danny, artifact comment): fix item 2, Where to train table must show EXP/hr, Mesos/hr and Hrs/level at desktop width without sideways scroll.
 - 2026-10-21 Second audit (Danny, artifact comments): build items 3, 5-15 (4 and 9 were already shipped by other threads); browser screen-reading EXP/hr calculator (for macOS users) and a Crafting section overhaul go to their own threads.
 - 2026-10-21 Grind Tracker: assume players run the game at their monitor's native resolution (Danny); docs say so instead of listing window setups.
+- 2026-10-21 Danny: add @char to Ctrl+K and a job census (classicrank.com, keyless, daily job; no read key).

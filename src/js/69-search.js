@@ -21,8 +21,8 @@ QLAUNCH.forEach((r, i) => add("quest", i, r.name, `Lv ${r.lvl} · ${r.npc}`));
 for (const [job, list] of Object.entries(D.skills)) for (const s of list) add("skill", job + "|" + s.id, s.n, job);
 const DROPBY = {}; for (const [mid, m] of Object.entries(D.mobdb)) for (const [iid, , v] of m.dr || []) (DROPBY[iid] = DROPBY[iid] || []).push([mid, v]);
 const KINDS = {mob: "mob", mobs: "mob", monster: "mob", monsters: "mob", item: "item", items: "item", map: "map", maps: "map",
-  quest: "quest", quests: "quest", skill: "skill", skills: "skill", drop: "drop", drops: "drop"};
-const LABEL = {mob: ["Monster", "p-bad"], item: ["Item", "p-good"], map: ["Map", "p-warn"], quest: ["Quest", "p-hot"], skill: ["Skill", "p-hot"]};
+  quest: "quest", quests: "quest", skill: "skill", skills: "skill", drop: "drop", drops: "drop", char: "char", ign: "char"};
+const LABEL = {mob: ["Monster", "p-bad"], item: ["Item", "p-good"], map: ["Map", "p-warn"], quest: ["Quest", "p-hot"], skill: ["Skill", "p-hot"], char: ["Character", "p-good"]};
 
 // 0 exact, 1 starts with the query, 2 words matched in order, 3 any order, 4 substring; null = no match
 function score(r, q, toks){
@@ -38,6 +38,7 @@ const ORDER = {mob: 0, item: 1, map: 2, quest: 3, skill: 4};
 function find(raw){
   let q = raw.trim(), kind = null; const m = q.match(/^@(\w+)\s*/);
   if (m && KINDS[m[1].toLowerCase()]){ kind = KINDS[m[1].toLowerCase()]; q = q.slice(m[0].length) }
+  if (kind === "char") return charRow(q.trim());
   q = norm(q); if (!q) return [];
   const toks = q.split(" "), hits = [];
   for (const r of ROWS){ if (kind && kind !== "drop" && r.kind !== kind) continue; if (kind === "drop" && (r.kind !== "item" || !DROPBY[r.key])) continue;
@@ -51,9 +52,23 @@ function find(raw){
   return out.slice(0, 60);
 }
 
+// @char <name>: one character from classicrank.com (59-crlookup.js), asked 300 ms after typing stops; Enter loads it into
+// Where to train when that page is open, else the Character Builder
+const CHAR = {}; let charT = 0;
+function charRow(name){
+  if (!name) return [{kind: "char", key: "", name: "Type a character name", sub: "Looks it up on classicrank.com"}];
+  const k = name.toLowerCase(); let v = CHAR[k];
+  if (v && !v.wait && Date.now() - v.t > 6e4) v = null;   // answers age out after a minute (busy / offline ones too)
+  if (!v){ for (const x in CHAR) if (CHAR[x].wait) delete CHAR[x];   // a name typed past is never asked
+    CHAR[k] = {wait: true}; clearTimeout(charT); charT = setTimeout(() => CRL.lookup(name).then(r => { CHAR[k] = {...r, t: Date.now()}; if (!box.hidden) draw() }), 300) }
+  if (!v || v.wait) return [{kind: "char", key: "", name, sub: "Looking up on classicrank.com…"}];
+  if (!v.c) return [{kind: "char", key: "", name, sub: v.note}];
+  const c = v.c;
+  return [{kind: "char", key: c.name, c, name: c.display, sub: `Lv ${c.level ?? "?"} ${c.job || ""}${c.rank ? " · Overall #" + fmt(c.rank) : ""}${c.jrank ? " · job #" + fmt(c.jrank) : ""} · Enter loads it into ${$("#maps").hidden ? "Character Builder" : "Where to train"}`}];
+}
 const box = $("#srch"), inp = $("#srchq"), list = $("#srchres");
 let res = [], sel = 0;
-const icon = r => r.kind === "item" ? itemIcon(r.key, 1, true) : r.kind === "mob" && D.mobimg[r.key] ? `<img class="srchimg" src="data:image/png;base64,${D.mobimg[r.key]}" alt="">` : "";
+const icon = r => r.kind === "char" ? (r.c?.photo ? `<img class="srchimg" src="${esc(r.c.photo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : "") : r.kind === "item" ? itemIcon(r.key, 1, true) : r.kind === "mob" && D.mobimg[r.key] ? `<img class="srchimg" src="data:image/png;base64,${D.mobimg[r.key]}" alt="">` : "";
 function draw(){
   res = find(inp.value); sel = Math.min(sel, Math.max(0, res.length - 1));
   list.innerHTML = res.length ? res.map((r, i) => `<li role="option" id="srch${i}" data-i="${i}" aria-selected="${i === sel}"><span class="pill ${LABEL[r.kind][1]}">${LABEL[r.kind][0]}</span>${icon(r)}<span class="srchtxt"><b>${esc(r.name)}</b><span class="sub">${esc(r.sub || "")}</span></span></li>`).join("")
@@ -64,12 +79,14 @@ const mark = () => { list.querySelectorAll("li[data-i]").forEach(li => li.setAtt
 // open things the way a click on their name anywhere on the page does (those listeners live in each tab's file)
 const clickAs = (cls, attr, v) => { const el = document.createElement("span"); el.className = cls; el.dataset[attr] = v; el.hidden = true; document.body.append(el); el.click(); el.remove() };
 function go(r){
+  if (r.kind === "char" && !r.c) return;   // still looking up / not found: keep the box open
   close();
   if (r.kind === "mob") clickAs("mobname", "mob", r.key);
   else if (r.kind === "item") clickAs("itname", "item", r.key);
   else if (r.kind === "map") clickAs("mname", "map", r.key);
   else if (r.kind === "skill") openSkillPage(r.key);
   else if (r.kind === "quest") openQuests({s: QLAUNCH[r.key].name});
+  else if (r.kind === "char" && r.c){ const w = $("#maps").hidden ? "plan" : "maps"; $("#t-" + w).click(); CRL.use(w, r.c) }
 }
 // closing without picking (Esc, Ctrl K, a click outside) puts focus back where it was, so keyboard users don't land on a hidden box
 let back = null;

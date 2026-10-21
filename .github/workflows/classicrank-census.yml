@@ -1,0 +1,30 @@
+# Daily: Windia job census from classicrank.com's keyless API (scripts/fetch_classicrank.py) into data/data.json; commits
+# data only (pages.yml builds dist). Danny asked for the census 2026-10-21.
+name: classicrank-census
+on:
+  schedule: [{cron: "49 6 * * *"}]   # minute off the other polls (tests/cron.test.js)
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: main-pipeline
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - name: Fetch, commit if changed
+        # on a push race, start again from the new main (never merge data.json)
+        run: |
+          for i in 1 2 3; do
+            python3 scripts/fetch_classicrank.py
+            git add data/sources/classicrank.json data/data.json
+            if git diff --cached --quiet; then echo "no change"; exit 0; fi
+            git -c user.name="classicrank census bot" -c user.email="actions@github.com" commit -qm "classicrank job census $(date -u +%F)"
+            git push origin HEAD:main && exit 0
+            sleep $((i*15)); git fetch -q origin main; git reset -q --hard origin/main
+          done
+          exit 1

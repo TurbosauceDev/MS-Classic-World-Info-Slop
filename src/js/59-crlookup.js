@@ -12,6 +12,9 @@ const JOB = {Swordsman: ["Warrior", "Warrior"], Fighter: ["Warrior", "Fighter"],
   Archer: ["Bowman", "Archer"], Hunter: ["Bowman", "Hunter"], Crossbowman: ["Bowman", "Crossbowman"], Ranger: ["Bowman", "Hunter"], Sniper: ["Bowman", "Crossbowman"],
   Thief: ["Thief", "Rogue"], Assassin: ["Thief", "Assassin"], Bandit: ["Thief", "Bandit"], Hermit: ["Thief", "Assassin"], "Chief Bandit": ["Thief", "Bandit"]};
 const FAMILY = {Warrior: "Warrior", Magician: "Magician", Bowman: "Bowman", Thief: "Thief"};
+// Windia job census (D.crank, scripts/fetch_classicrank.py, daily): players per job, for the builder card and "of N" on the badge
+const CR = D.crank?.jobs?.length ? D.crank : null, NJOB = Object.fromEntries((CR?.jobs || []).map(j => [j[0], j[3]]));
+const BR2JOB = {}; for (const [j, [, b]] of Object.entries(JOB)) if (!(b in BR2JOB)) BR2JOB[b] = j;   // 1st/2nd job names come first
 // -> {cls, branch} for the builder, or {cls: null} (Beginner / Pirate / unknown job: keep the picked class, set the level only)
 function jobOf(c){
   const j = JOB[c.job];
@@ -38,7 +41,7 @@ function badge(c, note){
   const j = jobOf(c);
   return (c.photo ? `<img class="crlimg" src="${esc(c.photo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : "")
     + `<div><b>${esc(c.display)}</b> <span class="sub">Lv ${c.level ?? "?"} ${esc(c.job || "?")}</span><br><span class="tiny">`
-    + [c.rank ? `Overall #${fmt(c.rank)}` : "", c.jrank && c.job ? `${esc(c.job)} #${fmt(c.jrank)}` : "", c.when ? `level up ${ago(c.when)}` : ""].filter(Boolean).join(" · ")
+    + [c.rank ? `Overall #${fmt(c.rank)}` : "", c.jrank && c.job ? `${esc(c.job)} #${fmt(c.jrank)}${NJOB[c.job] >= c.jrank ? " of " + fmt(NJOB[c.job]) : ""}` : "", c.when ? `level up ${ago(c.when)}` : ""].filter(Boolean).join(" · ")
     + ` · <a href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">classicrank.com</a></span>`
     + (note || !j.cls ? `<br><span class="tiny">${esc(note || j.why)}</span>` : "") + `</div>`;
 }
@@ -59,23 +62,36 @@ function applyTo(where, c){
 }
 const BOX = {};
 function draw(where, note){ const b = BOX[where]; if (!b) return; b.out.innerHTML = CUR ? badge(CUR, note) : note ? `<span class="tiny">${esc(note)}</span>` : "" }
-async function load(where){
-  const b = BOX[where], name = b.inp.value.trim();
-  if (!/^[A-Za-z0-9]{1,13}$/.test(name)){ draw(where, "Names are letters and numbers, up to 13."); return }
-  b.btn.disabled = true; b.out.innerHTML = `<span class="tiny">Looking up ${esc(name)}…</span>`;
-  let note = "";
+// one lookup: {c} or {note}. Replies are kept a minute (classicrank caches 30 s; the search box asks as you type)
+const SEEN = new Map();
+async function lookup(name){
+  if (!/^[A-Za-z0-9]{1,13}$/.test(name)) return {note: "Names are letters and numbers, up to 13."};
+  const k = name.toLowerCase(), hit = SEEN.get(k); if (hit && Date.now() - hit.t < 6e4) return hit.v;
+  let v;
   try {
     const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
     const r = await fetch(API + encodeURIComponent(name) + "?fields=" + FIELDS, {signal: ctl.signal}); clearTimeout(t);
-    if (r.status === 404) note = `${name} isn't on classicrank.com yet.`;
-    else if (r.status === 429) note = "classicrank.com is busy, try again in a minute.";
-    else if (!r.ok) note = "classicrank.com didn't answer (HTTP " + r.status + ").";
-    else { const c = clean(await r.json()); if (!c) note = "classicrank.com sent something unexpected.";
-      else { CUR = c; try { localStorage.setItem("cr_char", JSON.stringify({c})) } catch(e) {} note = applyTo(where, c) } }
-  } catch(e) { note = "Couldn't reach classicrank.com." }
+    if (r.status === 404) v = {note: `${name} isn't on classicrank.com yet.`};
+    else if (r.status === 429) return {note: "classicrank.com is busy, try again in a minute."};
+    else if (!r.ok) return {note: "classicrank.com didn't answer (HTTP " + r.status + ")."};
+    else { const c = clean(await r.json()); v = c ? {c} : {note: "classicrank.com sent something unexpected."} }
+  } catch(e) { return {note: "Couldn't reach classicrank.com."} }
+  SEEN.set(k, {t: Date.now(), v}); return v;
+}
+// make c "your character": remembered, applied to that page, badges redrawn
+function use(where, c){
+  CUR = c; try { localStorage.setItem("cr_char", JSON.stringify({c})) } catch(e) {}
+  const note = applyTo(where, c);
+  if (BOX[where]) BOX[where].inp.value = c.name;
+  draw(where, note); for (const w in BOX) if (w !== where) draw(w);
+  census();
+}
+async function load(where){
+  const b = BOX[where], name = b.inp.value.trim();
+  b.btn.disabled = true; b.out.innerHTML = `<span class="tiny">Looking up ${esc(name)}…</span>`;
+  const r = await lookup(name);
   b.btn.disabled = false;
-  draw(where, note);
-  for (const w in BOX) if (w !== where) draw(w);
+  if (r.c) use(where, r.c); else draw(where, r.note);
 }
 for (const where of ["plan", "maps"]){
   const host = document.querySelector(`.crl[data-for="${where}"]`); if (!host) continue;
@@ -87,5 +103,24 @@ for (const where of ["plan", "maps"]){
   b.inp.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); load(where) } });
   draw(where);
 }
-CRL = {jobOf, clean, get cur(){ return CUR }};
+const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+const TIER = ["Beginner", "1st job", "2nd job"];
+function census(){
+  const el = $("#pcensusbody"); if (!el) return;
+  if (!CR){ el.innerHTML = `<p class="tiny">No census in this build.</p>`; return }
+  const rows = CR.jobs.filter(j => j[3] > 0 && j[1] <= 2).sort((a, b) => b[1] - a[1] || b[3] - a[3]);
+  const tierN = t => rows.reduce((a, j) => a + (j[1] === t ? j[3] : 0), 0), share = j => Math.round(100 * j[3] / tierN(j[1]));
+  const mine = BR2JOB[BLD.S.branch], m = rows.find(j => j[0] === mine);
+  let line = "";
+  if (m && m[1] > 0){ const peers = rows.filter(j => j[1] === m[1]), r = peers.filter(j => j[3] > m[3]).length + 1;
+    line = `<p><b>${esc(m[0])}</b> is the ${r === 1 ? "" : ord(r) + " "}most played ${TIER[m[1]]} of ${peers.length}: ${fmt(m[3])} characters (${share(m)}%).`
+      + (m[5] ? ` Job rank #100 is Lv ${m[5]};` : "") + (m[4] ? ` the top ${esc(m[0])} is Lv ${m[4]}.` : "") + `</p>` }
+  const lv = Object.entries(CR.levels || {}).filter(([L]) => +L >= 30).map(([L, n]) => `Lv ${L}+ <b>${fmt(n)}</b> (${+(100 * n / CR.chars).toFixed(n < CR.chars / 100 ? 1 : 0)}%)`).join(" · ");
+  el.innerHTML = line + `<div class="tblwrap"><table class="mini"><thead><tr><th>Job</th><th class="num">Characters</th><th class="num">Share</th><th class="num">Top Lv</th><th class="num" title="Level of the 100th character in that job">#100 Lv</th></tr></thead><tbody>`
+    + rows.map(j => `<tr${j[0] === mine ? ' class="vrow"' : ""}><td>${esc(j[0].replace("Fire/Poison", "F/P").replace("Ice/Lightning", "I/L"))}${j[1] < 2 ? ` <span class="sub">${TIER[j[1]]}</span>` : ""}</td><td class="num">${fmt(j[3])}</td><td class="num">${j[1] ? share(j) + "%" : "–"}</td><td class="num">${j[4] ?? "–"}</td><td class="num">${j[5] ?? "–"}</td></tr>`).join("")
+    + `</tbody></table></div><p class="tiny">${fmt(CR.chars)} Windia characters on <a href="https://classicrank.com" target="_blank" rel="noopener">classicrank.com</a>, read ${esc(CR.read)}. ${lv}. Share = of the same job tier. Only characters someone scanned or uploaded there, so it leans to active players. Pirates aren't out yet.</p>`;
+}
+if (typeof BLD !== "undefined" && BLD) BLD.onRender(census);
+census();
+CRL = {jobOf, clean, lookup, use, badge, get cur(){ return CUR }};
 })();

@@ -32,6 +32,7 @@ node tests/monkey.js | tail -3              # random clicks/typing/Back/window s
 python3 scripts/pages_site.py /tmp/site     # the Pages copy pages.yml deploys (prints first-load size)
 python3 scripts/name_diff.py <base-commit>  # skill/item/monster/map renames between two data.json (CI: osms-names.yml)
 python3 scripts/fetch_shared.py             # shared tracker runs (daily CI job does this)
+python3 scripts/fetch_classicrank.py        # classicrank.com job census -> D.crank (~2 min; daily CI job does this)
 node scripts/fetch_meowdb_drops.js          # drops + mesos; then build_data.py extras mobdb
 node scripts/fetch_meowdb_shops.js          # NPC shops; then build_data.py extras crafting itemdb weapon_sources
 python3 tests/meowdb_test.py                # meowdb source shape + Citizenship shop prices = meowdb launch prices
@@ -289,7 +290,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Load by IGN (classicrank.com) 2026-10-21
 - `src/js/59-crlookup.js` + `.crl[data-for=plan|maps]` slots (CSS in a `<style>` in src/pages/plan.html, kept out of styles.css). Keyless GET on Load/Enter only; CORS `*`, 30 req/min per IP, 429 + Retry-After when busy (classicrank.com/developer). No read key needed; never put one in src/ or dist/.
 - Reply sanitised by `clean()`: name `[A-Za-z0-9]{1,13}`, ints range-checked, photo/profile URLs only `https://classicrank.com/...`. Job map covers every `/api/v1/jobs` name (3rd job → its 2nd job; Beginner/Pirate → level only). tests/features.js "Load by IGN" mocks the API.
-- Follow-ups not built: `@char` in Ctrl+K, job census from keyless `/jobs` + `/stats` (per-job counts via `?job=X&limit=1` meta.total), tracker auto-setup.
+- 10-21 later: `@char <name>` in Ctrl+K (69-search.js `charRow`, 300 ms debounce, `CRL.lookup`/`CRL.use`; Enter → Where to train if open, else Builder). Job census: `scripts/fetch_classicrank.py` (keyless, ~50 one-row list calls 2.2 s apart: meta.total = players, row 100 = job rank #100 level; lists past row 1,000 are 403 without a key) → `data/sources/classicrank.json` + `D.crank`; `.github/workflows/classicrank-census.yml` daily at 06:49 UTC, data only. Builder card `#pcensus` (census() in 59-crlookup.js). build_data.py step `classicrank` only re-merges the source file.
+- Trap: tracker auto-setup still not built (tracker thread).
 
 ## mesoindex.com prices + listings 2026-10-21
 - `scripts/fetch_mesoindex.py` (build_data.py step `mesoindex`, test `tests/mesoindex_test.py`) -> `data/sources/mesoindex.json` -> `D.mi` (`/api/catalog` one call, real item ids in `game`; `/api/item?game=<id>` per-item shop slots with channel, room, shop, title). Workflow `mesoindex-poll.yml` every 3 h; listing calls only where the catalog row moved, busiest first, 15 min budget per run (~700 calls; the next run does the rest). UI `src/js/14-mesoindex.js`: `PRICE_SRC` row + `LIST_SRC` shops seen in the last day. `pwPrice` unchanged.
