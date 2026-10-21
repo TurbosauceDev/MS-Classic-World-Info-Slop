@@ -12,6 +12,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30   # the whole suite takes ~12 min; a hung browser would otherwise hold the runner 6 h
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
