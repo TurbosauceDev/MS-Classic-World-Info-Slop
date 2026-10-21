@@ -66,7 +66,8 @@ jobs:
 
       - name: Install agent-browser + Chrome deps
         run: |
-          npm install -g agent-browser
+          # pinned: this job holds a contents:write token (enough to publish a tracker release that auto-updates players)
+          npm install -g agent-browser@0.39.1
           agent-browser install --with-deps
 
       - name: Restore OSMS data export cache

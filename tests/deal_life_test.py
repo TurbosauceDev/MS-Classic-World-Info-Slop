@@ -21,6 +21,11 @@ with tempfile.TemporaryDirectory() as d:
     for i, (t, now) in enumerate(SNAPS):
         f.write_text(json.dumps({"listed": t, "items": IT, "now": now})); git("add", "-A"); git("commit", "-qm", f"s{i}")
     check(len(deal_life.snapshots(d)) == 5, "reads every committed snapshot (git cat-file --batch)")
+    # a commit whose listings are days older than its prices (10-21 market.json fallback) is not a snapshot
+    old = f.read_text(); f.write_text(json.dumps({"listed": "2098-12-28 12:04", "read": "2099-01-02", "items": IT, "now": {"1": [1, 1, 1, "", "x"]}}))
+    git("add", "-A"); git("commit", "-qm", "stale")
+    check(len(deal_life.snapshots(d)) == 5, "stale listings (listed days before read) skipped")
+    f.write_text(old); git("add", "-A"); git("commit", "-qm", "back")
     L = deal_life.life(d)
     check(L["snaps"] == 5 and L["from"] == "2099-01-01 00:00" and L["to"] == "2099-01-01 05:00" and L["gap"] == 30, "range and median gap")
     check(L["g"].get("steal") == [1, 1, 0, 30], "a steal gone by the next snapshot: lasted 0-30 min")

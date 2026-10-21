@@ -12,12 +12,13 @@ jobs:
   fetch:
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    permissions: { contents: read }   # scrapes an outside site for 30 min: no write token here, only the commit job has one
     steps:
       - uses: actions/checkout@v4
         with: { ref: main }
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: npm i --no-save playwright && npx playwright install --with-deps chromium
+      - run: npm i --no-save playwright@1.64.1 && npx playwright install --with-deps chromium   # pinned (was latest)
       - run: cp data/sources/meowdb_market.json /tmp/old.json 2>/dev/null || true; node scripts/fetch_meowdb_market.js
       - name: Keep only a new file
         run: cmp -s data/sources/meowdb_market.json /tmp/old.json && rm data/sources/meowdb_market.json || true

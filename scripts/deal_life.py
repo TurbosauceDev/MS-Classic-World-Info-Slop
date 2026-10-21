@@ -26,6 +26,12 @@ def minutes(s):
     try: return int(datetime.strptime(s, "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc).timestamp() // 60)
     except (TypeError, ValueError): return None
 
+def stale(j, t):
+    """listings a day or more older than the prices they were saved with (the 10-21 market.json fallback put 10-17
+    listings in a 10-21 commit): not a snapshot of that time"""
+    r = minutes((j.get("read") or "")[:10] + " 00:00")
+    return r is not None and r - t > 24 * 60
+
 def snapshots(root=ROOT, days=14, cap=1500):
     """[(minute, snapshot dict)] oldest first, one per distinct "listed" time; includes the working-tree file."""
     out = {}
@@ -43,11 +49,11 @@ def snapshots(root=ROOT, days=14, cap=1500):
                 try: j = json.loads(body)
                 except ValueError: continue
                 t = minutes(j.get("listed"))
-                if t is not None and isinstance(j.get("now"), dict): out.setdefault(t, j)
+                if t is not None and isinstance(j.get("now"), dict) and not stale(j, t): out.setdefault(t, j)
     except (OSError, subprocess.SubprocessError, ValueError, TypeError): pass
     try:
         j = json.load(open(pathlib.Path(root) / SRC)); t = minutes(j.get("listed"))
-        if t is not None and isinstance(j.get("now"), dict): out[t] = j
+        if t is not None and isinstance(j.get("now"), dict) and not stale(j, t): out[t] = j
     except (OSError, ValueError): pass
     return sorted(out.items())
 

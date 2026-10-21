@@ -164,6 +164,7 @@ The PAT was pasted in chat once (chat logs are the exposure surface). To rotate:
 
 ## Traps (real bugs we hit; do not regress on these)
 - 2026-10-21 stale fallback: market.json `listings` carried meso.watch's 10-17 data, so `listed` went back 4 days and FM Sniper graded dead listings as deals. fetch_mesowatch.py now drops listings whose `seen` (last sighting, both CSV shapes) is over 6 h before the price read, and `listed` = newest kept listing ("" if none). Also fixed: `seen` carry-forward only read the old [[price, seller, t]] shape, so first-seen reset every poll. Test: `python3 tests/mesowatch_fresh_test.py` (CI).
+- deal_life.py skips history snapshots whose `listed` is a day+ before their `read` (the f7b3e0f commit), so FM Sniper lifetimes aren't skewed for its 14-day window. `agent-browser@0.39.1` is pinned in mesowatch-poll.yml: the job's token can publish tracker releases.
 
 - **Chrome silently drops the second blob download.** If you `a.click()` two
   blob URLs in the same page session back-to-back, the second one never saves.
