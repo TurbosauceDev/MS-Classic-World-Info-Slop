@@ -177,39 +177,59 @@ python3 scripts/fetch_mesowatch.py "$WORKDIR/tmp/market.json" "$WORKDIR/download
 # --- Step 6: Check if mesowatch_prices.json actually changed ---
 if git diff --quiet -- data/sources/mesowatch_prices.json; then
   log "No changes to mesowatch_prices.json — nothing to rebuild, no commit."
-  exit 0
+else
+  log "mesowatch_prices.json changed — running build steps."
+
+  # --- Step 7: Rebuild data/data.json (just the prices step) + dist/index.html ---
+  log "Running build_data.py prices..."
+  python3 scripts/build_data.py prices
+
+  log "Running build.py..."
+  python3 scripts/build.py | tail -3
+
+  # --- Step 8: Build commit message from the diff ---
+  log "Building commit message from diff..."
+  python3 scripts/mesowatch_claude_review.py > /tmp/commit_msg.txt 2>/tmp/claude_err.txt || {
+    # If the commit-message script fails for any reason, fall back to a plain message
+    echo "chore(mesowatch): refresh prices ($(date -u +%F))" > /tmp/commit_msg.txt
+    echo "[warn] commit-message script failed, using fallback" >> /tmp/claude_err.txt
+  }
+  cat /tmp/claude_err.txt || true
+  echo "--- commit message ---"
+  cat /tmp/commit_msg.txt
+
+  # --- Step 9: Commit + push to main ---
+  log "Committing + pushing to main..."
+  git config user.name "meso.watch helper"
+  git config user.email "actions@github.com"
+  git add data/sources/mesowatch_prices.json data/data.json dist/index.html
+  git commit -F /tmp/commit_msg.txt
+  # Use GITHUB_TOKEN's git credentials — Actions auto-injects them via
+  # extraheader config in the checkout step. Push to main.
+  git push origin HEAD:main
+
+  log "Done. Pages will redeploy via pages.yml workflow_run trigger."
 fi
 
-log "mesowatch_prices.json changed — running build steps."
-
-# --- Step 7: Rebuild data/data.json (just the prices step) + dist/index.html ---
-log "Running build_data.py prices..."
-python3 scripts/build_data.py prices
-
-log "Running build.py..."
-python3 scripts/build.py | tail -3
-
-# --- Step 8: Build commit message from the diff ---
-log "Building commit message from diff..."
-python3 scripts/mesowatch_claude_review.py > /tmp/commit_msg.txt 2>/tmp/claude_err.txt || {
-  # If the commit-message script fails for any reason, fall back to a plain message
-  echo "chore(mesowatch): refresh prices ($(date -u +%F))" > /tmp/commit_msg.txt
-  echo "[warn] commit-message script failed, using fallback" >> /tmp/claude_err.txt
-}
-cat /tmp/claude_err.txt || true
-echo "--- commit message ---"
-cat /tmp/commit_msg.txt
-
-# --- Step 9: Commit + push to main ---
-log "Committing + pushing to main..."
-git config user.name "meso.watch helper"
-git config user.email "actions@github.com"
-git add data/sources/mesowatch_prices.json data/data.json dist/index.html
-git commit -F /tmp/commit_msg.txt
-# Use GITHUB_TOKEN's git credentials — Actions auto-injects them via
-# extraheader config in the checkout step. Push to main.
-git push origin HEAD:main
-
-log "Done. Pages will redeploy via pages.yml workflow_run trigger."
+# --- Step 10: Data-freshness health check ---
+# Warn loudly if the most recent 'meso.watch helper' commit is >2h old.
+# This catches cron-skipping issues + the rare case where a commit was
+# rejected due to push race (the concurrency group queues but eventually
+# one wins, so a >2h gap means something is genuinely wrong).
+LAST_HELPER_DATE=$(git log -1 --format=%cI --author="meso.watch helper" 2>/dev/null || true)
+if [ -n "$LAST_HELPER_DATE" ]; then
+  LAST_HELPER_EPOCH=$(date -u -d "$LAST_HELPER_DATE" +%s 2>/dev/null || true)
+  NOW_EPOCH=$(date -u +%s)
+  if [ -n "$LAST_HELPER_EPOCH" ]; then
+    AGE_S=$((NOW_EPOCH - LAST_HELPER_EPOCH))
+    AGE_H=$((AGE_S / 3600))
+    AGE_M=$(((AGE_S % 3600) / 60))
+    if [ "$AGE_H" -ge 2 ]; then
+      log "WARNING: last 'meso.watch helper' commit was ${AGE_H}h ${AGE_M}m ago (>2h threshold). Cron entries may be getting skipped. See docs/ai/mesowatch-sync.md"
+    else
+      log "Freshness OK: last 'meso.watch helper' commit was ${AGE_H}h ${AGE_M}m ago"
+    fi
+  fi
+fi
 
 
