@@ -234,3 +234,6 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Quest turn-in value (v0.12.5): quest `il` rows are `[name, n, sourceMob, itemId]` (`build_data.py reqitems` patches an old data.json and adds the turn-in items to D.items). `questMarket` prices turn-ins vs rewards with `pwPrice` (skips 403xxxx quest items and per-set prices), NPC floor alongside; net tag only when all priced. `stackWith`: kl mobs + il source mob + D.drops mobs, ±10 levels. Test: `node tests/questvalue.js` (fake prices).
 - Trap: craftplan.js "padding" check already failed on main 40200c3 before this change (not from quests).
 - Craft planner padding test (10-21): tests/craftplan.js seeds `free: 1` so the filled table has rows regardless of live prices; it failed after a price refresh left 0 profitable crafts (layout was fine).
+- Kill breakpoints (v0.12.6, 10-21): Where to train kill badge = `kbpHtml` (10-maps.js) → `killInfo` per monster from `trainRange` (per-hit window
+  range; source order FORM_FROM_BUILDER hand-off > typed Magic+INT / Attack range > default build `form`; null = no badge, never 20 × level).
+  `form` = calc()'s damage inputs (50-builder.js), also in S.win and saved under "train".fb.form. Even-roll assumption: `pKill` (binned convolution). Tests: golden.js.

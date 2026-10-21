@@ -220,12 +220,13 @@ function calc(sp){
   const sk = attackSkills(w).find(s => s.id === S.skill) || null;
   const sl = sk ? (sk.id === "basic" ? 1 : lv(sk, sp, list)) : 0;
   const ai = sk && sl ? attackInfo(sk, sl) : null;
-  let min = 0, max = 0, mast = 0, faRate = 0, faPct = 0;
+  let min = 0, max = 0, mast = 0, faRate = 0, faPct = 0, form = null;   // form: the damage formula's inputs, for Where to train's kill breakpoints
   if (ai && ai.kind === "magic"){
     const magic = Math.floor(ap.INT / 2) + (w?.mad || 0) + matkB;
     mast = (0.1 + ai.mast / 10) * 0.7;   // launch client: mastery ×0.7, INT/125 (OSMS formulas page)
     min = ai.pct / 100 * magic * (ap.INT * mast / 125 + 1);
     max = ai.pct / 100 * magic * (ap.INT / 125 + 1);
+    form = {magic: true, M: magic, INT: ap.INT, mast};
   } else if (ai && w){
     const ammo = (AMMO[w.type] || []).find(a => a[0] === S.ammo)?.[1] || 0;
     const watk = w.pad + ammo;
@@ -241,6 +242,7 @@ function calc(sp){
     const mult = ai.pct / 100;
     min = mult * (0.8 + (prim * wmult * mast + sec) / 100 + atkB / 50) * watk;
     max = mult * (1.0 + (prim * wmult + sec) / 100 + atkB / 50) * watk;
+    form = {watk, prim, sec, wmult, mast, atkB, stat: PRIMARY[cls]};
     const fa = T("Final Attack: " + wk);
     if (fa) [faRate, faPct] = faStats(fa);
   }
@@ -297,7 +299,7 @@ function calc(sp){
   const hpMult = guard * (buffs ? 1 - num(T("Invincible"), /Physical damage -(\d+)%/) / 100 : 1);
   const {near, even} = nearMobs(L);
   const hitAvg = even.length ? even.reduce((a, m) => a + hitProb(acc, m[4], m[1] - L), 0) / even.length : 1;
-  return {cost, hp, mp, wdef, mdef, hpMult, mpMult: guard, w, sk, sl, ai, min, max, avg, crit, critDmg, perCast, stage, interval, dps, acc, avoid, booster, mast, faRate: faOn ? faRate : 0, faPct, atkB, matkB, near, hitAvg, eff: dps * hitAvg};
+  return {cost, hp, mp, wdef, mdef, hpMult, mpMult: guard, w, sk, sl, ai, min, max, avg, crit, critDmg, perCast, stage, interval, dps, acc, avoid, booster, mast, faRate: faOn ? faRate : 0, faPct, atkB, matkB, near, hitAvg, eff: dps * hitAvg, form};
 }
 
 /* greedy auto-build: keep buying the next 1-5 points that add the most real damage per SP */
@@ -413,7 +415,7 @@ buildAt = (cls, branch, fam, lvl, aoe = false, obt = false, guide = false) => {
   try { applyDefaults(); if (guide) guideBuild(); else S.sp = autoSP(); const r = calc(S.sp);
     if (aoe && !(r.dps > 0)) return buildAt(cls, branch, fam, lvl, false, obt, guide);   // area skill not learnable yet (Lv 10 Warrior: Slash Blast needs Power Strike 1)
     return {dps: r.dps, acc: r.acc, hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid, cost: r.cost, branch: S.branch, weapon: r.w?.name, wid: r.w?.id, skill: r.sk?.n, sid: r.sk?.id, targets: r.ai?.targets || 1, reach: r.sk?.rg, ammo: S.ammo,
-      min: r.min, max: r.max, pct: r.ai?.pct, hits: r.ai?.hits, interval: r.interval, crit: r.crit, critDmg: r.critDmg, mast: r.mast, magic: r.ai?.kind === "magic",
+      min: r.min, max: r.max, pct: r.ai?.pct, hits: r.ai?.hits, interval: r.interval, crit: r.crit, critDmg: r.critDmg, mast: r.mast, magic: r.ai?.kind === "magic", form: r.form,
       basicIv: tierMs(r.w?.spd ?? 6, r.w?.type === "Crossbow" ? 2 : 0) / 1000, ammoPrice: AMMO_COST[S.ammo] || 0} }
   finally { S = keep }
 };
@@ -510,7 +512,7 @@ function avatar(w){
 function render(){
   const L = S.lvl, ap = S.ap, cls = S.cls, br = S.branch;
   const r = calc(S.sp), w = r.w;
-  S.dps = Math.round(r.dps); S.acc = r.acc; S.win = {min: r.min, max: r.max, pct: r.ai?.pct || 100, magic: r.ai?.kind === "magic" ? Math.floor(ap.INT / 2) + (w?.mad || 0) + r.matkB : 0, INT: ap.INT}; S.def = {hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid}; S.cost = r.cost; S.area = r.ai && r.sk?.rg ? {t: r.ai.targets || 1, r: r.sk.rg, n: r.sk.n} : null;
+  S.dps = Math.round(r.dps); S.acc = r.acc; S.win = {min: r.min, max: r.max, pct: r.ai?.pct || 100, magic: r.ai?.kind === "magic" ? Math.floor(ap.INT / 2) + (w?.mad || 0) + r.matkB : 0, INT: ap.INT, form: r.form, hits: r.ai?.hits || 1, crit: r.crit, critDmg: r.critDmg}; S.def = {hp: r.hp, wdef: r.wdef, mdef: r.mdef, mult: r.hpMult, mmult: r.mpMult, avoid: r.avoid}; S.cost = r.cost; S.area = r.ai && r.sk?.rg ? {t: r.ai.targets || 1, r: r.sk.rg, n: r.sk.n} : null;
   const left = apTotal(L) - (ap.STR + ap.DEX + ap.INT + ap.LUK);
   $("#papleft").textContent = left === 0 ? "All AP spent" : left > 0 ? `${left} AP unspent` : `${-left} AP over budget`;
   $("#papleft").className = "pill " + (left === 0 ? "p-good" : "p-warn");

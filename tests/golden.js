@@ -76,6 +76,23 @@ const path = require("path");
   check(!lost.length, "every skill named in guides / AoE / weapon tables exists in the export", lost);
   const aoe = await p.evaluate(() => [classAoe("Warrior", 10)?.n ?? null, classAoe("Warrior", 11)?.n, classAoe("Bowman", 45)?.n, buildAt("Warrior", "Fighter", "Sword", 10, true).dps > 0]);
   check(aoe.join() === ",Slash Blast,Arrow Bomb,true", "area attacks: none at Warrior 10 (1 SP; Slash Blast needs Power Strike 1), Slash Blast at 11, Arrow Bomb at Bowman 45", aoe);
+  // kill breakpoints (10-maps.js), hand-checked: one hit even on [100,200] ≥150 = 1/2; two ≥350 = 50²/(2·100²) = 1/8;
+  // two on [36,60] ≥100 = 20²/(2·24²) = 0.347; crit 50% ×2 on [100,200] ≥250: only crits, 3/4 of [200,400] → 0.375
+  const pk = await p.evaluate(() => [pKill(1, 100, 200, 0, 1, 150), pKill(2, 100, 200, 0, 1, 350), pKill(2, 36, 60, 0, 1, 100), pKill(1, 100, 200, 50, 2, 250)]);
+  check([0.5, 0.125, 0.3472, 0.375].every((v, i) => Math.abs(pk[i] - v) < 0.005), "kill chance: uniform rolls, Irwin-Hall n=2, crit mix", pk);
+  // W.Atk 20, DEX/STR 50 × wmult 4, mastery 0.5: min (0.8 + 100/100)·20 = 36, max (1 + 200/100)·20 = 60. 100 HP, no defense:
+  // 3 hits sure; 2 hits sure needs min ≥ 50 → 1.8·(20+d) ≥ 50 → +8 W.Atk, or 0.8 + (50+s)·0.02 ≥ 2.5 → +35 stat
+  const ki = await p.evaluate(() => { const form = {watk: 20, prim: 50, sec: 0, wmult: 4, mast: 0.5, atkB: 0, stat: "STR"}, R = {pm: 1, hits: 1, crit: 0, critDmg: 0, magic: false, form, win: formWin(form)};
+    const k = killInfo(["T", 30, 100, 0, 0, 0, 0, {}], 30, R, 100, "Warrior"), k2 = killInfo(["T", 30, 100, 0, 0, 0, 0, {}], 30, {...R, hits: 2}, 100, "Warrior");
+    return [...R.win, k.sure, Math.round(k.ps[0][1] * 1000) / 1000, k.atk, k.stat, k2.sure, k.hit] });
+  check(ki.join() === "36,60,3,0.347,8,35,2,1", "kill breakpoints: range, 3 hits sure, 2 hits 34.7%, +8 W.Atk / +35 stat, 2-hit skill = 2 attacks", ki);
+  // hitProb inversion: acc 60 vs avoid 20, monster 5 levels up: 46.7% now, +17 → 95%, +19 → 100% (Python re-implementation of hitProb)
+  const ak = await p.evaluate(() => { const k = killInfo(["A", 35, 1000, 0, 20, 0, 0, {}], 30, {pm: 1, hits: 1, crit: 0, critDmg: 0, magic: false, form: null, win: [10, 20]}, 60, "Warrior"); return [Math.round(k.hit * 1000) / 10, k.acc95, k.acc100, k.atk === undefined] });
+  check(ak.join() === "46.7,17,19,true", "accuracy breakpoints for 95% / 100%; no +W.Atk without a build's formula inputs", ak);
+  // no damage range, no breakpoint: a Beginner build (flat damage) and wand basic attacks with nothing typed never fall back to 20 × level
+  const nr = await p.evaluate(() => { $("#atk").value = ""; $("#umag").value = ""; $("#uint").value = ""; FORM_FROM_BUILDER = null;
+    return [trainRange(buildAt("Warrior", "Warrior", null, 8), false), trainRange(trainBuild("Magician", 20), true), !!trainRange(trainBuild("Magician", 20), false)?.form?.magic] });
+  check(nr.join() === ",,true", "no kill badge without a damage range (Beginner, wand basic attacks); spells use Magic + INT", nr);
   console.log(errs.length ? "\n" + errs.join("\n") : "\nall reference numbers match");
   await b.close();
   process.exit(errs.length ? 1 : 0);

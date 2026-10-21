@@ -172,6 +172,7 @@ function setTrainStats(S){   // from "Use this in Where to train"
   $("#umag").value = w.magic || ""; $("#uint").value = w.magic ? w.INT : "";
   $("#uacc").value = S.acc != null ? Math.round(S.acc) : ""; $("#uavo").value = S.def?.avoid ?? ""; $("#uhp").value = S.def?.hp ?? ""; $("#uwdef").value = S.def?.wdef ?? "";
   DPS_FROM_BUILDER = S.dps || null;
+  FORM_FROM_BUILDER = w.form ? {...w.form, pct: w.pct, hits: w.hits, crit: w.crit, critDmg: w.critDmg} : null;
 }
 // damage per second: stat-window ATTACK range (or Magic + INT for spells) × the default build's skill %, hits, crit and attack time
 // basic = no skills: 100% × 1 hit at the weapon's own speed (buildAt's basicIv), whatever the class
@@ -188,6 +189,75 @@ function trainDps(cls, L, b, basic){
   else { const m = $("#atk").value.match(/(\d+)\D+(\d+)/); if (m) return {dps: per((+m[1] + +m[2]) / 2), src: "you"} }
   return b.dps > 0 ? {dps: b.dps, src: "default"} : {dps: 20 * L, src: "guess"};
 }
+// Kill breakpoints (estimate). Per-hit damage range after the skill's % and before the monster's defense, from the same
+// source as the damage above (typed boxes, the Character Builder hand-off, else the default build; never the 20 × level
+// guess, which has no range). Each hit assumed to roll evenly between min and max; a crit multiplies it by (100 + crit
+// damage)%. Defense ×100/(def+100), level penalty and element as mobKill. form = the damage formula's inputs
+// (50-builder.js calc) so +W.Atk / +main stat can be tried; a typed Attack range alone has none (stat split unknown).
+let FORM_FROM_BUILDER = null;   // {…calc form, pct, hits, crit, critDmg} from "Use this in Where to train"; cleared with DPS_FROM_BUILDER
+const formWin = (f, dA = 0, dS = 0) => { if (f.magic){ const I = f.INT + dS, M = f.M + dA + Math.floor(I / 2) - Math.floor(f.INT / 2); return [M * (I * f.mast / 125 + 1), M * (I / 125 + 1)] }
+  const p = f.prim + dS, w = f.watk + dA; return [(0.8 + (p * f.wmult * f.mast + f.sec) / 100 + f.atkB / 50) * w, (1 + (p * f.wmult + f.sec) / 100 + f.atkB / 50) * w] };
+function trainRange(b, basic){
+  const F = FORM_FROM_BUILDER, src = F || b, base = {pm: basic ? 1 : (src.pct || 100) / 100, hits: basic ? 1 : src.hits || 1, crit: src.crit || 0, critDmg: src.critDmg || 0};
+  if (F && (basic ? !F.magic : true)) return {...base, magic: !!F.magic, form: F, win: formWin(F)};
+  if (b.magic && !basic){ const mag = statNum("#umag"), int = statNum("#uint");
+    const f = mag && int != null ? {magic: true, M: mag, INT: int, mast: b.mast || 0} : b.form;
+    return f?.magic ? {...base, magic: true, form: f, win: formWin(f)} : null }
+  const m = $("#atk").value.match(/(\d+)\D+(\d+)/);
+  if (m) return +m[2] > 0 ? {...base, magic: false, form: null, win: [Math.min(+m[1], +m[2]), Math.max(+m[1], +m[2])]} : null;
+  return b.form && !b.form.magic ? {...base, magic: false, form: b.form, win: formWin(b.form)} : null;
+}
+// chance that n hits (each even on [lo, hi], crit chance c% for ×k) add up to at least hp: binned convolution, normal past 16 hits
+function pKill(n, lo, hi, c, k, hp){
+  const top = c > 0 ? hi * k : hi; if (n <= 0 || n * top < hp) return 0; if (n * lo >= hp) return 1;
+  const segs = [[lo, hi, 1 - c / 100]]; if (c > 0) segs.push([lo * k, hi * k, c / 100]);
+  if (n > 16){ let mu = 0, m2 = 0; for (const [a, b, w] of segs){ mu += w * (a + b) / 2; m2 += w * ((b - a) ** 2 / 12 + ((a + b) / 2) ** 2) }
+    const sd = Math.sqrt(n * (m2 - mu * mu)), z = (hp - n * mu) / (sd || 1e-9), t = 1 / (1 + 0.2316419 * Math.abs(z)), d = 0.3989423 * Math.exp(-z * z / 2);
+    const tail = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? tail : 1 - tail }
+  const B = 64, w = top / B, one = new Float64Array(B);
+  for (const [a, b, m] of segs) for (let i = 0; i < B; i++){ const x0 = Math.max(a, i * w), x1 = Math.min(b, (i + 1) * w); if (x1 > x0) one[i] += m * (b > a ? (x1 - x0) / (b - a) : 1) }
+  let dist = one;
+  for (let j = 1; j < n; j++){ const out = new Float64Array(dist.length + B - 1); for (let i = 0; i < dist.length; i++) if (dist[i]) for (let q = 0; q < B; q++) out[i + q] += dist[i] * one[q]; dist = out }
+  // index i of an n-hit sum = n bin centres: (i + n/2) × w, its mass spread over one bin width around that
+  let p = 0; for (let i = 0; i < dist.length; i++){ const x = (i + n / 2) * w; p += dist[i] * Math.max(0, Math.min(1, (x + w / 2 - hp) / w)) }
+  return Math.max(0, Math.min(1, p));
+}
+// accuracy for a hit chance (hitProb), searched in whole points: null past +999
+const accFor_ = (acc, eva, diff, want) => { for (let d = 0; d <= 999; d++) if (hitProb(acc + d, eva, diff) >= want - 1e-9) return d; return null };
+function killInfo(m, L, R, acc, cls){
+  const [nm, lv, hp, , eva, pdd, mdd, el] = m, diff = lv - L, els = R.magic ? ELEMS[cls] || [] : [];
+  let em = 1; if (els.length){ em = Math.max(...els.map(e => EMULT[el[e]] ?? 1)); if (em === 0) em = 1 }
+  const f = lvlPen(diff) * em * 100 / ((R.magic ? mdd : pdd) + 100), k = (100 + R.critDmg) / 100, hit = hitProb(acc, eva, diff);
+  const per = win => [win[0] * R.pm * f, win[1] * R.pm * f], [lo, hi] = per(R.win), H = R.hits;
+  const out = {nm, hp, hit, acc95: hit >= 0.95 ? 0 : accFor_(acc, eva, diff, 0.95), acc100: hit >= 1 ? 0 : accFor_(acc, eva, diff, 1)};
+  if (!(lo > 0)) return out;
+  const sure = Math.ceil(hp / (H * lo) - 1e-9); out.sure = sure;
+  // chance of a kill in fewer attacks than the sure one, from sure-1 down while it's at least 0.5%: [[attacks, chance]], fastest first
+  out.ps = []; for (let c = sure - 1; c >= 1; c--){ const q = pKill(c * H, lo, hi, R.crit, k, hp); if (q < 0.005) break; out.ps.unshift([c, q]) }
+  if (sure > 1 && R.form){ const need = hp / ((sure - 1) * H), ok = (dA, dS) => per(formWin(R.form, dA, dS))[0] >= need - 1e-9;
+    out.atk = null; for (let d = 1; d <= 200; d++) if (ok(d, 0)){ out.atk = d; break }
+    out.stat = null; for (let d = 1; d <= 999; d++) if (ok(0, d)){ out.stat = d; break } }
+  return out;
+}
+const pctTxt = q => q > 0.995 ? ">99%" : Math.round(q * 100) + "%";
+const hitWord = (n, H) => H > 1 ? `${n} attack${n === 1 ? "" : "s"}` : `${n} hit${n === 1 ? "" : "s"}`;
+function kbpHtml(mid, L, R, acc, cls){
+  if (!R) return "";
+  const sp = (D.maps[mid]?.[2] || []).filter(([id]) => D.mobs[id]), seen = new Set(), ks = [];
+  for (const [id, c] of [...sp].sort((a, b) => b[1] - a[1])) if (!seen.has(id)){ seen.add(id); ks.push(killInfo(D.mobs[id], L, R, acc, cls)) }
+  const k0 = ks[0]; if (!k0?.sure) return "";
+  const H = R.hits, aName = R.form?.magic ? "Magic ATT" : "W.Atk", sName = R.form?.magic ? "INT" : R.form?.stat || "";
+  const lines = ks.map(k => { if (!k.sure) return "";
+    const now = `${k.ps.map(([c, q]) => `${hitWord(c, H)} ${pctTxt(q)}, `).join("")}${hitWord(k.sure, H)} always`;
+    const nxt = k.sure === 1 ? "" : !R.form ? "" : k.atk == null && k.stat == null ? `<br>${hitWord(k.sure - 1, H)} always: out of reach of +200 ${aName}`
+      : `<br>${hitWord(k.sure - 1, H)} always: ${[k.atk != null ? `+${k.atk} ${aName}` : "", k.stat != null ? `+${k.stat} ${sName}` : ""].filter(Boolean).join(" or ")}`;
+    const ac = k.hit >= 1 ? "" : `<br>hit ${(k.hit * 100).toFixed(1)}%: ${k.acc95 ? `+${k.acc95} Acc for 95%, ` : ""}${k.acc100 != null ? `+${k.acc100} for 100%` : "100% out of reach"}`;
+    return `<div><b>${esc(k.nm)}</b> · ${fmt(k.hp)} HP<br>${now}${nxt}${ac}</div>` }).join("");
+  const w = H > 1 ? "attack" : "hit", f0 = k0.ps.find(([, q]) => q >= 0.5), label = `${k0.sure}-${w} sure${f0 ? ` · ${f0[0]}-${w} ${pctTxt(f0[1])}` : ""}`;
+  return `<details class="kbp"><summary><span class="pill" title="${H > 1 ? `Attacks (${H} hits each)` : "Hits"} that land to kill ${esc(k0.nm)}: always enough, and the fastest kill that happens at least half the time (estimate; click for every monster and what one fewer takes)">${label}</span></summary><div class="sub">${lines}${R.form ? "" : `<div>+${aName} breakpoints need your build: Character Builder → Use this in Where to train, or clear the Attack box.</div>`}</div></details>`;
+}
+// worst monster on the map: accuracy to hit them all 100%
+const accNeed = (mid, L, acc) => { let w = 0; for (const [id] of D.maps[mid]?.[2] || []){ const m = D.mobs[id]; if (!m) continue; const h = hitProb(acc, m[4], m[1] - L); if (h >= 1) continue; const d = accFor_(acc, m[4], m[1] - L, 1); if (d == null) return null; w = Math.max(w, d) } return w };
 // HP potions for getting hit (estimate): `share` of the monsters you kill (your pick, #hitsh) get one attack at you, landing at its hit chance vs your
 // avoid (mobHits), for hitTaken damage, healed at MESO_HP. mesos/hr.
 function hitCostHr(r, L, def, share = 1){
@@ -305,13 +375,14 @@ function rankMaps(){
     const ok = rows.filter(r => r.net > 0 && r.dng.f < 0.25);
     if (ok.length) rows = ok; else { rows.sort((a, b) => b.net - a.net); loss = rows.length > 0 }
   }
+  const R = trainRange(fb, basic);
   const top = rows.slice(0, 15), best = Math.max(...top.map(r => r.rate), 1e-9), need = D.exp[L];
   $("#maprows").innerHTML = top.length ? top.map((r,i) => `<tr>
     <td class="num">${i+1}</td>
     <td>${mapLink(r.id, r.name)}${r.open ? "" : ' <span class="pill p-warn">opens later</span>'}${area ? `<div class="sub">hits ~${r.hits.toFixed(1)} per cast</div>` : ""}${frugal && mapPots(r.id).length ? `<div class="sub">drops ${mapPots(r.id).map(p => `<span class="itname" tabindex="0" data-item="${p}">${esc(D.items[p]?.n || p)}</span>`).join(", ")}</div>` : ""}</td>
-    <td class="sub">${mobList(r.mobs)}</td>
+    <td class="sub">${mobList(r.mobs)}${kbpHtml(r.id, L, R, acc, cls)}</td>
     <td class="num">${r.n}</td><td class="num">${r.avg.toFixed(1)}</td>
-    <td class="num">${r.hit < .9 ? `<span class="pill p-warn">${Math.round(r.hit*100)}%</span>` : Math.round(r.hit*100) + "%"}</td>
+    <td class="num">${r.hit < .9 ? `<span class="pill p-warn">${Math.round(r.hit*100)}%</span>` : Math.round(r.hit*100) + "%"}${r.hit < 0.995 ? (n => n ? `<div class="sub" title="Accuracy to hit every monster here 100% of the time">+${n} Acc → 100%</div>` : "")(accNeed(r.id, L, acc)) : ""}</td>
     <td>${dangerPill(r.dng || mapDanger(r.id, L, def))}</td><td class="sub">${esc(potsText(r.id))}</td>
     <td><span class="bar"><i style="width:${Math.round(100*r.rate/best)}%"></i></span><span class="mono">${Math.round(100*r.rate/best)}</span></td>
     <td class="num">${fmt(r.rate*3600)}${(pe => pe ? peLine(pe, party) : "")(r.pe || playersExp(r.id, L, party))}${btLine(bestTime(r.id))}</td>
@@ -332,11 +403,12 @@ function rankMaps(){
     + (frugal ? ` <b>Frugal:</b> only maps that pay for themselves and aren't Danger/Lethal, fastest EXP first. Net = mesos/hr minus ${basic ? (ammoP ? `ammo for basic attacks` : "nothing for basic attacks") : COST_FROM_BUILDER ? "your build's skill potions and ammo" : `a default ${esc(cls)} build's skill potions and ammo`} (${fmt(cost?.mesoHr || 0)}/hr attacking nonstop, times the time spent attacking) minus Red Potions for getting hit (estimate: ${({"0.1": "1 in 10", "0.25": "1 in 4", "0.5": "half", "1": "every one"})[$("#hitsh").value]} of the monsters you kill attack${hitsh === 1 ? "s" : ""} you once, at their hit chance against your avoid, no armor). ${+$("#lootr").value ? `Plus loot sold to NPCs: each monster's reported ETC item and potion drops (meowdb player reports) at ${Math.round($("#lootr").value * 100)}% per kill each (an assumption: drop rates aren't in the game files), ${$("#lootp").value === "pw" ? "at the median player-shop sale price (meso.watch, " + D.pw.read + ") where it has 5+ sales, else NPC sell price; selling to players takes a shop and time" : "at NPC sell price"}; ores, gems, equips and scrolls aren't counted.` : "Loot sold to NPCs isn't counted."} Potions its monsters drop are listed under the map name.${rows.some(r => r.real != null) ? ` "(players' costs)": instead of both estimates, what grind tracker players near your level really spent there on potions, food and ammo (median, 3+ players).` : ""}`
       + (loss ? ` <b>No map comes out meso positive at this level and damage</b>; these lose the least.` : "") : "")
     + (!frugal && COST_FROM_BUILDER ? ` Your build's potions and ammo: up to ${fmt(COST_FROM_BUILDER.mesoHr)} mesos/hr while attacking nonstop; on the top map you attack about ${Math.round((top[0]?.att ?? 1) * 100)}% of the time, so about ${fmt(COST_FROM_BUILDER.mesoHr * (top[0]?.att ?? 1))}/hr. "net" = mesos/hr minus that.` : "")
+    + (R ? ` Kill badge (under the monsters): hits that land to kill the map's most common monster from your damage range after its defense, level penalty${R.magic ? " and element" : ""} (estimate: each hit rolls evenly between min and max, crits ${R.crit}% for +${R.critDmg}%; misses not counted). Click it for each monster and the +${R.form?.magic ? "Magic ATT" : "W.Atk"} or +${R.form?.magic ? "INT" : R.form?.stat || "main stat"} that makes one fewer hit a sure kill.` : ` No kill badges: ${basic && fb.magic ? "type your stat-window Attack range for wand or staff hits" : "no damage range to work from"}.`)
     + ` EXP/hr is a model estimate${party > 1 ? "" : ", solo"}.` + (D.shared?.rows?.length ? ` "players:" under it = what grind tracker players around your level really got there (median, shown once 3+ players or parties ran the map).` : "") + (Object.keys(D.shared?.times || {}).length ? ` "best time:" = the 3 hours of the day (your time) when tracker players farm that map fastest compared with their own usual speed there.` : "")
     + (far ? ` <b>No map has monsters within 12 levels of you</b> (Victoria Island tops out around level 60-75), so these are the best of the rest.` : "");
   saveTrain();
 }
-["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; AOE_FROM_BUILDER = null; DEF_FROM_BUILDER = null; COST_FROM_BUILDER = null; DPS_FROM_BUILDER = null; rankMaps() }));
+["#cls","#lvl"].forEach(s => $(s).addEventListener("input", () => { ACC_FROM_BUILDER = null; AOE_FROM_BUILDER = null; DEF_FROM_BUILDER = null; COST_FROM_BUILDER = null; DPS_FROM_BUILDER = null; FORM_FROM_BUILDER = null; rankMaps() }));
 $("#cls").addEventListener("change", () => { STAT_IN.forEach(s => $(s).value = ""); rankMaps() });   // another class's stats don't carry over
 $("#party").addEventListener("change", rankMaps);
 $("#tmode").addEventListener("change", rankMaps);
@@ -344,7 +416,7 @@ $("#hitsh").addEventListener("change", rankMaps);
 $("#lootr").addEventListener("change", rankMaps);
 $("#lootp").addEventListener("change", rankMaps);
 $("#aoe").addEventListener("change", rankMaps);
-STAT_IN.forEach(s => $(s).addEventListener("input", () => { DPS_FROM_BUILDER = null; rankMaps() }));
+STAT_IN.forEach(s => $(s).addEventListener("input", () => { DPS_FROM_BUILDER = null; FORM_FROM_BUILDER = null; rankMaps() }));
 $("#lvl").addEventListener("change", rankMaps);
 // Where to train settings + the Character Builder hand-off ("Use this in Where to train") survive a reload: saved after
 // every ranking under "train", loaded (and checked: hand edits, old versions) before the first ranking (69-search.js)
@@ -353,7 +425,7 @@ const fin = x => typeof x === "number" && isFinite(x);
 const numObj = (o, keys) => o && typeof o === "object" && !Array.isArray(o) ? Object.fromEntries(keys.filter(k => fin(o[k])).map(k => [k, o[k]])) : null;
 function saveTrain(){
   try { localStorage.setItem("train", JSON.stringify({v: Object.fromEntries(TRAIN.map(k => [k, $("#" + k).value])),
-    fb: {acc: ACC_FROM_BUILDER, aoe: AOE_FROM_BUILDER, def: DEF_FROM_BUILDER, cost: COST_FROM_BUILDER, dps: DPS_FROM_BUILDER}})) } catch(e) {}
+    fb: {acc: ACC_FROM_BUILDER, aoe: AOE_FROM_BUILDER, def: DEF_FROM_BUILDER, cost: COST_FROM_BUILDER, dps: DPS_FROM_BUILDER, form: FORM_FROM_BUILDER}})) } catch(e) {}
 }
 function loadTrain(){
   const o = savedState("train", {v: {}, fb: {}}), v = o.v || {}, fb = o.fb || {};
@@ -362,6 +434,9 @@ function loadTrain(){
   ACC_FROM_BUILDER = fin(fb.acc) ? fb.acc : null; DPS_FROM_BUILDER = fin(fb.dps) && fb.dps >= 0 ? fb.dps : null;
   const d = numObj(fb.def, ["hp", "wdef", "mdef", "mult", "mmult", "avoid"]); DEF_FROM_BUILDER = d && fin(d.hp) && fin(d.wdef) ? d : null;
   const c = numObj(fb.cost, ["mpHr", "hpHr", "ammoHr", "ammoPrice", "mesoHr"]); COST_FROM_BUILDER = c && fin(c.mesoHr) ? c : null;
+  const fm = numObj(fb.form, ["watk", "prim", "sec", "wmult", "mast", "atkB", "M", "INT", "pct", "hits", "crit", "critDmg"]), mg = fb.form?.magic === true;
+  FORM_FROM_BUILDER = DPS_FROM_BUILDER && fm && (mg ? ["M", "INT", "mast"] : ["watk", "prim", "sec", "wmult", "mast", "atkB"]).every(k => k in fm)
+    ? {...fm, magic: mg, ...(!mg && /^(STR|DEX|INT|LUK)$/.test(fb.form.stat) ? {stat: fb.form.stat} : {})} : null;
   const a = fb.aoe, r = Array.isArray(a?.r) && a.r.length <= 2 && a.r.every(fin) ? a.r : null;
   AOE_FROM_BUILDER = a && fin(a.t) && a.t > 1 && a.t <= 15 && r && typeof a.n === "string" ? {t: a.t, r, n: a.n.slice(0, 40)} : null;
 }

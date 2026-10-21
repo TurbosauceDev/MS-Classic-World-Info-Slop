@@ -101,7 +101,7 @@ if (HASH.q) openQuests(HASH.q);
 // Where to train: every setting in the link (#t)
 loadTrain();   // saved settings first (10-maps.js); a #t link overrides them
 $("#tshare").addEventListener("click", () => copyShare($("#tshare"), shareUrl("t", Object.fromEntries(TRAIN.map(k => [k, $("#" + k).value]).filter(([, v]) => v !== "")))));
-if (HASH.t){ ACC_FROM_BUILDER = AOE_FROM_BUILDER = DEF_FROM_BUILDER = COST_FROM_BUILDER = DPS_FROM_BUILDER = null;   // a link is someone else's character
+if (HASH.t){ ACC_FROM_BUILDER = AOE_FROM_BUILDER = DEF_FROM_BUILDER = COST_FROM_BUILDER = DPS_FROM_BUILDER = FORM_FROM_BUILDER = null;   // a link is someone else's character
   for (const k of TRAIN) if (HASH.t[k] != null && [...($("#" + k).options || [{value: HASH.t[k]}])].some(o => o.value === String(HASH.t[k]))) $("#" + k).value = HASH.t[k];
   rankMaps() }
 // Where to train: nothing filled the table on load (it sat empty until a setting changed), so rank on first open
