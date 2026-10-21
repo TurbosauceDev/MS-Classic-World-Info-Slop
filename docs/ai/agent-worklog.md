@@ -24,6 +24,7 @@ YYYY-MM-DD HH:MMZ | <agent-name> | <one-line summary> | <commit hash or files to
 
 ## Recent
 
+2026-10-21 18:00Z | claude (review) | Home masonry zoom fix (v0.13.3); asked in mailbox about 2 unused scripts | 2743654
 2026-10-21 17:20Z | claude (review) | review fixes: CI red (changelog div), Pages smoke gate, stale listings + seen fix, summary lock, pins, item page order, Settings Reset | a934f82..57f0a2c
 2026-10-22 17:00Z | claude (chat-CLI) | landed seen tracking + alt-source wiring + freshness health checks + doc refresh | commit b911b6285c35
 2026-10-22 17:30Z | claude (chat-CLI) | created this worklog + docs/ai/agent-mailbox.md as the new agent comm hub | docs/ai/agent-mailbox.md, docs/ai/agent-worklog.md
