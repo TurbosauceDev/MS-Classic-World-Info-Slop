@@ -24,7 +24,8 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
 
 (async () => {
   execFileSync("python3", [path.join(ROOT, "scripts/pages_site.py"), OUT]);
-  check(JSON.parse(fs.readFileSync(path.join(OUT, "market.json"), "utf8")).listed, "pages_site.py writes market.json (D.pw)");
+  { const m = JSON.parse(fs.readFileSync(path.join(OUT, "market.json"), "utf8"));   // listed is "" when meso.watch has only stale listings
+    check(m.it && typeof m.listed === "string" && m.now && typeof m.now === "object", "pages_site.py writes market.json (D.pw)") }
   let market = JSON.stringify(FIX), hits = 0;
   const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split("?")[0]);
     if (u === "/market.json"){ hits++; r.writeHead(200, {"content-type": "application/json"}); return r.end(market) }
@@ -169,6 +170,9 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
   // file:// (the artifact) never fetches market.json; a listing missing from the last-seen list is marked new
   { const ap = await b.newPage(), e3 = []; ap.on("pageerror", e => e3.push(e.message)); let fetched = 0; ap.on("request", r => { if (/market\.json/.test(r.url())) fetched++ });
     const file = "file://" + path.join(ROOT, "dist/index.html");
+    // the fixture's listings in place of the build's (which can be empty), like the live refresh would swap them
+    await ap.addInitScript(fx => { const parse = JSON.parse; let done = false;
+      JSON.parse = function(t, ...a){ const r = parse.call(this, t, ...a); if (!done && r && r.pw && r.pw.it){ done = true; Object.assign(r.pw, fx) } return r } }, {it: FIX.it, now: FIX.now, listed: FIX.listed});
     await ap.goto(file); await ap.evaluate(() => { const b = document.querySelector("#t-snipe"), c = document.querySelector("#c-town"); if (c.offsetParent) c.click(); b.click() });
     await ap.click('#snview [data-v="all"]');
     const keys = await ap.$$eval("#snrows tr[data-k]", l => l.map(r => r.dataset.k));

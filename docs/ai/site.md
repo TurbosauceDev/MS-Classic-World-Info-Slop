@@ -274,3 +274,4 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Item page order + Settings Reset 2026-10-21
 - Item page (49-items.js): Stats, Where to get it, What it's for, then Prices (Danny 10-21). tests/polish.js "item page section order".
 - Settings › Reset (`src/js/77-reset.js`, card at the end of `#thpop`): `#rstlook` removes `RESET.LOOK` (theme themec navmode pagesize anchors profile; saved profiles/themes kept), `#rstall` clears all localStorage + sessionStorage. First click arms for 5 s (`.btn.danger`), second wipes, drops the hash and reloads. edge.js "reset:"; the settings chip check now expects Layout,Theme,Reset. A new look/layout key belongs in `RESET.LOOK`.
+- Smoke/snipe no longer need real live listings (10-21: dropping stale ones left 0 and smoke went red, which now blocks Pages): smoke checks the empty state when `PWNOW` is empty, snipe.js's file:// check swaps in its fixture.
