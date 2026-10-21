@@ -245,3 +245,5 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-21 Danny: build a character lookup from classicrank.com's API ("Load by IGN"). Keyless browser call on user action is an approved runtime fetch; no read key needed for single lookups, /jobs, /stats.
 - 2026-10-21 Danny: work mesoindex.com into item pages: Prices row + Where to buy shops (channel, FM room, seller). pwPrice / FM Sniper stay on meso.watch.
 - 2026-10-21 Second audit (Danny, artifact comment): fix item 2, Where to train table must show EXP/hr, Mesos/hr and Hrs/level at desktop width without sideways scroll.
+- 2026-10-21 Second audit (Danny, artifact comments): build items 3, 5-15 (4 and 9 were already shipped by other threads); browser screen-reading EXP/hr calculator (for macOS users) and a Crafting section overhaul go to their own threads.
+- 2026-10-21 Grind Tracker: assume players run the game at their monitor's native resolution (Danny); docs say so instead of listing window setups.

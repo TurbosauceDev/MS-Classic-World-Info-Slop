@@ -299,3 +299,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - smoke.js now checks every page at 1300 px: no `.tblwrap` may scroll sideways (Where to train hid EXP/hr, Mesos/hr, Hrs/level).
 - Where to train: potions line under the map name, `dangerPill(o, 1)` puts "hits you N%" under the pill, relative bar under EXP/hr. `.thwrap` lets headers wrap + 10px cell padding (Where to train, Items, Citizenship).
 - Trap: a new column on those tables can push them past 910 px again; the smoke check will say which page. Monster pages' best-maps table (next to the minimap) still scrolls; not covered.
+
+## Second audit polish 2026-10-21 (tests/polish.js "second audit" block)
+- `.drop` hides the file input (opacity 0, covers the label) behind an icon + "Browse" chip: keep `<label class="drop"><input type=file><span>` shape. `fitSelects` (00-core.js) adds `label.wide` on phones when a select's chosen text doesn't fit; runs on tab open + select change.
+- Path Planner `#xsum` = `.snstats` tiles (golden.js reads the first `h3` for "N h") + `details.xmore`. EXP/hr form is `.ecform` with two `.ecrow`s; hint lives in `#echint`, empty saves show `#ecempty`. Quest "Stack with" is `details.qstack`.
+- h2 is 20px everywhere (fold-out section titles 17.5px, Home categories keep 24px). Monster page `.mfgrid` stacks under 1250px; smoke.js checks the best-maps table fits at 1300.

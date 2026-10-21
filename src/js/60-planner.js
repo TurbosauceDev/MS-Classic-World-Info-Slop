@@ -347,17 +347,22 @@ function render(){
   const maps = new Set(S.filter(s => s.k === "grind").map(s => s.map.id)).size, nq = S.filter(s => s.k === "quest").length;
   const stop = S.find(s => s.k === "stop" || s.k === "nomap");
   const tot = P.qExp + P.gExp, net = P.drops + P.mesos + Math.min(P.qpots, P.upkeep) - P.spend - P.upkeep;
-  $("#xsum").innerHTML = [
-    [stop ? `Stops at level ${stop.L}` : `About ${hm(P.t)} to level ${X.goal}`,
+  // headline numbers as stat tiles (second audit #10), the long explanations in a fold under them
+  const pace = X.pace === 1 ? "perfect-play" : X.pace === 2 ? "relaxed" : "average";
+  const tiles = [
+    [stop ? "Stops early" : `Time to level ${X.goal}`, stop ? `Lv ${stop.L}` : hm(P.t), stop ? (stop.k === "stop" ? "timed quests run out" : "no training map fits") : `from level ${X.cur}, ${pace} pace · estimate`,
       stop ? (stop.k === "stop" ? `Quests that can be timed run out at level ${stop.L}${X.goal > stop.L ? `, ${X.goal - stop.L} short of your goal. Switch to "Quests + grinding" to finish.` : "."}` : `No training map fits level ${stop.L}.`)
-           : `From level ${X.cur} at ${X.pace === 1 ? "perfect-play" : X.pace === 2 ? "relaxed" : "average"} pace. Estimate.`],
-    [`Mesos: about ${net >= 0 ? "+" : "−"}${fmt(Math.abs(net))} overall`, `Earned about ${fmt(P.drops)} from monster meso drops and ${fmt(P.mesos)} from quests. Spent ${fmt(P.spend)} on weapons (NPC shop prices) and up to ${fmt(P.upkeep)} on potions and ammo while grinding (skills on every attack, at shop prices)${P.qpots ? `, of which quest potions cover about ${fmt(Math.min(P.qpots, P.upkeep))}` : ""}. Monster mesos: floor(2.1 × monster level) + 3, ±10%, on about 67% of kills (OSMS formulas page). Selling loot and getting hit aren't counted.`],
-    ...(X.mode === "rewards" ? [[`${fmt(P.mesos)} mesos + items worth ≈ ${fmt(P.items)} to NPCs`, `From ${nq} quests, ${S.filter(s => s.k === "quest" && vTier(s.r) === 1).length} of them rated Must do. NPC sell value is a floor: rated items (Sauna Robe, scrolls) sell for far more to players.`]] : []),
-    [`${nq} quests · ${maps} training map${maps === 1 ? "" : "s"}${nv ? ` · ${nv} valuable side quests` : ""}`, tot ? `${Math.round(100 * P.qExp / tot)}% of the EXP from quests (including the kills they ask for), ${Math.round(100 * P.gExp / tot)}% from grinding.` : ""],
-    ...(G && !stop && !G.steps.some(s => s.k === "nomap") && nq ? [[`Grinding only: ${hm(G.t)}`, P.t > G.t
+           : `From level ${X.cur} at ${pace} pace. Estimate.`],
+    ["Mesos overall", `${net >= 0 ? "+" : "−"}${fmt(Math.abs(net))}`, "drops + quests − gear and upkeep", `Earned about ${fmt(P.drops)} from monster meso drops and ${fmt(P.mesos)} from quests. Spent ${fmt(P.spend)} on weapons (NPC shop prices) and up to ${fmt(P.upkeep)} on potions and ammo while grinding (skills on every attack, at shop prices)${P.qpots ? `, of which quest potions cover about ${fmt(Math.min(P.qpots, P.upkeep))}` : ""}. Monster mesos: floor(2.1 × monster level) + 3, ±10%, on about 67% of kills (OSMS formulas page). Selling loot and getting hit aren't counted.`],
+    ...(X.mode === "rewards" ? [["Quest rewards", fmt(P.mesos), `mesos + items ≈ ${fmt(P.items)} to NPCs`, `From ${nq} quests, ${S.filter(s => s.k === "quest" && vTier(s.r) === 1).length} of them rated Must do. NPC sell value is a floor: rated items (Sauna Robe, scrolls) sell for far more to players.`]] : []),
+    ["Route", `${nq} quests`, `${maps} training map${maps === 1 ? "" : "s"}${nv ? ` · ${nv} valuable side` : ""}${tot ? ` · ${Math.round(100 * P.qExp / tot)}% EXP from quests` : ""}`,
+      tot ? `${Math.round(100 * P.qExp / tot)}% of the EXP from quests (including the kills they ask for), ${Math.round(100 * P.gExp / tot)}% from grinding.` : ""],
+    ...(G && !stop && !G.steps.some(s => s.k === "nomap") && nq ? [["Grinding only", hm(G.t), P.t > G.t ? `quests cost ${hm(P.t - G.t)} more` : `quests save ${hm(G.t - P.t)}`, P.t > G.t
       ? `The quests cost about ${hm(P.t - G.t)} more than pure grinding, in exchange for their item rewards. Tick "Only quests faster than grinding" to drop the slow ones.`
       : `The quests save about ${hm(G.t - P.t)} over pure grinding.`]] : [])
-  ].map(([h, p]) => `<div class="fact"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join("");
+  ];
+  $("#xsum").innerHTML = `<div class="snstats">${tiles.map(([l, v, sub]) => `<div class="sntile"><div class="snth">${esc(l)}</div><h3 class="sntv">${esc(v)}</h3><div class="sub">${esc(sub)}</div></div>`).join("")}</div>
+    <details class="mnmore xmore"><summary>How these numbers are worked out</summary><ul>${tiles.filter(t => t[3]).map(([l, , , d]) => `<li><b>${esc(l)}:</b> ${esc(d)}</li>`).join("")}</ul></details>`;
   let n = 0;
   // tick-off boxes: a step's key survives replanning when it's the same quest / job advancement / map and levels
   const key = s => s.k === "gear" ? `w${s.weapon}:${s.L}` : s.k === "quest" || s.k === "value" ? "q" + s.r.id : s.k === "grind" ? `g${s.map.id}:${s.from}-${s.to}` : s.k === "travel" ? `t${s.from}>${s.to}:${s.L}` : s.k === "kit" ? `k${s.b || X.cls}:${s.c}` : s.k === "kpq" ? "kpq" : `j${X.cls}:${s.L}${s.id ? ":" + s.id : ""}`;

@@ -56,11 +56,12 @@ function calc(){
   const mid = BYLABEL[String(S.map).trim().toLowerCase()] || null, party = +S.pty || 1, card = +S.card || 1;
   cur = null;
   if (e0 == null || e1 == null || !(min > 0)){
-    $("#ecout").innerHTML = `<p class="note">${S.t0 != null ? "Timer running. Train, then press <b>Stop</b> and type your new EXP." : "Type your start and end EXP and the minutes (or use the timer)."}</p>`;
+    $("#ecout").innerHTML = ""; $("#echint").innerHTML = S.t0 != null ? "Timer running. Train, then press <b>Stop</b> and type your new EXP." : "Type your start and end EXP and the minutes (or use the timer).";
     return;
   }
   const gain = expBetween(L0, e0, L1, e1);
-  if (gain <= 0){ $("#ecout").innerHTML = `<p class="note">End EXP is below the start. If you leveled up, raise <b>End level</b>.</p>`; return }
+  if (gain <= 0){ $("#ecout").innerHTML = ""; $("#echint").innerHTML = "End EXP is below the start. If you leveled up, raise <b>End level</b>."; return }
+  $("#echint").innerHTML = "";
   const rate = gain / min * 60, perSec = rate / 3600, goal = Math.min(MAX_LEVEL, Math.max(L1 + 1, +S.goal || L1 + 1));
   const model = modelRate(S.cls, L1, mid, party), est = model != null ? model * card : null;
   cur = {t: Date.now(), cls: S.cls, L: L1, map: mid, party, card, min, gain, rate, est};
@@ -81,7 +82,8 @@ function rows(){
     <td class="num">${r.party}</td><td class="num">${r.card > 1 ? r.card + "x" : "–"}</td><td class="num">${+(+r.min).toFixed(1)}</td>
     <td class="num">${fmt(r.gain)}</td><td class="num"><b>${fmt(r.rate)}</b></td><td class="num">${r.est ? Math.round(r.rate / r.est * 100) + "%" : "–"}</td>
     <td><button class="btn" data-ecdel="${r.i}" type="button" style="padding:3px 9px" aria-label="Delete">✕</button></td></tr>`).join("")
-    : `<tr><td colspan="11" class="sub">No saved sessions yet.</td></tr>`;
+    : "";
+  $("#ecempty").hidden = !!list.length; $("#ecsaved").hidden = $("#ectbl").hidden = !list.length;   // short empty state, not an empty table (second audit #11)
 }
 $("#ecrows").addEventListener("click", e => { const b = e.target.closest("[data-ecdel]"); if (!b) return; S.rec.splice(+b.dataset.ecdel, 1); save(); rows() });
 $("#ecclear").addEventListener("click", () => { if (S.rec.length && confirm("Delete all saved sessions?")){ S.rec = []; save(); rows() } });

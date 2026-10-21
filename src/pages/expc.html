@@ -9,29 +9,33 @@
       <li><b>Save</b> keeps the session in this browser only. Sort by date or EXP/hr to compare maps.</li>
     </ul>
   </details>
-  <div class="controls">
+  <div class="controls ecform">
+    <div class="ecrow">
     <label>Class<select id="eccls">
       <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
       <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
-    <label>Start level<input id="ecl0" type="number" min="1" max="99" value="25" style="width:5em"></label>
-    <label>Start EXP<input id="ece0" type="text" inputmode="decimal" placeholder="12345 or 45.6%" size="13"></label>
-    <label>End level<input id="ecl1" type="number" min="1" max="99" value="25" style="width:5em"></label>
-    <label>End EXP<input id="ece1" type="text" inputmode="decimal" placeholder="12345 or 45.6%" size="13"></label>
-    <label>Minutes<input id="ecmin" type="number" min="0" step="0.1" style="width:6em"></label>
-    <button class="btn" id="ectimer" type="button" style="align-self:flex-end">Start timer</button>
-  </div>
-  <div class="controls" style="margin-top:8px">
+    <label>Start level<input id="ecl0" type="number" min="1" max="99" value="25" style="width:4.2em"></label>
+    <label>Start EXP<input id="ece0" type="text" inputmode="decimal" placeholder="12345 or 45.6%" size="12"></label>
+    <label>End level<input id="ecl1" type="number" min="1" max="99" value="25" style="width:4.2em"></label>
+    <label>End EXP<input id="ece1" type="text" inputmode="decimal" placeholder="12345 or 45.6%" size="12"></label>
+    <div class="ecmin"><label>Minutes<input id="ecmin" type="number" min="0" step="0.1" style="width:5em"></label>
+    <button class="btn" id="ectimer" type="button">Start timer</button></div>
+    </div>
+    <div class="ecrow"><span class="ecsub">Compare with Where to train <i>(optional)</i></span>
     <label>Map<input id="ecmap" type="search" list="ecmaps" placeholder="optional" size="24"></label>
     <datalist id="ecmaps"></datalist>
     <label>Party<select id="ecpty"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
     <label>EXP card<select id="eccard"><option value="1">None</option><option value="1.5">1.5x</option><option value="2">2x</option></select></label>
     <label>Goal level<input id="ecgoalL" type="number" min="2" max="100" style="width:5em"></label>
+    </div>
+    <p class="ecnote" id="echint"></p>
   </div>
   <div id="ecout" class="mpage"></div>
   <h2>Saved sessions</h2>
-  <div class="controls"><label>Sort<select id="ecsort"><option value="t">Newest</option><option value="rate">EXP/hr</option></select></label>
+  <p class="ecempty" id="ecempty">Nothing saved yet. Press <b>Save</b> on a result above to keep it here (this browser only) and compare maps.</p>
+  <div class="controls" id="ecsaved"><label>Sort<select id="ecsort"><option value="t">Newest</option><option value="rate">EXP/hr</option></select></label>
     <button class="btn" id="ecclear" type="button" style="align-self:flex-end">Clear all</button></div>
-  <div class="tblwrap"><table>
+  <div class="tblwrap" id="ectbl"><table>
     <thead><tr><th>When</th><th>Class</th><th class="num">Lv</th><th>Map</th><th class="num">Party</th><th class="num">Card</th><th class="num">Min</th><th class="num">EXP</th><th class="num">EXP/hr</th><th class="num">vs estimate</th><th></th></tr></thead>
     <tbody id="ecrows"></tbody>
   </table></div>

@@ -40,6 +40,8 @@ const boxGaps = require("./boxgaps");
   await p.goBack(); await p.waitForTimeout(50); check(!(await p.isHidden("#items")) && await p.isHidden("#wmap"), "browser Back returns to the previous page");
   await p.click("#navback"); await p.waitForTimeout(50);
   check(!(await p.isHidden("#mbpage")) && await p.textContent("#mbpage h2") === mob1, "site Back reopens the monster page");
+  { const w = await p.evaluate(() => { const t = document.querySelector("#mfarm .tblwrap"); return t ? [t.scrollWidth, t.clientWidth] : [0, 0] });
+    check(w[0] <= w[1] + 1, `monster page: best-maps table fits next to the minimap at 1300px (${w})`) }   // second audit #3
   await p.click("#navback"); await p.waitForTimeout(50); check(!(await p.isHidden("#mblist")), "Back again: monster list");
   await p.click("#navfwd"); await p.waitForTimeout(50); check(!(await p.isHidden("#mbpage")), "Forward redoes the step");
   await p.click("#mbback"); await p.waitForTimeout(50); check(await p.isDisabled("#navfwd"), "a new step clears Forward");

@@ -120,7 +120,8 @@ function stackWith(r){
 const qref = (src, q) => `<span class="name qname" tabindex="0" data-src="${src}" data-i="${(src === "cit" ? D.citq : D.quests).indexOf(q)}">${esc(q.name)}</span>`;
 function stackCell(r){
   const s = stackWith(r); if (!s.length) return "";
-  return `<div class="qstack sub">Stack with: ${s.slice(0, 3).map(([src, q]) => `${qref(src, q)} <span class="tiny">Lv ${q.lvl}</span>`).join(", ")}${s.length > 3 ? ` <span title="${esc(s.slice(3).map(([, q]) => q.name).join(", "))}">+${s.length - 3} more</span>` : ""}</div>`;
+  // a "stacks with N" chip that opens the list, so the row stays a few lines tall (second audit #12)
+  return `<details class="qstack sub"><summary title="Other quests within 10 levels that need the same monster">stacks with ${s.length}</summary>${s.map(([src, q]) => `${qref(src, q)} <span class="tiny">Lv ${q.lvl}</span>`).join(", ")}</details>`;
 }
 /* item rewards: icons with in-game style tooltips */
 function rewardCell(r){

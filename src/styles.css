@@ -65,7 +65,8 @@ tr:last-child td{border-bottom:0}
 .cgroup h3{font:800 19.5px/1.2 var(--f-display);margin:0 0 2px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
 .cgroup h3 span{font:500 14px var(--f-body);color:var(--muted)}
 .branch td{background:var(--accent-soft);font:600 13px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
-h2{font:800 24px/1.2 var(--f-display);margin:28px 0 4px}
+/* one heading scale (second audit #8): page sections 20px, card titles 17.5px (.card h3, fold-out section titles) */
+h2{font:800 20px/1.25 var(--f-display);margin:28px 0 6px;text-wrap:balance}
 .empty{padding:18px;color:var(--muted)}
 [hidden]{display:none!important}
 .sicon{width:32px;height:32px;flex-shrink:0;image-rendering:pixelated;border-radius:6px;background:var(--bg);border:1px solid var(--line);padding:2px;box-sizing:content-box}
@@ -154,7 +155,7 @@ table.mini td,table.mini th{padding:6px 8px}
 .qname{cursor:help;text-decoration:underline dotted var(--muted);text-underline-offset:3px}
 .qname:hover,.qname:focus{color:var(--accent);outline:none}
 .qname:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
-#cit h2{margin-top:30px}
+#cit h2{margin-top:28px}
 #cshops .fact table{margin-top:6px}
 .chainbtn{all:unset;cursor:pointer;font-weight:600;color:var(--accent);text-decoration:underline;text-underline-offset:3px}
 .chainbtn:hover{color:var(--ink)}
@@ -291,8 +292,10 @@ input.khave{width:64px;text-align:right}
 .mtop .sub{margin:0 0 8px;font-size:15px}
 .msec{font:700 17.5px var(--f-display);margin:22px 0 10px}
 .mfarm .controls.inline{background:none;border:0;padding:0 0 12px}
-.mfgrid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
-@media (max-width:900px){.mfgrid{grid-template-columns:minmax(0,1fr)}}
+.mfgrid{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1fr);gap:16px;align-items:start}
+.mfarm .bar{width:48px}
+@media (max-width:1250px){.mfgrid{grid-template-columns:minmax(0,1fr)}}
+.mfarm th{white-space:normal}
 .mfrow{cursor:pointer}
 #mfall{margin-top:8px}
 @media (max-width:600px){.mfarm .bar{display:none}.mfarm td:first-child{min-width:120px}}
@@ -467,7 +470,7 @@ nav button[hidden]{display:none}
 header h1{cursor:pointer}
 .homegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--hcw,300px)),1fr));gap:14px}
 .homecat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
-.homecat h2{margin:0 0 6px}
+.homecat h2{margin:0 0 6px;font-size:24px}
 .hcat{font:800 21.5px var(--f-display);color:var(--ink);background:none;border:0;padding:0;cursor:pointer}
 .hcat:hover{color:var(--accent)}
 .hlink{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:9px 0;cursor:pointer;color:var(--ink);font:15px/1.4 var(--f-body)}
@@ -476,9 +479,16 @@ header h1{cursor:pointer}
 .hlink:hover b{text-decoration:underline}
 .hlink:focus-visible,.hcat:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (max-width:420px){.homegrid{grid-template-columns:1fr}}
-.drop{display:block;border:1.5px dashed var(--line);border-radius:10px;padding:12px;font-size:14px;color:var(--muted);cursor:pointer;background:var(--bg)}
+/* screenshot drop zones (Price check, Craft planner, Builder): the browser's file button is hidden behind an icon + "Browse" chip (second audit #5) */
+.drop{position:relative;display:flex;align-items:center;gap:12px;border:1.5px dashed var(--line);border-radius:10px;padding:12px;font-size:14px;color:var(--muted);cursor:pointer;background:var(--bg)}
 .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
-.drop input{display:block;margin-bottom:6px;max-width:100%;font-size:14px}
+.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.drop::before{content:"";flex:none;width:34px;height:34px;border-radius:8px;background:var(--accent);opacity:.85;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Ccircle cx='9' cy='10' r='2'/%3E%3Cpath d='M21 16l-5-5-9 9'/%3E%3C/svg%3E") center/24px no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Ccircle cx='9' cy='10' r='2'/%3E%3Cpath d='M21 16l-5-5-9 9'/%3E%3C/svg%3E") center/24px no-repeat}
+.drop>span{flex:1;min-width:0}
+.drop::after{content:"Browse";flex:none;font:600 13px var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 12px}
+.drop:hover::after{border-color:var(--accent)}
+@media (max-width:600px){.drop::after{display:none}}
 /* Builder: Undo / Redo / Reset bar, screenshot thumbnails with a box on everything read, "where did this SP go" ask */
 .pbar{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .pbar .btn{display:inline-flex;align-items:center;gap:6px}
@@ -615,6 +625,7 @@ input[type=file]::file-selector-button{font:600 14px var(--f-body);color:var(--i
 input[type=file]::file-selector-button:hover{border-color:var(--accent)}
 .sitever{margin:18px 0 0;text-align:center;font:500 13px var(--f-mono);color:var(--muted);opacity:.85}
 .sitever.pwstate{margin-top:4px}
+.sitever>span{display:inline-block}
 /* Settings (70-theme.js, 74-profiles.js): built like the Grind Tracker's Settings pop-up (tracker/app/index.html #prefsPop,
    .modal) so the two feel like one product (Danny 10-21): inset over a blurred backdrop, sticky title with section chips,
    one card per section with an accent heading and a rule, swatch grid, on-bg page with panel cards */
@@ -659,6 +670,8 @@ input[type=file]::file-selector-button:hover{border-color:var(--accent)}
   nav .navrow{align-items:center}
   nav .cats,nav .subs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
   nav .cats::-webkit-scrollbar,nav .subs::-webkit-scrollbar{display:none}
+  /* labels cut at the row ends fade out, so the row reads as swipeable rather than clipped */
+  nav .cats,nav .subs{-webkit-mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent);padding-inline:14px;scroll-padding-inline:14px}
   nav .cats button,nav .subs button{flex:none;white-space:nowrap}
   nav .cats button{padding:6px 12px}
   nav .subs{margin-top:6px}
@@ -983,11 +996,15 @@ html.anchoring :is(.navcol,.homegrid){user-select:none}
 #snstats{grid-template-columns:repeat(6,minmax(0,1fr))}
 @media (max-width:1180px){#snstats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:520px){#snstats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#xsum .snstats{margin:14px 0 6px}
+#xsum .xmore{font-size:14px;color:var(--muted)}
+#xsum .xmore>summary{cursor:pointer;color:var(--accent);font-weight:600;width:fit-content}
+#xsum .xmore ul{margin:6px 0 0;padding-left:18px;display:grid;gap:4px}
 #mapnote .mnmore{margin-top:6px}
 #mapnote .mnmore>summary{cursor:pointer;color:var(--accent);font-weight:600;width:fit-content}
 #mapnote .mnmore[open]>summary{margin-bottom:6px}
 details.sec{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-top:14px;box-shadow:var(--shadow)}
-details.sec>summary h2{margin:0}
+details.sec>summary h2{margin:0;font-size:17.5px}
 details.sec[open]>summary{margin-bottom:10px}
 details.sec .controls{box-shadow:none;background:var(--bg)}
 .mhead{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
@@ -1021,6 +1038,7 @@ details.sec .controls{box-shadow:none;background:var(--bg)}
   .controls{gap:10px 10px;padding:12px}
   .controls>label:not(.chk){flex:1 1 140px}
   .controls>label:not(.chk)>:is(input,select){width:100%!important;min-width:0;box-sizing:border-box}
+  label.wide,.controls>label.wide:not(.chk){flex-basis:100%;grid-column:1/-1}label.wide>select{width:100%}
   .controls>.btn.tgl{padding-inline:9px;font-size:13px;flex:1 1 auto}
 }
 /* Phone tables (Danny 10-21, audit #3; 76-stack.js labels cells): rows of 4+ column tables become small cards,
@@ -1058,3 +1076,19 @@ details.sec .controls{box-shadow:none;background:var(--bg)}
 .btn.danger{border-color:var(--bad);color:var(--bad)}
 /* touch screens: fold-out headers were 19-22px tall, under a finger's reach (10-21 phone audit) */
 @media (pointer:coarse){.howto>summary,#mapnote .mnmore>summary,.trkwarn>summary,.navmm summary{padding:7px 0}}
+
+/* EXP/hr calculator form (second audit #11): one card, session row + optional compare row, timer beside Minutes, hint inside */
+.ecform{flex-direction:column;align-items:stretch;gap:12px}
+.ecrow{display:flex;flex-wrap:wrap;gap:12px 14px;align-items:flex-end}
+.ecrow+.ecrow{border-top:1px solid var(--line);padding-top:12px}
+.ecsub{flex-basis:100%;font:600 12px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ecsub i{font-style:normal;text-transform:none;letter-spacing:0;font-weight:400}
+.ecmin{display:flex;gap:8px;align-items:flex-end}
+.ecnote{margin:0;font-size:14px;color:var(--muted)}.ecnote:empty{display:none}
+.ecempty{background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:14px 16px;color:var(--muted);margin:8px 0 0}
+@media (max-width:600px){.ecrow>label:not(.chk){flex:1 1 140px}.ecrow>label>:is(input,select){width:100%!important;min-width:0;box-sizing:border-box}.ecmin{flex:1 1 100%}.ecmin label{flex:1}}
+.qstack{margin-top:4px}
+.qstack>summary{display:inline-block;list-style:none;cursor:pointer;font:600 12px var(--f-body);padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.qstack>summary::-webkit-details-marker{display:none}
+.qstack>summary::after{content:" ▸";font-size:10px}.qstack[open]>summary::after{content:" ▾"}
+.qstack[open]>summary{margin-bottom:4px}

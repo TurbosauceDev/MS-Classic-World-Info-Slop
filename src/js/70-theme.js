@@ -66,7 +66,7 @@
   const day = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const tm = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
   el.title = el.textContent.replace(/^.*built /, "");
-  el.textContent = `Site version: v${el.dataset.ver} · built ${day} · ${tm}`;
+  el.innerHTML = `<span>Site version: v${esc(el.dataset.ver)}</span> <span>· built ${esc(day)} · ${esc(tm)}</span>`;   // two unbreakable halves: phones wrap between them, not mid-phrase (second audit #14)
 })();
 
 // Home, under the version: meso.watch data state (Danny 10-20): item prices (D.pw.it, sales read up to D.pw.read) and live

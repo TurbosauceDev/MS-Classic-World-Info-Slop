@@ -98,10 +98,10 @@ const TABS = [...document.querySelectorAll("nav [data-tab]")], CATS = [...docume
 const LASTTAB = {};   // category -> last page opened in it
 const NAVREG = {};   // page -> {get, set} of its current place, for Back/Forward (75-history.js)
 const navReg = (tab, get, set) => { NAVREG[tab] = {get, set} };
-// on phones the section and page rows are one swipeable row each: keep the selected button scrolled into view
+// on phones the section and page rows are one swipeable row each: keep the selected button centered in its row
 const inRow = el => { const p = el?.parentElement; if (!p || p.scrollWidth <= p.clientWidth) return;
   const r = el.getBoundingClientRect(), q = p.getBoundingClientRect();
-  if (r.left < q.left) p.scrollLeft += r.left - q.left - 12; else if (r.right > q.right) p.scrollLeft += r.right - q.right + 12 };
+  p.scrollLeft += r.left + r.width / 2 - (q.left + q.width / 2) };   // centered, so the pills either side show (second audit #6)
 // sidebar layout: wider than a phone and not "Two rows" (Theme popup); it lists every page (71-navside.js re-runs showCat on a switch)
 const SIDEMQ = matchMedia("(min-width:761px)"), sideNav = () => SIDEMQ.matches && document.documentElement.getAttribute("data-nav") !== "rows";
 const showCat = cat => {
@@ -117,8 +117,18 @@ TABS.forEach(b => b.addEventListener("click", () => {
   TABS.forEach(x => x.setAttribute("aria-selected", x === b)); inRow(b);
   $("#home").hidden = true; TABS.forEach(x => $("#" + x.dataset.tab).hidden = x !== b);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
-  setTitle(b.textContent.trim());
+  setTitle(b.textContent.trim()); requestAnimationFrame(() => fitSelects($("#" + b.dataset.tab)));
 }));
+// phones: a filter select too narrow for its chosen text ("Area attack (Ao") takes the whole row (second audit #7)
+const PHONEMQ = matchMedia("(max-width:600px)"), selCtx = document.createElement("canvas").getContext("2d");
+const fitSelects = root => { if (!root) return;
+  root.querySelectorAll("label:not(.chk)>select").forEach(s => { const l = s.parentElement;
+    if (!PHONEMQ.matches || !s.offsetParent) return l.classList.remove("wide");
+    const cs = getComputedStyle(s); selCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const need = selCtx.measureText(s.selectedOptions[0]?.textContent || "").width + 34;   // + padding and the arrow
+    l.classList.toggle("wide", need > (l.classList.contains("wide") ? (l.parentElement.clientWidth - 34) / 2 : s.clientWidth)) }) };
+document.addEventListener("change", e => { if (e.target.matches?.(".controls select")) fitSelects(e.target.closest(".controls")) });
+PHONEMQ.addEventListener("change", () => fitSelects(document.querySelector("main section:not([hidden])")));
 const goHome = () => { showCat("home"); TABS.forEach(x => { x.setAttribute("aria-selected", false); $("#" + x.dataset.tab).hidden = true });
   $("#home").hidden = false; try { localStorage.setItem("tab", "home") } catch(e) {} setTitle("") };
 const goCat = cat => cat === "home" ? goHome() : $("#t-" + (LASTTAB[cat] || TABS.find(x => x.dataset.cat === cat).dataset.tab)).click();

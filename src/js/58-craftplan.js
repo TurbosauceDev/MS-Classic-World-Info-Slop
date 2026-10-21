@@ -101,7 +101,8 @@ function draw(){
   $("#cpinv").innerHTML = have.length ? `${shots ? `${shots} screenshot${shots > 1 ? "s" : ""} read (<a href="#" data-cpgo="inv">see them on Price check</a>) · ${invPeek(window.INVP.counts())} · <button class="linkbtn" type="button" id="cpclear">clear screenshots</button>` : "No screenshots yet"}${Object.keys(S.hand).length ? ` · by hand: ${Object.entries(S.hand).map(([id, n]) => `<span class="pill">${esc(D.items[id].n)} ×${fmt(n)} <button class="linkbtn" type="button" data-cprm="${id}" aria-label="Remove ${esc(D.items[id].n)}">✕</button></span>`).join(" ")}` : ""} · ${fmt(have.length)} kind${have.length === 1 ? "" : "s"} of item in all.` : "Nothing in your inventory yet: add screenshots or type items in.";
   if (!ALLOWED.length){
     for (const s of ["#cpnow", "#cpalm"]) $(s).innerHTML = `<tr><td colspan="5" class="empty">Set a craft level above 0 for a profession you've learned.</td></tr>`;
-    $("#cpnowc").textContent = ""; $("#cpnowx").textContent = ""; $("#cptot").innerHTML = ""; return }
+    $("#cpnowc").textContent = ""; $("#cpnowx").textContent = "";
+    $("#cptot").innerHTML = `<p class="empty">Set a craft level and add your inventory above: the best mix of crafts from what you hold shows here.</p>`; return }   // second audit #13
   const now = [], almost = []; let loss = 0, unpriced = 0;
   for (const r of ALLOWED){
     if (!worth(r.id)){ unpriced++; continue }

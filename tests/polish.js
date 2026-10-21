@@ -1,5 +1,6 @@
 // Audit fixes 2026-10-21 (Danny picked 15 items): shared Reset + Copy link on list pages, Keep or sell fits its card,
 // FM Sniper tiles on one row, Home masonry, changelog days + version times, World Map idle card, item page layout.
+// Second audit (same day): drop zones, Path Planner tiles, EXP/hr form, quest stack chips, phone selects, footer.
 // Run: node tests/polish.js (CI: tests.yml)
 const { chromium } = require("playwright");
 const path = require("path");
@@ -83,6 +84,30 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
   const mn = await p.evaluate(() => ({fold: !!document.querySelector("#mapnote details.mnmore:not([open])"), dmg: /^Damage: /.test($("#mapnote").innerText)}));
   check(mn.fold && mn.dmg, `where to train: note folded under the summary (${JSON.stringify(mn)})`);
 
+  // second audit (Danny 10-21 artifact comments)
+  // #5 screenshot drop zones: no browser "Choose Files" button showing
+  for (const t of ["inv", "cplan", "plan"]){ await open(t); await p.waitForTimeout(80);
+    const d = await p.evaluate(t => [...document.querySelectorAll(`#${t} .drop input[type=file]`)].map(i => getComputedStyle(i).opacity), t);
+    check(d.length === 1 && d[0] === "0", `${t}: drop zone hides the native file button (${d})`) }
+  // #10 Path Planner: headline numbers as tiles, explanations folded
+  await open("path"); await p.waitForTimeout(200);
+  const ps = await p.evaluate(() => ({tiles: document.querySelectorAll("#xsum .sntile").length, fold: !!document.querySelector("#xsum details.xmore:not([open])")}));
+  check(ps.tiles >= 3 && ps.fold, `path planner: stat tiles + folded working (${JSON.stringify(ps)})`);
+  // #11 EXP/hr calculator: Start timer beside Minutes, hint inside the form, empty state instead of an empty table
+  await open("expc"); await p.waitForTimeout(100);
+  const ec = await p.evaluate(() => ({row: Math.abs($("#ectimer").getBoundingClientRect().top - $("#ecmin").getBoundingClientRect().top) < 20,
+    hint: !!$(".ecform #echint").textContent, empty: !$("#ecempty").hidden && $("#ectbl").hidden}));
+  check(ec.row && ec.hint && ec.empty, `exp/hr calculator form (${JSON.stringify(ec)})`);
+  // #12 Quests: "Stack with" is a closed chip, not an inline list
+  await open("quests"); await p.waitForTimeout(200);
+  check(await p.evaluate(() => document.querySelectorAll("#qrows details.qstack:not([open])").length > 0), "quests: stacks-with lists start folded");
+  // #7 phones: a select too narrow for its value takes the whole row
+  await p.setViewportSize({width: 390, height: 800}); await open("maps"); await p.waitForTimeout(200);
+  const sel = await p.evaluate(() => { const s = $("#mapatk") || [...document.querySelectorAll("#maps .controls select")].find(x => /Area attack/.test(x.selectedOptions[0]?.textContent));
+    return s ? [s.parentElement.classList.contains("wide"), Math.round(s.getBoundingClientRect().width)] : null });
+  check(sel && sel[0] && sel[1] > 300, `phone: Where to train's attack select gets the full row (${sel})`);
+  // #14 footer version wraps between its two halves
+  check(await p.evaluate(() => document.querySelectorAll(".sitefoot .sitever:not(.pwstate)>span").length === 2), "footer: version line in two unbreakable halves");
   check(!errs.length, `no page errors (${errs.join(" | ")})`);
   await b.close(); console.log(fails ? `\n${fails} failed` : "\nall good"); process.exit(fails ? 1 : 0);
 })();
