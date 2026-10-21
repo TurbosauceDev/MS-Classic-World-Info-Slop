@@ -59,7 +59,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 49-items.js | 18 | Items list + page; `.ri`/`.itname` click opens it |
 | 50-builder.js | 43 | Character Builder; `buildAt()` headless default build; BLD |
 | 51-shot.js | | screenshot reader core (un-double UI, icon pixel match, SHOT_FONT digits); also copied into tracker |
-| 52-shotimport.js | 11 | builder "Import from screenshots" |
+| 52-shotimport.js | 16 | builder "Import from screenshots": auto-applies, thumbnails + big view, unshown-SP ask |
 | 53-skills.js | | Skills tab |
 | 54-invprice.js | | Price check (inventory/bank screenshots → meso.watch `PW` prices; Keep or sell column via `KEEPSELL` from 47-keep.js) |
 | 58-craftplan.js | | Craft planner (Mesos and Trade): craft levels + Price check's screenshot reads (`INVP.counts()`, `invupdate` event) + hand entry → craft now / almost (farm maps, buy cost) / best mix; `window.CPLAN` for tests |
@@ -212,3 +212,6 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - `src/js/74-profiles.js`: localStorage `profiles` (max 30) + `profile` (in use; unset = "b:Default"), same model as the tracker's (switching away saves the screen into your profile; built-ins "b:<name>" are never saved into/deleted). Codes = MSCS1 + `site` {nav, size, anchors}; app takes only the theme, site takes only the theme from app codes. `window.PROFILES` for tests; edge.js "profiles:".
 - Danny's Default anchors were measured off his 10-21 screenshot (1961 px header, sidebar ~285 px is an estimate); if he sends his own code, replace BUILTIN[1]. Uses `ANCH.clean/set` and `SITETHEME.setup/take`.
 - Settings modal now mirrors tracker `#prefsPop` (sticky title + `.pnav` chips, `.setcard` per section). Trap: don't use a `<nav>` in it, global `nav` CSS hits it.
+- 10-21 builder pass: screenshots apply on paste (`applyR` in 52-shotimport.js, wrapped in `BLD.group` so one paste = one Undo step); the review form is gone, the builder's own controls are the edit form. Undo/Redo/Reset live in 50-builder.js (`HIST`, `track()` at the end of `render()`); the import's READS ride along via `BLD.extra`. Only typing in AP boxes coalesces steps.
+- Trap: anything that changes S in several `BLD.apply` calls must go through `BLD.group`, or Undo needs two presses. Reset = default S with an auto skill build (sp `{__auto:1}`), not empty SP.
+- Each read keeps `marks` (native-pixel boxes) and a `thumb` crop of just the read windows; a full 2560x1440 frame reads fine at 2x (bow-full.png).

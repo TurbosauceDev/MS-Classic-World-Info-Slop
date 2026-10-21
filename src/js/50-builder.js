@@ -34,6 +34,7 @@ const SK = D.skills; // job name -> skills from the COT2 export
 const BASIC = {id:"basic", n:"Basic attack", max:0};
 
 let S = {cls:"Warrior", lvl:30, branch:"Fighter", weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, gear:{}, gender:""};
+const S0 = JSON.stringify(S);   // a fresh build, for Reset
 // armor (D.armor rows: [id, name, slot, reqLevel, job, gender, [reqSTR, DEX, INT, LUK], {stat: n}, shop price])
 const ARMOR = Object.fromEntries((D.armor || []).map(a => [a[0], a]));
 const SLOTS = [["Hat", "Hat"], ["Overall", "Overall"], ["Top", "Top"], ["Bottom", "Bottom"], ["Glove", "Gloves"], ["Shoes", "Shoes"], ["Shield", "Shield"], ["Cape", "Cape"], ["Earring", "Earrings"]];
@@ -551,6 +552,7 @@ function render(){
     return `<tr><td>${mobLink(m[0])}</td><td class="num sub">Lv ${m[1]}</td><td class="num"><span class="pill ${pct >= 95 ? "p-good" : pct >= 70 ? "p-warn" : "p-bad"}">${pct}%</span></td></tr>`;
   }).join("")}</tbody></table>` : `<p class="tiny">No monsters near this level in the launch areas.</p>`;
   try { localStorage.setItem("planner", JSON.stringify(S)) } catch(e) {}
+  track();
 }
 
 function refresh(){ fillControls(); render() }
@@ -573,17 +575,55 @@ $("#pgear").addEventListener("change", e => { const sl = e.target.dataset.slot; 
 $("#pgender").addEventListener("change", () => { S.gender = $("#pgender").value; for (const [k, id] of Object.entries(S.gear)) if (ARMOR[id]?.[5] && S.gender && ARMOR[id][5] !== S.gender) delete S.gear[k]; fillGear(); render() });
 $("#pgearclear").addEventListener("click", () => { S.gear = {}; fillGear(); render() });
 $("#pbuffs").addEventListener("change", () => { S.buffs = $("#pbuffs").checked; render() });
-for (const k of ["STR","DEX","INT","LUK"]) $("#p" + k).addEventListener("input", () => { S.ap[k] = Math.min(9999, Math.max(4, Math.floor(+$("#p" + k).value) || 4)); render() });   // 9999: input sanity cap (1e308 scrolled phones sideways), not a game limit
+for (const k of ["STR","DEX","INT","LUK"]) $("#p" + k).addEventListener("input", () => { HIST.typing = true; S.ap[k] = Math.min(9999, Math.max(4, Math.floor(+$("#p" + k).value) || 4)); render() });   // 9999: input sanity cap (1e308 scrolled phones sideways), not a game limit
 $("#pauto").addEventListener("click", () => { S.ap = autoAP(W.find(x => x.name === S.weapon)); refresh() });
 $("#pspauto").addEventListener("click", () => { S.sp = autoSP(); render() });
 $("#pspreset").addEventListener("click", () => { S.sp = {}; render() });
-$("#pskills").addEventListener("click", e => {
-  const b = e.target.closest("button[data-d]"); if (!b) return;
-  const id = b.parentElement.dataset.id, s = jobSkills().find(x => x.id === id);
-  const v = S.sp[id] || 0, room = spPool(tierOf(s)) - spentIn(S.sp, tierOf(s), jobSkills());
-  const n = b.dataset.d === "max" ? Math.min(s.max, v + room) : Math.max(0, Math.min(s.max, v + Math.min(+b.dataset.d, room)));
+// d: +1, -1 or "max"; false when the skill can't take a point (maxed, prerequisite unmet, no SP left in its job)
+const canSP = id => { const list = jobSkills(), s = list.find(x => x.id === id);
+  return !!s && (S.sp[id] || 0) < s.max && spPool(tierOf(s)) > spentIn(S.sp, tierOf(s), list) && !s.req.some(([n, need]) => { const p = byName(n, list); return p && lv(p, S.sp, list) < need }) };
+function addSP(id, d){
+  const list = jobSkills(), s = list.find(x => x.id === id); if (!s) return false;
+  const v = S.sp[id] || 0, room = spPool(tierOf(s)) - spentIn(S.sp, tierOf(s), list);
+  if (d !== -1 && !canSP(id)) return false;
+  const n = d === "max" ? Math.min(s.max, v + room) : Math.max(0, Math.min(s.max, v + Math.min(+d, room)));
   if (n) S.sp[id] = n; else delete S.sp[id];
-  render();
+  render(); return true;
+}
+$("#pskills").addEventListener("click", e => {
+  const b = e.target.closest("button[data-d]"); if (b) addSP(b.parentElement.dataset.id, b.dataset.d === "max" ? "max" : +b.dataset.d);
+});
+// Undo / Redo / Reset (Danny 10-21). Every change to the build is one step (typing in an AP box is one step per burst); the
+// screenshot import's own state rides along through BLD.extra, so undoing a paste also takes that screenshot back off.
+const KEYS = ["cls","lvl","branch","fam","weapon","skill","ammo","ap","sp","buffs","gear","gender"];
+const HIST = {undo: [], redo: [], cur: null, t: 0, quiet: false, typing: false, typed: false}, onRender = [];
+const snap = () => { const s = JSON.stringify(Object.fromEntries(KEYS.map(k => [k, S[k]]))), x = BLD?.extra?.get(); return {s, x, k: s + "|" + (BLD?.extra?.key(x) ?? "")} };
+function track(){
+  if (HIST.hold) return;
+  const now = snap(), c = HIST.cur;
+  if (c && c.k !== now.k && !HIST.quiet){
+    if (!(HIST.typing && HIST.typed && Date.now() - HIST.t < 800)) HIST.undo.push(c), HIST.undo.length > 100 && HIST.undo.shift();
+    HIST.t = Date.now(); HIST.redo = []; HIST.typed = HIST.typing;
+  }
+  HIST.cur = now; HIST.typing = false;
+  $("#pundo").disabled = !HIST.undo.length; $("#predo").disabled = !HIST.redo.length;
+  for (const f of onRender) f();
+}
+function restore(h){
+  HIST.quiet = true; for (const k of KEYS) delete S[k]; Object.assign(S, JSON.parse(h.s)); BLD.extra?.set(h.x);
+  refresh(); HIST.quiet = false; HIST.typed = false;
+}
+const undo = () => { if (!HIST.undo.length) return; HIST.redo.push(HIST.cur); const r = HIST.redo; restore(HIST.undo.pop()); HIST.redo = r; track() };
+const redo = () => { if (!HIST.redo.length) return; HIST.undo.push(HIST.cur); const r = HIST.redo, h = r.pop(); restore(h); HIST.redo = r; track() };
+$("#pundo").addEventListener("click", undo);
+$("#predo").addEventListener("click", redo);
+$("#preset").addEventListener("click", () => { for (const k of KEYS) delete S[k]; Object.assign(S, JSON.parse(S0)); rebuild(); BLD.extra?.set(null); refresh() });
+// Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) on the builder; a focused text box keeps its own undo
+document.addEventListener("keydown", e => {
+  if ($("#plan").hidden || !(e.ctrlKey || e.metaKey) || e.altKey || /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName)) return;
+  const k = e.key.toLowerCase();
+  if (k === "z" && !e.shiftKey){ e.preventDefault(); undo() }
+  else if (k === "y" || (k === "z" && e.shiftKey)){ e.preventDefault(); redo() }
 });
 $("#pshare").addEventListener("click", () => copyShare($("#pshare"), shareUrl("b", Object.fromEntries(["cls","lvl","branch","fam","weapon","skill","ammo","ap","sp","buffs","gear","gender"].map(k => [k, S[k]])))));
 $("#ppath").addEventListener("click", () => pathFrom(S.cls, S.branch, S.fam, S.lvl));
@@ -598,7 +638,8 @@ $("#psend").addEventListener("click", () => {
   rankMaps();
 });
 BLD = {get S(){ return S }, W, ARMOR, BRANCHES, JOBLABEL, PRIMARY, SLOTS, apTotal, kindOf, faStats, TWO_HANDED,
-  apply(fn){ fn(S); refresh() }};
+  apply(fn){ fn(S); refresh() }, skills: jobSkills, tierOf, spPool, spentIn, addSP, canSP, autoSP, onRender: f => onRender.push(f), extra: null,
+  group(fn){ HIST.hold = true; try { fn() } finally { HIST.hold = false; track() } }};   // several changes, one Undo step
 if (!Object.keys(S.sp).length) rebuild();
 refresh();
 })();

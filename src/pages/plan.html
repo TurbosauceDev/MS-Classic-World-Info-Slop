@@ -12,8 +12,9 @@
           <li><b>Final Attack</b> is counted only when it helps: each proc plays its own attack (~0.6 s), so on one monster it can cost damage. Hunter's fires 3 arrows. Axe Mastery's bleed and Poison Breath's poison add their damage over time.</li>
           <li><b>HP and MP</b> follow meowdb's measured gains per level and per job advancement, plus Max HP / Max MP Increase.</li>
           <li><b>Armor</b> (optional): pick pieces per slot; their stats count everywhere on this tab. <b>Upkeep</b> = potions and ammo per hour while attacking nonstop, at shop prices.</li>
+          <li><b>Undo / Redo</b> (Ctrl+Z / Ctrl+Y) step back through every change, a pasted screenshot included; <b>Reset</b> starts a fresh build.</li>
           <li><b>Copy link</b> makes a link that opens this exact build.</li>
-          <li><b>Import from screenshots</b> reads the game's windows in this page (nothing is uploaded): level and STR/DEX/INT/LUK from the stat window, worn items by their icons, skill levels from the skill window (one screenshot per skill tab; scroll and add more if the list is long). The stat window shows totals, so the read gear's stats are taken off to get your AP. Gear counts as its base stats (an average drop); scrolled or above-average gear adds more, so fix the numbers in the review if you know them. Screenshots add up in any order; ✕ removes one, <b>Reset</b> clears them all. PNG screenshots work best; a game window that's been smoothly resized (not 100% or 200%) may not read.</li>
+          <li><b>Import from screenshots</b> reads the game's windows in this page (nothing is uploaded): level and STR/DEX/INT/LUK from the stat window, worn items by their icons, skill levels from the skill window (one screenshot per skill tab; scroll and add more if the list is long). The stat window shows totals, so the read gear's stats are taken off to get your AP. Gear counts as its base stats (an average drop); scrolled or above-average gear adds more, so fix the numbers in the review if you know them. Screenshots add up in any order (one window per snip, or one full-screen shot with all three open) and apply as soon as they're read; click a thumbnail to see everything read from it, × removes one. Skill points the screenshots don't show (a skill tab you didn't paste) are asked for. PNG screenshots work best; a game window that's been smoothly resized (not 100% or 200%) may not read.</li>
           <li><b>Auto build</b> spends every point: first where it adds the most damage after misses, then passives, then buffs. Skills follow the game's prerequisites.</li>
         </ul>
       </div>
@@ -28,14 +29,20 @@
       </div>
     </div>
   </details>
+  <div class="pbar" role="toolbar" aria-label="Build history">
+    <button class="btn sm" id="pundo" type="button" title="Undo (Ctrl+Z)" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Undo</button>
+    <button class="btn sm" id="predo" type="button" title="Redo (Ctrl+Y)" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="m15 14 5-5-5-5m5 5H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>Redo</button>
+    <button class="btn sm" id="preset" type="button" title="Start a fresh build (Undo brings it back)"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></svg>Reset</button>
+  </div>
   <div class="plan">
     <div class="pcol">
       <div class="card">
         <div class="cardhead"><h3>Import from screenshots</h3><span id="pimpst" class="pill"></span></div>
         <label class="drop" id="pimpdrop"><input type="file" id="pimpfile" accept="image/*" multiple>
-          <span>Drop, pick or paste (Ctrl+V) screenshots of your <b>Character Stat</b>, <b>Equipment Inventory</b> and <b>Skill Inventory</b> windows, in any order, one at a time or together. You check what was read before it's applied.</span></label>
-        <p id="pimpreads"></p>
-        <div id="pimprev"></div>
+          <span>Paste (Ctrl+V), drop or pick screenshots of your <b>Character Stat</b>, <b>Equipment Inventory</b> and <b>Skill Inventory</b> windows: one snip at a time, or one full-screen shot with all three open. Each one is applied right away; Undo takes it back off.</span></label>
+        <div id="pimpshots" class="pishots"></div>
+        <p class="tiny" id="pimpnote"></p>
+        <div id="pimpsp"></div>
       </div>
       <div class="card">
         <div class="seg small" id="pclass">
@@ -121,4 +128,7 @@
       </div>
     </div>
   </div>
+  <div id="pishotpop" class="srch" hidden><div class="srchbox setbox pibox" role="dialog" aria-modal="true" aria-labelledby="pishothd">
+    <div class="sethead"><h2 id="pishothd">Screenshot</h2><button class="btn setx" id="pishotx" type="button" aria-label="Close" title="Close (Esc)">×</button></div>
+    <div id="pishotbody"></div></div></div>
 </section>

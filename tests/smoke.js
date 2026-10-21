@@ -50,29 +50,43 @@ const boxGaps = require("./boxgaps");
     check((await p.textContent("#pspleft")).includes("spent") || (await p.textContent("#pspleft")).includes("spare"), `${c} 45 auto-build spends all SP`);
     check(+(await p.textContent("#pdps")).replace(/,/g, "") > 0, `${c} 45 has damage`);
   }
-  // screenshot import (Danny's in-game windows): level, AP after gear, gear, skills
-  await p.setInputFiles("#pimpfile", ["stat", "equip", "skill"].map(f => path.resolve(__dirname, `fixtures/${f}.png`)));
-  await p.waitForSelector("#piapply", {timeout: 30000});
-  await p.click("#piapply");
+  // screenshot import (Danny's in-game windows): applied as soon as read (no Apply step, Danny 10-21): level, AP after gear, gear, skills
+  const shots = n => p.waitForFunction(n => document.querySelectorAll("#pimpshots .pishot").length === n && !/Reading/.test(document.querySelector("#pimpst").textContent), n, {timeout: 30000});
+  await p.setInputFiles("#pimpfile", ["stat", "equip", "skill"].map(f => path.resolve(__dirname, `fixtures/${f}.png`))); await shots(3);
   const ap = await p.$$eval("#pSTR,#pDEX,#pINT,#pLUK", l => l.map(x => x.value).join(" "));
-  check(ap === "4 4 127 25" && (await p.textContent("#psummary")).startsWith("Level 28 Magician · Ice Wand · Magic Claw 20") && (await p.textContent("#pgearsum")) === "5 pieces", `screenshot import (AP ${ap})`);
-  await p.click("#pgearclear"); await p.click("#pireset");
-  check(!(await p.textContent("#pimprev")).trim() && !(await p.textContent("#pimpreads")).trim(), "screenshot import Reset clears everything");
+  check(ap === "4 4 127 25" && (await p.textContent("#psummary")).startsWith("Level 28 Magician · Ice Wand · Magic Claw 20") && (await p.textContent("#pgearsum")) === "5 pieces" && !(await p.$("#piapply")), `screenshot import applies itself (AP ${ap})`);
+  await p.click("#preset"); await shots(0);
+  check(!(await p.textContent("#pimpnote")).trim() && (await p.textContent("#psummary")).startsWith("Level 30 Fighter") && (await p.textContent("#pgearsum")) === "none", "builder Reset: fresh build, screenshots cleared");
   // Danny's Lv28 Archer: every skill level read (The Eye of Amazon's used to fail), and the builder's own numbers match his stat window
-  await p.setInputFiles("#pimpfile", ["stat", "equip", "skill"].map(f => path.resolve(__dirname, `fixtures/bow-${f}.png`)));
-  await p.waitForSelector("#piapply", {timeout: 30000});
-  const bsk = await p.$$eval("#pimprev input[data-sk]", l => l.length);
-  await p.click("#piapply");
+  await p.setInputFiles("#pimpfile", ["stat", "equip", "skill"].map(f => path.resolve(__dirname, `fixtures/bow-${f}.png`))); await shots(3);
+  const bsk = await p.evaluate(() => Object.values(BLD.S.sp).filter(v => v > 0).length);
   const bst = await p.evaluate(() => [...document.querySelectorAll("#plan .card")].find(c => c.querySelector("h3")?.textContent === "Character stats")?.innerText.replace(/\s+/g, " "));
   check(bsk === 5 && (await p.textContent("#psummary")).startsWith("Level 28 Archer · Battle Bow") && /ACCURACY 66 AVOID 28 .*HP \/ MP 845 \/ 669 W.DEF \/ M.DEF 107 \/ 30/.test(bst), `bowman import matches the stat window (${bsk} skills; ${bst})`);
-  await p.click("#pgearclear"); await p.click("#pireset");
+  await p.click("#preset"); await shots(0);
   // the same Archer, equipment uploaded first and the stat window after (Danny, 2026-10-18: stats alone read "11 over the budget")
-  await p.setInputFiles("#pimpfile", path.resolve(__dirname, "fixtures/bow-equip2.png")); await p.waitForSelector("#pimpreads .pill");
+  await p.setInputFiles("#pimpfile", path.resolve(__dirname, "fixtures/bow-equip2.png")); await shots(1);
   check(/Add: Stats/.test(await p.textContent("#pimpst")), "equipment alone asks for the stat window");
-  await p.setInputFiles("#pimpfile", path.resolve(__dirname, "fixtures/bow-stat2.png")); await p.waitForFunction(() => document.querySelectorAll("#pimpreads .pill").length === 2);
-  const bnote = await p.textContent("#pinote");
-  check(/Battle Bow/.test(await p.$eval("#piweapon", s => s.selectedOptions[0].text)) && !/over|more than/.test(bnote), `equipment then stats: weapon read, AP fits (${bnote})`);
-  await p.click("#piapply"); await p.click("#pgearclear"); await p.click("#pireset");
+  await p.setInputFiles("#pimpfile", path.resolve(__dirname, "fixtures/bow-stat2.png")); await shots(2);
+  const bnote = await p.textContent("#pimpnote");
+  check(await p.$eval("#pweapon", s => s.value) === "Battle Bow" && !/over|more than/.test(bnote), `equipment then stats: weapon read, AP fits (${bnote})`);
+  await p.click("#preset"); await shots(0);
+  // Danny's whole screen (2560x1440, all three windows open, 10-21): one paste builds his Lv 30 Hunter; only the 2nd job's
+  // 1 SP (not on the 1st job skill tab) is asked for. Undo takes the pick, then the paste, back off; Redo puts it back
+  await p.setInputFiles("#pimpfile", path.resolve(__dirname, "fixtures/bow-full.png")); await shots(1);
+  const fap = await p.$$eval("#pSTR,#pDEX,#pINT,#pLUK", l => l.map(x => x.value).join(" ")), fsum = await p.textContent("#psummary");
+  check(fap === "29 133 4 4" && fsum.startsWith("Level 30 Hunter · Battle Bow") && (await p.textContent("#pgearsum")) === "6 pieces" &&
+    await p.evaluate(() => ["3000000", "3000001", "3001002", "3001003"].every(id => BLD.S.sp[id] === 15) && BLD.S.sp["3001001"] === 1), `full-screen shot builds the Hunter (AP ${fap}; ${fsum})`);
+  check(/1 Hunter SP isn't in your screenshots/.test(await p.textContent("#pimpsp")), "asks where the Lv 30 Hunter SP went");
+  await p.click(".pithumb"); await p.waitForSelector("#pishotpop:not([hidden])");
+  check(await p.$$eval("#pishotbody li", l => l.length) === 17 && await p.$$eval("#pishotbody .pimk", l => l.length) === 17, "big view: a box and a line for all 17 things read");
+  await p.keyboard.press("Escape"); check(await p.isHidden("#pishotpop"), "Esc closes the big view");
+  await p.click("#pimpsp [data-addsp]");
+  check((await p.textContent("#pspleft")) === "All SP spent" && !(await p.textContent("#pimpsp")).trim(), "picking the skill spends it and the ask goes away");
+  await p.click("#pundo"); check((await p.textContent("#pspleft")) === "1 SP left", "Undo takes the SP back");
+  await p.keyboard.press("Control+z"); await p.waitForTimeout(50);
+  check(await p.$$eval("#pimpshots .pishot", l => l.length) === 0 && (await p.textContent("#psummary")).startsWith("Level 30 Fighter"), "Ctrl+Z takes the screenshot back off");
+  await p.click("#predo"); check(await p.$$eval("#pimpshots .pishot", l => l.length) === 1 && (await p.textContent("#psummary")).startsWith("Level 30 Hunter"), "Redo puts it back");
+  await p.click("#preset"); await shots(0);
   // Path Planner (opened from the builder)
   await p.click("#ppath");
   await p.waitForTimeout(300);

@@ -457,8 +457,44 @@ header h1{cursor:pointer}
 .drop{display:block;border:1.5px dashed var(--line);border-radius:10px;padding:12px;font-size:14px;color:var(--muted);cursor:pointer;background:var(--bg)}
 .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
 .drop input{display:block;margin-bottom:6px;max-width:100%;font-size:14px}
-.pigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px}
-.pigrid input{width:100%;box-sizing:border-box}
+/* Builder: Undo / Redo / Reset bar, screenshot thumbnails with a box on everything read, "where did this SP go" ask */
+.pbar{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.pbar .btn{display:inline-flex;align-items:center;gap:6px}
+.pbar .btn:disabled{opacity:.45;cursor:default;border-color:var(--line)}
+.drop.busy{cursor:progress;animation:pibusy 1s ease-in-out infinite alternate}
+@keyframes pibusy{to{border-color:var(--accent);background:var(--accent-soft)}}
+.pishots{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.pishots:empty,#pimpnote:empty{display:none}
+#pimpnote{margin:10px 0 0}
+.pishot{display:inline-flex;flex-direction:column;gap:5px;margin:0;padding:6px;background:var(--bg);border:1px solid var(--line);border-radius:10px}
+.pishot.new{animation:popin .22s ease-out}
+.pithumb{all:unset;position:relative;display:block;height:84px;border-radius:6px;overflow:hidden;cursor:zoom-in}
+.pithumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pithumb img{display:block;height:100%;width:auto;image-rendering:pixelated}
+.pishot.bad .pithumb{opacity:.6}
+.pishot figcaption{width:0;min-width:100%;display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.pix{all:unset;cursor:pointer;font-size:16px;line-height:1;padding:0 4px;border-radius:4px}
+.pix:hover,.pix:focus-visible{color:var(--bad);background:var(--panel)}
+.pimk{position:absolute;box-sizing:border-box;border:1.5px solid var(--pk,var(--accent));border-radius:2px;pointer-events:none;box-shadow:0 0 0 1px rgba(255,255,255,.35)}
+.pimk-item{--pk:var(--leaf)}
+.pimk-skill{--pk:var(--warn)}
+.pisp{margin-top:12px;padding:10px 12px;border:1px solid var(--accent);background:var(--accent-soft);border-radius:10px;animation:popin .2s ease-out}
+.pisp p{margin:0 0 8px;font-size:14px}
+.pispbtns{display:flex;flex-wrap:wrap;gap:6px}
+.pispbtns .btn{display:inline-flex;align-items:center;gap:6px;background:var(--panel)}
+.pispbtns img{image-rendering:pixelated}
+.pibox{width:min(980px,100%)}
+.piview{overflow:auto;max-height:58vh;background:var(--bg);border-radius:8px;padding:10px}
+.pibig{position:relative;margin:0 auto}
+.pibig img{display:block;image-rendering:pixelated}
+.pibig .pimk{pointer-events:auto;border-width:2px}
+.pibig .pimk.hot{box-shadow:0 0 0 3px var(--pk,var(--accent));background:rgba(255,255,255,.18)}
+.piinv{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px;margin-top:12px}
+.piinv h4{margin:0 0 6px}
+.piinv ul{list-style:none;margin:0;padding:0}
+.piinv li{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:6px;font-size:14px;min-height:30px}
+.piinv li.hot{background:var(--accent-soft)}
+.piinv li img{width:28px;height:28px;object-fit:contain;image-rendering:pixelated}
 details.sec>summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:8px}
 details.sec>summary::-webkit-details-marker{display:none}
 details.sec>summary::before{content:"▸";color:var(--accent);font-size:17.5px;transition:transform .15s;display:inline-block}

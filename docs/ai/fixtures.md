@@ -21,6 +21,7 @@ that's gone.
 | bow-skill.png | 406x756 | same Archer, Skill Inventory | 5 skills read, incl. The Eye of Amazon (927e349 bug) |
 | bow-equip2.png | 355x587 | Archer equipment, uploaded first | "Add: Stats" prompt |
 | bow-stat2.png | 745x573 | Archer stats, uploaded after equip2 | weapon Battle Bow, no "over budget" note |
+| bow-full.png | 2557x1439 | Danny's whole screen, Lv 30 Hunter, Skill (1st job tab) + Equipment + Character Stat open | one paste: Lv 30 Hunter, Battle Bow, 6 armor, AP 29/133/4/4, 5 skills, asks for 1 Hunter SP; 17 boxes in big view (smoke.js) |
 | bank-0.png, bank-1.png, bank-2.png, bank-3.png, bank-4.png | ~425x730 | bank window scrolled 0-4 rows | together: Green Mushroom Cap 387, Arrows for Bows 1,970, Set of Match Cards 3, bank 5,825 mesos |
 | bank-inv.png | 846x735 | bank with inventory open beside it | inventory side ignored (no "Equip:" read) |
 | tip-hat-accuracy-lesser.png | 604x263 | 2x crop: scroll tooltip (bullet, bold name, picture box, chat-font description) | features.js: Hat Accuracy Scroll: Lesser |
