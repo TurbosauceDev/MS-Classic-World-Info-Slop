@@ -183,11 +183,15 @@ const boxGaps = require("./boxgaps");
   await p.selectOption("#itcat", "Equip"); await p.selectOption("#itjob", "Warrior"); check(await p.$$eval("#itrows tr[data-id]", r => r.length) > 50, "item filters: warrior equipment");
   await p.selectOption("#itcat", ""); await p.selectOption("#itjob", "");
   // meso.watch live listings + trend (2026-10-19): cheap filter is non-equipment only, sorted by how far under the median
+  // live listings come from poll data; when the feed has none the filter is disabled instead (2026-10-21)
+  if (await p.evaluate(() => !Object.keys(D.pw?.now || {}).length)) check(await p.isDisabled("#itcheap"), "item list: cheap filter disabled without live listings");
+  else {
   await p.click("#itcheap"); { const r = await p.$$eval("#itrows tr[data-id]", r => r.map(x => [x.children[2].textContent, x.children[6].textContent]));
     check(r.length > 5 && r.every(([lv, pw]) => lv === "" && /now [\d,]+/.test(pw)), "item list: cheap in shops now (non-equip, with listing)") }
   check(await p.$$eval("#itrows tr[data-id] td:nth-child(8)", c => c.some(x => /[▲▼]\d+%/.test(x.textContent))), "item list: trend column");
   await p.click("#itrows .ibtn"); check(/Cheapest listed\s*[\d,.]+/i.test(await p.innerText("#itpage")) && /meso\.watch \(cheapest per item only, from streams, updated (just now|\d+ (min|h|days) ago)/.test(await p.textContent("#itpage")) && !/NaN|undefined/.test(await p.textContent("#itpage")), "item page: cheapest live listing");
   await p.click("#itback"); await p.click("#itcheap");
+  }
   await p.fill("#itsearch", "snail shell"); await p.click("#itrows .ibtn");
   check(/Snail/.test(await p.textContent("#itpage .mlist")) && !/NaN|undefined/.test(await p.textContent("#items")), "item page: snail shell drops");
   await p.click("#itpage .mobname"); check(!(await p.isHidden("#mbpage")), "item page monster link opens the monster page");
@@ -265,7 +269,8 @@ const boxGaps = require("./boxgaps");
   // inventory price check: the grind tracker's Use-tab fixture (Danny's screenshot, game pixels)
   // FM Sniper on the build's real meso.watch list (logic with fixed numbers: tests/snipe.js)
   await tab("#t-snipe"); await p.click('#snview [data-v="deal"]');
-  { const r = await p.$$eval("#snrows tr", l => l.map(x => [parseInt((x.querySelector(".snpct") || {}).textContent?.replace("<", "") ?? "NaN"), /under NPC/i.test(x.textContent)]));
+  if (await p.evaluate(() => !Object.keys(D.pw?.now || {}).length)) check(await p.$$eval("#snrows tr", l => l.length === 1 && !!l[0].querySelector(".empty")) && !/NaN|undefined/.test(await p.textContent("#snipe")), "FM Sniper: empty state without live listings");
+  else { const r = await p.$$eval("#snrows tr", l => l.map(x => [parseInt((x.querySelector(".snpct") || {}).textContent?.replace("<", "") ?? "NaN"), /under NPC/i.test(x.textContent)]));
     check(r.length > 0 && r.every(([v, npc]) => v < 100 || npc) && await p.$$eval("#snstats .sntile", l => l.length) === 6, `FM Sniper: deals all under 100% of value or under the NPC price (${r.length} rows)`) }
   await tab("#t-inv"); await p.setInputFiles("#ivfile", path.resolve(__dirname, "../tracker/tests/frames-inv/use-12162.png"));
   await p.waitForFunction(() => /^Read$|had no/.test(document.querySelector("#ivst").textContent), null, {timeout: 60000});

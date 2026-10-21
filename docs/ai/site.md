@@ -255,3 +255,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - `src/js/01-pagectl.js` + `76-polish.js`: PAGECTL lists the list pages; each gets Reset filters + Copy link in `.ctlend` at the end of its filter row (existing buttons keep their handlers, missing ones are generic). Defaults are read in 01 before page scripts restore saved state (fields inside the page section, not in details/modals). Link = `#L={p, v}` (changed fields only); 00-core.js opens the page, 76 applies it. New list page: add it to PAGECTL and the regex in 00-core.js. tests/polish.js.
 - Changelog cards carry `data-t` (ship time, backfilled from git author dates; Oct 16 card is date-only). build.py writes `data-t` = build time into src/pages/log.html for a new card that has none, so commit log.html after building. 76-polish.js adds the time and folds days into `details.logday`.
 - Home is masonry (`.homegrid.masonry`, 1 px rows, ResizeObserver spans). Trap: a Home card's `margin-bottom` is the row gap now; don't add row-gap back. tests/boxgaps.js skips boxes inside folded `<details>`.
+
+## No live listings guard 2026-10-21
+- Since the meso.watch poll switched to list.json (8c25f5c), `D.pw.now`/`listed` are empty. Items "Cheap in shops now" is disabled when PWNOW is empty; FM Sniper shows its empty state.
+- smoke.js and snipe.js branch on `D.pw.now` being empty, so poll data can't turn CI red. Trap: the item-page "Cheapest listed" check only runs when listings exist.

@@ -146,6 +146,8 @@ $("#itsearch").addEventListener("input", e => { S.q = e.target.value; S.all = fa
 for (const [k, el] of [["cat", "#itcat"], ["slot", "#itslot"], ["job", "#itjob"], ["from", "#itfrom"], ["use", "#ituse"]]) $(el).addEventListener("change", e => { S[k] = e.target.value; S.all = false; if (k === "cat") slotOpts(); save(); render() });
 $("#itsrc").addEventListener("change", e => { S.src = e.target.checked; save(); render() });
 $("#itnoq").addEventListener("change", e => { S.noq = e.target.checked; save(); render() });
+// No live listings in the data (meso.watch list.json feed, 2026-10-21): disable the filter instead of showing an empty list
+if (!Object.keys(PWNOW).length) { const c = $("#itcheap"); c.checked = S.cheap = false; c.disabled = true; c.parentElement.title = "No live meso.watch listings in this build."; c.parentElement.classList.add("off") }
 $("#itcheap").addEventListener("change", e => { S.cheap = e.target.checked; S.all = false; if (S.cheap) { S.sort = "now"; S.dir = 1 } save(); render() });
 $("#itreset").addEventListener("click", () => { Object.assign(S, DEF, {q: "", all: false}); sync(); save(); render() });
 $("#itmore").addEventListener("click", () => { S.all = true; render() });
