@@ -238,3 +238,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-21 Danny OK'd audit #3: on phones, wide tables become compact stacked rows (cards with labelled values) instead of sideways scroll.
 - 2026-10-21 Danny: a KPQ tracker on the site plus sturdier, more polished KPQ leaderboards (built as the KPQ timer page + board filters; site rounds marked, Rush only).
 - 2026-10-21 Danny (review thread): push the review fixes to main and keep fixing (CI gating, stale meso.watch listings, summary rebuild lock).
+- 2026-10-21 Danny: item page order = stats, Where to get it, What it's for, then Prices. Settings gets a reset back to factory new (built as two buttons: look and layout only, or erase everything).

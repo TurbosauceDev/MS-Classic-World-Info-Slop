@@ -270,3 +270,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - bf2672f left an empty duplicate "classicmarket.kr market prices" card (no `</div>`) at the top of log.html: every older card nested inside it, smoke "t-log at 390px" failed, and since smoke is the first CI step every later suite was skipped from 69c3e09 on while Pages kept deploying. build.py now asserts `<div>`/`</div>` counts match in each `src/pages/*.html`.
 - CI after the fix: every tests.yml suite runs even when one fails (`!cancelled()`), Playwright pinned 1.56.1, and pages.yml runs smoke.js before each deploy (bot price commits never trigger Site tests), so a red main no longer goes live. shared-data.yml joined `main-pipeline` and retries its push like the polls.
 - Pins: Playwright 1.56.1 (tests, pages), 1.64.1 (meowdb poll, whose 30-min fetch job is now `contents: read`; only its commit job writes).
+
+## Item page order + Settings Reset 2026-10-21
+- Item page (49-items.js): Stats, Where to get it, What it's for, then Prices (Danny 10-21). tests/polish.js "item page section order".
+- Settings › Reset (`src/js/77-reset.js`, card at the end of `#thpop`): `#rstlook` removes `RESET.LOOK` (theme themec navmode pagesize anchors profile; saved profiles/themes kept), `#rstall` clears all localStorage + sessionStorage. First click arms for 5 s (`.btn.danger`), second wipes, drops the hash and reloads. edge.js "reset:"; the settings chip check now expects Layout,Theme,Reset. A new look/layout key belongs in `RESET.LOOK`.

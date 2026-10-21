@@ -97,6 +97,17 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.keyboard.press("Escape"); check(!(await p.isVisible("#thpop")) && await p.evaluate(() => document.activeElement.id) === "thopen", "Esc closes Settings, focus back on the cog");
     check(await p.getAttribute("#thopen", "aria-label") === "Settings", "cog button is labelled Settings");
     await p.click("#thopen"); await p.mouse.click(5, 5); check(!(await p.isVisible("#thpop")), "a click on the backdrop closes Settings"); await ctx.close() }
+  // Settings › Reset (Danny 10-21): one click only arms; look reset keeps data, erase-everything empties storage
+  { const {p, errs, ctx} = await page(); await p.goto(URL);
+    await p.evaluate(() => { localStorage.setItem("navmode", "basic"); localStorage.setItem("pagesize", "5"); localStorage.setItem("pathdone", '["x"]'); localStorage.setItem("kpqt", "[1]") });
+    await p.goto(URL + "#m=2"); await p.click("#thopen"); await p.click("#rstlook");
+    const armed = await p.evaluate(() => [localStorage.getItem("navmode"), /again/.test(document.querySelector("#rstlook").textContent)]);
+    await Promise.all([p.waitForNavigation(), p.click("#rstlook")]); await p.waitForTimeout(200);
+    const look = await p.evaluate(() => [localStorage.getItem("navmode"), localStorage.getItem("pagesize"), localStorage.getItem("pathdone"), document.documentElement.dataset.nav || "", location.hash]);
+    check(armed[0] === "basic" && armed[1] && look[0] == null && look[1] == null && look[2] === '["x"]' && look[3] === "" && look[4] === "", `reset: look and layout (armed ${JSON.stringify(armed)}, after ${JSON.stringify(look)})`);
+    await p.click("#thopen"); await p.click("#rstall"); await Promise.all([p.waitForNavigation(), p.click("#rstall")]); await p.waitForTimeout(200);
+    const left = await p.evaluate(() => Object.keys(localStorage).filter(k => ["pathdone", "kpqt", "navmode"].includes(k) || localStorage.getItem(k) === '["x"]'));
+    check(!left.length && !errs.length, `reset: erase everything (left ${left}, errors ${errs.join(" | ")})`); await ctx.close() }
   // Toggle anchors (Settings): drag Search in the header, kept after reload, Reset all puts it back, hand-edited values ignored, phones keep the default
   { const {p, errs, ctx} = await page({viewport: {width: 1800, height: 1000}}); await p.goto(URL); await p.waitForTimeout(300);
     const at = () => p.$eval("#srchopen", e => { const r = e.getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y)] });
@@ -166,7 +177,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.click("#thopen"); const left = await p.$$eval("#profSel optgroup[label=Yours] option", o => o.map(x => x.value));
     check(left.join() === "ok", `profiles: broken saved profiles are dropped (${left})`);
     const chip = await p.$$eval("#setnav button", b => b.map(x => x.textContent)); await p.click("#setnav button >> text=Theme"); await p.waitForTimeout(500);
-    check(chip.join() === "Layout,Theme" && await p.getAttribute("#setnav button >> text=Theme", "aria-current") === "true", "settings: section chips like the app's, Theme marked after a jump");
+    check(chip.join() === "Layout,Theme,Reset" && await p.getAttribute("#setnav button >> text=Theme", "aria-current") === "true", "settings: section chips like the app's, Theme marked after a jump");
     check(!errs.length, "profiles: no JS errors " + errs.join(" | ")); await ctx.close() }
   // round 3 (Danny 10-20): his screenshot is the default (Search on the left over the sidebar and as wide, small cog on the right
   // in the same row); edit mode also moves the title, resizes the sidebar or puts it right, reorders sidebar sections and Home cards

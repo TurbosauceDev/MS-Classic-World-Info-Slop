@@ -97,8 +97,6 @@ function page(o){
       <p class="sub">${esc(typeOf(it))}${isEq ? ` · level ${s.reqLevel || 0}+` : ""} · item ID ${o.id}${others ? ` · same name: ${others}` : ""}</p><p class="mflags">${flags}</p></div></div>
     ${it.d ? `<p class="idesc">${esc(it.d).replace(/\n/g, "<br>")}</p>` : ""}
     ${stats ? `<h3 class="msec">Stats</h3><dl class="stats mgrid">${stats}</dl>` : ""}</div>
-    <h3 class="msec">Prices ${npcCheaperPill(o.id)}</h3>
-    <div id="itprices">${priceBox(o.id)}</div>
     <h3 class="msec">Where to get it</h3>
     <div class="mcols">
       ${card(`Monster drops <span class="sub">(meowdb player reports; confirmed = net player votes)</span>`, drops, "No drop reports yet.")}
@@ -112,6 +110,8 @@ function page(o){
       ${card("Quests that want it", wants, "No quest asks for it.")}
       ${card("Crafting recipes that use it", makes, "No recipe uses it.")}
     </div>
+    <h3 class="msec">Prices ${npcCheaperPill(o.id)}</h3>
+    <div id="itprices">${priceBox(o.id)}</div>
     ${like.length ? `<h3 class="msec">Similar ${esc(typeOf(it))} for ${esc(it.job && it.job !== "All" ? it.job : "any job")}</h3><div class="tblwrap"><table class="mini"><thead><tr><th>Item</th><th class="num">Lv</th><th>Stats</th><th>Get it</th></tr></thead>
       <tbody>${like.map(x => `<tr><td><button class="linkbtn" data-iopen="${x.id}">${esc(x.it.n)}</button>${x.it.g ? ` <span class="sub">${esc(x.it.g)}</span>` : ""}</td><td class="num">${x.lv}</td><td class="sub">${esc(keyStats(x.it))}</td><td>${srcPills(x)}</td></tr>`).join("")}</tbody></table></div>` : ""}
   </div>`;

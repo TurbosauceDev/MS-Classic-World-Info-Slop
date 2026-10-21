@@ -1051,3 +1051,5 @@ details.sec .controls{box-shadow:none;background:var(--bg)}
   table.kv td{border:0}
   table.stk tbody td:not(.stkhead):not(.stkfull)::before{content:attr(data-l);display:block;font:600 10.5px var(--f-body);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:1px}
 }
+/* Settings › Reset: an armed button (second click does it) */
+.btn.danger{border-color:var(--bad);color:var(--bad)}

@@ -1059,6 +1059,8 @@ details.sec .controls{box-shadow:none;background:var(--bg)}
   table.kv td{border:0}
   table.stk tbody td:not(.stkhead):not(.stkfull)::before{content:attr(data-l);display:block;font:600 10.5px var(--f-body);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:1px}
 }
+/* Settings › Reset: an armed button (second click does it) */
+.btn.danger{border-color:var(--bad);color:var(--bad)}
 
 </style>
 <script>
@@ -2398,6 +2400,10 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   </details>
 
   <div class="changelog">
+    <div class="card" data-t="2026-10-21T17:13:34Z"><div class="cardhead"><h3><span class="ver">v0.13.1</span> Oct 21, 2026 · Item pages reordered, and a way to reset the site</h3></div>
+      <p>Item pages now go stats, then <b>Where to get it</b> and <b>What it's for</b>, then <b>Prices</b>.</p>
+      <p>Settings has a new <b>Reset</b> section: <b>Reset look and layout</b> puts the theme, menu style, page size and header/sidebar back to how the site comes (your saved profiles and themes stay), and <b>Erase everything this site saved</b> makes it like a first visit. Both ask for a second click first.</p>
+    </div>
     <div class="card" data-minor data-t="2026-10-21T16:09:00Z"><div class="cardhead"><h3><span class="ver">v0.13.0</span> Oct 21, 2026 · KPQ timer and a better KPQ leaderboard</h3><span class="pill p-hot">new</span></div>
       <p>New <b>KPQ timer</b> page (Grind Tracker): time Kerning PQ rounds stage by stage with the space bar, see each stage against your best, sum of best and averages, and keep your rounds in this browser. Share your game window and it reads the in-game KPQ clock, so rounds start by themselves and follow the game's time. Turn on sending to put cleared rounds on the leaderboard with your name.</p>
       <p>The <b>KPQ leaderboard</b> gets filters (Rush or Bonus, party size, job, period, timed by), each round's stage times on a click, a Fastest stages card, an About box, and your own line highlighted. The server now drops repeats of the same round and keeps where each round was timed. Fixed for the Grind Tracker's next release: the KPQ clock never read seconds ending in 6 or 9.</p></div>
@@ -2867,7 +2873,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-21T17:07:23Z" data-ver="0.13.0">Site version: v0.13.0 · built Oct 21, 2026 · 17:07 UTC</p>
+  <p class="sitever" data-built="2026-10-21T17:15:00Z" data-ver="0.13.1">Site version: v0.13.1 · built Oct 21, 2026 · 17:15 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -2906,6 +2912,14 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
     <div class="throw"><button class="btn" id="thcopy" type="button" title="A one-line code to paste in Discord">Copy share code</button></div>
     <div class="throw"><input id="thcode" type="text" placeholder="Paste a share code (MSCT1...)" aria-label="Theme share code" spellcheck="false"><button class="btn" id="thadd" type="button">Add</button></div>
     <p class="thnote" id="thmsg" aria-live="polite"></p>
+  </div>
+  <div class="setcard" data-nav="Reset"><h3>Reset</h3>
+    <p class="thnote">Everything here is saved in this browser only. Each button asks you to click again before it does anything.</p>
+    <div class="throw"><button class="btn" id="rstlook" type="button">Reset look and layout</button></div>
+    <p class="thnote">Theme, menu style, page size and where the header and sidebar parts sit go back to how the site comes. Your saved profiles and themes stay in their lists.</p>
+    <div class="throw"><button class="btn" id="rstall" type="button">Erase everything this site saved</button></div>
+    <p class="thnote">Like a first visit: also clears builds, filters, Path planner progress, watch lists, Craft planner items, KPQ timer rounds, profiles, saved themes and the Feedback inbox key.</p>
+    <p class="thnote" id="rstmsg" role="status"></p>
   </div>
 </div></div>
 
@@ -4905,8 +4919,6 @@ function page(o){
       <p class="sub">${esc(typeOf(it))}${isEq ? ` · level ${s.reqLevel || 0}+` : ""} · item ID ${o.id}${others ? ` · same name: ${others}` : ""}</p><p class="mflags">${flags}</p></div></div>
     ${it.d ? `<p class="idesc">${esc(it.d).replace(/\n/g, "<br>")}</p>` : ""}
     ${stats ? `<h3 class="msec">Stats</h3><dl class="stats mgrid">${stats}</dl>` : ""}</div>
-    <h3 class="msec">Prices ${npcCheaperPill(o.id)}</h3>
-    <div id="itprices">${priceBox(o.id)}</div>
     <h3 class="msec">Where to get it</h3>
     <div class="mcols">
       ${card(`Monster drops <span class="sub">(meowdb player reports; confirmed = net player votes)</span>`, drops, "No drop reports yet.")}
@@ -4920,6 +4932,8 @@ function page(o){
       ${card("Quests that want it", wants, "No quest asks for it.")}
       ${card("Crafting recipes that use it", makes, "No recipe uses it.")}
     </div>
+    <h3 class="msec">Prices ${npcCheaperPill(o.id)}</h3>
+    <div id="itprices">${priceBox(o.id)}</div>
     ${like.length ? `<h3 class="msec">Similar ${esc(typeOf(it))} for ${esc(it.job && it.job !== "All" ? it.job : "any job")}</h3><div class="tblwrap"><table class="mini"><thead><tr><th>Item</th><th class="num">Lv</th><th>Stats</th><th>Get it</th></tr></thead>
       <tbody>${like.map(x => `<tr><td><button class="linkbtn" data-iopen="${x.id}">${esc(x.it.n)}</button>${x.it.g ? ` <span class="sub">${esc(x.it.g)}</span>` : ""}</td><td class="num">${x.lv}</td><td class="sub">${esc(keyStats(x.it))}</td><td>${srcPills(x)}</td></tr>`).join("")}</tbody></table></div>` : ""}
   </div>`;
@@ -11037,5 +11051,25 @@ function stackTable(t){
     .observe(document.body, {childList: true, subtree: true});
   for (const t of document.getElementsByTagName("table")) stackTable(t);
 }
+
+// Settings › Reset (Danny 10-21: a way back to factory new). Look and layout = the keys the <head> script and 70-theme /
+// 71-navside / 72-anchors / 74-profiles read; everything = all of this site's storage. A first click arms the button for
+// 5 s ("Click again to ..."), the second does it and reloads without the #share part. window.RESET for tests.
+const RESET = (() => {
+  const LOOK = ["theme", "themec", "navmode", "pagesize", "anchors", "profile"];
+  const wipe = all => { try { if (all){ localStorage.clear(); sessionStorage.clear() } else LOOK.forEach(k => localStorage.removeItem(k)) } catch (e) {}
+    try { history.replaceState(null, "", location.pathname + location.search) } catch (e) {}   // drop a #share link
+    location.reload() };
+  const arm = (id, label, all) => { const b = $(id); if (!b) return; let t = null;
+    b.addEventListener("click", () => {
+      if (t){ clearTimeout(t); t = null; wipe(all); return }
+      b.textContent = "Click again to " + label.toLowerCase(); b.classList.add("danger"); $("#rstmsg").textContent = "";
+      t = setTimeout(() => { t = null; b.textContent = label; b.classList.remove("danger") }, 5000);
+    }) };
+  arm("#rstlook", "Reset look and layout", false);
+  arm("#rstall", "Erase everything this site saved", true);
+  return {LOOK};
+})();
+window.RESET = RESET;
 
 </script>

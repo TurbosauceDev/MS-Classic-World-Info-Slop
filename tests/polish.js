@@ -67,6 +67,9 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     return {card: !!document.querySelector("#items .mhead .mtop"), lines: dd ? (dd.getBoundingClientRect().height < parseFloat(getComputedStyle(dd).fontSize) * 2 ? 1 : 2) : -1,
       bare: [...document.querySelectorAll("#itprices .pxsrc td:last-child")].filter(e => /^\d{4}-\d\d-\d\d$/.test(e.textContent.trim())).length} });
   check(it.card && it.lines === 1 && !it.bare, `item page: header card, effect on one line, relative Updated (${JSON.stringify(it)})`);
+  // Danny 10-21: Stats, then Where to get it and What it's for, then Prices
+  const order = await p.evaluate(() => [...document.querySelectorAll("#items h3.msec")].map(h => h.textContent.trim().split(" ")[0]).filter(t => /^(Stats|Where|What|Prices)$/.test(t)).join(","));
+  check(order === "Stats,Where,What,Prices", `item page section order (${order})`);
 
   // 9. Where to train: one summary line, the working folded under it
   await open("maps"); await p.waitForTimeout(200);
