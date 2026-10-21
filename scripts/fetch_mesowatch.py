@@ -9,7 +9,8 @@ are supported:
   python3 scripts/fetch_mesowatch.py <export.csv> [listings.csv]   # a dev export Danny drops in chat
   python3 scripts/fetch_mesowatch.py <market.json> [listings.csv]  # the raw market file + fresh listings CSV
 listings.csv = the live Free Market listings (meso_watch_fresh_listings.csv format): keeps the cheapest listing per
-non-equipment item ("now"), since equips vary by rolls and scrolls (Danny, 2026-10-19).
+non-equipment item ("now") plus ALL listings per item ("asks"), since equips vary by rolls and scrolls (Danny, 2026-10-19).
+The "asks" field gives the frontend a "Where to buy" list with every shop that has the item, sorted by price.
 Then: python3 scripts/build_data.py prices && python3 scripts/build.py"""
 import csv, json, pathlib, sys
 
@@ -50,18 +51,24 @@ j = {"source": "https://meso.watch/", "read": (generated or "")[:10], "market": 
 if sys.argv[2:]:
     # cheapest live listing per item: {itemId: [price each, qty, channel, map name, seller]}; equipment (1xxxxxx) and
     # per-set items (stars, arrows sold by the set) left out
-    now, at = {}, None
+    # ALSO: all listings per item in "asks" for the "Where to buy" / deal finder UI (v0.12.7)
+    now, asks, at = {}, {}, None
     for r in csv.DictReader(open(sys.argv[2], newline="")):
         at = at or r.get("generated_at")
         kind, _, n = r["id"].partition(":")
         if kind != "basil" or not n.isdigit() or int(n) // 1000000 == 1 or int(n) // 10000 == 207 or (out.get(str(int(n))) or [0] * 5)[4] & 2: continue
         iid, p = str(int(n)), num(r["price"])
-        if p is None or (iid in now and now[iid][0] <= p): continue
-        now[iid] = [p if p < 1 else round(p), int(r.get("qty") or 1), int(r["channel"]) if (r.get("channel") or "").isdigit() else None,
-                    r.get("map") or "", r.get("seller") or ""]
-    j["now"], j["listed"] = now, (at or "")[:16].replace("T", " ")
+        if p is None: continue
+        entry = [p if p < 1 else round(p), int(r.get("qty") or 1), int(r["channel"]) if (r.get("channel") or "").isdigit() else None,
+                 r.get("map") or "", r.get("seller") or ""]
+        asks.setdefault(iid, []).append(entry)
+        if iid not in now or p < now[iid][0]:
+            now[iid] = entry
+    for iid in asks: asks[iid].sort(key=lambda x: x[0])
+    j["now"], j["asks"], j["listed"] = now, asks, (at or "")[:16].replace("T", " ")
 dst = ROOT / "data" / "sources" / "mesowatch_prices.json"
 dst.write_text(json.dumps(j, separators=(",", ":")))
 print(f"{len(out)} items with sales ({sum(not v[4] & 1 for v in out.values())} solid) as of {generated}"
-      + (f", {len(j['now'])} listed now as of {j['listed']}" if "now" in j else "") + f" -> {dst}")
+      + (f", {len(j['now'])} cheapest + {sum(len(v) for v in j.get('asks',{}).values())} total listings now as of {j['listed']}" if "now" in j else "") + f" -> {dst}")
+
 
