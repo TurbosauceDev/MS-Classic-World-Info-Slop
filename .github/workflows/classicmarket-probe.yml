@@ -1,0 +1,15 @@
+# Manual one-off: prints the shape (no values) of classicmarket.kr's logged-in price endpoints using the
+# CLASSICMARKET_COOKIE secret. Delete once Layer B is built.
+name: classicmarket probe
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/classicmarket_probe.py
+        env:
+          CLASSICMARKET_COOKIE: ${{ secrets.CLASSICMARKET_COOKIE }}
