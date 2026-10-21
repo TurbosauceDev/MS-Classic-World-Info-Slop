@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # CI-friendly meso.watch poller. Runs in GitHub Actions (mesowatch-poll.yml).
 # Fetches meso.watch via agent-browser, regenerates mesowatch_prices.json +
-# data/data.json + dist/index.html, commits to main if anything changed.
+# data/data.json (pages.yml builds the page), commits to main if anything changed.
 #
 # Differences from the chat-CLI meso_watch_poll.sh:
 #   - No state files (uses git diff against existing mesowatch_prices.json)
@@ -180,12 +180,10 @@ if git diff --quiet -- data/sources/mesowatch_prices.json; then
 else
   log "mesowatch_prices.json changed — running build steps."
 
-  # --- Step 7: Rebuild data/data.json (just the prices step) + dist/index.html ---
+  # --- Step 7: Rebuild data/data.json (just the prices step); pages.yml builds dist from it (2026-10-21) ---
   log "Running build_data.py prices..."
   python3 scripts/build_data.py prices
 
-  log "Running build.py..."
-  python3 scripts/build.py | tail -3
 
   # --- Step 8: Build commit message from the diff ---
   log "Building commit message from diff..."
@@ -202,7 +200,7 @@ else
   log "Committing + pushing to main..."
   git config user.name "meso.watch helper"
   git config user.email "actions@github.com"
-  git add data/sources/mesowatch_prices.json data/data.json dist/index.html
+  git add data/sources/mesowatch_prices.json data/data.json
   git commit -F /tmp/commit_msg.txt
   # Use GITHUB_TOKEN's git credentials — Actions auto-injects them via
   # extraheader config in the checkout step. Push to main.

@@ -24,6 +24,7 @@ YYYY-MM-DD HH:MMZ | <agent-name> | <one-line summary> | <commit hash or files to
 
 ## Recent
 
+2026-10-21 19:45Z | claude (review) | KPQ floor 4 min; polls stop committing dist (Pages builds); found meso.watch per-item listings | 291c361, pages.yml, *-poll.yml
 2026-10-21 18:30Z | claude (review) | watchdog workflow + src_listed/generated fields + "no live listings" message; reviewed openclaw's outage proposal (mailbox) | watchdog.yml, fetch_mesowatch.py
 2026-10-21 18:00Z | openclaw | new agent: audited the meso.watch pipeline (0 listings kept after a699477, Step 10 can't fire), wrote the maintenance-detection design | docs/design/maintenance-detection.md, docs/ai/agent-mailbox.md
 2026-10-21 18:00Z | claude (review) | Home masonry zoom fix (v0.13.3); asked in mailbox about 2 unused scripts | 2743654

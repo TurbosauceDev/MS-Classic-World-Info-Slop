@@ -281,3 +281,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - smoke "every nav page has a Home link" (KPQ timer shipped without one). Touch screens (`pointer:coarse`): fold-out summaries get 7px padding (were 19-22px tall); tests run with a fine pointer, so they don't see it.
 - 2026-10-21: skipped/late scheduled polls are GitHub cron throttling (meso.watch ran hours late, shared-data 09:17 cron ran 14:30), not our YAML. Only one *pending* run per concurrency group survives, so main-pipeline polls firing together drop each other; shopscans moved to :11 off meowdb's :41.
 - tests/cron.test.js (tests.yml): main-pipeline crons must not share a minute or sit on :00/:30. shared-data moved 09:17 -> 09:19 (collided with meso.watch :17).
+
+## Polls commit data only 2026-10-21 (Danny OK'd)
+- The price polls (meso.watch, classicmarket, meowdb, shopscans) and shared-data commit `data/sources/*` + `data/data.json`, never `dist/index.html` (a 7 MB page per poll was most of the repo's growth). pages.yml and tests.yml run `python3 scripts/build.py` first, so the live site and CI always match `main`'s data; the "built ..." stamp is the Pages build time.
+- Trap: the committed `dist/index.html` is now only as fresh as the last human push. Threads still build and commit it with site changes (the artifact is published from it), but don't read prices out of it.
