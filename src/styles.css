@@ -519,6 +519,12 @@ details.sec>summary:hover h2{color:var(--accent)}
 .homecat.bill .hlink .hic{display:block;grid-row:1/3;width:34px;height:34px;margin:0}
 .homecat.bill .hlink b,.homecat.bill .hlink span{grid-column:2}
 ::view-transition-group(*){animation-duration:.35s;animation-timing-function:cubic-bezier(.2,.7,.2,1)}
+/* the browser's default stretches each card's old/new picture to the moving box (a small card's snapshot scaled to billboard
+   width = giant ghost text, both cross-fading = flashing). Pin both at their real size, top-left, clipped by the box; the old
+   one fades out fast. The page behind the cards (root) swaps at once instead of cross-fading two footers. */
+::view-transition-old(*),::view-transition-new(*){height:100%;object-fit:none;object-position:left top;mix-blend-mode:normal}
+::view-transition-old(*){animation-duration:.18s}
+::view-transition-old(root),::view-transition-new(root){animation:none}
 /* small polish: soft depth on panels, gentle motion on open/close and hover. All motion is off under prefers-reduced-motion
    (rule above); nothing here touches the Home cards. */
 ::selection{background:color-mix(in srgb,var(--accent) 30%,transparent);color:var(--ink)}

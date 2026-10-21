@@ -527,6 +527,12 @@ details.sec>summary:hover h2{color:var(--accent)}
 .homecat.bill .hlink .hic{display:block;grid-row:1/3;width:34px;height:34px;margin:0}
 .homecat.bill .hlink b,.homecat.bill .hlink span{grid-column:2}
 ::view-transition-group(*){animation-duration:.35s;animation-timing-function:cubic-bezier(.2,.7,.2,1)}
+/* the browser's default stretches each card's old/new picture to the moving box (a small card's snapshot scaled to billboard
+   width = giant ghost text, both cross-fading = flashing). Pin both at their real size, top-left, clipped by the box; the old
+   one fades out fast. The page behind the cards (root) swaps at once instead of cross-fading two footers. */
+::view-transition-old(*),::view-transition-new(*){height:100%;object-fit:none;object-position:left top;mix-blend-mode:normal}
+::view-transition-old(*){animation-duration:.18s}
+::view-transition-old(root),::view-transition-new(root){animation:none}
 /* small polish: soft depth on panels, gentle motion on open/close and hover. All motion is off under prefers-reduced-motion
    (rule above); nothing here touches the Home cards. */
 ::selection{background:color-mix(in srgb,var(--accent) 30%,transparent);color:var(--ink)}
@@ -2061,6 +2067,8 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </details>
 
   <div class="changelog">
+    <div class="card"><div class="cardhead"><h3><span class="ver">v0.11.2</span> Oct 21, 2026 · Smoother Home cards</h3></div>
+      <p>Clicking a Home section card no longer flashes: the cards glide into place with sharp text instead of stretching and blinking.</p></div>
     <div class="card"><div class="cardhead"><h3><span class="ver">v0.11.1</span> Oct 21, 2026 · Feedback page</h3></div>
       <p>New <b>Feedback</b> page (link at the bottom of every page, or under More in the two-row layout): tell us about a bug, a wrong number or an idea. Notes go straight to the people running the site; add a Discord or in-game name if you'd like an answer. Nothing else about you is kept. The page sits in one centered column.</p></div>
     <div class="card" data-minor><div class="cardhead"><h3><span class="ver">v0.11.0</span> Oct 21, 2026 · Craft planner</h3><span class="pill p-hot">new</span></div>
@@ -2428,7 +2436,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-21T02:47:47Z" data-ver="0.11.1">Site version: v0.11.1 · built Oct 21, 2026 · 02:47 UTC</p>
+  <p class="sitever" data-built="2026-10-21T02:49:51Z" data-ver="0.11.2">Site version: v0.11.2 · built Oct 21, 2026 · 02:49 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button></div>
 </footer>

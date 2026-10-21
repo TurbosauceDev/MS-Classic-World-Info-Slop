@@ -131,6 +131,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   redrawn each minute. Smoke "meso.watch state on Home" pins the text; keep `.sitever` the first match (smoke reads the version from it).
 - tests/edge.js "tracker server reply hostileName" checks a markup player name shows as literal text on the KPQ board.
 - Unset path vars write to a literal folder named "undefined" (the 10-06 Credits screenshots landed at repo root). Gitignored now; save screenshots to the scratchpad.
+- Home billboard (homeBig) uses View Transitions: the browser default stretches each card snapshot to the moving box and cross-fades (10-21 "cards flash" report: giant ghost text). styles.css pins `::view-transition-old/new(*)` to `object-fit:none` top-left; root swaps without fading. tests/edge.js "Home billboard transition" checks it. Any new view transition inherits this.
 
 ## Splits
 - 10-18: `src/index.html` split into `src/pages/<id>.html` (built dist identical). Edit a page's file, not the shell; build.py asserts every page file has a slot.
