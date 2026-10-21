@@ -889,6 +889,12 @@ html.anchoring :is(.navcol,.homegrid){user-select:none}
 #cpnowx{margin:10px 0 0}
 #cpst:empty,#cpnowc:empty,#cpnowx:empty{display:none}
 .cpbig{font-size:16px;margin:0 0 4px}
+/* scanned-inventory peek (invPeek in 00-core.js) */
+.ipeek{position:relative;display:inline-block;color:var(--accent);text-decoration:underline dotted;cursor:help;outline:none}
+.ipeek-pop{position:absolute;left:0;top:calc(100% + 6px);z-index:40;min-width:228px;max-width:min(372px,86vw);padding:10px;border-radius:10px;background:var(--panel);border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .16s ease,transform .16s ease,visibility .16s;color:var(--ink);text-decoration:none;cursor:default}
+.ipeek:hover .ipeek-pop,.ipeek:focus-within .ipeek-pop{opacity:1;visibility:visible;transform:none}
+.ipeek-h{display:block;font:600 12px var(--f-body);color:var(--muted);margin:0 2px 8px}
+.ipeek-g{display:grid;grid-template-columns:repeat(auto-fill,34px);gap:4px;padding:6px;border-radius:8px;background:var(--bg);max-height:260px;overflow:auto}
 
 </style>
 <script>
@@ -2449,7 +2455,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-21T04:20:58Z" data-ver="0.11.3">Site version: v0.11.3 · built Oct 21, 2026 · 04:20 UTC</p>
+  <p class="sitever" data-built="2026-10-21T04:59:05Z" data-ver="0.11.3">Site version: v0.11.3 · built Oct 21, 2026 · 04:59 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button></div>
 </footer>
@@ -2501,6 +2507,14 @@ function fillIcons(root){
   for (const i of root.querySelectorAll(".ri[data-item] > i:first-child, tr[data-id] > td > .ibtn > i:first-child")){
     const id = i.closest("[data-item]")?.dataset.item || i.closest("tr[data-id]").dataset.id, b = D.iicons[id];
     if (!b) continue; const im = document.createElement("img"); im.src = "data:image/png;base64," + b; im.alt = ""; i.replaceWith(im) }
+}
+// "what was scanned" peek: {item id: count} -> a link that shows the items as an inventory grid on hover/focus.
+// Shared by Price check and the Craft planner (any screenshot reader can use it)
+function invPeek(counts, label){
+  const ids = Object.keys(counts).filter(id => D.items[id]).sort((a, b) => D.items[a].n.localeCompare(D.items[b].n));
+  if (!ids.length) return "";
+  return `<span class="ipeek" tabindex="0">${label || `see what was read (${ids.length})`}<span class="ipeek-pop" role="tooltip"><span class="ipeek-h">Read from your screenshots</span><span class="ipeek-g">${ids.map(id =>
+    `<span class="ri" data-item="${id}" data-n="${counts[id]}" title="${esc(D.items[id].n)} ×${counts[id]}">${D.iicons[id] ? `<img src="data:image/png;base64,${D.iicons[id]}" alt="">` : "<i></i>"}${counts[id] > 1 ? `<b>${counts[id] > 9999 ? Math.round(counts[id] / 1000) + "k" : counts[id]}</b>` : ""}</span>`).join("")}</span></span></span>`;
 }
 function assetsIn(){
   fillIcons(document);
@@ -6458,7 +6472,7 @@ function render(){
   const fm = all.reduce((a, o) => a + o.tot, 0), npc = all.reduce((a, o) => a + o.npc * o.qty, 0);
   // Keep or sell rules on what you carry: "sell now" = the sell part of each row at the suggested price
   const sells = all.filter(o => o.ks?.sell > 0), sellNow = sells.reduce((a, o) => a + o.each * o.ks.sell, 0), keeps = all.filter(o => o.ks?.keep > 0).length;
-  $("#ivsum").innerHTML = all.length ? `<p><b>${fmt(fm)} mesos</b> if you sell everything at these prices <span class="sub">(NPCs alone: ${fmt(npc)}${mesos != null ? ` · mesos in your inventory: ${fmt(mesos)}` : ""}${bankMesos != null ? ` · in the bank: ${fmt(bankMesos)}` : ""})</span>.${unknown ? ` <span class="pill p-warn">${unknown} slot${unknown > 1 ? "s" : ""} not read</span>` : ""}</p>
+  $("#ivsum").innerHTML = all.length ? `<p><b>${fmt(fm)} mesos</b> if you sell everything at these prices · ${invPeek(Object.fromEntries(all.filter(o => o.qty).map(o => [o.id, o.qty])))} <span class="sub">(NPCs alone: ${fmt(npc)}${mesos != null ? ` · mesos in your inventory: ${fmt(mesos)}` : ""}${bankMesos != null ? ` · in the bank: ${fmt(bankMesos)}` : ""})</span>.${unknown ? ` <span class="pill p-warn">${unknown} slot${unknown > 1 ? "s" : ""} not read</span>` : ""}</p>
     <p id="ivsell"><b>Sell now: ${fmt(sellNow)} mesos</b> for ${sells.length} item${sells.length === 1 ? "" : "s"} no open quest needs (<a href="#" id="ivkeep">Keep or sell</a> rules); keep ${keeps}. <span class="sub">Equips and potions nothing wants are your call. Counts come from the screenshots; quests ticked done in the Path Planner don't count.</span></p>` : "";
   $("#ivbody").innerHTML = all.map(o => { const it = D.items[o.id];
     return `<tr><td><span class="ri" tabindex="0" data-item="${o.id}" data-n="${o.qty}">${D.iicons[o.id] ? `<img src="data:image/png;base64,${D.iicons[o.id]}" alt="">` : "<i></i>"}</span>
@@ -7426,7 +7440,7 @@ function draw(){
   const inv = inventory(), have = [...inv].filter(x => x[1] > 0);
   // inventory line: hand-typed items can be removed here; screenshots on the Price check
   const shots = window.INVP?.reads() || 0;
-  $("#cpinv").innerHTML = have.length ? `${shots ? `${shots} screenshot${shots > 1 ? "s" : ""} read (<a href="#" data-cpgo="inv">see them on Price check</a>) · <button class="linkbtn" type="button" id="cpclear">clear screenshots</button>` : "No screenshots yet"}${Object.keys(S.hand).length ? ` · by hand: ${Object.entries(S.hand).map(([id, n]) => `<span class="pill">${esc(D.items[id].n)} ×${fmt(n)} <button class="linkbtn" type="button" data-cprm="${id}" aria-label="Remove ${esc(D.items[id].n)}">✕</button></span>`).join(" ")}` : ""} · ${fmt(have.length)} kind${have.length === 1 ? "" : "s"} of item in all.` : "Nothing in your inventory yet: add screenshots or type items in.";
+  $("#cpinv").innerHTML = have.length ? `${shots ? `${shots} screenshot${shots > 1 ? "s" : ""} read (<a href="#" data-cpgo="inv">see them on Price check</a>) · ${invPeek(window.INVP.counts())} · <button class="linkbtn" type="button" id="cpclear">clear screenshots</button>` : "No screenshots yet"}${Object.keys(S.hand).length ? ` · by hand: ${Object.entries(S.hand).map(([id, n]) => `<span class="pill">${esc(D.items[id].n)} ×${fmt(n)} <button class="linkbtn" type="button" data-cprm="${id}" aria-label="Remove ${esc(D.items[id].n)}">✕</button></span>`).join(" ")}` : ""} · ${fmt(have.length)} kind${have.length === 1 ? "" : "s"} of item in all.` : "Nothing in your inventory yet: add screenshots or type items in.";
   if (!ALLOWED.length){
     for (const s of ["#cpnow", "#cpalm"]) $(s).innerHTML = `<tr><td colspan="5" class="empty">Set a craft level above 0 for a profession you've learned.</td></tr>`;
     $("#cpnowc").textContent = ""; $("#cpnowx").textContent = ""; $("#cptot").innerHTML = ""; return }

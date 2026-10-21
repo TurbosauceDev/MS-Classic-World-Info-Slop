@@ -19,6 +19,14 @@ function fillIcons(root){
     const id = i.closest("[data-item]")?.dataset.item || i.closest("tr[data-id]").dataset.id, b = D.iicons[id];
     if (!b) continue; const im = document.createElement("img"); im.src = "data:image/png;base64," + b; im.alt = ""; i.replaceWith(im) }
 }
+// "what was scanned" peek: {item id: count} -> a link that shows the items as an inventory grid on hover/focus.
+// Shared by Price check and the Craft planner (any screenshot reader can use it)
+function invPeek(counts, label){
+  const ids = Object.keys(counts).filter(id => D.items[id]).sort((a, b) => D.items[a].n.localeCompare(D.items[b].n));
+  if (!ids.length) return "";
+  return `<span class="ipeek" tabindex="0">${label || `see what was read (${ids.length})`}<span class="ipeek-pop" role="tooltip"><span class="ipeek-h">Read from your screenshots</span><span class="ipeek-g">${ids.map(id =>
+    `<span class="ri" data-item="${id}" data-n="${counts[id]}" title="${esc(D.items[id].n)} ×${counts[id]}">${D.iicons[id] ? `<img src="data:image/png;base64,${D.iicons[id]}" alt="">` : "<i></i>"}${counts[id] > 1 ? `<b>${counts[id] > 9999 ? Math.round(counts[id] / 1000) + "k" : counts[id]}</b>` : ""}</span>`).join("")}</span></span></span>`;
+}
 function assetsIn(){
   fillIcons(document);
   // rows drawn later from strings built before the icons came (lazyRows) get the same patch

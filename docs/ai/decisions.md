@@ -222,3 +222,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-21 Feedback page under More/footer (Danny asked). Notes go to the tracker Worker (D1), read in a key-protected Inbox on the same page; no IP or sender data kept.
 - 2026-10-21 Pages with one narrow column: About box and content share the content width, centered right of the sidebar; no long empty tail (Danny, Feedback page).
 - 2026-10-21 Danny: always padding between nested boxes and their container; nothing flush to or past a card edge. Stacked cards get a gap too (Craft planner fix; tests/boxgaps.js).
+- 2026-10-21: Screenshot-reading pages show a hover/popup inventory grid of what was scanned (Danny).
