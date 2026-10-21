@@ -242,3 +242,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-21 Danny: keep dropping meso.watch listings older than 6 h (no stale "live" deals). Delete scripts/fetch_classicmarket.py + data/sources/classicmarket_items.json if no agent claims them by 10-23.
 - 2026-10-21 Danny: KPQ leaderboard floor = 4 minutes (server check.js KPQ_MIN 240 s); faster rounds are kept but never counted.
 - 2026-10-21 Danny OK'd: price polls stop committing dist/index.html; Pages builds the page itself.
+- 2026-10-21 Danny: build a character lookup from classicrank.com's API ("Load by IGN"). Keyless browser call on user action is an approved runtime fetch; no read key needed for single lookups, /jobs, /stats.

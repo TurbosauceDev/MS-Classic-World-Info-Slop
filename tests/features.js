@@ -224,6 +224,44 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(JSON.stringify(ss) === "[true,true,true]", `prices: mesoarbitrage + maplestory.watch rows and listings (${ss})`);
     await ctx.close() }
 
+  // classicrank.com "Load by IGN" (59-crlookup.js), API mocked: every job in GET /api/v1/jobs (2026-10-21) maps to a builder
+  // class/branch (Beginner, Pirate -> none), the reply is sanitised (markup, foreign URLs), loading sets the builder and Where to train
+  { const {p, errs, ctx} = await page();
+    const JOBS = [["Beginner","Beginner"],["Archer","Bowman"],["Magician","Magician"],["Pirate","Pirate"],["Thief","Thief"],["Swordsman","Warrior"],
+      ["Crossbowman","Bowman"],["Hunter","Bowman"],["Cleric","Magician"],["Wizard (Fire/Poison)","Magician"],["Wizard (Ice/Lightning)","Magician"],
+      ["Brawler","Pirate"],["Gunslinger","Pirate"],["Assassin","Thief"],["Bandit","Thief"],["Fighter","Warrior"],["Page","Warrior"],["Spearman","Warrior"],
+      ["Ranger","Bowman"],["Sniper","Bowman"],["Mage (Fire/Poison)","Magician"],["Mage (Ice/Lightning)","Magician"],["Priest","Magician"],
+      ["Marauder","Pirate"],["Outlaw","Pirate"],["Chief Bandit","Thief"],["Hermit","Thief"],["Crusader","Warrior"],["Dragon Knight","Warrior"],["White Knight","Warrior"]];
+    const reply = {GGboom: {name: "GGboom", display_name: "GG<b>boom</b>", level: 74, job: "Spearman", job_tier: 2, family: "Warrior", overall_rank: 3, job_rank: 1,
+        level_updated: "2026-10-20T18:58:56Z", photo: "https://classicrank.com/api/avatar/GGboom?v=1", profile_url: "https://classicrank.com/user/GGboom"},
+      Sneaky: {name: "Sneaky", level: 45, job: "Wizard (Ice/Lightning)", family: "Magician", photo: "https://evil.example/x.png", profile_url: "javascript:alert(1)"}};
+    const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64");
+    await ctx.route("https://classicrank.com/**", r => { if (/\/api\/avatar\//.test(r.request().url())) return r.fulfill({status: 200, contentType: "image/png", body: PNG}); const n = decodeURIComponent(r.request().url().split("?")[0].split("/").pop());
+      return reply[n] ? r.fulfill({status: 200, contentType: "application/json", headers: {"access-control-allow-origin": "*"}, body: JSON.stringify({data: reply[n]})})
+        : r.fulfill({status: 404, contentType: "application/json", headers: {"access-control-allow-origin": "*"}, body: '{"error":{"status":404}}'}) });
+    await p.goto(URL); await open(p, "plan");
+    const m = await p.evaluate(J => J.map(([job, family]) => { const j = CRL.jobOf({job, family}); return j.cls ? j.cls + "|" + j.branch : "-" }), JOBS);
+    const okMap = await p.evaluate(m => m.every(v => v === "-" || BLD.BRANCHES[v.split("|")[0]].some(b => b[0] === v.split("|")[1])), m);
+    check(okMap && m.filter(v => v === "-").length === 6 && m[JOBS.findIndex(j => j[0] === "Wizard (Ice/Lightning)")] === "Magician|I/L Wizard" && m[JOBS.findIndex(j => j[0] === "Hermit")] === "Thief|Assassin",
+      `classicrank jobs map to builder jobs (${m.join(", ")})`);
+    await p.fill('.crl[data-for="plan"] input', "GGboom"); await p.click('.crl[data-for="plan"] button');
+    await p.waitForFunction(() => /Spearman/.test(document.querySelector('.crl[data-for="plan"] .crlout').innerText));
+    const b = await p.evaluate(() => { const o = document.querySelector('.crl[data-for="plan"] .crlout'); return {S: BLD.S.cls + "|" + BLD.S.branch + "|" + BLD.S.lvl,
+      bold: !!o.querySelector("b b"), txt: o.innerText.replace(/\s+/g, " "), img: o.querySelector("img")?.src, a: o.querySelector("a").href} });
+    check(!errs.length && b.S === "Warrior|Spearman|74" && !b.bold && /GG<b>boom<\/b>/.test(b.txt) && /Overall #3 · Spearman #1/.test(b.txt) && b.img === "https://classicrank.com/api/avatar/GGboom?v=1" && b.a === "https://classicrank.com/user/GGboom",
+      `Load by IGN sets the builder, escapes the name (${JSON.stringify(b)})`);
+    await open(p, "maps"); await p.fill('.crl[data-for="maps"] input', "Sneaky"); await p.click('.crl[data-for="maps"] button');
+    await p.waitForFunction(() => document.querySelector('.crl[data-for="maps"] .crlout a'));
+    const w = await p.evaluate(() => { const o = document.querySelector('.crl[data-for="maps"] .crlout'); return {cls: $("#cls").value, lvl: $("#lvl").value, img: !!o.querySelector("img"), a: o.querySelector("a").href} });
+    check(!errs.length && w.cls === "I/L Wizard" && w.lvl === "45" && !w.img && w.a === "https://classicrank.com/user/Sneaky", `Load by IGN sets Where to train, drops foreign URLs (${JSON.stringify(w)})`);
+    await p.fill('.crl[data-for="maps"] input', "Nobody"); await p.click('.crl[data-for="maps"] button');
+    await p.waitForFunction(() => /isn't on classicrank/.test(document.querySelector('.crl[data-for="maps"] .crlout').innerText));
+    await p.fill('.crl[data-for="maps"] input', "<img>"); await p.click('.crl[data-for="maps"] button');
+    check(/letters and numbers/.test(await p.innerText('.crl[data-for="maps"] .crlout')), "Load by IGN: unknown name and bad input say so");
+    await p.reload(); await open(p, "plan");
+    check(await p.inputValue('.crl[data-for="plan"] input') === "Sneaky" && /Sneaky/.test(await p.innerText('.crl[data-for="plan"] .crlout')), "Load by IGN: last character remembered after reload");
+    await ctx.close() }
+
   await b.close();
   console.log(fails ? `\n${fails} failed` : "\nall good"); process.exit(fails ? 1 : 0);
 })();

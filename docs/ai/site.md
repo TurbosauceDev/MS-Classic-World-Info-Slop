@@ -1,7 +1,7 @@
 # Site cheatsheet (for Claude threads)
 
 One self-contained page (`dist/index.html`) built from `src/` + `data/data.json`. No server, no external requests except
-Google Fonts and the tracker's live `/api/summary` fetch (Danny OK'd). Also published as the claude.ai artifact.
+Google Fonts, the tracker's live `/api/summary` fetch (Danny OK'd) and the user-initiated classicrank.com "Load by IGN" lookup. Also published as the claude.ai artifact.
 
 ## Pipeline
 ```
@@ -65,6 +65,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 52-shotimport.js | 16 | builder "Import from screenshots": auto-applies, thumbnails + big view, unshown-SP ask |
 | 53-skills.js | | Skills tab |
 | 54-invprice.js | | Price check (inventory/bank screenshots → meso.watch `PW` prices; Keep or sell column via `KEEPSELL` from 47-keep.js) |
+| 59-crlookup.js | | Load by IGN (Builder + Where to train): keyless classicrank.com `/api/v1/characters/{name}`, badge, `jobOf` job → class/branch; `window.CRL` for tests |
 | 58-craftplan.js | | Craft planner (Mesos and Trade): craft levels + Price check's screenshot reads (`INVP.counts()`, `invupdate` event) + hand entry → craft now / almost (farm maps, buy cost) / best mix; `window.CPLAN` for tests |
 | 57-scrollscan.js | | Price check › Scroll check: getDisplayMedia, live Use tab grid, tooltip read (readers.js `readTextLines`) matched to scroll name/desc, slot = nearest to tooltip corner; feeds 54 via `INVP.live` |
 | 55-bcompare.js | | Builder "Compare two jobs" (buildAt per side, or "This build" = BLD.S) |
@@ -98,7 +99,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   (`mapLink()`, click opens World Map card), `.nname` NPC (`npcLink()`), `.mobname` monster (`mobLink()`).
 - **Per-viewer state:** localStorage in try/catch; load an object with `savedState(key, S)` (00-core.js: drops unknown keys and wrong types), then range-check enums/levels.
   Share links (`HASH.x`) are just as untrusted: validate before use (see the sanitizers in 50-builder.js / 60-planner.js). Keys in use: tab planner path pathdone qsort qeq qval ctown craft craftlv
-  qcompact keep keephave mobs items skills navi wmap expc theme themes themec anchors train (Where to train + Builder hand-off) bcmp (job compare) snipe snipewatch snipeseen snipetarget snipetools snipealert snipepresets (FM Sniper) fbkey (Feedback inbox) cplan (Craft planner) profiles profile (Settings profiles).
+  qcompact keep keephave mobs items skills navi wmap expc theme themes themec anchors train (Where to train + Builder hand-off) bcmp (job compare) snipe snipewatch snipeseen snipetarget snipetools snipealert snipepresets (FM Sniper) fbkey (Feedback inbox) cplan (Craft planner) profiles profile (Settings profiles) cr_char (Load by IGN).
 - **Explanations:** a closed `<details class="howto">` at the top of the tab, short bullets.
 - **Share links:** extend the existing `#key=value&` hash (69-search.js); never a new scheme.
 - **Settings (cog `#thopen`, Danny 10-20):** `#thpop` is an inset modal (`.srch.setm` > `.srchbox.setbox`) next to `#srch` near the end of index.html, not inside the header (`.wrap` zoom); tests close it with `#thclose` (the backdrop covers the cog, so clicking `#thopen` again times out). Toggle anchors (`src/js/72-anchors.js`, option A of the mockups): movers over `#srchopen`/`#thopen` move them by `transform` from their natural spot (layout never shifts), localStorage `anchors` = {id: {x share of header width, y px, w px once resized}}, cleaned on load; off under 761px. `window.ANCH` for tests. tests/edge.js "anchors:" checks drag/reload/reset/bad values/phone, F1, center guide, scale, Colours.
@@ -285,3 +286,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Polls commit data only 2026-10-21 (Danny OK'd)
 - The price polls (meso.watch, classicmarket, meowdb, shopscans) and shared-data commit `data/sources/*` + `data/data.json`, never `dist/index.html` (a 7 MB page per poll was most of the repo's growth). pages.yml and tests.yml run `python3 scripts/build.py` first, so the live site and CI always match `main`'s data; the "built ..." stamp is the Pages build time.
 - Trap: the committed `dist/index.html` is now only as fresh as the last human push. Threads still build and commit it with site changes (the artifact is published from it), but don't read prices out of it.
+## Load by IGN (classicrank.com) 2026-10-21
+- `src/js/59-crlookup.js` + `.crl[data-for=plan|maps]` slots (CSS in a `<style>` in src/pages/plan.html, kept out of styles.css). Keyless GET on Load/Enter only; CORS `*`, 30 req/min per IP, 429 + Retry-After when busy (classicrank.com/developer). No read key needed; never put one in src/ or dist/.
+- Reply sanitised by `clean()`: name `[A-Za-z0-9]{1,13}`, ints range-checked, photo/profile URLs only `https://classicrank.com/...`. Job map covers every `/api/v1/jobs` name (3rd job → its 2nd job; Beginner/Pirate → level only). tests/features.js "Load by IGN" mocks the API.
+- Follow-ups not built: `@char` in Ctrl+K, job census from keyless `/jobs` + `/stats` (per-job counts via `?job=X&limit=1` meta.total), tracker auto-setup.

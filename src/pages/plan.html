@@ -29,6 +29,15 @@
       </div>
     </div>
   </details>
+  <style>/* Load by IGN (59-crlookup.js); scoped here, not in styles.css */
+  .crl{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 10px;margin:0 0 12px}
+  .crl label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+  .crl input{width:11em}
+  .crlout{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 260px}
+  .crlout:empty{display:none}
+  .crlimg{width:48px;height:48px;object-fit:contain;image-rendering:pixelated;flex:none}
+  .crlout a{color:var(--accent)}</style>
+  <div class="crl" data-for="plan"></div>
   <div class="pbar" role="toolbar" aria-label="Build history">
     <button class="btn sm" id="pundo" type="button" title="Undo (Ctrl+Z)" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Undo</button>
     <button class="btn sm" id="predo" type="button" title="Redo (Ctrl+Y)" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="m15 14 5-5-5-5m5 5H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>Redo</button>
