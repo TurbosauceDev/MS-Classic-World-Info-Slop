@@ -66,9 +66,9 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(!errs.length, "no JS errors " + errs.join(" | "));
     await ctx.close() }
 
-  // Danny 10-21: cards stacked flush, inner tables/inputs touching. Filled page, desktop and phone: every box padded, no touching
+  // Danny 10-21: cards stacked flush, inner tables/inputs touching. Filled page (materials free, so rows don't hinge on live prices), desktop and phone: every box padded, no touching
   { const {p, errs, ctx} = await page();
-    await p.evaluate(() => localStorage.setItem("cplan", JSON.stringify({lv: [3, 3, 3, 3, 3, 3], hand: {4010001: 40, 4010000: 40, 1002029: 3, 4000021: 50, 4003000: 30, 4000003: 30}})));
+    await p.evaluate(() => localStorage.setItem("cplan", JSON.stringify({lv: [3, 3, 3, 3, 3, 3], free: 1, hand: {4010001: 40, 4010000: 40, 1002029: 3, 4000021: 50, 4003000: 30, 4000003: 30}})));
     await p.reload(); await p.evaluate(() => { const b = document.querySelector("#t-cplan"); document.querySelector("#c-" + b.dataset.cat).click(); b.click() });
     for (const w of [1300, 390]){
       await p.setViewportSize({width: w, height: 900}); await p.waitForTimeout(150);
