@@ -15,14 +15,14 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     const all = [...D.quests, ...D.citq], il = all.flatMap(q => q.il);
     const ids = il.every(x => x.length === 4 && /^\d+$/.test(x[3])), rows = il.every(x => D.items[x[3]]);
     // fake prices: 2 turn-in items (one 403xxxx quest item, which never counts), get / pick 1 / random / class-only groups
-    const set = (id, v) => { PW[id] = [v, 0, 0, 10, 0]; delete CM[id] };
+    const set = (id, v) => { PW[id] = [v, 0, 0, 10, 0]; delete CM[id]; delete CMP[id]; delete MDB[id] };
     const A = "4000000", B = "4000001", C = "2000000", E = "2000001", F = "2000002", G = "2000003", H = "2000006";
     [[A, 100], [B, 50], [C, 10], [E, 30], [F, 70], [G, 5], [H, 1000]].forEach(([id, v]) => set(id, v));
     const q = {name: "Test quest", lvl: 20, mesos: 500, kl: [], il: [["a", 10, null, A], ["b", 4, null, B], ["q", 1, null, "4031000"]],
       ri: [{k: "get", it: [[C, 3]]}, {k: "pick", it: [[E, 1], [F, 1]]}, {k: "rand", it: [[G, 2, 50], [C, 1, 50]]},
            {k: "pick", job: "Warrior", it: [[H, 1]]}, {k: "pick", job: "Magician", it: [[G, 1]]}]};
     const m = questMarket(q);
-    delete PW[B]; const part = questMarket(q), cell = marketCell(q);
+    delete PW[B]; delete CMP[B]; delete MDB[B]; const part = questMarket(q), cell = marketCell(q);
     // stacking: Pia and the Blue Mushroom (kills Blue Mushroom) stacks with Jane and the Mushroom (needs Blue Mushroom Caps)
     const jane = D.quests.find(x => x.name === "Jane and the Mushroom"), st = stackWith(jane), far = st.some(([, x]) => Math.abs(x.lvl - jane.lvl) > 10);
     return {ids, rows, m, part, cell, pia: st.some(([, x]) => x.name === "Pia and the Blue Mushroom"), self: st.some(([, x]) => x === jane), far};
