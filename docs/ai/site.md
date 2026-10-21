@@ -86,7 +86,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Recipes
 - **New page/tab:** markup `<section id="x" hidden>` in src/pages/x.html + a `<!--@page x-->` slot in index.html; button `#t-x` with `data-cat` in `.subs`
   (under its section's `.sgh` title, with `<img class="nic" data-pool="x">` and a pool `P.x` in 71-navside.js); `.hlink`
-  on the Home card; bump the home-link count in tests/smoke.js (25 now) and the sidebar page count (21), Home sprites in tests/pages.js + smoke.js (31), the nav page count in tests/edge.js "My Character still loads" (23), add a click-through check.
+  on the Home card; bump the home-link count in tests/smoke.js (26 now) and the sidebar page count (21), Home sprites in tests/pages.js + smoke.js (32), the nav page count in tests/edge.js "My Character still loads" (23), add a click-through check.
   Give the `.hlink` an `<img class="hic" data-ic="i:<item>|m:<mob>|s:<skill>">` sprite (filled from D in 00-core.js,
   shown only when the card is a billboard) and bump the sprite count in smoke.js (29 = 7 headers + 22 links).
 - **Changelog:** every user-visible change gets a dated entry at the top of `#log` (grep `id="log"`, read ~20 lines there).
@@ -275,3 +275,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Item page (49-items.js): Stats, Where to get it, What it's for, then Prices (Danny 10-21). tests/polish.js "item page section order".
 - Settings › Reset (`src/js/77-reset.js`, card at the end of `#thpop`): `#rstlook` removes `RESET.LOOK` (theme themec navmode pagesize anchors profile; saved profiles/themes kept), `#rstall` clears all localStorage + sessionStorage. First click arms for 5 s (`.btn.danger`), second wipes, drops the hash and reloads. edge.js "reset:"; the settings chip check now expects Layout,Theme,Reset. A new look/layout key belongs in `RESET.LOOK`.
 - Smoke/snipe no longer need real live listings (10-21: dropping stale ones left 0 and smoke went red, which now blocks Pages): smoke checks the empty state when `PWNOW` is empty, snipe.js's file:// check swaps in its fixture.
+
+## Titles, page links, touch 2026-10-21
+- `setTitle(name)` (00-core.js) sets "<page> · MS Classic World Data Slop" on every tab click, plain title on Home; FM Sniper's "(n) " badge is kept in front (56-snipe.js strips/adds it on document.title). `#g=<page id>` (plain, not base64: HASH parse special-cases `g`) opens that page; other share keys still win. edge.js "#g= page link + page titles".
+- smoke "every nav page has a Home link" (KPQ timer shipped without one). Touch screens (`pointer:coarse`): fold-out summaries get 7px padding (were 19-22px tall); tests run with a fine pointer, so they don't see it.

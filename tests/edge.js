@@ -97,6 +97,11 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.keyboard.press("Escape"); check(!(await p.isVisible("#thpop")) && await p.evaluate(() => document.activeElement.id) === "thopen", "Esc closes Settings, focus back on the cog");
     check(await p.getAttribute("#thopen", "aria-label") === "Settings", "cog button is labelled Settings");
     await p.click("#thopen"); await p.mouse.click(5, 5); check(!(await p.isVisible("#thpop")), "a click on the backdrop closes Settings"); await ctx.close() }
+  // #g=<page> opens that page; the tab title names the open page (10-21); a bad page id falls back to Home
+  { const {p, errs, ctx} = await page(); await p.goto(URL + "#g=kpqt"); await p.waitForTimeout(200);
+    const a = [await p.isHidden("#kpqt"), await p.title()]; await p.click("#sbhome"); const h = await p.title();
+    await p.goto(URL + "#g=nope<x>"); await p.reload(); await p.waitForTimeout(200);
+    check(!a[0] && a[1] === "KPQ timer · MS Classic World Data Slop" && h === "MS Classic World Data Slop" && !errs.length, `#g= page link + page titles (${JSON.stringify([a, h])})`); await ctx.close() }
   // Settings › Reset (Danny 10-21): one click only arms; look reset keeps data, erase-everything empties storage
   { const {p, errs, ctx} = await page(); await p.goto(URL);
     await p.evaluate(() => { localStorage.setItem("navmode", "basic"); localStorage.setItem("pagesize", "5"); localStorage.setItem("pathdone", '["x"]'); localStorage.setItem("kpqt", "[1]") });

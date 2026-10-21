@@ -52,6 +52,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
    Inside the claude.ai artifact the page's own URL isn't shareable, so links point at the GitHub Pages copy. */
 const SHARE_BASE = "https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/";
 const HASH = (() => { const o = {}; for (const part of location.hash.slice(1).split("&")){ const [k, v] = part.split("=");
+  if (k === "g"){ if (/^[a-z]{2,12}$/.test(v || "")) o.g = v; continue }   // #g=<page id>: a plain link to one page (10-21)
   try { if (v) o[k] = JSON.parse(decodeURIComponent(escape(atob(v.replace(/-/g, "+").replace(/_/g, "/"))))) } catch(e) {} } return o })();
 // saved page state from localStorage, keeping only keys the defaults have, with a usable type (numbers and strings
 // convert to the default's type; null default = any string or number): old versions or hand edits must not crash a page
@@ -91,6 +92,8 @@ async function copyShare(btn, url){
 /* tabs: category row (.cats) + that category's pages (.subs); Home is a category with no pages. That's the "Two rows"
    layout and phones; the default sidebar layout lists every page under its section title (71-navside.js, styles.css). Page buttons keep
    their #t-<id> ids, so code elsewhere can still open a page with $("#t-items").click(). */
+// browser tab title = the open page's name (FM Sniper's "(3) " unread badge rides in front)
+const SITETITLE = document.title, setTitle = name => { const b = document.title.match(/^\(\d+\) /)?.[0] || ""; document.title = b + (name ? name + " · " : "") + SITETITLE };
 const TABS = [...document.querySelectorAll("nav [data-tab]")], CATS = [...document.querySelectorAll("nav .cats button")];
 const LASTTAB = {};   // category -> last page opened in it
 const NAVREG = {};   // page -> {get, set} of its current place, for Back/Forward (75-history.js)
@@ -114,9 +117,10 @@ TABS.forEach(b => b.addEventListener("click", () => {
   TABS.forEach(x => x.setAttribute("aria-selected", x === b)); inRow(b);
   $("#home").hidden = true; TABS.forEach(x => $("#" + x.dataset.tab).hidden = x !== b);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
+  setTitle(b.textContent.trim());
 }));
 const goHome = () => { showCat("home"); TABS.forEach(x => { x.setAttribute("aria-selected", false); $("#" + x.dataset.tab).hidden = true });
-  $("#home").hidden = false; try { localStorage.setItem("tab", "home") } catch(e) {} };
+  $("#home").hidden = false; try { localStorage.setItem("tab", "home") } catch(e) {} setTitle("") };
 const goCat = cat => cat === "home" ? goHome() : $("#t-" + (LASTTAB[cat] || TABS.find(x => x.dataset.cat === cat).dataset.tab)).click();
 CATS.forEach(b => b.addEventListener("click", () => goCat(b.dataset.cat)));
 // Home: a click on a section card (not one of its links) grows it into a "billboard" at the top (wider, bigger text, a
@@ -140,7 +144,7 @@ $("header h1").addEventListener("click", goHome);
 // read the last page before goHome() overwrites it with "home" (that made every visit land on Home)
 let SAVEDTAB = null; try { SAVEDTAB = localStorage.getItem("tab") } catch(e) {}
 goHome();
-try { const t = HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : HASH.n ? "navi" : HASH.t ? "maps" : HASH.q ? "quests" : HASH.f ? "snipe" : HASH.L && /^(items|mobs|skills|quests|keep|wmap|maps|snipe)$/.test(HASH.L.p) ? HASH.L.p : SAVEDTAB; if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
+try { const t = HASH.g && document.querySelector(`[data-tab="${HASH.g}"]`) ? HASH.g : HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : HASH.n ? "navi" : HASH.t ? "maps" : HASH.q ? "quests" : HASH.f ? "snipe" : HASH.L && /^(items|mobs|skills|quests|keep|wmap|maps|snipe)$/.test(HASH.L.p) ? HASH.L.p : SAVEDTAB; if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
 // Credits: when each data source was last read (build.py fills SRCDATES from fetch_osms.sh and data/sources/*.json)
 const SRCDATES = __SRCDATES__;

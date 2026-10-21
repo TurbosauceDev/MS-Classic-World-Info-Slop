@@ -439,7 +439,7 @@ function toast(html){ const el = $("#sntoast"); el.innerHTML = html; el.hidden =
   clearTimeout(toastT); toastT = setTimeout(() => { el.classList.add("out"); toastT = setTimeout(() => { el.hidden = true }, 250) }, 8000) }
 $("#sntoast").addEventListener("click", () => { $("#sntoast").hidden = true });
 // alerts (Watch list switches): tab title count while the tab is in the background, browser notification, a soft chime
-const TITLE = document.title; let BADGE = 0;
+let BADGE = 0;   // unread count in front of the page title (00-core.js setTitle keeps it)
 const chime = () => { try { const A = window.AudioContext || window.webkitAudioContext; if (!A) return; const a = new A();
   [[880, 0], [1320, 0.12]].forEach(([f, t]) => { const o = a.createOscillator(), g = a.createGain(); o.type = "sine"; o.frequency.value = f;
     g.gain.setValueAtTime(0.0001, a.currentTime + t); g.gain.exponentialRampToValueAtTime(0.12, a.currentTime + t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + t + 0.35);
@@ -448,12 +448,12 @@ const chime = () => { try { const A = window.AudioContext || window.webkitAudioC
 function alertHits(hot, test = false){
   if (!hot.length) return;
   const body = hot.slice(0, 3).map(x => `${x.it.n} ${money(x.n[0])}${x.r != null ? ` (${pct(x.r)})` : ""}`).join(", ");
-  if ((AL.badge || test) && document.hidden){ BADGE += hot.length; document.title = `(${BADGE}) ${TITLE}` }
+  if ((AL.badge || test) && document.hidden){ BADGE += hot.length; document.title = `(${BADGE}) ${document.title.replace(/^\(\d+\) /, "")}` }
   if ((AL.note || test) && typeof Notification !== "undefined" && Notification.permission === "granted") try { new Notification("FM Sniper: watched item listed", {body, tag: "snipe", icon: LIVE ? "icon-192.png" : undefined}) } catch(e) {}
   if (AL.sound || test) chime();
   if (test) toast(`<b>Test alert:</b> ${esc(body)}${typeof Notification !== "undefined" && Notification.permission !== "granted" ? "<br>Browser notifications are off for this site." : ""}`);
 }
-document.addEventListener("visibilitychange", () => { if (!document.hidden && BADGE){ BADGE = 0; document.title = TITLE } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && BADGE){ BADGE = 0; document.title = document.title.replace(/^\(\d+\) /, "") } });
 const alertsOn = () => LIVE && WATCH.size && (AL.badge || AL.note || AL.sound);
 
 // live refresh (Pages copy only): market.json = this build's D.pw, rewritten on every deploy (meso.watch poll, every 30 min)

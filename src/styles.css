@@ -1053,3 +1053,5 @@ details.sec .controls{box-shadow:none;background:var(--bg)}
 }
 /* Settings › Reset: an armed button (second click does it) */
 .btn.danger{border-color:var(--bad);color:var(--bad)}
+/* touch screens: fold-out headers were 19-22px tall, under a finger's reach (10-21 phone audit) */
+@media (pointer:coarse){.howto>summary,#mapnote .mnmore>summary,.trkwarn>summary,.navmm summary{padding:7px 0}}
