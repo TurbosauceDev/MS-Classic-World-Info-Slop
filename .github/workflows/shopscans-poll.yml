@@ -4,7 +4,7 @@
 # helper); same concurrency group as the other polls so commits queue.
 name: shopscans poll
 on:
-  schedule: [{cron: "41 */3 * * *"}]
+  schedule: [{cron: "11 1-23/3 * * *"}]   # off meowdb's :41 slot (only one pending run per concurrency group survives)
   workflow_dispatch:
 permissions:
   contents: write
