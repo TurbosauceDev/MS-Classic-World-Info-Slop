@@ -204,12 +204,23 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.evaluate(() => { const id = "2000000", kn = PWNOW[id], kl = MDBL[id], now = Math.round(Date.now() / 6e4);
       PWNOW[id] = [70, 5, 6, "Free Market <4>", "CINDY"];
       MDBL[id] = [[0, 90, 10, 3, 0, "Kerning bottom left", "Jayce", now - 30, 0, ""], [0, 60, 1, 7, 7, "middle", "ChadX", now - 5, 0, ""], [1, 40, 100, 0, 0, "", "Buyer", now, 1, ""]];
-      window._pxkeep = [kn, kl]; const e = document.createElement("span"); e.className = "itname"; e.dataset.item = id; document.querySelector("#items").prepend(e); e.click() });
+      window._pxkeep = [kn, kl, MWLS[id]]; delete MWLS[id]; const e = document.createElement("span"); e.className = "itname"; e.dataset.item = id; document.querySelector("#items").prepend(e); e.click() });
     await p.waitForTimeout(150);
-    const w = await p.evaluate(() => { const id = "2000000", [kn, kl] = window._pxkeep, t = [...document.querySelectorAll("#itprices .pxls")].map(e => e.innerText.replace(/\s+/g, " "));
-      if (kn) PWNOW[id] = kn; else delete PWNOW[id]; if (kl) MDBL[id] = kl; else delete MDBL[id]; return t });
+    const w = await p.evaluate(() => { const id = "2000000", [kn, kl, kw] = window._pxkeep, t = [...document.querySelectorAll("#itprices .pxls")].map(e => e.innerText.replace(/\s+/g, " "));
+      if (kn) PWNOW[id] = kn; else delete PWNOW[id]; if (kl) MDBL[id] = kl; else delete MDBL[id]; if (kw) MWLS[id] = kw; return t });
     check(w.length === 2 && /^Each.*60 cheapest.*Ch 7 · FM 7 · middle ChadX.*70.*Ch 6 · FM 4 CINDY.*90.*Ch 3 · Kerning bottom left Jayce/i.test(w[0]) && /40.*×100.*whisper \/ meet up Buyer/.test(w[1]),
       `prices: where to buy sorted, buy orders apart (${w.join(" | ").slice(0, 300)})`);
+    // mesoarbitrage.com + maplestory.watch 2026-10-21: one Prices row each with sample counts; maplestory.watch shops seen in
+    // the last day join Where to buy with seller + FM room, older ones (likely closed) drop out
+    const ss = await p.evaluate(() => { const id = "2000000", now = Math.round(Date.now() / 6e4), k = [MA[id], MW[id], MWLS[id]];
+      MA[id] = [48, 60, 45, 143, 35, 15, now - 200]; MW[id] = [40, 20, 35, 22, 45, now - 10];
+      MWLS[id] = [[33, 100, null, 1, "Tomatos", "pots <b>cheap</b>", now - 20], [30, 1, 4, 4, "Gone", "old", now - 1500]];
+      const rows = PRICE_SRC.map(f => f(id)).filter(Boolean), ls = listingsOf(id).filter(x => x.src === "maplestory.watch");
+      [MA[id], MW[id], MWLS[id]] = k; for (const [o, v] of [[MA, k[0]], [MW, k[1]], [MWLS, k[2]]]) if (!v) delete o[id];
+      return [rows.some(r => r.src === "mesoarbitrage.com" && r.v === 48 && r.n === "60 sales" && !r.few),
+        rows.some(r => r.src === "maplestory.watch" && r.v === 40 && r.n === "20 sales" && /▼11%/.test(r.trend)),
+        ls.length === 1 && ls[0].who === "Tomatos" && ls[0].room === "FM 1" && ls[0].qty === 100 && pxWhere(ls[0]).includes("&lt;b&gt;")] });
+    check(JSON.stringify(ss) === "[true,true,true]", `prices: mesoarbitrage + maplestory.watch rows and listings (${ss})`);
     await ctx.close() }
 
   await b.close();

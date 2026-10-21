@@ -27,5 +27,6 @@ jobs:
       - run: node tests/questvalue.js
       - run: python3 tests/deal_life_test.py
       - run: python3 tests/classicmarket_test.py
+      - run: python3 tests/shopscans_test.py
       - run: python3 tests/meowdb_test.py
       - run: node tests/monkey.js
