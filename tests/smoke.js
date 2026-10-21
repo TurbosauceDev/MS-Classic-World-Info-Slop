@@ -300,6 +300,10 @@ const boxGaps = require("./boxgaps");
     const [sw, cw, bad] = await p.evaluate(() => { const m = document.querySelector("main section:not([hidden])") || document.body;
       return [document.documentElement.scrollWidth, document.documentElement.clientWidth, (m.innerText.match(/.{0,30}\b(NaN|undefined|Infinity)\b.{0,20}/) || [""])[0]] });
     check(sw <= cw + 1 && !bad, `${id} at 390px (width ${sw}/${cw}${bad ? ", text: " + bad : ""})`);
+    // tables don't hide columns off to the side (Danny 10-21, audit #3): 4+ column tables stack into row cards (76-stack.js)
+    const wide = await p.evaluate(() => [...document.querySelectorAll(".tblwrap")].filter(w => w.offsetParent && w.scrollWidth > w.clientWidth + 1)
+      .map(w => (w.closest("[id]") || {}).id + " " + w.scrollWidth + "/" + w.clientWidth));
+    check(!wide.length, `${id} at 390px: tables fit, no sideways scroll${wide.length ? " (" + wide.slice(0, 3).join(" | ") + ")" : ""}`);
     const spill = await p.evaluate(spillingInputs);
     check(!spill, `${id} at 390px: inputs stay inside their labels${spill ? " (" + spill + ")" : ""}`);
     const gaps = await p.evaluate(boxGaps, [6, id.slice(2)]);

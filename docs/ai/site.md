@@ -79,6 +79,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 69-search.js | | Ctrl K / `/` search, `#key=value&` share links |
 | 71-navside.js | | sidebar nav: random sprite pools per page (MESO_ICONS inlined), footer links, Settings Layout + Page size |
 | 75-history.js | | Back/Forward: history entry per page/place change, nav ← → buttons |
+| 76-stack.js | | phone tables: labels body cells with their header (`data-l`), marks 4+ column tables `stk` (styles.css "Phone tables", ≤600px) |
 
 Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `python3 -c "import json;d=json.load(open('data/data.json'));print(list(d))"`.
 
@@ -255,3 +256,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - `src/js/01-pagectl.js` + `76-polish.js`: PAGECTL lists the list pages; each gets Reset filters + Copy link in `.ctlend` at the end of its filter row (existing buttons keep their handlers, missing ones are generic). Defaults are read in 01 before page scripts restore saved state (fields inside the page section, not in details/modals). Link = `#L={p, v}` (changed fields only); 00-core.js opens the page, 76 applies it. New list page: add it to PAGECTL and the regex in 00-core.js. tests/polish.js.
 - Changelog cards carry `data-t` (ship time, backfilled from git author dates; Oct 16 card is date-only). build.py writes `data-t` = build time into src/pages/log.html for a new card that has none, so commit log.html after building. 76-polish.js adds the time and folds days into `details.logday`.
 - Home is masonry (`.homegrid.masonry`, 1 px rows, ResizeObserver spans). Trap: a Home card's `margin-bottom` is the row gap now; don't add row-gap back. tests/boxgaps.js skips boxes inside folded `<details>`.
+
+## Phone tables 2026-10-21
+- ≤600px every table with 4+ header columns becomes row cards (`table.stk`): card title = first non-number column (`.stkhead`), the rest labelled from `data-l` in a 3-wide grid, long cells (>28 letters) span 2. A MutationObserver in 76-stack.js relabels on every row change, so new tables need nothing. Opt out with class `nostk`; tables with `tbody th` row headers (transposed) never stack.
+- Traps: headers with no thead (key/value tables) aren't stacked: give them `kv` (KPQ King Slime) or fit them. Craft levels has a phone-only transposed copy `#crlevelsp`. Smoke "tables fit, no sideways scroll" checks every `.tblwrap` at 390px (the page-width check didn't see inner scroll).
+

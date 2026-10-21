@@ -70,6 +70,9 @@ $("#crlevels").innerHTML = `<thead><tr><th></th>${CRAFT_LV.map((_, i) => `<th cl
   <tr><th>Craft EXP in this level</th>${CRAFT_LV.map(([e]) => `<td class="num">${fmt(e)}</td>`).join("")}</tr>
   <tr><th>Total craft EXP to reach</th>${cum.map(t => `<td class="num">${fmt(t)}</td>`).join("")}</tr>
   <tr><th>New recipes</th>${CRAFT_LV.map((_, i) => `<td class="num">${R.filter(r => r.lvl === i + 1).length}</td>`).join("")}</tr></tbody>`;
+// phones get the same numbers turned on their side, one row per craft level (8 columns don't fit at 390px)
+$("#crlevelsp").innerHTML = `<thead><tr><th class="num">Lv</th><th class="num">Char. lv</th><th class="num">EXP in level</th><th class="num">Total to reach</th><th class="num">New recipes</th></tr></thead><tbody>
+  ${CRAFT_LV.map(([e, c], i) => `<tr><td class="num">${i + 1}</td><td class="num">${c ?? "quest"}</td><td class="num">${fmt(e)}</td><td class="num">${fmt(cum[i])}</td><td class="num">${R.filter(r => r.lvl === i + 1).length}</td></tr>`).join("")}</tbody>`;
 
 /* cheapest leveling: per craft level, the recipe with the lowest (fees + raw materials at NPC price) per craft EXP */
 $("#crlvdisc").innerHTML = DISC.map((n, i) => `<option value="${i}">${esc(n)}</option>`).join("");

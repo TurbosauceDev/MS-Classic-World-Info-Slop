@@ -256,6 +256,8 @@ ul.crq li{margin-bottom:6px}
 .crfind:hover{color:var(--accent)}
 .crfind:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
 #crlevels th{white-space:nowrap}
+.crlvp{display:none}
+@media (max-width:600px){.crlvp{display:block}}
 .ups{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:3px}
 .sharebox{flex:1 1 260px;min-width:0;font:500 14px var(--f-mono, monospace);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
 .geargrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px 14px;margin-top:10px}
@@ -1025,6 +1027,37 @@ details.sec .controls{box-shadow:none;background:var(--bg)}
   .controls>label:not(.chk){flex:1 1 140px}
   .controls>label:not(.chk)>:is(input,select){width:100%!important;min-width:0;box-sizing:border-box}
   .controls>.btn.tgl{padding-inline:9px;font-size:13px;flex:1 1 auto}
+}
+/* Phone tables (Danny 10-21, audit #3; 76-stack.js labels cells): rows of 4+ column tables become small cards,
+   name across the top, the other columns as label/value pairs in a 3-wide grid. Sortable headers stay as a chip row. */
+@media (max-width:600px){
+  .tblwrap:has(>table.stk){overflow-x:visible}
+  table.stk{min-width:0!important}
+  table.stk,table.stk tbody{display:block}
+  table.stk thead:not(:has(button,[data-s])){display:none}
+  table.stk thead tr{display:flex;flex-wrap:wrap;gap:6px;padding:10px 10px 4px}
+  table.stk thead th{display:block;position:static;padding:3px 9px;border:1px solid var(--line);border-radius:999px;background:var(--bg)}
+  table.stk thead th:not(:has(button,[data-s])):not([data-s]){display:none}
+  table.stk tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 10px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  table.stk tbody tr:last-child{border-bottom:0}
+  table.stk tbody td{display:block;padding:0;border:0;min-width:0;text-align:left;white-space:normal;overflow-wrap:anywhere}
+  table.stk td:is(.stkhead,.stkfull){grid-column:1/-1;order:-1}
+  table.stk td.stkwide{grid-column:span 2}
+  table.stk tbody td{background:none!important}
+  table.stk tbody tr:hover,table.stk tbody tr.sel{background:color-mix(in srgb,var(--accent-soft) 40%,transparent)}
+  table.stk tbody td:empty{display:none}
+  table.stk tbody td *{min-width:0!important;max-width:100%}
+  table.stk tbody td .pill{white-space:normal}
+  .tblwrap table:not(.stk) :is(th,td){padding:7px 8px}
+  .tblwrap table:not(.stk) tbody th{white-space:normal}
+  .tblwrap table.kpqtry :is(th,td){padding:6px 5px}
+  .tblwrap:has(>#crlevels){display:none}
+  #crlevelsp th{white-space:normal}
+  table.kv,table.kv tbody{display:block}
+  table.kv tr{display:grid;grid-template-columns:minmax(0,1fr) auto;border-bottom:1px solid var(--line)}
+  table.kv tr:last-child{border-bottom:0}
+  table.kv td{border:0}
+  table.stk tbody td:not(.stkhead):not(.stkfull)::before{content:attr(data-l);display:block;font:600 10.5px var(--f-body);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:1px}
 }
 
 </style>
@@ -2239,6 +2272,8 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </details>
 
   <div class="changelog">
+    <div class="card" data-t="2026-10-21T16:05:00Z"><div class="cardhead"><h3><span class="ver">v0.12.11</span> Oct 21, 2026 · Tables fit on phones</h3></div>
+      <p>On a phone, wide tables (Monsters, Skills, Items, Quests, Where to train, Path planner, Crafting, FM Sniper and the rest) no longer hide columns off to the side. Each row becomes a small card: the name on top, every other column as a labelled value underneath. Sort buttons stay above the list. Craft levels turn on their side, one row per level.</p></div>
     <div class="card" data-t="2026-10-21T15:49:36Z"><div class="cardhead"><h3><span class="ver">v0.12.10</span> Oct 21, 2026 · Polish pass: consistent controls and tidier pages</h3></div>
       <p>Every list page (Items, Monsters, Skills, Quests, Keep or sell, World Map, Where to train, FM Sniper) now has <b>Reset filters</b> and <b>Copy link</b> side by side at the end of its filter row; a list link opens the page with the same filters. The changelog shows the time each version went out (in your time zone; older versions read back from the site's history) and folds older days under their date.</p>
       <ul><li>Home cards keep their own height, and More now links Feedback and Privacy.</li>
@@ -2662,7 +2697,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <details class="sec" open>
     <summary><h2>Craft levels</h2></summary>
     <p class="note">Same table for every profession. Lv 1 comes from the apprentice quest.</p>
-    <div class="tblwrap"><table class="mini" id="crlevels"></table></div>
+    <div class="tblwrap"><table class="mini" id="crlevels"></table></div><div class="tblwrap crlvp"><table class="mini nostk" id="crlevelsp"></table></div>
   </details>
 
   <details class="sec" open>
@@ -2703,7 +2738,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-21T15:49:36Z" data-ver="0.12.10">Site version: v0.12.10 · built Oct 21, 2026 · 15:49 UTC</p>
+  <p class="sitever" data-built="2026-10-21T15:56:35Z" data-ver="0.12.11">Site version: v0.12.11 · built Oct 21, 2026 · 15:56 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -4221,6 +4256,9 @@ $("#crlevels").innerHTML = `<thead><tr><th></th>${CRAFT_LV.map((_, i) => `<th cl
   <tr><th>Craft EXP in this level</th>${CRAFT_LV.map(([e]) => `<td class="num">${fmt(e)}</td>`).join("")}</tr>
   <tr><th>Total craft EXP to reach</th>${cum.map(t => `<td class="num">${fmt(t)}</td>`).join("")}</tr>
   <tr><th>New recipes</th>${CRAFT_LV.map((_, i) => `<td class="num">${R.filter(r => r.lvl === i + 1).length}</td>`).join("")}</tr></tbody>`;
+// phones get the same numbers turned on their side, one row per craft level (8 columns don't fit at 390px)
+$("#crlevelsp").innerHTML = `<thead><tr><th class="num">Lv</th><th class="num">Char. lv</th><th class="num">EXP in level</th><th class="num">Total to reach</th><th class="num">New recipes</th></tr></thead><tbody>
+  ${CRAFT_LV.map(([e, c], i) => `<tr><td class="num">${i + 1}</td><td class="num">${c ?? "quest"}</td><td class="num">${fmt(e)}</td><td class="num">${fmt(cum[i])}</td><td class="num">${R.filter(r => r.lvl === i + 1).length}</td></tr>`).join("")}</tbody>`;
 
 /* cheapest leveling: per craft level, the recipe with the lowest (fees + raw materials at NPC price) per craft EXP */
 $("#crlvdisc").innerHTML = DISC.map((n, i) => `<option value="${i}">${esc(n)}</option>`).join("");
@@ -9280,7 +9318,7 @@ function render(){
     <li>All 10 monsters (${D.mobdb["800001"] ? "6 Jr. Necki, 3 Curse Eye, 1 King Slime" : ""}) drop a coupon. The leader hands all 10 to Cloto.</li>
     <li>Jr. Necki has ${D.mobdb["800001"]?.eva ?? "high"} avoidability: bring someone with the accuracy to hit it.</li>
     <li>Jr. Necki and Curse Eye come back every 3 minutes (game files); King Slime doesn't.</li></ul>
-    ${ks ? `<div class="tblwrap"><table><tbody>
+    ${ks ? `<div class="tblwrap"><table class="kv"><tbody>
       <tr><td>Level</td><td class="num">${ks.level}</td><td>HP</td><td class="num">${fmt(ks.hp)}</td></tr>
       <tr><td>EXP</td><td class="num">${fmt(ks.exp)}</td><td>Weapon / magic attack</td><td class="num">${ks.PADamage} / ${ks.MADamage}</td></tr>
       <tr><td>W.DEF / M.DEF</td><td class="num">${ks.PDDamage} / ${ks.MDDamage}</td><td>Accuracy / avoid</td><td class="num">${ks.acc} / ${ks.eva}</td></tr>
@@ -10519,6 +10557,34 @@ if (HASH.L && Object.hasOwn(PAGECTL, HASH.L.p) && HASH.L.v && typeof HASH.L.v ==
       const inner = document.createElement("div"); inner.className = "logdaybody"; inner.append(...list); d.append(inner); box.append(d);
     }
   }
+}
+
+// Phone tables (Danny 10-21, audit #3): a table with 4+ columns shows each row as a small card under 600px
+// (styles.css "Phone tables"). Every body cell gets its column's header as data-l, shown as a label above the value.
+// Long cells (> 28 letters) take two of the three grid columns. Cells are labelled whenever rows are added (lazyRows, re-sorts, filters), so pages need nothing extra.
+const STACK_MIN = 4;
+function stackTable(t){
+  const h = t.tHead && t.tHead.rows[0], ls = [];
+  if (h) for (const c of h.cells) { const l = (c.innerText || c.textContent).trim().replace(/\s*\n\s*/g, " / ");
+    for (let i = 0; i < (c.colSpan || 1); i++) ls.push(l) }
+  // tables with row headers (th down the side, like Craft levels) read across, so they keep their shape
+  const on = ls.length >= STACK_MIN && !t.classList.contains("nostk") && !t.querySelector("tbody th");
+  t.classList.toggle("stk", on); if (!on) return;
+  // card title = first column that isn't a number (# or Lv first: the name heads the card, the number joins the grid)
+  let k = [...h.cells].findIndex(c => !c.classList.contains("num") && c.textContent.trim() !== "#"); if (k < 0 || k > 2) k = 0;
+  for (const tb of t.tBodies) for (const r of tb.rows){ let at = 0;
+    for (const c of r.cells){ const n = c.colSpan || 1, l = n >= ls.length ? "" : ls[at];
+      if (c.dataset.l !== l) c.dataset.l = l; c.classList.toggle("stkfull", n >= ls.length)
+      c.classList.toggle("stkhead", at === k && n < ls.length)
+      c.classList.toggle("stkwide", at !== k && n < ls.length && c.textContent.length > 28); at += n } }
+}
+{ const todo = new Set(); let raf = 0;
+  const run = () => { raf = 0; for (const t of todo) if (t.isConnected) stackTable(t); todo.clear() };
+  const add = n => { if (n.nodeType !== 1) return; const t = n.closest("table"); if (t) todo.add(t);
+    else for (const x of n.getElementsByTagName("table")) todo.add(x) };
+  new MutationObserver(ms => { for (const m of ms) add(m.target); if (todo.size && !raf) raf = requestAnimationFrame(run) })
+    .observe(document.body, {childList: true, subtree: true});
+  for (const t of document.getElementsByTagName("table")) stackTable(t);
 }
 
 </script>

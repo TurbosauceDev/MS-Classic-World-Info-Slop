@@ -90,7 +90,7 @@ function render(){
     <li>All 10 monsters (${D.mobdb["800001"] ? "6 Jr. Necki, 3 Curse Eye, 1 King Slime" : ""}) drop a coupon. The leader hands all 10 to Cloto.</li>
     <li>Jr. Necki has ${D.mobdb["800001"]?.eva ?? "high"} avoidability: bring someone with the accuracy to hit it.</li>
     <li>Jr. Necki and Curse Eye come back every 3 minutes (game files); King Slime doesn't.</li></ul>
-    ${ks ? `<div class="tblwrap"><table><tbody>
+    ${ks ? `<div class="tblwrap"><table class="kv"><tbody>
       <tr><td>Level</td><td class="num">${ks.level}</td><td>HP</td><td class="num">${fmt(ks.hp)}</td></tr>
       <tr><td>EXP</td><td class="num">${fmt(ks.exp)}</td><td>Weapon / magic attack</td><td class="num">${ks.PADamage} / ${ks.MADamage}</td></tr>
       <tr><td>W.DEF / M.DEF</td><td class="num">${ks.PDDamage} / ${ks.MDDamage}</td><td>Accuracy / avoid</td><td class="num">${ks.acc} / ${ks.eva}</td></tr>
