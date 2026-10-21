@@ -2,7 +2,7 @@
 # to the default (Pages) branch when something changed (Danny OK'd, 2026-10-18).
 name: shared-data
 on:
-  schedule: [{cron: "17 9 * * *"}]
+  schedule: [{cron: "19 9 * * *"}]
   workflow_dispatch:
 permissions:
   contents: write

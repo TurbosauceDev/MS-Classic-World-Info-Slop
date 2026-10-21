@@ -20,6 +20,8 @@ jobs:
       # pinned like tracker.yml: an unpinned install picks up each new Playwright release the day it ships
       - id: install
         run: npm i --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
+      - name: Cron minutes
+        run: node tests/cron.test.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/smoke.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
