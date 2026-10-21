@@ -314,19 +314,19 @@ input.khave{width:64px;text-align:right}
 .mcols h4{font:600 13px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 6px}
 .mcols h4 .sub{text-transform:none;letter-spacing:0;font-weight:500}
 .mcols p{margin:4px 0 10px;font-size:14.5px}
-#itprices .pxtiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:10px}
-#itprices .pxt{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0}
-#itprices .pxk{font:600 12px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-#itprices .pxv{font:700 24px/1.15 var(--f-mono);color:var(--ink);font-variant-numeric:tabular-nums}
-#itprices .pxv small{font:500 12px var(--f-body);color:var(--muted)}
-#itprices .pxs{font-size:12.5px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
-#itprices .tblwrap{margin-top:12px}
-#itprices table td{vertical-align:baseline}
-#itprices td.num b{font-variant-numeric:tabular-nums}
-#itprices .pxh{font:600 13px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 0}
-#itprices .pxh .sub{text-transform:none;letter-spacing:0;font-weight:500;margin-left:4px}
-#itprices .pxls .pxx{display:none}
-#itprices .tblwrap.open .pxx{display:table-row;animation:pxin .25s ease-out}
+:is(#itprices,.crpx) .pxtiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:10px}
+:is(#itprices,.crpx) .pxt{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0}
+:is(#itprices,.crpx) .pxk{font:600 12px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+:is(#itprices,.crpx) .pxv{font:700 24px/1.15 var(--f-mono);color:var(--ink);font-variant-numeric:tabular-nums}
+:is(#itprices,.crpx) .pxv small{font:500 12px var(--f-body);color:var(--muted)}
+:is(#itprices,.crpx) .pxs{font-size:12.5px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
+:is(#itprices,.crpx) .tblwrap{margin-top:12px}
+:is(#itprices,.crpx) table td{vertical-align:baseline}
+:is(#itprices,.crpx) td.num b{font-variant-numeric:tabular-nums}
+:is(#itprices,.crpx) .pxh{font:600 13px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 0}
+:is(#itprices,.crpx) .pxh .sub{text-transform:none;letter-spacing:0;font-weight:500;margin-left:4px}
+:is(#itprices,.crpx) .pxls .pxx{display:none}
+:is(#itprices,.crpx) .tblwrap.open .pxx{display:table-row;animation:pxin .25s ease-out}
 @keyframes pxin{from{opacity:0}to{opacity:1}}
 #itprices .pxall{margin-top:8px}
 #itprices .pxfoot{font-size:12.5px;margin:12px 0 0}
@@ -975,6 +975,29 @@ html.anchoring :is(.navcol,.homegrid){user-select:none}
 #cpnowx{margin:10px 0 0}
 #cpst:empty,#cpnowc:empty,#cpnowx:empty{display:none}
 .cpbig{font-size:16px;margin:0 0 4px}
+/* Crafting tabs (45-crafting.js) + recipe pop-up #crpop (inset modal like Settings) */
+.crme .cpset{margin-bottom:0}
+.crmode{margin:16px 0 14px}
+.crmode button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,var(--panel))}
+.crmode button:not([aria-selected="true"]):hover{border-color:var(--accent)}
+.crpanel{animation:fadein .25s}
+.crpanel>.card+.card{margin-top:14px}
+.crpanel .cardhead{flex-wrap:wrap;gap:6px 10px}
+#crlvtot{white-space:normal;max-width:100%}
+.crname{font-weight:700;color:var(--ink);text-align:left;text-decoration:none}
+.crname:hover,.crname:focus-visible{color:var(--accent);text-decoration:underline}
+#crrows .pill{margin-top:4px}
+.crbox{width:min(860px,100%)}
+#crpoph .ing{gap:10px}
+.crpsub{margin:10px 0 0;line-height:1.7}
+.crpx .pxtiles{margin:0;grid-template-columns:repeat(auto-fit,minmax(min(100%,128px),1fr))}
+.crpx .pxv{font-size:20px}
+.crall>summary{cursor:pointer;list-style:none}
+.crall>summary::-webkit-details-marker{display:none}
+.crall>summary h3{margin:0}
+.crall[open]>summary h3{margin-bottom:10px}
+.crall>summary h3::before{content:"▸";font-size:12px;transition:transform .15s}
+.crall[open]>summary h3::before{transform:rotate(90deg)}
 /* scanned-inventory peek (invPeek in 00-core.js) */
 .ipeek{position:relative;display:inline-block;color:var(--accent);text-decoration:underline dotted;cursor:help;outline:none}
 .ipeek-pop{position:absolute;left:0;top:calc(100% + 6px);z-index:40;min-width:228px;max-width:min(372px,86vw);padding:10px;border-radius:10px;background:var(--panel);border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .16s ease,transform .16s ease,visibility .16s;color:var(--ink);text-decoration:none;cursor:default}

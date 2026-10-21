@@ -154,6 +154,8 @@ $("header h1").addEventListener("click", goHome);
 // read the last page before goHome() overwrites it with "home" (that made every visit land on Home)
 let SAVEDTAB = null; try { SAVEDTAB = localStorage.getItem("tab") } catch(e) {}
 goHome();
+// the Craft planner became Crafting's Plan tab (10-21): old links and saved tabs land there
+if (HASH.g === "cplan" || SAVEDTAB === "cplan"){ HASH.g = SAVEDTAB = "craft"; try { localStorage.setItem("crtab", "plan") } catch(e) {} }
 try { const t = HASH.g && document.querySelector(`[data-tab="${HASH.g}"]`) ? HASH.g : HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : HASH.n ? "navi" : HASH.t ? "maps" : HASH.q ? "quests" : HASH.f ? "snipe" : HASH.L && /^(items|mobs|skills|quests|keep|wmap|maps|snipe)$/.test(HASH.L.p) ? HASH.L.p : SAVEDTAB; if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
 // Credits: when each data source was last read (build.py fills SRCDATES from fetch_osms.sh and data/sources/*.json)

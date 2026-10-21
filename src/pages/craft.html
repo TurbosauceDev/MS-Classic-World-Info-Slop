@@ -5,78 +5,136 @@
       <div>
         <h4>Getting started</h4>
         <ul>
-          <li>Six professions, each taught by a master NPC (cards below). From character level 10, finish the master's apprentice quest to learn it at craft Lv 1.</li>
+          <li>Six professions, each taught by a master NPC (<b>Reference</b> tab). From character level 10, finish the master's apprentice quest to learn it at craft Lv 1.</li>
           <li>Weaponcrafting's apprentice quest needs Smithing's apprentice quest done first, plus a Bronze and an Iron Ingot (Smithing).</li>
-          <li>Professions feed each other: arrows need Smithing ingots, the Red Chair needs Tailoring cloth and Weaponcrafting screws. The "From scratch" column lists every part.</li>
+          <li>Professions feed each other: arrows need Smithing ingots, the Red Chair needs Tailoring cloth and Weaponcrafting screws. Click any recipe for every part.</li>
+          <li>Set <b>Your craft levels</b> once: Plan, Recipes ("Only my levels") and Level up all use them.</li>
         </ul>
       </div>
       <div>
-        <h4>Leveling a profession</h4>
+        <h4>Leveling and profit</h4>
         <ul>
-          <li>Every craft costs mesos and gives craft EXP (columns below). Craft levels go 1 to 8 (the launch client's cap; the game files still list some Lv 9-10 recipes, hidden here).</li>
-          <li>Each craft level also needs a character level: 5 × the craft level (Lv 2 at 10, Lv 8 at 40).</li>
-          <li><b>Kits</b> (weekly "in Need of Help" quests, craft Lv 2+): +10% craft EXP for 15 min.</li>
-          <li><b>Catalysts</b> (craft Lv 5 quests): use while crafting for a chance to change a weapon's or armor's bonus stats, or to turn a Lesser scroll into an Intermediate, Greater or Chaos one. The odds aren't in the game files.</li>
-          <li>The six weekly help quests share one pool: 1 is offered per week.</li>
+          <li>Every craft costs a fee and gives craft EXP. Craft levels go 1 to <span class="crcap"></span> (the launch client's cap; the game files still list some Lv 9-10 recipes, hidden here). Each craft level also needs a character level: 5 × the craft level (Lv 2 at 10, Lv 8 at 40).</li>
+          <li><b>Kits</b> (weekly "in Need of Help" quests, craft Lv 2+): +10% craft EXP for 15 min. <b>Catalysts</b> (craft Lv 5 quests): a chance to change a weapon's or armor's bonus stats, or to upgrade a Lesser scroll; the odds aren't in the game files.</li>
+          <li><b>Profit</b> = what the result sells for (the site's usual price: meso.watch median sale, then classicmarket.kr, then meowdb; or what an NPC pays if that's more) minus the fee minus what the ingredients would sell for. A crafted part with no price counts at its own from-scratch cost. Equips are valued as plain ones.</li>
+          <li><b>Plan</b>: add your inventory (the same Equip, Use, Etc and bank screenshots the <a href="#" data-cpgo="inv">Price check</a> reads, or typed in) to see what to craft now, what you're close to, and the best mix.</li>
         </ul>
       </div>
       <div>
         <h4>Where the numbers come from</h4>
         <ul>
-          <li><b>Game files (launch client, OSMS export Oct 17):</b> recipes, craft levels, mesos, craft EXP, quests, item stats.</li>
-          <li><b>OSMS Data Explorer crafting tab:</b> craft EXP per level and the character-level gate (launch client: capped at Lv 8, Lv 1-8 unchanged from COT2).</li>
-          <li><b>meowdb shop list:</b> dye and helmet prices.</li>
-          <li>Not in the files: drop rates, success rates, and where most ores and Fragment of Magic drop. A "Monster" source is meowdb's grind-maps guide (Leather, Stiff Feather, Animal Fur Bundle, Dragon Skin, Diamond Ore) or a guess from the item's name or description.</li>
+          <li><b>Game files (launch client, OSMS export Oct 17):</b> recipes, craft levels, fees, craft EXP, quests, item stats, NPC prices.</li>
+          <li><b>OSMS Data Explorer crafting tab:</b> craft EXP per level and the character-level gate (capped at Lv 8; Lv 1-8 unchanged from COT2).</li>
+          <li><b>Prices:</b> <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> (as of <span id="cpdate"></span>), classicmarket.kr, meowdb; meowdb shop list for NPC shops.</li>
+          <li><b>Estimates:</b> no drop or success rates exist in the files. Farming times take every reported drop as 5% per kill (this site's assumption) unless grind tracker players shared 100+ kills of that monster; kills per hour use Where to train's model with the default build, alone. Every craft is taken as a success.</li>
         </ul>
       </div>
     </div>
   </details>
 
-  <details class="sec">
-    <summary><h2>Masters and profession quests</h2></summary>
-    <p class="note">Hover names for the quest, NPC or item. Quest items marked with a profession are crafted.</p>
-    <div class="grid2" id="crmasters"></div>
-  </details>
+  <div class="card crme">
+    <div class="cardhead"><h3>Your craft levels</h3><span class="sub">saved in this browser · 0 = not learned</span></div>
+    <div class="cpset" id="cplv"></div>
+  </div>
 
-  <details class="sec" open>
-    <summary><h2>Craft levels</h2></summary>
-    <p class="note">Same table for every profession. Lv 1 comes from the apprentice quest.</p>
-    <div class="tblwrap"><table class="mini" id="crlevels"></table></div><div class="tblwrap crlvp"><table class="mini nostk" id="crlevelsp"></table></div>
-  </details>
+  <div class="seg crmode" id="crmode" role="tablist" aria-label="Crafting">
+    <button role="tab" type="button" data-m="plan" aria-selected="false" aria-controls="crp-plan">Plan</button>
+    <button role="tab" type="button" data-m="rec" aria-selected="false" aria-controls="crp-rec">Recipes</button>
+    <button role="tab" type="button" data-m="lvl" aria-selected="false" aria-controls="crp-lvl">Level up</button>
+    <button role="tab" type="button" data-m="ref" aria-selected="false" aria-controls="crp-ref">Reference</button>
+  </div>
 
-  <details class="sec" open>
-    <summary><h2>Cheapest way to level a profession</h2></summary>
-    <p class="note">For each craft level, the recipe with the lowest cost per craft EXP: its fee plus the fees of parts you make on the way, plus raw materials at what an NPC pays for them (what you give up by not selling them; an estimate). Materials with no NPC price count as free and are flagged. Crafts needed = craft EXP for that level ÷ the recipe's EXP. Whether low recipes keep giving full EXP at higher craft levels isn't in the game files.</p>
-    <div class="controls" style="margin-top:12px"><label>Profession<select id="crlvdisc"></select></label><span class="pill p-hot" id="crlvtot" style="align-self:center"></span></div>
-    <div class="tblwrap"><table>
-      <thead><tr><th class="num">Craft Lv</th><th>Craft this</th><th class="num">Crafts</th><th class="num">Mesos</th><th>Materials (from scratch)</th></tr></thead>
-      <tbody id="crlvrows"></tbody>
-    </table></div>
-  </details>
-
-  <details class="sec" id="crrecipes" open>
-    <summary><h2>Recipes</h2></summary>
-    <p class="note">"From scratch" breaks crafted parts down to raw materials and adds their mesos. Parts with several recipes use the lowest-level one.</p>
-    <div class="seg small" role="radiogroup" aria-label="Profession" id="crdisc" style="margin-top:12px"></div>
-    <div class="controls" style="margin-top:12px">
-      <label>Type<select id="crtype"></select></label>
-      <label>Equipment for<select id="crcls"><option value="">Any class</option><option>Warrior</option><option>Magician</option><option>Bowman</option><option>Thief</option></select></label>
-      <label>Up to craft Lv<input id="crmax" type="number" min="1" max="8" value="8"></label>
-      <label>Search<input id="crsearch" type="search" placeholder="item or material"></label>
-      <span class="pill p-hot" id="crcount" style="align-self:center"></span>
+  <div class="crpanel" id="crp-plan" role="tabpanel" hidden>
+    <div class="card">
+      <div class="cardhead"><h3>Your inventory</h3><span id="cpst" class="pill"></span></div>
+      <div class="cpset">
+        <label class="lab">Class (for farming)<select id="cpcls"><option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option><option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
+        <label class="lab">Level<input id="cplvl" type="number" min="1" max="100" value="25"></label>
+        <label class="lab">My materials cost<select id="cpfree"><option value="0">what they'd sell for</option><option value="1">nothing (I farmed them)</option></select></label>
+      </div>
+      <label class="drop" id="cpdrop"><input type="file" id="cpfile" accept="image/*" multiple>
+        <span>Drop, pick or paste (Ctrl+V) inventory or bank screenshots. Read in your browser; nothing is uploaded.</span></label>
+      <div class="cpset cpadd">
+        <label class="lab">Add by hand<input id="cpitem" type="text" list="cpitems" placeholder="Item name" autocomplete="off"></label>
+        <label class="lab">Count<input id="cpn" type="number" min="1" max="9999" value="1"></label>
+        <button class="btn sm" id="cpaddb" type="button">Add</button>
+        <datalist id="cpitems"></datalist>
+      </div>
+      <p id="cpinv" class="sub"></p>
     </div>
-    <div class="tblwrap"><table>
-      <thead id="crhead"><tr><th class="num" data-k="lvl"><button>Craft Lv</button></th><th data-k="name"><button>Makes</button></th><th>Ingredients</th><th class="num" data-k="mesos"><button>Mesos</button></th><th class="num" data-k="exp"><button>Craft EXP</button></th><th>From scratch</th></tr></thead>
-      <tbody id="crrows"></tbody>
-    </table></div>
-  </details>
 
-  <details class="sec" open>
-    <summary><h2>Raw materials</h2></summary>
-    <p class="note">Everything recipes use that no recipe makes. Click a name to see the recipes that use it. "Sells for" is the NPC sell price.</p>
-    <div class="tblwrap"><table>
-      <thead><tr><th>Material</th><th class="num">Recipes</th><th>Used by</th><th>Where to get</th><th class="num">Sells for</th></tr></thead>
-      <tbody id="crmats"></tbody>
-    </table></div>
-  </details>
+    <div class="card">
+      <div class="cardhead"><h3>Best mix from your inventory</h3></div>
+      <div id="cptot"></div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><h3>Craft now</h3><span id="cpnowc" class="pill p-good"></span></div>
+      <div class="tblwrap"><table class="mini"><thead><tr><th>Make</th><th>Uses (each)</th><th class="num">Times</th><th class="num">Profit each</th><th class="num">Total</th></tr></thead>
+        <tbody id="cpnow"></tbody></table></div>
+      <p class="sub" id="cpnowx"></p>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><h3>Almost</h3><span class="pill p-warn">times are estimates</span></div>
+      <div class="tblwrap"><table class="mini"><thead><tr><th>Make</th><th>Missing (once)</th><th>Farm it</th><th class="num">Profit if farmed</th><th class="num">If bought</th></tr></thead>
+        <tbody id="cpalm"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="crpanel" id="crp-rec" role="tabpanel" hidden>
+    <div class="card" id="crrecipes">
+      <div class="cardhead"><h3>Recipes</h3><span class="pill p-hot" id="crcount"></span></div>
+      <div class="seg small" role="radiogroup" aria-label="Profession" id="crdisc"></div>
+      <div class="controls" style="margin-top:12px">
+        <label>Type<select id="crtype"></select></label>
+        <label>Equipment for<select id="crcls"><option value="">Any class</option><option>Warrior</option><option>Magician</option><option>Bowman</option><option>Thief</option></select></label>
+        <label>Up to craft Lv<input id="crmax" type="number" min="1" max="8" value="8"></label>
+        <label>Search<input id="crsearch" type="search" placeholder="item or material"></label>
+        <label class="chk"><input type="checkbox" id="crmine"> Only my levels</label>
+        <label class="chk"><input type="checkbox" id="crprof"> Profitable only</label>
+      </div>
+      <p class="note">Click a recipe for its parts, every price, where to farm the materials and what it's used in. Profit is per craft, ingredients valued at what they'd sell for.</p>
+      <div class="tblwrap"><table>
+        <thead id="crhead"><tr><th class="num" data-k="lvl"><button>Craft Lv</button></th><th data-k="name"><button>Makes</button></th><th>Ingredients</th><th class="num" data-k="mesos"><button>Fee</button></th><th class="num" data-k="exp"><button>Craft EXP</button></th><th class="num" data-k="sell"><button>Sells for</button></th><th class="num" data-k="profit"><button>Profit</button></th></tr></thead>
+        <tbody id="crrows"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="crpanel" id="crp-lvl" role="tabpanel" hidden>
+    <div class="card">
+      <div class="cardhead"><h3>Cheapest way to level a profession</h3><span class="pill p-hot" id="crlvtot"></span></div>
+      <div class="controls">
+        <label>Profession<select id="crlvdisc"></select></label>
+        <label>Value materials at<select id="crlvval"><option value="npc">what an NPC pays</option><option value="mkt">what they'd sell for (market)</option></select></label>
+      </div>
+      <p class="note">For each craft level from yours, the recipe with the lowest cost per craft EXP: its fee, the fees of parts you make on the way, and the raw materials at the price you pick (what you give up by not selling them; an estimate). Materials with no price count as free and are flagged. Crafts needed = craft EXP for that level ÷ the recipe's EXP. Whether low recipes keep giving full EXP at higher craft levels isn't in the game files.</p>
+      <div class="tblwrap"><table>
+        <thead><tr><th class="num">Craft Lv</th><th>Craft this</th><th class="num">Crafts</th><th class="num">Mesos</th><th>Materials (from scratch)</th></tr></thead>
+        <tbody id="crlvrows"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="crpanel" id="crp-ref" role="tabpanel" hidden>
+    <div class="card">
+      <div class="cardhead"><h3>Craft levels</h3></div>
+      <p class="note">Same table for every profession. Lv 1 comes from the apprentice quest.</p>
+      <div class="tblwrap"><table class="mini" id="crlevels"></table></div><div class="tblwrap crlvp"><table class="mini nostk" id="crlevelsp"></table></div>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h3>Masters and profession quests</h3></div>
+      <p class="note">Hover names for the quest, NPC or item. Quest items marked with a profession are crafted.</p>
+      <div class="grid2" id="crmasters"></div>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h3>Raw materials</h3></div>
+      <p class="note">Everything recipes use that no recipe makes. Click a name to see the recipes that use it. "Sells for" is the NPC sell price.</p>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Material</th><th class="num">Recipes</th><th>Used by</th><th>Where to get</th><th class="num">Sells for</th></tr></thead>
+        <tbody id="crmats"></tbody>
+      </table></div>
+    </div>
+  </div>
 </section>

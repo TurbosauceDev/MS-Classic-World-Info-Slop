@@ -85,7 +85,6 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="t-inv" aria-selected="false" data-tab="inv" data-cat="town" hidden><img class="nic" data-pool="inv" alt="">Price check</button>
     <button role="tab" id="t-keep" aria-selected="false" data-tab="keep" data-cat="town" hidden><img class="nic" data-pool="keep" alt="">Keep or sell</button>
     <button role="tab" id="t-craft" aria-selected="false" data-tab="craft" data-cat="town" hidden><img class="nic" data-pool="craft" alt="">Crafting</button>
-    <button role="tab" id="t-cplan" aria-selected="false" data-tab="cplan" data-cat="town" hidden><img class="nic" data-pool="cplan" alt="">Craft planner</button>
     <button role="tab" id="t-cit" aria-selected="false" data-tab="cit" data-cat="town" hidden><img class="nic" data-pool="cit" alt="">Citizenship</button>
     <button role="tab" id="t-log" aria-selected="false" data-tab="log" data-cat="more" hidden><img class="nic" data-pool="log" alt="">Changelog</button>
     <button role="tab" id="t-credits" aria-selected="false" data-tab="credits" data-cat="more" hidden><img class="nic" data-pool="credits" alt="">Credits</button>
@@ -128,7 +127,6 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 <!--@page keep-->
 
 <!--@page snipe-->
-<!--@page cplan-->
 
 <!--@page inv-->
 
@@ -147,6 +145,11 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
 </div>
+
+<div id="crpop" class="srch setm" hidden><div class="srchbox setbox crbox" role="dialog" aria-modal="true" aria-labelledby="crpoph" tabindex="-1">
+  <div class="sethead"><h2 id="crpoph"></h2><button class="btn setx" id="crpopx" type="button" aria-label="Close recipe" title="Close (Esc)">✕</button></div>
+  <div id="crpopb"></div>
+</div></div>
 
 <div id="thpop" class="srch setm" hidden><div class="srchbox setbox" role="dialog" aria-modal="true" aria-labelledby="sethd" tabindex="-1">
   <div class="sethead"><h2 id="sethd">Settings</h2><button class="btn setx" id="thclose" type="button" aria-label="Close settings" title="Close (Esc)">✕</button>

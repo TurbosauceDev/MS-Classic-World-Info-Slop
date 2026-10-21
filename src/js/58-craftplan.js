@@ -1,10 +1,11 @@
-/* ---------------- Craft planner: your craft levels + inventory screenshots -> what to craft for profit ---------------- */
+/* ---------------- Crafting > Plan (was the Craft planner page): your craft levels + inventory screenshots -> what to craft for profit ---------------- */
+// Also owns the craft levels card and the price helpers the other Crafting tabs use (45-crafting.js, via window.CPLAN).
 (() => {
 // Inventory = the Price check's screenshot reads (54-invprice.js, INVP.counts) plus items typed in by hand. Recipes, fees and
 // craft EXP: OSMS export (D.craft.rec, capped at CRAFT_CAP). Prices: meso.watch median sale (PW), NPC sell price (game files),
 // NPC shops (meowdb), live listings (PWNOW). Farming: meowdb drop reports (D.drops) and named-after monsters (D.craft.src),
 // 5% per kill (our assumption: no drop rates exist anywhere) unless shared runs saw 100+ kills; kills/hr from mapRates.
-const DISC = D.craft.disc.map(d => d[0]), RECS = D.craft.rec.map(([d, type, lvl, id, n, exp, mesos, ing]) => ({d, type, lvl, id, n, exp, mesos, ing}));
+const DISC = D.craft.disc.map(d => d[0]), RECS = D.craft.rec.map(([d, type, lvl, id, n, exp, mesos, ing], i) => ({i, d, type, lvl, id, n, exp, mesos, ing}));
 const CLS = ["Warrior", "Bowman", "Thief", "Magician", "I/L Wizard", "F/P Wizard", "Cleric"];
 const S = {lv: DISC.map(() => 0), cls: "Warrior", L: 25, free: 0, hand: {}};
 const fresh = (() => { try { return !localStorage.getItem("cplan") } catch(e) { return true } })();
@@ -89,11 +90,11 @@ function inventory(){
 }
 const nm = id => `<span class="itname" tabindex="0" data-item="${id}">${esc(D.items[id]?.n || id)}</span>`;
 const ings = (o, k = 1) => Object.entries(o).map(([id, n]) => `<span class="sning">${itemIcon(id, 1, true)} ${fmt(Math.round(n / k))} ${nm(id)}</span>`).join(" ");
-const made = r => `<span class="ing">${itemIcon(r.id, r.n)}<span>${nm(r.id)}${r.n > 1 ? ` ×${r.n}` : ""}<div class="sub">${esc(DISC[r.d])} Lv ${r.lvl}${r.type === "Equipment" ? " · plain equip" : ""}${rough(r.id) ? ` <span class="pill p-warn" title="${esc(roughWhy(r.id))}">rough</span>` : ""}</div></span></span>`;
+const made = r => `<span class="ing">${itemIcon(r.id, r.n)}<span><button class="linkbtn crname" type="button" data-r="${r.i}">${esc(D.items[r.id]?.n || r.id)}</button>${r.n > 1 ? ` ×${r.n}` : ""}<div class="sub">${esc(DISC[r.d])} Lv ${r.lvl}${r.type === "Equipment" ? " · plain equip" : ""}${rough(r.id) ? ` <span class="pill p-warn" title="${esc(roughWhy(r.id))}">rough</span>` : ""}</div></span></span>`;
 const plus = v => `<b class="${v > 0 ? "up" : "down"}">${v > 0 ? "+" : ""}${fmt(Math.round(v))}</b>`;
 
 function draw(){
-  if ($("#cplan").hidden) return;
+  if ($("#craft").hidden || $("#crp-plan").hidden) return;
   setLevels();
   const inv = inventory(), have = [...inv].filter(x => x[1] > 0);
   // inventory line: hand-typed items can be removed here; screenshots on the Price check
@@ -143,11 +144,11 @@ function draw(){
 }
 
 /* controls */
-$("#cpcap").textContent = CRAFT_CAP; $("#cpdate").textContent = D.pw?.read || "?";
+document.querySelectorAll(".crcap").forEach(e => e.textContent = CRAFT_CAP); $("#cpdate").textContent = D.pw?.read || "?";
 $("#cplv").innerHTML = DISC.map((n, i) => `<label class="lab">${esc(n)}<select data-cpd="${i}">${Array.from({length: CRAFT_CAP + 1}, (_, k) => `<option value="${k}">${k ? "Lv " + k : "not learned"}</option>`).join("")}</select></label>`).join("");
 $("#cplv").querySelectorAll("select").forEach(s => s.value = S.lv[+s.dataset.cpd]);
 $("#cpcls").value = S.cls; $("#cplvl").value = S.L; $("#cpfree").value = S.free;
-$("#cplv").addEventListener("change", e => { const i = e.target.dataset.cpd; if (i == null) return; S.lv[+i] = +e.target.value; save(); draw() });
+$("#cplv").addEventListener("change", e => { const i = e.target.dataset.cpd; if (i == null) return; S.lv[+i] = +e.target.value; save(); document.dispatchEvent(new Event("craftlv")) });
 $("#cpcls").addEventListener("change", e => { S.cls = CLS.includes(e.target.value) ? e.target.value : "Warrior"; save(); draw() });
 $("#cplvl").addEventListener("change", e => { S.L = Math.min(MAX_LEVEL, Math.max(1, Math.round(+e.target.value) || 25)); e.target.value = S.L; save(); draw() });
 $("#cpfree").addEventListener("change", e => { S.free = e.target.value === "1" ? 1 : 0; save(); draw() });
@@ -162,7 +163,7 @@ function addHand(){
 }
 $("#cpaddb").addEventListener("click", addHand);
 $("#cpitem").addEventListener("keydown", e => { if (e.key === "Enter") addHand() });
-$("#cplan").addEventListener("click", e => {
+$("#craft").addEventListener("click", e => {
   const go = e.target.closest("[data-cpgo]"); if (go){ e.preventDefault(); $("#t-" + go.dataset.cpgo).click(); return }
   if (e.target.id === "cpclear"){ window.INVP?.clear(); return }
   const rm = e.target.dataset.cprm; if (rm){ delete S.hand[rm]; save(); draw() }
@@ -178,9 +179,8 @@ drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add(
 drop.addEventListener("dragleave", () => drop.classList.remove("over"));
 drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); shots(e.dataTransfer.files) });
 $("#cpfile").addEventListener("change", e => { shots(e.target.files); e.target.value = "" });
-document.addEventListener("paste", e => { if ($("#cplan").hidden) return; const f = [...(e.clipboardData?.files || [])]; if (f.length){ e.preventDefault(); shots(f) } });
-document.addEventListener("invupdate", draw);
-$("#t-cplan").addEventListener("click", () => setTimeout(draw));
-draw();
-window.CPLAN = {make: (r, t, inv) => (setLevels(), run(r, t, inv)), maxTimes: (r, inv) => (setLevels(), maxTimes(r, inv)), farm, worth, S};   // tests
+document.addEventListener("paste", e => { if ($("#craft").hidden || $("#crp-plan").hidden) return; const f = [...(e.clipboardData?.files || [])]; if (f.length){ e.preventDefault(); shots(f) } });
+// redraws on craftlv / invupdate / tab opens come from 45-crafting.js (only the open tab draws)
+window.CPLAN = {make: (r, t, inv) => (setLevels(), run(r, t, inv)), maxTimes: (r, inv) => (setLevels(), maxTimes(r, inv)), farm, worth, S,
+  RECS, inventory, draw, rough, roughWhy, buyEach, buyHow};   // Crafting tabs + tests
 })();
