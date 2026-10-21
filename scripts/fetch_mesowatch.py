@@ -21,15 +21,16 @@ src = pathlib.Path(sys.argv[1])
 num = lambda x: float(x) if x not in (None, "") else None
 
 
-def row(iid, price, p25, p75, sold, low, per_set, trend=None, sell=None):
+def row(iid, price, p25, p75, sold, low, per_set, trend=None, sell=None, askMedian=None):
     # [median sale price, 25th pct, 75th pct, sales seen, flags: 1 = low data, 2 = priced per set, meso.watch trend or null,
-    #  sell-through or null (= sold / (sold + asks): share of units put up that sold, checked against the CSV 2026-10-19)]
+    #  sell-through or null, askMedian or null (median of current ask prices — from list.json only, null for CSV input)]
     return iid, [round(price), round(p25 if p25 is not None else price), round(p75 if p75 is not None else price),
                  int(sold), (1 if low else 0) | (2 if per_set else 0), None if trend is None else round(trend, 3),
-                 None if sell is None else round(sell, 3)]
+                 None if sell is None else round(sell, 3),
+                 None if askMedian is None else round(askMedian)]
 
 
-out, generated = {}, None
+out, generated, hist, totals = {}, None, {}, None
 if src.suffix.lower() == ".csv":
     for r in csv.DictReader(open(src, newline="")):
         generated = generated or r.get("generated_at")
@@ -40,14 +41,20 @@ if src.suffix.lower() == ".csv":
         out[iid] = v
 else:
     d = json.load(open(src)); generated = d.get("generated_at")
+    totals = d.get("totals")
     for it in d["items"]:
         kind, _, n = it["id"].partition(":")
         if kind != "basil" or not it.get("sold"): continue
         iid, v = row(str(int(n)), it["price"], it.get("p25"), it.get("p75"), it["sold"],
-                     it.get("lowData"), it.get("unitBasis") == "set", it.get("trend"), it.get("sellThrough"))
+                     it.get("lowData"), it.get("unitBasis") == "set", it.get("trend"), it.get("sellThrough"),
+                     it.get("askMedian"))
         out[iid] = v
+        h = it.get("history")
+        if h: hist[iid] = [[e.get("date",""), round(e["median"]) if e.get("median") is not None else None, e.get("sold",0)] for e in h]
 
 j = {"source": "https://meso.watch/", "read": (generated or "")[:10], "market": "Classic World", "items": out}
+if hist: j["hist"] = hist
+if totals: j["totals"] = totals
 if sys.argv[2:]:
     # cheapest live listing per item: {itemId: [price each, qty, channel, map name, seller]}; equipment (1xxxxxx) and
     # per-set items (stars, arrows sold by the set) left out
@@ -70,5 +77,6 @@ dst = ROOT / "data" / "sources" / "mesowatch_prices.json"
 dst.write_text(json.dumps(j, separators=(",", ":")))
 print(f"{len(out)} items with sales ({sum(not v[4] & 1 for v in out.values())} solid) as of {generated}"
       + (f", {len(j['now'])} cheapest + {sum(len(v) for v in j.get('asks',{}).values())} total listings now as of {j['listed']}" if "now" in j else "") + f" -> {dst}")
+
 
 
