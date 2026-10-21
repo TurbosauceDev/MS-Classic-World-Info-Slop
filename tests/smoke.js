@@ -222,6 +222,20 @@ const path = require("path");
   check(!(await p.isHidden("#navi")) && (await p.inputValue("#navto")) !== "", "world map: Route here opens the navigator");
   await p.click('.sitefoot [data-foot="log"]'); check(await p.$$eval("#log .card", c => c.length) >= 1, "changelog tab renders");
   await p.click('.sitefoot [data-foot="credits"]'); check(await p.$$eval("#credits .card", c => c.length) === 8 && await p.$$eval("#srcdates li", l => l.length) >= 3, "credits tab renders (7 sources + Data last updated)");
+  { // Feedback: a note goes to the server with its kind, page and version; the honeypot stays empty; errors show (server faked)
+    const sent = []; let code = 200;
+    await p.route("**/api/feedback", r => { sent.push(JSON.parse(r.request().postData() || "{}")); r.fulfill({status: code, contentType: "application/json", body: "{}", headers: {"access-control-allow-origin": "*"}}) });
+    await p.click('.sitefoot [data-foot="feedback"]');
+    check(!(await p.isHidden("#feedback")) && await p.isDisabled("#fbsend"), "feedback: page opens, Send waits for a note");
+    await p.click('#fbkind [data-k="Bug"]'); await p.fill("#fbmsg", "Snail EXP looks off"); await p.fill("#fbcontact", "Turbow");
+    code = 429; await p.click("#fbsend"); await p.waitForSelector("#fbstat.bad");
+    check(/try again later/.test(await p.textContent("#fbstat")) && await p.inputValue("#fbmsg") === "Snail EXP looks off", "feedback: a refused note keeps the text and says why");
+    code = 200; await p.click("#fbsend"); await p.waitForSelector("#fbdone:not([hidden])");
+    const b = sent.at(-1);
+    check(b.kind === "Bug" && b.msg === "Snail EXP looks off" && b.contact === "Turbow" && b.website === "" && b.page === "credits" && /^\d+\.\d+\.\d+$/.test(b.ver), "feedback: note sent (" + JSON.stringify(b) + ")");
+    await p.click("#fbagain"); check(await p.inputValue("#fbmsg") === "" && !(await p.isHidden("#fbform")), "feedback: Send another clears the form");
+    await p.unroute("**/api/feedback");
+  }
   await tab("#t-craft"); await p.selectOption("#crlvdisc", "2"); check(/mesos to finish craft Lv 8/.test(await p.textContent("#crlvtot")) && await p.$$eval("#crlvrows tr", r => r.length) === 8, "crafting leveling plan");
   await tab("#t-maps"); check(await p.$$eval("#timedrows tr", r => r.length) > 10 && /Mushmom/.test(await p.textContent("#timedrows")), "bosses and timed spawns");
   await tab("#t-quests"); await p.click("#qcompact"); await p.click("#qcompact"); check(await p.$$eval("#qrows tr", r => r.length) > 0, "quest compact toggle");

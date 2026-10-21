@@ -188,3 +188,4 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   Esc/backdrop close the top one (el._close), Tab is trapped, opening from Mini leaves Mini. A new pop-up = `class="modal hidden"` + modalOpen.
 - Closing animates 140 ms with `.closing` (pointer-events off): tests that check `isVisible` after a close wait ~250 ms. ui.test.js
   checks every pop-up is inset, blurred and never calls host.mini/winSize or changes the page height (fitWin on).
+- 2026-10-21 Feedback: `feedback` table (schema.sql), POST /api/feedback (5-2000 chars, 5/hour and 20/day per ipday, 300/day total, honeypot `website`), GET /api/feedback + POST /api/feedback/done need `Authorization: Bearer FEEDBACK_KEY` (503 until the secret exists). server.yml puts the repo secret FEEDBACK_KEY into the Worker after deploy.

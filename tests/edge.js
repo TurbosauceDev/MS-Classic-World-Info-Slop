@@ -4,7 +4,7 @@
 const { chromium } = require("playwright");
 const path = require("path");
 const URL = "file://" + path.resolve(__dirname, "../dist/index.html");
-const TABS = ["trk", "trkhow", "trkruns", "trkkpq", "plan", "path", "maps", "expc", "quests", "mobs", "items", "skills", "wmap", "navi", "kpq", "cit", "craft", "keep", "inv", "log", "credits"];
+const TABS = ["trk", "trkhow", "trkruns", "trkkpq", "plan", "path", "maps", "expc", "quests", "mobs", "items", "skills", "wmap", "navi", "kpq", "cit", "craft", "keep", "inv", "log", "credits", "feedback"];
 const KEYS = "tab planner path pathdone qsort qeq qval ctown craft craftlv qcompact keep keephave mobs items skills navi wmap expc theme themes themec train bcmp anchors".split(" ");
 const BADTEXT = /.{0,30}(NaN|undefined|Infinity|\[object).{0,30}/;
 const enc = o => Buffer.from(JSON.stringify(o)).toString("base64").replace(/\+/g, "-").replace(/\//g, "_");
@@ -172,7 +172,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.reload(); await p.waitForTimeout(300);
     const old = await p.evaluate(() => [[...document.querySelectorAll("nav .sgh")].map(e => e.dataset.cat).join(), [...document.querySelectorAll(".homegrid>.homecat")].map(e => e.dataset.sec).join(),
       document.querySelectorAll("nav .subs [data-tab]").length, document.querySelector("#t-plan").dataset.cat + document.querySelector("#t-skills").dataset.cat].join("|"));
-    check(old === "db,trk,train,world,town|town,trk,train,world,db,more|23|traindb", `edit mode: layout saved with My Character still loads (${old})`);
+    check(old === "db,trk,train,world,town|town,trk,train,world,db,more|24|traindb", `edit mode: layout saved with My Character still loads (${old})`);
     await p.evaluate(() => localStorage.setItem("tab", "plan")); await p.goto(URL + "#"); await p.reload(); await p.waitForTimeout(300);
     const bt = await p.evaluate(() => !document.querySelector("#plan").hidden && document.querySelector("#c-train").getAttribute("aria-selected") === "true");
     await p.goto(URL + "#s=" + Buffer.from("{}").toString("base64")); await p.reload(); await p.waitForTimeout(300);

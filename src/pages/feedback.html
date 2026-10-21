@@ -1,0 +1,45 @@
+<section id="feedback" hidden>
+  <details class="howto">
+    <summary>About this page</summary>
+    <ul>
+      <li>Found a wrong number, a bug, or have an idea? Leave a note here. Only the people running this site can read it.</li>
+      <li>Nothing about you is stored: no account, no IP address. Add a way to reach you (Discord name, in-game name) only if you want an answer.</li>
+      <li>A wrong number is most useful with where you saw it and what the game shows (a screenshot link helps).</li>
+    </ul>
+  </details>
+
+  <div class="card fbcard">
+    <form id="fbform" novalidate>
+      <div class="cardhead"><h3>Leave us a note</h3><span class="tiny fbto">Read by the site owner</span></div>
+      <div class="seg small fbkind" id="fbkind" role="radiogroup" aria-label="What is it about">
+        <button type="button" role="radio" aria-checked="true" data-k="Idea">Idea</button>
+        <button type="button" role="radio" aria-checked="false" data-k="Bug">Bug</button>
+        <button type="button" role="radio" aria-checked="false" data-k="Wrong number">Wrong number</button>
+        <button type="button" role="radio" aria-checked="false" data-k="Other">Other</button>
+      </div>
+      <label class="lab fblab">Your note
+        <textarea id="fbmsg" rows="7" maxlength="2000" placeholder="What should we know?" required></textarea>
+        <span class="fbcount" id="fbcount" aria-live="polite">0 / 2000</span></label>
+      <label class="lab fblab"><span>How to reach you <span class="fbopt">(optional)</span></span>
+        <input type="text" id="fbcontact" maxlength="100" autocomplete="off" placeholder="Discord or in-game name"></label>
+      <label class="fbhp" aria-hidden="true">Website <input type="text" id="fbweb" name="website" tabindex="-1" autocomplete="off"></label>
+      <div class="fbfoot"><button class="btn primary" id="fbsend" type="submit" disabled>Send note</button><p class="tiny fbstat" id="fbstat" role="status"></p></div>
+    </form>
+    <div class="fbdone" id="fbdone" hidden>
+      <div class="fbtick" aria-hidden="true">✓</div>
+      <h3>Thanks, got it.</h3>
+      <p class="tiny">Your note is in the inbox. We read every one.</p>
+      <button class="btn" id="fbagain" type="button">Send another</button>
+    </div>
+  </div>
+
+  <details class="howto fbadmin" id="fbadmin">
+    <summary>Inbox (site owner)</summary>
+    <div class="fbkeyrow"><label class="lab fblab">Inbox key <input type="password" id="fbkey" autocomplete="off" placeholder="FEEDBACK_KEY"></label>
+      <button class="btn" id="fbopen" type="button">Open inbox</button><button class="btn" id="fbforget" type="button" hidden>Forget key</button></div>
+    <p class="tiny" id="fbinfo"></p>
+    <div class="seg small" id="fbshow" role="radiogroup" aria-label="Show" hidden>
+      <button type="button" role="radio" aria-checked="true" data-s="new">New</button><button type="button" role="radio" aria-checked="false" data-s="all">All</button></div>
+    <div class="fblist" id="fblist"></div>
+  </details>
+</section>

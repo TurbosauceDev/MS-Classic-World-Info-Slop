@@ -3,11 +3,13 @@
    POST /api/kpq      a cleared KPQ round from the grind tracker (sharing on): the KPQ leaderboard
    POST /api/party    live party view: post your numbers, get your party's (same party code)
    GET  /api/summary  everything the site needs, anonymous: one row per player per map/party (their typical run),
-                      plus drop counts per monster. The site's daily build bakes this into the page. */
+                      plus drop counts per monster. The site's daily build bakes this into the page.
+   POST /api/feedback a note from the site's Feedback page
+   GET  /api/feedback Danny's inbox (Authorization: Bearer FEEDBACK_KEY, a Worker secret); POST /api/feedback/done marks or deletes */
 import G from "./gamedata.json" with {type: "json"};
 import {cleanRun, cleanKpq, median} from "./check.js";
 
-const CORS = {"access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST", "access-control-allow-headers": "content-type"};
+const CORS = {"access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST", "access-control-allow-headers": "content-type, authorization"};
 const json = (v, status = 200) => new Response(JSON.stringify(v), {status, headers: {"content-type": "application/json", ...CORS}});
 // a run is 15 min, so 4/hour is the real most; the rest is slack. Per IP: a whole party can share one home network
 // (6 players x 4 runs/hr x 12 hr = 288), so up to 6 tracker copies and 300 runs a day
@@ -182,12 +184,54 @@ export default {
     try { return await route(req, env) } catch (e) { console.error(e); return json({error: "server error"}, 500) }
   },
 };
+// Feedback page: a note is 5-2000 characters; a filled hidden field (bots) is thanked and dropped. Per IP 5 an hour and 20 a
+// day, and 300 a day from everyone, so a flood can't fill the database.
+const FB_KINDS = ["Idea", "Bug", "Wrong number", "Other"], FB_PER_HOUR = 5, FB_PER_IP_DAY = 20, FB_PER_DAY = 300;
+const fbText = (v, n) => typeof v === "string" ? v.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "").trim().slice(0, n) : "";
+async function postFeedback(req, env){
+  let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
+  if (!body || typeof body !== "object") return json({error: "bad json"}, 400);
+  if (body.website) return json({ok: true});   // honeypot
+  const msg = fbText(body.msg, 2000), kind = FB_KINDS.includes(body.kind) ? body.kind : "Other";
+  if (msg.length < 5) return json({error: "too short"}, 400);
+  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  const mine = await env.DB.prepare("SELECT COUNT(*) n, SUM(received > ?) hr FROM feedback WHERE ipday = ?").bind(new Date(now - 3600e3).toISOString(), ipday).first();
+  const all = await env.DB.prepare("SELECT COUNT(*) n FROM feedback WHERE received > ?").bind(new Date(now - 86400e3).toISOString()).first();
+  if ((mine.hr || 0) >= FB_PER_HOUR || mine.n >= FB_PER_IP_DAY || all.n >= FB_PER_DAY) return json({error: "too many"}, 429);
+  await env.DB.prepare("INSERT INTO feedback (received, ipday, kind, msg, contact, page, ver) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .bind(now.toISOString(), ipday, kind, msg, fbText(body.contact, 100) || null, fbText(body.page, 40) || null, fbText(body.ver, 20) || null).run();
+  return json({ok: true});
+}
+// constant-time compare so the key can't be guessed a character at a time
+const sameKey = (a, b) => { if (!b || a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0 };
+function fbAdmin(req, env){
+  if (!env.FEEDBACK_KEY) return json({error: "no key set on the server"}, 503);
+  return sameKey((req.headers.get("authorization") || "").replace(/^Bearer /, ""), env.FEEDBACK_KEY) ? null : json({error: "wrong key"}, 401);
+}
+async function getFeedback(req, env){
+  const no = fbAdmin(req, env); if (no) return no;
+  const {results} = await env.DB.prepare("SELECT id, received, kind, msg, contact, page, ver, done FROM feedback ORDER BY id DESC LIMIT 500").all();
+  return json({notes: results});
+}
+async function doneFeedback(req, env){
+  const no = fbAdmin(req, env); if (no) return no;
+  let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
+  const id = Number(body?.id);
+  if (!Number.isInteger(id)) return json({error: "bad id"}, 400);
+  if (body.delete) await env.DB.prepare("DELETE FROM feedback WHERE id = ?").bind(id).run();
+  else await env.DB.prepare("UPDATE feedback SET done = ? WHERE id = ?").bind(body.done ? 1 : 0, id).run();
+  return json({ok: true});
+}
+
 async function route(req, env){
   const url = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
   if (url.pathname === "/api/runs" && req.method === "POST") return postRun(req, env);
   if (url.pathname === "/api/kpq" && req.method === "POST") return postKpq(req, env);
   if (url.pathname === "/api/party" && req.method === "POST") return partyLive(req, env);
+  if (url.pathname === "/api/feedback" && req.method === "POST") return postFeedback(req, env);
+  if (url.pathname === "/api/feedback" && req.method === "GET") return getFeedback(req, env);
+  if (url.pathname === "/api/feedback/done" && req.method === "POST") return doneFeedback(req, env);
   if (url.pathname === "/api/summary" && req.method === "GET"){
     // worked out at most every 5 minutes and kept in the meta table (each request would otherwise read every run; the
     // Cache API does nothing on workers.dev)

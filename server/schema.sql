@@ -42,3 +42,9 @@ CREATE INDEX IF NOT EXISTS kpq_ipday ON kpq_rounds (ipday);
 CREATE TABLE IF NOT EXISTS kpq_names (kpq_id INTEGER PRIMARY KEY, name TEXT NOT NULL);
 -- the one round sent before names existed (Rush 4:37, 2026-10-18) was Danny's Turbow (Danny, 2026-10-18)
 INSERT OR IGNORE INTO kpq_names (kpq_id, name) SELECT id, 'Turbow' FROM kpq_rounds WHERE date = '2026-10-18' AND mode = 'Rush' AND clear = 277 AND received < '2026-10-18T21:00';
+-- site Feedback page (2026-10-21): notes visitors leave for us. Read by Danny on the site with the FEEDBACK_KEY secret
+-- (GET /api/feedback). ipday is the same rate-limit hash as runs; no IP or anything else about the sender is kept.
+CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY, received TEXT NOT NULL, ipday TEXT NOT NULL, kind TEXT NOT NULL,
+  msg TEXT NOT NULL, contact TEXT, page TEXT, ver TEXT, done INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX IF NOT EXISTS feedback_ipday ON feedback (ipday);
+CREATE INDEX IF NOT EXISTS feedback_received ON feedback (received);

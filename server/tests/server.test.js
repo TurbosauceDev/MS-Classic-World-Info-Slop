@@ -143,4 +143,32 @@ assert.strictEqual(kb.board.Bonus[1].group, kb.board.Rush[0].group, "same party,
 assert.ok(!JSON.stringify(kb).includes("kpqparty"), "no install ids in the board");
 for (let i = 0; i < 13; i++) [s] = await kpost(kr("kpqsolo000000009", 600 + i, {party: 1}), "22.0.0.1");
 assert.strictEqual(s, 429, "13th round in an hour refused");
+// Feedback page: notes in, honeypot dropped, limits, admin key
+const fb = (body, ip = "30.0.0.1", path = "/api/feedback", key) => worker.fetch(new Request("https://x" + path, {method: "POST", body: JSON.stringify(body),
+  headers: {"cf-connecting-ip": ip, ...(key ? {authorization: "Bearer " + key} : {})}}), env).then(async r => [r.status, await r.json()]);
+const inbox = key => worker.fetch(new Request("https://x/api/feedback", {headers: key ? {authorization: "Bearer " + key} : {}}), env).then(async r => [r.status, await r.json()]);
+[s] = await inbox("anything"); assert.strictEqual(s, 503, "no key set: inbox closed");
+env.FEEDBACK_KEY = "k".repeat(32);
+[s, r] = await fb({kind: "Bug", msg: "  The <b>EXP</b> calc says NaN\u0007 at Lv 31 ", contact: "Turbow#1", page: "expc", ver: "0.10.9"});
+assert.deepStrictEqual([s, r.ok], [200, true]);
+[s, r] = await fb({kind: "Nonsense", msg: "x".repeat(5000)});
+[s] = await fb({msg: "hi"}); assert.strictEqual(s, 400, "too short");
+[s] = await fb({msg: "buy cheap mesos", website: "spam.example"}); assert.strictEqual(s, 200, "honeypot looks accepted");
+[s] = await fb("just a string"); assert.strictEqual(s, 400);
+for (let i = 0; i < 4; i++) [s] = await fb({msg: "note number " + i});
+assert.strictEqual(s, 429, "6th note in an hour from one IP refused");
+[s] = await fb({msg: "another person"}, "30.0.0.2"); assert.strictEqual(s, 200);
+[s] = await inbox(); assert.strictEqual(s, 401);
+[s] = await inbox("k".repeat(31) + "x"); assert.strictEqual(s, 401, "wrong key");
+[s, r] = await inbox("k".repeat(32));
+assert.strictEqual(r.notes.length, 6, "5 from the first IP + 1, honeypot note not stored");
+const bug = r.notes.find(n => n.kind === "Bug");
+assert.deepStrictEqual([bug.msg, bug.contact, bug.page, bug.ver, bug.done], ["The <b>EXP</b> calc says NaN at Lv 31", "Turbow#1", "expc", "0.10.9", 0]);
+const big = r.notes.find(n => n.msg.startsWith("xxx")); assert.deepStrictEqual([big.kind, big.msg.length], ["Other", 2000]);
+assert.ok(!JSON.stringify(r).includes("30.0.0") && !("ipday" in bug), "nothing about the sender goes out");
+[s] = await fb({id: bug.id, done: true}, "x", "/api/feedback/done", "k".repeat(32)); assert.strictEqual(s, 200);
+[s] = await fb({id: big.id, delete: true}, "x", "/api/feedback/done"); assert.strictEqual(s, 401, "delete needs the key");
+[s] = await fb({id: big.id, delete: true}, "x", "/api/feedback/done", "k".repeat(32));
+[s, r] = await inbox("k".repeat(32));
+assert.deepStrictEqual([r.notes.length, r.notes.find(n => n.id === bug.id).done], [5, 1]);
 console.log("server tests passed");

@@ -14,6 +14,7 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      FEEDBACK_KEY: ${{ secrets.FEEDBACK_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,3 +32,7 @@ jobs:
       - name: Deploy
         if: env.CLOUDFLARE_API_TOKEN != ''
         run: npx wrangler deploy
+      # the key that opens the site's Feedback inbox (repo secret FEEDBACK_KEY; without it the inbox stays closed)
+      - name: Feedback key
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.FEEDBACK_KEY != ''
+        run: printf '%s' "$FEEDBACK_KEY" | npx wrangler secret put FEEDBACK_KEY
