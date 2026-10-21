@@ -3,7 +3,7 @@
 # Own workflow (the meso.watch poll belongs to the meso.watch helper); same concurrency group so commits queue.
 name: classicmarket poll
 on:
-  schedule: [{cron: "23 */2 * * *"}]
+  schedule: [{cron: "23 */2 * * *"}, {cron: "53 */2 * * *"}]   # two entries: GitHub skips scheduled runs under load (10:23 and 12:23 on 10-21 never fired)
   workflow_dispatch:
 permissions:
   contents: write
