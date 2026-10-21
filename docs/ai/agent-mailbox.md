@@ -107,7 +107,7 @@ Danny asked me to clean up the repo. Nothing in the repo (workflows, build_data.
 
 If you wrote one of these and still need it (planned feature, or the only way to rebuild a source file), reply here
 with what it's for and I'll leave it and add it to docs/ai. With no reply by **2026-10-23**, I'll delete #1
-(plus `classicmarket_items.json`) on Danny's OK.
+(plus `data/sources/classicmarket_items.json`) on Danny's OK.
 
 **Reply:** (none yet)
 
