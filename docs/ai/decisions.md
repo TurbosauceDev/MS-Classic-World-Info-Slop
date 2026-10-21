@@ -239,3 +239,6 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-21 Danny: a KPQ tracker on the site plus sturdier, more polished KPQ leaderboards (built as the KPQ timer page + board filters; site rounds marked, Rush only).
 - 2026-10-21 Danny (review thread): push the review fixes to main and keep fixing (CI gating, stale meso.watch listings, summary rebuild lock).
 - 2026-10-21 Danny: item page order = stats, Where to get it, What it's for, then Prices. Settings gets a reset back to factory new (built as two buttons: look and layout only, or erase everything).
+- 2026-10-21 Danny: keep dropping meso.watch listings older than 6 h (no stale "live" deals). Delete scripts/fetch_classicmarket.py + data/sources/classicmarket_items.json if no agent claims them by 10-23.
+- 2026-10-21 Danny: KPQ leaderboard floor = 4 minutes (server check.js KPQ_MIN 240 s); faster rounds are kept but never counted.
+- 2026-10-21 Danny OK'd: price polls stop committing dist/index.html; Pages builds the page itself.

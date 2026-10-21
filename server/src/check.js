@@ -50,6 +50,8 @@ const KPQ_IDS = ["80000000", "80000100", "80000200", "80000300", "80000400", "80
 // character name for the board: letters and digits, up to 12 (our own bound, same as the tracker's name box); anything else
 // is dropped, the round still counts
 const kpqName = v => typeof v === "string" && /^[A-Za-z0-9]{2,12}$/.test(v.trim()) ? v.trim() : null;
+// fastest believable KPQ clear: 4 minutes (Danny 2026-10-21); faster ones are kept but never counted
+export const KPQ_MIN = 240;
 export function cleanKpq(r){
   const num = (v, lo, hi) => typeof v === "number" && isFinite(v) && v >= lo && v <= hi;
   if (!r || typeof r !== "object") return {error: "not a round"};
@@ -66,7 +68,7 @@ export function cleanKpq(r){
     clock: r.clock ? 1 : 0, exp: cnt(r.exp, 1e7), mesos: cnt(r.mesos, 1e7), stages, name: kpqName(r.name),
     src: r.src === "site" ? "site" : "tracker"};   // site = the site's KPQ timer (stages split by key press, 2026-10-21)
   let why = null;
-  if (round.clear < 60 || round.clear > 3600) why = "clear time";
+  if (round.clear < KPQ_MIN || round.clear > 3600) why = "clear time";
   else if (round.total != null && round.total < round.clear) why = "total under clear";
   else if (["80000000", "80000400"].some(id => !(id in stages))) why = "stages missing";
   else if (KPQ_IDS.slice(0, 5).reduce((a, id) => a + (stages[id] || 0), 0) > round.clear + 60) why = "stage times over clear";

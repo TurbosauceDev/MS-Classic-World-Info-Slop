@@ -195,3 +195,4 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 
 ## Summary rebuild 2026-10-21
 - `/api/summary`: when the stored copy is stale, the first request claims meta `summary_lock` and rebuilds; others within 60 s get the stale copy (was: every request rebuilt). Past 1.5 MB `kpq.list` is cut to 1000 then 0 rounds so it can still be stored. server.test.js checks the lock. `server/package-lock.json` now pins wrangler's tree.
+- KPQ floor 2026-10-21 (Danny): `KPQ_MIN` = 240 s in server/src/check.js; summary() also skips stored rounds under it (one earlier 30 s-60 s rule). server.test.js "3:59 round not counted".

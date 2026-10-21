@@ -135,6 +135,7 @@ for (let i = 1; i <= 4; i++) [s, r] = await kpost(kr("kpqparty0000000" + i, 500,
 [s, r] = await kpost(kr("kpqsolo000000001", 900, {party: 1}), "21.0.0.1");
 [s, r] = await kpost(kr("kpqsolo000000002", 700, {mode: "Rush", exp: 20000, mesos: 50, stages: {"80000000": 60, "80000400": 250, "80000500": 30}}), "21.0.0.2");
 [s, r] = await kpost(kr("kpqsolo000000003", 30), "21.0.0.3"); assert.ok(!r.counted && r.why === "clear time", "30 s round not counted: " + JSON.stringify([s, r]));
+[s, r] = await kpost(kr("kpqsolo000000004", 239), "21.0.0.4"); assert.ok(!r.counted && r.why === "clear time", "3:59 round not counted (4 min floor): " + JSON.stringify([s, r]));
 [s, r] = await kpost(kr("kpqsolo000000004", 400, {stages: {"80000100": 60}}), "21.0.0.4"); assert.strictEqual(r.why, "stages missing");
 [s] = await kpost({install: "x"}, "21.0.0.5"); assert.strictEqual(s, 400);
 const kb = (await fresh()).kpq;
