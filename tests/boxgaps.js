@@ -7,7 +7,9 @@ module.exports = function boxGaps([min, sid]){
     const s = getComputedStyle(e);
     return !s.display.startsWith("inline") && parseFloat(s.borderTopWidth) > 0 && parseFloat(s.borderBottomWidth) > 0 && s.borderTopStyle !== "none" && parseFloat(s.borderRadius) > 0 };
   const name = e => e.tagName.toLowerCase() + (e.id ? "#" + e.id : "") + (typeof e.className === "string" && e.className.trim() ? "." + e.className.trim().split(/\s+/).join(".") : "");
-  const boxes = [...sec.querySelectorAll("*")].filter(isBox), out = [];
+  // inside a folded <details> (not its summary) nothing shows, so nothing can touch
+  const folded = e => { const d = e.parentElement?.closest("details:not([open])"); return !!d && !d.querySelector(":scope > summary")?.contains(e) };
+  const boxes = [...sec.querySelectorAll("*")].filter(e => isBox(e) && !folded(e)), out = [];
   for (const b of boxes){
     let a = b.parentElement, scroll = false;
     while (a && a !== sec && !isBox(a)){ const s = getComputedStyle(a); if (/auto|scroll|hidden/.test(s.overflowX + s.overflowY)) scroll = true; a = a.parentElement }

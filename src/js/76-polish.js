@@ -1,0 +1,42 @@
+// Reset filters + Copy link (01-pagectl.js): add the missing one, then park both at the right end of the first filter row
+for (const [p, [rid, sid]] of Object.entries(PAGECTL)){
+  const row = [rid, sid].map(i => i && $("#" + i)?.closest(".controls")).find(Boolean) || document.querySelector(`#${p} .controls`); if (!row) continue;
+  const mk = (id, txt) => { const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.id = id; b.textContent = txt; return b };
+  const r = rid ? $("#" + rid) : mk(p + "ctlreset", "Reset filters"), s = sid ? $("#" + sid) : mk(p + "ctlshare", "Copy link");
+  if (!rid) r.addEventListener("click", () => ctlReset(p));
+  if (!sid) s.addEventListener("click", () => copyShare(s, shareUrl("L", {p, v: ctlState(p)})));
+  const box = document.createElement("span"); box.className = "ctlend"; r.style.alignSelf = s.style.alignSelf = "";
+  box.append(r, s); row.append(box);
+}
+// a list link: its page is already open (00-core.js); put the fields back once that page has drawn
+if (HASH.L && Object.hasOwn(PAGECTL, HASH.L.p) && HASH.L.v && typeof HASH.L.v === "object") setTimeout(() => {
+  const p = HASH.L.p; for (const e of ctlFields(p)) if (Object.hasOwn(HASH.L.v, e.id) && Object.hasOwn(CTLDEF[p], e.id)){
+    const v = HASH.L.v[e.id]; if (typeof v === typeof CTLDEF[p][e.id]) ctlSet(e, v) } }, 0);
+
+// Home: masonry. Each card spans as many 1 px grid rows as it is tall, so short cards don't sit over blank space (audit 10-21).
+// Order, the billboard (full row, first) and edit-mode reorders stay plain grid; a ResizeObserver keeps spans current.
+{ const grid = document.querySelector(".homegrid"), GAP = 14;
+  const fit = () => { if (!grid) return; for (const c of grid.children) c.style.gridRowEnd = `span ${Math.max(1, Math.ceil(c.getBoundingClientRect().height + GAP))}` };
+  if (grid && "ResizeObserver" in window){ grid.classList.add("masonry"); const ro = new ResizeObserver(fit);
+    for (const c of grid.children) ro.observe(c); ro.observe(grid) } }
+
+// Changelog: each version's time (data-t, in your time zone like the Home stamp) and older days folded under their date
+{ const box = document.querySelector("#log .changelog");
+  if (box){
+    const cards = [...box.querySelectorAll(":scope > .card")], days = new Map();
+    for (const c of cards){
+      const h = c.querySelector(".cardhead h3"), t = c.dataset.t || "", ms = /T/.test(t) ? Date.parse(t) : NaN;
+      if (h && !isNaN(ms)){ const s = document.createElement("time"); s.className = "vtime"; s.dateTime = t;
+        s.title = new Date(ms).toUTCString().replace("GMT", "UTC");
+        s.textContent = new Date(ms).toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit", timeZoneName: "short"}); h.after(s) }
+      const day = (h?.textContent.match(/[A-Z][a-z]{2} \d{1,2}, \d{4}/) || ["Earlier"])[0];
+      if (!days.has(day)) days.set(day, []); days.get(day).push(c);
+    }
+    let first = true;
+    for (const [day, list] of days){
+      const d = document.createElement("details"); d.className = "logday"; d.open = first; first = false;
+      d.innerHTML = `<summary><span>${esc(day)}</span><span class="sub">${list.length} version${list.length === 1 ? "" : "s"} · v${esc(list.at(-1).querySelector(".ver")?.textContent.slice(1) || "")}–${esc(list[0].querySelector(".ver")?.textContent.slice(1) || "")}</span></summary>`;
+      const inner = document.createElement("div"); inner.className = "logdaybody"; inner.append(...list); d.append(inner); box.append(d);
+    }
+  }
+}

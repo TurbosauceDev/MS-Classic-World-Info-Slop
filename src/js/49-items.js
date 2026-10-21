@@ -65,7 +65,7 @@ const SRCPILL = {drop: ["drops", "p-warn"], shop: ["shop", "p-good"], craft: ["c
 sync();
 
 function page(o){
-  const it = o.it, s = it.st || {}, st = (k, v, t) => v == null || v === "" ? "" : `<div${t ? ` title="${esc(t)}"` : ""}><dt>${k}</dt><dd>${v}</dd></div>`;
+  const it = o.it, s = it.st || {}, st = (k, v, t) => v == null || v === "" ? "" : `<div${String(v).length > 12 ? ' class="wide"' : ""}${t ? ` title="${esc(t)}"` : ""}><dt>${k}</dt><dd>${v}</dd></div>`;
   const isEq = it.c === "Equipment";
   const flags = [`<span class="pill p-hot">${esc(typeOf(it))}</span>`, o.quest && `<span class="pill p-warn" title="Quest item: only used for a quest">quest item</span>`, isEq && it.job && it.job !== "All" && `<span class="pill p-warn">${esc(it.job)} only</span>`,
     isEq && (!it.job || it.job === "All") && `<span class="pill p-good">any job</span>`, it.g && `<span class="pill p-warn">${esc(it.g)} only</span>`,
@@ -93,10 +93,10 @@ function page(o){
   const card = (h, body, empty) => `<div><h4>${h}</h4>${body ? `<ul class="mlist">${body}</ul>` : `<p class="sub">${empty}</p>`}</div>`;
   return `<div class="mpage">
     <div class="mpbar"><button class="btn" id="itback">← All items</button><button class="btn" id="itshare">Copy link</button></div>
-    <div class="mtop">${D.iicons[o.id] ? `<img class="sprite" src="data:image/png;base64,${D.iicons[o.id]}" alt="">` : ""}<div><h2>${esc(it.n)}</h2>
+    <div class="mhead"><div class="mtop">${D.iicons[o.id] ? `<img class="sprite" src="data:image/png;base64,${D.iicons[o.id]}" alt="">` : ""}<div><h2>${esc(it.n)}</h2>
       <p class="sub">${esc(typeOf(it))}${isEq ? ` · level ${s.reqLevel || 0}+` : ""} · item ID ${o.id}${others ? ` · same name: ${others}` : ""}</p><p class="mflags">${flags}</p></div></div>
     ${it.d ? `<p class="idesc">${esc(it.d).replace(/\n/g, "<br>")}</p>` : ""}
-    ${stats ? `<h3 class="msec">Stats</h3><dl class="stats mgrid">${stats}</dl>` : ""}
+    ${stats ? `<h3 class="msec">Stats</h3><dl class="stats mgrid">${stats}</dl>` : ""}</div>
     <h3 class="msec">Prices ${npcCheaperPill(o.id)}</h3>
     <div id="itprices">${priceBox(o.id)}</div>
     <h3 class="msec">Where to get it</h3>

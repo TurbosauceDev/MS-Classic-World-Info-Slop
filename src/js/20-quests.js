@@ -97,8 +97,10 @@ function marketCell(r){
   const tip = `Player prices: ${srcs}${m.rough ? ". Few sales or asking prices only: rough" : ""}. Reward = quest mesos + items (pick 1: the best, random: expected value).`;
   const badge = !m.all ? `<span class="pill p-warn">${ok}/${tot} priced</span>`
     : m.ctot ? `<span class="pill ${net >= 0 ? "p-good" : "p-bad"}" title="${net >= 0 ? "Doing the quest beats selling the items" : "Selling the turn-in items pays more than the reward"}">net ${net >= 0 ? "+" : "−"}${fmt(Math.abs(Math.round(net)))}</span>` : "";
-  return `<div class="qmkt sub" title="${esc(tip)}">${m.ctot ? `Turn-in ~${fmt(Math.round(m.cost))} · ` : ""}Reward ~${fmt(Math.round(m.rew))} ${badge}
-    <br>NPC floor ${fmt(Math.round(m.npc))} · ${esc(srcs)}${m.rough ? " · rough" : ""}</div>`;
+  // one number first (net, or the reward's value), the parts on a quieter line, sources on hover (audit 10-21)
+  const lead = m.all && m.ctot ? badge : `<b class="qmv">~${fmt(Math.round(m.rew))}</b> reward value ${badge}`;
+  return `<div class="qmkt" title="${esc(tip)}">${lead}
+    <div class="sub">${m.ctot ? `turn-in ~${fmt(Math.round(m.cost))} · reward ~${fmt(Math.round(m.rew))} · ` : ""}NPC floor ${fmt(Math.round(m.npc))}${m.rough ? " · rough" : ""}</div></div>`;
 }
 /* "Stack with": other quests within 10 levels that need the same monster (a kill, or a monster that drops a turn-in item) */
 const qMobs = r => new Set([...(r.kl || []).map(([m]) => String(m)),

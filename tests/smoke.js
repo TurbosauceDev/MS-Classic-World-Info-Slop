@@ -14,8 +14,8 @@ const boxGaps = require("./boxgaps");
   // Home page + section nav. Sidebar layout (default, wider than a phone): every page button shows; the two-row layout and
   // phones show one section's pages at a time, so open the section first when its button is showing
   const tab = async sel => { const c = "#c-" + await p.$eval(sel, b => b.dataset.cat); if (await p.isVisible(c)) await p.click(c); await p.click(sel) };
-  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 23, "home page lists every page");
-  check(await p.$$eval("#home img.hic", l => l.length === 29 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "home sprites all load (29)");
+  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 25, "home page lists every page");
+  check(await p.$$eval("#home img.hic", l => l.length === 31 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "home sprites all load (31)");
   await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && await p.getAttribute("#t-mobs", "aria-selected") === "true", "home link opens its page");
   const side = await p.evaluate(() => ({pages: [...document.querySelectorAll("nav .subs [data-tab]")].filter(b => b.offsetParent).length,
     titles: [...document.querySelectorAll("nav .sgh")].filter(b => b.offsetParent).map(b => b.textContent.trim()).join("|"),

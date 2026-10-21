@@ -2,6 +2,10 @@
 // median24h, n24h, median7d, n7d]; "usual" = meowdb's 14-day median of asks players saw in shops, "sold for" reports and
 // finished meowdb trades. MDBL[id] = live listings players posted on meowdb: [buy, price each, qty, ch, FM room, spot, user,
 // bumped (UTC minutes), direct trade, stats]; the fetch drops ones not bumped in 7 days.
+// "Updated" column: a bare date reads as today / yesterday / N days ago like the rest, full date on hover
+const whenTxt = w => { const m = /^(\d{4}-\d\d-\d\d)/.exec(w || ""); if (!m || w.length > 10) return esc(w || "");
+  const d = Math.floor((Date.now() - Date.parse(m[1] + "T00:00:00Z")) / 864e5);
+  return `<span title="${m[1]}">${d <= 0 ? "today" : d === 1 ? "yesterday" : d + " days ago"}</span>` };
 const agoMin = m => { m = Math.max(0, m); return m < 1 ? "just now" : m < 60 ? Math.round(m) + " min ago" : m < 48 * 60 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " days ago" };
 const mdbAgo = () => { const t = Date.parse((D.mdb?.read || "").replace(" ", "T") + "Z"); return isNaN(t) ? "" : agoMin((Date.now() - t) / 6e4) };
 PRICE_SRC.splice(1, 0, id => { const m = MDB[id]; if (!m || m[0] == null) return null;
@@ -31,7 +35,7 @@ function priceBox(id){
     ${tile("NPC buys", it?.p ? fmt(it.p) : "–", it?.p ? "game files" : "can't be sold to NPCs")}</div>`;
   const src = rows.length ? `<div class="tblwrap"><table class="mini pxsrc"><thead><tr><th>Source</th><th class="num">Price</th><th>Based on</th><th>Range</th><th>Updated</th></tr></thead><tbody>${rows.map(r =>
     `<tr><td><b>${esc(r.src)}</b> <span class="sub">${esc(r.kind)}</span></td><td class="num"><b>${fmt(r.v)}</b>${r.per ? ` <span class="sub">${r.per}</span>` : ""}${r.trend ? " " + r.trend : ""}</td>
-      <td>${r.n}${r.few ? ` <span class="pill p-warn" title="Few data points: rough">few</span>` : ""}</td><td class="sub">${r.detail || ""}</td><td class="sub">${esc(r.when || "")}</td></tr>`).join("")}</tbody></table></div>`
+      <td>${r.n}${r.few ? ` <span class="pill p-warn" title="Few data points: rough">few</span>` : ""}</td><td class="sub">${r.detail || ""}</td><td class="sub">${whenTxt(r.when)}</td></tr>`).join("")}</tbody></table></div>`
     : `<p class="sub">No player prices from meso.watch, meowdb or classicmarket.kr yet.</p>`;
   const lrow = (x, i) => `<tr${i >= PX_SHOW ? ` class="pxx"` : ""}><td class="num"><b>${pxEach(x.v)}</b>${i === 0 && !x.buy ? ` <span class="pill p-good">cheapest</span>` : ""}</td><td class="num">${x.qty > 1 ? "×" + fmt(x.qty) : "1"}</td>
     <td>${pxWhere(x)}${x.note ? ` <span class="sub">${esc(x.note)}</span>` : ""}</td><td>${x.who ? esc(x.who) : `<span class="sub">–</span>`}</td><td class="sub">${esc(x.ago || "")}</td><td class="sub">${esc(x.src)}</td></tr>`;

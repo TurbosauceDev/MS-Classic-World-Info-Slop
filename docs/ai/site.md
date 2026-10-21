@@ -25,6 +25,7 @@ node tests/golden.js | tail -3              # meowdb-published reference numbers
 node tests/edge.js | tail -5                # bad saved state/share links/server replies, phone nav, keyboard; ~80 s
 node tests/features.js | tail -5            # train hand-off reload, price check keep/sell, job compare, Credits dates
 node tests/pages.js | tail -5               # Pages split (late icons), manifest, offline service worker
+node tests/polish.js | tail -3              # list Reset + Copy link, Home masonry, changelog times, World Map idle card, item page
 node tests/snipe.js | tail -5               # FM Sniper on a fixture market.json: deal maths, views, filters, watch, new, live refresh, tools
 python3 tests/deal_life_test.py             # FM Sniper deal lifetimes from a fake snapshot git history
 node tests/monkey.js | tail -3              # random clicks/typing/Back/window sizes; SEEDS=4,5 N=300 to vary; ~100 s
@@ -84,7 +85,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Recipes
 - **New page/tab:** markup `<section id="x" hidden>` in src/pages/x.html + a `<!--@page x-->` slot in index.html; button `#t-x` with `data-cat` in `.subs`
   (under its section's `.sgh` title, with `<img class="nic" data-pool="x">` and a pool `P.x` in 71-navside.js); `.hlink`
-  on the Home card; bump the home-link count in tests/smoke.js (23 now) and the sidebar page count (21), Home sprites in tests/pages.js + smoke.js (29), the nav page count in tests/edge.js "My Character still loads" (23), add a click-through check.
+  on the Home card; bump the home-link count in tests/smoke.js (25 now) and the sidebar page count (21), Home sprites in tests/pages.js + smoke.js (31), the nav page count in tests/edge.js "My Character still loads" (23), add a click-through check.
   Give the `.hlink` an `<img class="hic" data-ic="i:<item>|m:<mob>|s:<skill>">` sprite (filled from D in 00-core.js,
   shown only when the card is a billboard) and bump the sprite count in smoke.js (29 = 7 headers + 22 links).
 - **Changelog:** every user-visible change gets a dated entry at the top of `#log` (grep `id="log"`, read ~20 lines there).
@@ -249,3 +250,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Traps: mesoarbitrage `npc` = game-file NPC sell price (not stored). maplestory.watch is name-only: male/female and quest copies share names, tie -> mesoarbitrage's id, else dropped (Blue Moon). Neither site splits equip rolls/scrolls. No CORS on either, so build-time only.
 - Layer B (2026-10-21, owner OK'd, credit classicmarket.kr everywhere): `scripts/fetch_classicmarket_market.py` pulls `/api/prices/recent` (their combined "합산" prices) with repo secret `CLASSICMARKET_COOKIE` (`cmm_session=...` of Danny's character-verified login) -> `data/sources/classicmarket_market.json` + `D.cmp.it[id] = [median, low, high, sold, seen, forSaleNow, day]`, same workflow. `pwPrice` order: meso.watch -> cmp -> meowdb -> cm asks -> cm bids.
 - Traps: verifying/re-logging on classicmarket replaces the session, so the old cookie dies (the poll then prints a ::warning:: and keeps the old file). Never pull Minerva's Owl (`owl-scrape-blocked`) or work around `/api/prices/list`'s x-cm-token.
+
+## Audit polish pass 2026-10-21
+- `src/js/01-pagectl.js` + `76-polish.js`: PAGECTL lists the list pages; each gets Reset filters + Copy link in `.ctlend` at the end of its filter row (existing buttons keep their handlers, missing ones are generic). Defaults are read in 01 before page scripts restore saved state (fields inside the page section, not in details/modals). Link = `#L={p, v}` (changed fields only); 00-core.js opens the page, 76 applies it. New list page: add it to PAGECTL and the regex in 00-core.js. tests/polish.js.
+- Changelog cards carry `data-t` (ship time, backfilled from git author dates; Oct 16 card is date-only). build.py writes `data-t` = build time into src/pages/log.html for a new card that has none, so commit log.html after building. 76-polish.js adds the time and folds days into `details.logday`.
+- Home is masonry (`.homegrid.masonry`, 1 px rows, ResizeObserver spans). Trap: a Home card's `margin-bottom` is the row gap now; don't add row-gap back. tests/boxgaps.js skips boxes inside folded `<details>`.

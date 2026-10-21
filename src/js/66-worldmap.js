@@ -179,9 +179,17 @@ function showMap(id){   // one map of a sub-map (or a grey neighbour outside it)
   $("#wmcard").innerHTML = card(here, id); shown = "m" + id;
   document.querySelectorAll(".wmnode").forEach(d => d.classList.toggle("on", d.dataset.map === id));
 }
+// nothing picked yet: the numbered dots (best 3 for your class and level) as a list to click, instead of an empty box
+function idleCard(){
+  const spots = S.sub == null ? D.wmap[S.isl][5] : [];
+  const top = spots.map((sp, i) => [i, spotRate(sp), sp]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  return `<h3 class="wmidleh">Best spots here for you</h3>${top.length ? `<ol class="wmidle">${top.map(([i, , sp]) =>
+    `<li><button type="button" class="linkbtn" data-wmpick="${i}">${esc(mapName(sp[3].find(known)) || "?")}</button>${sp[3].filter(known).length > 1 ? ` <span class="sub">+${sp[3].filter(known).length - 1} more maps</span>` : ""}</li>`).join("")}</ol>` : `<p class="sub">No spot on this island fits your level.</p>`}
+    <p class="sub">Same as dots 1-3 on the map (EXP/hr estimate for your class and level). Click a dot to see that place.</p>`;
+}
 function show(i){
   INFO = null;
-  if (i == null){ $("#wmcard").innerHTML = `<p class="sub">Click a dot to see that place.</p>`; shown = null; return }
+  if (i == null){ $("#wmcard").innerHTML = idleCard(); shown = null; return }
   if (i !== shown) S.mm = null;
   shown = i; $("#wmcard").innerHTML = card(i);
   document.querySelectorAll(".wmdot").forEach(d => d.classList.toggle("on", +d.dataset.i === i));
@@ -253,6 +261,7 @@ map.addEventListener("click", e => {
   if (DRILL(D.wmap[S.isl][5][i])) return openArea(i);
   S.pin = i; document.querySelectorAll(".wmdot").forEach(x => x.classList.toggle("pin", +x.dataset.i === S.pin)); show(i) });
 $("#wmcard").addEventListener("click", e => {
+  const pk = e.target.closest("[data-wmpick]"); if (pk){ document.querySelector(`.wmdot[data-i="${pk.dataset.wmpick}"]`)?.click(); return }
   const dr = e.target.closest("[data-drill]"); if (dr) return openArea(+dr.dataset.drill);
   const r = e.target.closest("[data-route]"); if (r) return navTo(r.dataset.route);
   const sh = e.target.closest("[data-wshare]"); if (sh) return copyShare(sh, shareUrl("w", sh.dataset.wshare));

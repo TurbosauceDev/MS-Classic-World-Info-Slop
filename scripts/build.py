@@ -38,9 +38,16 @@ assert "__BUILD__" in html and "__BUILDISO__" in html
 html = html.replace("__BUILDISO__", now.strftime("%Y-%m-%dT%H:%M:%SZ")).replace("__BUILD__", ver)
 # site version number (Danny 10-19) = changelog entries counted from the oldest (0.1.0): each card is one version, a card
 # marked data-minor starts the next 0.x.0. A new changelog card bumps it, nobody has to remember a number.
+# each card carries data-t = when that version shipped (Danny 10-21, backfilled from git history). A new card without one gets
+# this build's time written into src/pages/log.html itself, so commit it with the card (tests/docs.test.js checks).
+LOGSRC = ROOT / "src" / "pages" / "log.html"
+src_log = LOGSRC.read_text()
+stamped = re.sub(r'<div class="card"( data-minor)?><div class="cardhead">', lambda m: f'<div class="card"{m.group(1) or ""} data-t="{now.strftime("%Y-%m-%dT%H:%M:%SZ")}"><div class="cardhead">', src_log)
+if stamped != src_log:
+    LOGSRC.write_text(stamped); html = html.replace(src_log.strip(), stamped.strip(), 1); print("changelog: stamped new card(s) with this build's time in src/pages/log.html")
 head, rest = html.split('<section id="log"', 1)
 log, tail = rest.split("</section>", 1)
-card = r'(<div class="card"( data-minor)?><div class="cardhead"><h3>)'
+card = r'(<div class="card"( data-minor)?(?: data-t="[^"]+")?><div class="cardhead"><h3>)'
 cards = list(re.finditer(card, log))
 assert cards and cards[-1].group(2), "oldest changelog card must be data-minor (0.1.0)"
 vers, mi, pa = [], 0, 0

@@ -34,7 +34,9 @@ function trkRender(){
   document.querySelectorAll(".trksrc").forEach(e => e.innerHTML = src);
   $("#trkkpqdata").innerHTML = trkKpq(s.kpq);
   if (!s.runs){
-    $("#trkdata").innerHTML = `<div class="card trkempty"><h3>No shared runs yet</h3><p>Every 15 minutes of non-stop farming on one map that a tracker player shares lands here: EXP/hr and mesos/hr by map, confirmed drops by monster, and the best time of day to farm. Be the first: <a href="#" data-go="trk">download the tracker</a> and say yes to sharing.</p></div>`;
+    $("#trkdata").innerHTML = `<div class="card trkempty"><h3>No shared runs yet</h3><p>Every 15 minutes of non-stop farming on one map that a tracker player shares lands here: EXP/hr and mesos/hr by map, confirmed drops by monster, and the best time of day to farm. Be the first: <a href="#" data-go="trk">download the tracker</a> and say yes to sharing.</p>
+      <div class="tblwrap trkpreview" aria-label="What a shared run row shows"><table class="mini"><thead><tr><th>Map</th><th class="num">Players</th><th class="num">EXP/hr</th><th class="num">Mesos/hr</th><th>Best time</th></tr></thead>
+      <tbody><tr><td><span class="pill p-hot">example</span> the map you farmed</td><td class="num sub">you</td><td class="num sub">from your EXP bar</td><td class="num sub">from your pickups</td><td class="sub">your hour of day</td></tr></tbody></table></div></div>`;
     return;
   }
   // maps: one line per map and solo/party; each player (or party) counts once (their typical run)
