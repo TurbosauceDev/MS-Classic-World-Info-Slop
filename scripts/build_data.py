@@ -640,6 +640,12 @@ def step_shared(D):
                    "times": {m: t for m, t in j.get("times", {}).items() if m in D["maps"]},   # map -> [[UTC start hour, speed vs usual, players]]
                    "kpq": j.get("kpq", {})}   # KPQ leaderboard {rounds, groups, board: {Bonus|Rush: [{best, median, rounds, party, level, job, date, ...}]}}
 
+def step_cmarket(D):
+    """cm {read, posts, it: {itemId: [askMin, askMedian, askN, bidMax, bidMedian, bidN]}}: classicmarket.kr trade posts
+    (scripts/fetch_classicmarket_listings.py)."""
+    import fetch_classicmarket_listings
+    fetch_classicmarket_listings.step(D)
+
 def osms_info():
     """osms {ref, date}: the export commit the data came from and its date (Credits "Data last updated"); None without git."""
     try:
@@ -648,7 +654,7 @@ def osms_info():
         return {"ref": h, "date": d}
     except Exception: return None
 
-PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D))}   # (key it owns, step)
+PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: step_cmarket(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)
@@ -662,7 +668,7 @@ if __name__ == "__main__":
     D = step_base()
     step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D)
     D = json.loads(json.dumps(D))  # str keys, as in the partial rebuild path (crafting/extras look mobs up by str id)
-    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D); step_itemdb(D); step_kpq(D); step_prices(D); step_shared(D)
+    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D); step_itemdb(D); step_kpq(D); step_prices(D); step_shared(D); step_cmarket(D)
     D["osms"] = osms_info()
     for k in ("mobdiff", "skilldiff", "latermobnames"): D.pop(k, None)   # only the removed "What changed since 2008" tab used these
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees

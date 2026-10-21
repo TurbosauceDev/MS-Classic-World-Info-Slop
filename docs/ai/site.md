@@ -218,3 +218,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Privacy page 2026-10-21
 - `src/pages/privacy.html` (footer "Privacy", More › Privacy): static, plain-language policy + disclaimers, verified from code (localStorage only, screenshots/screen share never uploaded, Worker keeps only Feedback notes, opt-in runs/KPQ, party_live 1 h, salted IP-day hashes). Smoke checks the footer link.
 - Trap: if a feature starts sending or storing anything new (server field, external fetch, analytics), update this page in the same push.
+
+## classicmarket.kr prices 2026-10-21
+- `scripts/fetch_classicmarket_listings.py` pulls classicmarket.kr's public `/api/listings` (JSON, real item ids, price is per unit) -> `data/sources/classicmarket_prices.json` + `D.cm.it[id] = [askMin, askMedian, askN, bidMax, bidMedian, bidN]`. Workflow `classicmarket-poll.yml` every 2 h (own workflow, meso.watch poll untouched); build_data.py step `cmarket`.
+- Counted: use/etc posts, and equips with 0 upgrades and an "exact" roll (buy posts with no roll too). Dropped: scrolled, upper/lower/unknown rolls, Cash, placeholder prices (0, all-same digits like 9999/99999, 123456), posts 10x off the median, bids over 2x the ask median. Author, Discord id and note are never stored.
+- Traps: the outside handoff's note rules (drop cheap posts saying 귓 "whisper") would drop real stackables (Iron Ore 300 "귓주세용"); price is already "each" (개당), no total parsing. Tests: `python3 tests/classicmarket_test.py` on `tests/fixtures/classicmarket_listings.json` (real posts).

@@ -25,4 +25,5 @@ jobs:
       - run: node tests/snipe.js
       - run: node tests/craftplan.js
       - run: python3 tests/deal_life_test.py
+      - run: python3 tests/classicmarket_test.py
       - run: node tests/monkey.js
