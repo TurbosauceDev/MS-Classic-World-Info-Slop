@@ -1117,6 +1117,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="t-trk" aria-selected="false" data-tab="trk" data-cat="trk" hidden><img class="nic" data-pool="trk" alt="">Overview</button>
     <button role="tab" id="t-trkhow" aria-selected="false" data-tab="trkhow" data-cat="trk" hidden><img class="nic" data-pool="trkhow" alt="">How to use</button>
     <button role="tab" id="t-trkruns" aria-selected="false" data-tab="trkruns" data-cat="trk" hidden><img class="nic" data-pool="trkruns" alt="">Shared runs</button>
+    <button role="tab" id="t-kpqt" aria-selected="false" data-tab="kpqt" data-cat="trk" hidden><img class="nic" data-pool="kpqt" alt="">KPQ timer</button>
     <button role="tab" id="t-trkkpq" aria-selected="false" data-tab="trkkpq" data-cat="trk" hidden><img class="nic" data-pool="trkkpq" alt="">KPQ leaderboard</button>
     <div class="sgh" data-cat="train"><img class="nic" data-pool="g_train" alt="">Training</div>
     <button role="tab" id="t-maps" aria-selected="false" data-tab="maps" data-cat="train" hidden><img class="nic" data-pool="maps" alt="">Where to train</button>
@@ -1665,9 +1666,134 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <p class="note trksrc"></p>
   <div id="trkdata"></div>
 </section>
+<section id="kpqt" hidden>
+  <details class="howto">
+    <summary>About the KPQ timer</summary>
+    <ul>
+      <li>A stopwatch for Kerning PQ rounds, split by stage: 1st, 2nd, 3rd, 4th, Last (King Slime), then the Bonus stage. Press <kbd>Space</kbd> as each stage ends. Each stage shows how it compares with your best.</li>
+      <li><b>Clear</b> = 1st stage to leaving the Last stage, the same time the <a href="#" data-go="trkkpq">KPQ leaderboard</a> ranks by. The Bonus stage doesn't count toward it.</li>
+      <li><b>Share game window</b> (optional, desktop browser): the page reads the in-game "Time Left" clock, so a new round starts by itself when its clock appears and the times follow the game's clock. The picture stays in your browser; nothing is uploaded. Stage changes are still your key press: the page can't see which map you're on.</li>
+      <li>Rounds are saved in this browser only. Turn on <b>Send cleared rounds</b> to put them on the KPQ leaderboard with your character name; they're marked as timed on the site. The <a href="#" data-go="trk">Grind Tracker</a> app does all of this by itself, stages and EXP included.</li>
+      <li>Keys: <kbd>Space</kbd> start / next stage, <kbd>Enter</kbd> end the round here, <kbd>Backspace</kbd> undo the last split, <kbd>Esc</kbd> throw the round away.</li>
+    </ul>
+  </details>
+
+  <div class="card kt-card">
+    <div class="kt-top">
+      <div class="kt-clockbox">
+        <div class="kt-clock" id="ktclock" aria-live="off">0:00.0</div>
+        <div class="kt-state" id="ktstate">Ready: press <kbd>Space</kbd> as the 1st stage starts</div>
+      </div>
+      <div class="kt-btns">
+        <button class="btn primary" id="ktnext" type="button">Start <kbd>Space</kbd></button>
+        <button class="btn" id="ktend" type="button" disabled>End round <kbd>Enter</kbd></button>
+        <button class="btn" id="ktundo" type="button" disabled>Undo split</button>
+        <button class="btn" id="ktcancel" type="button" disabled>Throw away</button>
+      </div>
+    </div>
+    <ol class="kt-stages" id="ktstages"></ol>
+    <div class="kt-share">
+      <button class="btn sm" id="ktshare" type="button">Share game window</button>
+      <span class="pill" id="ktshst" hidden></span>
+      <span class="tiny kt-toast" id="kttoast" role="status"></span>
+    </div>
+  </div>
+
+  <div class="card kt-card">
+    <h3>Your rounds</h3>
+    <dl class="stats" id="ktstats"></dl>
+    <div id="kthist"></div>
+  </div>
+
+  <div class="card kt-card">
+    <h3>Leaderboard details</h3>
+    <div class="kt-form">
+      <label>Character name <input id="ktname" maxlength="12" autocomplete="off" spellcheck="false" placeholder="in-game name"></label>
+      <label>Job <select id="ktjob"></select></label>
+      <label>Level <input id="ktlevel" type="number" min="1" max="200" inputmode="numeric"></label>
+      <label>Party size <select id="ktparty"><option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+      <label>Party code <input id="ktcode" maxlength="20" autocomplete="off" spellcheck="false" placeholder="optional"></label>
+    </div>
+    <label class="chk kt-sendsw"><input type="checkbox" id="ktsend"> Send cleared rounds to the KPQ leaderboard</label>
+    <p class="tiny">Sent with each round: the times, party size, job, level, the name above and the party code (only to group your party as one line, never shown). Without a name the board shows a made-up one, like Archer4821. Same party code as your party's trackers = one line for the whole party.</p>
+  </div>
+<style>
+.kt-card{margin-bottom:14px}
+.kt-top{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between}
+.kt-clockbox{min-width:0}
+.kt-clock{font:600 clamp(44px,9vw,76px)/1 var(--f-mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;transition:color .25s}
+.kt-clock.run{color:var(--accent)}
+.kt-clock.bonus{color:var(--leaf)}
+.kt-state{color:var(--muted);margin-top:6px;font-size:14.5px;min-height:1.4em}
+.kt-btns{display:flex;flex-wrap:wrap;gap:8px}
+.kt-btns .btn{margin-top:0}
+.kt-btns kbd{font-size:11px;opacity:.8;margin-left:4px;color:inherit;background:transparent;border:1px solid currentColor;box-shadow:none}
+.kt-btns .btn:disabled{opacity:.45;cursor:default;border-color:var(--line)}
+.kt-stages{list-style:none;margin:16px 0 0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.kt-st{border:1px solid var(--line);border-radius:10px;padding:8px 10px 9px;background:var(--bg);min-width:0;transition:border-color .25s,background .25s,box-shadow .25s}
+.kt-st.now{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.kt-st.done{background:var(--panel)}
+.kt-st b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.kt-st .t{display:block;font:600 19px var(--f-mono);font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}
+.kt-st .d{display:block;font:500 12.5px var(--f-mono);min-height:1.3em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.kt-st .d.fast{color:var(--leaf)}.kt-st .d.slow{color:var(--bad)}
+.kt-bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:6px}
+.kt-bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s linear,background .3s}
+.kt-bar i.over{background:var(--warn)}
+.kt-st.done .kt-bar i{background:var(--leaf)}.kt-st.done .kt-bar i.over{background:var(--warn)}
+.kt-share{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:14px}
+.kt-share .btn{margin-top:0}
+.kt-toast{margin:0;opacity:0;transition:opacity .25s}
+.kt-toast.on{opacity:1}
+.kt-toast button{font:inherit;color:var(--accent);background:none;border:0;padding:0 0 0 6px;cursor:pointer;text-decoration:underline}
+#ktstats{margin:8px 0 12px}
+#kthist td.best{color:var(--leaf);font-weight:600}
+#kthist .kt-x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px}
+#kthist .kt-x:hover{color:var(--bad)}
+.kt-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 14px;margin:8px 0 12px}
+.kt-form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+.kt-form input,.kt-form select{font:15px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0}
+.kt-sendsw{display:flex;margin:4px 0}
+#kthist td.kt-when{white-space:nowrap}
+@media (max-width:760px){.kt-stages{grid-template-columns:repeat(3,minmax(0,1fr))}.kt-st .d{white-space:normal}}
+</style>
+</section>
 <section id="trkkpq" hidden>
-  <p class="note trksrc" style="margin-top:0"></p>
+  <details class="howto">
+    <summary>About the KPQ leaderboard</summary>
+    <ul>
+      <li>Kerning PQ rounds from <a href="#" data-go="trk">Grind Tracker</a> players with sharing on, and from the site's <a href="#" data-go="kpqt">KPQ timer</a> with sending on. Rounds joined part-way aren't counted.</li>
+      <li><b>Rush</b>: fastest clear, 1st stage to beating King Slime and leaving the Last stage. The Bonus stage isn't counted.</li>
+      <li><b>Bonus</b>: rounds that went into the Bonus stage, ranked by EXP + mesos gained that round (1 meso = 1 point, our own weighting). A faster Rush leaves more Bonus time, which shows up as more EXP and mesos. Only the tracker reads EXP, so site-timed rounds are on Rush only.</li>
+      <li>One line per party (same party code) or player (home network). A party's trackers each send the same round; it counts once.</li>
+      <li>The server checks every round: the stage times have to fit in the clear, a clear has to be 1 to 60 minutes (our own bounds), the same round sent twice counts once, and one tracker or browser can send 12 rounds an hour.</li>
+      <li>Names link to the player's <a href="https://classicrank.com/" target="_blank" rel="noopener">classicrank.com</a> profile. Filters are saved in this browser.</li>
+    </ul>
+  </details>
+  <p class="note trksrc"></p>
   <div id="trkkpqdata"></div>
+<style>
+.kb-card{margin-bottom:14px}
+.kb-filters{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:flex-end;margin-bottom:10px}
+.kb-filters .seg{margin:0}
+.kb-filters label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted)}
+.kb-filters select{font:14.5px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.kb-filters .btn{margin:0 0 1px}
+.kb-filters .btn:disabled{opacity:.45;cursor:default}
+.kb-count{margin:0 0 8px}
+tr.kb-row{cursor:pointer;transition:background .2s}
+tr.kb-row:hover,tr.kb-row:focus-visible{background:var(--accent-soft);outline:none}
+tr.kb-me td{background:var(--leaf-soft)}
+td.kb-ch{color:var(--muted);width:1em}
+tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
+.kb-split{display:flex;gap:3px;min-width:420px}
+.kb-split span{display:flex;flex-direction:column;min-width:0;padding:4px 6px;border-radius:6px;background:var(--accent-soft);font:600 13px var(--f-mono);white-space:nowrap;overflow:hidden}
+.kb-split span.bon{background:var(--leaf-soft)}
+.kb-split b{font:600 10.5px var(--f-body);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.kb-fast .kb-who{font:500 13px var(--f-body);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@keyframes kbin{from{opacity:0;transform:translateY(-3px)}}
+@media (max-width:600px){.kb-split{min-width:0;flex-wrap:wrap}.kb-split span{flex:1 1 28%!important}}
+</style>
 </section>
 <section id="quests" hidden>
   <details class="howto">
@@ -2272,6 +2398,10 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   </details>
 
   <div class="changelog">
+    <div class="card" data-minor data-t="2026-10-21T16:04:00Z"><div class="cardhead"><h3><span class="ver">v0.13.0</span> Oct 21, 2026 · KPQ timer and a better KPQ leaderboard</h3><span class="pill p-hot">new</span></div>
+      <p>New <b>KPQ timer</b> page (Grind Tracker): time Kerning PQ rounds stage by stage with the space bar, see each stage against your best, sum of best and averages, and keep your rounds in this browser. Share your game window and it reads the in-game KPQ clock, so rounds start by themselves and follow the game's time. Turn on sending to put cleared rounds on the leaderboard with your name.</p>
+      <p>The <b>KPQ leaderboard</b> gets filters (Rush or Bonus, party size, job, period, timed by), each round's stage times on a click, a Fastest stages card, an About box, and your own line highlighted. The server now drops repeats of the same round and keeps where each round was timed. Fixed for the Grind Tracker's next release: the KPQ clock never read seconds ending in 6 or 9.</p></div>
+    <div class="card" data-t="2026-10-21T16:04:57Z"><div class="cardhead"><h3><span class="ver">v0.12.12</span> Oct 21, 2026 · classicmarket.kr market prices</h3></div>
     <div class="card" data-t="2026-10-21T16:05:00Z"><div class="cardhead"><h3><span class="ver">v0.12.11</span> Oct 21, 2026 · Tables fit on phones</h3></div>
       <p>On a phone, wide tables (Monsters, Skills, Items, Quests, Where to train, Path planner, Crafting, FM Sniper and the rest) no longer hide columns off to the side. Each row becomes a small card: the name on top, every other column as a labelled value underneath. Sort buttons stay above the list. Craft levels turn on their side, one row per level.</p></div>
     <div class="card" data-t="2026-10-21T15:49:36Z"><div class="cardhead"><h3><span class="ver">v0.12.10</span> Oct 21, 2026 · Polish pass: consistent controls and tidier pages</h3></div>
@@ -2738,7 +2868,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-21T15:56:35Z" data-ver="0.12.11">Site version: v0.12.11 · built Oct 21, 2026 · 15:56 UTC</p>
+  <p class="sitever" data-built="2026-10-21T16:05:17Z" data-ver="0.13.0">Site version: v0.13.0 · built Oct 21, 2026 · 16:05 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -6270,13 +6400,13 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
   }
   /* KPQ's "Time Left" clock, top middle of the screen: cream dot-matrix digits, 5x7 dots each, one dot every 5 px (game
      pixels), laid out MM.SS as digit, digit, 4 columns, digit, digit. Read from Danny's KPQ frames (2026-10-18), where the
-     dot grid sat at x = middle - 37 + 5*col, y = 44 + 5*row. 6 and 9 weren't in those frames: they're the font's usual
-     shapes, unconfirmed, so they only count on an exact match. Returns seconds left, or null. */
+     dot grid sat at x = middle - 37 + 5*col, y = 44 + 5*row. 6 and 9 from his later KPQ frames (22:16, 22:19; 2026-10-21
+     audit: the old guessed shapes were wrong, so every :x6/:x9 second read nothing). Returns seconds left, or null. */
   const TDIG = {".###./#..##/#.#.#/#.#.#/##..#/##..#/.###.": 0, "..#../.##../..#../..#../..#../..#../.###.": 1,
     ".###./#...#/....#/...#./..#../.#.../#####": 2, ".###./#...#/....#/..##./....#/#...#/.###.": 3,
     "..##./.#.#./.#.#./#..#./#####/...#./...#.": 4, "#####/#..../####./....#/....#/#...#/.###.": 5,
-    "#####/...#./...#./..#../..#../.#.../.#...": 7, ".###./#...#/#...#/.###./#...#/#...#/.###.": 8};
-  const TDIG_GUESS = {".##../.#.../#..../####./#...#/#...#/.###.": 6, ".###./#...#/#...#/.####/....#/...#./.##..": 9};
+    ".###./#..../#..../####./#...#/#...#/.###.": 6, "#####/...#./...#./..#../..#../.#.../.#...": 7,
+    ".###./#...#/#...#/.###./#...#/#...#/.###.": 8, ".###./#...#/#...#/.####/....#/...#./.###.": 9};
   function readKpqTimer(img){
     const {w, h, d} = img, mid = Math.round(w / 2);
     if (w < 400 || h < 100) return null;
@@ -6284,7 +6414,7 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
     const g = [];
     for (let r = 0; r < 7; r++){ const row = []; for (let c = 0; c < 30; c++) row.push(ink(mid - 37 + 5 * c, 44 + 5 * r)); g.push(row) }
     const cell = (a, i) => { const rows = []; for (let r = 0; r < 7; r++){ let x = ""; for (let c = 0; c < 5; c++) x += g[r][a + c] ? "#" : "."; rows.push(x) } return rows.join("/") };
-    const digit = bm => { if (bm in TDIG) return TDIG[bm]; if (bm in TDIG_GUESS) return TDIG_GUESS[bm];
+    const digit = bm => { if (bm in TDIG) return TDIG[bm];
       let best = null, bd = 9, tie = false;
       for (const [k, v] of Object.entries(TDIG)){ let n = 0; for (let j = 0; j < k.length; j++) if (k[j] !== bm[j]) n++; if (n < bd){ bd = n; best = v; tie = false } else if (n === bd) tie = true }
       return bd <= 1 && !tie ? best : null };
@@ -9381,13 +9511,21 @@ function trkClean(d){
     for (const [i, n] of Object.entries(obj(c.items))) items[i] = tI(n);
     mobs[id] = {kills: tI(c.kills), players: tI(c.players), mesos: tI(c.mesos), mesoDrops: tI(c.mesoDrops), items} }
   const times = {}; for (const [map, t] of Object.entries(obj(d.times))){ const a = (Array.isArray(t) ? t : []).filter(x => Array.isArray(x) && isFinite(x[0]) && isFinite(x[1])).map(x => [+x[0], +x[1]]); if (a.length) times[map] = a }
-  const k = obj(d.kpq), board = {};
-  for (const m of ["Rush", "Bonus"]) if (Array.isArray(obj(k.board)[m])) board[m] = k.board[m].map(e0 => { const e = obj(e0);
-    return {best: tI(e.best), median: tI(e.median), rounds: tI(e.rounds), party: tI(e.party), level: tN(e.level), exp: tI(e.exp), mesos: tI(e.mesos), bonus: tN(e.bonus), clear: tI(e.clear),
-      clock: !!e.clock, names: (Array.isArray(e.names) ? e.names : []).map(tS), job: tS(e.job), date: tS(e.date)} });
   const up = new Date(d.updated);
   return {runs: tI(d.runs), players: tI(d.players), hours: tI(d.hours), updated: isNaN(up) ? null : up, rows: trkRows(d.rows, true), mobs, times,
-    kpq: {rounds: tI(k.rounds), groups: tI(k.groups), board}, live: true};
+    kpq: trkKpqClean(d.kpq), live: true};
+}
+// the KPQ part of a summary (live reply or the build's snapshot), same rules: board = the server's top lines per mode,
+// list = every counted round (server 2026-10-21) for the board's filters
+function trkKpqClean(k0){
+  const obj = v => v && typeof v === "object" && !Array.isArray(v) ? v : {}, k = obj(k0), board = {}, arr = v => Array.isArray(v) ? v : [];
+  for (const m of ["Rush", "Bonus"]) if (Array.isArray(obj(k.board)[m])) board[m] = k.board[m].map(e0 => { const e = obj(e0);
+    return {best: tI(e.best), median: tI(e.median), rounds: tI(e.rounds), party: tI(e.party), level: tN(e.level), exp: tI(e.exp), mesos: tI(e.mesos), bonus: tN(e.bonus), clear: tI(e.clear),
+      clock: !!e.clock, names: arr(e.names).map(tS), job: tS(e.job), date: tS(e.date)} });
+  const list = arr(k.list).map(e0 => { const e = obj(e0), s = arr(e.s);
+    return {g: tS(e.g), d: tS(e.d), p: tI(e.p), l: tN(e.l), j: tS(e.j), c: tI(e.c), k: !!e.k, x: tN(e.x), m: tN(e.m), s: [0, 1, 2, 3, 4, 5].map(i => tN(s[i])),
+      n: arr(e.n).map(tS).slice(0, 6), src: e.src === "site" ? "site" : "tracker"} }).filter(e => e.g && e.c > 0 && /^\d{4}-\d\d-\d\d$/.test(e.d));
+  return {rounds: tI(k.rounds), groups: tI(k.groups), board, list};
 }
 const trkMapName = r => D.mapnames[r.map] ?? D.maps[r.map]?.[0] ?? r.name ?? r.map;
 const trkMed = a => { const v = a.filter(x => x != null); return v.length ? median(v) : null };
@@ -9397,7 +9535,7 @@ function trkRender(){
   const src = s.live ? `Live from the tracker server${s.updated ? `, updated ${esc(s.updated.toLocaleString())}` : ""}.`
     : `Snapshot from the tracker server${s.read ? `, read ${esc(s.read)}` : ""}.${TRK_ASKED ? " The live server couldn't be reached from here." : ""}`;
   document.querySelectorAll(".trksrc").forEach(e => e.innerHTML = src);
-  $("#trkkpqdata").innerHTML = trkKpq(s.kpq);
+  $("#trkkpqdata").innerHTML = trkKpq(s.live ? s.kpq : trkKpqClean(s.kpq));
   if (!s.runs){
     $("#trkdata").innerHTML = `<div class="card trkempty"><h3>No shared runs yet</h3><p>Every 15 minutes of non-stop farming on one map that a tracker player shares lands here: EXP/hr and mesos/hr by map, confirmed drops by monster, and the best time of day to farm. Be the first: <a href="#" data-go="trk">download the tracker</a> and say yes to sharing.</p>
       <div class="tblwrap trkpreview" aria-label="What a shared run row shows"><table class="mini"><thead><tr><th>Map</th><th class="num">Players</th><th class="num">EXP/hr</th><th class="num">Mesos/hr</th><th>Best time</th></tr></thead>
@@ -9448,9 +9586,10 @@ function trkRender(){
 // most EXP + mesos gained that round. Names: the character names the party's trackers sent
 const TRK_KMODE = {v: "Rush"};
 function trkKpq(k){
-  const head = `<p class="note">Kerning PQ boards from tracker players. <b>Rush</b>: fastest clear, 1st stage to beating King Slime and leaving the Last stage (Bonus stage not counted). <b>Bonus</b>: rounds that went into the Bonus stage, ranked by EXP + mesos gained that round (1 meso = 1 point, our own weighting); a faster Rush leaves more Bonus time, which shows up as more EXP and mesos. One line per party (same party code) or player. Rounds joined part-way aren't counted.</p>`;
+  const head = "";   // what the boards mean: the About box in src/pages/trkkpq.html
+  if (k?.list?.length) return KPQB.render(k);   // filters, splits (68-trkkpq.js)
   const modes = ["Rush", "Bonus"].filter(m => k?.board?.[m]?.length);
-  if (!k?.rounds || !modes.length) return head + `<div class="card trkempty"><h3>No KPQ rounds yet</h3><p>With sharing on, every KPQ round the tracker sees from the 1st stage to the end lands here. Use the same party code as your party so you show up as one team.</p></div>`;
+  if (!k?.rounds || !modes.length) return head + `<div class="card trkempty"><h3>No KPQ rounds yet</h3><p>With sharing on, every KPQ round the <a href="#" data-go="trk">Grind Tracker</a> sees from the 1st stage to the end lands here, and so do rounds timed on the site's <a href="#" data-go="kpqt">KPQ timer</a> with sending on. Use the same party code as your party so you show up as one team.</p></div>`;
   if (!modes.includes(TRK_KMODE.v)) TRK_KMODE.v = modes[0];
   const rush = TRK_KMODE.v === "Rush";
   const seg = `<div class="seg" role="radiogroup" id="trkkm">${["Rush", "Bonus"].map(m => `<button role="radio" aria-checked="${m === TRK_KMODE.v}" data-m="${m}"${modes.includes(m) ? "" : " disabled"}>${m}</button>`).join("")}</div>`;
@@ -9465,12 +9604,12 @@ function trkKpq(k){
     : `<tr><td class="num">${rank(i)}</td><td class="num"><b>${fmt(e.best)}</b></td><td class="num">${fmt(e.exp)}</td><td class="num">${fmt(e.mesos)}</td><td class="num">${e.bonus ? mss(e.bonus) : "–"}</td><td class="num">${mss(e.clear)}${clockMark(e)}</td><td class="num">${e.rounds}</td><td>${who(e)}</td>${lj(e)}<td class="sub">${esc(e.date || "")}</td></tr>`).join("");
   const th = rush ? `<th class="num">Rank</th><th class="num">Best clear</th><th class="num">Typical</th><th class="num">Rounds</th><th>Who</th><th>Level and job</th><th>Date</th>`
     : `<th class="num">Rank</th><th class="num">EXP + mesos</th><th class="num">EXP</th><th class="num">Mesos</th><th class="num">Bonus time</th><th class="num">Rush clear</th><th class="num">Rounds</th><th>Who</th><th>Level and job</th><th>Date</th>`;
-  return head + `<p class="sub">${fmt(k.rounds)} round${k.rounds === 1 ? "" : "s"} from ${fmt(k.groups)} ${k.groups === 1 ? "party or player" : "parties and players"}.</p>${seg}
+  return head + `<div class="card kb-card"><p class="sub">${fmt(k.rounds)} round${k.rounds === 1 ? "" : "s"} from ${fmt(k.groups)} ${k.groups === 1 ? "party or player" : "parties and players"}.</p>${seg}
     <div class="tblwrap"><table><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="sub">${rush ? "" : "EXP and mesos are what the tracker player who sent the best round gained in it. "}Level and job are that tracker player's. "~" = timed with the PC clock.</p>`;
+    <p class="sub">${rush ? "" : "EXP and mesos are what the tracker player who sent the best round gained in it. "}Level and job are that tracker player's. "~" = timed with the PC clock.</p></div>`;
 }
 const mss = sec => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0") };
-$("#trkkpqdata").addEventListener("click", e => { const b = e.target.closest("#trkkm button"); if (b){ TRK_KMODE.v = b.dataset.m; trkRender() } });
+$("#trkkpqdata").addEventListener("click", e => { const b = e.target.closest("#trkkm button"); if (b){ TRK_KMODE.v = KPQB.F.mode = b.dataset.m; KPQB.keep(); trkRender() } });
 // in-page links between the tracker pages (data-go = page id)
 for (const id of ["trk", "trkhow", "trkruns", "trkkpq"]) $("#" + id).addEventListener("click", e => { const a = e.target.closest("a[data-go]"); if (!a) return;
   e.preventDefault(); $("#t-" + a.dataset.go).click(); window.scrollTo({top: $("nav").offsetTop - 8}) });
@@ -9483,7 +9622,8 @@ function trkOpen(){
   }).catch(() => trkRender());
 }
 // the data pages ask the server once, on first open
-for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click", trkOpen); if (!$("#" + id).hidden) trkOpen() }
+// (a microtask: the KPQ board needs 68-trkkpq.js, later in this same script)
+for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click", trkOpen); if (!$("#" + id).hidden) queueMicrotask(trkOpen) }
 // Patch notes on Overview: the app's own changelog (tracker/app/changelog.js, inlined by build.py; window.TrackerChangelog),
 // kept apart from the site's Changelog (Danny 10-19). Newest 5 shown, the rest under "Older versions".
 // Grind Tracker patch notes, newest first: [version, date, what changed]. Shown in the app (Help > Patch notes) and on the
@@ -9491,6 +9631,7 @@ for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click",
 // Releasing? Add a line for the new version at the top: tests/core.test.js fails if the top entry isn't package.json's version.
 (function (root){
   const LOG = [
+    ["0.2.68", "2026-10-21", "KPQ clock: seconds ending in 6 or 9 now read (they were skipped), so KPQ stage and round times follow the game clock all the way."],
     ["0.2.67", "2026-10-20", "Built-in profile \"Danny's Default\" under Settings > Layout > Profiles. A profile's window size now always fits your screen."],
     ["0.2.66", "2026-10-20", "Settings, Help (F1), Patch notes and Report a bug open as pop-ups over a blurred backdrop with a little space around them and a smooth open and close; Help no longer opens under the layout or resizes the window."],
     ["0.2.65", "2026-10-19", "App icon is now the game's own Slime sprite on the purple tile."],
@@ -9581,6 +9722,317 @@ for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click",
   $("#trkpatchnew").innerHTML = L.slice(0, 5).map(row).join("");
   $("#trkpatchold").innerHTML = L.slice(5).map(row).join("");
 })();
+
+/* ---------------- KPQ timer page (#kpqt) and the KPQ leaderboard's filters ---------------- */
+// The timer: a stopwatch split by KPQ stage (1st … Last, then Bonus), keyed by the player (Space = next stage). Optional
+// screen share reads the in-game "Time Left" clock with the tracker's reader (readers.js readKpqTimer, inlined by build.py):
+// the round then starts when a new clock appears and its time follows the game clock. Stages stay a key press: the site has
+// no map reader. Rounds live in localStorage ("kpqt"); cleared ones go to the tracker server's /api/kpq when the player
+// turns sending on (src "site", 2026-10-21). Clear = 1st stage to leaving the Last stage, like the tracker.
+const KPQT = (() => {
+const STG = ["1st", "2nd", "3rd", "4th", "Last", "Bonus"];
+const KS = ["80000000", "80000100", "80000200", "80000300", "80000400", "80000500"];   // KPQ map ids, same order
+const API = TRK_API.replace(/\/api\/summary$/, "/api/kpq");
+// jobs as the tracker reads them off the stat window; first job names for the made-up board name (tracker kpqAlias)
+const JOBS = ["Beginner", "Swordman", "Fighter", "Page", "Spearman", "Magician", "Wizard (Fire, Poison)", "Wizard (Ice, Lightning)", "Cleric",
+  "Archer", "Hunter", "Crossbowman", "Rogue", "Assassin", "Bandit"];
+const FIRST = {Fighter: "Swordman", Page: "Swordman", Spearman: "Swordman", Cleric: "Magician", Hunter: "Archer", Crossbowman: "Archer", Assassin: "Rogue", Bandit: "Rogue"};
+const $k = id => document.getElementById(id);
+const tenths = s => { s = Math.max(0, s); const m = Math.floor(s / 60), r = s - m * 60; return m + ":" + (r < 10 ? "0" : "") + r.toFixed(1) };
+const secs = s => s == null ? "–" : mss(s);
+const dlt = d => (d < 0 ? "−" : "+") + (Math.abs(d) >= 60 ? mss(Math.abs(d)) : Math.abs(d).toFixed(1) + "s");
+
+/* ---- saved state ---- */
+const SET = Object.assign({name: "", job: "", level: "", party: 4, code: "", send: false, id: ""}, savedState("kpqtset", {name: "", job: "", level: "", party: 4, code: "", send: false, id: ""}));
+if (!/^site-[0-9a-f]{24}$/.test(SET.id)) SET.id = "site-" + [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(16).padStart(2, "0")).join("");
+let ROUNDS = [];
+try { const v = JSON.parse(localStorage.getItem("kpqt") || "[]"); if (Array.isArray(v)) ROUNDS = v.filter(r => r && Array.isArray(r.st) && r.st.length === 6) } catch(e) {}
+const save = () => { try { localStorage.setItem("kpqt", JSON.stringify(ROUNDS.slice(-300))); localStorage.setItem("kpqtset", JSON.stringify(SET)) } catch(e) {} };
+
+/* ---- the round being timed ----
+   cur = {t0: Date.now() at the 1st stage, at: ISO start, splits: [seconds at the end of each stage], clk: null | {left0, left, at}}
+   With the game clock: round time = clk.left0 - clock now (plus the part of a second since it last ticked) */
+let cur = null, undoBin = null;
+try { const v = JSON.parse(localStorage.getItem("kpqtcur") || "null"); if (v && typeof v.t0 === "number" && Array.isArray(v.splits) && Date.now() - v.t0 < 3 * 3600e3) cur = v } catch(e) {}
+const keepCur = () => { try { cur ? localStorage.setItem("kpqtcur", JSON.stringify(cur)) : localStorage.removeItem("kpqtcur") } catch(e) {} };
+function now(){
+  if (!cur) return 0;
+  const c = cur.clk;
+  // between clock ticks: the part of a second since the last one; clock gone (map change, window covered): carry on from it
+  if (c && c.left != null){ const dt = (Date.now() - c.at) / 1000; return Math.max(cur.splits.at(-1) || 0, c.left0 - c.left + (dt < 4 ? Math.min(.95, dt) : dt)) }
+  return (Date.now() - cur.t0) / 1000;
+}
+const stageIdx = () => cur ? cur.splits.length : -1;   // 0-4 = 1st … Last, 5 = Bonus
+function start(left = null){
+  cur = {t0: Date.now(), at: new Date().toISOString(), splits: [], clk: left == null ? null : {left0: left, left, at: Date.now()}};
+  keepCur(); render(); loop();
+}
+function next(){
+  if (!cur) return start(S?.left ?? null);
+  if (stageIdx() >= 5) return end();
+  cur.splits.push(Math.round(now() * 10) / 10); keepCur(); render();
+}
+function undo(){ if (cur?.splits.length){ cur.splits.pop(); keepCur(); render() } }
+function cancel(){
+  if (!cur) return;
+  undoBin = cur; cur = null; keepCur(); render();
+  toast(`Round thrown away <button type="button" data-undo>Undo</button>`, 6000);
+}
+// End: in the Last stage = cleared, no Bonus (a Rush); in the Bonus = done; earlier = left before the Last stage (kept, not cleared)
+function end(){
+  if (!cur) return;
+  const t = Math.round(now() * 10) / 10, sp = [...cur.splits, t];   // the stage it's in ends now
+  const st = STG.map((_, k) => sp[k] == null ? null : Math.round((sp[k] - (k ? sp[k - 1] : 0)) * 10) / 10);
+  const cleared = sp.length >= 5, clear = cleared ? sp[4] : null;
+  const r = {id: Date.now(), at: cur.at, date: new Date(cur.t0).toLocaleDateString("sv"), hour: new Date(cur.t0).getUTCHours(), st, clear,
+    total: sp.at(-1), clock: !!cur.clk, party: +SET.party || 4, job: SET.job || null, level: +SET.level || null, sent: null};
+  ROUNDS.push(r); cur = null; keepCur(); save(); render();
+  if (S) S.armed = false;   // the clock still shows (Bonus, Exit): wait for it to go before a new round starts by itself
+  if (cleared && SET.send) send(r);
+  else toast(cleared ? `Cleared in <b>${tenths(clear)}</b>` : "Round saved (not cleared: ended before the Last stage)", 4000);
+}
+
+/* ---- leaderboard ---- */
+const alias = () => { const j = SET.job || "", b = j.startsWith("Wizard") ? "Magician" : FIRST[j] || (/^(Beginner|Swordman|Magician|Archer|Rogue)$/.test(j) ? j : "Player");
+  return b + (parseInt(SET.id.slice(5, 13), 16) % 9000 + 1000) };
+async function send(r){
+  if (r.clear == null || r.sent === "sent") return;
+  const stages = {}; r.st.forEach((s, k) => { if (s != null) stages[KS[k]] = Math.round(s) });
+  const name = /^[A-Za-z0-9]{2,12}$/.test(SET.name) ? SET.name : alias();
+  const body = {kpq: true, v: 1, src: "site", install: SET.id, date: r.date, hour: r.hour, mode: r.st[5] != null ? "Bonus" : "Rush", party: r.party, level: r.level || +SET.level || null,
+    job: r.job || SET.job || null, clear: Math.round(r.clear), total: Math.round(r.total), clock: r.clock, stages, partyCode: SET.code.trim() || null, name};
+  r.sent = "sending"; render();
+  try {
+    const res = await fetch(API, {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(body), signal: AbortSignal.timeout(15e3)});
+    const j = await res.json().catch(() => ({}));
+    r.sent = res.ok ? (j.counted || j.why === "already sent" ? "sent" : "not counted: " + (j.why || "?")) : res.status === 429 ? "too many rounds this hour" : "refused: " + (j.error || res.status);
+  } catch(e){ r.sent = "couldn't reach the server" }
+  save(); render();
+  toast(r.sent === "sent" ? `Sent to the <a href="#" data-go="trkkpq">KPQ leaderboard</a> as <b>${esc(name)}</b>` : "Not sent: " + esc(r.sent), 5000);
+}
+
+/* ---- screen share: the in-game KPQ clock ---- */
+let S = null;
+async function share(){
+  if (S) return unshare();
+  const st = $k("ktshst"); st.hidden = false;
+  if (!navigator.mediaDevices?.getDisplayMedia){ st.textContent = "Needs a desktop browser (Chrome, Edge, Firefox)"; st.className = "pill p-warn"; return }
+  let stream;
+  try { stream = await navigator.mediaDevices.getDisplayMedia({video: {frameRate: 5}, audio: false}) }
+  catch(e){ st.textContent = e.name === "NotAllowedError" ? "Sharing cancelled" : "This page can't share your screen here: open the site in your browser"; st.className = "pill p-warn"; return }
+  const video = document.createElement("video"); video.muted = true; video.playsInline = true; video.srcObject = stream;
+  try { await video.play() } catch(e) {}
+  S = {stream, video, canvas: document.createElement("canvas"), left: null, seen: 0, gone: Date.now(), armed: false, prev: null};
+  stream.getVideoTracks()[0].addEventListener("ended", unshare);
+  S.timer = setInterval(tick, 250);
+  $k("ktshare").textContent = "Stop sharing"; shareState();
+}
+function unshare(){
+  if (!S) return;
+  clearInterval(S.timer); S.stream.getTracks().forEach(t => t.stop()); S = null;
+  $k("ktshare").textContent = "Share game window"; $k("ktshst").hidden = true; render();
+}
+function tick(){
+  const v = S?.video; if (!v?.videoWidth) return;
+  const c = S.canvas; if (c.width !== v.videoWidth || c.height !== v.videoHeight){ c.width = v.videoWidth; c.height = v.videoHeight }
+  const g = c.getContext("2d", {willReadFrequently: true}); g.drawImage(v, 0, 0);
+  let left = null;
+  try { left = GrindReaders.readKpqTimer(GrindReaders.native({w: c.width, h: c.height, d: g.getImageData(0, 0, c.width, c.height).data}, true)) } catch(e) {}
+  feed(left, Date.now());
+}
+// one clock read (also called by tests): null = no clock on screen
+function feed(left, t){
+  if (!S) return;
+  if (left == null){ if (S.left != null) S.gone = t; S.left = null; S.prev = null; if (t - S.gone > 3000) S.armed = true; shareState(); return }
+  // a new round's clock: armed (no clock for 3 s) and two reads that agree (falling, or the same second)
+  const fresh = S.armed && S.prev != null && left <= S.prev && S.prev - left <= 2;
+  S.prev = left;
+  if (S.left !== left){ S.left = left; S.at = t }
+  if (!cur && fresh){ S.armed = false; start(left); toast("Round started from the KPQ clock", 3000) }
+  else if (cur){
+    if (!cur.clk) cur.clk = {left0: left + (t - cur.t0) / 1000, left, at: t};   // clock first seen mid-round
+    else if (cur.clk.left !== left){ cur.clk.left = left; cur.clk.at = t }
+    keepCur();
+  }
+  shareState();
+}
+function shareState(){
+  if (!S) return;
+  const st = $k("ktshst");
+  st.textContent = S.left != null ? "KPQ clock " + mss(S.left) : S.armed ? "Watching for the next KPQ clock" : "No KPQ clock on screen";
+  st.className = "pill" + (S.left != null ? " p-good" : "");
+}
+
+/* ---- drawing ---- */
+const cleared = () => ROUNDS.filter(r => r.clear != null);
+function bests(){
+  const b = STG.map((_, k) => { const v = ROUNDS.map(r => r.st[k]).filter(x => x != null); return v.length ? Math.min(...v) : null });
+  const c = cleared().map(r => r.clear);
+  return {stage: b, clear: c.length ? Math.min(...c) : null};
+}
+let raf = 0;
+function loop(){ cancelAnimationFrame(raf); if (!cur) return; const f = () => { if (!cur) return; if (!$k("kpqt").hidden) live(); raf = requestAnimationFrame(f) }; raf = requestAnimationFrame(f) }
+function live(){
+  const t = now(), i = stageIdx(), b = bests();
+  $k("ktclock").textContent = tenths(t);
+  const el = $k("ktstages").children[Math.min(i, 5)]; if (!el) return;
+  const st = t - (cur.splits.at(-1) || 0), best = b.stage[i];
+  el.querySelector(".t").textContent = tenths(st);
+  const bar = el.querySelector(".kt-bar i"); bar.style.width = (best ? Math.min(100, st / best * 100) : 0) + "%"; bar.classList.toggle("over", !!best && st > best);
+  const d = el.querySelector(".d"); if (best){ d.textContent = st > best ? dlt(st - best) + " vs best" : "best " + tenths(best); d.className = "d" + (st > best ? " slow" : "") }
+}
+function render(){
+  const i = stageIdx(), b = bests(), sp = cur?.splits || [];
+  const clk = $k("ktclock"); clk.className = "kt-clock" + (cur ? i >= 5 ? " bonus" : " run" : "");
+  if (!cur){ const last = ROUNDS.at(-1); clk.textContent = last ? tenths(last.clear ?? last.total) : "0:00.0" }
+  $k("ktstate").innerHTML = !cur ? (S?.armed ? "Ready: starts by itself when the KPQ clock appears, or press <kbd>Space</kbd>" : "Ready: press <kbd>Space</kbd> as the 1st stage starts")
+    : i < 4 ? `${STG[i]} stage: <kbd>Space</kbd> when it's cleared` : i === 4 ? "Last stage: <kbd>Space</kbd> into the Bonus, <kbd>Enter</kbd> if you skip it"
+    : `Bonus stage (cleared in <b>${tenths(sp[4])}</b>${b.clear != null && sp[4] !== b.clear ? `, ${dlt(sp[4] - b.clear)} vs best` : ""}): <kbd>Space</kbd> when you leave`;
+  $k("ktnext").innerHTML = (!cur ? "Start" : i < 4 ? "Next stage" : i === 4 ? "Into Bonus" : "Finish") + " <kbd>Space</kbd>";
+  $k("ktend").innerHTML = (!cur || i < 4 ? "End round" : i === 4 ? "Clear, skip Bonus" : "Finish") + " <kbd>Enter</kbd>";
+  $k("ktend").disabled = $k("ktcancel").disabled = !cur; $k("ktundo").disabled = !sp.length;
+  // stage cells: done ones show their time and how it went against the best before this round
+  $k("ktstages").innerHTML = STG.map((n, k) => {
+    const done = cur && k < sp.length, t = done ? sp[k] - (k ? sp[k - 1] : 0) : null, best = b.stage[k];
+    const d = done && best != null ? (t <= best ? `<span class="d fast">${t < best ? dlt(t - best) + " new best" : "= best"}</span>` : `<span class="d slow">${dlt(t - best)}</span>`)
+      : `<span class="d">${best != null ? "best " + tenths(best) : ""}</span>`;
+    const w = done ? (best ? Math.min(100, t / best * 100) : 100) : 0;
+    return `<li class="kt-st${done ? " done" : ""}${cur && k === i ? " now" : ""}"><b>${n}</b><span class="t">${done ? tenths(t) : cur && k === i ? "0:00.0" : "–"}</span>${d}<div class="kt-bar"><i style="width:${w}%"${done && best && t > best ? ' class="over"' : ""}></i></div></li>`;
+  }).join("");
+  if (cur) live();
+  // stats and history
+  const c = cleared(), last10 = c.slice(-10).map(r => r.clear), sob = b.stage.slice(0, 5).every(x => x != null) ? b.stage.slice(0, 5).reduce((a, x) => a + x, 0) : null;
+  const bon = ROUNDS.map(r => r.st[5]).filter(x => x != null);
+  $k("ktstats").innerHTML = [["Rounds", fmt(ROUNDS.length) + (ROUNDS.length > c.length ? ` <span class="sub">(${c.length} cleared)</span>` : "")], ["Best clear", secs(b.clear)],
+    ["Average, last 10", last10.length ? mss(last10.reduce((a, x) => a + x, 0) / last10.length) : "–"], ["Sum of best stages", secs(sob)],
+    ["Average Bonus", bon.length ? mss(bon.reduce((a, x) => a + x, 0) / bon.length) : "–"]].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+  if (!ROUNDS.length){ $k("kthist").innerHTML = `<p class="tiny">No rounds yet. They're saved in this browser as you finish them.</p>`; return }
+  const rows = ROUNDS.slice(-50).reverse().map(r => {
+    const sent = r.clear == null ? `<span class="sub">not cleared</span>` : r.sent === "sent" ? `<span class="pill p-good">sent</span>` : r.sent === "sending" ? `<span class="sub">sending…</span>`
+      : `<button class="btn sm" type="button" data-send="${r.id}">Send</button>${r.sent ? ` <span class="sub">${esc(r.sent)}</span>` : ""}`;
+    return `<tr><td class="sub kt-when" title="${esc(r.date)}">${esc(r.date.slice(5))} ${new Date(r.at).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</td><td class="num${r.clear != null && r.clear === b.clear ? " best" : ""}"><b>${secs(r.clear)}</b></td>`
+      + r.st.map((s, k) => `<td class="num${s != null && s === b.stage[k] ? " best" : ""}">${secs(s)}</td>`).join("")
+      + `<td class="num">${r.party}</td><td>${r.clock ? "game clock" : "key presses"}</td><td>${sent}</td><td><button class="kt-x" type="button" data-del="${r.id}" title="Delete this round" aria-label="Delete this round">×</button></td></tr>`;
+  }).join("");
+  $k("kthist").innerHTML = `<div class="tblwrap"><table class="mini"><thead><tr><th>When</th><th class="num">Clear</th>${STG.map(n => `<th class="num">${n}</th>`).join("")}<th class="num">Party</th><th>Timed by</th><th>Leaderboard</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
+    + (ROUNDS.length > 50 ? `<p class="tiny">Newest 50 of ${fmt(ROUNDS.length)} shown; bests and averages use all of them.</p>` : "");
+}
+let toastT = 0;
+function toast(html, ms){ const el = $k("kttoast"); el.innerHTML = html; el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on"), ms) }
+
+/* ---- wiring ---- */
+$k("ktjob").innerHTML = `<option value="">–</option>` + JOBS.map(j => `<option>${j}</option>`).join("");
+const form = {name: "ktname", job: "ktjob", level: "ktlevel", party: "ktparty", code: "ktcode"};
+for (const [k, id] of Object.entries(form)){ $k(id).value = SET[k] ?? ""; $k(id).addEventListener("input", () => { SET[k] = $k(id).value; save() }) }
+$k("ktname").addEventListener("change", () => { const v = $k("ktname").value.trim(); $k("ktname").setCustomValidity(v && !/^[A-Za-z0-9]{2,12}$/.test(v) ? "Letters and digits, 2 to 12" : ""); $k("ktname").reportValidity() });
+$k("ktsend").checked = !!SET.send; $k("ktsend").addEventListener("change", () => { SET.send = $k("ktsend").checked; save() });
+$k("ktnext").addEventListener("click", next); $k("ktend").addEventListener("click", end); $k("ktundo").addEventListener("click", undo); $k("ktcancel").addEventListener("click", cancel);
+$k("ktshare").addEventListener("click", share);
+$k("kpqt").addEventListener("click", e => {
+  const a = e.target.closest("a[data-go]"); if (a){ e.preventDefault(); $("#t-" + a.dataset.go).click(); window.scrollTo({top: 0}); return }
+  if (e.target.closest("[data-undo]") && undoBin && !cur){ cur = undoBin; undoBin = null; keepCur(); render(); loop(); $k("kttoast").classList.remove("on"); return }
+  const s = e.target.closest("[data-send]"); if (s){ const r = ROUNDS.find(x => x.id === +s.dataset.send); if (r) send(r); return }
+  const d = e.target.closest("[data-del]"); if (d){ ROUNDS = ROUNDS.filter(x => x.id !== +d.dataset.del); save(); render() }
+});
+document.addEventListener("keydown", e => {
+  if ($k("kpqt").hidden || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  if (e.target.closest?.("input, select, textarea, [contenteditable]") || document.querySelector("dialog[open], .modal:not([hidden])")) return;
+  const k = e.key;
+  if (k === " "){ e.preventDefault(); next() }
+  else if (k === "Enter" && cur){ e.preventDefault(); end() }
+  else if (k === "Backspace" && cur){ e.preventDefault(); undo() }
+  else if (k === "Escape" && cur){ e.preventDefault(); cancel() }
+});
+render(); if (cur) loop();
+return {feed, start, next, end, get rounds(){ return ROUNDS }, get cur(){ return cur }, set sharing(v){ S = v ? {left: null, gone: 0, armed: true, prev: null} : null }, render, name: () => SET.name};
+})();
+
+/* ---- KPQ leaderboard from the server's round list (summary.kpq.list, server 2026-10-21): filters for board, party
+   size, job, period and timing. One line per party (party code) or player; Rush = fastest clear, Bonus = most EXP + mesos
+   that round (site-timed rounds have no EXP, so they're on Rush only). Old summaries without a list: trkKpq's own board. ---- */
+const KPQB = (() => {
+const CLASS = {Beginner: "Beginner", Swordman: "Warrior", Fighter: "Warrior", Page: "Warrior", Spearman: "Warrior", Magician: "Magician", Cleric: "Magician",
+  Archer: "Bowman", Hunter: "Bowman", Crossbowman: "Bowman", Rogue: "Thief", Assassin: "Thief", Bandit: "Thief"};
+const jobClass = j => j ? CLASS[j] || (j.startsWith("Wizard") ? "Magician" : null) : null;
+const STG = ["1st", "2nd", "3rd", "4th", "Last", "Bonus"];
+const DEF = {mode: "Rush", party: "any", job: "any", when: "all", timing: "any"};
+const F = Object.assign({...DEF}, savedState("trkkf", DEF));
+const keep = () => { try { localStorage.setItem("trkkf", JSON.stringify(F)) } catch(e) {} };
+let open = null;   // the group whose stage splits are shown
+const day = d => new Date(d + "T12:00:00");
+function rows(list){
+  const today = new Date().toLocaleDateString("sv"), week = Date.now() - 7 * 864e5;
+  return list.filter(e => (F.party === "any" || String(e.p) === F.party) && (F.job === "any" || jobClass(e.j) === F.job)
+    && (F.when === "all" || (F.when === "today" ? e.d === today : day(e.d) >= week))
+    && (F.timing === "any" || (F.timing === "clock" ? e.k : e.src === "tracker"))
+    && (F.mode === "Rush" || e.s[5] != null && e.x != null));
+}
+const score = e => (e.x || 0) + (e.m || 0);
+function board(list){
+  const g = new Map();
+  for (const e of rows(list)){
+    if (!g.has(e.g)) g.set(e.g, {g: e.g, best: null, vals: [], n: 0, names: new Set()});
+    const b = g.get(e.g), v = F.mode === "Rush" ? e.c : score(e);
+    b.vals.push(v); b.n++; e.n.forEach(n => b.names.add(n));
+    if (!b.best || (F.mode === "Rush" ? v < b.best.c : v > score(b.best))) b.best = e;
+  }
+  return [...g.values()].sort(F.mode === "Rush" ? (a, b) => a.best.c - b.best.c : (a, b) => score(b.best) - score(a.best));
+}
+const sel = (id, label, opts) => `<label>${label} <select data-f="${id}">${opts.map(([v, t]) => `<option value="${v}"${F[id] === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>`;
+function render(k){
+  const list = k.list, mine = KPQT.name().toLowerCase();
+  const parties = [...new Set(list.map(e => e.p))].sort((a, b) => a - b), classes = [...new Set(list.map(e => jobClass(e.j)).filter(Boolean))].sort();
+  if (F.party !== "any" && !parties.includes(+F.party)) F.party = "any";
+  if (F.job !== "any" && !classes.includes(F.job)) F.job = "any";
+  const bonusN = list.filter(e => e.s[5] != null && e.x != null).length;
+  if (F.mode === "Bonus" && !bonusN) F.mode = "Rush";
+  const rush = F.mode === "Rush", b = board(list);
+  const filt = `<div class="kb-filters"><div class="seg small" role="radiogroup" aria-label="Board" id="trkkm">${["Rush", "Bonus"].map(m => `<button role="radio" type="button" aria-checked="${m === F.mode}" data-m="${m}"${m === "Bonus" && !bonusN ? " disabled" : ""}>${m}</button>`).join("")}</div>
+    ${sel("party", "Party", [["any", "Any size"], ...parties.map(p => [String(p), p === 1 ? "Solo" : p + " players"])])}
+    ${sel("job", "Job", [["any", "Any job"], ...classes.map(c => [c, c])])}
+    ${sel("when", "When", [["all", "All time"], ["week", "Last 7 days"], ["today", "Today"]])}
+    ${sel("timing", "Timed by", [["any", "Anything"], ["clock", "In-game clock"], ["tracker", "Grind Tracker only"]])}
+    <button class="btn sm" type="button" data-kreset${Object.keys(DEF).every(x => F[x] === DEF[x]) ? " disabled" : ""}>Reset filters</button></div>`;
+  const crank = n => /^[A-Za-z0-9]{2,13}$/.test(n) ? `<a href="https://classicrank.com/user/${n}" target="_blank" rel="noopener" title="${n} on classicrank.com">${n}</a>` : esc(n);
+  const rank = i => i < 3 ? `<span class="pill ${i ? "p-hot" : "p-good"}">#${i + 1}</span>` : "#" + (i + 1);
+  const mark = e => (e.k ? "" : ' <span class="sub" title="Timed with the PC clock: the KPQ clock wasn\'t read">~</span>') + (e.src === "site" ? ' <span class="sub" title="Timed on this site\'s KPQ timer (stages by key press)">⌨</span>' : "");
+  const cols = rush ? 7 : 9;
+  const trs = b.slice(0, 50).map((x, i) => {
+    const e = x.best, names = [...x.names].slice(0, 6), me = mine && names.some(n => n.toLowerCase() === mine);
+    const who = (names.length ? `<b>${names.map(crank).join(", ")}</b> <span class="sub">` : "<span>") + (e.p > 1 ? "party of " + e.p : "solo") + "</span>";
+    const lj = `<td>${e.l ? "Lv " + e.l : "–"}${e.j ? ` <span class="sub">${esc(e.j)}</span>` : ""}</td>`;
+    const tr = rush ? `<td class="num">${rank(i)}</td><td class="num"><b>${mss(e.c)}</b>${mark(e)}</td><td class="num">${mss(median(x.vals))}</td><td class="num">${x.n}</td><td>${who}</td>${lj}<td class="sub">${esc(e.d)}</td>`
+      : `<td class="num">${rank(i)}</td><td class="num"><b>${fmt(score(e))}</b></td><td class="num">${fmt(e.x || 0)}</td><td class="num">${fmt(e.m || 0)}</td><td class="num">${mss(e.s[5])}</td><td class="num">${mss(e.c)}${mark(e)}</td><td>${who}</td>${lj}<td class="sub">${esc(e.d)}</td>`;
+    const sp = open === x.g ? `<tr class="kb-sp"><td colspan="${cols + 1}">${splits(e)}</td></tr>` : "";
+    return `<tr class="kb-row${me ? " kb-me" : ""}${open === x.g ? " kb-open" : ""}" data-g="${esc(x.g)}" tabindex="0" title="Stage times of this round">${tr}<td class="kb-ch" aria-hidden="true">${open === x.g ? "▴" : "▾"}</td></tr>${sp}`;
+  }).join("");
+  const th = rush ? `<th class="num">Rank</th><th class="num">Best clear</th><th class="num">Typical</th><th class="num">Rounds</th><th>Who</th><th>Level and job</th><th>Date</th>`
+    : `<th class="num">Rank</th><th class="num">EXP + mesos</th><th class="num">EXP</th><th class="num">Mesos</th><th class="num">Bonus time</th><th class="num">Rush clear</th><th>Who</th><th>Level and job</th><th>Date</th>`;
+  // fastest time per stage in the rounds the filters keep
+  const rs = rows(list), fast = STG.slice(0, 5).map((n, s) => { let m = null; for (const e of rs) if (e.s[s] != null && (!m || e.s[s] < m.s[s])) m = e; return m ? [n, m.s[s], m.n[0] || ""] : null }).filter(Boolean);
+  const fastHtml = rush && fast.length ? `<div class="card kb-fast"><h3>Fastest stages</h3><dl class="stats">${fast.map(([n, t, who]) => `<div><dt>${n}</dt><dd>${mss(t)}</dd><dd class="sub kb-who">${who ? esc(who) : "&nbsp;"}</dd></div>`).join("")}</dl><p class="tiny">Best single stage in the rounds shown above, whoever ran it. Together they're the fastest round anyone could put together.</p></div>` : "";
+  const shown = rs.length;
+  const body = b.length ? `<div class="tblwrap"><table><thead><tr>${th}<th aria-label="Stages"></th></tr></thead><tbody>${trs}</tbody></table></div>`
+    : `<p class="tiny">No rounds match these filters. <button class="btn sm" type="button" data-kreset>Reset filters</button></p>`;
+  return `<div class="card kb-card">${filt}<p class="sub kb-count">${fmt(shown)} round${shown === 1 ? "" : "s"} from ${fmt(b.length)} ${b.length === 1 ? "party or player" : "parties and players"}${shown < list.length ? ` (of ${fmt(list.length)})` : ""}. Click a line for its stage times.</p>${body}
+    <p class="sub">${rush ? "" : "EXP and mesos are the best a party member's tracker saw that round. "}Level and job are the sender's. "~" = timed with the PC clock, "⌨" = timed on the site's <a href="#" data-go="kpqt">KPQ timer</a>.</p></div>${fastHtml}`;
+}
+function splits(e){
+  const tot = e.s.slice(0, 5).reduce((a, x) => a + (x || 0), 0) || 1;
+  return `<div class="kb-split">${STG.map((n, s) => e.s[s] == null ? "" : `<span style="flex:${s < 5 ? Math.max(.06, e.s[s] / tot) : .16}"${s === 5 ? ' class="bon"' : ""}><b>${n}</b>${mss(e.s[s])}</span>`).join("")}</div>`;
+}
+function wire(root, redraw){
+  root.addEventListener("change", e => { const s = e.target.closest("select[data-f]"); if (s){ F[s.dataset.f] = s.value; keep(); redraw() } });
+  root.addEventListener("click", e => {
+    if (e.target.closest("[data-kreset]")){ Object.assign(F, DEF); keep(); redraw(); return }
+    if (e.target.closest("a")) return;
+    const r = e.target.closest("tr.kb-row"); if (r){ open = open === r.dataset.g ? null : r.dataset.g; redraw() }
+  });
+  root.addEventListener("keydown", e => { const r = e.target.closest?.("tr.kb-row"); if (r && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); r.click() } });
+}
+return {render, wire, keep, F};
+})();
+KPQB.wire($("#trkkpqdata"), trkRender);
 
 /* ---------------- search everything (Ctrl K) + the share links for Where to train and the Quest Database ---------------- */
 (() => {
@@ -9914,7 +10366,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
   const skills = Object.values(D.skills).flat(), skill = n => skills.filter(s => s.n === n && D.icons[s.id]).slice(0, 1).map(s => "s:" + s.id);
   const kpq = ["m:800000", "m:800001", "m:800002", "m:800003", "i:4001001", "i:4001002"];   // Ligator, Jr. Necki, Curse Eye, King Slime, Coupon, Pass
   const P = {
-    home: ["m:2"], trk: mobs, trkhow: ["i:4031032"], trkruns: mobs, trkkpq: kpq,
+    home: ["m:2"], trk: mobs, trkhow: ["i:4031032"], trkruns: mobs, trkkpq: kpq, kpqt: kpq,
     plan: I(known.filter(i => D.items[i].c === "Equipment")), skills: Object.keys(D.icons).map(i => "s:" + i),
     maps: mobs, path: I(Object.keys(D.potval)), expc: ["s:4101001"], kpq,
     wmap: I(["2030000", "2030001", "2030002", "2030003", "2030004", "2030005", "2030006"]),   // launch towns only
