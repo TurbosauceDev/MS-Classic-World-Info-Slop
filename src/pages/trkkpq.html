@@ -1,4 +1,36 @@
 <section id="trkkpq" hidden>
-  <p class="note trksrc" style="margin-top:0"></p>
+  <details class="howto">
+    <summary>About the KPQ leaderboard</summary>
+    <ul>
+      <li>Kerning PQ rounds from <a href="#" data-go="trk">Grind Tracker</a> players with sharing on, and from the site's <a href="#" data-go="kpqt">KPQ timer</a> with sending on. Rounds joined part-way aren't counted.</li>
+      <li><b>Rush</b>: fastest clear, 1st stage to beating King Slime and leaving the Last stage. The Bonus stage isn't counted.</li>
+      <li><b>Bonus</b>: rounds that went into the Bonus stage, ranked by EXP + mesos gained that round (1 meso = 1 point, our own weighting). A faster Rush leaves more Bonus time, which shows up as more EXP and mesos. Only the tracker reads EXP, so site-timed rounds are on Rush only.</li>
+      <li>One line per party (same party code) or player (home network). A party's trackers each send the same round; it counts once.</li>
+      <li>The server checks every round: the stage times have to fit in the clear, a clear has to be 1 to 60 minutes (our own bounds), the same round sent twice counts once, and one tracker or browser can send 12 rounds an hour.</li>
+      <li>Names link to the player's <a href="https://classicrank.com/" target="_blank" rel="noopener">classicrank.com</a> profile. Filters are saved in this browser.</li>
+    </ul>
+  </details>
+  <p class="note trksrc"></p>
   <div id="trkkpqdata"></div>
+<style>
+.kb-card{margin-bottom:14px}
+.kb-filters{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:flex-end;margin-bottom:10px}
+.kb-filters .seg{margin:0}
+.kb-filters label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted)}
+.kb-filters select{font:14.5px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.kb-filters .btn{margin:0 0 1px}
+.kb-filters .btn:disabled{opacity:.45;cursor:default}
+.kb-count{margin:0 0 8px}
+tr.kb-row{cursor:pointer;transition:background .2s}
+tr.kb-row:hover,tr.kb-row:focus-visible{background:var(--accent-soft);outline:none}
+tr.kb-me td{background:var(--leaf-soft)}
+td.kb-ch{color:var(--muted);width:1em}
+tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
+.kb-split{display:flex;gap:3px;min-width:420px}
+.kb-split span{display:flex;flex-direction:column;min-width:0;padding:4px 6px;border-radius:6px;background:var(--accent-soft);font:600 13px var(--f-mono);white-space:nowrap;overflow:hidden}
+.kb-split span.bon{background:var(--leaf-soft)}
+.kb-split b{font:600 10.5px var(--f-body);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.kb-fast .kb-who{font:500 13px var(--f-body);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@keyframes kbin{from{opacity:0;transform:translateY(-3px)}}
+</style>
 </section>

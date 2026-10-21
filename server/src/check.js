@@ -63,7 +63,8 @@ export function cleanKpq(r){
   const round = {date: r.date || new Date().toISOString().slice(0, 10), hour: Number.isInteger(r.hour) && r.hour >= 0 && r.hour < 24 ? r.hour : null,
     mode: r.mode === "Rush" ? "Rush" : "Bonus", party: r.party | 0, level: r.level == null ? null : Math.round(r.level),
     job: typeof r.job === "string" ? r.job.slice(0, 40) || null : null, clear: Math.round(r.clear), total: cnt(r.total, 7200),
-    clock: r.clock ? 1 : 0, exp: cnt(r.exp, 1e7), mesos: cnt(r.mesos, 1e7), stages, name: kpqName(r.name)};
+    clock: r.clock ? 1 : 0, exp: cnt(r.exp, 1e7), mesos: cnt(r.mesos, 1e7), stages, name: kpqName(r.name),
+    src: r.src === "site" ? "site" : "tracker"};   // site = the site's KPQ timer (stages split by key press, 2026-10-21)
   let why = null;
   if (round.clear < 60 || round.clear > 3600) why = "clear time";
   else if (round.total != null && round.total < round.clear) why = "total under clear";

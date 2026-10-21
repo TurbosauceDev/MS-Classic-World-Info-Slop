@@ -17,7 +17,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
   const skills = Object.values(D.skills).flat(), skill = n => skills.filter(s => s.n === n && D.icons[s.id]).slice(0, 1).map(s => "s:" + s.id);
   const kpq = ["m:800000", "m:800001", "m:800002", "m:800003", "i:4001001", "i:4001002"];   // Ligator, Jr. Necki, Curse Eye, King Slime, Coupon, Pass
   const P = {
-    home: ["m:2"], trk: mobs, trkhow: ["i:4031032"], trkruns: mobs, trkkpq: kpq,
+    home: ["m:2"], trk: mobs, trkhow: ["i:4031032"], trkruns: mobs, trkkpq: kpq, kpqt: kpq,
     plan: I(known.filter(i => D.items[i].c === "Equipment")), skills: Object.keys(D.icons).map(i => "s:" + i),
     maps: mobs, path: I(Object.keys(D.potval)), expc: ["s:4101001"], kpq,
     wmap: I(["2030000", "2030001", "2030002", "2030003", "2030004", "2030005", "2030006"]),   // launch towns only

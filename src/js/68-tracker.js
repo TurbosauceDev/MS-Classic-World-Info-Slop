@@ -16,13 +16,21 @@ function trkClean(d){
     for (const [i, n] of Object.entries(obj(c.items))) items[i] = tI(n);
     mobs[id] = {kills: tI(c.kills), players: tI(c.players), mesos: tI(c.mesos), mesoDrops: tI(c.mesoDrops), items} }
   const times = {}; for (const [map, t] of Object.entries(obj(d.times))){ const a = (Array.isArray(t) ? t : []).filter(x => Array.isArray(x) && isFinite(x[0]) && isFinite(x[1])).map(x => [+x[0], +x[1]]); if (a.length) times[map] = a }
-  const k = obj(d.kpq), board = {};
-  for (const m of ["Rush", "Bonus"]) if (Array.isArray(obj(k.board)[m])) board[m] = k.board[m].map(e0 => { const e = obj(e0);
-    return {best: tI(e.best), median: tI(e.median), rounds: tI(e.rounds), party: tI(e.party), level: tN(e.level), exp: tI(e.exp), mesos: tI(e.mesos), bonus: tN(e.bonus), clear: tI(e.clear),
-      clock: !!e.clock, names: (Array.isArray(e.names) ? e.names : []).map(tS), job: tS(e.job), date: tS(e.date)} });
   const up = new Date(d.updated);
   return {runs: tI(d.runs), players: tI(d.players), hours: tI(d.hours), updated: isNaN(up) ? null : up, rows: trkRows(d.rows, true), mobs, times,
-    kpq: {rounds: tI(k.rounds), groups: tI(k.groups), board}, live: true};
+    kpq: trkKpqClean(d.kpq), live: true};
+}
+// the KPQ part of a summary (live reply or the build's snapshot), same rules: board = the server's top lines per mode,
+// list = every counted round (server 2026-10-21) for the board's filters
+function trkKpqClean(k0){
+  const obj = v => v && typeof v === "object" && !Array.isArray(v) ? v : {}, k = obj(k0), board = {}, arr = v => Array.isArray(v) ? v : [];
+  for (const m of ["Rush", "Bonus"]) if (Array.isArray(obj(k.board)[m])) board[m] = k.board[m].map(e0 => { const e = obj(e0);
+    return {best: tI(e.best), median: tI(e.median), rounds: tI(e.rounds), party: tI(e.party), level: tN(e.level), exp: tI(e.exp), mesos: tI(e.mesos), bonus: tN(e.bonus), clear: tI(e.clear),
+      clock: !!e.clock, names: arr(e.names).map(tS), job: tS(e.job), date: tS(e.date)} });
+  const list = arr(k.list).map(e0 => { const e = obj(e0), s = arr(e.s);
+    return {g: tS(e.g), d: tS(e.d), p: tI(e.p), l: tN(e.l), j: tS(e.j), c: tI(e.c), k: !!e.k, x: tN(e.x), m: tN(e.m), s: [0, 1, 2, 3, 4, 5].map(i => tN(s[i])),
+      n: arr(e.n).map(tS).slice(0, 6), src: e.src === "site" ? "site" : "tracker"} }).filter(e => e.g && e.c > 0 && /^\d{4}-\d\d-\d\d$/.test(e.d));
+  return {rounds: tI(k.rounds), groups: tI(k.groups), board, list};
 }
 const trkMapName = r => D.mapnames[r.map] ?? D.maps[r.map]?.[0] ?? r.name ?? r.map;
 const trkMed = a => { const v = a.filter(x => x != null); return v.length ? median(v) : null };
@@ -32,7 +40,7 @@ function trkRender(){
   const src = s.live ? `Live from the tracker server${s.updated ? `, updated ${esc(s.updated.toLocaleString())}` : ""}.`
     : `Snapshot from the tracker server${s.read ? `, read ${esc(s.read)}` : ""}.${TRK_ASKED ? " The live server couldn't be reached from here." : ""}`;
   document.querySelectorAll(".trksrc").forEach(e => e.innerHTML = src);
-  $("#trkkpqdata").innerHTML = trkKpq(s.kpq);
+  $("#trkkpqdata").innerHTML = trkKpq(s.live ? s.kpq : trkKpqClean(s.kpq));
   if (!s.runs){
     $("#trkdata").innerHTML = `<div class="card trkempty"><h3>No shared runs yet</h3><p>Every 15 minutes of non-stop farming on one map that a tracker player shares lands here: EXP/hr and mesos/hr by map, confirmed drops by monster, and the best time of day to farm. Be the first: <a href="#" data-go="trk">download the tracker</a> and say yes to sharing.</p>
       <div class="tblwrap trkpreview" aria-label="What a shared run row shows"><table class="mini"><thead><tr><th>Map</th><th class="num">Players</th><th class="num">EXP/hr</th><th class="num">Mesos/hr</th><th>Best time</th></tr></thead>
@@ -83,9 +91,10 @@ function trkRender(){
 // most EXP + mesos gained that round. Names: the character names the party's trackers sent
 const TRK_KMODE = {v: "Rush"};
 function trkKpq(k){
-  const head = `<p class="note">Kerning PQ boards from tracker players. <b>Rush</b>: fastest clear, 1st stage to beating King Slime and leaving the Last stage (Bonus stage not counted). <b>Bonus</b>: rounds that went into the Bonus stage, ranked by EXP + mesos gained that round (1 meso = 1 point, our own weighting); a faster Rush leaves more Bonus time, which shows up as more EXP and mesos. One line per party (same party code) or player. Rounds joined part-way aren't counted.</p>`;
+  const head = "";   // what the boards mean: the About box in src/pages/trkkpq.html
+  if (k?.list?.length) return KPQB.render(k);   // filters, splits (68-trkkpq.js)
   const modes = ["Rush", "Bonus"].filter(m => k?.board?.[m]?.length);
-  if (!k?.rounds || !modes.length) return head + `<div class="card trkempty"><h3>No KPQ rounds yet</h3><p>With sharing on, every KPQ round the tracker sees from the 1st stage to the end lands here. Use the same party code as your party so you show up as one team.</p></div>`;
+  if (!k?.rounds || !modes.length) return head + `<div class="card trkempty"><h3>No KPQ rounds yet</h3><p>With sharing on, every KPQ round the <a href="#" data-go="trk">Grind Tracker</a> sees from the 1st stage to the end lands here, and so do rounds timed on the site's <a href="#" data-go="kpqt">KPQ timer</a> with sending on. Use the same party code as your party so you show up as one team.</p></div>`;
   if (!modes.includes(TRK_KMODE.v)) TRK_KMODE.v = modes[0];
   const rush = TRK_KMODE.v === "Rush";
   const seg = `<div class="seg" role="radiogroup" id="trkkm">${["Rush", "Bonus"].map(m => `<button role="radio" aria-checked="${m === TRK_KMODE.v}" data-m="${m}"${modes.includes(m) ? "" : " disabled"}>${m}</button>`).join("")}</div>`;
@@ -100,12 +109,12 @@ function trkKpq(k){
     : `<tr><td class="num">${rank(i)}</td><td class="num"><b>${fmt(e.best)}</b></td><td class="num">${fmt(e.exp)}</td><td class="num">${fmt(e.mesos)}</td><td class="num">${e.bonus ? mss(e.bonus) : "–"}</td><td class="num">${mss(e.clear)}${clockMark(e)}</td><td class="num">${e.rounds}</td><td>${who(e)}</td>${lj(e)}<td class="sub">${esc(e.date || "")}</td></tr>`).join("");
   const th = rush ? `<th class="num">Rank</th><th class="num">Best clear</th><th class="num">Typical</th><th class="num">Rounds</th><th>Who</th><th>Level and job</th><th>Date</th>`
     : `<th class="num">Rank</th><th class="num">EXP + mesos</th><th class="num">EXP</th><th class="num">Mesos</th><th class="num">Bonus time</th><th class="num">Rush clear</th><th class="num">Rounds</th><th>Who</th><th>Level and job</th><th>Date</th>`;
-  return head + `<p class="sub">${fmt(k.rounds)} round${k.rounds === 1 ? "" : "s"} from ${fmt(k.groups)} ${k.groups === 1 ? "party or player" : "parties and players"}.</p>${seg}
+  return head + `<div class="card kb-card"><p class="sub">${fmt(k.rounds)} round${k.rounds === 1 ? "" : "s"} from ${fmt(k.groups)} ${k.groups === 1 ? "party or player" : "parties and players"}.</p>${seg}
     <div class="tblwrap"><table><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="sub">${rush ? "" : "EXP and mesos are what the tracker player who sent the best round gained in it. "}Level and job are that tracker player's. "~" = timed with the PC clock.</p>`;
+    <p class="sub">${rush ? "" : "EXP and mesos are what the tracker player who sent the best round gained in it. "}Level and job are that tracker player's. "~" = timed with the PC clock.</p></div>`;
 }
 const mss = sec => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0") };
-$("#trkkpqdata").addEventListener("click", e => { const b = e.target.closest("#trkkm button"); if (b){ TRK_KMODE.v = b.dataset.m; trkRender() } });
+$("#trkkpqdata").addEventListener("click", e => { const b = e.target.closest("#trkkm button"); if (b){ TRK_KMODE.v = KPQB.F.mode = b.dataset.m; KPQB.keep(); trkRender() } });
 // in-page links between the tracker pages (data-go = page id)
 for (const id of ["trk", "trkhow", "trkruns", "trkkpq"]) $("#" + id).addEventListener("click", e => { const a = e.target.closest("a[data-go]"); if (!a) return;
   e.preventDefault(); $("#t-" + a.dataset.go).click(); window.scrollTo({top: $("nav").offsetTop - 8}) });
@@ -118,7 +127,8 @@ function trkOpen(){
   }).catch(() => trkRender());
 }
 // the data pages ask the server once, on first open
-for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click", trkOpen); if (!$("#" + id).hidden) trkOpen() }
+// (a microtask: the KPQ board needs 68-trkkpq.js, later in this same script)
+for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click", trkOpen); if (!$("#" + id).hidden) queueMicrotask(trkOpen) }
 // Patch notes on Overview: the app's own changelog (tracker/app/changelog.js, inlined by build.py; window.TrackerChangelog),
 // kept apart from the site's Changelog (Danny 10-19). Newest 5 shown, the rest under "Older versions".
 /*@TRKLOG*/

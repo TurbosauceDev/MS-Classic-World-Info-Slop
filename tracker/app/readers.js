@@ -257,13 +257,13 @@
   }
   /* KPQ's "Time Left" clock, top middle of the screen: cream dot-matrix digits, 5x7 dots each, one dot every 5 px (game
      pixels), laid out MM.SS as digit, digit, 4 columns, digit, digit. Read from Danny's KPQ frames (2026-10-18), where the
-     dot grid sat at x = middle - 37 + 5*col, y = 44 + 5*row. 6 and 9 weren't in those frames: they're the font's usual
-     shapes, unconfirmed, so they only count on an exact match. Returns seconds left, or null. */
+     dot grid sat at x = middle - 37 + 5*col, y = 44 + 5*row. 6 and 9 from his later KPQ frames (22:16, 22:19; 2026-10-21
+     audit: the old guessed shapes were wrong, so every :x6/:x9 second read nothing). Returns seconds left, or null. */
   const TDIG = {".###./#..##/#.#.#/#.#.#/##..#/##..#/.###.": 0, "..#../.##../..#../..#../..#../..#../.###.": 1,
     ".###./#...#/....#/...#./..#../.#.../#####": 2, ".###./#...#/....#/..##./....#/#...#/.###.": 3,
     "..##./.#.#./.#.#./#..#./#####/...#./...#.": 4, "#####/#..../####./....#/....#/#...#/.###.": 5,
-    "#####/...#./...#./..#../..#../.#.../.#...": 7, ".###./#...#/#...#/.###./#...#/#...#/.###.": 8};
-  const TDIG_GUESS = {".##../.#.../#..../####./#...#/#...#/.###.": 6, ".###./#...#/#...#/.####/....#/...#./.##..": 9};
+    ".###./#..../#..../####./#...#/#...#/.###.": 6, "#####/...#./...#./..#../..#../.#.../.#...": 7,
+    ".###./#...#/#...#/.###./#...#/#...#/.###.": 8, ".###./#...#/#...#/.####/....#/...#./.###.": 9};
   function readKpqTimer(img){
     const {w, h, d} = img, mid = Math.round(w / 2);
     if (w < 400 || h < 100) return null;
@@ -271,7 +271,7 @@
     const g = [];
     for (let r = 0; r < 7; r++){ const row = []; for (let c = 0; c < 30; c++) row.push(ink(mid - 37 + 5 * c, 44 + 5 * r)); g.push(row) }
     const cell = (a, i) => { const rows = []; for (let r = 0; r < 7; r++){ let x = ""; for (let c = 0; c < 5; c++) x += g[r][a + c] ? "#" : "."; rows.push(x) } return rows.join("/") };
-    const digit = bm => { if (bm in TDIG) return TDIG[bm]; if (bm in TDIG_GUESS) return TDIG_GUESS[bm];
+    const digit = bm => { if (bm in TDIG) return TDIG[bm];
       let best = null, bd = 9, tie = false;
       for (const [k, v] of Object.entries(TDIG)){ let n = 0; for (let j = 0; j < k.length; j++) if (k[j] !== bm[j]) n++; if (n < bd){ bd = n; best = v; tie = false } else if (n === bd) tie = true }
       return bd <= 1 && !tie ? best : null };

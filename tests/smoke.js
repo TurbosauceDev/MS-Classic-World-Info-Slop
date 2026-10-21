@@ -21,7 +21,7 @@ const boxGaps = require("./boxgaps");
     titles: [...document.querySelectorAll("nav .sgh")].filter(b => b.offsetParent).map(b => b.textContent.trim()).join("|"),
     sprites: [...document.querySelectorAll("nav img.nic")].filter(i => i.offsetParent).every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0),
     cats: !!document.querySelector("nav .cats").offsetParent}));
-  check(side.pages === 21 && side.titles === "Grind Tracker|Training|Victoria Island|Maple Database|Mesos and Trade" && side.sprites && !side.cats,
+  check(side.pages === 22 && side.titles === "Grind Tracker|Training|Victoria Island|Maple Database|Mesos and Trade" && side.sprites && !side.cats,
     `sidebar lists every page under its section, each with a sprite (${JSON.stringify(side)})`);
   { const [nb, ft] = await p.evaluate(() => { scrollTo(0, 1e6); return [document.querySelector("nav").getBoundingClientRect().bottom, document.querySelector(".sitefoot").getBoundingClientRect().top] }); await p.evaluate(() => scrollTo(0, 0));
     check(ft >= nb, `footer starts below the whole sidebar (nav bottom ${Math.round(nb)}, footer top ${Math.round(ft)})`) }   // Danny 10-20: it slid over the footer

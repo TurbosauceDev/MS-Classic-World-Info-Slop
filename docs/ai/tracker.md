@@ -74,6 +74,9 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - KPQ boards (server summary.kpq.board): Rush = all rounds by clear; Bonus = rounds with 80000500 stage time, by EXP +
   mesos. The tracker's Bonus/Rush pick is stored (mode) but no longer picks the board. Names: kpq_names table (schema.sql
   re-runs every deploy, so new columns go in side tables); tracker sends Name (Party card) else the OCR'd charName.
+- Server 2026-10-21: summary.kpq.list = every counted round (party trackers' copies merged: same group/date/hour, clears within 5 s),
+  newest 3000, for the site's filters; kpq_src side table ('site' rounds); same install + same clear within 30 min = "already sent".
+  Bonus board needs exp (site rounds have none). KPQ clock 6/9 shapes confirmed from Danny's frames (timer-2216/2219/2546).
 - Settings is no longer a tab: it's a popup (#prefsPop, openPrefs/closePrefs; ids kept from "Preferences") opened from the
   native File menu → Settings (Ctrl+,, main.js sends menu "settings"); no title-bar button. Tests open it with `window.menu("settings")` and must close it (it covers the page). Its section chips
   (#prefsNav) come from `data-nav` on each card: a new section needs that attribute. label.chk checkboxes are switches.

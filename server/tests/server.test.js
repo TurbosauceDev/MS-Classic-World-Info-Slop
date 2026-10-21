@@ -141,6 +141,17 @@ assert.deepStrictEqual(kb.board.Rush[2].names, [], "no name sent");
 assert.deepStrictEqual(kb.board.Bonus.map(e => [e.best, e.bonus, e.clear, e.rounds]), [[20050, 30, 700, 1], [9700, 55, 500, 1]]);
 assert.strictEqual(kb.board.Bonus[1].group, kb.board.Rush[0].group, "same party, same label on both boards");
 assert.ok(!JSON.stringify(kb).includes("kpqparty"), "no install ids in the board");
+// the round list behind the site's filters: a party's 4 trackers sending one round = one line, names merged
+assert.strictEqual(kb.list.length, 4, JSON.stringify(kb.list));
+const pr = kb.list.find(e => e.c === 400);
+assert.deepStrictEqual([pr.p, pr.n, pr.k, pr.src, pr.g, pr.s.slice(0, 5)], [4, ["Turbow1", "Turbow2", "Turbow3"], 1, "tracker", kb.board.Rush[0].group, [60, 60, 60, 60, 150]]);
+assert.strictEqual(kb.list.find(e => e.c === 500).x, 9400, "best EXP of the party's trackers kept");
+// the site's KPQ timer: source kept, the same round sent twice counted once
+[s, r] = await kpost(kr("sitetimer0000001", 333, {src: "site", clock: false, name: "Webby"}), "23.0.0.1"); assert.ok(r.counted, JSON.stringify(r));
+[s, r] = await kpost(kr("sitetimer0000001", 333, {src: "site", clock: false, name: "Webby"}), "23.0.0.1"); assert.deepStrictEqual([r.counted, r.why], [false, "already sent"]);
+const kl = (await fresh()).kpq.list, site = kl.filter(e => e.src === "site");
+assert.deepStrictEqual([site.length, site[0].n, site[0].k], [1, ["Webby"], 0]);
+assert.ok(!JSON.stringify(kl).includes("sitetimer") && !JSON.stringify(kl).includes("kpqparty"), "no install ids in the list");
 for (let i = 0; i < 13; i++) [s] = await kpost(kr("kpqsolo000000009", 600 + i, {party: 1}), "22.0.0.1");
 assert.strictEqual(s, 429, "13th round in an hour refused");
 // Feedback page: notes in, honeypot dropped, limits, admin key

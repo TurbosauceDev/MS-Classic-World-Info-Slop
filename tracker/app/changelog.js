@@ -3,6 +3,7 @@
 // Releasing? Add a line for the new version at the top: tests/core.test.js fails if the top entry isn't package.json's version.
 (function (root){
   const LOG = [
+    ["0.2.68", "2026-10-21", "KPQ clock: seconds ending in 6 or 9 now read (they were skipped), so KPQ stage and round times follow the game clock all the way."],
     ["0.2.67", "2026-10-20", "Built-in profile \"Danny's Default\" under Settings > Layout > Profiles. A profile's window size now always fits your screen."],
     ["0.2.66", "2026-10-20", "Settings, Help (F1), Patch notes and Report a bug open as pop-ups over a blurred backdrop with a little space around them and a smooth open and close; Help no longer opens under the layout or resizes the window."],
     ["0.2.65", "2026-10-19", "App icon is now the game's own Slime sprite on the purple tile."],

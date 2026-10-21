@@ -57,12 +57,16 @@ async function postKpq(req, env){
   const recent = await env.DB.prepare("SELECT COUNT(*) n FROM kpq_rounds WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n, COUNT(DISTINCT install) k, SUM(install = ?) mine FROM kpq_rounds WHERE ipday = ?").bind(body.install, ipday).first();
   if (recent.n >= KPQ_PER_HOUR || today.n >= MAX_PER_IP_DAY || today.k >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rounds"}, 429);
+  // the same round sent twice (a retry, or the site's Send pressed again): same install, same clear, in the last 30 min
+  const dup = await env.DB.prepare("SELECT id FROM kpq_rounds WHERE install = ? AND clear = ? AND received > ?").bind(body.install, c.round.clear, new Date(now - 1800e3).toISOString()).first();
+  if (dup) return json({ok: true, counted: false, why: "already sent"});
   const r = c.round, code = typeof body.partyCode === "string" ? body.partyCode.trim().toLowerCase().slice(0, 20) : "";
   const grp = code && r.party > 1 ? await sha("party:" + code + await salt(env.DB)) : null;
   const ins = await env.DB.prepare(`INSERT INTO kpq_rounds (install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(body.install, ipday, now.toISOString(), r.date, r.hour, r.mode, r.party, r.level, r.job,
     r.clear, r.total, r.clock, r.exp, r.mesos, JSON.stringify(r.stages), grp, c.ok ? 1 : 0, c.why).run();
   if (r.name) await env.DB.prepare("INSERT OR REPLACE INTO kpq_names (kpq_id, name) VALUES (?, ?)").bind(ins.meta.last_row_id, r.name).run();
+  if (r.src !== "tracker") await env.DB.prepare("INSERT OR REPLACE INTO kpq_src (kpq_id, src) VALUES (?, ?)").bind(ins.meta.last_row_id, r.src).run();
   return json({ok: true, counted: c.ok, why: c.why});
 }
 
@@ -107,7 +111,7 @@ export async function summary(db){
   // one person with fresh installs (or a whole household) can't make up the "3+ players" a map needs on their own
   const uf = new Map(), find = k => { let r = k; while (uf.has(r) && uf.get(r) !== r) r = uf.get(r); uf.set(k, r); return r },
     join = (a, b) => { const x = find(a), y = find(b); if (x !== y) uf.set(x, y) };
-  const kq = (await db.prepare("SELECT k.install, k.ipday, k.date, k.mode, k.party, k.level, k.job, k.clear, k.total, k.clock, k.exp, k.mesos, k.stages, k.grp, n.name FROM kpq_rounds k LEFT JOIN kpq_names n ON n.kpq_id = k.id WHERE k.ok = 1").all()).results;
+  const kq = (await db.prepare("SELECT k.install, k.ipday, k.date, k.mode, k.party, k.level, k.job, k.clear, k.total, k.clock, k.exp, k.mesos, k.stages, k.grp, k.hour, n.name, x.src FROM kpq_rounds k LEFT JOIN kpq_names n ON n.kpq_id = k.id LEFT JOIN kpq_src x ON x.kpq_id = k.id WHERE k.ok = 1 ORDER BY k.id").all()).results;
   for (const r of [...results, ...kq]) join("i" + r.install, "n" + r.ipday);
   const net = install => find("i" + install);
   // parties: a party code joined with its members' networks (a separate set, so soloing friends who partied once stay apart)
@@ -158,7 +162,7 @@ export async function summary(db){
   const score = r => (r.exp || 0) + (r.mesos || 0), bonusSec = r => { try { return JSON.parse(r.stages || "{}")[BONUS] || 0 } catch { return 0 } };
   for (const r of kq){
     const g = r.party > 1 && r.grp ? "P" + pfind("p" + r.grp) : "S" + net(r.install), bs = bonusSec(r);
-    for (const mode of bs > 0 ? ["Rush", "Bonus"] : ["Rush"]){
+    for (const mode of bs > 0 && r.exp != null ? ["Rush", "Bonus"] : ["Rush"]){   // site-timed rounds carry no EXP: Rush only
       const m = kg[mode]; if (!m.has(g)) m.set(g, {g, best: null, vals: [], per: new Map(), names: new Map()});
       const e = m.get(g), better = mode === "Rush" ? !e.best || r.clear < e.best.clear : !e.best || score(r) > score(e.best);
       e.vals.push(mode === "Rush" ? r.clear : score(r)); e.per.set(r.install, (e.per.get(r.install) || 0) + 1);
@@ -174,6 +178,19 @@ export async function summary(db){
       rounds: Math.max(...e.per.values()), names: [...new Set(e.names.values())].slice(0, 6), party: b.party, level: b.level, job: b.job, date: b.date, clock: !!b.clock,
       clear: b.clear, bonus: b.bonus, exp: b.exp, mesos: b.mesos} });
   }
+  // every counted round for the site's filters (party size, job, period, timing), newest 3000. A party's trackers each send
+  // the same round: one line per party round (same group, date and hour, clears within 5 s), names merged, the best EXP + mesos kept
+  const KS = ["80000000", "80000100", "80000200", "80000300", "80000400", "80000500"], merged = [], open = new Map();
+  for (const r of kq){
+    const g = r.party > 1 && r.grp ? "P" + pfind("p" + r.grp) : "S" + net(r.install), key = [g, r.date, r.hour].join("|");
+    let st; try { st = JSON.parse(r.stages || "{}") } catch { st = {} }
+    const prev = (open.get(key) || []).find(e => Math.abs(e.c - r.clear) <= 5 && !e.ins.has(r.install));
+    if (prev){ prev.ins.add(r.install); if (r.name && !prev.n.includes(r.name)) prev.n.push(r.name); if (score(r) > (prev.x || 0) + (prev.m || 0)){ prev.x = r.exp; prev.m = r.mesos } continue }
+    const e = {g: lab(g), d: r.date, p: r.party, l: r.level, j: r.job, c: r.clear, t: r.total, k: r.clock ? 1 : 0, x: r.exp, m: r.mesos,
+      s: KS.map(id => st[id] ?? null), n: r.name ? [r.name] : [], src: r.src || "tracker", ins: new Set([r.install])};
+    merged.push(e); (open.get(key) || open.set(key, []).get(key)).push(e);
+  }
+  kpq.list = merged.slice(-3000).map(({ins, ...e}) => e);
   const players = new Set(results.map(r => r.install)).size, hours = results.reduce((a, r) => a + r.minutes, 0) / 60;
   return {updated: new Date().toISOString(), runs: results.length, players, hours: Math.round(hours * 10) / 10, rows, mobs, times, kpq};
 }
