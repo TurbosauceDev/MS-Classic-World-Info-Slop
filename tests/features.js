@@ -189,6 +189,14 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       if (keep) PWNOW["2000000"] = keep; else delete PWNOW["2000000"]; return out });
     check(JSON.stringify(r) === "[true,true,false]", `items: "NPC sells for less" only when the shop beats the listing (${r})`);
     check(/\d+ confirmed/.test(await p.evaluate(() => votesHtml(12))), "drop reports read \"N confirmed\"");
+    // classicmarket.kr 2026-10-21: a Prices line with source + post counts; pwPrice falls back meso.watch -> asks -> buy orders
+    const c = await p.evaluate(() => { const id = "2000000", kp = PW[id], kc = CM[id], out = [];
+      CM[id] = [40, 45, 3, 30, 28, 2]; out.push(PRICE_SRC.map(f => f(id)).some(r => r && /classicmarket\.kr: sellers ask from <b>40<\/b>.*3 posts.*buy orders up to <b>30<\/b>.*2 posts/.test(r[1])));
+      PW[id] = [60, 50, 70, 9, 0]; out.push(pwPrice(id).src);
+      delete PW[id]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
+      CM[id] = [null, null, 0, 30, 28, 2]; out.push(pwPrice(id).src);
+      if (kp) PW[id] = kp; if (kc) CM[id] = kc; else delete CM[id]; return out });
+    check(JSON.stringify(c) === '[true,"meso.watch","classicmarket.kr asks 45","classicmarket.kr buy orders"]', `classicmarket: price line + fallback order (${c})`);
     await ctx.close() }
 
   await b.close();

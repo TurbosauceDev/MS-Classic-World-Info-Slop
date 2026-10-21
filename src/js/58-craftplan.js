@@ -19,12 +19,15 @@ const save = () => { try { localStorage.setItem("cplan", JSON.stringify(S)) } ca
 /* prices */
 const shopMin = id => { const a = [...(D.ishop?.[id] || []).map(s => s[3]), D.shopsell?.[id]?.[2]].filter(v => v > 0); return a.length ? Math.min(...a) : 0 };
 // what one sells for: the median player-shop sale or what an NPC pays, whichever is more. Items meso.watch prices by the set
-// (flag 2) have no per-item price, so they fall back to the NPC price.
-const worth = id => { const p = PW[id], med = p && !(p[4] & 2) && p[0] > 0 ? p[0] : 0; return Math.max(med, D.items[id]?.p || 0) };
-const rough = id => { const p = PW[id]; return !!(p && p[4] & 1 && p[0] > (D.items[id]?.p || 0)) };
+// (flag 2) have no per-item price, so they fall back to the NPC price. No meso.watch sales: classicmarket.kr asks, then buy orders (pwPrice).
+const worth = id => { const f = pwPrice(id), med = f && !f.per ? f.v : 0; return Math.max(med, D.items[id]?.p || 0) };
+const rough = id => { const f = pwPrice(id); return !!(f && f.rough && f.v > (D.items[id]?.p || 0)) };
+const roughWhy = id => pwPrice(id)?.src === "meso.watch" ? "Under 5 sales seen" : `Only ${pwPrice(id)?.src || "rough"} (${fmt(pwPrice(id)?.n || 0)} posts): asking prices, not sales`;
 // cheapest way to buy one: a live listing, an NPC shop or the usual price
-const buyEach = id => { const n = PWNOW[id], p = PW[id], a = [n && n[0] >= 1 ? n[0] : 0, shopMin(id), p && !(p[4] & 2) ? p[0] : 0].filter(v => v > 0); return a.length ? Math.min(...a) : Infinity };
-const buyHow = id => { const v = buyEach(id), n = PWNOW[id]; return v === (n && n[0]) ? "listed now" : v === shopMin(id) ? "NPC shop" : "usual price" };
+// (no meso.watch price: the cheapest classicmarket.kr sell post)
+const cmAsk = id => !PW[id] && CM[id]?.[2] ? CM[id][0] : 0;
+const buyEach = id => { const n = PWNOW[id], p = PW[id], a = [n && n[0] >= 1 ? n[0] : 0, shopMin(id), p && !(p[4] & 2) ? p[0] : 0, cmAsk(id)].filter(v => v > 0); return a.length ? Math.min(...a) : Infinity };
+const buyHow = id => { const v = buyEach(id), n = PWNOW[id]; return v === (n && n[0]) ? "listed now" : v === shopMin(id) ? "NPC shop" : v === cmAsk(id) ? "classicmarket.kr post" : "usual price" };
 
 /* crafting */
 let ALLOWED = [], SUB = {};   // recipes your levels allow; item id -> the recipe used to make it as a part (45-crafting.js rule)
@@ -86,7 +89,7 @@ function inventory(){
 }
 const nm = id => `<span class="itname" tabindex="0" data-item="${id}">${esc(D.items[id]?.n || id)}</span>`;
 const ings = (o, k = 1) => Object.entries(o).map(([id, n]) => `<span class="sning">${itemIcon(id, 1, true)} ${fmt(Math.round(n / k))} ${nm(id)}</span>`).join(" ");
-const made = r => `<span class="ing">${itemIcon(r.id, r.n)}<span>${nm(r.id)}${r.n > 1 ? ` ×${r.n}` : ""}<div class="sub">${esc(DISC[r.d])} Lv ${r.lvl}${r.type === "Equipment" ? " · plain equip" : ""}${rough(r.id) ? ` <span class="pill p-warn" title="Under 5 sales seen">rough</span>` : ""}</div></span></span>`;
+const made = r => `<span class="ing">${itemIcon(r.id, r.n)}<span>${nm(r.id)}${r.n > 1 ? ` ×${r.n}` : ""}<div class="sub">${esc(DISC[r.d])} Lv ${r.lvl}${r.type === "Equipment" ? " · plain equip" : ""}${rough(r.id) ? ` <span class="pill p-warn" title="${esc(roughWhy(r.id))}">rough</span>` : ""}</div></span></span>`;
 const plus = v => `<b class="${v > 0 ? "up" : "down"}">${v > 0 ? "+" : ""}${fmt(Math.round(v))}</b>`;
 
 function draw(){

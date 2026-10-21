@@ -283,6 +283,9 @@ function drawSell(){
   const opts = [];
   if (n && n[0] > 1) opts.push(["Be the cheapest", n[0] - 1, `1 under the cheapest listing now (${money(n[0])}${n[4] ? " by " + esc(n[4]) : ""}): yours shows first`]);
   if (p) opts.push(["Quick sale", p[1], "the low end: 3 in 4 sales went for more"], ["Usual price", p[0], `the median of ${fmt(p[3])} sale${p[3] === 1 ? "" : "s"} seen`], ["Patient", p[2], "the high end: 1 in 4 sales went for more"]);
+  const c = CM[id];   // classicmarket.kr trade posts: a buy order is a buyer waiting now
+  if (c?.[5]) opts.push(["Fill a buy order", c[3], `the highest of ${cmPosts(c[5])} on classicmarket.kr (${cmAgo()})`]);
+  if (c?.[2] && !p) opts.push(["Match other sellers", c[1], `the median of ${cmPosts(c[2])} on classicmarket.kr: asking prices, not sales`]);
   if (npc) opts.push(["Sell to an NPC", npc, "no waiting (game files)"]);
   const advice = [];
   if (npc && opts.some(o => o[0] !== "Sell to an NPC") && npc >= Math.min(...opts.filter(o => o[0] !== "Sell to an NPC" && o[0] !== "Patient").map(o => o[1]))) advice.push("An NPC pays about as much as players do: vendoring may be the better deal.");
