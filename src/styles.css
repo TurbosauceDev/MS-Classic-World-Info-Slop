@@ -770,10 +770,11 @@ header .thbtn:hover svg,header .thbtn[aria-expanded="true"] svg{transform:rotate
 .sntbl [aria-sort="ascending"]::after{content:" ▲"} .sntbl [aria-sort="descending"]::after{content:" ▼"}
 .sntbl [aria-sort]::after{color:var(--accent)}
 .sntr{font-size:13.5px}
-#snp-list .sntbl td:nth-child(6) .sub{white-space:nowrap}
-@media (max-width:1180px){#snp-list .sntbl th:nth-child(4),#snp-list .sntbl td:nth-child(4){display:none}}
+/* subs wrap so the list fits its card at 1300 px (smoke.js) */
+#snp-list .sntbl td .sub{white-space:normal}
+@media (max-width:1400px){#snp-list .sntbl th:nth-child(4),#snp-list .sntbl td:nth-child(4){display:none}}
 .snwhere{min-width:20ch;max-width:28ch}
-.sntbl .num .sub{font-family:var(--f-body)}
+.sntbl .num .sub{font-family:var(--f-body);white-space:normal;min-width:10ch}
 .sntbl .snsales{white-space:normal;min-width:9ch}
 .snprice{font-size:16px}
 .snpct{font:700 18px var(--f-mono)}
