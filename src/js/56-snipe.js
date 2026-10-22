@@ -283,6 +283,7 @@ function drawSell(){
   const opts = [];
   if (n && n[0] > 1) opts.push(["Be the cheapest", n[0] - 1, `1 under the cheapest listing now (${money(n[0])}${n[4] ? " by " + esc(n[4]) : ""}): yours shows first`]);
   if (p) opts.push(["Quick sale", p[1], "the low end: 3 in 4 sales went for more"], ["Usual price", p[0], `the median of ${fmt(p[3])} sale${p[3] === 1 ? "" : "s"} seen`], ["Patient", p[2], "the high end: 1 in 4 sales went for more"]);
+  if (p?.[7]) opts.push(["Others ask", p[7], "the median asking price of listings up now (meso.watch): asks, not sales"]);
   const c = CM[id];   // classicmarket.kr trade posts: a buy order is a buyer waiting now
   if (c?.[5]) opts.push(["Fill a buy order", c[3], `the highest of ${cmPosts(c[5])} on classicmarket.kr (${cmAgo()})`]);
   if (c?.[2] && !p) opts.push(["Match other sellers", c[1], `the median of ${cmPosts(c[2])} on classicmarket.kr: asking prices, not sales`]);
@@ -291,6 +292,7 @@ function drawSell(){
   if (npc && opts.some(o => o[0] !== "Sell to an NPC") && npc >= Math.min(...opts.filter(o => o[0] !== "Sell to an NPC" && o[0] !== "Patient").map(o => o[1]))) advice.push("An NPC pays about as much as players do: vendoring may be the better deal.");
   if (p && !(p[4] & 1) && p[6] != null && p[6] < 0.1) advice.push(`Slow seller: only ${Math.round(p[6] * 100)}% of units put up for sale were bought. Price near the low end or expect to wait.`);
   if (n && p && n[0] < p[1]) advice.push(`Someone is listing well under the usual price (${money(n[0])}). Undercutting them means selling cheap; waiting until it sells may pay more.`);
+  if (p?.[7] && p[0] && p[7] >= p[0] * 1.5) advice.push(`Sellers ask ${Math.round(p[7] / p[0] * 100)}% of what sells: buyers' market, the usual price is the realistic one.`);
   if (p && p[4] & 1) advice.push("Rough: fewer than 5 sales seen, so these prices are a guess.");
   if (p && pwTrend(id)) advice.push(`meso.watch trend: ${pwTrend(id)}`);
   el.innerHTML = `<div class="card snsellc"><div class="snch">${itemIcon(id)}<div>${nm(id)}<div class="sub">${esc(CATS[catOf(id)])}</div></div></div>

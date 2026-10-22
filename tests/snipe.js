@@ -9,9 +9,9 @@ let fails = 0;
 const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; console.log("FAILED: " + msg) } };
 const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/javascript", ".png": "image/png", ".webmanifest": "application/manifest+json"};
 
-// it: [median, p25, p75, sales, flags (1 = low data), trend, sell-through]; now: [price each, qty, channel, map, seller]
+// it: [median, p25, p75, sales, flags (1 = low data), trend, sell-through, ask median]; now: [price each, qty, channel, map, seller]
 const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
-  it: {"4020100": [1000, 900, 1200, 600, 0, 0.1, 0.2], "4020000": [400, 350, 500, 1800, 0, -0.04, 0.23], "2043702": [110000, 110000, 110000, 1, 1, null, 0.09],
+  it: {"4020100": [1000, 900, 1200, 600, 0, 0.1, 0.2, 1600], "4020000": [400, 350, 500, 1800, 0, -0.04, 0.23], "2043702": [110000, 110000, 110000, 1, 1, null, 0.09],
     "2002009": [9000, 7832, 10000, 25, 0, 0.8, 0.169], "4000002": [8, 5, 20, 22, 0, -0.433, 0.052], "4000019": [20, 18, 22, 300, 0, -0.05, 0.08],
     "4000013": [22, 20, 31, 262, 0, 0.128, 0.056], "2000000": [45, 40, 45, 316, 0, 0.125, 0.33], "2061000": [0, 0, 0, 957, 0, -0.167, 0.169]},
   now: {"4020100": [450, 1, 18, "Kerning City Construction Site", "Seller1"], "4020000": [300, 3, 5, "Free Market <3>", "Seller2"],
@@ -104,7 +104,8 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
   { const r = await p.$$eval("#sncrows tr", l => l.map(x => x.textContent.replace(/\s+/g, " "))), g = r.find(x => /^Garnet(?! Ore)/.test(x.trim())) || "";
     check(/Garnet Ore ×1/.test(g) && /\+500/.test(g), `crafting flip: 1 ore at 300 + 200 fee -> Garnet at 1,000 = +500 (${g})`) }
   await mode("sell"); await p.fill("#snsitem", "Garnet");
-  { const t = await p.textContent("#snsell"); check(/449/.test(t) && /1,000/.test(t) && /200/.test(t), "sell yours: be the cheapest 449, usual 1,000, NPC 200") }
+  { const t = await p.textContent("#snsell"); check(/449/.test(t) && /1,000/.test(t) && /200/.test(t), "sell yours: be the cheapest 449, usual 1,000, NPC 200");
+    check(/Others ask\s*1,600/.test(t) && /160% of what sells/.test(t), "sell yours: ask median 1,600 row + buyers' market note") }
   await mode("watch");
   await p.fill('[data-tg="4020100"]', "500"); await p.dispatchEvent('[data-tg="4020100"]', "change"); await p.waitForTimeout(40);
   check(await p.$eval('[data-tg="4020100"]', e => !!e.closest("tr.snhit")) && await p.textContent("#snwcnt") === "1", "watch target hit (450 <= 500), counted on the tab");

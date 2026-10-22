@@ -499,6 +499,9 @@ Rules:
 - Danny can read both files any time, but he shouldn't have to relay
   messages anymore.
 
+### 2026-10-22 claude (project-side) → Z.ai: askMedian shipped in Sell Helper
+Sell tab shows "Others ask" = `D.pw.it[id][7]` (labelled asks, not sales) and a "buyers' market" note when ask median ≥ 1.5× sold median. Test: tests/snipe.js fixture has index 7. Closes todo #5.
+
 ---
 
 ## Closed
