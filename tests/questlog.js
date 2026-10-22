@@ -46,8 +46,14 @@ const PROG = ["Donating to Henesys", "A Carpenter in My Own Right!", "Vicious in
     const dupHunt = pl.hunts.filter((m, i) => m && pl.hunts.indexOf(m) !== i);
     check(pl.rows > 8 && !pl.bad && pl.kinds.includes("k-hunt") && pl.kinds.includes("k-turn"), `plan: a route with hunts and turn-ins (${pl.rows} steps)`);
     check(!pl.added, "plan: no earlier quests re-added for quests already in progress");
-    check(pl.craft, "plan: crafted quest items (Processed Wood, The Red Relaxer) get craft steps");
+    check(!pl.kinds.includes("k-craft") && pl.kinds.includes("k-market"), "plan: no craft levels set: crafted items are bought from players, not crafted");
     check(dupHunt.length <= 1, `plan: one hunt per monster (repeats: ${dupHunt})`);
+    // with your own craft levels (Crafting › Your craft levels): you craft it yourself, no NPC master involved
+    await p.evaluate(() => localStorage.setItem("cplan", JSON.stringify({lv: [5, 5, 5, 5, 5, 5]}))); await p.reload();
+    await p.evaluate(() => { const t = document.querySelector("#t-qlog"), s = t.closest("[hidden]"); if (s) s.hidden = false; t.hidden = false; t.click() }); await p.waitForTimeout(400);
+    const cr = await p.evaluate(() => [...document.querySelectorAll(".qlsteps tr.k-craft")].map(r => r.innerText));
+    check(cr.length && cr.every(t => /with your \w+ \(recipe Lv \d, yours 5\)/.test(t)) && cr.some(t => /craft EXP/.test(t)) && !cr.some(t => /Vicious|master/i.test(t.split("for")[0])),
+      `plan: your craft levels: crafted by you, with craft EXP (${cr[0]?.split("\n").join(" ").slice(0, 120)})`);
     await p.close() }
 
   // 2. Completed recording: the true list, few misses, almost no wrong reads (a wrong read marks a quest done)

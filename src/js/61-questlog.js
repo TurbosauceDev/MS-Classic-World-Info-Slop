@@ -403,15 +403,21 @@ const QLOG = (() => {
         h.items.push([name, need, iid, q]); h.qs.add(q); h.for.add(forT); H.set(key, h); return }
       const sh = shopFor(iid);
       if (sh){ const b = {kind: "buy", q, item: [name, need, iid], shop: sh, map: sh[1], dep: []}; T.push(b); forT.dep.push(b); return }
-      const rc = lvl < 2 && (D.craft?.rec || []).filter(c => String(c[3]) === String(iid) && c[2] <= CRAFT_CAP).sort((a, b) => a[2] - b[2])[0];
-      if (rc){ const disc = D.craft.disc[rc[0]], times = Math.ceil(need / (rc[4] || 1));
+      // crafting is the player's own skill (Classic World: a level per profession, set in Crafting › Your craft levels):
+      // the lowest-level recipe your level allows, crafted where you are; above your level, buy it from players instead
+      const all = (D.craft?.rec || []).filter(c => String(c[3]) === String(iid) && c[2] <= CRAFT_CAP).sort((a, b) => a[2] - b[2]);
+      const mine = d => window.CPLAN?.S?.lv?.[d] || 0, rc = lvl < 2 && all.find(c => c[2] <= mine(c[0]));
+      if (rc){ const disc = D.craft.disc[rc[0]][0], times = Math.ceil(need / (rc[4] || 1));
         // one craft step per item: a second quest wanting it adds to the count (and to its materials)
         let c = CR.get(iid);
-        if (c){ c.item[1] += need; c.times += times; c.fee += (rc[6] || 0) * times; c.qs.add(q) }
-        else { c = {kind: "craft", q, qs: new Set([q]), item: [name, need, iid], times, disc: disc[0], lv: rc[2], fee: (rc[6] || 0) * times, npc: disc[2], map: npcSpot(disc[2]), dep: []}; CR.set(iid, c); T.push(c) }
+        if (c){ c.item[1] += need; c.times += times; c.fee += (rc[6] || 0) * times; c.cexp += (rc[5] || 0) * times; c.qs.add(q) }
+        else { c = {kind: "craft", q, qs: new Set([q]), item: [name, need, iid], times, disc, lv: rc[2], my: mine(rc[0]), fee: (rc[6] || 0) * times, cexp: (rc[5] || 0) * times, map: null, dep: []}; CR.set(iid, c); T.push(c) }
         if (!forT.dep.includes(c)) forT.dep.push(c);
         for (const [m, k] of rc[7]) get(String(m), D.items[m]?.n || m, k * times, q, c, null, lvl + 1);
         return }
+      if (all.length){ const need1 = all[0], disc = D.craft.disc[need1[0]][0], pr = typeof pwPrice === "function" ? pwPrice(iid) : null;
+        const b = {kind: "market", q, item: [name, need, iid], price: pr, why: `${disc} Lv ${need1[2]} makes it (yours: ${mine(need1[0]) || "not learned"})`, map: null, dep: []};
+        T.push(b); forT.dep.push(b); return }
       notes.push(`${name} × ${need} for ${q.r.name}: no monster, shop or recipe source in our data (another quest, or an NPC hands it over).`);
     }
     for (const h of H.values()){
@@ -436,7 +442,7 @@ const QLOG = (() => {
         for (const t of ready){
           let c;
           if (t.kind === "hunt"){ const s = killSpot(t.mob, t.kills, pos, L, ch, false); c = s ? {map: s.map[0], tr: s.tr, work: s.kill} : {map: pos, tr: 0, work: Infinity, none: true} }
-          else { const tr = t.map && pos ? tripSec(pos, t.map) : 0; c = {map: t.map || pos, tr, work: t.kind === "buy" ? 20 : t.kind === "craft" ? 10 + 3 * t.times : QUEST_SEC / 2} }
+          else { const tr = t.map && pos ? tripSec(pos, t.map) : 0; c = {map: t.map || pos, tr, work: t.kind === "buy" ? 20 : t.kind === "market" ? 60 : t.kind === "craft" ? 10 + 3 * t.times : QUEST_SEC / 2} }
           const pri = rule === "accept-first" && t.kind === "accept" ? -1e6 : 0, v = c.tr + (isFinite(c.work) ? c.work : 1e7) + pri;
           if (!best || v < best.v) best = {t, c, v};
         }
@@ -444,7 +450,8 @@ const QLOG = (() => {
         const st = {kind: t.kind, map: c.map, travel: c.tr, route: pos && c.map && pos !== c.map ? routeText(pos, c.map) : "", sec: isFinite(c.work) ? c.work : null, none: c.none};
         if (t.kind === "hunt"){ st.mob = t.mob; st.kills = t.kills; st.items = t.items.map(([n, k]) => [n, k]); st.qs = [...t.qs].map(q => q.r); if (isFinite(c.work)) exp += D.mobs[t.mob][3] * t.kills }
         else if (t.kind === "buy"){ st.item = t.item; st.shop = t.shop; st.q = t.q.r }
-        else if (t.kind === "craft"){ Object.assign(st, {item: t.item, times: t.times, disc: t.disc, lv: t.lv, fee: t.fee, npc: t.npc, q: t.q.r, qs: [...t.qs].map(q => q.r)}); mesos -= t.fee }
+        else if (t.kind === "craft"){ Object.assign(st, {item: t.item, times: t.times, disc: t.disc, lv: t.lv, my: t.my, fee: t.fee, cexp: t.cexp, q: t.q.r, qs: [...t.qs].map(q => q.r)}); mesos -= t.fee }
+        else if (t.kind === "market"){ Object.assign(st, {item: t.item, price: t.price, why: t.why, q: t.q.r}); if (t.price?.v) mesos -= t.price.v * t.item[1] }
         else { st.q = t.q.r; if (t.kind === "turn"){ exp += t.q.r.exp || 0; mesos += t.q.r.mesos || 0 } }
         sec += c.tr + (isFinite(c.work) ? c.work : 0); if (c.map) pos = c.map; steps.push(st);
       }
@@ -499,21 +506,22 @@ const QLOG = (() => {
       `<tr><td colspan="8" class="empty">${view === "prog" ? "No quests in progress: read your In Progress tab or press On it on a quest." : view === "open" ? "Nothing open at this level that you haven't done." : "None."}</td></tr>`);
     $("#qlpicked").textContent = S.pick.length ? `${S.pick.length} picked` : "Pick quests to plan";
   }
-  const kindTxt = {accept: "Accept", turn: "Turn in", hunt: "Hunt", buy: "Buy", craft: "Craft"};
+  const kindTxt = {accept: "Accept", turn: "Turn in", hunt: "Hunt", buy: "Buy", craft: "Craft", market: "Buy from players"};
   function drawPlan(){
     const box = $("#qlplan");
     if (!S.pick.length){ box.innerHTML = `<p class="sub">Tick quests above (or press <b>Pick all in progress</b>) and the route shows here.</p>`; lastPlan = null; return }
     const P = lastPlan = plan(S.pick);
-    box.innerHTML = `<div class="qltiles"><div class="sntile"><b>${hm(P.sec)}</b><span>about, start to finish</span></div><div class="sntile"><b>${fmt(P.exp)}</b><span>EXP (quests + kills)</span></div><div class="sntile"><b>${fmt(P.mesos)}</b><span>mesos from quests${P.steps.some(x => x.fee) ? ", less craft fees" : ""}</span></div><div class="sntile"><b>${P.steps.length}</b><span>steps for ${P.quests.length} quest${P.quests.length === 1 ? "" : "s"}</span></div></div>
+    box.innerHTML = `<div class="qltiles"><div class="sntile"><b>${hm(P.sec)}</b><span>about, start to finish</span></div><div class="sntile"><b>${fmt(P.exp)}</b><span>EXP (quests + kills)</span></div><div class="sntile"><b>${fmt(P.mesos)}</b><span>mesos from quests${P.steps.some(x => x.fee || x.kind === "market") ? ", less crafting and player buys" : ""}</span></div><div class="sntile"><b>${P.steps.length}</b><span>steps for ${P.quests.length} quest${P.quests.length === 1 ? "" : "s"}</span></div></div>
       <div class="tblwrap"><table class="qlsteps"><thead><tr><th class="num">#</th><th>Do</th><th>Where</th><th>What</th><th class="num">Time</th></tr></thead><tbody>${P.steps.map((s, i) => `<tr class="k-${s.kind}">
         <td class="num">${i + 1}</td><td><b>${kindTxt[s.kind]}</b></td><td>${s.map ? mapLink(s.map, mapName(s.map)) : "<span class='sub'>–</span>"}${s.route ? `<div class="sub">${esc(s.route)}</div>` : ""}</td>
         <td>${s.kind === "hunt" ? `${fmt(s.kills)} ${mobLink(s.mob)}${s.items.length ? ` <span class="sub">for ${s.items.map(([n, k]) => `${fmt(k)} ${esc(n)}`).join(", ")}</span>` : ""}<div class="sub">${s.qs.map(r => esc(r.name)).join(" · ")}</div>${s.none ? `<div class="bad">Too strong for your Path Planner character at Lv ${P.L} (or nowhere to hunt it at launch).</div>` : ""}`
           : s.kind === "buy" ? `${fmt(s.item[1])} ${esc(s.item[0])} from ${npcLink(s.shop[0])} (${fmt(s.shop[3])} each) <span class="sub">for ${esc(s.q.name)}</span>`
-          : s.kind === "craft" ? `${fmt(s.item[1])} ${esc(s.item[0])} (${fmt(s.times)} craft${s.times === 1 ? "" : "s"}, ${esc(s.disc)} Lv ${s.lv}${s.fee ? `, ${fmt(s.fee)} mesos` : ""}) at ${npcLink(s.npc)} <span class="sub">for ${s.qs.map(r => esc(r.name)).join(" · ")}; needs that profession</span>` : `${qname(s.q)} <span class="sub">${npcLink(s.q.npc)}</span>`}</td>
+          : s.kind === "craft" ? `${fmt(s.item[1])} ${esc(s.item[0])}: ${fmt(s.times)} craft${s.times === 1 ? "" : "s"} with your ${esc(s.disc)} (recipe Lv ${s.lv}, yours ${s.my})${s.fee ? `, ${fmt(s.fee)} mesos` : ""}${s.cexp ? `, +${fmt(s.cexp)} craft EXP` : ""} <span class="sub">for ${s.qs.map(r => esc(r.name)).join(" · ")}</span>`
+          : s.kind === "market" ? `${fmt(s.item[1])} ${esc(s.item[0])}${s.price?.v ? ` at about ${fmt(s.price.v)} each (${esc(s.price.src)})` : " (no player price seen yet)"} <span class="sub">for ${esc(s.q.name)}; ${esc(s.why)}</span>` : `${qname(s.q)} <span class="sub">${npcLink(s.q.npc)}</span>`}</td>
         <td class="num">${s.sec == null ? "?" : hm((s.travel || 0) + s.sec)}</td></tr>`).join("")}</tbody></table></div>
       ${P.left ? `<p class="bad">${P.left} step${P.left === 1 ? "" : "s"} couldn't be placed (a quest waits on one that isn't open).</p>` : ""}
       ${P.notes.length ? `<ul class="sub">${P.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
-      <p class="sub">Estimates: kill times use your Path Planner character (${esc(X().cls)}${P.est ? ", rough damage" : ""}) at Lv ${P.L}; item drops assume ${Math.round(P.rate * 100)}% per kill (no drop rates exist in the files; change it in the Path Planner). Turn-ins are at the quest's NPC.</p>`;
+      <p class="sub">Estimates: kill times use your Path Planner character (${esc(X().cls)}${P.est ? ", rough damage" : ""}) at Lv ${P.L}; item drops assume ${Math.round(P.rate * 100)}% per kill (no drop rates exist in the files; change it in the Path Planner). Turn-ins are at the quest's NPC. Crafts use your levels from <b>Crafting › Your craft levels</b>${window.CPLAN ? ` (${D.craft.disc.map((d, i) => `${esc(d[0])} ${window.CPLAN.S.lv[i] || 0}`).join(", ")})` : ""}; anything above them is bought from players.</p>`;
   }
   const redraw = () => { drawRead(); drawUnsure(); drawList(); drawPlan(); histUi() };
   // Undo / Redo over what was read and marked (a read, a live share, a Done / On it, Forget = one step each)
