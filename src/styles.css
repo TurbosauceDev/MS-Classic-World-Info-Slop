@@ -804,6 +804,11 @@ header .thbtn:hover svg,header .thbtn[aria-expanded="true"] svg{transform:rotate
 .snpanel{animation:fadein .25s}
 .snsavebox{display:inline-flex;gap:6px;align-items:center}
 .snsavebox input{width:16ch}
+.pwspark{vertical-align:middle;color:var(--accent);overflow:visible}
+.pwspark path{fill:none;stroke:currentColor;stroke-width:1.4;stroke-linejoin:round;stroke-linecap:round}
+.pwspark .pwsa{fill:currentColor;stroke:none;opacity:.12}.pwspark circle{fill:currentColor}
+.pwspark.up{color:var(--leaf)}.pwspark.down{color:var(--bad)}.pwspark.big path:not(.pwsa){stroke-width:2}
+.pxchart{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:10px 0}.pxchart .pwspark{max-width:100%;height:auto}
 .snhist{display:block;margin:4px 0 2px;color:var(--accent)}
 .snhist rect{fill:currentColor;opacity:.75}
 .snmood{font-size:13px;color:var(--muted)}

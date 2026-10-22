@@ -37,7 +37,7 @@ function priceBox(id){
     ${tile("NPC shop", shop ? fmt(shop[3]) : "–", shop ? esc(shop[0]) + (shop[4] ? ` · ${shop[4]} price` : "") : "no shop sells it", shop ? `${shop[0]}, ${shop[2]} (meowdb shop list)` : "")}
     ${tile("NPC buys", it?.p ? fmt(it.p) : "–", it?.p ? "game files" : "can't be sold to NPCs")}</div>`;
   const src = rows.length ? `<div class="tblwrap"><table class="mini pxsrc"><thead><tr><th>Source</th><th class="num">Price</th><th>Based on</th><th>Range</th><th>Updated</th></tr></thead><tbody>${rows.map(r =>
-    `<tr><td><b>${esc(r.src)}</b> <span class="sub">${esc(r.kind)}</span></td><td class="num"><b>${fmt(r.v)}</b>${r.per ? ` <span class="sub">${r.per}</span>` : ""}${r.trend ? " " + r.trend : ""}</td>
+    `<tr><td><b>${esc(r.src)}</b> <span class="sub">${esc(r.kind)}</span></td><td class="num"><b>${fmt(r.v)}</b>${r.per ? ` <span class="sub">${r.per}</span>` : ""}${r.trend ? " " + r.trend : ""}${r.spark ? " " + r.spark : ""}</td>
       <td>${r.n}${r.few ? ` <span class="pill p-warn" title="Few data points: rough">few</span>` : ""}</td><td class="sub">${r.detail || ""}</td><td class="sub">${whenTxt(r.when)}</td></tr>`).join("")}</tbody></table></div>`
     : `<p class="sub">No player prices from meso.watch, meowdb or classicmarket.kr yet.</p>`;
   const lrow = (x, i) => `<tr${i >= PX_SHOW ? ` class="pxx"` : ""}><td class="num"><b>${pxEach(x.v)}</b>${i === 0 && !x.buy ? ` <span class="pill p-good">cheapest</span>` : ""}</td><td class="num">${x.qty > 1 ? "×" + fmt(x.qty) : "1"}</td>
@@ -46,6 +46,7 @@ function priceBox(id){
     <tbody>${a.map(lrow).join("")}</tbody></table></div>${a.length > PX_SHOW ? `<button class="btn pxall" data-pxall>Show all ${a.length}</button>` : ""}`;
   const where = sells.length ? ltab(sells, "Where to buy", sells.length === 1 ? "listing" : "listings, cheapest first")
     : `<h4 class="pxh">Where to buy</h4><p class="sub">No live listing with a channel or FM room right now.</p>`;
-  return `${tiles}${src}${where}${buys.length ? ltab(buys, "Buy orders", buys.length === 1 ? "player wants it" : "players want it, best offer first") : ""}
+  const h = PWH[id], chart = h ? `<div class="pxchart">${pwSpark(id, 1)}<span class="sub">meso.watch median sale price, ${h[0][0]} to ${h[h.length - 1][0]}: ${fmt(Math.min(...h.map(x => x[1])))}-${fmt(Math.max(...h.map(x => x[1])))} · ${fmt(h.reduce((a, x) => a + x[2], 0))} sold</span></div>` : "";
+  return `${tiles}${chart}${src}${where}${buys.length ? ltab(buys, "Buy orders", buys.length === 1 ? "player wants it" : "players want it, best offer first") : ""}
     <p class="sub pxfoot">Listings come from meso.watch (cheapest per item only, from streams, updated ${pwListedAgo() || "–"}), meowdb (players post their own shops, updated ${mdbAgo() || "–"}; gone after 7 days without a bump), and maplestory.watch + mesoindex.com shop scans (seen in the last day). classicmarket.kr posts have no location. Shops open and close fast: if one is gone, try the next.</p>`;
 }

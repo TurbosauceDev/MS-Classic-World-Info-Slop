@@ -285,6 +285,16 @@ const PW = D.pw?.it || {}, PWNOW = D.pw?.now || {}, MDB = D.mdb?.it || {}, MDBL 
 const pwSolid = id => PW[id] && !(PW[id][4] & 1) ? PW[id][0] : 0;
 const pwTrend = id => { const p = PW[id], t = p?.[5]; if (t == null || p[4] & 1 || Math.abs(t) < 0.005) return "";
   return `<span class="${t > 0 ? "up" : "down"}" title="Recent price trend (meso.watch)">${t > 0 ? "▲" : "▼"}${Math.round(Math.abs(t) * 100)}%</span>` };
+// 7-day sparkline of meso.watch daily median sale prices (D.pw.hist, 2+ days). big = the Items page Prices box chart.
+const PWH = D.pw?.hist || {};
+function pwSpark(id, big){ const h = PWH[id]; if (!h) return "";
+  const W = big ? 280 : 44, H = big ? 56 : 14, pad = big ? 4 : 1.5, v = h.map(x => x[1]), lo = Math.min(...v), hi = Math.max(...v), r = hi - lo || 1;
+  const pt = h.map((x, i) => [pad + i * (W - 2 * pad) / (h.length - 1), H - pad - (hi === lo ? (H - 2 * pad) / 2 : (x[1] - lo) * (H - 2 * pad) / r)]);
+  const d = pt.map((q, i) => (i ? "L" : "M") + q[0].toFixed(1) + " " + q[1].toFixed(1)).join(""), last = pt[pt.length - 1];
+  const tip = h.map(x => `${x[0]}: ${fmt(x[1])} (${fmt(x[2])} sold)`).join("\n");
+  const cls = v[v.length - 1] > v[0] ? "up" : v[v.length - 1] < v[0] ? "down" : "";
+  return `<svg class="pwspark${big ? " big" : ""} ${cls}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Median sale price, last ${h.length} days"><title>meso.watch median sale price per day\n${esc(tip)}</title>`
+    + (big ? `<path class="pwsa" d="${d}L${last[0].toFixed(1)} ${H}L${pt[0][0].toFixed(1)} ${H}Z"/>` : "") + `<path d="${d}"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="${big ? 2.5 : 1.6}"/></svg>` }
 // sell-through = sold / (sold + asks): the share of units put up for sale that were bought (meso.watch). Tags use our own
 // cut-offs (about the top and bottom tenth of items with enough sales on 2026-10-17): 40%+ sells fast, under 10% slow.
 const pwSell = id => { const p = PW[id], v = p?.[6]; return v == null || p[4] & 1 ? null : v };
@@ -316,7 +326,7 @@ const PRICE_SRC = [
   id => { const p = PW[id]; if (!p) return null; const sv = pwSell(id);
     return {src: "meso.watch", kind: "sales seen on stream", v: p[0], per: p[4] & 2 ? "per set" : "", trend: pwTrend(id),
       detail: `half sold for ${fmt(p[1])}-${fmt(p[2])}${sv != null ? ` · ${Math.round(sv * 100)}% of units listed were bought` : ""}`,
-      n: `${fmt(p[3])} sale${p[3] === 1 ? "" : "s"}`, few: !!(p[4] & 1), when: D.pw.read} }];
+      n: `${fmt(p[3])} sale${p[3] === 1 ? "" : "s"}`, few: !!(p[4] & 1), when: D.pw.read, spark: pwSpark(id)} }];
 // Every live listing with a place to find it, cheapest first (Items page "Where to buy"). A source with locations pushes a function
 // id -> [{v, qty, ch, room, spot, who, ago, src, buy, note}] onto LIST_SRC. meso.watch keeps only the cheapest listing per item.
 // meso.watch: every live listing (D.pw.asks, last field = first seen unix min, fetch_mesowatch.py "seen"); cheapest only when absent.

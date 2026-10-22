@@ -131,7 +131,7 @@ function render(){
   const cap = S.all ? rows.length : 150;
   $("#itrows").innerHTML = rows.slice(0, cap).map(o => `<tr data-id="${o.id}"><td><button class="mbtn ibtn">${D.iicons[o.id] ? `<img src="data:image/png;base64,${D.iicons[o.id]}" alt="">` : "<i></i>"}<span><b>${esc(o.it.n)}</b>${o.it.g ? ` <span class="sub">${esc(o.it.g)}</span>` : ""}</span></button></td>
       <td>${esc(typeOf(o.it))}</td><td class="num">${o.it.c === "Equipment" ? o.lv : ""}</td><td class="sub">${o.it.c === "Equipment" ? esc(o.it.job || "All") : ""}</td>
-      <td class="sub">${esc(keyStats(o.it))}</td><td class="num">${o.it.p ? fmt(o.it.p) : "–"}</td><td class="num">${PW[o.id] ? fmt(PW[o.id][0]) + (PW[o.id][4] & 1 ? "?" : "") : "–"}${pwCheap(o.id) ? `<div class="sub up" title="Cheapest live listing (meso.watch, listings updated ${pwListedAgo()})">now ${fmt(PWNOW[o.id][0])}</div>` : ""}</td><td class="num">${pwTrend(o.id) || "–"}</td><td>${srcPills(o)} ${npcCheaperPill(o.id)}</td></tr>`).join("")
+      <td class="sub">${esc(keyStats(o.it))}</td><td class="num">${o.it.p ? fmt(o.it.p) : "–"}</td><td class="num">${PW[o.id] ? fmt(PW[o.id][0]) + (PW[o.id][4] & 1 ? "?" : "") : "–"}${pwCheap(o.id) ? `<div class="sub up" title="Cheapest live listing (meso.watch, listings updated ${pwListedAgo()})">now ${fmt(PWNOW[o.id][0])}</div>` : ""}</td><td class="num">${pwTrend(o.id) || (PWH[o.id] ? "" : "–")}${PWH[o.id] ? `<div>${pwSpark(o.id)}</div>` : ""}</td><td>${srcPills(o)} ${npcCheaperPill(o.id)}</td></tr>`).join("")
     || `<tr><td colspan="9" class="sub">No item matches.</td></tr>`;
   $("#itmore").hidden = rows.length <= cap; $("#itmore").textContent = `Show all ${fmt(rows.length)}`;
 }

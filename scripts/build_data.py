@@ -642,10 +642,12 @@ def step_kpq(D):
     D["kpq"] = sorted(out, key=lambda o: int(o["id"]))
 
 def step_prices(D):
-    """pw {read: date, it: {itemId: [median, p25, p75, sales, flags (1 low data, 2 per set), trend, sell-through]}, listed, now}: meso.watch player-shop sale
+    """pw {read: date, hist, it: {itemId: [median, p25, p75, sales, flags (1 low data, 2 per set), trend, sell-through]}, listed, now}: meso.watch player-shop sale
     prices (scripts/fetch_mesowatch.py), items in D.items only."""
     j = json.load(open(ROOT / "data" / "sources" / "mesowatch_prices.json"))
     D["pw"] = {"read": j["read"], "it": {k: v for k, v in j["items"].items() if k in D["items"]}}
+    # hist {itemId: [[date, median, sold], ...]}: meso.watch 7-day daily medians (list.json items[].history); 2+ days only (sparklines)
+    D["pw"]["hist"] = {k: v for k, v in j.get("hist", {}).items() if k in D["items"] and len(v) >= 2}
     if "now" in j:   # cheapest live listing per non-equip item {itemId: [price each, qty, channel, map, seller]}, as of "listed"
         D["pw"].update(listed=j["listed"], srclisted=j.get("src_listed", ""), now={k: v for k, v in j["now"].items() if k in D["items"]})
         # every live listing + when we first saw it {itemId: [[price each, qty, channel, map, seller, firstSeenUnixMin|None]]} (seen: parallel to asks)

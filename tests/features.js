@@ -189,6 +189,12 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       if (keep) PWNOW["2000000"] = keep; else delete PWNOW["2000000"]; return out });
     check(JSON.stringify(r) === "[true,true,false]", `items: "NPC sells for less" only when the shop beats the listing (${r})`);
     check(/\d+ confirmed/.test(await p.evaluate(() => votesHtml(12))), "drop reports read \"N confirmed\"");
+    // 7-day sparklines 2026-10-22: D.pw.hist -> line chart in Prices box, small one in the meso.watch row; none without 2+ days
+    const sp = await p.evaluate(() => { const id = "2000000", k = PWH[id], out = [];
+      PWH[id] = [["2026-10-20", 50, 3], ["2026-10-21", 40, 5], ["2026-10-22", 45, 2]]; const svg = pwSpark(id, 1), m = svg.match(/<path d="M([^"]+)"/);
+      out.push(/<svg class="pwspark big down"/.test(svg), (m?.[1].match(/L/g) || []).length, /10 sold/.test(priceBox(id)), /pwspark/.test(PRICE_SRC[0](id)?.spark || ""));
+      delete PWH[id]; out.push(pwSpark(id) === "", !/pxchart/.test(priceBox(id))); if (k) PWH[id] = k; return out });
+    check(JSON.stringify(sp) === "[true,2,true,true,true,true]", `items: 7-day price sparkline (${sp})`);
     // classicmarket.kr + meowdb 2026-10-21: a Prices row per source with its sample count; pwPrice falls back
     // meso.watch -> classicmarket.kr market (combined, Layer B) -> meowdb usual -> classicmarket.kr asks -> buy orders
     const c = await p.evaluate(() => { const id = "2000000", kp = PW[id], kc = CM[id], km = MDB[id], kk = CMP[id], out = [];
