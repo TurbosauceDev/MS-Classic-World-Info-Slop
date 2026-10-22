@@ -86,3 +86,4 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 - `C:\Users\danny\AppData\Roaming\MS Classic Grind Tracker`: saved sessions.
 | `tests/fixtures/questlog-completed.webm` | 510x816, 49 s, VP9 (from Danny's 10-21 mp4) | QUEST window, Completed tab, each category opened and scrolled: 59 lines (list in tests/questlog.js TRUTH) | tests/questlog.js |
 | `tests/fixtures/questlog-progress.png` | 515x818 | QUEST window, In Progress tab: 8 quests in 5 categories (Citizenship 1, Crafting 2, Henesys 2, Kerning City 2, Sleepywood 1) | tests/questlog.js |
+| `tests/fixtures/questlog-progress2.png` | 552x837 | QUEST window, In Progress (Danny 10-22): 8 quests in 6 categories, "Icarus's Dream" selected (white on blue), cut "Asking After Maya, the Tow..." (was read as Nella/Rina) | tests/questlog.js |

@@ -58,6 +58,22 @@ const QLOG = (() => {
     const a = res(m), b = res(r); let s = 0; for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]); return s / a.length;
   }
   const l1 = cmp;
+  // letter-by-letter alignment (DTW in a ±band): the game's letter widths drift from Arial's, which squeezing both to N
+  // columns smears over a long name ("Asking After Maya, the Tow..." read as "Nella"); used to rank the closest few
+  function dtw(m, r){
+    const n = m.w, k = r.w; if (!n || !k) return 9;
+    const col = (t, i) => [t.cols[0][i] / t.h * 3, t.cols[1][i] / t.h * 3, t.cols[2][i] / t.h * 3];
+    const A = Array.from({length: n}, (_, i) => col(m, i)), B = Array.from({length: k}, (_, j) => col(r, j));
+    const band = Math.max(8, Math.round(0.06 * Math.max(n, k))), INF = 1e9;
+    let prev = new Float64Array(k + 1).fill(INF), cur = new Float64Array(k + 1); prev[0] = 0;
+    for (let i = 1; i <= n; i++){
+      cur.fill(INF); const jc = Math.round(i * k / n), lo = Math.max(1, jc - band), hi = Math.min(k, jc + band);
+      for (let j = lo; j <= hi; j++){ const a = A[i - 1], b = B[j - 1], d = Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+        cur[j] = d + Math.min(prev[j - 1], prev[j], cur[j - 1]) }
+      [prev, cur] = [cur, prev];
+    }
+    return prev[k] / (n + k);
+  }
   const score = (m, r) => !m.w || !r.w ? 9 : 2 * Math.abs(m.w - r.w) / Math.max(1, m.w) + cmp(m, r);   // shape is the surer half: the game draws Arial a touch wider in places
   const TANCATS = ["Event", "Warrior", "Magician", "Bowman", "Thief", "Citizenship", "Crafting"];
 
@@ -68,6 +84,9 @@ const QLOG = (() => {
   const lum = (r, g, b) => (r * 3 + g * 6 + b) / 10;
   const dark = (r, g, b) => lum(r, g, b) < 125 && Math.max(r, g, b) - Math.min(r, g, b) < 45;   // text, not the blue arrow icons
   const light = (r, g, b) => lum(r, g, b) > 222 && Math.max(r, g, b) - Math.min(r, g, b) < 40;   // white bar text
+  // the clicked row: white text on a (51,102,153) box (Danny's 10-22 shot, "Icarus's Dream"); read as if it were dark on white
+  const isSel = (r, g, b) => Math.abs(r - 51) < 28 && Math.abs(g - 102) < 28 && Math.abs(b - 153) < 28;
+  const selInk = (r, g, b) => lum(r, g, b) > 160 && Math.max(r, g, b) - Math.min(r, g, b) < 60;
 
   // one frame -> {tab, bars: [{y0, y1, cat, n}], lines: [{y0, y1, x0, x1, prof, trunc, cat}]} in frame pixels, or null
   function readFrame(img){
@@ -107,27 +126,34 @@ const QLOG = (() => {
       if (n > 20){ const f = (sx / n - L) / (R - L); tab = f < 0.33 ? "avail" : f < 0.66 ? "prog" : "done" } }
     // 3. text lines: dark text in the list (left of the icon column excluded), outside the bars
     const tx0 = L + Math.round(0.09 * (R - L)), tx1 = R - 2, inBar = y => bars.some(b => y >= b.y0 - 1 && y <= b.y1 + 1);
+    // rows inside the selection box (most of the text column is that blue): ink there is the light text
+    const sel = new Uint8Array(H + 1); for (let y = 0; y < H; y++){ let n = 0, k = 0; for (let x = tx0; x < tx1; x += 4){ k++; const i = at(x, y); if (isSel(p[i], p[i + 1], p[i + 2])) n++ } if (n > k * 0.5) sel[y] = 1 }
+    for (let y = 1; y < H; y++) if (!sel[y] && sel[y - 1] && sel[y + 1]) sel[y] = 1;   // a line of text right across it
+    // the box's left edge: where a run of 12 box pixels starts (the quest icon left of it has a few such pixels too)
+    const selAt = (x, y) => { const i = at(x, y); return isSel(p[i], p[i + 1], p[i + 2]) };
+    let sx0 = W; for (let y = 0; y < H; y++) if (sel[y]) for (let x = tx0; x < sx0; x++){ let r = 0; while (r < 12 && selAt(x + r, y)) r++; if (r === 12){ sx0 = x; break } }
+    const dk = (i, y) => sel[y] ? (i >> 2) % W >= sx0 + 2 && selInk(p[i], p[i + 1], p[i + 2]) : dark(p[i], p[i + 1], p[i + 2]);
     // lines are found from the left half (every name starts there; the mouse pointer sits by the bars' right end)
     const hx1 = tx0 + Math.round(0.5 * (tx1 - tx0));
     const yTop = py >= 0 ? py + 3 : bars[0].y0, lines = [];
     let cur = null;
     for (let y = yTop; y <= H; y++){
       let ink = false;
-      if (y < H && !inBar(y)) for (let x = tx0; x < hx1; x++){ const i = at(x, y); if (dark(p[i], p[i + 1], p[i + 2])){ ink = true; break } }
+      if (y < H && !inBar(y)) for (let x = tx0; x < hx1; x++){ const i = at(x, y); if (dk(i, y)){ ink = true; break } }
       if (ink && !cur) cur = {y0: y, y1: y}; else if (ink) cur.y1 = y;
       else if (cur){ if (cur.y1 - cur.y0 >= 0.25 * P && cur.y1 - cur.y0 <= 0.8 * P) lines.push(cur); cur = null }
     }
     const out = [];
     for (const ln of lines){
       // a row's background is white (not the footer or the scroll bar)
-      const bgi = at(Math.min(W - 1, R - 4), Math.round((ln.y0 + ln.y1) / 2)); if (lum(p[bgi], p[bgi + 1], p[bgi + 2]) < 200) continue;
+      const my = Math.round((ln.y0 + ln.y1) / 2), bgi = at(Math.min(W - 1, R - 4), my); if (!sel[my] && lum(p[bgi], p[bgi + 1], p[bgi + 2]) < 200) continue;
       // the line with room for ascenders/descenders the left half lacked; a column with ink just outside that band belongs to
       // something taller (the pointer) and is left out
-      const m = Math.round(0.12 * P), Y0 = Math.max(0, ln.y0 - m), Y1 = Math.min(H - 1, ln.y1 + m), isd = (x, y) => { if (y < 0 || y >= H || inBar(y)) return false; const i = at(x, y); return dark(p[i], p[i + 1], p[i + 2]) };
+      const m = Math.round(0.12 * P), Y0 = Math.max(0, ln.y0 - m), Y1 = Math.min(H - 1, ln.y1 + m), isd = (x, y) => { if (y < 0 || y >= H || inBar(y)) return false; const i = at(x, y); return dk(i, y) };
       const bad = new Uint8Array(tx1 - tx0 + 1); for (let x = tx0; x < tx1; x++) if (isd(x, Y0 - 1) || isd(x, Y0 - 2) || isd(x, Y1 + 1) || isd(x, Y1 + 2)) bad[x - tx0] = 1;
       const z = zprof((x, y) => !bad[x - tx0] && isd(x, y), tx0, tx1 - 1, Y0, Y1, Math.round(0.7 * P)); if (!z.w) continue;
       // near the right edge a cut name is likely even when the dots blur: matchLine tries it both ways (edge)
-      out.push({y0: ln.y0, y1: ln.y1, ...z, trunc: ellipsis(p, at, z.x0, z.x1, ln, P), edge: z.x1 > R - 0.12 * (R - L)});   // z.x0/x1: ink box in frame x
+      out.push({y0: ln.y0, y1: ln.y1, ...z, trunc: ellipsis(dk, at, z.x0, z.x1, ln, P), edge: z.x1 > R - 0.12 * (R - L)});   // z.x0/x1: ink box in frame x
     }
     // 4. bar text (white): which category, and its count
     for (const b of bars){
@@ -139,10 +165,10 @@ const QLOG = (() => {
     return {tab, bars, lines: out, P, L, R};
   }
   // "..." at the right end: the last ~3 dots are ink only in the bottom third of the line
-  function ellipsis(p, at, x0, x1, ln, P){
+  function ellipsis(dk, at, x0, x1, ln, P){
     const w = Math.round(P * 0.32), mid = ln.y0 + (ln.y1 - ln.y0) * 0.6; if (x1 - x0 < 3 * w) return false;
     let hi = 0, lo = 0;
-    for (let x = x1 - w; x <= x1; x++) for (let y = ln.y0; y <= ln.y1; y++){ const i = at(x, y); if (dark(p[i], p[i + 1], p[i + 2])) y < mid ? hi++ : lo++ }
+    for (let x = x1 - w; x <= x1; x++) for (let y = ln.y0; y <= ln.y1; y++){ if (dk(at(x, y), y)) y < mid ? hi++ : lo++ }
     return lo > 4 && hi <= 2;   // a pixel or two of video blur above the dots
   }
   // best category for a bar ("Henesys (6)"): tan bars hold the groups, blue ones the regions; then its count
@@ -156,33 +182,40 @@ const QLOG = (() => {
     const alts = [...new Set(all.filter(x => x.s - best.s < 0.03).map(x => x.cat))];
     // the count: only the "(n)" at the end of the text, against each number
     const tw = rend("(" + "0".repeat(best.d) + ")", px).w, tail = zprof(b.get, Math.max(b.t.x0, b.t.x1 - tw - 1), b.t.x1, 0, b.mh);
-    const ns = []; for (let i = best.d === 1 ? 0 : 10; i < (best.d === 1 ? 10 : 100); i++) ns.push([i, score(tail, rend("(" + i + ")", px))]);
+    const ns = []; for (let i = best.d === 1 ? 0 : 10; i < (best.d === 1 ? 10 : 100); i++) { const r = rend("(" + i + ")", px); ns.push([i, r.w && tail.w ? score(tail, r) + dtw(tail, r) + Math.abs(tail.w - r.w) / tail.w : 9]) }   // + letter-aligned: "2" and "3" differ in a few columns
     ns.sort((a, b) => a[1] - b[1]);
-    return {cat: best.cat, alts, n: ns[1] && ns[1][1] - ns[0][1] < 0.02 ? null : ns[0][0], s: best.s};   // an unsure count stays blank
+    return {cat: best.cat, alts, n: ns[1] && ns[1][1] - ns[0][1] < 0.025 ? null : ns[0][0], s: best.s};   // an unsure count stays blank
   }
   // best quest-log name for a text line among a category's names; cut names ("...") by their best-fitting prefix
   function matchLine(t, cat, px){
     const cats = Array.isArray(cat) ? cat : cat ? [cat] : [], names = cats.length ? [...new Set(cats.flatMap(c => [...(CAT.get(c)?.keys() || [])]))] : [...new Set(ALLQ.map(x => lnOf(x[1])))], sc = [];
     for (const n of names){
-      let s = 9;
-      if (t.trunc || t.edge){ for (let i = 4; i < n.length; i++){ const r = rend(n.slice(0, i).trimEnd() + "...", px); if (Math.abs(t.w - r.w) / t.w < 0.08) s = Math.min(s, score(t, r)) } }
-      if (!t.trunc) s = Math.min(s, score(t, rend(n, px)));
-      sc.push([n, s]);
+      let s = 9, br = null;
+      if (t.trunc || t.edge){ for (let i = 4; i < n.length; i++){ const r = rend(n.slice(0, i).trimEnd() + "...", px); if (Math.abs(t.w - r.w) / t.w < 0.08){ const v = score(t, r); if (v < s){ s = v; br = r } } } }
+      if (!t.trunc){ const r = rend(n, px), v = score(t, r); if (v < s){ s = v; br = r } }
+      sc.push([n, s, br]);
     }
     sc.sort((a, b) => a[1] - b[1]);
+    // the closest few, re-ranked letter by letter; the old score stays as the match's quality (thresholds below)
+    const top = sc.slice(0, 6).filter(x => x[2] && x[1] < sc[0][1] + 0.12).map(x => [...x, dtw(t, x[2]) + 0.5 * Math.abs(t.w - x[2].w) / t.w]).sort((a, b) => a[3] - b[3]);
+    const dGap = top[1] ? top[1][3] - top[0][3] : 1;
+    if (top.length > 1){ const s0 = sc[0][1]; sc.splice(0, top.length, ...top.map((x, i) => [x[0], i ? Math.max(x[1], s0) : s0, x[2]])) }
     // a cut name two quests share ("[Forest of Patience] Sabitra..."): keep both, the state decides later
     const amb = t.trunc && sc[0] ? sc.filter(x => x[1] - sc[0][1] < 0.01).map(x => x[0]) : [];
     return {ln: sc[0]?.[0], s: sc[0]?.[1] ?? 9, alt: sc.slice(1, 3), amb: amb.length > 1 ? amb : null,
-      sure: !!sc[0] && sc[0][1] < 0.32 && (amb.length > 1 || !sc[1] || sc[1][1] - sc[0][1] > 0.03)};
+      sure: !!sc[0] && sc[0][1] < 0.32 && (amb.length > 1 || dGap > 0.008), dGap};
   }
 
   // a run of frames -> per tab: {cats: {cat: n}, names: Map(ln -> {cat, s, seen})}
   function reader(){
     let k = null, order = [];   // order: categories in the log, top to bottom (rows above the first bar belong to the one before it)
     const tabs = {done: {cats: {}, names: new Map(), slots: new Map()}, prog: {cats: {}, names: new Map(), slots: new Map()}, avail: {cats: {}, names: new Map(), slots: new Map()}};
-    let lastTab = "done", last = [];
+    let lastTab = null, last = [], noTab = 0;
     function add(fr){
       if (!fr) return false;
+      // the state (done / in progress) comes only from the tab the frame shows, or the one the last frames showed; a frame
+      // before any tab was seen is skipped rather than guessed
+      if (!fr.tab && !lastTab){ noTab++; return false }
       const tab = fr.tab || lastTab; lastTab = tab;
       const kk = k || fr.P * 0.576;   // the text's font size in px (42px rows ~ 24.2px Arial; refined from sure matches below)
       const bars = fr.bars.map(b => ({...b, m: matchBar(b, kk)}));
@@ -210,8 +243,8 @@ const QLOG = (() => {
         // "The Fifth Mark") then go to the slot that reads them best instead of both rows taking one name.
         if (above?.m){
           const i = Math.max(0, Math.round((t.y0 - above.y1) / fr.P - 0.4)), sk = m.cat + "|" + i;   // by distance, so a missed row above doesn't shift it
-          const sl = T.slots.get(sk) || new Map(), o = sl.get(key) || {v: 0, s: 9, amb: m.amb, cat: m.cat};
-          o.v += m.sure ? 1 : 0.3; o.s = Math.min(o.s, m.s); sl.set(key, o); T.slots.set(sk, sl);
+          const sl = T.slots.get(sk) || new Map(), o = sl.get(key) || {v: 0, sv: 0, s: 9, amb: m.amb, cat: m.cat, alt: new Set()};
+          o.v += m.sure ? 1 : 0.3; if (m.sure) o.sv++; o.s = Math.min(o.s, m.s); for (const [n, v] of m.alt || []) if (v - m.s < 0.06) o.alt.add(n); sl.set(key, o); T.slots.set(sk, sl);
         } else if (m.sure){ const o = T.names.get(key) || {cat: m.cat, s: 9, amb: m.amb}; o.s = Math.min(o.s, m.s); T.names.set(key, o) }   // above the first bar: sure reads only
       }
       // the text size from sure, uncut matches
@@ -219,7 +252,7 @@ const QLOG = (() => {
       if (ks.length >= 2 && !k) k = ks.sort((a, b) => a - b)[ks.length >> 1];
       last = got; return true;
     }
-    return {add, tabs, get k(){ return k }, get last(){ return last }};
+    return {add, tabs, get k(){ return k }, get last(){ return last }, get noTab(){ return noTab }, get tab(){ return lastTab }};
   }
 
   async function readFiles(files, onProg = () => {}){
@@ -245,7 +278,10 @@ const QLOG = (() => {
   }
   // a reader's votes -> quests (a file read at the end, the live reader every second)
   function settle(rd, frames, used){
-    const res = {at: new Date().toISOString(), frames, used, cats: {}, done: [], prog: {}};
+    // unsure: rows read only narrowly, or more rows than the bar counts; shown to the player to confirm, never applied
+    const res = {at: new Date().toISOString(), frames, used, cats: {}, done: [], prog: {}, unsure: [], noTab: rd.noTab || 0};
+    const unsure = (tab, cat, names, why) => { const opts = [...new Set(names.flatMap(n => n.split("\u0000")))].filter(n => CAT.get(cat)?.has(n)).slice(0, 4);
+      if (opts.length && !res.unsure.some(u => u.tab === tab && u.opts[0] === opts[0])) res.unsure.push({tab, cat, opts, why}) };
     for (const tab of ["done", "prog"]){
       res.cats[tab] = {};
       for (const [c, n] of Object.entries(rd.tabs[tab].cats)) res.cats[tab][c] = {n, found: 0};
@@ -254,7 +290,19 @@ const QLOG = (() => {
       // (best read first: on cut, blurry rows a wrong name can win many frames narrowly, the right one wins its clear frames)
       const T = {names: new Map(rd.tabs[tab].names), slots: rd.tabs[tab].slots}, taken = new Map(), slots = [...T.slots.entries()].map(([sk, m]) => { const [c, i] = [sk.slice(0, sk.lastIndexOf("|")), +sk.slice(sk.lastIndexOf("|") + 1)]; return {c, i, cands: [...m.entries()].filter(([, o]) => o.v >= 0.9).sort((a, b) => a[1].s - b[1].s || b[1].v - a[1].v)} })
         .filter(x => x.cands.length).sort((a, b) => a.cands[0][1].s - b.cands[0][1].s);
-      for (const sl of slots){ const used = taken.get(sl.c) || new Set(); const pick = sl.cands.find(([k]) => !used.has(k)); if (!pick) continue; used.add(pick[0]); taken.set(sl.c, used); if (!T.names.has(pick[0])) T.names.set(pick[0], {...pick[1], cat: sl.c}) }
+      for (const sl of slots){ const used = taken.get(sl.c) || new Set(); const pick = sl.cands.find(([k]) => !used.has(k)); if (!pick) continue; used.add(pick[0]); taken.set(sl.c, used);
+        // never once a clear read (only narrow ones, or a near-tie every time): ask instead of applying
+        if (!pick[1].sv){ if (!T.names.has(pick[0])) unsure(tab, sl.c, [pick[0], ...pick[1].alt], "narrow"); continue }
+        if (!T.names.has(pick[0])) T.names.set(pick[0], {...pick[1], cat: sl.c}) }
+      // rows seen only faintly (no name won enough frames): ask too
+      for (const [sk, m] of T.slots){ const c = sk.slice(0, sk.lastIndexOf("|")), best = [...m.entries()].sort((a, b) => b[1].v - a[1].v)[0];
+        if (best && best[1].v < 0.9 && best[1].v >= 0.6 && !taken.get(c)?.has(best[0]) && !T.names.has(best[0])) unsure(tab, c, [best[0], ...best[1].alt], "faint") }
+      // more rows than the bar's own count: the weakest extra reads are doubtful
+      const byCat = new Map(); for (const [key, o] of T.names){ if (!byCat.has(o.cat)) byCat.set(o.cat, []); byCat.get(o.cat).push([key, o]) }
+      for (const [c, list] of byCat){ const n = rd.tabs[tab].cats[c]; if (n == null || list.length <= n) continue;
+        for (const [key, o] of list.sort((a, b) => b[1].s - a[1].s).slice(0, list.length - n)){ T.names.delete(key); unsure(tab, c, [key, ...(o.alt || [])], "count") } }
+      // a shared cut name in the Completed tab can't say which quest: ask
+      if (tab === "done") for (const [key, o] of T.names) if (o.amb){ unsure(tab, o.cat, o.amb, "cut") }
       for (const [key, o] of T.names){
         // a shared cut name: in progress = the first of them not done; done = can't tell, so none (tick it by hand)
         let ln = key;
@@ -396,6 +444,18 @@ const QLOG = (() => {
   const lvIn = $("#qllv"); lvIn.value = S.lv;
   function fillFrom(){ const towns = [...new Set(Object.values(JOBTOWN).concat(["Lith Harbor", "Sleepywood"]))];
     $("#qlfrom").innerHTML = `<option value="">Where the first quest is</option>` + towns.map(t => { const id = OPENMAP[t]; return id ? `<option value="${id}"${S.from === id ? " selected" : ""}>${esc(t)}</option>` : "" }).join("") }
+  // rows the reader wasn't sure of (settle(): narrow, faint, over the bar's count, a shared cut name): the player picks
+  let U = []; const skip = new Set();   // answered rows don't come back while a share keeps reading
+  const tabTxt = t => t === "prog" ? "In Progress" : "Completed";
+  function setUnsure(list){ const d = DONE(); U = (list || []).filter(u => !skip.has(u.tab + "|" + u.opts[0]) && !u.opts.some(n => (CAT.get(u.cat)?.get(n) || []).some(([, r]) => u.tab === "done" ? d.has(String(r.id)) : String(r.id) in S.prog))) }
+  function drawUnsure(){
+    $("#qlunsure").innerHTML = U.length ? `<p class="sub">Not sure about ${U.length === 1 ? "this row" : "these rows"}, so ${U.length === 1 ? "it wasn't" : "they weren't"} added. Pick what the game shows:</p>` + U.map((u, i) =>
+      `<div class="qlu"><span class="sub">${esc(u.cat)} · ${tabTxt(u.tab)}${u.why === "count" ? " (more rows than the bar's count)" : ""}:</span> ${u.opts.map(n => `<button class="btn sm" type="button" data-u="${i}" data-n="${esc(n)}">${esc(n)}</button>`).join("")}<button class="btn sm" type="button" data-u="${i}" data-n="">None of these</button></div>`).join("") : "";
+  }
+  // add a quest-log name in a tab to a state (S, or a live share's base so the next second's re-apply keeps it)
+  function addName(o, tab, cat, n){ const qs = (CAT.get(cat)?.get(n) || []).map(x => x[1]); if (!qs.length) return;
+    if (tab === "done"){ for (const r of qs){ o.done = [...new Set([...o.done, String(r.id)])] } }
+    else { const st = curStep(qs, new Set(o.done)); if (st) o.prog = {...o.prog, [String(st.id)]: n} } }
   function drawRead(){
     const n = S.done.length, p = Object.keys(S.prog).length;
     $("#qlsum").innerHTML = !n && !p ? `<p class="sub">Nothing read yet. Your quests below use what you tick by hand.</p>`
@@ -438,7 +498,7 @@ const QLOG = (() => {
       ${P.notes.length ? `<ul class="sub">${P.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
       <p class="sub">Estimates: kill times use your Path Planner character (${esc(X().cls)}${P.est ? ", rough damage" : ""}) at Lv ${P.L}; item drops assume ${Math.round(P.rate * 100)}% per kill (no drop rates exist in the files; change it in the Path Planner). Turn-ins are at the quest's NPC.</p>`;
   }
-  const redraw = () => { drawRead(); drawList(); drawPlan(); histUi() };
+  const redraw = () => { drawRead(); drawUnsure(); drawList(); drawPlan(); histUi() };
   // Undo / Redo over what was read and marked (a read, a live share, a Done / On it, Forget = one step each)
   const hist = [], fut = [], snap = () => JSON.parse(JSON.stringify({done: S.done, prog: S.prog, cats: S.cats, at: S.at}));
   const step = () => { hist.push(snap()); if (hist.length > 40) hist.shift(); fut.length = 0 };
@@ -451,7 +511,7 @@ const QLOG = (() => {
   // a read on top of what you had (base): in progress beats done, since a repeatable ("Donating to Henesys") sits in both tabs
   function apply(base, r){
     S.done = [...new Set([...base.done, ...r.done])].filter(i => !(i in r.prog)); S.prog = {...base.prog, ...r.prog};
-    S.cats = r.cats; S.at = r.at; save(); redraw();
+    S.cats = r.cats; S.at = r.at; setUnsure(r.unsure); save(); redraw();
   }
   // what a read added, by name (shown under the status so a wrong one is easy to spot and Undo)
   function seen(base, label){
@@ -477,7 +537,10 @@ const QLOG = (() => {
   $("#qlfrom").addEventListener("change", e => { S.from = e.target.value; save(); drawPlan() });
   $("#qlpickprog").addEventListener("click", () => { S.pick = [...new Set([...S.pick, ...Object.keys(S.prog)])]; save(); drawList(); drawPlan() });
   $("#qlclearpick").addEventListener("click", () => { S.pick = []; save(); drawList(); drawPlan() });
-  $("#qlforget").addEventListener("click", () => { if (LV) endLive(); step(); restore({done: [], prog: {}, cats: null, at: ""}); $("#qlstat").textContent = "Forgot what was read (Undo brings it back)." });
+  $("#qlforget").addEventListener("click", () => { if (LV) endLive(); step(); skip.clear(); U = []; restore({done: [], prog: {}, cats: null, at: ""}); $("#qlstat").textContent = "Forgot what was read (Undo brings it back)." });
+  $("#qlunsure").addEventListener("click", e => { const b = e.target.closest("button[data-u]"); if (!b) return; const u = U[+b.dataset.u]; if (!u) return;
+    if (b.dataset.n){ step(); addName(S, u.tab, u.cat, b.dataset.n); if (LV) addName(LV.base, u.tab, u.cat, b.dataset.n); save() }
+    skip.add(u.tab + "|" + u.opts[0]); U = U.filter(x => x !== u); redraw() });
   $("#qlundo").addEventListener("click", undo); $("#qlredo").addEventListener("click", redo);
   document.addEventListener("keydown", e => { if (page.hidden || !(e.ctrlKey || e.metaKey) || e.target.closest?.("input, select, textarea")) return; const k = e.key.toLowerCase();
     if (k === "z" && !e.shiftKey){ e.preventDefault(); undo() } else if (k === "y" || (k === "z" && e.shiftKey)){ e.preventDefault(); redo() } });
@@ -486,9 +549,10 @@ const QLOG = (() => {
     const st = $("#qlstat"); st.textContent = "Reading…"; $("#qlbar").hidden = false;
     try {
       const r = await readFiles(files, f => { $("#qlbar").value = f; st.textContent = `Reading… ${Math.round(f * 100)}%` });
-      if (!r.done.length && !Object.keys(r.prog).length){ st.textContent = "No quest window found. Record or capture the QUEST window with a category open (see How the Quest log works)."; return }
+      if (!r.done.length && !Object.keys(r.prog).length && r.noTab && !r.used){ st.textContent = "Found the quest list but not its tabs (Available / In Progress / Completed): keep the tab row in the shot so it knows which state the quests are in."; return }
+      if (!r.done.length && !Object.keys(r.prog).length && !r.unsure.length){ st.textContent = "No quest window found. Record or capture the QUEST window with a category open (see How the Quest log works)."; return }
       const base = snap(); step(); if (!Object.keys(r.prog).length && view === "prog") view = "open";
-      apply(base, r); seen(base, "Read:"); st.textContent = `Read ${fmt(r.done.length)} done and ${fmt(Object.keys(r.prog).length)} in-progress quests from ${fmt(r.used)} frame${r.used === 1 ? "" : "s"}.`;
+      apply(base, r); seen(base, "Read:"); st.textContent = `Read ${fmt(r.done.length)} done and ${fmt(Object.keys(r.prog).length)} in-progress quests from ${fmt(r.used)} frame${r.used === 1 ? "" : "s"}.${U.length ? ` ${U.length} row${U.length === 1 ? "" : "s"} not sure: pick below.` : ""}`;
     } catch(e){ st.textContent = "Couldn't read that file" + (e.message === "video" ? ": this browser can't play that video format (try Chrome or Edge, or an .mp4/.webm)." : ".") }
     finally { $("#qlbar").hidden = true }
   }
@@ -508,7 +572,9 @@ const QLOG = (() => {
   }
   function liveFrame(f){
     const L = LV; if (!L) return;
-    const fr = readFrame({width: f.w, height: f.h, data: f.d}); L.frames++; if (!L.rd.add(fr)) return; L.used++;
+    const fr = readFrame({width: f.w, height: f.h, data: f.d}); L.frames++;
+    if (fr && !fr.tab && !L.rd.tab){ $("#qlnow").innerHTML = `<span class="sub">Quest list found, but not its tabs: keep Available / In Progress / Completed in view so it knows which state the quests are in.</span>`; L.rd.add(fr); return }
+    if (!L.rd.add(fr)) return; L.used++;
     const tab = fr.tab || L.tab || "done"; L.tab = tab;
     const now = L.rd.last.filter(([, m]) => m.sure && m.ln).map(([, m]) => m.ln);
     $("#qlnow").innerHTML = `<span class="sub">${tab === "prog" ? "In Progress" : tab === "avail" ? "Available (not needed)" : "Completed"} tab, this frame:</span> ${now.length ? [...new Set(now)].map(n => `<span class="pill">${esc(n)}</span>`).join("") : "<span class='sub'>no rows read</span>"}`;
@@ -517,7 +583,7 @@ const QLOG = (() => {
   }
   function liveApply(){
     const L = LV, r = settle(L.rd, L.frames, L.used), n = r.done.length + Object.keys(r.prog).length;
-    if (n === L.n) return; L.n = n;
+    if (n === L.n && r.unsure.length === L.u) return; L.n = n; L.u = r.unsure.length;
     apply(L.base, r); seen(L.base, "Read so far:");
     $("#qlstat").textContent = `Reading… ${fmt(r.done.length)} done and ${fmt(Object.keys(r.prog).length)} in progress so far.`;
   }
@@ -527,9 +593,9 @@ const QLOG = (() => {
     if (!L.scr) return;
     LV = L; L.n = -1; liveApply(); LV = null;
     const r = settle(L.rd, L.frames, L.used);
-    if (!r.done.length && !Object.keys(r.prog).length){ if (hist.length) hist.pop(); $("#qlstat").textContent = L.frames ? "Stopped. No quest window was seen: share the game window and open QUEST with a category open." : "Stopped."; return }
+    if (!r.done.length && !Object.keys(r.prog).length && !U.length){ if (hist.length) hist.pop(); $("#qlstat").textContent = L.frames ? "Stopped. No quest window was seen: share the game window and open QUEST with a category open." : "Stopped."; return }
     if (!Object.keys(r.prog).length && view === "prog"){ view = "open"; drawList() }
-    $("#qlstat").textContent = `Read ${fmt(r.done.length)} done and ${fmt(Object.keys(r.prog).length)} in-progress quests from ${fmt(r.used)} frame${r.used === 1 ? "" : "s"}. Wrong one? Undo, or Not done on its row.`;
+    $("#qlstat").textContent = `Read ${fmt(r.done.length)} done and ${fmt(Object.keys(r.prog).length)} in-progress quests from ${fmt(r.used)} frame${r.used === 1 ? "" : "s"}.${U.length ? ` ${U.length} row${U.length === 1 ? "" : "s"} not sure: pick below.` : ""} Wrong one? Undo, or Not done on its row.`;
   }
   $("#qllive").addEventListener("click", live);
   addEventListener("pagehide", () => LV && endLive());
@@ -541,6 +607,6 @@ const QLOG = (() => {
   document.addEventListener("paste", e => { if (page.hidden) return; const f = [...(e.clipboardData?.files || [])]; if (f.length){ e.preventDefault(); handle(f) } });
   let shown = false; const show = () => { if (!shown && !page.hidden){ shown = true; fillFrom(); redraw() } };
   new MutationObserver(show).observe(page, {attributes: true, attributeFilter: ["hidden"]}); show();
-  return {readFrame, reader, settle, matchLine, matchBar, readFiles, plan, status, S, handle, redraw, rend, l1, liveFrame: f => { if (!LV){ LV = {rd: reader(), frames: 0, used: 0, base: snap(), t: 0, n: 0, scr: {stop(){}}}; step() } liveFrame(f) }, endLive, undo, redo};
+  return {readFrame, reader, settle, matchLine, matchBar, readFiles, plan, status, S, handle, redraw, rend, l1, dtw, setUnsure: l => { setUnsure(l); redraw() }, get unsure(){ return U }, liveFrame: f => { if (!LV){ LV = {rd: reader(), frames: 0, used: 0, base: snap(), t: 0, n: 0, scr: {stop(){}}}; step() } liveFrame(f) }, endLive, undo, redo};
 })();
 window.QLOG = QLOG;
