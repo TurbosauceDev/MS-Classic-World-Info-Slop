@@ -55,7 +55,7 @@ const PROG = ["Donating to Henesys", "A Carpenter in My Own Right!", "Vicious in
     const ids = await p.evaluate(() => QLOG.S.done), got = await lnOf(p, ids);
     const right = got.filter(n => TRUTH.includes(n)), wrong = got.filter(n => !TRUTH.includes(n));
     check(right.length >= 54, `recording: ${right.length} of ${TRUTH.length} done quests read (missed: ${TRUTH.filter(n => !got.includes(n)).join(" | ")})`);
-    check(wrong.length <= 1, `recording: wrong reads ≤ 1 (${wrong.join(" | ") || "none"})`);
+    check(wrong.length === 0, `recording: no wrong reads (${wrong.join(" | ") || "none"})`);
     const un = await p.evaluate(() => QLOG.unsure.map(u => u.opts[0] + " (" + u.why + ")"));
     check(un.every(n => !got.includes(n.replace(/ \(\w+\)$/, ""))), `recording: rows asked about aren't also applied (${un.join(" | ") || "none"})`);
     // Keep or sell / Path Planner read done quests from pathdone
