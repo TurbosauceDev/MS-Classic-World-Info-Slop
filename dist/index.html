@@ -1133,6 +1133,7 @@ details.sec .controls{box-shadow:none;background:var(--bg)}
 /* Quest log (61-questlog.js) */
 .qlcats{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 #qlnow:empty,#qlseen:empty{display:none}
+.qlcats .pill{white-space:normal;max-width:100%}
 .qltiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
 .qltiles .sntile b{display:block;font:700 20px var(--f-display)}.qltiles .sntile span{color:var(--muted);font-size:13px}
 .qlsteps td:nth-child(2){white-space:nowrap}.qlsteps tr.k-hunt td:nth-child(2) b{color:var(--accent)}.qlsteps tr.k-craft td:nth-child(2) b{color:var(--leaf)}
@@ -1938,6 +1939,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 .kt-st.done .kt-bar i{background:var(--leaf)}.kt-st.done .kt-bar i.over{background:var(--warn)}
 .kt-share{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:14px}
 .kt-share .btn{margin-top:0}
+.kt-share .pill{white-space:normal;max-width:100%}
 .kt-toast{margin:0;opacity:0;transition:opacity .25s}
 .kt-toast.on{opacity:1}
 .kt-toast button{font:inherit;color:var(--accent);background:none;border:0;padding:0 0 0 6px;cursor:pointer;text-decoration:underline}
@@ -3138,7 +3140,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-22T19:40:17Z" data-ver="0.16.2">Site version: v0.16.2 · built Oct 22, 2026 · 19:40 UTC</p>
+  <p class="sitever" data-built="2026-10-22T19:46:43Z" data-ver="0.16.2">Site version: v0.16.2 · built Oct 22, 2026 · 19:46 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
