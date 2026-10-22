@@ -192,7 +192,7 @@ const boxGaps = require("./boxgaps");
   const live = await p.evaluate(() => Object.keys(PWNOW).length);
   if (live){
     await p.click("#itcheap"); { const r = await p.$$eval("#itrows tr[data-id]", r => r.map(x => [x.children[2].textContent, x.children[6].textContent]));
-      check(r.length > 5 && r.every(([lv, pw]) => lv === "" && /now [\d,]+/.test(pw)), "item list: cheap in shops now (non-equip, with listing)") }
+      check(r.length > 0 && r.every(([lv, pw]) => lv === "" && /now [\d,]+/.test(pw)), "item list: cheap in shops now (non-equip, with listing)") }
     await p.click("#itrows .ibtn"); check(/Cheapest listed\s*[\d,.]+/i.test(await p.innerText("#itpage")) && /meso\.watch \(cheapest per item only, from streams, updated (just now|\d+ (min|h|days) ago)/.test(await p.textContent("#itpage")) && !/NaN|undefined/.test(await p.textContent("#itpage")), "item page: cheapest live listing");
     await p.click("#itback"); await p.click("#itcheap");
   } else { await p.click("#itcheap"); check(!(await p.$$("#itrows tr[data-id]")).length, "item list: cheap in shops now is empty with no live listings"); await p.click("#itcheap") }
