@@ -100,7 +100,7 @@ npm start           # run it (Windows, Electron)
   installer on Windows and publishes a GitHub Release; installed copies auto-update from it (electron-updater).
 - Sharing (asked on first start, off until answered): every 15 minutes of non-stop farming on one map is a run sent to
   the server (server/), queued in run-queue.json until it answers. Sessions are also saved locally under
-  %APPDATA%/ms-classic-grind-tracker/sessions (History, CSV export).
+  %APPDATA%/MS Classic Grind Tracker/sessions (History, CSV export; Electron names the folder after productName).
 - Party view: with a party code, the tracker posts its live EXP/hr, level, job (and the name typed, if any) once a
   minute to `/api/party` and shows everyone on the same code. Works with sharing off.
 - v0.2.26: Ctrl+Shift+B (global, works with the game in front), the Bug button or Help > Report a bug opens a popup that grabs the last 8 frames at that moment, then asks for a note. Use-tab drops between inventory looks count as used up. KPQ stage time counts with no EXP (middle stages have no monsters). Pickup names: l/i read alike ("Biue Potion" now = Blue Potion); same-name items (Red Potion) take the first. Inventory tab chips are buttons: click = read that tab now; not found in 4 s = drag a box around the inventory (settings.invArea, looked at first; the window is still found anywhere if moved).
