@@ -85,7 +85,7 @@ All CONFLICTS below were applied 2026-10-20 (Danny: "you can trust everything fr
 - CONFLICTS, client-read: **MasteryMult = (0.1 + lvl/10) × 0.7** (0.07 unlearned, 0.77 max), was 0.8 (50-builder.js:225,239).
   **Magic MIN/MAX use INT/125**, was INT/100 (50-builder.js:226-227, 10-maps.js:176); Poison Breath DoT /125 already right.
   **Iron Arrow falloff 0.8^n** (1, 0.8, 0.64, 0.512), was linear 1/0.8/0.6/0.4 (AOE_FALL, 10-maps.js:92).
-  **Damage taken = I × (1 − D/(D + 2I + 300)) − D/25 − Level/10**, I = Atk × (1.1 + 0.4 rand) (mean 1.3, same), trunc,
+  **Damage taken = I × (1 − D/(D + 2I + 300)) − D/25 − Level/10**, I = Atk × (1.2 + 0.2 rand) (Grand Launch client, OSMS 6f003e7; was 1.1 + 0.4; mean 1.3 either way), trunc,
   min 1; was COT2's I/(1 + D/(5L + 200 + 1.2I)) (hitTaken, 10-maps.js:34). E.g. Atk 100, DEF 50, Lv 30: 118 → 114.
   **EXP 90-99 = previous × 2.1** (Lv 90 needs 11,938,059, not 5,996,316); 51-89 ×1.0548 as ours (00-core.js:6). The
   whole 1-99 table is client-read, so EXP_SURE = 49 could go to 99.
@@ -111,6 +111,12 @@ All CONFLICTS below were applied 2026-10-20 (Danny: "you can trust everything fr
   fallback); shield guard max(5%, ShieldDEF/(ShieldDEF + 500)); Claw Guard 3-5% only with no shield; Heal vs undead
   rewritten (Roll 0.1-1.2, /1000 + 2.5, no Bless term); Bleed total = % × ((2·Prim + Sec)/100 + 1 + AP/50) × WA, DoT
   and bleed use the linear level penalty; StatDiv 300 / AtkDiv 150 when meleeing with bow/crossbow/claw; Meso Explosion.
+
+- Grand Launch re-read (OSMS 6f003e7, Oct 21, checked 2026-10-22): incoming roll narrowed to 1.2-1.4 (mean still 1.3,
+  site unchanged); NEW, not modeled: physical immunity (monster skill 140, only Faust: 5 s, once a minute; every physical
+  hit deals PImmuneDamage = 1, magic unaffected); EXP "special" mobs add 800020-800024 (Curse Eye, Primrose Hill Stirge/
+  Flyeye/Goblin Fire), boss list adds Stumpy, Faust: we read mob EXP from the export, so no effect. Portals/map_manifest:
+  key order only, routes unchanged; items.json: furniture sprite flags only.
 
 ## Estimates the page makes (flagged in its "How" boxes)
 - **Ammo attack** (stars, arrows): old-game values; Subi +15, Wolbi +17, Bronze arrows +1 confirmed by the meowdb class guides.

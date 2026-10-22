@@ -35,7 +35,8 @@ function hpmpAt(cls, L, hpPct = 0, mpPct = 0, second = L >= 30){
 // (Invincible cuts physical only; Magic Guard both). Monsters with a magic attack (maplestory.quest raw client: only
 // Tauromacis and Taurospear at launch) also hit with Magic Attack against M.DEF; the worse of the two counts.
 // Armor isn't counted (we don't model it), so real danger is lower. meowdb labels: <10% Safe, 10-24% Caution, 25-49% Danger, 50%+ Lethal.
-// launch client (OSMS formulas page, damage taken): I × (1 − D / (D + 2I + 300)) − D/25 − Level/10, I = Atk × 1.3 on average
+// launch client (OSMS formulas page, damage taken): I × (1 − D / (D + 2I + 300)) − D/25 − Level/10, I = Atk × (1.2 + 0.2 rand)
+// (Grand Launch roll, OSMS 6f003e7; was 1.1-1.5). Midpoint 1.3 used: the sampled average differs by under 2%.
 const hitTaken = (atk, def, L) => { const raw = atk * 1.3; return Math.max(1, Math.trunc(raw * (1 - def / (def + 2 * raw + 300)) - def / 25 - L / 10)) };
 function touchPct(mobId, L, d){
   const a = D.mobatk?.[mobId]; if (!a || !d.hp) return 0;
