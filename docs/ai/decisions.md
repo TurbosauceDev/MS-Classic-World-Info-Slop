@@ -249,3 +249,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-21 Grind Tracker: assume players run the game at their monitor's native resolution (Danny); docs say so instead of listing window setups.
 - 2026-10-21 Danny: add @char to Ctrl+K and a job census (classicrank.com, keyless, daily job; no read key).
 - 2026-10-21 Grind Tracker How to use gets a data-folders + uninstall card (Danny, second audit #16).
+- 2026-10-22 Danny (thread "Second site audit"): standing permission widened; threads push, publish the artifact and release the tracker whenever work is ready and tested, no per-push ask. CLAUDE.md + tracker.md updated.

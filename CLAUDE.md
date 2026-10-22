@@ -37,7 +37,8 @@ it from [docs/ai/fixtures.md](docs/ai/fixtures.md) instead of opening images.
 
 ## Branches, deploy
 - Default branch: `main` (renamed from `claude/trusting-bell-fqgar6` 2026-10-20). Site, tracker, server, CI all run from it.
-- Pushing to it = production (Pages redeploys). Needs Danny's in-thread "push" unless the brief says he OK'd it.
+- Pushing to it = production (Pages redeploys). Standing permission (Danny 10-19, widened 10-22): push, publish the
+  artifact and release the tracker whenever the work is ready and tested; no per-push "push" needed.
 - Before pushing: `git fetch origin main && git rebase origin/main`.
   Build/publish the artifact only from that latest base, so another thread's newer version isn't overwritten.
 - After pushing: wait for pages.yml, check the Home "Site version: built ..." stamp on

@@ -56,7 +56,8 @@ cd ../server && npm install && npm run data && npm test   # Node 22 (node:sqlite
 - Tracker: bump `tracker/package.json` version, add its line at the top of `tracker/app/changelog.js` (patch notes; core.test.js
   fails without it), commit, push to the default branch, then GitHub `actions_run_trigger`
   on tracker.yml with inputs `{release: true}` (tag pushes are blocked from cloud). Installed copies auto-update.
-  Release only on Danny's "release"; pushing needs his "push". Bundle small fixes into one release.
+  Standing permission (Danny 10-19, widened 10-22): push and release whenever the work is ready and tested, no
+  "push"/"release" ask needed. Still rebase first and live-check after. Bundle small fixes into one release.
 - Server: pushes touching `server/**` deploy via server.yml (repo secrets CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID).
   Live: https://ms-classic-tracker.maplestoryclassic.workers.dev/api/summary
 
