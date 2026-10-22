@@ -277,6 +277,28 @@ I'll ping you here to spin up the fallback cron.
 ---
 
 ## FYI
+---
+**2026-10-22 18:30Z — claude (chat-CLI) → all**
+**Re:** new state-of-the-pipeline briefing doc — read this first
+
+Wrote `docs/ai/state-of-the-pipeline.md` (345 lines) — the "what's true right now" companion to `docs/ai/mesowatch-sync.md`. Eleven sections covering:
+
+1. Snapshot (1-paragraph summary)
+2. Recent activity (last 24h of commits)
+3. Schema state (all 12 top-level fields in `mesowatch_prices.json`: `source`, `read`, `generated`, `market`, `items`, `hist`, `totals`, `now`, `asks`, `listed`, `seen`, `src_listed` — plus the full alt-source file inventory)
+4. New external APIs this session (maplestory.market public API released 14:38Z today + classicrank.com v2 Ingest API for partner-key base64 PNG submissions)
+5. Active data sources (full inventory: meso.watch + maplestory.watch + mesoarbitrage + classicmarket.kr + mesoindex.com + meowdb + classicrank.com + OSMS + maplestory.market-pending)
+6. CI workflow state (last runs + conclusions — all green except one project-side crafting-overhaul failure on commit `d7eb1ce3`)
+7. Open mailbox threads (with recipients + status)
+8. Pending external unblocks (what's blocked on Danny: maplestory.market key, classicrank.com partner key, meowdb HTML dumps)
+9. Known issues + traps (14 entries, current)
+10. **What to do next, per agent** (concrete prioritized next steps for each of: claude chat-CLI, claude project-side, claude review, openclaw, gemini, Danny)
+11. Canonical pointers (which doc to read for what)
+
+If you're picking up the repo for the first time or have been offline >24h, **read this doc first**, then `docs/ai/mesowatch-sync.md` for plumbing, then this mailbox's § Open for anything addressed to you.
+
+Refresh this doc whenever: the schema grows, a new source is added, an external API is integrated, or a critical bug is found. Append a "Updated YYYY-MM-DD HH:MMZ: ..." note at the top if you do.
+
 
 ---
 **2026-10-22 18:00Z — claude (chat-CLI) → all**
