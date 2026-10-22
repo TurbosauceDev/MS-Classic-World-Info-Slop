@@ -2,7 +2,9 @@
   <details class="howto">
     <summary>How the Quest log works</summary>
     <ul>
-      <li>Open the in-game <b>QUEST</b> window on the <b>Completed</b> tab. Start a screen recording (Windows: Win+Alt+R, or OBS), open one category, scroll slowly to its end, close it, open the next. Then do the same on <b>In Progress</b>. Drop the video here. Screenshots of the window work too.</li>
+      <li>Press <b>Read my screen</b> and share the game window. Open the in-game <b>QUEST</b> window on the <b>Completed</b> tab, open one category, scroll slowly to its end, close it, open the next. Then do the same on <b>In Progress</b>. What's read shows as you go; press <b>Stop reading</b> when done.</li>
+      <li>No screen share? Record the same thing (Windows: Win+Alt+R, or OBS) and drop the video, or paste screenshots of the window.</li>
+      <li><b>Undo</b> / <b>Redo</b> (Ctrl+Z / Ctrl+Y) take back a read or a mark; <b>Forget what was read</b> starts over.</li>
       <li>The site reads each row's name against the quests that category can hold, in your browser; nothing is uploaded. Questlines show under their line's name (like "Icarus's Dream"), so one row can mean several quests.</li>
       <li>The pills say how many quests were read per category against the number on the game's bar. Fix anything missed with <b>Done</b> / <b>On it</b> on a row.</li>
       <li><b>Can accept now</b> comes from the game files: quests you haven't done, at or under your level, for your class (your Path Planner class), whose earlier quests are done. The Available tab isn't needed.</li>
@@ -13,12 +15,15 @@
 
   <div class="card">
     <div class="cardhead"><h3>Read your quest log</h3></div>
+    <div class="throw"><button class="btn primary" id="qllive" type="button">Read my screen</button></div>
+    <div id="qlnow" class="qlcats" aria-live="polite"></div>
     <label class="drop" id="qldrop"><input type="file" id="qlfile" accept="video/*,image/*" multiple>
-      <span>Drop or pick a <b>recording</b> of your QUEST window (Completed, then In Progress), or paste (Ctrl+V) screenshots of it.</span></label>
+      <span>Or drop a <b>recording</b> of your QUEST window (Completed, then In Progress), or paste (Ctrl+V) screenshots of it.</span></label>
     <progress id="qlbar" max="1" value="0" hidden></progress>
     <p class="note" id="qlstat" role="status"></p>
+    <div id="qlseen"></div>
     <div id="qlsum"></div>
-    <div class="throw"><button class="btn" id="qlforget" type="button">Forget what was read</button></div>
+    <div class="throw"><button class="btn" id="qlundo" type="button" disabled>Undo</button><button class="btn" id="qlredo" type="button" disabled>Redo</button><button class="btn" id="qlforget" type="button">Forget what was read</button></div>
   </div>
 
   <div class="card">

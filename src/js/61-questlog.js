@@ -241,7 +241,10 @@ const QLOG = (() => {
         URL.revokeObjectURL(v.src);
       }
     }
-    // names -> quests
+    return settle(rd, frames, used);
+  }
+  // a reader's votes -> quests (a file read at the end, the live reader every second)
+  function settle(rd, frames, used){
     const res = {at: new Date().toISOString(), frames, used, cats: {}, done: [], prog: {}};
     for (const tab of ["done", "prog"]){
       res.cats[tab] = {};
@@ -249,7 +252,7 @@ const QLOG = (() => {
       // slots: strongest first, each takes its best name not already taken in its category (and only with a sure read or
       // several narrow ones behind it); rows past the bar's own count are ignored
       // (best read first: on cut, blurry rows a wrong name can win many frames narrowly, the right one wins its clear frames)
-      const T = rd.tabs[tab], taken = new Map(), slots = [...T.slots.entries()].map(([sk, m]) => { const [c, i] = [sk.slice(0, sk.lastIndexOf("|")), +sk.slice(sk.lastIndexOf("|") + 1)]; return {c, i, cands: [...m.entries()].filter(([, o]) => o.v >= 0.9).sort((a, b) => a[1].s - b[1].s || b[1].v - a[1].v)} })
+      const T = {names: new Map(rd.tabs[tab].names), slots: rd.tabs[tab].slots}, taken = new Map(), slots = [...T.slots.entries()].map(([sk, m]) => { const [c, i] = [sk.slice(0, sk.lastIndexOf("|")), +sk.slice(sk.lastIndexOf("|") + 1)]; return {c, i, cands: [...m.entries()].filter(([, o]) => o.v >= 0.9).sort((a, b) => a[1].s - b[1].s || b[1].v - a[1].v)} })
         .filter(x => x.cands.length).sort((a, b) => a.cands[0][1].s - b.cands[0][1].s);
       for (const sl of slots){ const used = taken.get(sl.c) || new Set(); const pick = sl.cands.find(([k]) => !used.has(k)); if (!pick) continue; used.add(pick[0]); taken.set(sl.c, used); if (!T.names.has(pick[0])) T.names.set(pick[0], {...pick[1], cat: sl.c}) }
       for (const [key, o] of T.names){
@@ -387,7 +390,7 @@ const QLOG = (() => {
   }
 
   // ---------- page ----------
-  const page = $("#qlog"); if (!page) return {readFrame, reader, matchLine, matchBar, readFiles, plan, status, S};
+  const page = $("#qlog"); if (!page) return {readFrame, reader, settle, matchLine, matchBar, readFiles, plan, status, S};
   let view = "prog", lastPlan = null;
   const qname = r => qref(BYID.get(String(r.id))?.[0] || "q", r);
   const lvIn = $("#qllv"); lvIn.value = S.lv;
@@ -435,7 +438,28 @@ const QLOG = (() => {
       ${P.notes.length ? `<ul class="sub">${P.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
       <p class="sub">Estimates: kill times use your Path Planner character (${esc(X().cls)}${P.est ? ", rough damage" : ""}) at Lv ${P.L}; item drops assume ${Math.round(P.rate * 100)}% per kill (no drop rates exist in the files; change it in the Path Planner). Turn-ins are at the quest's NPC.</p>`;
   }
-  const redraw = () => { drawRead(); drawList(); drawPlan() };
+  const redraw = () => { drawRead(); drawList(); drawPlan(); histUi() };
+  // Undo / Redo over what was read and marked (a read, a live share, a Done / On it, Forget = one step each)
+  const hist = [], fut = [], snap = () => JSON.parse(JSON.stringify({done: S.done, prog: S.prog, cats: S.cats, at: S.at}));
+  const step = () => { hist.push(snap()); if (hist.length > 40) hist.shift(); fut.length = 0 };
+  function restore(o){ const gone = S.done.filter(i => !o.done.includes(i)); Object.assign(S, o); save();
+    try { const pd = new Set(JSON.parse(localStorage.getItem("pathdone") || "[]")); for (const i of gone) pd.delete("q" + i); localStorage.setItem("pathdone", JSON.stringify([...pd])) } catch(e) {}
+    $("#qlseen").innerHTML = ""; redraw() }
+  const undo = () => { if (LV) endLive(); if (!hist.length) return; fut.push(snap()); restore(hist.pop()) };
+  const redo = () => { if (!fut.length) return; hist.push(snap()); restore(fut.pop()) };
+  function histUi(){ $("#qlundo").disabled = !hist.length; $("#qlredo").disabled = !fut.length; $("#qlforget").disabled = !S.done.length && !Object.keys(S.prog).length }
+  // a read on top of what you had (base): in progress beats done, since a repeatable ("Donating to Henesys") sits in both tabs
+  function apply(base, r){
+    S.done = [...new Set([...base.done, ...r.done])].filter(i => !(i in r.prog)); S.prog = {...base.prog, ...r.prog};
+    S.cats = r.cats; S.at = r.at; save(); redraw();
+  }
+  // what a read added, by name (shown under the status so a wrong one is easy to spot and Undo)
+  function seen(base, label){
+    const d = new Set(base.done), add = S.done.filter(i => !d.has(i)).map(i => BYID.get(i)?.[1]).filter(Boolean),
+      on = Object.keys(S.prog).filter(i => !(i in base.prog)).map(i => BYID.get(i)?.[1]).filter(Boolean);
+    const names = (rs, cls) => [...new Set(rs.map(lnOf))].slice(0, 60).map(n => `<span class="pill ${cls}">${esc(n)}</span>`).join("");
+    $("#qlseen").innerHTML = add.length || on.length ? `<div class="qlcats"><span class="sub">${label}</span>${names(on, "p-warn")}${names(add, "p-ok")}</div>` : "";
+  }
   $("#qlview").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (!b) return; view = b.dataset.v; drawList() });
   $("#qlrows").addEventListener("change", e => {
     const st = e.target.closest(".qlstep");
@@ -443,29 +467,72 @@ const QLOG = (() => {
       S.pick = S.pick.map(x => x === old ? nu : x); save(); redraw(); return }
     const c = e.target.closest(".qlpick"); if (!c) return; const id = c.closest("tr").dataset.id;
     S.pick = c.checked ? [...new Set([...S.pick, id])] : S.pick.filter(x => x !== id); save(); drawList(); drawPlan() });
-  $("#qlrows").addEventListener("click", e => { const b = e.target.closest(".qlmark"); if (!b) return; const id = b.closest("tr").dataset.id, m = b.dataset.m;
+  $("#qlrows").addEventListener("click", e => { const b = e.target.closest(".qlmark"); if (!b) return; const id = b.closest("tr").dataset.id, m = b.dataset.m; step();
     if (m === "done"){ S.done = [...new Set([...S.done, id])]; delete S.prog[id]; S.pick = S.pick.filter(x => x !== id) }
     else if (m === "undo"){ S.done = S.done.filter(x => x !== id); try { const pd = new Set(JSON.parse(localStorage.getItem("pathdone") || "[]")); pd.delete("q" + id); localStorage.setItem("pathdone", JSON.stringify([...pd])) } catch(e) {} }
     else if (m === "prog") S.prog[id] = BYID.get(id)[1].name; else delete S.prog[id];
+    hist.length && JSON.stringify(hist.at(-1)) === JSON.stringify(snap()) && hist.pop();
     save(); redraw() });
   lvIn.addEventListener("change", () => { const v = Math.round(+lvIn.value); S.lv = v >= 1 && v <= MAX_LEVEL ? v : S.lv; lvIn.value = S.lv; save(); redraw() });
   $("#qlfrom").addEventListener("change", e => { S.from = e.target.value; save(); drawPlan() });
   $("#qlpickprog").addEventListener("click", () => { S.pick = [...new Set([...S.pick, ...Object.keys(S.prog)])]; save(); drawList(); drawPlan() });
   $("#qlclearpick").addEventListener("click", () => { S.pick = []; save(); drawList(); drawPlan() });
-  $("#qlforget").addEventListener("click", () => { S.done = []; S.prog = {}; S.cats = null; S.at = ""; save(); redraw() });
+  $("#qlforget").addEventListener("click", () => { if (LV) endLive(); step(); restore({done: [], prog: {}, cats: null, at: ""}); $("#qlstat").textContent = "Forgot what was read (Undo brings it back)." });
+  $("#qlundo").addEventListener("click", undo); $("#qlredo").addEventListener("click", redo);
+  document.addEventListener("keydown", e => { if (page.hidden || !(e.ctrlKey || e.metaKey) || e.target.closest?.("input, select, textarea")) return; const k = e.key.toLowerCase();
+    if (k === "z" && !e.shiftKey){ e.preventDefault(); undo() } else if (k === "y" || (k === "z" && e.shiftKey)){ e.preventDefault(); redo() } });
   async function handle(files){
     files = [...files].filter(f => /^(image|video)\//.test(f.type)); if (!files.length) return;
     const st = $("#qlstat"); st.textContent = "Reading…"; $("#qlbar").hidden = false;
     try {
       const r = await readFiles(files, f => { $("#qlbar").value = f; st.textContent = `Reading… ${Math.round(f * 100)}%` });
-      if (!r.done.length && !Object.keys(r.prog).length){ st.textContent = "No quest window found. Record or capture the QUEST window with a category open (see About this page)."; return }
-      // in progress beats done: a repeatable ("Donating to Henesys") sits in both tabs, and you're on it again
-      S.done = [...new Set([...S.done, ...r.done])].filter(i => !(i in r.prog)); Object.assign(S.prog, r.prog);
-      S.cats = r.cats; S.at = r.at; if (!Object.keys(r.prog).length && view === "prog") view = "open";
-      save(); redraw(); st.textContent = `Read ${fmt(r.done.length)} done and ${fmt(Object.keys(r.prog).length)} in-progress quests from ${fmt(r.used)} frame${r.used === 1 ? "" : "s"}.`;
+      if (!r.done.length && !Object.keys(r.prog).length){ st.textContent = "No quest window found. Record or capture the QUEST window with a category open (see How the Quest log works)."; return }
+      const base = snap(); step(); if (!Object.keys(r.prog).length && view === "prog") view = "open";
+      apply(base, r); seen(base, "Read:"); st.textContent = `Read ${fmt(r.done.length)} done and ${fmt(Object.keys(r.prog).length)} in-progress quests from ${fmt(r.used)} frame${r.used === 1 ? "" : "s"}.`;
     } catch(e){ st.textContent = "Couldn't read that file" + (e.message === "video" ? ": this browser can't play that video format (try Chrome or Edge, or an .mp4/.webm)." : ".") }
     finally { $("#qlbar").hidden = true }
   }
+  // live: the QUEST window read straight off a shared screen (02-screen.js), 4 frames a second like a recording; what's
+  // read is applied every second (no Apply step), the names seen in the latest frame shown as you scroll
+  let LV = null;
+  async function live(){
+    if (LV) return endLive();
+    const st = $("#qlstat"), base = snap();
+    LV = {rd: reader(), frames: 0, used: 0, base, t: 0, n: 0};
+    $("#qllive").textContent = "Stop reading";
+    const scr = await shareScreen({ms: 250, fps: 10, onFrame: liveFrame, onEnd: endLive});
+    if (typeof scr === "string"){ LV = null; $("#qllive").textContent = "Read my screen"; st.textContent = scr; return }
+    if (!LV){ scr.stop(); return }
+    LV.scr = scr; step();
+    st.textContent = "Sharing. Open the QUEST window on Completed, open each category and scroll slowly to its end, then the same on In Progress.";
+  }
+  function liveFrame(f){
+    const L = LV; if (!L) return;
+    const fr = readFrame({width: f.w, height: f.h, data: f.d}); L.frames++; if (!L.rd.add(fr)) return; L.used++;
+    const tab = fr.tab || L.tab || "done"; L.tab = tab;
+    const now = L.rd.last.filter(([, m]) => m.sure && m.ln).map(([, m]) => m.ln);
+    $("#qlnow").innerHTML = `<span class="sub">${tab === "prog" ? "In Progress" : tab === "avail" ? "Available (not needed)" : "Completed"} tab, this frame:</span> ${now.length ? [...new Set(now)].map(n => `<span class="pill">${esc(n)}</span>`).join("") : "<span class='sub'>no rows read</span>"}`;
+    if (Date.now() - L.t < 1000) return; L.t = Date.now();
+    liveApply();
+  }
+  function liveApply(){
+    const L = LV, r = settle(L.rd, L.frames, L.used), n = r.done.length + Object.keys(r.prog).length;
+    if (n === L.n) return; L.n = n;
+    apply(L.base, r); seen(L.base, "Read so far:");
+    $("#qlstat").textContent = `Reading… ${fmt(r.done.length)} done and ${fmt(Object.keys(r.prog).length)} in progress so far.`;
+  }
+  function endLive(){
+    const L = LV; if (!L) return; LV = null; L.scr?.stop();
+    $("#qllive").textContent = "Read my screen"; $("#qlnow").innerHTML = "";
+    if (!L.scr) return;
+    LV = L; L.n = -1; liveApply(); LV = null;
+    const r = settle(L.rd, L.frames, L.used);
+    if (!r.done.length && !Object.keys(r.prog).length){ if (hist.length) hist.pop(); $("#qlstat").textContent = L.frames ? "Stopped. No quest window was seen: share the game window and open QUEST with a category open." : "Stopped."; return }
+    if (!Object.keys(r.prog).length && view === "prog"){ view = "open"; drawList() }
+    $("#qlstat").textContent = `Read ${fmt(r.done.length)} done and ${fmt(Object.keys(r.prog).length)} in-progress quests from ${fmt(r.used)} frame${r.used === 1 ? "" : "s"}. Wrong one? Undo, or Not done on its row.`;
+  }
+  $("#qllive").addEventListener("click", live);
+  addEventListener("pagehide", () => LV && endLive());
   const dz = $("#qldrop");
   dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("over") });
   dz.addEventListener("dragleave", () => dz.classList.remove("over"));
@@ -474,6 +541,6 @@ const QLOG = (() => {
   document.addEventListener("paste", e => { if (page.hidden) return; const f = [...(e.clipboardData?.files || [])]; if (f.length){ e.preventDefault(); handle(f) } });
   let shown = false; const show = () => { if (!shown && !page.hidden){ shown = true; fillFrom(); redraw() } };
   new MutationObserver(show).observe(page, {attributes: true, attributeFilter: ["hidden"]}); show();
-  return {readFrame, reader, matchLine, matchBar, readFiles, plan, status, S, handle, redraw, rend, l1};
+  return {readFrame, reader, settle, matchLine, matchBar, readFiles, plan, status, S, handle, redraw, rend, l1, liveFrame: f => { if (!LV){ LV = {rd: reader(), frames: 0, used: 0, base: snap(), t: 0, n: 0, scr: {stop(){}}}; step() } liveFrame(f) }, endLive, undo, redo};
 })();
 window.QLOG = QLOG;

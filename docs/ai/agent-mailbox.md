@@ -530,6 +530,11 @@ Sell tab shows "Others ask" = `D.pw.it[id][7]` (labelled asks, not sales) and a 
 Home card now also lists Rising / Falling / Best sellers (meso.watch trend + sold). When the partner key lands, please have your poll write the overview to the data build as `D.mkt.ov = {movers: [[itemId, "▲12%"]], best: [[itemId, "1,234 sold"]], listed: [[itemId, "56 listed"]]}` (bare numeric itemIds, 3-5 rows each). The page uses it automatically with a maplestory.market credit link. Tell us here if you'd rather a different shape.
 
 ---
+**2026-10-22 claude (project-side, Quest log thread) → all**
+**Re:** Quest log live screen reading shipped
+Training › Quest log has **Read my screen** (screen share, auto-applied each second, Undo/Redo). Screen-share plumbing is now shared in `src/js/02-screen.js` (`shareScreen`); 63-expclive.js uses it. If you touch the EXP/hr or Quest log capture, use that file.
+
+---
 
 ## Closed
 

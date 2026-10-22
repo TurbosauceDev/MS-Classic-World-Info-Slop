@@ -61,6 +61,26 @@ const PROG = ["Donating to Henesys", "A Carpenter in My Own Right!", "Vicious in
     check(pd, "done quests reach Keep or sell (pathdone q<id>)");
     await p.close() }
 
+  // 2b. live screen reading (Danny 10-22): frames fed as a shared screen would (QLOG.liveFrame), applied with no Apply
+  // step, the names read shown, Undo / Redo / Forget; and the share button copes with a refused share
+  { const p = await page();
+    await p.evaluate(async src => { const im = new Image(); im.src = src; await im.decode(); const c = document.createElement("canvas"); c.width = im.width; c.height = im.height;
+      const g = c.getContext("2d"); g.drawImage(im, 0, 0); const f = {w: c.width, h: c.height, d: g.getImageData(0, 0, c.width, c.height).data};
+      for (let i = 0; i < 3; i++) QLOG.liveFrame(f); QLOG.endLive() }, "data:image/png;base64," + require("fs").readFileSync(FX("questlog-progress.png")).toString("base64"));
+    const s = await p.evaluate(() => ({prog: Object.keys(QLOG.S.prog), seen: document.querySelectorAll("#qlseen .pill").length, st: document.querySelector("#qlstat").textContent, undo: !document.querySelector("#qlundo").disabled}));
+    const got = await lnOf(p, s.prog);
+    check(got.length === 8 && PROG.every(n => got.includes(n)), `live: the 8 quests in progress (${got.join(" | ")})`);
+    check(s.seen >= 8 && /^Read 0 done and 8/.test(s.st) && s.undo, `live: what was read is shown and undoable (${s.seen} names, "${s.st}")`);
+    await p.click("#qlundo"); const u = await p.evaluate(() => Object.keys(QLOG.S.prog).length);
+    await p.click("#qlredo"); const r = await p.evaluate(() => Object.keys(QLOG.S.prog).length);
+    await p.click("#qlforget"); const f = await p.evaluate(() => Object.keys(QLOG.S.prog).length);
+    await p.click("#qlundo"); const fu = await p.evaluate(() => Object.keys(QLOG.S.prog).length);
+    check(u === 0 && r === 8 && f === 0 && fu === 8, `Undo / Redo / Forget / Undo (${u} ${r} ${f} ${fu})`);
+    await p.click("#qllive"); await p.waitForFunction(() => document.querySelector("#qllive").textContent === "Read my screen" && document.querySelector("#qlstat").textContent, null, {timeout: 15000}).catch(() => {});
+    const sh = await p.evaluate(() => ({b: document.querySelector("#qllive").textContent, st: document.querySelector("#qlstat").textContent}));
+    check(sh.b === "Read my screen" && /cancel|can't share|desktop browser/i.test(sh.st), `refused screen share says so (${sh.st})`);
+    await p.close() }
+
   // 3. hostile saved state: the page still opens and lists quests
   { const p = await b.newPage(); p.on("pageerror", e => errs.push(e.message)); await p.goto(URL);
     await p.evaluate(() => localStorage.setItem("qlog", JSON.stringify({done: ["<img>", 5, null], prog: {"x": 1, "10104": {}}, pick: "nope", lv: 1e9, from: "../x", cats: 7})));

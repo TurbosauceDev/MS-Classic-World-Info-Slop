@@ -15,15 +15,6 @@ const hms = ms => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math
 const hrsTxt = h => h == null || !isFinite(h) ? "–" : dur(h * 3600);
 const gameData = async () => { await ASSETS; return G || (G = GrindGamedata.toGamedata(D)) };
 
-// ticks from a worker: a page in a background tab (the game in front) gets its own timers slowed to once a minute
-function ticker(ms, f){
-  let iv = null, w = null;
-  const plain = () => { if (!iv) iv = setInterval(f, ms) };
-  try { w = new Worker(URL.createObjectURL(new Blob([`setInterval(() => postMessage(0), ${ms})`], {type: "text/javascript"}))); w.onmessage = f; w.onerror = () => { w.terminate(); w = null; plain() } }
-  catch(e){ plain() }
-  return () => { clearInterval(iv); w?.terminate() };
-}
-
 /* ---- a run: begin() starts the maths (tests call it without a screen), feed() reads one RGBA frame ---- */
 async function begin(){
   const g = await gameData(), p = EXPC.pick(), t = Date.now();
@@ -72,38 +63,18 @@ function stop(){
 addEventListener("pagehide", () => { if (L){ const r = record(); if (r) EXPC.addRec(r) } });   // tab closed mid-run: keep it
 
 /* ---- the screen ---- */
-let C = null;   // {stream, video, cap, canvas, stop, busy}
+let C = null;   // {stop, pip}: the shared screen (02-screen.js)
 async function share(){
   const st = $e("eclst");
-  if (!navigator.mediaDevices?.getDisplayMedia){ st.textContent = "Needs a desktop browser (Chrome, Edge, Firefox, Safari)."; return }
-  let stream;
-  try { stream = await navigator.mediaDevices.getDisplayMedia({video: {frameRate: 5}, audio: false}) }
-  catch(e){ st.textContent = e.name === "NotAllowedError" ? "Sharing cancelled." : "This page can't share your screen here: open the site in your browser."; return }
-  const video = document.createElement("video"); video.muted = true; video.playsInline = true; video.srcObject = stream;
-  try { await video.play() } catch(e) {}
-  const track = stream.getVideoTracks()[0];
-  C = {stream, video, canvas: document.createElement("canvas"), cap: window.ImageCapture ? new ImageCapture(track) : null};
-  track.addEventListener("ended", () => L ? stop() : unshare());
-  st.textContent = "Loading the game's item pictures…";
-  await begin();
-  C.stop = ticker(500, grab);
+  const r = await shareScreen({ms: 500, onFrame: f => { if (L) feed(f) }, onEnd: () => L ? stop() : unshare(),
+    before: async () => { st.textContent = "Loading the game's item pictures…"; await begin() }});
+  if (typeof r === "string"){ st.textContent = r; return }
+  C = r;
 }
 function unshare(){
   if (!C) return;
-  C.stop?.(); C.stream.getTracks().forEach(t => t.stop()); C = null;
+  C.stop(); C = null;
   L?.pip?.close();
-}
-async function grab(){
-  if (!C || C.busy || !L) return; C.busy = true;
-  try {
-    let src = null;
-    if (C.cap && C.cap.track?.readyState === "live") try { src = await C.cap.grabFrame() } catch(e) {}   // works in a background tab
-    if (!src){ if (!C.video.videoWidth) return; src = C.video }
-    const w = src.videoWidth || src.width, h = src.videoHeight || src.height, c = C.canvas;
-    if (c.width !== w || c.height !== h){ c.width = w; c.height = h }
-    const g = c.getContext("2d", {willReadFrequently: true}); g.drawImage(src, 0, 0); src.close?.();
-    feed({w, h, d: g.getImageData(0, 0, w, h).data});
-  } catch(e) {} finally { if (C) C.busy = false }
 }
 
 /* ---- what's shown ---- */
