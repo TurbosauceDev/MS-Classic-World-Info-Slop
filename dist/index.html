@@ -322,19 +322,19 @@ input.khave{width:64px;text-align:right}
 .mcols h4{font:600 13px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 6px}
 .mcols h4 .sub{text-transform:none;letter-spacing:0;font-weight:500}
 .mcols p{margin:4px 0 10px;font-size:14.5px}
-#itprices .pxtiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:10px}
-#itprices .pxt{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0}
-#itprices .pxk{font:600 12px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-#itprices .pxv{font:700 24px/1.15 var(--f-mono);color:var(--ink);font-variant-numeric:tabular-nums}
-#itprices .pxv small{font:500 12px var(--f-body);color:var(--muted)}
-#itprices .pxs{font-size:12.5px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
-#itprices .tblwrap{margin-top:12px}
-#itprices table td{vertical-align:baseline}
-#itprices td.num b{font-variant-numeric:tabular-nums}
-#itprices .pxh{font:600 13px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 0}
-#itprices .pxh .sub{text-transform:none;letter-spacing:0;font-weight:500;margin-left:4px}
-#itprices .pxls .pxx{display:none}
-#itprices .tblwrap.open .pxx{display:table-row;animation:pxin .25s ease-out}
+:is(#itprices,.crpx) .pxtiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:10px}
+:is(#itprices,.crpx) .pxt{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0}
+:is(#itprices,.crpx) .pxk{font:600 12px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+:is(#itprices,.crpx) .pxv{font:700 24px/1.15 var(--f-mono);color:var(--ink);font-variant-numeric:tabular-nums}
+:is(#itprices,.crpx) .pxv small{font:500 12px var(--f-body);color:var(--muted)}
+:is(#itprices,.crpx) .pxs{font-size:12.5px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
+:is(#itprices,.crpx) .tblwrap{margin-top:12px}
+:is(#itprices,.crpx) table td{vertical-align:baseline}
+:is(#itprices,.crpx) td.num b{font-variant-numeric:tabular-nums}
+:is(#itprices,.crpx) .pxh{font:600 13px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 0}
+:is(#itprices,.crpx) .pxh .sub{text-transform:none;letter-spacing:0;font-weight:500;margin-left:4px}
+:is(#itprices,.crpx) .pxls .pxx{display:none}
+:is(#itprices,.crpx) .tblwrap.open .pxx{display:table-row;animation:pxin .25s ease-out}
 @keyframes pxin{from{opacity:0}to{opacity:1}}
 #itprices .pxall{margin-top:8px}
 #itprices .pxfoot{font-size:12.5px;margin:12px 0 0}
@@ -983,6 +983,29 @@ html.anchoring :is(.navcol,.homegrid){user-select:none}
 #cpnowx{margin:10px 0 0}
 #cpst:empty,#cpnowc:empty,#cpnowx:empty{display:none}
 .cpbig{font-size:16px;margin:0 0 4px}
+/* Crafting tabs (45-crafting.js) + recipe pop-up #crpop (inset modal like Settings) */
+.crme .cpset{margin-bottom:0}
+.crmode{margin:16px 0 14px}
+.crmode button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,var(--panel))}
+.crmode button:not([aria-selected="true"]):hover{border-color:var(--accent)}
+.crpanel{animation:fadein .25s}
+.crpanel>.card+.card{margin-top:14px}
+.crpanel .cardhead{flex-wrap:wrap;gap:6px 10px}
+#crlvtot{white-space:normal;max-width:100%}
+.crname{font-weight:700;color:var(--ink);text-align:left;text-decoration:none}
+.crname:hover,.crname:focus-visible{color:var(--accent);text-decoration:underline}
+#crrows .pill{margin-top:4px}
+.crbox{width:min(860px,100%)}
+#crpoph .ing{gap:10px}
+.crpsub{margin:10px 0 0;line-height:1.7}
+.crpx .pxtiles{margin:0;grid-template-columns:repeat(auto-fit,minmax(min(100%,128px),1fr))}
+.crpx .pxv{font-size:20px}
+.crall>summary{cursor:pointer;list-style:none}
+.crall>summary::-webkit-details-marker{display:none}
+.crall>summary h3{margin:0}
+.crall[open]>summary h3{margin-bottom:10px}
+.crall>summary h3::before{content:"▸";font-size:12px;transition:transform .15s}
+.crall[open]>summary h3::before{transform:rotate(90deg)}
 /* scanned-inventory peek (invPeek in 00-core.js) */
 .ipeek{position:relative;display:inline-block;color:var(--accent);text-decoration:underline dotted;cursor:help;outline:none}
 .ipeek-pop{position:absolute;left:0;top:calc(100% + 6px);z-index:40;min-width:228px;max-width:min(372px,86vw);padding:10px;border-radius:10px;background:var(--panel);border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .16s ease,transform .16s ease,visibility .16s;color:var(--ink);text-decoration:none;cursor:default}
@@ -1180,7 +1203,6 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="t-inv" aria-selected="false" data-tab="inv" data-cat="town" hidden><img class="nic" data-pool="inv" alt="">Price check</button>
     <button role="tab" id="t-keep" aria-selected="false" data-tab="keep" data-cat="town" hidden><img class="nic" data-pool="keep" alt="">Keep or sell</button>
     <button role="tab" id="t-craft" aria-selected="false" data-tab="craft" data-cat="town" hidden><img class="nic" data-pool="craft" alt="">Crafting</button>
-    <button role="tab" id="t-cplan" aria-selected="false" data-tab="cplan" data-cat="town" hidden><img class="nic" data-pool="cplan" alt="">Craft planner</button>
     <button role="tab" id="t-cit" aria-selected="false" data-tab="cit" data-cat="town" hidden><img class="nic" data-pool="cit" alt="">Citizenship</button>
     <button role="tab" id="t-log" aria-selected="false" data-tab="log" data-cat="more" hidden><img class="nic" data-pool="log" alt="">Changelog</button>
     <button role="tab" id="t-credits" aria-selected="false" data-tab="credits" data-cat="more" hidden><img class="nic" data-pool="credits" alt="">Credits</button>
@@ -1233,8 +1255,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       <button class="hlink" data-go="snipe"><img class="hic" data-ic="i:4020100" alt=""><b>FM Sniper</b><span>Live Free Market listings priced under what the item usually sells for.</span></button>
       <button class="hlink" data-go="inv"><img class="hic" data-ic="i:4031041" alt=""><b>Price check</b><span>Paste inventory screenshots, get every item listed with a player-shop price.</span></button>
       <button class="hlink" data-go="keep"><img class="hic" data-ic="i:4000001" alt=""><b>Keep or sell</b><span>Which loot quests and recipes still want, and what's safe to sell.</span></button>
-      <button class="hlink" data-go="craft"><img class="hic" data-ic="i:4010100" alt=""><b>Crafting</b><span>Professions, the cheapest way to level them, recipes and materials.</span></button>
-      <button class="hlink" data-go="cplan"><img class="hic" data-ic="i:4010103" alt=""><b>Craft planner</b><span>Your craft levels and inventory screenshots: what to craft for profit, and what to farm for the rest.</span></button>
+      <button class="hlink" data-go="craft"><img class="hic" data-ic="i:4010100" alt=""><b>Crafting</b><span>Plan crafts from your inventory screenshots, recipes with profit, the cheapest way to level, masters and materials.</span></button>
       <button class="hlink" data-go="cit"><img class="hic" data-ic="i:2030004" alt=""><b>Citizenship</b><span>Town grades, citizenship quests and town shops.</span></button>
       </div>
     </div>
@@ -2328,55 +2349,6 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   <p class="note" id="snfoot"></p>
   <div class="sntoast" id="sntoast" role="status" hidden></div>
 </section>
-<section id="cplan" hidden>
-  <details class="howto">
-    <summary>How the Craft planner works</summary>
-    <ul>
-      <li>Set your craft level in each profession (0 = not learned; crafting caps at Lv <span id="cpcap"></span> at launch) and add your inventory: the same <b>Equip</b>, <b>Use</b>, <b>Etc</b> and <b>bank</b> screenshots the <a href="#" data-cpgo="inv">Price check</a> reads (drop them on either page, both see them), or type items in by hand.</li>
-      <li><b>Craft now</b>: recipes your levels allow and your materials cover, with how many times you could make each on its own. Parts you can craft yourself (ore into ingots, say) are made on the way. <b>Profit</b> = what the result sells for (median player-shop sale on <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a>, as of <span id="cpdate"></span>, or what an NPC pays if that's more) minus the craft fee (game files) minus what your materials would sell for. Switch <b>My materials cost</b> to "nothing" to count them as free.</li>
-      <li><b>Almost</b>: recipes where you have some of the materials. Each missing item shows the cheapest way to buy it (live listing, NPC shop or usual price) and the best maps to farm it with an <b>estimated</b> time.</li>
-      <li>Farming times are estimates. No drop rates exist in the game files or anywhere else, so every reported drop (meowdb player reports, or a monster the item is named after) is taken as <b>5% per kill</b> (this site's assumption). Where grind tracker players shared 100+ kills of a monster, their real drop count is used instead. Kills per hour come from Where to train's model: your class and level with the default build, killing alone.</li>
-      <li><b>From your inventory</b>: the best mix of crafts using only what you hold, best profit per craft first. Equips are valued as plain ones (median sale); good rolls sell for more, bad ones for less. Crafting success rates aren't in the files, so every craft is taken as a success.</li>
-    </ul>
-  </details>
-
-  <div class="card">
-    <div class="cardhead"><h3>Your crafting</h3><span id="cpst" class="pill"></span></div>
-    <div class="cpset" id="cplv"></div>
-    <div class="cpset">
-      <label class="lab">Class (for farming)<select id="cpcls"><option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option><option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
-      <label class="lab">Level<input id="cplvl" type="number" min="1" max="100" value="25"></label>
-      <label class="lab">My materials cost<select id="cpfree"><option value="0">what they'd sell for</option><option value="1">nothing (I farmed them)</option></select></label>
-    </div>
-    <label class="drop" id="cpdrop"><input type="file" id="cpfile" accept="image/*" multiple>
-      <span>Drop, pick or paste (Ctrl+V) inventory or bank screenshots. Read in your browser; nothing is uploaded.</span></label>
-    <div class="cpset cpadd">
-      <label class="lab">Add by hand<input id="cpitem" type="text" list="cpitems" placeholder="Item name" autocomplete="off"></label>
-      <label class="lab">Count<input id="cpn" type="number" min="1" max="9999" value="1"></label>
-      <button class="btn sm" id="cpaddb" type="button">Add</button>
-      <datalist id="cpitems"></datalist>
-    </div>
-    <p id="cpinv" class="sub"></p>
-  </div>
-
-  <div class="card">
-    <div class="cardhead"><h3>Craft now</h3><span id="cpnowc" class="pill p-good"></span></div>
-    <div class="tblwrap"><table class="mini"><thead><tr><th>Make</th><th>Uses (each)</th><th class="num">Times</th><th class="num">Profit each</th><th class="num">Total</th></tr></thead>
-      <tbody id="cpnow"></tbody></table></div>
-    <p class="sub" id="cpnowx"></p>
-  </div>
-
-  <div class="card">
-    <div class="cardhead"><h3>Almost</h3><span class="pill p-warn">times are estimates</span></div>
-    <div class="tblwrap"><table class="mini"><thead><tr><th>Make</th><th>Missing (once)</th><th>Farm it</th><th class="num">Profit if farmed</th><th class="num">If bought</th></tr></thead>
-      <tbody id="cpalm"></tbody></table></div>
-  </div>
-
-  <div class="card">
-    <div class="cardhead"><h3>From your inventory</h3></div>
-    <div id="cptot"></div>
-  </div>
-</section>
 
 <section id="inv" hidden>
   <details class="howto">
@@ -2465,6 +2437,13 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   </details>
 
   <div class="changelog">
+    <div class="card" data-t="2026-10-22T01:15:50Z"><div class="cardhead"><h3><span class="ver">v0.14.2</span> Oct 22, 2026 · Crafting, all in one place</h3></div>
+      <ul><li>The Craft planner is now the <b>Plan</b> tab of <b>Crafting</b>, next to <b>Recipes</b>, <b>Level up</b> and <b>Reference</b> (masters, craft levels, raw materials). Old Craft planner links open Plan.</li>
+        <li><b>Your craft levels</b> sit at the top, set once for every tab.</li>
+        <li><b>Recipes</b> show <b>Sells for</b> and <b>Profit</b> (sortable), with <b>Only my levels</b>, <b>Profitable only</b> and a "you can make N" badge from your inventory screenshots.</li>
+        <li>Click any recipe for a pop-up: prices, ingredients (what you have, worth, cheapest buy), the from-scratch parts, where to farm the materials, what it's used in, and every price source.</li>
+        <li><b>Level up</b> starts from your craft level and can value materials at market price.</li></ul>
+    </div>
     <div class="card" data-t="2026-10-22T01:20:00Z"><div class="cardhead"><h3><span class="ver">v0.14.1</span> Oct 22, 2026 · New content: Excavation Site, Remains, Stumpy</h3></div>
       <p>Game data updated to the OSMS Oct 21 release: <b>Excavation Site I-III</b>, <b>Remains &lt;Tomb&gt; I-IV</b>, <b>Remains &lt;Cliff&gt;</b>, <b>Camp 1-3</b>, Parched Land and The Murky Swamp II, with 9 new monsters (Ghost Stump, Wooden and Rocky Mask, Skeledog, Mummydog, Skeleton Soldier/Officer/Commander), the boss <b>Stumpy</b>, 37 items and 18 recipes. Where to train ranks the new maps, and Monsters has a <b>Primrose Hill PQ</b> type.</p>
       <p><b>World Map:</b> maps the in-game world map has no dot for (the new areas, the Kerning subway and a few others) are now listed with the nearest dot you can walk to, so map and monster search find them.</p></div>
@@ -2902,88 +2881,151 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
       <div>
         <h4>Getting started</h4>
         <ul>
-          <li>Six professions, each taught by a master NPC (cards below). From character level 10, finish the master's apprentice quest to learn it at craft Lv 1.</li>
+          <li>Six professions, each taught by a master NPC (<b>Reference</b> tab). From character level 10, finish the master's apprentice quest to learn it at craft Lv 1.</li>
           <li>Weaponcrafting's apprentice quest needs Smithing's apprentice quest done first, plus a Bronze and an Iron Ingot (Smithing).</li>
-          <li>Professions feed each other: arrows need Smithing ingots, the Red Chair needs Tailoring cloth and Weaponcrafting screws. The "From scratch" column lists every part.</li>
+          <li>Professions feed each other: arrows need Smithing ingots, the Red Chair needs Tailoring cloth and Weaponcrafting screws. Click any recipe for every part.</li>
+          <li>Set <b>Your craft levels</b> once: Plan, Recipes ("Only my levels") and Level up all use them.</li>
         </ul>
       </div>
       <div>
-        <h4>Leveling a profession</h4>
+        <h4>Leveling and profit</h4>
         <ul>
-          <li>Every craft costs mesos and gives craft EXP (columns below). Craft levels go 1 to 8 (the launch client's cap; the game files still list some Lv 9-10 recipes, hidden here).</li>
-          <li>Each craft level also needs a character level: 5 × the craft level (Lv 2 at 10, Lv 8 at 40).</li>
-          <li><b>Kits</b> (weekly "in Need of Help" quests, craft Lv 2+): +10% craft EXP for 15 min.</li>
-          <li><b>Catalysts</b> (craft Lv 5 quests): use while crafting for a chance to change a weapon's or armor's bonus stats, or to turn a Lesser scroll into an Intermediate, Greater or Chaos one. The odds aren't in the game files.</li>
-          <li>The six weekly help quests share one pool: 1 is offered per week.</li>
+          <li>Every craft costs a fee and gives craft EXP. Craft levels go 1 to <span class="crcap"></span> (the launch client's cap; the game files still list some Lv 9-10 recipes, hidden here). Each craft level also needs a character level: 5 × the craft level (Lv 2 at 10, Lv 8 at 40).</li>
+          <li><b>Kits</b> (weekly "in Need of Help" quests, craft Lv 2+): +10% craft EXP for 15 min. <b>Catalysts</b> (craft Lv 5 quests): a chance to change a weapon's or armor's bonus stats, or to upgrade a Lesser scroll; the odds aren't in the game files.</li>
+          <li><b>Profit</b> = what the result sells for (the site's usual price: meso.watch median sale, then classicmarket.kr, then meowdb; or what an NPC pays if that's more) minus the fee minus what the ingredients would sell for. A crafted part with no price counts at its own from-scratch cost. Equips are valued as plain ones.</li>
+          <li><b>Plan</b>: add your inventory (the same Equip, Use, Etc and bank screenshots the <a href="#" data-cpgo="inv">Price check</a> reads, or typed in) to see what to craft now, what you're close to, and the best mix.</li>
         </ul>
       </div>
       <div>
         <h4>Where the numbers come from</h4>
         <ul>
-          <li><b>Game files (launch client, OSMS export Oct 17):</b> recipes, craft levels, mesos, craft EXP, quests, item stats.</li>
-          <li><b>OSMS Data Explorer crafting tab:</b> craft EXP per level and the character-level gate (launch client: capped at Lv 8, Lv 1-8 unchanged from COT2).</li>
-          <li><b>meowdb shop list:</b> dye and helmet prices.</li>
-          <li>Not in the files: drop rates, success rates, and where most ores and Fragment of Magic drop. A "Monster" source is meowdb's grind-maps guide (Leather, Stiff Feather, Animal Fur Bundle, Dragon Skin, Diamond Ore) or a guess from the item's name or description.</li>
+          <li><b>Game files (launch client, OSMS export Oct 17):</b> recipes, craft levels, fees, craft EXP, quests, item stats, NPC prices.</li>
+          <li><b>OSMS Data Explorer crafting tab:</b> craft EXP per level and the character-level gate (capped at Lv 8; Lv 1-8 unchanged from COT2).</li>
+          <li><b>Prices:</b> <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> (as of <span id="cpdate"></span>), classicmarket.kr, meowdb; meowdb shop list for NPC shops.</li>
+          <li><b>Estimates:</b> no drop or success rates exist in the files. Farming times take every reported drop as 5% per kill (this site's assumption) unless grind tracker players shared 100+ kills of that monster; kills per hour use Where to train's model with the default build, alone. Every craft is taken as a success.</li>
         </ul>
       </div>
     </div>
   </details>
 
-  <details class="sec">
-    <summary><h2>Masters and profession quests</h2></summary>
-    <p class="note">Hover names for the quest, NPC or item. Quest items marked with a profession are crafted.</p>
-    <div class="grid2" id="crmasters"></div>
-  </details>
+  <div class="card crme">
+    <div class="cardhead"><h3>Your craft levels</h3><span class="sub">saved in this browser · 0 = not learned</span></div>
+    <div class="cpset" id="cplv"></div>
+  </div>
 
-  <details class="sec" open>
-    <summary><h2>Craft levels</h2></summary>
-    <p class="note">Same table for every profession. Lv 1 comes from the apprentice quest.</p>
-    <div class="tblwrap"><table class="mini" id="crlevels"></table></div><div class="tblwrap crlvp"><table class="mini nostk" id="crlevelsp"></table></div>
-  </details>
+  <div class="seg crmode" id="crmode" role="tablist" aria-label="Crafting">
+    <button role="tab" type="button" data-m="plan" aria-selected="false" aria-controls="crp-plan">Plan</button>
+    <button role="tab" type="button" data-m="rec" aria-selected="false" aria-controls="crp-rec">Recipes</button>
+    <button role="tab" type="button" data-m="lvl" aria-selected="false" aria-controls="crp-lvl">Level up</button>
+    <button role="tab" type="button" data-m="ref" aria-selected="false" aria-controls="crp-ref">Reference</button>
+  </div>
 
-  <details class="sec" open>
-    <summary><h2>Cheapest way to level a profession</h2></summary>
-    <p class="note">For each craft level, the recipe with the lowest cost per craft EXP: its fee plus the fees of parts you make on the way, plus raw materials at what an NPC pays for them (what you give up by not selling them; an estimate). Materials with no NPC price count as free and are flagged. Crafts needed = craft EXP for that level ÷ the recipe's EXP. Whether low recipes keep giving full EXP at higher craft levels isn't in the game files.</p>
-    <div class="controls" style="margin-top:12px"><label>Profession<select id="crlvdisc"></select></label><span class="pill p-hot" id="crlvtot" style="align-self:center"></span></div>
-    <div class="tblwrap"><table>
-      <thead><tr><th class="num">Craft Lv</th><th>Craft this</th><th class="num">Crafts</th><th class="num">Mesos</th><th>Materials (from scratch)</th></tr></thead>
-      <tbody id="crlvrows"></tbody>
-    </table></div>
-  </details>
-
-  <details class="sec" id="crrecipes" open>
-    <summary><h2>Recipes</h2></summary>
-    <p class="note">"From scratch" breaks crafted parts down to raw materials and adds their mesos. Parts with several recipes use the lowest-level one.</p>
-    <div class="seg small" role="radiogroup" aria-label="Profession" id="crdisc" style="margin-top:12px"></div>
-    <div class="controls" style="margin-top:12px">
-      <label>Type<select id="crtype"></select></label>
-      <label>Equipment for<select id="crcls"><option value="">Any class</option><option>Warrior</option><option>Magician</option><option>Bowman</option><option>Thief</option></select></label>
-      <label>Up to craft Lv<input id="crmax" type="number" min="1" max="8" value="8"></label>
-      <label>Search<input id="crsearch" type="search" placeholder="item or material"></label>
-      <span class="pill p-hot" id="crcount" style="align-self:center"></span>
+  <div class="crpanel" id="crp-plan" role="tabpanel" hidden>
+    <div class="card">
+      <div class="cardhead"><h3>Your inventory</h3><span id="cpst" class="pill"></span></div>
+      <div class="cpset">
+        <label class="lab">Class (for farming)<select id="cpcls"><option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option><option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
+        <label class="lab">Level<input id="cplvl" type="number" min="1" max="100" value="25"></label>
+        <label class="lab">My materials cost<select id="cpfree"><option value="0">what they'd sell for</option><option value="1">nothing (I farmed them)</option></select></label>
+      </div>
+      <label class="drop" id="cpdrop"><input type="file" id="cpfile" accept="image/*" multiple>
+        <span>Drop, pick or paste (Ctrl+V) inventory or bank screenshots. Read in your browser; nothing is uploaded.</span></label>
+      <div class="cpset cpadd">
+        <label class="lab">Add by hand<input id="cpitem" type="text" list="cpitems" placeholder="Item name" autocomplete="off"></label>
+        <label class="lab">Count<input id="cpn" type="number" min="1" max="9999" value="1"></label>
+        <button class="btn sm" id="cpaddb" type="button">Add</button>
+        <datalist id="cpitems"></datalist>
+      </div>
+      <p id="cpinv" class="sub"></p>
     </div>
-    <div class="tblwrap"><table>
-      <thead id="crhead"><tr><th class="num" data-k="lvl"><button>Craft Lv</button></th><th data-k="name"><button>Makes</button></th><th>Ingredients</th><th class="num" data-k="mesos"><button>Mesos</button></th><th class="num" data-k="exp"><button>Craft EXP</button></th><th>From scratch</th></tr></thead>
-      <tbody id="crrows"></tbody>
-    </table></div>
-  </details>
 
-  <details class="sec" open>
-    <summary><h2>Raw materials</h2></summary>
-    <p class="note">Everything recipes use that no recipe makes. Click a name to see the recipes that use it. "Sells for" is the NPC sell price.</p>
-    <div class="tblwrap"><table>
-      <thead><tr><th>Material</th><th class="num">Recipes</th><th>Used by</th><th>Where to get</th><th class="num">Sells for</th></tr></thead>
-      <tbody id="crmats"></tbody>
-    </table></div>
-  </details>
+    <div class="card">
+      <div class="cardhead"><h3>Best mix from your inventory</h3></div>
+      <div id="cptot"></div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><h3>Craft now</h3><span id="cpnowc" class="pill p-good"></span></div>
+      <div class="tblwrap"><table class="mini"><thead><tr><th>Make</th><th>Uses (each)</th><th class="num">Times</th><th class="num">Profit each</th><th class="num">Total</th></tr></thead>
+        <tbody id="cpnow"></tbody></table></div>
+      <p class="sub" id="cpnowx"></p>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><h3>Almost</h3><span class="pill p-warn">times are estimates</span></div>
+      <div class="tblwrap"><table class="mini"><thead><tr><th>Make</th><th>Missing (once)</th><th>Farm it</th><th class="num">Profit if farmed</th><th class="num">If bought</th></tr></thead>
+        <tbody id="cpalm"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="crpanel" id="crp-rec" role="tabpanel" hidden>
+    <div class="card" id="crrecipes">
+      <div class="cardhead"><h3>Recipes</h3><span class="pill p-hot" id="crcount"></span></div>
+      <div class="seg small" role="radiogroup" aria-label="Profession" id="crdisc"></div>
+      <div class="controls" style="margin-top:12px">
+        <label>Type<select id="crtype"></select></label>
+        <label>Equipment for<select id="crcls"><option value="">Any class</option><option>Warrior</option><option>Magician</option><option>Bowman</option><option>Thief</option></select></label>
+        <label>Up to craft Lv<input id="crmax" type="number" min="1" max="8" value="8"></label>
+        <label>Search<input id="crsearch" type="search" placeholder="item or material"></label>
+        <label class="chk"><input type="checkbox" id="crmine"> Only my levels</label>
+        <label class="chk"><input type="checkbox" id="crprof"> Profitable only</label>
+      </div>
+      <p class="note">Click a recipe for its parts, every price, where to farm the materials and what it's used in. Profit is per craft, ingredients valued at what they'd sell for.</p>
+      <div class="tblwrap"><table>
+        <thead id="crhead"><tr><th class="num" data-k="lvl"><button>Craft Lv</button></th><th data-k="name"><button>Makes</button></th><th>Ingredients</th><th class="num" data-k="mesos"><button>Fee</button></th><th class="num" data-k="exp"><button>Craft EXP</button></th><th class="num" data-k="sell"><button>Sells for</button></th><th class="num" data-k="profit"><button>Profit</button></th></tr></thead>
+        <tbody id="crrows"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="crpanel" id="crp-lvl" role="tabpanel" hidden>
+    <div class="card">
+      <div class="cardhead"><h3>Cheapest way to level a profession</h3><span class="pill p-hot" id="crlvtot"></span></div>
+      <div class="controls">
+        <label>Profession<select id="crlvdisc"></select></label>
+        <label>Value materials at<select id="crlvval"><option value="npc">what an NPC pays</option><option value="mkt">what they'd sell for (market)</option></select></label>
+      </div>
+      <p class="note">For each craft level from yours, the recipe with the lowest cost per craft EXP: its fee, the fees of parts you make on the way, and the raw materials at the price you pick (what you give up by not selling them; an estimate). Materials with no price count as free and are flagged. Crafts needed = craft EXP for that level ÷ the recipe's EXP. Whether low recipes keep giving full EXP at higher craft levels isn't in the game files.</p>
+      <div class="tblwrap"><table>
+        <thead><tr><th class="num">Craft Lv</th><th>Craft this</th><th class="num">Crafts</th><th class="num">Mesos</th><th>Materials (from scratch)</th></tr></thead>
+        <tbody id="crlvrows"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="crpanel" id="crp-ref" role="tabpanel" hidden>
+    <div class="card">
+      <div class="cardhead"><h3>Craft levels</h3></div>
+      <p class="note">Same table for every profession. Lv 1 comes from the apprentice quest.</p>
+      <div class="tblwrap"><table class="mini" id="crlevels"></table></div><div class="tblwrap crlvp"><table class="mini nostk" id="crlevelsp"></table></div>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h3>Masters and profession quests</h3></div>
+      <p class="note">Hover names for the quest, NPC or item. Quest items marked with a profession are crafted.</p>
+      <div class="grid2" id="crmasters"></div>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h3>Raw materials</h3></div>
+      <p class="note">Everything recipes use that no recipe makes. Click a name to see the recipes that use it. "Sells for" is the NPC sell price.</p>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Material</th><th class="num">Recipes</th><th>Used by</th><th>Where to get</th><th class="num">Sells for</th></tr></thead>
+        <tbody id="crmats"></tbody>
+      </table></div>
+    </div>
+  </div>
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-22T01:13:52Z" data-ver="0.14.1">Site version: v0.14.1 · built Oct 22, 2026 · 01:13 UTC</p>
+  <p class="sitever" data-built="2026-10-22T01:15:51Z" data-ver="0.14.2">Site version: v0.14.2 · built Oct 22, 2026 · 01:15 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
 </div>
+
+<div id="crpop" class="srch setm" hidden><div class="srchbox setbox crbox" role="dialog" aria-modal="true" aria-labelledby="crpoph" tabindex="-1">
+  <div class="sethead"><h2 id="crpoph"></h2><button class="btn setx" id="crpopx" type="button" aria-label="Close recipe" title="Close (Esc)">✕</button></div>
+  <div id="crpopb"></div>
+</div></div>
 
 <div id="thpop" class="srch setm" hidden><div class="srchbox setbox" role="dialog" aria-modal="true" aria-labelledby="sethd" tabindex="-1">
   <div class="sethead"><h2 id="sethd">Settings</h2><button class="btn setx" id="thclose" type="button" aria-label="Close settings" title="Close (Esc)">✕</button>
@@ -3193,6 +3235,8 @@ $("header h1").addEventListener("click", goHome);
 // read the last page before goHome() overwrites it with "home" (that made every visit land on Home)
 let SAVEDTAB = null; try { SAVEDTAB = localStorage.getItem("tab") } catch(e) {}
 goHome();
+// the Craft planner became Crafting's Plan tab (10-21): old links and saved tabs land there
+if (HASH.g === "cplan" || SAVEDTAB === "cplan"){ HASH.g = SAVEDTAB = "craft"; try { localStorage.setItem("crtab", "plan") } catch(e) {} }
 try { const t = HASH.g && document.querySelector(`[data-tab="${HASH.g}"]`) ? HASH.g : HASH.p ? "path" : HASH.b ? "plan" : HASH.m ? "mobs" : HASH.i ? "items" : HASH.s ? "skills" : HASH.n ? "navi" : HASH.t ? "maps" : HASH.q ? "quests" : HASH.f ? "snipe" : HASH.L && /^(items|mobs|skills|quests|keep|wmap|maps|snipe)$/.test(HASH.L.p) ? HASH.L.p : SAVEDTAB; if (t && t !== "home") document.querySelector(`[data-tab="${t}"]`)?.click() } catch(e) {}
 
 // Credits: when each data source was last read (build.py fills SRCDATES from fetch_osms.sh and data/sources/*.json)
@@ -4507,6 +4551,23 @@ const QBYID = Object.fromEntries(D.quests.map(r => [r.id, r]));
 const npcAt = name => { const l = (D.npcs[D.npcid[name]] || [])[1] || []; return l.length ? mapLink(l[0][0], D.mapnames[l[0][0]] || D.maps[l[0][0]]?.[0] || "") : "" };
 const madeBy = id => { const p = pick(id); return p ? `${DISC[p.d]} Lv ${p.lvl}` : "" };
 const ingChip = ([id, n]) => `<span class="ing">${itemIcon(id, 1, true)}<span>${n > 1 ? n + "× " : ""}${esc(D.items[id]?.n || id)}${madeBy(id) ? ` <span class="sub">(${madeBy(id)})</span>` : ""}</span></span>`;
+// Plan (58-craftplan.js) owns your craft levels, inventory and the price helpers; set up after this file, so read it lazily
+const CP = () => window.CPLAN, lvOf = d => CP()?.S.lv[d] || 0;
+const recBtn = r => `<button class="linkbtn crname" type="button" data-r="${r.i}">${esc(r.it.n)}</button>`;
+const plus = v => `<b class="${v > 0 ? "up" : "down"}">${v > 0 ? "+" : ""}${fmt(Math.round(v))}</b>`;
+const roughPill = id => CP().rough(id) ? ` <span class="pill p-warn" title="${esc(CP().roughWhy(id))}">rough</span>` : "";
+const priceSrc = id => { const f = pwPrice(id); return f && !f.per && f.v >= (D.items[id]?.p || 0) ? f.src : "NPC price" };
+// an ingredient's cost: what it would sell for; a crafted part with no price costs its own fee + ingredients (per item made)
+let ICOST = {}, ECON = {};
+function icost(id, seen = new Set()){
+  if (id in ICOST) return ICOST[id];
+  const w = CP().worth(id); if (w > 0) return ICOST[id] = w;
+  const p = pick(id); if (!p || seen.has(id)) return ICOST[id] = 0;
+  seen.add(id); return ICOST[id] = (p.mesos + p.ing.reduce((a, [x, n]) => a + icost(x, seen) * n, 0)) / p.n;
+}
+// per craft: sell = result's worth × batch, mats = ingredient costs, profit = sell - fee - mats (null: the result has no price)
+const econ = r => ECON[r.i] ||= (() => { const sell = CP().worth(r.id) * r.n, mats = r.ing.reduce((a, [x, n]) => a + icost(x) * n, 0);
+  return {sell, mats, profit: sell ? sell - r.mesos - mats : null, free: r.ing.filter(([x]) => !icost(x)).map(([x]) => x)} })();
 const TOK = {Warrior: "Warrior", Magician: "Mage", Bowman: "Bowman", Thief: "Thief"};
 const forCls = (it, cls) => !cls || it.job === "All" || String(it.job || "").split("/").includes(TOK[cls]);
 const eqLine = it => it.c !== "Equipment" ? "" : [it.st?.reqLevel ? `Lv ${it.st.reqLevel}` : "", it.job && it.job !== "All" ? it.job : "any class", it.wt || it.s].filter(Boolean).join(" · ");
@@ -4544,68 +4605,76 @@ $("#crlevels").innerHTML = `<thead><tr><th></th>${CRAFT_LV.map((_, i) => `<th cl
 $("#crlevelsp").innerHTML = `<thead><tr><th class="num">Lv</th><th class="num">Char. lv</th><th class="num">EXP in level</th><th class="num">Total to reach</th><th class="num">New recipes</th></tr></thead><tbody>
   ${CRAFT_LV.map(([e, c], i) => `<tr><td class="num">${i + 1}</td><td class="num">${c ?? "quest"}</td><td class="num">${fmt(e)}</td><td class="num">${fmt(cum[i])}</td><td class="num">${R.filter(r => r.lvl === i + 1).length}</td></tr>`).join("")}</tbody>`;
 
-/* cheapest leveling: per craft level, the recipe with the lowest (fees + raw materials at NPC price) per craft EXP */
+/* cheapest leveling: per craft level from yours, the recipe with the lowest (fees + raw materials) per craft EXP. Raw materials
+   at what an NPC pays (game files) or what they'd sell for (Plan's worth: usual price or NPC, whichever is more) */
 $("#crlvdisc").innerHTML = DISC.map((n, i) => `<option value="${i}">${esc(n)}</option>`).join("");
-try { $("#crlvdisc").value = localStorage.getItem("craftlv") || "0" } catch(e) {}
+try { $("#crlvdisc").value = localStorage.getItem("craftlv") || "0"; if ($("#crlvdisc").selectedIndex < 0) $("#crlvdisc").value = "0" } catch(e) {}
+try { $("#crlvval").value = localStorage.getItem("craftlvv") === "mkt" ? "mkt" : "npc" } catch(e) {}
 function renderLeveling(){
-  const di = +$("#crlvdisc").value; try { localStorage.setItem("craftlv", String(di)) } catch(e) {}
+  const di = +$("#crlvdisc").value, mkt = $("#crlvval").value === "mkt", price = x => mkt ? CP().worth(x) : D.items[x]?.p || 0;
+  try { localStorage.setItem("craftlv", String(di)); localStorage.setItem("craftlvv", mkt ? "mkt" : "npc") } catch(e) {}
+  const from = Math.max(1, lvOf(di));
   let total = 0;
   $("#crlvrows").innerHTML = CRAFT_LV.map(([need, charLv], i) => {
-    const L = i + 1;
+    const L = i + 1; if (L < from) return "";
     const opts = R.filter(r => r.d === di && r.lvl <= L && r.exp > 0).map(r => {
-      const s = scratch(r), unpriced = [...s.need.keys()].filter(x => !D.items[x]?.p);
-      const cost = s.mesos + [...s.need].reduce((a, [x, n]) => a + (D.items[x]?.p || 0) * n, 0);
+      const s = scratch(r), unpriced = [...s.need.keys()].filter(x => !price(x));
+      const cost = s.mesos + [...s.need].reduce((a, [x, n]) => a + price(x) * n, 0);
       return {r, s, cost, per: cost / r.exp, unpriced};
     }).sort((a, b) => a.per - b.per);
     const b = opts[0]; if (!b) return `<tr><td class="num">${L}</td><td colspan="4" class="sub">No recipe at this level.</td></tr>`;
     const k = Math.ceil(need / b.r.exp); total += k * b.cost;
     return `<tr><td class="num">${L}<div class="sub">char ${charLv ?? "quest"}</div></td>
-      <td><span class="ing">${itemIcon(b.r.id, 1, true)}<span><b>${esc(b.r.it.n)}</b>${b.r.n > 1 ? ` ×${b.r.n}` : ""}<div class="sub">${fmt(b.r.exp)} EXP · ${fmt(b.cost)} mesos each${b.unpriced.length ? ` · <span class="pill p-warn">${b.unpriced.length} unpriced</span>` : ""}</div></span></span></td>
-      <td class="num">${fmt(k)}</td><td class="num">${fmt(k * b.cost)}</td>
+      <td><span class="ing">${itemIcon(b.r.id, 1, true)}<span>${recBtn(b.r)}${b.r.n > 1 ? ` ×${b.r.n}` : ""}<div class="sub">${fmt(b.r.exp)} EXP · ${fmt(Math.round(b.cost))} mesos each${b.unpriced.length ? ` · <span class="pill p-warn">${b.unpriced.length} unpriced</span>` : ""}</div></span></span></td>
+      <td class="num">${fmt(k)}</td><td class="num">${fmt(Math.round(k * b.cost))}</td>
       <td><div class="ings">${[...b.s.need].map(([x, n]) => itemIcon(x, n * k, true)).join("")}</div>${b.s.parts.length ? `<div class="sub">also craft ${b.s.parts.map(([p, m]) => `${fmt(m * k)}× ${esc(p.it.n)}`).join(", ")}</div>` : ""}</td></tr>`;
   }).join("");
-  $("#crlvtot").textContent = `≈ ${fmt(total)} mesos to finish craft Lv ${CRAFT_CAP} (the cap)`;
+  $("#crlvtot").textContent = `≈ ${fmt(Math.round(total))} mesos to finish craft Lv ${CRAFT_CAP} (the cap)${from > 1 ? ` from Lv ${from}` : ""}`;
 }
 $("#crlvdisc").addEventListener("change", renderLeveling);
-renderLeveling();
+$("#crlvval").addEventListener("change", renderLeveling);
 
 /* recipes */
-const S = {d: -1, type: "", cls: "", max: CRAFT_CAP, q: "", sort: "lvl", dir: 1};
+const S = {d: -1, type: "", cls: "", max: CRAFT_CAP, q: "", sort: "lvl", dir: 1, mine: false, prof: false};
 try { Object.assign(S, savedState("craft", S)) } catch(e) {}
 $("#crdisc").innerHTML = ["All", ...DISC].map((n, i) => `<button role="radio" aria-checked="false" data-d="${i - 1}">${esc(n)}</button>`).join("");
 $("#crtype").innerHTML = `<option value="">All</option>` + [...new Set(R.map(r => r.type))].sort().map(t => `<option>${esc(t)}</option>`).join("");
-const KEY = {lvl: r => r.lvl, name: r => r.it.n, mesos: r => r.mesos, exp: r => r.exp, req: r => r.it.st?.reqLevel || 0};
+const KEY = {lvl: r => r.lvl, name: r => r.it.n, mesos: r => r.mesos, exp: r => r.exp, req: r => r.it.st?.reqLevel || 0,
+  sell: r => econ(r).sell || -1, profit: r => econ(r).profit ?? -1e15};
 function renderRecipes(){
   try { localStorage.setItem("craft", JSON.stringify(S)) } catch(e) {}
+  ICOST = {}; ECON = {};
   document.querySelectorAll("#crdisc button").forEach(b => b.setAttribute("aria-checked", +b.dataset.d === S.d));
-  $("#crtype").value = S.type; $("#crcls").value = S.cls; $("#crmax").value = S.max; $("#crsearch").value = S.q;
-  const q = S.q.trim().toLowerCase();
-  const rows = R.filter(r => (S.d < 0 || r.d === S.d) && (!S.type || r.type === S.type) && r.lvl <= S.max &&
-      (!S.cls || (r.it.c === "Equipment" && forCls(r.it, S.cls))) &&
+  $("#crtype").value = S.type; $("#crcls").value = S.cls; $("#crmax").value = S.max; $("#crsearch").value = S.q; $("#crmine").checked = !!S.mine; $("#crprof").checked = !!S.prof;
+  const q = S.q.trim().toLowerCase(), inv = CP().inventory(), have = [...inv.values()].some(n => n > 0);
+  const rows = R.filter(r => (S.d < 0 || r.d === S.d) && (!S.type || r.type === S.type) && r.lvl <= S.max && (!S.mine || lvOf(r.d) >= r.lvl) &&
+      (!S.cls || (r.it.c === "Equipment" && forCls(r.it, S.cls))) && (!S.prof || econ(r).profit > 0) &&
       (!q || r.it.n.toLowerCase().includes(q) || r.ing.some(([x]) => (D.items[x]?.n || "").toLowerCase().includes(q))))
     .sort((a, b) => { const x = KEY[S.sort](a), y = KEY[S.sort](b);
       return (x < y ? -1 : x > y ? 1 : 0) * S.dir || a.lvl - b.lvl || a.d - b.d || a.i - b.i });
   document.querySelectorAll("#crhead th[data-k]").forEach(th => { const on = th.dataset.k === S.sort;
     th.setAttribute("aria-sort", on ? (S.dir > 0 ? "ascending" : "descending") : "none");
     th.querySelector("button").dataset.arrow = on ? (S.dir > 0 ? "▲" : "▼") : "" });
-  $("#crcount").textContent = `${rows.length} recipes`;
+  $("#crcount").textContent = `${rows.length} recipe${rows.length === 1 ? "" : "s"}`;
   lazyRows($("#crrows"), rows.map(r => {
-    const s = r.ing.some(([x]) => pick(x)) ? scratch(r) : null;
+    const e = econ(r), T = have && lvOf(r.d) >= r.lvl ? CP().maxTimes(CP().RECS[r.i], inv) : 0;
     return `<tr><td class="num">${r.lvl}</td>
-      <td><span class="ing">${itemIcon(r.id, 1)}<span><b>${esc(r.it.n)}</b>${r.n > 1 ? ` ×${r.n}` : ""}<div class="sub">${esc(DISC[r.d])} · ${esc(r.type)}${eqLine(r.it) ? " · " + esc(eqLine(r.it)) : ""}</div></span></span></td>
+      <td><span class="ing">${itemIcon(r.id, 1)}<span>${recBtn(r)}${r.n > 1 ? ` ×${r.n}` : ""}<div class="sub">${esc(DISC[r.d])} · ${esc(r.type)}${eqLine(r.it) ? " · " + esc(eqLine(r.it)) : ""}</div>${T ? `<span class="pill p-good" title="From your Plan inventory, parts made on the way">you can make ${fmt(T)}</span>` : ""}</span></span></td>
       <td><div class="ings">${r.ing.map(ingChip).join("")}</div></td>
       <td class="num">${fmt(r.mesos)}</td><td class="num">${fmt(r.exp)}</td>
-      <td>${s ? `<div class="ings">${[...s.need].map(([x, n]) => itemIcon(x, n, true)).join("")}</div>
-        <div class="sub">${fmt(s.mesos)} mesos in all · also craft ${s.parts.map(([p, k]) => `${k}× ${esc(p.it.n)} (${esc(DISC[p.d])} Lv ${p.lvl})`).join(", ")}</div>` : `<span class="sub">same</span>`}</td></tr>`;
-  }), `<tr><td colspan="6" class="sub">No recipes match.</td></tr>`);
+      <td class="num">${e.sell ? fmt(e.sell) + roughPill(r.id) : `<span class="sub">–</span>`}</td>
+      <td class="num">${e.profit != null ? plus(e.profit) : `<span class="sub">–</span>`}${e.free.length ? `<div class="sub" title="${esc(e.free.map(x => D.items[x]?.n || x).join(", "))}">${e.free.length} unpriced</div>` : ""}</td></tr>`;
+  }), `<tr><td colspan="7" class="sub">No recipes match.</td></tr>`);
 }
 document.querySelectorAll("#crdisc button").forEach(b => b.addEventListener("click", () => { S.d = +b.dataset.d; renderRecipes() }));
 $("#crtype").addEventListener("change", e => { S.type = e.target.value; renderRecipes() });
 $("#crcls").addEventListener("change", e => { S.cls = e.target.value; renderRecipes() });
 $("#crmax").addEventListener("change", e => { S.max = Math.min(CRAFT_CAP, Math.max(1, +e.target.value || CRAFT_CAP)); renderRecipes() });
 $("#crsearch").addEventListener("input", e => { S.q = e.target.value; renderRecipes() });
+$("#crmine").addEventListener("change", e => { S.mine = e.target.checked; renderRecipes() });
+$("#crprof").addEventListener("change", e => { S.prof = e.target.checked; renderRecipes() });
 document.querySelectorAll("#crhead th[data-k] button").forEach(b => b.addEventListener("click", () => {
-  const k = b.parentElement.dataset.k; S.dir = S.sort === k ? -S.dir : (k === "exp" || k === "mesos" ? -1 : 1); S.sort = k; renderRecipes();
+  const k = b.parentElement.dataset.k; S.dir = S.sort === k ? -S.dir : (["exp", "mesos", "sell", "profit"].includes(k) ? -1 : 1); S.sort = k; renderRecipes();
 }));
 
 /* raw materials: everything a recipe uses that no recipe makes */
@@ -4624,10 +4693,83 @@ const renderMats = () => { $("#crmats").innerHTML = Object.entries(USE).sort((a,
     <td class="sub">${where.join("<br>") || `<span class="na">not in the game files (no drop tables)</span>`}</td><td class="num">${fmt(it.p)}</td></tr>`;
 }).join("") };
 $("#crmats").addEventListener("click", e => { const b = e.target.closest(".crfind"); if (!b) return;
-  Object.assign(S, {d: -1, type: "", cls: "", max: CRAFT_CAP, q: b.dataset.q}); renderRecipes(); $("#crrecipes").open = true; $("#crrecipes").scrollIntoView({behavior: "smooth"}) });
-// the two big tables (~15k elements) are built on first open, not on page load
-let built = false; const build = () => { if (built) return; built = true; renderMats(); renderRecipes() };
-$("#t-craft").addEventListener("click", build); if (!$("#craft").hidden) build();
+  Object.assign(S, {d: -1, type: "", cls: "", max: CRAFT_CAP, q: b.dataset.q, mine: false, prof: false}); mode("rec"); renderRecipes(); $("#crmode").scrollIntoView({behavior: "smooth"}) });
+
+/* recipe pop-up: parts, prices, profit, farming, what it's used in (inset modal like Settings) */
+const USEDIN = {};
+for (const r of R) for (const [x] of r.ing) (USEDIN[x] = USEDIN[x] || []).push(r);
+const pop = $("#crpop");
+let popFrom = null;
+const tile = (k, v, sub) => `<div class="pxt"><span class="pxk">${k}</span><b class="pxv">${v}</b><span class="pxs">${sub}</span></div>`;
+function openRec(i){
+  const r = R[i]; if (!r) return;
+  ICOST = {}; ECON = {};
+  const cp = CP(), e = econ(r), s = scratch(r), inv = cp.inventory(), mine = lvOf(r.d), T = mine >= r.lvl ? cp.maxTimes(cp.RECS[r.i], inv) : 0;
+  const gate = CRAFT_LV[r.lvl - 1]?.[1];
+  $("#crpoph").innerHTML = `<span class="ing">${itemIcon(r.id, r.n)}<span>${esc(r.it.n)}${r.n > 1 ? ` <span class="sub">×${r.n}</span>` : ""}</span></span>`;
+  const ingRow = ([x, n]) => { const b = cp.buyEach(x), c = icost(x), h = inv.get(x) || 0;
+    return `<tr><td><span class="ing">${itemIcon(x, 1, true)}<span>${esc(D.items[x]?.n || x)}${madeBy(x) ? `<div class="sub">${pick(x) ? `<button class="linkbtn" data-r="${pick(x).i}">${madeBy(x)}</button>` : ""}</div>` : ""}</span></span></td>
+      <td class="num">${fmt(n)}</td><td class="num">${h ? `<b class="${h >= n ? "up" : ""}">${fmt(h)}</b>` : `<span class="sub">0</span>`}</td>
+      <td class="num">${c ? fmt(Math.round(c)) + roughPill(x) : `<span class="sub">no price</span>`}${!cp.worth(x) && c ? `<div class="sub">from scratch</div>` : ""}</td>
+      <td class="num">${isFinite(b) ? `${fmt(b)}<div class="sub">${cp.buyHow(x)}</div>` : `<span class="sub">–</span>`}</td></tr>` };
+  const farm = [...s.need.keys()].map(x => [x, cp.farm(x)]).filter(([, f]) => f.length);
+  const used = (USEDIN[r.id] || []).slice().sort((a, b) => a.lvl - b.lvl || a.d - b.d);
+  $("#crpopb").innerHTML = `<p class="sub crpsub">${esc(DISC[r.d])} Lv ${r.lvl}${gate ? ` (character Lv ${gate})` : ""} · ${esc(r.type)}${eqLine(r.it) ? " · " + esc(eqLine(r.it)) : ""} ·
+      ${mine >= r.lvl ? `<span class="pill p-good">your level allows it</span>` : mine ? `<span class="pill p-warn">you're ${esc(DISC[r.d])} Lv ${mine}</span>` : `<span class="pill">set your ${esc(DISC[r.d])} level on the Crafting page</span>`}${T ? ` <span class="pill p-good">you can make ${fmt(T)}</span>` : ""}</p>
+    <div class="setcard crpx"><div class="pxtiles">
+      ${tile("Sells for", e.sell ? fmt(e.sell) : "–", e.sell ? `${r.n > 1 ? `${r.n} × ${fmt(cp.worth(r.id))} · ` : ""}${esc(priceSrc(r.id))}${roughPill(r.id)}` : "no sales seen, no NPC price")}
+      ${tile("Fee", fmt(r.mesos), "game files")}
+      ${tile("Ingredients", fmt(Math.round(e.mats)), e.free.length ? `<span class="pill p-warn">${e.free.length} unpriced</span> counted as free` : "what they'd sell for")}
+      ${tile("Profit", e.profit != null ? plus(e.profit) : "–", e.profit != null ? "per craft · an estimate" : "the result has no price")}
+      ${tile("Craft EXP", fmt(r.exp), r.exp ? `${fmt(Math.ceil((CRAFT_LV[r.lvl - 1]?.[0] || 0) / r.exp))} crafts fill Lv ${r.lvl}` : "")}
+    </div></div>
+    <div class="setcard"><h3>Ingredients <span class="sub">per craft</span></h3>
+      <div class="tblwrap"><table class="mini"><thead><tr><th>Item</th><th class="num">Need</th><th class="num">You have</th><th class="num">Worth each</th><th class="num">Cheapest buy</th></tr></thead><tbody>${r.ing.map(ingRow).join("")}</tbody></table></div></div>
+    ${s.parts.length ? `<div class="setcard"><h3>From scratch</h3><div class="ings">${[...s.need].map(([x, n]) => `<span class="ing">${itemIcon(x, n, true)}<span>${n > 1 ? fmt(n) + "× " : ""}${esc(D.items[x]?.n || x)}</span></span>`).join("")}</div>
+      <p class="sub">Craft first: ${s.parts.map(([p, k]) => `<button class="linkbtn" data-r="${p.i}">${fmt(k * p.n)}× ${esc(p.it.n)}</button> (${esc(DISC[p.d])} Lv ${p.lvl})`).join(", ")} · ${fmt(s.mesos)} mesos in fees in all.</p></div>` : ""}
+    ${farm.length ? `<div class="setcard"><h3>Where to farm the raw materials <span class="pill p-warn">estimates</span></h3>
+      <div class="tblwrap"><table class="mini"><thead><tr><th>Material</th><th>Map</th><th>Monster</th><th class="num">Per hour</th></tr></thead><tbody>${farm.flatMap(([x, f]) => f.map((m, k) => `<tr>${k ? "" : `<td rowspan="${f.length}"><span class="ing">${itemIcon(x, 1, true)}<span>${esc(D.items[x]?.n || x)}</span></span></td>`}
+        <td>${mapLink(m.map, m.name)}</td><td class="sub">${m.who.map(w => esc(D.mobs[w]?.[0] || "")).join(", ")}</td><td class="num">~${fmt(Math.max(1, Math.round(m.hr)))}${m.real ? ` <span class="pill p-good" title="Drop count from grind tracker players' shared runs">players' drops</span>` : ""}</td></tr>`)).join("")}</tbody></table></div>
+      <p class="sub">As a ${esc(cp.S.cls)} Lv ${fmt(cp.S.L)} (Plan tab), killing alone, 5% per kill unless players shared 100+ kills.</p></div>` : ""}
+    ${used.length ? `<div class="setcard"><h3>Used in <span class="sub">${used.length} recipe${used.length === 1 ? "" : "s"}</span></h3><div class="ings">${used.map(u => `<span class="ing">${itemIcon(u.id, 1, true)}<button class="linkbtn" data-r="${u.i}">${esc(u.it.n)}</button> <span class="sub">${esc(DISC[u.d])} Lv ${u.lvl}</span></span>`).join("")}</div></div>` : ""}
+    <details class="setcard crpx crall"><summary><h3>Every price for ${esc(r.it.n)}</h3></summary>${priceBox(r.id)}</details>`;
+  if (pop.hidden){ popFrom = document.activeElement; pop.hidden = false }
+  pop.querySelector(".setbox").scrollTop = 0; $("#crpopx").focus({preventScroll: true});
+}
+const shut = () => { if (pop.hidden) return; pop.hidden = true; if (popFrom?.isConnected) popFrom.focus({preventScroll: true}) };
+$("#crpopx").addEventListener("click", shut);
+pop.addEventListener("click", e => { if (e.target === pop) return shut();
+  const m = e.target.closest("[data-pxall]"); if (m){ m.previousElementSibling.classList.add("open"); m.remove(); return }
+  const b = e.target.closest("button[data-r]"); if (b) openRec(+b.dataset.r);
+  else if (e.target.closest("a")) shut() });   // map / item links leave the page
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !pop.hidden) shut() });
+$("#craft").addEventListener("click", e => { const b = e.target.closest("button[data-r]"); if (b){ e.preventDefault(); openRec(+b.dataset.r) } });
+
+/* tabs: Plan / Recipes / Level up / Reference; tables are built on first open (the recipe and material tables are ~15k elements) */
+const MODES = ["plan", "rec", "lvl", "ref"], DIRTY = new Set(MODES);
+let M = (() => { try { return localStorage.getItem("crtab") } catch(e) { return null } })();
+function mode(m){
+  if (!MODES.includes(m)) m = CP().S.lv.some(v => v > 0) ? "plan" : "rec";
+  M = m; try { localStorage.setItem("crtab", m) } catch(e) {}
+  document.querySelectorAll("#crmode [data-m]").forEach(b => { b.setAttribute("aria-selected", b.dataset.m === m); b.tabIndex = b.dataset.m === m ? 0 : -1 });
+  for (const x of MODES) $("#crp-" + x).hidden = x !== m;
+  show();
+}
+function show(){
+  if ($("#craft").hidden || !DIRTY.has(M)) return;
+  DIRTY.delete(M);
+  if (M === "plan") CP().draw(); else if (M === "rec") renderRecipes(); else if (M === "lvl") renderLeveling(); else renderMats();
+}
+$("#crmode").addEventListener("click", e => { const b = e.target.closest("[data-m]"); if (b) mode(b.dataset.m) });
+$("#crmode").addEventListener("keydown", e => { const d = {ArrowRight: 1, ArrowLeft: -1}[e.key]; if (!d) return;
+  e.preventDefault(); mode(MODES[(MODES.indexOf(M) + d + MODES.length) % MODES.length]); $(`#crmode [data-m="${M}"]`).focus() });
+// craft levels or inventory changed: redraw what's open, the rest on its next open (Reference doesn't use them)
+const stale = () => { for (const x of ["plan", "rec", "lvl"]) DIRTY.add(x); show() };
+document.addEventListener("craftlv", stale);
+document.addEventListener("invupdate", stale);
+$("#t-craft").addEventListener("click", () => setTimeout(show));
+setTimeout(() => mode(M));   // after 58-craftplan.js has set up CPLAN
+window.CRAFT = {mode, openRec, econ: r => (ICOST = {}, ECON = {}, econ(r)), R};   // tests
 })();
 
 /* ---------------- keep or sell ---------------- */
@@ -8334,13 +8476,14 @@ if (!navigator.mediaDevices?.getDisplayMedia){ $s("ssgo").disabled = true; $s("s
 return {FONT, hovered, match, tooltip, readTip, readFrame, place, frameRows, start, stop, step, get S(){ return S }};
 })();
 
-/* ---------------- Craft planner: your craft levels + inventory screenshots -> what to craft for profit ---------------- */
+/* ---------------- Crafting > Plan (was the Craft planner page): your craft levels + inventory screenshots -> what to craft for profit ---------------- */
+// Also owns the craft levels card and the price helpers the other Crafting tabs use (45-crafting.js, via window.CPLAN).
 (() => {
 // Inventory = the Price check's screenshot reads (54-invprice.js, INVP.counts) plus items typed in by hand. Recipes, fees and
 // craft EXP: OSMS export (D.craft.rec, capped at CRAFT_CAP). Prices: meso.watch median sale (PW), NPC sell price (game files),
 // NPC shops (meowdb), live listings (PWNOW). Farming: meowdb drop reports (D.drops) and named-after monsters (D.craft.src),
 // 5% per kill (our assumption: no drop rates exist anywhere) unless shared runs saw 100+ kills; kills/hr from mapRates.
-const DISC = D.craft.disc.map(d => d[0]), RECS = D.craft.rec.map(([d, type, lvl, id, n, exp, mesos, ing]) => ({d, type, lvl, id, n, exp, mesos, ing}));
+const DISC = D.craft.disc.map(d => d[0]), RECS = D.craft.rec.map(([d, type, lvl, id, n, exp, mesos, ing], i) => ({i, d, type, lvl, id, n, exp, mesos, ing}));
 const CLS = ["Warrior", "Bowman", "Thief", "Magician", "I/L Wizard", "F/P Wizard", "Cleric"];
 const S = {lv: DISC.map(() => 0), cls: "Warrior", L: 25, free: 0, hand: {}};
 const fresh = (() => { try { return !localStorage.getItem("cplan") } catch(e) { return true } })();
@@ -8425,11 +8568,11 @@ function inventory(){
 }
 const nm = id => `<span class="itname" tabindex="0" data-item="${id}">${esc(D.items[id]?.n || id)}</span>`;
 const ings = (o, k = 1) => Object.entries(o).map(([id, n]) => `<span class="sning">${itemIcon(id, 1, true)} ${fmt(Math.round(n / k))} ${nm(id)}</span>`).join(" ");
-const made = r => `<span class="ing">${itemIcon(r.id, r.n)}<span>${nm(r.id)}${r.n > 1 ? ` ×${r.n}` : ""}<div class="sub">${esc(DISC[r.d])} Lv ${r.lvl}${r.type === "Equipment" ? " · plain equip" : ""}${rough(r.id) ? ` <span class="pill p-warn" title="${esc(roughWhy(r.id))}">rough</span>` : ""}</div></span></span>`;
+const made = r => `<span class="ing">${itemIcon(r.id, r.n)}<span><button class="linkbtn crname" type="button" data-r="${r.i}">${esc(D.items[r.id]?.n || r.id)}</button>${r.n > 1 ? ` ×${r.n}` : ""}<div class="sub">${esc(DISC[r.d])} Lv ${r.lvl}${r.type === "Equipment" ? " · plain equip" : ""}${rough(r.id) ? ` <span class="pill p-warn" title="${esc(roughWhy(r.id))}">rough</span>` : ""}</div></span></span>`;
 const plus = v => `<b class="${v > 0 ? "up" : "down"}">${v > 0 ? "+" : ""}${fmt(Math.round(v))}</b>`;
 
 function draw(){
-  if ($("#cplan").hidden) return;
+  if ($("#craft").hidden || $("#crp-plan").hidden) return;
   setLevels();
   const inv = inventory(), have = [...inv].filter(x => x[1] > 0);
   // inventory line: hand-typed items can be removed here; screenshots on the Price check
@@ -8479,11 +8622,11 @@ function draw(){
 }
 
 /* controls */
-$("#cpcap").textContent = CRAFT_CAP; $("#cpdate").textContent = D.pw?.read || "?";
+document.querySelectorAll(".crcap").forEach(e => e.textContent = CRAFT_CAP); $("#cpdate").textContent = D.pw?.read || "?";
 $("#cplv").innerHTML = DISC.map((n, i) => `<label class="lab">${esc(n)}<select data-cpd="${i}">${Array.from({length: CRAFT_CAP + 1}, (_, k) => `<option value="${k}">${k ? "Lv " + k : "not learned"}</option>`).join("")}</select></label>`).join("");
 $("#cplv").querySelectorAll("select").forEach(s => s.value = S.lv[+s.dataset.cpd]);
 $("#cpcls").value = S.cls; $("#cplvl").value = S.L; $("#cpfree").value = S.free;
-$("#cplv").addEventListener("change", e => { const i = e.target.dataset.cpd; if (i == null) return; S.lv[+i] = +e.target.value; save(); draw() });
+$("#cplv").addEventListener("change", e => { const i = e.target.dataset.cpd; if (i == null) return; S.lv[+i] = +e.target.value; save(); document.dispatchEvent(new Event("craftlv")) });
 $("#cpcls").addEventListener("change", e => { S.cls = CLS.includes(e.target.value) ? e.target.value : "Warrior"; save(); draw() });
 $("#cplvl").addEventListener("change", e => { S.L = Math.min(MAX_LEVEL, Math.max(1, Math.round(+e.target.value) || 25)); e.target.value = S.L; save(); draw() });
 $("#cpfree").addEventListener("change", e => { S.free = e.target.value === "1" ? 1 : 0; save(); draw() });
@@ -8498,7 +8641,7 @@ function addHand(){
 }
 $("#cpaddb").addEventListener("click", addHand);
 $("#cpitem").addEventListener("keydown", e => { if (e.key === "Enter") addHand() });
-$("#cplan").addEventListener("click", e => {
+$("#craft").addEventListener("click", e => {
   const go = e.target.closest("[data-cpgo]"); if (go){ e.preventDefault(); $("#t-" + go.dataset.cpgo).click(); return }
   if (e.target.id === "cpclear"){ window.INVP?.clear(); return }
   const rm = e.target.dataset.cprm; if (rm){ delete S.hand[rm]; save(); draw() }
@@ -8514,11 +8657,10 @@ drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add(
 drop.addEventListener("dragleave", () => drop.classList.remove("over"));
 drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); shots(e.dataTransfer.files) });
 $("#cpfile").addEventListener("change", e => { shots(e.target.files); e.target.value = "" });
-document.addEventListener("paste", e => { if ($("#cplan").hidden) return; const f = [...(e.clipboardData?.files || [])]; if (f.length){ e.preventDefault(); shots(f) } });
-document.addEventListener("invupdate", draw);
-$("#t-cplan").addEventListener("click", () => setTimeout(draw));
-draw();
-window.CPLAN = {make: (r, t, inv) => (setLevels(), run(r, t, inv)), maxTimes: (r, inv) => (setLevels(), maxTimes(r, inv)), farm, worth, S};   // tests
+document.addEventListener("paste", e => { if ($("#craft").hidden || $("#crp-plan").hidden) return; const f = [...(e.clipboardData?.files || [])]; if (f.length){ e.preventDefault(); shots(f) } });
+// redraws on craftlv / invupdate / tab opens come from 45-crafting.js (only the open tab draws)
+window.CPLAN = {make: (r, t, inv) => (setLevels(), run(r, t, inv)), maxTimes: (r, inv) => (setLevels(), maxTimes(r, inv)), farm, worth, S,
+  RECS, inventory, draw, rough, roughWhy, buyEach, buyHow};   // Crafting tabs + tests
 })();
 
 /* "Load by IGN": one character from classicrank.com's keyless API (CORS open, 30 requests/min per IP; classicrank.com/developer).
@@ -10684,7 +10826,6 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
     inv: ["x:0", "x:1", "x:2", "x:3"],
     keep: I([...dropped].filter(i => i.startsWith("400") && D.items[i]?.c === "Etc")),
     craft: I([...ingr].filter(i => i.startsWith("4") && (dropped.has(i) || D.ishop?.[i] || crafted.has(i)))),
-    cplan: I([...crafted].filter(i => i.startsWith("40") && PW[i])),
     // Henesys / Kerning City townsfolk from the citizenship quests, and the two towns' return scrolls
     cit: [...new Set(D.citq.map(q => q.npc))].filter(n => n && D.npcid[n] && D.npcimg[D.npcid[n]]).map(n => "n:" + D.npcid[n]).concat(["i:2030004", "i:2030005"]),
   };
