@@ -175,7 +175,7 @@ function minimap(id, star, hi){
   const marks = P.map(([x, y, d, hid]) => `<span class="pt${hid ? " hid" : ""}${String(d) === String(hi) ? " on" : ""}" style="${pos(x, y)}">${num[d]}</span>`).join("")
     + (star ? `<span class="npcstar" style="${pos(star[0], star[1])}">★</span>` : "");
   const exits = dests.map(d => { const all = P.filter(p => p[2] === d), hid = all.every(p => p[3]), later = D.maps[d] && !D.maps[d][1];
-    return `<li${String(d) === String(hi) ? ' class="on"' : ""}><b class="ptn${hid ? " hid" : ""}">${num[d]}</b>${esc(D.mapnames[d] || D.maps[d]?.[0] || "map " + d)}${hid ? " <span>hidden</span>" : ""}${later ? " <span>not at launch</span>" : ""}</li>` }).join("");
+    return `<li${String(d) === String(hi) ? ' class="on"' : ""}><b class="ptn${hid ? " hid" : ""}">${num[d]}</b>${D.mapnames[d] || D.maps[d] ? mapLink(d, D.mapnames[d] || D.maps[d][0]) : "map " + d}${hid ? " <span>hidden</span>" : ""}${later ? " <span>not at launch</span>" : ""}</li>` }).join("");
   return [mm ? `<div class="mmwrap"${w ? ` style="width:${w}px;height:${h}px"` : ""}><img class="mm" src="data:image/${D.mmapType};base64,${mm}" alt="Minimap of ${esc(name)}"${w ? ` width="${w}" height="${h}"` : ""}>${marks}</div>` : `<p>No minimap in the game files.</p>`,
     exits ? `<h5>Exits</h5><ul class="mexits">${exits}</ul>` : ""];
 }

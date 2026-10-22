@@ -210,6 +210,8 @@ const boxGaps = require("./boxgaps");
   // a map name opens its World Map card
   await tab("#t-maps"); const mn1 = await p.textContent("#maprows .mname >> nth=0"); await p.click("#maprows .mname >> nth=0");
   check(!(await p.isHidden("#wmap")) && (await p.textContent("#wmcard")).includes(mn1) && !/NaN|undefined/.test(await p.textContent("#wmcard")), "map name opens its World Map card");
+  { const ex = "#wmcard .mexits .mname >> nth=0", en = await p.textContent(ex); await p.hover(ex); const tip = await p.textContent("#qtip");
+    await p.click(ex); check(tip.includes(en) && (await p.textContent("#wmcard .qt-h, #wmcard h3, #wmcard")).includes(en), `exit name previews and opens that map (${en})`) }
   await tab("#t-navi");
   await p.click('#navtowns button[data-id="10001000"]'); await p.fill("#navto", "Perion"); await p.dispatchEvent("#navto", "change");
   check(await p.$$eval("#navout .navsteps li", r => r.length) > 0 && /cab ride/.test(await p.textContent("#navout")), "navigator: Henesys to Perion by cab");
