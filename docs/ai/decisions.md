@@ -263,3 +263,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-22 Danny approved Z.ai todo #2 as "Market Comparison Index" under Mesos and Trade (mockup artifact Grd52g2hz4w5fMt913Qre1); item icons with tooltip + click to item page.
 - 2026-10-22 Danny: Quest log reader must check its own reads and get the state right (done vs in progress): unsure rows are asked, not applied; no visible tab = no state guessed.
 - 2026-10-22: Citizenship moved from Mesos and Trade to Maple Database (Danny).
+- 2026-10-22 Danny: delete scripts/fetch_classicmarket.py + classicmarket_items.json (NPC prices already come from game files; nothing else it adds).

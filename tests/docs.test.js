@@ -33,7 +33,10 @@ const IGNORE = new Set([
   "maplestory-market-poll.yml",           // planned, not yet written
   "scripts/submit_to_classicrank.py",     // planned, not yet written
   "fresh/Classic%20World.json",           // meso.watch URL endpoint, not a repo file
-  "classicmarket_items.json",             // generated data file
+  "classicmarket_items.json",             // deleted 2026-10-22 (Danny); old mailbox/digest mentions stay
+  "fetch_classicmarket.py",               // deleted 2026-10-22 (Danny)
+  "scripts/fetch_classicmarket.py",
+  "data/sources/classicmarket_items.json",
   "classicmarket_market.json",            // generated data file
   "classicmarket_prices.json",            // generated data file
   "mesoindex.json",                       // generated data file
