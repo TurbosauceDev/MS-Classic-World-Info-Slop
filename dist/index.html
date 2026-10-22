@@ -1216,6 +1216,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="t-skills" aria-selected="false" data-tab="skills" data-cat="db" hidden><img class="nic" data-pool="skills" alt="">Skills</button>
     <div class="sgh" data-cat="town"><img class="nic" data-pool="g_town" alt="">Mesos and Trade</div>
     <button role="tab" id="t-snipe" aria-selected="false" data-tab="snipe" data-cat="town" hidden><img class="nic" data-pool="snipe" alt="">FM Sniper</button>
+    <button role="tab" id="t-mci" aria-selected="false" data-tab="mci" data-cat="town" hidden><img class="nic" data-pool="mci" alt="">Market Comparison Index</button>
     <button role="tab" id="t-inv" aria-selected="false" data-tab="inv" data-cat="town" hidden><img class="nic" data-pool="inv" alt="">Price check</button>
     <button role="tab" id="t-keep" aria-selected="false" data-tab="keep" data-cat="town" hidden><img class="nic" data-pool="keep" alt="">Keep or sell</button>
     <button role="tab" id="t-craft" aria-selected="false" data-tab="craft" data-cat="town" hidden><img class="nic" data-pool="craft" alt="">Crafting</button>
@@ -1271,6 +1272,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       <p class="mktday" id="mktday" hidden></p>
       <div class="hlinks">
       <button class="hlink" data-go="snipe"><img class="hic" data-ic="i:4020100" alt=""><b>FM Sniper</b><span>Live Free Market listings priced under what the item usually sells for.</span></button>
+      <button class="hlink" data-go="mci"><img class="hic" data-ic="i:4010001" alt=""><b>Market Comparison Index</b><span>Every price site side by side: which one is cheapest for each item, and where they disagree.</span></button>
       <button class="hlink" data-go="inv"><img class="hic" data-ic="i:4031041" alt=""><b>Price check</b><span>Paste inventory screenshots, get every item listed with a player-shop price.</span></button>
       <button class="hlink" data-go="keep"><img class="hic" data-ic="i:4000001" alt=""><b>Keep or sell</b><span>Which loot quests and recipes still want, and what's safe to sell.</span></button>
       <button class="hlink" data-go="craft"><img class="hic" data-ic="i:4010100" alt=""><b>Crafting</b><span>Plan crafts from your inventory screenshots, recipes with profit, the cheapest way to level, masters and materials.</span></button>
@@ -2458,6 +2460,51 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   <p class="note" id="snfoot"></p>
   <div class="sntoast" id="sntoast" role="status" hidden></div>
 </section>
+<section id="mci" hidden>
+  <style>
+    .mcisrc{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+    .mcisrc div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:grid;gap:1px}
+    .mcisrc b{font:600 14.5px var(--f-body)}.mcisrc span{font:13px var(--f-mono);color:var(--muted)}
+    .mcitbl{font-size:14px}.mcitbl th,.mcitbl td{padding:7px 6px}.mcitbl th{font-size:11px;letter-spacing:.04em}
+    .mcitbl td:first-child{white-space:normal;min-width:130px}.mcitbl .pill{font-size:11px}
+    .mcitbl td.lo{background:var(--leaf-soft);color:var(--leaf);font-weight:600}
+    .mcitbl td.hi{background:var(--warn-soft);color:var(--warn)}
+    .mcitbl td.few{opacity:.55;font-style:italic}
+    .mcitbl td.mid{font-weight:600}
+    .mcitbl td .sub{display:block;font:12px var(--f-body);color:var(--muted)}
+    .mcileg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:var(--muted);margin-top:10px}
+    .mcileg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px;border:1px solid}
+  </style>
+  <details class="howto">
+    <summary>How the Market Comparison Index works</summary>
+    <div class="howgrid">
+      <div><h4>What each column is</h4><ul>
+        <li>One column per price site we pull, each showing that site's own typical <b>sale</b> price: <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> median sale, <a href="https://maplestory.watch/" target="_blank" rel="noopener">maplestory.watch</a> typical price (14 days), <a href="https://mesoindex.com/" target="_blank" rel="noopener">mesoindex.com</a> usual price, <a href="https://mesoarbitrage.com/" target="_blank" rel="noopener">mesoarbitrage.com</a> median sale (shown 2 h late), <a href="https://classicmarket.kr/" target="_blank" rel="noopener">classicmarket.kr</a> combined market median, <a href="https://meowdb.com/msclassic" target="_blank" rel="noopener">meowdb</a> usual price (mixes asks seen in shops with sales, so it runs high on cheap loot).</li>
+        <li>A site with only asks and no sales for an item is left blank here. The item's own page has every row in detail.</li>
+        <li><b>Middle</b> = median of the sites shown. <b>Spread</b> = dearest site ÷ cheapest site.</li>
+        <li><b>Cheapest live</b> = the cheapest listing seen in the last day on meso.watch, maplestory.watch, mesoindex or meowdb. Shops close fast; cheap ones are often gone. Equips are any roll, so no "% under" for them.</li>
+      </ul></div>
+      <div><h4>Reading it</h4><ul>
+        <li><b>Green</b> = cheapest site for that item, <b>amber</b> = dearest. Dimmed cells rest on fewer than 5 sales.</li>
+        <li>Big spreads usually mean one site has few sales or counts asks, not a real price gap. Check the sales count (hover a cell).</li>
+        <li>Click an item to open its page: all prices, where to buy, history.</li>
+        <li>maplestory.market gets a column once we have its partner key. classicrank.com is rankings only.</li>
+      </ul></div>
+    </div>
+  </details>
+  <div class="mcisrc" id="mcisrc"></div>
+  <div class="controls">
+    <label>Search<input id="mciq" type="search" placeholder="Item name"></label>
+    <label>Type<select id="mcicat"><option value="">Everything</option><option value="Etc">Loot, ores and gems</option><option value="Scroll">Scrolls</option><option value="Consumable">Potions and food</option><option value="Equipment">Equips</option><option value="Setup">Other</option></select></label>
+    <label>Sites with a price<select id="mcimin"><option value="2">2 or more</option><option value="3">3 or more</option><option value="4">4 or more</option><option value="5">5 or more</option><option value="6">All 6</option></select></label>
+    <label>Sort<select id="mcisort"><option value="sold">Most traded</option><option value="spread">Sites disagree most</option><option value="deal">Best live deal</option><option value="mid">Highest price</option><option value="name">Name</option></select></label>
+    <button class="btn" id="mcireset">Reset filters</button>
+    <span class="pill p-hot" id="mcicnt" style="align-self:center"></span>
+  </div>
+  <div class="mcileg"><span><i style="background:var(--leaf-soft);border-color:var(--leaf)"></i>cheapest site</span><span><i style="background:var(--warn-soft);border-color:var(--warn)"></i>dearest site</span><span><i style="background:var(--line);border-color:var(--line)"></i>dimmed: under 5 sales</span></div>
+  <div class="tblwrap thwrap"><table class="mcitbl"><thead><tr id="mcihd"></tr></thead><tbody id="mcirows"></tbody></table></div>
+  <p class="note" id="mcimore"></p>
+</section>
 
 <section id="inv" hidden>
   <details class="howto">
@@ -2546,6 +2593,9 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   </details>
 
   <div class="changelog">
+    <div class="card" data-minor data-t="2026-10-22T19:44:08Z"><div class="cardhead"><h3><span class="ver">v0.17.0</span> Oct 22, 2026 · Market Comparison Index</h3></div>
+      <p>New page under Mesos and Trade: every price site we pull side by side, one row per item (meso.watch, maplestory.watch, mesoindex.com, mesoarbitrage.com, classicmarket.kr, meowdb). The cheapest site for each item is green, the dearest amber, with the middle price, how far the sites disagree and the cheapest live listing seen in the last day. Hover an item for its tooltip, click it for its page.</p>
+    </div>
     <div class="card" data-t="2026-10-22T19:55:00Z"><div class="cardhead"><h3><span class="ver">v0.16.2</span> Oct 22, 2026 · Quest log reads your screen</h3></div>
       <p><b>Quest log</b> no longer needs a recording: press <b>Read my screen</b>, share the game window and scroll through your QUEST window. Quests fill in as they're read, with the names shown so a wrong one is easy to spot. <b>Undo</b> / <b>Redo</b> take back a read. Dropping a recording or screenshots still works.</p>
     </div>
@@ -3140,7 +3190,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-22T19:46:43Z" data-ver="0.16.2">Site version: v0.16.2 · built Oct 22, 2026 · 19:46 UTC</p>
+  <p class="sitever" data-built="2026-10-22T19:57:25Z" data-ver="0.17.0">Site version: v0.17.0 · built Oct 22, 2026 · 19:57 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -7874,6 +7924,60 @@ for (const ev of ["input", "change", "click"]) $("#plan").addEventListener(ev, e
 $("#t-plan").addEventListener("click", render); render();
 })();
 
+/* ---------------- Market Comparison Index: every price site side by side, one row per item ---------------- */
+(() => {
+// One column per site, each that site's typical SALE price for the item (asks-only rows are left out; the Items page Prices box
+// shows those). Same data the Prices box reads: PW (meso.watch), MW (maplestory.watch), MI (mesoindex), MA (mesoarbitrage),
+// CMP (classicmarket.kr combined, credit required), MDB (meowdb usual = asks + sales). Each fn: id -> [price, sales] or null.
+// maplestory.market (D.mm) adds a row here once its fetcher lands. Middle = median of sites, spread = max / min (ours, stated).
+const SITES = [
+  ["meso.watch", "meso.watch", D.pw?.read, id => { const p = PW[id]; return p?.[0] > 0 ? [p[0], p[3]] : null }],
+  ["maplestory.watch", "mswatch", D.mw?.read, id => { const w = MW[id]; return w?.[0] > 0 && w[1] > 0 ? [w[0], w[1]] : null }],
+  ["mesoindex.com", "mesoindex", D.mi?.read, id => { const m = MI[id]; return m?.[0] > 0 && m[3] ? [m[0], m[3]] : null }],
+  ["mesoarbitrage.com", "mesoarb", D.ma?.read, id => { const m = MA[id]; return m?.[0] > 0 && m[1] ? [m[0], m[1]] : null }],
+  ["classicmarket.kr", "classicmkt", D.cmp?.read, id => { const k = CMP[id]; return k?.[0] > 0 ? [k[0], k[3]] : null }],
+  ["meowdb", "meowdb", D.mdb?.read, id => { const m = MDB[id]; return m?.[0] > 0 ? [m[0], m[2]] : null }]];
+const DEF = {q: "", cat: "", min: "3", sort: "sold"}, SHOW = 150;
+let S = {...DEF, ...savedState("mci", DEF), q: ""}, all = false, ROWS = null;
+const save = () => { try { localStorage.setItem("mci", JSON.stringify({...S, q: ""})) } catch(e) {} };
+// one row per item that has a sale price on 2+ sites
+function build(){
+  ROWS = [];
+  for (const id of IDS){ const it = D.items[id]; if (!it) continue;
+    const s = SITES.map(x => x[3](id)), vs = s.filter(Boolean).map(x => x[0]); if (vs.length < 2) continue;
+    const mid = median(vs), lo = Math.min(...vs), hi = Math.max(...vs), eq = it.c === "Equipment";
+    const ask = listingsOf(id).filter(x => !x.buy && Date.now() / 6e4 - (x.t || Date.now() / 6e4) < 1440).sort((a, b) => a.v - b.v)[0] || null;
+    ROWS.push({id, it, s, k: vs.length, mid, lo, hi, spread: hi / lo, sold: s.reduce((a, x) => a + (x ? x[1] : 0), 0), ask,
+      deal: ask && !eq ? ask.v / mid : 9}) }
+}
+const cell = (x, r) => !x ? `<td class="num sub">–</td>`
+  : `<td class="num${r.lo < r.hi && x[0] === r.lo ? " lo" : ""}${r.lo < r.hi && x[0] === r.hi ? " hi" : ""}${x[1] < 5 ? " few" : ""}" title="${fmt(x[1])} sale${x[1] === 1 ? "" : "s"}">${fmt(x[0])}</td>`;
+const askCell = r => { const a = r.ask; if (!a) return `<td class="num sub">none</td>`;
+  return `<td class="num">${fmt(a.v)}${r.deal < 0.9 ? `<br><span class="pill p-good">${Math.round((1 - r.deal) * 100)}% under</span>` : ""}<span class="sub" title="${esc(a.ago || "")}">${esc(a.src)}</span></td>` };
+const SORTS = {sold: (a, b) => b.sold - a.sold, spread: (a, b) => b.spread - a.spread, deal: (a, b) => a.deal - b.deal || b.sold - a.sold,
+  mid: (a, b) => b.mid - a.mid, name: (a, b) => a.it.n.localeCompare(b.it.n)};
+function render(){
+  if (!ROWS) build();
+  const q = S.q.trim().toLowerCase(), min = +S.min;
+  const a = ROWS.filter(r => r.k >= min && (!S.cat || r.it.c === S.cat) && (!q || r.it.n.toLowerCase().includes(q))).sort(SORTS[S.sort] || SORTS.sold);
+  $("#mcicnt").textContent = `${fmt(a.length)} item${a.length === 1 ? "" : "s"}`;
+  $("#mcirows").innerHTML = a.length ? (all ? a : a.slice(0, SHOW)).map(r => `<tr><td><span class="ing">${itemIcon(r.id)}<span class="itname name" tabindex="0" data-item="${r.id}">${esc(r.it.n)}</span></span></td>${r.s.map(x => cell(x, r)).join("")}<td class="num mid">${fmt(r.mid)}</td><td class="num"><span class="pill ${r.spread >= 2 ? "p-warn" : "p-hot"}">×${r.spread.toFixed(1)}</span></td>${askCell(r)}</tr>`).join("")
+    : `<tr><td colspan="${SITES.length + 4}" class="sub">No item matches. Try fewer sites or another type.</td></tr>`;
+  $("#mcimore").innerHTML = !all && a.length > SHOW ? `Showing the first ${SHOW}. <button class="btn" id="mciall">Show all ${fmt(a.length)}</button>` : "";
+}
+const IDS = [...new Set([PW, MW, MI, MA, CMP, MDB].flatMap(o => Object.keys(o)))];
+$("#mcisrc").innerHTML = SITES.map(([n, , read, f]) => `<div><b>${n}</b><span>${fmt(IDS.filter(f).length)} items with sales</span><span>updated ${esc(read || "?")}${read && read.length > 10 ? " UTC" : ""}</span></div>`).join("");
+$("#mcihd").innerHTML = `<th>Item</th>${SITES.map(x => `<th class="num" title="${x[0]}">${x[1]}</th>`).join("")}<th class="num" title="Median of the sites shown">Middle</th><th class="num" title="Dearest site ÷ cheapest site">Spread</th><th class="num">Cheapest live</th>`;
+const sync = () => { $("#mciq").value = S.q; $("#mcicat").value = S.cat; $("#mcimin").value = S.min; $("#mcisort").value = S.sort };
+for (const [k, el] of [["q", "#mciq"], ["cat", "#mcicat"], ["min", "#mcimin"], ["sort", "#mcisort"]])
+  $(el).addEventListener(k === "q" ? "input" : "change", e => { S[k] = e.target.value; all = false; save(); render() });
+$("#mcireset").addEventListener("click", () => { S = {...DEF}; all = false; sync(); save(); render() });
+$("#mcimore").addEventListener("click", e => { if (e.target.id === "mciall"){ all = true; render() } });
+sync();
+$("#t-mci").addEventListener("click", render);
+if (!$("#mci").hidden) render();
+})();
+
 /* ---------------- FM Sniper: live Free Market listings under their usual player-shop price ---------------- */
 (() => {
 // One row per item meso.watch lists right now (PWNOW: the cheapest live listing per non-equip item, [price each, qty,
@@ -12272,13 +12376,15 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
     // FM Sniper: what meso.watch has listed right now, and meso bags
     snipe: [...I(Object.keys(PWNOW)), "x:1", "x:2", "x:3"],
     inv: ["x:0", "x:1", "x:2", "x:3"],
+    // Market Comparison Index: ores and gems, the most traded items
+    mci: I(["4010000", "4010001", "4010002", "4020000", "4020100", "4000008"]),
     keep: I([...dropped].filter(i => i.startsWith("400") && D.items[i]?.c === "Etc")),
     craft: I([...ingr].filter(i => i.startsWith("4") && (dropped.has(i) || D.ishop?.[i] || crafted.has(i)))),
     // Henesys / Kerning City townsfolk from the citizenship quests, and the two towns' return scrolls
     cit: [...new Set(D.citq.map(q => q.npc))].filter(n => n && D.npcid[n] && D.npcimg[D.npcid[n]]).map(n => "n:" + D.npcid[n]).concat(["i:2030004", "i:2030005"]),
   };
   Object.assign(P, { g_trk: [...P.trk, ...kpq], g_train: [...P.maps, ...P.plan, ...P.path, ...kpq],
-    g_world: [...P.wmap, ...P.navi], g_db: [...P.items, ...P.mobs, ...P.quests, ...P.skills], g_town: [...P.snipe, ...P.inv, ...P.craft, ...P.keep] });
+    g_world: [...P.wmap, ...P.navi], g_db: [...P.items, ...P.mobs, ...P.quests, ...P.skills], g_town: [...P.snipe, ...P.mci, ...P.inv, ...P.craft, ...P.keep] });
   const src = k => { const [t, id] = k.split(":"), b = t === "x" ? MESO_ICONS[id] : {i: D.iicons, m: D.mobimg, s: D.icons, n: D.npcimg}[t]?.[id];
     return b ? "data:image/png;base64," + b : null };
   const fill = () => { for (const im of document.querySelectorAll("img.nic:not([src])")){

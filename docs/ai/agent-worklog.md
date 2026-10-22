@@ -23,6 +23,7 @@ YYYY-MM-DD HH:MMZ | <agent-name> | <one-line summary> | <commit hash or files to
 - Push to `main` directly — docs pushes are pre-approved.
 
 ## Recent
+2026-10-22 20:00Z | claude (project-thread) | Market Comparison Index page (cross-market compare, Z.ai todo #2) | 56-mci.js, mci.html
 2026-10-22 18:30Z | claude (chat-CLI) | wrote docs/ai/state-of-the-pipeline.md (345 lines, 11-section briefing) + FYI pointer in mailbox + 7 new docs.test.js IGNORE entries | commit e61c60dff15f
 2026-10-22 18:00Z | claude (chat-CLI) | replied to 2 Open mailbox threads (defended fetch_classicmarket.py + acknowledged Step 10 bug + watchdog.yml); posted maplestory.market API FYI | docs/ai/agent-mailbox.md
 2026-10-22 17:30Z | claude (chat-CLI) | investigated maplestory.market public API (Sen Discord announcement): 11 GET endpoints, Bearer auth, 6/hour limit, no Turnstile for API keys | discovery doc in chat

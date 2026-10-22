@@ -14,16 +14,16 @@ const boxGaps = require("./boxgaps");
   // Home page + section nav. Sidebar layout (default, wider than a phone): every page button shows; the two-row layout and
   // phones show one section's pages at a time, so open the section first when its button is showing
   const tab = async sel => { const c = "#c-" + await p.$eval(sel, b => b.dataset.cat); if (await p.isVisible(c)) await p.click(c); await p.click(sel) };
-  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 26, "home page lists every page");
+  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 27, "home page lists every page");
   { const miss = await p.evaluate(() => { const h = new Set([...document.querySelectorAll("#home [data-go]")].map(a => a.dataset.go)); return [...document.querySelectorAll('[id^="t-"]')].map(b => b.id.slice(2)).filter(x => !h.has(x)) });
     check(!miss.length, `every nav page has a Home link (missing: ${miss})`) }   // 10-21: KPQ timer shipped without one
-  check(await p.$$eval("#home img.hic", l => l.length === 32 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "home sprites all load (32)");
+  check(await p.$$eval("#home img.hic", l => l.length === 33 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "home sprites all load (33)");
   await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && await p.getAttribute("#t-mobs", "aria-selected") === "true", "home link opens its page");
   const side = await p.evaluate(() => ({pages: [...document.querySelectorAll("nav .subs [data-tab]")].filter(b => b.offsetParent).length,
     titles: [...document.querySelectorAll("nav .sgh")].filter(b => b.offsetParent).map(b => b.textContent.trim()).join("|"),
     sprites: [...document.querySelectorAll("nav img.nic")].filter(i => i.offsetParent).every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0),
     cats: !!document.querySelector("nav .cats").offsetParent}));
-  check(side.pages === 22 && side.titles === "Grind Tracker|Training|Victoria Island|Maple Database|Mesos and Trade" && side.sprites && !side.cats,
+  check(side.pages === 23 && side.titles === "Grind Tracker|Training|Victoria Island|Maple Database|Mesos and Trade" && side.sprites && !side.cats,
     `sidebar lists every page under its section, each with a sprite (${JSON.stringify(side)})`);
   { const [nb, ft] = await p.evaluate(() => { scrollTo(0, 1e6); return [document.querySelector("nav").getBoundingClientRect().bottom, document.querySelector(".sitefoot").getBoundingClientRect().top] }); await p.evaluate(() => scrollTo(0, 0));
     check(ft >= nb, `footer starts below the whole sidebar (nav bottom ${Math.round(nb)}, footer top ${Math.round(ft)})`) }   // Danny 10-20: it slid over the footer
@@ -287,6 +287,11 @@ const boxGaps = require("./boxgaps");
     const tiles = await p.$$eval("#snstats .sntile", l => l.length) === 6;
     if (live) check(r.length > 0 && r.every(([v, npc]) => v < 100 || npc) && tiles, `FM Sniper: deals all under 100% of value or under the NPC price (${r.length} rows)`);
     else check(r.every(([v]) => isNaN(v)) && tiles && !/NaN|undefined/.test(await p.textContent("#snipe")), `FM Sniper: no live listings, no deal rows (${r.length} rows)`) }
+  // Market Comparison Index: rows with icons, a price on 3+ sites, middle between cheapest and dearest; name opens the item page
+  await tab("#t-mci");
+  { const r = await p.$$eval("#mcirows tr", l => l.map(x => { const v = [...x.querySelectorAll("td.num")].slice(0, 7).map(t => parseInt(t.textContent.replace(/,/g, ""))); return [!!x.querySelector(".ri img"), v.slice(0, 6).filter(n => !isNaN(n)), v[6]] }));
+    check(r.length > 50 && r.every(([ic, s, m]) => ic && s.length >= 3 && m >= Math.min(...s) && m <= Math.max(...s)) && !/NaN|undefined/.test(await p.textContent("#mci")), `Market Comparison Index: rows with icons and 3+ sites (${r.length} rows)`);
+    await p.click("#mcirows .itname >> nth=0"); check(!(await p.isHidden("#items")) && !(await p.isHidden("#itpage")), "Market Comparison Index: item name opens its page") }
   await tab("#t-inv"); await p.setInputFiles("#ivfile", path.resolve(__dirname, "../tracker/tests/frames-inv/use-12162.png"));
   await p.waitForFunction(() => /^Read$|had no/.test(document.querySelector("#ivst").textContent), null, {timeout: 60000});
   check(/Lemon/.test(await p.textContent("#ivbody")) && /mesos/.test(await p.textContent("#ivsum")), "price check reads a Use tab");

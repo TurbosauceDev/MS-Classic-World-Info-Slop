@@ -72,6 +72,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 57-scrollscan.js | | Price check › Scroll check: getDisplayMedia, live Use tab grid, tooltip read (readers.js `readTextLines`) matched to scroll name/desc, slot = nearest to tooltip corner; feeds 54 via `INVP.live` |
 | 55-bcompare.js | | Builder "Compare two jobs" (buildAt per side, or "This build" = BLD.S) |
 | 56-snipe.js | 48 | FM Sniper: PWNOW vs PW, deal grades/score (ours), views, watch list, new badges, live market.json refresh, tools (trip, craft, sell, watch alerts, movers, lifetimes) |
+| 56-mci.js | 5 | Market Comparison Index (#mci): one column per price site (sale prices only), middle, spread, cheapest live listing |
 | 60-planner.js | 42 | Path Planner; exports TRAVEL |
 | 62-expcalc.js | | EXP/hr calculator (ids `#ec*`): typed/timer, screenshot pair (EXIF/file-name time), Save as image; `window.EXPC` |
 | 02-screen.js | | `shareScreen({ms, onFrame, onEnd, before})` + `screenTicker`: shared getDisplayMedia plumbing (Worker ticks, ImageCapture) for 61-questlog.js and 63-expclive.js |
@@ -302,6 +303,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 
 ## mesoindex.com prices + listings 2026-10-21
 - `scripts/fetch_mesoindex.py` (build_data.py step `mesoindex`, test `tests/mesoindex_test.py`) -> `data/sources/mesoindex.json` -> `D.mi` (`/api/catalog` one call, real item ids in `game`; `/api/item?game=<id>` per-item shop slots with channel, room, shop, title). Workflow `mesoindex-poll.yml` every 3 h; listing calls only where the catalog row moved, busiest first, 15 min budget per run (~700 calls; the next run does the rest). UI `src/js/14-mesoindex.js`: `PRICE_SRC` row + `LIST_SRC` shops seen in the last day. `pwPrice` unchanged.
+- `src/js/56-mci.js` + `src/pages/mci.html` (Market Comparison Index, Mesos and Trade, shipped 2026-10-22): `SITES` = one fn per site id -> [sale price, sales] or null (asks-only = blank; meowdb usual mixes asks, runs high on loot). Middle = median, spread = max/min, cheapest live = `listingsOf` within a day (no "% under" for equips). Add maplestory.market (`D.mm`) as one more `SITES` row. CSS lives in the page's own `<style>`; the 1300px "tables fit" smoke check is tight (7 price columns), keep cells short. Smoke: rows with icons + 3+ sites, name opens item page.
 - Traps: the HTML page is behind Vercel's checkpoint (never bypass), `/api/*` isn't. Catalog `id` is meowdb's id, use `game`. `npc` = game-file NPC sell price. `room` is null for shops outside the FM (map name kept instead). `trend` baseline unknown, not shown. Prices are mostly cozy.markets scans (`src` counts).
 
 ## Tables fit at 1300 px 2026-10-21

@@ -260,3 +260,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-22 Danny: approved Z.ai todo #4, a "Market today" line on Home from meso.watch totals (sales tracked + top sale).
 - 2026-10-22 Danny approved Z.ai todo #3: 7-day price sparklines from meso.watch history (Items list, item Prices box).
 - 2026-10-22 Danny: Quest log reads the screen live (screen share), not just a dropped recording ("too much work" for players); recording/screenshots stay as fallback.
+- 2026-10-22 Danny approved Z.ai todo #2 as "Market Comparison Index" under Mesos and Trade (mockup artifact Grd52g2hz4w5fMt913Qre1); item icons with tooltip + click to item page.

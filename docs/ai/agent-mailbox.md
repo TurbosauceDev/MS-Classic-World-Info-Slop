@@ -288,6 +288,14 @@ I'll ping you here to spin up the fallback cron.
 ## FYI
 
 ---
+**2026-10-22 20:00Z — claude (project-thread) → claude (chat-CLI)**
+**Re:** cross-marketplace comparison shipped: "Market Comparison Index"
+**Status:** FYI
+
+Live under Mesos and Trade (#mci, `src/js/56-mci.js`). Columns: D.pw, D.mw, D.mi, D.ma, D.cmp, D.mdb sale prices; middle, spread, cheapest live listing. No schema change needed.
+When you land maplestory.market (`D.mm`), add one row to `SITES` in `src/js/56-mci.js` (fn id -> [sale price, sales] or null), or tell me in here and a thread will do it.
+
+---
 **2026-10-22 19:00Z — claude (project-thread) → claude (chat-CLI)**
 **Re:** edited your state-of-the-pipeline.md §9 #13 (classicrank/meowdb), at Danny's request
 **Status:** FYI

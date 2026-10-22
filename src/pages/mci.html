@@ -1,0 +1,45 @@
+<section id="mci" hidden>
+  <style>
+    .mcisrc{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+    .mcisrc div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:grid;gap:1px}
+    .mcisrc b{font:600 14.5px var(--f-body)}.mcisrc span{font:13px var(--f-mono);color:var(--muted)}
+    .mcitbl{font-size:14px}.mcitbl th,.mcitbl td{padding:7px 6px}.mcitbl th{font-size:11px;letter-spacing:.04em}
+    .mcitbl td:first-child{white-space:normal;min-width:130px}.mcitbl .pill{font-size:11px}
+    .mcitbl td.lo{background:var(--leaf-soft);color:var(--leaf);font-weight:600}
+    .mcitbl td.hi{background:var(--warn-soft);color:var(--warn)}
+    .mcitbl td.few{opacity:.55;font-style:italic}
+    .mcitbl td.mid{font-weight:600}
+    .mcitbl td .sub{display:block;font:12px var(--f-body);color:var(--muted)}
+    .mcileg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:var(--muted);margin-top:10px}
+    .mcileg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px;border:1px solid}
+  </style>
+  <details class="howto">
+    <summary>How the Market Comparison Index works</summary>
+    <div class="howgrid">
+      <div><h4>What each column is</h4><ul>
+        <li>One column per price site we pull, each showing that site's own typical <b>sale</b> price: <a href="https://meso.watch/" target="_blank" rel="noopener">meso.watch</a> median sale, <a href="https://maplestory.watch/" target="_blank" rel="noopener">maplestory.watch</a> typical price (14 days), <a href="https://mesoindex.com/" target="_blank" rel="noopener">mesoindex.com</a> usual price, <a href="https://mesoarbitrage.com/" target="_blank" rel="noopener">mesoarbitrage.com</a> median sale (shown 2 h late), <a href="https://classicmarket.kr/" target="_blank" rel="noopener">classicmarket.kr</a> combined market median, <a href="https://meowdb.com/msclassic" target="_blank" rel="noopener">meowdb</a> usual price (mixes asks seen in shops with sales, so it runs high on cheap loot).</li>
+        <li>A site with only asks and no sales for an item is left blank here. The item's own page has every row in detail.</li>
+        <li><b>Middle</b> = median of the sites shown. <b>Spread</b> = dearest site ÷ cheapest site.</li>
+        <li><b>Cheapest live</b> = the cheapest listing seen in the last day on meso.watch, maplestory.watch, mesoindex or meowdb. Shops close fast; cheap ones are often gone. Equips are any roll, so no "% under" for them.</li>
+      </ul></div>
+      <div><h4>Reading it</h4><ul>
+        <li><b>Green</b> = cheapest site for that item, <b>amber</b> = dearest. Dimmed cells rest on fewer than 5 sales.</li>
+        <li>Big spreads usually mean one site has few sales or counts asks, not a real price gap. Check the sales count (hover a cell).</li>
+        <li>Click an item to open its page: all prices, where to buy, history.</li>
+        <li>maplestory.market gets a column once we have its partner key. classicrank.com is rankings only.</li>
+      </ul></div>
+    </div>
+  </details>
+  <div class="mcisrc" id="mcisrc"></div>
+  <div class="controls">
+    <label>Search<input id="mciq" type="search" placeholder="Item name"></label>
+    <label>Type<select id="mcicat"><option value="">Everything</option><option value="Etc">Loot, ores and gems</option><option value="Scroll">Scrolls</option><option value="Consumable">Potions and food</option><option value="Equipment">Equips</option><option value="Setup">Other</option></select></label>
+    <label>Sites with a price<select id="mcimin"><option value="2">2 or more</option><option value="3">3 or more</option><option value="4">4 or more</option><option value="5">5 or more</option><option value="6">All 6</option></select></label>
+    <label>Sort<select id="mcisort"><option value="sold">Most traded</option><option value="spread">Sites disagree most</option><option value="deal">Best live deal</option><option value="mid">Highest price</option><option value="name">Name</option></select></label>
+    <button class="btn" id="mcireset">Reset filters</button>
+    <span class="pill p-hot" id="mcicnt" style="align-self:center"></span>
+  </div>
+  <div class="mcileg"><span><i style="background:var(--leaf-soft);border-color:var(--leaf)"></i>cheapest site</span><span><i style="background:var(--warn-soft);border-color:var(--warn)"></i>dearest site</span><span><i style="background:var(--line);border-color:var(--line)"></i>dimmed: under 5 sales</span></div>
+  <div class="tblwrap thwrap"><table class="mcitbl"><thead><tr id="mcihd"></tr></thead><tbody id="mcirows"></tbody></table></div>
+  <p class="note" id="mcimore"></p>
+</section>
