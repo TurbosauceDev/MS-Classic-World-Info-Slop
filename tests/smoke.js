@@ -359,7 +359,7 @@ const boxGaps = require("./boxgaps");
     check(/^meso\.watch: [\d,]+ item prices \(sales up to \w{3} \d{1,2}\)( · [\d,]+ live listings, updated (just now|\d+ (min|h|days) ago)| · no live listings(: meso\.watch's newest list is from \w{3} \d{1,2}| from meso\.watch right now))?$/.test(pws), `meso.watch state on Home (${pws})`);
     // Market today on the Mesos and Trade card (D.pw.tot, Z.ai todo #4): sales count + named top sale
     const mkt = await q.$eval("#mktday", e => e.hidden ? "" : e.textContent);
-    check(/^Market today [\d,]+ player-shop sales tracked · top sale: \S.* for [\d,]+ mesos/.test(mkt), `Market today on Home (${mkt})`);
+    check(/^Market today [\d,]+ player-shop sales tracked · top sale: \S.* for [\d,]+ mesos.*Best sellers \S/.test(mkt), `Market today on Home (${mkt})`);
     // version number = newest changelog entry (build.py numbers every card, Danny 10-19); tracker patch notes on its Overview
     const vers = await q.$$eval("#log .changelog .ver", a => a.map(e => e.textContent));
     check(vers.length > 50 && t.includes(vers[0] + " ·") && vers.at(-1) === "v0.1.0" && new Set(vers).size === vers.length, `site version matches the changelog (${vers[0]}, ${vers.length} entries)`);

@@ -86,6 +86,21 @@
   const el = document.getElementById("mktday"), t = D.pw?.tot; if (!el || !t?.sales) return;
   const [id, price, qty, time] = t.top || [], it = id && D.items[id];
   const when = time ? new Date(time).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
-  el.innerHTML = `<b>Market today</b> ${fmt(t.sales)} player-shop sales tracked${it ? ` · top sale: <span class="itname" tabindex="0" data-item="${id}">${esc(it.n)}</span>${qty > 1 ? ` ×${qty}` : ""} for ${fmt(price)} mesos${when ? ` (${when})` : ""}` : ""} <span class="tiny">(meso.watch)</span>`;
+  el.innerHTML = `<b>Market today</b> ${fmt(t.sales)} player-shop sales tracked${it ? ` · top sale: <span class="itname" tabindex="0" data-item="${id}">${esc(it.n)}</span>${qty > 1 ? ` ×${qty}` : ""} for ${fmt(price)} mesos${when ? ` (${when})` : ""}` : ""}`;
+  // Rows: first source with data wins. maplestory.market /api/market/overview (D.mkt.ov {movers, best, listed}: [[itemId, text]])
+  // slots in ahead once Danny's partner key + Z.ai's poll provide it; until then our own from meso.watch (trend [5], sold [3]).
+  const sources = [
+    () => D.mkt?.ov && { credit: `<a href="https://maplestory.market" target="_blank" rel="noopener">maplestory.market</a>`,
+      rows: [["Movers", D.mkt.ov.movers], ["Best sellers", D.mkt.ov.best], ["Most listed", D.mkt.ov.listed]] },
+    () => { const ok = Object.entries(D.pw.it || {}).filter(([k, p]) => D.items[k] && p[0] > 0 && p[3] >= 50 && !(p[4] & 1));   // 50+ sales, not low data
+      const pct = t => `${t > 0 ? "▲" : "▼"}${Math.round(Math.abs(t) * 100)}%`, by = f => ok.slice().sort((a, b) => f(b) - f(a));
+      return { credit: "meso.watch", rows: [
+        ["Rising", by(([, p]) => p[5]).filter(([, p]) => p[5] >= 0.005).slice(0, 4).map(([k, p]) => [k, pct(p[5])])],
+        ["Falling", by(([, p]) => -p[5]).filter(([, p]) => p[5] <= -0.005).slice(0, 4).map(([k, p]) => [k, pct(p[5])])],
+        ["Best sellers", by(([, p]) => p[3]).slice(0, 4).map(([k, p]) => [k, fmt(p[3]) + " sold"])]] } }];
+  const src = sources.map(f => f()).find(x => x?.rows.some(r => r[1]?.length));
+  if (src) el.innerHTML += `<span class="mktrows">${src.rows.filter(r => r[1]?.length).map(([h, r]) => `<span><b>${h}</b> ${r.map(([k, v]) =>
+    `<span class="itname" tabindex="0" data-item="${k}">${esc(D.items[k]?.n || k)}</span> ${v}`).join(", ")}</span>`).join("")}<span class="tiny">(${src.credit === "meso.watch" ? "meso.watch" : `top sale meso.watch, lists ${src.credit}`})</span></span>`;
+  else el.innerHTML += ` <span class="tiny">(meso.watch)</span>`;
   el.hidden = false;
 })();
