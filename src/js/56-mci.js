@@ -41,7 +41,7 @@ function render(){
 }
 const IDS = [...new Set([PW, MW, MI, MA, CMP, MDB].flatMap(o => Object.keys(o)))];
 $("#mcisrc").innerHTML = SITES.map(([n, , read, f]) => `<div><b>${n}</b><span>${fmt(IDS.filter(f).length)} items with sales</span><span>updated ${esc(read || "?")}${read && read.length > 10 ? " UTC" : ""}</span></div>`).join("");
-$("#mcihd").innerHTML = `<th>Item</th>${SITES.map(x => `<th class="num" title="${x[0]}">${x[1]}</th>`).join("")}<th class="num" title="Median of the sites shown">Middle</th><th class="num" title="Dearest site ÷ cheapest site">Spread</th><th class="num">Cheapest live</th>`;
+$("#mcihd").innerHTML = `<th>Item</th>${SITES.map(x => `<th class="num" title="${x[0]}">${x[1]}</th>`).join("")}<th class="num" title="Median of the sites shown">Middle</th><th class="num" title="Most expensive site ÷ cheapest site">Spread</th><th class="num">Cheapest live</th>`;
 const sync = () => { $("#mciq").value = S.q; $("#mcicat").value = S.cat; $("#mcimin").value = S.min; $("#mcisort").value = S.sort };
 for (const [k, el] of [["q", "#mciq"], ["cat", "#mcicat"], ["min", "#mcimin"], ["sort", "#mcisort"]])
   $(el).addEventListener(k === "q" ? "input" : "change", e => { S[k] = e.target.value; all = false; save(); render() });
