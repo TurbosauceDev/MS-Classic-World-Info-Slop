@@ -46,6 +46,8 @@ jobs:
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/polish.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node tests/questlog.js
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python3 tests/deal_life_test.py
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python3 tests/watchdog_test.py

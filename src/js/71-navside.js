@@ -19,7 +19,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
   const P = {
     home: ["m:2"], trk: mobs, trkhow: ["i:4031032"], trkruns: mobs, trkkpq: kpq, kpqt: kpq,
     plan: I(known.filter(i => D.items[i].c === "Equipment")), skills: Object.keys(D.icons).map(i => "s:" + i),
-    maps: mobs, path: I(Object.keys(D.potval)), expc: ["s:4101001"], kpq,
+    maps: mobs, path: I(Object.keys(D.potval)), qlog: ["i:4031000", "i:4031001", "i:4031002", "i:4031009", "i:4031011"], expc: ["s:4101001"], kpq,
     wmap: I(["2030000", "2030001", "2030002", "2030003", "2030004", "2030005", "2030006"]),   // launch towns only
     navi: [...skill("Teleport"), ...skill("Haste"), "i:2030000"],
     items: I(known), mobs, quests: I(Object.keys(D.items).filter(i => i.startsWith("403") && (dropped.has(i) || qtext.includes(D.items[i].n)))),

@@ -84,3 +84,5 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 ## On Danny's device (folder tools, already approved; not in the repo)
 - `C:\Users\danny\Pictures\MS Classic Tracker frames`: debug and bug-report frames. New fixtures come from here.
 - `C:\Users\danny\AppData\Roaming\MS Classic Grind Tracker`: saved sessions.
+| `tests/fixtures/questlog-completed.webm` | 510x816, 49 s, VP9 (from Danny's 10-21 mp4) | QUEST window, Completed tab, each category opened and scrolled: 59 lines (list in tests/questlog.js TRUTH) | tests/questlog.js |
+| `tests/fixtures/questlog-progress.png` | 515x818 | QUEST window, In Progress tab: 8 quests in 5 categories (Citizenship 1, Crafting 2, Henesys 2, Kerning City 2, Sleepywood 1) | tests/questlog.js |

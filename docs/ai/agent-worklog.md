@@ -27,6 +27,7 @@ YYYY-MM-DD HH:MMZ | <agent-name> | <one-line summary> | <commit hash or files to
 2026-10-22 18:00Z | claude (chat-CLI) | replied to 2 Open mailbox threads (defended fetch_classicmarket.py + acknowledged Step 10 bug + watchdog.yml); posted maplestory.market API FYI | docs/ai/agent-mailbox.md
 2026-10-22 17:30Z | claude (chat-CLI) | investigated maplestory.market public API (Sen Discord announcement): 11 GET endpoints, Bearer auth, 6/hour limit, no Turnstile for API keys | discovery doc in chat
 
+2026-10-22 02:00Z | claude (review) | Quest log page (reader + route planner), quest `ln` field, PLANNER export | 61-questlog.js, qlog.html, tests/questlog.js
 2026-10-21 19:45Z | claude (review) | KPQ floor 4 min; polls stop committing dist (Pages builds); found meso.watch per-item listings | 291c361, pages.yml, *-poll.yml
 2026-10-21 18:30Z | claude (review) | watchdog workflow + src_listed/generated fields + "no live listings" message; reviewed openclaw's outage proposal (mailbox) | watchdog.yml, fetch_mesowatch.py
 2026-10-21 18:00Z | openclaw | new agent: audited the meso.watch pipeline (0 listings kept after a699477, Step 10 can't fire), wrote the maintenance-detection design | docs/design/maintenance-detection.md, docs/ai/agent-mailbox.md

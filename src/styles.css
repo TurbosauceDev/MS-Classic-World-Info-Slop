@@ -1116,3 +1116,10 @@ details.sec .controls{box-shadow:none;background:var(--bg)}
 .qstack>summary::-webkit-details-marker{display:none}
 .qstack>summary::after{content:" ▸";font-size:10px}.qstack[open]>summary::after{content:" ▾"}
 .qstack[open]>summary{margin-bottom:4px}
+/* Quest log (61-questlog.js) */
+.qlcats{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.qltiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.qltiles .sntile b{display:block;font:700 20px var(--f-display)}.qltiles .sntile span{color:var(--muted);font-size:13px}
+.qlsteps td:nth-child(2){white-space:nowrap}.qlsteps tr.k-hunt td:nth-child(2) b{color:var(--accent)}.qlsteps tr.k-craft td:nth-child(2) b{color:var(--leaf)}
+.qlstep{max-width:100%;font-size:13px}
+#qlbar{width:100%;margin-top:8px}

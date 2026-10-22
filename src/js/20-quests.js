@@ -15,7 +15,7 @@ function reqHTML(r, hideNA = false){
 function renderQuests(){
   const lo = +$("#qmin").value || 0, hi = +$("#qmax").value || 100, s = $("#qsearch").value.trim().toLowerCase();
   let q = QLAUNCH.filter(r => r.lvl >= lo && r.lvl <= hi);
-  if (s) q = q.filter(r => (r.name + r.npc + r.req + r.reward).toLowerCase().includes(s));
+  if (s) q = q.filter(r => (r.name + r.npc + r.req + r.reward + (r.ln || "")).toLowerCase().includes(s));   // ln: questline name, as the quest log shows it
   if ($("#qeq").getAttribute("aria-pressed") === "true") q = q.filter(r => r.info && r.info.eq);
   if ($("#qval").getAttribute("aria-pressed") === "true") q = q.filter(r => VALUE[r.id]);
   // questline filter overrides the other filters and shows the chain in order
@@ -39,7 +39,7 @@ function renderQuests(){
   lazyRows($("#qrows"), q.map(r => `<tr>
     <td class="num">${r.lvl}</td>
     <td><span class="name qname" tabindex="0" data-src="q" data-i="${D.quests.indexOf(r)}">${esc(r.name)}</span> ${vPill(r.id)}${VALUE[r.id] ? `<div class="vwhy"><b>${esc(VALUE[r.id][1])}</b>${VALUE[r.id][3] ? ` · ${esc(VALUE[r.id][3])} only` : ""} · ${esc(VALUE[r.id][2])} <span class="sub">(${vSrc(VALUE[r.id])})</span></div>` : ""}<div class="sub">${npcLink(r.npc)} · ${esc(r.region || "")}${r.rep ? ` · <span class="pill p-warn">${r.rep}</span>` : ""}${r.region === "El Nath" || r.region === "Orbis" ? ` · <span class="pill p-bad">not in launch</span>` : r.region === "Forgotten Hollow" ? ` · <span class="pill p-warn">opens later</span>` : ""}</div></td>
-    <td>${r.chain ? `<button class="chainbtn" data-chain="${esc(r.chain)}" title="Show the ${esc(r.chain)} questline">Yes</button><div class="sub">${r.cpos} of ${r.cn}</div>` : `<span class="sub">No</span>`}</td>
+    <td>${r.chain ? `<button class="chainbtn" data-chain="${esc(r.chain)}" title="Show the ${esc(r.chain)} questline">${esc(r.chain)}</button><div class="sub">${r.cpos} of ${r.cn}</div>` : `<span class="sub">No</span>`}</td>
     <td class="sub">${reqHTML(r)}${stackCell(r)}</td>
     <td class="num">${fmt(r.exp)}</td>
     <td class="num">${r.pct_level ?? "–"}${r.pct_level != null ? "%" : ""}</td>

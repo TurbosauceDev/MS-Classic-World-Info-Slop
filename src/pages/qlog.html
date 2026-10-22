@@ -1,0 +1,41 @@
+<section id="qlog" hidden>
+  <details class="howto">
+    <summary>How the Quest log works</summary>
+    <ul>
+      <li>Open the in-game <b>QUEST</b> window on the <b>Completed</b> tab. Start a screen recording (Windows: Win+Alt+R, or OBS), open one category, scroll slowly to its end, close it, open the next. Then do the same on <b>In Progress</b>. Drop the video here. Screenshots of the window work too.</li>
+      <li>The site reads each row's name against the quests that category can hold, in your browser; nothing is uploaded. Questlines show under their line's name (like "Icarus's Dream"), so one row can mean several quests.</li>
+      <li>The pills say how many quests were read per category against the number on the game's bar. Fix anything missed with <b>Done</b> / <b>On it</b> on a row.</li>
+      <li><b>Can accept now</b> comes from the game files: quests you haven't done, at or under your level, for your class (your Path Planner class), whose earlier quests are done. The Available tab isn't needed.</li>
+      <li>Done quests are shared with <b>Keep or sell</b> ("skip quests I've done") and the Path Planner.</li>
+      <li><b>Plan</b>: one route for every quest you tick, plus the earlier quests they need. Each monster is hunted once for every quest that wants it (kill counts count for all accepted quests at once, drops add up), shop items are bought on the way, and the stops are ordered for the least travel and kill time. Times are estimates from your Path Planner character; item drops use its assumed drop rate.</li>
+    </ul>
+  </details>
+
+  <div class="card">
+    <div class="cardhead"><h3>Read your quest log</h3></div>
+    <label class="drop" id="qldrop"><input type="file" id="qlfile" accept="video/*,image/*" multiple>
+      <span>Drop or pick a <b>recording</b> of your QUEST window (Completed, then In Progress), or paste (Ctrl+V) screenshots of it.</span></label>
+    <progress id="qlbar" max="1" value="0" hidden></progress>
+    <p class="note" id="qlstat" role="status"></p>
+    <div id="qlsum"></div>
+    <div class="throw"><button class="btn" id="qlforget" type="button">Forget what was read</button></div>
+  </div>
+
+  <div class="card">
+    <div class="cardhead"><h3>Your quests</h3><span class="pill" id="qlpicked"></span></div>
+    <div class="cpset">
+      <label class="lab">Your level<input id="qllv" type="number" min="1" max="100" value="30"></label>
+      <div class="seg small" id="qlview" role="group" aria-label="Show">
+        <button type="button" data-v="prog">In progress<span></span></button><button type="button" data-v="open">Can accept now<span></span></button><button type="button" data-v="soon">Within 5 levels<span></span></button><button type="button" data-v="done">Done<span></span></button>
+      </div>
+      <button class="btn" id="qlpickprog" type="button">Pick all in progress</button><button class="btn" id="qlclearpick" type="button">Clear picks</button>
+    </div>
+    <div class="tblwrap"><table class="qllist"><thead><tr><th>Plan</th><th class="num">Lv</th><th>Quest</th><th>Region</th><th>NPC</th><th>Asks for</th><th class="num">EXP</th><th>Mark</th></tr></thead><tbody id="qlrows"></tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="cardhead"><h3>Plan</h3></div>
+    <div class="cpset"><label class="lab">Start from<select id="qlfrom"></select></label></div>
+    <div id="qlplan"></div>
+  </div>
+</section>

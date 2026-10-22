@@ -154,6 +154,9 @@ def step_quests(D):
         L.sort(key=lambda r: (r["lvl"], int(r["id"])))
         for i, r in enumerate(L): r["cpos"] = i + 1; r["cn"] = len(L)
     for r in D["quests"] + D["citq"]:
+        # ln: the name the in-game quest log shows (a questline's parent name, else the quest's own; Danny 10-21:
+        # "Icarus's Dream" / "Mystery of Niora Hospital" are lines, like meowdb's quest tracker). Kept for 1-quest lines too.
+        r["ln"] = r["chain"] or r["name"]
         if r["chain"] and r["cn"] < 2: r["chain"] = None
 
 def reward_groups(i):

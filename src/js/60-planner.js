@@ -1,6 +1,7 @@
 /* ---------------- path planner ---------------- */
 let pathFrom; // (cls, branch, fam, level): fill the planner from the Character Builder and open it
 let TRAVEL;   // the travel model, shared with the Map Navigator (65-navigator.js)
+let PLANNER;  // travel, kill spots and the character, shared with the Quest log (61-questlog.js)
 (() => {
 const XB = {Warrior:["Fighter","Page","Spearman"], Magician:["F/P Wizard","I/L Wizard","Cleric"], Bowman:["Hunter","Crossbowman"], Thief:["Assassin","Bandit"]};
 const FIRST = {Warrior:"Warrior", Magician:"Magician", Bowman:"Archer", Thief:"Rogue"};
@@ -468,4 +469,5 @@ pathFrom = (cls, branch, fam, lvl) => {
 const show = () => { if (!shown && !$("#path").hidden){ shown = true; render() } };
 document.querySelector('[data-tab="path"]').addEventListener("click", show);
 show();
+PLANNER = {get X(){ return X }, charAt, killSpot, tripSec, routeText, npcSpot, okMob, mapName, hm, OPENMAP, JOBTOWN, QUEST_SEC};
 })();
