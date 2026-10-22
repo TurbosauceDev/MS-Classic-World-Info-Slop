@@ -3195,7 +3195,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-22T20:40:36Z" data-ver="0.17.1">Site version: v0.17.1 · built Oct 22, 2026 · 20:40 UTC</p>
+  <p class="sitever" data-built="2026-10-22T21:19:17Z" data-ver="0.17.1">Site version: v0.17.1 · built Oct 22, 2026 · 21:19 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -9771,12 +9771,13 @@ const QLOG = (() => {
     const top = (t.trunc ? [...sc].sort((a, b) => a[4] - b[4]).slice(0, 6) : sc.slice(0, 6).filter(x => x[2] && x[1] < sc[0][1] + 0.12).map(x => [...x.slice(0, 4), x[4] < 9 ? x[4] : dtw(t, x[2]) + 0.5 * Math.abs(t.w - x[2].w) / t.w])).filter(x => x[2]).sort((a, b) => a[4] - b[4]);
     // near-ties only count against a different visible text: two names cut to the same letters are one row, not a doubt
     const rival = top.find(x => x[3] !== top[0]?.[3]), dGap = top[0] && rival ? rival[4] - top[0][4] : 1;
+    const riv = top.filter(x => x[3] !== top[0]?.[3] && x[4] - top[0][4] < 0.02).map(x => x[0]);   // the names it nearly was
     if (top.length > 1){ const s0 = sc[0][1], tn = new Set(top.map(x => x[0])), rest = sc.filter(x => !tn.has(x[0])); sc.length = 0; sc.push(...top.map((x, i) => [x[0], i ? Math.max(x[1], s0 + 1e-6) : s0, x[2], x[3]]), ...rest) }
     // a cut name two quests share ("[Forest of Patience] Sabitra..."): keep both, the state decides later
     // a cut name two quests share ("[Forest of Patience] Sabitra..."): the same visible letters
     const amb = t.trunc && sc[0] ? sc.filter(x => x[3] && x[3] === sc[0][3]).map(x => x[0]) : [];
     return {ln: sc[0]?.[0], s: sc[0]?.[1] ?? 9, alt: sc.slice(1, 3), amb: amb.length > 1 ? amb : null,
-      sure: !!sc[0] && sc[0][1] < 0.32 && (amb.length > 1 || dGap > 0.008), dGap};
+      sure: !!sc[0] && sc[0][1] < 0.32 && (amb.length > 1 || dGap > 0.008), dGap, riv};
   }
 
   // a run of frames -> per tab: {cats: {cat: n}, names: Map(ln -> {cat, s, seen})}
@@ -9817,7 +9818,7 @@ const QLOG = (() => {
         if (above?.m){
           const i = Math.max(0, Math.round((t.y0 - above.y1) / fr.P - 0.4)), sk = m.cat + "|" + i;   // by distance, so a missed row above doesn't shift it
           const sl = T.slots.get(sk) || new Map(), o = sl.get(key) || {v: 0, sv: 0, s: 9, amb: m.amb, cat: m.cat, alt: new Set()};
-          o.v += m.sure ? 1 : 0.3; if (m.sure) o.sv++; o.s = Math.min(o.s, m.s); for (const [n, v] of m.alt || []) if (v - m.s < 0.06) o.alt.add(n); sl.set(key, o); T.slots.set(sk, sl);
+          o.v += m.sure ? 1 : 0.3; if (m.sure) o.sv++; o.s = Math.min(o.s, m.s); for (const n of m.riv || []) o.alt.add(n); sl.set(key, o); T.slots.set(sk, sl);
         } else if (m.sure){ const o = T.names.get(key) || {cat: m.cat, s: 9, amb: m.amb}; o.s = Math.min(o.s, m.s); T.names.set(key, o) }   // above the first bar: sure reads only
       }
       // the text size from sure, uncut matches
@@ -9862,10 +9863,13 @@ const QLOG = (() => {
       // several narrow ones behind it); rows past the bar's own count are ignored
       // (best read first: on cut, blurry rows a wrong name can win many frames narrowly, the right one wins its clear frames)
       const T = {names: new Map(rd.tabs[tab].names), slots: rd.tabs[tab].slots}, taken = new Map(), slots = [...T.slots.entries()].map(([sk, m]) => { const [c, i] = [sk.slice(0, sk.lastIndexOf("|")), +sk.slice(sk.lastIndexOf("|") + 1)]; return {c, i, cands: [...m.entries()].filter(([, o]) => o.v >= 0.9).sort((a, b) => a[1].s - b[1].s || b[1].v - a[1].v)} })
-        .filter(x => x.cands.length).sort((a, b) => a.cands[0][1].s - b.cands[0][1].s);
+        .filter(x => x.cands.length).sort((a, b) => (b.cands[0][1].sv ? 1 : 0) - (a.cands[0][1].sv ? 1 : 0) || a.cands[0][1].s - b.cands[0][1].s);   // clear reads first
       for (const sl of slots){ const used = taken.get(sl.c) || new Set(); const pick = sl.cands.find(([k]) => !used.has(k)); if (!pick) continue; used.add(pick[0]); taken.set(sl.c, used);
         // never once a clear read (only narrow ones, or a near-tie every time): ask instead of applying
-        if (!pick[1].sv){ if (!T.names.has(pick[0])) unsure(tab, sl.c, [pick[0], ...pick[1].alt], "narrow"); continue }
+        // ...unless every close rival is already another row's clear read in this category (a quest shows once per tab):
+        // "[Event] The Final Mark" near-ties "The First Mark" / "The Fifth Mark", which sit in their own rows
+        const rivals = [...pick[1].alt].filter(n => n !== pick[0]);
+        if (!pick[1].sv && !(rivals.length && rivals.every(n => T.names.has(n)))){ if (!T.names.has(pick[0])) unsure(tab, sl.c, [pick[0], ...pick[1].alt], "narrow"); continue }
         if (!T.names.has(pick[0])) T.names.set(pick[0], {...pick[1], cat: sl.c}) }
       // rows seen only faintly (no name won enough frames): ask too
       for (const [sk, m] of T.slots){ const c = sk.slice(0, sk.lastIndexOf("|")), best = [...m.entries()].sort((a, b) => b[1].v - a[1].v)[0];
