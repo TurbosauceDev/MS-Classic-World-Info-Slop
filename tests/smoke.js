@@ -146,7 +146,7 @@ const boxGaps = require("./boxgaps");
   // Crafting
   await tab("#t-craft");
   check(await p.$$eval("#crmasters .fact", r => r.length) === 6, "six profession masters");
-  check(/^290 /.test(await p.textContent("#crcount")), "all 290 recipes up to the craft Lv 8 cap listed");
+  check(/^308 /.test(await p.textContent("#crcount")), "all 308 recipes up to the craft Lv 8 cap listed");
   await p.click('#crdisc button[data-d="4"]'); await p.selectOption("#crcls", "Thief");
   check(await p.$$eval("#crrows tr", r => r.length) > 0, "Leatherworking Thief filter");
   await p.click("#crmats .crfind >> nth=0");
@@ -161,7 +161,7 @@ const boxGaps = require("./boxgaps");
     await (await tr.$(".khave")).fill(""); }
   await p.selectOption("#kby", "c"); await p.selectOption("#kdisc", { index: 1 }); check(await p.$$eval("#krows tr", r => r.length) > 0, "keep list: crafting + profession filter");
   await p.selectOption("#kby", ""); await p.selectOption("#kdisc", "");
-  await tab("#t-mobs"); check(/^71 /.test(await p.textContent("#mbcount")), "monster database lists 71 monsters");
+  await tab("#t-mobs"); check(/^84 /.test(await p.textContent("#mbcount")), "monster database lists 84 monsters");
   await p.fill("#mbsearch", "balrog"); await p.click("#mbrows .mbtn");
   check(/Cursed Sanctuary/.test(await p.textContent("#mbpage")) && !/NaN|undefined/.test(await p.textContent("#mobs")), "monster page: Jr. Balrog");
   await p.click("#mbback"); await p.fill("#mbsearch", "green mushroom"); await p.click("#mbrows .mbtn");
@@ -177,8 +177,8 @@ const boxGaps = require("./boxgaps");
   check(/Magic Claw/.test(await p.textContent("#skpage h2")) && await p.$$eval("#skpage tbody tr", r => r.length) === 20 && /Energy Bolt/.test(await p.textContent("#skpage .mcols")), "skill page: levels and requirements");
   await p.click("#skback"); await p.click("#skreset"); check(/^90 /.test(await p.textContent("#skcount")) && !/NaN|undefined/.test(await p.textContent("#skills")), "skill list: reset filters");
   check(/^https:\/\/maplestory\.io\/api\/MCW\/CBT2\/character\/2000\/\d+,\d+.*\/stand[12]\/0$/.test(await p.$eval("#pavatar", i => i.dataset.src || "")), "builder: avatar URL (maplestory.io MCW)");
-  await tab("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); if (await p.isChecked("#itnoq")) await p.click("#itnoq"); check(/^2,221 /.test(await p.textContent("#itcount")), "item database lists 2,221 items");
-  await p.click("#itsrc"); check(/^[\d,]+ /.test(await p.textContent("#itcount")) && !/^2,221/.test(await p.textContent("#itcount")), "item list: known-source filter");
+  await tab("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); if (await p.isChecked("#itnoq")) await p.click("#itnoq"); check(/^2,258 /.test(await p.textContent("#itcount")), "item database lists 2,258 items");
+  await p.click("#itsrc"); check(/^[\d,]+ /.test(await p.textContent("#itcount")) && !/^2,258/.test(await p.textContent("#itcount")), "item list: known-source filter");
   { const n = await p.textContent("#itcount"); await p.click("#itnoq"); await p.fill("#itsearch", "letter");
     check(!/Maria's Letter/.test(await p.textContent("#itrows")) && n !== await p.textContent("#itcount"), "item list: hide quest items");
   await p.fill("#itsearch", "") }
@@ -231,6 +231,12 @@ const boxGaps = require("./boxgaps");
   await p.click("#wmmap .wmdot.hit:not(.k2) >> nth=0");
   check(await p.$$eval("#wmcard .wmleg li.me", r => r.length) === 1, "world map: lit dot's minimap shows the searched monster");
   await p.click("#wmmobclr"); check(await p.$$eval("#wmmap .wmdot.dim", r => r.length) === 0, "world map: clear monster search");
+  // OSMS 63db094 (10-21) maps with no spot on the client's world map are listed with the nearest marked spot
+  await p.mouse.move(0, 0); await p.fill("#wmfind", "Excavation Site I"); await p.dispatchEvent("#wmfind", "change");
+  check(/Excavation Site I/.test(await p.textContent("#wmcard")) && /Remains <Tomb> IV/.test(await p.textContent("#wmcard")) && /aren't marked on the in-game world map/.test(await p.textContent("#wmcard")) && await p.$$eval("#wmmap .wmdot.pin", r => r.length) === 1, "world map: Excavation Site (no client spot) found via the nearest spot");
+  await p.fill("#wmmob", "Ghost Stump"); await p.dispatchEvent("#wmmob", "change");
+  check(await p.$$eval("#wmmap .wmdot.hit", r => r.length) === 1, "world map: new monster Ghost Stump lights its spot");
+  await p.click("#wmmobclr");
   await p.mouse.move(0, 0); await p.fill("#wmfind", "Sleepywood"); await p.dispatchEvent("#wmfind", "change"); await p.locator("#wmfind").blur();
   check(await p.$$eval("#wmmap .wmnode", r => r.length) > 40 && await p.$$eval("#wmmap .wmsvg line", r => r.length) > 40, "world map: Sleepywood opens its sub-map with exits");
   await p.click('#wmmap .wmnode[data-map="10005070"]'); const sel = await p.textContent("#wmcard .qt-h");

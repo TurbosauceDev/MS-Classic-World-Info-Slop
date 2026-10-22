@@ -168,6 +168,7 @@ function card(i, lone){
     ${rest.length ? `<h5>${fights.length ? "Other maps here" : "Maps here"}</h5><p class="wmnpcs">${rest.map(id => mapLink(id, mapName(id))).join(", ")}</p>` : ""}
     <h5>Minimap: ${esc(mapName(mmId))}</h5><div class="mfmap">${mm}${legend}${exits}</div>
     ${ids.length > open.length ? `<p class="tiny">+${ids.length - open.length} more map${ids.length - open.length === 1 ? "" : "s"} the client lists here that aren't in the launch files.</p>` : ""}
+    ${(near => near.length ? `<p class="tiny">${near.length === 1 && lone ? "This map isn't" : esc(near.map(mapName).join(", ")) + (near.length === 1 ? " isn't" : " aren't")} marked on the in-game world map; listed with the nearest marked spot by walking.</p>` : "")(open.filter(id => (sp?.[4] || []).includes(id)))}
     ${mobRows ? `<h5>Monsters (spawn points)</h5><ul class="mmobs">${mobRows}</ul>` : ""}
     ${npcs.length ? `<h5>NPCs</h5><p class="wmnpcs">${npcs.map(npcLink).join(", ")}</p>` : ""}
     ${qs.length ? `<h5>Quests from NPCs here (${qs.length})</h5><ul class="mmobs">${qs.map(q => `<li>${qn(q)} <span>Lv ${q[1].lvl}${q[0] === "cit" ? " · Citizenship" : ""} · ${esc(q[1].npc)}</span></li>`).join("")}</ul>` : ""}

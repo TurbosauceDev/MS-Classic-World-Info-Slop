@@ -519,6 +519,7 @@ def step_mobdb(D):
         if a.launch_status(mid) == "Open at launch": return ""
         if 80000000 <= mid < 80001000: return "KPQ"
         if 80001000 <= mid < 80002000: return "2nd job test"
+        if 80003000 <= mid < 80004000: return "Primrose Hill PQ"   # Tory / Growlie maps, added in OSMS 63db094 (10-21)
     drops = json.load(open(ROOT / "data" / "sources" / "meowdb_drops.json"))["mobs"]
     mesos = json.load(open(ROOT / "data" / "sources" / "meowdb_mesos.json"))["monsters"]
     SKIP = {"gif", "gifs", "thumbnail", "maps", "id"}
@@ -575,6 +576,17 @@ def step_worldmap(D):
         buf = io.BytesIO(); im.convert("RGBA").save(buf, "WEBP", quality=80, method=6)
         spots = [[round((ox + m["spot"]["x"]) / W, 4), round((oy + m["spot"]["y"]) / H, 4), m["type"], [str(i) for i in m["mapNumbers"]]] for m in w["maps"]]
         out.append([key, island, W, H, base64.b64encode(buf.getvalue()).decode(), spots])
+    # launch maps the client's world map has no spot for (Excavation Site, Remains <Tomb>, Kerning subway, ...): listed
+    # with the spot of the nearest marked map by walking (D.nav), ids also kept in that spot's 5th field so the page can say so
+    at = {i: s for w in out for s in w[5] for i in s[3]}
+    ret = {str(m["id"]): str(m.get("return_map_id")) for r in a.mapsj["regions"] for m in r["maps"]}   # no walkable link: its return town
+    for mid in sorted(D["nav"]):
+        if mid in at: continue
+        seen, q = {mid}, [mid]
+        while q and not any(x in at for x in q):
+            q = [y for x in q for y in sorted(D["nav"].get(x, [])) if y not in seen and not seen.add(y)]
+        hit = next((x for x in q if x in at), None) or (ret.get(mid) if ret.get(mid) in at else None)
+        if hit: sp = at[hit]; sp[3].append(mid); (sp.append([]) if len(sp) < 5 else None); sp[4].append(mid)
     D["wmap"] = out
 
 def step_itemdb(D):

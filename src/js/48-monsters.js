@@ -4,11 +4,11 @@
 // player drop reports and mesos, plus the quests and recipes that want it. Clicking a monster (here or any .mobname on the
 // page) opens its own page, with the best maps to farm it ranked by kills per hour for a class and level you pick.
 const M = Object.entries(D.mobdb).map(([id, m]) => {
-  const kind = m.maps.every(x => x[4] === "KPQ") ? "kpq" : m.maps.every(x => x[4] === "2nd job test") ? "job"
+  const kind = m.maps.every(x => x[4] === "KPQ") ? "kpq" : m.maps.every(x => x[4] === "2nd job test") ? "job" : m.maps.every(x => x[4] === "Primrose Hill PQ") ? "pq"
     : m.special === "Jump Quest" ? "jq" : m.is_boss ? "boss" : "field";
   return {id, m, kind, ratio: m.exp / m.hp};
 });
-const KIND = {boss: ["Boss", "p-bad"], jq: ["Jump quest", "p-warn"], kpq: ["KPQ", "p-hot"], job: ["2nd job test", "p-hot"], field: ["", ""]};
+const KIND = {boss: ["Boss", "p-bad"], jq: ["Jump quest", "p-warn"], kpq: ["KPQ", "p-hot"], pq: ["Primrose Hill PQ", "p-hot"], job: ["2nd job test", "p-hot"], field: ["", ""]};
 // quests that want a kill or an item from this monster (by id when the game data says so)
 const QK = {}, QI = {};
 for (const [src, list] of [["q", QLAUNCH], ["cit", D.citq]]) for (const r of list){
@@ -152,7 +152,7 @@ function renderFarm(o){
         <td>${dangerPill({f: r.danger.f})}</td><td class="num">${r.exp ? fmt(r.exp) : "–"}</td></tr>`).join("")}</tbody></table>${rows.length > 8 ? `<button class="btn" id="mfall">${S.fall ? "Show top 8" : `Show all ${rows.length} maps`}</button>` : ""}</div>
       <div class="mfmap">${mm}<p class="sub">Dots = where ${esc(m.name)} spawns on ${esc(D.maps[spawnMap]?.[0] || D.mapnames[spawnMap] || "")}; numbers = exits. Click a map row to switch.</p></div></div>
       <p class="tiny">Kills/hr: estimate for a level ${L} ${esc(L >= 30 ? branch : S.fc)} with the Character Builder's default build, solo, single target, killing everything on the map as it respawns (same model as Where to train)${hit != null ? `; you hit it ${Math.round(hit * 100)}% of the time` : ""}. Danger = one touch from the map's hardest hitter as a share of a typical Max HP at that level. "Too hard" = you'd miss some monster there more than 95% of the time. Long-respawn spawns (bosses, timers over a minute) aren't counted.</p>`
-    : `<p class="sub">Not in any regular map spawn: it's a boss, a timed spawn, or only in KPQ / the 2nd job test. See every spawn place below.</p>${mm ? `<div class="mfmap">${mm}</div>` : ""}`);
+    : `<p class="sub">Not in any regular map spawn: it's a boss, a timed spawn, or only in a party quest / the 2nd job test. See every spawn place below.</p>${mm ? `<div class="mfmap">${mm}</div>` : ""}`);
 }
 // the shared minimap (20-quests.js) with this monster's spawn points added as dots
 const minimapWith = (mid, pts) => { const [mm, exits] = minimap(mid);

@@ -95,7 +95,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   10-20 audit: 5 small ships (footer move, favicon, offline on custom domain, builder avatar, "listings updated ago") had no card; caught up as v0.8.1. Add only at the top: a card inserted lower renumbers every newer version.
   Each card = one site version, numbered by build.py (oldest = 0.1.0; `class="card" data-minor` starts the next 0.x.0, for a big addition).
   Site-only: tracker app changes go in `tracker/app/changelog.js`.
-- **Item count** asserted in smoke.js (2,221); update when items change.
+- **Item count** asserted in smoke.js (2,258; also 308 recipes, 84 monsters in smoke + edge); update when items change.
 - **Tooltips:** one floating `#qtip`; classes `.qname` quest, `.ri` item icon, `.itname` item name, `.mname` map
   (`mapLink()`, click opens World Map card), `.nname` NPC (`npcLink()`), `.mobname` monster (`mobLink()`).
 - **Per-viewer state:** localStorage in try/catch; load an object with `savedState(key, S)` (00-core.js: drops unknown keys and wrong types), then range-check enums/levels.
@@ -307,3 +307,10 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Path Planner `#xsum` = `.snstats` tiles (golden.js reads the first `h3` for "N h") + `details.xmore`. EXP/hr form is `.ecform` with two `.ecrow`s; hint lives in `#echint`, empty saves show `#ecempty`. Quest "Stack with" is `details.qstack`.
 - h2 is 20px everywhere (fold-out section titles 17.5px, Home categories keep 24px). Monster page `.mfgrid` stacks under 1250px; smoke.js checks the best-maps table fits at 1300.
 - FM Sniper tables use `.thwrap` too (smoke's 1300 px check only bites with live listings; it blocked Pages 10-21 20:33 to 10-22 00:20). smoke's "cheap in shops now" needs ≥1 row, not >5 (data-dependent).
+
+## OSMS 63db094 re-pin 2026-10-21
+- OSMS F2P release (17:53Z): +9 field monsters (Excavation Site I-III, Remains <Tomb>/<Cliff>, Camp 1-3), Stumpy (Parched Land, 1 h timed),
+  Primrose Hill PQ monsters (mobdb kind "Primrose Hill PQ", Monsters filter "pq"), +13 maps, +37 items, +18 recipes. Faust/Moon Bunny/Flyeye 1032 have no spawn maps, so no page.
+- maplestory.io still has only MCW CBT2 + "1" (= COT1, older). The new maps have no world-map spot: step_worldmap now adds every
+  D.nav map without one to the spot of its nearest marked map by walking (fallback: OSMS return_map_id), ids also in the spot's 5th
+  field; the card says "aren't marked on the in-game world map". Smoke "world map: Excavation Site ..." + "Ghost Stump lights its spot".
