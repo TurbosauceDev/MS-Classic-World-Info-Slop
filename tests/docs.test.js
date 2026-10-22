@@ -25,6 +25,20 @@ const IGNORE = new Set([
   "scripts/fetch_maplestory_market.py",  // planned, not yet written
   "data/sources/maplestory_market_prices.json",  // planned, not yet written
   "docs/design/maintenance-detection.md",  // openclaw design doc, may not be in repo yet
+  "meowdb_shops.json",                    // generated data file (project-side Claude owns)
+  "meowdb_mesos.json",                    // generated data file
+  "meowdb_material_drops.json",            // generated data file
+  "shared_runs.json",                     // generated data file
+  ".github/workflows/maplestory-market-poll.yml",  // planned, not yet written
+  "maplestory-market-poll.yml",           // planned, not yet written
+  "scripts/submit_to_classicrank.py",     // planned, not yet written
+  "fresh/Classic%20World.json",           // meso.watch URL endpoint, not a repo file
+  "classicmarket_items.json",             // generated data file
+  "classicmarket_market.json",            // generated data file
+  "classicmarket_prices.json",            // generated data file
+  "mesoindex.json",                       // generated data file
+  "meowdb_market.json",                   // generated data file
+  "meowdb_drops.json",                    // generated data file
 ]);
 const FIXTURE_DIRS = ["tests/fixtures", ...fs.readdirSync(path.join(root, "tracker/tests")).filter(d => d.startsWith("frames")).map(d => "tracker/tests/" + d)];
 let fail = 0;
