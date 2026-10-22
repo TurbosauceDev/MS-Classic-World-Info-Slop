@@ -151,7 +151,14 @@ const QLOG = (() => {
       // something taller (the pointer) and is left out
       const m = Math.round(0.12 * P), Y0 = Math.max(0, ln.y0 - m), Y1 = Math.min(H - 1, ln.y1 + m), isd = (x, y) => { if (y < 0 || y >= H || inBar(y)) return false; const i = at(x, y); return dk(i, y) };
       const bad = new Uint8Array(tx1 - tx0 + 1); for (let x = tx0; x < tx1; x++) if (isd(x, Y0 - 1) || isd(x, Y0 - 2) || isd(x, Y1 + 1) || isd(x, Y1 + 2)) bad[x - tx0] = 1;
-      const z = zprof((x, y) => !bad[x - tx0] && isd(x, y), tx0, tx1 - 1, Y0, Y1, Math.round(0.7 * P)); if (!z.w) continue;
+      // ink joined to something reaching outside the band (the mouse pointer's outline, Danny's recording 16.5 s: its tip sits
+      // on "Vicious in Need of an Apprentice" and made it read as the wider "Francois...") is left out with all its pixels
+      const bw = tx1 - tx0, by0 = Math.max(0, Y0 - 8), by1 = Math.min(H - 1, Y1 + 8), bh = by1 - by0 + 1, lab = new Uint8Array(bw * bh), stack = [];
+      for (let y = by0; y <= by1; y++) for (let x = tx0; x < tx1; x++){ if ((y >= Y0 && y <= Y1) || !isd(x, y) || lab[(y - by0) * bw + x - tx0]) continue;
+        stack.push(x, y); lab[(y - by0) * bw + x - tx0] = 1;
+        while (stack.length){ const yy = stack.pop(), xx = stack.pop();
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){ const nx = xx + dx, ny = yy + dy; if (nx < tx0 || nx >= tx1 || ny < by0 || ny > by1) continue; const j = (ny - by0) * bw + nx - tx0; if (!lab[j] && isd(nx, ny)){ lab[j] = 1; stack.push(nx, ny) } } } }
+      const z = zprof((x, y) => !bad[x - tx0] && !lab[(y - by0) * bw + x - tx0] && isd(x, y), tx0, tx1 - 1, Y0, Y1, Math.round(0.7 * P)); if (!z.w) continue;
       // near the right edge a cut name is likely even when the dots blur: matchLine tries it both ways (edge)
       out.push({y0: ln.y0, y1: ln.y1, ...z, trunc: ellipsis(dk, at, z.x0, z.x1, ln, P), edge: z.x1 > R - 0.12 * (R - L)});   // z.x0/x1: ink box in frame x
     }
@@ -190,18 +197,24 @@ const QLOG = (() => {
   function matchLine(t, cat, px){
     const cats = Array.isArray(cat) ? cat : cat ? [cat] : [], names = cats.length ? [...new Set(cats.flatMap(c => [...(CAT.get(c)?.keys() || [])]))] : [...new Set(ALLQ.map(x => lnOf(x[1])))], sc = [];
     for (const n of names){
-      let s = 9, br = null;
-      if (t.trunc || t.edge){ for (let i = 4; i < n.length; i++){ const r = rend(n.slice(0, i).trimEnd() + "...", px); if (Math.abs(t.w - r.w) / t.w < 0.08){ const v = score(t, r); if (v < s){ s = v; br = r } } } }
-      if (!t.trunc){ const r = rend(n, px), v = score(t, r); if (v < s){ s = v; br = r } }
-      sc.push([n, s, br]);
+      // cut: each of the name's cuts near the row's width, the one that lines up letter by letter (dtw) kept
+      let s = 9, br = null, bt = "", bd = 9;
+      const dd = r => dtw(t, r) + 0.5 * Math.abs(t.w - r.w) / t.w;
+      if (t.trunc || t.edge){ for (let i = 4; i < n.length; i++){ const tx = n.slice(0, i).trimEnd() + "..."; if (tx === bt) continue; const r = rend(tx, px); if (Math.abs(t.w - r.w) / t.w < 0.08){ s = Math.min(s, score(t, r)); const d = dd(r); if (d < bd){ bd = d; br = r; bt = tx } } } }
+      if (!t.trunc){ const r = rend(n, px), v = score(t, r); if (v < s){ s = v; if (!(t.edge && bd < dd(r))){ br = r; bt = n; bd = 9 } } }
+      sc.push([n, s, br, bt, bd]);
     }
     sc.sort((a, b) => a[1] - b[1]);
     // the closest few, re-ranked letter by letter; the old score stays as the match's quality (thresholds below)
-    const top = sc.slice(0, 6).filter(x => x[2] && x[1] < sc[0][1] + 0.12).map(x => [...x, dtw(t, x[2]) + 0.5 * Math.abs(t.w - x[2].w) / t.w]).sort((a, b) => a[3] - b[3]);
-    const dGap = top[1] ? top[1][3] - top[0][3] : 1;
-    if (top.length > 1){ const s0 = sc[0][1]; sc.splice(0, top.length, ...top.map((x, i) => [x[0], i ? Math.max(x[1], s0) : s0, x[2]])) }
+    // (cut names: every name's best cut is re-ranked, so "First Greeting with Mrs. Ming Min..." vs "...Maya, the Tow..." is
+    // decided on the letters that differ)
+    const top = (t.trunc ? [...sc].sort((a, b) => a[4] - b[4]).slice(0, 6) : sc.slice(0, 6).filter(x => x[2] && x[1] < sc[0][1] + 0.12).map(x => [...x.slice(0, 4), x[4] < 9 ? x[4] : dtw(t, x[2]) + 0.5 * Math.abs(t.w - x[2].w) / t.w])).filter(x => x[2]).sort((a, b) => a[4] - b[4]);
+    // near-ties only count against a different visible text: two names cut to the same letters are one row, not a doubt
+    const rival = top.find(x => x[3] !== top[0]?.[3]), dGap = top[0] && rival ? rival[4] - top[0][4] : 1;
+    if (top.length > 1){ const s0 = sc[0][1], tn = new Set(top.map(x => x[0])), rest = sc.filter(x => !tn.has(x[0])); sc.length = 0; sc.push(...top.map((x, i) => [x[0], i ? Math.max(x[1], s0 + 1e-6) : s0, x[2], x[3]]), ...rest) }
     // a cut name two quests share ("[Forest of Patience] Sabitra..."): keep both, the state decides later
-    const amb = t.trunc && sc[0] ? sc.filter(x => x[1] - sc[0][1] < 0.01).map(x => x[0]) : [];
+    // a cut name two quests share ("[Forest of Patience] Sabitra..."): the same visible letters
+    const amb = t.trunc && sc[0] ? sc.filter(x => x[3] && x[3] === sc[0][3]).map(x => x[0]) : [];
     return {ln: sc[0]?.[0], s: sc[0]?.[1] ?? 9, alt: sc.slice(1, 3), amb: amb.length > 1 ? amb : null,
       sure: !!sc[0] && sc[0][1] < 0.32 && (amb.length > 1 || dGap > 0.008), dGap};
   }
