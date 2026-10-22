@@ -25,6 +25,7 @@ node tests/golden.js | tail -3              # meowdb-published reference numbers
 node tests/edge.js | tail -5                # bad saved state/share links/server replies, phone nav, keyboard; ~80 s
 node tests/features.js | tail -5            # train hand-off reload, price check keep/sell, job compare, Credits dates
 node tests/pages.js | tail -5               # Pages split (late icons), manifest, offline service worker
+node tests/expclive.js | tail -3            # EXP/hr live reader on tracker/tests/frames, Stop saves a session, screenshot pair
 node tests/polish.js | tail -3              # list Reset + Copy link, Home masonry, changelog times, World Map idle card, item page
 node tests/snipe.js | tail -5               # FM Sniper on a fixture market.json: deal maths, views, filters, watch, new, live refresh, tools
 python3 tests/deal_life_test.py             # FM Sniper deal lifetimes from a fake snapshot git history
@@ -72,7 +73,8 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 55-bcompare.js | | Builder "Compare two jobs" (buildAt per side, or "This build" = BLD.S) |
 | 56-snipe.js | 48 | FM Sniper: PWNOW vs PW, deal grades/score (ours), views, watch list, new badges, live market.json refresh, tools (trip, craft, sell, watch alerts, movers, lifetimes) |
 | 60-planner.js | 42 | Path Planner; exports TRAVEL |
-| 62-expcalc.js | | EXP/hr calculator (ids `#ec*`) |
+| 62-expcalc.js | | EXP/hr calculator (ids `#ec*`): typed/timer, screenshot pair (EXIF/file-name time), Save as image; `window.EXPC` |
+| 63-expclive.js | | EXP/hr live screen reader (`#ecl*`): tracker readers + core/session.js + core/gamedata.js, Mini view (Document PiP); `window.EXPLIVE` for tests |
 | 64-undervalued.js | | UV_PICKS / UV_PACKED / UV_SRC (World Map toggle, "vibes", never tied to planner) |
 | 65-navigator.js | | Map Navigator, `navTo(id)` |
 | 66-worldmap.js | 28 | World Map (D.wmap), map cards (`openMapInfo`), Sleepywood sub-map |
@@ -316,3 +318,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - maplestory.io still has only MCW CBT2 + "1" (= COT1, older). The new maps have no world-map spot: step_worldmap now adds every
   D.nav map without one to the spot of its nearest marked map by walking (fallback: OSMS return_map_id), ids also in the spot's 5th
   field; the card says "aren't marked on the in-game world map". Smoke "world map: Excavation Site ..." + "Ghost Stump lights its spot".
+
+## EXP/hr live reader 2026-10-21
+- `src/js/63-expclive.js`: Share game window → getDisplayMedia, frames every 500 ms from a Worker ticker (background tabs throttle page timers), ImageCapture.grabFrame where it exists, else the video. Each frame goes through the app's own `createReaders(G).readFrame` and `createSession(G)` (G = `GrindGamedata.toGamedata(D)` after ASSETS); no forked maths. Bar off screen 5 s = auto pause; Pause = hold. Stop / pagehide saves to `expc` sessions (`live: true`, `mesosHr`, `kills`).
+- Not in the browser: map/job/death OCR (pick map + class on the page), inventory loot correction, glyph learning across runs, shared-run uploads (kept off the boards until Danny says). Mini view needs Chrome/Edge 116+ (`documentPictureInPicture`); the button hides elsewhere.
+- Screenshot pair (karuzk 10-18) now uses readers.js `readBar`/`readBarAny`; the old copied 61-expbar.js is gone. Unverified in a real browser capture: background-tab frame grabbing on Firefox/Safari (no ImageCapture there).

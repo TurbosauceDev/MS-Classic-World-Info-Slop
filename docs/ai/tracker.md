@@ -33,7 +33,8 @@ game window ─(Windows Graphics Capture)─► app/main.js ─frames─► app/
 | core/session.js | 29 | pure: events → rates; `createRunSlicer` (15-min share runs) |
 | core/history.js | 10 | pure History maths (GrindHistory): metrics, compareRuns, perHour, byMap, bests, filterRuns, today, goalEta; tested in core.test.js |
 | core/autosave.js | 1 | crash-recovery file (Node, main.js): write/read/clear sessions/autosave.json |
-| build_data.js | | data/data.json → app/gamedata.json; copies src/js/51-shot.js → app/shot.js |
+| core/gamedata.js | | pure D → G (`GrindGamedata.toGamedata`), shared by build_data.js and the site's live EXP/hr reader |
+| build_data.js | | data/data.json → app/gamedata.json (via core/gamedata.js); copies src/js/51-shot.js → app/shot.js |
 | server/src/index.js | 17 | Worker routes; `server/src/check.js` validates runs |
 
 Symbol index: `grep -n "^function\|^async function" tracker/app/renderer*.js`; readers/session are indented:
@@ -200,3 +201,6 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 
 ## User data folders 2026-10-21
 - `%APPDATA%\MS Classic Grind Tracker` (settings.json, run-queue.json, sessions/; Electron names it after productName, not `name`), Pictures\MS Classic Tracker frames (bug reports) and Pictures\MS Classic Tracker runs (summary PNGs). Site How to use lists them with uninstall steps; keep both in sync if a path changes.
+
+## Site live reader shares tracker code 2026-10-21
+- build.py inlines `tracker/core/gamedata.js` + `tracker/core/session.js` into the site (src/js/63-expclive.js) next to readers.js. Changing session/readers/gamedata changes the site too: run `node tests/expclive.js` (tests.yml now also triggers on tracker/app/readers.js and tracker/core/**). Keep these three files browser-safe (no require at top level).

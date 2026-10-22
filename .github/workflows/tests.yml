@@ -5,7 +5,7 @@ name: Site tests
 on:
   push:
     branches: ["main"]
-    paths: ["dist/**", "src/**", "data/**", "tests/**", "scripts/pages_site.py", ".github/workflows/tests.yml"]
+    paths: ["dist/**", "src/**", "data/**", "tests/**", "tracker/app/readers.js", "tracker/core/**", "scripts/pages_site.py", ".github/workflows/tests.yml"]
   pull_request:
   workflow_dispatch:
 
@@ -39,6 +39,8 @@ jobs:
         run: node tests/craftplan.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/kpq.js
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node tests/expclive.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/questvalue.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}

@@ -5,7 +5,7 @@ name: pages
 on:
   push:
     branches: ["main"]
-    paths: ["dist/index.html", "data/data.json", "src/**", "scripts/build.py", "tracker/app/**", "src/pwa/**", "scripts/pages_site.py", ".github/workflows/pages.yml"]
+    paths: ["dist/index.html", "data/data.json", "src/**", "scripts/build.py", "tracker/app/**", "tracker/core/**", "src/pwa/**", "scripts/pages_site.py", ".github/workflows/pages.yml"]
   workflow_run:   # the daily shared-data + per-update meso.watch commits are pushed with GITHUB_TOKEN, which doesn't trigger push workflows
     workflows: ["shared-data", "meso.watch poll", "classicmarket poll", "meowdb market poll", "shopscans poll", "mesoindex poll"]
     types: [completed]

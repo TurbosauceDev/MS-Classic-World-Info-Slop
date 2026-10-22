@@ -86,7 +86,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
 
   // second audit (Danny 10-21 artifact comments)
   // #5 screenshot drop zones: no browser "Choose Files" button showing
-  for (const t of ["inv", "cplan", "plan"]){ await open(t); await p.waitForTimeout(80);
+  for (const t of ["inv", "expc", "plan"]){ await open(t); await p.waitForTimeout(80);
     const d = await p.evaluate(t => [...document.querySelectorAll(`#${t} .drop input[type=file]`)].map(i => getComputedStyle(i).opacity), t);
     check(d.length === 1 && d[0] === "0", `${t}: drop zone hides the native file button (${d})`) }
   // #10 Path Planner: headline numbers as tiles, explanations folded

@@ -2,11 +2,14 @@
   <details class="howto">
     <summary>How to use the EXP/hr calculator</summary>
     <ul>
-      <li>Before you start, note your EXP from the bar at the bottom of the screen (e.g. <b>123456[45.67%]</b>) and press <b>Start timer</b>.</li>
-      <li>Train for 5 to 10 minutes, then press <b>Stop</b> and type the new EXP. If you leveled up, raise <b>End level</b>.</li>
-      <li>EXP boxes take the number, the percentage (45.67%) or the whole bar text. Or skip the timer and type the minutes.</li>
-      <li>Pick the map, party and EXP card to compare with our <b>Where to train</b> estimate for that map (default build for your class and level). Our estimate counts no EXP card, so it's multiplied by your card here.</li>
-      <li><b>Save</b> keeps the session in this browser only. Sort by date or EXP/hr to compare maps.</li>
+      <li><b>Live (desktop browser, Windows or macOS):</b> pick your class and map, press <b>Share game window</b> and pick the game. The page reads your EXP bar and the pickup lines like the <a href="#" data-go="trk">Grind Tracker</a> app does: EXP, mesos and kills per hour, loot value, potions used, time to level. The picture stays in your browser; nothing is uploaded.</li>
+      <li>Time with no EXP, meso or item for a minute isn't counted, and the clock stops while the EXP bar is off screen (Cash Shop, changing channel). <b>Pause</b> for a break. <b>Stop</b> saves the run below.</li>
+      <li><b>Mini view</b> (Chrome, Edge) opens a small always-on-top window with the numbers, to keep over the game.</li>
+      <li>The browser can't read your map or class off the screen (the app does), so pick them here. Pickup lines must be on screen (the default chat setting) for mesos, kills and loot.</li>
+      <li><b>From two screenshots:</b> take one when you start and one when you stop, then drop, pick or paste both into the box. It reads the EXP bar on each and the time each was taken (camera data, else a date in the file name, else the file's time; pasted = the moment you paste).</li>
+      <li><b>By hand:</b> type your EXP from the bar (e.g. <b>123456[45.67%]</b>, the number or 45.67%), press <b>Start timer</b>, train 5 to 10 minutes, press <b>Stop</b> and type the new EXP. If you leveled up, raise <b>End level</b>.</li>
+      <li>Map, party and EXP card compare your rate with our <b>Where to train</b> estimate for that map (default build for your class and level, × your card). <b>Save</b> keeps the session in this browser only; <b>Save as image</b> makes a picture to share.</li>
+      <li>EXP needed above level 49 is meowdb's historical table (not confirmed in game), so time to level is an estimate there.</li>
     </ul>
   </details>
   <div class="controls ecform">
@@ -14,6 +17,34 @@
     <label>Class<select id="eccls">
       <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
       <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
+    <label>Map<input id="ecmap" type="search" list="ecmaps" placeholder="optional" size="24"></label>
+    <datalist id="ecmaps"></datalist>
+    <label>Party<select id="ecpty"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
+    <label>EXP card<select id="eccard"><option value="1">None</option><option value="1.5">1.5x</option><option value="2">2x</option></select></label>
+    <label>Goal level<input id="ecgoalL" type="number" min="2" max="100" style="width:5em"></label>
+    </div>
+  </div>
+
+  <div class="card eclive" id="eclive">
+    <div class="eclhead">
+      <h3>Live from your screen</h3>
+      <div class="eclbtns">
+        <button class="btn primary" id="eclshare" type="button">Share game window</button>
+        <button class="btn" id="eclpause" type="button" hidden>Pause</button>
+        <button class="btn" id="eclstop" type="button" hidden>Stop and save</button>
+        <button class="btn" id="eclmini" type="button" hidden>Mini view</button>
+      </div>
+    </div>
+    <p class="note" id="eclst" role="status">Reads the EXP bar and pickup lines from a shared game window. Nothing is uploaded.</p>
+    <div id="eclout" hidden></div>
+  </div>
+
+  <h2>From screenshots or by hand</h2>
+  <label class="drop" id="ecdrop"><input type="file" id="ecfile" accept="image/*" multiple>
+    <span>Drop, pick or paste (Ctrl+V) <b>two screenshots</b>, one from the start and one from the end of your session. The EXP bar and the time are read from them; nothing is uploaded.</span></label>
+  <p class="note" id="ecshot" style="margin:8px 0 12px"></p>
+  <div class="controls ecform">
+    <div class="ecrow">
     <label>Start level<input id="ecl0" type="number" min="1" max="99" value="25" style="width:4.2em"></label>
     <label>Start EXP<input id="ece0" type="text" inputmode="decimal" placeholder="12345 or 45.6%" size="12"></label>
     <label>End level<input id="ecl1" type="number" min="1" max="99" value="25" style="width:4.2em"></label>
@@ -21,22 +52,35 @@
     <div class="ecmin"><label>Minutes<input id="ecmin" type="number" min="0" step="0.1" style="width:5em"></label>
     <button class="btn" id="ectimer" type="button">Start timer</button></div>
     </div>
-    <div class="ecrow"><span class="ecsub">Compare with Where to train <i>(optional)</i></span>
-    <label>Map<input id="ecmap" type="search" list="ecmaps" placeholder="optional" size="24"></label>
-    <datalist id="ecmaps"></datalist>
-    <label>Party<select id="ecpty"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
-    <label>EXP card<select id="eccard"><option value="1">None</option><option value="1.5">1.5x</option><option value="2">2x</option></select></label>
-    <label>Goal level<input id="ecgoalL" type="number" min="2" max="100" style="width:5em"></label>
-    </div>
     <p class="ecnote" id="echint"></p>
   </div>
   <div id="ecout" class="mpage"></div>
   <h2>Saved sessions</h2>
-  <p class="ecempty" id="ecempty">Nothing saved yet. Press <b>Save</b> on a result above to keep it here (this browser only) and compare maps.</p>
+  <p class="ecempty" id="ecempty">Nothing saved yet. Press <b>Save</b> on a result above, or <b>Stop and save</b> a live run, to keep it here (this browser only) and compare maps.</p>
   <div class="controls" id="ecsaved"><label>Sort<select id="ecsort"><option value="t">Newest</option><option value="rate">EXP/hr</option></select></label>
     <button class="btn" id="ecclear" type="button" style="align-self:flex-end">Clear all</button></div>
   <div class="tblwrap" id="ectbl"><table>
-    <thead><tr><th>When</th><th>Class</th><th class="num">Lv</th><th>Map</th><th class="num">Party</th><th class="num">Card</th><th class="num">Min</th><th class="num">EXP</th><th class="num">EXP/hr</th><th class="num">vs estimate</th><th></th></tr></thead>
+    <thead><tr><th>When</th><th>Class</th><th class="num">Lv</th><th>Map</th><th class="num">Party</th><th class="num">Card</th><th class="num">Min</th><th class="num">EXP</th><th class="num">EXP/hr</th><th class="num">Mesos/hr</th><th class="num">vs estimate</th><th></th></tr></thead>
     <tbody id="ecrows"></tbody>
   </table></div>
+<style>/* live reader (63-expclive.js); scoped here, not in styles.css */
+.eclive{margin:14px 0 18px}
+.eclhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.eclhead h3{margin:0}
+.eclbtns{display:flex;flex-wrap:wrap;gap:8px}
+#eclout .big{margin:6px 0 2px}
+#eclout .stats{margin-top:12px}
+.eclread{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.eclread .pill{white-space:normal}
+.ecllist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 20px;margin-top:12px;font-size:14px}
+.ecllist h4{margin:6px 0 2px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ecllist ul{list-style:none;margin:0;padding:0}
+.ecllist li{display:flex;justify-content:space-between;gap:10px;padding:2px 0;border-bottom:1px solid var(--line)}
+.eclmini{padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.eclmini .mmbig{font:800 34px/1 var(--f-display);color:var(--ink)}
+.eclmini .mmbig small{font:500 14px var(--f-body);color:var(--muted)}
+.eclmini .mmrow{display:flex;justify-content:space-between;gap:10px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eclmini .btn{align-self:flex-start}
+.ecllist li span:last-child{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+</style>
 </section>

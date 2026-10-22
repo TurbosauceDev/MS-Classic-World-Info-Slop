@@ -1596,11 +1596,14 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <details class="howto">
     <summary>How to use the EXP/hr calculator</summary>
     <ul>
-      <li>Before you start, note your EXP from the bar at the bottom of the screen (e.g. <b>123456[45.67%]</b>) and press <b>Start timer</b>.</li>
-      <li>Train for 5 to 10 minutes, then press <b>Stop</b> and type the new EXP. If you leveled up, raise <b>End level</b>.</li>
-      <li>EXP boxes take the number, the percentage (45.67%) or the whole bar text. Or skip the timer and type the minutes.</li>
-      <li>Pick the map, party and EXP card to compare with our <b>Where to train</b> estimate for that map (default build for your class and level). Our estimate counts no EXP card, so it's multiplied by your card here.</li>
-      <li><b>Save</b> keeps the session in this browser only. Sort by date or EXP/hr to compare maps.</li>
+      <li><b>Live (desktop browser, Windows or macOS):</b> pick your class and map, press <b>Share game window</b> and pick the game. The page reads your EXP bar and the pickup lines like the <a href="#" data-go="trk">Grind Tracker</a> app does: EXP, mesos and kills per hour, loot value, potions used, time to level. The picture stays in your browser; nothing is uploaded.</li>
+      <li>Time with no EXP, meso or item for a minute isn't counted, and the clock stops while the EXP bar is off screen (Cash Shop, changing channel). <b>Pause</b> for a break. <b>Stop</b> saves the run below.</li>
+      <li><b>Mini view</b> (Chrome, Edge) opens a small always-on-top window with the numbers, to keep over the game.</li>
+      <li>The browser can't read your map or class off the screen (the app does), so pick them here. Pickup lines must be on screen (the default chat setting) for mesos, kills and loot.</li>
+      <li><b>From two screenshots:</b> take one when you start and one when you stop, then drop, pick or paste both into the box. It reads the EXP bar on each and the time each was taken (camera data, else a date in the file name, else the file's time; pasted = the moment you paste).</li>
+      <li><b>By hand:</b> type your EXP from the bar (e.g. <b>123456[45.67%]</b>, the number or 45.67%), press <b>Start timer</b>, train 5 to 10 minutes, press <b>Stop</b> and type the new EXP. If you leveled up, raise <b>End level</b>.</li>
+      <li>Map, party and EXP card compare your rate with our <b>Where to train</b> estimate for that map (default build for your class and level, × your card). <b>Save</b> keeps the session in this browser only; <b>Save as image</b> makes a picture to share.</li>
+      <li>EXP needed above level 49 is meowdb's historical table (not confirmed in game), so time to level is an estimate there.</li>
     </ul>
   </details>
   <div class="controls ecform">
@@ -1608,6 +1611,34 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <label>Class<select id="eccls">
       <option>Warrior</option><option>Bowman</option><option>Thief</option><option>Magician</option>
       <option>I/L Wizard</option><option>F/P Wizard</option><option>Cleric</option></select></label>
+    <label>Map<input id="ecmap" type="search" list="ecmaps" placeholder="optional" size="24"></label>
+    <datalist id="ecmaps"></datalist>
+    <label>Party<select id="ecpty"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
+    <label>EXP card<select id="eccard"><option value="1">None</option><option value="1.5">1.5x</option><option value="2">2x</option></select></label>
+    <label>Goal level<input id="ecgoalL" type="number" min="2" max="100" style="width:5em"></label>
+    </div>
+  </div>
+
+  <div class="card eclive" id="eclive">
+    <div class="eclhead">
+      <h3>Live from your screen</h3>
+      <div class="eclbtns">
+        <button class="btn primary" id="eclshare" type="button">Share game window</button>
+        <button class="btn" id="eclpause" type="button" hidden>Pause</button>
+        <button class="btn" id="eclstop" type="button" hidden>Stop and save</button>
+        <button class="btn" id="eclmini" type="button" hidden>Mini view</button>
+      </div>
+    </div>
+    <p class="note" id="eclst" role="status">Reads the EXP bar and pickup lines from a shared game window. Nothing is uploaded.</p>
+    <div id="eclout" hidden></div>
+  </div>
+
+  <h2>From screenshots or by hand</h2>
+  <label class="drop" id="ecdrop"><input type="file" id="ecfile" accept="image/*" multiple>
+    <span>Drop, pick or paste (Ctrl+V) <b>two screenshots</b>, one from the start and one from the end of your session. The EXP bar and the time are read from them; nothing is uploaded.</span></label>
+  <p class="note" id="ecshot" style="margin:8px 0 12px"></p>
+  <div class="controls ecform">
+    <div class="ecrow">
     <label>Start level<input id="ecl0" type="number" min="1" max="99" value="25" style="width:4.2em"></label>
     <label>Start EXP<input id="ece0" type="text" inputmode="decimal" placeholder="12345 or 45.6%" size="12"></label>
     <label>End level<input id="ecl1" type="number" min="1" max="99" value="25" style="width:4.2em"></label>
@@ -1615,24 +1646,37 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <div class="ecmin"><label>Minutes<input id="ecmin" type="number" min="0" step="0.1" style="width:5em"></label>
     <button class="btn" id="ectimer" type="button">Start timer</button></div>
     </div>
-    <div class="ecrow"><span class="ecsub">Compare with Where to train <i>(optional)</i></span>
-    <label>Map<input id="ecmap" type="search" list="ecmaps" placeholder="optional" size="24"></label>
-    <datalist id="ecmaps"></datalist>
-    <label>Party<select id="ecpty"><option value="1">Solo</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
-    <label>EXP card<select id="eccard"><option value="1">None</option><option value="1.5">1.5x</option><option value="2">2x</option></select></label>
-    <label>Goal level<input id="ecgoalL" type="number" min="2" max="100" style="width:5em"></label>
-    </div>
     <p class="ecnote" id="echint"></p>
   </div>
   <div id="ecout" class="mpage"></div>
   <h2>Saved sessions</h2>
-  <p class="ecempty" id="ecempty">Nothing saved yet. Press <b>Save</b> on a result above to keep it here (this browser only) and compare maps.</p>
+  <p class="ecempty" id="ecempty">Nothing saved yet. Press <b>Save</b> on a result above, or <b>Stop and save</b> a live run, to keep it here (this browser only) and compare maps.</p>
   <div class="controls" id="ecsaved"><label>Sort<select id="ecsort"><option value="t">Newest</option><option value="rate">EXP/hr</option></select></label>
     <button class="btn" id="ecclear" type="button" style="align-self:flex-end">Clear all</button></div>
   <div class="tblwrap" id="ectbl"><table>
-    <thead><tr><th>When</th><th>Class</th><th class="num">Lv</th><th>Map</th><th class="num">Party</th><th class="num">Card</th><th class="num">Min</th><th class="num">EXP</th><th class="num">EXP/hr</th><th class="num">vs estimate</th><th></th></tr></thead>
+    <thead><tr><th>When</th><th>Class</th><th class="num">Lv</th><th>Map</th><th class="num">Party</th><th class="num">Card</th><th class="num">Min</th><th class="num">EXP</th><th class="num">EXP/hr</th><th class="num">Mesos/hr</th><th class="num">vs estimate</th><th></th></tr></thead>
     <tbody id="ecrows"></tbody>
   </table></div>
+<style>/* live reader (63-expclive.js); scoped here, not in styles.css */
+.eclive{margin:14px 0 18px}
+.eclhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.eclhead h3{margin:0}
+.eclbtns{display:flex;flex-wrap:wrap;gap:8px}
+#eclout .big{margin:6px 0 2px}
+#eclout .stats{margin-top:12px}
+.eclread{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.eclread .pill{white-space:normal}
+.ecllist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 20px;margin-top:12px;font-size:14px}
+.ecllist h4{margin:6px 0 2px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ecllist ul{list-style:none;margin:0;padding:0}
+.ecllist li{display:flex;justify-content:space-between;gap:10px;padding:2px 0;border-bottom:1px solid var(--line)}
+.eclmini{padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.eclmini .mmbig{font:800 34px/1 var(--f-display);color:var(--ink)}
+.eclmini .mmbig small{font:500 14px var(--f-body);color:var(--muted)}
+.eclmini .mmrow{display:flex;justify-content:space-between;gap:10px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eclmini .btn{align-self:flex-start}
+.ecllist li span:last-child{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+</style>
 </section>
 
 <section id="trk" hidden>
@@ -2437,6 +2481,10 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   </details>
 
   <div class="changelog">
+    <div class="card" data-minor data-t="2026-10-22T01:26:06Z"><div class="cardhead"><h3><span class="ver">v0.15.0</span> Oct 22, 2026 · EXP/hr live from your screen</h3><span class="pill p-hot">new</span></div>
+      <p>The <b>EXP/hr calculator</b> can now watch your game like the Grind Tracker app does, right in the browser (so macOS works too). Press <b>Share game window</b>: it reads your EXP bar and pickup lines and shows EXP, mesos and kills per hour, loot value, potions used, level-ups and time to level, with idle time and Cash Shop trips left out. <b>Pause</b> for breaks, <b>Stop and save</b> puts the run in your saved sessions (now with Mesos/hr), and <b>Mini view</b> (Chrome, Edge) keeps the numbers in a small window over the game. Pick your map and class on the page; the browser can't read them off the screen.</p>
+      <p>Also: drop two screenshots (start and end) to fill in the calculator from their EXP bars and times, and <b>Save as image</b> makes a picture of your result to share. Nothing is uploaded.</p>
+    </div>
     <div class="card" data-t="2026-10-22T01:15:50Z"><div class="cardhead"><h3><span class="ver">v0.14.2</span> Oct 22, 2026 · Crafting, all in one place</h3></div>
       <ul><li>The Craft planner is now the <b>Plan</b> tab of <b>Crafting</b>, next to <b>Recipes</b>, <b>Level up</b> and <b>Reference</b> (masters, craft levels, raw materials). Old Craft planner links open Plan.</li>
         <li><b>Your craft levels</b> sit at the top, set once for every tab.</li>
@@ -3016,7 +3064,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-22T01:15:51Z" data-ver="0.14.2">Site version: v0.14.2 · built Oct 22, 2026 · 01:15 UTC</p>
+  <p class="sitever" data-built="2026-10-22T01:31:32Z" data-ver="0.15.0">Site version: v0.15.0 · built Oct 22, 2026 · 01:31 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -9264,7 +9312,9 @@ show();
 
 /* ---------------- EXP/hr calculator ---------------- */
 // two EXP readings + elapsed time -> measured EXP/hr, time to level, and the Where to train estimate for that map
-// (mapRates with the default build, × EXP card). Saved sessions live in localStorage "expc".
+// (mapRates with the default build, × EXP card). Saved sessions live in localStorage "expc". Two screenshots fill it in:
+// EXP bar via the tracker's readers (readers.js, inlined in 54-invprice.js), time from EXIF / file name / file time.
+// "Save as image" draws a result card. The live screen reader (63-expclive.js) saves its runs here through window.EXPC.
 (() => {
 const MAPS = {}, BYLABEL = {}, seen = {};
 for (const [id, [name, open]] of Object.entries(D.maps).sort((a, b) => a[1][0].localeCompare(b[1][0]))){
@@ -9312,6 +9362,109 @@ $("#ectimer").addEventListener("click", () => {
   save(); timerUi(); calc();
 });
 
+// ---- screenshots: EXP bar + when each was taken (10-18 branch karuzk, Danny OK'd) ----
+// JPEG camera time (EXIF DateTimeOriginal, else DateTimeDigitized / DateTime), as a local time; null if none
+function exifTime(buf){
+  try {
+    const v = new DataView(buf); if (v.getUint16(0) !== 0xFFD8) return null;
+    let o = 2;
+    while (o + 4 < v.byteLength && v.getUint8(o) === 0xFF){
+      const mk = v.getUint8(o + 1), len = v.getUint16(o + 2);
+      if (mk === 0xE1 && v.getUint32(o + 4) === 0x45786966){
+        const t = o + 10, le = v.getUint16(t) === 0x4949, u16 = i => v.getUint16(t + i, le), u32 = i => v.getUint32(t + i, le);
+        const tag = (ifd, id) => { const n = u16(ifd); for (let k = 0; k < n; k++){ const e = ifd + 2 + k * 12; if (u16(e) === id) return e } return -1 };
+        const str = e => { let s = ""; for (let k = 0; k < 19; k++) s += String.fromCharCode(v.getUint8(t + u32(e + 8) + k)); return s };
+        const ifd0 = u32(4), ex = tag(ifd0, 0x8769);
+        let e = ex >= 0 ? tag(u32(ex + 8), 0x9003) : -1;
+        if (e < 0 && ex >= 0) e = tag(u32(ex + 8), 0x9004);
+        if (e < 0) e = tag(ifd0, 0x0132);
+        const m = e >= 0 && str(e).match(/(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/);
+        return m ? new Date(m[1], m[2] - 1, m[3], m[4], m[5], m[6]).getTime() : null;
+      }
+      o += 2 + len;
+    }
+  } catch(e) {}
+  return null;
+}
+// a date and time in the file name: 2026-10-17 21.05.33, 20261017_210533, 261017_210533 ...
+function nameTime(name){
+  const m = name.match(/(?:^|\D)((?:20)?\d\d)[-_.]?(\d\d)[-_.]?(\d\d)[ _T-]*(\d\d)[-_.:h]?(\d\d)[-_.:m]?(\d\d)(?!\d)/);
+  if (!m) return null;
+  const y = +m[1] < 100 ? 2000 + +m[1] : +m[1], d = new Date(y, m[2] - 1, m[3], m[4], m[5], m[6]);
+  return m[2] >= 1 && m[2] <= 12 && m[3] >= 1 && m[3] <= 31 && m[4] < 24 && m[5] < 60 && m[6] < 60 ? d.getTime() : null;
+}
+// EXP bar of one screenshot: pixel-exact first, else any scale; level = the EXP table entry EXP / % works out to
+function barOf(img){
+  const R = window.GrindReaders, b = R.readBar(R.native(img)) || R.readBarAny(img);
+  if (!b) return null;
+  let level = null;
+  if (b.pct > 0.5) for (const [L, need] of Object.entries(D.exp)) if (Math.abs(b.exp / (b.pct / 100) - need) / need < 0.004){ level = +L; break }
+  return {exp: b.exp, pct: b.pct, level};
+}
+let SHOTS = [];   // [{t, how, bar}] this visit only
+async function addShots(files, pasted){
+  files = [...files].filter(f => f.type.startsWith("image/")); if (!files.length) return;
+  $("#ecshot").textContent = "Reading…";
+  for (const f of files){
+    let t = null, how = "pasted";
+    if (!pasted){ t = exifTime(await f.slice(0, 131072).arrayBuffer()); how = "camera time";
+      if (t == null){ t = nameTime(f.name); how = "file name" }
+      if (t == null){ t = f.lastModified; how = "file time" } }
+    else t = Date.now();
+    let bar = null; try { bar = barOf(await shotLoad(f)) } catch(e) {}
+    SHOTS.push({t, how, bar});
+  }
+  SHOTS.sort((a, b) => a.t - b.t); if (SHOTS.length > 2) SHOTS = [SHOTS[0], SHOTS[SHOTS.length - 1]];
+  const [a, b] = SHOTS, put = (sel, v) => { if (v != null) $(sel).value = v };
+  const said = s => s.bar ? `${fmt(s.bar.exp)} [${s.bar.pct.toFixed(2)}%]${s.bar.level ? ` at level ${s.bar.level}` : ""}` : "EXP bar not found (type it in)";
+  const when = s => `${new Date(s.t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit", second: "2-digit"})} (${s.how})`;
+  put("#ecl0", a.bar?.level); put("#ece0", a.bar?.exp);
+  if (b){
+    put("#ecl1", b.bar?.level ?? (a.bar?.level && Math.max(+$("#ecl1").value, a.bar.level))); put("#ece1", b.bar?.exp);
+    $("#ecmin").value = +((b.t - a.t) / 60000).toFixed(1);
+    if (S.t0 != null){ S.t0 = null; timerUi() }
+    $("#ecshot").innerHTML = `Start: ${esc(said(a))}, ${esc(when(a))}<br>End: ${esc(said(b))}, ${esc(when(b))}${b.t - a.t < 60000 ? '<br><b>Under a minute apart:</b> check the times, or type the minutes.' : ""}`;
+    SHOTS = [];
+  } else {
+    if (+$("#ecl1").value < +$("#ecl0").value) $("#ecl1").value = $("#ecl0").value;
+    $("#ece1").value = ""; $("#ecshot").innerHTML = `Start: ${esc(said(a))}, ${esc(when(a))}. Now add the end screenshot.`;
+  }
+  calc();
+}
+const drop = $("#ecdrop");
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over") });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); addShots(e.dataTransfer.files) });
+$("#ecfile").addEventListener("change", e => { addShots(e.target.files); e.target.value = "" });
+document.addEventListener("paste", e => { if ($("#expc").hidden) return; const f = [...(e.clipboardData?.files || [])]; if (f.length){ e.preventDefault(); addShots(f, true) } });
+
+// ---- result as a picture: r {t, L, cls, map, gain, min, rate, party, card, next?, mesosHr?} ----
+function shareCard(r){
+  const W = 720, H = 360, c = document.createElement("canvas"), g = c.getContext("2d"), css = getComputedStyle(document.documentElement);
+  c.width = W * 2; c.height = H * 2; g.scale(2, 2);
+  const col = k => css.getPropertyValue(k).trim() || "#888", ff = k => css.getPropertyValue(k).trim() || "sans-serif";
+  g.fillStyle = col("--panel"); g.fillRect(0, 0, W, H);
+  g.fillStyle = col("--accent"); g.fillRect(0, 0, 8, H);
+  const txt = (s, x, y, font, color) => { g.font = font; g.fillStyle = col(color); g.fillText(s, x, y) };
+  txt(`Level ${r.L} ${r.cls}${r.map && D.maps[r.map] ? " · " + D.maps[r.map][0] : ""}`, 40, 56, `600 22px ${ff("--f-body")}`, "--ink");
+  txt(fmt(r.rate), 40, 150, `800 84px ${ff("--f-display")}`, "--ink");
+  g.font = `800 84px ${ff("--f-display")}`; const w = g.measureText(fmt(r.rate)).width;
+  txt("EXP/hr", 52 + w, 150, `500 24px ${ff("--f-body")}`, "--muted");
+  txt(`${fmt(r.gain)} EXP in ${+(+r.min).toFixed(1)} min · ${+(r.rate / D.exp[r.L] * 100).toFixed(1)}% of a level per hour`, 40, 200, `500 20px ${ff("--f-body")}`, "--ink");
+  txt([r.mesosHr ? `${fmt(r.mesosHr)} mesos/hr` : "", r.party > 1 ? `Party of ${r.party}` : "Solo", r.card > 1 ? `${r.card}x EXP card` : "", r.next ? `next level in ${r.next}` : ""].filter(Boolean).join(" · "), 40, 234, `500 20px ${ff("--f-body")}`, "--muted");
+  txt(new Date(r.t).toLocaleString([], {year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}), 40, 300, `500 16px ${ff("--f-body")}`, "--muted");
+  txt("MS Classic World Data Slop · EXP/hr calculator", 40, 328, `600 16px ${ff("--f-body")}`, "--accent");
+  return c;
+}
+// shows the picture under btn's card (copy / long-press where downloads are blocked) and downloads or shares it
+function saveImage(r, out){
+  const c = shareCard(r), name = `exp-hr-${r.L}-${new Date(r.t).toISOString().slice(0, 10)}.png`;
+  out.innerHTML = `<img src="${c.toDataURL("image/png")}" alt="EXP/hr result picture" style="display:block;width:100%;max-width:520px;margin-top:12px;border-radius:8px;border:1px solid var(--line)"><p class="note">Right-click or long-press the picture to copy it.</p>`;
+  c.toBlob(b => { if (!b) return; const f = new File([b], name, {type: "image/png"});
+    if (navigator.canShare?.({files: [f]}) && matchMedia("(pointer:coarse)").matches){ navigator.share({files: [f]}).catch(() => {}); return }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000) });
+}
+
 let cur = null;
 function calc(){
   for (const [k, sel] of Object.entries(F)) S[k] = $(sel).value;
@@ -9329,14 +9482,17 @@ function calc(){
   const rate = gain / min * 60, perSec = rate / 3600, goal = Math.min(MAX_LEVEL, Math.max(L1 + 1, +S.goal || L1 + 1));
   const model = modelRate(S.cls, L1, mid, party), est = model != null ? model * card : null;
   cur = {t: Date.now(), cls: S.cls, L: L1, map: mid, party, card, min, gain, rate, est};
+  const next = hrs(toLevel(L1, e1, L1 + 1) / perSec);
   const pct = rate / D.exp[L1] * 100, unsure = L1 >= EXP_SURE ? ' <span class="pill p-warn">estimated EXP table</span>' : "";
   $("#ecout").innerHTML = `<div class="card">
     <div class="big">${fmt(rate)} <small>EXP/hr</small></div>
     <p>${fmt(gain)} EXP in ${min < 1 ? Math.round(min * 60) + " s" : +min.toFixed(1) + " min"} · ${pct >= 10 ? Math.round(pct) : pct.toFixed(1)}% of level ${L1} per hour${card > 1 ? ` · ${fmt(rate / card)}/hr without the ${card}x card` : ""}</p>
-    <p>Next level: <b>${hrs(toLevel(L1, e1, L1 + 1) / perSec)}</b>${goal > L1 + 1 ? ` · Level ${goal}: <b>${hrs(toLevel(L1, e1, goal) / perSec)}</b>` : ""}${unsure}</p>
+    <p>Next level: <b>${next}</b>${goal > L1 + 1 ? ` · Level ${goal}: <b>${hrs(toLevel(L1, e1, goal) / perSec)}</b>` : ""}${unsure}</p>
     ${mid ? `<p>${mapLink(mid, D.maps[mid][0])}: our estimate ${est != null ? `<b>${fmt(est)}</b>/hr (default ${esc(S.cls)} build${party > 1 ? `, party of ${party}` : ""}${card > 1 ? `, ×${card} card` : ""}). You got <b>${Math.round(rate / est * 100)}%</b> of it.` : "none (your build can't hit these monsters reliably by our model)."}</p>` : ""}
-    <button class="btn primary" id="ecsave" type="button">Save session</button></div>`;
+    <button class="btn primary" id="ecsave" type="button">Save session</button> <button class="btn" id="ecimg" type="button">Save as image</button>
+    <div id="ecimgout"></div></div>`;
   $("#ecsave").addEventListener("click", () => { S.rec.unshift(cur); save(); rows(); $("#ecsave").textContent = "Saved"; $("#ecsave").disabled = true });
+  $("#ecimg").addEventListener("click", () => saveImage({...cur, next}, $("#ecimgout")));
 }
 function rows(){
   const list = S.rec.map((r, i) => ({...r, i})).sort(S.sort === "rate" ? (a, b) => b.rate - a.rate : (a, b) => b.t - a.t);
@@ -9344,7 +9500,7 @@ function rows(){
     <td class="sub">${new Date(r.t).toLocaleString([], {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}</td>
     <td>${esc(r.cls)}</td><td class="num">${r.L}</td><td>${r.map && D.maps[r.map] ? mapLink(r.map, D.maps[r.map][0]) : "–"}</td>
     <td class="num">${r.party}</td><td class="num">${r.card > 1 ? r.card + "x" : "–"}</td><td class="num">${+(+r.min).toFixed(1)}</td>
-    <td class="num">${fmt(r.gain)}</td><td class="num"><b>${fmt(r.rate)}</b></td><td class="num">${r.est ? Math.round(r.rate / r.est * 100) + "%" : "–"}</td>
+    <td class="num">${fmt(r.gain)}</td><td class="num"><b>${fmt(r.rate)}</b></td><td class="num">${r.mesosHr != null ? fmt(r.mesosHr) : "–"}</td><td class="num">${r.est ? Math.round(r.rate / r.est * 100) + "%" : "–"}</td>
     <td><button class="btn" data-ecdel="${r.i}" type="button" style="padding:3px 9px" aria-label="Delete">✕</button></td></tr>`).join("")
     : "";
   $("#ecempty").hidden = !!list.length; $("#ecsaved").hidden = $("#ectbl").hidden = !list.length;   // short empty state, not an empty table (second audit #11)
@@ -9355,6 +9511,616 @@ $("#ecsort").addEventListener("change", () => { S.sort = $("#ecsort").value; sav
 $("#ecl0").addEventListener("input", () => { if (+$("#ecl1").value < +$("#ecl0").value) $("#ecl1").value = $("#ecl0").value });
 for (const sel of Object.values(F)) if (sel !== "#ecsort") $(sel).addEventListener("input", calc);
 timerUi(); calc(); rows();
+// for the live reader (63-expclive.js): the picked class/map/party/card/goal, a finished run into the saved sessions
+window.EXPC = {
+  pick: () => ({cls: $("#eccls").value, map: BYLABEL[$("#ecmap").value.trim().toLowerCase()] || null, party: +$("#ecpty").value || 1, card: +$("#eccard").value || 1, goal: +$("#ecgoalL").value || null}),
+  modelRate, saveImage,
+  addRec(r){ S.rec.unshift(r); save(); rows() }
+};
+})();
+
+/* ---------------- EXP/hr calculator: live from the screen ---------------- */
+// The browser version of the Grind Tracker's core (Danny 10-21: "most of the functionality of the desktop app, as a
+// browser feature", so macOS players get it too). A shared game window is read with the app's own code, not a copy:
+// readers.js (EXP bar, pickup lines, party bars, potion counts; inlined in 54-invprice.js), tracker/core/session.js
+// (rates, active time, level-ups, loot value) and tracker/core/gamedata.js (D -> the app's game data), inlined below by
+// build.py. Left out (browsers can't, or it needs OCR): map/job/death reading, global keys, click-through overlay.
+// Map and class come from the page's pickers. A finished run goes to the saved sessions (62-expcalc.js, window.EXPC).
+/* data/data.json (the site's data, D) -> the tracker's game data (G): only what the tracker needs. Pure, no files, so the
+   app build (build_data.js) and the site's live EXP/hr reader (src/js/63-expclive.js, inlined by build.py) make the same G. */
+(function (root){
+  function toGamedata(D){
+    const items = {};
+    for (const [id, it] of Object.entries(D.items)) items[id] = {n: it.n, p: it.p || 0, c: it.c};
+    const G = {
+      mobs: Object.fromEntries(Object.entries(D.mobs).map(([id, m]) => [id, m.slice(0, 4)])),   // [name, level, hp, exp]
+      maps: D.maps, mapnames: D.mapnames, exp: D.exp, items, pw: D.pw?.it || {}, pwRead: D.pw?.read || null,
+    };
+    // KPQ stages aren't in D.maps (the site's grind maps): every stage's name is known (the minimap OCR matches it: KPQ runs
+    // are spotted by these ids, G.kpq), and the ones with monsters are added as maps, e.g. the bonus stage players grind
+    G.kpq = (D.kpq || []).map(k => k.id);
+    for (const k of D.kpq || []) G.mapnames = {...G.mapnames, [k.id]: k.name};
+    for (const k of D.kpq || []){
+      if (G.maps[k.id]) continue;
+      // stages without monsters (2-4, Exit) are maps too, with none: EXP there is stage-clear EXP, not kills
+      if (!k.mob?.length){ G.maps[k.id] = [k.name, 1, []]; continue }
+      const n = {}; for (const [id] of k.mob) n[id] = (n[id] || 0) + 1;
+      G.maps[k.id] = [k.name, 1, Object.entries(n).map(([id, c]) => [+id, c])];
+      G.mapnames = {...G.mapnames, [k.id]: k.name};
+    }
+    // mob -> items players have seen it drop (meowdb reports, D.drops item -> [[mob, reports]]): picks the item when a pickup
+    // line's name fits several. KPQ's own items (Coupon, Pass) on the KPQ stages
+    G.drops = {};
+    for (const [item, list] of Object.entries(D.drops || {})) for (const [mob] of list) (G.drops[mob] = G.drops[mob] || []).push(item);
+    G.kpqItems = ["4001001", "4001002"];
+    // timed spawns (bosses and slow respawns; D.timed rows [mob, name, level, hp, exp, map, mapName, count, respawn s, boss]):
+    // map -> [[mob, respawn s, boss]]; those monsters join their map's list so their kills are recognised
+    G.timed = {};
+    for (const [mob, name, level, hp, exp, map, mapName, , sec, boss] of D.timed || []){
+      if (!G.maps[map]){ G.maps[map] = [mapName, 1, []]; G.mapnames = {...G.mapnames, [map]: G.mapnames[map] || mapName} }
+      if (!G.mobs[mob]) G.mobs[mob] = [name, level, hp, exp];   // bosses aren't in D.mobs
+      (G.timed[map] = G.timed[map] || []).push([String(mob), sec, boss]);
+      if (G.maps[map] && !G.maps[map][2].some(([id]) => String(id) === String(mob))) G.maps[map] = [G.maps[map][0], G.maps[map][1], [...G.maps[map][2], [+mob, 0]]];
+    }
+    // monsters only in the site's monster pages (KPQ stages: Ligator, Curse Eye, King Slime...): same [name, level, hp, exp]
+    for (const [, , list] of Object.values(G.maps)) for (const [id] of list){ const m = D.mobdb?.[id]; if (!G.mobs[id] && m) G.mobs[id] = [m.name, m.level, m.hp, m.exp] }
+    // items used up while farming (potions, food, arrows, throwing stars): icons for reading their counts on the quick slots
+    // and in the Use tab, and the lowest NPC shop price (D.ishop) for their cost
+    const used = Object.entries(D.items).filter(([id, it]) => /^20(60|61|70)/.test(id) || ["hp", "mp", "hpR", "mpR"].some(k => it.sp?.[k])).map(([id]) => id);
+    G.icons = Object.fromEntries(used.filter(id => D.iicons[id]).map(id => [id, D.iicons[id]]));
+    // every Equip / Use / Etc item's picture, for reading the inventory window (readers.js readInventory)
+    G.iicons = Object.fromEntries(Object.entries(D.iicons).filter(([id]) => ["Equipment", "Consumable", "Scroll", "Etc"].includes(D.items[id]?.c)));
+    G.buy = Object.fromEntries(used.map(id => [id, Math.min(...(D.ishop[id] || []).map(s => s[3]).filter(p => p > 0))]).filter(([, p]) => isFinite(p)));
+    // plain arrows aren't in our shop data: Danny's price, 2 arrows = 1 meso (2026-10-17). Bronze arrows are 2 each (shop data, matches him)
+    for (const id of ["2060000", "2061000"]) G.buy[id] ??= 0.5;
+    return G;
+  }
+  if (typeof module !== "undefined" && module.exports) module.exports = {toGamedata}; else root.GrindGamedata = {toGamedata};
+})(typeof window !== "undefined" ? window : globalThis);
+
+/* Grind session tracker: turns what the screen readers saw (timestamped events) into rates. Pure logic, no screen or DOM,
+   so it runs the same in the Windows app and in Node tests. Game data comes from tracker/app/gamedata.json (built from
+   data/data.json by tracker/build_data.js).
+
+   Events (t = ms since epoch):
+     {t, type: "exp",   gain}             one "You received EXP (+gain)" message = one kill (yours or a party member's)
+     {t, type: "bonus", gain}             "Bonus EXP for PARTY (+gain)": EXP, not a kill
+     {t, type: "bar",   exp, level?}      EXP bar reading: current EXP into the level (and level, when worked out)
+     {t, type: "item", id, qty?, src?}    an item picked up (src "box": a box's reward from the chat box, no monster)
+     {t, type: "itemraw", text, qty?, cands?}  an item pickup line whose name fits several items (cands) or none; the one
+                                          this map's monsters drop is taken when only one of them does
+     {t, type: "inv", tab, items, alike?, stacks?, unknown}  the inventory's open tab (equip/use/etc): {id: count}; alike = how many
+                                          items share that picture (scrolls); unknown = slots that didn't read
+     {t, type: "meso",  amount}           meso pickup message
+     {t, type: "item",  id, qty?}         item pickup message (id resolved by the reader from the item name)
+     {t, type: "map",   id, name?}        map read from the minimap (id null: a map our data doesn't have, name as read)
+     {t, type: "party", size}             party size from the party HP bars (1 = solo)
+     {t, type: "job",   name}             class read from the screen
+     {t, type: "have",  items}            {id: count} on the quick slots (a quick slot shows the item's total)
+     {t, type: "use",   id, n}            n of an item used up (potion, food, arrows), from the quick-slot / Use-tab counts
+     {t, type: "useseen"}                 item counts are on screen (so nothing used = 0, not unknown)
+     {t, type: "wallet", n}               the meso total in the inventory window (spending shows here, pickups alone don't)
+     {t, type: "pause"} / {t, type: "resume"}  the game screen is gone (Cash Shop, changing channel): that time isn't farming; hold: paused by hand, only "resume" ends it
+   Rates use active time only: any gap of more than IDLE_MS with no EXP, meso or item event is left out. */
+(function (root){
+  const IDLE_MS = 60000, RECENT_MS = 5 * 60e3;
+  // the player's own calendar day (toISOString alone is UTC: an evening in America would land on tomorrow)
+  const localDate = t => { const d = new Date(t); return new Date(t - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
+  function createSession(G, opts = {}){
+    const idleMs = opts.idleMs || IDLE_MS;
+    const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
+      msgExp: 0, barExp: 0, recent: [], kills: 0, unknownKills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, itemT: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
+      pausedAt: null, held: false, pausedMs: 0, levelUps: [], levelAt: null, used: {}, have: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
+
+    /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
+       your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
+       isn't even (the party bonus comes as its own line). There a kill is the monster only when just one monster on the
+       map gives that much; otherwise it's a kill with the monster unknown ("?"). More than any monster gives = not a kill. */
+    function matchMob(gain){
+      const list = G.maps[S.map]?.[2] || [], mobs = list.map(([id]) => String(id)).filter(id => G.mobs[id]?.[3]);
+      const base = id => G.mobs[id][3];
+      // a lone monster worth 5x the smallest one on the map (KPQ's King Slime) is a boss: one kill per visit to the map, so
+      // stage-clear EXP after it isn't taken for more kills (Danny's KPQ run, 2026-10-18)
+      const least = Math.min(...mobs.map(base)), big = id => mobs.length > 1 && list.find(([m]) => String(m) === id)?.[1] === 1 && base(id) >= 5 * least;
+      const r = pick();
+      if (r && r !== "?" && big(r)){ if (S.bigKilled.has(r)) return null; S.bigKilled.add(r) }
+      return r;
+      function pick(){
+        if (S.party <= 1){
+          let best = null, bestErr = Infinity;
+          for (const id of mobs){ const err = Math.abs(base(id) - gain) / base(id); if (err < bestErr){ bestErr = err; best = id } }
+          return bestErr <= 0.15 ? best : null;
+      }
+      // a boss on the map fits almost any small share: only count it when no regular monster gives that much
+      const regular = mobs.filter(id => !timed(id) && !big(id)), fitsReg = regular.filter(id => gain <= base(id) * 1.05);
+      const fits = fitsReg.length ? fitsReg : mobs.filter(id => gain <= base(id) * 1.05);
+      if (!fits.length) return null;
+      const exact = fits.filter(id => Math.abs(base(id) - gain) / base(id) <= 0.03);
+      return exact.length === 1 ? exact[0] : fits.length === 1 ? fits[0] : "?";
+      }
+    }
+    // monsters on this map with a long respawn (bosses etc.), from the game data
+    const timed = id => (G.timed?.[S.map] || []).find(([m]) => m === String(id));
+    // respawn timers for this map: when each timed monster was last killed here and when it's due back
+    function respawns(now){
+      return (G.timed?.[S.map] || []).map(([id, sec, boss]) => { const k = S.timedKills[id];
+        return {id, name: G.mobs[id]?.[0] || "Monster " + id, sec, boss: !!boss, killed: k || null, dueIn: k ? Math.max(0, k + sec * 1000 - now) : null} });
+    }
+    // KPQ's middle stages have no monsters, so minutes with no EXP there are still play time (Danny, 2026-10-18): no idle cut-off in a stage
+    const kpqStage = () => (G.kpq || []).includes(S.map) && S.map !== "80000600";
+    function credit(t){ const gap = t - S.last; S.activeMs += gap > (kpqStage() ? 30 * 60e3 : idleMs) || gap < 0 ? 0 : gap }   // < 0: the PC clock went back
+    // a level-up: how long the level before took (active time), when this session saw that level start
+    function levelUp(level, t){
+      const was = S.levelAt;
+      S.levelUps.push({level, t, map: S.map, mapName: G.mapnames?.[S.map] || G.maps[S.map]?.[0] || S.mapName || null,
+        activeMin: was && !was.partial && was.level === level - 1 ? Math.round((S.activeMs - was.activeMs) / 6e3) / 10 : null});
+      S.levelAt = {level, activeMs: S.activeMs};
+    }
+    // inventory now minus at the first read, per item (tabs read at least twice), biggest change first
+    function invGain(){
+      const out = [];
+      for (const [tab, {first, last, low}] of Object.entries(S.inv)){
+        if (last.t <= first.t) continue;
+        for (const id of new Set([...Object.keys(first.items), ...Object.keys(last.items)])){
+          let n = (last.items[id] || 0) - (first.items[id] || 0);
+          // gone from the tab while some slots didn't read: most likely one of those, not all used up (Danny's Lemons, 2026-10-18)
+          // ...unless it went down while it still showed: that much was used (Danny's Warrior Potion 2 -> 1, then unread, 2026-10-18)
+          if (!last.items[id] && last.unknown > 0){ const lo = low[id]; if (lo == null || lo >= (first.items[id] || 0)) continue; n = lo - first.items[id] }
+          // a stack of it didn't read (and no earlier read of that slot to fill in): that total is short. Short at the first
+          // look, a drop since is still at least that much used; short at the last look, nothing can be said
+          if (last.partial[id] || first.partial[id] && n > 0) continue;
+          // one stack fewer and more slots unread than at the first look: a stack that didn't read, not used (Danny's arrows, 2026-10-18)
+          if (n < 0 && last.unknown > first.unknown && (last.stacks[id] || 0) < (first.stacks[id] || 0)) continue;
+          if (n && !(G.kpqItems || []).includes(id)) out.push({id, tab, n, was: first.items[id] || 0, now: last.items[id] || 0, alike: last.alike[id] || first.alike[id] || 1, name: G.items[id]?.n || "Item " + id});
+        }
+      }
+      return out.sort((a, b) => Math.abs(b.n) - Math.abs(a.n));
+    }
+    // KPQ's Pass and Coupon only matter inside KPQ: not loot (Danny, 2026-10-18)
+    function gotItem(id, q, t, src){ id = String(id); if ((G.kpqItems || []).includes(id)) return; S.items[id] = (S.items[id] || 0) + q; (S.itemT[id] ||= {first: t}).last = t; if (S.lastKillMob && !src){ const m = mob(S.lastKillMob); m.items[id] = (m.items[id] || 0) + q } }
+    const mob = id => S.byMob[id] || (S.byMob[id] = {kills: 0, exp: 0, mesos: 0, mesoDrops: 0, items: {}});
+
+    function add(e){
+      S.events++;
+      if (S.start === null) S.start = e.t;
+      const counts = ["exp", "bonus", "meso", "item", "itemraw", "bar"].includes(e.type);
+      // paused: farming time up to the pause counts, the pause itself doesn't; anything counted (or "resume") ends it
+      // a pause by hand (hold) only ends with "resume": nothing read meanwhile (a party member's EXP) restarts the clock
+      if (e.type === "pause"){ if (S.pausedAt === null){ if (S.last !== null){ credit(e.t); S.last = e.t } S.pausedAt = e.t } if (e.hold) S.held = true; return S }
+      if (S.pausedAt !== null && (e.type === "resume" || counts && !S.held)){ S.pausedMs += Math.max(0, e.t - S.pausedAt); S.pausedAt = null; S.held = false; if (S.last !== null || counts) S.last = e.t }
+      if (e.type === "resume") return S;
+      if (counts && S.pausedAt === null){ if (S.last !== null) credit(e.t); S.last = e.t }
+      switch (e.type){
+        case "map": S.map = e.id == null ? null : String(e.id); S.mapName = e.name || null; S.bigKilled.clear(); break;
+        case "party": S.party = Math.max(1, e.size | 0); break;
+        case "job": S.job = e.name; break;
+        case "exp": {
+          S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t);
+          if (!G.maps[S.map]){ S.kills++; S.unknownKills++; S.lastKillMob = null; break }   // map not known: a kill, monster unknown
+          const id = matchMob(e.gain);
+          if (id === "?"){ S.kills++; S.unknownKills++; S.lastKillMob = null }   // a party kill, monster unknown
+          else if (id){ const m = mob(id); m.kills++; m.exp += e.gain; S.kills++; S.lastKillMob = id; if (timed(id)) S.timedKills[id] = e.t }
+          else S.otherExp += e.gain;   // fits no monster here: quest reward etc.
+          break;
+        }
+        case "bonus": S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); break;
+        // the inventory's open tab read: kept as first and latest per tab (Equip, Use, Etc)
+        case "inv": {
+          if (!e.tab || !e.items) break;
+          const items = Object.fromEntries(Object.entries(e.items).filter(([, n]) => Number.isFinite(n) && n >= 0));   // a count that didn't read is no count
+          const read = {t: e.t, items, alike: e.alike || {}, stacks: e.stacks || {}, partial: e.partial || {}, unknown: e.unknown || 0};
+          const tab = S.inv[e.tab] ||= {first: read, low: {}}; tab.last = read;
+          for (const [id, n] of Object.entries(items)) if (n > 0 && !read.partial[id] && !(tab.low[id] <= n)) tab.low[id] = n;   // fewest seen per item
+          if (e.tab === "use"){ for (const id of Object.keys(S.have)) if (!(id in items) && !read.unknown) delete S.have[id]; for (const [id, n] of Object.entries(items)) if (!read.partial[id]) S.have[id] = n }
+          break;
+        }
+        case "itemraw": {
+          // a name that fits several items: the one the monsters here drop (player drop reports), or KPQ's Coupon/Pass
+          const here = new Set((G.maps[S.map]?.[2] || []).flatMap(([m]) => G.drops?.[m] || []).concat((G.kpq || []).includes(S.map) ? G.kpqItems || [] : []));
+          const fit = (e.cands || []).filter(id => here.has(String(id)));
+          // "x1 earned" inside KPQ is Cloto's Pass/reward hand-out, not loot: not an unread drop (Danny's reports, 2026-10-18)
+          if (fit.length === 1) gotItem(fit[0], e.qty || 1, e.t); else if (!(/earned/i.test(e.text || "") && (G.kpq || []).includes(S.map))) S.unreadItems++;
+          break;
+        }
+        case "wallet": if (Number.isFinite(e.n) && e.n >= 0){ if (S.walletFirst === null) S.walletFirst = e.n; S.walletLast = e.n } break;
+        // how many of each counted item there are now (all its stacks on screen: quick slots or the open Use tab)
+        case "have": for (const [id, n] of Object.entries(e.items || {})) if (n >= 0) S.have[String(id)] = n; break;
+        case "use": { S.useSeen = true; const n = Math.max(0, e.n | 0); if (n) S.used[String(e.id)] = (S.used[String(e.id)] || 0) + n; break }
+        case "useseen": S.useSeen = true; break;
+        case "bar": {
+          const p = S.bar, before = S.level;
+          // the EXP number and the % come from one line, so EXP / % must be some level's total: "1 [68.01%]" is a misread
+          // number (Danny's KPQ run: each one counted as a death, then the next good read as +32k EXP). Ignore it.
+          // and that level must be this one or the next (a garbled % can make EXP / % land on another level's total)
+          const fit = e.pct > 0.5 ? levelOf(G, e.exp, e.pct) : null;
+          // under 0.5% the level can't be worked out, but the EXP must still be that % (to 2 decimals) of this level or the next
+          // (of some level, before the level is known)
+          const tiny = !(e.pct > 0.5) && Number.isFinite(e.pct) && !(S.level ? [S.level, S.level + 1] : Object.keys(G.exp).map(Number))
+            .some(L => G.exp[L] && Math.abs(e.exp - e.pct / 100 * G.exp[L]) <= Math.max(2, G.exp[L] * 0.00006));
+          // a jump of 2+ levels (quest turn-in, bar unread for a while): taken once the same level reads 3 times running (twice let garbled readings through in the fuzz test)
+          const jump = fit && S.level && fit > S.level + 1 && S.bar?.level && (S.jumpTo === fit ? ++S.jumpN >= 3 : (S.jumpTo = fit, S.jumpN = 1, false));
+          if (!jump && (tiny || e.pct > 0.5 && (!fit || S.level && fit !== S.level && fit !== S.level + 1))){ S.badBars = (S.badBars || 0) + 1; break }
+          S.jumpTo = null;
+          if (jump){ const q = S.bar; let d = (G.exp[q.level] || 0) - q.exp + e.exp; for (let L = q.level + 1; L < fit; L++) d += G.exp[L] || 0;
+            S.barExp += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t); for (let L = q.level + 1; L <= fit; L++){ S.level = L; if (!(S.levelUps.at(-1)?.level >= L)) levelUp(L, e.t) }
+            S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: fit}; break }
+          if (e.level) S.level = e.level;
+          // level not known yet (only readings under 0.5%, which can't be checked well): nothing counted until it is
+          if (!S.level){ S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: null}; break }
+          if (p && p.level){
+            let d = e.exp - p.exp;
+            // leveled up: the level says so, or (just after a level-up, when the % is too small to work the level out)
+            // the bar was at 90%+ and fell to under half of that; a death only takes a few %
+            const up = e.level && p.level ? e.level > p.level : p.level && p.pct >= 90 && e.exp < p.exp * 0.5;
+            // the EXP number can come back higher after a level-up (it's into a bigger level); the % going down says so too
+            if (up && (d < 0 || e.pct != null && p.pct != null && e.pct < p.pct)){ d = (G.exp[p.level] || 0) - p.exp + e.exp; if (!e.level) S.level = p.level + 1 }
+            // a death takes at most about a tenth of the level; a bigger drop without a level-up is a misread: ignore it,
+            // unless it keeps reading that way (3 in a row: a level-up the reader couldn't tell, e.g. a quest turn-in)
+            else if (d < 0 && G.exp[p.level] && -d > 0.2 * G.exp[p.level] && (S.bigDrops = (S.bigDrops || 0) + 1) < 3){ S.badBars = (S.badBars || 0) + 1; S.level = before; break }
+            else if (d < 0 && S.bigDrops >= 3 && !e.level){ d = (G.exp[p.level] || 0) - p.exp + e.exp; S.level = p.level + 1 }   // 3 in a row: the level-up it was
+            S.bigDrops = 0;
+            if (d > 0){ S.barExp += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t) }
+            // a drop without a level-up = a death (the game takes a share of the level's EXP); not counted again until EXP rises
+            else if (d < -Math.max(5, (G.exp[p.level] || 0) * 0.001) && !p.dead){   // a few EXP down is the last digit misread, not a death
+              S.deaths++; const k = S.map || "?"; S.deathMaps[k] = (S.deathMaps[k] || 0) + 1 }
+          }
+          if (before && S.level === before + 1 && !(S.levelUps.at(-1)?.level >= S.level)) levelUp(S.level, e.t);   // once per level, even if a misread flickers it
+          else if (S.level && !S.levelAt) S.levelAt = {level: S.level, activeMs: S.activeMs, partial: true};   // started mid-level: its time is unknown
+          S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: S.level, dead: p && e.exp < p.exp && !(e.level > p.level) ? true : p?.dead && e.exp <= p.exp}; break;
+        }
+        case "meso":
+          S.mesos += e.amount;
+          // credited to the last monster killed: exact on one-monster maps, a guess where several share the map
+          if (S.lastKillMob){ const m = mob(S.lastKillMob); m.mesos += e.amount; m.mesoDrops++ }
+          break;
+        case "item": {
+          gotItem(e.id, e.qty || 1, e.t, e.src);   // src "box": opened from a box, not a monster's drop
+          break;
+        }
+      }
+      // EXP so far at this moment, for the last-5-minutes rate
+      if (counts){ S.recent.push([e.t, S.barExp, S.msgExp]); while (S.recent.length > 2 && S.recent[1][0] < e.t - RECENT_MS) S.recent.shift() }
+      return S;
+    }
+
+    // market value of one item: player-shop median (meso.watch), else NPC sell price. rough = meso.watch flags it low data
+    // (few sales seen); lo/hi = the middle half of its sales (p25-p75), the NPC price when it has no player-shop sales
+    const worth = id => G.pw?.[id]?.[0] ?? G.items[id]?.p ?? 0;
+    const rough = id => !!(G.pw?.[id]?.[4] & 1);
+    const worthLo = id => G.pw?.[id]?.[1] ?? worth(id), worthHi = id => G.pw?.[id]?.[2] ?? worth(id);
+
+    // EXP/hr over the last 5 minutes (wall time, breaks included): how you're doing right now
+    function recentExpHr(){
+      const r = S.recent; if (r.length < 2) return null;
+      const a = r.find(p => p[0] >= S.last - RECENT_MS) || r[0], b = r[r.length - 1], ms = b[0] - a[0];
+      if (ms < 60e3) return null;
+      const gain = b[1] > a[1] || S.barExp ? b[1] - a[1] : b[2] - a[2];
+      return gain / ms * 3.6e6;
+    }
+
+    function stats(){
+      const hrs = S.activeMs / 3.6e6, per = v => hrs > 0 ? v / hrs : 0;
+      // EXP/hr: from the EXP bar when it's being read (counts every source), else the EXP messages
+      const exp = S.barExp || S.msgExp;
+      const expHr = per(exp);
+      const need = S.bar && S.level ? G.exp[S.level] : null;
+      const toLevelHrs = need && expHr > 0 ? Math.max(0, need - S.bar.exp) / expHr : null;
+      // a goal level: the rest of this level plus every level up to it, at the current rate
+      const goal = opts.goalLevel === "next" ? (S.level ? S.level + 1 : 0) : +opts.goalLevel || 0;   // "next": always the level after this one
+      let toGoalHrs = null;
+      if (need && expHr > 0 && goal > S.level){ let left = Math.max(0, need - S.bar.exp); let known = true; for (let l = S.level + 1; l < goal; l++){ if (!G.exp[l]) known = false; left += G.exp[l] || 0 } toGoalHrs = known ? left / expHr : null }   // past the EXP table: unknown, not "sooner"
+      // the inventory read at two times (a tab opened early and again later): what's in it now minus what was in it then.
+      // Etc, equips and scrolls only (potions go up when bought). Per item the bigger of that and the pickup lines: the
+      // inventory catches lines that didn't read, the lines catch loot sold or stored in between
+      const inv = invGain(), seenN = {...S.items}, filled = {};
+      for (const g of inv) if (g.n > 0 && !(G.kpqItems || []).includes(g.id) && g.alike === 1 && ["Etc", "Equipment", "Scroll"].includes(G.items[g.id]?.c) && g.n > (seenN[g.id] || 0)){ filled[g.id] = g.n - (seenN[g.id] || 0); seenN[g.id] = g.n }
+      // fewer than the pickup lines, and the tab read with every slot readable both before the first and after the last
+      // pickup: the inventory is right, a line read twice (Danny's one Mace counted 2, 2026-10-18)
+      for (const g of inv){ const t = S.itemT[g.id], tab = S.inv[g.tab];
+        if (g.n > 0 && g.alike === 1 && t && g.n < (seenN[g.id] || 0) && !tab.first.unknown && !tab.last.unknown && tab.first.t < t.first && tab.last.t > t.last) seenN[g.id] = g.n }
+      const items = Object.entries(seenN).map(([id, n]) => ({id, name: G.items[id]?.n || "Item " + id, n, each: worth(id), total: worth(id) * n, lo: worthLo(id) * n, hi: worthHi(id) * n, rough: rough(id), inv: filled[id] || 0}))
+        .sort((a, b) => b.total - a.total);
+      const unreadLeft = Math.max(0, S.unreadItems - Object.values(filled).reduce((a, b) => a + b, 0));
+      const lootValue = items.reduce((a, b) => a + b.total, 0), lootLo = items.reduce((a, b) => a + b.lo, 0), lootHi = items.reduce((a, b) => a + b.hi, 0),
+        lootRough = items.reduce((a, b) => a + (b.rough ? b.total : 0), 0);   // part of the value priced from few sales
+      // used up: NPC shop price (cheapest shop), else the player-shop median; unknown price = left out of the cost
+      // Use-tab items that went down between inventory looks count as used too (max of the two, like loot above)
+      const usedN = {...S.used};
+      for (const g of inv) if (g.tab === "use" && g.n < 0 && g.alike === 1 && -g.n > (usedN[g.id] || 0)) usedN[g.id] = -g.n;
+      // "I only buy meat and lemons": the potions they name came from drops and quests, so they cost nothing (Danny, 2026-10-18)
+      const free = new Set(opts.freeIds || []);
+      // arrows and stars carried: listed even before any are counted used, with how many are left (Danny: "you should be
+      // able to see exactly how many arrows i have each time", 2026-10-18)
+      for (const id of Object.keys(S.have)) if (/^20(60|61|70)/.test(id) && !(id in usedN)) usedN[id] = 0;
+      const used = Object.entries(usedN).map(([id, n]) => { const each = free.has(id) ? 0 : G.buy?.[id] ?? G.pw?.[id]?.[0] ?? null;
+        return {id, name: G.items[id]?.n || "Item " + id, n, each, total: each == null ? null : each * n, free: free.has(id), have: S.have[id] ?? null} }).sort((a, b) => (b.total || 0) - (a.total || 0) || b.n - a.n);
+      const usedCost = used.reduce((a, u) => a + (u.total || 0), 0);
+      const mobs = Object.entries(S.byMob).map(([id, m]) => ({id, name: G.mobs[id]?.[0] || "Monster " + id, ...m,
+        mesoPerKill: m.kills ? m.mesos / m.kills : 0})).sort((a, b) => b.kills - a.kills);
+      return {activeMin: S.activeMs / 6e4, map: S.map, mapName: G.mapnames?.[S.map] || G.maps[S.map]?.[0] || S.mapName || null, party: S.party,
+        job: S.job, level: S.level, kills: S.kills, unknownKills: S.unknownKills, killsHr: per(S.kills), exp, expHr, toLevelHrs, otherExp: S.otherExp,
+        // share of the bar's EXP that showed up as readable messages: below ~70%, kills/mesos/drops are undercounted
+        readShare: S.barExp > 0 ? Math.min(1, S.msgExp / S.barExp) : null,
+        // kills if the missed lines were kills at the same rate as the ones read (an estimate; only from 20% read up)
+        killsEstHr: S.barExp > 0 && S.msgExp / S.barExp >= 0.2 && S.msgExp < S.barExp ? per(S.kills * S.barExp / S.msgExp) : null,
+        expHr5: recentExpHr(), deaths: S.deaths, paused: S.pausedAt !== null, levelUps: S.levelUps, toGoalHrs, goalLevel: goal || null, lastExpT: S.lastExpT,
+        mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: unreadLeft, unreadLines: S.unreadItems, inv, invTabs: Object.fromEntries(Object.entries(S.inv).map(([k, v]) => [k, {first: v.first.t, last: v.last.t}])), lootValue, lootLo, lootHi, lootRough, lootHr: per(lootValue), items, mobs,
+        used, usedCost, usedCostHr: per(usedCost), netHr: per(S.mesos + lootValue - usedCost),
+        // inventory mesos now minus at the first read: real money in or out, shop trips included (loot not sold yet isn't in it)
+        walletNet: S.walletFirst === null ? null : S.walletLast - S.walletFirst, walletNetHr: S.walletFirst === null ? null : per(S.walletLast - S.walletFirst)};
+    }
+
+    // anonymous summary for the shared drop tables (no character name, no timestamps beyond the date)
+    function shareable(){
+      const s = stats();
+      return {v: 1, deaths: S.deaths, date: localDate(S.start || Date.now()), map: s.map, mapName: s.mapName, party: s.party, job: s.job,
+        level: s.level, activeMin: Math.round(s.activeMin * 10) / 10, kills: s.kills, exp: s.exp, mesos: s.mesos,
+        msgExp: S.msgExp, barExp: S.barExp, readShare: s.readShare, otherExp: S.otherExp, unreadItems: S.unreadItems, items: S.items,
+        used: Object.fromEntries(s.used.filter(u => u.n > 0).map(u => [u.id, u.n])),   // as listed (Use-tab drops included), not just counted
+        usedCost: S.useSeen || S.inv.use?.last.t > S.inv.use?.first.t ? Math.round(s.usedCost) : null,
+        mobs: s.mobs.map(m => ({id: m.id, kills: m.kills, mesos: m.mesos, mesoDrops: m.mesoDrops, items: m.items}))};
+    }
+
+    const setGoal = lv => { opts.goalLevel = lv }, setFree = ids => { opts.freeIds = ids };
+    return {add, stats, shareable, respawns, setGoal, setFree, state: S};
+  }
+
+  /* Shared runs (the same rules as beanguri's Maple Classic Exp Overlay): 15 minutes of non-stop farming on one map with
+     the same party. A map or party change, or a break longer than idleMs, starts a new run; a finished run goes to onRun. */
+  const RUN_MS = 15 * 60e3;
+  function createRunSlicer(G, opts = {}){
+    const idleMs = opts.idleMs || IDLE_MS, runMs = opts.runMs || RUN_MS, onRun = opts.onRun || (() => {});
+    let cur = null, last = null, bar = null;
+    const ctx = {};   // latest map / party / job, carried into each new run
+    // a new run at time t; after a finished run the last bar reading is its EXP baseline (not after a break)
+    function fresh(t, keepBar){
+      cur = createSession(G, {idleMs});
+      for (const e of Object.values(ctx)) cur.add({...e, t});
+      if (keepBar && bar) cur.add({...bar, t});
+    }
+    const same = (a, b) => JSON.stringify({...a, t: 0}) === JSON.stringify({...b, t: 0});
+    function add(e){
+      if (e.type === "map" || e.type === "party" || e.type === "job"){
+        const was = ctx[e.type]; ctx[e.type] = e;
+        if (!cur || e.type !== "job" && was && !same(was, e)) fresh(e.t, false); else cur.add(e);
+        return;
+      }
+      const counts = ["exp", "bonus", "meso", "item", "itemraw", "bar"].includes(e.type);
+      // the break is from the last counted event, or (nothing counted yet: just started, or a new map) from the run's start
+      // (a map read, then 20 min idle, then farming made a 20-minute "run" of one kill, 2026-10-19)
+      const ref = last ?? cur?.state.start;
+      if (!cur || counts && ref != null && e.t - ref > idleMs) fresh(e.t, false);
+      cur.add(e);
+      if (counts) last = e.t;
+      if (e.type === "bar") bar = e;
+      const S = cur.state;
+      // run length is wall time minus pauses (a channel change inside a run doesn't count as farming)
+      if (S.last !== null && S.last - S.start - S.pausedMs >= runMs){
+        onRun({...cur.shareable(), minutes: Math.round((S.last - S.start - S.pausedMs) / 6e3) / 10, hour: new Date(S.start).getUTCHours()});   // UTC hour: "best time to farm"
+        fresh(e.t, true);
+      }
+    }
+    return {add, get current(){ return cur }};
+  }
+
+  /* Speed check for a finished run against the shared data (server /api/summary rows: one per player per map, their
+     typical run). Peers = players within 5 levels, solo vs party the same as you. A map counts once 3+ players have farmed
+     it, without runs under half or over double its median (the same rules as the site). Verdict cut-offs are our own
+     choice: under 0.75x the peers' median = slow, up to 1.25x average, up to 1.75x good, above that very fast. */
+  const medianOf = a => { const s = [...a].sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[n >> 1] : (s[n / 2 - 1] + s[n / 2]) / 2) : null };
+  function speedCheck(run, summary, G){
+    const hr = run.exp / (run.minutes / 60), party = run.party > 1;
+    // without the EXP bar the run's EXP is only the messages read, which undercounts: no verdict
+    if (!run.level || !run.barExp || !summary?.rows) return {expHr: hr, verdict: null, noBar: !run.barExp};
+    const peers = summary.rows.filter(r => r.level && Math.abs(r.level - run.level) <= 5 && (r.party > 1) === party && r.map);
+    const byMap = {};
+    for (const r of peers) (byMap[r.map] = byMap[r.map] || []).push(r);
+    // 3+ groups: a party sharing a party code is one group, so one party can't rank a map on its own
+    const groups = a => new Set(a.map((r, i) => r.group ?? "row" + i)).size;
+    const maps = [];
+    for (const [map, a] of Object.entries(byMap)){
+      const m = medianOf(a.map(r => r.expHr)), kept = a.filter(r => r.expHr >= m / 2 && r.expHr <= m * 2);
+      if (groups(kept) >= 3) maps.push({map, name: G.mapnames?.[map] || G.maps?.[map]?.[0] || "Map " + map, expHr: medianOf(kept.map(r => r.expHr)), players: kept.length});
+    }
+    const all = maps.flatMap(m => byMap[m.map].filter(r => r.expHr >= m.expHr / 2 && r.expHr <= m.expHr * 2).map(r => r.expHr));
+    if (all.length < 3) return {expHr: hr, verdict: null, peers: all.length};
+    const ref = medianOf(all), x = hr / ref;
+    const verdict = x < 0.75 ? "slow" : x <= 1.25 ? "average" : x <= 1.75 ? "good" : "very fast";
+    const faster = maps.filter(m => m.expHr > hr && m.map !== String(run.map)).sort((a, b) => b.expHr - a.expHr).slice(0, 3);
+    return {expHr: hr, verdict, ref, peers: groups(maps.flatMap(m => byMap[m.map].filter(r => r.expHr >= m.expHr / 2 && r.expHr <= m.expHr * 2))), faster};
+  }
+
+  // start/end snapshots (mapleexp.com's way: two screenshots, level + EXP % on each, elapsed time between them).
+  // level: the EXP table level whose total fits EXP / % (null when the % is too small to tell)
+  function levelOf(G, exp, pct){
+    if (!(pct > 0.5)) return null;
+    for (const [L, need] of Object.entries(G.exp)) if (Math.abs(exp / (pct / 100) - need) / need < 0.004) return +L;
+    return null;
+  }
+  // EXP gained from snapshot a to b ({level, exp}; exp optional, else pct of the level's total): the rest of a's level,
+  // every full level between, and b's EXP into its level. null when it can't be worked out.
+  function expBetween(G, a, b){
+    const into = s => s.exp != null ? s.exp : G.exp[s.level] && s.pct != null ? s.pct / 100 * G.exp[s.level] : null;
+    if (!a?.level || !b?.level || b.level < a.level) return null;
+    const ea = into(a), eb = into(b);
+    if (ea == null || eb == null) return null;
+    if (a.level === b.level) return eb - ea;
+    let d = (G.exp[a.level] || 0) - ea + eb;
+    for (let L = a.level + 1; L < b.level; L++){ if (!G.exp[L]) return null; d += G.exp[L] }
+    return d;
+  }
+
+  const api = {createSession, createRunSlicer, speedCheck, levelOf, expBetween, IDLE_MS, RUN_MS};
+  if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindSession = api;
+})(typeof window !== "undefined" ? window : globalThis);
+
+(() => {
+const R = window.GrindReaders, GS = window.GrindSession, $e = id => document.getElementById(id);
+const PAUSE_MS = 5000;   // EXP bar off screen this long (Cash Shop, changing channel, minimized): the clock stops
+let G = null, L = null, last = null, rendT = 0;   // L: the live run; last: the run just stopped (for Save as image)
+const hms = ms => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}` };
+const hrsTxt = h => h == null || !isFinite(h) ? "–" : dur(h * 3600);
+const gameData = async () => { await ASSETS; return G || (G = GrindGamedata.toGamedata(D)) };
+
+// ticks from a worker: a page in a background tab (the game in front) gets its own timers slowed to once a minute
+function ticker(ms, f){
+  let iv = null, w = null;
+  const plain = () => { if (!iv) iv = setInterval(f, ms) };
+  try { w = new Worker(URL.createObjectURL(new Blob([`setInterval(() => postMessage(0), ${ms})`], {type: "text/javascript"}))); w.onmessage = f; w.onerror = () => { w.terminate(); w = null; plain() } }
+  catch(e){ plain() }
+  return () => { clearInterval(iv); w?.terminate() };
+}
+
+/* ---- a run: begin() starts the maths (tests call it without a screen), feed() reads one RGBA frame ---- */
+async function begin(){
+  const g = await gameData(), p = EXPC.pick(), t = Date.now();
+  let icons = []; try { icons = await R.loadIcons(g) } catch(e) {}   // potions/arrows: counts on the quick slots and Use tab
+  const sess = GS.createSession(g, {goalLevel: p.goal || "next"});
+  L = {sess, rd: R.createReaders(g, icons), t0: t, barAt: t, held: false, auto: false, seen: {}, pick: p};
+  sess.add({t, type: "job", name: p.cls});
+  if (p.map) sess.add({t, type: "map", id: p.map});
+  last = null; ui(); render(true);
+}
+function feed(f, t = Date.now()){
+  if (!L) return;
+  const ev = L.rd.readFrame(f, t, R.native(f, true)), info = L.rd.info;
+  for (const e of ev){
+    if (e.type === "glyph" || e.type === "kpqtime") continue;
+    if (L.held && /^(exp|bonus|meso|item|itemraw)$/.test(e.type)) continue;   // paused by hand: a break, nothing counts
+    L.sess.add(e);
+    if (/^(exp|bonus|meso|item|itemraw)$/.test(e.type)) L.seen.lines = t;
+  }
+  if (info.bar){ L.seen.bar = t; L.barAt = t; if (L.auto){ L.auto = false; if (!L.held) L.sess.add({t, type: "resume"}) } }
+  else if (!L.auto && t - L.barAt > PAUSE_MS){ L.auto = true; L.sess.add({t: L.barAt, type: "pause"}) }
+  L.seen.party = info.partyWindow;
+  render();
+}
+function pause(){
+  if (!L) return; const t = Date.now();
+  L.held = !L.held; L.sess.add(L.held ? {t, type: "pause", hold: true} : {t, type: "resume"});
+  ui(); render(true);
+}
+// the run as a saved session; null when nothing was gained
+function record(){
+  const s = L.sess.stats(), p = EXPC.pick(), Lv = s.level || +$("#ecl1").value || 1;
+  if (!(s.exp > 0) || !(s.activeMin > 0.1)) return null;
+  const model = p.map ? EXPC.modelRate(p.cls, Lv, p.map, s.party) : null;
+  return {t: L.t0, cls: p.cls, L: Lv, map: p.map, party: s.party, card: p.card, min: +s.activeMin.toFixed(1), gain: s.exp, rate: s.expHr,
+    est: model != null ? model * p.card : null, mesosHr: s.mesosHr, kills: s.kills, live: true};
+}
+function stop(){
+  if (!L) return;
+  const r = record(); if (r) EXPC.addRec(r);
+  last = r && {...r, next: hrsTxt(L.sess.stats().toLevelHrs)};
+  unshare(); L = null; ui();
+  $e("eclst").innerHTML = r ? `Saved to your sessions below: <b>${fmt(r.rate)}</b> EXP/hr over ${r.min} min. <button class="btn sm" id="eclimg" type="button">Save as image</button><span id="eclimgout"></span>` : "Stopped. Nothing was gained, so nothing was saved.";
+  $e("eclimg")?.addEventListener("click", () => EXPC.saveImage(last, $e("eclimgout")));
+}
+addEventListener("pagehide", () => { if (L){ const r = record(); if (r) EXPC.addRec(r) } });   // tab closed mid-run: keep it
+
+/* ---- the screen ---- */
+let C = null;   // {stream, video, cap, canvas, stop, busy}
+async function share(){
+  const st = $e("eclst");
+  if (!navigator.mediaDevices?.getDisplayMedia){ st.textContent = "Needs a desktop browser (Chrome, Edge, Firefox, Safari)."; return }
+  let stream;
+  try { stream = await navigator.mediaDevices.getDisplayMedia({video: {frameRate: 5}, audio: false}) }
+  catch(e){ st.textContent = e.name === "NotAllowedError" ? "Sharing cancelled." : "This page can't share your screen here: open the site in your browser."; return }
+  const video = document.createElement("video"); video.muted = true; video.playsInline = true; video.srcObject = stream;
+  try { await video.play() } catch(e) {}
+  const track = stream.getVideoTracks()[0];
+  C = {stream, video, canvas: document.createElement("canvas"), cap: window.ImageCapture ? new ImageCapture(track) : null};
+  track.addEventListener("ended", () => L ? stop() : unshare());
+  st.textContent = "Loading the game's item pictures…";
+  await begin();
+  C.stop = ticker(500, grab);
+}
+function unshare(){
+  if (!C) return;
+  C.stop?.(); C.stream.getTracks().forEach(t => t.stop()); C = null;
+  L?.pip?.close();
+}
+async function grab(){
+  if (!C || C.busy || !L) return; C.busy = true;
+  try {
+    let src = null;
+    if (C.cap && C.cap.track?.readyState === "live") try { src = await C.cap.grabFrame() } catch(e) {}   // works in a background tab
+    if (!src){ if (!C.video.videoWidth) return; src = C.video }
+    const w = src.videoWidth || src.width, h = src.videoHeight || src.height, c = C.canvas;
+    if (c.width !== w || c.height !== h){ c.width = w; c.height = h }
+    const g = c.getContext("2d", {willReadFrequently: true}); g.drawImage(src, 0, 0); src.close?.();
+    feed({w, h, d: g.getImageData(0, 0, w, h).data});
+  } catch(e) {} finally { if (C) C.busy = false }
+}
+
+/* ---- what's shown ---- */
+function ui(){
+  const on = !!L;
+  $e("eclshare").hidden = on; $e("eclpause").hidden = !on; $e("eclstop").hidden = !on;
+  $e("eclmini").hidden = !on || !window.documentPictureInPicture;
+  $e("eclpause").textContent = L?.held ? "Resume" : "Pause"; $e("eclpause").setAttribute("aria-pressed", !!L?.held);
+  $e("eclout").hidden = !on;
+}
+function render(now){
+  if (!L) return;
+  const t = Date.now(); if (!now && t - rendT < 900) return; rendT = t;
+  const s = L.sess.stats(), p = EXPC.pick(), sn = L.seen, ok = (k, ms) => sn[k] && t - sn[k] < ms;
+  const model = p.map && s.level ? EXPC.modelRate(p.cls, s.level, p.map, s.party) : null, est = model != null ? model * p.card : null;
+  const state = L.held ? "Paused" : L.auto ? "Paused: EXP bar off screen" : s.paused ? "Idle" : "Reading";
+  const bar = L.sess.state.bar;
+  $e("eclst").innerHTML = `<span class="pill ${L.held || L.auto ? "p-warn" : ""}">${state}</span> Active ${hms(s.activeMin * 6e4)} of ${hms(t - L.t0)}.`;
+  const stat = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
+  const lvl = s.level ? `${s.level}${bar?.pct != null ? ` <span class="sub">${bar.pct.toFixed(2)}%</span>` : ""}${s.levelUps.length ? ` <span class="sub">(+${s.levelUps.length})</span>` : ""}` : "–";
+  const items = s.items.slice(0, 8), used = s.used.filter(u => u.n > 0).slice(0, 6), mobs = s.mobs.slice(0, 6);
+  $e("eclout").innerHTML = `<div class="big">${fmt(s.expHr)} <small>EXP/hr${s.expHr5 != null ? ` · last 5 min ${fmt(s.expHr5)}` : ""}</small></div>
+    <dl class="stats">${stat("EXP gained", fmt(s.exp))}${stat("Level", lvl)}${stat("Next level in", hrsTxt(s.toLevelHrs))}${s.goalLevel > (s.level || 0) + 1 ? stat("Level " + s.goalLevel + " in", hrsTxt(s.toGoalHrs)) : ""}
+      ${stat("Mesos/hr", fmt(s.mesosHr))}${stat("Mesos", fmt(s.mesos))}${stat("Kills/hr", fmt(s.killsHr))}${stat("Kills", fmt(s.kills))}
+      ${stat("Loot value/hr", fmt(s.lootHr))}${s.usedCostHr >= 0.5 ? stat("Potions/hr", "−" + fmt(s.usedCostHr)) : ""}${stat("Net mesos/hr", fmt(s.netHr))}${s.deaths ? stat("Deaths", s.deaths) : ""}
+      ${est ? stat("vs our estimate", Math.round(s.expHr / est * 100) + "%") : ""}</dl>
+    <div class="eclread"><span class="pill ${ok("bar", 3000) ? "p-good" : "p-warn"}">EXP bar ${ok("bar", 3000) ? "✓" : "not seen"}</span>
+      <span class="pill ${ok("lines", 120e3) ? "p-good" : ""}">Pickup lines ${ok("lines", 120e3) ? "✓" : "none yet"}</span>
+      <span class="pill">${s.party > 1 ? "Party of " + s.party : "Solo"}</span>${p.map ? "" : `<span class="pill p-warn">Pick a map to name kills</span>`}
+      ${s.readShare != null && s.readShare < 0.7 && s.exp > 0 ? `<span class="pill p-warn">${Math.round(s.readShare * 100)}% of EXP seen as lines: kills, mesos and loot are undercounted</span>` : ""}</div>
+    ${items.length || used.length || mobs.length ? `<div class="ecllist">
+      ${items.length ? `<div><h4>Loot</h4><ul>${items.map(i => `<li><span>${esc(i.name)} ×${fmt(i.n)}</span><span>${fmt(i.total)}</span></li>`).join("")}</ul></div>` : ""}
+      ${mobs.length ? `<div><h4>Monsters</h4><ul>${mobs.map(m => `<li><span>${esc(m.name)}</span><span>${fmt(m.kills)}</span></li>`).join("")}</ul></div>` : ""}
+      ${used.length ? `<div><h4>Used</h4><ul>${used.map(u => `<li><span>${esc(u.name)} ×${fmt(u.n)}</span><span>${u.total == null ? "?" : fmt(u.total)}</span></li>`).join("")}</ul></div>` : ""}
+    </div>` : ""}`;
+  if (L.pip) miniDraw(s, state);
+}
+
+/* ---- Mini view: a small always-on-top window (Document Picture-in-Picture, Chrome/Edge) ---- */
+async function mini(){
+  if (!L) return;
+  if (L.pip){ L.pip.close(); return }
+  let w; try { w = await documentPictureInPicture.requestWindow({width: 300, height: 190}) } catch(e){ return }
+  const root = document.documentElement;
+  for (const a of root.attributes) w.document.documentElement.setAttribute(a.name, a.value);
+  document.querySelectorAll("style").forEach(st => w.document.head.append(st.cloneNode(true)));
+  w.document.title = "EXP/hr";
+  w.document.body.innerHTML = `<div class="eclmini"><div id="mm"></div><button class="btn sm" id="mmpause" type="button">Pause</button></div>`;
+  w.document.getElementById("mmpause").addEventListener("click", pause);
+  w.addEventListener("pagehide", () => { if (L) L.pip = null; $e("eclmini").textContent = "Mini view" });
+  L.pip = w; $e("eclmini").textContent = "Close mini view"; render(true);
+}
+function miniDraw(s, state){
+  const d = L.pip.document, m = d.getElementById("mm"); if (!m) return;
+  m.innerHTML = `<div class="mmbig">${fmt(s.expHr)} <small>EXP/hr</small></div>
+    <div class="mmrow"><span>${fmt(s.mesosHr)} mesos/hr</span><span>${fmt(s.killsHr)} kills/hr</span></div>
+    <div class="mmrow"><span>Next level ${hrsTxt(s.toLevelHrs)}</span><span>${hms(s.activeMin * 6e4)}</span></div>
+    <div class="mmrow sub"><span>${state}</span><span>${s.level ? "Lv " + s.level : ""}</span></div>`;
+  d.getElementById("mmpause").textContent = L.held ? "Resume" : "Pause";
+}
+
+$e("eclshare").addEventListener("click", share);
+$e("eclpause").addEventListener("click", pause);
+$e("eclstop").addEventListener("click", stop);
+$e("eclmini").addEventListener("click", mini);
+// the pickers feed the run: map names kills, class/goal for time to goal
+$("#ecmap").addEventListener("change", () => { const p = EXPC.pick(); if (L && p.map !== L.pick.map){ L.pick = p; L.sess.add({t: Date.now(), type: "map", id: p.map}); render(true) } });
+$("#ecgoalL").addEventListener("input", () => { if (L){ L.sess.setGoal(+$("#ecgoalL").value || "next"); render(true) } });
+$("#eccls").addEventListener("change", () => { if (L){ L.sess.add({t: Date.now(), type: "job", name: $("#eccls").value}); render(true) } });
+window.EXPLIVE = {begin, feed, pause, stop, get run(){ return L }};   // tests
 })();
 
 /* ---------------- possibly undervalued training maps (World Map "Undervalued maps" button) ---------------- */
