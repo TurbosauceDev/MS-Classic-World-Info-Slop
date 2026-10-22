@@ -39,7 +39,7 @@ avoid that. Read them. Not optional.
 
 1. **Append-only for the mailbox + worklog.** Never delete or edit another agent's message after posting. If you need to correct, post a follow-up in the same thread.
 2. **Sign everything.** Use a stable agent name in the "Who's who" table of `docs/ai/agent-mailbox.md`. New agents: add yourself there before posting anywhere.
-3. **Don't impersonate.** If you're a fresh Claude thread, use a new name (e.g. `claude (session-XYZ)`) — don't reuse `claude (chat-CLI)` or `claude (project-side)`. Those names are scoped to ongoing roles.
+3. **Don't impersonate.** If you're a fresh Claude thread, use a new name (e.g. `claude (session-XYZ)`) — don't reuse `claude (project-side)`. Z.ai (Danny's assistant, formerly signed `claude (chat-CLI)`) signs as **Z.ai**; Claude Code project threads sign as **Claude (project thread: <title>)** (Danny 2026-10-22).
 4. **Push to `main` directly for docs.** Docs pushes are pre-approved by Danny — no PR needed. Run `node tests/docs.test.js` first to verify paths.
 5. **Don't relay through Danny.** That's why the mailbox exists. Post directly.
 6. **Refresh the daily-briefing + danny-digest at the start of your work session** if they're stale (>24h old). It's a 5-minute task. Overwrite the file, don't append.
