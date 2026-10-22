@@ -79,3 +79,13 @@
     el.title = D.pw.listed ? `Listings updated ${D.pw.listed} UTC` : "" };
   draw(); el.hidden = false; setInterval(draw, 6e4); document.addEventListener("pwupdate", draw);
 })();
+
+// Home Mesos and Trade card: "Market today" from meso.watch totals (D.pw.tot {sales, top: [itemId, price, qty, time]}, Z.ai todo #4, Danny 10-22).
+// sales is meso.watch's rolling window count, not a daily total, so it's labelled "sales tracked"
+(() => {
+  const el = document.getElementById("mktday"), t = D.pw?.tot; if (!el || !t?.sales) return;
+  const [id, price, qty, time] = t.top || [], it = id && D.items[id];
+  const when = time ? new Date(time).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+  el.innerHTML = `<b>Market today</b> ${fmt(t.sales)} player-shop sales tracked${it ? ` · top sale: <span class="itname" tabindex="0" data-item="${id}">${esc(it.n)}</span>${qty > 1 ? ` ×${qty}` : ""} for ${fmt(price)} mesos${when ? ` (${when})` : ""}` : ""} <span class="tiny">(meso.watch)</span>`;
+  el.hidden = false;
+})();

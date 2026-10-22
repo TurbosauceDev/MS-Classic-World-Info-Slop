@@ -652,6 +652,9 @@ def step_prices(D):
         sn = j.get("seen", {})
         D["pw"]["asks"] = {k: [a[:5] + [(sn.get(k) or [])[i] if i < len(sn.get(k) or []) else None] for i, a in enumerate(v)]
                            for k, v in j.get("asks", {}).items() if k in D["items"] and v}
+    if j.get("totals"):   # Home "Market today": meso.watch sales count (rolling window) + top sale; itemId comes as "basil:01382005"
+        t = j["totals"]; ts = t.get("topSale") or {}; iid = str(int(str(ts.get("itemId", "")).split(":")[-1] or 0))
+        D["pw"]["tot"] = {"sales": t.get("sales", 0), "top": [iid, ts["price"], ts.get("qty", 1), ts.get("time", "")] if ts.get("price") else None}
     try:   # FM Sniper deal lifetimes from this file's git history (scripts/deal_life.py); never fails the price step
         import deal_life
         D["pw"]["life"] = deal_life.life(ROOT)

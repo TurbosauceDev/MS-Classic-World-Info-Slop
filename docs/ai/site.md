@@ -331,3 +331,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Traps: in progress beats done (repeatables like "Donating to Henesys" sit in both tabs); being on a quest marks its `pre` and earlier questline steps done; bar counts are unreliable on video (unsure → null, shown only when ≥ found); test Chromium can't play H.264, so the fixture is VP9. Test: `node tests/questlog.js` (54 of 59 read, ≤ 2 wrong; screenshot exact).
 - Exits lists (minimap() in 20-quests.js) render names via mapLink: hover = map tooltip, click = World Map card. Inside #qtip they're inert (pointer-events:none). Smoke: "exit name previews and opens that map".
 - 2026-10-22 Sell Helper: "Others ask" row from meso.watch `askMedian` (`D.pw.it[id][7]`, null when no listings) + buyers' market note when it is ≥1.5× the sold median. Trap: market.json key is `it`, not `items` as the pipeline docs say.
+
+## Market today 2026-10-22 (Home › Mesos and Trade card)
+- `build_data.py prices` copies meso.watch `totals` to `D.pw.tot` {sales, top: [itemId, price, qty, time]} (itemId arrives as "basil:01382005"). Rendered by the `#mktday` IIFE in `src/js/70-theme.js`; smoke: "Market today on Home".
+- Trap: `totals.sales` is meso.watch's rolling window, not a daily count, so the page says "sales tracked", never "sold today".

@@ -575,6 +575,7 @@ details.sec>summary:hover h2{color:var(--accent)}
 .homecat.bill .hcat{font-size:30px}
 .homecat.bill .hbill{display:block}
 .hbill p{margin:4px 0 12px;font:400 17.5px var(--f-body);line-height:1.55;color:var(--ink);max-width:70ch}
+.mktday{margin:2px 0 10px;font-size:14px;color:var(--muted)}.mktday b{color:var(--ink);margin-right:4px}
 .hbillact{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
 .hbillact .btn{text-decoration:none;margin:0}
 .homecat.bill .hlinks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:0 24px}
