@@ -1,5 +1,17 @@
 # meso.watch sync cheatsheet (for Claude threads)
 
+> **Update 2026-10-22:** Step 10 (data-freshness health check in `scripts/mesowatch-sync/mesowatch_poll_ci.sh`) was
+> **removed by claude (review)** in commit `04faa8d`. It had a measurement-ordering bug — it ran `git log
+> --author="meso.watch helper"` *after* the script had just committed as "meso.watch helper", so the
+> most-recent-commit age was always 0. Replaced by `.github/workflows/watchdog.yml` + `scripts/watchdog.py`
+> which checks: (a) last successful poll workflow run > 2h, (b) list.json `generated` > 3h, (c) no listing
+> < 6h with new `src_listed` field telling upstream-outage from our-bug. The new `src_listed` + `generated`
+> fields are additive to `mesowatch_prices.json`. See `docs/ai/agent-mailbox.md` for the design discussion.
+>
+> **Update 2026-10-22:** Per Danny's OK, polls **no longer commit `dist/index.html`** — `pages.yml` +
+> `tests.yml` run `scripts/build.py` themselves. `scripts/mesowatch-sync/mesowatch_poll_ci.sh` Step 9 now only adds
+> `data/sources/mesowatch_prices.json` + `data/data.json` to the commit.
+
 Automated pipeline that polls `meso.watch` hourly via 6 scheduled GitHub
 Actions cron entries (at minute 7, 17, 27, 37, 47, 57 of every hour — the
 off-minute marks avoid GitHub's high-load 0/30 schedule-event skips),
@@ -165,7 +177,7 @@ The PAT was pasted in chat once (chat logs are the exposure surface). To rotate:
 ## Traps (real bugs we hit; do not regress on these)
 - 2026-10-21 stale fallback: market.json `listings` carried meso.watch's 10-17 data, so `listed` went back 4 days and FM Sniper graded dead listings as deals. fetch_mesowatch.py now drops listings whose `seen` (last sighting, both CSV shapes) is over 6 h before the price read, and `listed` = newest kept listing ("" if none). Also fixed: `seen` carry-forward only read the old [[price, seller, t]] shape, so first-seen reset every poll. Test: `python3 tests/mesowatch_fresh_test.py` (CI).
 - 2026-10-21: the poll no longer runs build.py or commits dist/index.html; pages.yml builds the page from data.json.
-- `src_listed` (listing file's own time, kept when every listing is dropped) -> `D.pw.srclisted` -> `pwNoLive()` (10-maps.js) in the footer + FM Sniper empty state. `generated` = list.json's full time. Step 10 is gone from mesowatch_poll_ci.sh: `.github/workflows/watchdog.yml` + `scripts/watchdog.py` (test `python3 tests/watchdog_test.py`) check from outside at :13/:43 and keep one "[watchdog]" issue (comment only when the problem set changes, closes after 2 clean checks). 10-21: market.json fallback's own time is 10-17 12:04, so 0 listings is upstream, not our drop.
+- `src_listed` (listing file's own time, kept when every listing is dropped) -> `D.pw.srclisted` -> `pwNoLive()` (10-maps.js) in the footer + FM Sniper empty state. `generated` = list.json's full time. Step 10 is gone from `scripts/mesowatch-sync/mesowatch_poll_ci.sh`: `.github/workflows/watchdog.yml` + `scripts/watchdog.py` (test `python3 tests/watchdog_test.py`) check from outside at :13/:43 and keep one "[watchdog]" issue (comment only when the problem set changes, closes after 2 clean checks). 10-21: market.json fallback's own time is 10-17 12:04, so 0 listings is upstream, not our drop.
 - deal_life.py skips history snapshots whose `listed` is a day+ before their `read` (the f7b3e0f commit), so FM Sniper lifetimes aren't skewed for its 14-day window. `agent-browser@0.39.1` is pinned in mesowatch-poll.yml: the job's token can publish tracker releases.
 
 - **Chrome silently drops the second blob download.** If you `a.click()` two
