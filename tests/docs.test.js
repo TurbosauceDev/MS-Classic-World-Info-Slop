@@ -39,6 +39,8 @@ const IGNORE = new Set([
   "mesoindex.json",                       // generated data file
   "meowdb_market.json",                   // generated data file
   "meowdb_drops.json",                    // generated data file
+  "fetch_maplestory_market.py",           // planned, not yet written (bare form)
+  "submit_to_classicrank.py",             // planned, not yet written (bare form)
 ]);
 const FIXTURE_DIRS = ["tests/fixtures", ...fs.readdirSync(path.join(root, "tracker/tests")).filter(d => d.startsWith("frames")).map(d => "tracker/tests/" + d)];
 let fail = 0;

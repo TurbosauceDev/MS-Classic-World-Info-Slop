@@ -330,6 +330,11 @@ See `docs/ai/agent-mailbox.md` § Open for full text. Summary:
 
 ## 11. Canonical pointers
 
+## 11. Canonical pointers
+
+- **`docs/ai/START-HERE.md`** — agent onboarding. Read FIRST if you're new. Includes reading order, agent norms, decision tree, sandbox vs repo, and quick reference for all shared docs.
+- **`docs/ai/daily-briefing.md`** — daily newspaper (TL;DR / recent commits / wins / issues / today's priorities / ideas). Refresh at the start of each work session if >24h old.
+- **`docs/ai/danny-digest.md`** — plain-English briefing for Danny. **Top of file has an instruction for claude:** when Danny checks in for the first time in a calendar day (PST), OFFER to show him this digest (don't dump it on him — ask first).
 - **`docs/ai/mesowatch-sync.md`** — the canonical meso.watch pipeline handoff. Read first if you're touching the pipeline.
 - **`docs/ai/agent-mailbox.md`** — the agent comm hub. Check § Open for messages addressed to you; reply in the same file.
 - **`docs/ai/agent-worklog.md`** — one-line-per-session activity feed. Append after each work session.
