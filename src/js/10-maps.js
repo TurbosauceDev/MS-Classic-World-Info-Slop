@@ -319,7 +319,12 @@ const PRICE_SRC = [
       n: `${fmt(p[3])} sale${p[3] === 1 ? "" : "s"}`, few: !!(p[4] & 1), when: D.pw.read} }];
 // Every live listing with a place to find it, cheapest first (Items page "Where to buy"). A source with locations pushes a function
 // id -> [{v, qty, ch, room, spot, who, ago, src, buy, note}] onto LIST_SRC. meso.watch keeps only the cheapest listing per item.
-const LIST_SRC = [id => { const n = PWNOW[id]; return n ? [{v: n[0], qty: n[1], ch: n[2], room: n[3], who: n[4], ago: pwListedAgo(), src: "meso.watch"}] : [] }];
+// meso.watch: every live listing (D.pw.asks, last field = first seen unix min, fetch_mesowatch.py "seen"); cheapest only when absent.
+// Listed = how long it has been up; 3+ days = stale tag (Z.ai todo #1, Danny 2026-10-22)
+const PWASK = D.pw?.asks || {};
+const LIST_SRC = [id => PWASK[id] ? PWASK[id].map(a => ({v: a[0], qty: a[1], ch: a[2], room: a[3], who: a[4], src: "meso.watch",
+    ...(a[5] ? {since: a[5], ago: "up " + agoMin(Date.now() / 6e4 - a[5]).replace(" ago", "")} : {ago: pwListedAgo()})}))
+  : PWNOW[id] ? [{v: PWNOW[id][0], qty: PWNOW[id][1], ch: PWNOW[id][2], room: PWNOW[id][3], who: PWNOW[id][4], ago: pwListedAgo(), src: "meso.watch"}] : []];
 const listingsOf = id => LIST_SRC.flatMap(f => f(id)).filter(x => x.v > 0);
 function pwHtml(id, long){ const p = PW[id]; if (!p) return "";
   const per = p[4] & 2 ? " per set" : "", low = p[4] & 1 ? ` <span class="pill p-warn" title="Fewer than 5 sales seen: rough">few sales</span>` : "";

@@ -648,6 +648,10 @@ def step_prices(D):
     D["pw"] = {"read": j["read"], "it": {k: v for k, v in j["items"].items() if k in D["items"]}}
     if "now" in j:   # cheapest live listing per non-equip item {itemId: [price each, qty, channel, map, seller]}, as of "listed"
         D["pw"].update(listed=j["listed"], srclisted=j.get("src_listed", ""), now={k: v for k, v in j["now"].items() if k in D["items"]})
+        # every live listing + when we first saw it {itemId: [[price each, qty, channel, map, seller, firstSeenUnixMin|None]]} (seen: parallel to asks)
+        sn = j.get("seen", {})
+        D["pw"]["asks"] = {k: [a[:5] + [(sn.get(k) or [])[i] if i < len(sn.get(k) or []) else None] for i, a in enumerate(v)]
+                           for k, v in j.get("asks", {}).items() if k in D["items"] and v}
     try:   # FM Sniper deal lifetimes from this file's git history (scripts/deal_life.py); never fails the price step
         import deal_life
         D["pw"]["life"] = deal_life.life(ROOT)

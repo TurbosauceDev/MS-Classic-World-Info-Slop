@@ -256,3 +256,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-22 Danny: the quest database follows the game's questlines (meowdb shows them the same way): Quest Database shows the questline name, search finds it; data gets `ln` (questline name, else the quest's).
 - 2026-10-22: Exit names on map cards are links (hover preview, click opens that map), hidden exits included (Danny).
 - 2026-10-22 Danny approved Z.ai todo #5: show meso.watch askMedian in Sell Helper (shipped as "Others ask").
+- 2026-10-22 Danny (approved Z.ai todo #1): Where to buy shows how long each meso.watch listing has been up; 3+ days = "stale" tag.

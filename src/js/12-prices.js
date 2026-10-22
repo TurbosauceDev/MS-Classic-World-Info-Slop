@@ -17,6 +17,9 @@ LIST_SRC.push(id => (MDBL[id] || []).map(r => ({v: r[1], qty: r[2], ch: r[3], ro
 
 // Items page "Prices": 4 headline tiles, one row per market source, then every listing we know a place for, cheapest first
 const PX_SHOW = 8;
+// listing up 3+ days (x.since = first seen unix min): likely overpriced or a dead shop
+const PX_STALE_MIN = 3 * 1440, pxStale = x => x.since && Date.now() / 6e4 - x.since >= PX_STALE_MIN
+  ? ` <span class="pill p-warn" title="First seen ${Math.floor((Date.now() / 6e4 - x.since) / 1440)} days ago: it hasn't sold, so it may be overpriced or the shop is gone">stale</span>` : "";
 const pxWhere = x => [x.ch ? "Ch " + x.ch : "", String(x.room || "").replace(/Free Market\s*<(\d+)>/i, "FM $1"), x.spot].filter(Boolean).map(esc).join(" · ")
   || (x.direct ? `<span class="sub">whisper / meet up</span>` : `<span class="sub">not given</span>`);
 const pxEach = v => v < 10 && v % 1 ? v : fmt(v);
@@ -38,7 +41,7 @@ function priceBox(id){
       <td>${r.n}${r.few ? ` <span class="pill p-warn" title="Few data points: rough">few</span>` : ""}</td><td class="sub">${r.detail || ""}</td><td class="sub">${whenTxt(r.when)}</td></tr>`).join("")}</tbody></table></div>`
     : `<p class="sub">No player prices from meso.watch, meowdb or classicmarket.kr yet.</p>`;
   const lrow = (x, i) => `<tr${i >= PX_SHOW ? ` class="pxx"` : ""}><td class="num"><b>${pxEach(x.v)}</b>${i === 0 && !x.buy ? ` <span class="pill p-good">cheapest</span>` : ""}</td><td class="num">${x.qty > 1 ? "×" + fmt(x.qty) : "1"}</td>
-    <td>${pxWhere(x)}${x.note ? ` <span class="sub">${esc(x.note)}</span>` : ""}</td><td>${x.who ? esc(x.who) : `<span class="sub">–</span>`}</td><td class="sub">${esc(x.ago || "")}</td><td class="sub">${esc(x.src)}</td></tr>`;
+    <td>${pxWhere(x)}${x.note ? ` <span class="sub">${esc(x.note)}</span>` : ""}</td><td>${x.who ? esc(x.who) : `<span class="sub">–</span>`}</td><td class="sub">${esc(x.ago || "")}${pxStale(x)}</td><td class="sub">${esc(x.src)}</td></tr>`;
   const ltab = (a, h, what) => `<h4 class="pxh">${h} <span class="sub">${a.length} ${what}</span></h4><div class="tblwrap"><table class="mini pxls"><thead><tr><th class="num">Each</th><th class="num">Qty</th><th>Where</th><th>Seller</th><th>Listed</th><th>Source</th></tr></thead>
     <tbody>${a.map(lrow).join("")}</tbody></table></div>${a.length > PX_SHOW ? `<button class="btn pxall" data-pxall>Show all ${a.length}</button>` : ""}`;
   const where = sells.length ? ltab(sells, "Where to buy", sells.length === 1 ? "listing" : "listings, cheapest first")
