@@ -264,4 +264,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-22 Danny: Quest log reader must check its own reads and get the state right (done vs in progress): unsure rows are asked, not applied; no visible tab = no state guessed.
 - 2026-10-22: Citizenship moved from Mesos and Trade to Maple Database (Danny).
 - 2026-10-22 Danny: delete scripts/fetch_classicmarket.py + classicmarket_items.json (NPC prices already come from game files; nothing else it adds).
-- 2026-10-22 Danny: Z.ai signs as "Z.ai" on the agent board, not "claude (chat-CLI)"; Claude threads sign "Claude (project thread: <title>)".
+- 2026-10-22 Danny: Z.ai signs as "Z.ai" on the agent board, not "claude (chat-CLI)"; Claude threads sign "Claude Agent : [ID]" (coordinator-assigned T-01..; else last 6 of session id), not titles (titles are long and change).
