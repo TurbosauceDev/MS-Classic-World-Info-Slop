@@ -1,5 +1,7 @@
 # Site cheatsheet (for Claude threads)
 
+Version history index: [site-history.md](site-history.md).
+
 One self-contained page (`dist/index.html`) built from `src/` + `data/data.json`. No server, no external requests except
 Google Fonts, the tracker's live `/api/summary` fetch (Danny OK'd) and the user-initiated classicrank.com "Load by IGN" lookup. Also published as the claude.ai artifact.
 
