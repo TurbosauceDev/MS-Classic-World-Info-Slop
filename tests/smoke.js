@@ -225,6 +225,7 @@ const boxGaps = require("./boxgaps");
     await p.click(ex); check(tip.includes(en) && (await p.textContent("#wmcard .qt-h, #wmcard h3, #wmcard")).includes(en), `exit name previews and opens that map (${en})`) }
   await tab("#t-navi");
   await p.click('#navtowns button[data-id="10001000"]'); await p.fill("#navto", "Perion"); await p.dispatchEvent("#navto", "change");
+  if (await p.isChecked("#navnocab")) await p.uncheck("#navnocab");   // the Victoria Island card leaves No taxi ticked
   check(await p.$$eval("#navout .navsteps li", r => r.length) > 0 && /cab ride/.test(await p.textContent("#navout")), "navigator: Henesys to Perion by cab");
   await p.check("#navnocab"); check(!/cab ride/.test(await p.textContent("#navout")) && /maps? on foot/.test(await p.textContent("#navout")), "navigator: no taxi walks the whole way"); await p.uncheck("#navnocab");
   await p.click('#navtowns button[data-id="60"]'); await p.fill("#navto", "Ant Tunnel I"); await p.dispatchEvent("#navto", "change");
