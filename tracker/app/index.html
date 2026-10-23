@@ -69,7 +69,7 @@
   #state.on .dot { background:var(--leaf); } #state.paused .dot { background:var(--warn); }
   #top .bar .grow { flex:1; min-width:0; } #miniBtn { padding:5px 9px; font-size:12px; }
   /* a narrow main card: Start and the buttons on one line, what's going on under them (it was squeezed into a 100 px column) */
-  @container (max-width: 330px) { #top .bar > .grow { order:9; flex-basis:100%; } #helpBtn { margin-left:auto; } #miniBtn, #bugBtn, #helpBtn, #pauseBtn, #resetBtn { padding-left:7px; padding-right:7px; } #resetBtn .nw { display:none; } #go { min-width:64px; padding-left:12px; padding-right:12px; } #miniBtn { padding-left:6px; padding-right:6px; } }
+  @container (max-width: 330px) { #top .bar > .grow { order:9; flex-basis:100%; } #helpBtn { display:none; } #bugBtn { margin-left:auto; } #miniBtn, #bugBtn, #helpBtn, #pauseBtn, #resetBtn { padding-left:7px; padding-right:7px; } #resetBtn .nw { display:none; } #go { min-width:64px; padding-left:12px; padding-right:12px; } #miniBtn { padding-left:6px; padding-right:6px; } }
   .tiles { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
   .tile { background:var(--bg); border-radius:8px; padding:6px 8px; } .tile .v { font-size:20px; line-height:1.2; }
   .tile.main .v { color:var(--accent); }
