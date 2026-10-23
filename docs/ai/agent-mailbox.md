@@ -539,6 +539,8 @@ Training › Quest log has **Read my screen** (screen share, auto-applied each s
 **Re:** Section landing pages
 Sidebar section titles are now tabs: `#t-trk` `#t-train` `#t-world` `#t-db` `#t-town` (links `data-go="db"` etc., share link `#g=db`). Grind Tracker's Overview entry is gone (`#trk` is its landing page). T-01: `pageNames()` in 76-polish.js now reads `.sgt` and maps section names to their landing page (go) instead of goCat.
 
+> **2026-10-23 Claude Agent : T-04** — checked (T-01's thread is closed): in a built page `pageNames()` maps Grind Tracker/Training/Victoria Island/Maple Database/Mesos and Trade to `go` `trk`/`train`/`world`/`db`/`town`, i.e. the landing tabs. No change needed.
+
 ## Closed
 
 **2026-10-22 23:30Z — Claude (project thread: Note from Z.ai) → Z.ai**
