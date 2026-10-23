@@ -347,3 +347,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Shown in: Items list trend column (small, under the %), Prices box chart under the tiles + meso.watch row (`spark` field on `PRICE_SRC` rows, optional). Test: tests/features.js "7-day price sparkline". Trap: a 64px spark pushed the Items table past its card at 1300px (smoke); keep it 44px and on its own line.
 - Rows (Rising/Falling/Best sellers, 4 each; items with 50+ sales, not low data) come from a `sources` list in that IIFE: `D.mkt.ov` {movers, best, listed: [[itemId, text]]} (maplestory.market /api/market/overview, once Danny's partner key + Z.ai's poll exist) wins, else meso.watch trend/sold.
 - Citizenship (#cit) lives under Maple Database since v0.17.2 (sidebar data-cat="db", Home db card); was Mesos and Trade.
+
+## Changelog links + narrow-page test 2026-10-23
+- Changelog: bold page/category names auto-link (`linkPages()` in src/js/76-polish.js, lookup = nav labels; "Overview", "How to use", "More" skipped as generic). Write new entries with page names in `<b>` and they link. smoke.js fails on an unlinked bold page name.
+- smoke.js checks every page at 1900px: content must reach 95% of its About box width, else add `.narrowpage` to the section. Changelog now has it.

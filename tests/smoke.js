@@ -348,6 +348,30 @@ const boxGaps = require("./boxgaps");
   await p.setViewportSize({width: 1900, height: 900}); await p.waitForTimeout(100);
   const wide = await p.evaluate(() => { const w = document.querySelector(".wrap"); return [getComputedStyle(w).zoom, Math.round(w.getBoundingClientRect().width)] });
   check(wide[0] === "1.15" && Math.abs(wide[1] - 1595) < 8, `page size 3 at 1900px: zoom 1.15, 82% wide (${wide})`);
+  // no long empty tail (Danny 10-21 Feedback, 10-22 Changelog): if a page's content is a narrow column but its About box
+  // stretches far past it, the page needs .narrowpage on its <section>
+  for (const id of await p.$$eval(".subs button[id^=t-]", bs => bs.map(b => b.id))){
+    await p.evaluate(i => document.getElementById(i).click(), id); await p.waitForTimeout(150);
+    const t = await p.evaluate(sid => { const sec = document.getElementById(sid), h = sec && sec.querySelector(":scope > details.howto"); if (!h || !h.getClientRects().length) return null;
+      const x0 = h.getBoundingClientRect().left, solid = /^(IMG|CANVAS|INPUT|SELECT|BUTTON|TEXTAREA|TABLE|svg)$/; let r = 0;
+      for (const e of sec.querySelectorAll("*")){ if (h.contains(e) || !e.getClientRects().length) continue;
+        if (solid.test(e.tagName)) { r = Math.max(r, e.getBoundingClientRect().right); continue }
+        if (![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+        const g = document.createRange(); g.selectNodeContents(e); for (const q of g.getClientRects()) r = Math.max(r, q.right) }
+      return [Math.round(h.getBoundingClientRect().width), Math.round(r - x0)] }, id.slice(2));
+    if (t) check(t[1] > t[0] * 0.95, `${id} at 1900px: content fills its About box width, no empty tail (content ${t[1]}/${t[0]} px; else add .narrowpage)`);
+  }
+  // Changelog: a page or section named in bold is a link to it (Danny 10-22), and the link works
+  { await p.evaluate(() => document.getElementById("t-log").click());
+    const [bad, n] = await p.evaluate(() => { const names = new Set([...document.querySelectorAll(".subs button[data-tab], button[id^=c-][data-cat]")].map(b => b.textContent.trim().toLowerCase()));
+      names.delete("overview"); names.delete("how to use"); names.delete("more");
+      const bs = [...document.querySelectorAll("#log .changelog b")].filter(b => names.has(b.textContent.trim().replace(/:$/, "").toLowerCase()));
+      return [bs.filter(b => !b.closest("a[data-go],a[data-go-cat]")).map(b => b.textContent).slice(0, 5), bs.length] });
+    check(n > 10 && !bad.length, `changelog: ${n} page names are links${bad.length ? " (unlinked: " + bad.join(", ") + ")" : ""}`);
+    await p.evaluate(() => { document.querySelector("#log .changelog details").open = true; document.querySelector('#log .changelog a[data-go="qlog"]').click() });
+    check(await p.evaluate(() => !document.getElementById("qlog").hidden), "changelog: clicking Quest log opens Quest log");
+  }
+  await p.click("#t-plan").catch(() => p.evaluate(() => document.getElementById("t-plan").click()));
   for (const w of [1280, 900, 700, 430]){
     await p.setViewportSize({width: w, height: 800}); await p.waitForTimeout(100);
     const spill = await p.evaluate(spillingInputs);

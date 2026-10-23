@@ -22,9 +22,22 @@ if (HASH.L && Object.hasOwn(PAGECTL, HASH.L.p) && HASH.L.v && typeof HASH.L.v ==
   if (grid && "ResizeObserver" in window){ grid.classList.add("masonry"); const ro = new ResizeObserver(fit);
     for (const c of grid.children) ro.observe(c); ro.observe(grid) } }
 
+// name -> page: every nav tab label (data-go) and category (data-go-cat), lower case; generic labels left out
+function pageNames(){ const m = new Map();
+  for (const b of document.querySelectorAll(".subs button[data-tab]")){ const n = b.textContent.trim().toLowerCase(); if (n && !/^(overview|how to use)$/.test(n)) m.set(n, ["go", b.dataset.tab]) }
+  for (const b of document.querySelectorAll("button[id^=c-][data-cat]")){ const n = b.textContent.trim().toLowerCase(); if (n && n !== "more") m.set(n, ["goCat", b.dataset.cat]) }
+  return m }
+function linkPages(root){ const m = pageNames();
+  for (const b of root.querySelectorAll("b")){ if (b.closest("a")) continue; const hit = m.get(b.textContent.trim().replace(/:$/, "").toLowerCase()); if (!hit) continue;
+    const a = document.createElement("a"); a.href = "#"; a.dataset[hit[0]] = hit[1]; b.replaceWith(a); a.append(b) } }
+$("#log").addEventListener("click", e => { const a = e.target.closest("a[data-go],a[data-go-cat]"); if (!a) return; e.preventDefault();
+  a.dataset.go ? $("#t-" + a.dataset.go).click() : goCat(a.dataset.goCat); window.scrollTo({top: 0}) });
+
 // Changelog: each version's time (data-t, in your time zone like the Home stamp) and older days folded under their date
 { const box = document.querySelector("#log .changelog");
   if (box){
+    // page and section names in bold become links there (Danny 10-22): the lookup is the nav itself, so new pages link with no edits
+    linkPages(box);
     const cards = [...box.querySelectorAll(":scope > .card")], days = new Map();
     for (const c of cards){
       const h = c.querySelector(".cardhead h3"), t = c.dataset.t || "", ms = /T/.test(t) ? Date.parse(t) : NaN;
