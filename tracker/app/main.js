@@ -15,7 +15,8 @@ const QUEUE = path.join(app.getPath("userData"), "run-queue.json");
 const writeAtomic = (file, text) => { fs.writeFileSync(file + ".tmp", text); fs.renameSync(file + ".tmp", file) };
 const writeSettings = s => writeAtomic(SETTINGS, JSON.stringify(s, null, 1));
 const SESSIONS = path.join(app.getPath("userData"), "sessions");   // finished sessions, kept locally either way
-const AUTO = require("../core/autosave.js");   // the running session, autosaved there (crash recovery)
+const AUTO = require("../core/autosave.js");
+const HIST = require("../core/history.js");   // applyEdit: History > Edit run   // the running session, autosaved there (crash recovery)
 
 // Windows Graphics Capture (what OBS uses) instead of the old GDI window grab, which gives black frames for DirectX games
 app.commandLine.appendSwitch("enable-features", "WebRtcAllowWgcWindowCapturer,WebRtcAllowWgcScreenCapturer,AllowWgcWindowCapturer,AllowWgcScreenCapturer");
@@ -79,8 +80,8 @@ app.whenReady().then(() => {
   // our own menu instead of Electron's default (its Help menu only linked to Electron's site)
   const show = what => () => win && !win.isDestroyed() && win.webContents.send("menu", what);
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    {label: "File", submenu: [{label: "Settings", accelerator: "CmdOrCtrl+,", click: show("settings")}, {type: "separator"}, {label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
-    {label: "View", submenu: [{label: "Modules toolbox", click: show("toolbox")}, {label: "Mini bar", click: show("mini")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {label: "Fit every box to its content", click: show("fit")}, {label: "Line up every box", accelerator: "CmdOrCtrl+Shift+L", click: show("align")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
+    {label: "File", submenu: [{label: "Settings", accelerator: "CmdOrCtrl+,", click: show("settings")}, {label: "Past sessions", accelerator: "F2", registerAccelerator: false, click: show("history")}, {label: "Reset tracker (clear the screen)", click: show("reset")}, {type: "separator"}, {label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
+    {label: "View", submenu: [{label: "Modules toolbox", click: show("toolbox")}, {label: "Simple Mode", click: show("mini")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {label: "Fit every box to its content", click: show("fit")}, {label: "Line up every box", accelerator: "CmdOrCtrl+Shift+L", click: show("align")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
     {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Patch notes", click: show("patchnotes")}, {label: "Check for updates", click: show("update")},
       {label: "Report a bug", click: show("report")}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
   ]));
@@ -256,13 +257,12 @@ ipcMain.handle("delete-session", (_, saved) => {
   if (!/^\d{10,16}$/.test(String(saved))) return false;
   try { fs.unlinkSync(path.join(SESSIONS, saved + ".json")); return true } catch { return false }
 });
-// History's rename/note: only name and note change (trimmed, the same caps as the Start box and the note field; empty = none)
+// History > Edit run: name, note, map and the numbers a misread can get wrong (core/history.js applyEdit keeps the first values in orig)
 ipcMain.handle("update-session", (_, saved, patch) => {
   if (!/^\d{10,16}$/.test(String(saved)) || !patch || typeof patch !== "object") return false;
-  const file = path.join(SESSIONS, saved + ".json"), cut = (v, n) => typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null;
-  try { const x = JSON.parse(fs.readFileSync(file, "utf8"));
-    if ("name" in patch) x.name = cut(patch.name, 60); if ("note" in patch) x.note = cut(patch.note, 1000);
-    writeAtomic(file, JSON.stringify(x)); return true } catch { return false }
+  const file = path.join(SESSIONS, saved + ".json");
+  try { const x = JSON.parse(fs.readFileSync(file, "utf8"));   // name, note, map and the numbers a misread gets wrong (core/history.js applyEdit)
+    writeAtomic(file, JSON.stringify(HIST.applyEdit(x, patch))); return true } catch { return false }
 });
 ipcMain.handle("export-csv", () => {
   // text starting with = + - @ would run as a formula in Excel (map names come from OCR): prefixed with '

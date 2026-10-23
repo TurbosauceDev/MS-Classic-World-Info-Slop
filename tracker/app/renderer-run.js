@@ -93,9 +93,27 @@ async function stopNow(){
   clearInterval(autoTimer); autoTimer = null;
   renderState(session?.stats());
 }
+// Reset (Danny 2026-10-23: "cleaner in between use sessions"): only while not tracking. Clears the numbers, both logs, the
+// start/end readings and the last summary back to a just-opened window; saved runs stay in Past sessions
+function resetTracker(){
+  if (timer != null || starting){ $("#status").textContent = "Stop and finalize the run first, then Reset."; return false }
+  if (dummyOn) dummyClear();
+  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: goalOf(), freeIds: freeIds()});
+  snaps.start = snaps.end = null; wrap = null; runT0 = 0; feed = null;
+  for (const id of ["#summary", "#lastRun", "#partyBox", "#respawn"]) $(id).classList.add("hidden");
+  $("#feed").innerHTML = $("#miniFeed").innerHTML = $("#events").innerHTML = "";
+  $("#runName").value = $("#wrapName").value = $("#runNote").value = "";
+  try { renderSnaps(render()) } catch (e){ log("reset", {err: e.message}) }
+  session = null; renderState(null); renderWrap();
+  $("#status").className = ""; $("#status").textContent = "Reset: ready for a new run.";
+  return true;
+}
+$("#resetBtn").onclick = resetTracker;
 // what History keeps of a run (saved at Finalize log; the same thing autosaved every minute while tracking)
 function sessionRecord(snapRec){
-  return {shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), name: runName() || null, note: $("#runNote").value.trim() || null, ...runExtras(), kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds, timeline: kpqTimeline(Date.now()), best: kpq.times.length ? Math.round(Math.min(...kpq.times)) : null, avg: kpq.times.length ? Math.round(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length) : null} : null, lootValue: Math.round(session.stats().lootValue), levelUps: session.state.levelUps.map(({t, ...l}) => l)};
+  return {shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), name: runName() || null, note: $("#runNote").value.trim() || null, ...runExtras(), kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds, timeline: kpqTimeline(Date.now()), best: kpq.times.length ? Math.round(Math.min(...kpq.times)) : null, avg: kpq.times.length ? Math.round(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length) : null} : null, lootValue: Math.round(session.stats().lootValue), levelUps: session.state.levelUps.map(({t, ...l}) => l),
+    // EXP, farming time and kills per map visited (the run's map is the one with the most EXP, not where it ended)
+    maps: session.stats().maps.slice(0, 12).map(m => ({map: m.map, name: m.name, exp: Math.round(m.exp), min: Math.round(m.min * 10) / 10, kills: m.kills}))};
 }
 // crash recovery: while tracking, the run so far is written every minute (main.js: sessions/autosave.json, swapped in whole);
 // a normal save or a run with nothing in it removes it. On the next launch a left-over one is offered back (recoverCheck)
@@ -111,7 +129,7 @@ async function recoverCheck(){
   $("#recover").classList.remove("hidden");
   $("#recoverSave").onclick = async () => { const {autosaved, ...rec} = x;
     await host.saveSession({...rec, recovered: true, note: [rec.note, "Recovered after the tracker closed (up to the last minute's autosave)."].filter(Boolean).join("\n")});
-    $("#recover").classList.add("hidden"); $("#status").textContent = "Recovered run saved to History."; if ($("#hist").closest("#dock")) loadHist() };
+    $("#recover").classList.add("hidden"); $("#status").textContent = "Recovered run saved to History."; if (modalIsOpen($("#histPop"))) loadHist() };
   $("#recoverDrop").onclick = async () => { await host.autosave?.(null); $("#recover").classList.add("hidden"); $("#status").textContent = "Unsaved run discarded." };
 }
 // more about the run for History: who played it, levels, clock time, the best drop, the monster killed most

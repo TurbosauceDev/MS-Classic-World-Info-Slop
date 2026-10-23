@@ -30,7 +30,7 @@
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
       msgExp: 0, barExp: 0, recent: [], kills: 0, unknownKills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, itemT: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
-      pausedAt: null, held: false, pausedMs: 0, levelUps: [], levelAt: null, used: {}, have: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
+      pausedAt: null, held: false, pausedMs: 0, byMap: {}, levelUps: [], levelAt: null, used: {}, have: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
@@ -68,7 +68,12 @@
     }
     // KPQ's middle stages have no monsters, so minutes with no EXP there are still play time (Danny, 2026-10-18): no idle cut-off in a stage
     const kpqStage = () => (G.kpq || []).includes(S.map) && S.map !== "80000600";
-    function credit(t){ const gap = t - S.last; S.activeMs += gap > (kpqStage() ? 30 * 60e3 : idleMs) || gap < 0 ? 0 : gap }   // < 0: the PC clock went back
+    function credit(t){ const gap = t - S.last, ms = gap > (kpqStage() ? 30 * 60e3 : idleMs) || gap < 0 ? 0 : gap; S.activeMs += ms; if (ms) here().ms += ms }   // < 0: the PC clock went back
+    // per map: EXP (bar and lines), farming time and kills credited to the map they happened on, so the run's map is where the
+    // EXP came from, not where the player stood at Stop (Danny 2026-10-23: deaths, town scrolls and walking home made Lith
+    // Harbor's department store or the player's house a "training map")
+    const mapNameOf = id => G.mapnames?.[id] || G.maps[id]?.[0] || null;
+    const here = () => { const k = S.map || "?"; return S.byMap[k] ||= {name: mapNameOf(S.map) || S.mapName || null, bar: 0, msg: 0, ms: 0, kills: 0} };
     // a level-up: how long the level before took (active time), when this session saw that level start
     function levelUp(level, t){
       const was = S.levelAt;
@@ -115,15 +120,15 @@
         case "party": S.party = Math.max(1, e.size | 0); break;
         case "job": S.job = e.name; break;
         case "exp": {
-          S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t);
-          if (!G.maps[S.map]){ S.kills++; S.unknownKills++; S.lastKillMob = null; break }   // map not known: a kill, monster unknown
+          S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); here().msg += e.gain;
+          if (!G.maps[S.map]){ S.kills++; here().kills++; S.unknownKills++; S.lastKillMob = null; break }   // map not known: a kill, monster unknown
           const id = matchMob(e.gain);
-          if (id === "?"){ S.kills++; S.unknownKills++; S.lastKillMob = null }   // a party kill, monster unknown
-          else if (id){ const m = mob(id); m.kills++; m.exp += e.gain; S.kills++; S.lastKillMob = id; if (timed(id)) S.timedKills[id] = e.t }
+          if (id === "?"){ S.kills++; here().kills++; S.unknownKills++; S.lastKillMob = null }   // a party kill, monster unknown
+          else if (id){ const m = mob(id); m.kills++; m.exp += e.gain; S.kills++; here().kills++; S.lastKillMob = id; if (timed(id)) S.timedKills[id] = e.t }
           else S.otherExp += e.gain;   // fits no monster here: quest reward etc.
           break;
         }
-        case "bonus": S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); break;
+        case "bonus": S.msgExp += e.gain; here().msg += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); break;
         // the inventory's open tab read: kept as first and latest per tab (Equip, Use, Etc)
         case "inv": {
           if (!e.tab || !e.items) break;
@@ -162,7 +167,7 @@
           if (!jump && (tiny || e.pct > 0.5 && (!fit || S.level && fit !== S.level && fit !== S.level + 1))){ S.badBars = (S.badBars || 0) + 1; break }
           S.jumpTo = null;
           if (jump){ const q = S.bar; let d = (G.exp[q.level] || 0) - q.exp + e.exp; for (let L = q.level + 1; L < fit; L++) d += G.exp[L] || 0;
-            S.barExp += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t); for (let L = q.level + 1; L <= fit; L++){ S.level = L; if (!(S.levelUps.at(-1)?.level >= L)) levelUp(L, e.t) }
+            S.barExp += d; here().bar += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t); for (let L = q.level + 1; L <= fit; L++){ S.level = L; if (!(S.levelUps.at(-1)?.level >= L)) levelUp(L, e.t) }
             S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: fit}; break }
           if (e.level) S.level = e.level;
           // level not known yet (only readings under 0.5%, which can't be checked well): nothing counted until it is
@@ -179,7 +184,7 @@
             else if (d < 0 && G.exp[p.level] && -d > 0.2 * G.exp[p.level] && (S.bigDrops = (S.bigDrops || 0) + 1) < 3){ S.badBars = (S.badBars || 0) + 1; S.level = before; break }
             else if (d < 0 && S.bigDrops >= 3 && !e.level){ d = (G.exp[p.level] || 0) - p.exp + e.exp; S.level = p.level + 1 }   // 3 in a row: the level-up it was
             S.bigDrops = 0;
-            if (d > 0){ S.barExp += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t) }
+            if (d > 0){ S.barExp += d; here().bar += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t) }
             // a drop without a level-up = a death (the game takes a share of the level's EXP); not counted again until EXP rises
             else if (d < -Math.max(5, (G.exp[p.level] || 0) * 0.001) && !p.dead){   // a few EXP down is the last digit misread, not a death
               S.deaths++; const k = S.map || "?"; S.deathMaps[k] = (S.deathMaps[k] || 0) + 1 }
@@ -257,7 +262,12 @@
       const usedCost = used.reduce((a, u) => a + (u.total || 0), 0);
       const mobs = Object.entries(S.byMob).map(([id, m]) => ({id, name: G.mobs[id]?.[0] || "Monster " + id, ...m,
         mesoPerKill: m.kills ? m.mesos / m.kills : 0})).sort((a, b) => b.kills - a.kills);
-      return {activeMin: S.activeMs / 6e4, map: S.map, mapName: G.mapnames?.[S.map] || G.maps[S.map]?.[0] || S.mapName || null, party: S.party,
+      // the run's map = the one most of the EXP came from (bar when read, else lines), else the most farming time, else where
+      // the player is now; nowMap = where the player is now (live display)
+      const useBar = S.barExp > 0, maps = Object.entries(S.byMap).map(([id, m]) => ({map: id === "?" ? null : id, name: m.name, exp: useBar ? m.bar : m.msg, min: m.ms / 6e4, kills: m.kills}))
+        .filter(m => m.exp > 0 || m.min > 0 || m.kills > 0).sort((a, b) => b.exp - a.exp || b.min - a.min);
+      const top = maps.find(m => m.map && m.exp > 0) || maps.find(m => m.map) || null, nowName = mapNameOf(S.map) || S.mapName || null;
+      return {activeMin: S.activeMs / 6e4, map: top ? top.map : S.map, mapName: top ? top.name : nowName, nowMap: S.map, nowMapName: nowName, maps, party: S.party,
         job: S.job, level: S.level, kills: S.kills, unknownKills: S.unknownKills, killsHr: per(S.kills), exp, expHr, toLevelHrs, otherExp: S.otherExp,
         // share of the bar's EXP that showed up as readable messages: below ~70%, kills/mesos/drops are undercounted
         readShare: S.barExp > 0 ? Math.min(1, S.msgExp / S.barExp) : null,

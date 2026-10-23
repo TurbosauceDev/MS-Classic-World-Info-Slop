@@ -192,7 +192,7 @@ function render(){
   $("#active").textContent = Math.round(s.activeMin) + " min";
   $("#expTotal").textContent = fmt(s.exp); $("#expPerMin").textContent = s.activeMin >= 1 ? fmt(s.exp / s.activeMin) + " EXP/min active" : "";
   $("#kpqNote").textContent = kpqText(s);
-  $("#where").innerHTML = [kpq?.on && "KPQ (" + esc(settings.kpqMode || "Bonus") + ")", s.mapName && esc(s.mapName), s.job && esc(s.job), s.party > 1 ? "party of " + s.party : "solo",
+  $("#where").innerHTML = [kpq?.on && "KPQ (" + esc(settings.kpqMode || "Bonus") + ")", s.nowMapName && esc(s.nowMapName), s.job && esc(s.job), s.party > 1 ? "party of " + s.party : "solo",
     kills(s.kills), mz(s.mesoPerKill) + "/kill",
     s.readShare != null && Math.round(s.readShare * 100) + "% of EXP seen as messages",
     settings.share && esc(runInfo())].filter(Boolean).join(" · ");

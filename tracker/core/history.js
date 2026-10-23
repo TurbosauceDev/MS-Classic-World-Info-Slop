@@ -9,6 +9,7 @@
    today(list, now) -> {runs, min, exp, mesos}   the runs saved on now's local calendar day
    goalEta(list, {exp, goal, now}) -> {level, pct, goal, need, perDay, maps: [{name, expHr, hours, at}]} | {why}
      exp = the EXP table the session uses (G.exp, from data.json); "at your <map> rate" from byMap's EXP/hr
+   applyEdit(x, patch) -> a copy with name/note/map/numbers fixed by hand (x.orig keeps the first values, x.edited the time)
    ctx.bestDrop(x) -> {each} | null (the renderer's, which knows item prices) */
 (function (root){
   const MAX_CMP = 6, PB_MIN = 15;   // compare up to 6 runs; personal bests only from runs with 15+ min farming (as Last 7 days' fastest map)
@@ -119,6 +120,33 @@
       .sort((a, b) => a.hours - b.hours);
     return {level, pct, goal, need, perDay, maps};
   }
-  const api = {metrics, today, goalEta, compareRuns, perHour, byMap, bests, filterRuns, placeOf, isKpq, expOf, GROUPS, MAX_CMP, PB_MIN};
+  // a saved run fixed by hand (History details > Edit, main.js update-session): name/note as text, the map, and the numbers a
+  // misread can get wrong. Only the keys in patch change; the first value of each edited number is kept in x.orig, and
+  // x.edited marks it. EXP is set wherever History reads it (expTotal, the start/end readings, the live count)
+  const EDIT_NUM = {activeMin: [0, 10080, 1], exp: [0, 2e9, 0], mesos: [0, 2e10, 0], kills: [0, 1e7, 0], deaths: [0, 1e4, 0]};
+  function applyEdit(x, patch, now = Date.now()){
+    const y = JSON.parse(JSON.stringify(x)), cut = (v, n) => typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null;
+    if (!patch || typeof patch !== "object") return y;
+    if ("name" in patch) y.name = cut(patch.name, 60);
+    if ("note" in patch) y.note = cut(patch.note, 1000);
+    const keep = (k, v) => { y.orig ||= {}; if (!(k in y.orig)) y.orig[k] = v ?? null };
+    let changed = false;
+    if ("mapName" in patch){ const n = cut(patch.mapName, 60), id = patch.map != null && /^\d{1,10}$/.test(String(patch.map)) ? String(patch.map) : null;
+      if (n && n !== y.mapName){ keep("mapName", y.mapName); keep("map", y.map); y.mapName = n; y.map = id; changed = true } }
+    for (const [k, [lo, hi, dp]] of Object.entries(EDIT_NUM)){
+      if (!(k in patch)) continue; const v = Number(patch[k]);
+      if (!Number.isFinite(v) || v < lo || v > hi) continue;
+      const r = dp ? Math.round(v * 10) / 10 : Math.round(v), was = k === "exp" ? expOf(y) : y[k];
+      if (r === was) continue;
+      keep(k, was); changed = true;
+      if (k === "exp"){ y.exp = r; if ("expTotal" in y) y.expTotal = r; if (y.snap && typeof y.snap === "object") y.snap.exp = r }
+      else y[k] = r;
+      // the start/end readings' minutes are clock time; a fixed farming time is what the rate should use
+      if (k === "activeMin" && y.snap && typeof y.snap === "object" && y.snap.minutes > 0) y.snap.minutes = r;
+    }
+    if (changed){ y.edited = now; if (y.activeMin >= 1) y.expPerActiveMin = Math.round(expOf(y) / y.activeMin); else y.expPerActiveMin = null }
+    return y;
+  }
+  const api = {metrics, applyEdit, EDIT_NUM, today, goalEta, compareRuns, perHour, byMap, bests, filterRuns, placeOf, isKpq, expOf, GROUPS, MAX_CMP, PB_MIN};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindHistory = api;
 })(typeof window !== "undefined" ? window : globalThis);

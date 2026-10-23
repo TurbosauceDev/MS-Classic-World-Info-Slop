@@ -58,9 +58,9 @@ const path = require("path"), {chromium} = require("playwright");
       {saved: t0 - 1000, date: "yesterday", mapName: "Pig Beach", activeMin: 60, exp: 5000, mesos: 1000, level: 21}];
     host.sessions = async () => window.histFake.map(x => ({...x}));
     settings = await host.settings({goal: 25}); goalUi();
-    if (!$("#hist").closest("#dock")) addBox("hist"); await loadHist();
-    return [$("#today").textContent, $("#eta").textContent, [...document.querySelectorAll("#eta tr td:first-child")].map(td => td.textContent),
-      GAMEDATA.exp[22] * 0.5 + GAMEDATA.exp[23] + GAMEDATA.exp[24], hm((GAMEDATA.exp[22] * 0.5 + GAMEDATA.exp[23] + GAMEDATA.exp[24]) / 12000)] });
+    openHist(); await loadHist(); const out =
+    [$("#today").textContent, $("#eta").textContent, [...document.querySelectorAll("#eta tr td:first-child")].map(td => td.textContent),
+      GAMEDATA.exp[22] * 0.5 + GAMEDATA.exp[23] + GAMEDATA.exp[24], hm((GAMEDATA.exp[22] * 0.5 + GAMEDATA.exp[23] + GAMEDATA.exp[24]) / 12000)]; modalClose($("#histPop")); return out });
   if (!/^Today: 50 min farming · 8,000 EXP · .*1,200 \(2 runs\)$/.test(hs[0].trim())) fail("today card", hs[0]);
   if (!hs[1].includes(`Goal: Lv 25 (${hs[3].toLocaleString()} EXP from Lv 22 50.0%`) || hs[2].join() !== "Snail Hunting Ground III,Pig Beach"
     || !hs[1].includes(hs[4] + " farming") || !/about (today|tomorrow|\w+day|\w{3} \d+)/.test(hs[1]) || !/a day \(your days played this week\)/.test(hs[1])) fail("goal ETA", hs);
@@ -123,7 +123,8 @@ const path = require("path"), {chromium} = require("playwright");
     $("#profSel").value = "b:Danny's Default"; $("#profSel").dispatchEvent(new Event("change"));
     const del = $("#profDel").disabled; $("#profUse").click(); await wait(250);
     const got = {theme: settings.theme, profile: settings.profile, win: window.winSized, dock: [...$("#dock").querySelectorAll("[data-box]")].map(b => b.dataset.box).sort().join(),
-      hist: !!BOXES.find(b => b.dataset.box === "hist").closest("#shelf"), note: $("#setupNote").textContent};
+      hist: !document.querySelector("#dock #hist") && !BOXES.some(b => b.dataset.box === "hist"),   // Past sessions is a pop-up since 0.2.70
+      note: $("#setupNote").textContent};
     await themePick("p:Midnight"); $("#profSel").value = "KPQ"; $("#profUse").click(); await wait(250);
     const again = TH.builtins(boxIds())[0].theme.preset, kept = settings.profiles.some(p => /Danny/.test(p.name));
     return {del, got, again, kept, opt: [...$("#profSel").querySelectorAll("optgroup")].map(g => g.label).join()} });

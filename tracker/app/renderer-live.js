@@ -83,7 +83,7 @@ function dropAlert(id){
 let lastParty = 0, partyBusy = false, partyNames = null;   // partyNames: the other trackers on the party code last time (event log joins/leaves)
 async function sendParty(){
   const s = session.stats(), box = $("#partyBox");
-  const r = await host.party({job: s.job, level: s.level, mapName: s.mapName, expHr: s.expHr, expHr5: s.expHr5, killsHr: s.killsHr, mesosHr: s.mesosHr,
+  const r = await host.party({job: s.job, level: s.level, mapName: s.nowMapName, expHr: s.expHr, expHr5: s.expHr5, killsHr: s.killsHr, mesosHr: s.mesosHr,
     active: Math.round(s.activeMin)}).catch(() => null);
   if (!r || timer == null) return;   // stopped while the answer was on its way: don't bring the card back
   box.classList.remove("hidden"); $("#miniParty").textContent = "";
@@ -132,7 +132,7 @@ function autoPause(minimap, info, t){   // minimap: the minimap is on screen (lo
 const KPQ_MAPS = new Set((G.kpq || []).map(String));
 let kpq = null;
 // Pause (button or its shortcut): the timer stops until pressed again (held); the game screen coming back doesn't resume it
-function pauseUi(){ const b = $("#pauseBtn"); b.classList.toggle("hidden", timer == null || !!wrap); b.textContent = held ? "Go on" : "Pause"; b.setAttribute("aria-pressed", String(held)) }
+function pauseUi(){ $("#resetBtn").classList.toggle("hidden", timer != null || starting || !session?.state.events); const b = $("#pauseBtn"); b.classList.toggle("hidden", timer == null || !!wrap); b.textContent = held ? "Go on" : "Pause"; b.setAttribute("aria-pressed", String(held)) }
 $("#pauseBtn").onclick = () => {
   if (timer == null || wrap || !session) return;
   held = !held; const t = Date.now();

@@ -6,7 +6,7 @@ function miniList(rows, cell, empty){ if (!rows.length) return `<tr class="more"
 function renderMini(s){
   $("#miniTotal").textContent = fmt(s.exp); $("#miniActive").textContent = hm(s.activeMin / 60);
   $("#miniClock").textContent = runT0 && (timer != null || dummyOn) ? hm((Date.now() - runT0) / 3.6e6) : "-";
-  $("#miniState").textContent = [$("#stateText").textContent, s.mapName].filter(Boolean).join(" · ");
+  $("#miniState").textContent = [$("#stateText").textContent, s.nowMapName].filter(Boolean).join(" · ");
   $("#miniItems").innerHTML = miniList(s.items, i => `<tr><td>${ico(i.id)}${esc(i.name)}</td><td class="n">×${fmt(i.n)}</td></tr>`, "Nothing yet");
   $("#miniMobs").innerHTML = miniList(s.mobs, m => `<tr><td>${esc(m.name)}</td><td class="n">${fmt(m.kills)}</td></tr>`, "None yet");
   $("#miniUsed").innerHTML = miniList(s.used.filter(u => u.n), u => `<tr><td>${ico(u.id)}${esc(u.name)}</td><td class="n">×${fmt(u.n)}</td></tr>`, "None yet");
@@ -124,7 +124,8 @@ function tidy(){
   for (const e of document.querySelectorAll("[data-box], .boxcol")) if (!isRow(e.parentElement)) e.style.flex = "";
 }
 // saved as order.dock = [box id | {row: [box id | [box ids (a column)]], w: [widths]}], v: 2; a box not in it is in the toolbox.
-// Older saves (order per tab: dock, session, loot, hist) load with dock, Session and Loot in that order, History in the toolbox
+// Older saves (order per tab: dock, session, loot, hist) load with dock, Session and Loot in that order. "hist" (Past sessions)
+// is a pop-up since 0.2.70 (F2): a save that lists it just skips it
 function layoutSave(){
   requestAnimationFrame(() => compactFit());
   tidy(); fitRows(); if (snapOn()) alignRows(SNAP); const order = {};
@@ -155,7 +156,7 @@ function layoutLoad(l){
   if (!(l.v >= 2)){ const said = new Set(["dock", "session", "loot"].flatMap(k => JSON.stringify(l.order[k] || []).match(/"[a-z]+"/g) || []).map(x => x.slice(1, -1)));
     for (const b of BOXES) if (b.parentElement === h && !said.has(b.dataset.box)) h.appendChild(b) }
   for (const b of BOXES){ b.classList.toggle("folded", (l.folded || []).includes(b.dataset.box)); const v = +l.h?.[b.dataset.box]; heightSet(b, v > 0 ? v : null) }
-  tidy(); fitRows(); tbRender(); if ($("#hist").closest("#dock") && typeof loadHist === "function") loadHist();
+  tidy(); fitRows(); tbRender();
 }
 // puts box b at side z (top, bottom, left, right) of target t (a box, or a row when dropped in a row's gap)
 function place(b, t, z){
@@ -258,7 +259,7 @@ const endDrag = (e, cancel) => {
 };
 document.addEventListener("pointerup", e => endDrag(e, false));
 document.addEventListener("pointercancel", e => endDrag(e, true));
-document.addEventListener("keydown", e => { if (e.key === "Escape" && drag) endDrag(e, true) });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && drag){ e.preventDefault(); endDrag(e, true) } });
 // resizing (Danny, 2026-10-19: "it should require something like a shift click or an alt click ... the adjustment bars
 // shouldn't be perpetually visible and grabbable"): bars show in the gaps only while Shift or Alt is held (the pointer's own
 // modifier flags count too, so it works while the game has the keyboard). The bar between two boxes side by side shares the
@@ -418,7 +419,7 @@ function tbRender(){
 }
 function tbOpen(on = $("#toolbox").classList.contains("hidden")){ $("#toolbox").classList.toggle("hidden", !on); $("#tbBtn").setAttribute("aria-expanded", String(on)); if (on){ tbRender(); ($("#tbList .tbItem") || $("#tbClose")).focus() } }
 // a module just added: unfolded, scrolled into view, briefly lit; History loads its list when it arrives
-function added(b){ if (b.classList.contains("folded")){ b.classList.remove("folded"); foldMark(b) } if (b.dataset.box === "hist") loadHist();
+function added(b){ if (b.classList.contains("folded")){ b.classList.remove("folded"); foldMark(b) }
   requestAnimationFrame(() => { b.scrollIntoView({block: "nearest", behavior: calm.matches ? "auto" : "smooth"}); if (!calm.matches) b.animate([{boxShadow: "0 0 0 3px var(--accent)"}, {boxShadow: "0 0 0 0 transparent"}], {duration: 700}) }) }
 function addBox(id){ const b = BOXES.find(x => x.dataset.box === id); if (!b || !b.closest("#shelf")) return; flip(() => { $("#dock").appendChild(b); tidy(); fitRows() }); added(b); layoutSave() }
 function shelve(b){ if (b.dataset.box === "main") return; flip(() => { $("#shelf").appendChild(b); b.style.flex = ""; tidy(); fitRows() }); layoutSave(); tbRender() }
@@ -427,6 +428,6 @@ $("#tbList").addEventListener("keydown", e => { const it = e.target.closest(".tb
   if (e.key === "Enter" || e.key === " "){ e.preventDefault(); const n = it.nextElementSibling || it.previousElementSibling; addBox(it.dataset.mod); (n && $(`#tbList [data-mod="${n.dataset.mod}"]`) || $("#tbClose")).focus() }
   else if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); (e.key === "ArrowDown" ? it.nextElementSibling : it.previousElementSibling)?.focus() } });
 $("#tbBtn").onclick = () => tbOpen(); $("#tbClose").onclick = () => tbOpen(false);
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !e.defaultPrevented && !drag && !$("#toolbox").classList.contains("hidden") && !MODALS.length) tbOpen(false) });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !e.defaultPrevented && !drag && !$("#toolbox").classList.contains("hidden") && !MODALS.length){ e.preventDefault(); tbOpen(false) } });
 tbRender();
 

@@ -86,7 +86,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   // Fit every box now (Settings and the View menu): widths and heights you set go, the arrangement stays
   await page.evaluate(() => { heightSet($("#logBox"), 300); layoutSave(); window.menu("fit") }); await page.waitForTimeout(50);
   const fa = await page.evaluate(() => [document.querySelectorAll(".sized").length, [...document.querySelectorAll(".boxrow > :not(.split)")].filter(p => p.style.flex).length, JSON.stringify(settings.layout.order.dock), JSON.stringify(settings.layout.h)]);
-  if (fa[0] || fa[1] || fa[2] !== '["main",{"row":["stats",["log","mobs"]],"w":[1,1]},{"row":["items","mesos","used"],"w":[1,1,1]},"hist"]' || fa[3] !== "{}") fail("fit every box now", fa);
+  if (fa[0] || fa[1] || fa[2] !== '["main",{"row":["stats",["log","mobs"]],"w":[1,1]},{"row":["items","mesos","used"],"w":[1,1,1]}]' || fa[3] !== "{}") fail("fit every box now", fa);
   // double-click a box's title: that box (and its row's widths) fit again
   await page.evaluate(() => heightSet($("#mesoBox"), 400)); await page.dblclick("#mesoBox h3");
   if (await page.evaluate(() => $("#mesoBox").classList.contains("sized"))) fail("double-click title fits the box", 0);

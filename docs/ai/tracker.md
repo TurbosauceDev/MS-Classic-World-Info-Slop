@@ -207,3 +207,10 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 
 ## Negative EXP from misread snapshot 2026-10-23
 - Start/End snapshot raw EXP can be misread while the % is right (100,578 read as 200,579 gave -84,346). `expBetween` and `snap()` now drop a raw EXP that is >1% of the level off its own %. Fixture: `tracker/tests/sessions/negative-exp-kpq-rush-2026-10-23.json` (saved run, tracker 0.2.69).
+
+## UI redesign part 1, 2026-10-23 (0.2.70, T-05)
+- EXP by map: session.js keeps `S.byMap[id] = {name, bar, msg, ms, kills}`; stats() `map`/`mapName` = most EXP (bar if read, else lines), then most farming time; `nowMap`/`nowMapName` = where the player stands (live #where, Simple Mode line, party, bug report). Saved runs carry `maps` (top 12). Test: core.test.js "EXP goes to the map it was gained on".
+- Edit run: core/history.js `applyEdit` (pure, used by main.js `update-session`): name, note, map, activeMin, exp (also expTotal + snap.exp), mesos, kills, deaths; first values in `x.orig`, `x.edited` = time. Form = `details.hedit` in History details; only changed fields are sent (editPatch).
+- Past sessions is a modal (#histPop, F2 toggles, File > Past sessions), no longer a module: no `data-box="hist"`; old saves listing "hist" skip it. Esc with no pop-up/toolbox/drag opens Settings: Esc handlers that consume the key must `preventDefault()` (drag cancel and toolbox close do) or Settings opens behind them.
+- Reset (#resetBtn, File > Reset tracker, resetTracker in renderer-run.js): only when not tracking; clears numbers, both logs, snaps, summary. Mini is labelled "Simple Mode" in the UI (ids/settings keys still `mini`).
+- Next (waits on Danny's comments): Simple Mode layout + main card with Start/end + Inventory check merged, per-hour/total switch. Mockup: https://claude.ai/artifact/9jSzRhkNJyXMMnapUW2aF2

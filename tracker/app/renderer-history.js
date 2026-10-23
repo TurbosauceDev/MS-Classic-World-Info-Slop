@@ -19,7 +19,7 @@ $("#miniFull").onclick = () => { document.body.classList.remove("mini"); if (fit
 // History (the maths is core/history.js): search and filters, Maps, personal bests, an EXP/hr trend for one map, rows with
 // details (monsters, loot, used, level-ups) and rename/note editing, and compare for up to 6 runs against a baseline
 const H = GrindHistory, hctx = {bestDrop: x => bestDrop(x)};
-let histList = [], histF = {q: "", map: "", player: "", kind: "", sort: "new"}, histShown = 30, histOpen = new Set(), cmpSel = [], cmpBase = null;
+let histList = [], histF = {q: "", map: "", player: "", kind: "", sort: "new"}, histShown = 30, histOpen = new Set(), histEdit = new Set(), cmpSel = [], cmpBase = null;
 const expOf = H.expOf, apm = x => H.metrics(x).apm;
 // a run's who and how: character, job, levels, party, kills, deaths, the monster killed most, clock time
 const who = x => [x.player, x.job, x.startLevel != null && x.endLevel != null && x.endLevel !== x.startLevel ? `Lv ${x.startLevel} → ${x.endLevel}` : x.level ? "Lv " + (x.endLevel ?? x.level) : null,
@@ -99,9 +99,34 @@ function histDetail(x){
     + (!mobs.length && !items.length && !used.length && !ups.length ? `<div class="note">No monster, loot or level-up detail saved with this session.</div>` : "")
     + (x.readShare != null ? `<div class="note">${Math.round(x.readShare * 100)}% of the EXP bar's gain showed up as readable lines${x.readShare < 0.7 ? ": kills, mesos and drops are undercounted" : ""}.</div>` : "")
     + `<div class="row">${same ? `<button class="alt cmpPrev" data-a="${+same.saved}" data-b="${+x.saved}">Compare with the run before it here (${esc(when(same))})</button>` : ""}</div>`
-    + (host.updateSession ? `<div class="row hedit"><input class="eName" maxlength="60" placeholder="Name (optional)" value="${esc(x.name || "")}" style="flex:1;min-width:0"></div>
-      <textarea class="eNote" maxlength="1000" rows="2" placeholder="Note (optional)" style="width:100%;box-sizing:border-box">${esc(x.note || "")}</textarea>
-      <div class="row"><button class="alt eSave" data-saved="${+x.saved}">Save name and note</button></div>` : "");
+    + (Array.isArray(x.maps) && x.maps.length > 1 ? `<div class="note">EXP by map: ${x.maps.filter(m => m && (m.exp > 0 || m.kills > 0)).map(m => `${esc(m.name || "Unknown map")} ${fmt(m.exp)} EXP${m.min ? ` <span class="dim">${esc(hm(m.min / 60))}</span>` : ""}`).join(" · ") || "none"}.</div>` : "")
+    + (x.edited ? `<div class="note">Edited by hand${editWas(x)}.</div>` : "")
+    + (host.updateSession ? editForm(x) : "");
+}
+// History > Edit run: fix what a misread got wrong (core/history.js applyEdit; first values kept in x.orig)
+const EDIT_LABEL = {mapName: "map", activeMin: "farming minutes", exp: "EXP", mesos: "mesos", kills: "kills", deaths: "deaths"};
+function editWas(x){
+  const o = x.orig && typeof x.orig === "object" ? Object.entries(x.orig).filter(([k]) => EDIT_LABEL[k]) : [];
+  return o.length ? ": was " + o.map(([k, v]) => `${EDIT_LABEL[k]} ${esc(v == null ? "none" : typeof v === "number" ? fmt(v) : String(v))}`).join(", ") : "";
+}
+function editForm(x){
+  const num = (k, label, v, step = 1) => `<label class="eF"><span>${label}</span><input class="eN" data-k="${k}" type="number" min="0" step="${step}" value="${v == null ? "" : +v}"></label>`;
+  if (!$("#eMaps")){ const d = document.createElement("datalist"); d.id = "eMaps"; d.innerHTML = [...new Set(Object.values(G.mapnames || {}))].sort().map(n => `<option value="${esc(n)}">`).join(""); document.body.append(d) }   // one list of map names for every form
+  return `<details class="hedit"${histEdit.has(String(+x.saved)) ? " open" : ""} data-saved="${+x.saved}"><summary>Edit run</summary>
+    <div class="row"><input class="eName" maxlength="60" placeholder="Name (optional)" value="${esc(x.name || "")}" style="flex:1;min-width:0"></div>
+    <div class="eGrid">${H.isKpq(x) ? "" : `<label class="eF eMap"><span>Map</span><input class="eMapIn" list="eMaps" maxlength="60" value="${esc(x.mapName || "")}"></label>`}
+      ${num("activeMin", "Farming minutes", x.activeMin != null ? Math.round(x.activeMin * 10) / 10 : null, 0.1)}${num("exp", "EXP gained", H.expOf(x))}${num("mesos", "Mesos", x.mesos ?? 0)}${num("kills", "Kills", x.kills ?? 0)}${num("deaths", "Deaths", x.deaths ?? 0)}</div>
+    <textarea class="eNote" maxlength="1000" rows="2" placeholder="Note (optional)" style="width:100%;box-sizing:border-box">${esc(x.note || "")}</textarea>
+    <div class="row"><button class="alt eSave" data-saved="${+x.saved}">Save changes</button><span class="dim">Changed numbers keep their first value, shown under the run.</span></div></details>`;
+}
+// the patch the form asks for: only what changed (a number left as it was isn't sent)
+function editPatch(box, x){
+  const p = {name: box.querySelector(".eName").value.trim(), note: box.querySelector(".eNote").value.trim()};
+  const mi = box.querySelector(".eMapIn"), mn = mi ? mi.value.trim() : "";
+  if (mi && mn && mn !== (x.mapName || "")){ p.mapName = mn; const id = Object.entries(G.mapnames || {}).find(([, n]) => n === mn)?.[0] ?? (Array.isArray(x.maps) ? x.maps.find(m => m && m.name === mn)?.map : null); if (id) p.map = id }
+  for (const i of box.querySelectorAll(".eN")){ if (i.value === "") continue; const v = +i.value, k = i.dataset.k, was = k === "exp" ? H.expOf(x) : k === "activeMin" ? Math.round((x.activeMin || 0) * 10) / 10 : (x[k] ?? 0);
+    if (Number.isFinite(v) && v !== was) p[k] = v }
+  return p;
 }
 // EXP/hr run by run, oldest to newest, for one map (3+ runs with a rate)
 function trendDraw(list){
@@ -168,9 +193,9 @@ $("#histRows").onclick = async e => {
   const prev = e.target.closest("button.cmpPrev");
   if (prev){ cmpSel = [prev.dataset.a, prev.dataset.b]; cmpBase = null; cmpDraw(); histDraw(); $("#cmp").scrollIntoView?.({block: "nearest"}); return }
   const sv = e.target.closest("button.eSave");
-  if (sv){ const tr = sv.closest("tr"), name = tr.querySelector(".eName").value.trim(), note = tr.querySelector(".eNote").value.trim();
+  if (sv){ const box = sv.closest(".hedit"), x = histList.find(y => String(+y.saved) === sv.dataset.saved); if (!x) return;
     sv.disabled = true;
-    if (await host.updateSession(sv.dataset.saved, {name, note})){ $("#status").textContent = "Session updated."; loadHist() }
+    if (await host.updateSession(sv.dataset.saved, editPatch(box, x))){ $("#status").textContent = "Run updated."; histEdit.delete(sv.dataset.saved); loadHist() }
     else { sv.disabled = false; $("#status").textContent = "Couldn't update that session." }
     return }
   const b = e.target.closest("button.del"); if (!b) return;
@@ -179,6 +204,13 @@ $("#histRows").onclick = async e => {
   if (await host.deleteSession?.(b.dataset.saved)){ $("#status").textContent = "Session deleted."; cmpSel = cmpSel.filter(s => s !== b.dataset.saved); histOpen.delete(b.dataset.saved); loadHist() }
   else { b.disabled = false; $("#status").textContent = "Couldn't delete that session." }
 };
+// Past sessions is a pop-up (F2, File > Past sessions), not a module any more (Danny 2026-10-23); it reloads on every open
+function openHist(){ loadHist(); $("#histPop").scrollTop = 0; modalOpen($("#histPop"), $("#histClose")) }
+$("#histPop")._close = el => modalClose(el, $("#go"));
+$("#histClose").onclick = () => modalClose($("#histPop"), $("#go"));
+document.addEventListener("keydown", e => { if (e.key === "F2" && !keyWait){ e.preventDefault(); modalIsOpen($("#histPop")) ? modalClose($("#histPop"), $("#go")) : openHist() } });
+// an open Edit run form stays open when the list redraws
+$("#histRows").addEventListener("toggle", e => { const d = e.target; if (d.classList?.contains("hedit")) d.open ? histEdit.add(d.dataset.saved) : histEdit.delete(d.dataset.saved) }, true);
 // level-up log: how long each level took (farming time in one session), newest first
 // Today: farming time, EXP and mesos over the runs saved today (local day, core/history.js today())
 function todayDraw(){

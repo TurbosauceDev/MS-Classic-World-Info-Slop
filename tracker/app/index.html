@@ -29,7 +29,7 @@
     padding-right:calc(100vw - env(titlebar-area-width, calc(100vw - 140px))); background:var(--panel); border-bottom:1px solid var(--line); -webkit-app-region:drag; user-select:none; }
   #titlebar .tbname { font-size:12px; font-weight:600; color:var(--accent); margin-right:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex-shrink:1; }
   /* a narrow window: the menus never wrap (▦ over "Modules"); the app name gives way first, then the word Modules */
-  #titlebar button { white-space:nowrap; flex-shrink:0; } @media (max-width: 460px){ #tbBtn .tbw { display:none; } }
+  #titlebar button { white-space:nowrap; flex-shrink:0; } @media (max-width: 460px){ #tbBtn .tbw, #miniBtn .nw { display:none; } }
   #titlebar button { -webkit-app-region:no-drag; background:none; color:var(--muted); padding:4px 8px; font-size:12px; border-radius:6px; }
   #titlebar button:hover, #titlebar button:focus-visible { background:var(--accent-soft); color:var(--ink); }
   /* scrollbars in the app's colours (the page's own one starts under the title bar) */
@@ -69,7 +69,7 @@
   #state.on .dot { background:var(--leaf); } #state.paused .dot { background:var(--warn); }
   #top .bar .grow { flex:1; min-width:0; } #miniBtn { padding:5px 9px; font-size:12px; }
   /* a narrow main card: Start and the buttons on one line, what's going on under them (it was squeezed into a 100 px column) */
-  @container (max-width: 330px) { #top .bar > .grow { order:9; flex-basis:100%; } #helpBtn { margin-left:auto; } }
+  @container (max-width: 330px) { #top .bar > .grow { order:9; flex-basis:100%; } #helpBtn { margin-left:auto; } #miniBtn, #bugBtn, #helpBtn, #pauseBtn, #resetBtn { padding-left:7px; padding-right:7px; } #resetBtn .nw { display:none; } #go { min-width:64px; padding-left:12px; padding-right:12px; } #miniBtn { padding-left:6px; padding-right:6px; } }
   .tiles { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
   .tile { background:var(--bg); border-radius:8px; padding:6px 8px; } .tile .v { font-size:20px; line-height:1.2; }
   .tile.main .v { color:var(--accent); }
@@ -257,7 +257,7 @@
   #hist > .row:has(> #csv) { padding-right:72px; }
   /* History: filters, maps, compare */
   #hist [hidden] { display:none !important; }
-  #histRows, #recap { max-width:720px; }
+  #histRows, #recap { max-width:720px; } #histRows { width:100%; } #histPop { max-width:820px; }
   #histRows td.n { white-space:normal; }   /* narrow window: "EXP/hr" and "Delete?" wrap instead of scrolling the page sideways (monkey, 2026-10-19) */
   .cmpBox { margin:8px 0 10px; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); max-width:720px; }
   .cmpT tr.cmpHead td { padding-bottom:8px; } .cmpT td:first-child { position:sticky; left:0; z-index:1; background:var(--bg); } .cmpT .cmpWho { min-width:130px; } .cmpT .cbar { min-width:100px; }
@@ -284,7 +284,9 @@
   #mapsBox { margin:8px 0; max-width:720px; } #mapsBox summary { cursor:pointer; font-weight:600; } .mapsT { width:100%; } .mapsT td { padding:3px 4px; }
   /* narrow window: Runs and Best go (the row's details have them), the rest still fits; past that it scrolls in its box */
   #maps { container-type:inline-size; overflow-x:auto; } @container (max-width: 400px){ .mapsT td:nth-child(2), .mapsT td:nth-child(5) { display:none; } }
-  tr.hdet > td { background:var(--bg); border-radius:8px; padding:8px; } .hcols { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12px; } .hcol { min-width:150px; } .hcol .ico { width:16px; height:16px; margin:-2px 4px -2px 0; }
+  tr.hdet > td { background:var(--bg); border-radius:8px; padding:8px; } details.hedit { margin-top:6px; } details.hedit > summary { cursor:pointer; font-weight:600; font-size:12px; color:var(--accent); } details.hedit[open] > summary { margin-bottom:6px; }
+  .eGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:6px 10px; margin:6px 0; } .eF { display:flex; flex-direction:column; gap:2px; font-size:11px; min-width:0; } .eF input { width:100%; box-sizing:border-box; min-width:0; } .eF.eMap { grid-column:1 / -1; }
+  .hcols { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12px; } .hcol { min-width:150px; } .hcol .ico { width:16px; height:16px; margin:-2px 4px -2px 0; }
   svg.trend { width:100%; max-width:720px; height:44px; display:block; } #trend { margin:6px 0; }
   #updBanner { position:sticky; top:38px; z-index:5; display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-color:var(--accent); background:var(--accent-soft); } #updBanner b { flex:1; }
 </style>
@@ -344,8 +346,9 @@
       <div class="grow"><div id="state"><span class="dot"></span><span id="stateText">Not tracking</span></div><div id="status" role="status" aria-live="polite">Looking for the MapleStory window...</div></div>
       <button id="helpBtn" class="alt" title="How to use the tracker (F1)">?</button>
       <button id="bugBtn" class="alt" title="Report a bug (Ctrl+Shift+B, works from the game too)">Bug</button>
+      <button id="resetBtn" class="alt hidden" title="Clear the numbers, logs and last summary for a fresh start (saved runs stay in Past sessions)" aria-label="Reset"><span aria-hidden="true">↺</span><span class="nw"> Reset</span></button>
       <button id="pauseBtn" class="alt hidden" aria-pressed="false" title="Pause the timer (break, shop trip); press again to go on">Pause</button>
-      <button id="miniBtn" class="alt" title="Shrink to a small bar with just EXP/hr">Mini</button></div>
+      <button id="miniBtn" class="alt" title="Simple Mode: the numbers that matter while farming, in a smaller window">Simple<span class="nw"> Mode</span></button></div>
     <div class="row" id="nameRow" style="margin-top:6px"><input id="runName" maxlength="60" aria-label="Run name (optional)" placeholder="Name this run (optional), e.g. KPQ rush with randoms" style="flex:1;min-width:0"></div>
     <div class="tiles">
       <div class="tile main" title="EXP per hour of farming (breaks left out)"><div class="k">EXP/hr</div><div class="v" id="expHr">-</div><div class="note" id="expHr5"></div></div>
@@ -406,7 +409,14 @@
   <div class="card hidden" id="selfcheck"></div>
   <!-- modules not in the layout: the Modules toolbox lists them (renderer-layout.js) -->
   <div id="shelf" hidden>
-    <div class="card" id="hist" data-box="hist" data-title="Past sessions"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Past sessions</h3><button id="csv" class="alt">Export CSV</button></div><div id="today"></div><div id="eta"></div><div id="recap"></div>
+  </div>
+  <div id="toolbox" class="hidden" role="dialog" aria-label="Modules toolbox"><div class="tbHead"><b>Modules</b><button id="tbClose" aria-label="Close the toolbox">✕</button></div>
+    <div class="tbHint">Drag a module into your layout, or press + to add it at the bottom. Press × on a box (or drag it here) to put it away.</div>
+    <div id="tbList" role="list"></div></div>
+  <!-- Past sessions: a pop-up (F2, File > Past sessions), not a module (Danny 2026-10-23) -->
+  <section id="histPop" class="modal hidden" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+    <div class="pophead"><h2 id="histTitle">Past sessions</h2><button id="histClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>
+    <div class="card" id="hist"><div class="row" style="margin-top:0"><span class="note" style="flex:1">Every run you finished, newest first. Open one to see its details or edit it.</span><button id="csv" class="alt">Export CSV</button></div><div id="today"></div><div id="eta"></div><div id="recap"></div>
       <details id="mapsBox" open hidden><summary>Maps</summary><div id="maps"></div></details>
       <div class="row histBar" id="histBar" hidden><input id="histQ" type="search" aria-label="Search sessions" placeholder="Search name, map, note, monster" style="flex:1;min-width:140px">
         <select id="histMap" aria-label="Map"></select><select id="histWho" aria-label="Character" hidden></select>
@@ -414,10 +424,7 @@
         <select id="histSort" aria-label="Sort"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="expHr">Most EXP/hr</option><option value="mesosHr">Most mesos/hr</option><option value="netHr">Most net/hr</option><option value="min">Longest</option></select>
         <button class="alt" id="cmpShown" hidden title="Tick the first sessions in the list below for Compare">Compare the top 6</button></div>
       <div class="note" id="histCount"></div><div id="trend"></div><div id="cmp"></div><table id="histRows"></table><div id="histMore" class="row"></div></div>
-  </div>
-  <div id="toolbox" class="hidden" role="dialog" aria-label="Modules toolbox"><div class="tbHead"><b>Modules</b><button id="tbClose" aria-label="Close the toolbox">✕</button></div>
-    <div class="tbHint">Drag a module into your layout, or press + to add it at the bottom. Press × on a box (or drag it here) to put it away.</div>
-    <div id="tbList" role="list"></div></div>
+  </section>
   <section id="helpPop" class="modal hidden" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
     <div class="pophead"><h2 id="helpTitle">Help</h2><button id="helpClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>
     <div class="card" id="help">
@@ -428,7 +435,7 @@
         <li>For the first few seconds the <b>self-check</b> shows what it can read. A ✗ comes with what to fix and turns ✓ by
           itself once it works.</li>
         <li>Press <b>Stop</b> when you're done: the timer stops and the tracker asks for one last look at your inventory. Press
-          <b>Finalize log</b> to save it to <b>History</b> and see the run summary (a name, typed under Start, and a note are optional). <b>Resume</b> carries on instead.</li>
+          <b>Finalize log</b> to save it to <b>Past sessions</b> and see the run summary (a name, typed under Start, and a note are optional). <b>Resume</b> carries on instead.</li>
       </ul></details>
       <details><summary>What the numbers mean</summary><ul>
         <li><b>EXP/hr</b>: EXP per hour of farming. Breaks over a minute (no EXP, no pickups) are left out. "Last 5 min" is
@@ -455,7 +462,9 @@
           is just the newest one). Read with the run log, it tells the story of the run.</li>
         <li><b>Snapshots</b>: EXP/hr from just two readings of the EXP bar (start and now), like mapleexp.com. A good check
           on the live number. Type a level or % to fix one that read wrong.</li>
-        <li><b>History</b>: past sessions, your last 7 days, how long each level took, Maps (EXP/hr per map), your best runs, search and filters, details per session (monsters, loot, potions used; rename and note), Compare (tick 2 to 6 sessions), and Export CSV.</li>
+        <li><b>Past sessions</b> (F2, or File &gt; Past sessions): your last 7 days, how long each level took, Maps (EXP/hr per map), your best runs, search and filters, details per run (monsters, loot, potions used, EXP by map), Compare (tick 2 to 6 runs), and Export CSV. <b>Edit run</b> in a run's details fixes its name, note, map, farming time, EXP, mesos, kills or deaths when something read wrong; the first values stay listed under it.</li>
+        <li>A run's map is the one you got the most EXP on, not where you stood at Stop: dying, a town scroll or walking to a shop doesn't make that town your training map.</li>
+        <li><b>Esc</b> opens Settings (and closes any pop-up). <b>Reset</b>, next to Start when you're not tracking (also File &gt; Reset tracker), clears the numbers, logs and last summary for a fresh start; saved runs stay in Past sessions.</li>
         <li><b>Settings</b> (File → Settings, or Ctrl+,): job, potion box, alerts, goal level, party code, sharing, updates and bug reports.</li>
       </ul></details>
       <details><summary>Potions or arrows not counted</summary><ul>
@@ -485,13 +494,13 @@
         <li>KPQ rounds don't count as farming runs. With sharing on, each round cleared from the 1st stage goes to the KPQ leaderboard on the site instead (clear time, party size, level, job and your character name, unless you turn the name off in Settings).</li>
       </ul></details>
       <details><summary>Window tips</summary><ul>
-        <li><b>Mini</b> shrinks the window to a strip with EXP/hr and time to level. Click the strip to bring it back.</li>
+        <li><b>Simple Mode</b> (was Mini) shrinks the window to the numbers that matter while farming. <b>Full view</b> brings everything back.</li>
         <li>The window stays on top of the game. Turn that off in Settings → Window and sharing.</li>
         <li>Ctrl + and Ctrl - make the text bigger or smaller.</li>
         <li><b>Pause</b> (next to Start while tracking) stops the clock for a break; nothing picked up counts until you press <b>Go on</b>.</li>
       </ul></details>
       <details><summary>Shortcuts and themes</summary><ul>
-        <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, Ctrl+Shift+S Start/Stop, P Pause, M Mini bar, K Modules toolbox (also in View), H hide/show, I read the open inventory tab, B report a bug,
+        <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, Ctrl+Shift+S Start/Stop, P Pause, M Simple Mode, K Modules toolbox (also in View), H hide/show, I read the open inventory tab, B report a bug,
           X click-through (clicks go to the game under the window; the same keys turn it off), N mark the moment in the run note, G save the numbers as a picture, U mute sounds. Change or turn them off in Settings → Shortcuts and window.</li>
         <li>Settings → Theme: pick a colourway, or <b>Edit colours</b> and save your own. <b>Copy share code</b> gives a one-line code friends paste under Share a theme; <b>Save as file</b> makes a .mstheme file.</li>
         <li>Settings → Shortcuts and window → See-through window makes the tracker partly transparent over the game.</li>

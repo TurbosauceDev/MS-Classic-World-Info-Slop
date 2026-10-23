@@ -32,6 +32,26 @@ s.add({t: sec(330), type: "exp", gain: 2});
 s.add({t: sec(340), type: "exp", gain: 2});
 assert.strictEqual(s.stats().activeMin, 40 / 60);
 
+// EXP goes to the map it was gained on, not where the run ended (Danny 2026-10-23: a death or town scroll back to Lith Harbor
+// made "Lith Harbor Department Store" the run's training map)
+{ const m = createSession(G), lv = 20, at = (t, e) => m.add({t: sec(t), type: "bar", exp: e, pct: e / G.exp[lv] * 100, level: lv});
+  m.add({t: sec(0), type: "map", id: 42}); at(0, 1000);
+  for (let i = 1; i <= 60; i++){ m.add({t: sec(i * 10), type: "exp", gain: 8}); at(i * 10 + 1, 1000 + i * 8) }   // 10 min, 480 EXP
+  at(610, 1000 + 480 - 50);   // died
+  m.add({t: sec(620), type: "map", id: 10000000}); m.add({t: sec(640), type: "map", id: 10000002});
+  for (let i = 0; i < 30; i++) at(650 + i * 20, 1430);   // 10 min shopping, the bar still reading
+  const st = m.stats();
+  assert.strictEqual(st.map, "42", "run map = where the EXP came from");
+  assert.strictEqual(st.mapName, "Snail Hunting Ground III");
+  assert.strictEqual(st.nowMapName, "Lith Harbor Department Store", "live display = where the player is now");
+  assert.deepStrictEqual(st.maps.map(x => [x.map, x.exp, x.kills]), [["42", 480, 60], ["10000002", 0, 0]]);
+  assert.strictEqual(m.shareable().map, "42");
+  // EXP on two maps: the one with more wins, whichever came last
+  const n = createSession(G); n.add({t: sec(0), type: "map", id: 42});
+  for (let i = 0; i < 10; i++) n.add({t: sec(i * 10), type: "exp", gain: 8});
+  n.add({t: sec(100), type: "map", id: 40}); for (let i = 0; i < 5; i++) n.add({t: sec(110 + i * 10), type: "exp", gain: 2});
+  assert.strictEqual(n.stats().map, "42"); assert.strictEqual(n.stats().nowMap, "40") }
+
 // party of 3 on A Split Road (Blue Snail 4, Shroom 6, Red Snail 8): +7 fits only Red Snail; +3 could be any (a kill,
 // monster unknown); quest EXP (500) is not a kill
 s = createSession(G);
@@ -389,6 +409,16 @@ console.log("box ok");
   assert.doesNotThrow(() => { Hi.compareRuns([{saved: 1}, {saved: 2, mobs: "x", items: null}]); Hi.byMap([{saved: 1}]); Hi.perHour([{saved: 1, activeMin: 5, mobs: [null]}], "mobs") });
 }
 console.log("history ok");
+// History > Edit run (2026-10-23): the map and misread numbers fixed by hand, first values kept, EXP set where History reads it
+{ const Hi = require("../core/history.js"), x = {saved: 1, mapName: "Lith Harbor Department Store", map: "10000002", activeMin: 30, exp: 900, expTotal: 1000, snap: {exp: 1000, minutes: 40}, mesos: 50, kills: 10, deaths: 0, name: "a"};
+  const y = Hi.applyEdit(x, {mapName: "Snail Hunting Ground III", map: "42", exp: 1200, activeMin: 20, deaths: "x", kills: -3, name: "  ", note: "fixed"}, 5);
+  assert.deepStrictEqual([y.mapName, y.map, y.exp, y.expTotal, y.snap.exp, y.snap.minutes, y.activeMin, y.deaths, y.kills, y.name, y.note, y.edited, y.expPerActiveMin],
+    ["Snail Hunting Ground III", "42", 1200, 1200, 1200, 20, 20, 0, 10, null, "fixed", 5, 60]);
+  assert.deepStrictEqual(y.orig, {mapName: "Lith Harbor Department Store", map: "10000002", exp: 1000, activeMin: 30});
+  assert.strictEqual(Hi.metrics(y).expHr, 3600, "EXP/hr from the fixed numbers");
+  const z = Hi.applyEdit(y, {exp: 1300}, 6); assert.strictEqual(z.orig.exp, 1000, "the first value stays"); assert.strictEqual(x.exp, 900, "input untouched");
+  assert.strictEqual(Hi.applyEdit(x, {name: "b"}).edited, undefined, "a rename isn't an edit") }
+
 
 // Today card (History, 0.2.60): only runs saved on now's local calendar day; EXP as History rows count it (start/end readings first)
 { const Hi = require("../core/history.js"), now = new Date(2026, 9, 19, 15, 0).getTime(), mid = new Date(2026, 9, 19, 0, 0, 30).getTime();

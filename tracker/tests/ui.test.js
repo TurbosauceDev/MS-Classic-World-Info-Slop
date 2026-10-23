@@ -13,10 +13,10 @@ const path = require("path"), {chromium} = require("playwright");
   await page.click("#guideShare");
   if (await page.isVisible("#guide") || !await page.isChecked("#share")) throw new Error("guide answer");
   // default layout: the old Session tab (numbers, monsters, then KPQ / Alerts and goal / Start and end folded) then the old Loot
-  // tab, all in one layout; History waits in the Modules toolbox (Danny, 2026-10-19: modules instead of tabs)
+  // tab, all in one layout (Danny, 2026-10-19: modules instead of tabs); Past sessions is a pop-up (F2) since 0.2.70, so the toolbox starts empty
   const lay0 = await page.evaluate(() => [[...document.querySelectorAll('#dock > [data-box]')].map(b => b.dataset.box + (b.classList.contains("folded") ? "-" : "")).join(),
     [...document.querySelectorAll("#tbList .tbItem")].map(x => x.dataset.mod).join(), !!document.querySelector(".tabs, section[data-tab=session]")]);
-  if (lay0.join("|") !== "main,log,events,stats,mobs,kpq-,alerts-,snaps-,invcheck,mesos,items,used|hist|false") throw new Error("default layout: " + lay0);
+  if (lay0.join("|") !== "main,log,events,stats,mobs,kpq-,alerts-,snaps-,invcheck,mesos,items,used||false") throw new Error("default layout: " + lay0);
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click()));
   // a capture that never sends a frame (minimized game): Start says so instead of waiting for good, and works after (2026-10-19)
   await page.evaluate(() => { window.gdm0 = navigator.mediaDevices.getDisplayMedia; navigator.mediaDevices.getDisplayMedia = async () => document.createElement("canvas").captureStream(4) });
@@ -196,10 +196,10 @@ const path = require("path"), {chromium} = require("playwright");
     return [...moved, document.querySelector("#mesoBox").previousElementSibling.id, document.querySelector("[data-box=mobs]").classList.contains("folded"), JSON.stringify(settings.layout.order.dock), settings.layout.v] });
   if (lay[0] !== "dock" || !lay[1] || lay[2] !== "invBox" || lay[3] || lay[4] !== '["main","log","events","stats","mobs","kpq","alerts","snaps","invcheck","mesos","items","used"]' || lay[5] !== 2) throw new Error("box layout: " + lay);
   { const old = await page.evaluate(() => { layoutLoad({order: {dock: ["main", "log"], session: ["stats", {row: ["mobs", "events"], w: [1, 1]}], loot: ["items"], hist: ["hist"]}});
-      const r = [JSON.stringify([...document.querySelectorAll("#dock > *")].slice(0, 6).map(e => e.dataset.box || [...e.children].map(x => x.dataset.box).join("+"))), !!document.querySelector("#hist").closest("#shelf")];
+      const r = [JSON.stringify([...document.querySelectorAll("#dock > *")].slice(0, 6).map(e => e.dataset.box || [...e.children].map(x => x.dataset.box).join("+"))), !!document.querySelector("#hist").closest("#histPop") && !document.querySelector("#dock #hist")];
       document.querySelector("#layoutReset").click(); return r });
     if (old[0] !== '["main","log","stats","mobs++events","items","kpq"]' || !old[1]) throw new Error("old layout migrated: " + old) }
-  // Modules toolbox (Danny, 2026-10-19): History dragged from it onto the bottom of the run log lands under it; × puts it
+  // Modules toolbox (Danny, 2026-10-19): Consumables used (put away first) dragged from it onto the bottom of the run log lands under it; × puts it
   // back; a box dragged onto the toolbox is put away, + adds it at the bottom. Then Monsters by its grip onto the top half of
   // Start and end (goes above it). (The target is measured once the drag has started: the layout grows a drop border.)
   const dragTo = async (from, to, dy = 0) => { const a = await page.locator(from).boundingBox();
@@ -207,7 +207,8 @@ const path = require("path"), {chromium} = require("playwright");
     await page.waitForTimeout(150); const b = await page.locator(to).boundingBox();
     await page.mouse.move(b.x + b.width / 2, b.y + (dy || b.height / 2), {steps: 5}); await page.mouse.up(); await page.waitForTimeout(50) };
   await page.setViewportSize({width: 600, height: 2400}); 
-  await page.click("#tbBtn"); if (!await page.isVisible("#toolbox") || await page.textContent("#tbList") !== "⠿Past sessions+") throw new Error("toolbox open: " + await page.textContent("#tbList"));
+  await page.click("#usedBox .shut"); await page.waitForTimeout(250);
+  await page.click("#tbBtn"); if (!await page.isVisible("#toolbox") || await page.textContent("#tbList") !== "⠿Consumables used+") throw new Error("toolbox open: " + await page.textContent("#tbList"));
   // (flaky in CI 2026-10-19: aiming 4 px above the run log's bottom edge missed it when the layout moved a few px after the drag
   // began, and it fell through to "add at the bottom". Wait out the toolbox's open animation and the drag-start reflow, then aim
   // well inside the box's lower half.)
@@ -217,18 +218,18 @@ const path = require("path"), {chromium} = require("playwright");
     const b = await page.locator("#logBox").boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height * 0.75, {steps: 5});
     const g = await page.evaluate(() => [document.querySelector(".dragLabel")?.textContent, document.querySelector(".dropGhost").textContent]);
     await page.mouse.up(); await page.waitForTimeout(50);
-    const t = await page.evaluate(() => [document.querySelector("#logBox").nextElementSibling?.id, document.querySelector("#tbList").textContent, JSON.stringify(settings.layout.order.dock), !!document.querySelector(".moving, .dragLabel"), document.querySelector("#histRows").children.length]);
-    if (!/Past sessions/.test(g[0]) || !/Below/.test(g[1]) || t[0] !== "hist" || !/Every module is in your layout/.test(t[1]) || !t[2].startsWith('["main","log","hist","events"') || t[3] || !t[4]) throw new Error("toolbox drag in: " + JSON.stringify([g, t])) }
-  await page.click("#hist .shut");
-  { const t = await page.evaluate(() => [!!document.querySelector("#hist").closest("#shelf"), document.querySelector("#tbList").textContent, settings.layout.order.dock.includes("hist")]);
-    if (!t[0] || !/Past sessions/.test(t[1]) || t[2]) throw new Error("× puts away: " + t) }
+    const t = await page.evaluate(() => [document.querySelector("#logBox").nextElementSibling?.id, document.querySelector("#tbList").textContent, JSON.stringify(settings.layout.order.dock), !!document.querySelector(".moving, .dragLabel")]);
+    if (!/Consumables used/.test(g[0]) || !/Below/.test(g[1]) || t[0] !== "usedBox" || !/Every module is in your layout/.test(t[1]) || !t[2].startsWith('["main","log","used","events"') || t[3]) throw new Error("toolbox drag in: " + JSON.stringify([g, t])) }
+  await page.click("#usedBox .shut");
+  { const t = await page.evaluate(() => [!!document.querySelector("#usedBox").closest("#shelf"), document.querySelector("#tbList").textContent, settings.layout.order.dock.includes("used")]);
+    if (!t[0] || !/Consumables used/.test(t[1]) || t[2]) throw new Error("× puts away: " + t) }
   await page.waitForTimeout(250); await dragTo("#mesoBox h3", "#tbList");   // (after the boxes stop gliding)
-  { const t = await page.evaluate(() => [!!document.querySelector("#mesoBox").closest("#shelf"), [...document.querySelectorAll("#tbList .tbItem")].map(x => x.dataset.mod).join(), !document.querySelector("#main .shut, #top .shut")]);
-    if (!t[0] || t[1] !== "hist,mesos" || !t[2]) throw new Error("dragged onto the toolbox: " + t) }
-  await page.click("#tbList [data-mod=mesos] button");
+  { const t = await page.evaluate(() => [!!document.querySelector("#mesoBox").closest("#shelf"), [...document.querySelectorAll("#tbList .tbItem")].map(x => x.dataset.mod).sort().join(), !document.querySelector("#main .shut, #top .shut")]);
+    if (!t[0] || t[1] !== "mesos,used" || !t[2]) throw new Error("dragged onto the toolbox: " + t) }
+  await page.click("#tbList [data-mod=used] button"); await page.click("#tbList [data-mod=mesos] button");
   if (await page.evaluate(() => document.querySelector("#dock").lastElementChild.id) !== "mesoBox") throw new Error("+ adds at the bottom");
   await page.click("#tbClose"); if (await page.isVisible("#toolbox")) throw new Error("toolbox close");
-  await dragTo("[data-box=mobs] .grip", "#snaps", 10);
+  await page.waitForTimeout(250); await dragTo("[data-box=mobs] .grip", "#snaps", 10);
   const dr = await page.evaluate(() => [document.querySelector("[data-box=mobs]").nextElementSibling?.id, !!document.querySelector(".dragLabel, .moving"), JSON.stringify(settings.layout.order.dock)]);
   if (dr[0] !== "snaps" || dr[1] || !/mobs.*snaps/.test(dr[2])) throw new Error("mouse drag: " + dr);
   // pinned: dropped on the strip above the tabs (it only has a size while dragging) the box lands there, not back in a tab
@@ -305,7 +306,7 @@ const path = require("path"), {chromium} = require("playwright");
     set("#s1lv", 25); set("#s1pct", 71.40); return [document.querySelector("#snapRate").textContent, document.querySelector("#snapNote").textContent] });
   const want = Math.round(0.2479 * 47216 / (22 / 60));
   if (Math.abs(+sn[0].replace(/\D/g, "") - want) > want * 0.01 || !/22 min/.test(sn[1])) throw new Error("snapshots: " + JSON.stringify(sn) + " want ~" + want);
-  await page.click("#snapEnd"); await page.waitForTimeout(200);   // a button snapshot from the (test) game picture: saved, replaces the typed end
+  await page.click("#snapEnd"); await page.waitForFunction(() => snaps.end?.file && snaps.end.hand, null, {timeout: 3000}).catch(() => {});   // (200 ms flaked, 2026-10-23)   // a button snapshot from the (test) game picture: saved, replaces the typed end
   if (!(await page.evaluate(() => snaps.end.file && snaps.end.hand))) throw new Error("snap end button");
   await page.fill("#runName", "KPQ rush with randoms");
   await page.click("#go"); await page.waitForTimeout(200);
@@ -337,7 +338,9 @@ const path = require("path"), {chromium} = require("playwright");
   await page.evaluate(async () => { settings.alertWorth = 10; dropAlert(4000019);
     await showSpeed({exp: 1000, barExp: 1000, minutes: 15, level: 20, party: 1, map: 42}) });
   const status = await page.textContent("#status"), last = await page.textContent("#lastRun");
-  await page.evaluate(() => document.querySelector("#hist").closest("#dock") ? loadHist() : addBox("hist")); await page.waitForTimeout(100);
+  // Past sessions: a pop-up on F2 (Danny 2026-10-23), not a module
+  await page.keyboard.press("F2"); await page.waitForTimeout(250);
+  if (!await page.isVisible("#histPop") || await page.evaluate(() => !!document.querySelector("[data-box=hist]"))) throw new Error("F2 opens Past sessions");
   const hist = await page.textContent("#hist");
   // compare (Danny, 2026-10-19: more than two at once): A = the oldest and the baseline; another baseline; take one out; Clear
   await page.click("#histRows .cmp >> nth=0"); await page.click("#histRows .cmp >> nth=1");
@@ -371,15 +374,22 @@ const path = require("path"), {chromium} = require("playwright");
   await page.click("#histRows button.det >> nth=0"); await page.waitForTimeout(50);
   const hd = await page.textContent("#histRows tr.hdet");
   if (!/Horny Mushroom Cap ×3/.test(hd) || !/Lv 21 → 22/.test(hd) || /Compare with the run before/.test(hd)) throw new Error("history details: " + hd);
+  await page.click("#histRows .hedit summary");
   await page.fill("#histRows .eName", "Snail rush"); await page.fill("#histRows .eNote", "ch 3"); await page.click("#histRows .eSave"); await page.waitForTimeout(50);
   const upd = await page.evaluate(() => window.updated);
-  if (!upd || upd.name !== "Snail rush" || upd.note !== "ch 3" || !(upd.saved > 0)) throw new Error("rename session: " + JSON.stringify(upd));
+  if (!upd || upd.name !== "Snail rush" || upd.note !== "ch 3" || !(upd.saved > 0) || "exp" in upd || "mapName" in upd) throw new Error("rename session: " + JSON.stringify(upd));
+  // Edit run (Danny 2026-10-23): the map and a misread number fixed by hand; only what changed is sent, the map's id looked up
+  await page.click("#histRows button.det >> nth=0"); await page.click("#histRows .hedit summary");
+  await page.fill("#histRows .eMapIn", "The Pig Beach"); await page.fill("#histRows .eN[data-k=exp]", "7000"); await page.click("#histRows .eSave"); await page.waitForTimeout(50);
+  { const u = await page.evaluate(() => window.updated);
+    if (u.mapName !== "The Pig Beach" || u.map !== "10000021" || u.exp !== 7000 || "kills" in u || "activeMin" in u) throw new Error("edit run: " + JSON.stringify(u)) }
   // an older run on the same map: its details offer to compare the two
   await page.evaluate(async () => { const s0 = host.sessions; window.s0 = s0; host.sessions = async () => [...await s0(), {saved: Date.now() - 20 * 864e5, date: "2026-09-29", mapName: "Snail Hunting Ground III", activeMin: 30, exp: 3000, mesos: 400}]; await loadHist() });
   await page.click("#histRows button.det >> nth=0"); await page.click("#histRows button.cmpPrev"); await page.waitForTimeout(50);
   const cp2 = await page.$$eval("#cmp .cmpWho", w => w.map(x => x.textContent));
   if (cp2.length !== 2 || !/Snail/.test(cp2[0]) || !/Snail/.test(cp2[1])) throw new Error("compare with the run before: " + cp2);
   await page.click("#cmpClear"); await page.evaluate(async () => { host.sessions = window.s0; histOpen.clear(); await loadHist() });
+  await page.keyboard.press("F2"); await page.waitForTimeout(250); if (await page.isVisible("#histPop")) throw new Error("F2 closes Past sessions");
   // a watched item: the alert set finds it by part of its name
   const watched = await page.evaluate(() => { settings.alertItems = "Horny Mushroom Cap"; return alertSet().has("4000019") });
   if (!watched) throw new Error("item alert set");
@@ -421,11 +431,15 @@ const path = require("path"), {chromium} = require("playwright");
   if (!mini || full || !back) throw new Error("mini bar toggle");
   // History: × asks first, the second click deletes and the list is redrawn
   await page.evaluate(() => { host.deleteSession = async saved => (window.deleted = saved, true) });
-  await page.evaluate(() => document.querySelector("#hist").closest("#dock") ? loadHist() : addBox("hist")); await page.waitForTimeout(100);
+  await page.evaluate(() => openHist()); await page.waitForTimeout(250);
   const del = "#histRows button.del >> nth=0"; await page.click(del);
   const ask = await page.textContent(del), before = await page.evaluate(() => window.deleted);
   await page.click(del); await page.waitForTimeout(100);
   if (ask !== "Delete?" || before || !(await page.evaluate(() => window.deleted > 0))) throw new Error("delete session: " + ask);
+  await page.keyboard.press("Escape"); await page.waitForTimeout(250); if (await page.isVisible("#histPop") || await page.isVisible("#prefsPop")) throw new Error("Esc closes Past sessions (and only that)");
+  // Esc with nothing open: Settings (Danny 2026-10-23)
+  await page.keyboard.press("Escape"); await page.waitForTimeout(250); if (!await page.isVisible("#prefsPop")) throw new Error("Esc opens Settings");
+  await page.keyboard.press("Escape"); await page.waitForTimeout(250);
   // Settings: a popup from File → Settings; no panel tabs any more (modules, 2026-10-19)
   if (await page.$(".tabs")) throw new Error("panel tabs are back");
   await page.evaluate(() => window.menu("settings")); if (!await page.isVisible("#prefsPop #themeSw")) throw new Error("preferences popup not shown");
@@ -508,7 +522,8 @@ const path = require("path"), {chromium} = require("playwright");
   // History at a 340 px window: the × turning into "Delete?" widened the list past the window (monkey seed 2 in CI, 2026-10-19)
   { const p2 = await browser.newPage({viewport: {width: 340, height: 600}}); await p2.addInitScript(require("./ui-host"));
     await p2.goto("file://" + path.join(__dirname, "../app/index.html")); await p2.click("#guideShare");
-    const r0 = await p2.evaluate(async () => { addBox("hist"); await loadHist(); return document.querySelector("#histRows").getBoundingClientRect().right });
+    await p2.evaluate(async () => { openHist(); await loadHist() }); await p2.waitForTimeout(300);   // after the pop-up's open animation (scale)
+    const r0 = await p2.evaluate(() => { return document.querySelector("#histRows").getBoundingClientRect().right });
     await p2.locator("#histRows .del").first().click();
     const w = await p2.evaluate(() => [document.querySelector("#histRows .del.sure")?.textContent, document.documentElement.scrollWidth, document.documentElement.clientWidth,
       document.querySelector("#histRows").getBoundingClientRect().right]);

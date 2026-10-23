@@ -22,6 +22,9 @@ function openPatchNotes(){ $("#patchNotes").open = true; openHelp(); $("#helpPop
 $("#helpPop")._close = el => modalClose(el, $("#helpBtn"));
 $("#helpClose").onclick = () => modalClose($("#helpPop"), $("#helpBtn"));
 document.addEventListener("keydown", e => { if (e.key === "F1"){ e.preventDefault(); openHelp() } });
+// Esc with nothing open opens Settings (Danny 2026-10-23: "options open up on pressing esc"); with a pop-up open, Esc closes it
+// (renderer.js, which runs first and marks the key handled). Not while dragging, picking a shortcut, or with the toolbox open
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !e.defaultPrevented && !MODALS.length && !drag && !keyWait && $("#toolbox").classList.contains("hidden") && !e.ctrlKey && !e.altKey && !e.shiftKey){ e.preventDefault(); openPrefs() } });
 // title bar: File / View / Help open the app's menus under the button
 // Settings: a popup from File → Settings (Ctrl+,). Was the Settings tab, then "Preferences" on the title bar; Danny 2026-10-18:
 // "rename preferences back to settings and have it live under file". Esc, ✕ or a click outside closes it
@@ -52,6 +55,8 @@ host.onMenu?.(what => {
   if (what === "help") openHelp();
   else if (what === "patchnotes") openPatchNotes();
   else if (what === "settings") openPrefs();
+  else if (what === "history") openHist();
+  else if (what === "reset") resetTracker();
   else if (what === "dummy") dummyToggle();
   else if (what === "fit") fitAll();
   else if (what === "align") alignAll();
@@ -269,7 +274,7 @@ $("#spUse").onclick = () => spTake(true);
 $("#spKeep").onclick = () => spTake(false);
 
 // Settings: keyboard shortcuts (they work from the game too; main.js registers them) and the see-through window
-const KEY_NAMES = {onTop: "Keep on top on/off", startStop: "Start / Stop", pause: "Pause / go on", mini: "Mini bar on/off", toolbox: "Modules toolbox open/close",
+const KEY_NAMES = {onTop: "Keep on top on/off", startStop: "Start / Stop", pause: "Pause / go on", mini: "Simple Mode on/off", toolbox: "Modules toolbox open/close",
   show: "Hide / show the tracker", invNow: "Read the open inventory tab now", report: "Report a bug",
   clickThrough: "Click-through on/off (mouse goes to the game)", mark: "Mark this moment (in the run note)", saveImage: "Save the numbers as a picture", mute: "Mute sounds on/off"};
 const keyText = k => k ? k.replace("CommandOrControl", "Ctrl").replace("Super", "Win").replace(/\+/g, " + ") : "Off";
@@ -316,7 +321,7 @@ $("#opacity").oninput = e => { $("#opacityV").textContent = e.target.value + "%"
 $("#opacity").onchange = e => host.settings({opacity: Math.min(1, Math.max(0.4, +e.target.value / 100))}).then(x => settings = x);
 // Mark: a time stamp (and the map) in the run's note, for "this is when the party left" moments; also in the log
 function markNow(){
-  const d = new Date(), at = d.toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}), map = session?.stats().mapName;
+  const d = new Date(), at = d.toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}), map = session?.stats().nowMapName;
   const line = `[${at}] mark${map ? " · " + map : ""}`, n = $("#runNote");
   n.value = (n.value ? n.value.replace(/\s*$/, "") + "\n" : "") + line; log("mark", {map: map || null});
   $("#status").textContent = `Marked ${at} (in the run note, under Stop's wrap-up).`;
