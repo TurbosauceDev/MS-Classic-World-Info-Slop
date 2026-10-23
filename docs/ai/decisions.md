@@ -267,3 +267,4 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-22 Danny: Z.ai signs as "Z.ai" on the agent board, not "claude (chat-CLI)"; Claude threads sign "Claude Agent : [ID]" (coordinator-assigned T-01..; else last 6 of session id), not titles (titles are long and change).
 - 2026-10-22 Danny: Classic World crafting is player-centric (a skill and level per profession); the old profession masters are legacy. Planners use the player's craft levels, never send them to a master NPC to craft.
 - 2026-10-23 Danny: Changelog gets .narrowpage (no About-box tail) and page/section names in entries link to that page.
+- 2026-10-22 Danny: each sidebar section gets its own landing page (click the section title) explaining its pages with interactive examples; Grind Tracker's Overview becomes its landing page, separate Overview entry removed.

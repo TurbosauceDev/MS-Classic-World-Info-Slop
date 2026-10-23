@@ -351,3 +351,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Changelog links + narrow-page test 2026-10-23
 - Changelog: bold page/category names auto-link (`linkPages()` in src/js/76-polish.js, lookup = nav labels; "Overview", "How to use", "More" skipped as generic). Write new entries with page names in `<b>` and they link. smoke.js fails on an unlinked bold page name.
 - smoke.js checks every page at 1900px: content must reach 95% of its About box width, else add `.narrowpage` to the section. Changelog now has it.
+
+## Section landing pages 2026-10-23
+- Sidebar section titles are now `<button class="sgh" id="t-<cat>" data-tab="<cat>">` (spans `.sgt` title + `.sgo` "Overview", shown as a pill on phones/Two rows), so they're ordinary tabs: `#trk` (old Overview), `#train`, `#world`, `#db`, `#town` (src/pages/<cat>.html, demos in src/js/77-landing.js, drawn on first open; CSS "section landing pages" at the end of styles.css). goCat() opens the landing page until a section has a LASTTAB.
+- Text of a nav button: read `.sgt || button` (setTitle, smoke titles, 76-polish `pageNames`); the raw textContent ends in "Overview". Sidebar page count is 27 (smoke); Home "Open X →" buttons are `data-go="<cat>"`.
+- Demos use only D + existing helpers (itemIcon, pwSolid/pwSpark/pwTrend, TRAVEL.travel, navTo); trip time labelled an estimate. Adding a page to a section: add its card/link to that section's landing page too.
