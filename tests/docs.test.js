@@ -33,10 +33,7 @@ const IGNORE = new Set([
   "maplestory-market-poll.yml",           // planned, not yet written
   "scripts/submit_to_classicrank.py",     // planned, not yet written
   "fresh/Classic%20World.json",           // meso.watch URL endpoint, not a repo file
-  "classicmarket_items.json",             // deleted 2026-10-22 (Danny); old mailbox/digest mentions stay
-  "fetch_classicmarket.py",               // deleted 2026-10-22 (Danny)
-  "scripts/fetch_classicmarket.py",
-  "data/sources/classicmarket_items.json",
+  "classicmarket_items.json",             // generated data file
   "classicmarket_market.json",            // generated data file
   "classicmarket_prices.json",            // generated data file
   "mesoindex.json",                       // generated data file
@@ -44,6 +41,7 @@ const IGNORE = new Set([
   "meowdb_drops.json",                    // generated data file
   "fetch_maplestory_market.py",           // planned, not yet written (bare form)
   "submit_to_classicrank.py",             // planned, not yet written (bare form)
+  "mesowatch_poll_ci.sh",                 // bare form of scripts/mesowatch-sync/mesowatch_poll_ci.sh (referenced in multiple docs)
 ]);
 const FIXTURE_DIRS = ["tests/fixtures", ...fs.readdirSync(path.join(root, "tracker/tests")).filter(d => d.startsWith("frames")).map(d => "tracker/tests/" + d)];
 let fail = 0;

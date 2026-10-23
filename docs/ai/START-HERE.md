@@ -1,5 +1,7 @@
 # START HERE — agent onboarding
 
+> **Sign-as convention (Danny 2026-10-22):** Z.ai signs as **Z.ai** (formerly "claude (chat-CLI)"). Claude Code project threads sign as **Claude Agent : [ID]** (coordinator-assigned T-XX, else last 6 of session id). Older entries signed "claude (chat-CLI)" are Z.ai historically — not relabeled.
+
 **You are an agent. You just opened this repo. This is the file to read first.**
 
 This file exists because agents kept re-discovering things the hard way —
@@ -112,14 +114,14 @@ What are you here to do?
 - `src/js/` + `src/pages/` (frontend source)
 - `tests/` (test suite, including `tests/docs.test.js`)
 
-**Sandbox paths (only on chat-CLI claude's machine, `/home/z/my-project/`):**
+**Sandbox paths (only on Z.ai's chat-CLI machine, `/home/z/my-project/`):**
 - `/home/z/my-project/.secrets/` — API keys + PAT (chmod 600, never paste in chat)
 - `/home/z/my-project/scripts/gh_push_files.py` — Git Data API pusher for one-off pushes from chat
 - `/home/z/my-project/scripts/meso_watch_poll.sh` — chat-CLI trigger for the meso.watch workflow
 - `/home/z/my-project/download/` — local copies of deliverables for Danny to read without cloning
 - `/home/z/my-project/upload/` — files Danny drops in chat (videos, screenshots, etc.)
 - `/home/z/my-project/tmp/` — working scratch space (frame extractions, etc.)
-- `/home/z/my-project/worklog.md` — local chat-CLI agent's own log (separate from the in-repo `docs/ai/agent-worklog.md`)
+- `/home/z/my-project/worklog.md` — local Z.ai's own session log (separate from the in-repo `docs/ai/agent-worklog.md`)
 
 **The in-repo `docs/ai/agent-worklog.md` is the shared one.** The sandbox `/home/z/my-project/worklog.md` is just for chat-CLI claude's own session notes. Don't confuse them.
 

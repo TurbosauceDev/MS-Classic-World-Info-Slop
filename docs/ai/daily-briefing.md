@@ -1,8 +1,8 @@
-# Daily Briefing — 2026-10-22 (Issue #1)
+# Daily Briefing — 2026-10-23 (Issue #2)
 
 **For:** All agents.
-**From:** claude (chat-CLI).
-**Written:** 2026-10-22 18:45Z.
+**From:** Z.ai (sign-as update applied 2026-10-22 23:25Z per Danny).
+**Written:** 2026-10-23 15:55Z.
 **Refresh rule:** overwrite this file at the start of your work session
 if it's >24h old. Keep history in git (`git log docs/ai/daily-briefing.md`).
 **Read order for new agents:** START-HERE.md → state-of-the-pipeline.md →
@@ -12,105 +12,129 @@ this file → agent-mailbox.md § Open.
 
 ## TL;DR (5 bullets)
 
-1. **Site is healthy.** meso.watch hourly poll producing 198,764 total sales; 800 live listings as of latest run. All 6 cross-marketplace polls (meso.watch / shopscans / classicmarket / mesoindex / meowdb / classicrank-census) running on schedule.
-2. **Two new external APIs landed this session.** maplestory.market public API (admin-reviewed Bearer key, no Turnstile, 6/hour default limit — awaiting Danny to sign up + submit key request) + classicrank.com v2 Ingest API (partner key + base64 PNG character sprite submission — awaiting partner key from Kitten).
-3. **Agent comms infrastructure live.** 6 shared docs in `docs/ai/`: START-HERE (onboarding), state-of-the-pipeline (snapshot), agent-mailbox (comm hub), agent-worklog (1-line feed), daily-briefing (this file), danny-digest (Danny's plain-English briefing). Plus canonical `docs/ai/mesowatch-sync.md` + `docs/ai/decisions.md`.
-4. **5 active agents.** claude (chat-CLI), claude (project-side), claude (review), openclaw, gemini. Mailbox has 3 Open threads awaiting reply + multiple FYI notes broadcast.
-5. **One known issue:** Site tests failed earlier on commit `d7eb1ce3` (project-side Claude's crafting overhaul). Likely resolved by later commits — verify on next push.
+1. **Site is healthy.** All 6 cross-marketplace polls ran overnight. meso.watch produced 8+ commits; classicmarket 5; mesoindex + shopscans + meowdb 2 each; classicrank-census 1. 198,764 total sales (unchanged from yesterday — rolling window, not cumulative). fresh.json is healthy (800+ rows, `[fresh] OK` log firing).
+2. **3 audit-improvement features shipped by Claude (project-side) overnight** — price sparklines (`2da2851`, uses `D.pw.hist`) + Market today dashboard (`2618ea0`, uses `D.pw.totals`) + Market Comparison Index (`06f064e`, uses `D.pw` + `D.mw` + `D.ma` + `D.cmp` + `D.mdb` + `D.mi`). All 3 were on my pending-for-frontend list — DONE.
+3. **Danny OK'd agent board naming convention** — Z.ai signs as **Z.ai** (not "claude (chat-CLI)"). Claude Code project threads sign as **Claude Agent : [ID]** (coordinator-assigned T-XX, else last 6 of session id). Updated `docs/ai/agent-mailbox.md` § How to use + Who's who. Old entries remain historically signed "claude (chat-CLI)" — those are me, but not relabeled.
+4. **Danny OK'd deleting `fetch_classicmarket.py`** (commit `cbc82b7`). I defended keeping it (5,235-item static catalog with NPC prices + Korean names), but Danny sided with claude (review)'s cleanup argument. Done — `data/sources/classicmarket_items.json` also deleted.
+5. **2 meso.watch poll runs failed overnight** with push-race errors (`non-fast-forward push rejection`). Not mysterious — `mesowatch_poll_ci.sh` doesn't have retry logic. Diagnosed in mailbox Open thread + offered to wire up the `for i in 1 2 3; do ...` pattern that `shopscans-poll.yml` already uses.
 
 ## Recent commits since last issue (last 24h, newest first)
 
 ```
-c1b5ad3  mailbox FYI pointer + worklog entry for state-of-the-pipeline doc
-e61c60d  agent briefing: new docs/ai/state-of-the-pipeline.md snapshot
-7fa7ba4  chore(mesowatch): refresh prices — 32 live listings changed
-a785cff  chore(mesowatch): refresh prices — 134 items moved, 160 listings changed
-d633171  chore(mesowatch): refresh prices — 184 items moved, 166 listings changed
-dbe5405  chore(mesowatch): refresh prices — 630 items moved, 156 listings changed
-d4972be  Shared runs refresh 2026-10-22
-7daf070  mesoindex.com prices 2026-10-22 14:16
-54fc13b  meowdb market prices 2026-10-22 13:06
-5c81b4b  shop-scan prices (mesoarbitrage, maplestory.watch) 2026-10-22 13:06
-e87094f  classicmarket.kr prices 2026-10-22 12:33
-be2e238  classicrank job census 2026-10-22
-3f6fb07  classicmarket.kr prices 2026-10-22 12:07
-cc7eade  agent comms: reply to 2 Open threads + maplestory.market API FYI + ...
-958c007  chore(mesowatch): refresh prices — 227 items moved, 158 listings changed
-... (more chore(mesowatch) commits)
+16b367c  mailbox: close Z.ai sign-as and comparison-page threads, note script status
+bacbafe  chore(mesowatch): refresh prices — 584 items moved, 181 live listings changed
+4145d39  classicmarket.kr prices 2026-10-23 13:52
+e7c0a1e  chore(mesowatch): refresh prices — 234 items moved, 180 live listings changed
+09021fa  classicmarket.kr prices 2026-10-23 13:37
+e2a517d  chore(mesowatch): refresh prices — 674 items moved, 165 live listings changed
+b0d3c05  shop-scan prices (mesoarbitrage, maplestory.watch) 2026-10-23 12:44
+ae4dddf  chore(mesowatch): refresh prices — 477 items moved, 168 live listings changed
+5922795  chore(mesowatch): refresh prices — 663 items moved, 152 live listings changed
+b7fabad  classicmarket.kr prices 2026-10-23 08:03
+3d1d81d  mesoindex.com prices 2026-10-23 08:01
+be04f3e  classicmarket.kr prices 2026-10-23 07:43
+b9e8d79  chore(mesowatch): refresh prices — 255 items moved, 145 live listings changed
+41db641  chore(mesowatch): refresh prices — 638 items moved, 149 live listings changed
+f7ff041  shop-scan prices (mesoarbitrage, maplestory.watch) 2026-10-23 06:06
+1ccd1ef  chore(mesowatch): refresh prices — 557 items moved, 163 live listings changed
+0c52f89  docs: move site version history out of memory into docs/ai/site-history.md
+72fc2a1  chore(mesowatch): refresh prices — 628 items moved, 183 live listings changed
+1826da2  mesoindex.com prices 2026-10-23 02:06
+43e732f  chore(mesowatch): refresh prices — 172 items moved, 161 live listings changed
+bf48e78  chore(mesowatch): refresh prices — 642 items moved, 159 live listings changed
+34ff2a2  classicmarket.kr prices 2026-10-23 01:02
+0570ae7  classicmarket.kr prices 2026-10-23 00:45
+9538813  Changelog: drop stray wording in an old entry
+75dfd54  Landing pages: docs hand-off, decision, mailbox note
+62a1e9e  Section landing pages: sidebar section titles open a page per section
+978dd91  Changelog: centered column, page names link to their pages
+06a0f9c  Quest log planner: crafting is the player's own skill (Classic World)
+f4ae4e3  mesoindex.com prices 2026-10-22 23:46
+ed00877  agent board: Claude threads sign 'Claude Agent : [ID]'
+88a1fc8  agent board: Z.ai identifies as Z.ai; sign-off rule
+cbc82b7  Delete unused classicmarket catalog fetcher (Danny 10-22)
+b975ef5  mailbox: cron pile-up note + failure question for meso.watch helper
+06f064e  Market Comparison Index: every price site side by side (Mesos and Trade)
+07e0110  Quest log: Read my screen (live screen share)
+2618ea0  Market today: Rising/Falling/Best sellers rows, slot for maplestory.market overview
+2da2851  Items: 7-day meso.watch price sparklines (D.pw.hist)
 ```
 
 ## Wins since last issue
 
-- **`b911b628`** (claude chat-CLI) — landed `seen` field in `mesowatch_prices.json` for first-seen-time tracking of (price, seller) pairs across runs. Lets frontend identify stale listings (3+ days held = holdout, not price leader).
-- **`876f4904`** (claude chat-CLI) — created agent mailbox + worklog as the comm hub. Cuts Danny out of the message-relay loop.
-- **`cc7eade`** (claude chat-CLI) — replied to 2 Open mailbox threads (defended keeping `fetch_classicmarket.py`; acknowledged Step 10 measurement-ordering bug + agreed `watchdog.yml` is the right design). Posted maplestory.market API FYI.
-- **`e61c60d`** (claude chat-CLI) — wrote `docs/ai/state-of-the-pipeline.md` (345-line snapshot doc).
-- **Project-side Claude shipped:** mesoindex.com as 5th cross-marketplace source (`.github/workflows/mesoindex-poll.yml`, 3h cadence, 998 items + 693 with shops); Crafting overhaul (multiple commits); `classicrank-census.yml` (daily Windia job census).
-- **claude (review) shipped:** `watchdog.yml` + `scripts/watchdog.py` with proper outage detection (replaces my buggy Step 10 which measured the commit it just made).
+- **`2da2851`** (Claude project-side) — Items page: 7-day meso.watch price sparklines via `D.pw.hist`. **Audit improvement #4 DONE.**
+- **`2618ea0`** (Claude project-side) — Market today dashboard: Rising/Falling/Best sellers rows + slot for maplestory.market overview. **Audit improvement #5 DONE.**
+- **`06f064e`** (Claude project-side) — Market Comparison Index: every price site side by side (Mesos + Trade). **Audit improvement #3 DONE.**
+- **`88a1fc8` + `ed00877`** (Claude Agent FjKBXQ) — agent board naming convention: Z.ai signs as Z.ai; Claude Code threads sign as Claude Agent : [ID].
+- **`cbc82b7`** (Danny + Claude review) — deleted `fetch_classicmarket.py` + `data/sources/classicmarket_items.json`. Cleanup won.
+- **`978dd91` + `62a1e9e` + `75dfd54` + `0c52f89`** — quality-of-life: centered changelog column, section landing pages with live examples, page names in browser tab, moved site version history to `docs/ai/site-history.md` (frees memory).
+- **`06a0f9c`** — Quest log planner: crafting as player's own skill (no profession-master trips).
+- **`07e0110`** — Quest log: "Read my screen" live screen share via `getDisplayMedia` API + shared `shareScreen` in `src/js/02-screen.js`.
+- **All overnight polls ran clean** (except 2 push-race failures noted in Issues).
 
 ## Issues / what's broken / needs attention
 
-1. **Site tests on commit `d7eb1ce3`** (Crafting overhaul, project-side Claude) failed earlier today. Likely resolved by later commits — verify on next project-side push.
-2. **`fetch_classicmarket.py` + `data/sources/classicmarket_items.json`** — claude (review) flagged these as unused. I defended keeping them in mailbox (the 5,235-item static catalog has NPC prices + Korean names the live fetchers don't have). Proposed wiring into `classicmarket-poll.yml` as a once-daily catalog refresh. **Waiting on claude (review) to OK the proposal** (deadline 2026-10-23).
-3. **fresh.json was broken 2026-10-17 to 2026-10-21** but came back on 2026-10-22 (800 rows in latest poll + `[fresh] OK` log fired). If it goes empty again, the market.json fallback in `scripts/mesowatch-sync/mesowatch_poll_ci.sh` handles it. Don't try to "fix" fresh.json — that's meso.watch's job.
-4. **3 Open mailbox threads still unanswered:**
-   - claude (chat-CLI) → claude (project-side): render the new `seen` field on the where-to-buy list
-   - claude (chat-CLI) → claude (project-side): cross-marketplace comparison page (`D.mw` / `D.ma` ready to render)
-   - claude (chat-CLI) → gemini: Val Town/Cloudflare Worker fallback cron status
+1. **2 meso.watch poll runs failed overnight** — `2026-10-22T19:15Z` + `2026-10-22T22:22Z` with `! [rejected] HEAD -> main (non-fast-forward)` push errors. Root cause: `mesowatch_poll_ci.sh` Step 9 has no push-retry logic (compare `shopscans-poll.yml` which has `for i in 1 2 3; do ... sleep $((i*15)); git fetch -q origin main; git reset -q --hard origin/main ... done`). I replied in mailbox Open thread offering to wire up the retry pattern. Waiting on Danny's OK to land it.
+2. **5 cancelled meso.watch runs/hour** — by design (6 crons/hr in shared `main-pipeline` concurrency group, GitHub keeps 1 pending slot, 5 evicted). Not broken, just wasteful. Project-side Claude thread suggested reducing to 2 crons/hr; I lean toward keeping 6 crons/hr + adding push retry instead. Danny's call.
+3. **3 Open mailbox threads still unanswered** after my replies today:
+   - claude (chat-CLI) → claude (project-side): render `seen` field on where-to-buy list (data is in `mesowatch_prices.json.seen` parallel to `asks`; 3+ days = stale flag)
+   - claude (chat-CLI) → claude (project-side): cross-marketplace comparison page (DONE — `06f064e` shipped it; should mark Closed)
+   - claude (chat-CLI) → gemini: Val Town/Cloudflare Worker status (still no reply)
+4. **maplestory.market + classicrank.com partner keys still pending** — both blocked on Danny.
 
 ## What's still left to do
 
 **Pending external unblocks (blocked on Danny):**
-1. **maplestory.market partner key** — Danny logs in at `https://maplestory.market/account` (Henesys SSO), submits a key request (project: planner site, GitHub Actions cron hourly, ~2-3 req/hour, cross-marketplace comparison use case, credit with `?ref=` link). Reveal the approved key once + drop in `/home/z/my-project/.secrets/maplestory-market-key` (chmod 600).
-2. **classicrank.com partner key** — Danny asks Kitten for a v2 Ingest API partner key (she's actively nudging him in Discord). Drop in `/home/z/my-project/.secrets/classicrank-key` (chmod 600).
-3. **meowdb item-page HTML dumps** (for `parse_meowdb_drops.py` rebuild test) — if Danny has them from a past scraping session, drop in `/home/z/my-project/upload/`.
+1. **maplestory.market partner key** — log in at `/account` (Henesys SSO), submit key request, drop in `/home/z/my-project/.secrets/maplestory-market-key`. Project-side Claude already shipped the dashboard slot for it (commit `2618ea0`), so once the key lands + I write `fetch_maplestory_market.py`, the data flows straight into the existing UI without further frontend work.
+2. **classicrank.com partner key from Kitten** — drop in `/home/z/my-project/.secrets/classicrank-key`. I'll write Phase 1 heartbeat submitter.
+3. **meowdb item-page HTML dumps** — for `parse_meowdb_drops.py` rebuild test (no longer blocking — script was kept).
 
-**Pending project-side Claude work (frontend):**
-1. Render the `seen` field on the where-to-buy list (≥3 days = stale flag)
-2. Cross-marketplace comparison page (5 sources: meso.watch / maplestory.watch / mesoarbitrage / classicmarket / meowdb, +maplestory.market as 6th when key lands)
-3. Price history charts using `D.pw.hist` (7-day rolling)
-4. Market overview/dashboard using `D.pw.totals` + `D.mi` (mesoindex's market data)
-5. askMedian in Sell Helper using `D.pw.items[iid][7]`
+**Pending per-agent work:**
+1. **Z.ai (me):** reply when maplestory.market OR classicrank.com key lands → write the appropriate fetcher/submitter. Also: if Danny OKs the push-retry pattern, wire it into `mesowatch_poll_ci.sh`. Also: if mailbox thread for "render `seen` field" still unanswered by project-side Claude in a few days, consider rendering it myself in the frontend (low effort).
+2. **Claude (project-side):** continue crafting overhaul. Also: mark the cross-marketplace comparison Open thread as Closed (since `06f064e` shipped it). Also: render `seen` field on where-to-buy (Open thread).
+3. **Claude (review):** done with cleanup pass. Open thread for `fetch_classicmarket.py` is closed (Danny decided DELETE).
+4. **openclaw:** no recent activity. Next time they pick up: read `docs/ai/START-HERE.md` (it's the entry doc now).
+5. **gemini:** reply to the Val Town/Cloudflare Worker status Open thread.
 
-**Pending claude (review) decision:**
-1. OK or reject the `fetch_classicmarket.py` keep + wire-in proposal (mailbox Open thread, deadline 2026-10-23)
+## Today's priorities (2026-10-23, what to focus on)
 
-## Today's priorities (2026-10-22, what to focus on)
-
-1. **claude (chat-CLI):** wait for Danny to drop either the maplestory.market key OR the classicrank.com key. Either unlocks the next fetcher. While waiting: nothing blocking — could write a `scripts/submit_to_classicrank.py` Phase 1 skeleton (heartbeat-only) ready to run the moment a key arrives.
-2. **claude (project-side):** reply to the 2 Open threads in the mailbox (seen rendering + cross-marketplace UI). Even a "got it, will do" reply closes the loop so I stop pinging. Then continue crafting-overhaul work + address the failed Site tests if still red.
-3. **claude (review):** review the `fetch_classicmarket.py` keep + wire-in proposal. Either approve (and claude chat-CLI will wire it in) or reject (and we delete the script + data file by 2026-10-23).
-4. **openclaw:** read START-HERE.md (new today) → state-of-the-pipeline.md → mailbox § Open. Then either pick up the meowdb fetcher investigation OR audit the new mesoindex source for completeness.
-5. **gemini:** reply to the Val Town/Cloudflare Worker status Open thread. Just a "still on Val Town, no plans to migrate" or "migrated to Cloudflare Worker on date X" reply is enough.
-6. **Danny:** drop a key (any one!) into `/home/z/my-project/.secrets/`. The maplestory.market one is the highest-value unlock (5th cross-marketplace source + bypass-Turnstile pattern means it works without agent-browser).
+1. **Z.ai:** wait for Danny to drop either partner key. While waiting: implement push-retry in `mesowatch_poll_ci.sh` IF Danny OKs (mailbox Open thread awaiting his reply). Also: write `submit_to_classicrank.py` Phase 1 skeleton (heartbeat-only, ready to run when key arrives).
+2. **Claude (project-side):** close the cross-marketplace comparison Open thread in mailbox (since `06f064e` shipped it). Continue crafting overhaul. Render `seen` field on where-to-buy (the only remaining unanswered audit item I sent).
+3. **Claude (review):** idle unless Danny has more cleanup work.
+4. **openclaw:** read START-HERE.md → state-of-the-pipeline.md → mailbox § Open. Pick up something.
+5. **gemini:** reply to the Val Town Open thread.
+6. **Danny:** drop a partner key in `/home/z/my-project/.secrets/`. maplestory.market is highest-value (project-side already built the UI slot). Also: pick the cron pile-up fix (2 crons/hr vs. push retry — I lean retry).
 
 ## Ideas floating around (lower priority, worth thinking about)
 
-1. **Per-item listing fetch from meso.watch** — claude (review) noted that meso.watch moved listings to per-item files at `data/markets/Classic%20World/item/basil_<id>.json`. The combined `fresh/Classic%20World.json` is now a workers.dev beta. Switching to per-item fetching would let us poll only items whose `listedLast` moved (much more efficient than the current 22 MB market.json fallback). Waiting on Danny to weigh in on load concerns + 6h-vs-24h cadence.
-2. **Stale-listing badges on the where-to-buy UI** — the `seen` field is the data; the UI is just a "3d" or "stale" chip next to each listing. Low effort, high signal.
-3. **Daily catalog refresh for classicmarket.kr** — the 5,235-item static catalog (NPC prices + Korean names) hasn't been refreshed since 2026-10-21. Wire `fetch_classicmarket.py` into `classicmarket-poll.yml` to run once daily (catalog changes rarely, doesn't need 2h polling). Fixes the null Credits date + enables NPC-price-as-deal-baseline in the cross-marketplace UI.
-4. **`/api/deals` cross-check** — when the maplestory.market key lands, their `/api/deals` endpoint is a built-in underpriced-listings view. Comparing our cheap filter against theirs is a good sanity check on both algorithms.
-5. **`/api/market/overview` for the planned dashboard** — maplestory.market has a built-in market movers / best sellers / most listed endpoint. That's directly useful for the audit-improvement #5 market dashboard.
-6. **classicrank avatar_b64 sprite capture (Phase 3)** — the high-value contribution to Kitten's site. Danny's shop visitor video captures character names; adding sprite capture would let us submit profile photos for characters that don't have them. Phased: Phase 1 (heartbeat names only) → Phase 2 (level+job OCR) → Phase 3 (sprite crop + base64 encode). Needs the partner key first.
-7. **`/api/listings/changes` incremental polling** — maplestory.market has a listing-diff endpoint. Once we have the key, polling this every hour (instead of full `/api/listings`) would be much lighter on our rate limit. Worth implementing as the second iteration of the fetcher.
+1. **Push-retry in mesowatch_poll_ci.sh** — copy the `for i in 1 2 3; do ... sleep $((i*15)); git fetch -q origin main; git reset -q --hard origin/main; cp /tmp/mw.json data/sources/mesowatch_prices.json; python3 -c "..." ... done` pattern from `shopscans-poll.yml`. Keeps 6 crons/hr, handles race properly. ~15 min task once Danny OKs.
+2. **Per-item listing fetch from meso.watch** — claude (review) noted listings moved to per-item files at `data/markets/Classic%20World/item/basil_<id>.json`. Switching would let us poll only items whose `listedLast` moved. Waiting on Danny to weigh in on load + 6h-vs-24h cadence.
+3. **Stale-listing badges on where-to-buy UI** — `seen` field is the data; UI is just a "3d stale" chip next to each listing. Low effort, high signal.
+4. **`/api/deals` cross-check** — when maplestory.market key lands, their built-in deals endpoint is a sanity check on our cheap filter.
+5. **`/api/market/overview` for the dashboard** — maplestory.market has a built-in market movers endpoint. Project-side Claude already left a slot for it (commit `2618ea0`).
+6. **`/api/listings/changes` incremental polling** — maplestory.market's diff endpoint. Could poll hourly instead of full `/api/listings` to stay under 6/hour rate limit.
+7. **classicrank avatar_b64 sprite capture (Phase 3)** — the high-value contribution to Kitten's site. Needs partner key + Phase 1 heartbeat first.
 
-## Notable mailbox threads worth surfacing
+## Notable mailbox threads
 
-- **claude (review) → openclaw, replied by claude (chat-CLI):** Step 10 bug + watchdog.yml replacement. My buggy Step 10 measured the commit it just made (always 0m old). Replaced by `watchdog.yml` + `scripts/watchdog.py` with proper logic. I acknowledged the design was right.
-- **claude (review) → all (ask + claude chat-CLI + project-side + gemini):** two scripts nothing uses: keep or delete? I defended `fetch_classicmarket.py`. Deadline 2026-10-23.
-- **claude (chat-CLI) → claude (project-side):** render the new `seen` field on the where-to-buy list. Data is in `mesowatch_prices.json.seen` parallel to `asks`. Awaiting reply.
-- **claude (chat-CLI) → claude (project-side):** cross-marketplace comparison page. `D.mw` + `D.ma` + (new) `D.mi` ready to render. Awaiting reply.
-- **claude (chat-CLI) → gemini:** Val Town/Cloudflare Worker fallback cron status check. Awaiting reply.
+- **Claude Agent (Skipped scheduled polls) → Z.ai, REPLIED by Z.ai:** cron pile-up + 2 failures root cause (push race on shared concurrency group). Offered 2 fix options: 2 crons/hr OR push retry. Leaning retry.
+- **Claude Agent : FjKBXQ → Z.ai, REPLIED by Z.ai:** sign-as update acknowledged. Applying "Z.ai" going forward. Old entries remain historically "claude (chat-CLI)".
+- **claude (review) → claude (chat-CLI), REPLIED:** two scripts nothing uses — Danny decided DELETE for `fetch_classicmarket.py` (commit `cbc82b7` landed).
+- **claude (chat-CLI) → claude (project-side):** render `seen` field on where-to-buy list. **Still awaiting reply.** Data is in `mesowatch_prices.json.seen` parallel to `asks`.
+- **claude (chat-CLI) → claude (project-side):** cross-marketplace comparison page. **Should be marked Closed** — `06f064e` shipped it.
+- **claude (chat-CLI) → gemini:** Val Town/Cloudflare Worker fallback cron status. **Still awaiting reply.**
 
 ## Deeper docs to read
 
-- `docs/ai/mesowatch-sync.md` — pipeline plumbing reference (read this if you're touching the poller or schema)
-- `docs/ai/state-of-the-pipeline.md` — full snapshot of schema + sources + CI + traps (read this if you need current state in detail)
-- `docs/ai/agent-mailbox.md` — comm hub (read § Open for anything addressed to you; § FYI for broadcast notes)
-- `docs/ai/agent-worklog.md` — one-line per session activity feed (skim § Recent for what other agents just did)
-- `docs/ai/decisions.md` — dated decision log (read if you need to understand WHY something is the way it is)
-- `docs/ai/danny-digest.md` — plain-English briefing for Danny (read if you're about to talk to him — match his context)
+- `docs/ai/START-HERE.md` — onboarding (read first if you're new)
+- `docs/ai/state-of-the-pipeline.md` — full snapshot of schema + sources + CI + traps
+- `docs/ai/mesowatch-sync.md` — pipeline plumbing reference
+- `docs/ai/agent-mailbox.md` — comm hub (§ Open for messages to you; § FYI for broadcasts)
+- `docs/ai/agent-worklog.md` — one-line per session activity feed
+- `docs/ai/danny-digest.md` — Danny's plain-English briefing (today's Issue #2)
+- `docs/ai/site-history.md` — version history (NEW, moved out of memory by commit `0c52f89`)
+- `docs/ai/decisions.md` — dated decision log
 
 ---
 
-**End of Issue #1.** Next issue: when an agent starts work tomorrow (or whenever this is >24h old), overwrite with Issue #2.
+**End of Issue #2.** Next issue: when an agent starts work tomorrow (or whenever this is >24h old), overwrite with Issue #3.
