@@ -1132,3 +1132,70 @@ details.sec .controls{box-shadow:none;background:var(--bg)}
 .qlsteps td:nth-child(2){white-space:nowrap}.qlsteps tr.k-hunt td:nth-child(2) b{color:var(--accent)}.qlsteps tr.k-craft td:nth-child(2) b{color:var(--leaf)}
 .qlstep{max-width:100%;font-size:13px}
 #qlbar{width:100%;margin-top:8px}
+/* ---- section landing pages (77-landing.js, Danny 10-22): the sidebar section title is a button that opens its section's page ---- */
+nav button.sgh .sgo{display:none}
+@media (max-width:760px){nav button.sgh:not([hidden]){display:inline-flex}nav button.sgh .sgt{display:none}nav button.sgh .sgo{display:inline}}
+html[data-nav="rows"] nav button.sgh:not([hidden]){display:inline-flex}
+html[data-nav="rows"] nav button.sgh .sgt{display:none}
+html[data-nav="rows"] nav button.sgh .sgo{display:inline}
+@media (min-width:761px){
+  html:not([data-nav="rows"]) nav .subs button.sgh[data-tab]{margin:16px 0 5px;width:100%;padding:3px 10px 3px 2px;border-radius:8px;transition:background-color .15s}
+  html:not([data-nav]) nav .subs button.sgh[data-tab]{margin:22px 0 5px;font:800 21.5px/1.1 var(--f-display)!important;letter-spacing:-.01em;color:var(--accent);text-shadow:none!important}
+  html[data-nav="basic"] nav .subs button.sgh[data-tab]{font:600 11.5px var(--f-body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding-left:10px;margin:14px 0 3px}
+  html:not([data-nav="rows"]) nav .subs button.sgh[aria-selected="true"]{color:var(--accent)}
+}
+.lp .lpic{width:56px;height:56px;object-fit:contain;flex:none;filter:drop-shadow(0 3px 5px rgba(23,17,42,.3))}
+.lp .lpic.sm{width:30px;height:30px;filter:drop-shadow(0 2px 3px rgba(23,17,42,.3))}
+.lp .lpic:not([src]){visibility:hidden}
+.lphero{display:flex;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+.lphero h2{margin:0 0 4px}
+.lphero p{margin:0 0 10px;max-width:68ch}
+.lpgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:14px;align-items:start}
+.lpcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0;transition:border-color .15s,box-shadow .15s}
+.lpcard:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));box-shadow:0 4px 18px -10px color-mix(in srgb,var(--accent) 60%,transparent)}
+.lpcard>.sub{margin:0}
+.lphead{display:flex;align-items:center;gap:10px}
+.lphead h3{margin:0;font:700 17.5px var(--f-display);flex:1}
+.lpdemo{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:4px;display:flex;flex-direction:column;gap:8px;min-height:120px;min-width:0}
+.lpdemo input[type=search]{width:100%;box-sizing:border-box}
+.lpctl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lpctl input[type=number]{width:70px}
+.lprows{display:flex;flex-direction:column;gap:4px}
+.lprow{display:flex;align-items:center;gap:8px;min-width:0;padding:3px 6px;border-radius:6px}
+.lprow:hover{background:var(--panel)}
+.lprow>.sub:last-child{margin-left:auto;white-space:nowrap}
+.lprow .qname,.lprow .itname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lplv{min-width:44px}
+.lpmob{display:flex;gap:14px;align-items:center}
+.lpmob>img{width:72px;height:72px;object-fit:contain;flex:none;animation:lpin .25s ease-out}
+.lpmob .mobname{font:700 16px var(--f-display);cursor:pointer}
+.lpstats{display:flex;gap:12px;flex-wrap:wrap;margin:4px 0;font-size:14px}
+.lpstats b{color:var(--muted);font-weight:600;margin-right:3px}
+.lpdrops{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.lpdrops .sub{margin-right:4px}
+.lpchips{display:flex;gap:6px;flex-wrap:wrap}
+.lpchips .btn.on{background:var(--accent-soft);border-color:var(--accent)}
+.lpicons{display:flex;gap:6px;flex-wrap:wrap}
+.lpsk{width:40px;height:40px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:0;cursor:pointer;transition:transform .12s,border-color .12s}
+.lpsk:hover,.lpsk:focus-visible{border-color:var(--accent);transform:translateY(-1px)}
+.lpsk img{max-width:32px;max-height:32px}
+#lpskinfo{margin:0;min-height:2.8em}
+.lppages{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px;margin-bottom:16px}
+.lplink{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;row-gap:2px;align-items:center;text-align:left;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;color:var(--ink);font:inherit;transition:border-color .15s,transform .15s}
+.lplink:hover{border-color:var(--accent);transform:translateY(-1px)}
+.lplink img{grid-row:1/3}
+.lplink b{font:700 15.5px var(--f-display)}
+.lplink span{color:var(--muted);font-size:13.5px;line-height:1.35}
+@media (max-width:600px){.lphero{padding:14px;gap:12px;align-items:flex-start}.lphero>.lpic{width:40px;height:40px}}
+.lpbig{font:700 20px var(--f-display)}
+.lpbig .sub{font:400 13.5px var(--f-body)}
+.lpmm{display:grid;place-items:center;background:var(--panel);border-radius:8px;padding:8px}
+.lpmm img{max-width:100%;max-height:180px;image-rendering:pixelated;animation:lpin .25s ease-out}
+.lpwmap{display:block;padding:0;border:0;background:none;cursor:pointer;border-radius:8px;overflow:hidden}
+.lpwmap img{display:block;width:100%;height:auto;transition:transform .3s}
+.lpwmap:hover img{transform:scale(1.02)}
+.lpctl select{max-width:150px}
+.lprow s{opacity:.7}
+@keyframes lpin{from{opacity:0;transform:translateY(4px)}}
+@media (prefers-reduced-motion:reduce){.lpmob>img{animation:none}.lplink,.lpsk,.lpcard{transition:none}}

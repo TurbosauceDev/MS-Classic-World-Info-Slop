@@ -1,0 +1,52 @@
+<section id="db" class="lp" hidden>
+  <div class="lphero">
+    <img class="lpic" data-ic="i:4001007" alt="">
+    <div>
+      <h2>Maple Database</h2>
+      <p>Everything in the launch game files, cross-linked: every item, monster, quest and 1st/2nd job skill, plus town citizenship. Try each one below, or search them all at once.</p>
+      <button class="btn sm lpsrch" type="button">Search everything <kbd>Ctrl K</kbd></button>
+    </div>
+  </div>
+  <div class="lpgrid">
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:2000000" alt=""><h3>Items</h3><button class="btn sm" data-go="items">Open Items →</button></div>
+      <p class="sub">Stats, who drops it, NPC shops, recipes and the quests that want it.</p>
+      <div class="lpdemo">
+        <input type="search" id="lpitq" placeholder="Try an item name, e.g. glove" aria-label="Item name" autocomplete="off">
+        <div class="lprows" id="lpitems"></div>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="m:9" alt=""><h3>Monsters</h3><button class="btn sm" data-go="mobs">Open Monsters →</button></div>
+      <p class="sub">Stats, spawn maps, player-reported drops and the best maps to farm each one.</p>
+      <div class="lpdemo">
+        <div class="lpctl"><label>Around level <input type="number" id="lpmlv" min="1" max="70" value="15"></label><button class="btn sm" id="lpmnext" type="button">Another</button></div>
+        <div id="lpmob"></div>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:4031001" alt=""><h3>Quests</h3><button class="btn sm" data-go="quests">Open Quests →</button></div>
+      <p class="sub">Every launch quest with its level, rewards, questline and community picks.</p>
+      <div class="lpdemo">
+        <div class="lpctl"><label>Your level <input type="number" id="lpqlv" min="1" max="70" value="20"></label><span class="sub" id="lpqn"></span></div>
+        <div class="lprows" id="lpquests"></div>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="s:2001003" alt=""><h3>Skills</h3><button class="btn sm" data-go="skills">Open Skills →</button></div>
+      <p class="sub">Every 1st and 2nd job skill: what it does at each level and what it needs first.</p>
+      <div class="lpdemo">
+        <div class="lpchips" id="lpskjob" role="group" aria-label="Class"></div>
+        <div class="lpicons" id="lpskills"></div>
+        <p class="sub" id="lpskinfo">Point at a skill to see what it does at level 1.</p>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:2030004" alt=""><h3>Citizenship</h3><button class="btn sm" data-go="cit">Open Citizenship →</button></div>
+      <p class="sub">Town grades, the citizenship quests that raise them and the town shops they open.</p>
+      <div class="lpdemo">
+        <div class="lprows" id="lpcit"></div>
+      </div>
+    </article>
+  </div>
+</section>

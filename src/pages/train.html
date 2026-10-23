@@ -1,0 +1,33 @@
+<section id="train" class="lp" hidden>
+  <div class="lphero">
+    <img class="lpic" data-ic="m:10" alt="">
+    <div>
+      <h2>Training</h2>
+      <p>Where to grind for your build, a Character Builder for AP, skills and damage, a level-by-level plan with quests, how fast you really level, and the Kerning Party Quest stage by stage.</p>
+    </div>
+  </div>
+  <div class="lppages" aria-label="Pages in Training">
+    <button class="lplink" data-go="maps"><img class="lpic sm" data-ic="m:10" alt=""><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
+    <button class="lplink" data-go="plan"><img class="lpic sm" data-ic="s:1001001" alt=""><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
+    <button class="lplink" data-go="path"><img class="lpic sm" data-ic="i:2010000" alt=""><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
+    <button class="lplink" data-go="qlog"><img class="lpic sm" data-ic="i:4031001" alt=""><b>Quest log</b><span>Read your in-game quest log from a recording and get one route for the quests you pick.</span></button>
+  </div>
+  <div class="lpgrid">
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="s:4101001" alt=""><h3>EXP/hr calculator</h3><button class="btn sm" data-go="expc">Open EXP/hr calculator →</button></div>
+      <p class="sub">Time a session and get your real EXP per hour and time to level.</p>
+      <div class="lpdemo">
+        <div class="lpctl"><label>Level <input type="number" id="lpelv" min="1" max="199" value="30"></label><label>EXP/hr <input type="number" id="lpehr" min="0" step="1000" value="60000"></label></div>
+        <div id="lpexp"></div>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="m:29" alt=""><h3>Kerning PQ</h3><button class="btn sm" data-go="kpq">Open Kerning PQ →</button></div>
+      <p class="sub">Kerning Party Quest stage by stage: puzzles, answers and rewards.</p>
+      <div class="lpdemo">
+        <div class="lpchips" id="lpkpqs" role="group" aria-label="Stage"></div>
+        <div id="lpkpq"></div>
+      </div>
+    </article>
+  </div>
+</section>

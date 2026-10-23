@@ -20,10 +20,10 @@ const boxGaps = require("./boxgaps");
   check(await p.$$eval("#home img.hic", l => l.length === 33 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "home sprites all load (33)");
   await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && await p.getAttribute("#t-mobs", "aria-selected") === "true", "home link opens its page");
   const side = await p.evaluate(() => ({pages: [...document.querySelectorAll("nav .subs [data-tab]")].filter(b => b.offsetParent).length,
-    titles: [...document.querySelectorAll("nav .sgh")].filter(b => b.offsetParent).map(b => b.textContent.trim()).join("|"),
+    titles: [...document.querySelectorAll("nav .sgh")].filter(b => b.offsetParent).map(b => (b.querySelector(".sgt") || b).textContent.trim()).join("|"),
     sprites: [...document.querySelectorAll("nav img.nic")].filter(i => i.offsetParent).every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0),
     cats: !!document.querySelector("nav .cats").offsetParent}));
-  check(side.pages === 23 && side.titles === "Grind Tracker|Training|Victoria Island|Maple Database|Mesos and Trade" && side.sprites && !side.cats,
+  check(side.pages === 27 && side.titles === "Grind Tracker|Training|Victoria Island|Maple Database|Mesos and Trade" && side.sprites && !side.cats,
     `sidebar lists every page under its section, each with a sprite (${JSON.stringify(side)})`);
   { const [nb, ft] = await p.evaluate(() => { scrollTo(0, 1e6); return [document.querySelector("nav").getBoundingClientRect().bottom, document.querySelector(".sitefoot").getBoundingClientRect().top] }); await p.evaluate(() => scrollTo(0, 0));
     check(ft >= nb, `footer starts below the whole sidebar (nav bottom ${Math.round(nb)}, footer top ${Math.round(ft)})`) }   // Danny 10-20: it slid over the footer
@@ -33,6 +33,17 @@ const boxGaps = require("./boxgaps");
   await layout("rows"); await p.click("#c-db"); check(!(await p.isHidden("#mobs")) && await p.isHidden("#t-plan") && await p.isVisible("#c-db"), "two rows: section remembers its last page, other sections' pages hidden");
   await layout("basic"); check(await p.isVisible("#t-plan") && await p.isHidden("nav img.nic >> nth=0") && await p.evaluate(() => localStorage.getItem("navmode")) === "basic", "basic mode: plain sidebar, no sprites, remembered");
   await layout("side"); check(await p.isVisible("nav img.nic >> nth=1") && await p.evaluate(() => !document.documentElement.hasAttribute("data-nav")), "back to the sidebar");
+  // section landing pages (77-landing.js, Danny 10-22): the sidebar section title opens its section's page with live examples
+  for (const [c, demo] of [["trk", "#lptruns"], ["train", "#lpexp .lpbig"], ["world", "#lpnav .lpbig"], ["db", "#lpmob .mobname"], ["town", "#lpprice .lpchips"]]){
+    await p.click("#t-" + c); await p.waitForTimeout(80);
+    check(!(await p.isHidden("#" + c)) && await p.getAttribute("#t-" + c, "aria-selected") === "true" && (await p.$$eval(demo, l => l.length)) > 0
+      && (await p.title()).startsWith(await p.$eval(`#t-${c} .sgt`, e => e.textContent)), `landing page ${c}: opens from its section title, example drawn`) }
+  await p.click("#t-db"); await p.fill("#lpitq", "glove"); check(await p.$$eval("#lpitems .itname", l => l.length) > 0, "Maple Database landing: item search finds glove");
+  await p.click("#lpitems .itname"); check(!(await p.isHidden("#items")) && await p.isVisible("#itback"), "landing item result opens its item page"); await p.click("#itback");
+  await p.click("#t-db"); await p.click('#db .lpcard [data-go="skills"]'); check(!(await p.isHidden("#skills")), "landing Open button opens its page");
+  await p.click("#t-world"); await p.click("#lpnroute"); check(!(await p.isHidden("#navi")), "Victoria Island landing: Show the route opens Map Navigator");
+  await layout("rows"); await p.click("#c-train"); check(!(await p.isHidden("#train")) && (await p.textContent("#t-train")).trim().endsWith("Overview") && await p.isVisible("#t-train .sgo"),
+    "two rows: a section opens on its landing page, shown as an Overview pill"); await layout("side");
   await p.click('.sitefoot [data-foot="log"]'); check(!(await p.isHidden("#log")), "footer: Changelog");
   // Back / Forward (75-history.js): pages and places inside them are browser history entries
   await tab("#t-mobs"); await p.click("#mbrows .mbtn"); const mob1 = await p.textContent("#mbpage h2");

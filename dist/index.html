@@ -1140,6 +1140,73 @@ details.sec .controls{box-shadow:none;background:var(--bg)}
 .qlsteps td:nth-child(2){white-space:nowrap}.qlsteps tr.k-hunt td:nth-child(2) b{color:var(--accent)}.qlsteps tr.k-craft td:nth-child(2) b{color:var(--leaf)}
 .qlstep{max-width:100%;font-size:13px}
 #qlbar{width:100%;margin-top:8px}
+/* ---- section landing pages (77-landing.js, Danny 10-22): the sidebar section title is a button that opens its section's page ---- */
+nav button.sgh .sgo{display:none}
+@media (max-width:760px){nav button.sgh:not([hidden]){display:inline-flex}nav button.sgh .sgt{display:none}nav button.sgh .sgo{display:inline}}
+html[data-nav="rows"] nav button.sgh:not([hidden]){display:inline-flex}
+html[data-nav="rows"] nav button.sgh .sgt{display:none}
+html[data-nav="rows"] nav button.sgh .sgo{display:inline}
+@media (min-width:761px){
+  html:not([data-nav="rows"]) nav .subs button.sgh[data-tab]{margin:16px 0 5px;width:100%;padding:3px 10px 3px 2px;border-radius:8px;transition:background-color .15s}
+  html:not([data-nav]) nav .subs button.sgh[data-tab]{margin:22px 0 5px;font:800 21.5px/1.1 var(--f-display)!important;letter-spacing:-.01em;color:var(--accent);text-shadow:none!important}
+  html[data-nav="basic"] nav .subs button.sgh[data-tab]{font:600 11.5px var(--f-body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding-left:10px;margin:14px 0 3px}
+  html:not([data-nav="rows"]) nav .subs button.sgh[aria-selected="true"]{color:var(--accent)}
+}
+.lp .lpic{width:56px;height:56px;object-fit:contain;flex:none;filter:drop-shadow(0 3px 5px rgba(23,17,42,.3))}
+.lp .lpic.sm{width:30px;height:30px;filter:drop-shadow(0 2px 3px rgba(23,17,42,.3))}
+.lp .lpic:not([src]){visibility:hidden}
+.lphero{display:flex;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+.lphero h2{margin:0 0 4px}
+.lphero p{margin:0 0 10px;max-width:68ch}
+.lpgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:14px;align-items:start}
+.lpcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0;transition:border-color .15s,box-shadow .15s}
+.lpcard:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));box-shadow:0 4px 18px -10px color-mix(in srgb,var(--accent) 60%,transparent)}
+.lpcard>.sub{margin:0}
+.lphead{display:flex;align-items:center;gap:10px}
+.lphead h3{margin:0;font:700 17.5px var(--f-display);flex:1}
+.lpdemo{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:4px;display:flex;flex-direction:column;gap:8px;min-height:120px;min-width:0}
+.lpdemo input[type=search]{width:100%;box-sizing:border-box}
+.lpctl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lpctl input[type=number]{width:70px}
+.lprows{display:flex;flex-direction:column;gap:4px}
+.lprow{display:flex;align-items:center;gap:8px;min-width:0;padding:3px 6px;border-radius:6px}
+.lprow:hover{background:var(--panel)}
+.lprow>.sub:last-child{margin-left:auto;white-space:nowrap}
+.lprow .qname,.lprow .itname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lplv{min-width:44px}
+.lpmob{display:flex;gap:14px;align-items:center}
+.lpmob>img{width:72px;height:72px;object-fit:contain;flex:none;animation:lpin .25s ease-out}
+.lpmob .mobname{font:700 16px var(--f-display);cursor:pointer}
+.lpstats{display:flex;gap:12px;flex-wrap:wrap;margin:4px 0;font-size:14px}
+.lpstats b{color:var(--muted);font-weight:600;margin-right:3px}
+.lpdrops{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.lpdrops .sub{margin-right:4px}
+.lpchips{display:flex;gap:6px;flex-wrap:wrap}
+.lpchips .btn.on{background:var(--accent-soft);border-color:var(--accent)}
+.lpicons{display:flex;gap:6px;flex-wrap:wrap}
+.lpsk{width:40px;height:40px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:0;cursor:pointer;transition:transform .12s,border-color .12s}
+.lpsk:hover,.lpsk:focus-visible{border-color:var(--accent);transform:translateY(-1px)}
+.lpsk img{max-width:32px;max-height:32px}
+#lpskinfo{margin:0;min-height:2.8em}
+.lppages{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px;margin-bottom:16px}
+.lplink{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;row-gap:2px;align-items:center;text-align:left;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;color:var(--ink);font:inherit;transition:border-color .15s,transform .15s}
+.lplink:hover{border-color:var(--accent);transform:translateY(-1px)}
+.lplink img{grid-row:1/3}
+.lplink b{font:700 15.5px var(--f-display)}
+.lplink span{color:var(--muted);font-size:13.5px;line-height:1.35}
+@media (max-width:600px){.lphero{padding:14px;gap:12px;align-items:flex-start}.lphero>.lpic{width:40px;height:40px}}
+.lpbig{font:700 20px var(--f-display)}
+.lpbig .sub{font:400 13.5px var(--f-body)}
+.lpmm{display:grid;place-items:center;background:var(--panel);border-radius:8px;padding:8px}
+.lpmm img{max-width:100%;max-height:180px;image-rendering:pixelated;animation:lpin .25s ease-out}
+.lpwmap{display:block;padding:0;border:0;background:none;cursor:pointer;border-radius:8px;overflow:hidden}
+.lpwmap img{display:block;width:100%;height:auto;transition:transform .3s}
+.lpwmap:hover img{transform:scale(1.02)}
+.lpctl select{max-width:150px}
+.lprow s{opacity:.7}
+@keyframes lpin{from{opacity:0;transform:translateY(4px)}}
+@media (prefers-reduced-motion:reduce){.lpmob>img{animation:none}.lplink,.lpsk,.lpcard{transition:none}}
 
 </style>
 <script>
@@ -1194,29 +1261,28 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <!-- sidebar layout (default, 71-navside.js): every page listed under its section title; the two-row layout shows one section at a time -->
   <div class="subs" role="tablist" aria-label="Pages">
     <button class="sbhome" id="sbhome" type="button" data-go-cat="home"><img class="nic" data-pool="home" alt="">Home</button>
-    <div class="sgh" data-cat="trk"><img class="nic" data-pool="g_trk" alt="">Grind Tracker</div>
-    <button role="tab" id="t-trk" aria-selected="false" data-tab="trk" data-cat="trk" hidden><img class="nic" data-pool="trk" alt="">Overview</button>
+    <button role="tab" class="sgh" id="t-trk" aria-selected="false" data-tab="trk" data-cat="trk" hidden><img class="nic" data-pool="g_trk" alt=""><span class="sgt">Grind Tracker</span><span class="sgo">Overview</span></button>
     <button role="tab" id="t-trkhow" aria-selected="false" data-tab="trkhow" data-cat="trk" hidden><img class="nic" data-pool="trkhow" alt="">How to use</button>
     <button role="tab" id="t-trkruns" aria-selected="false" data-tab="trkruns" data-cat="trk" hidden><img class="nic" data-pool="trkruns" alt="">Shared runs</button>
     <button role="tab" id="t-kpqt" aria-selected="false" data-tab="kpqt" data-cat="trk" hidden><img class="nic" data-pool="kpqt" alt="">KPQ timer</button>
     <button role="tab" id="t-trkkpq" aria-selected="false" data-tab="trkkpq" data-cat="trk" hidden><img class="nic" data-pool="trkkpq" alt="">KPQ leaderboard</button>
-    <div class="sgh" data-cat="train"><img class="nic" data-pool="g_train" alt="">Training</div>
+    <button role="tab" class="sgh" id="t-train" aria-selected="false" data-tab="train" data-cat="train" hidden><img class="nic" data-pool="g_train" alt=""><span class="sgt">Training</span><span class="sgo">Overview</span></button>
     <button role="tab" id="t-maps" aria-selected="false" data-tab="maps" data-cat="train" hidden><img class="nic" data-pool="maps" alt="">Where to train</button>
     <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="train" hidden><img class="nic" data-pool="plan" alt="">Character Builder</button>
     <button role="tab" id="t-path" aria-selected="false" data-tab="path" data-cat="train" hidden><img class="nic" data-pool="path" alt="">Path Planner</button>
     <button role="tab" id="t-qlog" aria-selected="false" data-tab="qlog" data-cat="train" hidden><img class="nic" data-pool="qlog" alt="">Quest log</button>
     <button role="tab" id="t-expc" aria-selected="false" data-tab="expc" data-cat="train" hidden><img class="nic" data-pool="expc" alt="">EXP/hr calculator</button>
     <button role="tab" id="t-kpq" aria-selected="false" data-tab="kpq" data-cat="train" hidden><img class="nic" data-pool="kpq" alt="">Kerning PQ</button>
-    <div class="sgh" data-cat="world"><img class="nic" data-pool="g_world" alt="">Victoria Island</div>
+    <button role="tab" class="sgh" id="t-world" aria-selected="false" data-tab="world" data-cat="world" hidden><img class="nic" data-pool="g_world" alt=""><span class="sgt">Victoria Island</span><span class="sgo">Overview</span></button>
     <button role="tab" id="t-wmap" aria-selected="false" data-tab="wmap" data-cat="world" hidden><img class="nic" data-pool="wmap" alt="">World Map</button>
     <button role="tab" id="t-navi" aria-selected="false" data-tab="navi" data-cat="world" hidden><img class="nic" data-pool="navi" alt="">Map Navigator</button>
-    <div class="sgh" data-cat="db"><img class="nic" data-pool="g_db" alt="">Maple Database</div>
+    <button role="tab" class="sgh" id="t-db" aria-selected="false" data-tab="db" data-cat="db" hidden><img class="nic" data-pool="g_db" alt=""><span class="sgt">Maple Database</span><span class="sgo">Overview</span></button>
     <button role="tab" id="t-items" aria-selected="false" data-tab="items" data-cat="db" hidden><img class="nic" data-pool="items" alt="">Items</button>
     <button role="tab" id="t-mobs" aria-selected="false" data-tab="mobs" data-cat="db" hidden><img class="nic" data-pool="mobs" alt="">Monsters</button>
     <button role="tab" id="t-quests" aria-selected="false" data-tab="quests" data-cat="db" hidden><img class="nic" data-pool="quests" alt="">Quests</button>
     <button role="tab" id="t-skills" aria-selected="false" data-tab="skills" data-cat="db" hidden><img class="nic" data-pool="skills" alt="">Skills</button>
     <button role="tab" id="t-cit" aria-selected="false" data-tab="cit" data-cat="db" hidden><img class="nic" data-pool="cit" alt="">Citizenship</button>
-    <div class="sgh" data-cat="town"><img class="nic" data-pool="g_town" alt="">Mesos and Trade</div>
+    <button role="tab" class="sgh" id="t-town" aria-selected="false" data-tab="town" data-cat="town" hidden><img class="nic" data-pool="g_town" alt=""><span class="sgt">Mesos and Trade</span><span class="sgo">Overview</span></button>
     <button role="tab" id="t-snipe" aria-selected="false" data-tab="snipe" data-cat="town" hidden><img class="nic" data-pool="snipe" alt="">FM Sniper</button>
     <button role="tab" id="t-mci" aria-selected="false" data-tab="mci" data-cat="town" hidden><img class="nic" data-pool="mci" alt="">Market Comparison Index</button>
     <button role="tab" id="t-inv" aria-selected="false" data-tab="inv" data-cat="town" hidden><img class="nic" data-pool="inv" alt="">Price check</button>
@@ -1242,7 +1308,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       </div>
     </div>
     <div class="homecat" data-sec="train"><h2><button class="hcat" data-big="train" aria-expanded="false"><img class="hic" data-ic="m:10" alt="">Training</button></h2>
-      <div class="hbill"><p>Where to grind for your build, a Character Builder for AP, skills and damage, a level-by-level plan with quests, how fast you really level, and the Kerning Party Quest stage by stage.</p><div class="hbillact"><button class="btn hopen" data-go-cat="train">Open Training →</button></div></div>
+      <div class="hbill"><p>Where to grind for your build, a Character Builder for AP, skills and damage, a level-by-level plan with quests, how fast you really level, and the Kerning Party Quest stage by stage.</p><div class="hbillact"><button class="btn hopen" data-go="train">Open Training →</button></div></div>
       <div class="hlinks">
       <button class="hlink" data-go="maps"><img class="hic" data-ic="m:10" alt=""><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
       <button class="hlink" data-go="plan"><img class="hic" data-ic="s:1001001" alt=""><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
@@ -1253,14 +1319,14 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       </div>
     </div>
     <div class="homecat" data-sec="world"><h2><button class="hcat" data-big="world" aria-expanded="false"><img class="hic" data-ic="i:2030000" alt="">Victoria Island</button></h2>
-      <div class="hbill"><p>Find your way around the launch world: the in-game world map with what lives where, and the fastest route between any two maps.</p><div class="hbillact"><button class="btn hopen" data-go-cat="world">Open Victoria Island →</button></div></div>
+      <div class="hbill"><p>Find your way around the launch world: the in-game world map with what lives where, and the fastest route between any two maps.</p><div class="hbillact"><button class="btn hopen" data-go="world">Open Victoria Island →</button></div></div>
       <div class="hlinks">
       <button class="hlink" data-go="wmap"><img class="hic" data-ic="i:4031134" alt=""><b>World Map</b><span>Click any spot for its maps, monsters, NPCs, quests and EXP per hour.</span></button>
       <button class="hlink" data-go="navi"><img class="hic" data-ic="s:2101001" alt=""><b>Map Navigator</b><span>Fastest route between two maps, with exit numbers on the minimaps.</span></button>
       </div>
     </div>
     <div class="homecat" data-sec="db"><h2><button class="hcat" data-big="db" aria-expanded="false"><img class="hic" data-ic="i:4001007" alt="">Maple Database</button></h2>
-      <div class="hbill"><p>Everything in the launch game files, cross-linked: every item, monster, quest and 1st/2nd job skill. Search them all at once with Ctrl K.</p><div class="hbillact"><button class="btn hopen" data-go-cat="db">Open Maple Database →</button></div></div>
+      <div class="hbill"><p>Everything in the launch game files, cross-linked: every item, monster, quest and 1st/2nd job skill. Search them all at once with Ctrl K.</p><div class="hbillact"><button class="btn hopen" data-go="db">Open Maple Database →</button></div></div>
       <div class="hlinks">
       <button class="hlink" data-go="items"><img class="hic" data-ic="i:2000000" alt=""><b>Items</b><span>Every item: stats, who drops it, shops, recipes and quests that use it.</span></button>
       <button class="hlink" data-go="mobs"><img class="hic" data-ic="m:9" alt=""><b>Monsters</b><span>Stats, spawns, drops and the best maps to farm each monster.</span></button>
@@ -1270,7 +1336,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       </div>
     </div>
     <div class="homecat" data-sec="town"><h2><button class="hcat" data-big="town" aria-expanded="false"><img class="hic" data-ic="i:3994011" alt="">Mesos and Trade</button></h2>
-      <div class="hbill"><p>Live Free Market deals, a price check from inventory screenshots, which loot is worth keeping, crafting professions, recipes and a profit planner, and town grades and shops.</p><div class="hbillact"><button class="btn hopen" data-go-cat="town">Open Mesos and Trade →</button></div></div>
+      <div class="hbill"><p>Live Free Market deals, a price check from inventory screenshots, which loot is worth keeping, crafting professions, recipes and a profit planner, and town grades and shops.</p><div class="hbillact"><button class="btn hopen" data-go="town">Open Mesos and Trade →</button></div></div>
       <p class="mktday" id="mktday" hidden></p>
       <div class="hlinks">
       <button class="hlink" data-go="snipe"><img class="hic" data-ic="i:4020100" alt=""><b>FM Sniper</b><span>Live Free Market listings priced under what the item usually sells for.</span></button>
@@ -1747,7 +1813,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </style>
 </section>
 
-<section id="trk" hidden>
+<section id="trk" class="lp" hidden>
   <details class="howto">
     <summary>About the Grind Tracker</summary>
     <ul>
@@ -1755,7 +1821,13 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       <li>What players share shows up in Shared runs and the KPQ leaderboard, and as "players:" lines and Confirmed Drops elsewhere on the site.</li>
     </ul>
   </details>
-  <div class="grid2" style="margin-top:0">
+  <div class="lppages" aria-label="Pages in Grind Tracker">
+    <button class="lplink" data-go="trkhow"><img class="lpic sm" data-ic="i:4031032" alt=""><b>How to use</b><span>Set-up, the numbers, parties, KPQ and fixing bad reads.</span></button>
+    <button class="lplink" data-go="trkruns"><img class="lpic sm" data-ic="i:4031126" alt=""><b>Shared runs</b><span id="lptruns">Real EXP/hr, mesos and drops from tracker players.</span></button>
+    <button class="lplink" data-go="kpqt"><img class="lpic sm" data-ic="m:800001" alt=""><b>KPQ timer</b><span>Time your Kerning PQ rounds stage by stage, against your best.</span></button>
+    <button class="lplink" data-go="trkkpq"><img class="lpic sm" data-ic="m:800003" alt=""><b>KPQ leaderboard</b><span id="lptkpq">Fastest Kerning PQ clears by tracker parties.</span></button>
+  </div>
+  <div class="grid2">
     <div class="card">
       <div class="cardhead"><h3>MS Classic Grind Tracker</h3><span class="pill p-hot">Windows · free</span></div>
       <ul class="trkfeat">
@@ -2073,6 +2145,150 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   <div id="mbpage" hidden></div>
 </section>
 
+<section id="db" class="lp" hidden>
+  <div class="lphero">
+    <img class="lpic" data-ic="i:4001007" alt="">
+    <div>
+      <h2>Maple Database</h2>
+      <p>Everything in the launch game files, cross-linked: every item, monster, quest and 1st/2nd job skill, plus town citizenship. Try each one below, or search them all at once.</p>
+      <button class="btn sm lpsrch" type="button">Search everything <kbd>Ctrl K</kbd></button>
+    </div>
+  </div>
+  <div class="lpgrid">
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:2000000" alt=""><h3>Items</h3><button class="btn sm" data-go="items">Open Items →</button></div>
+      <p class="sub">Stats, who drops it, NPC shops, recipes and the quests that want it.</p>
+      <div class="lpdemo">
+        <input type="search" id="lpitq" placeholder="Try an item name, e.g. glove" aria-label="Item name" autocomplete="off">
+        <div class="lprows" id="lpitems"></div>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="m:9" alt=""><h3>Monsters</h3><button class="btn sm" data-go="mobs">Open Monsters →</button></div>
+      <p class="sub">Stats, spawn maps, player-reported drops and the best maps to farm each one.</p>
+      <div class="lpdemo">
+        <div class="lpctl"><label>Around level <input type="number" id="lpmlv" min="1" max="70" value="15"></label><button class="btn sm" id="lpmnext" type="button">Another</button></div>
+        <div id="lpmob"></div>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:4031001" alt=""><h3>Quests</h3><button class="btn sm" data-go="quests">Open Quests →</button></div>
+      <p class="sub">Every launch quest with its level, rewards, questline and community picks.</p>
+      <div class="lpdemo">
+        <div class="lpctl"><label>Your level <input type="number" id="lpqlv" min="1" max="70" value="20"></label><span class="sub" id="lpqn"></span></div>
+        <div class="lprows" id="lpquests"></div>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="s:2001003" alt=""><h3>Skills</h3><button class="btn sm" data-go="skills">Open Skills →</button></div>
+      <p class="sub">Every 1st and 2nd job skill: what it does at each level and what it needs first.</p>
+      <div class="lpdemo">
+        <div class="lpchips" id="lpskjob" role="group" aria-label="Class"></div>
+        <div class="lpicons" id="lpskills"></div>
+        <p class="sub" id="lpskinfo">Point at a skill to see what it does at level 1.</p>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:2030004" alt=""><h3>Citizenship</h3><button class="btn sm" data-go="cit">Open Citizenship →</button></div>
+      <p class="sub">Town grades, the citizenship quests that raise them and the town shops they open.</p>
+      <div class="lpdemo">
+        <div class="lprows" id="lpcit"></div>
+      </div>
+    </article>
+  </div>
+</section>
+<section id="train" class="lp" hidden>
+  <div class="lphero">
+    <img class="lpic" data-ic="m:10" alt="">
+    <div>
+      <h2>Training</h2>
+      <p>Where to grind for your build, a Character Builder for AP, skills and damage, a level-by-level plan with quests, how fast you really level, and the Kerning Party Quest stage by stage.</p>
+    </div>
+  </div>
+  <div class="lppages" aria-label="Pages in Training">
+    <button class="lplink" data-go="maps"><img class="lpic sm" data-ic="m:10" alt=""><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
+    <button class="lplink" data-go="plan"><img class="lpic sm" data-ic="s:1001001" alt=""><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
+    <button class="lplink" data-go="path"><img class="lpic sm" data-ic="i:2010000" alt=""><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
+    <button class="lplink" data-go="qlog"><img class="lpic sm" data-ic="i:4031001" alt=""><b>Quest log</b><span>Read your in-game quest log from a recording and get one route for the quests you pick.</span></button>
+  </div>
+  <div class="lpgrid">
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="s:4101001" alt=""><h3>EXP/hr calculator</h3><button class="btn sm" data-go="expc">Open EXP/hr calculator →</button></div>
+      <p class="sub">Time a session and get your real EXP per hour and time to level.</p>
+      <div class="lpdemo">
+        <div class="lpctl"><label>Level <input type="number" id="lpelv" min="1" max="199" value="30"></label><label>EXP/hr <input type="number" id="lpehr" min="0" step="1000" value="60000"></label></div>
+        <div id="lpexp"></div>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="m:29" alt=""><h3>Kerning PQ</h3><button class="btn sm" data-go="kpq">Open Kerning PQ →</button></div>
+      <p class="sub">Kerning Party Quest stage by stage: puzzles, answers and rewards.</p>
+      <div class="lpdemo">
+        <div class="lpchips" id="lpkpqs" role="group" aria-label="Stage"></div>
+        <div id="lpkpq"></div>
+      </div>
+    </article>
+  </div>
+</section>
+<section id="world" class="lp" hidden>
+  <div class="lphero">
+    <img class="lpic" data-ic="i:2030000" alt="">
+    <div>
+      <h2>Victoria Island</h2>
+      <p>Find your way around the launch world: the in-game world map with what lives where, and the fastest route between any two maps.</p>
+    </div>
+  </div>
+  <div class="lpgrid">
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:4031134" alt=""><h3>World Map</h3><button class="btn sm" data-go="wmap">Open World Map →</button></div>
+      <p class="sub">Click any spot for its maps, monsters, NPCs, quests and EXP per hour.</p>
+      <div class="lpdemo">
+        <button class="lpwmap" data-go="wmap" aria-label="Open the World Map"><img id="lpwmimg" alt=""></button>
+        <p class="sub" id="lpwmn"></p>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="s:2101001" alt=""><h3>Map Navigator</h3><button class="btn sm" data-go="navi">Open Map Navigator →</button></div>
+      <p class="sub">Fastest route between two maps, with exit numbers on the minimaps.</p>
+      <div class="lpdemo">
+        <div class="lpctl"><label>From <select id="lpnfrom"></select></label><label>To <select id="lpnto"></select></label></div>
+        <div id="lpnav"></div>
+      </div>
+    </article>
+  </div>
+</section>
+<section id="town" class="lp" hidden>
+  <div class="lphero">
+    <img class="lpic" data-ic="i:3994011" alt="">
+    <div>
+      <h2>Mesos and Trade</h2>
+      <p>Live Free Market deals, a price check from inventory screenshots, which loot is worth keeping, crafting professions, recipes and a profit planner.</p>
+    </div>
+  </div>
+  <div class="lppages" aria-label="Pages in Mesos and Trade">
+    <button class="lplink" data-go="mci"><img class="lpic sm" data-ic="i:4010001" alt=""><b>Market Comparison Index</b><span>Every price site side by side: which one is cheapest for each item.</span></button>
+    <button class="lplink" data-go="keep"><img class="lpic sm" data-ic="i:4000001" alt=""><b>Keep or sell</b><span>Which loot quests and recipes still want, and what's safe to sell.</span></button>
+    <button class="lplink" data-go="craft"><img class="lpic sm" data-ic="i:4010100" alt=""><b>Crafting</b><span>Recipes with profit, the cheapest way to level, masters and materials.</span></button>
+  </div>
+  <div class="lpgrid">
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:4020100" alt=""><h3>FM Sniper</h3><button class="btn sm" data-go="snipe">Open FM Sniper →</button></div>
+      <p class="sub">Live Free Market listings priced under what the item usually sells for.</p>
+      <div class="lpdemo">
+        <p class="sub" id="lpsnn"></p>
+        <div class="lprows" id="lpsnipe"></div>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:4031041" alt=""><h3>Price check</h3><button class="btn sm" data-go="inv">Open Price check →</button></div>
+      <p class="sub">Paste inventory screenshots and get every item listed with a player-shop price. Or look one up here:</p>
+      <div class="lpdemo">
+        <input type="search" id="lppq" placeholder="Item name, e.g. ore" aria-label="Item name" autocomplete="off">
+        <div class="lprows" id="lpprice"></div>
+      </div>
+    </article>
+  </div>
+</section>
 <section id="items" hidden>
   <details class="howto">
     <summary>How to use the item database</summary>
@@ -2584,17 +2800,24 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   </div>
 </section>
 
-<section id="log" hidden>
+<section id="log" class="narrowpage" hidden>
   <details class="howto">
     <summary>About this page</summary>
     <ul>
       <li>What changed in this site and why, newest first. Each entry is one site version (shown next to "Site version" on Home): the middle number goes up for a big addition, the last one for everything else.</li>
-      <li>The Grind Tracker app has its own patch notes: <a href="#" data-go="trk">Grind Tracker › Overview</a>, or Help › Patch notes in the app.</li>
+      <li>The Grind Tracker app has its own patch notes: <a href="#" data-go="trk">Grind Tracker</a>, or Help › Patch notes in the app.</li>
       <li>Game changes come from the OSMS Data Explorer patch notes (COT2 → Public Release) and our own rebuild.</li>
     </ul>
   </details>
 
   <div class="changelog">
+    <div class="card" data-t="2026-10-23T01:00:00Z"><div class="cardhead"><h3><span class="ver">v0.18.1</span> Oct 23, 2026 · Section pages</h3></div>
+      <p>Click a section title in the sidebar (<b>Grind Tracker</b>, <b>Training</b>, <b>Victoria Island</b>, <b>Maple Database</b>, <b>Mesos and Trade</b>) for that section's own page: what each page in it does, with a small live example to try, like an item search, a monster card, EXP to your next level, a town-to-town trip time or an item's going price.</p>
+      <p>Grind Tracker's Overview is now its section page; old links still open it. On phones and in Two rows, each section starts with an Overview pill.</p>
+    </div>
+    <div class="card" data-minor data-t="2026-10-23T00:20:00Z"><div class="cardhead"><h3><span class="ver">v0.18.0</span> Oct 23, 2026 · Changelog links</h3></div>
+      <p>Page and section names in the <b>Changelog</b> are now links: click <b>Quest log</b> or <b>Mesos and Trade</b> to go there. The page is one centered column now, with no empty space to the right.</p>
+    </div>
     <div class="card" data-t="2026-10-22T23:52:53Z"><div class="cardhead"><h3><span class="ver">v0.17.3</span> Oct 22, 2026 · Quest log plans crafting with your own craft levels</h3></div>
       <p>Crafting is your own skill in Classic World, so the Quest log's route now crafts quest items with your levels from <b>Crafting › Your craft levels</b>, right where you are, and shows the craft EXP you'll get. Items above your level (or in a profession you haven't learned) are planned as <b>Buy from players</b> at the usual price, with the level that would let you make them.</p>
     </div>
@@ -2760,7 +2983,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
     <div class="card" data-t="2026-10-19T23:54:24+00:00"><div class="cardhead"><h3><span class="ver">v0.7.2</span> Oct 19, 2026 · Ability point boxes fixed</h3><span class="pill p-good">fix</span></div>
       <p><b>Character Builder:</b> the STR, DEX, INT and LUK boxes no longer overlap each other or run past the edge of the card. The same fix covers the skill boxes in "Import from screenshots".</p></div>
     <div class="card" data-t="2026-10-19T22:40:06+00:00"><div class="cardhead"><h3><span class="ver">v0.7.1</span> Oct 19, 2026 · Version numbers</h3><span class="pill p-hot">update</span></div>
-      <p>The site has a version number now, shown next to "Site version" on Home. Every entry in this changelog is one version, counted from the first build on Oct 6 (0.1.0) to today; the middle number went up for the big additions (monster and item databases, Home page, EXP/hr calculator, players' shared runs, Search everything, the phone app). The <b>Grind Tracker</b> app's own patch notes moved to <a href="#" data-go="trk">Grind Tracker › Overview</a> (and Help › Patch notes in the app), so this page is only about the site.</p></div>
+      <p>The site has a version number now, shown next to "Site version" on Home. Every entry in this changelog is one version, counted from the first build on Oct 6 (0.1.0) to today; the middle number went up for the big additions (monster and item databases, Home page, EXP/hr calculator, players' shared runs, Search everything, the phone app). The <b>Grind Tracker</b> app's own patch notes moved to <a href="#" data-go="trk">Grind Tracker</a> (click the section title) (and Help › Patch notes in the app), so this page is only about the site.</p></div>
     <div class="card" data-minor data-t="2026-10-19T20:27:33+00:00"><div class="cardhead"><h3><span class="ver">v0.7.0</span> Oct 19, 2026 · Phone app, faster first load, keep or sell in the price check</h3><span class="pill p-hot">update</span></div>
       <p><b>Phones:</b> "Add to Home Screen" on the GitHub Pages site now opens it full-screen like an app, and once opened it works offline. The page there loads about 3× less up front (item icons and minimaps follow a moment later). <b>Price check</b> marks every item <b>Keep</b> or <b>Sell</b> with the Keep or sell rules and adds up what you can <b>sell now</b>. <b>Character Builder:</b> compare two jobs side by side at one level (e.g. Fighter vs Page at 45). <b>Where to train</b> remembers its settings and your "Use this in Where to train" build after a reload. <b>Credits</b> lists when each data source was last updated. Typing a huge number in a Where to train stat box no longer breaks the phone layout.</p></div>
     <div class="card" data-t="2026-10-19T19:21:10+00:00"><div class="cardhead"><h3><span class="ver">v0.6.12</span> Oct 19, 2026 · Hunter and Crossbowman area attacks back</h3><span class="pill p-good">fix</span></div>
@@ -3201,7 +3424,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-22T23:57:30Z" data-ver="0.17.3">Site version: v0.17.3 · built Oct 22, 2026 · 23:57 UTC</p>
+  <p class="sitever" data-built="2026-10-23T00:17:27Z" data-ver="0.18.1">Site version: v0.18.1 · built Oct 23, 2026 · 00:17 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -3383,7 +3606,7 @@ TABS.forEach(b => b.addEventListener("click", () => {
   TABS.forEach(x => x.setAttribute("aria-selected", x === b)); inRow(b);
   $("#home").hidden = true; TABS.forEach(x => $("#" + x.dataset.tab).hidden = x !== b);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
-  setTitle(b.textContent.trim()); requestAnimationFrame(() => fitSelects($("#" + b.dataset.tab)));
+  setTitle((b.querySelector(".sgt") || b).textContent.trim()); requestAnimationFrame(() => fitSelects($("#" + b.dataset.tab)));
 }));
 // phones: a filter select too narrow for its chosen text ("Area attack (Ao") takes the whole row (second audit #7)
 const PHONEMQ = matchMedia("(max-width:600px)"), selCtx = document.createElement("canvas").getContext("2d");
@@ -13096,9 +13319,22 @@ if (HASH.L && Object.hasOwn(PAGECTL, HASH.L.p) && HASH.L.v && typeof HASH.L.v ==
   if (grid && "ResizeObserver" in window){ grid.classList.add("masonry"); const ro = new ResizeObserver(fit);
     for (const c of grid.children) ro.observe(c); ro.observe(grid) } }
 
+// name -> page: every nav tab label (data-go) and category (data-go-cat), lower case; generic labels left out
+function pageNames(){ const m = new Map();
+  for (const b of document.querySelectorAll(".subs button[data-tab]")){ const n = (b.querySelector(".sgt") || b).textContent.trim().toLowerCase(); if (n && !/^(overview|how to use)$/.test(n)) m.set(n, ["go", b.dataset.tab]) }
+  for (const b of document.querySelectorAll("button[id^=c-][data-cat]")){ const n = b.textContent.trim().toLowerCase(); if (n && n !== "more" && !m.has(n)) m.set(n, ["goCat", b.dataset.cat]) }   // section names open the section page (77-landing.js)
+  return m }
+function linkPages(root){ const m = pageNames();
+  for (const b of root.querySelectorAll("b")){ if (b.closest("a")) continue; const hit = m.get(b.textContent.trim().replace(/:$/, "").toLowerCase()); if (!hit) continue;
+    const a = document.createElement("a"); a.href = "#"; a.dataset[hit[0]] = hit[1]; b.replaceWith(a); a.append(b) } }
+$("#log").addEventListener("click", e => { const a = e.target.closest("a[data-go],a[data-go-cat]"); if (!a) return; e.preventDefault();
+  a.dataset.go ? $("#t-" + a.dataset.go).click() : goCat(a.dataset.goCat); window.scrollTo({top: 0}) });
+
 // Changelog: each version's time (data-t, in your time zone like the Home stamp) and older days folded under their date
 { const box = document.querySelector("#log .changelog");
   if (box){
+    // page and section names in bold become links there (Danny 10-22): the lookup is the nav itself, so new pages link with no edits
+    linkPages(box);
     const cards = [...box.querySelectorAll(":scope > .card")], days = new Map();
     for (const c of cards){
       const h = c.querySelector(".cardhead h3"), t = c.dataset.t || "", ms = /T/.test(t) ? Date.parse(t) : NaN;
@@ -13144,6 +13380,156 @@ function stackTable(t){
     .observe(document.body, {childList: true, subtree: true});
   for (const t of document.getElementsByTagName("table")) stackTable(t);
 }
+
+/* ---------------- section landing pages ---------------- */
+// Clicking a sidebar section title (a `.sgh` button with its own data-tab) opens that section's landing page: what each
+// page does, with a small live example built from D (Danny 10-22). Grind Tracker's landing page is its old Overview (#trk).
+(() => {
+const png = b => b ? "data:image/png;base64," + b : "";
+// sprites drawn after load (the Pages copy gets item icons from ASSETS, after 00-core.js filled the Home ones)
+const fillIc = root => root.querySelectorAll("img[data-ic]:not([src])").forEach(im => { const [k, id] = im.dataset.ic.split(":");
+  const b = {i: D.iicons, m: D.mobimg, s: D.icons}[k]?.[id]; if (b) im.src = png(b) });
+ASSETS.then(() => document.querySelectorAll(".lp").forEach(fillIc));
+document.addEventListener("click", e => { const g = e.target.closest?.(".lp [data-go]:not(a)"); if (!g) return;
+  $("#t-" + g.dataset.go).click(); window.scrollTo({top: $("nav").offsetTop - 8}) });
+const clampLv = (el, d) => { const v = Math.round(+el.value); return v >= 1 && v <= 200 ? v : d };
+
+/* Maple Database */
+// Items: live name search, the six best matches (starts-with first, then shorter names), one row per name
+const ITN = Object.entries(D.items).filter(([, it]) => it.n).map(([id, it]) => [id, it.n.toLowerCase()]);
+function lpItems(){
+  const q = $("#lpitq").value.trim().toLowerCase(), box = $("#lpitems");
+  if (!q){ box.innerHTML = `<p class="sub">Type a few letters, or try</p><div class="lpchips">${["glove", "potion", "ore", "claw"].map(w => `<button class="btn sm" data-try="${w}">${w}</button>`).join("")}</div>`; return }
+  const seen = new Set(), hits = ITN.filter(([, n]) => n.includes(q)).sort((a, b) => (b[1].startsWith(q) - a[1].startsWith(q)) || a[1].length - b[1].length)
+    .filter(([, n]) => !seen.has(n) && seen.add(n)).slice(0, 6);
+  box.innerHTML = hits.length ? hits.map(([id]) => { const it = D.items[id];
+    return `<div class="lprow">${itemIcon(id, 1, true)}<span class="itname" tabindex="0" data-item="${id}" data-n="1">${esc(it.n)}</span><span class="sub">${esc(it.c === "Equipment" ? it.wt || it.s || "" : it.c || "")}</span></div>` }).join("")
+    : `<p class="sub">No item called that.</p>`;
+}
+// Monsters: a random field monster near the level, as a small card (sprite, stats, top reported drops)
+const MOBS = Object.entries(D.mobdb).filter(([id, m]) => D.mobimg[id] && !m.is_boss && m.maps?.length && m.maps.some(x => !x[4])).map(([id, m]) => [id, m, +m.level]);
+let lpMobId = null;
+function lpMob(next){
+  const lv = clampLv($("#lpmlv"), 15), near = MOBS.filter(x => Math.abs(x[2] - lv) <= 3), pool = near.length ? near : MOBS;
+  let pick = pool.find(x => x[0] === lpMobId);
+  if (!pick || next){ const rest = pool.filter(x => x[0] !== lpMobId); pick = (rest.length ? rest : pool)[Math.floor(Math.random() * (rest.length || pool.length))] }
+  const [id, m] = pick; lpMobId = id;
+  const drops = (m.dr || []).slice(0, 5).map(([iid, , n]) => itemIcon(iid, 1, true)).join("");
+  $("#lpmob").innerHTML = `<div class="lpmob"><img src="${png(D.mobimg[id])}" alt="">
+    <div><span class="mobname" tabindex="0" data-mob="${id}">${esc(m.name)}</span>
+      <div class="lpstats"><span><b>Lv</b> ${m.level}</span><span><b>HP</b> ${fmt(+m.hp)}</span><span><b>EXP</b> ${fmt(+m.exp)}</span></div>
+      ${drops ? `<div class="lpdrops"><span class="sub">Reported drops</span>${drops}</div>` : ""}</div></div>`;
+}
+// Quests: how many quests your level can take, and the four closest to it
+const QS = D.quests.filter(q => +q.lvl >= 0);
+function lpQuests(){
+  const lv = clampLv($("#lpqlv"), 20), ok = QS.filter(q => +q.lvl <= lv);
+  $("#lpqn").textContent = `${ok.length} of ${QS.length} quests open`;
+  $("#lpquests").innerHTML = ok.sort((a, b) => b.lvl - a.lvl).slice(0, 4).map(q =>
+    `<div class="lprow"><span class="sub lplv">Lv ${q.lvl}</span><span class="name qname" tabindex="0" data-src="q" data-i="${D.quests.indexOf(q)}">${esc(q.name)}</span>${+q.exp ? `<span class="sub">${fmt(+q.exp)} EXP</span>` : ""}</div>`).join("");
+}
+// Skills: a class's 1st job skills as icons; pointing at one shows its level 1 text
+const SKJ = ["Warrior", "Magician", "Archer", "Rogue"].filter(j => D.skills[j]);
+let lpJob = SKJ[0];
+function lpSkills(){
+  $("#lpskjob").innerHTML = SKJ.map(j => `<button class="btn sm${j === lpJob ? " on" : ""}" data-job="${j}" aria-pressed="${j === lpJob}">${j}</button>`).join("");
+  $("#lpskills").innerHTML = D.skills[lpJob].map(s => `<button class="lpsk" data-sk="${s.id}" aria-label="${esc(s.n)}">${D.icons[s.id] ? `<img src="${png(D.icons[s.id])}" alt="">` : esc(s.n[0])}</button>`).join("");
+  $("#lpskinfo").textContent = "Point at a skill to see what it does at level 1.";
+}
+const skInfo = el => { const s = D.skills[lpJob].find(x => x.id === el.dataset.sk); if (!s) return;
+  $("#lpskinfo").innerHTML = `<b>${esc(s.n)}</b> <span class="sub">(max ${s.max})</span> ${esc(s.st?.[0] || "")}` };
+// Citizenship: quests per town
+function lpCit(){
+  const by = {}; for (const q of D.citq) if (q.region && q.region !== "Citizenship") by[q.region] = (by[q.region] || 0) + 1;
+  $("#lpcit").innerHTML = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([t, n]) => `<div class="lprow"><b>${esc(t)}</b><span class="sub">${n} citizenship quests</span></div>`).join("")
+    + `<p class="sub">From level 12, sign up in Henesys or Kerning City. Each town has its own grades, quests and shop.</p>`;
+}
+let dbDrawn = false;
+const drawDb = async () => { if (dbDrawn) return; dbDrawn = true; await ASSETS; lpItems(); lpMob(); lpQuests(); lpSkills(); lpCit() };
+$("#lpitq").addEventListener("input", lpItems);
+$("#lpitems").addEventListener("click", e => { const b = e.target.closest("[data-try]"); if (b){ $("#lpitq").value = b.dataset.try; lpItems(); $("#lpitq").focus() } });
+$("#lpmlv").addEventListener("change", () => lpMob(true)); $("#lpmnext").addEventListener("click", () => lpMob(true));
+$("#lpqlv").addEventListener("input", lpQuests);
+$("#lpskjob").addEventListener("click", e => { const b = e.target.closest("[data-job]"); if (b){ lpJob = b.dataset.job; lpSkills() } });
+for (const ev of ["mouseover", "focusin"]) $("#lpskills").addEventListener(ev, e => { const b = e.target.closest(".lpsk"); if (b) skInfo(b) });
+$("#lpskills").addEventListener("click", () => $("#t-skills").click());
+$("#db .lpsrch").addEventListener("click", () => $("#srchopen").click());
+
+/* Training */
+// EXP/hr calculator: EXP to the next level (D.exp, game files) and the time it takes at the rate typed
+function lpExp(){
+  const lv = clampLv($("#lpelv"), 30), need = D.exp[lv], hr = +$("#lpehr").value;
+  if (!need){ $("#lpexp").innerHTML = `<p class="sub">No level ${lv} in the game files.</p>`; return }
+  const h = hr > 0 ? need / hr : 0, t = h ? (h >= 1 ? `${Math.floor(h)} h ${Math.round(h % 1 * 60)} min` : `${Math.max(1, Math.round(h * 60))} min`) : "";
+  $("#lpexp").innerHTML = `<div class="lpbig">${fmt(need)} <span class="sub">EXP from level ${lv} to ${lv + 1}</span></div>`
+    + (t ? `<div class="lpbig">${t} <span class="sub">at ${fmt(hr)} EXP/hr</span></div>` : `<p class="sub">Type your EXP/hr to see the time.</p>`);
+}
+// Kerning PQ: each stage's minimap from the game files
+const KPQ = (D.kpq || []).filter(k => k.mm && !/exit/i.test(k.name));
+let lpStage = 0;
+function lpKpq(){
+  const k = KPQ[lpStage]; if (!k) return;
+  $("#lpkpqs").innerHTML = KPQ.map((x, i) => `<button class="btn sm${i === lpStage ? " on" : ""}" data-st="${i}" aria-pressed="${i === lpStage}">${esc((/<(.+)>/.exec(x.name) || [, x.name])[1].replace(/ stage$/i, ""))}</button>`).join("");
+  $("#lpkpq").innerHTML = `<div class="lpmm"><img src="data:image/webp;base64,${k.mm}" alt="${esc(k.name)} minimap"></div><p class="sub">${esc(k.name)}${k.mob?.length ? ` · ${k.mob.length} monster spawns` : ""}</p>`;
+}
+let trainDrawn = false;
+const drawTrain = () => { if (trainDrawn) return; trainDrawn = true; lpExp(); lpKpq() };
+for (const id of ["#lpelv", "#lpehr"]) $(id).addEventListener("input", lpExp);
+$("#lpkpqs").addEventListener("click", e => { const b = e.target.closest("[data-st]"); if (b){ lpStage = +b.dataset.st; lpKpq() } });
+
+/* Victoria Island */
+// World Map: the island's map picture; Map Navigator: town to town with the planner's trip times (60-planner.js TRAVEL)
+const TOWNS = D.cabs.filter(id => D.nav[id]);
+function lpNav(){
+  const a = $("#lpnfrom").value, b = $("#lpnto").value, t = TRAVEL.travel(a, b);
+  $("#lpnav").innerHTML = a === b ? `<p class="sub">Pick two different towns.</p>` : !t ? `<p class="sub">No route found.</p>`
+    : `<div class="lpbig">about ${Math.max(1, Math.round(t.sec / 60))} min <span class="sub">(estimate)</span></div><p class="sub">${t.walk} map${t.walk === 1 ? "" : "s"} on foot${t.taxi ? `, ${t.taxi} taxi ride${t.taxi === 1 ? "" : "s"}` : ""}.</p>
+      <button class="btn sm" id="lpnroute">Show the route →</button>`;
+}
+let worldDrawn = false;
+const drawWorld = () => { if (worldDrawn) return; worldDrawn = true;
+  const w = D.wmap.find(x => x[1] === "Victoria Island") || D.wmap[0];
+  if (w){ $("#lpwmimg").src = "data:image/webp;base64," + w[4]; $("#lpwmimg").alt = w[1] + " world map"; $("#lpwmn").textContent = `${w[1]}. Click the map to open it.` }
+  const opts = TOWNS.map(id => `<option value="${id}">${esc(D.mapnames[id] || id)}</option>`).join("");
+  $("#lpnfrom").innerHTML = $("#lpnto").innerHTML = opts; $("#lpnto").selectedIndex = Math.min(1, TOWNS.length - 1); lpNav() };
+for (const id of ["#lpnfrom", "#lpnto"]) $(id).addEventListener("change", lpNav);
+$("#lpnav").addEventListener("click", e => { if (!e.target.closest("#lpnroute")) return;
+  $(`#navtowns button[data-id="${$("#lpnfrom").value}"]`)?.click(); navTo($("#lpnto").value) });
+
+/* Mesos and Trade */
+// FM Sniper: the live listings furthest under their meso.watch median sale price; Price check: one item's median sale
+function lpSnipe(){
+  const now = D.pw?.now || {}, rows = Object.entries(now).map(([id, x]) => [id, x, pwSolid(id)]).filter(([id, x, m]) => D.items[id] && m >= 1000 && x[0] > 0 && x[0] < m)
+    .sort((a, b) => a[1][0] / a[2] - b[1][0] / b[2]).slice(0, 4);
+  $("#lpsnn").textContent = D.pw?.listed ? `Furthest under their usual sale price in the listings read ${D.pw.listed}:` : "";
+  $("#lpsnipe").innerHTML = rows.length ? rows.map(([id, x, m]) => `<div class="lprow">${itemIcon(id, 1, true)}<span class="itname" tabindex="0" data-item="${id}" data-n="1">${esc(D.items[id].n)}</span>`
+    + `<span class="sub">${fmt(x[0])} <s>${fmt(m)}</s></span></div>`).join("") : `<p class="sub">No listings under their usual price right now.</p>`;
+}
+const PRICED = ITN.filter(([id]) => pwSolid(id));
+function lpPrice(){
+  const q = $("#lppq").value.trim().toLowerCase(), box = $("#lpprice");
+  if (!q){ box.innerHTML = `<p class="sub">Type a few letters, or try</p><div class="lpchips">${["ore", "scroll", "potion"].map(w => `<button class="btn sm" data-try="${w}">${w}</button>`).join("")}</div>`; return }
+  const hits = PRICED.filter(([, n]) => n.includes(q)).sort((a, b) => (b[1].startsWith(q) - a[1].startsWith(q)) || a[1].length - b[1].length).slice(0, 5);
+  box.innerHTML = hits.length ? hits.map(([id]) => `<div class="lprow">${itemIcon(id, 1, true)}<span class="itname" tabindex="0" data-item="${id}" data-n="1">${esc(D.items[id].n)}</span>`
+    + `<span class="sub">${pwSpark(id)} ${fmt(pwSolid(id))} ${pwTrend(id)}</span></div>`).join("") + `<p class="sub">Median player-shop sale price (meso.watch).</p>`
+    : `<p class="sub">No sale prices for an item called that.</p>`;
+}
+let townDrawn = false;
+const drawTown = async () => { if (townDrawn) return; townDrawn = true; await ASSETS; lpSnipe(); lpPrice() };
+$("#lppq").addEventListener("input", lpPrice);
+$("#lpprice").addEventListener("click", e => { const b = e.target.closest("[data-try]"); if (b){ $("#lppq").value = b.dataset.try; lpPrice(); $("#lppq").focus() } });
+
+/* Grind Tracker: live lines on its page links */
+function drawTrk(){
+  const sh = D.shared, best = sh?.kpq?.board?.Rush?.[0]?.best;
+  if (sh?.runs > 0) $("#lptruns").textContent = `${fmt(+sh.runs)} runs, ${sh.hours} hours from ${sh.players} player${sh.players == 1 ? "" : "s"} so far.`;
+  if (best > 0) $("#lptkpq").textContent = `Fastest Rush clear so far: ${Math.floor(best / 60)}:${String(best % 60).padStart(2, "0")}.`;
+}
+
+const DRAW = {db: drawDb, trk: drawTrk, train: drawTrain, world: drawWorld, town: drawTown};
+for (const [id, f] of Object.entries(DRAW)) $("#t-" + id).addEventListener("click", () => f());
+for (const [id, f] of Object.entries(DRAW)) if (!$("#" + id).hidden) f();
+})();
 
 // Settings › Reset (Danny 10-21: a way back to factory new). Look and layout = the keys the <head> script and 70-theme /
 // 71-navside / 72-anchors / 74-profiles read; everything = all of this site's storage. A first click arms the button for

@@ -117,7 +117,7 @@ TABS.forEach(b => b.addEventListener("click", () => {
   TABS.forEach(x => x.setAttribute("aria-selected", x === b)); inRow(b);
   $("#home").hidden = true; TABS.forEach(x => $("#" + x.dataset.tab).hidden = x !== b);
   try { localStorage.setItem("tab", b.dataset.tab) } catch(e) {}
-  setTitle(b.textContent.trim()); requestAnimationFrame(() => fitSelects($("#" + b.dataset.tab)));
+  setTitle((b.querySelector(".sgt") || b).textContent.trim()); requestAnimationFrame(() => fitSelects($("#" + b.dataset.tab)));
 }));
 // phones: a filter select too narrow for its chosen text ("Area attack (Ao") takes the whole row (second audit #7)
 const PHONEMQ = matchMedia("(max-width:600px)"), selCtx = document.createElement("canvas").getContext("2d");

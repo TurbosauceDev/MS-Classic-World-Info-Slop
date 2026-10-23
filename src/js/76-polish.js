@@ -24,8 +24,8 @@ if (HASH.L && Object.hasOwn(PAGECTL, HASH.L.p) && HASH.L.v && typeof HASH.L.v ==
 
 // name -> page: every nav tab label (data-go) and category (data-go-cat), lower case; generic labels left out
 function pageNames(){ const m = new Map();
-  for (const b of document.querySelectorAll(".subs button[data-tab]")){ const n = b.textContent.trim().toLowerCase(); if (n && !/^(overview|how to use)$/.test(n)) m.set(n, ["go", b.dataset.tab]) }
-  for (const b of document.querySelectorAll("button[id^=c-][data-cat]")){ const n = b.textContent.trim().toLowerCase(); if (n && n !== "more") m.set(n, ["goCat", b.dataset.cat]) }
+  for (const b of document.querySelectorAll(".subs button[data-tab]")){ const n = (b.querySelector(".sgt") || b).textContent.trim().toLowerCase(); if (n && !/^(overview|how to use)$/.test(n)) m.set(n, ["go", b.dataset.tab]) }
+  for (const b of document.querySelectorAll("button[id^=c-][data-cat]")){ const n = b.textContent.trim().toLowerCase(); if (n && n !== "more" && !m.has(n)) m.set(n, ["goCat", b.dataset.cat]) }   // section names open the section page (77-landing.js)
   return m }
 function linkPages(root){ const m = pageNames();
   for (const b of root.querySelectorAll("b")){ if (b.closest("a")) continue; const hit = m.get(b.textContent.trim().replace(/:$/, "").toLowerCase()); if (!hit) continue;
