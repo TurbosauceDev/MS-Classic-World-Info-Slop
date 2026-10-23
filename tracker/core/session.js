@@ -30,7 +30,7 @@
     const idleMs = opts.idleMs || IDLE_MS;
     const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
       msgExp: 0, barExp: 0, recent: [], kills: 0, unknownKills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, itemT: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
-      pausedAt: null, held: false, pausedMs: 0, byMap: {}, levelUps: [], levelAt: null, used: {}, have: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
+      pausedAt: null, held: false, pausedMs: 0, byMap: {}, pmBar: {}, pmMsg: {}, firstBar: null, levelUps: [], levelAt: null, used: {}, have: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
 
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
@@ -72,6 +72,8 @@
     // per map: EXP (bar and lines), farming time and kills credited to the map they happened on, so the run's map is where the
     // EXP came from, not where the player stood at Stop (Danny 2026-10-23: deaths, town scrolls and walking home made Lith
     // Harbor's department store or the player's house a "training map")
+    // EXP per clock minute (Simple Mode's chart and "best minute"), from the bar and from the lines; a minute with no EXP is 0
+    const pm = (o, t, d) => { const k = Math.floor(t / 6e4); o[k] = (o[k] || 0) + d };
     const mapNameOf = id => G.mapnames?.[id] || G.maps[id]?.[0] || null;
     const here = () => { const k = S.map || "?"; return S.byMap[k] ||= {name: mapNameOf(S.map) || S.mapName || null, bar: 0, msg: 0, ms: 0, kills: 0} };
     // a level-up: how long the level before took (active time), when this session saw that level start
@@ -120,7 +122,7 @@
         case "party": S.party = Math.max(1, e.size | 0); break;
         case "job": S.job = e.name; break;
         case "exp": {
-          S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); here().msg += e.gain;
+          S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); here().msg += e.gain; pm(S.pmMsg, e.t, e.gain);
           if (!G.maps[S.map]){ S.kills++; here().kills++; S.unknownKills++; S.lastKillMob = null; break }   // map not known: a kill, monster unknown
           const id = matchMob(e.gain);
           if (id === "?"){ S.kills++; here().kills++; S.unknownKills++; S.lastKillMob = null }   // a party kill, monster unknown
@@ -128,7 +130,7 @@
           else S.otherExp += e.gain;   // fits no monster here: quest reward etc.
           break;
         }
-        case "bonus": S.msgExp += e.gain; here().msg += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); break;
+        case "bonus": S.msgExp += e.gain; here().msg += e.gain; pm(S.pmMsg, e.t, e.gain); S.lastExpT = Math.max(S.lastExpT || 0, e.t); break;
         // the inventory's open tab read: kept as first and latest per tab (Equip, Use, Etc)
         case "inv": {
           if (!e.tab || !e.items) break;
@@ -167,7 +169,7 @@
           if (!jump && (tiny || e.pct > 0.5 && (!fit || S.level && fit !== S.level && fit !== S.level + 1))){ S.badBars = (S.badBars || 0) + 1; break }
           S.jumpTo = null;
           if (jump){ const q = S.bar; let d = (G.exp[q.level] || 0) - q.exp + e.exp; for (let L = q.level + 1; L < fit; L++) d += G.exp[L] || 0;
-            S.barExp += d; here().bar += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t); for (let L = q.level + 1; L <= fit; L++){ S.level = L; if (!(S.levelUps.at(-1)?.level >= L)) levelUp(L, e.t) }
+            S.barExp += d; here().bar += d; pm(S.pmBar, e.t, d); S.lastExpT = Math.max(S.lastExpT || 0, e.t); for (let L = q.level + 1; L <= fit; L++){ S.level = L; if (!(S.levelUps.at(-1)?.level >= L)) levelUp(L, e.t) }
             S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: fit}; break }
           if (e.level) S.level = e.level;
           // level not known yet (only readings under 0.5%, which can't be checked well): nothing counted until it is
@@ -184,13 +186,14 @@
             else if (d < 0 && G.exp[p.level] && -d > 0.2 * G.exp[p.level] && (S.bigDrops = (S.bigDrops || 0) + 1) < 3){ S.badBars = (S.badBars || 0) + 1; S.level = before; break }
             else if (d < 0 && S.bigDrops >= 3 && !e.level){ d = (G.exp[p.level] || 0) - p.exp + e.exp; S.level = p.level + 1 }   // 3 in a row: the level-up it was
             S.bigDrops = 0;
-            if (d > 0){ S.barExp += d; here().bar += d; S.lastExpT = Math.max(S.lastExpT || 0, e.t) }
+            if (d > 0){ S.barExp += d; here().bar += d; pm(S.pmBar, e.t, d); S.lastExpT = Math.max(S.lastExpT || 0, e.t) }
             // a drop without a level-up = a death (the game takes a share of the level's EXP); not counted again until EXP rises
             else if (d < -Math.max(5, (G.exp[p.level] || 0) * 0.001) && !p.dead){   // a few EXP down is the last digit misread, not a death
               S.deaths++; const k = S.map || "?"; S.deathMaps[k] = (S.deathMaps[k] || 0) + 1 }
           }
           if (before && S.level === before + 1 && !(S.levelUps.at(-1)?.level >= S.level)) levelUp(S.level, e.t);   // once per level, even if a misread flickers it
           else if (S.level && !S.levelAt) S.levelAt = {level: S.level, activeMs: S.activeMs, partial: true};   // started mid-level: its time is unknown
+          if (!S.firstBar && S.level) S.firstBar = {t: e.t, level: S.level, pct: e.pct};   // where this run started on the bar (Simple Mode's level bar)
           S.bar = {t: e.t, exp: e.exp, pct: e.pct, level: S.level, dead: p && e.exp < p.exp && !(e.level > p.level) ? true : p?.dead && e.exp <= p.exp}; break;
         }
         case "meso":
@@ -208,11 +211,9 @@
       return S;
     }
 
-    // market value of one item: player-shop median (meso.watch), else NPC sell price. rough = meso.watch flags it low data
-    // (few sales seen); lo/hi = the middle half of its sales (p25-p75), the NPC price when it has no player-shop sales
-    const worth = id => G.pw?.[id]?.[0] ?? G.items[id]?.p ?? 0;
-    const rough = id => !!(G.pw?.[id]?.[4] & 1);
-    const worthLo = id => G.pw?.[id]?.[1] ?? worth(id), worthHi = id => G.pw?.[id]?.[2] ?? worth(id);
+    // value of one item: lootPrice (Etc monster drops at NPC price, useful items at the player-shop median, Danny 2026-10-23)
+    const worth = id => lootPrice(G, id).each, rough = id => lootPrice(G, id).rough;
+    const worthLo = id => lootPrice(G, id).lo, worthHi = id => lootPrice(G, id).hi;
 
     // EXP/hr over the last 5 minutes (wall time, breaks included): how you're doing right now
     function recentExpHr(){
@@ -243,7 +244,7 @@
       // pickup: the inventory is right, a line read twice (Danny's one Mace counted 2, 2026-10-18)
       for (const g of inv){ const t = S.itemT[g.id], tab = S.inv[g.tab];
         if (g.n > 0 && g.alike === 1 && t && g.n < (seenN[g.id] || 0) && !tab.first.unknown && !tab.last.unknown && tab.first.t < t.first && tab.last.t > t.last) seenN[g.id] = g.n }
-      const items = Object.entries(seenN).map(([id, n]) => ({id, name: G.items[id]?.n || "Item " + id, n, each: worth(id), total: worth(id) * n, lo: worthLo(id) * n, hi: worthHi(id) * n, rough: rough(id), inv: filled[id] || 0}))
+      const items = Object.entries(seenN).map(([id, n]) => ({id, name: G.items[id]?.n || "Item " + id, n, each: worth(id), total: worth(id) * n, lo: worthLo(id) * n, hi: worthHi(id) * n, rough: rough(id), npc: lootPrice(G, id).npc, inv: filled[id] || 0}))
         .sort((a, b) => b.total - a.total);
       const unreadLeft = Math.max(0, S.unreadItems - Object.values(filled).reduce((a, b) => a + b, 0));
       const lootValue = items.reduce((a, b) => a + b.total, 0), lootLo = items.reduce((a, b) => a + b.lo, 0), lootHi = items.reduce((a, b) => a + b.hi, 0),
@@ -267,7 +268,10 @@
       const useBar = S.barExp > 0, maps = Object.entries(S.byMap).map(([id, m]) => ({map: id === "?" ? null : id, name: m.name, exp: useBar ? m.bar : m.msg, min: m.ms / 6e4, kills: m.kills}))
         .filter(m => m.exp > 0 || m.min > 0 || m.kills > 0).sort((a, b) => b.exp - a.exp || b.min - a.min);
       const top = maps.find(m => m.map && m.exp > 0) || maps.find(m => m.map) || null, nowName = mapNameOf(S.map) || S.mapName || null;
-      return {activeMin: S.activeMs / 6e4, map: top ? top.map : S.map, mapName: top ? top.name : nowName, nowMap: S.map, nowMapName: nowName, maps, party: S.party,
+      const pmSrc = useBar ? S.pmBar : S.pmMsg, pmKeys = Object.keys(pmSrc).map(Number), perMin = [];
+      if (pmKeys.length){ const k0 = Math.floor(S.start / 6e4), k1 = Math.max(...pmKeys, Math.floor((S.last ?? S.start) / 6e4)); for (let k = Math.max(k0, k1 - 1439); k <= k1; k++) perMin.push([k * 6e4, pmSrc[k] || 0]) }   // last 24 h at most
+      return {activeMin: S.activeMs / 6e4, perMin, bestMin: perMin.length ? Math.max(...perMin.map(p => p[1])) : 0, firstBar: S.firstBar, bar: S.bar && S.bar.level ? {level: S.bar.level, pct: S.bar.pct, t: S.bar.t} : null,
+        map: top ? top.map : S.map, mapName: top ? top.name : nowName, nowMap: S.map, nowMapName: nowName, maps, party: S.party,
         job: S.job, level: S.level, kills: S.kills, unknownKills: S.unknownKills, killsHr: per(S.kills), exp, expHr, toLevelHrs, otherExp: S.otherExp,
         // share of the bar's EXP that showed up as readable messages: below ~70%, kills/mesos/drops are undercounted
         readShare: S.barExp > 0 ? Math.min(1, S.msgExp / S.barExp) : null,
@@ -382,6 +386,17 @@
     return d;
   }
 
-  const api = {createSession, createRunSlicer, speedCheck, levelOf, expBetween, IDLE_MS, RUN_MS};
+  /* what one dropped item is worth (Danny 2026-10-23): Etc monster drops (Green Mushroom Cap, item ids 4000xxx) and quest
+     Etc at the NPC sell price (OSMS export, items.p): players don't buy them. Ores, plates and jewels (4004/4005/4010/4011/
+     4020/4021), crafting materials (4003: Screw, Processed Wood), equipment and scrolls at the player price (meso.watch median,
+     G.pw), else NPC. npc = priced at NPC; rough = meso.watch flags few sales; lo/hi = p25-p75 of player sales */
+  const USEFUL_ETC = /^40(03|04|05|10|11|20|21)\d{3}$/;
+  function lootPrice(G, id){
+    id = String(id); const npc = G.items?.[id]?.p ?? 0, pw = G.pw?.[id], c = G.items?.[id]?.c;
+    if (c === "Etc" && !USEFUL_ETC.test(id) || !pw) return {each: npc, lo: npc, hi: npc, npc: true, rough: false};
+    return {each: pw[0] ?? npc, lo: pw[1] ?? pw[0] ?? npc, hi: pw[2] ?? pw[0] ?? npc, npc: false, rough: !!(pw[4] & 1)};
+  }
+
+  const api = {createSession, createRunSlicer, speedCheck, levelOf, expBetween, lootPrice, IDLE_MS, RUN_MS};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindSession = api;
 })(typeof window !== "undefined" ? window : globalThis);

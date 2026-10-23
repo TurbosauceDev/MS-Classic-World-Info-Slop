@@ -71,7 +71,7 @@ function alertSet(){
 }
 function flash(){ $("#top").classList.remove("flash"); void $("#top").offsetWidth; $("#top").classList.add("flash") }
 function dropAlert(id){
-  const min = +settings.alertWorth || 0, worth = G.pw?.[id]?.[0] ?? G.items[id]?.p ?? 0;
+  const min = +settings.alertWorth || 0, worth = GrindSession.lootPrice(G, id).each;
   if (alertSet().has(String(id))){ beep(660, 0.15); setTimeout(() => beep(990, 0.25), 180); flash(); $("#status").textContent = `Drop you're watching for: ${G.items[id]?.n || "item " + id}`; return }
   if (!min || worth < min) return;
   flash();
@@ -368,6 +368,7 @@ eventStatus();   // the first line ("Looking for the MapleStory window...")
 // start/end snapshots: {t, level, pct, exp?, file?, hand?}; a hand-fixed or button snapshot isn't replaced by the automatic ones
 const snaps = {start: null, end: null};
 const clock = t => new Date(t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
+$("#snapFix").onclick = () => { const e = $("#snapEdit"), open = e.hidden; e.hidden = !open; $("#snapFix").setAttribute("aria-expanded", String(open)); $("#snapFix").textContent = open ? "done" : "fix" };
 function renderSnaps(live = session?.stats().exp){   // live: EXP the live count added up over (about) the same stretch
   for (const [i, k] of [[0, "start"], [1, "end"]]){
     const sn = snaps[k], lv = $("#s" + i + "lv"), pc = $("#s" + i + "pct");
@@ -377,6 +378,11 @@ function renderSnaps(live = session?.stats().exp){   // live: EXP the live count
   }
   const a = snaps.start, b = snaps.end, d = a && b && b.t > a.t ? GrindSession.expBetween(G, a, b) : null, hrs = a && b ? (b.t - a.t) / 3.6e6 : 0;
   $("#snapRate").textContent = d != null && hrs > 0 ? fmt(d / hrs) + " EXP/hr" : "-";
+  // the main card's one line: start reading -> the end reading, or the bar now while tracking
+  const now = b || (session?.state.bar?.level ? {level: session.state.bar.level, pct: session.state.bar.pct, t: session.state.bar.t} : null), rd = x => x?.level ? `Lv ${x.level} ${x.pct != null ? (+x.pct).toFixed(2) + "%" : ""}` : "?";
+  const a0 = a?.level ? a : session?.state.firstBar || a;   // no start reading yet: the run's first bar read
+  $("#snapLine").innerHTML = a0 || now ? `<b>${esc(rd(a0))}</b> → <b>${esc(rd(now))}</b>${a0 && now ? ` <span class="dim">read ${esc(clock(a0.t))} · ${esc(clock(now.t))}</span>` : ""}${d != null && hrs > 0 ? ` <span class="dim">· ${fmt(d / hrs)} EXP/hr</span>` : ""}`
+    : "Read at Start and at Stop";
   // mini bar: the snapshot rate too, so the small view isn't only the live count (render() rewrites the note each tick first)
   if (d != null && hrs > 0.05 && timer != null) $("#miniNote").textContent += ($("#miniNote").textContent ? " · " : "") + "start to now: " + fmt(d / hrs) + " EXP/hr";
   // a reading without a level or % gets marked: the session's EXP/hr can't be worked out without it

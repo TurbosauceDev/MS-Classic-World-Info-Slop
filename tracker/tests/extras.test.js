@@ -129,7 +129,7 @@ const path = require("path"), {chromium} = require("playwright");
     const again = TH.builtins(boxIds())[0].theme.preset, kept = settings.profiles.some(p => /Danny/.test(p.name));
     return {del, got, again, kept, opt: [...$("#profSel").querySelectorAll("optgroup")].map(g => g.label).join()} });
   if (!bi.del || bi.got.theme !== "p:Default" || bi.got.profile !== "b:Danny's Default" || String(bi.got.win) !== "2560,1392" || !bi.got.hist
-    || bi.got.dock !== "alerts,events,invcheck,items,kpq,log,main,mesos,mobs,snaps,stats,used" || !/built in/.test(bi.got.note)) fail("built-in profile", bi);
+    || bi.got.dock !== "alerts,events,items,kpq,log,main,mesos,mobs,stats,used" || !/built in/.test(bi.got.note)) fail("built-in profile", bi);
   if (bi.again !== "Default" || bi.kept || bi.opt !== "Yours,Built in") fail("built-in profile stays as shipped", bi);
 
   await browser.close();

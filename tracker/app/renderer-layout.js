@@ -10,8 +10,44 @@ function renderMini(s){
   $("#miniItems").innerHTML = miniList(s.items, i => `<tr><td>${ico(i.id)}${esc(i.name)}</td><td class="n">×${fmt(i.n)}</td></tr>`, "Nothing yet");
   $("#miniMobs").innerHTML = miniList(s.mobs, m => `<tr><td>${esc(m.name)}</td><td class="n">${fmt(m.kills)}</td></tr>`, "None yet");
   $("#miniUsed").innerHTML = miniList(s.used.filter(u => u.n), u => `<tr><td>${ico(u.id)}${esc(u.name)}</td><td class="n">×${fmt(u.n)}</td></tr>`, "None yet");
+  simpleDraw(s);
   const f = $("#miniFeed"); f.scrollTop = f.scrollHeight;   // (it can't scroll while hidden: set again once shown)
   miniFit();
+}
+// Simple Mode's top half (Danny 2026-10-23, modeled on his B2 <Subway Depot> mockup): map, Lv/job, EXP gained in the farming
+// time, EXP/min, best minute, the level bar from the run's first reading to now, potions used (red) and picked up (green),
+// mesos spent / picked up / loot value, and EXP per clock minute (session perMin; gaps are 0)
+function simpleDraw(s){
+  const mapId = s.nowMap || s.map, name = s.nowMapName || s.mapName, spawns = (G.maps[mapId]?.[2] || []).reduce((a, [, c]) => a + (c || 0), 0);
+  $("#smMap").textContent = name || "No map yet"; $("#smSpawns").textContent = spawns ? spawns + " spawns" : "";
+  $("#smWho").hidden = !(s.level || s.job); $("#smWho").innerHTML = (s.level ? `Lv. <b>${s.level}</b>` : "") + (s.job ? " " + esc(s.job) : "");
+  const min = s.activeMin; $("#smIn").textContent = min >= 1 ? "in " + hm(min / 60) : "";
+  $("#miniTotal").textContent = (s.exp > 0 ? "+" : "") + fmt(s.exp);
+  $("#smPerMin").textContent = min >= 1 ? fmt(s.exp / min) : "-"; $("#smBest").textContent = s.bestMin ? fmt(s.bestMin) : "-";
+  // level bar: dim = where the run started, bright = gained, a tick per level-up; "+%" = level percent gained over the run
+  const a = s.firstBar, b = s.bar, lv = $("#smLvl"); lv.hidden = !(a && b);
+  if (a && b){ const ups = b.level - a.level, gained = ups * 100 + b.pct - a.pct, from = ups ? 0 : a.pct;
+    lv.innerHTML = `<span>Lv. <b>${a.level}</b></span><div class="smTrack" title="Started at Lv ${a.level} ${a.pct.toFixed(2)}%, now Lv ${b.level} ${b.pct.toFixed(2)}%"><i class="was" style="width:${from}%"></i><i class="now" style="left:${from}%;width:${Math.max(0, b.pct - from)}%"></i>${ups ? `<span class="up" style="left:0"></span>` : ""}</div><span>Lv. <b>${b.level}</b></span><span class="gain">${gained >= 0 ? "+" : "−"}${Math.abs(gained).toFixed(2)}%</span>` }
+  // potions: used (red), and picked up as drops (green, Consumable items in the loot)
+  const pots = [...s.used.filter(u => u.n > 0).map(u => ({id: u.id, name: u.name, n: -u.n})), ...s.items.filter(i => G.items[i.id]?.c === "Consumable").map(i => ({id: i.id, name: i.name, n: i.n}))].slice(0, 6);
+  $("#smPots").innerHTML = pots.length ? pots.map(p => `<div class="smPot">${ico(p.id)}<div><b class="${p.n < 0 ? "neg" : "pos"}">${p.n < 0 ? "−" : "+"}${fmt(Math.abs(p.n))}</b><span class="note">${esc(p.name)}</span></div></div>`).join("") : `<span class="note">None used yet</span>`;
+  const pm = v => min >= 1 ? fmt(v / min) + "/min" : "";
+  $("#smMoney").innerHTML = `<span class="note">spent</span><span class="v neg">−${fmt(s.usedCost)}</span><span class="note">${pm(s.usedCost)}</span>`
+    + `<span class="note">picked up</span><span class="v pos">+${fmt(s.mesos)}</span><span class="note">${pm(s.mesos)}</span>`
+    + `<span class="note" title="Etc monster drops at the NPC price; ores, crafting materials, equipment and scrolls at the player-shop price (meso.watch)">loot value</span><span class="v pos">+${fmt(s.lootValue)}</span><span class="note">${pm(s.lootValue)}</span>`;
+  smChart(s.perMin || []);
+}
+function smChart(pts){
+  const svg = $("#smChart"), L = 34, R = 512, T = 8, B = 128;
+  if (pts.length < 2){ svg.innerHTML = `<text x="260" y="70" text-anchor="middle">The chart starts after the first minute of EXP</text>`; return }
+  const top = Math.max(...pts.map(p => p[1])), step = top <= 0 ? 1 : Math.pow(10, Math.floor(Math.log10(top))) * (top / Math.pow(10, Math.floor(Math.log10(top))) > 5 ? 2 : top / Math.pow(10, Math.floor(Math.log10(top))) > 2 ? 1 : 0.5);
+  const max = Math.max(step, Math.ceil(top / step) * step), n = pts.length, x = i => L + (R - L) * i / (n - 1), y = v => B - (B - T) * v / max;
+  const kfmt = v => v >= 1000 ? (v / 1000).toFixed(v % 1000 ? 1 : 0) + "K" : String(v);
+  let h = ""; for (let v = 0; v <= max + 1e-9; v += step) h += `<line x1="${L}" x2="${R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="var(--line)"/><text x="${L - 4}" y="${(y(v) + 3).toFixed(1)}" text-anchor="end">${kfmt(Math.round(v))}</text>`;
+  const every = Math.max(1, Math.ceil(n / 6)); for (let i = 0; i < n; i += every) h += `<text x="${x(i).toFixed(1)}" y="${B + 14}" text-anchor="${x(i) > R - 24 ? "end" : x(i) < L + 24 ? "start" : "middle"}">${new Date(pts[i][0]).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"})}</text>`;
+  const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ");
+  h += `<polygon points="${L},${B} ${line} ${R},${B}" fill="color-mix(in srgb, var(--warn) 22%, transparent)"/><polyline points="${line}" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linejoin="round"/>`;
+  svg.innerHTML = h;
 }
 // the window fits the Mini view when it opens, and grows if the lists outgrow it (only when that changed: setting it every
 // tick would fight a user resizing). A window made bigger than that gets bigger content, not blank space (Danny, 2026-10-19:

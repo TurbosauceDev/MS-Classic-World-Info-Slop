@@ -154,6 +154,19 @@ function renderRespawns(){
   box.innerHTML = `<div class="k">Respawns on this map (game data)</div><table>` + list.map(r => `<tr><td>${esc(r.name)}${r.boss ? " (boss)" : ""}</td>
     <td class="n">${r.killed ? r.dueIn > 0 ? "back in ~" + mm(r.dueIn) : "due now" : "every " + mm(r.sec * 1000)}</td></tr>`).join("") + "</table>";
 }
+// main card tiles: per hour of farming or totals for the run (Danny 2026-10-23), remembered in settings.tileTotal
+function renderTiles(s){
+  const tot = !!settings.tileTotal;
+  $("#tPer").setAttribute("aria-pressed", String(!tot)); $("#tTot").setAttribute("aria-pressed", String(tot));
+  $("#expHrK").textContent = tot ? "EXP gained" : "EXP/hr"; $("#mesosHrK").textContent = tot ? "Mesos" : "Mesos/hr";
+  $("#killsHrK").textContent = tot ? "Kills" : "Kills/hr"; $("#lootTK").textContent = tot ? "Loot value" : "Loot/hr";
+  if (!s) return;
+  $("#lootT").innerHTML = mz(tot ? s.lootValue : s.lootHr);
+  $("#lootTNote").textContent = s.lootRough ? "some prices from few sales" : "";
+  if (!tot) return;
+  $("#expHr").textContent = fmt(s.exp); $("#mesosHr").innerHTML = mz(s.mesos); $("#killsHr").textContent = fmt(s.kills);
+}
+for (const [id, on] of [["#tPer", false], ["#tTot", true]]) $(id).onclick = () => { settings.tileTotal = on; host.settings({tileTotal: on}).then(x => settings = x); renderTiles(session?.stats()) };
 function render(){
   const s = session.stats();
   $("#killsHr").textContent = fmt(s.killsHr);
@@ -162,6 +175,7 @@ function render(){
   $("#killsEst").textContent = s.killsEstHr == null ? "" : "~" + fmt(s.killsEstHr) + " with missed lines (est.)";
   $("#ttl").textContent = s.toLevelHrs == null ? "-" : s.toLevelHrs < 1 ? Math.round(s.toLevelHrs * 60) + " min" : s.toLevelHrs.toFixed(1) + " h";
   $("#mesosHr").innerHTML = mz(s.mesosHr);
+  renderTiles(s);
   renderRespawns();
   $("#miniExp").textContent = fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent; $("#miniMeso").innerHTML = mz(s.mesosHr);
   $("#miniNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
@@ -199,14 +213,14 @@ function render(){
   $("#mobsEmpty").classList.toggle("hidden", !!s.mobs.length); $("#itemsEmpty").classList.toggle("hidden", !!(s.items.length || s.unreadItems));
   $("#mobs").innerHTML = s.mobs.map(m => `<tr><td>${esc(m.name)}</td><td class="n">${kills(m.kills)}</td><td class="n">${mz(m.mesoPerKill)}/kill</td></tr>`).join("");   // party kills whose EXP share fits several monsters aren't listed (Danny, 2026-10-19)
   $("#items").innerHTML = (s.items.length ? `<tr class="th"><td>Item</td><td class="n">Got</td><td class="n">Each</td><td class="n">Worth</td></tr>` : "")
-    + s.items.map(i => `<tr><td>${ico(i.id)}${esc(i.name)}${i.inv ? ` <span class="note">(${i.inv} from the inventory)</span>` : ""}</td><td class="n">×${fmt(i.n)}</td><td class="n dim">${mz(i.each)}${i.rough ? `<span class="note" title="Few player-shop sales seen (meso.watch): rough price">?</span>` : ""}</td><td class="n">${sgm(i.total)}</td></tr>`).join("")
+    + s.items.map(i => `<tr><td>${ico(i.id)}${esc(i.name)}${i.inv ? ` <span class="note">(${i.inv} from the inventory)</span>` : ""}</td><td class="n">×${fmt(i.n)}</td><td class="n dim">${mz(i.each)}${i.rough ? `<span class="note" title="Few player-shop sales seen (meso.watch): rough price">?</span>` : ""}${i.npc && i.each ? `<span class="note" title="NPC sell price (game files): Etc monster drops aren't bought by players"> npc</span>` : ""}</td><td class="n">${sgm(i.total)}</td></tr>`).join("")
     + (s.items.length ? `<tr class="tot"><td>Total</td><td class="n">×${fmt(s.items.reduce((a, i) => a + i.n, 0))}</td><td></td><td class="n">${sgm(s.lootValue)}</td></tr>`
       + (s.lootHi > s.lootLo ? `<tr><td colspan="4" class="note">Likely worth ${mz(s.lootLo)} to ${mz(s.lootHi)} (middle half of player-shop sales, meso.watch)${s.lootRough ? `; ${mz(s.lootRough)} of it is priced from few sales (?)` : ""}</td></tr>` : "") : "")
     + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet: ${(s.invTabs?.etc?.last || 0) > (s.invTabs?.etc?.first || 0)
       ? "the Etc tab doesn't show more than the pickup lines already counted, so they're probably Use items (potions) or a misread line. Report a bug right after one shows up so it can be fixed"
       : "open your Etc tab for a second to count them from the inventory"}</td></tr>` : "");
   renderInv(s); renderWrap(s); renderMini(s);
-  $("#priceNote").textContent = G.pwRead ? `Worth = player-shop median from meso.watch (${G.pwRead}), else NPC price. Mesos/kill on maps with several monsters is a best guess.` : "";
+  $("#priceNote").textContent = G.pwRead ? `Worth: Etc monster drops (caps, teeth, shells) at the NPC sell price (game files); ores, jewels, crafting materials, equipment and scrolls at the player-shop median from meso.watch (${G.pwRead}), else NPC price. "npc" marks NPC-priced rows. Mesos/kill on maps with several monsters is a best guess.` : "";
   return s.exp;   // for renderSnaps
 }
 

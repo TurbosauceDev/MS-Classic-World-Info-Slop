@@ -18,9 +18,15 @@ assert.strictEqual(st.mobs.find(m => m.name === "Red Snail").mesos, 200, "mesos 
 assert.strictEqual(st.mobs.find(m => m.name === "Blue Snail").items["4000019"], 10);
 assert.ok(Math.abs(st.activeMin - 591 / 60) < 1e-9, "active time from first to last pickup");
 assert.ok(Math.abs(st.killsHr - 60 / (591 / 3600)) < 1e-6);
-assert.strictEqual(st.lootValue, 10 * G.pw["4000019"][0], "Horny Mushroom Cap at its meso.watch median");
-assert.ok(st.lootLo === 10 * G.pw["4000019"][1] && st.lootHi === 10 * G.pw["4000019"][2], "loot range = meso.watch p25-p75");
-assert.strictEqual(st.lootRough, G.pw["4000019"][4] & 1 ? st.lootValue : 0, "rough part = items flagged low data");
+// Etc monster drops at the NPC sell price, useful items (ores, crafting materials, equipment) at the player price (Danny 2026-10-23)
+assert.strictEqual(st.lootValue, 10 * G.items["4000019"].p, "Horny Mushroom Cap at its NPC price");
+assert.ok(st.lootLo === st.lootValue && st.lootHi === st.lootValue && st.lootRough === 0 && st.items[0].npc, "NPC price: no range, not rough");
+{ const {lootPrice} = require("../core/session.js");
+  assert.strictEqual(lootPrice(G, "4010000").each, G.pw["4010000"][0], "Bronze Ore at its meso.watch median");
+  assert.ok(!lootPrice(G, "4010000").npc && lootPrice(G, "4020000").each === G.pw["4020000"][0], "ores are useful");
+  assert.strictEqual(lootPrice(G, "4003000").each, G.pw["4003000"][0], "Screw (crafting) at the player price");
+  assert.strictEqual(lootPrice(G, "4000021").each, G.items["4000021"].p, "Wild Boar Tooth at NPC price");
+  const eq = Object.keys(G.pw).find(id => G.items[id]?.c === "Equipment"); assert.strictEqual(lootPrice(G, eq).each, G.pw[eq][0], "equipment at the player price") }
 assert.ok(st.toLevelHrs > 0 && st.toLevelHrs < 100);
 
 // idle: a 5-minute AFK gap adds nothing to active time
@@ -51,6 +57,13 @@ assert.strictEqual(s.stats().activeMin, 40 / 60);
   for (let i = 0; i < 10; i++) n.add({t: sec(i * 10), type: "exp", gain: 8});
   n.add({t: sec(100), type: "map", id: 40}); for (let i = 0; i < 5; i++) n.add({t: sec(110 + i * 10), type: "exp", gain: 2});
   assert.strictEqual(n.stats().map, "42"); assert.strictEqual(n.stats().nowMap, "40") }
+
+// Simple Mode (2026-10-23): EXP per clock minute (a minute with none is 0), best minute, the run's first bar reading
+{ const m = createSession(G), lv = 20, at = (t, e) => m.add({t: T0 + t * 1000, type: "bar", exp: e, pct: e / G.exp[lv] * 100, level: lv});
+  m.add({t: T0, type: "map", id: 42}); at(0, 1000); at(30, 1100); at(70, 1150); at(190, 1400);   // min 0: +100, min 1: +50, min 2: 0, min 3: +250
+  const st = m.stats();
+  assert.deepStrictEqual(st.perMin.map(p => p[1]), [100, 50, 0, 250]); assert.strictEqual(st.bestMin, 250);
+  assert.ok(st.firstBar.level === 20 && Math.abs(st.firstBar.pct - 1000 / G.exp[lv] * 100) < 1e-9 && st.bar.level === 20) }
 
 // party of 3 on A Split Road (Blue Snail 4, Shroom 6, Red Snail 8): +7 fits only Red Snail; +3 could be any (a kill,
 // monster unknown); quest EXP (500) is not a kill
@@ -473,7 +486,7 @@ console.log("history ok");
   // profile's window size never leaves the monitor (his 2560x1392 on a 1920x1040 work area, zoom 1 and 1.25, off to the right)
   { const fs = require("fs"), path = require("path"), real = [...fs.readFileSync(path.join(__dirname, "../app/index.html"), "utf8").matchAll(/data-box="([a-z]+)"/g)].map(m => m[1]), B = TH.builtins(real);
     assert.ok(B.length >= 1 && B[0].name === "Danny's Default" && B[0].win.w === 2560 && B[0].theme.preset === "Default", "built-in decodes");
-    assert.equal(B[0].layout.order.dock.flatMap(i => typeof i === "string" ? [i] : i.row.flat()).length, 12, "every box Danny placed survives");
+    assert.equal(B[0].layout.order.dock.flatMap(i => typeof i === "string" ? [i] : i.row.flat()).length, 10, "every box Danny placed survives (12 before Start and end + Inventory check moved into the main card, 0.2.71)");
     const wa = {x: 0, y: 0, width: 1920, height: 1040}, b = {x: 1500, y: 300, width: 376, height: 640}, c = [360, 600];
     for (const z of [1, 1.25]){ const f = TH.winFit(B[0].win, z, b, c, wa);
       assert.deepStrictEqual([f.w + 16, f.h + 40, f.x, f.y], [1920, 1040, 0, 0], "fits the work area at zoom " + z) }

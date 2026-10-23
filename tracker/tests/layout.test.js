@@ -104,9 +104,9 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   if (!gl) fail("boxes glide when the layout changes", gl);
   // Mini: the zoom follows the window edge in fine steps, never past the window, growing as the window grows
   await page.emulateMedia({reducedMotion: "reduce"});
-  await page.evaluate(() => { $("#miniBtn").click() }); await vp(700, 380);
+  await page.evaluate(() => { $("#miniBtn").click() }); await vp(700, 1000);   // (Simple Mode is ~800-1000 px tall at 1x since 0.2.71)
   let z0 = 0; const zs = [];
-  for (let h = 380; h <= 600; h += 10){ await vp(700, h);
+  for (let h = 1000; h <= 1440; h += 20){ await vp(700, h);
     const [z, bottom, applied] = await page.evaluate(() => [miniZ, $("#mini").getBoundingClientRect().bottom, +$("#mini").style.zoom]); zs.push(z);
     if (Math.abs(applied - z) > 0.001) fail("mini zoom applied at " + h, {z, applied});
     if (z < z0 - 0.001 || bottom > h + 1) fail("mini zoom at " + h, {z, z0, bottom}); z0 = z }

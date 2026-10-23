@@ -16,7 +16,7 @@ const path = require("path"), {chromium} = require("playwright");
   // tab, all in one layout (Danny, 2026-10-19: modules instead of tabs); Past sessions is a pop-up (F2) since 0.2.70, so the toolbox starts empty
   const lay0 = await page.evaluate(() => [[...document.querySelectorAll('#dock > [data-box]')].map(b => b.dataset.box + (b.classList.contains("folded") ? "-" : "")).join(),
     [...document.querySelectorAll("#tbList .tbItem")].map(x => x.dataset.mod).join(), !!document.querySelector(".tabs, section[data-tab=session]")]);
-  if (lay0.join("|") !== "main,log,events,stats,mobs,kpq-,alerts-,snaps-,invcheck,mesos,items,used||false") throw new Error("default layout: " + lay0);
+  if (lay0.join("|") !== "main,log,events,stats,mobs,kpq-,alerts-,mesos,items,used||false") throw new Error("default layout: " + lay0);
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click()));
   // a capture that never sends a frame (minimized game): Start says so instead of waiting for good, and works after (2026-10-19)
   await page.evaluate(() => { window.gdm0 = navigator.mediaDevices.getDisplayMedia; navigator.mediaDevices.getDisplayMedia = async () => document.createElement("canvas").captureStream(4) });
@@ -194,7 +194,7 @@ const path = require("path"), {chromium} = require("playwright");
     const moved = [document.querySelector("#mesoBox").parentElement.id, document.querySelector("[data-box=mobs]").classList.contains("folded")];
     document.querySelector("#layoutReset").click(); await new Promise(r => setTimeout(r, 50));
     return [...moved, document.querySelector("#mesoBox").previousElementSibling.id, document.querySelector("[data-box=mobs]").classList.contains("folded"), JSON.stringify(settings.layout.order.dock), settings.layout.v] });
-  if (lay[0] !== "dock" || !lay[1] || lay[2] !== "invBox" || lay[3] || lay[4] !== '["main","log","events","stats","mobs","kpq","alerts","snaps","invcheck","mesos","items","used"]' || lay[5] !== 2) throw new Error("box layout: " + lay);
+  if (lay[0] !== "dock" || !lay[1] || lay[2] !== "alertsBox" || lay[3] || lay[4] !== '["main","log","events","stats","mobs","kpq","alerts","mesos","items","used"]' || lay[5] !== 2) throw new Error("box layout: " + lay);
   { const old = await page.evaluate(() => { layoutLoad({order: {dock: ["main", "log"], session: ["stats", {row: ["mobs", "events"], w: [1, 1]}], loot: ["items"], hist: ["hist"]}});
       const r = [JSON.stringify([...document.querySelectorAll("#dock > *")].slice(0, 6).map(e => e.dataset.box || [...e.children].map(x => x.dataset.box).join("+"))), !!document.querySelector("#hist").closest("#histPop") && !document.querySelector("#dock #hist")];
       document.querySelector("#layoutReset").click(); return r });
@@ -229,9 +229,9 @@ const path = require("path"), {chromium} = require("playwright");
   await page.click("#tbList [data-mod=used] button"); await page.click("#tbList [data-mod=mesos] button");
   if (await page.evaluate(() => document.querySelector("#dock").lastElementChild.id) !== "mesoBox") throw new Error("+ adds at the bottom");
   await page.click("#tbClose"); if (await page.isVisible("#toolbox")) throw new Error("toolbox close");
-  await page.waitForTimeout(250); await dragTo("[data-box=mobs] .grip", "#snaps", 10);
+  await page.waitForTimeout(250); await dragTo("[data-box=mobs] .grip", "#alertsBox", 10);
   const dr = await page.evaluate(() => [document.querySelector("[data-box=mobs]").nextElementSibling?.id, !!document.querySelector(".dragLabel, .moving"), JSON.stringify(settings.layout.order.dock)]);
-  if (dr[0] !== "snaps" || dr[1] || !/mobs.*snaps/.test(dr[2])) throw new Error("mouse drag: " + dr);
+  if (dr[0] !== "alertsBox" || dr[1] || !/mobs.*alerts/.test(dr[2])) throw new Error("mouse drag: " + dr);
   // pinned: dropped on the strip above the tabs (it only has a size while dragging) the box lands there, not back in a tab
   { const a = await page.locator("[data-box=stats] .grip").boundingBox(); await page.mouse.move(a.x + 3, a.y + 3); await page.mouse.down(); await page.mouse.move(a.x + 20, a.y + 20, {steps: 3});
     const d = await page.locator("#logBox").boundingBox(); await page.mouse.move(d.x + d.width / 2, d.y + d.height - 4, {steps: 5});
@@ -287,7 +287,7 @@ const path = require("path"), {chromium} = require("playwright");
     layoutLoad(saved); const re = document.querySelector("#mesoBox").parentElement.className + "/" + Math.round(document.querySelector("#usedBox").getBoundingClientRect().width);
     return [flat, re, document.querySelector("#usedBox").parentElement.className] });
   if (unw[0] !== 0 || !unw[1].startsWith("boxcol/") || unw[2] !== "boxrow") throw new Error("unwrap/load: " + unw);
-  await page.evaluate(() => window.menu("settings")); await page.click("#layoutReset"); await page.click("#prefsClose"); if ((await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join())) !== "kpq,alerts,snaps") throw new Error("reset folds");
+  await page.evaluate(() => window.menu("settings")); await page.click("#layoutReset"); await page.click("#prefsClose"); if ((await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join())) !== "kpq,alerts") throw new Error("reset folds");
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click())); await page.setViewportSize({width: 1280, height: 720});
   // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened
   await page.waitForTimeout(3200);
@@ -306,7 +306,13 @@ const path = require("path"), {chromium} = require("playwright");
     set("#s1lv", 25); set("#s1pct", 71.40); return [document.querySelector("#snapRate").textContent, document.querySelector("#snapNote").textContent] });
   const want = Math.round(0.2479 * 47216 / (22 / 60));
   if (Math.abs(+sn[0].replace(/\D/g, "") - want) > want * 0.01 || !/22 min/.test(sn[1])) throw new Error("snapshots: " + JSON.stringify(sn) + " want ~" + want);
+  await page.click("#snapFix"); if (!await page.isVisible("#s1lv")) throw new Error("fix opens the start/end fields");
   await page.click("#snapEnd"); await page.waitForFunction(() => snaps.end?.file && snaps.end.hand, null, {timeout: 3000}).catch(() => {});   // (200 ms flaked, 2026-10-23)   // a button snapshot from the (test) game picture: saved, replaces the typed end
+  await page.click("#snapFix");   // close the start/end fields again
+  // main card (Danny 2026-10-23, mockup card 2): Start -> now on one line; Per hour / Total switch on the tiles, remembered
+  { await page.click("#tTot"); const t = await page.evaluate(() => [$("#snapLine").textContent, $("#expHrK").textContent, $("#expHr").textContent, $("#lootTK").textContent, settings.tileTotal, String(Math.round(session.stats().exp).toLocaleString())]);
+    await page.click("#tPer"); const p = await page.evaluate(() => [$("#expHrK").textContent, settings.tileTotal]);
+    if (!/^Lv 25 46\.61% → .* read /.test(t[0]) || t[1] !== "EXP gained" || t[2] !== t[5] || t[3] !== "Loot value" || t[4] !== true || p[0] !== "EXP/hr" || p[1] !== false) throw new Error("main card: " + JSON.stringify([t, p])) }
   if (!(await page.evaluate(() => snaps.end.file && snaps.end.hand))) throw new Error("snap end button");
   await page.fill("#runName", "KPQ rush with randoms");
   await page.click("#go"); await page.waitForTimeout(200);
@@ -403,8 +409,11 @@ const path = require("path"), {chromium} = require("playwright");
   // Mini view (Danny, 2026-10-18): the totals and times, the run log and the three lists; the window asked to fit it
   const mv = await page.evaluate(() => ["#miniExp", "#miniMeso", "#miniTotal", "#miniActive", "#miniClock", "#miniTtl", "#miniItems", "#miniMobs", "#miniUsed"].filter(q => !document.querySelector(q).offsetParent));
   if (mv.length) throw new Error("mini view hides: " + mv);
+  // Simple Mode (Danny's B2 <Subway Depot> mockup, 2026-10-23): map, Lv/job, EXP gained, potions, spent / picked up / loot value
+  { const sm = await page.evaluate(() => [$("#smMap").textContent, $("#smWho").textContent, $("#miniTotal").textContent, $("#smMoney").textContent, !!$("#smChart").children.length]);
+    if (sm[0] === "No map yet" || !/Lv\./.test(sm[1]) || !/^\+/.test(sm[2]) || !/spent.*picked up.*loot value/.test(sm[3]) || !sm[4]) throw new Error("simple mode: " + JSON.stringify(sm)) }
   // a window bigger than the Mini view: the content grows to fill it, no blank space (Danny, 2026-10-19)
-  const vp = page.viewportSize(); await page.setViewportSize({width: 1276, height: 420}); await page.waitForTimeout(150);
+  const vp = page.viewportSize(); await page.setViewportSize({width: 1276, height: 1900}); await page.waitForTimeout(150);   // (Simple Mode is ~1000 px tall at 1x since 0.2.71)
   const mz = await page.evaluate(() => [miniZ, document.querySelector("#mini").getBoundingClientRect().bottom, innerHeight]);
   if (!(mz[0] > 1.3) || mz[1] < mz[2] - 30) throw new Error("mini fill: " + mz);
   await page.setViewportSize(vp);

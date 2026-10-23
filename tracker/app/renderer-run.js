@@ -133,7 +133,7 @@ async function recoverCheck(){
   $("#recoverDrop").onclick = async () => { await host.autosave?.(null); $("#recover").classList.add("hidden"); $("#status").textContent = "Unsaved run discarded." };
 }
 // more about the run for History: who played it, levels, clock time, the best drop, the monster killed most
-const worthOf = id => G.pw?.[id]?.[0] ?? G.items[id]?.p ?? 0;
+const worthOf = id => GrindSession.lootPrice(G, id).each;   // Etc monster drops at NPC price (core/session.js lootPrice)
 // the best drop: the single item worth the most (older sessions: from their item counts at today's prices)
 function bestDrop(x){
   if (x.bestDrop !== undefined) return x.bestDrop;
