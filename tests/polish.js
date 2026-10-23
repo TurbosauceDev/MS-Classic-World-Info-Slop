@@ -108,6 +108,11 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
   check(sel && sel[0] && sel[1] > 300, `phone: Where to train's attack select gets the full row (${sel})`);
   // #14 footer version wraps between its two halves
   check(await p.evaluate(() => document.querySelectorAll(".sitefoot .sitever:not(.pwstate)>span").length === 2), "footer: version line in two unbreakable halves");
+  // Victoria Island Map Navigator card assumes no taxis (Danny 10-23) and hands that to the full navigator
+  await open("world");
+  const vn = await p.evaluate(() => { $("#lpnfrom").value = "10000000"; $("#lpnto").value = $("#lpnto").options[3].value; $("#lpnto").dispatchEvent(new Event("change"));
+    const t = $("#lpnav").innerText; $("#lpnroute").click(); return [/no taxis/.test(t), $("#navnocab").checked] });
+  check(vn[0] && vn[1], `Victoria Island Map Navigator card: no taxis (${vn})`);
   check(!errs.length, `no page errors (${errs.join(" | ")})`);
   await b.close(); console.log(fails ? `\n${fails} failed` : "\nall good"); process.exit(fails ? 1 : 0);
 })();

@@ -98,9 +98,9 @@ $("#lpkpqs").addEventListener("click", e => { const b = e.target.closest("[data-
 // World Map: the island's map picture; Map Navigator: town to town with the planner's trip times (60-planner.js TRAVEL)
 const TOWNS = D.cabs.filter(id => D.nav[id]);
 function lpNav(){
-  const a = $("#lpnfrom").value, b = $("#lpnto").value, t = TRAVEL.travel(a, b);
-  $("#lpnav").innerHTML = a === b ? `<p class="sub">Pick two different towns.</p>` : !t ? `<p class="sub">No route found.</p>`
-    : `<div class="lpbig">about ${Math.max(1, Math.round(t.sec / 60))} min <span class="sub">(estimate)</span></div><p class="sub">${t.walk} map${t.walk === 1 ? "" : "s"} on foot${t.taxi ? `, ${t.taxi} taxi ride${t.taxi === 1 ? "" : "s"}` : ""}.</p>
+  const a = $("#lpnfrom").value, b = $("#lpnto").value, h = a === b ? [] : TRAVEL.walkHops(a, b);   // no taxis, like the full Map Navigator's "No taxi" box
+  $("#lpnav").innerHTML = a === b ? `<p class="sub">Pick two different towns.</p>` : !h ? `<p class="sub">No walking route found.</p>`
+    : `<div class="lpbig">about ${Math.max(1, Math.round(h.length * TRAVEL.WALK_SEC / 60))} min <span class="sub">(estimate)</span></div><p class="sub">${h.length} map${h.length === 1 ? "" : "s"} on foot, no taxis.</p>
       <button class="btn sm" id="lpnroute">Show the route →</button>`;
 }
 let worldDrawn = false;
@@ -111,7 +111,7 @@ const drawWorld = () => { if (worldDrawn) return; worldDrawn = true;
   $("#lpnfrom").innerHTML = $("#lpnto").innerHTML = opts; $("#lpnto").selectedIndex = Math.min(1, TOWNS.length - 1); lpNav() };
 for (const id of ["#lpnfrom", "#lpnto"]) $(id).addEventListener("change", lpNav);
 $("#lpnav").addEventListener("click", e => { if (!e.target.closest("#lpnroute")) return;
-  $(`#navtowns button[data-id="${$("#lpnfrom").value}"]`)?.click(); navTo($("#lpnto").value) });
+  $(`#navtowns button[data-id="${$("#lpnfrom").value}"]`)?.click(); navTo.noCab = true; navTo($("#lpnto").value); navTo.noCab = false });
 
 /* Mesos and Trade */
 // FM Sniper: the live listings furthest under their meso.watch median sale price; Price check: one item's median sale

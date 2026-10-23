@@ -38,6 +38,7 @@ function walkHops(a, b){
   const out = []; for (let v = b; v !== a; v = prev[v]) out.unshift([prev[v], v, false]);
   return out;
 }
+TRAVEL.walkHops = walkHops;   // the Victoria Island card (77-landing.js) quotes the no-taxi route
 function route(a, b){
   if (!D.nav[a] || !D.nav[b]) return null;
   if (ISLAND(a) && !ISLAND(b)){   // Shanks' ship, then on to the destination
@@ -84,6 +85,6 @@ $("#navswap").addEventListener("click", () => { if (S.to && D.nav[S.to]){ [S.fro
 // open the navigator with a map as the destination (World Map's "Route here")
 $("#navshare").addEventListener("click", () => copyShare($("#navshare"), shareUrl("n", {f: S.from, t: S.to, c: S.nocab ? 1 : 0})));
 if (HASH.n && D.nav[HASH.n.f]){ S.from = HASH.n.f; S.to = HASH.n.t || null; S.nocab = !!HASH.n.c; $("#navnocab").checked = S.nocab }   // shared link
-navTo = id => { hideQtip(); S.to = String(id); save(); $("#t-navi").click(); render(); $("#navi").scrollIntoView({block: "start"}) };
+navTo = id => { hideQtip(); S.to = String(id); if (id && navTo.noCab){ S.nocab = true; $("#navnocab").checked = true } save(); $("#t-navi").click(); render(); $("#navi").scrollIntoView({block: "start"}) };
 render();
 })();
