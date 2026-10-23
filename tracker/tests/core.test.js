@@ -200,6 +200,8 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
   assert.ok(Math.abs(expBetween(G, {level: 25, pct: 46.61}, {level: 25, pct: 71.40}) - 0.2479 * n) < 1, "same level");
   assert.strictEqual(expBetween(G, {level: 24, exp: 100}, {level: 26, exp: 50}), G.exp[24] - 100 + G.exp[25] + 50, "across levels");
   assert.strictEqual(expBetween(G, {level: 25, pct: 50}, {level: 24, pct: 10}), null, "level went down: no answer");
+  { const m = G.exp[32], d = expBetween(G, {level: 32, pct: 81.93, exp: 200579}, {level: 32, pct: 94.68, exp: 116233});   // 10-23 "3 kpq rush": start read 200,579 for ~100,578
+    assert.ok(d > 0 && Math.abs(d - 0.1275 * m) < 0.002 * m, "raw EXP that contradicts its % is ignored: " + d) }
   assert.strictEqual(levelOf(G, Math.round(0.7094 * n), 70.94), 25, "level from EXP / %");
   assert.strictEqual(levelOf(G, 1, 68.01), null, "misread EXP fits no level");
   assert.strictEqual(expBetween(G, {level: 20, pct: 50}, {level: 21, pct: null}), null, "a % left blank: no answer, not 0%") }

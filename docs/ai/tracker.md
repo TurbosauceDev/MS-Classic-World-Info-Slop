@@ -204,3 +204,6 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 
 ## Site live reader shares tracker code 2026-10-21
 - build.py inlines `tracker/core/gamedata.js` + `tracker/core/session.js` into the site (src/js/63-expclive.js) next to readers.js. Changing session/readers/gamedata changes the site too: run `node tests/expclive.js` (tests.yml now also triggers on tracker/app/readers.js and tracker/core/**). Keep these three files browser-safe (no require at top level).
+
+## Negative EXP from misread snapshot 2026-10-23
+- Start/End snapshot raw EXP can be misread while the % is right (100,578 read as 200,579 gave -84,346). `expBetween` and `snap()` now drop a raw EXP that is >1% of the level off its own %. Fixture: `tracker/tests/sessions/negative-exp-kpq-rush-2026-10-23.json` (saved run, tracker 0.2.69).

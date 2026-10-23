@@ -392,7 +392,7 @@ async function snap(which, f = null, hand = true){
   const img = GrindReaders.native(f), bar = GrindReaders.readBar(img) || GrindReaders.readBarAny(f);
   const level = bar && (GrindSession.levelOf(G, bar.exp, bar.pct) || session?.state.level) || null;
   // an automatic snapshot whose bar didn't read keeps the last good reading (only the picture is new)
-  const sn = !bar && !hand && snaps[which]?.level ? {...snaps[which]} : {t: Date.now(), level, pct: bar ? bar.pct : null, exp: bar && level ? bar.exp : undefined, hand};
+  const sn = !bar && !hand && snaps[which]?.level ? {...snaps[which]} : {t: Date.now(), level, pct: bar ? bar.pct : null, exp: bar && level && !(G.exp[level] && Math.abs(bar.exp - bar.pct / 100 * G.exp[level]) > 0.01 * G.exp[level]) ? bar.exp : undefined, hand};
   snaps[which] = sn;
   try {
     const c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);

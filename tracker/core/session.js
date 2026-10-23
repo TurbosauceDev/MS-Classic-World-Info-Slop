@@ -360,7 +360,9 @@
   // EXP gained from snapshot a to b ({level, exp}; exp optional, else pct of the level's total): the rest of a's level,
   // every full level between, and b's EXP into its level. null when it can't be worked out.
   function expBetween(G, a, b){
-    const into = s => s.exp != null ? s.exp : G.exp[s.level] && s.pct != null ? s.pct / 100 * G.exp[s.level] : null;
+    // a raw EXP that disagrees with the same snapshot's % (a misread digit, 100,578 read as 200,579) loses to the %
+    const into = s => { const need = G.exp[s.level], byPct = need && s.pct != null ? s.pct / 100 * need : null;
+      return s.exp != null && !(byPct != null && Math.abs(s.exp - byPct) > 0.01 * need) ? s.exp : byPct };
     if (!a?.level || !b?.level || b.level < a.level) return null;
     const ea = into(a), eb = into(b);
     if (ea == null || eb == null) return null;
