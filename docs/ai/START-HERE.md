@@ -20,6 +20,8 @@ avoid that. Read them. Not optional.
 | `docs/ai/daily-briefing.md` | Today's digest — what landed, what's broken, today's priorities | You'll work on yesterday's problem instead of today's |
 | `docs/ai/danny-digest.md` | Plain-English briefing for Danny (less technical) | If Danny asks "what's up?" you'll dump 500 lines of jargon on him instead of pointing him at one short doc |
 | `docs/ai/digest-contract.md` | Where digests live, required fields, tone rules; linted in CI | You'll post a digest the pipeline rejects, or hardcode the archive thread id |
+| `docs/ai/discord-digest-runbook.md` | Transport, state and rotation mechanics of the digest pipeline (webhooks, state file, recovery) | You'll break the pipeline or be unable to rebuild it after a sandbox loss |
+| `docs/ai/HANDOFF-TEMPLATE.md` + `docs/ai/handoff-<surface>.md` | Standing per-surface state snapshots, kept fresh at session end | You'll guess another surface's state and duplicate or collide with its in-flight work |
 | `docs/ai/mesowatch-sync.md` | Canonical plumbing handoff for the meso.watch pipeline | You'll break the Cloudflare bypass, the localStorage transport, or the cron-scheduling pattern (each one took hours to figure out) |
 | `docs/ai/decisions.md` | Dated decision log — every non-trivial call Danny made | You'll re-litigate a decision Danny already made, or undo a constraint that exists for a reason |
 | `docs/ai/design.md` | Visual style guide: tokens, type, spacing, modals, animation, sprites, copy, tracker parity | Your page looks off-brand, hard-codes colors, or breaks Danny's layout rules |
@@ -52,6 +54,10 @@ avoid that. Read them. Not optional.
 8. **Append a worklog entry after every session** — one line, format: `YYYY-MM-DD HH:MMZ | agent-name | one-line summary | commit hash or files touched`.
 9. **For code changes** (not docs): follow the existing patterns. Look at how the latest similar fetcher is structured (`scripts/fetch_mesoindex.py` is the most recent example), copy the shape, don't invent new conventions.
 10. **For schema changes**: additive only. Don't remove fields without checking with Danny in-thread. Don't reorder arrays (the frontend reads by index).
+11. **Claim before you take an open thread.** Not addressed to you? Append a `[CLAIM]` lease line first (format: mailbox § How to use item 6; enforced by `tests/docs.test.js`). Release with `[RELEASE]` if you drop it.
+12. **Pings are for urgent, addressed asks only.** `#agent-pings`, one line, cap 5/agent/day (mailbox § How to use item 7). FYIs stay in the mailbox.
+13. **Keep your surface's handoff file fresh.** Update `docs/ai/handoff-<surface>.md` (template: `docs/ai/HANDOFF-TEMPLATE.md`) at session end. Volatile docs need a current `last-verified:` stamp — docs CI fails past 72h.
+14. **Transcribe Danny's calls.** A decision exists only when it has a dated line in `docs/ai/decisions.md`; pending calls live in its § Open decisions.
 
 ## Decision tree — where to start based on what you're doing
 
@@ -149,6 +155,9 @@ Then post a worklog entry when you start work + another when you finish.
 | `docs/ai/danny-digest.md` | Plain-English briefing for Danny | overwrite daily |
 | `docs/ai/mesowatch-sync.md` | Canonical meso.watch pipeline handoff | when pipeline plumbing changes |
 | `docs/ai/decisions.md` | Dated decision log | append on every non-trivial call |
+| `docs/ai/discord-digest-runbook.md` | Digest pipeline transport/state/rotation mechanics | when pipeline mechanics change |
+| `docs/ai/HANDOFF-TEMPLATE.md` | Template for standing per-surface handoffs | when the snapshot shape changes |
+| `docs/ai/handoff-<surface>.md` | Per-surface state snapshot (one per agent surface) | touch at session end |
 | `docs/ai/fixtures.md` | Test image index | append when adding new fixtures |
 
 ---

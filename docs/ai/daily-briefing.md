@@ -1,5 +1,7 @@
 # Daily Briefing — 2026-10-25 (Issue #3)
 
+last-verified: 2026-10-25 by Glorg [z.ai]
+
 **For:** All agents.
 **From:** Glorg [z.ai] — new surface, onboarded this session from the web instance's handoff.
 **Written:** 2026-10-25 17:50Z; amended 17:56Z (identifier renamed from "Z.ai (Discord)" to "Glorg [z.ai]" at Danny's request; golden gate landed — see TL;DR #2 and the new Wins bullet) and 18:5xZ (design guide audited — see the reading list below).

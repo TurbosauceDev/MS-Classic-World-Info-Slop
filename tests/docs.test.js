@@ -3,6 +3,8 @@
 //    Bare names resolve against the folders the docs use them from (src/js, tracker, ...); add a doc's own planned or
 //    generated-only names to IGNORE with a reason. Absolute paths (/home/z/... = Danny's sandbox) are never repo paths.
 // 2. docs/ai/fixtures.md lists every test image and names no image that's gone.
+// 3. [CLAIM]/[RECLAIM]/[RELEASE] lines in agent-mailbox.md follow the lease format (mailbox § How to use).
+// 4. Volatile docs carry a fresh `last-verified: YYYY-MM-DD by <agent>` stamp (VOLATILE list below).
 const fs = require("fs"), path = require("path");
 const root = path.join(__dirname, "..");
 const DOCS = ["CLAUDE.md", ...fs.readdirSync(path.join(root, "docs/ai")).filter(f => f.endsWith(".md")).map(f => "docs/ai/" + f)];
@@ -43,6 +45,7 @@ const IGNORE = new Set([
   "fetch_maplestory_market.py",           // planned, not yet written (bare form)
   "submit_to_classicrank.py",             // planned, not yet written (bare form)
   "mesowatch_poll_ci.sh",                 // bare form of scripts/mesowatch-sync/mesowatch_poll_ci.sh (referenced in multiple docs)
+  "download/ms-classic-enhancements/",    // web instance's sandbox draft batch, quoted in decisions.md — not a repo path
 ]);
 const FIXTURE_DIRS = ["tests/fixtures", ...fs.readdirSync(path.join(root, "tracker/tests")).filter(d => d.startsWith("frames")).map(d => "tracker/tests/" + d)];
 let fail = 0;
@@ -80,6 +83,27 @@ for (const doc of DOCS){
     checked++;
     if (!found(p.replace(/\/$/, ""))) bad(doc, `${p} not found`);
   }
+}
+
+// lease lines are standalone lines starting with [CLAIM]/[RECLAIM]/[RELEASE] (mailbox § How to use item 6).
+// Fenced examples and mid-prose mentions in backticks don't count; only a line that OPENS with the token must match the format.
+const CLAIM_RE = /^(\s*>\s*|\s*)(\*\*)?\[(CLAIM|RECLAIM|RELEASE)\]\2?\s+\S+\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}Z\b/;
+const CLAIM_OPEN = /^(\s*>\s*|\s*)(\*\*)?\[(CLAIM|RECLAIM|RELEASE)\]/;
+let mbFence = false;
+for (const line of fs.readFileSync(path.join(root, "docs/ai/agent-mailbox.md"), "utf8").split("\n")){
+  if (/^\s*```/.test(line)) { mbFence = !mbFence; continue; }
+  if (mbFence || !CLAIM_OPEN.test(line)) continue;
+  if (!CLAIM_RE.test(line)) bad("docs/ai/agent-mailbox.md", `malformed lease line: ${line.trim().slice(0, 80)}`);
+}
+
+// volatile docs: must carry a last-verified stamp no older than maxH hours (end-of-day UTC, so a same-day stamp is always fresh)
+const VOLATILE = [["docs/ai/daily-briefing.md", 72]];
+for (const [f, maxH] of VOLATILE){
+  const text = fs.readFileSync(path.join(root, f), "utf8");
+  const m = text.match(/last-verified:\s*(\d{4}-\d{2}-\d{2})\s+by\s+\S/);
+  if (!m){ bad(f, "missing `last-verified: YYYY-MM-DD by <agent>` stamp (docs.test.js VOLATILE list)"); continue; }
+  const ageH = (Date.now() - Date.parse(m[1] + "T23:59:59Z")) / 36e5;
+  if (ageH > maxH) bad(f, `last-verified ${m[1]} is ${Math.round(ageH)}h old (max ${maxH}) — refresh the file and bump the stamp`);
 }
 
 // fixture index: every image listed, every listed image present

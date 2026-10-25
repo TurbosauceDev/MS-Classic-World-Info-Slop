@@ -4,6 +4,11 @@ One dated line per call Danny made. `grep -i <word> docs/ai/decisions.md` before
 removal. Add a line (newest at the bottom of its section) in the same push as the work. Backfilled 2026-10-18 from
 project memory; older dates are the day the call was recorded.
 
+**Transcription rule (2026-10-25):** a decision isn't "made" until it has a dated line here. Whoever witnesses the
+call transcribes it in the same session — agents included — tagged with its source (`discord`, `in-thread`, ...).
+Calls Danny still owes live in "Open decisions" at the bottom; when he makes the call, move it into the right section
+above as a dated line and note the resolution date in its place.
+
 ## Process
 - 2026-10-06 Data comes from the OSMS game-file export; Classic World only, launch content only (no Orbis, El Nath, Forgotten Hollow, 3rd job unless asked).
 - 2026-10-07 Pushing to the default branch is production; needs his in-thread "push" (he OK'd direct pushes 10-07, a guard may still ask).
@@ -277,3 +282,13 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-10-25 Danny: wants a written design handoff so Z.ai and any helper keep the site and tracker visually aligned; "the style we're building so far is looking good". Written as docs/ai/design.md (T-06).
 - 2026-10-25 Danny: retire the "INSTRUCTION FOR CLAUDE" offer-on-check-in block from `docs/ai/danny-digest.md` — the daily digest is now delivered automatically (Glorg [z.ai]: a Markdown file to #daily-updates at 04:45 AM PT, stale issues rotated to the [Archive] thread), so Claude surfaces no longer need to offer or manually refresh it.
 - 2026-10-25 Danny (via Glorg [z.ai]): make the digest/design spec executable: gold digest, lint in CI, written contract (docs/ai/digest-contract.md), routing in config/digest.json. Repo wins over chat. Built by T-07.
+
+## Open decisions (pending Danny)
+
+Each entry blocks something. When Danny calls it, transcribe above with the date and note the resolution here.
+
+- **maplestory.market partner key** — blocks the dashboard price slot (request at his account page; secret goes to the sandbox secrets path).
+- **classicrank.com partner key from Kitten** — blocks classicrank ingestion (same secrets path).
+- **Cron pile-up** — cut meso.watch to 2 polls/hour vs add push-retry to the poll script (Z.ai leans retry).
+- **Draft batch** — merge vs archive the web instance's `download/ms-classic-enhancements/` draft batch.
+- **web-PAT revoke** — confirm the web instance's old PAT is revoked (hygiene; fine-grained replacement already in use).
