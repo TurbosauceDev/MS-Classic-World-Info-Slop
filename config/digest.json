@@ -12,7 +12,7 @@
     "channel": "#daily-updates",
     "webhook_secret": "DISCORD_DAILY_UPDATES_WEBHOOK",
     "archive_thread_name": "[Archive]",
-    "archive_thread_id": null,
+    "archive_thread_id": "1563979543272890620",
     "archive_thread_id_note": "Z.ai fills in the Discord thread id (digits, as a string). Not a secret."
   },
   "archive": { "keep_latest_in_channel": 1, "stale_after_hours": 24 },
