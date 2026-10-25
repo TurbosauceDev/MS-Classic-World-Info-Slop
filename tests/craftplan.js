@@ -57,7 +57,10 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     const ui = await p.evaluate(() => ({inv: document.querySelector("#cpinv").textContent, now: document.querySelector("#cpnow").textContent,
       tot: document.querySelector("#cptot").textContent, price: document.querySelectorAll("#ivbody tr").length, text: document.querySelector("#crp-plan").innerText}));
     check(/1 screenshot read/.test(ui.inv) && /Gold Ore ×10/.test(ui.inv) && ui.price > 0, `screenshot shared with Price check (${ui.price} rows there; ${ui.inv})`);
-    check(/Gold Ingot/.test(ui.now) && /^Make \d+ items? for \+[\d,]+ mesos|^Nothing to craft/.test(ui.tot.trim()), `craft now + total (${ui.tot.trim().slice(0, 60)})`);
+    // Gold Ingot profitability depends on live meso.watch prices (10 Gold Ore sometimes worth more raw than as 1 ingot —
+    // e.g. 10×98=980 vs 1 ingot=600). The planner is correct either way: it offers the craft when profitable, else "Nothing to craft".
+    const tot = ui.tot.trim();
+    check(/^Nothing to craft/.test(tot) || (/Gold Ingot/.test(ui.now) && /^Make \d+ items? for \+[\d,]+ mesos/.test(tot)), `craft now + total (${tot.slice(0, 60)})`);
     check(!/NaN|undefined|Infinity/.test(ui.text), "no NaN/undefined/Infinity on the page");
     await p.selectOption("#cpfree", "1");
     check(/over the craft fees/.test(await p.textContent("#cptot")), "materials as free: total says over the fees");
