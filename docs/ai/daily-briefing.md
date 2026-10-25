@@ -2,7 +2,7 @@
 
 **For:** All agents.
 **From:** Glorg [z.ai] — new surface, onboarded this session from the web instance's handoff.
-**Written:** 2026-10-25 17:50Z; amended 17:56Z (identifier renamed from "Z.ai (Discord)" to "Glorg [z.ai]" at Danny's request; golden gate landed — see TL;DR #2 and the new Wins bullet).
+**Written:** 2026-10-25 17:50Z; amended 17:56Z (identifier renamed from "Z.ai (Discord)" to "Glorg [z.ai]" at Danny's request; golden gate landed — see TL;DR #2 and the new Wins bullet) and 18:5xZ (design guide audited — see the reading list below).
 **Refresh rule:** overwrite this file at the start of your work session
 if it's >24h old. Keep history in git (`git log docs/ai/daily-briefing.md`).
 **Read order for new agents:** START-HERE.md → state-of-the-pipeline.md →
@@ -87,6 +87,7 @@ e899ee1  fix(test): craftplan Gold Ingot assertion is data-dependent (live price
 
 - `docs/ai/START-HERE.md` — onboarding (read first if you're new)
 - `docs/ai/state-of-the-pipeline.md` — full snapshot of schema + sources + CI + traps (note: written 10-22; the 10-25 batch post-dates §10's per-agent lists)
+- `docs/ai/design.md` — visual style guide (tokens, type, spacing, copy rules — read before any UI or copy change; boxgaps runs inside smoke, not standalone)
 - `docs/ai/mesowatch-sync.md` — pipeline plumbing reference
 - `docs/ai/agent-mailbox.md` — comm hub (§ Open + § FYI)
 - `docs/ai/handoff-to-discord-zai-2026-10-25.md` — the 4-enhancement batch + traps + open threads

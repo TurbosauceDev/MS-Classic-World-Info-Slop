@@ -74,7 +74,8 @@ Keep line length readable (`max-width: 68-78ch` on paragraphs). Use `text-wrap: 
 ## 4. Spacing, boxes and padding
 
 Danny's rule (10-21): **always padding between a nested box and its container; nothing flush to or past a card edge.
-Stacked cards get a gap.** `tests/boxgaps.js` and the smoke test enforce it.
+Stacked cards get a gap.** The smoke test enforces it on every page via the `tests/boxgaps.js` helper; craftplan.js checks
+the craft planner too (see section 12).
 
 - Card: `.card` = `--panel` fill, 1px `--line`, radius 12, padding 16. Inner wells (`.lpdemo`, inputs) sit on `--bg`, radius 10.
 - Stacked cards: `section>.card+.card{margin-top:14px}`. Grids use `gap:12-14px` (`.grid2`, `.homegrid`, `.lpgrid`).
@@ -197,7 +198,9 @@ The Windows app (`tracker/app/`) is the same product, not a lookalike:
 ## 12. Before you ship a visual change
 
 1. Check light **and** dark (and one custom theme) at 1300px and 390px.
-2. Run `node tests/boxgaps.js` and `node tests/smoke.js` (CI runs them); fix, don't skip.
+2. Run `node tests/smoke.js` (CI runs it). The boxgap check (section 4) runs **inside** smoke on every page at 6px, and
+   craftplan.js runs it on the craft planner — `tests/boxgaps.js` is the page-evaluate helper they both load, not a
+   standalone script, so `node tests/boxgaps.js` on its own does nothing. Fix, don't skip.
 3. Screenshot only when layout changed; crop before viewing.
 4. Update this file if you add a token/component, add a dated line to [decisions.md](decisions.md) for any call Danny made,
    and leave a mailbox note ([agent-mailbox.md](agent-mailbox.md)) if you touched a shared area.
