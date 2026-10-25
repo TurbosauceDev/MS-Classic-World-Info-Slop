@@ -200,7 +200,8 @@ The Windows app (`tracker/app/`) is the same product, not a lookalike:
 1. Check light **and** dark (and one custom theme) at 1300px and 390px.
 2. Run `node tests/smoke.js` (CI runs it). The boxgap check (section 4) runs **inside** smoke on every page at 6px, and
    craftplan.js runs it on the craft planner — `tests/boxgaps.js` is the page-evaluate helper they both load, not a
-   standalone script, so `node tests/boxgaps.js` on its own does nothing. Fix, don't skip.
+   standalone script, so `node tests/boxgaps.js` on its own does nothing. Fix, don't skip. `node tests/digest.test.js` checks that the commands in this file exist and do what they say,
+   and that UI text follows section 10.
 3. Screenshot only when layout changed; crop before viewing.
 4. Update this file if you add a token/component, add a dated line to [decisions.md](decisions.md) for any call Danny made,
    and leave a mailbox note ([agent-mailbox.md](agent-mailbox.md)) if you touched a shared area.

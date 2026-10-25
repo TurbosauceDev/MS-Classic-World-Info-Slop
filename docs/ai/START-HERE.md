@@ -19,6 +19,7 @@ avoid that. Read them. Not optional.
 | `docs/ai/agent-worklog.md` | One-line per session activity feed | You'll redo work someone else just finished; or you'll step on a concurrent edit because you didn't see the latest commit |
 | `docs/ai/daily-briefing.md` | Today's digest — what landed, what's broken, today's priorities | You'll work on yesterday's problem instead of today's |
 | `docs/ai/danny-digest.md` | Plain-English briefing for Danny (less technical) | If Danny asks "what's up?" you'll dump 500 lines of jargon on him instead of pointing him at one short doc |
+| `docs/ai/digest-contract.md` | Where digests live, required fields, tone rules; linted in CI | You'll post a digest the pipeline rejects, or hardcode the archive thread id |
 | `docs/ai/mesowatch-sync.md` | Canonical plumbing handoff for the meso.watch pipeline | You'll break the Cloudflare bypass, the localStorage transport, or the cron-scheduling pattern (each one took hours to figure out) |
 | `docs/ai/decisions.md` | Dated decision log — every non-trivial call Danny made | You'll re-litigate a decision Danny already made, or undo a constraint that exists for a reason |
 | `docs/ai/design.md` | Visual style guide: tokens, type, spacing, modals, animation, sprites, copy, tracker parity | Your page looks off-brand, hard-codes colors, or breaks Danny's layout rules |

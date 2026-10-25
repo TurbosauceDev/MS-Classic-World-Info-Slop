@@ -1,0 +1,20 @@
+{
+  "_comment": "Digest pipeline routing. Names secrets, never holds them: webhook URLs live in repo/sandbox secrets only. Contract: docs/ai/digest-contract.md. Checked by tests/digest.test.js.",
+  "version": 1,
+  "schedule": { "local_time": "04:45", "timezone": "America/Los_Angeles" },
+  "files": {
+    "live_digest": "docs/ai/danny-digest.md",
+    "live_briefing": "docs/ai/daily-briefing.md",
+    "gold_digest": "docs/ai/examples/danny-digest.gold.md",
+    "attachment_name": "danny-digest-{date}-issue-{issue}.md"
+  },
+  "discord": {
+    "channel": "#daily-updates",
+    "webhook_secret": "DISCORD_DAILY_UPDATES_WEBHOOK",
+    "archive_thread_name": "[Archive]",
+    "archive_thread_id": null,
+    "archive_thread_id_note": "Z.ai fills in the Discord thread id (digits, as a string). Not a secret."
+  },
+  "archive": { "keep_latest_in_channel": 1, "stale_after_hours": 24 },
+  "lint": { "command": "node scripts/lint_digest.js", "run_before_post": true }
+}

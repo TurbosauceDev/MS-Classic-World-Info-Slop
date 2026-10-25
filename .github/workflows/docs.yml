@@ -1,5 +1,6 @@
 # Docs check on every push/PR (no path filter, so a code move that breaks the notes goes red): every path and command
-# named in CLAUDE.md and docs/ai/*.md exists, and docs/ai/fixtures.md lists every test image. No installs, seconds.
+# named in CLAUDE.md and docs/ai/*.md exists, and docs/ai/fixtures.md lists every test image;
+# tests/digest.test.js lints the digest, checks config/digest.json and that design.md commands do what they claim. No installs, seconds.
 name: Docs check
 on:
   push:
@@ -16,3 +17,4 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: node tests/docs.test.js
+      - run: node tests/digest.test.js
