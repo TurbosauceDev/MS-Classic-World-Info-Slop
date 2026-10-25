@@ -201,7 +201,9 @@ const boxGaps = require("./boxgaps");
   // meso.watch live listings + trend (2026-10-19): cheap filter is non-equipment only, sorted by how far under the median
   // needs real live listings, which are dropped when meso.watch only has stale ones (10-21): FM Sniper's own listing checks
   // run on a fixture (tests/snipe.js), so here an empty list only has to show the filter's empty state
-  const live = await p.evaluate(() => Object.keys(PWNOW).length);
+  // guard on what the cheap filter can show, not on raw PWNOW: pwCheap needs a live listing AND a solid
+  // (non-equip) median (10-maps.js), so an all-equip listing lull must take the empty branch, not false-fail the gate
+  const live = await p.evaluate(() => Object.keys(PWNOW).filter(id => PW[id] && !(PW[id][4] & 1)).length);
   if (live){
     await p.click("#itcheap"); { const r = await p.$$eval("#itrows tr[data-id]", r => r.map(x => [x.children[2].textContent, x.children[6].textContent]));
       check(r.length > 0 && r.every(([lv, pw]) => lv === "" && /now [\d,]+/.test(pw)), "item list: cheap in shops now (non-equip, with listing)") }
