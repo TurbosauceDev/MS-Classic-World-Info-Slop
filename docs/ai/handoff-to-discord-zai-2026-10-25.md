@@ -24,7 +24,7 @@ Danny asked me to go as deep as possible on the project, then build 4 enhancemen
 - **HEAD:** `e899ee1` (`fix(test): craftplan Gold Ingot assertion is data-dependent`)
 - **The 4-enhancement batch** is commits `53d8825`→`3e3bb07` (rebased onto the 16:53 classicmarket data refresh).
 - **Production is live + verified:** `https://maplestory.scumlord.studio/` (custom domain → GitHub Pages). Build stamp `v0.18.1 · built Oct 25, 2026 · 16:29 UTC`. Deployed HTML contains all 4 enhancements (confirmed via grep: `mcihealth` 9 refs, `7-day sale-price trend` 1, `findDeals` 2, `value="trend">7-day trend` 1).
-- **CI on `e899ee1`:** Docs check ✓ success; Site tests was in-progress at handoff time (locally I ran the full suite + it's green — see below). `pages.yml` ran ✓ on `3e3bb07`. **First thing you do: confirm Site tests on `e899ee1` finished green** ([Actions tab](https://github.com/TurbosauceDev/MS-Classic-World-Info-Slop/actions) → "Site tests" run for `e899ee1`).
+- **CI on `e899ee1`:** Docs check ✓ success; **Site tests ✓ success (run #138)** — the craftplan fix flipped it green (it was failure #137 on the pre-fix commit `3e3bb07`). `pages.yml` ran ✓ on `3e3bb07`. All green.
 
 ## The 4 enhancements (what, where, traps)
 
@@ -63,7 +63,7 @@ Danny asked me to go as deep as possible on the project, then build 4 enhancemen
 
 ## Open threads / what's next (prioritized)
 
-1. **Confirm Site tests on `e899ee1` is green.** If it's red, the failure is NOT my code (I ran the full suite locally — `tests/cadence_test.js` 8/8, `tests/data_quality_test.py` 16/16, `tests/smoke.js` all good, `tests/craftplan.js` all ok, docs 380 paths). If something else flaked, it's likely another data-dependent test (see #2).
+1. **Site tests on `e899ee1` is ✓ green (run #138).** No action needed — the craftplan fix flipped it green. (If a future run flakes, it's likely another data-dependent test — see #2.)
 
 2. **Sweep for data-dependent test flakes (the craftplan pattern).** `tests/craftplan.js` line 60 hardcoded a profitability assumption that broke when live prices drifted. Other tests may have the same brittleness — any test that asserts a specific item is "profitable" / "a deal" / "best" against LIVE meso.watch data is a flake waiting to happen. `grep -nE "profitable|deal|best|cheapest" tests/*.js` is a starting point. Consider making those tests use frozen fixtures (like `tests/classicmarket_test.py` does) or accept the "no result" case. **Danny values "every real bug becomes a test" — a brittle test that false-fails is its own bug.**
 
