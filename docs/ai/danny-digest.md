@@ -1,39 +1,11 @@
 # Danny's daily digest
 
-> **INSTRUCTION FOR CLAUDE (read this first, top of file):**
->
-> When Danny checks in on the project for the first time in a calendar day
-> (PST timezone — America/Los_Angeles), OR when his first message in a new
-> session is a greeting / status check ("hi", "hello", "morning", "what's
-> up", "status", "what's new", "anything happening", "refresh", or similar),
-> **offer to show him this digest before doing anything else.**
->
-> **How to offer:**
-> - One sentence: "Hey Danny — I've got a daily digest ready (a quick
->   plain-English summary of what landed since you last checked in, what's
->   broken, and what needs your attention today). Want me to share it?"
-> - If he says yes (or "sure", "ok", "go", "yep"): paste the **Digest
->   body** section below verbatim. Don't summarize or rephrase — paste
->   exactly. It's already written to be readable.
-> - If he says no (or "later", "not now", "just doing X"): skip it. Don't
->   paste it later unless he asks.
-> - If he asks a specific question first ("hey, did X happen?"): answer
->   the question, then offer the digest at the end if it seems useful.
->
-> **Detection trigger (be liberal):** if you're unsure whether to offer,
-> offer. The cost of an extra "want the digest?" is low; the cost of Danny
-> missing a critical update because you didn't offer is higher.
->
-> **Refresh rule for claude:** if this file is >24h old when Danny checks
-> in, refresh it FIRST (overwrite with today's content based on the latest
-> git log + mailbox + state-of-the-pipeline.md), THEN offer it to Danny.
-> The refresh should take ~5 minutes — read the last 24h of `git log
-> --oneline origin/main`, skim `docs/ai/agent-mailbox.md` § Open + § FYI,
-> skim `docs/ai/agent-worklog.md` § Recent, and write the new digest body.
->
-> **Authoritative version:** this file at `docs/ai/danny-digest.md` in the
-> repo. Local copy at `/home/z/my-project/download/danny-digest.md` if you
-> need to read it without cloning.
+Delivered automatically: Glorg [z.ai] rebuilds this file daily, posts the current
+issue as a Markdown file to the #daily-updates channel at 04:45 AM PT (America/Los_Angeles),
+and rotates stale issues into the #daily-updates [Archive] thread. The manual
+"offer the digest on check-in" flow is retired (Danny's call, 2026-10-25 — the
+feed makes it redundant). Issue history: the [Archive] thread and
+`git log docs/ai/danny-digest.md`.
 
 ---
 
