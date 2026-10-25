@@ -22,6 +22,8 @@ jobs:
         run: npm i --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
       - name: Cron minutes
         run: node tests/cron.test.js
+      - name: Poll cadence
+        run: node tests/cadence_test.js
       - run: python3 scripts/build.py | tail -2
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/smoke.js
@@ -61,5 +63,7 @@ jobs:
         run: python3 tests/meowdb_test.py
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python3 tests/mesowatch_fresh_test.py
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: python3 tests/data_quality_test.py
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/monkey.js
