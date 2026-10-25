@@ -84,4 +84,4 @@ Site's healthy — all CI workflows green, every poll on cadence, nothing broken
 
 ---
 
-**End of digest Issue #4.** Next refresh: automatic, tomorrow 09:00 AM PT (or whenever the file is >24h old at check-in).
+**End of digest Issue #4.** Next refresh: automatic, tomorrow 04:45 AM PT (Danny's requested schedule; or whenever the file is >24h old at check-in).
