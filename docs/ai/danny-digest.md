@@ -39,67 +39,60 @@
 
 ## Digest body
 
-**Date:** 2026-10-23 (Friday)
-**Written:** 15:55 UTC (8:55 AM PST)
-**Author:** Z.ai
+**Date:** 2026-10-25 (Sunday)
+**Written:** 17:50 UTC (10:50 AM PST)
+**Author:** Z.ai (Discord)
 
 ### Where things stand
 
-The site's humming along — every poll workflow ran overnight (meso.watch hourly, classicmarket 2h, mesoindex + shopscans + meowdb 3h, classicrank daily, watchdog hourly). The big news is that project-side Claude shipped 3 of the audit-improvement features I'd been waiting on: price-history sparklines on item pages, a Market-today dashboard with Rising/Falling/Best sellers, and a Market Comparison Index showing every price source side by side. So three of the five audit items I had on my pending-for-frontend list are now done. Also: Danny decided to delete `fetch_classicmarket.py` (the static catalog fetcher) — I'd defended keeping it, but Danny sided with the cleanup argument, so it's gone (commit `cbc82b7`).
+The site's in good shape — all CI workflows green, every poll running on cadence, nothing broken. The big news since you last checked in: the 4-enhancement batch you asked Z.ai (web) to build landed on 10-25 and is live on production (v0.18.1). That's a Source-health panel on the Market Comparison Index, a 7-day trend column on MCI, a `@deal` search command in the Ctrl+K bar, and two new CI tests (cross-source data quality + poll cadence). Plus a craftplan test fix — one of its assertions assumed Gold Ingots are always profitable to craft, live prices disagreed, and the test went red; the planner was actually right, so the test now accepts "Nothing to craft" as a correct answer.
 
-One real issue overnight: 2 meso.watch poll runs failed with push-race errors (non-fast-forward push rejection on the shared concurrency group). It's not breakage in the fetcher — it's that the script doesn't have retry logic when its commit loses the race to a concurrent poll. I've diagnosed it in the mailbox + offered to wire up the retry pattern that shopscans-poll.yml already uses.
+Also new today: I'm the Discord surface of the same assistant (you pinged me in `#main`). Z.ai (web) wrote me a handoff, I verified everything from a fresh clone (CI green, live site healthy, all 4 enhancements deployed, full test suite passes locally), you gave me my own repo-scoped PAT, and I took over their top open thread: a sweep for data-dependent test flakes — tests that assert something about live market prices and will false-fail when prices move. Found and fixed 2 more (details in the wins below); everything else checked out properly fixture-based.
 
 ### Wins since you last checked in
 
-- **Project-side Claude shipped 3 audit features** in commits `2da2851` + `2618ea0` + `06f064e`:
-  - **Price sparklines** on item pages (audit #4 — uses `D.pw.hist`, the 7-day rolling history I added to mesowatch_prices.json)
-  - **Market today dashboard** with Rising/Falling/Best sellers rows + a slot for maplestory.market overview (audit #5 — uses `D.pw.totals`)
-  - **Market Comparison Index** showing every price site side by side (audit #3 — uses `D.pw` + `D.mw` + `D.ma` + `D.cmp` + `D.mdb` + `D.mi`)
-- **Danny OK'd the agent board naming convention** — I'm now signed as **Z.ai** (not "claude (chat-CLI)"). Claude Code project threads sign as `Claude Agent : [ID]` (coordinator-assigned T-XX, or last 6 chars of session id if no coordinator).
-- **Project-side Claude shipped quality-of-life features**: section landing pages, quest log planner with crafting as a player skill, "Read my screen" live screen share, page-name-in-browser-tab, centered changelog column. Plus a new `docs/ai/site-history.md` for version history.
-- **All overnight polls ran clean** — meso.watch produced 8+ commits, classicmarket 5, mesoindex 2, shopscans 2, meowdb 2, classicrank-census 1. (Plus 2 cancelled + 2 failed meso.watch runs — see issues below.)
+- **4 enhancements live on https://maplestory.scumlord.studio/** (v0.18.1, built 17:14 UTC today): MCI Source-health panel (flags stale price sources), MCI 7-day trend column, `@deal` Ctrl+K deal-finder, and 2 new CI tests wired in.
+- **Site tests are green again** (run #138) — the craftplan fix flipped it after the pre-fix commit's failure (#137).
+- **2 more brittle tests hardened** (the same "asserts live prices" class): the crafting page's profit-sort test (now tolerates a market day where no recipe is profitable) and the smoke test that gates every deploy (now only requires the cheap-filter to show rows when the filter could actually have results — an all-equipment listing lull won't false-block deploys anymore).
+- **Polls all healthy** — meso.watch hourly, classicmarket 2h, shopscans/meowdb/mesoindex 3h, classicrank census daily. ~378k rolling-window sales tracked.
 
 ### Anything broken or weird
 
-- **2 meso.watch poll runs failed overnight** (2026-10-22T19:15Z and 2026-10-22T22:22Z) with `! [rejected] HEAD -> main (non-fast-forward)` push errors. Root cause: another `main-pipeline` workflow (probably another meso.watch run or a classicmarket poll) landed a commit between when this run fetched main + when it tried to push. The script doesn't have retry logic — it just exits 1. I've diagnosed this in mailbox Open thread + offered to wire up the retry pattern. **Easy fix, no data loss** — the next meso.watch run (10 min later) re-fetched + re-committed successfully.
-- **5 cancelled meso.watch runs per hour** — that's by design (6 crons/hr in the shared concurrency group, GitHub keeps only 1 pending slot, so 5 are evicted). Not broken, just wasteful (120 cancelled runs/day). Project-side Claude suggested reducing to 2 crons/hr; I lean toward keeping 6 crons/hr but adding push retry instead. Your call.
-- **fresh.json is healthy again** — the broken-endpoint issue from last week is fully resolved, latest polls show 800+ live rows + `[fresh] OK` log lines.
+- **Nothing.** No watchdog issues, no failed polls since the 10-22 push-race pair (that fix decision is still parked with you — see below).
 
 ### Decisions I need from you
 
-1. **maplestory.market partner key** — still pending. When you get a chance: log in at https://maplestory.market/account (Henesys SSO), submit a key request saying "MS-Classic-World-Info-Slop planner site, GitHub Actions cron hourly, ~2-3 req/hour, cross-marketplace comparison, will credit with ?ref= link", reveal the approved key once + drop in `/home/z/my-project/.secrets/maplestory-market-key` (chmod 600). Project-side Claude already left a **slot for maplestory.market** in the Market-today dashboard (commit `2618ea0`), so as soon as the key lands I can wire up the fetcher + the data flows straight into the existing UI.
-2. **classicrank.com partner key from Kitten** — still pending. Same plan as before: drop in `/home/z/my-project/.secrets/classicrank-key` (chmod 600), I'll write the Phase 1 heartbeat submitter.
-3. **Cron pile-up fix** — your call: (a) reduce meso.watch to 2 crons/hour on minutes nothing else uses (less data, simpler), or (b) let me add push-retry logic to `mesowatch_poll_ci.sh` (keeps 6 crons/hour, handles race properly). I lean (b) but defer to you.
+1. **maplestory.market partner key** — still the highest-value unlock. Log in at https://maplestory.market/account (Henesys SSO), submit the key request, drop the key in `/home/z/my-project/.secrets/maplestory-market-key`. The dashboard slot is already built — once the key lands, the fetcher is about an hour of work.
+2. **classicrank.com partner key from Kitten** — same deal, `/home/z/my-project/.secrets/classicrank-key`.
+3. **Cron pile-up call (from 10-22, still open):** (a) cut meso.watch to 2 polls/hour, or (b) add push-retry logic to the poll script (keeps 6/hour). Z.ai leans (b); either works.
+4. **Draft-batch call (new today):** Z.ai (web) has an unshipped earlier draft — a more elaborate data-integrity dashboard + CI audit — sitting on their sandbox. It overlaps what already shipped (the data-quality + cadence tests) but is fancier. Recommendation: keep the shipped simple version, archive the draft. If you want the richer Danny-facing dashboard instead, tell them to share it.
+5. **Web instance's PAT** — you said you'll revoke it; just confirming it's still on the list.
 
 ### Today's priorities (the most important 1-3 things)
 
-1. **Drop the maplestory.market key in `/home/z/my-project/.secrets/`.** Still the highest-value unlock — project-side Claude already built the dashboard slot for it. Once the key's in, I write `fetch_maplestory_market.py` (Phase 1: `/api/prices` + `/api/status`), wire it into a 3-hourly poll, and the data flows straight into the Market-today dashboard + the Market Comparison Index without any UI work needed.
-2. **Reply to Kitten about the classicrank partner key** if you haven't already. Just a "hey Kitten, can I get a partner key for v2 Ingest? I want to submit character sprites from my shop visitor captures" would unblock it.
+1. Nothing is on fire — the keys in "Decisions" above are the only unblocks, in that order.
+2. If you want the `pages.yml` golden-gate hardening (a regression test added to the deploy gate so a broken main can't ship — it deployed 4× red back on 10-21), that's landing right after this digest.
 
 ### Ideas floating around (lower priority, no rush)
 
-- **Per-item listing fetch from meso.watch** — claude (review) noted listings moved to per-item files at `data/markets/Classic%20World/item/basil_<id>.json`. Switching to per-item fetching would let us poll only items whose `listedLast` moved. Still waiting on you to weigh in on load concerns + 6h-vs-24h cadence.
-- **`/api/deals` cross-check** — when maplestory.market key lands, their built-in `/api/deals` endpoint is a sanity check on our cheap filter algorithm.
-- **`/api/listings/changes` incremental polling** — maplestory.market has a listing-diff endpoint. Could poll that hourly instead of full `/api/listings` to stay well under the 6/hour rate limit.
-- **classicrank avatar_b64 sprite capture (Phase 3)** — once the classicrank partner key + the Phase 1 heartbeat submitter are both working, the next step is to extract character sprites from your shop visitor video frames + submit as base64 PNG. That's the high-value contribution to Kitten's site.
-- **Stale-listing badges on where-to-buy UI** — the `seen` field is the data; project-side Claude can render a "3d stale" chip next to each listing. Low effort, high signal. (I left an Open thread asking them — no reply yet.)
+- Per-item listing fetch from meso.watch (poll only what changed) — waiting on your load/cadence call.
+- Per-item cross-source price agreement on the MCI page (extends today's Source-health panel).
+- Incremental stats tables for the tracker server before it hits 100k runs.
+- `/api/deals` cross-check + incremental polling once the maplestory.market key lands.
 
 ### Other agents' status
 
-- **Claude (project-side):** actively shipped 3 audit features + multiple quality-of-life items overnight (price sparklines, market dashboard, market comparison index, quest log crafting, read-my-screen, section landing pages). Likely picking up the crafting overhaul again today.
-- **Claude (review):** wrapped up the cleanup pass. Danny OK'd deleting `fetch_classicmarket.py` (commit `cbc82b7`).
-- **openclaw:** no recent activity visible in the worklog since 2026-10-21 18:00Z.
-- **gemini:** still no reply to the Val Town/Cloudflare Worker status Open thread from yesterday. Will likely reply next time they check in.
-- **Claude Agent : FjKBXQ:** posted the sign-as + ID-format rule changes. Acknowledged in mailbox.
+- **Z.ai (web):** handed off cleanly; will read the mailbox reply next session. Their PAT should be revoked (see Decisions).
+- **Claude (project-side):** one open UI item from the 10-22 audit batch (the "first seen / stale" badge on where-to-buy listings).
+- **Claude (review) / openclaw:** idle. gemini: still hasn't replied about the fallback cron.
 
 ### Where to go deeper
 
-- `docs/ai/state-of-the-pipeline.md` — full snapshot of schema + sources + CI + traps (now 12 fields in mesowatch_prices.json; 9 active sources; all polls green except the 2 push-race failures noted above)
-- `docs/ai/daily-briefing.md` — today's newspaper for agents (same content as this but for the agent audience)
-- `docs/ai/agent-mailbox.md` — comm hub, 2 Open threads I just replied to (cron pile-up + sign-as)
-- The repo itself: https://github.com/TurbosauceDev/MS-Classic-World-Info-Slop
-- The live site: https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/
+- `docs/ai/handoff-to-discord-zai-2026-10-25.md` — what the 4-enhancement batch changed and why
+- `docs/ai/state-of-the-pipeline.md` — schema + sources + CI + traps snapshot
+- `docs/ai/daily-briefing.md` — the agent-facing version of this digest
+- The live site: https://maplestory.scumlord.studio/
 
 ---
 
-**End of digest Issue #2.** Next refresh: when you next check in (or tomorrow morning, whichever comes first).
+**End of digest Issue #3.** Next refresh: when you next check in (or tomorrow morning, whichever comes first).

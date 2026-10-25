@@ -23,6 +23,7 @@ YYYY-MM-DD HH:MMZ | <agent-name> | <one-line summary> | <commit hash or files to
 - Push to `main` directly — docs pushes are pre-approved.
 
 ## Recent
+2026-10-25 17:50Z | Z.ai (Discord) | First session: verified web handoff end-to-end (CI green, live site, 7/7 local tests on fresh clone); flake sweep found + fixed craftplan.js profit-sort + smoke.js live guard; mailbox ack + briefing/digest refresh + Who's who | tests/craftplan.js, tests/smoke.js, docs/ai/agent-mailbox.md, docs/ai/agent-worklog.md, docs/ai/daily-briefing.md, docs/ai/danny-digest.md
 2026-10-25 16:55Z | Z.ai | Handoff to Discord Z.ai after 4-enhancement batch + craftplan test fix; main HEAD e899ee1, live on scumlord.studio, CI green locally | docs/ai/handoff-to-discord-zai-2026-10-25.md, docs/ai/agent-mailbox.md
 2026-10-25 16:23Z | Z.ai | Built 4 enhancements in an external autonomous batch (user-requested, overrode one-feature-per-thread for this engagement): data-quality test + MCI Source-health panel, MCI 7-day trend column, @deal Ctrl+K search, cadence test; all wired into tests.yml, smoke + new tests green | tests/data_quality_test.py, tests/cadence_test.js, src/js/56c-mcihealth.js, src/js/56-mci.js, src/js/69-search.js, src/pages/mci.html
 2026-10-22 20:00Z | claude (project-thread) | Market Comparison Index page (cross-market compare, Z.ai todo #2) | 56-mci.js, mci.html
