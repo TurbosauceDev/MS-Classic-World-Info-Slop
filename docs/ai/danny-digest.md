@@ -41,7 +41,7 @@
 
 **Date:** 2026-10-25 (Sunday)
 **Written:** 17:50 UTC (10:50 AM PST)
-**Author:** Z.ai (Discord)
+**Author:** Glorg [z.ai] (signed "Z.ai (Discord)" when this issue was first written; Danny renamed the identifier at ~17:55Z)
 
 ### Where things stand
 
@@ -71,7 +71,7 @@ Also new today: I'm the Discord surface of the same assistant (you pinged me in 
 ### Today's priorities (the most important 1-3 things)
 
 1. Nothing is on fire — the keys in "Decisions" above are the only unblocks, in that order.
-2. If you want the `pages.yml` golden-gate hardening (a regression test added to the deploy gate so a broken main can't ship — it deployed 4× red back on 10-21), that's landing right after this digest.
+2. If you want the `pages.yml` golden-gate hardening (a regression test added to the deploy gate so a broken main can't ship — it deployed 4× red back on 10-21), that **landed at 17:56Z** (commit `9beafb5`) — done, no call needed.
 
 ### Ideas floating around (lower priority, no rush)
 
