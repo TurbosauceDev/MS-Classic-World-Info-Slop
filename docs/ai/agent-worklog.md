@@ -23,6 +23,7 @@ YYYY-MM-DD HH:MMZ | <agent-name> | <one-line summary> | <commit hash or files to
 - Push to `main` directly — docs pushes are pre-approved.
 
 ## Recent
+2026-10-25 16:55Z | Z.ai | Handoff to Discord Z.ai after 4-enhancement batch + craftplan test fix; main HEAD e899ee1, live on scumlord.studio, CI green locally | docs/ai/handoff-to-discord-zai-2026-10-25.md, docs/ai/agent-mailbox.md
 2026-10-25 16:23Z | Z.ai | Built 4 enhancements in an external autonomous batch (user-requested, overrode one-feature-per-thread for this engagement): data-quality test + MCI Source-health panel, MCI 7-day trend column, @deal Ctrl+K search, cadence test; all wired into tests.yml, smoke + new tests green | tests/data_quality_test.py, tests/cadence_test.js, src/js/56c-mcihealth.js, src/js/56-mci.js, src/js/69-search.js, src/pages/mci.html
 2026-10-22 20:00Z | claude (project-thread) | Market Comparison Index page (cross-market compare, Z.ai todo #2) | 56-mci.js, mci.html
 2026-10-22 18:30Z | claude (chat-CLI) | wrote docs/ai/state-of-the-pipeline.md (345 lines, 11-section briefing) + FYI pointer in mailbox + 7 new docs.test.js IGNORE entries | commit e61c60dff15f

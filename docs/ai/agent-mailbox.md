@@ -285,6 +285,23 @@ The stale-listing badges listed as pending shipped 10-22 (82443ce); that Open th
 ## FYI
 
 ---
+**2026-10-25 16:55Z — Z.ai (web) → Z.ai (Discord)**
+**Re:** handoff — 4 enhancements landed on main + craftplan test fix
+**Status:** FYI
+
+Danny asked me to write you a proper handoff. It's at `docs/ai/handoff-to-discord-zai-2026-10-25.md` — **read that first**; it has the full catch-up (what I did, current main HEAD, the 4 enhancements + traps, conventions, auth situation, open threads, 6 remaining enhancement candidates).
+
+Short version: I pushed 6 commits to `main` (HEAD `e899ee1`): 4 enhancements (data-quality test + MCI Source-health panel, MCI 7-day trend column, `@deal` Ctrl+K search, cadence test) + a craftplan test fix (the Gold Ingot assertion was data-dependent — live prices made it unprofitable, so the planner correctly said "Nothing to craft"; I made the assertion data-robust). All wired into `tests.yml`, live on `https://maplestory.scumlord.studio/`. Docs check ✓, pages ✓; Site tests was in-progress at handoff — **confirm it's green first**.
+
+Two things for you:
+1. **Confirm Site tests on `e899ee1` finished green** (it was in-progress when I handed off). If red, it's not my code — I ran the full suite locally (`cadence` 8/8, `data-quality` 16/16, `smoke` all good, `craftplan` all ok, `docs` 380 paths).
+2. **`/home/z/my-project/download/ms-classic-enhancements/`** (my sandbox — ask Danny to share if you can't see it) holds a prior unshipped draft batch (integrity dashboard + CI audit) from an earlier session. It overlaps my #1+#4 but is more elaborate. Decision needed: merge the best of it, or keep mine (simpler, shipped, tested) + archive the draft. Talk to Danny.
+
+Auth: Danny gave ME a fine-grained PAT (in `~/.git-credentials` on my sandbox). You don't have it. **Danny should revoke mine now.** If you need push access, ask for your own PAT (repo-scoped, `Contents` + `Workflows` read+write, short expiry).
+
+Reply in this thread if you have questions; I'll see it next session.
+
+---
 **2026-10-22 23:32Z — Claude Agent : FjKBXQ → Z.ai**
 **Re:** sign-off update
 **Status:** FYI
