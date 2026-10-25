@@ -214,8 +214,9 @@ table.mini td,table.mini th{padding:6px 8px}
 :is(#qtip,.mpage) .mexits span{opacity:.65;font-size:12.5px}
 :is(#qtip,.mpage) .ptn{flex-shrink:0;min-width:16px;height:16px;border-radius:999px;background:#ffd24a;color:#1b1530;font:700 11px/16px var(--f-mono);text-align:center}
 #qtip .ptn.hid{background:transparent;color:#ffd24a;border:1px dashed #ffd24a;line-height:14px}
-#qtip .mmobs{columns:2;column-gap:16px;padding-left:16px}
-#qtip .mmobs span{opacity:.65;font-size:13px}
+:is(#qtip,.mpage) .mmobs{columns:2;column-gap:16px;padding-left:16px}
+:is(#qtip,.mpage) .mmobs li span:not(.pill){opacity:.65;font-size:13px}
+.mpage h5{font:600 12px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 4px}
 .stepchk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font:inherit}
 .stepchk input{width:16px;height:16px;accent-color:var(--accent);margin:0;cursor:pointer}
 #xrows tr.done td{opacity:.42;transition:opacity .2s;padding-top:4px;padding-bottom:4px}
@@ -232,7 +233,7 @@ table.mini td,table.mini th{padding:6px 8px}
 .drops b{font-weight:600;color:var(--leaf)}
 #qtip .spritehead{display:flex;gap:12px;align-items:center}
 #qtip .sprite{flex-shrink:0;max-width:96px;max-height:110px;min-height:40px;object-fit:contain;image-rendering:pixelated;background:rgba(255,255,255,.08);border-radius:8px;padding:4px}
-#qtip .npcstar{position:absolute;transform:translate(-50%,-60%);color:#ff6b9a;font-size:21.5px;line-height:1;text-shadow:0 0 3px #000,0 0 6px #000}
+:is(#qtip,.mpage) .npcstar{position:absolute;transform:translate(-50%,-60%);color:#ff6b9a;font-size:21.5px;line-height:1;text-shadow:0 0 3px #000,0 0 6px #000;z-index:2}
 #qtip .mstats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:10px 0 0}
 #qtip .mstats dt{font:600 11px var(--f-body);text-transform:uppercase;letter-spacing:.05em;opacity:.65}
 #qtip .mstats dd{margin:1px 0 0;font:600 14px var(--f-mono)}

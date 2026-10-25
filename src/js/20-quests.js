@@ -281,6 +281,49 @@ for (const [src, list] of Object.entries(QLISTS)) for (const q of list){
   if (!(q.name in QSRC)) QSRC[q.name] = [src, q];
 }
 const qlinkOf = key => { const f = QSRC[key]; return f ? qref(f[0], f[1]) : esc(key) };
+/* ---------------- where to go (Danny 10-25, second take on the layout) ----------------
+   One section answers "where do I go and what will I meet there": the giver's map sits near the top of the page with
+   the numbered exits, the star on the giver and colored dots for every monster spawn spot on that map (legend under
+   the map, the quest's own targets in bold). Targets that live on other maps are listed with their best spawn maps. */
+const questTargets = r => {
+  const out = [];
+  for (const [m] of r.kl || []) if (!out.includes(String(m))) out.push(String(m));
+  for (const [, , s] of r.il || []) if (s && !out.includes(String(s))) out.push(String(s));
+  return out.filter(m => D.mobs[m] || D.mobdb[m]);
+};
+const mobName = id => D.mobs[id] ? D.mobs[id][0] : D.mobdb[id] ? D.mobdb[id].name : "?";
+const mobLv = id => D.mobs[id] ? D.mobs[id][1] : D.mobdb[id] ? D.mobdb[id].level : "";
+const dotsInto = (mm, dots) => { if (!dots) return mm; const s = mm.indexOf('<span class="npcstar"');
+  return s >= 0 ? mm.slice(0, s) + dots + mm.slice(s) : mm.replace(/<\/div>$/, dots + "</div>") };
+function whereSection(r){
+  const npcId = D.npcid[r.npc], locs = npcId && D.npcs[npcId] ? D.npcs[npcId][1] : [], here = locs[0];
+  const targets = questTargets(r), mapId = here && here[0];
+  const res = mapId && D.maps[mapId] ? D.maps[mapId][2].filter(([mid]) => D.mobs[mid] || D.mobdb[mid]).sort((a, b) => b[1] - a[1]) : [];
+  const onMap = new Set(res.map(([mid]) => String(mid))), away = targets.filter(m => !onMap.has(m));
+  if (!here && !away.length) return "";
+  const mapIdS = mapId != null ? String(mapId) : null;
+  const [mm0, exits] = here ? minimap(mapIdS, here[1] != null ? [here[1], here[2]] : null) : ["", ""];
+  const hasMap = mm0.includes('class="mmwrap"');
+  let dots = "";
+  const legs = hasMap ? res.flatMap(([mid, n], i) => {
+    const pts = D.mobdb[mid] && D.mobdb[mid].sp ? D.mobdb[mid].sp[mapIdS] || [] : [];
+    dots += pts.map(([x, y]) => `<span class="mspot c${i % 8}" style="left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%"></span>`).join("");
+    return pts.length ? [`<li${targets.includes(String(mid)) ? ' class="me"' : ""}><i class="mspot c${i % 8}"></i>${mobLink(mid)} <span>Lv ${mobLv(mid)} · ×${n}</span></li>`] : [];
+  }) : [];
+  const mm = dotsInto(mm0, dots), mapName = mapIdS ? D.maps[mapIdS] ? D.maps[mapIdS][0] : D.mapnames[mapIdS] || "map " + mapIdS : "";
+  const legend = legs.length ? `<ul class="wmleg">${legs.join("")}</ul>` : "";
+  const caption = here && hasMap ? `<p class="sub">Numbers are exits.${here[1] != null ? ` ★ is where ${esc(r.npc || "the giver")} stands.` : ""}${legs.length ? " Dots mark where this map's monsters spawn." : ""}</p>` : "";
+  const also = here && locs.length > 1 ? `<p class="sub">${esc(D.npcs[npcId][0])} also stands in ${locs.slice(1).map(l => mapLink(String(l[0]), D.maps[l[0]] ? D.maps[l[0]][0] : D.mapnames[l[0]] || "map " + l[0])).join(", ")}.</p>` : "";
+  const resList = res.length ? `<h5>On this map</h5><ul class="mmobs">${res.map(([mid, n]) =>
+    `<li>${mobLink(mid)} <span>Lv ${mobLv(mid)} · ×${n}</span>${targets.includes(String(mid)) ? ` <span class="pill p-hot">target</span>` : ""}</li>`).join("")}</ul>` : "";
+  const bestMaps = m => Object.entries(D.maps).filter(([, mp]) => mp[1] && mp[2].some(x => String(x[0]) === m))
+    .map(([mid, mp]) => [mid, mp[0], mp[2].find(x => String(x[0]) === m)[1]]).sort((a, b) => b[2] - a[2]).slice(0, 3);
+  const awayList = away.length ? `<h5>Your targets elsewhere</h5><ul class="mlist">${away.map(m => { const ms = bestMaps(m);
+    return `<li>${mobLink(m)} <span class="sub">${ms.length ? "on " + ms.map(([mid, nm, n]) => `${mapLink(mid, nm)} ×${n}`).join(", ") : "not on a launch map"}</span></li>` }).join("")}</ul>` : "";
+  const right = [also, exits, resList, awayList].filter(Boolean).join("");
+  if (!right && !here) return "";
+  return `<h3 class="msec">Where to go</h3><div class="mcols">${here ? `<div><h4>${mapLink(mapIdS, mapName)}</h4>${mm}${legend}${caption}</div>` : ""}${right ? `<div>${right}</div>` : ""}</div>`;
+}
 function questPage(r, src){
   const i = r.info || {}, npcId = D.npcid[r.npc], sprite = npcId ? D.npcimg[npcId] : null;
   const st = (k, v, t) => v == null || v === "" ? "" : `<div${t ? ` title="${esc(t)}"` : ""}><dt>${k}</dt><dd>${v}</dd></div>`;
@@ -305,6 +348,7 @@ function questPage(r, src){
       ${st("Bonus", r.mult ? r.mult.toFixed(1) + "× the EXP of the kills it asks for" : null)}
       ${st("Equals", r.eq_kills ? `${fmt(r.eq_kills)} ${mobLink(r.eq_mob)} kills` : null, "The quest's EXP counted as kills of its target monster: fewer kills than this and the quest beats grinding")}
       ${st("Quest ID", String(r.id))}</dl>
+    ${whereSection(r)}
     <div class="mcols">
       <div><h4>To accept</h4>${(i.req || []).length || pre.length
         ? `${(i.req || []).length ? `<ul class="mlist">${lis(i.req)}</ul>` : ""}${pre.length ? `<p class="sub">Comes after:</p><ul class="mlist">${pre.map(p => `<li>${qlinkOf(p)}</li>`).join("")}</ul>` : ""}`
@@ -321,10 +365,7 @@ function questPage(r, src){
     ${r.chain ? `<h3 class="msec">Questline: ${esc(r.chain)}</h3><ul class="mlist">${mates.map(q =>
       `<li>${q === r ? `<b>${esc(q.name)}</b> <span class="pill p-hot">this page</span>` : qref(src, q)} <span class="sub">Lv ${q.lvl} · ${fmt(q.exp)} EXP${q.cpos ? ` · ${q.cpos} of ${q.cn}` : ""}</span></li>`).join("")}</ul>
       ${i.prev ? `<p class="sub">Comes after: ${qlinkOf(i.prev)}.</p>` : ""}${i.next ? `<p class="sub">Leads to: ${qlinkOf(i.next)}.</p>` : ""}` : ""}
-    <div class="mcols">
-      <div><h4>Who gives it</h4>${npcId && (D.npcs[npcId] || D.npcimg[npcId]) ? npcTip(npcId) : `<p class="sub">${esc(r.npc || "The giver")} is not in the launch files.</p>`}</div>
-      ${stacks.length ? `<div><h4>Stacks with</h4><ul class="mlist">${stacks.map(([s, q]) => `<li>${qref(s, q)} <span class="sub">Lv ${q.lvl}</span></li>`).join("")}</ul><p class="sub">Other quests within 10 levels that need the same monster, so the kills can share a trip.</p></div>` : ""}
-    </div>
+    ${stacks.length ? `<h3 class="msec">Stacks with</h3><ul class="mlist">${stacks.map(([s, q]) => `<li>${qref(s, q)} <span class="sub">Lv ${q.lvl}</span></li>`).join("")}</ul><p class="sub">Other quests within 10 levels that need the same monster, so the kills can share a trip.</p>` : ""}
   </div>`;
 }
 function showQuests(){
