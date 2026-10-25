@@ -40,59 +40,48 @@
 ## Digest body
 
 **Date:** 2026-10-25 (Sunday)
-**Written:** 17:50 UTC (10:50 AM PST)
-**Author:** Glorg [z.ai] (signed "Z.ai (Discord)" when this issue was first written; Danny renamed the identifier at ~17:55Z)
+**Written:** 18:15 UTC (11:15 AM PST)
+**Author:** Glorg [z.ai]
 
 ### Where things stand
 
-The site's in good shape — all CI workflows green, every poll running on cadence, nothing broken. The big news since you last checked in: the 4-enhancement batch you asked Z.ai (web) to build landed on 10-25 and is live on production (v0.18.1). That's a Source-health panel on the Market Comparison Index, a 7-day trend column on MCI, a `@deal` search command in the Ctrl+K bar, and two new CI tests (cross-source data quality + poll cadence). Plus a craftplan test fix — one of its assertions assumed Gold Ingots are always profitable to craft, live prices disagreed, and the test went red; the planner was actually right, so the test now accepts "Nothing to craft" as a correct answer.
+Site's healthy — all CI workflows green, every poll on cadence, nothing broken. This is a same-day refresh of digest #3 (written 17:50 UTC): three things landed since then, all housekeeping-plus rather than site features, so the site itself is unchanged (still v0.18.1 with this morning's 4 enhancements).
 
-Also new today: I'm the Discord surface of the same assistant (you pinged me in `#main`). Z.ai (web) wrote me a handoff, I verified everything from a fresh clone (CI green, live site healthy, all 4 enhancements deployed, full test suite passes locally), you gave me my own repo-scoped PAT, and I took over their top open thread: a sweep for data-dependent test flakes — tests that assert something about live market prices and will false-fail when prices move. Found and fixed 2 more (details in the wins below); everything else checked out properly fixture-based.
+### Wins since digest #3
 
-### Wins since you last checked in
-
-- **4 enhancements live on https://maplestory.scumlord.studio/** (v0.18.1, built 17:14 UTC today): MCI Source-health panel (flags stale price sources), MCI 7-day trend column, `@deal` Ctrl+K deal-finder, and 2 new CI tests wired in.
-- **Site tests are green again** (run #138) — the craftplan fix flipped it after the pre-fix commit's failure (#137).
-- **2 more brittle tests hardened** (the same "asserts live prices" class): the crafting page's profit-sort test (now tolerates a market day where no recipe is profitable) and the smoke test that gates every deploy (now only requires the cheap-filter to show rows when the filter could actually have results — an all-equipment listing lull won't false-block deploys anymore).
-- **Polls all healthy** — meso.watch hourly, classicmarket 2h, shopscans/meowdb/mesoindex 3h, classicrank census daily. ~378k rolling-window sales tracked.
+- **Golden gate live on the deploy path** (`9beafb5`): `tests/golden.js` now runs inside `pages.yml` pre-deploy, after build and before smoke. A red main can no longer ship a golden regression to production — the 10-21 pattern (4 red builds deployed back-to-back) is now closed at every gate. Verified live: the deploy check on that commit passed with the gate running inside it.
+- **Identifier renamed on the agent messageboard** (`183b0a1`): I sign **Glorg [z.ai]** now (was "Z.ai (Discord)") — Who's who, mailbox, briefing, worklog all updated with an old→new mapping note; older posted messages stay as history per the append-only rule.
+- **Your daily digest feed is live** (`83f493a`): you created #daily-updates + the webhook; the URL lives sandbox-side only (chmod 600, never committed), and a scheduled job at 09:00 AM your time now rebuilds this digest from the last 24h, pushes the refresh, and posts it to #daily-updates. Quiet days get a one-line heartbeat — no post means something's wrong. This post is today's hand-built issue #4; the first fully automatic one lands tomorrow morning.
 
 ### Anything broken or weird
 
-- **Nothing.** No watchdog issues, no failed polls since the 10-22 push-race pair (that fix decision is still parked with you — see below).
+- **Nothing.** All 3 workflows green, all polls on cadence, no watchdog issues. The token scope hiccup from this morning resolved itself once you added the workflow permission — the golden gate push went through on retry.
 
 ### Decisions I need from you
 
-1. **maplestory.market partner key** — still the highest-value unlock. Log in at https://maplestory.market/account (Henesys SSO), submit the key request, drop the key in `/home/z/my-project/.secrets/maplestory-market-key`. The dashboard slot is already built — once the key lands, the fetcher is about an hour of work.
-2. **classicrank.com partner key from Kitten** — same deal, `/home/z/my-project/.secrets/classicrank-key`.
+1. **maplestory.market partner key** — still the highest-value unlock. Log in at https://maplestory.market/account (Henesys SSO), submit the key request, then drop the key in the sandbox secrets path we discussed. Dashboard slot + MCI column slot are both already built; the fetcher is about an hour of work once the key lands.
+2. **classicrank.com partner key from Kitten** — same deal, same secrets path.
 3. **Cron pile-up call (from 10-22, still open):** (a) cut meso.watch to 2 polls/hour, or (b) add push-retry logic to the poll script (keeps 6/hour). Z.ai leans (b); either works.
-4. **Draft-batch call (new today):** Z.ai (web) has an unshipped earlier draft — a more elaborate data-integrity dashboard + CI audit — sitting on their sandbox. It overlaps what already shipped (the data-quality + cadence tests) but is fancier. Recommendation: keep the shipped simple version, archive the draft. If you want the richer Danny-facing dashboard instead, tell them to share it.
-5. **Web instance's PAT** — you said you'll revoke it; just confirming it's still on the list.
+4. **Draft-batch call:** the web instance's unshipped earlier draft (fancier integrity dashboard + CI audit) overlaps what already shipped. Recommendation: keep the shipped simple version, archive the draft.
+5. **Web instance's PAT** — you said you'll revoke it; still confirming it's on the list.
 
-### Today's priorities (the most important 1-3 things)
+### Today's priorities
 
 1. Nothing is on fire — the keys in "Decisions" above are the only unblocks, in that order.
-2. If you want the `pages.yml` golden-gate hardening (a regression test added to the deploy gate so a broken main can't ship — it deployed 4× red back on 10-21), that **landed at 17:56Z** (commit `9beafb5`) — done, no call needed.
-
-### Ideas floating around (lower priority, no rush)
-
-- Per-item listing fetch from meso.watch (poll only what changed) — waiting on your load/cadence call.
-- Per-item cross-source price agreement on the MCI page (extends today's Source-health panel).
-- Incremental stats tables for the tracker server before it hits 100k runs.
-- `/api/deals` cross-check + incremental polling once the maplestory.market key lands.
+2. The golden gate was the last CI-gating item, so I'm idle per one-feature-per-session. Candidates if you want more: worker `summary()` scaling, mesowatch-poll GH_TOKEN env hardening, per-item MCI agreement panel.
 
 ### Other agents' status
 
-- **Z.ai (web):** handed off cleanly; will read the mailbox reply next session. Their PAT should be revoked (see Decisions).
+- **Z.ai (web):** handed off cleanly; will read the mailbox reply next session. Their PAT revoke is item 5 above.
 - **Claude (project-side):** one open UI item from the 10-22 audit batch (the "first seen / stale" badge on where-to-buy listings).
-- **Claude (review) / openclaw:** idle. gemini: still hasn't replied about the fallback cron.
+- **Claude (review) / openclaw:** idle. **gemini:** still hasn't replied about the fallback cron.
 
 ### Where to go deeper
 
-- `docs/ai/handoff-to-discord-zai-2026-10-25.md` — what the 4-enhancement batch changed and why
-- `docs/ai/state-of-the-pipeline.md` — schema + sources + CI + traps snapshot
-- `docs/ai/daily-briefing.md` — the agent-facing version of this digest
+- `docs/ai/daily-briefing.md` — the agent-facing version (amended today with all three items above)
+- `docs/ai/agent-mailbox.md` — the rename FYI + handoff thread
 - The live site: https://maplestory.scumlord.studio/
 
 ---
 
-**End of digest Issue #3.** Next refresh: when you next check in (or tomorrow morning, whichever comes first).
+**End of digest Issue #4.** Next refresh: automatic, tomorrow 09:00 AM PT (or whenever the file is >24h old at check-in).
