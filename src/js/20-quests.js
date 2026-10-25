@@ -234,7 +234,6 @@ addEventListener("scroll", hideQtip, {passive:true});
 addEventListener("keydown", e => { if (e.key === "Escape") hideQtip() });
 
 let QSORT = {k:"mult", dir:-1}, QCHAIN = null;
-navReg("quests", () => QCHAIN, v => { QCHAIN = v; renderQuests() });
 $("#qrows").addEventListener("click", e => { const b = e.target.closest(".chainbtn"); if (!b) return; QCHAIN = b.dataset.chain; hideQtip(); renderQuests(); $("#qchainbar").scrollIntoView({block:"nearest"}) });
 $("#qchainbar").addEventListener("click", e => { if (e.target.id === "qchainclear"){ QCHAIN = null; renderQuests() } });
 try { const q = JSON.parse(localStorage.getItem("qsort") || "null"); if (q && q.k) QSORT = q } catch(e) {}
@@ -269,3 +268,89 @@ renderQuests();
   let on = innerWidth < 700; try { const v = localStorage.getItem("qcompact"); if (v !== null) on = v === "1" } catch(e) {}
   const set = v => { on = v; b.setAttribute("aria-pressed", on); table.classList.toggle("qcompact", on); try { localStorage.setItem("qcompact", on ? "1" : "0") } catch(e) {} };
   b.addEventListener("click", () => set(!on)); set(on) })();
+
+/* ---------------- quest pages (Danny 10-25): click any quest name on the site for the quest's own page ----------------
+   Same shape as the monster and item pages: the list folds away and the quest fills the section with its story, what
+   it takes to accept it, what it asks for, the rewards (with the community verdict and their worth at player prices),
+   the questline in order, the NPC who gives it and the quests it stacks with. Hover cards keep working everywhere. */
+let QOPEN = null;   // {src: "q" | "cit", i} while a quest page is open, null on the list
+const QLISTS = {q: D.quests, cit: D.citq};
+const QSRC = {};   // quest id and name -> [src, record], for the prerequisite and previous/next links
+for (const [src, list] of Object.entries(QLISTS)) for (const q of list){
+  if (!(q.id in QSRC)) QSRC[q.id] = [src, q];
+  if (!(q.name in QSRC)) QSRC[q.name] = [src, q];
+}
+const qlinkOf = key => { const f = QSRC[key]; return f ? qref(f[0], f[1]) : esc(key) };
+function questPage(r, src){
+  const i = r.info || {}, npcId = D.npcid[r.npc], sprite = npcId ? D.npcimg[npcId] : null;
+  const st = (k, v, t) => v == null || v === "" ? "" : `<div${t ? ` title="${esc(t)}"` : ""}><dt>${k}</dt><dd>${v}</dd></div>`;
+  const lis = a => (a || []).map(x => `<li>${esc(x)}</li>`).join("");
+  const avail = r.region === "El Nath" || r.region === "Orbis" ? `<span class="pill p-bad">not in launch</span>`
+    : r.region === "Forgotten Hollow" ? `<span class="pill p-warn">opens later</span>` : "";
+  const mesos = i.mesos || r.mesos, contrib = i.contrib || r.contrib;
+  const mates = (src === "cit" ? D.citq : QLAUNCH).filter(x => x.chain === r.chain).sort((a, b) => (a.cpos ?? a.lvl) - (b.cpos ?? b.lvl));
+  const stacks = stackWith(r), asks = reqHTML(r);
+  const pre = (r.pre || []).filter(p => QSRC[p]);
+  const val = VALUE[r.id];
+  return `<div class="mpage">
+    <div class="mpbar"><button class="btn" id="qback">${src === "cit" ? "← Close" : "← All quests"}</button><button class="btn" id="qdshare">Copy link</button></div>
+    <div class="mhead"><div class="mtop">${sprite ? `<img class="sprite" src="data:image/png;base64,${sprite}" alt="">` : ""}<div>
+      <h2>${esc(r.name)}</h2>
+      <p class="sub">Lv ${r.lvl} · from ${npcLink(r.npc) || "?"} · ${esc(r.region || "")}${r.chain ? ` · ${esc(r.chain)} questline` : ""}${r.rep ? ` · <span class="pill p-warn">${esc(r.rep)}</span>` : ""}</p>
+      ${avail || val ? `<p class="mflags">${avail ? avail + " " : ""}${val ? vPill(r.id) : ""}</p>` : ""}</div></div></div>
+    ${i.d ? `<p class="idesc">${esc(i.d).replace(/\n/g, "<br>")}</p>` : ""}
+    <h3 class="msec">At a glance</h3>
+    <dl class="stats mgrid">${st("EXP", r.exp ? fmt(r.exp) + (r.pct_level != null ? ` (${r.pct_level}% of level ${r.lvl})` : "") : null)}
+      ${st("Mesos", mesos ? fmt(mesos) : null)}${st("Contribution", contrib ? fmt(contrib) : null, "Citizenship contribution for turning it in")}
+      ${st("Bonus", r.mult ? r.mult.toFixed(1) + "× the EXP of the kills it asks for" : null)}
+      ${st("Equals", r.eq_kills ? `${fmt(r.eq_kills)} ${mobLink(r.eq_mob)} kills` : null, "The quest's EXP counted as kills of its target monster: fewer kills than this and the quest beats grinding")}
+      ${st("Quest ID", String(r.id))}</dl>
+    <div class="mcols">
+      <div><h4>To accept</h4>${(i.req || []).length || pre.length
+        ? `${(i.req || []).length ? `<ul class="mlist">${lis(i.req)}</ul>` : ""}${pre.length ? `<p class="sub">Comes after:</p><ul class="mlist">${pre.map(p => `<li>${qlinkOf(p)}</li>`).join("")}</ul>` : ""}`
+        : `<p class="sub">Nothing beyond reaching ${npcLink(r.npc) || "the NPC"} and being around level ${r.lvl}.</p>`}</div>
+      <div><h4>What it asks</h4>${asks ? `<p>${asks}</p>` : `<p class="sub">Nothing to hunt or gather: talk, deliver, come back.</p>`}</div>
+      ${i.start && i.start.length ? `<div><h4>You're given</h4><ul class="mlist">${lis(i.start)}</ul></div>` : ""}
+    </div>
+    <h3 class="msec">Rewards</h3>
+    <div class="mcols">
+      <div>${(r.ri || []).length ? rewardCell(r) : `<p class="sub">No item rewards.</p>`}
+        ${(i.items || []).length ? `<p class="sub">Also: ${esc(i.items.join("; "))}</p>` : ""}</div>
+      <div>${marketCell(r)}${val ? `<h4>Why players do it · ${VTIER[val[0]][0]}</h4><p>${esc(val[2])} <span class="sub">(${val[4].map(k => esc(VSRC[k][0])).join("; ")})</span></p>` : ""}</div>
+    </div>
+    ${r.chain ? `<h3 class="msec">Questline: ${esc(r.chain)}</h3><ul class="mlist">${mates.map(q =>
+      `<li>${q === r ? `<b>${esc(q.name)}</b> <span class="pill p-hot">this page</span>` : qref(src, q)} <span class="sub">Lv ${q.lvl} · ${fmt(q.exp)} EXP${q.cpos ? ` · ${q.cpos} of ${q.cn}` : ""}</span></li>`).join("")}</ul>
+      ${i.prev ? `<p class="sub">Comes after: ${qlinkOf(i.prev)}.</p>` : ""}${i.next ? `<p class="sub">Leads to: ${qlinkOf(i.next)}.</p>` : ""}` : ""}
+    <div class="mcols">
+      <div><h4>Who gives it</h4>${npcId && (D.npcs[npcId] || D.npcimg[npcId]) ? npcTip(npcId) : `<p class="sub">${esc(r.npc || "The giver")} is not in the launch files.</p>`}</div>
+      ${stacks.length ? `<div><h4>Stacks with</h4><ul class="mlist">${stacks.map(([s, q]) => `<li>${qref(s, q)} <span class="sub">Lv ${q.lvl}</span></li>`).join("")}</ul><p class="sub">Other quests within 10 levels that need the same monster, so the kills can share a trip.</p></div>` : ""}
+    </div>
+  </div>`;
+}
+function showQuests(){
+  const r = QOPEN && (QLISTS[QOPEN.src] || QLISTS.q)[QOPEN.i];
+  $("#qlist").hidden = !!r; $("#qpage").hidden = !r;
+  if (!r) renderQuests(); else $("#qpage").innerHTML = questPage(r, QOPEN.src);
+}
+function openQuest(src, i, scroll = true){
+  const list = QLISTS[src] || QLISTS.q, r = list[i];
+  if (!r){ QOPEN = null; showQuests(); if (scroll) $("#quests").scrollIntoView({block: "start"}); return }
+  const same = QOPEN && QOPEN.src === src && QOPEN.i === i && !$("#qpage").hidden;
+  QOPEN = {src, i}; showQuests();
+  if (scroll) (same ? $("#qpage") : $("#quests")).scrollIntoView({block: "start"});
+}
+$("#qpage").addEventListener("click", e => {
+  if (e.target.id === "qback"){ QOPEN = null; showQuests(); return }
+  if (e.target.id === "qdshare" && QOPEN) return copyShare(e.target, shareUrl("Q", QOPEN.src + ":" + QOPEN.i));
+});
+// a quest name anywhere on the site (the table, item and monster pages, the planner, the quest log, citizenship)
+// opens its page here
+document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".qname"); if (!el) return;
+  const src = QLISTS[el.dataset.src] ? el.dataset.src : "q";
+  if (!QLISTS[src][+el.dataset.i]) return;
+  hideQtip(); $("#t-quests").click(); openQuest(src, +el.dataset.i) });
+if (HASH.Q){ const m = /^([qc]):(\d+)$/.exec(String(HASH.Q)); if (m && QLISTS[m[1]][+m[2]]){ QOPEN = {src: m[1], i: +m[2]}; setTimeout(showQuests) } }
+navReg("quests", () => QOPEN ? `d:${QOPEN.src}:${QOPEN.i}` : (QCHAIN || ""), v => {
+  if (typeof v === "string" && v.slice(0, 2) === "d:"){ const p = v.split(":"); openQuest(p[1], +p[2], false) }
+  else { QOPEN = null; QCHAIN = v || null; showQuests() }
+});

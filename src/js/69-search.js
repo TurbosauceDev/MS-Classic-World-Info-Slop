@@ -129,7 +129,7 @@ function go(r){
   else if (r.kind === "item") clickAs("itname", "item", r.key);
   else if (r.kind === "map") clickAs("mname", "map", r.key);
   else if (r.kind === "skill") openSkillPage(r.key);
-  else if (r.kind === "quest") openQuests({s: QLAUNCH[r.key].name});
+  else if (r.kind === "quest") openQuest("q", r.key);
   else if (r.kind === "char" && r.c){ const w = $("#maps").hidden ? "plan" : "maps"; $("#t-" + w).click(); CRL.use(w, r.c) }
 }
 // closing without picking (Esc, Ctrl K, a click outside) puts focus back where it was, so keyboard users don't land on a hidden box
@@ -149,12 +149,12 @@ document.addEventListener("keydown", e => {
   if (e.key === "/" && box.hidden && !e.ctrlKey && !e.metaKey && !e.target.closest?.("input, textarea, select, [contenteditable]")){ e.preventDefault(); open() }
   if (e.key === "Escape" && !box.hidden) close(true) });
 
-// Quest Database: open with a search (also the #q share link); clears the questline view and the level/toggle filters
+// Quest Database: open with a search (also the #q share link); clears the questline view, the detail page and the level/toggle filters
 function openQuests(o){
-  $("#t-quests").click(); QCHAIN = null;
+  $("#t-quests").click(); QCHAIN = null; QOPEN = null;
   $("#qsearch").value = o.s || ""; $("#qmin").value = o.lo ?? 0; $("#qmax").value = o.hi ?? 100;
   if (o.s) ["#qeq", "#qval"].forEach(b => $(b).setAttribute("aria-pressed", "false"));
-  renderQuests(); $("#quests").scrollIntoView({block: "start"});
+  showQuests(); $("#quests").scrollIntoView({block: "start"});
 }
 $("#qshare").addEventListener("click", () => copyShare($("#qshare"), shareUrl("q", {s: $("#qsearch").value.trim(), lo: +$("#qmin").value || 0, hi: +$("#qmax").value || 100})));
 if (HASH.q) openQuests(HASH.q);
