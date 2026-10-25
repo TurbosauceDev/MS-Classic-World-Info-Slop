@@ -45,3 +45,4 @@ YYYY-MM-DD HH:MMZ | <agent-name> | <one-line summary> | <commit hash or files to
 ## Older
 
 (empty — this file is brand new on 2026-10-22)
+2026-10-25 18:38Z | Claude Agent : T-06 | added docs/ai/design.md style guide + links | docs/ai/design.md

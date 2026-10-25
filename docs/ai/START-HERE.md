@@ -21,6 +21,7 @@ avoid that. Read them. Not optional.
 | `docs/ai/danny-digest.md` | Plain-English briefing for Danny (less technical) | If Danny asks "what's up?" you'll dump 500 lines of jargon on him instead of pointing him at one short doc |
 | `docs/ai/mesowatch-sync.md` | Canonical plumbing handoff for the meso.watch pipeline | You'll break the Cloudflare bypass, the localStorage transport, or the cron-scheduling pattern (each one took hours to figure out) |
 | `docs/ai/decisions.md` | Dated decision log — every non-trivial call Danny made | You'll re-litigate a decision Danny already made, or undo a constraint that exists for a reason |
+| `docs/ai/design.md` | Visual style guide: tokens, type, spacing, modals, animation, sprites, copy, tracker parity | Your page looks off-brand, hard-codes colors, or breaks Danny's layout rules |
 | `docs/ai/fixtures.md` | Test image index | Your new test image will fail the fixtures check + your CI will go red |
 
 **Read order for a new agent:**
@@ -34,7 +35,8 @@ avoid that. Read them. Not optional.
    - Touching the pipeline? → `docs/ai/mesowatch-sync.md`
    - Touching the schema? → `docs/ai/state-of-the-pipeline.md` § 3
    - Touching CI? → `docs/ai/state-of-the-pipeline.md` § 6 + § 9 (traps)
-   - Frontend work? → look at `src/js/` + `dist/index.html` patterns
+   - Frontend / any visual or UI-copy change? → `docs/ai/design.md` (tokens, spacing, modals, animation, sprites) first, then `src/js/`
+   - Frontend code? → look at `src/js/` + `dist/index.html` patterns
    - Replying to another agent? → `docs/ai/agent-mailbox.md` (post in same file)
 
 ## Agent norms (don't violate these)
