@@ -20,8 +20,51 @@ for (const [n, id] of Object.entries(MAPN)) add("map", id, n, D.maps[id]?.[2]?.l
 QLAUNCH.forEach((r, i) => add("quest", i, r.name, `Lv ${r.lvl} · ${r.npc}`));
 for (const [job, list] of Object.entries(D.skills)) for (const s of list) add("skill", job + "|" + s.id, s.n, job);
 const DROPBY = {}; for (const [mid, m] of Object.entries(D.mobdb)) for (const [iid, , v] of m.dr || []) (DROPBY[iid] = DROPBY[iid] || []).push([mid, v]);
+// @deal <name>: items where the cheapest live ask is below the cross-source median by >= 10% (mirrors 56-mci.js's
+// deal = ask.v / mid). Surfaces the MCI's "X% under" deals in Ctrl+K, ranked by deal depth. Cached for 5 min so
+// typing doesn't recompute listings for every item on each keystroke.
+const DEAL_MIN = 0.9;
+const DEAL_SRC = [
+  id => { const p = PW[id]; return p?.[0] > 0 ? [p[0], p[3]] : null },          // meso.watch
+  id => { const w = MW[id]; return w?.[0] > 0 && w[1] > 0 ? [w[0], w[1]] : null }, // maplestory.watch
+  id => { const m = MI[id]; return m?.[0] > 0 && m[3] ? [m[0], m[3]] : null },     // mesoindex
+  id => { const m = MA[id]; return m?.[0] > 0 && m[1] ? [m[0], m[1]] : null },     // mesoarbitrage
+  id => { const k = CMP[id]; return k?.[0] > 0 ? [k[0], k[3]] : null },           // classicmarket
+  id => { const m = MDB[id]; return m?.[0] > 0 ? [m[0], m[2]] : null },           // meowdb
+];
+let DEALS = null, DEALS_AT = 0;
+function dealsIndex(){
+  if (DEALS && Date.now() - DEALS_AT < 5 * 60000) return DEALS;
+  DEALS = []; DEALS_AT = Date.now();
+  // only items that have ANY live listing (meso.watch now, meowdb, mesoindex, maplestory.watch) — a much smaller
+  // set than all D.items, and the only ones that can be a "deal"
+  const ids = [...new Set([...Object.keys(PWNOW || {}), ...Object.keys(MDBL || {}), ...Object.keys(MILS || {}), ...Object.keys(MWLS || {})])];
+  for (const id of ids) {
+    const it = D.items[id]; if (!it || it.c === "Equipment") continue;   // equips: any roll, no "% under" (matches MCI)
+    const vs = DEAL_SRC.map(f => f(id)).filter(Boolean).map(x => x[0]); if (vs.length < 2) continue;
+    const mid = median(vs);
+    const ask = listingsOf(id).filter(x => !x.buy && Date.now() / 6e4 - (x.t || Date.now() / 6e4) < 1440).sort((a, b) => a.v - b.v)[0];
+    if (!ask) continue;
+    const deal = ask.v / mid;
+    if (deal >= DEAL_MIN) continue;
+    DEALS.push({id, name: it.n, n: norm(it.n), deal, ask: ask.v, mid, ago: ask.ago, src: ask.src});
+  }
+  DEALS.sort((a, b) => a.deal - b.deal);
+  return DEALS;
+}
+function findDeals(raw){
+  const deals = dealsIndex(), q = norm(raw), toks = q ? q.split(" ") : [];
+  const out = [];
+  for (const d of deals) {
+    if (q && !(d.n.includes(q) || toks.every(t => d.n.includes(t)))) continue;
+    out.push({kind: "item", key: d.id, name: d.name,
+      sub: `${Math.round((1 - d.deal) * 100)}% under usual · cheapest ${fmt(d.ask)} (median ${fmt(d.mid)})${d.ago ? " · " + d.ago : ""}`});
+    if (out.length >= 40) break;
+  }
+  return out;
+}
 const KINDS = {mob: "mob", mobs: "mob", monster: "mob", monsters: "mob", item: "item", items: "item", map: "map", maps: "map",
-  quest: "quest", quests: "quest", skill: "skill", skills: "skill", drop: "drop", drops: "drop", char: "char", ign: "char"};
+  quest: "quest", quests: "quest", skill: "skill", skills: "skill", drop: "drop", drops: "drop", deal: "deal", deals: "deal", char: "char", ign: "char"};
 const LABEL = {mob: ["Monster", "p-bad"], item: ["Item", "p-good"], map: ["Map", "p-warn"], quest: ["Quest", "p-hot"], skill: ["Skill", "p-hot"], char: ["Character", "p-good"]};
 
 // 0 exact, 1 starts with the query, 2 words matched in order, 3 any order, 4 substring; null = no match
@@ -39,6 +82,7 @@ function find(raw){
   let q = raw.trim(), kind = null; const m = q.match(/^@(\w+)\s*/);
   if (m && KINDS[m[1].toLowerCase()]){ kind = KINDS[m[1].toLowerCase()]; q = q.slice(m[0].length) }
   if (kind === "char") return charRow(q.trim());
+  if (kind === "deal") return findDeals(q.trim());
   q = norm(q); if (!q) return [];
   const toks = q.split(" "), hits = [];
   for (const r of ROWS){ if (kind && kind !== "drop" && r.kind !== kind) continue; if (kind === "drop" && (r.kind !== "item" || !DROPBY[r.key])) continue;
