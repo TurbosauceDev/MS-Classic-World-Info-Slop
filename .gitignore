@@ -3,3 +3,7 @@ build/
 node_modules/
 __pycache__/
 undefined/
+
+# wrangler local dev state and secrets (never committed)
+server/.wrangler/
+server/.dev.vars

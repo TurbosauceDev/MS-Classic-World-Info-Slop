@@ -199,4 +199,18 @@ const keptRound = r.rounds.find(x => x.why === "clear time"), countedRound = r.r
 assert.ok(keptRound && countedRound && r.rounds.length >= 8, `kept and counted rounds both listed (${r.rounds.length} rounds)`);
 assert.ok(!("install" in r.rounds[0]) && !("ipday" in r.rounds[0]), "no install or IP data in the inbox");
 assert.strictEqual((await worker.fetch(new Request("https://x/api/kpq/recent"), {DB})).status, 503, "no key on the server: inbox closed");
+// the owner panel (2026-10-26): GET /admin serves the page itself (no data on it, no key needed); the inbox gained
+// stage times, src, a limit param and a total count, which the panel shows without any curling
+const adm = await worker.fetch(new Request("https://x/admin"), env);
+assert.strictEqual(adm.status, 200);
+assert.match(adm.headers.get("content-type"), /text\/html/, "panel is HTML");
+assert.ok((await adm.text()).includes("Tracker admin"), "panel page served");
+const kq2 = q => worker.fetch(new Request("https://x/api/kpq/recent" + q, {headers: {authorization: "Bearer " + "k".repeat(32)}}), env).then(async r => [r.status, await r.json()]);
+[s, r] = await kq2("?limit=3");
+assert.strictEqual(r.rounds.length, 3, "limit param caps the list");
+assert.ok(r.total >= r.rounds.length, "total rounds on file included");
+assert.ok("stages" in r.rounds[0] && "src" in r.rounds[0], "stage times and source on every row");
+[s, r] = await kq2("?limit=notanumber");
+assert.ok(r.rounds.length >= 3, "junk limit falls back to the default");
+assert.ok(!JSON.stringify(r).includes("ipday") && !JSON.stringify(r).includes("install"), "still no install or IP data");
 console.log("server tests passed");

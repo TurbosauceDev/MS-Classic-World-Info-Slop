@@ -5,9 +5,12 @@
    GET  /api/summary  everything the site needs, anonymous: one row per player per map/party (their typical run),
                       plus drop counts per monster. The site's daily build bakes this into the page.
    POST /api/feedback a note from the site's Feedback page
-   GET  /api/feedback Danny's inbox (Authorization: Bearer FEEDBACK_KEY, a Worker secret); POST /api/feedback/done marks or deletes */
+   GET  /api/feedback Danny's inbox (Authorization: Bearer FEEDBACK_KEY, a Worker secret); POST /api/feedback/done marks or deletes
+   GET  /admin       the owner panel in a browser: KPQ inbox (each round's ok + why), feedback inbox, public summary.
+                     The page itself carries no data; the key is asked once and kept in the browser (localStorage fbkey) */
 import G from "./gamedata.json" with {type: "json"};
 import {cleanRun, cleanKpq, median, KPQ_MIN} from "./check.js";
+import {ADMIN_HTML} from "./admin.js";
 
 const CORS = {"access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST", "access-control-allow-headers": "content-type, authorization"};
 const json = (v, status = 200) => new Response(JSON.stringify(v), {status, headers: {"content-type": "application/json", ...CORS}});
@@ -244,10 +247,14 @@ async function doneFeedback(req, env){
 // owner inbox for KPQ rounds: everything the server received, counted or not, newest first. The public summary only shows
 // counted rounds, so "runs were done today, are they not logged?" (Danny, 2026-10-26) was unanswerable from outside — this
 // answers it with each round's ok and why. Same key as the feedback inbox; read-only; no install or IP data, names only.
+// Backs the owner panel at GET /admin, which asks for the key once and lists these in a browser (no curl needed)
 async function getKpqRecent(req, env){
   const no = fbAdmin(req, env); if (no) return no;
-  const {results} = await env.DB.prepare("SELECT k.id, k.received, k.date, k.hour, k.mode, k.party, k.level, k.job, k.clear, k.total, k.clock, k.exp, k.mesos, k.ok, k.why, n.name FROM kpq_rounds k LEFT JOIN kpq_names n ON n.kpq_id = k.id ORDER BY k.id DESC LIMIT 100").all();
-  return json({rounds: results});
+  const n = Math.min(500, Math.max(1, Number(new URL(req.url).searchParams.get("limit")) || 100));
+  const {results} = await env.DB.prepare(`SELECT k.id, k.received, k.date, k.hour, k.mode, k.party, k.level, k.job, k.clear, k.total, k.clock, k.exp, k.mesos, k.ok, k.why, k.stages, n.name, x.src
+    FROM kpq_rounds k LEFT JOIN kpq_names n ON n.kpq_id = k.id LEFT JOIN kpq_src x ON x.kpq_id = k.id ORDER BY k.id DESC LIMIT ?`).bind(n).all();
+  const all = await env.DB.prepare("SELECT COUNT(*) n FROM kpq_rounds").first();
+  return json({total: all.n, rounds: results.map(r => ({...r, src: r.src || "tracker"}))});
 }
 
 async function route(req, env){
@@ -260,6 +267,9 @@ async function route(req, env){
   if (url.pathname === "/api/feedback" && req.method === "GET") return getFeedback(req, env);
   if (url.pathname === "/api/kpq/recent" && req.method === "GET") return getKpqRecent(req, env);
   if (url.pathname === "/api/feedback/done" && req.method === "POST") return doneFeedback(req, env);
+  // the owner panel: a static page, no data on it — every data route it calls stays behind the key
+  if (url.pathname === "/admin" && req.method === "GET")
+    return new Response(ADMIN_HTML, {headers: {"content-type": "text/html; charset=utf-8", "cache-control": "no-store"}});
   if (url.pathname === "/api/summary" && req.method === "GET"){
     // worked out at most every 5 minutes and kept in the meta table (each request would otherwise read every run; the
     // Cache API does nothing on workers.dev)
