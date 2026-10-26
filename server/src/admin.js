@@ -202,7 +202,7 @@ function unlock(){
   $("#hstate").textContent = "open"; $("#hstate").className = "pill p-good";
   show(TAB);
   clearInterval(timer);
-  timer = setInterval(() => { if (document.visibilityState === "visible" && TAB !== "sum") show(TAB, true) }, 30000);
+  timer = setInterval(() => { if ($("#auto").checked && document.visibilityState === "visible" && TAB !== "sum") show(TAB, true) }, 30000);
 }
 
 /* ---------- KPQ rounds ---------- */
@@ -301,7 +301,7 @@ function runsFacts(rows){
   const t = rows.filter(r => ptDay(r.received) === today);
   const ok = t.filter(r => r.ok);
   const kept = t.length - ok.length;
-  const lastOk = [...t].reverse().find(r => r.ok);
+  const lastOk = t.find(r => r.ok);   // t is newest first, so the first counted is the latest one
   const card = (h, v, s) => '<div class="fact"><h3>' + h + '</h3><p><span class="num">' + v + "</span></p>" + (s ? '<div class="sub">' + s + "</div>" : "") + "</div>";
   $("#rfacts").innerHTML =
     card("Today (Pacific)", t.length ? ok.length + " counted · " + kept + " kept" : "0 runs",
@@ -351,7 +351,7 @@ async function loadFb(quiet){
 const board = (list, mode) => !list || !list.length ? '<div class="empty">no entries yet</div>' :
   "<table><thead><tr><th>#</th><th>Group</th><th>Names</th><th>Best</th><th>Typical</th><th>Rounds</th></tr></thead><tbody>" +
   list.slice(0, 5).map((e, i) => "<tr><td>" + (i + 1) + "</td><td><span class='mono'>" + esc(e.group) + "</span></td><td>" + esc((e.names || []).join(", ") || "—") +
-    "</td><td class='num'>" + (mode === "Rush" ? mmss(e.best) : nfmt(e.best)) + "</td><td class='num'>" + mmss(e.median) +
+    "</td><td class='num'>" + (mode === "Rush" ? mmss(e.best) : nfmt(e.best)) + "</td><td class='num'>" + (mode === "Rush" ? mmss(e.median) : nfmt(e.median)) +
     "</td><td class='num'>" + e.rounds + "</td></tr>").join("") + "</tbody></table>";
 async function loadSum(){
   $("#sfacts").innerHTML = ""; $("#srush").innerHTML = '<div class="empty">loading…</div>'; $("#sbonus").innerHTML = "";

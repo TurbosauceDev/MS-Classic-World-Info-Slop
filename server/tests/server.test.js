@@ -96,6 +96,14 @@ sql.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary_lock', ?)").run
 assert.strictEqual((await (await worker.fetch(new Request("https://x/api/summary"), env)).json()).stale, 1, "stale copy served while another request rebuilds");
 sql.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary_lock', ?)").run(String(Date.now() - 120e3));
 assert.strictEqual((await (await worker.fetch(new Request("https://x/api/summary"), env)).json()).stale, undefined, "an old rebuild claim doesn't block");
+// a corrupt cached copy (a half-written row) self-heals: rebuilt on the spot, not served as broken JSON or a 500 (2026-10-26 bug hunt)
+sql.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', '{oops')").run();
+sql.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary_lock', ?)").run(String(Date.now()));
+const healed = await (await worker.fetch(new Request("https://x/api/summary"), env)).json();
+assert.ok(healed.runs > 0, "corrupt cache row: rebuilt even with a fresh rebuild claim");
+sql.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").run(JSON.stringify({updated: "not a date"}));
+sql.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary_lock', ?)").run(String(Date.now() - 120e3));
+assert.ok((await (await worker.fetch(new Request("https://x/api/summary"), env)).json()).runs > 0, "an updated that is not a date counts as stale");
 const bad = (await fresh()).mobs["3"];
 assert.strictEqual(bad.kills, 100); assert.strictEqual(bad.mesos, 0); assert.deepStrictEqual(bad.items, {"4000001": 2});
 // attack-style input: "__proto__" ids on an unknown map, non-text names. Never crashes the summary or touches Object.prototype

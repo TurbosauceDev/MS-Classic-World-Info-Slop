@@ -296,11 +296,16 @@ async function route(req, env){
     // worked out at most every 5 minutes and kept in the meta table (each request would otherwise read every run; the
     // Cache API does nothing on workers.dev)
     const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary'").first();
-    let body = row?.v;
-    if (!body || Date.now() - Date.parse(JSON.parse(body).updated) > 5 * 60e3){
-      // one rebuild at a time: while another request is working it out (claimed in the last minute), the old copy is served
-      const lock = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary_lock'").first();
-      if (!body || !lock || Date.now() - Number(lock.v) > 60e3){
+    let body = row?.v, fresh = false;
+    // a copy that doesn't parse, or whose updated isn't a date (a half-written row), counts as no copy at all:
+    // the endpoint rebuilds instead of serving broken JSON or 500-ing forever
+    if (body) try { fresh = Date.now() - Date.parse(JSON.parse(body).updated) <= 5 * 60e3 } catch {}
+    if (!fresh){
+      // one rebuild at a time: while another request is working it out (claimed in the last minute), the old copy is served.
+      // A copy that doesn't parse can't be served as is, so no lock for it: rebuild now
+      let ok = null; try { ok = JSON.parse(body) } catch {}
+      const lock = ok ? await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary_lock'").first() : null;
+      if (!lock || Date.now() - Number(lock.v) > 60e3){
         await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary_lock', ?)").bind(String(Date.now())).run();
         const s = await summary(env.DB);
         body = JSON.stringify(s);
