@@ -63,6 +63,8 @@ host.onMenu?.(what => {
   else if (what === "toolbox"){ document.body.classList.remove("mini"); document.body.classList.remove("focus"); host.mini?.(false); tbOpen() }
   else if (what === "mini") (document.body.classList.contains("mini") ? $("#miniFull") : $("#miniBtn")).click();
   else if (what === "focus") (document.body.classList.contains("focus") ? $("#fzFull") : $("#focusBtn")).click();
+  else if (what === "overlay") $("#overlayBtn").click();
+  else if (what === "overlayEdit") host.overlayEdit?.();
   else if (what === "report") openBugPop();
   else if (what.startsWith("onTop:")){ const on = what === "onTop:true"; settings.onTop = on; $("#ontop").checked = on; $("#status").textContent = "Keep on top: " + (on ? "on" : "off") + "." }
   else if (what.startsWith("clickThrough:")){ const on = what === "clickThrough:true"; document.body.classList.toggle("through", on)
@@ -275,7 +277,7 @@ $("#spUse").onclick = () => spTake(true);
 $("#spKeep").onclick = () => spTake(false);
 
 // Settings: keyboard shortcuts (they work from the game too; main.js registers them) and the see-through window
-const KEY_NAMES = {onTop: "Keep on top on/off", startStop: "Start / Stop", pause: "Pause / go on", mini: "Simple Mode on/off", focus: "Focus mode on/off", toolbox: "Modules toolbox open/close",
+const KEY_NAMES = {onTop: "Keep on top on/off", startStop: "Start / Stop", pause: "Pause / go on", mini: "Simple Mode on/off", focus: "Focus mode on/off", overlay: "Overlay mode show/hide", overlayEdit: "Overlay: edit the layout", toolbox: "Modules toolbox open/close",
   show: "Hide / show the tracker", invNow: "Read the open inventory tab now", report: "Report a bug",
   clickThrough: "Click-through on/off (mouse goes to the game)", mark: "Mark this moment (in the run note)", saveImage: "Save the numbers as a picture", mute: "Mute sounds on/off"};
 const keyText = k => k ? k.replace("CommandOrControl", "Ctrl").replace("Super", "Win").replace(/\+/g, " + ") : "Off";

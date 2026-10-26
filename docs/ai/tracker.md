@@ -27,6 +27,8 @@ game window ─(Windows Graphics Capture)─► app/main.js ─frames─► app/
 | app/renderer-run.js | 20 | Start/Stop, inventory tab chips, End run summary, run name, frame pictures, Report a bug |
 | app/renderer-history.js | 22 | History UI: goal, filters, Maps, bests, trend, details + rename, compare 2-6, delete, level-up log, last 7 days |
 | app/renderer-settings.js | 20 | updates, Help, title bar, Settings popup, themes editor, sharing, shortcuts, Install |
+| app/renderer-overlay.js | 3 | Overlay Mode, tracker side: ovBuild snapshot (stats-lite, map spawns/respawns, KPQ clock, feed tail, theme) pushed on every render; wraps render/feedAdd |
+| app/overlay.html + app/overlay.js + app/overlay-preload.js | 14 | Overlay Mode, overlay window: floating glass widgets, drag + picker (settings.overlay.widgets), edit/locked, 1 s countdown tick |
 | app/readers.js | 68 | frame → events: EXP bar (BAR_FONT), pickup lines, party HP bars, inventory counts, KPQ clock. Also inlined into the site by build.py (`/*@READERS*/`) |
 | app/index.html | 34 | window markup + CSS |
 | app/main.js | 23 | Electron main: capture, OCR, updater, files, IPC |
@@ -94,7 +96,19 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   column skinned after maplestory.watch/market (air, soft shadows, hover highlights) using only theme tokens. Same data as
   Simple via shared builders (lvlHtml/potsHtml/moneyHtml, smChart(svg, pts)); #fzFeed mirrors feedAdd; window fit reuses
   host.mini with no zoom. modalOpen/toolbox leave it; #focusBtn hides under a 400 px main card (container query — inside a
-  hidden subtree no container matches, so the narrow-hide test runs in the full view). Tests: focus.test.js; ui.test shortcut rows = 13.
+  hidden subtree no container matches, so the narrow-hide test runs in the full view). Tests: focus.test.js; ui.test shortcut rows = 15.
+- Overlay Mode (0.2.74, Danny: "a true overlay style mode", shown maplestory.watch): a SECOND BrowserWindow, not a body class —
+  transparent, frameless, `focusable: false`, screen-saver on top, bounds = the union of all displays (ovBounds), so widgets can
+  sit on any monitor. main.js owns it (ovOpenWin/ovEditSet/ovToggle; ipc `overlay`, `ov-edit(-toggle)`, `ov-close`, `ov-state`,
+  `ov-push` relay); it re-pins in the same pinOnTop loop and closes with the tracker window. The tracker page (renderer-overlay.js,
+  loaded between renderer-settings and renderer-dummy) wraps `render` and `feedAdd` to push a snapshot ≤ every 500 ms while the
+  overlay is open — dummy data flows too (dummyFill forces one after the "Dummy data" labels). overlay.js renders 9 widgets
+  (Status/EXP/Kills/Mesos/Loot/Map & spawns/Party/KPQ/Run log), drags them in desktop pixels (settings.overlay.widgets,
+  wPos treats 0 as a real spot), re-clamps on ov-screens, and ticks countdowns locally between pushes (apply({...DATA, t: now})).
+  Edit = toolbar with a checkbox per widget + Done; locked = setIgnoreMouseEvents(true,{forward:true}) + body.locked (no titles).
+  The map card: G.maps[id][2] resolved to names/Lv/EXP + session.respawns() rows (overlay computes dueIn from killed+sec).
+  Theme: the push carries the tracker's resolved tokens (TH.resolve(themeNow(), darkQ.matches)) — overlay follows live.
+  Tests: overlay.test.js (page part + tracker part); ui-host stubs overlay/overlayPush/onOverlay/overlayEdit; ui.test rows = 15.
 - Compact view retired 0.2.58; compactFit stays as the "window height follows the boxes" sizer (fitWin). Adding a shortcut:
   KEYS (main.js), KEY_NAMES, and the ui test's shortcut row count.
 - Dummy data: app/renderer-dummy.js (View menu "dummy" → dummyToggle via renderer-settings.js onMenu). It sets `session`

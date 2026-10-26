@@ -80,7 +80,7 @@ function dropAlert(id){
 }
 
 // party view: every minute, our numbers go up with the party code and everyone's come back
-let lastParty = 0, partyBusy = false, partyNames = null;   // partyNames: the other trackers on the party code last time (event log joins/leaves)
+let lastParty = 0, partyBusy = false, partyNames = null, partyLive = null;   // partyNames: the other trackers on the party code last time (event log joins/leaves); partyLive: the same answer for the overlay widget
 async function sendParty(){
   const s = session.stats(), box = $("#partyBox");
   const r = await host.party({job: s.job, level: s.level, mapName: s.nowMapName, expHr: s.expHr, expHr5: s.expHr5, killsHr: s.killsHr, mesosHr: s.mesosHr,
@@ -92,6 +92,7 @@ async function sendParty(){
   const names = r.members.filter(m => !m.you).map(m => m.nick || m.job || "a member");
   if (partyNames){ for (const n of names) if (!partyNames.includes(n)) note(`${n} joined party "${settings.partyCode}"`, "party"); for (const n of partyNames) if (!names.includes(n)) note(`${n} left party "${settings.partyCode}"`, "party") }
   partyNames = names;
+  partyLive = r.members ? {expHr: r.expHr, members: r.members.slice(0, 6).map(m => ({nick: m.nick, job: m.job, level: m.level, expHr: m.expHr, you: !!m.you}))} : null;
   box.innerHTML = `<div class="k">Party "${esc(settings.partyCode)}": ${fmt(r.expHr)} EXP/hr together</div><table>` + r.members.map(m =>
     `<tr><td>${m.you ? "<b>you</b>" : esc(m.nick || m.job || "member")}${m.nick && !m.you && m.job ? ` <span class="note">${esc(m.job)}</span>` : ""}${m.level ? " Lv " + m.level : ""}</td>
     <td class="n">${fmt(m.expHr || 0)}/hr</td><td class="n note">${m.expHr5 != null ? "5 min: " + fmt(m.expHr5) : ""}</td></tr>`).join("")

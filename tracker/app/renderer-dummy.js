@@ -25,6 +25,7 @@ function dummyFill(){
   try { renderSnaps(render()) } catch (e){ $("#status").textContent = "Dummy data: " + e.message }
   requestAnimationFrame(() => { const el = $("#feed"); el.scrollTop = el.scrollHeight });   // after the boxes settled
   $("#stateText").textContent = "Dummy data"; $("#miniState").textContent = "Dummy data"; $("#fzState").textContent = "Dummy data";
+  ovSend(true);   // the overlay gets the made-up run too (try layouts there as well)
 }
 function dummyClearFeeds(){ $("#feed").innerHTML = ""; $("#miniFeed").innerHTML = ""; $("#fzFeed").innerHTML = "" }
 // wipe it in place: it used to reload the window, which the main process blocks (will-navigate), so it never went away

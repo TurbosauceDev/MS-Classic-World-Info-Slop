@@ -20,6 +20,11 @@ contextBridge.exposeInMainWorld("host", {
   party: live => ipcRenderer.invoke("party", live),
   mini: (on, h) => ipcRenderer.invoke("mini", on, h),
   winSize: (w, h) => ipcRenderer.invoke("win-size", w, h),
+  // overlay mode: a second, transparent window over the game (main.js owns it; this page builds the data for it)
+  overlay: on => ipcRenderer.invoke("overlay", on),
+  overlayEdit: () => ipcRenderer.invoke("ov-edit-toggle"),
+  overlayPush: d => ipcRenderer.send("ov-push", d),
+  onOverlay: cb => ipcRenderer.on("ov-state", (_, s) => cb(s)),
   menu: (label, x, y) => ipcRenderer.invoke("menu-popup", label, x, y),
   snip: url => ipcRenderer.invoke("snip", url),
   themeBar: c => ipcRenderer.invoke("theme-bar", c),

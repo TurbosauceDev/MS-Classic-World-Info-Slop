@@ -2,7 +2,9 @@
 
 Small always-on-top window that watches the MapleStory Classic World window while you grind: kills, EXP/hr, time to
 next level, mesos/hr with meso drops per monster, every item picked up with its market value. It only reads the window's
-pixels (same capture API as OBS/Discord); it never touches game files or memory and never sends keys.
+pixels (same capture API as OBS/Discord); it never touches game files or memory and never sends keys. Four views:
+the full window, Simple Mode (the run at a glance), Focus Mode (one clean centred column) and Overlay Mode (floating
+glass widgets over the game itself, on any monitor, click-through when locked).
 
 ```
 npm install
@@ -13,6 +15,16 @@ node tests/readers.test.js [dir]   # screen readers on real frames (tests/frames
 npm start           # run it (Windows, Electron)
 ```
 
+- Overlay Mode (v0.2.74, Danny: "a true overlay style mode", shown maplestory.watch's live overlay): a second, transparent
+  frameless window (`app/overlay.html` + `overlay.js`, owned by main.js) spanning the whole virtual desktop, always on top,
+  `showInactive` + `focusable: false` so the game never loses focus. The tracker window builds a small snapshot
+  (`renderer-overlay.js` ovBuild: stats-lite, the map's spawn table and respawn timers from G.timed, KPQ clock, the last
+  run-log lines in plain text, the resolved theme tokens) and pushes it on every re-render (500 ms throttle); the overlay
+  just renders it, and a 1 s tick advances the countdowns between pushes. Edit mode (Ctrl+Shift+E / View menu / Done in
+  the toolbar): cards drag anywhere (pointer events, saved in desktop pixels via settings.overlay.widgets, re-clamped on
+  `display-metrics-changed`), the toolbar's checkboxes pick what to track. Locked (Done / same keys):
+  `setIgnoreMouseEvents(true, {forward: true})` — every click reaches the game; the cards drop their titles. Widgets:
+  Status, EXP (with the level bar), Kills, Mesos, Loot, Map & spawns, Party, KPQ, Run log. tests/overlay.test.js.
 - `core/session.js`: events -> rates. Pure; idle gaps over 60 s are left out. Kills are placed by matching each EXP pickup
   to the map's monsters (exact base EXP, or the party share); mesos/items are credited to the last kill (a guess on maps
   with several monsters).

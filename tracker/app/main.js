@@ -77,11 +77,17 @@ app.whenReady().then(() => {
   let saveT = null;
   const keep = () => { clearTimeout(saveT); saveT = setTimeout(saveBounds, 500) };
   win.on("moved", keep); win.on("resized", keep); win.on("close", () => { clearTimeout(saveT); saveBounds() });
+  // the tracker window is the app: closing it closes the overlay too (window-all-closed then quits)
+  win.on("closed", () => ovCloseWin());
+  // monitors plugged in or removed, resolution changed: the overlay re-spans the desktop and its page re-clamps the widgets
+  require("electron").screen.on("display-metrics-changed", () => {
+    if (ovWin && !ovWin.isDestroyed()){ try { ovWin.setBounds(ovBounds()); ovWin.webContents.send("ov-screens", ovBounds()) } catch {} }
+  });
   // our own menu instead of Electron's default (its Help menu only linked to Electron's site)
   const show = what => () => win && !win.isDestroyed() && win.webContents.send("menu", what);
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {label: "File", submenu: [{label: "Settings", accelerator: "CmdOrCtrl+,", click: show("settings")}, {label: "Past sessions", accelerator: "F2", registerAccelerator: false, click: show("history")}, {label: "Reset tracker (clear the screen)", click: show("reset")}, {type: "separator"}, {label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
-    {label: "View", submenu: [{label: "Modules toolbox", click: show("toolbox")}, {label: "Simple Mode", click: show("mini")}, {label: "Focus mode", click: show("focus")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {label: "Fit every box to its content", click: show("fit")}, {label: "Line up every box", accelerator: "CmdOrCtrl+Shift+L", click: show("align")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
+    {label: "View", submenu: [{label: "Modules toolbox", click: show("toolbox")}, {label: "Simple Mode", click: show("mini")}, {label: "Focus mode", click: show("focus")}, {label: "Overlay mode", click: show("overlay")}, {label: "Edit overlay layout", click: show("overlayEdit")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {label: "Fit every box to its content", click: show("fit")}, {label: "Line up every box", accelerator: "CmdOrCtrl+Shift+L", click: show("align")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
     {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Patch notes", click: show("patchnotes")}, {label: "Check for updates", click: show("update")},
       {label: "Report a bug", click: show("report")}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
   ]));
@@ -122,7 +128,7 @@ ipcMain.handle("update-install", () => { if (upd.state !== "ready") return false
 /* keyboard shortcuts, working from anywhere (the game too): settings.keys {action: accelerator, "" = off}, else these.
    Each one takes its keys away from every other program while the tracker runs, so all can be changed or turned off.
    Always on top was Danny's ask (2026-10-18); the others are the buttons players reach for mid-grind */
-const KEYS = {onTop: "CommandOrControl+Shift+T", startStop: "CommandOrControl+Shift+S", pause: "CommandOrControl+Shift+P", mini: "CommandOrControl+Shift+M", focus: "CommandOrControl+Shift+F", toolbox: "CommandOrControl+Shift+K",
+const KEYS = {onTop: "CommandOrControl+Shift+T", startStop: "CommandOrControl+Shift+S", pause: "CommandOrControl+Shift+P", mini: "CommandOrControl+Shift+M", focus: "CommandOrControl+Shift+F", overlay: "CommandOrControl+Shift+O", overlayEdit: "CommandOrControl+Shift+E", toolbox: "CommandOrControl+Shift+K",
   show: "CommandOrControl+Shift+H", invNow: "CommandOrControl+Shift+I", report: "CommandOrControl+Shift+B",
   clickThrough: "CommandOrControl+Shift+X", mark: "CommandOrControl+Shift+N", saveImage: "CommandOrControl+Shift+G", mute: "CommandOrControl+Shift+U"};
 // modifiers + one key; a key with no modifier only for F1-F24 (a plain letter would be taken from the game's own keys)
@@ -145,6 +151,8 @@ function keyAction(a){
   if (a === "clickThrough"){ clickThrough = !clickThrough; win.setIgnoreMouseEvents(clickThrough, {forward: true}); win.webContents.send("menu", "clickThrough:" + clickThrough); return }
   if (a === "show"){ if (win.isVisible() && !win.isMinimized()) win.minimize(); else { win.restore(); win.show(); pinOnTop() } return }
   if (a === "report"){ win.show(); win.focus() }
+  if (a === "overlay"){ ovToggle(); return }
+  if (a === "overlayEdit"){ if (ovWin && !ovWin.isDestroyed()) ovEditSet(!ovEditing); return }
   win.webContents.send("menu", a);
 }
 // the Settings list: what each action is set to, the defaults, and which couldn't be had (another program holds them).
@@ -163,10 +171,55 @@ ipcMain.handle("keys", (_, keys, pause) => {
 function applyOpacity(){ if (win && !win.isDestroyed()){ const o = +readSettings().opacity; win.setOpacity(o >= 0.4 && o <= 1 ? o : 1) } }
 // on top of everything: the "screen-saver" level beats plain always-on-top windows (Danny: it kept going under other programs)
 function pinOnTop(){
-  if (!win || win.isDestroyed()) return;
-  if (readSettings().onTop === false){ win.setAlwaysOnTop(false); return }
-  win.setAlwaysOnTop(true, "screen-saver"); win.moveTop();
+  if (win && !win.isDestroyed()){
+    if (readSettings().onTop === false) win.setAlwaysOnTop(false);
+    else { win.setAlwaysOnTop(true, "screen-saver"); win.moveTop() }
+  }
+  // the overlay floats over the game: same treatment, and it doesn't care about the keep-on-top setting
+  if (ovWin && !ovWin.isDestroyed()){ ovWin.setAlwaysOnTop(true, "screen-saver"); ovWin.moveTop() }
 }
+
+/* Overlay mode (Danny, 2026-10-26: a fourth view, and the first one outside the tracker window): a transparent,
+   frameless, click-through window over the game — spanning the whole virtual desktop, so a widget can live on any
+   monitor. Edit mode (Ctrl+Shift+E) takes the mouse back to drag widgets and pick what they track; Done (or the same
+   keys) locks it and every click lands in the game again. The tracker window still does all the reading; it pushes a
+   small snapshot over IPC and this window just shows it (app/overlay.js). showInactive: opening never steals the game's
+   focus; focusable: false keeps it that way when clicked. */
+let ovWin = null, ovEditing = false;
+function ovBounds(){
+  const {screen} = require("electron"), ds = screen.getAllDisplays();
+  const x = Math.min(...ds.map(d => d.bounds.x)), y = Math.min(...ds.map(d => d.bounds.y));
+  return {x, y, width: Math.max(...ds.map(d => d.bounds.x + d.bounds.width)) - x, height: Math.max(...ds.map(d => d.bounds.y + d.bounds.height)) - y};
+}
+const ovWidgets = () => { const w = readSettings().overlay?.widgets; return w && typeof w === "object" && !Array.isArray(w) ? w : {} };
+const ovSendState = () => { if (win && !win.isDestroyed()) win.webContents.send("ov-state", {open: !!(ovWin && !ovWin.isDestroyed()), edit: ovEditing}) };
+function ovEditSet(on){
+  ovEditing = !!on;
+  if (ovWin && !ovWin.isDestroyed()){ ovWin.setIgnoreMouseEvents(!ovEditing, {forward: true}); ovWin.webContents.send("ov-mode", ovEditing) }
+  ovSendState();
+}
+function ovOpenWin(){
+  if (ovWin && !ovWin.isDestroyed()) return;
+  ovWin = new BrowserWindow({...ovBounds(), frame: false, transparent: true, hasShadow: false, resizable: false, movable: false,
+    fullscreenable: false, minimizable: false, maximizable: false, skipTaskbar: true, show: false, focusable: false,
+    webPreferences: {preload: path.join(__dirname, "overlay-preload.js"), contextIsolation: true, backgroundThrottling: false}});
+  ovWin.setAlwaysOnTop(true, "screen-saver");
+  ovWin.webContents.setWindowOpenHandler(() => ({action: "deny"}));
+  ovWin.webContents.on("will-navigate", e => e.preventDefault());
+  ovWin.on("closed", () => { ovWin = null; ovSendState() });
+  // edit: true unless the player locked it and it was still open when the app last quit
+  const edit = readSettings().overlay?.edit !== false;
+  ovWin.loadFile(path.join(__dirname, "overlay.html")).then(() => { ovWin.showInactive(); ovEditSet(edit) }).catch(() => {});
+  ovSendState();
+}
+function ovCloseWin(){ if (ovWin && !ovWin.isDestroyed()) ovWin.close() }
+function ovToggle(){ ovWin && !ovWin.isDestroyed() ? ovCloseWin() : ovOpenWin() }
+ipcMain.handle("overlay", () => { ovToggle(); return !!(ovWin && !ovWin.isDestroyed()) });
+ipcMain.handle("ov-edit", (_, on) => { if (ovWin && !ovWin.isDestroyed()) ovEditSet(on !== false); return ovEditing });
+ipcMain.handle("ov-edit-toggle", () => { if (ovWin && !ovWin.isDestroyed()) ovEditSet(!ovEditing); return ovEditing });
+ipcMain.handle("ov-close", () => { ovCloseWin(); return true });
+ipcMain.handle("ov-state", () => ({edit: ovEditing, widgets: ovWidgets(), desk: ovBounds()}));
+ipcMain.on("ov-push", (_, d) => { if (ovWin && !ovWin.isDestroyed()) ovWin.webContents.send("ov-data", d) });
 
 // "Show me where": a full-screen window with the frozen game picture; the player drags a box (snipping-tool style)
 // It opens on the game's monitor (Danny: it opened on his second monitor, where the tracker and the mouse were): the game
