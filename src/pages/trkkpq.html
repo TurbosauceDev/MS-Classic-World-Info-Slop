@@ -6,6 +6,7 @@
       <li><b>Rush</b>: fastest clear, 1st stage to beating King Slime and leaving the Last stage. The Bonus stage isn't counted.</li>
       <li><b>Bonus</b>: rounds that went into the Bonus stage, ranked by EXP + mesos gained that round (1 meso = 1 point, our own weighting). A faster Rush leaves more Bonus time, which shows up as more EXP and mesos. Only the tracker reads EXP, so site-timed rounds are on Rush only.</li>
       <li>One line per party (same party code) or player (home network). A party's trackers each send the same round; it counts once.</li>
+      <li><b>Today's runs</b> below the board: every round recorded today (this browser's date), fastest first, the day's best highlighted. It doesn't follow the filters, so the whole day stays visible when the board is filtered down.</li>
       <li>The server checks every round: the stage times have to fit in the clear, a clear has to be 1 to 60 minutes (our own bounds), the same round sent twice counts once, and one tracker or browser can send 12 rounds an hour.</li>
       <li>Names link to the player's <a href="https://classicrank.com/" target="_blank" rel="noopener">classicrank.com</a> profile. Filters are saved in this browser.</li>
     </ul>
@@ -23,6 +24,9 @@
 .kb-count{margin:0 0 8px}
 tr.kb-row{cursor:pointer;transition:background .2s}
 tr.kb-row:hover,tr.kb-row:focus-visible{background:var(--accent-soft);outline:none}
+tr.kb-best td{background:var(--accent-soft)}
+tr.kb-trow{cursor:pointer;transition:background .2s}
+tr.kb-trow:hover,tr.kb-trow:focus-visible{background:var(--accent-soft);outline:none}
 tr.kb-me td{background:var(--leaf-soft)}
 td.kb-ch{color:var(--muted);width:1em}
 tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}

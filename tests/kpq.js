@@ -95,6 +95,18 @@ const SUMMARY = {updated: "2026-10-21T12:00:00Z", runs: 0, players: 0, hours: 0,
   check(/1st[\s\S]*Last/.test(await p.textContent("#trkkpqdata .kb-split")), "clicking a line shows its stage times");
   check(/Fastest stages/.test(await p.textContent("#trkkpqdata")), "fastest stages card");
   check(await p.evaluate(() => JSON.parse(localStorage.getItem("trkkf")).mode) === "Rush", "filters saved");
+  // today's runs card (Danny 10-25): every round of the browser's date, fastest first, the day's best highlighted;
+  // ignores the filters, opens its own stage times
+  await p.clock.setFixedTime(new Date("2026-10-20T12:00:00"));
+  await p.click('#trkkm button[data-m="Rush"]');   // redraw so the card reads the clock's date
+  let t = await p.$$eval("#trkkpqdata tr.kb-trow", x => x.map(r => r.cells[0].textContent.trim()));
+  check(t.length === 4 && t[0].startsWith("4:40") && t[3].startsWith("7:00"), `today's runs: all 4 of the day, fastest first (${t})`);
+  check(await p.$("#trkkpqdata tr.kb-best") && /best/.test(await p.textContent("#trkkpqdata tr.kb-best")), "the day's best row is highlighted and labeled");
+  check(await p.$$eval("#trkkpqdata tr.kb-row", x => x.every(r => !r.classList.contains("kb-best"))), "board rows keep their own highlighting");
+  await p.click("#trkkpqdata tr.kb-trow");
+  check((await p.$$("#trkkpqdata .kb-split")).length === 1 && /1st[\s\S]*Last/.test(await p.textContent("#trkkpqdata .kb-split")), "a today row opens its stage times");
+  await p.click("#trkkpqdata tr.kb-trow");
+  check(!(await p.$("#trkkpqdata .kb-split")), "clicking again closes it");
   check(!errs.length, "no page errors " + errs.join(" | "));
   await b.close();
   if (fails) { console.log(fails + " failed"); process.exit(1) }

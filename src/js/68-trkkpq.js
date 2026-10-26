@@ -233,10 +233,11 @@ const STG = ["1st", "2nd", "3rd", "4th", "Last", "Bonus"];
 const DEF = {mode: "Rush", party: "any", job: "any", when: "all", timing: "any"};
 const F = Object.assign({...DEF}, savedState("trkkf", DEF));
 const keep = () => { try { localStorage.setItem("trkkf", JSON.stringify(F)) } catch(e) {} };
-let open = null;   // the group whose stage splits are shown
+let open = null, today = null;   // the board group / today-card round whose stage splits are shown
 const day = d => new Date(d + "T12:00:00");
+const todayStr = () => new Date().toLocaleDateString("sv");
 function rows(list){
-  const today = new Date().toLocaleDateString("sv"), week = Date.now() - 7 * 864e5;
+  const today = todayStr(), week = Date.now() - 7 * 864e5;
   return list.filter(e => (F.party === "any" || String(e.p) === F.party) && (F.job === "any" || jobClass(e.j) === F.job)
     && (F.when === "all" || (F.when === "today" ? e.d === today : day(e.d) >= week))
     && (F.timing === "any" || (F.timing === "clock" ? e.k : e.src === "tracker"))
@@ -289,8 +290,22 @@ function render(k){
   const shown = rs.length;
   const body = b.length ? `<div class="tblwrap"><table><thead><tr>${th}<th aria-label="Stages"></th></tr></thead><tbody>${trs}</tbody></table></div>`
     : `<p class="tiny">No rounds match these filters. <button class="btn sm" type="button" data-kreset>Reset filters</button></p>`;
+  // every round recorded today (this browser's date), fastest first, the day's best highlighted (Danny 10-25);
+  // independent of the filters, so the whole day stays visible when the board is filtered down
+  const trows = list.filter(e => e.d === todayStr()).sort((a, b) => a.c - b.c);
+  const latest = list.map(e => e.d).sort().at(-1);
+  const ttrs = trows.map((e, i) => {
+    const names = e.n || [], me = mine && names.some(n => n.toLowerCase() === mine);
+    const who = (names.length ? `<b>${names.map(crank).join(", ")}</b> <span class="sub">` : "<span>") + (e.p > 1 ? "party of " + e.p : "solo") + "</span>";
+    const sp = today === i ? `<tr class="kb-sp"><td colspan="7">${splits(e)}</td></tr>` : "";
+    return `<tr class="kb-trow${i ? "" : " kb-best"}${me ? " kb-me" : ""}" data-ti="${i}" tabindex="0" title="Stage times of this round"><td class="num"><b>${mss(e.c)}</b>${mark(e)}${i ? "" : ' <span class="pill p-good">best</span>'}</td><td>${who}</td><td>${e.l ? "Lv " + e.l : "–"}${e.j ? ` <span class="sub">${esc(e.j)}</span>` : ""}</td><td class="num">${e.s[5] != null ? mss(e.s[5]) : "–"}</td><td class="num">${e.x != null ? fmt(e.x) : "–"}</td><td class="num">${e.m != null ? fmt(e.m) : "–"}</td><td class="kb-ch" aria-hidden="true">${today === i ? "▴" : "▾"}</td></tr>${sp}`;
+  }).join("");
+  const todayCard = `<div class="card kb-card kb-today"><h3>Today's runs</h3>${trows.length ? `<p class="sub kb-count">${fmt(trows.length)} run${trows.length === 1 ? "" : "s"} recorded today, fastest first. The day's best is highlighted; click a line for its stage times.</p>
+    <div class="tblwrap"><table><thead><tr><th class="num">Clear</th><th>Who</th><th>Level and job</th><th class="num">Bonus</th><th class="num">EXP</th><th class="num">Mesos</th><th aria-label="Stages"></th></tr></thead><tbody>${ttrs}</tbody></table></div>
+    <p class="sub">The filters above don't apply here. "~" = timed with the PC clock, "⌨" = timed on the site's <a href="#" data-go="kpqt">KPQ timer</a>.</p>`
+    : `<p class="sub">No rounds recorded yet today${latest ? `. The latest on file is ${esc(latest)}` : ""}.</p>`}</div>`;
   return `<div class="card kb-card">${filt}<p class="sub kb-count">${fmt(shown)} round${shown === 1 ? "" : "s"} from ${fmt(b.length)} ${b.length === 1 ? "party or player" : "parties and players"}${shown < list.length ? ` (of ${fmt(list.length)})` : ""}. Click a line for its stage times.</p>${body}
-    <p class="sub">${rush ? "" : "EXP and mesos are the best a party member's tracker saw that round. "}Level and job are the sender's. "~" = timed with the PC clock, "⌨" = timed on the site's <a href="#" data-go="kpqt">KPQ timer</a>.</p></div>${fastHtml}`;
+    <p class="sub">${rush ? "" : "EXP and mesos are the best a party member's tracker saw that round. "}Level and job are the sender's. "~" = timed with the PC clock, "⌨" = timed on the site's <a href="#" data-go="kpqt">KPQ timer</a>.</p></div>${todayCard}${fastHtml}`;
 }
 function splits(e){
   const tot = e.s.slice(0, 5).reduce((a, x) => a + (x || 0), 0) || 1;
@@ -301,9 +316,10 @@ function wire(root, redraw){
   root.addEventListener("click", e => {
     if (e.target.closest("[data-kreset]")){ Object.assign(F, DEF); keep(); redraw(); return }
     if (e.target.closest("a")) return;
-    const r = e.target.closest("tr.kb-row"); if (r){ open = open === r.dataset.g ? null : r.dataset.g; redraw() }
+    const r = e.target.closest("tr.kb-row, tr.kb-trow"); if (r){ if (r.dataset.ti != null){ open = null; today = today === +r.dataset.ti ? null : +r.dataset.ti }
+      else { today = null; open = open === r.dataset.g ? null : r.dataset.g } redraw() }
   });
-  root.addEventListener("keydown", e => { const r = e.target.closest?.("tr.kb-row"); if (r && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); r.click() } });
+  root.addEventListener("keydown", e => { const r = e.target.closest?.("tr.kb-row, tr.kb-trow"); if (r && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); r.click() } });
 }
 return {render, wire, keep, F};
 })();
