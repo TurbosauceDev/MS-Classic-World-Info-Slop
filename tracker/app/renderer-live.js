@@ -344,6 +344,10 @@ function logAppend(el, html){
 // where messages for the user should go"): every #status message lands here too, so the one line under Start is just the newest
 const EV_KINDS = new Set(["map", "level", "death", "party", "job"]);
 const note = (text, kind = "info") => eventAdd({t: Date.now(), kind, text});   // a line in the event log only (the status line stays)
+// the server's answer to a shared run or KPQ round, pushed from the main process (preload onShare): the "sent" note only
+// ever meant queued, so the outcome follows it — kept but not counted shows with the server's own reason (2026-10-26)
+host.onShare(s => note(s.counted === false ? `The server kept but didn't count that ${s.what}: ${s.why}`
+  : `The server refused that ${s.what}: ${s.why}`, s.what === "KPQ round" ? "kpq" : "info"));
 let statusKind = "", statusUndo = false;   // statusKind: set right before a #status write that's a level-up; statusUndo: oneFrame putting the old line back
 function eventAdd(l){ const el = $("#events"), last = el.lastElementChild;
   // the same level twice (the level-up message and the run log's "reached level"): keep the first

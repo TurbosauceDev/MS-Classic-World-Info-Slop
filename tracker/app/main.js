@@ -219,6 +219,9 @@ ipcMain.handle("settings", (_, s) => {
 });
 // a finished 15-minute run (sharing on): queue it, then send everything queued. Kept until the server answers.
 const readQueue = () => { try { const q = JSON.parse(fs.readFileSync(QUEUE, "utf8")); return Array.isArray(q) ? q.filter(r => r && typeof r === "object") : [] } catch { return [] } };   // a broken file (null, {}) = nothing queued
+// the server's own answer to a shared run or KPQ round, on to the event log: the "sent" note only ever meant queued, so a
+// round the server kept but didn't count (too fast, missing stages) or refused was invisible (Danny, 2026-10-26)
+const shareReply = s => { if (win && !win.isDestroyed()) win.webContents.send("share", s) };
 let flushing = false;
 async function flushRuns(){
   if (!SERVER || flushing || !readSettings().share) return;
@@ -228,7 +231,10 @@ async function flushRuns(){
     for (const run of q){
       try {
         const r = await fetch(SERVER + (run.kpq ? "/api/kpq" : "/api/runs"), {signal: AbortSignal.timeout(20e3), method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(run)});
+        const b = await r.json().catch(() => null);   // {ok, counted, why} on the answers the server understands
         if (r.status === 429 || r.status >= 500) left.push(run);   // try again later; other answers are final
+        else if (b && b.counted === false) shareReply({what: run.kpq ? "KPQ round" : "run", counted: false, why: b.why || "no reason given"});
+        else if (!r.ok) shareReply({what: run.kpq ? "KPQ round" : "run", counted: null, why: "the server answered " + r.status});
       } catch { left.push(run) }
     }
     // runs queued while this was sending stay queued

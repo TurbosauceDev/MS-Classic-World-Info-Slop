@@ -30,4 +30,5 @@ contextBridge.exposeInMainWorld("host", {
   updateInstall: () => ipcRenderer.invoke("update-install"),
   onMenu: cb => ipcRenderer.on("menu", (_, what) => cb(what)),
   onUpdate: cb => ipcRenderer.on("update", (_, u) => cb(u)),
+  onShare: cb => ipcRenderer.on("share", (_, s) => cb(s)),
 });
