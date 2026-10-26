@@ -21,6 +21,7 @@ above as a dated line and note the resolution date in its place.
 - 2026-10-18 Prediction-vs-real-runs check for Where to train: later, not until there are users.
 - 2026-10-18 Don't ask again unless he raises it: mapleexp leaderboard export, 2nd job Bowman stat window, scroll odds calculator (not interested).
 - 2026-10-26 Danny: reply in English on Discord surfaces, always. Trigger: a model-availability error line ("please try again later") went out in Chinese under the bot's name; he flagged it. Applies to every agent posting to his channels, error fallbacks included.
+- 2026-10-26 Danny (via Glorg [z.ai]), on the overnight price audit's proposal table: "I approve of proposals: 1, 2, 3, 4, 5 and I will handle 6". P1 (mesoindex browser UA) and P2 (watchdog on all 7 sources) were already shipped; P3 (stale-age pill on Prices rows), P4 (sources-context sub-line under the Usual price tile) and P5 (pwPrice fallback tail: mesoarbitrage sold median → maplestory.watch typical → mesoindex usual) are approved to build. P6 (askMedian on the meso.watch row) Danny handles himself: do not build it. P7-P11 were not named: still open (P7 stays blocked on the maplestory.market key; P8 Movers, P9 data split, P10 mob calibration, P11 lock fix await his call).
 
 ## Data and sources
 - 2026-10-06 Quest-item drop rate assumption 30% per kill (15% "cautious"); no real drop rates exist anywhere.

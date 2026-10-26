@@ -197,7 +197,8 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(JSON.stringify(sp) === "[true,2,true,true,true,true]", `items: 7-day price sparkline (${sp})`);
     // classicmarket.kr + meowdb 2026-10-21: a Prices row per source with its sample count; pwPrice falls back
     // meso.watch -> classicmarket.kr market (combined, Layer B) -> meowdb usual -> classicmarket.kr asks -> buy orders
-    const c = await p.evaluate(() => { const id = "2000000", kp = PW[id], kc = CM[id], km = MDB[id], kk = CMP[id], out = [];
+    const c = await p.evaluate(() => { const id = "2000000", kp = PW[id], kc = CM[id], km = MDB[id], kk = CMP[id], ka = MA[id], kw = MW[id], ki = MI[id], out = [];
+      delete MA[id]; delete MW[id]; delete MI[id];
       CM[id] = [40, 45, 3, 30, 28, 2]; CMP[id] = [65, 50, 90, 12, 40, 3, "2026-10-21"]; MDB[id] = [55, 20, 7, 50, null, 4, null, 0, null, 0]; const rows = PRICE_SRC.map(f => f(id)).filter(Boolean);
       out.push(rows.some(r => r.src === "classicmarket.kr" && r.v === 45 && /3 posts/.test(r.n)) && rows.some(r => r.buy && r.v === 28) && rows.some(r => r.src === "meowdb" && r.v === 55 && /20 asks \+ 7 sales/.test(r.n)) && rows.some(r => r.src === "classicmarket.kr" && r.v === 65 && /12 sold · 40 seen/.test(r.n) && /50-90 · 3 for sale now/.test(r.detail)));
       PW[id] = [60, 50, 70, 9, 0]; out.push(pwPrice(id).src);
@@ -205,8 +206,29 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       delete CMP[id]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
       delete MDB[id]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
       CM[id] = [null, null, 0, 30, 28, 2]; out.push(pwPrice(id).src);
-      if (kp) PW[id] = kp; if (kc) CM[id] = kc; else delete CM[id]; if (km) MDB[id] = km; if (kk) CMP[id] = kk; return out });
-    check(JSON.stringify(c) === '[true,"meso.watch","classicmarket.kr market 65","meowdb 55","classicmarket.kr asks 45","classicmarket.kr buy orders"]', `prices: source rows + fallback order (${c})`);
+      delete CM[id];   // P5 tail starts only when the trade posts have nothing at all
+      MA[id] = [24000, 9, 20000, 40, 23000, 5, 0]; out.push(pwPrice(id).src + " " + pwPrice(id).v);   // P5 tail: sale median first
+      MA[id] = [0, 0, 300, 4, 0, 0, 0]; out.push(pwPrice(id).src + " " + pwPrice(id).v);   // no sales: cheapest ask, rough
+      delete MA[id]; MW[id] = [25000, 40, 22000, 10, 25000, 0]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
+      delete MW[id]; MI[id] = [26000, 24000, 28000, 7, 30, 25500, 20, 2, 0, 0]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
+      delete MI[id]; out.push(pwPrice(id) === null ? "none" : pwPrice(id).src);
+      if (kp) PW[id] = kp; if (kc) CM[id] = kc; else delete CM[id]; if (km) MDB[id] = km; if (kk) CMP[id] = kk;
+      if (ka) MA[id] = ka; else delete MA[id]; if (kw) MW[id] = kw; else delete MW[id]; if (ki) MI[id] = ki; else delete MI[id]; return out });
+    check(JSON.stringify(c) === '[true,"meso.watch","classicmarket.kr market 65","meowdb 55","classicmarket.kr asks 45","classicmarket.kr buy orders","mesoarbitrage.com 24000","mesoarbitrage.com 300","maplestory.watch 25000","mesoindex.com 26000","none"]', `prices: source rows + fallback order (${c})`);
+    // P3 + P4 (Danny 2026-10-26): a source row past its cadence gets a stale pill; the Usual tile carries a sources range + agreement pill
+    const q = await p.evaluate(() => { const id = "2000000", keep = [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id], D.cmp.read];
+      delete MA[id]; delete MW[id]; delete MI[id]; delete CM[id];
+      PW[id] = [100, 90, 110, 30, 0]; CMP[id] = [105, 95, 115, 20, 30, 5, "2026-10-26"]; MDB[id] = [110, 50, 8, 100, null, 4, null, 0, null, 0];
+      const out = [];
+      out.push(/3 solid sources · 100-110/.test(priceBox(id)) && /sources within 25%/.test(priceBox(id)));
+      CMP[id] = [400, 300, 500, 20, 30, 5, "2026-10-26"];
+      out.push(/sources 4x apart/.test(priceBox(id)));
+      D.cmp.read = "2026-10-20 00:00";
+      out.push(/stale \d+ d/.test(priceBox(id)));
+      D.cmp.read = "2026-10-26 00:00";
+      out.push(!/stale \d/.test(priceBox(id)));
+      [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id]] = keep; D.cmp.read = keep[7]; return out });
+    check(JSON.stringify(q) === "[true,true,true,true]", `prices: stale pill + sources context (${q})`);
     // Danny 2026-10-21: "Where to buy" lists every listing with a place (meso.watch cheapest + meowdb posts), cheapest first
     await p.evaluate(() => { const id = "2000000", kn = PWNOW[id], kl = MDBL[id], now = Math.round(Date.now() / 6e4);
       PWNOW[id] = [70, 5, 6, "Free Market <4>", "CINDY"];

@@ -63,8 +63,9 @@ function questTip(r){
     ${VALUE[r.id] ? `<h5>Why players do it · ${VTIER[VALUE[r.id][0]][0]}</h5><p>${esc(VALUE[r.id][2])} <span style="opacity:.7">(${VALUE[r.id][4].map(k => esc(VSRC[k][0])).join("; ")})</span></p>` : ""}
     ${i.prev || i.next ? `<h5>Quest chain${i.chain ? ": " + esc(i.chain) : ""}</h5><ul>${i.prev ? `<li>After: ${esc(i.prev)}</li>` : ""}${i.next ? `<li>Leads to: ${esc(i.next)}</li>` : ""}</ul>` : ""}`;
 }
-/* market value: turn-in items vs rewards at player prices (pwPrice: meso.watch sales, then classicmarket.kr posts),
-   next to the NPC-sell floor (mesos + what the reward items sell to NPCs). 403xxxx quest items can't be traded, so they don't count. */
+/* market value: turn-in items vs rewards at player prices (pwPrice: meso.watch sales first, then classicmarket.kr,
+   meowdb and the shop-scan sources), next to the NPC-sell floor (mesos + what the reward items sell to NPCs).
+   403xxxx quest items can't be traded, so they don't count. */
 const QONLY = id => +id >= 4031000 && +id < 4033000;
 const mktP = id => { const f = pwPrice(id); return f && !f.per && f.v > 0 ? f : null };
 function questMarket(r){

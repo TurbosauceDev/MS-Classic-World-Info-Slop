@@ -23,23 +23,43 @@ const PX_STALE_MIN = 3 * 1440, pxStale = x => x.since && Date.now() / 6e4 - x.si
 const pxWhere = x => [x.ch ? "Ch " + x.ch : "", String(x.room || "").replace(/Free Market\s*<(\d+)>/i, "FM $1"), x.spot].filter(Boolean).map(esc).join(" · ")
   || (x.direct ? `<span class="sub">whisper / meet up</span>` : `<span class="sub">not given</span>`);
 const pxEach = v => v < 10 && v % 1 ? v : fmt(v);
+// P3 (Danny 2026-10-26): a source row whose data file is past its poll cadence gets a quiet stale pill, like the listing pill.
+// Same thresholds as the MCI Source-health panel: meso.watch has a full-ISO generated (6 polls/h -> 180 min), the rest only
+// expose a date-only read (3 h polls -> 2 days, since "today" parses as 0-24 h old).
+const pxSrcTs = r => r.src === "meso.watch" ? D.pw?.generated
+  : r.src === "classicmarket.kr" ? (r.kind === "market (combined)" ? D.cmp?.read : D.cm?.read)
+  : {meowdb: D.mdb?.read, "mesoarbitrage.com": D.ma?.read, "maplestory.watch": D.mw?.read, "mesoindex.com": D.mi?.read}[r.src];
+const pxSrcStale = r => { const t = Date.parse(String(pxSrcTs(r) || "").replace(" ", "T") + "Z"); if (isNaN(t)) return "";
+  const min = Math.max(0, (Date.now() - t) / 6e4), max = r.src === "meso.watch" ? 180 : 2880;
+  if (min <= max) return "";
+  const txt = min < 2880 ? Math.round(min / 60) + " h" : Math.round(min / 1440) + " d";
+  return ` <span class="pill p-warn" title="This source's data is ${txt} old, past its update cadence: the poll may be failing silently. The watchdog files an issue when a source freezes; compare with the other rows before trusting this one.">stale ${txt}</span>`; };
 function priceBox(id){
   const it = D.items[id], best = pwPrice(id), rows = PRICE_SRC.map(f => f(id)).filter(Boolean), all = listingsOf(id);
   const sells = all.filter(x => !x.buy).sort((a, b) => a.v - b.v || (b.t || 0) - (a.t || 0)), buys = all.filter(x => x.buy).sort((a, b) => b.v - a.v);
   const shop = shopBest(id), cheap = sells[0], usual = best && !best.per ? best.v : null;
   const vs = v => { if (!usual) return ""; const r = v / usual; return r < 0.995 ? `<span class="up">${Math.round((1 - r) * 100)}% under usual</span>` : r > 1.005 ? `${Math.round((r - 1) * 100)}% over usual` : "about usual" };
-  const unit = {"meso.watch": "sales", "classicmarket.kr market": "sold", meowdb: "prices"}[best?.src] || "posts";
-  const tile = (k, v, sub, tip) => `<div class="pxt"${tip ? ` title="${esc(tip)}"` : ""}><span class="pxk">${k}</span><b class="pxv">${v}</b><span class="pxs">${sub}</span></div>`;
+  // P4 (Danny 2026-10-26): context under the headline: the range across solid sources (>= 5 data points, not buy orders)
+  // plus an agreement pill, so a headline that sits alone on the tile carries what the rows below it say.
+  const solid = rows.filter(r => r.v > 0 && !r.buy && !r.few).map(r => r.v);
+  const lo = Math.min(...solid), hi = Math.max(...solid), spread = hi / lo;
+  const agree = spread <= 1.25 ? ` <span class="pill p-good" title="All ${solid.length} solid sources sit within 25% of each other">sources within 25%</span>`
+    : spread > 2 ? ` <span class="pill p-warn" title="The solid sources disagree (ask-vs-sold windows or thin data): compare the rows below before trusting one number">sources ${Math.round(spread)}x apart</span>` : "";
+  const pxCtx = solid.length >= 2 ? `${solid.length} solid sources · ${fmt(lo)}-${fmt(hi)}${agree}` : "";
+  const unit = {"meso.watch": "sales", "classicmarket.kr market": "sold", "meowdb": "prices",
+    "mesoarbitrage.com": "sales", "maplestory.watch": "sales", "mesoindex.com": "sales",
+    "mesoarbitrage.com listing": "listings", "maplestory.watch listing": "listings", "mesoindex.com listing": "listings"}[best?.src + (best?.unit === "listing" ? " listing" : "")] || "posts";
+  const tile = (k, v, sub, tip, sub2) => `<div class="pxt"${tip ? ` title="${esc(tip)}"` : ""}><span class="pxk">${k}</span><b class="pxv">${v}</b><span class="pxs">${sub}</span>${sub2 ? `<span class="pxs">${sub2}</span>` : ""}</div>`;
   const tiles = `<div class="pxtiles">
     ${tile("Usual price", best ? fmt(best.v) + (best.per ? `<small> per set</small>` : "") : "–", best ? `${esc(best.src)} · ${fmt(best.n)} ${unit}${best.rough ? ` <span class="pill p-warn">rough</span>` : ""}` : "no player prices yet",
-      best ? `The price the rest of the site uses: meso.watch sales first, then classicmarket.kr market, then meowdb, then classicmarket.kr posts` : "")}
+      best ? `The price the rest of the site uses: meso.watch sales first, then classicmarket.kr market, then meowdb, then classicmarket.kr posts, then the shop-scan sources (mesoarbitrage, maplestory.watch, mesoindex)` : "", pxCtx)}
     ${tile("Cheapest listed", cheap ? pxEach(cheap.v) : "–", cheap ? `${pxWhere(cheap)}${vs(cheap.v) ? " · " + vs(cheap.v) : ""}` : "no live listing with a place")}
     ${tile("NPC shop", shop ? fmt(shop[3]) : "–", shop ? esc(shop[0]) + (shop[4] ? ` · ${shop[4]} price` : "") : "no shop sells it", shop ? `${shop[0]}, ${shop[2]} (meowdb shop list)` : "")}
     ${tile("NPC buys", it?.p ? fmt(it.p) : "–", it?.p ? "game files" : "can't be sold to NPCs")}</div>`;
   const src = rows.length ? `<div class="tblwrap"><table class="mini pxsrc"><thead><tr><th>Source</th><th class="num">Price</th><th>Based on</th><th>Range</th><th>Updated</th></tr></thead><tbody>${rows.map(r =>
     `<tr><td><b>${esc(r.src)}</b> <span class="sub">${esc(r.kind)}</span></td><td class="num"><b>${fmt(r.v)}</b>${r.per ? ` <span class="sub">${r.per}</span>` : ""}${r.trend ? " " + r.trend : ""}${r.spark ? " " + r.spark : ""}</td>
-      <td>${r.n}${r.few ? ` <span class="pill p-warn" title="Few data points: rough">few</span>` : ""}</td><td class="sub">${r.detail || ""}</td><td class="sub">${whenTxt(r.when)}</td></tr>`).join("")}</tbody></table></div>`
-    : `<p class="sub">No player prices from meso.watch, meowdb or classicmarket.kr yet.</p>`;
+      <td>${r.n}${r.few ? ` <span class="pill p-warn" title="Few data points: rough">few</span>` : ""}</td><td class="sub">${r.detail || ""}</td><td class="sub">${whenTxt(r.when)}${pxSrcStale(r)}</td></tr>`).join("")}</tbody></table></div>`
+    : `<p class="sub">No player prices from any market source yet.</p>`;
   const lrow = (x, i) => `<tr${i >= PX_SHOW ? ` class="pxx"` : ""}><td class="num"><b>${pxEach(x.v)}</b>${i === 0 && !x.buy ? ` <span class="pill p-good">cheapest</span>` : ""}</td><td class="num">${x.qty > 1 ? "×" + fmt(x.qty) : "1"}</td>
     <td>${pxWhere(x)}${x.note ? ` <span class="sub">${esc(x.note)}</span>` : ""}</td><td>${x.who ? esc(x.who) : `<span class="sub">–</span>`}</td><td class="sub">${esc(x.ago || "")}${pxStale(x)}</td><td class="sub">${esc(x.src)}</td></tr>`;
   const ltab = (a, h, what) => `<h4 class="pxh">${h} <span class="sub">${a.length} ${what}</span></h4><div class="tblwrap"><table class="mini pxls"><thead><tr><th class="num">Each</th><th class="num">Qty</th><th>Where</th><th>Seller</th><th>Listed</th><th>Source</th></tr></thead>
