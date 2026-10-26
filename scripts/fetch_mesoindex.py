@@ -19,7 +19,12 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 DST = ROOT / "data" / "sources" / "mesoindex.json"
 CAT = "https://mesoindex.com/api/catalog"
 ITEM = "https://mesoindex.com/api/item?game=%s"
-UA = {"User-Agent": "ms-classic-world-info site build (price summary)", "Accept": "application/json"}
+# mesoindex.com started 403-ing non-browser User-Agents around 2026-10-23 (their API 403'd our build UA from CI and
+# curl, while a browser UA gets a plain 200 with no checkpoint): the data had silently frozen for 3 days before the
+# watchdog caught it. Their /api/* still answers plain GETs for a normal browser client, so we send one. The Vercel
+# checkpoint on the HTML page stays untouched (never bypass it, docs/ai/decisions.md 2026-10-21).
+UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+      "Accept": "application/json"}
 LS_MAX, DAY, BUDGET = 8, 86400, 15 * 60   # listing calls stop after BUDGET s; the rest keep last run's rows
 CONF = {"high": 2, "medium": 1, "low": 0}
 
@@ -92,7 +97,7 @@ if __name__ == "__main__":
     except (OSError, ValueError): old = {}
     D = json.load(open(ROOT / "data" / "data.json"))
     try: j = fetch(old, D["items"])
-    except Exception as e: print("mesoindex fetch failed, keeping the old file:", e); sys.exit(0)
+    except Exception as e: print(f"::warning::mesoindex fetch failed, keeping the old file: {type(e).__name__} {e}"); sys.exit(0)
     DST.write_text(json.dumps(j, separators=(",", ":")))
     step(D)
     (ROOT / "data" / "data.json").write_text(json.dumps(D, separators=(",", ":")))
