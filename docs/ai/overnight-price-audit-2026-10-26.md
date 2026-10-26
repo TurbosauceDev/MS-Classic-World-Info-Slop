@@ -67,6 +67,8 @@ A 3-day outage on any of the other six sources was invisible by design. `scripts
 age of shopscans (ma + mw separately), classicmarket posts, classicmarket combined, meowdb, and mesoindex with
 per-cadence thresholds (24-36 h), migrates the old issue title in place, and keeps the same one-issue/comment-on-change
 behavior. `tests/watchdog_test.py` grew 6 cases including the exact mesoindex freeze pattern. All 16 checks green.
+Related and found while fixing F1: all polls share one `main-pipeline` concurrency lock, so a hung poll delays every
+other source's refresh (see P11).
 
 ### F3 — 51 items have source prices but no site price
 The fallback chain stops at classicmarket, so items priced **only** by mesoarbitrage / maplestory.watch / mesoindex
@@ -122,6 +124,7 @@ Expected — most items are not in the Free Market — listed so nobody mistakes
 | P8 | Movers page: biggest day-over-day price changes from fields already stored (`dayAgo`, `trend`, cmp `day`) | M | new page, data ready |
 | P9 | Split price data out of index.html: the SW is network-first, so every poll commit re-serves ~1.7 MB gzip to every returning visitor; icons are already a hashed second file — do the same for data.json (cached shell + data URL) | L | biggest perf win available |
 | P10 | Mob meso: show shared-runs "players' actual mesos/kill" beside meowdb's estimate once coverage grows; calibrate the map meso model | M | grows with shared runs |
+| P11 | Concurrency coupling: every poll shares the `main-pipeline` lock, so a hung poll starves the others — tonight's first mesoindex dispatch ground for 45+ min (cancelled by hand) and the hourly meso.watch refresh queued behind it the whole time. Options: a step-level timeout under the 30-min job ceiling, or loosening the group now that every poll carries its own push-retry loop | S | the existing watchdog `poll` check already catches the symptom |
 
 ## 5. Appendix — headline numbers from the audit run
 
