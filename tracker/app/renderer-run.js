@@ -81,7 +81,7 @@ async function finish(){
 async function stopNow(){
   log("stop", {engine: engine?.kind, skipped});
   if (!wrap && video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {}); if (check && !check.ended){ check = null; renderCheck() }
-  clearTimeout(timer); timer = null; engine?.close(); $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "";
+  clearTimeout(timer); timer = null; engine?.close(); $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = ""; $("#fzParty").textContent = "";
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   // a failed save (disk full, folder locked) must not leave the button saying Stop
   // the start/end readings go with it: History's EXP/hr comes from them when both are complete
@@ -101,7 +101,7 @@ function resetTracker(){
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: goalOf(), freeIds: freeIds()});
   snaps.start = snaps.end = null; wrap = null; runT0 = 0; feed = null;
   for (const id of ["#summary", "#lastRun", "#partyBox", "#respawn"]) $(id).classList.add("hidden");
-  $("#feed").innerHTML = $("#miniFeed").innerHTML = $("#events").innerHTML = "";
+  $("#feed").innerHTML = $("#miniFeed").innerHTML = $("#fzFeed").innerHTML = $("#events").innerHTML = "";
   $("#runName").value = $("#wrapName").value = $("#runNote").value = "";
   try { renderSnaps(render()) } catch (e){ log("reset", {err: e.message}) }
   session = null; renderState(null); renderWrap();
@@ -252,7 +252,7 @@ $("#bugPopCancel").onclick = closeBugPop;
 $("#bugPopSave").onclick = () => { const f = bugFrames || [], n = $("#bugPopNote").value; closeBugPop(); saveReport(f, n) };
 $("#bugPopNote").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); $("#bugPopSave").click() } };
 
-$("#pcode").onchange = e => host.settings({partyCode: e.target.value.trim().slice(0, 20)}).then(s => { settings = s; lastParty = 0; if (!s.partyCode){ $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = "" } });
+$("#pcode").onchange = e => host.settings({partyCode: e.target.value.trim().slice(0, 20)}).then(s => { settings = s; lastParty = 0; if (!s.partyCode){ $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = ""; $("#fzParty").textContent = "" } });
 $("#nick").onchange = e => host.settings({nick: e.target.value.trim().slice(0, 12)}).then(s => settings = s);
 const guideDone = share => host.settings({share, guideDone: true}).then(s => { settings = s; $("#share").checked = share; $("#guide").classList.add("hidden") });
 $("#guideShare").onclick = () => guideDone(true);

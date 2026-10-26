@@ -81,7 +81,7 @@ app.whenReady().then(() => {
   const show = what => () => win && !win.isDestroyed() && win.webContents.send("menu", what);
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {label: "File", submenu: [{label: "Settings", accelerator: "CmdOrCtrl+,", click: show("settings")}, {label: "Past sessions", accelerator: "F2", registerAccelerator: false, click: show("history")}, {label: "Reset tracker (clear the screen)", click: show("reset")}, {type: "separator"}, {label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
-    {label: "View", submenu: [{label: "Modules toolbox", click: show("toolbox")}, {label: "Simple Mode", click: show("mini")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {label: "Fit every box to its content", click: show("fit")}, {label: "Line up every box", accelerator: "CmdOrCtrl+Shift+L", click: show("align")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
+    {label: "View", submenu: [{label: "Modules toolbox", click: show("toolbox")}, {label: "Simple Mode", click: show("mini")}, {label: "Focus mode", click: show("focus")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {label: "Fit every box to its content", click: show("fit")}, {label: "Line up every box", accelerator: "CmdOrCtrl+Shift+L", click: show("align")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
     {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Patch notes", click: show("patchnotes")}, {label: "Check for updates", click: show("update")},
       {label: "Report a bug", click: show("report")}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
   ]));
@@ -122,7 +122,7 @@ ipcMain.handle("update-install", () => { if (upd.state !== "ready") return false
 /* keyboard shortcuts, working from anywhere (the game too): settings.keys {action: accelerator, "" = off}, else these.
    Each one takes its keys away from every other program while the tracker runs, so all can be changed or turned off.
    Always on top was Danny's ask (2026-10-18); the others are the buttons players reach for mid-grind */
-const KEYS = {onTop: "CommandOrControl+Shift+T", startStop: "CommandOrControl+Shift+S", pause: "CommandOrControl+Shift+P", mini: "CommandOrControl+Shift+M", toolbox: "CommandOrControl+Shift+K",
+const KEYS = {onTop: "CommandOrControl+Shift+T", startStop: "CommandOrControl+Shift+S", pause: "CommandOrControl+Shift+P", mini: "CommandOrControl+Shift+M", focus: "CommandOrControl+Shift+F", toolbox: "CommandOrControl+Shift+K",
   show: "CommandOrControl+Shift+H", invNow: "CommandOrControl+Shift+I", report: "CommandOrControl+Shift+B",
   clickThrough: "CommandOrControl+Shift+X", mark: "CommandOrControl+Shift+N", saveImage: "CommandOrControl+Shift+G", mute: "CommandOrControl+Shift+U"};
 // modifiers + one key; a key with no modifier only for F1-F24 (a plain letter would be taken from the game's own keys)

@@ -16,7 +16,18 @@ function renderMini(s){
 }
 // Simple Mode's top half (Danny 2026-10-23, modeled on his B2 <Subway Depot> mockup): map, Lv/job, EXP gained in the farming
 // time, EXP/min, best minute, the level bar from the run's first reading to now, potions used (red) and picked up (green),
-// mesos spent / picked up / loot value, and EXP per clock minute (session perMin; gaps are 0)
+// mesos spent / picked up / loot value, and EXP per clock minute (session perMin; gaps are 0). The level bar, potions and
+// mesos are built by helpers shared with Focus Mode (one source of truth; the views restyle them in CSS)
+function lvlHtml(a, b){ const ups = b.level - a.level, gained = ups * 100 + b.pct - a.pct, from = ups ? 0 : a.pct;
+  return `<span>Lv. <b>${a.level}</b></span><div class="smTrack" title="Started at Lv ${a.level} ${a.pct.toFixed(2)}%, now Lv ${b.level} ${b.pct.toFixed(2)}%"><i class="was" style="width:${from}%"></i><i class="now" style="left:${from}%;width:${Math.max(0, b.pct - from)}%"></i>${ups ? `<span class="up" style="left:0"></span>` : ""}</div><span>Lv. <b>${b.level}</b></span><span class="gain">${gained >= 0 ? "+" : "−"}${Math.abs(gained).toFixed(2)}%</span>` }
+function potsHtml(s){
+  const pots = [...s.used.filter(u => u.n > 0).map(u => ({id: u.id, name: u.name, n: -u.n})), ...s.items.filter(i => G.items[i.id]?.c === "Consumable").map(i => ({id: i.id, name: i.name, n: i.n}))].slice(0, 6);
+  return pots.length ? pots.map(p => `<div class="smPot">${ico(p.id)}<div><b class="${p.n < 0 ? "neg" : "pos"}">${p.n < 0 ? "−" : "+"}${fmt(Math.abs(p.n))}</b><span class="note">${esc(p.name)}</span></div></div>`).join("") : `<span class="note">None used yet</span>` }
+function moneyHtml(s){
+  const pm = v => s.activeMin >= 1 ? fmt(v / s.activeMin) + "/min" : "";
+  return `<span class="note">spent</span><span class="v neg">−${fmt(s.usedCost)}</span><span class="note">${pm(s.usedCost)}</span>`
+    + `<span class="note">picked up</span><span class="v pos">+${fmt(s.mesos)}</span><span class="note">${pm(s.mesos)}</span>`
+    + `<span class="note" title="Etc monster drops at the NPC price; ores, crafting materials, equipment and scrolls at the player-shop price (meso.watch)">loot value</span><span class="v pos">+${fmt(s.lootValue)}</span><span class="note">${pm(s.lootValue)}</span>` }
 function simpleDraw(s){
   const mapId = s.nowMap || s.map, name = s.nowMapName || s.mapName, spawns = (G.maps[mapId]?.[2] || []).reduce((a, [, c]) => a + (c || 0), 0);
   $("#smMap").textContent = name || "No map yet"; $("#smSpawns").textContent = spawns ? spawns + " spawns" : "";
@@ -26,19 +37,13 @@ function simpleDraw(s){
   $("#smPerMin").textContent = min >= 1 ? fmt(s.exp / min) : "-"; $("#smBest").textContent = s.bestMin ? fmt(s.bestMin) : "-";
   // level bar: dim = where the run started, bright = gained, a tick per level-up; "+%" = level percent gained over the run
   const a = s.firstBar, b = s.bar, lv = $("#smLvl"); lv.hidden = !(a && b);
-  if (a && b){ const ups = b.level - a.level, gained = ups * 100 + b.pct - a.pct, from = ups ? 0 : a.pct;
-    lv.innerHTML = `<span>Lv. <b>${a.level}</b></span><div class="smTrack" title="Started at Lv ${a.level} ${a.pct.toFixed(2)}%, now Lv ${b.level} ${b.pct.toFixed(2)}%"><i class="was" style="width:${from}%"></i><i class="now" style="left:${from}%;width:${Math.max(0, b.pct - from)}%"></i>${ups ? `<span class="up" style="left:0"></span>` : ""}</div><span>Lv. <b>${b.level}</b></span><span class="gain">${gained >= 0 ? "+" : "−"}${Math.abs(gained).toFixed(2)}%</span>` }
-  // potions: used (red), and picked up as drops (green, Consumable items in the loot)
-  const pots = [...s.used.filter(u => u.n > 0).map(u => ({id: u.id, name: u.name, n: -u.n})), ...s.items.filter(i => G.items[i.id]?.c === "Consumable").map(i => ({id: i.id, name: i.name, n: i.n}))].slice(0, 6);
-  $("#smPots").innerHTML = pots.length ? pots.map(p => `<div class="smPot">${ico(p.id)}<div><b class="${p.n < 0 ? "neg" : "pos"}">${p.n < 0 ? "−" : "+"}${fmt(Math.abs(p.n))}</b><span class="note">${esc(p.name)}</span></div></div>`).join("") : `<span class="note">None used yet</span>`;
-  const pm = v => min >= 1 ? fmt(v / min) + "/min" : "";
-  $("#smMoney").innerHTML = `<span class="note">spent</span><span class="v neg">−${fmt(s.usedCost)}</span><span class="note">${pm(s.usedCost)}</span>`
-    + `<span class="note">picked up</span><span class="v pos">+${fmt(s.mesos)}</span><span class="note">${pm(s.mesos)}</span>`
-    + `<span class="note" title="Etc monster drops at the NPC price; ores, crafting materials, equipment and scrolls at the player-shop price (meso.watch)">loot value</span><span class="v pos">+${fmt(s.lootValue)}</span><span class="note">${pm(s.lootValue)}</span>`;
-  smChart(s.perMin || []);
+  if (a && b) lv.innerHTML = lvlHtml(a, b);
+  $("#smPots").innerHTML = potsHtml(s);
+  $("#smMoney").innerHTML = moneyHtml(s);
+  smChart($("#smChart"), s.perMin || []);
 }
-function smChart(pts){
-  const svg = $("#smChart"), L = 34, R = 512, T = 8, B = 128;
+function smChart(svg, pts){
+  const L = 34, R = 512, T = 8, B = 128;
   if (pts.length < 2){ svg.innerHTML = `<text x="260" y="70" text-anchor="middle">The chart starts after the first minute of EXP</text>`; return }
   const top = Math.max(...pts.map(p => p[1])), step = top <= 0 ? 1 : Math.pow(10, Math.floor(Math.log10(top))) * (top / Math.pow(10, Math.floor(Math.log10(top))) > 5 ? 2 : top / Math.pow(10, Math.floor(Math.log10(top))) > 2 ? 1 : 0.5);
   const max = Math.max(step, Math.ceil(top / step) * step), n = pts.length, x = i => L + (R - L) * i / (n - 1), y = v => B - (B - T) * v / max;
@@ -71,6 +76,38 @@ function miniFit(force){ if (!document.body.classList.contains("mini")) return c
 // refit in the resize event itself, before the frame paints (it waited a frame, so a window edge being dragged showed the
 // view a step behind: cut off growing, a gap shrinking)
 addEventListener("resize", () => { if (document.body.classList.contains("mini")) miniFit() });
+// Focus Mode (Danny, 2026-10-26: a third view beside Simple Mode, skinned after maplestory.watch's market page): the same
+// session data as Simple Mode in one centred column — hero, stat tiles, level bar, chart, potions and mesos, run log, top
+// lists. No zoom games: the roominess is the point; a wider window just leaves more air around the column
+function renderFocus(s){
+  const mapId = s.nowMap || s.map, name = s.nowMapName || s.mapName, spawns = (G.maps[mapId]?.[2] || []).reduce((a, [, c]) => a + (c || 0), 0);
+  $("#fzState").textContent = $("#stateText").textContent;
+  $("#fzMap").textContent = name || "No map yet"; $("#fzSpawns").textContent = spawns ? spawns + " spawns" : "";
+  $("#fzWho").hidden = !(s.level || s.job); $("#fzWho").innerHTML = (s.level ? `Lv. <b>${s.level}</b>` : "") + (s.job ? " " + esc(s.job) : "");
+  const min = s.activeMin;
+  $("#fzTotal").textContent = (s.exp > 0 ? "+" : "") + fmt(s.exp); $("#fzIn").textContent = min >= 1 ? "in " + hm(min / 60) : "";
+  $("#fzPerMin").textContent = min >= 1 ? fmt(s.exp / min) : "-"; $("#fzBest").textContent = s.bestMin ? fmt(s.bestMin) : "-";
+  const a = s.firstBar, b = s.bar, lv = $("#fzLvl"); lv.hidden = !(a && b);
+  if (a && b) lv.innerHTML = lvlHtml(a, b);
+  $("#fzPots").innerHTML = potsHtml(s);
+  $("#fzMoney").innerHTML = moneyHtml(s);
+  smChart($("#fzChart"), s.perMin || []);
+  $("#fzActive").textContent = hm(min / 60); $("#fzClock").textContent = runT0 && (timer != null || dummyOn) ? hm((Date.now() - runT0) / 3.6e6) : "-";
+  $("#fzItems").innerHTML = miniList(s.items, i => `<tr><td>${ico(i.id)}${esc(i.name)}</td><td class="n">×${fmt(i.n)}</td></tr>`, "Nothing yet");
+  $("#fzMobs").innerHTML = miniList(s.mobs, m => `<tr><td>${esc(m.name)}</td><td class="n">${fmt(m.kills)}</td></tr>`, "None yet");
+  $("#fzUsed").innerHTML = miniList(s.used.filter(u => u.n), u => `<tr><td>${ico(u.id)}${esc(u.name)}</td><td class="n">×${fmt(u.n)}</td></tr>`, "None yet");
+  const f = $("#fzFeed"); f.scrollTop = f.scrollHeight;   // (it can't scroll while hidden: set again once shown)
+  focusFit();
+}
+// the window fits the Focus view: the same shrink-to-content host.mini gives Simple Mode (it keeps the width, and restores
+// the old size on the way back). No zoom: the air is the point
+let fzH = 0;
+function focusFit(force){ if (!document.body.classList.contains("focus")) return;
+  const B = document.body, el = $("#focus"); B.classList.add("measure");
+  const h = Math.ceil(el.getBoundingClientRect().bottom + scrollY + 12);
+  B.classList.remove("measure");
+  if (force || Math.abs(h - fzH) > 6){ fzH = h; host.mini?.(true, h) } }
+addEventListener("resize", () => { if (document.body.classList.contains("focus")) focusFit() });
 // "Window height follows the boxes" (settings.fitWin, Danny 2026-10-19: auto size): the full view gets the same fitting, so
 // folding a box, a list filling up or another tab grows or shrinks the window to what's there. Off: the player sizes it
 const fitsWindow = () => document.body.classList.contains("fitWin");
@@ -110,14 +147,17 @@ function renderMesos(s){
 function renderWrap(s){
   $("#wrap").classList.toggle("hidden", !wrap);
   $("#nameRow").classList.toggle("hidden", !!wrap);   // asked in the wrap-up card instead
-  // Mini hides the wrap-up card (Stop from the shortcut while in Mini): one line there instead, with its own Finalize log
+  // Mini and Focus hide the wrap-up card (Stop from a shortcut): one line there instead, with its own Finalize log
   $("#miniWrap").classList.toggle("hidden", !wrap);
+  $("#fzWrap").classList.toggle("hidden", !wrap);
   if (!wrap) return;
   const tabs = (s || session?.stats())?.invTabs || {}, n = INV_TABS.filter(([k]) => tabs[k]?.last >= wrap.t).length;
   $("#wrapTabs").innerHTML = INV_TABS.map(([k, name]) => { const done = tabs[k]?.last >= wrap.t, seeing = !done && lastInvTab === k && Date.now() - (tabs[k]?.last || 0) < 10e3;
     return `<button class="chip ${done ? "ok" : seeing ? "half" : "need"}" data-tab="${k}" title="${done ? "Read after Stop" : "Not read since Stop. Click to read it now (have the " + name + " tab open in the game)"}">${done ? "✓" : seeing ? "…" : "○"} ${name}</button>` }).join(" ");
   $("#miniWrapText").textContent = `Stopped: ${n} of 3 inventory tabs read. Show Equip, Use and Etc, then`;
+  $("#fzWrapText").textContent = $("#miniWrapText").textContent;
   if (n === 3) $("#miniWrapText").textContent = "Stopped: all 3 inventory tabs read.";
+  if (n === 3) $("#fzWrapText").textContent = $("#miniWrapText").textContent;
   $("#wrapNote").textContent = n === 3 ? "All 3 tabs read: add a name or note below if you like, then Finalize log." : `${n} of 3 tabs read since Stop.`;
   $("#wrapName").value = $("#runName").value;
   // all 3 tabs read: on to the name and note (once, and not while typing somewhere)
@@ -434,7 +474,7 @@ function flipTo(m){ if (m.size){ document.body.classList.add("gliding"); clearTi
   b.animate([{transform: `translate(${dx}px, ${dy}px)`}, {transform: "none"}], {duration: 180, easing: "cubic-bezier(.2,.7,.3,1)"}) } }
 function flip(fn){ const m = flipFrom(); fn(); flipTo(m) }
 // the run log (and Mini's copy) stays on its newest line through any resize, unless you scrolled up to read
-for (const f of [$("#feed"), $("#events"), $("#miniFeed")]){ f._stick = true;
+for (const f of [$("#feed"), $("#events"), $("#miniFeed"), $("#fzFeed")]){ f._stick = true;
   // only your own scrolling (wheel, keys, the scrollbar) lets go of the newest line: a scroll the browser makes when the box
   // changes size arrives a frame late, after the lines re-wrapped, and used to read as "scrolled up"
   for (const ev of ["wheel", "pointerdown", "keydown", "touchstart"]) f.addEventListener(ev, () => f._user = Date.now(), {passive: true});

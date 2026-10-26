@@ -86,9 +86,9 @@ async function sendParty(){
   const r = await host.party({job: s.job, level: s.level, mapName: s.nowMapName, expHr: s.expHr, expHr5: s.expHr5, killsHr: s.killsHr, mesosHr: s.mesosHr,
     active: Math.round(s.activeMin)}).catch(() => null);
   if (!r || timer == null) return;   // stopped while the answer was on its way: don't bring the card back
-  box.classList.remove("hidden"); $("#miniParty").textContent = "";
+  box.classList.remove("hidden"); $("#miniParty").textContent = ""; $("#fzParty").textContent = "";
   if (r.error){ box.innerHTML = `<div class="k">Party</div><div class="note">${r.why === "party full" ? "Party full: 6 trackers already use this code." : r.why === "too often" ? "Waiting a moment before updating." : "Party view didn't answer (" + esc(r.why || r.error) + ")."}</div>`; return }
-  $("#miniParty").textContent = `party: ${fmt(r.expHr)} EXP/hr together (${r.members.length})`;
+  $("#miniParty").textContent = `party: ${fmt(r.expHr)} EXP/hr together (${r.members.length})`; $("#fzParty").textContent = $("#miniParty").textContent;
   const names = r.members.filter(m => !m.you).map(m => m.nick || m.job || "a member");
   if (partyNames){ for (const n of names) if (!partyNames.includes(n)) note(`${n} joined party "${settings.partyCode}"`, "party"); for (const n of partyNames) if (!names.includes(n)) note(`${n} left party "${settings.partyCode}"`, "party") }
   partyNames = names;
@@ -331,8 +331,8 @@ function feedAdd(lines){ if (!lines?.length) return;
   ev.forEach(eventAdd);
   const html = lines.map(feedLine).join("");
   if (run.length) logAppend($("#feed"), run.map(feedLine).join(""));
-  // the Mini view has its own copy (always at the newest line)
-  const m = $("#miniFeed"); m.insertAdjacentHTML("beforeend", html); while (m.children.length > 60) m.firstElementChild.remove(); m.scrollTop = m.scrollHeight }
+  // the Mini and Focus views have their own copies (always at the newest line)
+  for (const f of [$("#miniFeed"), $("#fzFeed")]){ f.insertAdjacentHTML("beforeend", html); while (f.children.length > 60) f.firstElementChild.remove(); f.scrollTop = f.scrollHeight } }
 const feedSep = text => feedAdd([{t: Date.now(), kind: "sep", text}]);
 function logAppend(el, html){
   const stick = el._stick ?? el.scrollHeight - el.scrollTop - el.clientHeight < 24;   // (_stick: renderer-layout.js, kept through resizes)

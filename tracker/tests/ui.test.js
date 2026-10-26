@@ -518,7 +518,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.evaluate(() => window.menu("clickThrough:true")); const thr = await page.evaluate(() => [document.body.classList.contains("through"), document.querySelector("#status").textContent]);
   await page.evaluate(() => window.menu("clickThrough:false"));
   const rows = await page.$$eval("#keyRows [data-key]", b => b.length);
-  if (!/\[.*\] mark/.test(note) || pic?.join() !== "true,true" || mute.join() !== "true,true" || await page.evaluate(() => window.st.muted) !== false || !thr[0] || !/Ctrl \+ Shift \+ X turns it off/.test(thr[1]) || rows !== 12)
+  if (!/\[.*\] mark/.test(note) || pic?.join() !== "true,true" || mute.join() !== "true,true" || await page.evaluate(() => window.st.muted) !== false || !thr[0] || !/Ctrl \+ Shift \+ X turns it off/.test(thr[1]) || rows !== 13)
     throw new Error("more shortcuts: " + JSON.stringify({note, pic, mute, thr, rows}));
   // Settings chips in a narrow window (the header wraps to 3 lines): the section lands just under the header and its chip is
   // marked, the short last ones too (they landed under it, the chip before was marked, 2026-10-19)

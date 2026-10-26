@@ -43,4 +43,5 @@ jobs:
       - run: node tests/ui.test.js
       - run: node tests/layout.test.js
       - run: node tests/extras.test.js
+      - run: node tests/focus.test.js
       - run: node tests/monkey.test.js

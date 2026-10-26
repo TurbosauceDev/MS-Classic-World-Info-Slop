@@ -179,6 +179,8 @@ function render(){
   renderRespawns();
   $("#miniExp").textContent = fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent; $("#miniMeso").innerHTML = mz(s.mesosHr);
   $("#miniNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
+  $("#fzExp").textContent = fmt(s.expHr); $("#fzTtl").textContent = $("#ttl").textContent; $("#fzMeso").innerHTML = mz(s.mesosHr);
+  $("#fzNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
   $("#lootHr").innerHTML = mz(s.lootHr);
   const anyUsed = s.used.some(u => u.n);
   $("#usedHr").innerHTML = anyUsed ? sgm(-s.usedCostHr) : "-";
@@ -202,6 +204,7 @@ function render(){
   $("#goalV").textContent = s.goalLevel ? s.level >= s.goalLevel ? "reached" : s.toGoalHrs == null ? "-" : hm(s.toGoalHrs) : "-";
   $("#goalAt").textContent = s.toGoalHrs != null && s.toGoalHrs < 48 ? "about " + new Date(Date.now() + s.toGoalHrs * 3.6e6).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}) + " at this rate" : s.goalLevel ? "" : "set one in Alerts and goal";
   $("#miniGoal").textContent = s.goalLevel && s.toGoalHrs != null ? `Lv ${s.goalLevel} in ${hm(s.toGoalHrs)}` : "";
+  $("#fzGoal").textContent = s.goalLevel && s.toGoalHrs != null ? `Lv ${s.goalLevel} in ${hm(s.toGoalHrs)}` : "";
   stopCheck(s);
   $("#active").textContent = Math.round(s.activeMin) + " min";
   $("#expTotal").textContent = fmt(s.exp); $("#expPerMin").textContent = s.activeMin >= 1 ? fmt(s.exp / s.activeMin) + " EXP/min active" : "";
@@ -219,7 +222,7 @@ function render(){
     + (s.unreadItems ? `<tr><td colspan="3">${s.unreadItems} pickup(s) with names not read yet: ${(s.invTabs?.etc?.last || 0) > (s.invTabs?.etc?.first || 0)
       ? "the Etc tab doesn't show more than the pickup lines already counted, so they're probably Use items (potions) or a misread line. Report a bug right after one shows up so it can be fixed"
       : "open your Etc tab for a second to count them from the inventory"}</td></tr>` : "");
-  renderInv(s); renderWrap(s); renderMini(s);
+  renderInv(s); renderWrap(s); renderMini(s); renderFocus(s);
   $("#priceNote").textContent = G.pwRead ? `Worth: Etc monster drops (caps, teeth, shells) at the NPC sell price (game files); ores, jewels, crafting materials, equipment and scrolls at the player-shop median from meso.watch (${G.pwRead}), else NPC price. "npc" marks NPC-priced rows. Mesos/kill on maps with several monsters is a best guess.` : "";
   return s.exp;   // for renderSnaps
 }
@@ -239,7 +242,7 @@ function modalHide(el){ clearTimeout(el._t);
   el.classList.add("closing"); el._t = setTimeout(() => { el.classList.remove("closing"); el.classList.add("hidden") }, 140) }
 // Mini view can't show one, so opening a pop-up goes back to the full window first. focus: the element to focus (default the dialog); the element focused before opening gets focus back on close
 function modalOpen(el, focus){
-  if (document.body.classList.contains("mini")){ document.body.classList.remove("mini"); host.mini?.(false) }   // Mini hides everything else
+  if (document.body.classList.contains("mini") || document.body.classList.contains("focus")){ document.body.classList.remove("mini"); document.body.classList.remove("focus"); host.mini?.(false) }   // Simple and Focus hide everything else
   clearTimeout(el._t); el.classList.remove("hidden", "closing");
   if (!modalIsOpen(el)){ el._from = document.activeElement; MODALS.push(el) }
   modalSync(); (focus || el).focus?.({preventScroll: true}) }

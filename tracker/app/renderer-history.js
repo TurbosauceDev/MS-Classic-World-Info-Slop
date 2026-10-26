@@ -14,8 +14,12 @@ $("#goal").onchange = e => { const v = Math.round(+e.target.value || 0); setGoal
 $("#goalNext").onclick = () => setGoal("next"); $("#goalOff").onclick = () => setGoal("off");
 $("#alertItems").onchange = e => host.settings({alertItems: e.target.value.slice(0, 500)}).then(s => { settings = s; const n = alertSet().size; $("#alertItemsNote").textContent = n ? n + " item" + (n > 1 ? "s" : "") + " watched" : "" });
 $("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.value || 0)}).then(s => settings = s);
-$("#miniBtn").onclick = () => { document.body.classList.add("mini"); miniH = 0; if (session) renderMini(session.stats()); else miniFit(true) };
-$("#miniFull").onclick = () => { document.body.classList.remove("mini"); if (fitsWindow()) requestAnimationFrame(() => compactFit(true)); else host.mini(false) };
+const fullView = () => { document.body.classList.remove("mini"); document.body.classList.remove("focus"); if (fitsWindow()) requestAnimationFrame(() => compactFit(true)); else host.mini(false) };
+$("#miniBtn").onclick = () => { document.body.classList.remove("focus"); document.body.classList.add("mini"); miniH = 0; if (session) renderMini(session.stats()); else miniFit(true) };
+$("#miniFull").onclick = fullView;
+$("#focusBtn").onclick = () => { document.body.classList.remove("mini"); document.body.classList.add("focus"); fzH = 0; if (session) renderFocus(session.stats()); else focusFit(true) };
+$("#fzFull").onclick = fullView;
+$("#fzWrapEnd").onclick = () => $("#miniWrapEnd").click();
 // History (the maths is core/history.js): search and filters, Maps, personal bests, an EXP/hr trend for one map, rows with
 // details (monsters, loot, used, level-ups) and rename/note editing, and compare for up to 6 runs against a baseline
 const H = GrindHistory, hctx = {bestDrop: x => bestDrop(x)};

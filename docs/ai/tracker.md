@@ -90,6 +90,11 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   Tests: wait ~220 ms after a layout change before measuring a drag target (FLIP glide moves boxes).
 - Mini (#mini, renderMini): its own copies of numbers, run log (#miniFeed, mirrored in feedAdd) and top-5 lists; host.mini(on, h)
   sizes the window's content height to the view (miniFit). #miniFull goes back; the card itself isn't clickable any more.
+- Focus Mode (0.2.73, #focus + body.focus, renderFocus/focusFit in renderer-layout.js): the third view, a centred 840 px
+  column skinned after maplestory.watch/market (air, soft shadows, hover highlights) using only theme tokens. Same data as
+  Simple via shared builders (lvlHtml/potsHtml/moneyHtml, smChart(svg, pts)); #fzFeed mirrors feedAdd; window fit reuses
+  host.mini with no zoom. modalOpen/toolbox leave it; #focusBtn hides under a 400 px main card (container query — inside a
+  hidden subtree no container matches, so the narrow-hide test runs in the full view). Tests: focus.test.js; ui.test shortcut rows = 13.
 - Compact view retired 0.2.58; compactFit stays as the "window height follows the boxes" sizer (fitWin). Adding a shortcut:
   KEYS (main.js), KEY_NAMES, and the ui test's shortcut row count.
 - Dummy data: app/renderer-dummy.js (View menu "dummy" → dummyToggle via renderer-settings.js onMenu). It sets `session`

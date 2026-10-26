@@ -18,26 +18,26 @@ function dummyFill(){
   ev.push(bar(t0 + 1795e3, 120, 11), {t: t0 + 1795e3, type: "have", items: {2000000: 41, 2060000: 1310}});
   const lines = [];
   for (const e of ev){ s.add(e); if (e.t >= t0 + 1740e3) lines.push(...f.step(s.state, e.t + 2000, feedWho())); else f.step(s.state, e.t, feedWho()) }
-  dummyPrev = {session, runT0, events: $("#events").innerHTML, feed: $("#feed").innerHTML, mini: $("#miniFeed").innerHTML, state: $("#stateText").textContent};
+  dummyPrev = {session, runT0, events: $("#events").innerHTML, feed: $("#feed").innerHTML, mini: $("#miniFeed").innerHTML, fz: $("#fzFeed").innerHTML, state: $("#stateText").textContent};
   dummyClearFeeds(); session = s; runT0 = t0 - 120e3; dummyOn = true; stopWarned = true;   // no "No EXP for 2 minutes" beep
   feedAdd([{t: t0, kind: "sep", text: "Dummy data (made up, not saved or shared)"}, ...lines]);
   $("#dummyBar").classList.remove("hidden");
   try { renderSnaps(render()) } catch (e){ $("#status").textContent = "Dummy data: " + e.message }
   requestAnimationFrame(() => { const el = $("#feed"); el.scrollTop = el.scrollHeight });   // after the boxes settled
-  $("#stateText").textContent = "Dummy data"; $("#miniState").textContent = "Dummy data";
+  $("#stateText").textContent = "Dummy data"; $("#miniState").textContent = "Dummy data"; $("#fzState").textContent = "Dummy data";
 }
-function dummyClearFeeds(){ $("#feed").innerHTML = ""; $("#miniFeed").innerHTML = "" }
+function dummyClearFeeds(){ $("#feed").innerHTML = ""; $("#miniFeed").innerHTML = ""; $("#fzFeed").innerHTML = "" }
 // wipe it in place: it used to reload the window, which the main process blocks (will-navigate), so it never went away
 // (Danny, 2026-10-19). Every box is re-rendered from the run it covered, or from an empty session.
 function dummyClear(){
   if (!dummyOn) return;
-  const p = dummyPrev || {session: null, runT0: 0, feed: "", mini: "", state: "Not tracking"};
+  const p = dummyPrev || {session: null, runT0: 0, feed: "", mini: "", fz: "", state: "Not tracking"};
   dummyOn = false; dummyPrev = null;
   $("#stateText").textContent = p.state;   // before render: renderMini copies it
   session = p.session || GrindSession.createSession(G, {goalLevel: goalOf(), freeIds: freeIds()});
   try { renderSnaps(render()) } catch (e){ $("#status").textContent = "Dummy data: " + e.message }
   session = p.session; runT0 = p.runT0;
-  $("#feed").innerHTML = p.feed; $("#miniFeed").innerHTML = p.mini; if (p.events != null) $("#events").innerHTML = p.events;
+  $("#feed").innerHTML = p.feed; $("#miniFeed").innerHTML = p.mini; $("#fzFeed").innerHTML = p.fz; if (p.events != null) $("#events").innerHTML = p.events;
   $("#dummyBar").classList.add("hidden");
 }
 $("#dummyClear").onclick = dummyClear;

@@ -29,7 +29,7 @@
     padding-right:calc(100vw - env(titlebar-area-width, calc(100vw - 140px))); background:var(--panel); border-bottom:1px solid var(--line); -webkit-app-region:drag; user-select:none; }
   #titlebar .tbname { font-size:12px; font-weight:600; color:var(--accent); margin-right:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex-shrink:1; }
   /* a narrow window: the menus never wrap (▦ over "Modules"); the app name gives way first, then the word Modules */
-  #titlebar button { white-space:nowrap; flex-shrink:0; } @media (max-width: 460px){ #tbBtn .tbw, #miniBtn .nw { display:none; } }
+  #titlebar button { white-space:nowrap; flex-shrink:0; } @media (max-width: 460px){ #tbBtn .tbw, #miniBtn .nw, #focusBtn .nw { display:none; } }
   #titlebar button { -webkit-app-region:no-drag; background:none; color:var(--muted); padding:4px 8px; font-size:12px; border-radius:6px; }
   #titlebar button:hover, #titlebar button:focus-visible { background:var(--accent-soft); color:var(--ink); }
   /* scrollbars in the app's colours (the page's own one starts under the title bar) */
@@ -82,6 +82,39 @@
   #mini .mlists { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:0 12px; }
   #mini .mlists table { width:100%; font-size:12px; border-collapse:collapse; } #mini .mlists td { padding:1px 0; border:0; } #mini .mlists td.n { text-align:right; white-space:nowrap; padding-left:6px; }
   #mini .mlists .ico { height:1.2em; width:auto; vertical-align:-0.25em; margin-right:3px; } #mini .mlists .more td { color:var(--muted); } .hidden { display:none !important; } @keyframes flash { from { box-shadow: 0 0 0 3px var(--accent, #a78bfa) } to { box-shadow: none } } .flash { animation: flash 1.2s ease-out } .good { color:var(--leaf); } .slow { color:var(--warn); }
+  /* Focus Mode (Danny, 2026-10-26: a third view beside Simple Mode, skinned after maplestory.watch's market page): one
+     centred column with air around the numbers, soft shadows and quiet hover highlights. Every colour is a theme token, so
+     all themes and light/dark keep working; the window shrinks to fit like Simple Mode's (the width stays: more width = more air) */
+  body.focus { background:linear-gradient(color-mix(in srgb, var(--accent) 9%, var(--bg)) 0%, var(--bg) 44%, color-mix(in srgb, var(--ink) 7%, var(--bg)) 100%) fixed; }
+  body.focus > *:not(#focus):not(#titlebar) { display:none !important; } body.focus #focus { display:block; }
+  #focus { display:none; width:100%; max-width:840px; margin:0 auto; padding:16px 26px 26px; }   /* body is a flex column: width:100% or the column shrink-to-fits instead of centring */
+  .fzCard { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 20px; margin-top:14px;
+    box-shadow:0 1px 2px color-mix(in srgb, var(--ink) 13%, transparent), 0 14px 30px -16px color-mix(in srgb, var(--ink) 42%, transparent);
+    transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+  .fzCard:hover { border-color:color-mix(in srgb, var(--accent) 42%, var(--line));
+    box-shadow:0 1px 2px color-mix(in srgb, var(--ink) 13%, transparent), 0 16px 34px -14px color-mix(in srgb, var(--ink) 48%, transparent); }
+  #focus .fzHead { display:flex; align-items:center; gap:10px; margin:0 2px; }
+  #focus .fzWord { flex:1; font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #focus .fzWord b { color:var(--accent); } #fzState { font-size:12px; color:var(--muted); white-space:nowrap; } #fzFull { padding:4px 12px; font-size:12px; }
+  #fzWrap { margin:8px 0 0; } #fzWrap button { padding:2px 8px; }
+  .fzHero { text-align:center; padding:26px 22px 22px; background:linear-gradient(color-mix(in srgb, var(--accent) 11%, var(--panel)) 0%, var(--panel) 78%); }
+  #focus .smMap { font-size:27px; } #focus .smWho { margin-top:9px; } #focus .smSpawns { margin-top:7px; }
+  .fzHeroK { margin-top:16px; text-transform:uppercase; letter-spacing:.1em; font-size:11px; }
+  .fzBig { font-size:clamp(30px, 7vw, 44px); font-weight:800; line-height:1.08; color:var(--accent); font-variant-numeric:tabular-nums; }
+  .fzBig small { font-size:13px; font-weight:600; color:var(--muted); }
+  .fzTiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(148px, 1fr)); gap:10px; margin-top:14px; }
+  .fzTiles .fzCard { margin-top:0; padding:12px 14px; } .fzTiles .fzCard:hover { transform:translateY(-1px); }
+  .fzMid { font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; }
+  #focus .v { font-size:19px; } #focus .note:empty { display:none; }
+  #fzLvl { padding:14px 18px; }
+  #fzFeed { height:9.5em; } #focus .mk { color:var(--muted); }
+  #focus .mk:has(+ #fzFeed:empty) { display:none; }
+  .fzLists { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px 26px; }
+  .fzLists td { border-bottom-color:color-mix(in srgb, var(--line) 55%, transparent); padding:4px 0; }
+  .fzLists tr:hover td { background:color-mix(in srgb, var(--accent-soft) 38%, transparent); }
+  .fzLists .ico { height:1.2em; width:auto; vertical-align:-0.25em; margin-right:3px; } .fzLists .more td { color:var(--muted); }
+  /* a narrow window hides the Focus button (the column wants room): the View menu and Ctrl+Shift+F still switch */
+  @container (max-width: 400px){ #focusBtn { display:none; } }
   /* top: Start/Stop, what's going on, the four numbers that matter */
   #top .bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-right:46px; container-type:inline-size; }
   /* the main card is a box too (Danny, 2026-10-18); folded it keeps its Start bar */
@@ -351,6 +384,38 @@
       <div><div class="k mk">Consumables used</div><table id="miniUsed"></table></div>
     </div>
   </div>
+  <!-- Focus Mode (Danny 2026-10-26, a third view beside Simple Mode, skinned after maplestory.watch/market): the same session
+       data as Simple Mode in one centred column — hero, stat tiles, level bar, chart, potions and mesos, run log, top lists -->
+  <div id="focus">
+    <div class="fzHead"><span class="fzWord"><b>Grind</b> Tracker</span><span id="fzState"></span><button id="fzFull" class="alt" title="Back to the full window">Full view</button></div>
+    <div class="row hidden" id="fzWrap" role="status"><span id="fzWrapText" style="flex:1;min-width:0"></span><button id="fzWrapEnd" title="Saves the run to History (the summary waits in the full view)">Finalize log</button></div>
+    <div class="fzCard fzHero">
+      <div class="smMap" id="fzMap">No map yet</div>
+      <div class="smWho" id="fzWho" hidden></div>
+      <div class="smSpawns note" id="fzSpawns" title="Monster spawn points on this map (game files)"></div>
+      <div class="k fzHeroK">EXP gained</div>
+      <div class="fzBig"><span id="fzTotal">-</span> <small id="fzIn"></small></div>
+    </div>
+    <div class="fzTiles">
+      <div class="fzCard"><div class="k">EXP / min on average</div><div class="fzMid" id="fzPerMin">-</div></div>
+      <div class="fzCard"><div class="k">best minute</div><div class="fzMid" id="fzBest">-</div></div>
+      <div class="fzCard"><div class="k">EXP/hr</div><div class="v" id="fzExp">-</div></div>
+      <div class="fzCard"><div class="k">Mesos/hr</div><div class="v" id="fzMeso">-</div></div>
+      <div class="fzCard"><div class="k">Next level in</div><div class="v" id="fzTtl">-</div></div>
+      <div class="fzCard"><div class="k">Farming</div><div class="v" id="fzActive">-</div></div>
+      <div class="fzCard"><div class="k">On the clock</div><div class="v" id="fzClock">-</div></div>
+    </div>
+    <div class="fzCard smLvl" id="fzLvl" hidden></div>
+    <div class="fzCard smChart"><div class="k">EXP per minute</div><svg id="fzChart" viewBox="0 0 520 150" role="img" aria-label="EXP per minute"></svg></div>
+    <div class="fzCard smPots"><span class="k">Potions</span><div class="smPotList" id="fzPots"></div><div class="smMoney" id="fzMoney"></div></div>
+    <div class="note" id="fzNote"></div><div class="note" id="fzParty"></div><div class="note" id="fzGoal"></div>
+    <div class="fzCard"><div class="k mk">Run log</div><div id="fzFeed" class="feedlist" role="log" aria-label="Run log"></div></div>
+    <div class="fzCard fzLists">
+      <div><div class="k mk">Items looted</div><table id="fzItems"></table></div>
+      <div><div class="k mk">Monsters killed</div><table id="fzMobs"></table></div>
+      <div><div class="k mk">Consumables used</div><table id="fzUsed"></table></div>
+    </div>
+  </div>
   <div class="card hidden" id="guide">
     <div class="v">Welcome</div>
     <ol>
@@ -387,7 +452,8 @@
       <button id="bugBtn" class="alt" title="Report a bug (Ctrl+Shift+B, works from the game too)">Bug</button>
       <button id="resetBtn" class="alt hidden" title="Clear the numbers, logs and last summary for a fresh start (saved runs stay in Past sessions)" aria-label="Reset"><span aria-hidden="true">↺</span><span class="nw"> Reset</span></button>
       <button id="pauseBtn" class="alt hidden" aria-pressed="false" title="Pause the timer (break, shop trip); press again to go on">Pause</button>
-      <button id="miniBtn" class="alt" title="Simple Mode: the numbers that matter while farming, in a smaller window">Simple<span class="nw"> Mode</span></button></div>
+      <button id="miniBtn" class="alt" title="Simple Mode: the numbers that matter while farming, in a smaller window">Simple<span class="nw"> Mode</span></button>
+      <button id="focusBtn" class="alt" title="Focus Mode: the run in a clean, centred skin (Ctrl+Shift+F; a wide window shows it best)">Focus<span class="nw"> Mode</span></button></div>
     <div class="row" id="nameRow" style="margin-top:6px"><input id="runName" maxlength="60" aria-label="Run name (optional)" placeholder="Name this run (optional), e.g. KPQ rush with randoms" style="flex:1;min-width:0"></div>
     <div class="tileHead"><span class="k">This run</span><div class="seg" role="group" aria-label="Show numbers"><button id="tPer" aria-pressed="true">Per hour</button><button id="tTot" aria-pressed="false">Total</button></div></div>
     <div class="tiles">
@@ -539,6 +605,7 @@
       </ul></details>
       <details><summary>Window tips</summary><ul>
         <li><b>Simple Mode</b> (was Mini) shrinks the window to the run at a glance: map, EXP gained, EXP per minute and your best minute, the level bar since Start, potions used and picked up, mesos spent, picked up and loot value, and an EXP-per-minute chart. <b>Full view</b> brings everything back.</li>
+        <li><b>Focus Mode</b> is a third view: the same numbers in one centred column with room to breathe, soft shadows and quiet highlights (skinned after maplestory.watch's market page), in your theme's colours. A narrow window hides the button — the View menu or Ctrl+Shift+F still switch, and <b>Full view</b> comes back the same ways.</li>
         <li>The main card has a <b>Per hour / Total</b> switch for its numbers, your <b>Start → now</b> EXP readings (<b>fix</b> lets you type a level or % that read wrong) and the <b>Inventory</b> tabs (green = read, click one to read it now).</li>
         <li><b>Loot value</b>: Etc monster drops (caps, teeth, shells) count at the NPC sell price, since players don't buy them; ores, jewels, crafting materials, equipment and scrolls at the player-shop price from meso.watch.</li>
         <li>The window stays on top of the game. Turn that off in Settings → Window and sharing.</li>
@@ -546,7 +613,7 @@
         <li><b>Pause</b> (next to Start while tracking) stops the clock for a break; nothing picked up counts until you press <b>Go on</b>.</li>
       </ul></details>
       <details><summary>Shortcuts and themes</summary><ul>
-        <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, Ctrl+Shift+S Start/Stop, P Pause, M Simple Mode, K Modules toolbox (also in View), H hide/show, I read the open inventory tab, B report a bug,
+        <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, Ctrl+Shift+S Start/Stop, P Pause, M Simple Mode, F Focus Mode, K Modules toolbox (also in View), H hide/show, I read the open inventory tab, B report a bug,
           X click-through (clicks go to the game under the window; the same keys turn it off), N mark the moment in the run note, G save the numbers as a picture, U mute sounds. Change or turn them off in Settings → Shortcuts and window.</li>
         <li>Settings → Theme: pick a colourway, or <b>Edit colours</b> and save your own. <b>Copy share code</b> gives a one-line code friends paste under Share a theme; <b>Save as file</b> makes a .mstheme file.</li>
         <li>Settings → Shortcuts and window → See-through window makes the tracker partly transparent over the game.</li>
