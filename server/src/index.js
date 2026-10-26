@@ -241,6 +241,15 @@ async function doneFeedback(req, env){
   return json({ok: true});
 }
 
+// owner inbox for KPQ rounds: everything the server received, counted or not, newest first. The public summary only shows
+// counted rounds, so "runs were done today, are they not logged?" (Danny, 2026-10-26) was unanswerable from outside — this
+// answers it with each round's ok and why. Same key as the feedback inbox; read-only; no install or IP data, names only.
+async function getKpqRecent(req, env){
+  const no = fbAdmin(req, env); if (no) return no;
+  const {results} = await env.DB.prepare("SELECT k.id, k.received, k.date, k.hour, k.mode, k.party, k.level, k.job, k.clear, k.total, k.clock, k.exp, k.mesos, k.ok, k.why, n.name FROM kpq_rounds k LEFT JOIN kpq_names n ON n.kpq_id = k.id ORDER BY k.id DESC LIMIT 100").all();
+  return json({rounds: results});
+}
+
 async function route(req, env){
   const url = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
@@ -249,6 +258,7 @@ async function route(req, env){
   if (url.pathname === "/api/party" && req.method === "POST") return partyLive(req, env);
   if (url.pathname === "/api/feedback" && req.method === "POST") return postFeedback(req, env);
   if (url.pathname === "/api/feedback" && req.method === "GET") return getFeedback(req, env);
+  if (url.pathname === "/api/kpq/recent" && req.method === "GET") return getKpqRecent(req, env);
   if (url.pathname === "/api/feedback/done" && req.method === "POST") return doneFeedback(req, env);
   if (url.pathname === "/api/summary" && req.method === "GET"){
     // worked out at most every 5 minutes and kept in the meta table (each request would otherwise read every run; the

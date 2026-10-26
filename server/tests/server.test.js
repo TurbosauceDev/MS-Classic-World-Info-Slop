@@ -189,4 +189,14 @@ assert.ok(!JSON.stringify(r).includes("30.0.0") && !("ipday" in bug), "nothing a
 [s] = await fb({id: big.id, delete: true}, "x", "/api/feedback/done", "k".repeat(32));
 [s, r] = await inbox("k".repeat(32));
 assert.deepStrictEqual([r.notes.length, r.notes.find(n => n.id === bug.id).done], [5, 1]);
+
+// owner inbox for KPQ rounds (2026-10-26): everything the server received, counted or not, behind the same key
+const kpqInbox = key => worker.fetch(new Request("https://x/api/kpq/recent", {headers: key ? {authorization: "Bearer " + key} : {}}), env).then(async r => [r.status, await r.json()]);
+[s, r] = await kpqInbox(); assert.strictEqual(s, 401, "the KPQ inbox needs the key");
+[s, r] = await kpqInbox("wrong".repeat(7)); assert.strictEqual(s, 401, "wrong key refused");
+[s, r] = await kpqInbox("k".repeat(32)); assert.strictEqual(s, 200);
+const keptRound = r.rounds.find(x => x.why === "clear time"), countedRound = r.rounds.find(x => x.ok === 1 && x.why === null);
+assert.ok(keptRound && countedRound && r.rounds.length >= 8, `kept and counted rounds both listed (${r.rounds.length} rounds)`);
+assert.ok(!("install" in r.rounds[0]) && !("ipday" in r.rounds[0]), "no install or IP data in the inbox");
+assert.strictEqual((await worker.fetch(new Request("https://x/api/kpq/recent"), {DB})).status, 503, "no key on the server: inbox closed");
 console.log("server tests passed");
