@@ -2,7 +2,7 @@
 import assert from "assert";
 import {readFileSync} from "fs";
 import {DatabaseSync} from "node:sqlite";
-import worker from "../src/index.js";
+import worker, {ARCHIVE_DAYS} from "../src/index.js";
 
 const sql = new DatabaseSync(":memory:");
 sql.exec(readFileSync(new URL("../schema.sql", import.meta.url), "utf8"));
@@ -241,4 +241,25 @@ assert.ok(r.total > 2, "total runs on file included");
 assert.ok(!JSON.stringify(r).includes("ipday") && !JSON.stringify(r).includes("aaaaaaaaaaaaaaaa"), "still no install or IP data");
 const adm2 = await (await worker.fetch(new Request("https://x/admin"), env)).text();
 assert.ok(adm2.includes("Shared runs") && adm2.includes("/api/runs/recent"), "panel has the shared-runs tab");
+
+// archive (2026-10-26, Danny: "add an archive table"): runs past the 180-day window leave the hot tables at the rebuild
+// (the site's medians see a rolling window); the KPQ boards read live + archive, so an all-time best never falls off
+[s] = await post(run("archrun0000000001", 1000));
+[s, r] = await kpost(kr("archkpq0000000001", 300), "40.0.0.1");
+assert.ok(r.counted, JSON.stringify(r));
+const old = new Date(Date.now() - (ARCHIVE_DAYS + 5) * 86400e3).toISOString();
+sql.prepare("UPDATE runs SET received = ? WHERE install = 'archrun0000000001'").run(old);
+sql.prepare("UPDATE kpq_rounds SET received = ? WHERE install = 'archkpq0000000001'").run(old);
+const archived = await fresh();
+assert.deepStrictEqual(archived.archived, {runs: 1, rounds: 1}, "archive totals in the summary: " + JSON.stringify(archived.archived));
+assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE install = 'archrun0000000001'").get().n, 0, "old run left the hot table");
+assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs_archive WHERE install = 'archrun0000000001'").get().n, 1, "and sits in the archive");
+assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM kpq_rounds WHERE install = 'archkpq0000000001'").get().n, 0);
+assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM kpq_rounds_archive WHERE install = 'archkpq0000000001'").get().n, 1);
+assert.ok(archived.kpq.board.Rush.some(e => e.best === 300), "an archived round keeps its all-time board spot");
+const again = await fresh();
+assert.deepStrictEqual(again.archived, archived.archived, "a second rebuild doesn't double-move");
+const archId = sql.prepare("SELECT id FROM runs_archive WHERE install = 'archrun0000000001'").get().id;
+[s, r] = await runsInbox("k".repeat(32));
+assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT COUNT(*) n FROM runs").get().n, "the inbox lists the hot table only, total matches");
 console.log("server tests passed");

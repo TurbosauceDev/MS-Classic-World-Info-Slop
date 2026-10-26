@@ -359,7 +359,8 @@ async function loadSum(){
     const s = await (await fetch("/api/summary")).json();
     const card = (h, v) => '<div class="fact"><h3>' + h + '</h3><p><span class="num">' + v + "</span></p></div>";
     $("#sfacts").innerHTML = card("Updated", ago(s.updated)) + card("Runs", nfmt(s.runs)) + card("Players", nfmt(s.players)) +
-      card("Hours farmed", nfmt(s.hours)) + card("KPQ rounds counted", nfmt(s.kpq && s.kpq.rounds)) + card("KPQ groups", nfmt(s.kpq && s.kpq.groups));
+      card("Hours farmed", nfmt(s.hours)) + card("KPQ rounds counted", nfmt(s.kpq && s.kpq.rounds)) + card("KPQ groups", nfmt(s.kpq && s.kpq.groups)) +
+      card("Runs archived (180d+)", nfmt(s.archived && s.archived.runs));
     $("#srush").innerHTML = board(s.kpq && s.kpq.board && s.kpq.board.Rush, "Rush");
     $("#sbonus").innerHTML = board(s.kpq && s.kpq.board && s.kpq.board.Bonus, "Bonus");
   } catch { $("#srush").innerHTML = '<div class="err">could not reach the server</div>' }

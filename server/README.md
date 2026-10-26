@@ -8,8 +8,9 @@ for the site. Deployed by `.github/workflows/server.yml` on pushes to `server/**
 - `POST /api/party`: live party view. `{install, partyCode, nick?, job, level, mapName, expHr, expHr5, killsHr, mesosHr}` ->
   everyone with the same code seen in the last 3 minutes (no IDs back). Max 6 per code, one post per 20 s, 6 trackers per IP;
   rows deleted after an hour, never used in the summary.
-- `GET /api/summary`: `{runs, players, hours, rows, mobs}`. `rows` = one per player per map and solo/party (their median
-  run: expHr, mesosHr, killsHr, level, job). `mobs` = kills, meso drops and item counts per monster. No IDs, no IPs.
+- `GET /api/summary`: `{runs, players, hours, rows, mobs, times, kpq, archived}`. `rows` = one per player per map and
+  solo/party (their median run: expHr, mesosHr, killsHr, level, job). `mobs` = kills, meso drops and item counts per
+  monster. `archived` = `{runs, rounds}` sitting in the archive tables. No IDs, no IPs.
 - `GET /api/kpq/recent`: owner inbox (same key as the feedback inbox, `authorization: Bearer <FEEDBACK_KEY>`): the last
   `?limit=` (1-500, default 100) KPQ rounds the server received, counted or not, newest first, each with `ok`, `why`,
   stage times and source, plus `total` = rounds on file. Read-only; no install or IP data.
@@ -19,6 +20,11 @@ for the site. Deployed by `.github/workflows/server.yml` on pushes to `server/**
 - `GET /admin`: the owner panel in a browser — no curl needed. Asks for the key once (kept in `localStorage fbkey`,
   same spot as the site's Feedback admin), then shows the KPQ inbox (today filter in Pacific time, 30 s auto-refresh,
   stage splits on click), the shared-runs inbox (same today filter, what the run saw on click), the feedback inbox
-  (mark done / delete) and the public summary. The page itself carries no data; every route it calls stays behind the key.
+  (mark done / delete) and the public summary (with the archive totals). The page itself carries no data; every route
+  it calls stays behind the key.
+- Archive (2026-10-26): runs and KPQ rounds older than 180 days (`ARCHIVE_DAYS`) move from `runs` / `kpq_rounds` into
+  `runs_archive` / `kpq_rounds_archive` during the summary rebuild (idempotent, `INSERT OR IGNORE` on the id). The
+  rebuild's runs aggregates see the rolling 180-day window; the KPQ leaderboard reads live + archive (UNION ALL), so
+  all-time bests never fall off a board. Rate limits and the owner inboxes (newest N) are unaffected.
 - Stored: the run plus the install ID and a salted hash of IP + day (rate limit only). Never the character name.
 - Local: `npm install && npm run data && npm test` (Node 22: tests use node:sqlite in place of D1).

@@ -18,6 +18,28 @@ CREATE TABLE IF NOT EXISTS runs (
 CREATE INDEX IF NOT EXISTS runs_map ON runs (map, party);
 CREATE INDEX IF NOT EXISTS runs_install ON runs (install, received);
 CREATE INDEX IF NOT EXISTS runs_ipday ON runs (ipday);
+CREATE INDEX IF NOT EXISTS runs_received ON runs (received);
+-- archive (Danny, 2026-10-26: "add an archive table"): runs older than the summary's 180-day window (ARCHIVE_DAYS in
+-- src/index.js) move here during the summary rebuild, so that rebuild reads a bounded table instead of every run ever
+-- sent. Same columns plus when the row was moved; INSERT OR IGNORE keyed on the id, so a crash between the copy and the
+-- delete can't double-move a row (the next rebuild just deletes the original)
+CREATE TABLE IF NOT EXISTS runs_archive (
+  id        INTEGER PRIMARY KEY,
+  install   TEXT NOT NULL,
+  ipday     TEXT NOT NULL,
+  received  TEXT NOT NULL,
+  date      TEXT NOT NULL,
+  map       TEXT,
+  map_name  TEXT,
+  level     INTEGER, job TEXT, party INTEGER NOT NULL,
+  minutes   REAL NOT NULL, exp INTEGER NOT NULL, msg_exp INTEGER, bar_exp INTEGER,
+  kills     INTEGER NOT NULL, mesos INTEGER NOT NULL,
+  ok        INTEGER NOT NULL,
+  why       TEXT,
+  mobs      TEXT,
+  items     TEXT,
+  archived  TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
 -- party code (salted hash) a run was sent with: one party = one group in the "3 players" rules
 CREATE TABLE IF NOT EXISTS run_groups (run_id INTEGER PRIMARY KEY, grp TEXT NOT NULL);
@@ -37,6 +59,15 @@ CREATE TABLE IF NOT EXISTS kpq_rounds (id INTEGER PRIMARY KEY, install TEXT NOT 
   exp INTEGER, mesos INTEGER, stages TEXT, grp TEXT, ok INTEGER NOT NULL, why TEXT);
 CREATE INDEX IF NOT EXISTS kpq_install ON kpq_rounds (install, received);
 CREATE INDEX IF NOT EXISTS kpq_ipday ON kpq_rounds (ipday);
+CREATE INDEX IF NOT EXISTS kpq_received ON kpq_rounds (received);
+-- KPQ archive: rounds older than the same 180-day window move here too. The leaderboard reads live + archive together
+-- (UNION ALL in summary), so an all-time best never falls off a board when its round ages out of the hot table
+CREATE TABLE IF NOT EXISTS kpq_rounds_archive (
+  id INTEGER PRIMARY KEY, install TEXT NOT NULL, ipday TEXT NOT NULL, received TEXT NOT NULL, date TEXT NOT NULL,
+  hour INTEGER, mode TEXT NOT NULL, party INTEGER NOT NULL, level INTEGER, job TEXT, clear INTEGER NOT NULL, total INTEGER, clock INTEGER,
+  exp INTEGER, mesos INTEGER, stages TEXT, grp TEXT, ok INTEGER NOT NULL, why TEXT,
+  archived TEXT NOT NULL
+);
 -- KPQ board names (tracker 0.2.44+): the character name a tracker sent with the round. Its own table because schema.sql
 -- re-runs on every deploy and SQLite has no ADD COLUMN IF NOT EXISTS
 CREATE TABLE IF NOT EXISTS kpq_names (kpq_id INTEGER PRIMARY KEY, name TEXT NOT NULL);

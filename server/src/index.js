@@ -20,6 +20,11 @@ const json = (v, status = 200) => new Response(JSON.stringify(v), {status, heade
 // a run is 15 min, so 4/hour is the real most; the rest is slack. Per IP: a whole party can share one home network
 // (6 players x 4 runs/hr x 12 hr = 288), so up to 6 tracker copies and 300 runs a day
 const MAX_PER_HOUR = 6, MAX_PER_IP_DAY = 300, MAX_INSTALLS_PER_IP_DAY = 6;
+// rows older than this leave the hot tables for the archive ones (schema.sql) during the summary rebuild: the rebuild
+// then reads a bounded runs table instead of every run ever sent (Danny, 2026-10-26: "add an archive table"). 180 days
+// of farmed runs is the window the site's medians and drop tables see; the KPQ boards read live + archive, so their
+// all-time bests never age out (exported for the tests)
+export const ARCHIVE_DAYS = 180;
 
 async function sha(s){ return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 32) }
 async function salt(db){
@@ -108,6 +113,23 @@ async function partyLive(req, env){
   return json({members, expHr: members.reduce((a, m) => a + (m.expHr || 0), 0)});
 }
 
+// move rows past the window into the archive tables. INSERT OR IGNORE keyed on the id: a crash between the copy and the
+// delete can't double-move a row, the next rebuild just retries the delete. Called inside the summary rebuild, which the
+// summary lock already makes one-at-a-time; runs at most every 5 minutes, so the indexed received scan touches only the
+// handful of rows at the window's edge. Returns the archive totals for the panel
+async function archiveOld(db){
+  const cut = new Date(Date.now() - ARCHIVE_DAYS * 86400e3).toISOString();
+  await db.prepare(`INSERT OR IGNORE INTO runs_archive (id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items, archived)
+    SELECT id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items, ? FROM runs WHERE received < ?`).bind(cut, cut).run();
+  await db.prepare("DELETE FROM runs WHERE received < ?").bind(cut).run();
+  await db.prepare(`INSERT OR IGNORE INTO kpq_rounds_archive (id, install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why, archived)
+    SELECT id, install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why, ? FROM kpq_rounds WHERE received < ?`).bind(cut, cut).run();
+  await db.prepare("DELETE FROM kpq_rounds WHERE received < ?").bind(cut).run();
+  const r = await db.prepare("SELECT COUNT(*) n FROM runs_archive").first();
+  const k = await db.prepare("SELECT COUNT(*) n FROM kpq_rounds_archive").first();
+  return {runs: r.n, rounds: k.n};
+}
+
 export async function summary(db){
   const {results} = await db.prepare(`SELECT r.install, r.ipday, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.kills, r.mesos, r.mobs, g.grp, x.deaths, x.hour, x.used_cost
     FROM runs r LEFT JOIN run_groups g ON g.run_id = r.id LEFT JOIN run_extra x ON x.run_id = r.id WHERE r.ok = 1`).all();
@@ -117,7 +139,11 @@ export async function summary(db){
   // one person with fresh installs (or a whole household) can't make up the "3+ players" a map needs on their own
   const uf = new Map(), find = k => { let r = k; while (uf.has(r) && uf.get(r) !== r) r = uf.get(r); uf.set(k, r); return r },
     join = (a, b) => { const x = find(a), y = find(b); if (x !== y) uf.set(x, y) };
-  const kq = (await db.prepare("SELECT k.install, k.ipday, k.date, k.mode, k.party, k.level, k.job, k.clear, k.total, k.clock, k.exp, k.mesos, k.stages, k.grp, k.hour, k.received, n.name, x.src FROM kpq_rounds k LEFT JOIN kpq_names n ON n.kpq_id = k.id LEFT JOIN kpq_src x ON x.kpq_id = k.id WHERE k.ok = 1 AND k.clear >= ? ORDER BY k.id").bind(KPQ_MIN).all()).results;
+  const kqFrom = t => `SELECT ${t}.install, ${t}.ipday, ${t}.date, ${t}.mode, ${t}.party, ${t}.level, ${t}.job, ${t}.clear, ${t}.total, ${t}.clock, ${t}.exp, ${t}.mesos, ${t}.stages, ${t}.grp, ${t}.hour, ${t}.received, n.name, x.src, ${t}.id AS id
+    FROM ${t} LEFT JOIN kpq_names n ON n.kpq_id = ${t}.id LEFT JOIN kpq_src x ON x.kpq_id = ${t}.id WHERE ${t}.ok = 1 AND ${t}.clear >= ?`;
+  // live + archive: an all-time board never loses a record to the archive move (the archive tables keep the same ids, so
+  // the union comes back in send order and the merge below still pairs a party's trackers)
+  const kq = (await db.prepare(`${kqFrom("kpq_rounds")} UNION ALL ${kqFrom("kpq_rounds_archive")} ORDER BY id`).bind(KPQ_MIN, KPQ_MIN).all()).results;
   for (const r of [...results, ...kq]) join("i" + r.install, "n" + r.ipday);
   const net = install => find("i" + install);
   // parties: a party code joined with its members' networks (a separate set, so soloing friends who partied once stay apart)
@@ -307,7 +333,10 @@ async function route(req, env){
       const lock = ok ? await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary_lock'").first() : null;
       if (!lock || Date.now() - Number(lock.v) > 60e3){
         await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary_lock', ?)").bind(String(Date.now())).run();
+        // rows past the window leave the hot tables first, so this rebuild already reads the shrunken ones
+        const archived = await archiveOld(env.DB);
         const s = await summary(env.DB);
+        s.archived = archived;
         body = JSON.stringify(s);
         // D1 rows max out at 2 MB: past 1.5 MB keep fewer KPQ rounds for the filters, so the copy can still be stored
         for (const n of [1000, 0]) if (body.length >= 1.5e6 && s.kpq.list.length > n){ s.kpq.list = n ? s.kpq.list.slice(-n) : []; body = JSON.stringify(s) }
