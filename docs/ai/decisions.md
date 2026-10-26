@@ -20,6 +20,7 @@ above as a dated line and note the resolution date in its place.
 - 2026-10-18 Hand-off: threads read CLAUDE.md, their area page and this file first, and leave 2-3 lines on the area page plus dated decisions here in the same push.
 - 2026-10-18 Prediction-vs-real-runs check for Where to train: later, not until there are users.
 - 2026-10-18 Don't ask again unless he raises it: mapleexp leaderboard export, 2nd job Bowman stat window, scroll odds calculator (not interested).
+- 2026-10-26 Danny: reply in English on Discord surfaces, always. Trigger: a model-availability error line ("please try again later") went out in Chinese under the bot's name; he flagged it. Applies to every agent posting to his channels, error fallbacks included.
 
 ## Data and sources
 - 2026-10-06 Quest-item drop rate assumption 30% per kill (15% "cautious"); no real drop rates exist anywhere.
