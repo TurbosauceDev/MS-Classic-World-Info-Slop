@@ -111,7 +111,7 @@ export async function summary(db){
   // one person with fresh installs (or a whole household) can't make up the "3+ players" a map needs on their own
   const uf = new Map(), find = k => { let r = k; while (uf.has(r) && uf.get(r) !== r) r = uf.get(r); uf.set(k, r); return r },
     join = (a, b) => { const x = find(a), y = find(b); if (x !== y) uf.set(x, y) };
-  const kq = (await db.prepare("SELECT k.install, k.ipday, k.date, k.mode, k.party, k.level, k.job, k.clear, k.total, k.clock, k.exp, k.mesos, k.stages, k.grp, k.hour, n.name, x.src FROM kpq_rounds k LEFT JOIN kpq_names n ON n.kpq_id = k.id LEFT JOIN kpq_src x ON x.kpq_id = k.id WHERE k.ok = 1 AND k.clear >= ? ORDER BY k.id").bind(KPQ_MIN).all()).results;
+  const kq = (await db.prepare("SELECT k.install, k.ipday, k.date, k.mode, k.party, k.level, k.job, k.clear, k.total, k.clock, k.exp, k.mesos, k.stages, k.grp, k.hour, k.received, n.name, x.src FROM kpq_rounds k LEFT JOIN kpq_names n ON n.kpq_id = k.id LEFT JOIN kpq_src x ON x.kpq_id = k.id WHERE k.ok = 1 AND k.clear >= ? ORDER BY k.id").bind(KPQ_MIN).all()).results;
   for (const r of [...results, ...kq]) join("i" + r.install, "n" + r.ipday);
   const net = install => find("i" + install);
   // parties: a party code joined with its members' networks (a separate set, so soloing friends who partied once stay apart)
@@ -175,18 +175,19 @@ export async function summary(db){
   for (const mode of ["Rush", "Bonus"]){
     const list = [...kg[mode].values()].sort(mode === "Rush" ? (a, b) => a.best.clear - b.best.clear : (a, b) => score(b.best) - score(a.best)).slice(0, 50);
     if (list.length) kpq.board[mode] = list.map(e => { const b = e.best; return {group: lab(e.g), best: mode === "Rush" ? b.clear : score(b), median: Math.round(median(e.vals)),
-      rounds: Math.max(...e.per.values()), names: [...new Set(e.names.values())].slice(0, 6), party: b.party, level: b.level, job: b.job, date: b.date, clock: !!b.clock,
+      rounds: Math.max(...e.per.values()), names: [...new Set(e.names.values())].slice(0, 6), party: b.party, level: b.level, job: b.job, date: b.date, at: b.received, clock: !!b.clock,
       clear: b.clear, bonus: b.bonus, exp: b.exp, mesos: b.mesos} });
   }
   // every counted round for the site's filters (party size, job, period, timing), newest 3000. A party's trackers each send
-  // the same round: one line per party round (same group, date and hour, clears within 5 s), names merged, the best EXP + mesos kept
+  // the same round: one line per party round (same group, date and hour, clears within 5 s), names merged, the best EXP + mesos kept.
+  // at = when the server received the round (first tracker to send it), so the site can list a day's runs in arrival order
   const KS = ["80000000", "80000100", "80000200", "80000300", "80000400", "80000500"], merged = [], open = new Map();
   for (const r of kq){
     const g = r.party > 1 && r.grp ? "P" + pfind("p" + r.grp) : "S" + net(r.install), key = [g, r.date, r.hour].join("|");
     let st; try { st = JSON.parse(r.stages || "{}") } catch { st = {} }
     const prev = (open.get(key) || []).find(e => Math.abs(e.c - r.clear) <= 5 && !e.ins.has(r.install));
     if (prev){ prev.ins.add(r.install); if (r.name && !prev.n.includes(r.name)) prev.n.push(r.name); if (score(r) > (prev.x || 0) + (prev.m || 0)){ prev.x = r.exp; prev.m = r.mesos } continue }
-    const e = {g: lab(g), d: r.date, p: r.party, l: r.level, j: r.job, c: r.clear, t: r.total, k: r.clock ? 1 : 0, x: r.exp, m: r.mesos,
+    const e = {g: lab(g), d: r.date, at: r.received, p: r.party, l: r.level, j: r.job, c: r.clear, t: r.total, k: r.clock ? 1 : 0, x: r.exp, m: r.mesos,
       s: KS.map(id => st[id] ?? null), n: r.name ? [r.name] : [], src: r.src || "tracker", ins: new Set([r.install])};
     merged.push(e); (open.get(key) || open.set(key, []).get(key)).push(e);
   }
