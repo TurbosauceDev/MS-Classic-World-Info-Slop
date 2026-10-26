@@ -6,14 +6,14 @@ const path = require("path");
 const URL = "file://" + path.resolve(__dirname, "../dist/index.html");
 let fails = 0;
 const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; console.log("FAILED: " + msg) } };
-const L = (g, c, extra = {}) => ({g, d: "2026-10-20", p: 4, l: 25, j: "Hunter", c, t: c + 90, k: 1, x: 9000, m: 300, s: [60, 50, 70, 40, c - 220, 90], n: [], src: "tracker", ...extra});
+const L = (g, c, extra = {}) => ({g, d: "2026-10-20", p: 4, l: 25, j: "Hunter", c, t: c + 90, k: 1, x: 9000, m: 300, s: [60, 50, 70, 40, c - 220, 90], n: [], src: "tracker", at: "2026-10-20T16:00:00Z", ...extra});
 const SUMMARY = {updated: "2026-10-21T12:00:00Z", runs: 0, players: 0, hours: 0, rows: [], mobs: {}, times: {}, kpq: {rounds: 6, groups: 4, board: {}, list: [
-  L("k0", 300, {n: ["Turbow", "Slimey"]}), L("k0", 340), L("k1", 280, {p: 3, j: "Cleric", n: ['<img src=x onerror="window.__x=1">']}),
-  L("k2", 420, {p: 1, j: "Assassin", k: 0, x: 20000, n: ["Solo1"]}), L("k3", 250, {src: "site", k: 0, x: null, m: null, s: [50, 50, 50, 50, 50, null], n: ["Webby"], d: "2000-01-01"})]}};
+  L("k0", 300, {n: ["Turbow", "Slimey"], at: "2026-10-20T16:05:00Z"}), L("k0", 340, {at: "2026-10-20T16:20:00Z"}), L("k1", 280, {p: 3, j: "Cleric", n: ['<img src=x onerror="window.__x=1">'], at: "2026-10-20T17:00:00Z"}),
+  L("k2", 420, {p: 1, j: "Assassin", k: 0, x: 20000, n: ["Solo1"], at: "2026-10-20T15:30:00Z"}), L("k3", 250, {src: "site", k: 0, x: null, m: null, s: [50, 50, 50, 50, 50, null], n: ["Webby"], d: "2000-01-01", at: "2000-01-01T00:00:00Z"})]}};
 
 (async () => {
   const b = await chromium.launch();
-  const ctx = await b.newContext({viewport: {width: 1300, height: 900}}), p = await ctx.newPage(), errs = [], sent = [];
+  const ctx = await b.newContext({viewport: {width: 1300, height: 900}, timezoneId: "UTC"}), p = await ctx.newPage(), errs = [], sent = [];
   p.on("pageerror", e => errs.push(e.message.slice(0, 160)));
   await p.route("**/api/summary", r => r.fulfill({json: SUMMARY}));
   await p.route("**/api/kpq", r => { sent.push(JSON.parse(r.request().postData())); r.fulfill({json: {ok: true, counted: true}}) });
@@ -95,18 +95,23 @@ const SUMMARY = {updated: "2026-10-21T12:00:00Z", runs: 0, players: 0, hours: 0,
   check(/1st[\s\S]*Last/.test(await p.textContent("#trkkpqdata .kb-split")), "clicking a line shows its stage times");
   check(/Fastest stages/.test(await p.textContent("#trkkpqdata")), "fastest stages card");
   check(await p.evaluate(() => JSON.parse(localStorage.getItem("trkkf")).mode) === "Rush", "filters saved");
-  // today's runs card (Danny 10-25): every round of the browser's date, fastest first, the day's best highlighted;
-  // ignores the filters, opens its own stage times
+  // today's runs card (Danny 10-25; arrival order + times 10-26): every round of the browser's date in the order the
+  // server received it, each with its recorded time; the day's best is highlighted wherever it sits; ignores the filters
   await p.clock.setFixedTime(new Date("2026-10-20T12:00:00"));
   await p.click('#trkkm button[data-m="Rush"]');   // redraw so the card reads the clock's date
   let t = await p.$$eval("#trkkpqdata tr.kb-trow", x => x.map(r => r.cells[0].textContent.trim()));
-  check(t.length === 4 && t[0].startsWith("4:40") && t[3].startsWith("7:00"), `today's runs: all 4 of the day, fastest first (${t})`);
-  check(await p.$("#trkkpqdata tr.kb-best") && /best/.test(await p.textContent("#trkkpqdata tr.kb-best")), "the day's best row is highlighted and labeled");
+  check(t.join("|") === "15:30|16:05|16:20|17:00", `today's runs: arrival order with recorded times (${t})`);
+  t = await p.$$eval("#trkkpqdata tr.kb-trow", x => x.map(r => r.cells[1].textContent.trim()));
+  check(t.length === 4 && t[0].startsWith("7:00") && t[3].startsWith("4:40"), `all 4 of the day, arrival order, not fastest-first (${t})`);
+  const bestTxt = await p.textContent("#trkkpqdata tr.kb-best");
+  check(await p.$("#trkkpqdata tr.kb-best") && /best/.test(bestTxt) && /4:40/.test(bestTxt), "the day's best is highlighted wherever it sits in the day");
   check(await p.$$eval("#trkkpqdata tr.kb-row", x => x.every(r => !r.classList.contains("kb-best"))), "board rows keep their own highlighting");
   await p.click("#trkkpqdata tr.kb-trow");
   check((await p.$$("#trkkpqdata .kb-split")).length === 1 && /1st[\s\S]*Last/.test(await p.textContent("#trkkpqdata .kb-split")), "a today row opens its stage times");
   await p.click("#trkkpqdata tr.kb-trow");
   check(!(await p.$("#trkkpqdata .kb-split")), "clicking again closes it");
+  check(await p.evaluate(() => { const h = KPQB.render({list: [{g: "k", d: "2026-10-20", p: 1, l: 25, j: "Hunter", c: 300, t: 390, k: 1, x: null, m: null, s: [60, 60, 60, 60, 60, null], n: [], src: "tracker"}]});
+    return h.includes("fastest first") && !h.includes("Recorded") }), "rounds without recorded times keep the fastest-first list, no time column");
   check(!errs.length, "no page errors " + errs.join(" | "));
   await b.close();
   if (fails) { console.log(fails + " failed"); process.exit(1) }

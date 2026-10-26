@@ -290,18 +290,24 @@ function render(k){
   const shown = rs.length;
   const body = b.length ? `<div class="tblwrap"><table><thead><tr>${th}<th aria-label="Stages"></th></tr></thead><tbody>${trs}</tbody></table></div>`
     : `<p class="tiny">No rounds match these filters. <button class="btn sm" type="button" data-kreset>Reset filters</button></p>`;
-  // every round recorded today (this browser's date), fastest first, the day's best highlighted (Danny 10-25);
-  // independent of the filters, so the whole day stays visible when the board is filtered down
-  const trows = list.filter(e => e.d === todayStr()).sort((a, b) => a.c - b.c);
+  // every round recorded today (this browser's date), in the order the server received it once rounds carry times
+  // (Danny 10-25; arrival order + times 10-26), the day's best highlighted wherever it sits; independent of the
+  // filters, so the whole day stays visible when the board is filtered down. Without times (old data): fastest first.
+  const tday = list.filter(e => e.d === todayStr());
+  const hasAt = tday.some(e => e.at);
+  const trows = tday.slice().sort(hasAt ? (a, b) => (a.at || "").localeCompare(b.at || "") || a.c - b.c : (a, b) => a.c - b.c);
   const latest = list.map(e => e.d).sort().at(-1);
+  const tbest = trows.length ? trows.reduce((b, e) => e.c < b.c ? e : b, trows[0]) : null;
+  const tHM = at => { const t = new Date(at); return isNaN(t) ? "–" : t.toLocaleTimeString("en-GB", {hour: "2-digit", minute: "2-digit"}) };
   const ttrs = trows.map((e, i) => {
     const names = e.n || [], me = mine && names.some(n => n.toLowerCase() === mine);
     const who = (names.length ? `<b>${names.map(crank).join(", ")}</b> <span class="sub">` : "<span>") + (e.p > 1 ? "party of " + e.p : "solo") + "</span>";
-    const sp = today === i ? `<tr class="kb-sp"><td colspan="7">${splits(e)}</td></tr>` : "";
-    return `<tr class="kb-trow${i ? "" : " kb-best"}${me ? " kb-me" : ""}" data-ti="${i}" tabindex="0" title="Stage times of this round"><td class="num"><b>${mss(e.c)}</b>${mark(e)}${i ? "" : ' <span class="pill p-good">best</span>'}</td><td>${who}</td><td>${e.l ? "Lv " + e.l : "–"}${e.j ? ` <span class="sub">${esc(e.j)}</span>` : ""}</td><td class="num">${e.s[5] != null ? mss(e.s[5]) : "–"}</td><td class="num">${e.x != null ? fmt(e.x) : "–"}</td><td class="num">${e.m != null ? fmt(e.m) : "–"}</td><td class="kb-ch" aria-hidden="true">${today === i ? "▴" : "▾"}</td></tr>${sp}`;
+    const sp = today === i ? `<tr class="kb-sp"><td colspan="${hasAt ? 8 : 7}">${splits(e)}</td></tr>` : "";
+    const tt = hasAt ? `<td class="num" title="${esc(e.at || "")}">${e.at ? tHM(e.at) : "–"}</td>` : "";
+    return `<tr class="kb-trow${e === tbest ? " kb-best" : ""}${me ? " kb-me" : ""}" data-ti="${i}" tabindex="0" title="Stage times of this round">${tt}<td class="num"><b>${mss(e.c)}</b>${mark(e)}${e === tbest ? ' <span class="pill p-good">best</span>' : ""}</td><td>${who}</td><td>${e.l ? "Lv " + e.l : "–"}${e.j ? ` <span class="sub">${esc(e.j)}</span>` : ""}</td><td class="num">${e.s[5] != null ? mss(e.s[5]) : "–"}</td><td class="num">${e.x != null ? fmt(e.x) : "–"}</td><td class="num">${e.m != null ? fmt(e.m) : "–"}</td><td class="kb-ch" aria-hidden="true">${today === i ? "▴" : "▾"}</td></tr>${sp}`;
   }).join("");
-  const todayCard = `<div class="card kb-card kb-today"><h3>Today's runs</h3>${trows.length ? `<p class="sub kb-count">${fmt(trows.length)} run${trows.length === 1 ? "" : "s"} recorded today, fastest first. The day's best is highlighted; click a line for its stage times.</p>
-    <div class="tblwrap"><table><thead><tr><th class="num">Clear</th><th>Who</th><th>Level and job</th><th class="num">Bonus</th><th class="num">EXP</th><th class="num">Mesos</th><th aria-label="Stages"></th></tr></thead><tbody>${ttrs}</tbody></table></div>
+  const todayCard = `<div class="card kb-card kb-today"><h3>Today's runs</h3>${trows.length ? `<p class="sub kb-count">${fmt(trows.length)} run${trows.length === 1 ? "" : "s"} recorded today${hasAt ? ", in the order the server received them (your time)" : ", fastest first"}. The day's best is highlighted; click a line for its stage times.</p>
+    <div class="tblwrap"><table><thead><tr>${hasAt ? '<th class="num">Recorded</th>' : ""}<th class="num">Clear</th><th>Who</th><th>Level and job</th><th class="num">Bonus</th><th class="num">EXP</th><th class="num">Mesos</th><th aria-label="Stages"></th></tr></thead><tbody>${ttrs}</tbody></table></div>
     <p class="sub">The filters above don't apply here. "~" = timed with the PC clock, "⌨" = timed on the site's <a href="#" data-go="kpqt">KPQ timer</a>.</p>`
     : `<p class="sub">No rounds recorded yet today${latest ? `. The latest on file is ${esc(latest)}` : ""}.</p>`}</div>`;
   return `<div class="card kb-card">${filt}<p class="sub kb-count">${fmt(shown)} round${shown === 1 ? "" : "s"} from ${fmt(b.length)} ${b.length === 1 ? "party or player" : "parties and players"}${shown < list.length ? ` (of ${fmt(list.length)})` : ""}. Click a line for its stage times.</p>${body}

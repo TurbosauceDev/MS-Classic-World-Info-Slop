@@ -26,9 +26,9 @@ function trkKpqClean(k0){
   const obj = v => v && typeof v === "object" && !Array.isArray(v) ? v : {}, k = obj(k0), board = {}, arr = v => Array.isArray(v) ? v : [];
   for (const m of ["Rush", "Bonus"]) if (Array.isArray(obj(k.board)[m])) board[m] = k.board[m].map(e0 => { const e = obj(e0);
     return {best: tI(e.best), median: tI(e.median), rounds: tI(e.rounds), party: tI(e.party), level: tN(e.level), exp: tI(e.exp), mesos: tI(e.mesos), bonus: tN(e.bonus), clear: tI(e.clear),
-      clock: !!e.clock, names: arr(e.names).map(tS), job: tS(e.job), date: tS(e.date)} });
+      clock: !!e.clock, names: arr(e.names).map(tS), job: tS(e.job), date: tS(e.date), at: tS(e.at)} });
   const list = arr(k.list).map(e0 => { const e = obj(e0), s = arr(e.s);
-    return {g: tS(e.g), d: tS(e.d), p: tI(e.p), l: tN(e.l), j: tS(e.j), c: tI(e.c), k: !!e.k, x: tN(e.x), m: tN(e.m), s: [0, 1, 2, 3, 4, 5].map(i => tN(s[i])),
+    return {g: tS(e.g), d: tS(e.d), at: tS(e.at), p: tI(e.p), l: tN(e.l), j: tS(e.j), c: tI(e.c), k: !!e.k, x: tN(e.x), m: tN(e.m), s: [0, 1, 2, 3, 4, 5].map(i => tN(s[i])),
       n: arr(e.n).map(tS).slice(0, 6), src: e.src === "site" ? "site" : "tracker"} }).filter(e => e.g && e.c > 0 && /^\d{4}-\d\d-\d\d$/.test(e.d));
   return {rounds: tI(k.rounds), groups: tI(k.groups), board, list};
 }
