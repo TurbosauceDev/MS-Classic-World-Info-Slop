@@ -6,8 +6,11 @@
                       plus drop counts per monster. The site's daily build bakes this into the page.
    POST /api/feedback a note from the site's Feedback page
    GET  /api/feedback Danny's inbox (Authorization: Bearer FEEDBACK_KEY, a Worker secret); POST /api/feedback/done marks or deletes
-   GET  /admin       the owner panel in a browser: KPQ inbox (each round's ok + why), feedback inbox, public summary.
-                     The page itself carries no data; the key is asked once and kept in the browser (localStorage fbkey) */
+   GET  /api/runs/recent  Danny's inbox of shared runs (Bearer FEEDBACK_KEY): the last ?limit= runs received, counted or
+                     not, each with ok and why — the runs-side twin of /api/kpq/recent
+   GET  /admin       the owner panel in a browser: KPQ inbox (each round's ok + why), shared-runs inbox, feedback inbox,
+                     public summary. The page itself carries no data; the key is asked once and kept in the browser
+                     (localStorage fbkey) */
 import G from "./gamedata.json" with {type: "json"};
 import {cleanRun, cleanKpq, median, KPQ_MIN} from "./check.js";
 import {ADMIN_HTML} from "./admin.js";
@@ -257,6 +260,24 @@ async function getKpqRecent(req, env){
   return json({total: all.n, rounds: results.map(r => ({...r, src: r.src || "tracker"}))});
 }
 
+// owner inbox for shared runs: the runs-side twin of getKpqRecent (Danny, 2026-10-26: "lets also get it to show all
+// shared runs as well, not just the KPQ runs"). Everything the server received, counted or not, newest first, each with
+// ok and why. Same key as the feedback inbox; read-only; no install or IP data. The per-run mobs/items JSON is reduced
+// to counts here so the inbox stays light — the public summary is what turns the counted ones into the site's tables.
+async function getRunsRecent(req, env){
+  const no = fbAdmin(req, env); if (no) return no;
+  const n = Math.min(500, Math.max(1, Number(new URL(req.url).searchParams.get("limit")) || 100));
+  const {results} = await env.DB.prepare(`SELECT r.id, r.received, r.date, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.kills, r.mesos, r.ok, r.why, r.mobs, x.deaths, x.hour, x.used_cost
+    FROM runs r LEFT JOIN run_extra x ON x.run_id = r.id ORDER BY r.id DESC LIMIT ?`).bind(n).all();
+  const all = await env.DB.prepare("SELECT COUNT(*) n FROM runs").first();
+  return json({total: all.n, runs: results.map(r => {
+    let mobs = []; try { mobs = JSON.parse(r.mobs || "[]") || [] } catch {}
+    const sum = a => a.reduce((b, v) => b + (+v || 0), 0);
+    return {...r, mobs: {kinds: mobs.length, kills: sum(mobs.map(m => m.kills)), mesos: sum(mobs.map(m => m.mesos)),
+      drops: sum(mobs.map(m => m.mesoDrops)), items: sum(mobs.map(m => Object.values(m.items || {})))}};
+  })});
+}
+
 async function route(req, env){
   const url = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
@@ -266,6 +287,7 @@ async function route(req, env){
   if (url.pathname === "/api/feedback" && req.method === "POST") return postFeedback(req, env);
   if (url.pathname === "/api/feedback" && req.method === "GET") return getFeedback(req, env);
   if (url.pathname === "/api/kpq/recent" && req.method === "GET") return getKpqRecent(req, env);
+  if (url.pathname === "/api/runs/recent" && req.method === "GET") return getRunsRecent(req, env);
   if (url.pathname === "/api/feedback/done" && req.method === "POST") return doneFeedback(req, env);
   // the owner panel: a static page, no data on it — every data route it calls stays behind the key
   if (url.pathname === "/admin" && req.method === "GET")

@@ -213,4 +213,24 @@ assert.ok("stages" in r.rounds[0] && "src" in r.rounds[0], "stage times and sour
 [s, r] = await kq2("?limit=notanumber");
 assert.ok(r.rounds.length >= 3, "junk limit falls back to the default");
 assert.ok(!JSON.stringify(r).includes("ipday") && !JSON.stringify(r).includes("install"), "still no install or IP data");
+
+// owner inbox for shared runs (2026-10-26): the runs-side twin of the KPQ inbox — same key, newest first, counted or
+// not, each with ok + why and the run's mob/item JSON reduced to counts
+const runsInbox = key => worker.fetch(new Request("https://x/api/runs/recent", {headers: key ? {authorization: "Bearer " + key} : {}}), env).then(async r2 => [r2.status, await r2.json()]);
+[s, r] = await runsInbox(); assert.strictEqual(s, 401, "the runs inbox needs the key too");
+[s, r] = await runsInbox("wrong".repeat(7)); assert.strictEqual(s, 401, "wrong key refused");
+[s, r] = await runsInbox("k".repeat(32)); assert.strictEqual(s, 200);
+assert.ok(r.total >= 50 && r.runs.length >= 50, `every run the tests posted is listed (total ${r.total}, listed ${r.runs.length})`);
+const keptRun2 = r.runs.find(x => x.why === "monster not on this map"), countedRun2 = r.runs.find(x => x.ok === 1 && x.why === null);
+assert.ok(keptRun2 && countedRun2, "kept and counted runs both listed");
+const a2 = r.runs.find(x => x.exp === 1200);
+assert.deepStrictEqual(a2.mobs, {kinds: 1, kills: 100, mesos: 900, drops: 60, items: 3}, "mob/item JSON reduced to counts");
+assert.ok(r.runs.some(x => x.deaths != null) && r.runs.some(x => x.hour != null), "deaths and start hour along for the ride");
+assert.ok(!("install" in r.runs[0]) && !("ipday" in r.runs[0]), "no install or IP data in the runs inbox");
+const rq = q => worker.fetch(new Request("https://x/api/runs/recent" + q, {headers: {authorization: "Bearer " + "k".repeat(32)}}), env).then(async r2 => [r2.status, await r2.json()]);
+[s, r] = await rq("?limit=2"); assert.strictEqual(r.runs.length, 2, "limit caps the runs list");
+assert.ok(r.total > 2, "total runs on file included");
+assert.ok(!JSON.stringify(r).includes("ipday") && !JSON.stringify(r).includes("aaaaaaaaaaaaaaaa"), "still no install or IP data");
+const adm2 = await (await worker.fetch(new Request("https://x/admin"), env)).text();
+assert.ok(adm2.includes("Shared runs") && adm2.includes("/api/runs/recent"), "panel has the shared-runs tab");
 console.log("server tests passed");

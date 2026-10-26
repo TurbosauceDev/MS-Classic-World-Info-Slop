@@ -115,6 +115,7 @@ h2.sect{font:800 20px/1.25 var(--f-display);margin:26px 0 8px}
   <div id="panel" hidden>
     <div class="seg" role="tablist">
       <button role="tab" id="t-kpq" aria-pressed="true">KPQ rounds</button>
+      <button role="tab" id="t-runs" aria-pressed="false">Shared runs</button>
       <button role="tab" id="t-fb" aria-pressed="false">Feedback</button>
       <button role="tab" id="t-sum" aria-pressed="false">Public summary</button>
     </div>
@@ -128,6 +129,17 @@ h2.sect{font:800 20px/1.25 var(--f-display);margin:26px 0 8px}
       </div>
       <div class="tblwrap" id="kwrap"><div class="empty">loading…</div></div>
       <p class="note">Everything the server received, newest first — rounds the leaderboard kept <b>and</b> rounds it stored but did not count (the reason sits in the Status column). "counted" = it is on the public boards; anything else explains itself. No install or IP data is shown, by the endpoint's own rule.</p>
+    </section>
+
+    <section id="s-runs" hidden>
+      <div class="facts" id="rfacts"></div>
+      <div class="controls">
+        <label class="chk"><input type="checkbox" id="rtoday" checked>today only (Pacific)</label>
+        <span class="spacer"></span>
+        <span class="sub" id="rstamp"></span>
+      </div>
+      <div class="tblwrap" id="rwrap"><div class="empty">loading…</div></div>
+      <p class="note">Every 15-minute run the server received from the tracker, newest first — runs the site's tables count <b>and</b> runs it stored but did not count (the reason sits in the Status column). "counted" = it feeds the site's EXP/hr and drop tables. EXP and mesos are the run's own totals, not per hour. No install or IP data is shown, by the endpoint's own rule.</p>
     </section>
 
     <section id="s-fb" hidden>
@@ -152,7 +164,7 @@ const $ = s => document.querySelector(s);
 const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const ls = { get(){ try { return localStorage.getItem("fbkey") || "" } catch { return "" } },
              set(v){ try { v ? localStorage.setItem("fbkey", v) : localStorage.removeItem("fbkey") } catch {} } };
-let KEY = ls.get(), TAB = "kpq", timer = null, lastKpq = null;
+let KEY = ls.get(), TAB = "kpq", timer = null, lastKpq = null, lastRuns = null, runsTotal = "…";
 
 const PT = new Intl.DateTimeFormat("en-CA", {timeZone: "America/Los_Angeles"});
 const ptDay = iso => iso ? PT.format(new Date(iso)) : "";
@@ -256,6 +268,60 @@ async function loadKpq(quiet){
   }
 }
 
+/* ---------- Shared runs ---------- */
+function runsTable(rows){
+  if (!rows.length) return '<div class="empty">no runs on file yet</div>';
+  const today = PT.format(new Date());
+  const shown = $("#rtoday").checked ? rows.filter(r => ptDay(r.received) === today) : rows;
+  if (!shown.length) return '<div class="empty">Nothing received today (Pacific). A run posts every 15 minutes while a tracker is open with sharing on — nothing here means sharing was off or the tracker was closed. Untick "today only" to see the last runs on file.</div>';
+  let out = "";
+  for (const r of shown){
+    const id = "r" + r.id, m = r.mobs || {};
+    out += '<tr class="data ' + (r.ok ? "" : "kept") + '" data-x="' + id + '" title="click for what the run saw">' +
+      '<td class="num" title="' + esc(r.received) + '">' + ago(r.received) + '<div class="sub">' + ptClock(r.received) + " PT</div></td>" +
+      "<td>" + (r.map_name ? "<b>" + esc(r.map_name) + "</b>" : r.map != null ? '<span class="mono">map ' + esc(r.map) + "</span>" : '<span class="sub">—</span>') + "</td>" +
+      "<td>" + (r.level ? r.level + " " : "") + esc(r.job || "") + "</td>" +
+      '<td class="num">' + r.party + "</td>" +
+      '<td class="num">' + (r.minutes != null ? r.minutes.toFixed(1) : "—") + "</td>" +
+      '<td class="num">' + nfmt(r.exp) + "</td>" +
+      '<td class="num">' + nfmt(r.kills) + "</td>" +
+      '<td class="num">' + nfmt(r.mesos) + "</td>" +
+      "<td>" + whyPill(r) + "</td></tr>";
+    out += '<tr class="subrow" id="' + id + '" hidden><td colspan="9">' +
+      (m.kinds != null ? '<span class="stg">' + m.kinds + (m.kinds === 1 ? " mob kind" : " mob kinds") + " <b>" + nfmt(m.kills) + "</b> kills · <b>" + nfmt(m.mesos) + "</b> mesos picked up" +
+        (m.drops ? " · <b>" + nfmt(m.drops) + "</b> meso drops" : "") + (m.items ? " · <b>" + nfmt(m.items) + "</b> item drops" : "") + "</span>" : '<span class="stg">no mob data</span>') +
+      '<div class="sub">run date ' + esc(r.date || "?") + (r.hour != null ? ", started ~" + String(r.hour).padStart(2,"0") + ":00 UTC" : "") +
+      (r.deaths != null ? " · " + r.deaths + (r.deaths === 1 ? " death" : " deaths") : "") +
+      (r.used_cost != null ? " · " + nfmt(r.used_cost) + " mesos spent" : "") + " · run #" + r.id + "</div></td></tr>";
+  }
+  return "<table><thead><tr><th>When</th><th>Map</th><th>Lv / Job</th><th>Pty</th><th>Min</th><th>EXP</th><th>Kills</th><th>Mesos</th><th>Status</th></tr></thead><tbody>" + out + "</tbody></table>";
+}
+function runsFacts(rows){
+  const today = PT.format(new Date());
+  const t = rows.filter(r => ptDay(r.received) === today);
+  const ok = t.filter(r => r.ok);
+  const kept = t.length - ok.length;
+  const lastOk = [...t].reverse().find(r => r.ok);
+  const card = (h, v, s) => '<div class="fact"><h3>' + h + '</h3><p><span class="num">' + v + "</span></p>" + (s ? '<div class="sub">' + s + "</div>" : "") + "</div>";
+  $("#rfacts").innerHTML =
+    card("Today (Pacific)", t.length ? ok.length + " counted · " + kept + " kept" : "0 runs",
+      t.length ? (ok.length ? "last counted " + ptClock(lastOk.received) + " PT" : "nothing counted") : "nothing received since PT midnight") +
+    card("Last run", rows.length ? ago(rows[0].received) : "—", rows.length ? ptClock(rows[0].received) + " PT" : "") +
+    card("On file", nfmt(runsTotal), "newest " + rows.length + " listed");
+}
+async function loadRuns(quiet){
+  if (!quiet) $("#rwrap").innerHTML = '<div class="empty">loading…</div>';
+  try {
+    const body = await api("/api/runs/recent?limit=200");
+    runsTotal = body.total; lastRuns = body.runs || [];
+    $("#rwrap").innerHTML = runsTable(lastRuns);
+    runsFacts(lastRuns);
+    $("#rstamp").textContent = "checked " + new Date().toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit", second: "2-digit"});
+  } catch (e){
+    if (e.message !== "401") $("#rwrap").innerHTML = '<div class="err">' + esc("couldn't reach the server: " + e.message) + "</div>";
+  }
+}
+
 /* ---------- Feedback ---------- */
 function fbTable(notes){
   if (!notes.length) return '<div class="empty">inbox empty</div>';
@@ -302,15 +368,16 @@ async function loadSum(){
 /* ---------- tabs + events ---------- */
 function show(tab, quiet){
   TAB = tab;
-  for (const [t, s] of [["kpq","s-kpq"],["fb","s-fb"],["sum","s-sum"]]){
+  for (const [t, s] of [["kpq","s-kpq"],["runs","s-runs"],["fb","s-fb"],["sum","s-sum"]]){
     $("#t-" + t).setAttribute("aria-pressed", String(t === tab));
     $("#" + s).hidden = t !== tab;
   }
   if (tab === "kpq") loadKpq(quiet);
+  if (tab === "runs") loadRuns(quiet);
   if (tab === "fb") loadFb(quiet);
   if (tab === "sum") loadSum();
 }
-for (const [id, tab] of [["t-kpq","kpq"],["t-fb","fb"],["t-sum","sum"]]) $("#" + id).onclick = () => show(tab);
+for (const [id, tab] of [["t-kpq","kpq"],["t-runs","runs"],["t-fb","fb"],["t-sum","sum"]]) $("#" + id).onclick = () => show(tab);
 
 $("#open").onclick = tryKey;
 $("#key").addEventListener("keydown", e => { if (e.key === "Enter") tryKey() });
@@ -328,6 +395,7 @@ async function tryKey(){
 $("#forget").onclick = () => lock("Key forgotten on this device.");
 $("#refresh").onclick = () => show(TAB);
 $("#today").onchange = () => { if (lastKpq){ $("#kwrap").innerHTML = kpqTable(lastKpq); kpqFacts(lastKpq) } };
+$("#rtoday").onchange = () => { if (lastRuns){ $("#rwrap").innerHTML = runsTable(lastRuns); runsFacts(lastRuns) } };
 
 $("#panel").addEventListener("click", e => {
   const b = e.target.closest("button");

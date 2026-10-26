@@ -11,11 +11,14 @@ for the site. Deployed by `.github/workflows/server.yml` on pushes to `server/**
 - `GET /api/summary`: `{runs, players, hours, rows, mobs}`. `rows` = one per player per map and solo/party (their median
   run: expHr, mesosHr, killsHr, level, job). `mobs` = kills, meso drops and item counts per monster. No IDs, no IPs.
 - `GET /api/kpq/recent`: owner inbox (same key as the feedback inbox, `authorization: Bearer <FEEDBACK_KEY>`): the last
-  `?limit=` (10-500, default 100) KPQ rounds the server received, counted or not, newest first, each with `ok`, `why`,
+  `?limit=` (1-500, default 100) KPQ rounds the server received, counted or not, newest first, each with `ok`, `why`,
   stage times and source, plus `total` = rounds on file. Read-only; no install or IP data.
+- `GET /api/runs/recent`: the runs-side twin of the KPQ inbox (same key and rules): the last `?limit=` shared runs,
+  counted or not, newest first, each with `ok`, `why`, `deaths`/`hour`/`used_cost` when the tracker sent them and the
+  run's mobs/items JSON reduced to counts (`mobs: {kinds, kills, mesos, drops, items}`), plus `total` = runs on file.
 - `GET /admin`: the owner panel in a browser — no curl needed. Asks for the key once (kept in `localStorage fbkey`,
   same spot as the site's Feedback admin), then shows the KPQ inbox (today filter in Pacific time, 30 s auto-refresh,
-  stage splits on click), the feedback inbox (mark done / delete) and the public summary. The page itself carries no
-  data; every route it calls stays behind the key.
+  stage splits on click), the shared-runs inbox (same today filter, what the run saw on click), the feedback inbox
+  (mark done / delete) and the public summary. The page itself carries no data; every route it calls stays behind the key.
 - Stored: the run plus the install ID and a salted hash of IP + day (rate limit only). Never the character name.
 - Local: `npm install && npm run data && npm test` (Node 22: tests use node:sqlite in place of D1).
