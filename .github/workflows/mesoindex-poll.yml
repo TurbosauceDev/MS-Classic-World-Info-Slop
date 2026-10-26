@@ -19,9 +19,9 @@ jobs:
         with: { ref: main }
       - run: python3 tests/mesoindex_test.py
       - name: Fetch, build, commit if changed
-        # on a push race, start again from the new main, never merge data.json
+        # on a push race, start again from the new main, never merge data.json; -u so the run log shows fetch progress live
         run: |
-          python3 scripts/fetch_mesoindex.py > /tmp/mi.log; cat /tmp/mi.log
+          python3 -u scripts/fetch_mesoindex.py
           [ -f data/sources/mesoindex.json ] || exit 0   # first fetch failed
           cp data/sources/mesoindex.json /tmp/mi.json
           for i in 1 2 3; do
