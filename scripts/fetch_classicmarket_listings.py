@@ -71,7 +71,7 @@ def step(D):
 if __name__ == "__main__":
     try: posts = fetch()
     except Exception as e:
-        print("classicmarket fetch failed, keeping the old file:", e); sys.exit(0)
+        print(f"::warning::classicmarket posts fetch failed, keeping the old file: {type(e).__name__} {e}"); sys.exit(0)
     j = {"source": "https://classicmarket.kr/", "read": time.strftime("%Y-%m-%d %H:%M", time.gmtime()), "posts": len(posts), "it": aggregate(posts)}
     try:   # same prices: keep the old read time so the job doesn't commit just a timestamp
         old = json.loads(DST.read_text())

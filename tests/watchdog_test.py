@@ -29,4 +29,18 @@ check(w.plan(iss, bad, NOW)[0] == "update", "same problems: refresh the body onl
 check(w.plan(iss, bad + [("prices", "x")], NOW)[0] == "comment", "problems changed: comment")
 one = w.plan(iss, [], NOW); check(one[0] == "update" and w.plan({"body": one[1]}, [], NOW)[0] == "close", "closes after 2 clean checks, not 1")
 check(w.plan({"body": one[1]}, bad, NOW)[0] == "comment", "a problem after a clean check resets the count")
+
+# 2026-10-26: the other price sources (a failed fetch keeps the old file + green CI; mesoindex froze 3 days this way)
+FRESH = {f: {"read": "2026-10-21 17:30"} for f in ("shopscans.json", "classicmarket_prices.json", "classicmarket_market.json", "meowdb_market.json", "mesoindex.json")}
+SHOP_FRESH = {**FRESH, "shopscans.json": {"ma": {"read": "2026-10-21 17:30"}, "mw": {"read": "2026-10-21 17:30"}}}
+check(w.source_problems(NOW, SHOP_FRESH) == [], "all sources fresh: no problems")
+old = w.source_problems(NOW, {**SHOP_FRESH, "mesoindex.json": {"read": "2026-10-18 18:00"}})
+check(len(old) == 1 and old[0][0] == "mesoindex.json" and "72 h old" in old[0][1] and "keeps the old file" in old[0][1], f"mesoindex 3-day freeze trips ({old})")
+p = w.source_problems(NOW, {**SHOP_FRESH, "shopscans.json": {"ma": {"read": "2026-10-20 00:00"}, "mw": {"read": "2026-10-21 17:30"}}})
+check([k for k, _ in p] == ["shopscans.json:ma.read"], f"only the stale half of a two-part file trips ({p})")
+check(w.source_problems(NOW, {**SHOP_FRESH, "meowdb_market.json": None})[0][1].startswith("meowdb"), "missing file flags by name")
+check(w.source_problems(NOW, {**SHOP_FRESH, "mesoindex.json": {"read": "garbage"}})[0][0] == "mesoindex.json", "unreadable read time flags")
+all_old = w.source_problems(NOW, {f: None for f in SHOP_FRESH})
+check(len(all_old) == 6, f"every source file covered ({len(all_old)}: {[k for k, _ in all_old]})")
+
 print("all good" if not fails else f"{fails} failed"); sys.exit(1 if fails else 0)

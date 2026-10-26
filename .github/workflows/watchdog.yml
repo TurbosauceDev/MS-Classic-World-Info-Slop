@@ -1,6 +1,7 @@
-# Pipeline watchdog (2026-10-21): checks the meso.watch data from OUTSIDE the poll (a check inside it can't see its own
-# skipped or broken runs) and keeps one "[watchdog]" issue open while something is wrong. Reads only: no fetch, no build,
-# no commit. Checks and thresholds: scripts/watchdog.py.
+# Pipeline watchdog (2026-10-21, all price sources since 2026-10-26): checks every price source's data age from OUTSIDE
+# the polls (a check inside them can't see their own skipped or broken runs — and a failed fetch keeps the old file and
+# still exits 0, which is how mesoindex froze silently for 3 days on 2026-10-23) and keeps one "[watchdog]" issue open
+# while something is wrong. Reads only: no fetch, no build, no commit. Checks and thresholds: scripts/watchdog.py.
 name: watchdog
 on:
   schedule: [{cron: "13 * * * *"}, {cron: "43 * * * *"}]   # off the polls' minute marks

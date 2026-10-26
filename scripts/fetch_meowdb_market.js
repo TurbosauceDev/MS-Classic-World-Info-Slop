@@ -50,5 +50,5 @@ const KEEP_DAYS = 7, SELLS = 12, BUYS = 5;   // listings not bumped in a week ar
         ls: "buy 0/1, price each, qty, channel, FM room, spot, meowdb user, bumped (UTC min), direct trade 0/1, stats"}, it, ls};
     fs.writeFileSync(DST, JSON.stringify(j));
     console.log(`${got.cat} catalog items, ${got.live} live listings; ${Object.keys(it).length} items priced, ${Object.keys(ls).length} with listings -> ${DST}`);
-  } catch (e) { console.log("meowdb market fetch failed, keeping the old file:", e.message); if (b) await b.close() }
+  } catch (e) { console.log(`::warning::meowdb market fetch failed, keeping the old file: ${e.message}`); if (b) await b.close() }
 })();

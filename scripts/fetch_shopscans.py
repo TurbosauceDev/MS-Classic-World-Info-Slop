@@ -96,7 +96,7 @@ def fetch(old):
         out["ma"] = {"read": ts(j["generated"] / 1000), "it": ma_rows(j)}
         ma_names = {r[1].lower(): str(r[0]) for r in j["items"]}
     except Exception as e:
-        print("mesoarbitrage fetch failed, keeping the old rows:", e); out["ma"] = old.get("ma"); ma_names = {}
+        print(f"::warning::mesoarbitrage fetch failed, keeping the old rows: {type(e).__name__} {e}"); out["ma"] = old.get("ma"); ma_names = {}
     try:
         j = get(MW)
         nid = name_ids(D["items"], ma_names)
@@ -114,7 +114,7 @@ def fetch(old):
         out["mw"] = {"read": ts(j.get("at") or now), "it": it, "ls": ls}
         print(f"maplestory.watch: {len(j['items'])} items, {len(it)} mapped, {calls} listing calls, {len(ls)} with listings")
     except Exception as e:
-        print("maplestory.watch fetch failed, keeping the old rows:", e); out["mw"] = old.get("mw")
+        print(f"::warning::maplestory.watch fetch failed, keeping the old rows: {type(e).__name__} {e}"); out["mw"] = old.get("mw")
     return out
 
 if __name__ == "__main__":
