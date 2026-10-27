@@ -316,6 +316,20 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       `job census card + "of N" on the badge (${JSON.stringify(cen)})`);
     await ctx.close() }
 
+  // audit P10: mob pages show "players' actual" mesos/kill from shared runs beside the meowdb estimate (>= 100 kills to mean anything)
+  { const {p, errs, ctx} = await page(); await p.goto(URL); await open(p, "mobs");
+    await p.fill("#mbsearch", "Pig"); await p.dispatchEvent("#mbsearch", "input"); await p.waitForTimeout(80);
+    await p.evaluate(() => [...document.querySelectorAll("#mbrows .mbtn")].find(b => b.textContent.startsWith("Pig")).click()); await p.waitForTimeout(80);
+    const pig = await p.evaluate(() => { const t = document.querySelector("#mbpage").innerText, c = D.shared.mobs["8"], act = (c.mesos / c.kills).toFixed(1);
+      return {h2: document.querySelector("#mbpage h2").innerText, m: t.match(/players' actual: ([\d.]+) mesos per kill over ([\d,]+) tracker kills \(read [^)]+\)( — meowdb's [\d.]+ sits \d+% (?:under|over) this)?/), act} });
+    check(!errs.length && pig.h2 === "Pig" && pig.m && pig.m[1] === pig.act && /meowdb's \d/.test(pig.m[0]),
+      `Pig page shows players' actual (${pig.m ? pig.m[0] : "missing"}), computed ${(pig.m || [])[1]} = ${pig.act}`);
+    await p.click("#mbback"); await p.fill("#mbsearch", "Iron Hog"); await p.dispatchEvent("#mbsearch", "input"); await p.waitForTimeout(80);
+    await p.click("#mbrows .mbtn"); await p.waitForTimeout(80);
+    const hog = await p.evaluate(() => ({h2: document.querySelector("#mbpage h2").innerText, has: /players' actual/.test(document.querySelector("#mbpage").innerText), k: D.shared.mobs["24"]?.kills || 0}));
+    check(hog.h2 === "Iron Hog" && !hog.has && hog.k < 100, `a mob under 100 shared kills stays quiet (${hog.h2}, ${hog.k} kills)`);
+    await ctx.close() }
+
   await b.close();
   console.log(fails ? `\n${fails} failed` : "\nall good"); process.exit(fails ? 1 : 0);
 })();

@@ -70,6 +70,11 @@ function page(o){
   const quests = [...qk.map(x => `<li>${qn(x)} <span class="sub">hunt ${fmt(x[2])}</span></li>`), ...qi.map(x => `<li>${qn(x)} <span class="sub">${esc(x[3])} ×${fmt(x[2])}</span></li>`)].join("");
   const mr = mesoRange(m.level || 0), meso = `${fmt(Math.round(mesoAvg(m.level)))} <span class="sub">avg per kill (${mr[0]}–${mr[1]} mesos on ~67% of kills, OSMS formula)</span>`
     + (m.meso ? `<br><span class="sub">meowdb reports: ${m.meso[2]}–${m.meso[3]} mesos, ${m.meso[4]}% of kills (${m.meso[1]} report${m.meso[1] > 1 ? "s" : ""})</span>` : "");
+  // shared-runs reality check (audit P10): what tracker players actually picked up per kill, once enough kills are shared
+  // to mean anything (>=100). Compared against meowdb's per-kill estimate so a skewed estimate is visible on the page.
+  const sh = D.shared?.mobs[o.id], shk = sh?.kills || 0, act = shk ? sh.mesos / shk : 0;
+  const actual = sh && shk >= 100 && act > 0 ? `<br><span class="sub">players' actual: ${act.toFixed(1)} mesos per kill over ${fmt(shk)} tracker kills (read ${esc(D.shared.read)})`
+    + (m.meso ? ` — meowdb's ${m.meso[0]} sits ${Math.abs(Math.round((m.meso[0] - act) / act * 100))}% ${m.meso[0] < act ? "under" : "over"} this` : "") + "</span>" : "";
   const topDrop = sure[0] || maybe[0];
   return `<div class="mpage">
     <div class="mpbar"><button class="btn" id="mbback">← All monsters</button><button class="btn" id="mbshare">Copy link</button></div>
@@ -91,7 +96,7 @@ function page(o){
         ${sure.length ? grouped(sure, drop, "") : `<p class="sub">No confirmed drops reported yet.</p>`}
         ${maybe.length ? `<p class="sub">Reported, not confirmed yet:</p>${grouped(maybe, drop, " dim")}` : ""}
         ${mats.length ? `<p class="sub">Crafting materials it's known for:</p><div class="ricons">${mats.map(i => icon(i)).join("")}</div>` : ""}
-        <h4>Mesos</h4><p>${meso}</p>${confirmed(o.id)}</div>
+        <h4>Mesos</h4><p>${meso}${actual}</p>${confirmed(o.id)}</div>
       ${atk || skills || rev ? `<div><h4>Attacks and skills</h4><ul class="mlist">${atk}${skills}${rev ? `<li><b>When it dies</b> splits into ${rev}</li>` : ""}</ul>${!atk ? `<p class="sub">No special attacks: it only hurts on touch.</p>` : ""}</div>` : ""}
       ${quests ? `<div><h4>Quests that want it</h4><ul class="mlist">${quests}</ul></div>` : ""}
     </div></div>`;
