@@ -1,6 +1,7 @@
 # Every 2 hours: classicmarket.kr public trade posts -> data/sources/classicmarket_prices.json + D.cm, rebuild
 # (pages.yml builds the page), commit to main when prices changed. A failed fetch exits 0 and commits nothing. No vendor/ needed.
 # Own workflow (the meso.watch poll belongs to the meso.watch helper); same concurrency group so commits queue.
+# Step-level timeouts (audit P11): a hung step releases the shared lock before the job ceiling.
 name: classicmarket poll
 on:
   schedule: [{cron: "23 */2 * * *"}, {cron: "53 */2 * * *"}]   # two entries: GitHub skips scheduled runs under load (10:23 and 12:23 on 10-21 never fired)
@@ -18,7 +19,9 @@ jobs:
       - uses: actions/checkout@v4
         with: { ref: main }
       - run: python3 tests/classicmarket_test.py
+        timeout-minutes: 2
       - name: Fetch, build, commit if changed
+        timeout-minutes: 8
         env:
           CLASSICMARKET_COOKIE: ${{ secrets.CLASSICMARKET_COOKIE }}
         # on a push race (meso.watch poll commits often), start again from the new main, never merge data.json

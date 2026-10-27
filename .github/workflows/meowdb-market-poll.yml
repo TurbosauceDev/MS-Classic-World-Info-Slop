@@ -2,6 +2,7 @@
 # commit to main (pages.yml builds the page). meowdb sits behind Cloudflare, so the fetch runs in headless Chromium (~30 min).
 # The fetch job runs outside the main-pipeline group so the meso.watch poll isn't held up; only the commit job queues with it.
 # A failed fetch keeps the old file and commits nothing. No vendor/ needed.
+# Step-level timeouts (audit P11): a hung step releases the shared lock before the job ceiling (commit job).
 name: meowdb market poll
 on:
   schedule: [{cron: "41 */3 * * *"}]
@@ -19,7 +20,9 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm i --no-save playwright@1.64.1 && npx playwright install --with-deps chromium   # pinned (was latest)
+        timeout-minutes: 12
       - run: cp data/sources/meowdb_market.json /tmp/old.json 2>/dev/null || true; node scripts/fetch_meowdb_market.js
+        timeout-minutes: 40
       - name: Keep only a new file
         run: cmp -s data/sources/meowdb_market.json /tmp/old.json && rm data/sources/meowdb_market.json || true
       - uses: actions/upload-artifact@v4
@@ -38,6 +41,7 @@ jobs:
         with: { name: meowdb-market, path: /tmp/mdb }
         continue-on-error: true
       - name: Build, commit
+        timeout-minutes: 8
         # on a push race, start again from the new main, never merge data.json
         run: |
           [ -f /tmp/mdb/meowdb_market.json ] || { echo "no new fetch"; exit 0; }

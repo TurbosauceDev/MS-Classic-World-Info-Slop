@@ -18,6 +18,8 @@
 #
 # Uses GITHUB_TOKEN (auto-injected, no PAT needed). Commits as 'meso.watch helper'.
 # OSMS data export is cached across runs (keyed on OSMS_REF).
+# Step-level timeouts (audit P11): a hung step dies and releases the shared main-pipeline
+# lock before the job ceiling, instead of grinding while every other poll queues behind it.
 
 name: meso.watch poll
 
@@ -65,6 +67,7 @@ jobs:
         run: pip install --quiet Pillow
 
       - name: Install agent-browser + Chrome deps
+        timeout-minutes: 5
         run: |
           # pinned: this job holds a contents:write token (enough to publish a tracker release that auto-updates players)
           npm install -g agent-browser@0.39.1
@@ -79,9 +82,11 @@ jobs:
 
       - name: Fetch OSMS data (if cache miss or partial)
         if: steps.osms-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 6
         run: bash scripts/fetch_osms.sh
 
       - name: Run meso.watch poll
+        timeout-minutes: 8
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash scripts/mesowatch-sync/mesowatch_poll_ci.sh

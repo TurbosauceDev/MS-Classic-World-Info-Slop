@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with: { ref: main }
       - name: Fetch, commit if changed
+        timeout-minutes: 12   # step-level (audit P11): a hung fetch releases the shared lock before the job ceiling
         # on a push race, start again from the new main (never merge data.json)
         run: |
           for i in 1 2 3; do
