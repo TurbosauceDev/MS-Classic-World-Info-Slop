@@ -46,13 +46,19 @@ function priceBox(id){
   const agree = spread <= 1.25 ? ` <span class="pill p-good" title="All ${solid.length} solid sources sit within 25% of each other">sources within 25%</span>`
     : spread > 2 ? ` <span class="pill p-warn" title="The solid sources disagree (ask-vs-sold windows or thin data): compare the rows below before trusting one number">sources ${Math.round(spread)}x apart</span>` : "";
   const pxCtx = solid.length >= 2 ? `${solid.length} solid sources · ${fmt(lo)}-${fmt(hi)}${agree}` : "";
-  const unit = {"meso.watch": "sales", "classicmarket.kr market": "sold", "meowdb": "prices",
+  const unit = best?.src?.startsWith("consensus") ? "sales" : {"meso.watch": "sales", "classicmarket.kr market": "sold", "meowdb": "prices",
     "mesoarbitrage.com": "sales", "maplestory.watch": "sales", "mesoindex.com": "sales",
     "mesoarbitrage.com listing": "listings", "maplestory.watch listing": "listings", "mesoindex.com listing": "listings"}[best?.src + (best?.unit === "listing" ? " listing" : "")] || "posts";
+  // P13/P14 (Danny 2026-10-27): a meso.watch headline carries its trust context - the p25-p75 band when the median is
+  // thin or wide, and a "price moving" flag when the daily medians disagree (P15's weighted value says so itself).
+  const band = pwBand(id), moving = pwMoving(id);
+  const trust = best && best.src === "meso.watch"
+    ? [band ? `likely ${fmt(band[0])}-${fmt(band[1])}` : "", moving ? ` <span class="pill p-hot" title="The last two daily medians disagree by more than 25%: the price is in flux, check the sparkline">price moving</span>` : ""].filter(Boolean).join(" · ")
+    : "";
   const tile = (k, v, sub, tip, sub2) => `<div class="pxt"${tip ? ` title="${esc(tip)}"` : ""}><span class="pxk">${k}</span><b class="pxv">${v}</b><span class="pxs">${sub}</span>${sub2 ? `<span class="pxs">${sub2}</span>` : ""}</div>`;
   const tiles = `<div class="pxtiles">
-    ${tile("Usual price", best ? fmt(best.v) + (best.per ? `<small> per set</small>` : "") : "–", best ? `${esc(best.src)} · ${fmt(best.n)} ${unit}${best.rough ? ` <span class="pill p-warn">rough</span>` : ""}` : "no player prices yet",
-      best ? `The price the rest of the site uses: meso.watch sales first, then classicmarket.kr market, then meowdb, then classicmarket.kr posts, then the shop-scan sources (mesoarbitrage, maplestory.watch, mesoindex)` : "", pxCtx)}
+    ${tile("Usual price", best ? fmt(best.v) + (best.per ? `<small> per set</small>` : "") : "–", best ? `${esc(best.src)} · ${fmt(best.n)} ${unit}${best.wt ? ` · 3-day weighted` : ""}${best.rough ? ` <span class="pill p-warn">rough</span>` : ""}` : "no player prices yet",
+      best ? `The price the rest of the site uses: solid meso.watch sales first, then a consensus median of the solid markets for thin items, then classicmarket.kr market, meowdb, the classicmarket.kr posts and the shop-scan sources (mesoarbitrage, maplestory.watch, mesoindex)` : "", [pxCtx, trust].filter(Boolean).join(" · "))}
     ${tile("Cheapest listed", cheap ? pxEach(cheap.v) : "–", cheap ? `${pxWhere(cheap)}${vs(cheap.v) ? " · " + vs(cheap.v) : ""}` : "no live listing with a place")}
     ${tile("NPC shop", shop ? fmt(shop[3]) : "–", shop ? esc(shop[0]) + (shop[4] ? ` · ${shop[4]} price` : "") : "no shop sells it", shop ? `${shop[0]}, ${shop[2]} (meowdb shop list)` : "")}
     ${tile("NPC buys", it?.p ? fmt(it.p) : "–", it?.p ? "game files" : "can't be sold to NPCs")}</div>`;

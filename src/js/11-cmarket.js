@@ -13,7 +13,21 @@ const CMP = D.cmp?.it || {};
 // typical (or lowest ask) -> mesoindex usual (or cheapest ask), each labelled with its kind; thin data stays rough (null: none).
 function pwPrice(id){
   const p = PW[id], c = CM[id], m = MDB[id], k = CMP[id];
-  if (p && p[0] > 0) return {v: p[0], src: "meso.watch", n: p[3], unit: "sale", rough: !!(p[4] & 1), per: !!(p[4] & 2)};
+  // P16 (Danny 2026-10-27): a thin meso.watch median (low data, spike-held, or under 3 sales) no longer headlines; the
+  // solid sale-based sources pool into a consensus median instead. meso.watch stays first whenever it is solid, and with
+  // no consensus the old chain runs unchanged (a thin median still beats a 1-sale classicmarket row).
+  if (p && p[0] > 0 && !(p[4] & 1) && !(p[4] & 4) && p[3] >= 3){
+    const u = pwUsual(id);
+    return u.moving ? {v: u.v, src: "meso.watch", n: p[3], unit: "sale", rough: !!(p[4] & 1), per: !!(p[4] & 2), wt: 1}
+                    : {v: p[0], src: "meso.watch", n: p[3], unit: "sale", rough: !!(p[4] & 1), per: !!(p[4] & 2)};
+  }
+  const pool = [];
+  if (k?.[0] > 0 && k[3] >= 5) pool.push(k[0]);
+  if (MW[id]?.[0] > 0 && MW[id][1] >= 5) pool.push(MW[id][0]);
+  if (MI[id]?.[0] > 0 && MI[id][3] >= 5) pool.push(MI[id][0]);
+  if (pool.length >= 2){ const mid = median(pool), spread = Math.max(...pool) / Math.min(...pool);
+    return {v: mid, src: `consensus of ${pool.length} markets`, n: pool.length, unit: "sale", rough: spread > 1.5, cons: 1} }
+  if (p && p[0] > 0) return {v: p[0], src: "meso.watch", n: p[3], unit: "sale", rough: true, per: !!(p[4] & 2)};
   if (k?.[0] > 0) return {v: k[0], src: "classicmarket.kr market", n: k[3], unit: "sale", rough: k[3] < 5};
   if (m?.[0] > 0) return {v: m[0], src: "meowdb", n: m[1] + m[2], unit: "price", rough: m[2] < 5};   // rough: under 5 sales among its prices
   if (c?.[2]) return {v: c[1], src: "classicmarket.kr asks", n: c[2], unit: "post", rough: true};

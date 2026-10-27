@@ -642,12 +642,23 @@ def step_kpq(D):
     D["kpq"] = sorted(out, key=lambda o: int(o["id"]))
 
 def step_prices(D):
-    """pw {read: date, hist, it: {itemId: [median, p25, p75, sales, flags (1 low data, 2 per set), trend, sell-through]}, listed, now}: meso.watch player-shop sale
+    """pw {read: date, hist, it: {itemId: [median, p25, p75, sales, flags (1 low data, 2 per set, 4 held: spike breaker), trend, sell-through]}, listed, now}: meso.watch player-shop sale
     prices (scripts/fetch_mesowatch.py), items in D.items only."""
     j = json.load(open(ROOT / "data" / "sources" / "mesowatch_prices.json"))
-    D["pw"] = {"read": j["read"], "it": {k: v for k, v in j["items"].items() if k in D["items"]}}
-    # hist {itemId: [[date, median, sold], ...]}: meso.watch 7-day daily medians (list.json items[].history); 2+ days only (sparklines)
-    D["pw"]["hist"] = {k: v for k, v in j.get("hist", {}).items() if k in D["items"] and len(v) >= 2}
+    it = {k: v for k, v in j["items"].items() if k in D["items"]}
+    hist = {k: v for k, v in j.get("hist", {}).items() if k in D["items"] and len(v) >= 2}
+    # P12 (Danny 2026-10-27): spike circuit breaker. A fresh median built on fewer than 5 sales that lands more than 3x
+    # off yesterday is noise (one big sale or a bad read), not the market: hold yesterday's median and set flag 4, so the
+    # tile and every valuation use the steadier number while the sparkline still shows the honest daily medians.
+    held = 0
+    for k, p in it.items():
+        h = hist.get(k)
+        if not h or p[0] <= 0: continue
+        prev = h[-2][1]
+        if h[-1][2] < 5 and prev > 0 and (p[0] > prev * 3 or p[0] * 3 < prev):
+            p[0] = prev; p[4] |= 4; held += 1
+    if held: print(f"price breaker: held yesterday's median for {held} spike items (<5 sales today)")
+    D["pw"] = {"read": j["read"], "it": it, "hist": hist}
     if "now" in j:   # cheapest live listing per non-equip item {itemId: [price each, qty, channel, map, seller]}, as of "listed"
         D["pw"].update(listed=j["listed"], srclisted=j.get("src_listed", ""), now={k: v for k, v in j["now"].items() if k in D["items"]})
         # every live listing + when we first saw it {itemId: [[price each, qty, channel, map, seller, firstSeenUnixMin|None]]} (seen: parallel to asks)
