@@ -1,5 +1,7 @@
-// The GitHub Pages copy (scripts/pages_site.py): item icons + minimaps in a second file, web app manifest, offline service
-// worker. The artifact (dist/index.html) must stay one file with neither. Run: node tests/pages.js (CI: tests.yml)
+// The GitHub Pages copy (scripts/pages_site.py): item icons + minimaps in a second file, the per-poll market data in a
+// third (audit P9, prices-<hash>.json behind a stable prices.json pointer, app boots through window.__PRICES), web app
+// manifest, offline service worker (stale-while-revalidate for the shell). The artifact (dist/index.html) must stay one
+// file with none of that. Run: node tests/pages.js (CI: tests.yml)
 const { chromium } = require("playwright");
 const { execFileSync } = require("child_process");
 const fs = require("fs"), os = require("os"), path = require("path"), http = require("http");
@@ -11,10 +13,14 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
 (async () => {
   console.log(execFileSync("python3", [path.join(ROOT, "scripts/pages_site.py"), OUT]).toString().trim());
   const files = fs.readdirSync(OUT), assets = files.find(f => /^assets-[0-9a-f]+\.json$/.test(f));
+  const pfile = files.find(f => /^prices-[0-9a-f]+\.json$/.test(f)), pointer = JSON.parse(fs.readFileSync(path.join(OUT, "prices.json"), "utf8"));
   const dist = fs.statSync(path.join(ROOT, "dist/index.html")).size, first = fs.statSync(path.join(OUT, "index.html")).size;
   check(assets && first < dist * 0.6, `first load ${Math.round(first / 1024)} KB vs ${Math.round(dist / 1024)} KB in one file`);
+  check(pfile && pointer.url === pfile && ["pw", "mw", "cmp", "mdb"].every(k => pointer.keys.includes(k)), `prices pointer names the hashed file and covers the market keys (${pointer.url})`);
+  const shellData = JSON.parse(fs.readFileSync(path.join(OUT, "index.html"), "utf8").match(/<script type="application\/json" id="sitedata">([\s\S]*?)<\/script>/)[1]);
+  check(!shellData.pw && shellData.lazy2 === "prices.json", "the pages shell carries no market data, only the pointer");
   const art = fs.readFileSync(path.join(ROOT, "dist/index.html"), "utf8");
-  check(!/rel="manifest"/.test(art) && !/"lazy":/.test(art), "the artifact build has no manifest and no split");
+  check(!/rel="manifest"/.test(art) && !/"lazy":/.test(art) && !/lazy2|__PRICES/.test(art), "the artifact build has no manifest and no split");
   const man = JSON.parse(fs.readFileSync(path.join(OUT, "manifest.webmanifest"), "utf8"));
   check(man.display === "standalone" && man.icons.every(i => files.includes(i.src)), "manifest: standalone, its icons are deployed");
 
@@ -29,12 +35,13 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
     p.on("pageerror", e => errs.push(e.message.slice(0, 160))); return {p, errs, ctx} };
   const open = (p, t) => p.evaluate(t => { const b = document.querySelector("#t-" + t); document.querySelector("#c-" + b.dataset.cat).click(); b.click() }, t);
   const icons = p => p.$$eval("#itrows tr", r => ({rows: r.length, img: r.filter(x => x.querySelector(".ibtn img")).length}));
+  const booted = p => p.waitForFunction(() => window.__BOOTED === true, null, {timeout: 30000});
 
   // 1. icons arrive late (slow phone): what's drawn first gets them patched in; rows drawn later have them; Home sprites never wait
-  { delay = 1500; const {p, errs, ctx} = await page(); await p.goto(URL);
+  { delay = 1500; const {p, errs, ctx} = await page(); await p.goto(URL); await booted(p);
     const home = await p.$$eval("#home img[data-ic]", l => l.length);
     await open(p, "items"); const early = await icons(p);
-    await p.evaluate(() => ASSETS); await p.waitForTimeout(50); const late = await icons(p);
+    await p.evaluate(() => window.ASSETS); await p.waitForTimeout(50); const late = await icons(p);
     check(!errs.length && home === 34 && early.img < early.rows && late.img === late.rows, `items list gets its icons when the file lands (Home sprites ${home}; before ${JSON.stringify(early)}, after ${JSON.stringify(late)})`);
     await p.click("#itrows .ibtn >> nth=0"); await p.waitForTimeout(100);
     check(await p.$$eval("#items .mtop img.sprite", l => l.length) === 1, "item page shows its sprite");
@@ -47,18 +54,19 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
     await ctx.close(); delay = 0 }
 
   // 2. an open item page from a share link redraws its sprite when the icons land
-  { delay = 800; const {p, errs, ctx} = await page(); await p.goto(URL + "#i=" + Buffer.from('"2000000"').toString("base64").replace(/=+$/, ""));
-    await p.evaluate(() => ASSETS); await p.waitForTimeout(50);
+  { delay = 800; const {p, errs, ctx} = await page(); await p.goto(URL + "#i=" + Buffer.from('"2000000"').toString("base64").replace(/=+$/, "")); await booted(p);
+    await p.evaluate(() => window.ASSETS); await p.waitForTimeout(50);
     check(!errs.length && await p.$$eval("#items .mtop img.sprite", l => l.length) === 1, "item page opened before the icons came gets its sprite"); await ctx.close(); delay = 0 }
 
-  // 3. offline: once the service worker has the page, it opens with no network, icons and all
-  { const {p, errs, ctx} = await page(); await p.goto(URL);
+  // 3. offline: once the service worker has the page, it opens with no network, icons and prices included
+  { const {p, errs, ctx} = await page(); await p.goto(URL); await booted(p);
     check(await p.evaluate(() => navigator.serviceWorker.getRegistrations().then(r => r.length)) === 0, "no service worker on plain http (localhost here)");
     await p.evaluate(() => navigator.serviceWorker.register("sw.js").then(() => navigator.serviceWorker.ready));
-    await p.reload(); await p.evaluate(() => ASSETS); await p.waitForTimeout(300);   // controlled now: page + icons file cached
-    await ctx.setOffline(true); await p.reload(); await p.evaluate(() => ASSETS); await open(p, "items"); await p.waitForTimeout(100);
+    await p.reload(); await booted(p); await p.evaluate(() => window.ASSETS); await p.waitForTimeout(300);   // controlled now: page + icons + prices cached
+    const pwCount = await p.evaluate(() => Object.keys(D.pw?.it || {}).length);
+    await ctx.setOffline(true); await p.reload(); await booted(p); await p.evaluate(() => window.ASSETS); await open(p, "items"); await p.waitForTimeout(100);
     const r = await icons(p);
-    check(!errs.length && r.rows > 0 && r.img === r.rows, `offline reload works, icons included (${JSON.stringify(r)}; ${errs.join("; ")})`);
+    check(!errs.length && r.rows > 0 && r.img === r.rows && pwCount > 500, `offline reload works, icons and prices included (${JSON.stringify(r)}, pw ${pwCount}; ${errs.join("; ")})`);
     await ctx.close() }
 
   await b.close(); srv.close(); fs.rmSync(OUT, {recursive: true, force: true});

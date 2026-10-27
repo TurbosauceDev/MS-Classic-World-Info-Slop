@@ -32,7 +32,7 @@ node tests/polish.js | tail -3              # list Reset + Copy link, Home mason
 node tests/snipe.js | tail -5               # FM Sniper on a fixture market.json: deal maths, views, filters, watch, new, live refresh, tools
 python3 tests/deal_life_test.py             # FM Sniper deal lifetimes from a fake snapshot git history
 node tests/monkey.js | tail -3              # random clicks/typing/Back/window sizes; SEEDS=4,5 N=300 to vary; ~100 s
-python3 scripts/pages_site.py /tmp/site     # the Pages copy pages.yml deploys (prints first-load size)
+python3 scripts/pages_site.py /tmp/site     # the Pages copy pages.yml deploys (prints first-load size); audit P9: the per-poll market data rides in a hashed prices file behind a stable pointer, the app boots through window.__PRICES, and sw.js serves the cached shell so a returning visitor only re-downloads the prices file
 python3 scripts/name_diff.py <base-commit>  # skill/item/monster/map renames between two data.json (CI: osms-names.yml)
 python3 scripts/fetch_shared.py             # shared tracker runs (daily CI job does this)
 python3 scripts/fetch_classicrank.py        # classicrank.com job census -> D.crank (~2 min; daily CI job does this)
@@ -159,7 +159,14 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Tracker live summary goes through `trkClean()` (68-tracker.js) before rendering; never render server fields raw. Price check icon candidates and the Builder import's icons (52-shotimport.js `warm`) preload in idle time when their tab opens.
 
 ## Ideas batch 2026-10-19
-- Pages deploy = `scripts/pages_site.py` (pages.yml): D.iicons/D.mmaps move to a hashed assets JSON fetched at start (`ASSETS` promise in 00-core.js; first load 3,081 -> 968 KB gzip), plus `src/pwa/` manifest, icons (Orange Mushroom sprite, mobimg 9, on a rounded purple gradient tile matching the tracker Slime; regenerate with `python3 src/pwa/make_icons.py`; icon-32 favicon, 192/512 rounded "any", icon-maskable full-bleed for Android/iOS home screens) and sw.js (network-first, registers on any https host, so the custom domain too; it was *.github.io-only until 10-20). The artifact stays one file. Trap: code that needs every icon must `await ASSETS`; markup drawn before they land is patched by `fillIcons` (`.ri[data-item] > i`, items-list `.ibtn > i`) only, so a new icon spot needs that placeholder shape or a redraw.
+- Pages deploy = `scripts/pages_site.py` (pages.yml): D.iicons/D.mmaps move to a hashed assets JSON fetched at start (`ASSETS` promise in 00-core.js; first load 3,081 -> 968 KB gzip), plus `src/pwa/` manifest, icons (Orange Mushroom sprite, mobimg 9, on a rounded purple gradient tile matching the tracker Slime; regenerate with `python3 src/pwa/make_icons.py`; icon-32 favicon, 192/512 rounded "any", icon-maskable full-bleed for Android/iOS home screens) and sw.js (stale-while-revalidate for the shell since the P9 split: the cached shell answers and a fresh copy lands in the
+cache for the next visit; the market data is fetched fresh every visit, so prices stay current; registers on any https
+host, so the custom domain too; it was *.github.io-only until 10-20). The artifact stays one file. Audit P9 (2026-10-27):
+`scripts/pages_site.py` also moves the per-poll market data (pw/cm/cmp/mdb/ma/mw/mi + crank/shared/ishop, ~1.3 MB raw) into
+a hashed prices file behind a stable prices pointer file; a boot script merges them into D and the whole app script runs
+inside `window.__PRICES.then(() => { ... })` (tests hook `window.__BOOTED`/`window.ASSETS`). First load 3,771 -> 1,218 KB gzip;
+a returning visitor re-downloads only the prices file (~371 KB gzip) when a poll moved prices. Trap: the app is no longer
+top-level in the Pages copy - `const D` is wrapper-scoped (window.D is the test handle) and nothing may run before the merge. Trap: code that needs every icon must `await ASSETS`; markup drawn before they land is patched by `fillIcons` (`.ri[data-item] > i`, items-list `.ibtn > i`) only, so a new icon spot needs that placeholder shape or a redraw.
 - Credits "Data last updated": build.py injects `SRCDATES` (fetch_osms.sh ref + data/sources "read" dates); the OSMS date is data.json `osms` (build_data.py `osms_info()`; patched by hand to 6f003e7 on 10-22).
 - OSMS re-pin 10-22 (63db094 -> 6f003e7): trap: a full `build_data.py` here dropped KPQ spawn points (mobdb `sp`) and most `pw.life` price history (environment-dependent steps). When the export diff touches nothing the site reads, bump fetch_osms.sh and patch data.json `osms` only; diff data.json key-by-key after any full rebuild.
 - Monkey (tests/monkey.js) found: 1e308 in a Where to train stat box scrolled phones sideways (statNum now clamps 0-99,999; edge.js test).

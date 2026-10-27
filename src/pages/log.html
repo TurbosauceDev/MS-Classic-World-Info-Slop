@@ -9,6 +9,9 @@
   </details>
 
   <div class="changelog">
+    <div class="card" data-t="2026-10-27T20:38:57Z"><div class="cardhead"><h3>Oct 27, 2026 · Faster visits: prices split from the page</h3></div>
+      <p>The market data now loads from its own file instead of riding inside the page itself. Before, every price poll re-served the whole page to every returning visitor; now your device caches the page and only the price file re-downloads when prices move, at about a quarter of the bytes. First visits are lighter too: about 1.2 MB compressed instead of 1.5. Nothing changes on the surface, and offline works as before. Audit proposal P9.</p>
+    </div>
     <div class="card" data-t="2026-10-27T16:27:30Z"><div class="cardhead"><h3>Oct 27, 2026 · Movers page</h3><span class="pill p-hot">new page</span></div>
       <p>The biggest day-over-day price changes, one row per item and market, under Mesos and Trade. Each row compares a market against its own yesterday number, from fields the polls already store: meso.watch's published daily medians and maplestory.watch's stored day-ago typical, with a sparkline on the meso.watch rows. Each market is only ever compared with itself, so the wording differences between sites never touch the math. Filter by direction, item type, sales floor and sort by biggest move, biggest rise or biggest fall. Audit proposal P8.</p>
     </div>
