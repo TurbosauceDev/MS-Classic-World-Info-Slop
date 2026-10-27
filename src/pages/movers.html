@@ -1,0 +1,38 @@
+<section id="movers" hidden>
+  <style>
+    .mvtbl th,.mvtbl td{padding:7px 6px}
+    .mvtbl .chg{font-weight:600;white-space:nowrap}
+    .mvtbl .src b{font-weight:600}.mvtbl .src span{display:block;font:12px var(--f-body);color:var(--muted)}
+    .mvtbl td.day{color:var(--muted)}
+    .mvleg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13.5px;color:var(--muted);margin-top:10px}
+  </style>
+  <details class="howto">
+    <summary>What Movers shows and where the numbers come from</summary>
+    <div class="howgrid">
+      <div><h4>What a row is</h4><ul>
+        <li>The biggest <b>day-over-day price changes</b> across the markets we read, one row per item and market that has a yesterday price and a today price.</li>
+        <li><b>meso.watch</b>: today's median sale price vs yesterday's, from their published 7-day daily medians; the sparkline is the same history. Low-data items are left out.</li>
+        <li><b>maplestory.watch</b>: their 14-day typical shop price vs the day-ago value stored next to it.</li>
+        <li>Change compares each market against <b>itself</b>, never one site against another, so the semantic differences between sites (asks vs sales) don't pollute the row.</li>
+      </ul></div>
+      <div><h4>Reading it</h4><ul>
+        <li><b>Rising</b> rows are items getting more expensive, <b>Falling</b> cheaper. Dimmed sales counts rest on fewer than 5 sales.</li>
+        <li>Sales counts differ per market: meso.watch counts that day's sold slots, maplestory.watch units sold in 14 days.</li>
+        <li>Equips are priced by roll, so a big move can be one scrolled item. Check the item page before trading.</li>
+        <li>Click an item to open its page: all sources side by side, where to buy, history.</li>
+      </ul></div>
+    </div>
+  </details>
+  <div class="controls">
+    <label>Search<input id="mvq" type="search" placeholder="Item name"></label>
+    <label>Direction<select id="mvdir"><option value="">Rising and falling</option><option value="rise">Rising only</option><option value="fall">Falling only</option></select></label>
+    <label>Type<select id="mvcat"><option value="">Everything</option><option value="Etc">Loot, ores and gems</option><option value="Scroll">Scrolls</option><option value="Consumable">Potions and food</option><option value="Equipment">Equips</option><option value="Setup">Other</option></select></label>
+    <label>Sales at least<select id="mvmin"><option value="3">3</option><option value="5">5</option><option value="10">10</option><option value="25">25</option></select></label>
+    <label>Sort<select id="mvsort"><option value="move">Biggest move</option><option value="up">Biggest rise</option><option value="down">Biggest fall</option><option value="sold">Most traded</option><option value="name">Name</option></select></label>
+    <button class="btn" id="mvreset">Reset filters</button>
+    <span class="pill p-hot" id="mvcnt" style="align-self:center"></span>
+  </div>
+  <div class="tblwrap thwrap"><table class="mvtbl"><thead><tr id="mvhd"></tr></thead><tbody id="mvrows"></tbody></table></div>
+  <p class="mvleg" id="mvread"></p>
+  <p class="note" id="mvmore"></p>
+</section>
