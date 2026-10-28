@@ -102,6 +102,11 @@
   @keyframes ovflash { 0%,100% { box-shadow:0 1px 2px rgba(0,0,0,.22), 0 12px 32px -12px rgba(0,0,0,.45); }
     50% { box-shadow:0 0 0 3px var(--accent), 0 12px 32px -12px rgba(0,0,0,.45); } }
   .ovw.flash { animation:ovflash .7s ease-in-out 3; }
+  /* conditions (0.2.91): a card whose rule is met recolours its content, pulses, or hides (hiding never while editing) */
+  .ovw.cmet-color .b { --ink:var(--cc); --accent:var(--cc); }
+  .ovw.cmet-pulse { animation:ovflash 1.4s ease-in-out infinite; }
+  .ovw.cmet-hide { display:none; }
+  body.edit .ovw.cmet-hide { display:block; opacity:.45; }
   /* edit panel: the checkbox strip grew into a proper panel (Danny: "an in-style selection menu instead of that strip of
      boxes") — one glass card, one row per widget, per-widget detail under the picked row, options in the footer. */
   #ovpanel { position:fixed; top:12px; left:50%; transform:translateX(-50%); z-index:10; width:302px; max-width:calc(100vw - 20px);
@@ -164,6 +169,7 @@
   #ovinsp label b { min-width:78px; font-weight:600; flex:none; }
   #ovinsp label .pv { min-width:42px; text-align:right; color:var(--ink); flex:none; }
   #ovinsp input[type=range] { flex:1; min-width:0; }
+  #ovinsp input[type=number] { width:96px; padding:3px 6px; border:1px solid var(--line); border-radius:6px; background:color-mix(in srgb, var(--bg) 60%, transparent); color:var(--ink); font:inherit; }
   #ovinsp input[type=checkbox] { accent-color:var(--accent); margin:0; }
   #ovinsp input[type=color] { width:30px; height:20px; padding:0; border:1px solid var(--line); border-radius:5px; background:none; cursor:pointer; }
   #ovinsp select { background:var(--accent-soft); color:var(--ink); border:0; border-radius:7px; font:inherit; font-size:11px; padding:2px 4px; flex:1; min-width:0; }

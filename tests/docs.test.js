@@ -10,7 +10,7 @@ const root = path.join(__dirname, "..");
 const DOCS = ["CLAUDE.md", ...fs.readdirSync(path.join(root, "docs/ai")).filter(f => f.endsWith(".md")).map(f => "docs/ai/" + f)];
 const BASES = ["", "src", "src/js", "tracker", "tracker/tests", "server", "data", "scripts", "docs", ".github/workflows"];
 const IGNORE = new Set([
-  "AGENTS.md",                     // quoted in agent-mailbox.md as ElvUI's repo file, not ours
+  "elvui-code-review.md", "AGENTS.md",                     // quoted in agent-mailbox.md as ElvUI's repo file, not ours
   "scripts/fetch_classicmarket.py", "fetch_classicmarket.py", "data/sources/classicmarket_items.json",   // deleted 10-22 (cbc82b7); mailbox/digests still quote them
   "src/changelog.html",            // site.md split candidate, not made yet
   "meso_watch_items-*.csv",        // the dev's CSV export Danny drops in chat
@@ -66,7 +66,7 @@ for (const pj of ["tracker/package.json", "server/package.json", "package.json"]
   if (fs.existsSync(path.join(root, pj))) Object.keys(JSON.parse(fs.readFileSync(path.join(root, pj), "utf8")).scripts || {}).forEach(s => scripts.add(s));
 
 // docs that describe ANOTHER repo (its paths are not ours): only a deliberate list, checked by name
-const EXTERNAL = new Set(["docs/ai/elvui-architecture-briefing.md"]);
+const EXTERNAL = new Set(["docs/ai/elvui-architecture-briefing.md", "docs/ai/elvui-code-review.md"]);
 for (const doc of DOCS){
   if (EXTERNAL.has(doc)) continue;
   const text = fs.readFileSync(path.join(root, doc), "utf8");

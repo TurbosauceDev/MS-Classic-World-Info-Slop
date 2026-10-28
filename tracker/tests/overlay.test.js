@@ -224,6 +224,10 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       const r = el.getBoundingClientRect();
       return [el.offsetLeft + r.width <= innerWidth, el.offsetTop + r.height <= innerHeight] });
     if (!st[0] || !st[1]) fail("clamp to the real viewport", st);
+    // fractional widths (max-content text) must not leave the card a sub-pixel past the edge (the 0.2.89 CI-only failure)
+    st = await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.width = "213.4px"; el.style.left = "1900px"; clampCard(el);
+      const r = el.getBoundingClientRect(), ok = el.offsetLeft + r.width <= innerWidth; el.style.width = ""; clampCard(el); return ok });
+    if (!st) fail("clamp holds with a fractional width", st);
     // the panel itself drags by its header and saves its spot
     const pbox = await page.locator("#ovpHead").boundingBox();
     await page.mouse.move(pbox.x + 40, pbox.y + 8); await page.mouse.down();
@@ -329,6 +333,23 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       CFG.widgets = {status: ok}; $("#ovShareIn").value = "OVL1." + btoa(JSON.stringify({widgets: {status: ok, exp: ok}})); profImport(); const w = CFG.widgets.status;
       return {w, expHasLines: "lines" in CFG.widgets.exp} });
     if (st.w.rad !== 26 || "bg" in st.w || "acc" in st.w || "brd" in st.w || st.w.fs !== 1.2 || "shd" in st.w || st.w.show !== "idle" || "tok" in st.w || st.expHasLines) fail("import cleans params", st);
+    // conditions: a card watching EXP/hr recolours while it is below the line, pulses/hides on request, and reverts above it; hide never applies while editing
+    await page.evaluate(() => { CFG.widgets = {exp: {on: true, x: 400, y: 560}}; profCards(); place(); pick("exp") });
+    await page.evaluate(() => { const set = (k, v) => { const e = document.querySelector(`#ovinsp [data-k="${k}"]`); e.value = v; e.dispatchEvent(new Event("change", {bubbles: true})) };
+      set("cv", "expHr"); set("cn", "5000"); set("cact", "color") });
+    const feed = hr => page.evaluate(h => apply({t: Date.now(), on: true, state: "Tracking", runT0: Date.now() - 6e4, st: {activeMin: 1, exp: 5, expHr: h}}), hr);
+    await feed(100);
+    st = await page.evaluate(() => { const c = document.querySelector("#ovw-exp"); return [c.classList.contains("cmet-color"), getComputedStyle(c.querySelector(".b")).getPropertyValue("--accent").trim(), CFG.widgets.exp.cn, CFG.widgets.exp.cv] });
+    if (!st[0] || st[1] !== "#ef4444" || st[2] !== 5000 || st[3] !== "expHr") fail("condition recolours below the line", st);
+    await feed(9000);
+    if (await page.evaluate(() => document.querySelector("#ovw-exp").classList.contains("cmet-color"))) fail("condition clears above the line", 1);
+    await page.evaluate(() => { const e = document.querySelector('#ovinsp [data-k="cact"]'); e.value = "hide"; e.dispatchEvent(new Event("change", {bubbles: true})) });
+    await feed(100);
+    st = await page.evaluate(() => [getComputedStyle(document.querySelector("#ovw-exp")).display, (document.body.classList.toggle("edit", false), getComputedStyle(document.querySelector("#ovw-exp")).display), document.body.classList.toggle("edit", true) && 0]);
+    if (st[0] === "none" || st[1] !== "none") fail("condition hides when locked, never while editing", st);
+    st = await page.evaluate(() => { const ok = {on: true, x: 1, y: 2, cv: "mesos<script>", cop: "eq", cn: "abc", cact: "boom", ccol: "red"}; CFG.widgets = {exp: ok}; return [wv("exp", "cv"), wv("exp", "cop"), wv("exp", "cn"), wv("exp", "cact"), wv("exp", "ccol")] });
+    if (st.join() !== "none,lt,0,color,") fail("condition params fall back to defaults when invalid", st);
+    await page.evaluate(k => { CFG.widgets = JSON.parse(k); profCards(); place(); syncPanel(); ovSave() }, keepW); await page.waitForTimeout(400);
     await page.evaluate(() => pick(null));
     if (!await page.evaluate(() => document.querySelector("#ovinsp").classList.contains("hidden"))) fail("inspector closes with no pick", 1);
     await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.left = "500px"; savePos("exp") });

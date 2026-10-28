@@ -68,6 +68,11 @@ const PARAMS = [
   {k: "txt", sec: "Look", lab: "Text colour", t: "c"},
   {k: "show", sec: "Show when", lab: "Visible", t: "s", opts: {always: "Always", tracking: "Only while tracking", idle: "Only while stopped"}, def: "always"},
   {k: "ttl", sec: "Show when", lab: "Title while playing", t: "b", def: false},
+  {k: "cv", sec: "Condition", lab: "Watch", t: "s", opts: {none: "Off", expHr: "EXP / hr", mesosHr: "Mesos / hr", killsHr: "Kills / hr", lootHr: "Loot value / hr", kills: "Kills", deaths: "Deaths", pct: "Level progress %"}, def: "none"},
+  {k: "cop", sec: "Condition", lab: "When it is", t: "s", opts: {lt: "Below", gt: "Above"}, def: "lt"},
+  {k: "cn", sec: "Condition", lab: "This number", t: "n", min: 0, max: 1e9, def: 0},
+  {k: "cact", sec: "Condition", lab: "Then", t: "s", opts: {color: "Recolour the card", pulse: "Pulse the card", hide: "Hide the card"}, def: "color"},
+  {k: "ccol", sec: "Condition", lab: "Colour", t: "c"},
   {k: "spark", sec: "This card", lab: "Sparkline", t: "b", def: true, kinds: ["exp", "kills", "mesos"]},
   {k: "sub", sec: "This card", lab: "Detail rows", t: "b", def: true, kinds: ["exp", "kills", "mesos", "status", "kpq"]},
   {k: "lines", sec: "This card", lab: "Lines shown", t: "r", min: 2, max: 14, step: 1, def: {_: 6, loot: 5}, kinds: ["log", "loot"]},
@@ -78,6 +83,7 @@ const defOf = (p, id) => p.def !== null && typeof p.def === "object" ? (p.def[ba
 // a value is valid or it is the default: the page never trusts what a save or a pasted code carries
 function okParam(p, v, id){
   if (p.t === "r"){ const n = +v; return Number.isFinite(n) && v !== "" && v !== null ? clamp(+(Math.round(n / p.step) * p.step).toFixed(4), p.min, p.max) : defOf(p, id) }
+  if (p.t === "n"){ const n = +v; return v !== "" && v !== null && Number.isFinite(n) ? clamp(Math.round(n * 100) / 100, p.min, p.max) : defOf(p, id) }
   if (p.t === "s") return Object.prototype.hasOwnProperty.call(p.opts, v) ? v : defOf(p, id);
   if (p.t === "b") return typeof v === "boolean" ? v : defOf(p, id);
   return typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : "";
@@ -218,8 +224,8 @@ const PADS = {compact: [6, 9], normal: [9, 13], roomy: [13, 18]};
 // union of the displays — trusting the desk is what left cards cut off in a dead strip around the edge (Danny 10-28).
 function clampCard(el){
   const r = el.getBoundingClientRect(), w = r.width || 200, h = r.height || 60;
-  el.style.left = Math.min(Math.max(0, el.offsetLeft), Math.max(0, innerWidth - w)) + "px";
-  el.style.top = Math.min(Math.max(0, el.offsetTop), Math.max(0, innerHeight - h)) + "px";
+  el.style.left = Math.min(Math.max(0, el.offsetLeft), Math.max(0, Math.floor(innerWidth - w))) + "px";
+  el.style.top = Math.min(Math.max(0, el.offsetTop), Math.max(0, Math.floor(innerHeight - h))) + "px";
 }
 // Cards keep apart (Danny 10-28: Status ran under Mesos, Mesos' "loot/hr 16,9.." was cut off by Kills): numbers grow wider as a
 // run goes on, so after every render and every placement the cards are walked top-left to bottom-right and any that overlap
@@ -296,6 +302,16 @@ function setP(id, k, v){
   syncDetail(id); ovSave();
 }
 const setS = (id, s) => setP(id, "s", s), setO = (id, o) => setP(id, "o", o);
+// conditions (WeakAuras' idea, one rule per card): watch a number the tracker read off the screen; while it is below/above the
+// line the card recolours, pulses or hides. Numbers only ever come from the snapshot (computer vision output).
+const CONDV = {expHr: d => d.st?.expHr, mesosHr: d => d.st?.mesosHr, killsHr: d => d.st?.killsHr, lootHr: d => d.st?.lootHr,
+  kills: d => d.st?.kills, deaths: d => d.st?.deaths, pct: d => d.st?.pct};
+function conds(d){
+  for (const el of document.querySelectorAll(".ovw")){ const id = el.dataset.w, k = wv(id, "cv"), val = k !== "none" && CONDV[k] ? CONDV[k](d) : null;
+    const met = Number.isFinite(val) && (wv(id, "cop") === "lt" ? val < wv(id, "cn") : val > wv(id, "cn")), act = wv(id, "cact");
+    for (const a of ["color", "pulse", "hide"]) el.classList.toggle("cmet-" + a, met && act === a);
+    if (met && act === "color") el.style.setProperty("--cc", wv(id, "ccol") || "#ef4444"); else el.style.removeProperty("--cc") }
+}
 // the "Show when" rule (WeakAuras' load conditions, tamed): a card can hide unless the tracker is running / stopped. Never while editing.
 function vis(){
   const on = !!(DATA && (DATA.on || DATA.dummy));
@@ -318,7 +334,7 @@ function apply(d){
     const el = $("#ovw-" + id);
     if (el?.isConnected) el.querySelector(".b").innerHTML = RENDER[baseOf(id)](d, id);
   }
-  vis(); reflow();
+  conds(d); vis(); reflow();
   toastsShow(d.toasts);
 }
 // the conditions engine's toasts (0.2.78): a glass stack top-right, gone after 6.5 s or when the tracker pulls them;
@@ -435,6 +451,7 @@ function paramRow(p, id){
   const v = wv(id, p.k), id2 = "in-" + p.k;
   if (p.t === "r") return `<label><b>${p.lab}</b><input type="range" id="${id2}" data-k="${p.k}" min="${p.min * (p.u || 1)}" max="${p.max * (p.u || 1)}" step="${p.step * (p.u || 1)}" value="${v * (p.u || 1)}"><span class="pv">${p.f(v * (p.u || 1))}</span></label>`;
   if (p.t === "s") return `<label><b>${p.lab}</b><select data-k="${p.k}">${Object.entries(p.opts).map(([k, n]) => `<option value="${k}"${k === v ? " selected" : ""}>${n}</option>`).join("")}</select></label>`;
+  if (p.t === "n") return `<label><b>${p.lab}</b><input type="number" data-k="${p.k}" min="${p.min}" max="${p.max}" step="any" value="${v}"></label>`;
   if (p.t === "b") return `<label><b>${p.lab}</b><input type="checkbox" data-k="${p.k}"${v ? " checked" : ""}></label>`;
   return `<label><b>${p.lab}</b><input type="color" data-k="${p.k}" value="${v || "#a78bfa"}"><button class="clr" data-clr="${p.k}" title="Follow the tracker's theme again">Theme</button></label>`;
 }
