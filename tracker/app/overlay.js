@@ -188,6 +188,8 @@ function theme(th){
   const r = document.documentElement.style;
   if (th?.c) for (const [k, v] of Object.entries(VARS)) if (th.c[k]) r.setProperty(v, th.c[k]);
   document.documentElement.style.colorScheme = th?.mode === "light" ? "light" : "dark";
+  // the panel style rides with the theme (0.2.92): sk:"elv" re-skins the cards in ElvUI's crisp look, anything else is glass
+  document.body.classList.toggle("skin-elv", th?.sk === "elv");
 }
 
 // ---- cards: one element per kind, placed in desktop coordinates -------------------------------
@@ -600,6 +602,20 @@ function magnet(L, T, W, H, skipId){
   return {L: bx ? L + bx.d : null, T: by ? T + by.d : null, v: bx?.t, h: by?.t};
 }
 let drag = null, rz = null;
+// live readout while moving (0.2.92, ElvUI's movers say where they are): a tiny chip over the card with desktop pixels —
+// the same numbers the panel's x/y inputs keep — or the size % while resizing. Gone the moment you let go.
+let xyChip = null, xyT = null;
+function chip(text, card){
+  if (!CFG.edit) return;
+  if (!xyChip){ xyChip = document.createElement("div"); xyChip.id = "ovxy"; xyChip.className = "hidden"; document.body.appendChild(xyChip) }
+  clearTimeout(xyT);
+  xyChip.textContent = text;
+  xyChip.classList.remove("hidden");
+  const r = card.getBoundingClientRect();
+  xyChip.style.left = clamp(r.left, 4, Math.max(4, innerWidth - xyChip.offsetWidth - 4)) + "px";
+  xyChip.style.top = Math.max(4, r.top - xyChip.offsetHeight - 6) + "px";
+}
+function chipHide(){ clearTimeout(xyT); xyChip?.classList.add("hidden") }
 addEventListener("pointerdown", e => {
   if (!CFG.edit || e.button) return;
   const card = e.target.closest?.(".ovw");
@@ -621,6 +637,7 @@ addEventListener("pointermove", e => {
   if (rz){
     const k = Math.max((e.clientX - rz.x0) / rz.w0, (e.clientY - rz.y0) / rz.h0);
     setS(rz.id, rz.s0 * k);
+    chip(Math.round(wPos(rz.id).s * 100) + "%", rz.card);
     return;
   }
   if (!drag) return;
@@ -636,9 +653,11 @@ addEventListener("pointermove", e => {
   } else hideGuides();
   drag.card.style.left = L + "px";
   drag.card.style.top = T + "px";
+  chip(Math.round(DESK.x + L) + ", " + Math.round(DESK.y + T), drag.card);
   syncDetail(drag.id);
 });
 addEventListener("pointerup", () => {
+  chipHide();
   if (rz){ rz = null; return }
   if (!drag) return;
   const {card, id} = drag; drag = null;
@@ -665,6 +684,8 @@ addEventListener("keydown", e => {
   el.style.left = el.offsetLeft + d[0] * step + "px";
   el.style.top = el.offsetTop + d[1] * step + "px";
   clampCard(el); savePos(picked.id); syncDetail(picked.id);
+  chip(Math.round(DESK.x + el.offsetLeft) + ", " + Math.round(DESK.y + el.offsetTop), el);
+  xyT = setTimeout(chipHide, 900);   // nudges end from the keyboard: the chip lingers a beat, then leaves on its own
   e.preventDefault();
 });
 
@@ -701,7 +722,7 @@ addEventListener("keydown", e => {
     document.body.classList.toggle("edit", CFG.edit);
     document.body.classList.toggle("locked", !CFG.edit);
     $("#ovpanel").classList.toggle("hidden", !CFG.edit);
-    if (!CFG.edit){ hideGuides(); pick(null); buildInsp(null) }
+    if (!CFG.edit){ hideGuides(); pick(null); buildInsp(null); chipHide() }
     gridShow();   // the grid follows edit mode: locked hides it, editing brings it back if the preference says so
     toastsShow(DATA ? DATA.toasts : []);   // toasts too: hidden at once while editing, back when the push resumes
     place(); vis(); if (!CFG.edit) reflow(); ovSave();

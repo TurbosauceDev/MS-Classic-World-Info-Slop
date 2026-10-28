@@ -128,6 +128,15 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   getContentBounds() (re-asserts setBounds(ovBounds()) after show + on display-metrics-changed) instead of the intended
   display union — mixed-DPI/Windows-nudged windows left a dead strip around the perimeter with cards cut off.
   Tests: overlay.test.js (page part + tracker part); ui-host stubs overlay/overlayPush/onOverlay/overlayEdit; ui.test rows = 15.
+- Elv skin (0.2.92, Danny 10-29: "a complete re-skin in the ElvUI style", the no-game ElvUI study — docs/ai/elvui-tracker-reskin.md
+  has the full source-reading): a theme can carry `sk` (panel style; "elv" | absent = glass), threaded through themes.js
+  (T/clean/encode/resolve — resolve normalizes sk so callers always read it), the theme editor's Panel style select (#thSkin,
+  live-previewed), and the overlay push (th.sk). Both windows toggle body.skin-elv; the .skin-elv CSS blocks in index.html
+  (~line 376) and overlay.html square the corners, kill blur/shadows, flatten bars onto dark tracks and swap in bundled
+  PT Sans Narrow (app/fonts/, ParaType free licence note beside the files). The "Elv" preset is ElvUI's palette verbatim
+  (#0f0f0f/#1a1a1a/#3f3f3f, accent #1785d1 = ElvUI's valuecolor) and is appended LAST in PRESETS — tests index presets by
+  position (core.test.js 5/8, extras.test.js 8), so never insert before them. Edit mode gained #ovxy, a live x/y chip over
+  dragged/resized/nudged cards (overlay.js chip/chipHide; hidden on release, 900 ms linger after nudges, cleared on lock).
 - Compact view retired 0.2.58; compactFit stays as the "window height follows the boxes" sizer (fitWin). Adding a shortcut:
   KEYS (main.js), KEY_NAMES, and the ui test's shortcut row count.
 - Dummy data: app/renderer-dummy.js (View menu "dummy" → dummyToggle via renderer-settings.js onMenu). It sets `session`

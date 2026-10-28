@@ -5,6 +5,10 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:">
 <title>MS Classic Grind Tracker</title>
 <style>
+  /* Elv skin font (0.2.92): PT Sans Narrow — one of ElvUI's own faces, bundled under ParaType's free font licence
+     (app/fonts/, licence note beside the files). Only the Elv skin asks for it; every other theme keeps system-ui. */
+  @font-face { font-family:"PT Sans Narrow"; src:url("fonts/PT_Sans-Narrow-Web-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
+  @font-face { font-family:"PT Sans Narrow"; src:url("fonts/PT_Sans-Narrow-Web-Bold.ttf") format("truetype"); font-weight:700; font-display:swap; }
   /* the colours: themes.js sets these from the chosen theme (Settings > Theme); these are the default Purple, for the first paint */
   :root { --bg:#e7ddf9; --panel:#f7f1ff; --ink:#2a2142; --muted:#685c94; --line:#cfbff0; --accent:#7d58d6; --accent-soft:#dccbfa; --on-accent:#f7f1ff; --leaf:#3d7a5c; --warn:#9a6a00; --bad:#a3322b; }
   @media (prefers-color-scheme: dark) { :root { --bg:#1f1931; --panel:#2a2243; --ink:#f0eafd; --muted:#b6aad8; --line:#453a64; --accent:#d2bffb; --accent-soft:#41346a; --on-accent:#2a2243; --leaf:#7cc9a2; --warn:#e2b44a; --bad:#ef7a70; } }
@@ -336,7 +340,7 @@
   .feedlist .fl.exp > span { color:var(--leaf); } .feedlist .fl.meso > span { color:var(--warn); } .feedlist .fl.exp .dim, .feedlist .fl.meso .dim { color:inherit; } .feedlist .fl.level { background:var(--accent-soft); } .feedlist .fl.death span { color:var(--bad); }
   .feedlist .fl.map, .feedlist .fl.sep { color:var(--muted); font-style:italic; } .feedlist .fl.bad span { color:var(--bad); } .feedlist .fl.kpq > span, .feedlist .fl.run > span { color:var(--accent); }
   .feedlist .ic { height:1.25em; width:auto; vertical-align:-0.3em; image-rendering:pixelated; margin-right:1px; }
-  /* site market cards (v0.2.83): Watchlist + Market pulse */
+  /* site market cards (v0.2.92): Watchlist + Market pulse */
   #watchBox td:first-child { width:1%; }   /* icon column hugs, like the loot table */
   #watchRows .ico { height:1.4em; width:auto; vertical-align:-0.35em; image-rendering:pixelated; }
   #pulseBox .plist { list-style:none; margin:2px 0 6px; padding:0; }
@@ -385,6 +389,25 @@
   .hcols { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12px; } .hcol { min-width:150px; } .hcol .ico { width:16px; height:16px; margin:-2px 4px -2px 0; }
   svg.trend { width:100%; max-width:720px; height:44px; display:block; } #trend { margin:6px 0; }
   #updBanner { position:sticky; top:38px; z-index:5; display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-color:var(--accent); background:var(--accent-soft); } #updBanner b { flex:1; }
+  /* ---- Elv skin (0.2.92) ----------------------------------------------------------
+     A theme with sk:"elv" turns on body.skin-elv here and in the overlay window: ElvUI's panel language, no game
+     involved — square corners, crisp 1 px borders, flat bars on dark tracks, no soft shadows or blur, and the condensed
+     PT Sans Narrow. Colours stay tokens (pick any palette with it); only shape, texture and type change. */
+  body.skin-elv { font-family:"PT Sans Narrow", "Arial Narrow", "Liberation Sans Narrow", Arial, system-ui, sans-serif; }
+  body.skin-elv .card, body.skin-elv .smBox, body.skin-elv .tile, body.skin-elv .strip, body.skin-elv .smWho,
+  body.skin-elv .seg, body.skin-elv .modal, body.skin-elv #toolbox, body.skin-elv .fzCard, body.skin-elv .todayCard,
+  body.skin-elv .sw button, body.skin-elv button, body.skin-elv input, body.skin-elv select, body.skin-elv .feedlist,
+  body.skin-elv .cbar, body.skin-elv .smTrack, body.skin-elv .smTrack i, body.skin-elv tr.hdet > td,
+  body.skin-elv #titlebar button, body.skin-elv ::-webkit-scrollbar-thumb { border-radius:0; }
+  body.skin-elv .smTrack { background:color-mix(in srgb, var(--bg) 55%, #000); }   /* ElvUI bars: dark track, flat fill */
+  body.skin-elv .fzCard, body.skin-elv .fzCard:hover, body.skin-elv .fzHero, body.skin-elv .modal,
+  body.skin-elv #toolbox { box-shadow:none; }   /* crisp, not floating: the border does the separation */
+  body.skin-elv .fzCard:hover { border-color:color-mix(in srgb, var(--accent) 55%, var(--line)); }
+  body.skin-elv .fzHero { background:var(--panel); }   /* flat panels, no gradient washes */
+  body.skin-elv.focus { background:var(--bg); }
+  body.skin-elv #modalBack { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.55); }
+  body.skin-elv h3 { text-shadow:none; letter-spacing:.07em; }
+  body.skin-elv .smMap, body.skin-elv .smBig, body.skin-elv .fzBig { text-shadow:none; }   /* clean type, no glow */
 </style>
 </head>
 <body>
@@ -733,7 +756,8 @@
       <div class="sw" id="themeSw" role="radiogroup" aria-label="Theme"></div>
       <div class="row"><button id="themeEdit" class="alt">Edit colours</button> <span class="note" id="themeNow"></span></div>
       <div id="themeEditor" class="hidden">
-        <div class="row"><label>Name <input id="thName" maxlength="30" size="14"></label> <label>Kind <select id="thMode"><option value="dark">Dark</option><option value="light">Light</option></select></label></div>
+        <div class="row"><label>Name <input id="thName" maxlength="30" size="14"></label> <label>Kind <select id="thMode"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+          <label>Panel style <select id="thSkin" title="Glass is the rounded, blurred look; Elv is the crisp dark re-skin (square corners, thin borders, flat bars, condensed type)"><option value="glass">Glass</option><option value="elv">Elv (crisp)</option></select></label></div>
         <div class="thGrid" id="thColors"></div>
         <div class="note" id="thWarn"></div>
         <div class="row"><button id="thSave">Save as my theme</button> <button id="thDelete" class="alt hidden">Delete</button> <button id="thCancel" class="alt">Cancel</button></div>

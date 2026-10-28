@@ -60,6 +60,17 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.evaluate(d => window.ovData(d), {...structuredClone(payload), th: {c: {bg: "#101010", accent: "#ff8800", panel: "#202020", ink: "#ffffff"}, mode: "dark"}});
     if (!await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() === "#ff8800")) fail("theme tokens", 0);
     await page.evaluate(d => window.ovData(d), structuredClone(payload));   // back to the plain payload
+    // the Elv skin (0.2.83) rides the push: sk:"elv" squares the cards and drops the blur (the ElvUI panel look), and a
+    // push without it goes straight back to glass — the tracker's theme choice alone drives both windows
+    const elvTh = {c: {bg: "#101010", panel: "#202020", ink: "#ffffff", muted: "#999999", line: "#3f3f3f", accent: "#ff8800",
+      soft: "#222222", on: "#ffffff", leaf: "#55b76b", warn: "#e5821f", bad: "#e63333"}, mode: "dark", sk: "elv"};
+    await page.evaluate(d => window.ovData(d), {...structuredClone(payload), th: elvTh});
+    st = await page.evaluate(() => { const cs = getComputedStyle(document.querySelector("#ovw-status"));
+      return [document.body.classList.contains("skin-elv"), cs.borderRadius, cs.backdropFilter, document.body.classList.contains("edit")]; });
+    if (st[0] !== true || st[1] !== "0px" || st[2] !== "none" || st[3] !== true) fail("elv skin on the overlay", st);
+    await page.evaluate(d => window.ovData(d), {...structuredClone(payload), th: {c: {accent: "#ff8800"}, mode: "dark"}});
+    if (await page.evaluate(() => document.body.classList.contains("skin-elv"))) fail("elv skin clears without sk", 0);
+    await page.evaluate(d => window.ovData(d), structuredClone(payload));
     // alert toasts (0.2.78): the engine's toasts hide while editing, show the moment the overlay locks (the card they
     // belong to pulses, WeakAuras' region flash) and age out on a later push
     const toastAt = Date.now();
@@ -123,11 +134,16 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     st = await page.evaluate(() => { const g = document.querySelector("#ovgv"), v = parseFloat(g.style.left);
       return [g.classList.contains("hidden"), getComputedStyle(g).display === "none", Number.isFinite(v) ? Math.round(v) : -1] });
     if (st[0] || st[1] || st[2] !== 0) fail("snap guide while dragging (class + computed + at x 0)", st);
+    // the live x/y chip (0.2.83, ElvUI's movers say where they are): visible mid-drag with desktop pixels, gone on release
+    st = await page.evaluate(() => { const c = document.querySelector("#ovxy");
+      return [!!c && !c.classList.contains("hidden"), /^\d+, \d+$/.test(c?.textContent || "")]; });
+    if (!st[0] || !st[1]) fail("live x/y chip while dragging", st);
     await page.mouse.up();
     await page.waitForTimeout(350);
     st = await page.evaluate(() => { const e = document.querySelector("#ovw-exp"), g = document.querySelector("#ovgv");
       return [e.offsetLeft, window.ovSaved.overlay.widgets.exp.x, g.classList.contains("hidden"), getComputedStyle(g).display === "none"] });
     if (st[0] !== 0 || st[1] !== 0 || !st[2] || !st[3]) fail("snaps to the screen edge, saves 0, guide really hides", st);
+    if (!await page.evaluate(() => document.querySelector("#ovxy").classList.contains("hidden"))) fail("x/y chip hides on release", 0);
     // Shift skips snapping (ElvUI/WeakAuras): same approach, no alignment, guides stay hidden
     const off2 = await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); return [el.offsetLeft, el.offsetTop] });
     const ebox2 = await page.locator("#ovw-exp header .t").boundingBox();

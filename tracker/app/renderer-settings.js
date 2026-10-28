@@ -86,6 +86,7 @@ const allThemes = () => [...TH.PRESETS.map(t => ["p:" + t.name, t]), ...myThemes
 const themeNow = () => allThemes().find(([id]) => id === settings.theme)?.[1] || TH.PRESETS[0];
 function themeShow(t = thEdit || themeNow()){
   const r = TH.apply(t, darkQ.matches);
+  document.body.classList.toggle("skin-elv", r.sk === "elv");   // the panel style rides the theme (0.2.92): the Elv re-skin
   host.themeBar?.({color: r.c.panel, symbolColor: r.c.ink, bg: r.c.bg});
   return r;
 }
@@ -101,7 +102,7 @@ async function themePick(id){ settings = await host.settings({theme: id}); thEdi
 $("#themeSw").onclick = e => { const b = e.target.closest("[data-th]"); if (b) themePick(b.dataset.th) };
 function editorUi(){
   const t = thEdit;
-  $("#thName").value = t.name; $("#thMode").value = t.mode;
+  $("#thName").value = t.name; $("#thMode").value = t.mode; $("#thSkin").value = t.sk === "elv" ? "elv" : "glass";
   $("#thColors").innerHTML = Object.entries(TH.TOKENS).map(([k, [, label]]) => `<label><input type="color" data-tk="${k}" value="${t.c[k]}"> ${esc(label)}</label>`).join("");
   $("#thDelete").classList.toggle("hidden", !t.from);
   thWarn();
@@ -114,11 +115,12 @@ function thWarn(){
 }
 $("#themeEdit").onclick = () => {
   const t = themeNow(), r = TH.resolve(t, darkQ.matches), mine = settings.theme?.startsWith("u:");
-  thEdit = {name: mine ? t.name : t.name + " (mine)", mode: r.mode, c: {...r.c}, from: mine ? settings.theme : null};
+  thEdit = {name: mine ? t.name : t.name + " (mine)", mode: r.mode, c: {...r.c}, sk: r.sk === "elv" ? "elv" : "glass", from: mine ? settings.theme : null};
   $("#themeEditor").classList.remove("hidden"); editorUi(); $("#thName").focus();
 };
 $("#thColors").oninput = e => { const k = e.target.dataset.tk; if (!k || !thEdit) return; thEdit.c[k] = e.target.value; themeShow(); thWarn() };
 $("#thMode").onchange = e => { if (thEdit){ thEdit.mode = e.target.value; themeShow() } };
+$("#thSkin").onchange = e => { if (thEdit){ thEdit.sk = e.target.value === "elv" ? "elv" : "glass"; themeShow() } };   // live preview of the re-skin
 $("#thName").oninput = e => { if (thEdit) thEdit.name = e.target.value };
 $("#thCancel").onclick = () => { thEdit = null; $("#themeEditor").classList.add("hidden"); themeShow() };
 // saved under its name (the same name replaces that theme); at most 40 of your own

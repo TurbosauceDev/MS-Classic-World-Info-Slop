@@ -5,6 +5,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:">
 <title>MS Classic Overlay</title>
 <style>
+  /* Elv skin font (0.2.92): PT Sans Narrow under ParaType's free font licence — same files as the tracker window. */
+  @font-face { font-family:"PT Sans Narrow"; src:url("fonts/PT_Sans-Narrow-Web-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
+  @font-face { font-family:"PT Sans Narrow"; src:url("fonts/PT_Sans-Narrow-Web-Bold.ttf") format("truetype"); font-weight:700; font-display:swap; }
   /* the tracker's own colour tokens (themes.js applies the player's theme to :root each push; these are the Default theme,
      light and dark, for the first paint). The window itself is transparent: only the widgets draw. */
   :root { --bg:#e7ddf9; --panel:#f7f1ff; --ink:#2a2142; --muted:#685c94; --line:#cfbff0; --accent:#7d58d6; --accent-soft:#dccbfa; --on-accent:#f7f1ff; --leaf:#3d7a5c; --warn:#9a6a00; --bad:#a3322b; }
@@ -177,6 +180,27 @@
   #ovinsp .acts { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; padding-top:8px; border-top:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
   #ovinsp .acts button { background:var(--accent-soft); color:var(--ink); border:0; border-radius:7px; padding:3px 9px; font:inherit; font-size:11px; cursor:pointer; }
   #ovinsp .acts button:hover { background:var(--accent); color:var(--on-accent); } #ovinsp .acts .danger:hover { background:var(--bad); }
+  /* live x/y chip (0.2.92, ElvUI's movers say where they are while dragged): a small mono readout over the card being
+     dragged, resized or nudged — desktop pixels, the same numbers the x/y inputs save. Hidden the moment you let go. */
+  #ovxy { position:fixed; z-index:12; pointer-events:none; padding:1px 7px; font:11px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    color:var(--accent); background:color-mix(in srgb, var(--panel) 96%, transparent); border:1px solid var(--accent); border-radius:4px; }
+  /* ---- Elv skin (0.2.92) ----------------------------------------------------------
+     The tracker pushes sk:"elv" beside the theme colours; body.skin-elv re-skins the cards in ElvUI's panel language —
+     square corners, crisp 1 px borders at full strength, no blur and no soft shadows, flat bars on dark tracks, the
+     condensed PT Sans Narrow. Colours stay tokens, so any palette can wear the skin; the inspector's per-card radius,
+     shadow and blur still win over the skin where a card sets them explicitly. */
+  body.skin-elv { font-family:"PT Sans Narrow", "Arial Narrow", "Liberation Sans Narrow", Arial, system-ui, sans-serif; }
+  body.skin-elv .ovw, body.skin-elv .toast, body.skin-elv #ovpanel, body.skin-elv #ovinsp, body.skin-elv .trk, body.skin-elv .trk i,
+  body.skin-elv #ovpanel .btn, body.skin-elv #ovinsp .btn, body.skin-elv #ovinsp .acts button, body.skin-elv .wrow .eye,
+  body.skin-elv .wrow .st, body.skin-elv .wrow .nm, body.skin-elv .wdet input[type=number], body.skin-elv #ovinsp input[type=number],
+  body.skin-elv #ovinsp input[type=color], body.skin-elv #ovpanel select, body.skin-elv #ovinsp select,
+  body.skin-elv #ovpanel .foot.prof input, body.skin-elv #ovShare input, body.skin-elv #ovxy, body.skin-elv .ovw header button { border-radius:0; }
+  body.skin-elv .ovw { background:color-mix(in srgb, var(--panel) 90%, transparent);
+    -webkit-backdrop-filter:none; backdrop-filter:none; border-color:var(--line); box-shadow:none; }
+  body.skin-elv .toast, body.skin-elv #ovpanel, body.skin-elv #ovinsp { -webkit-backdrop-filter:none; backdrop-filter:none;
+    background:color-mix(in srgb, var(--panel) 96%, transparent); box-shadow:none; }
+  body.skin-elv .trk { background:color-mix(in srgb, var(--bg) 55%, #000); }   /* the ElvUI bar: dark track, flat fill */
+  body.skin-elv .ovw header .t, body.skin-elv .ovw .big, body.skin-elv .mapname { text-shadow:none; }   /* clean type */
 </style>
 </head>
 <body>

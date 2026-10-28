@@ -1,0 +1,12 @@
+PT Sans Narrow (Regular + Bold), bundled for the tracker's Elv skin (0.2.92).
+
+Source: google/fonts, ofl/ptsansnarrow (https://github.com/google/fonts/tree/main/ofl/ptsansnarrow)
+Files:   PT_Sans-Narrow-Web-Regular.ttf, PT_Sans-Narrow-Web-Bold.ttf
+Author:  ParaType (Alexandra Korolkova, Olga Ulrich, Vladimir Yefimov)
+Licence: ParaType Free Font License (PT Free Font License) — free to use, study, copy, bundle and
+         redistribute, with the font name kept and the licence text passed along. It is the same
+         licence ElvUI ships the face under.
+
+The full licence text is available with the upstream distribution; this note records what we bundle,
+where it came from and under what terms. If ParaType's licence text needs to ship verbatim, drop it
+in this folder next to the files.

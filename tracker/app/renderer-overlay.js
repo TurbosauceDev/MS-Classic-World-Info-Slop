@@ -43,7 +43,7 @@ function ovBuild(s){
     feed: ovFeed.slice(-8),
     spark: ovSpark.slice(-60),   // the rate trend for the card sparklines (renderer-alerts.js's toasts ride along too)
     toasts: alertToasts.slice(-3),   // the conditions engine's fired alerts (renderer-alerts.js), aged out by the overlay
-    th: {c: r.c, mode: r.mode}};
+    th: {c: r.c, mode: r.mode, sk: r.sk}};   // sk (0.2.92): the panel style rides with the colours, the overlay re-skins live
 }
 function ovSend(force){
   if (!ovOpen || !session) return;

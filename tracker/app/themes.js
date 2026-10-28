@@ -1,13 +1,16 @@
 // Tracker colour themes (Danny, 2026-10-18: a slightly brighter purple, a few purple variants and other colourways, and an
 // editor to design, save and share your own). A theme is {name, mode: "light" | "dark", c: {token: "#rrggbb"}}; the
 // default one follows Windows' light/dark setting. Tokens are the page's CSS variables (index.html :root).
+// A theme can also carry a panel style, sk: "elv" (0.2.92, Danny: "a complete re-skin in the ElvUI style") — the tracker
+// and the overlay windows both get body.skin-elv and the stylesheets square the corners, flatten the bars and swap in the
+// condensed face. sk is optional everywhere: absent = the glass look, old share codes and settings keep working.
 (function (root){
   // token -> [CSS variable, label in the editor]
   const TOKENS = {bg: ["--bg", "Background"], panel: ["--panel", "Boxes"], ink: ["--ink", "Text"], muted: ["--muted", "Faded text"],
     line: ["--line", "Lines"], accent: ["--accent", "Accent"], soft: ["--accent-soft", "Soft accent"], on: ["--on-accent", "Text on accent"],
     leaf: ["--leaf", "Good (green)"], warn: ["--warn", "Warning"], bad: ["--bad", "Bad (red)"]};
-  const T = (name, mode, s) => { const [bg, panel, ink, muted, line, accent, soft, on, leaf, warn, bad] = s.split(" ").map(x => "#" + x);
-    return {name, mode, c: {bg, panel, ink, muted, line, accent, soft, on, leaf, warn, bad}} };
+  const T = (name, mode, s, sk) => { const [bg, panel, ink, muted, line, accent, soft, on, leaf, warn, bad] = s.split(" ").map(x => "#" + x);
+    const t = {name, mode, c: {bg, panel, ink, muted, line, accent, soft, on, leaf, warn, bad}}; if (sk) t.sk = sk; return t };
   // "Purple" is the 0.2.42 look a little brighter (lighter background and boxes, a livelier accent); it has a light and a dark side
   const PURPLE = {name: "Purple", mode: "system",
     light: T("Purple", "light", "f8f6fe ffffff 2b2638 6c6580 e3dcf2 8566d6 efe8ff ffffff 3f8f5a b7791f c0392b").c,
@@ -29,18 +32,25 @@
     T("Midnight", "dark", "0f1420 171e2e e9eef8 9aa6bf 2a3449 6ea8ff 1f2c47 0f1420 5fcf8a e8b65a f26d6d"),
     T("Henesys", "light", "efe3d1 f8f0e4 33281c 6f5f4d dfccb2 b0560b f2dcc3 ffffff 3f8f5a a8680f c0392b"),
     T("Perion sand", "light", "e9dfcf f4ede1 3a2d22 6f5f51 d9c8b1 9c4f2b e7d5c1 ffffff 4d8b3a a8680f b8322a"),
-    T("High contrast", "dark", "000000 0d0d0d ffffff d0d0d0 6a6a6a ffd400 2b2600 000000 4cff7a ffb000 ff5050")];
+    T("High contrast", "dark", "000000 0d0d0d ffffff d0d0d0 6a6a6a ffd400 2b2600 000000 4cff7a ffb000 ff5050"),
+    // "Elv" (0.2.92): the ElvUI panel look as colours — near-black faded backdrop and panels (backdropcolor 0.1,
+    // backdropfadecolor 0.06 @ .8), a visible grey edge, and the signature value colour #1785d1 (0.09/0.52/0.82) for
+    // numbers and buttons. Dark only: the original has no light side. Pair it with sk:"elv" (below) for the full re-skin.
+    T("Elv", "dark", "0f0f0f 1a1a1a e8e8e8 9a9a9a 3f3f3f 1785d1 14304a ffffff 55b76b e5821f ef4d4d", "elv")];
   const HEX = /^#[0-9a-f]{6}$/i;
-  // a theme from outside (a share code, a file, settings): only a name, light/dark and the known tokens as #rrggbb survive
+  // a theme from outside (a share code, a file, settings): only a name, light/dark, the known tokens as #rrggbb and the
+  // panel style (sk "elv", anything else drops to the glass look) survive
   function clean(t){
     if (!t || typeof t !== "object" || !t.c || typeof t.c !== "object") return null;
     const c = {};
     for (const k of Object.keys(TOKENS)){ if (!HEX.test(t.c[k] || "")) return null; c[k] = t.c[k].toLowerCase() }
     const name = String(t.name || "").replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 30) || "My theme";
-    return {name, mode: t.mode === "light" ? "light" : "dark", c};
+    return t.sk === "elv" ? {name, mode: t.mode === "light" ? "light" : "dark", c, sk: "elv"}
+      : {name, mode: t.mode === "light" ? "light" : "dark", c};
   }
-  // share code: "MSCT1." + base64 of the JSON (one line, pastes into Discord)
-  const encode = t => "MSCT1." + btoa(unescape(encodeURIComponent(JSON.stringify({name: t.name, mode: t.mode, c: t.c}))));
+  // share code: "MSCT1." + base64 of the JSON (one line, pastes into Discord); sk rides along when it isn't the default
+  const encode = t => "MSCT1." + btoa(unescape(encodeURIComponent(JSON.stringify({name: t.name, mode: t.mode, c: t.c,
+    ...(t.sk && t.sk !== "glass" ? {sk: t.sk} : {})}))));
   function decode(s){
     const m = /MSCT1\.([A-Za-z0-9+/=]{20,4000})/.exec(String(s || "").replace(/\s+/g, ""));
     if (!m) return null;
@@ -51,8 +61,10 @@
     const lum = h => { const v = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(x => x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2] };
     const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05);
   }
-  // the colours in use now: a "system" theme picks its light or dark side
-  const resolve = (t, dark) => t.mode === "system" ? {name: t.name, mode: dark ? "dark" : "light", c: dark ? t.dark : t.light} : t;
+  // the colours in use now: a "system" theme picks its light or dark side; sk normalizes to "glass" when absent, so
+  // callers can always read .sk off the resolved theme (the overlay push carries it, both windows toggle the class)
+  const resolve = (t, dark) => { const r = t.mode === "system" ? {name: t.name, mode: dark ? "dark" : "light", c: dark ? t.dark : t.light} : t;
+    return r.sk ? r : {...r, sk: "glass"} };
   function apply(t, dark, el = root.document?.documentElement){
     const r = resolve(t, dark);
     if (el) for (const [k, [v]] of Object.entries(TOKENS)) el.style.setProperty(v, r.c[k]);
