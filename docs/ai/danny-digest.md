@@ -1,51 +1,54 @@
 ---
 kind: digest
 status: live
-issue: 6
-date: 2026-10-27
-written_utc: "11:45"
+issue: 7
+date: 2026-10-28
+written_utc: "11:55"
 author: "Glorg [z.ai]"
-site_version: "0.18.10"
+site_version: "0.19.3"
 ---
 
-# Danny's daily digest, issue 6
+# Danny's daily digest, issue 7
 
 ## Where things stand
 
-Site is healthy at v0.18.10, live at https://maplestory.scumlord.studio, CI green on head `6aeefd0`. Your approved price work (P3, P4, P5) shipped yesterday afternoon and is live on the site. All seven price sources are fresh on cadence and the watchdog is clean. The one open problem is classicrank.com: its API has been unreachable for us since 10-23, so the daily Windia job census is frozen at 10-22 data (Decision 1).
+The overnight tracker arc is done: your ElvUI and WeakAuras vision shipped as five releases between 08:49 and 09:53 UTC (v0.2.78 through v0.2.82, installer and update manifest verified on each). Your copy walks to v0.2.82 on the next restart, no action needed. The site is at v0.19.3 on https://maplestory.scumlord.studio and yesterday's approved site batch (P8 through P11, then the accuracy round) is all live. CI has one red spot: the shopscans poll failed twice because maplestory.watch started blocking non-browser clients with a Cloudflare 403. Root-caused and fixed this morning (`c2a6f9c`); the next scheduled run at 13:11 UTC should confirm green.
 
-## Wins since digest 5
+## Wins since digest 6
 
-- **P3, P4 and P5 shipped** (`e88d659`, live as v0.18.10), per your approval of proposals 1 through 5:
-  - **P5 fallback tail**: items priced only by mesoarbitrage, maplestory.watch or mesoindex now get a Usual price, drawn from mesoarbitrage sold median, then maplestory.watch typical, then mesoindex usual, each labelled rough. 50 items that showed "no player prices yet" now price out and light up loot, keep, craft and quest valuation. meso.watch stays first per your 10-21 call.
-  - **P4 sources context**: the Usual price tile carries a range across solid sources plus an agreement pill (within 25 percent vs N times apart).
-  - **P3 stale pills**: any Prices row whose source file is past its cadence gets a quiet stale tint, with the same thresholds as the MCI Source-health panel.
-  - Tests cover the fallback walk, the context block and the unpriced path; full suite green.
-- **Shared runs refresh** committed (`1b9b079`).
-- Housekeeping held: webhook secrets, digest state and the keeper crons all stayed intact overnight.
+- **Tracker 0.2.78, conditions and alerts** (`d66bd59`): the three hardcoded beeps became a real condition engine with 13 trigger kinds (EXP, mesos and kills per hour, boss due, KPQ clock, session time, goal reached, idle stretch, loot value and watched names), each configurable in Settings with a Test button. The overlay got glass toasts and a pulse on the matching card. Your old alert settings migrate on first boot.
+- **Tracker 0.2.79, layout profiles** (`472bf6f`): named overlay layouts in the ElvUI style, plus a Share strip that exports the live layout as an `OVL1.` code string and imports one with per-widget validation.
+- **Tracker 0.2.80, card sparklines** (`5424d55`): the EXP, Mesos and Kills cards draw a 30 minute trend line under the big number, sampled every 20 seconds, recolored live when you re-theme.
+- **Tracker 0.2.81, boss respawn polish** (`938539b`): respawns due within 2 minutes wear the warn color on the overlay and the tracker card, and the respawn card gained a "killed it" button to hand-mark a boss the log reader missed.
+- **Tracker 0.2.82, beta update channel** (`442f2de`): Settings > App has a "Get test builds before wide release" checkbox. Test builds ship as `x.y.z-beta.n`, so stable copies skip them and the next stable supersedes.
+- **Site P8, Movers page** (`a9e0f62`): biggest day-over-day price changes, under Mesos and Trade, one row per item and market, with direction, type and sales-floor filters.
+- **Site P9, data split** (`cdc757c`): price data moved out of the page shell. First load dropped from 3771 KB to 1218 KB gzip, and a returning visitor re-downloads only the prices file, about 371 KB, when a poll moves prices.
+- **Site accuracy round P12 to P16** (`a5a7670`): a spike circuit breaker holds yesterday's value when a thin median lands over 3x off, the Usual tile shows a p25 to p75 likely range, moving prices get a 3-day weighted headline, and thin medians yield to a consensus label when 2 or more solid markets agree.
+- **Site, listing age** (`b40b392`): Where to buy sorts freshest shops first, marks 8 to 12 hour listings low-confidence, and folds older listings behind a show-more button.
+- **P10 and P11** (`0fb4cf6`, `f18cfc3`): monster pages show the community's real mesos per kill from shared runs when a mob has 100+ tracker kills on file, and every poll step now carries a timeout so a hung fetch releases the pipeline lock instead of grinding to the job ceiling.
 
 ## Anything broken or weird
 
-- **classicrank.com is blocking us.** The census workflow has failed 4 days straight (last success 10-22 12:30 UTC). Actions runners get a hard 403; from here, every endpoint (`/stats`, `/characters`, `/jobs`) serves an anti-bot challenge page instead of JSON. `data/sources/classicrank.json` is frozen at 54,094 characters and 30 jobs. The browser-side Load-by-IGN lookup still works for visitors whose browser holds a fresh classicrank cookie, and answers "Couldn't reach classicrank.com" for the rest. I did not attempt a bypass, per your 10-20 rule. Today's 06:49 UTC scheduled run has not appeared so far, which GitHub does under load sometimes.
-- Nothing else: no price-source anomalies, no watchdog alerts, and no cancelled runs worth noting.
+- **maplestory.watch is blocking us.** Since 01:16 UTC, `/api/items` answers a Cloudflare 403 challenge page to non-browser clients (verified from the sandbox and from GitHub runners; failed runs 40614076628 and 40672788284). The poll script had no error handling, so the step crashed outright and the real error sat hidden in a log file. Fixed in `c2a6f9c`: each source now degrades on its own, keeps the old data and exits 0, the same contract `fetch_shopscans.py` already honored. mesoarbitrage.com still answers fine (1117 items fresh at 11:44 UTC), so only the maplestory.watch rows age, and the site's stale pills plus the MCI Source-health panel flag that. No bypassing, per your 10-20 rule.
+- **classicrank.com is unchanged**, challenge-walled since 10-23 (Decision 1).
+- **A sandbox recycle hit mid-overnight** and reverted my local tree to its pre-0.2.77 state while origin held the work. Recovered with `git stash` + `reset --hard origin/main` + pop, nothing lost. I also fixed four CI flakes (two data-dependent scene asserts, a fake-price leak into 3-day history, a Start-wait race), so the overnight dispatches stayed trustworthy.
 
 ## Decisions I need from you
 
-1. **classicrank outage call**: wait it out (the workflow self-heals if their challenge wave lifts) or chase the partner key from Kitten, which was already on the standing-ask list and is now the durable fix. I can also add classicrank staleness to the watchdog and this digest, so a freeze pings you instead of sitting as a red X. One word picks the path.
-2. **P8 Movers page**: the biggest day-over-day price changes, from fields we already store (`dayAgo`, `trend`, cmp `day`). Self-contained, data ready, say go.
-3. **P9 data split**: move price data out of `index.html` (about 1.7 MB gzip re-served to every returning visitor on each poll commit; measured 1.69 MB in the audit). Biggest perf win available, effort L.
-4. **P11 poll lock fix**, unchanged since digest 5: a step-level timeout under the 30-minute job ceiling, or loosen the shared `main-pipeline` group now that every poll carries its own push-retry.
-5. **Standing asks, unchanged**: the maplestory.market partner key, the draft-batch merge-vs-archive call, and the web instance PAT revoke confirm. The classicrank key moved into Decision 1.
+1. **classicrank outage call** (carried, unchanged): wait it out or chase the partner key from Kitten. One word picks the path.
+2. **maplestory.watch block**: my lean is wait it out, since the fixed poll self-heals the moment their challenge wave lifts and staleness is flagged on the site. If you would rather force it, the durable path is a contact or key like the classicmarket arrangement, and that needs you.
+3. **Cron pile-up** (carried): cut meso.watch to 2 polls per hour, or add push-retry to the poll script. I lean retry.
+4. **Standing asks, unchanged**: the maplestory.market partner key, the draft-batch merge-versus-archive call, and the web instance PAT revoke confirm.
 
 ## Today's priorities
 
-1. Your calls above. If you name no path on classicrank, I keep watching the daily run and report in the next digest.
-2. P8 can start the moment you say go; P9 wants a quiet window with no poll traffic, so it pairs with the P11 call.
-3. P6 (askMedian on the meso.watch row) stays yours; nothing needed from me.
+1. Restart the tracker once; the auto-updater walks you to v0.2.82. Edit mode now carries profiles, share codes, snap guides and full resizing, Settings > Alerts holds the 13 triggers, and the beta checkbox is there if you want the next test build early.
+2. I watch the 13:11 UTC shopscans run to confirm the fix lands green, then report on both blocked sources in issue 8.
+3. Nothing else blocks on you; the next items on my menu (site watchlist, market pulse, keyboard UX) wait for your pick.
 
 ## Where to go deeper
 
-- The audit with all proposals: `docs/ai/overnight-price-audit-2026-10-26.md`, reproduce with `python3 scripts/price_audit.py`.
-- The classicrank fetcher and its workflow: `scripts/fetch_classicrank.py`, `.github/workflows/classicrank-census.yml`.
-- The live site with the new price context: https://maplestory.scumlord.studio
+- Releases and installers: v0.2.78 through v0.2.82 on the repo's Releases page; in-app patch notes render from `app/changelog.js`.
+- The shopscans fix: `scripts/fetch_alt_sources.py` (per-source try/except) and `.github/workflows/shopscans-poll.yml`.
+- The overnight build log: `docs/ai/tracker.md` and the changelog cards on https://maplestory.scumlord.studio
 - Delivery and format rules: `docs/ai/digest-contract.md`. Next refresh 04:45 AM PT.
