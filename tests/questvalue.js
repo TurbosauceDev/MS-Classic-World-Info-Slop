@@ -15,7 +15,9 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     const all = [...D.quests, ...D.citq], il = all.flatMap(q => q.il);
     const ids = il.every(x => x.length === 4 && /^\d+$/.test(x[3])), rows = il.every(x => D.items[x[3]]);
     // fake prices: 2 turn-in items (one 403xxxx quest item, which never counts), get / pick 1 / random / class-only groups
-    const set = (id, v) => { PW[id] = [v, 0, 0, 10, 0]; delete CM[id]; delete CMP[id]; delete MDB[id]; delete MA[id]; delete MW[id]; delete MI[id] };
+    // PWH too: a solid fake PW row goes through pwUsual, which swaps in the item's real 3-day medians when the live
+    // history moved >25% day-over-day — Red Shell 4000001 started moving overnight and the fake 50 became a real 16 (10-28)
+    const set = (id, v) => { PW[id] = [v, 0, 0, 10, 0]; delete PWH[id]; delete CM[id]; delete CMP[id]; delete MDB[id]; delete MA[id]; delete MW[id]; delete MI[id] };
     const A = "4000000", B = "4000001", C = "2000000", E = "2000001", F = "2000002", G = "2000003", H = "2000006";
     [[A, 100], [B, 50], [C, 10], [E, 30], [F, 70], [G, 5], [H, 1000]].forEach(([id, v]) => set(id, v));
     const q = {name: "Test quest", lvl: 20, mesos: 500, kl: [], il: [["a", 10, null, A], ["b", 4, null, B], ["q", 1, null, "4031000"]],
