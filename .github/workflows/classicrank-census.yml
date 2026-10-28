@@ -19,13 +19,21 @@ jobs:
       - name: Fetch, commit if changed
         timeout-minutes: 12   # step-level (audit P11): a hung fetch releases the shared lock before the job ceiling
         # on a push race, start again from the new main (never merge data.json)
+        # first contact hits classicrank's verification splash (403 / 200 html to non-browser clients);
+        # the fetcher then retries through a headless Chromium (decisions.md 2026-10-28) — install it only if needed
         run: |
-          for i in 1 2 3; do
+          if ! python3 scripts/fetch_classicrank.py; then
+            echo "::warning::walled: installing headless chromium for the browser fallback"
+            npm install --no-save --ignore-scripts playwright@1.56.1
+            npx playwright install --with-deps chromium
             python3 scripts/fetch_classicrank.py
+          fi
+          for i in 1 2 3; do
             git add data/sources/classicrank.json data/data.json
             if git diff --cached --quiet; then echo "no change"; exit 0; fi
             git -c user.name="classicrank census bot" -c user.email="actions@github.com" commit -qm "classicrank job census $(date -u +%F)"
             git push origin HEAD:main && exit 0
             sleep $((i*15)); git fetch -q origin main; git reset -q --hard origin/main
+            python3 scripts/fetch_classicrank.py
           done
           exit 1

@@ -21,6 +21,11 @@ jobs:
         with: { ref: main }
       - run: python3 tests/shopscans_test.py
         timeout-minutes: 2
+      - name: Install headless chromium (browser fallback for challenge walls)
+        # maplestory.watch serves its Cloudflare challenge to non-browser clients (10-28): the fetchers
+        # fall back to a real browser (decisions.md 2026-10-28); the poll runs every 3 h so install up front
+        timeout-minutes: 5
+        run: npm install --no-save --ignore-scripts playwright@1.56.1 && npx playwright install --with-deps chromium
       - name: Fetch, build, commit if changed
         timeout-minutes: 20
         # on a push race (meso.watch poll commits often), start again from the new main, never merge data.json

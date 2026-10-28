@@ -15,7 +15,10 @@ for the same name, else dropped (name_ids()).
           ls: {itemId: [[priceEach, bundle, channel|null, fmRoom|null, seller, shopTitle, seenUnixMin], ...]}}
 ls keeps open, not-sold-out listings seen in the last day, cheapest LS_MAX per item: the Items page where-to-buy list needs
 seller + room to find the shop. Nothing else about sellers is stored. Prices are per item (bundles divided out)."""
-import json, pathlib, re, sys, time, urllib.parse, urllib.request
+import json, os, pathlib, re, sys, time, urllib.error, urllib.parse, urllib.request
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from browser_fetch import BrowserSession
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DST = ROOT / "data" / "sources" / "shopscans.json"
 MA = "https://mesoarbitrage.com/data/prices.json"
@@ -23,9 +26,20 @@ MW = "https://maplestory.watch/api/items"
 MW_ITEM = "https://maplestory.watch/api/item?name=%s"
 UA = {"User-Agent": "ms-classic-world-info site build (price summary)", "Accept": "application/json"}
 LS_MAX, DAY = 8, 86400
+BROWSER = None
 
 def get(url):
-    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=30) as r: return json.load(r)
+    """Plain urllib first; on a 403 challenge wall fall back to a real headless Chromium
+    (browser_fetch.py; allowed since Danny lifted the 10-20 never-bypass rule, decisions.md 2026-10-28)."""
+    if not os.environ.get("FORCE_BROWSER"):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=30) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code != 403: raise
+    global BROWSER
+    if BROWSER is None: BROWSER = BrowserSession()
+    return BROWSER.get(url)
 
 def umin(t):
     """unix seconds or ms -> unix minutes"""

@@ -20,7 +20,11 @@ import json
 import os
 import pathlib
 import sys
+import urllib.error
 import urllib.request
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from browser_fetch import BrowserSession
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC_DIR = ROOT / "data" / "sources"
@@ -28,14 +32,27 @@ SRC_DIR = ROOT / "data" / "sources"
 MSW_URL = "https://maplestory.watch/api/items"
 MA_URL = "https://mesoarbitrage.com/data/prices.json"
 
+BROWSER = None
+
 
 def fetch(url):
-    req = urllib.request.Request(url, headers={
-        "User-Agent": "meso-watch-poller/1.0",
-        "Accept": "application/json",
-    })
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read().decode())
+    """Plain urllib first; on a 403 challenge wall fall back to a real headless Chromium
+    (browser_fetch.py; allowed since Danny lifted the 10-20 never-bypass rule, decisions.md 2026-10-28)."""
+    if not os.environ.get("FORCE_BROWSER"):
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "meso-watch-poller/1.0",
+                "Accept": "application/json",
+            })
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read().decode())
+        except urllib.error.HTTPError as e:
+            if e.code != 403:
+                raise
+    global BROWSER
+    if BROWSER is None:
+        BROWSER = BrowserSession()
+    return BROWSER.get(url)
 
 
 def fetch_maplestorywatch():
