@@ -217,15 +217,17 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(JSON.stringify(c) === '[true,"meso.watch","classicmarket.kr market 65","meowdb 55","classicmarket.kr asks 45","classicmarket.kr buy orders","mesoarbitrage.com 24000","mesoarbitrage.com 300","maplestory.watch 25000","mesoindex.com 26000","none"]', `prices: source rows + fallback order (${c})`);
     // P3 + P4 (Danny 2026-10-26): a source row past its cadence gets a stale pill; the Usual tile carries a sources range + agreement pill
     const q = await p.evaluate(() => { const id = "2000000", keep = [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id], D.cmp.read];
+      // fresh/old timestamps relative to now: hardcoding a date broke at UTC midnight when it crossed the 48 h staleness line (10-28)
+      const fresh = new Date(Date.now() - 36e5).toISOString().slice(0, 16).replace("T", " "), old = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 16).replace("T", " ");
       delete MA[id]; delete MW[id]; delete MI[id]; delete CM[id];
-      PW[id] = [100, 90, 110, 30, 0]; CMP[id] = [105, 95, 115, 20, 30, 5, "2026-10-26"]; MDB[id] = [110, 50, 8, 100, null, 4, null, 0, null, 0];
+      PW[id] = [100, 90, 110, 30, 0]; CMP[id] = [105, 95, 115, 20, 30, 5, fresh]; MDB[id] = [110, 50, 8, 100, null, 4, null, 0, null, 0];
       const out = [];
       out.push(/3 solid sources · 100-110/.test(priceBox(id)) && /sources within 25%/.test(priceBox(id)));
-      CMP[id] = [400, 300, 500, 20, 30, 5, "2026-10-26"];
+      CMP[id] = [400, 300, 500, 20, 30, 5, fresh];
       out.push(/sources 4x apart/.test(priceBox(id)));
-      D.cmp.read = "2026-10-20 00:00";
+      D.cmp.read = old;
       out.push(/stale \d+ d/.test(priceBox(id)));
-      D.cmp.read = "2026-10-26 00:00";
+      D.cmp.read = fresh;
       out.push(!/stale \d/.test(priceBox(id)));
       [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id]] = keep; D.cmp.read = keep[7]; return out });
     check(JSON.stringify(q) === "[true,true,true,true]", `prices: stale pill + sources context (${q})`);
