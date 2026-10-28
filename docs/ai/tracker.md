@@ -293,3 +293,4 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 ## Simple Mode restyle + overlay esc fix 2026-10-28 (0.2.86, thread "Make tracker customizable like ElvUI and WeakAuras")
 - Simple Mode (#mini .sm*) now uses one accent (--accent) for the hero number and chart, ink for the map name, flat 6 px panels, 10 px uppercase labels; --warn gold is gone from it. Focus Mode shares .smMap/.smWho/.smBox, so check both after touching them.
 - overlay.js `esc` mapped ">" to &quot; (profile names with > broke the select). Test in overlay.test.js. Study + roadmap: [tracker-customization.md](tracker-customization.md).
+- ov-state (main.js) now returns core/overlaycfg.js state(settings): the WHOLE saved overlay. Before, only widgets came back, so profiles/snap/grid/panel spot reset every launch. core.test.js pins both the helper and the main.js wiring.

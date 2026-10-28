@@ -16,6 +16,7 @@ const writeAtomic = (file, text) => { fs.writeFileSync(file + ".tmp", text); fs.
 const writeSettings = s => writeAtomic(SETTINGS, JSON.stringify(s, null, 1));
 const SESSIONS = path.join(app.getPath("userData"), "sessions");   // finished sessions, kept locally either way
 const AUTO = require("../core/autosave.js");
+const OVCFG = require("../core/overlaycfg.js");
 const HIST = require("../core/history.js");   // applyEdit: History > Edit run   // the running session, autosaved there (crash recovery)
 
 // Windows Graphics Capture (what OBS uses) instead of the old GDI window grab, which gives black frames for DirectX games
@@ -233,7 +234,7 @@ ipcMain.handle("overlay", () => { ovToggle(); return !!(ovWin && !ovWin.isDestro
 ipcMain.handle("ov-edit", (_, on) => { if (ovWin && !ovWin.isDestroyed()) ovEditSet(on !== false); return ovEditing });
 ipcMain.handle("ov-edit-toggle", () => { if (ovWin && !ovWin.isDestroyed()) ovEditSet(!ovEditing); return ovEditing });
 ipcMain.handle("ov-close", () => { ovCloseWin(); return true });
-ipcMain.handle("ov-state", () => ({edit: ovEditing, widgets: ovWidgets(), desk: ovDesk()}));
+ipcMain.handle("ov-state", () => ({...OVCFG.state(readSettings()), edit: ovEditing, desk: ovDesk()}));   // the whole saved overlay (snap, grid, panel, profiles), not only the widgets
 ipcMain.on("ov-push", (_, d) => { if (ovWin && !ovWin.isDestroyed()) ovWin.webContents.send("ov-data", d) });
 
 // "Show me where": a full-screen window with the frozen game picture; the player drags a box (snipping-tool style)
