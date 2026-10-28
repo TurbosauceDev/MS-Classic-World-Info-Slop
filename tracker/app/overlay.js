@@ -170,6 +170,31 @@ function clampCard(el){
   el.style.left = Math.min(Math.max(0, el.offsetLeft), Math.max(0, innerWidth - w)) + "px";
   el.style.top = Math.min(Math.max(0, el.offsetTop), Math.max(0, innerHeight - h)) + "px";
 }
+// Cards keep apart (Danny 10-28: Status ran under Mesos, Mesos' "loot/hr 16,9.." was cut off by Kills): numbers grow wider as a
+// run goes on, so after every render and every placement the cards are walked top-left to bottom-right and any that overlap
+// are nudged — right if there is room, else down — a GAP clear of what is already placed. Only the DISPLAY moves: x/y in
+// settings stay where the player put them, so the cards settle back when the numbers shrink. Skipped mid-drag/resize.
+const GAP = 8;
+function reflow(){
+  if (drag || rz) return;
+  const els = [...document.querySelectorAll(".ovw")].filter(el => el.isConnected);
+  for (const el of els){ const id = el.dataset.w; el.style.left = Math.round(wPos(id).x - DESK.x) + "px"; el.style.top = Math.round(wPos(id).y - DESK.y) + "px"; clampCard(el) }
+  const rect = el => { const r = el.getBoundingClientRect(); return {l: r.left, t: r.top, r: r.right, b: r.bottom} };
+  const placed = [], order = els.map(el => ({el, r: rect(el)})).sort((a, b) => a.r.t - b.r.t || a.r.l - b.r.l);
+  for (const o of order){
+    for (let n = 0; n < 24; n++){
+      let r = rect(o.el);
+      const hit = placed.find(p => r.l < p.r + GAP && r.r + GAP > p.l && r.t < p.b + GAP && r.b + GAP > p.t);
+      if (!hit) break;
+      const dx = hit.r + GAP - r.l, dy = hit.b + GAP - r.t, w = r.r - r.l, h = r.b - r.t;
+      const canX = r.l + dx + w <= innerWidth, canY = r.t + dy + h <= innerHeight;
+      if (canX && (dx <= dy || !canY)) o.el.style.left = o.el.offsetLeft + dx + "px";
+      else if (canY) o.el.style.top = o.el.offsetTop + dy + "px";
+      else { o.el.style.left = o.el.offsetLeft - Math.max(0, r.r - hit.l + GAP) + "px"; break }   // no room either way: sit left of it
+    }
+    placed.push(rect(o.el));
+  }
+}
 function place(){
   for (const id of ids()){
     const el = $("#ovw-" + id); if (!el || !el.isConnected) continue;
@@ -178,6 +203,7 @@ function place(){
     styleCard(el, id);
     clampCard(el);
   }
+  reflow();
 }
 function setOn(id, on){
   CFG.widgets[id] = {...(CFG.widgets[id] || HOME[baseOf(id)] || {x: 24, y: 24}), on};
@@ -186,7 +212,7 @@ function setOn(id, on){
     c.style.left = Math.round(wPos(id).x - DESK.x) + "px"; c.style.top = Math.round(wPos(id).y - DESK.y) + "px";
     styleCard(c, id); clampCard(c) }
   else if (!on && el?.isConnected) el.remove();
-  syncPanel(); ovSave(); if (on && DATA) apply(DATA);
+  syncPanel(); ovSave(); if (on && DATA) apply(DATA); else reflow();
 }
 function addInst(kind){
   if (!KINDS[kind] || ids().filter(i => INST.test(i)).length >= MAX_INST) return null;
@@ -199,7 +225,7 @@ function addInst(kind){
 function delInst(id){
   if (!INST.test(id)) return;
   delete CFG.widgets[id]; $("#ovw-" + id)?.remove(); if (picked.id === id) picked.id = null;
-  syncPanel(); ovSave();
+  syncPanel(); ovSave(); reflow();
 }
 function savePos(id){
   const el = $("#ovw-" + id); if (!el) return;
@@ -207,7 +233,7 @@ function savePos(id){
   ovSave();
 }
 function setS(id, s){ s = clamp(Math.round(s * 100) / 100, .5, 2); CFG.widgets[id] = {...(CFG.widgets[id] || {}), s};
-  const el = $("#ovw-" + id); if (el){ styleCard(el, id); clampCard(el) }
+  const el = $("#ovw-" + id); if (el){ styleCard(el, id); clampCard(el); reflow() }
   const sv = document.querySelector(`.wrow[data-w="${id}"] .sv`); if (sv) sv.textContent = Math.round(s * 100) + "%";
   syncDetail(id); ovSave() }
 function setO(id, o){ CFG.widgets[id] = {...(CFG.widgets[id] || {}), o: clamp(Math.round(o * 100) / 100, .25, 1)};
@@ -228,6 +254,7 @@ function apply(d){
     const el = $("#ovw-" + id);
     if (el?.isConnected) el.querySelector(".b").innerHTML = RENDER[baseOf(id)](d, id);
   }
+  reflow();
   toastsShow(d.toasts);
 }
 // the conditions engine's toasts (0.2.78): a glass stack top-right, gone after 6.5 s or when the tracker pulls them;
@@ -499,7 +526,7 @@ addEventListener("pointerup", () => {
   card.classList.remove("moving");
   hideGuides();
   clampCard(card);
-  savePos(id);
+  savePos(id); reflow();
 });
 // Ctrl+scroll resizes the hovered card (WeakAuras' scale slider, at the pointer)
 addEventListener("wheel", e => {

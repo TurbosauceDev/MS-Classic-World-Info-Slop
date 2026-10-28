@@ -291,6 +291,21 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     st = await page.evaluate(() => { const w = {zzz_1: {x: 1, y: 1}, "exp_0": {x: 1, y: 1}, "__proto__": {x: 1}}; for (let i = 1; i <= 15; i++) w["log_" + i] = {x: i, y: i};
       $("#ovShareIn").value = "OVL1." + btoa(JSON.stringify({widgets: w})); profImport(); return Object.keys(CFG.widgets) });
     if (st.length !== 12 || st.some(k => !/^log_\d+$/.test(k))) fail("import caps instances and drops unknown ids", st);
+    // cards keep apart (Danny 10-28, tests/frames-overlay/overlap-status-mesos-kills-2026-10-28.png): Status, Mesos and Kills sat side by
+    // side; the numbers grew and Status ran under Mesos while Kills cut off its "loot/hr". Rebuild that spacing, feed it the wide values.
+    await page.evaluate(() => { CFG.widgets = {status: {on: true, x: 100, y: 500}, mesos: {on: true, x: 330, y: 500}, kills: {on: true, x: 520, y: 500}};
+      profCards(); place(); apply({t: Date.now(), on: false, dummy: false, runT0: Date.now() - 4359e3, state: "Stopped at 1:57 PM · wrapping up the run", st: {activeMin: 43, mesosHr: 15928, mesos: 11315, lootHr: 16912345, kills: 599, killsHr: 843, deaths: 0}}) });
+    const gap = () => page.evaluate(() => { const rs = [...document.querySelectorAll(".ovw")].map(e => [e.dataset.w, e.getBoundingClientRect()]), bad = [];
+      for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++){ const a = rs[i][1], b = rs[j][1];
+        if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) bad.push(rs[i][0] + "/" + rs[j][0]) }
+      return {bad, saved: ["status", "mesos", "kills"].map(k => CFG.widgets[k].x + "," + CFG.widgets[k].y).join(" "), wide: document.querySelector("#ovw-status").offsetWidth} });
+    st = await gap();
+    if (st.bad.length || st.saved !== "100,500 330,500 520,500") fail("cards keep apart (wide numbers)", st);
+    await page.evaluate(() => { CFG.edit = false; document.body.classList.add("locked"); apply({...DATA, t: Date.now()}) });   // locked play: same
+    st = await gap(); if (st.bad.length) fail("cards keep apart (locked)", st);
+    await page.evaluate(() => { CFG.edit = true; document.body.classList.remove("locked"); apply({t: Date.now(), on: true, state: "Tracking", st: {mesosHr: 5, lootHr: 1, killsHr: 1}}) });   // numbers shrink: cards settle back
+    st = await page.evaluate(() => ["status", "mesos", "kills"].map(k => document.querySelector("#ovw-" + k).offsetLeft + "," + document.querySelector("#ovw-" + k).offsetTop).join(" "));
+    if (st !== "100,500 330,500 520,500") fail("cards settle back when the numbers shrink", st);
     await page.evaluate(k => { CFG.widgets = JSON.parse(k); profCards(); place(); syncPanel(); ovSave() }, keepW); await page.waitForTimeout(400);   // back to the layout the later scenes expect
     await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.left = "500px"; savePos("exp") });
     await page.waitForTimeout(350);   // the save (and the profile mirror) debounce
