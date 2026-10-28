@@ -1,0 +1,5 @@
+{
+  "_readme": "Items excluded from price tracking (D.pw/cm/cmp/mi/mdb/ma/mw in scripts/build_data.py + the per-source fetchers' keep() filters) and from tests/data_quality_test.py's cross-source spread check. id_blocks are [lo, hi) client ID ranges; ids are individual items. Pure quest items = the client's quest-item ID block (see src/js/49-items.js QITEM) -- untradable, so they never legitimately appear in a price source; if one ever does, it is a vendor quirk, not a price. Arrows: vendor-price consumables whose only market signal is a thin sale tail (2026-10-28: meowdb's 100-meso/5-sale row on 2060000 tripped the 100x cross-source gate). Danny 2026-10-28: ignore arrows, we don't need to track them.",
+  "id_blocks": [[4031000, 4033000]],
+  "ids": ["2060000", "2060001", "2060002", "2060003", "2061000", "2061001", "2061002", "2061003"]
+}

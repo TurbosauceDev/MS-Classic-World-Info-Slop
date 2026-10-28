@@ -645,8 +645,9 @@ def step_prices(D):
     """pw {read: date, hist, it: {itemId: [median, p25, p75, sales, flags (1 low data, 2 per set, 4 held: spike breaker), trend, sell-through]}, listed, now}: meso.watch player-shop sale
     prices (scripts/fetch_mesowatch.py), items in D.items only."""
     j = json.load(open(ROOT / "data" / "sources" / "mesowatch_prices.json"))
-    it = {k: v for k, v in j["items"].items() if k in D["items"]}
-    hist = {k: v for k, v in j.get("hist", {}).items() if k in D["items"] and len(v) >= 2}
+    from price_blacklist import is_bl
+    it = {k: v for k, v in j["items"].items() if k in D["items"] and not is_bl(k)}
+    hist = {k: v for k, v in j.get("hist", {}).items() if k in D["items"] and not is_bl(k) and len(v) >= 2}
     # P12 (Danny 2026-10-27): spike circuit breaker. A fresh median built on fewer than 5 sales that lands more than 3x
     # off yesterday is noise (one big sale or a bad read), not the market: hold yesterday's median and set flag 4, so the
     # tile and every valuation use the steadier number while the sparkline still shows the honest daily medians.
@@ -660,11 +661,11 @@ def step_prices(D):
     if held: print(f"price breaker: held yesterday's median for {held} spike items (<5 sales today)")
     D["pw"] = {"read": j["read"], "it": it, "hist": hist}
     if "now" in j:   # cheapest live listing per non-equip item {itemId: [price each, qty, channel, map, seller]}, as of "listed"
-        D["pw"].update(listed=j["listed"], srclisted=j.get("src_listed", ""), now={k: v for k, v in j["now"].items() if k in D["items"]})
+        D["pw"].update(listed=j["listed"], srclisted=j.get("src_listed", ""), now={k: v for k, v in j["now"].items() if k in D["items"] and not is_bl(k)})
         # every live listing + when we first saw it {itemId: [[price each, qty, channel, map, seller, firstSeenUnixMin|None]]} (seen: parallel to asks)
         sn = j.get("seen", {})
         D["pw"]["asks"] = {k: [a[:5] + [(sn.get(k) or [])[i] if i < len(sn.get(k) or []) else None] for i, a in enumerate(v)]
-                           for k, v in j.get("asks", {}).items() if k in D["items"] and v}
+                           for k, v in j.get("asks", {}).items() if k in D["items"] and v and not is_bl(k)}
     if j.get("totals"):   # Home "Market today": meso.watch sales count (rolling window) + top sale; itemId comes as "basil:01382005"
         t = j["totals"]; ts = t.get("topSale") or {}; iid = str(int(str(ts.get("itemId", "")).split(":")[-1] or 0))
         D["pw"]["tot"] = {"sales": t.get("sales", 0), "top": [iid, ts["price"], ts.get("qty", 1), ts.get("time", "")] if ts.get("price") else None}

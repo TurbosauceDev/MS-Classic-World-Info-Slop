@@ -12,8 +12,9 @@ SRC = ROOT / "data" / "sources" / "meowdb_market.json"
 def step(D):
     if not SRC.exists(): return
     j = json.loads(SRC.read_text())
-    D["mdb"] = {"read": j["read"], "it": {k: v for k, v in j["it"].items() if k in D["items"]},
-                "ls": {k: v for k, v in j["ls"].items() if k in D["items"]}}
+    from price_blacklist import is_bl
+    D["mdb"] = {"read": j["read"], "it": {k: v for k, v in j["it"].items() if k in D["items"] and not is_bl(k)},
+                "ls": {k: v for k, v in j["ls"].items() if k in D["items"] and not is_bl(k)}}
 
 if __name__ == "__main__":
     D = json.load(open(ROOT / "data" / "data.json"))

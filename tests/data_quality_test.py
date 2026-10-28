@@ -23,6 +23,28 @@ from datetime import datetime, timezone
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'data', 'sources')
 
+# price-tracking blacklist (data/price_blacklist.json): items excluded from D.pw/cm/cmp/mi/mdb/ma/mw
+# by the build steps. The raw source files still legitimately contain them (the sources are the
+# fetchers' output, unfiltered), so the cross-source spread check must skip them too or it red-gates
+# on items nobody tracks (2026-10-28: meowdb's 100-meso arrows row vs 1-meso elsewhere).
+try:
+    with open(os.path.join(ROOT, 'data', 'price_blacklist.json'), encoding='utf-8') as f:
+        _BLJ = json.load(f)
+    _BL_IDS = set(map(str, _BLJ.get('ids', [])))
+    _BL_BLOCKS = [(int(a), int(b)) for a, b in _BLJ.get('id_blocks', [])]
+except (OSError, ValueError):
+    _BL_IDS, _BL_BLOCKS = set(), []
+
+
+def blacklisted(k):
+    if str(k) in _BL_IDS:
+        return True
+    try:
+        n = int(k)
+    except (TypeError, ValueError):
+        return False
+    return any(a <= n < b for a, b in _BL_BLOCKS)
+
 ID_RE = re.compile(r'^\d{1,10}$')
 
 
@@ -171,6 +193,8 @@ for name, fname, path, pidx, sidx in SOURCES:
 spread10 = spread100 = 0
 examples = []
 for id_, lst in per_item.items():
+    if blacklisted(id_):
+        continue
     solid = [(s, p, n) for s, p, n in lst if n >= 5]
     if len(solid) < 2:
         continue

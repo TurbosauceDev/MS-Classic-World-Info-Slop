@@ -100,7 +100,8 @@ def step(D):
     """build_data.py "shopscans" step: D.ma / D.mw from the saved file, items the page knows only."""
     if not DST.exists(): return
     j = json.loads(DST.read_text())
-    keep = lambda d: {k: v for k, v in d.items() if k in D["items"]}
+    from price_blacklist import is_bl
+    keep = lambda d: {k: v for k, v in d.items() if k in D["items"] and not is_bl(k)}
     if j.get("ma"): D["ma"] = {"read": j["ma"]["read"], "it": keep(j["ma"]["it"])}
     if j.get("mw"): D["mw"] = {"read": j["mw"]["read"], "it": keep(j["mw"]["it"]), "ls": keep(j["mw"]["ls"])}
 

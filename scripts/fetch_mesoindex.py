@@ -67,7 +67,8 @@ def step(D):
     """build_data.py "mesoindex" step: D.mi from the saved file, items the page knows only."""
     if not DST.exists(): return
     j = json.loads(DST.read_text())
-    keep = lambda d: {k: v for k, v in d.items() if k in D["items"]}
+    from price_blacklist import is_bl
+    keep = lambda d: {k: v for k, v in d.items() if k in D["items"] and not is_bl(k)}
     if j.get("it"): D["mi"] = {"read": j["read"], "it": keep(j["it"]), "ls": keep(j.get("ls", {}))}
 
 def fetch(old, items):

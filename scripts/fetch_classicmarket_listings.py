@@ -66,7 +66,8 @@ def step(D):
     """build_data.py "cmarket" step: D.cm from the saved file, items the page knows only."""
     if not DST.exists(): return
     j = json.loads(DST.read_text())
-    D["cm"] = {"read": j["read"], "posts": j["posts"], "it": {k: v for k, v in j["it"].items() if k in D["items"]}}
+    from price_blacklist import is_bl
+    D["cm"] = {"read": j["read"], "posts": j["posts"], "it": {k: v for k, v in j["it"].items() if k in D["items"] and not is_bl(k)}}
 
 if __name__ == "__main__":
     try: posts = fetch()
