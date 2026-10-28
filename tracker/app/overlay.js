@@ -17,12 +17,37 @@ const runClock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 // what can be tracked: the panel lists these, in this order. HOME is where each lands the first time (desktop pixels)
-const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log"};
+const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar"};
 const HOME = {status: {on: true, x: 24, y: 24}, exp: {on: true, x: 24, y: 108}, map: {on: true, x: 24, y: 250},
   kills: {on: false, x: 24, y: 620}, mesos: {on: false, x: 24, y: 700}, loot: {on: false, x: 24, y: 780},
-  party: {on: false, x: 24, y: 860}, kpq: {on: false, x: 24, y: 940}, log: {on: false, x: 24, y: 1020}};
+  party: {on: false, x: 24, y: 860}, kpq: {on: false, x: 24, y: 940}, log: {on: false, x: 24, y: 1020},
+  stat: {on: false, x: 300, y: 24}, bar: {on: false, x: 300, y: 110}};
 let DATA = null, CFG = {edit: true, widgets: {}, snap: true, grid: false, gsize: 64, panel: null, profile: "Default", profiles: null}, DESK = {x: 0, y: 0, width: 1920, height: 1080}, zTop = 1;
 const picked = {id: null};
+// Widget instances (0.2.87, WeakAuras' "make as many displays as you like"): a card id is a kind ("exp") or a kind plus an
+// instance number ("exp_2"), so one kind can be placed twice. The panel's Add widget makes them, an instance's x removes it.
+// "_" not "~": the id lands in a CSS selector (#ovw-exp_2).
+const INST = /^([a-z]+)_([1-9]\d?)$/, MAX_INST = 12;
+const baseOf = id => (INST.exec(id) || [null, id])[1];
+const validId = id => !!KINDS[id] || (INST.test(id) && !!KINDS[baseOf(id)]);
+const ids = () => [...Object.keys(KINDS), ...Object.keys(CFG.widgets).filter(id => INST.test(id) && validId(id))
+  .sort((a, b) => baseOf(a).localeCompare(baseOf(b)) || +INST.exec(a)[2] - +INST.exec(b)[2])];
+const wName = id => { const m = INST.exec(id); return m ? KINDS[m[1]] + " " + m[2] : KINDS[id] };
+// the token registry: every number a Stat number card can show, all read off the snapshot the tracker built from the
+// screen (nothing here touches the game). Add one line here and the picker offers it.
+const TOKENS = {
+  expHr: ["EXP / hr", d => fmt(d.st?.expHr || 0)], expHr5: ["EXP / hr, last 5 min", d => d.st?.expHr5 != null ? fmt(d.st.expHr5) : "—"],
+  exp: ["EXP gained", d => "+" + fmt(d.st?.exp || 0)], toLevel: ["Next level in", d => { const h = d.st?.toLevelHrs; return h == null ? "—" : h < 1 ? Math.round(h * 60) + " min" : h.toFixed(1) + " h" }],
+  mesosHr: ["Mesos / hr", d => fmt(d.st?.mesosHr || 0)], mesos: ["Mesos picked up", d => "+" + fmt(d.st?.mesos || 0)],
+  lootHr: ["Loot value / hr", d => fmt(d.st?.lootHr || 0)], killsHr: ["Kills / hr", d => fmt(d.st?.killsHr || 0)],
+  kills: ["Kills", d => fmt(d.st?.kills || 0)], deaths: ["Deaths", d => fmt(d.st?.deaths || 0)],
+  runClock: ["On the clock", d => d.runT0 && (d.on || d.dummy) ? runClock(d.t - d.runT0) : "-"],
+  farming: ["Farming time", d => d.st ? hm((d.st.activeMin || 0) / 60) : "-"],
+};
+const TOK_SETS = {};   // kind -> token set, filled just below
+const BARS = {levelPct: ["Level progress", d => d.st?.pct != null ? clamp(d.st.pct, 0, 100) : null]};
+TOK_SETS.stat = TOKENS; TOK_SETS.bar = BARS;
+const tokOf = (id, set, dflt) => { const t = CFG.widgets[id]?.tok; return set[t] ? t : dflt };
 
 // ---- the widgets -----------------------------------------------------------
 // the card sparkline (0.2.80): a tiny polyline of the rate's last samples, current-coloured, a dot on the newest value.
@@ -97,6 +122,11 @@ const RENDER = {
       ${clock ? `<div class="rows"><div><span>KPQ clock</span><b>${clock}</b></div></div>` : ""}
       ${k.hold ? `<div class="sub dim">paused between rounds</div>` : ""}`;
   },
+  stat(d, id){ const t = tokOf(id, TOKENS, "expHr");
+    return `<div class="big">${TOKENS[t][1](d)}</div><div class="sub">${esc(TOKENS[t][0])}</div>` },
+  bar(d, id){ const t = tokOf(id, BARS, "levelPct"), v = BARS[t][1](d);
+    return v == null ? `<div class="empty">Waiting for the EXP bar.</div>`
+      : `<div class="lvbar"><span>Lv <b>${d.st?.level ?? "-"}</b></span><div class="trk"><i style="width:${v}%"></i></div><span>${v.toFixed(1)}%</span></div><div class="sub">${esc(BARS[t][0])}</div>` },
   log(d){
     const lines = (d.feed || []).slice(-6).reverse();
     return lines.length ? lines.map(l => `<div class="lr ${esc(l.kind)}"><time>${clockT(l.t)}</time><span>${esc(l.text)}</span></div>`).join("") : `<div class="empty">Nothing yet.</div>`;
@@ -114,7 +144,7 @@ function theme(th){
 // ---- cards: one element per kind, placed in desktop coordinates -------------------------------
 // per-widget settings: on, x/y (desktop px), s = scale .5-2, o = opacity .25-1 (WeakAuras' per-region surface, tamed)
 function wPos(id){
-  const saved = CFG.widgets[id], home = HOME[id] || {on: false, x: 24, y: 24};
+  const saved = CFG.widgets[id], home = HOME[baseOf(id)] || {on: false, x: 24, y: 24};
   const xy = k => saved && Number.isFinite(+saved[k]) ? +saved[k] : home[k];   // 0 is a real spot (the desk's edge)
   return {on: saved ? saved.on !== false : home.on, x: xy("x"), y: xy("y"),
     s: clamp(saved && Number.isFinite(+saved.s) ? +saved.s : 1, .5, 2), o: clamp(saved && Number.isFinite(+saved.o) ? +saved.o : 1, .25, 1)};
@@ -122,7 +152,7 @@ function wPos(id){
 function mkCard(id){
   const el = document.createElement("section");
   el.className = "ovw"; el.id = "ovw-" + id; el.dataset.w = id;
-  el.innerHTML = `<header><span class="t">${esc(KINDS[id])}</span><button class="x" title="Hide ${esc(KINDS[id])}" aria-label="Hide ${esc(KINDS[id])}">×</button></header><div class="b"></div><i class="rsz" title="Drag to resize"></i>`;
+  el.innerHTML = `<header><span class="t">${esc(wName(id))}</span><button class="x" title="Hide ${esc(wName(id))}" aria-label="Hide ${esc(wName(id))}">×</button></header><div class="b"></div><i class="rsz" title="Drag to resize"></i>`;
   el.querySelector(".x").onclick = () => { setOn(id, false); if (picked.id === id) pick(null) };
   el.addEventListener("pointerenter", () => { if (CFG.edit) el.style.zIndex = ++zTop });
   return el;
@@ -141,7 +171,7 @@ function clampCard(el){
   el.style.top = Math.min(Math.max(0, el.offsetTop), Math.max(0, innerHeight - h)) + "px";
 }
 function place(){
-  for (const id of Object.keys(KINDS)){
+  for (const id of ids()){
     const el = $("#ovw-" + id); if (!el || !el.isConnected) continue;
     el.style.left = Math.round(wPos(id).x - DESK.x) + "px";
     el.style.top = Math.round(wPos(id).y - DESK.y) + "px";
@@ -150,13 +180,26 @@ function place(){
   }
 }
 function setOn(id, on){
-  CFG.widgets[id] = {...(CFG.widgets[id] || HOME[id] || {x: 24, y: 24}), on};
+  CFG.widgets[id] = {...(CFG.widgets[id] || HOME[baseOf(id)] || {x: 24, y: 24}), on};
   const el = $("#ovw-" + id);
   if (on && !el?.isConnected){ const c = el || mkCard(id); $("#ovroot").appendChild(c);
     c.style.left = Math.round(wPos(id).x - DESK.x) + "px"; c.style.top = Math.round(wPos(id).y - DESK.y) + "px";
     styleCard(c, id); clampCard(c) }
   else if (!on && el?.isConnected) el.remove();
   syncPanel(); ovSave(); if (on && DATA) apply(DATA);
+}
+function addInst(kind){
+  if (!KINDS[kind] || ids().filter(i => INST.test(i)).length >= MAX_INST) return null;
+  let n = 1; while (CFG.widgets[kind + "_" + n]) n++;
+  const id = kind + "_" + n, h = HOME[kind] || {x: 24, y: 24}, k = ids().length;
+  CFG.widgets[id] = {on: true, x: Math.round(DESK.x + 320 + (k % 6) * 36), y: Math.round(DESK.y + 120 + (k % 6) * 36)};
+  const c = mkCard(id); $("#ovroot").appendChild(c); place(); pick(id); syncPanel(); ovSave(); if (DATA) apply(DATA);
+  return id;
+}
+function delInst(id){
+  if (!INST.test(id)) return;
+  delete CFG.widgets[id]; $("#ovw-" + id)?.remove(); if (picked.id === id) picked.id = null;
+  syncPanel(); ovSave();
 }
 function savePos(id){
   const el = $("#ovw-" + id); if (!el) return;
@@ -181,9 +224,9 @@ const ovSave = () => { clearTimeout(saveT); saveT = setTimeout(() => {
 function apply(d){
   DATA = d;
   if (d.th) theme(d.th);
-  for (const id of Object.keys(KINDS)){
+  for (const id of ids()){
     const el = $("#ovw-" + id);
-    if (el?.isConnected) el.querySelector(".b").innerHTML = RENDER[id](d);
+    if (el?.isConnected) el.querySelector(".b").innerHTML = RENDER[baseOf(id)](d, id);
   }
   toastsShow(d.toasts);
 }
@@ -219,6 +262,8 @@ function buildPanel(){
   p.innerHTML = `<header id="ovpHead"><span class="t">Overlay edit</span><button class="btn" id="ovDone">Done</button><button class="btn alt" id="ovClose" title="Close the overlay">×</button></header>
     <p class="hint">Drag the cards — Shift skips snapping, arrows nudge. Ctrl+scroll or the corner grip resizes. All saves by itself.</p>
     <div id="ovpRows"></div>
+    <div class="foot add"><select id="ovAddKind" title="What to add">${Object.entries(KINDS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select>
+      <button class="btn alt" id="ovAdd" title="Place another card of this kind, with its own spot, size and (for stats) number">Add widget</button></div>
     <div class="foot"><label><input type="checkbox" id="ovSnap"> Snap</label><label><input type="checkbox" id="ovGrid"> Grid</label>
       <select id="ovGsize" title="Grid spacing"><option value="32">32 px</option><option value="64">64 px</option><option value="128">128 px</option></select>
       <button class="rw-all" id="ovReset">Reset layout</button></div>
@@ -231,6 +276,7 @@ function buildPanel(){
       <div class="shBtns"><button class="btn alt" id="ovShareCopy">Copy</button><button class="btn" id="ovShareApply">Apply code</button></div></div>`;
   $("#ovDone").onclick = () => window.ovhost.done();
   $("#ovClose").onclick = () => window.ovhost.close();
+  $("#ovAdd").onclick = () => addInst($("#ovAddKind").value);
   $("#ovSnap").onchange = e => { CFG.snap = e.target.checked; ovSave() };
   $("#ovGrid").onchange = e => { CFG.grid = e.target.checked; gridShow() ; ovSave() };
   $("#ovGsize").onchange = e => { CFG.gsize = +e.target.value || 64; gridShow(); ovSave() };
@@ -271,23 +317,25 @@ function buildPanel(){
 }
 function syncPanel(){
   const rows = $("#ovpRows"); if (!rows) return;
-  rows.innerHTML = Object.entries(KINDS).map(([id, name]) => { const p = wPos(id);
+  rows.innerHTML = ids().map(id => { const name = wName(id), p = wPos(id), inst = INST.test(id);
     return `<div class="wrow${p.on ? "" : " off"}${picked.id === id ? " sel" : ""}" data-w="${id}">
       <button class="eye${p.on ? "" : " off"}" title="${p.on ? "Hide" : "Show"} ${esc(name)}">${p.on ? EYE : EYEOFF}</button>
       <button class="nm" title="Pick ${esc(name)}">${esc(name)}</button>
-      <button class="st" data-d="-1" title="Smaller">−</button><span class="sv">${Math.round(p.s * 100)}%</span><button class="st" data-d="1" title="Bigger">+</button>
+      <button class="st" data-d="-1" title="Smaller">−</button><span class="sv">${Math.round(p.s * 100)}%</span><button class="st" data-d="1" title="Bigger">+</button>${inst ? `<button class="st del" title="Remove ${esc(name)}">×</button>` : ""}
     </div>
     <div class="wdet${picked.id === id ? " open" : ""}" data-w="${id}">
       <label><b>Size</b><input type="range" min="50" max="200" step="5" value="${Math.round(p.s * 100)}" data-k="s"></label>
       <label><b>Opacity</b><input type="range" min="25" max="100" step="5" value="${Math.round(p.o * 100)}" data-k="o"></label>
+      ${TOK_SETS[baseOf(id)] ? `<label><b>Shows</b><select data-k="tok">${Object.entries(TOK_SETS[baseOf(id)]).map(([k, v]) => `<option value="${k}"${tokOf(id, TOK_SETS[baseOf(id)], Object.keys(TOK_SETS[baseOf(id)])[0]) === k ? " selected" : ""}>${esc(v[0])}</option>`).join("")}</select></label>` : ""}
       <div class="xy">x <input type="number" step="1" data-k="x"> y <input type="number" step="1" data-k="y"></div>
       <button class="rw">Reset ${esc(name)}</button>
     </div>`; }).join("");
   rows.querySelectorAll(".wrow").forEach(row => {
     const id = row.dataset.w;
     row.querySelector(".eye").onclick = () => setOn(id, !wPos(id).on);
+    row.querySelector(".del")?.addEventListener("click", () => delInst(id));
     row.querySelector(".nm").onclick = () => pick(picked.id === id ? null : id);
-    row.querySelectorAll(".st").forEach(b => b.onclick = () => setS(id, wPos(id).s + .05 * +b.dataset.d));
+    row.querySelectorAll(".st[data-d]").forEach(b => b.onclick = () => setS(id, wPos(id).s + .05 * +b.dataset.d));
     row.onpointerenter = () => { const el = $("#ovw-" + id); document.body.classList.add("dim");
       if (el) el.classList.add("spot") };
     row.onpointerleave = () => { document.body.classList.remove("dim");
@@ -296,13 +344,15 @@ function syncPanel(){
   rows.querySelectorAll(".wdet").forEach(det => {
     const id = det.dataset.w, el = $("#ovw-" + id);
     det.querySelectorAll("input[type=range]").forEach(r => r.oninput = () => (r.dataset.k === "s" ? setS : setO)(id, +r.value / 100));
+    det.querySelector('select[data-k="tok"]')?.addEventListener("change", e => { CFG.widgets[id] = {...(CFG.widgets[id] || {}), tok: e.target.value}; if (DATA) apply(DATA); ovSave() });
     det.querySelectorAll("input[type=number]").forEach(n => n.onchange = () => {
       const k = n.dataset.k, v = Math.round(+n.value || 0), el2 = $("#ovw-" + id); if (!el2) return;
       el2.style[k === "x" ? "left" : "top"] = (v - DESK[k]) + "px";
       clampCard(el2); savePos(id) });
     det.querySelector(".rw").onclick = () => { const on = wPos(id).on;
-      CFG.widgets[id] = {...(HOME[id] || {x: 24, y: 24}), on};
-      if (el){ el.style.left = (HOME[id]?.x || 24) - DESK.x + "px"; el.style.top = (HOME[id]?.y || 24) - DESK.y + "px"; styleCard(el, id); clampCard(el) }
+      const home = HOME[baseOf(id)] || {x: 24, y: 24};
+      CFG.widgets[id] = {...home, on: on, ...(INST.test(id) ? {on: true} : {})};
+      if (el){ el.style.left = home.x - DESK.x + "px"; el.style.top = home.y - DESK.y + "px"; styleCard(el, id); clampCard(el) }
       syncPanel(); ovSave() };
   });
   const snap = $("#ovSnap"); if (snap) snap.checked = CFG.snap;
@@ -325,8 +375,7 @@ function pick(id){
 }
 function resetAll(){
   CFG.widgets = {};
-  for (const id of Object.keys(KINDS)){ const el = $("#ovw-" + id);
-    if (el?.isConnected) el.remove() }
+  document.querySelectorAll(".ovw").forEach(el => el.remove());
   for (const id of Object.keys(KINDS)) if ((HOME[id] || {}).on) $("#ovroot").appendChild(mkCard(id));
   pick(null); place(); syncPanel(); ovSave();
 }
@@ -344,8 +393,9 @@ function gridShow(){
 // versioned code string to paste elsewhere (Apply reads one back, validating every widget). -------------------------------
 const profCode = () => "OVL1." + btoa(JSON.stringify({widgets: CFG.widgets, panel: CFG.panel}));
 function profCards(){
-  for (const id of Object.keys(KINDS)){ const el = $("#ovw-" + id); if (!wPos(id).on && el?.isConnected) el.remove() }
-  for (const id of Object.keys(KINDS)) if (wPos(id).on && !$("#ovw-" + id)?.isConnected) $("#ovroot").appendChild(mkCard(id));
+  const live = new Set(ids().filter(id => wPos(id).on));
+  document.querySelectorAll(".ovw").forEach(el => { if (!live.has(el.dataset.w)) el.remove() });
+  for (const id of live) if (!$("#ovw-" + id)?.isConnected) $("#ovroot").appendChild(mkCard(id));
 }
 function profApply(name){
   const p = CFG.profiles[name]; if (!p) return;
@@ -365,9 +415,12 @@ function profImport(){
     const o = JSON.parse(atob(v.slice(5)));
     if (!o || typeof o.widgets !== "object" || !o.widgets) throw new Error("shape");
     const clean = {};
-    for (const id of Object.keys(KINDS)){ const w = o.widgets[id];
-      if (w && typeof w === "object") clean[id] = {on: w.on !== false, x: Math.round(+w.x || 0), y: Math.round(+w.y || 0),
-        s: clamp(Number.isFinite(+w.s) ? +w.s : 1, .5, 2), o: clamp(Number.isFinite(+w.o) ? +w.o : 1, .25, 1)} }
+    let inst = 0;
+    for (const id of Object.keys(o.widgets)){ const w = o.widgets[id];
+      if (!validId(id) || !w || typeof w !== "object" || (INST.test(id) && ++inst > MAX_INST)) continue;
+      clean[id] = {on: w.on !== false, x: Math.round(+w.x || 0), y: Math.round(+w.y || 0),
+        s: clamp(Number.isFinite(+w.s) ? +w.s : 1, .5, 2), o: clamp(Number.isFinite(+w.o) ? +w.o : 1, .25, 1)};
+      if (TOK_SETS[baseOf(id)]?.[w.tok]) clean[id].tok = w.tok }
     CFG.widgets = clean;
     if (o.panel && Number.isFinite(+o.panel.x)) CFG.panel = {x: Math.round(+o.panel.x), y: Math.round(+o.panel.y)};
     profCards(); pick(null); place(); syncPanel(); ovSave();
@@ -483,7 +536,7 @@ addEventListener("keydown", e => {
   if (!CFG.profiles || typeof CFG.profiles !== "object" || !CFG.profiles[CFG.profile])
     CFG.profiles = {[CFG.profile]: profSnap()};
   CFG.profiles[CFG.profile] = profSnap();
-  for (const id of Object.keys(KINDS)) if (wPos(id).on) $("#ovroot").appendChild(mkCard(id));
+  for (const id of ids()) if (wPos(id).on) $("#ovroot").appendChild(mkCard(id));
   buildPanel();
   gridShow();
   document.body.classList.toggle("edit", CFG.edit);

@@ -32,7 +32,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       !document.querySelector("#ovw-kills"), !document.querySelector("#ovw-mesos"), !document.querySelector("#ovw-log"),
       !document.querySelector("#ovpanel").classList.contains("hidden"), document.body.classList.contains("edit"),
       document.querySelectorAll("#ovpRows .wrow").length, !!document.querySelector("#ovSnap"), !!document.querySelector("#ovGrid"), !!document.querySelector("#ovReset")]);
-    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || st[8] !== 9 || !st[9] || !st[10] || !st[11]) fail("overlay defaults", st);
+    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || st[8] !== 11 || !st[9] || !st[10] || !st[11]) fail("overlay defaults", st);
     // a push fills the cards; the map card shows the spawn table and the respawn countdowns
     const t = Date.now();
     const payload = {t, on: true, paused: false, dummy: false, runT0: t - 7530e3, state: "Tracking · 12 min farmed",
@@ -267,6 +267,31 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     if (st !== "Tank>DPS") fail("profile with > in its name selectable", st);
     await page.selectOption("#ovProf", "Bossing"); await page.waitForTimeout(350);
     await page.evaluate(() => { CFG.profiles["Tank>DPS"] && delete CFG.profiles["Tank>DPS"]; profUi(); ovSave() }); await page.waitForTimeout(350);
+    const keepW = await page.evaluate(() => JSON.stringify(CFG.widgets));
+    // widget instances (0.2.87): a second EXP card, a Stat number with a chosen token, a Level bar; removal; the code carries them
+    await page.evaluate(() => { apply({t: Date.now(), on: true, st: {expHr: 12345, expHr5: 999, level: 31, pct: 42.5, mesosHr: 777}}) });
+    const nIn0 = await page.evaluate(() => document.querySelectorAll(".ovw").length);
+    await page.selectOption("#ovAddKind", "stat"); await page.click("#ovAdd");
+    await page.selectOption("#ovAddKind", "exp"); await page.click("#ovAdd");
+    await page.selectOption("#ovAddKind", "bar"); await page.click("#ovAdd"); await page.waitForTimeout(300);
+    st = await page.evaluate(() => [document.querySelectorAll(".ovw").length, !!$("#ovw-stat_1"), !!$("#ovw-exp_1"), $("#ovw-stat_1 .big")?.textContent, $("#ovw-bar_1 .trk i")?.style.width,
+      document.querySelector('.wrow[data-w="exp_1"] .nm').textContent]);
+    if (st[0] !== nIn0 + 3 || !st[1] || !st[2] || st[3] !== "12,345" || st[4] !== "42.5%" || st[5] !== "EXP 1") fail("widget instances added", [st, nIn0]);
+    await page.evaluate(() => pick("stat_1")); await page.selectOption('.wdet[data-w="stat_1"] select[data-k="tok"]', "mesosHr"); await page.waitForTimeout(300);
+    st = await page.evaluate(() => [$("#ovw-stat_1 .big").textContent, window.ovSaved.overlay.widgets.stat_1?.tok]);
+    if (st[0] !== "777" || st[1] !== "mesosHr") fail("stat token picker", st);
+    const code2 = await page.evaluate(() => profCode());
+    await page.click('.wrow[data-w="exp_1"] .del'); await page.waitForTimeout(300);
+    st = await page.evaluate(() => [!!$("#ovw-exp_1"), !!window.ovSaved.overlay.widgets.exp_1]);
+    if (st[0] || st[1]) fail("instance removed", st);
+    await page.evaluate(c => { $("#ovShareIn").value = c; profImport() }, code2); await page.waitForTimeout(300);
+    st = await page.evaluate(() => [!!$("#ovw-exp_1"), $("#ovw-stat_1 .big").textContent, !!$("#ovw-bar_1")]);
+    if (!st[0] || st[1] !== "777" || !st[2]) fail("instances survive a share code", st);
+    // a hostile code can't invent kinds or more than MAX_INST instances
+    st = await page.evaluate(() => { const w = {zzz_1: {x: 1, y: 1}, "exp_0": {x: 1, y: 1}, "__proto__": {x: 1}}; for (let i = 1; i <= 15; i++) w["log_" + i] = {x: i, y: i};
+      $("#ovShareIn").value = "OVL1." + btoa(JSON.stringify({widgets: w})); profImport(); return Object.keys(CFG.widgets) });
+    if (st.length !== 12 || st.some(k => !/^log_\d+$/.test(k))) fail("import caps instances and drops unknown ids", st);
+    await page.evaluate(k => { CFG.widgets = JSON.parse(k); profCards(); place(); syncPanel(); ovSave() }, keepW); await page.waitForTimeout(400);   // back to the layout the later scenes expect
     await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.left = "500px"; savePos("exp") });
     await page.waitForTimeout(350);   // the save (and the profile mirror) debounce
     const movedX = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);
@@ -303,6 +328,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.mouse.move(kbox.x + 6, kbox.y + 6); await page.mouse.down();
     await page.mouse.move(kbox.x - 20, kbox.y - 20, {steps: 4}); await page.mouse.up();
     await page.waitForTimeout(350);
+    await page.evaluate(() => { $("#ovpanel").style.left = "900px" });   // the panel is taller now (Add widget row, Stat + Level bar rows) and covered the EXP card at x=500
     if (!await page.evaluate(() => window.ovSaved.overlay.widgets.status.x >= 0 && window.ovSaved.overlay.widgets.status.y >= 0)) fail("drag clamped to the desk", window.ovSaved.overlay.widgets.status);
     await page.click("#ovw-exp header .x");
     await page.waitForTimeout(350);

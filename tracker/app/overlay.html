@@ -115,6 +115,7 @@
   .wrow:hover, .wrow.sel { background:color-mix(in srgb, var(--accent-soft) 55%, transparent); }
   .wrow .eye, .wrow .st { background:none; border:0; color:var(--muted); cursor:pointer; font:inherit; width:21px; height:21px; border-radius:6px; line-height:1; padding:0; display:grid; place-items:center; }
   .wrow .eye:hover, .wrow .st:hover { color:var(--accent); background:color-mix(in srgb, var(--panel) 60%, transparent); }
+  .wrow .st.del:hover { color:var(--bad); } .wdet select { flex:1; min-width:0; } #ovpanel .foot.add select { flex:1; min-width:0; }
   .wrow .eye.off { color:var(--muted); opacity:.6; }
   .wrow .nm { flex:1; text-align:left; background:none; border:0; color:var(--ink); font:inherit; font-size:12px; font-weight:600; cursor:pointer; padding:2px 4px; border-radius:6px; white-space:nowrap; }
   .wrow.off .nm { color:var(--muted); font-weight:400; }
@@ -128,6 +129,7 @@
   .wdet input[type=number] { width:64px; background:color-mix(in srgb, var(--panel) 70%, transparent); border:1px solid var(--line); color:var(--ink); border-radius:6px; font:inherit; font-size:11px; padding:2px 5px; }
   .wdet .rw { margin-left:auto; background:none; border:0; color:var(--muted); font:inherit; font-size:11px; cursor:pointer; padding:2px 6px; border-radius:6px; text-decoration:underline; }
   .wdet .rw:hover { color:var(--bad); }
+  #ovpRows { max-height:calc(100vh - 300px); overflow-y:auto; scrollbar-width:thin; }
   #ovpanel .foot { display:flex; align-items:center; gap:9px; margin-top:7px; padding-top:7px; border-top:1px solid color-mix(in srgb, var(--line) 65%, transparent); }
   #ovpanel .foot label { display:inline-flex; gap:5px; align-items:center; font-size:12px; cursor:pointer; }
   #ovpanel .foot input { accent-color:var(--accent); margin:0; }
