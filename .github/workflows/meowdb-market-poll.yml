@@ -1,7 +1,9 @@
 # Every 3 hours: meowdb Free Market (price summaries + live listings, no login) -> data/sources/meowdb_market.json + D.mdb,
-# commit to main (pages.yml builds the page). meowdb sits behind Cloudflare, so the fetch runs in headless Chromium (~30 min).
+# commit to main (pages.yml builds the page). meowdb sits behind Cloudflare, so the fetch runs in Chromium (~30 min).
+# 2026-10-28: meowdb 403s headless browsers on its market API ("Headless browsers are blocked here"), so the fetch
+# runs a real headed Chromium under xvfb (probe-verified); if the wall widens, the fetcher drops browse discovery and
+# sweeps the open per-item endpoints instead (see scripts/fetch_meowdb_market.js). A failed fetch keeps the old file.
 # The fetch job runs outside the main-pipeline group so the meso.watch poll isn't held up; only the commit job queues with it.
-# A failed fetch keeps the old file and commits nothing. No vendor/ needed.
 # Step-level timeouts (audit P11): a hung step releases the shared lock before the job ceiling (commit job).
 name: meowdb market poll
 on:
@@ -21,7 +23,8 @@ jobs:
         with: { node-version: 22 }
       - run: npm i --no-save playwright@1.64.1 && npx playwright install --with-deps chromium   # pinned (was latest)
         timeout-minutes: 12
-      - run: cp data/sources/meowdb_market.json /tmp/old.json 2>/dev/null || true; node scripts/fetch_meowdb_market.js
+      - run: which xvfb-run || sudo apt-get install -y xvfb   # headed chromium needs a display (preinstalled on runner images)
+      - run: cp data/sources/meowdb_market.json /tmp/old.json 2>/dev/null || true; xvfb-run -a node scripts/fetch_meowdb_market.js
         timeout-minutes: 40
       - name: Keep only a new file
         run: cmp -s data/sources/meowdb_market.json /tmp/old.json && rm data/sources/meowdb_market.json || true
