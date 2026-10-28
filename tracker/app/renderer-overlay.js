@@ -30,6 +30,7 @@ function ovBuild(s){
       round: kpq.round ? {t0: kpq.round.t0} : null, clock: kpq.left !== null ? {left: kpq.left, leftT: kpq.leftT} : null, hold: !!kpq.hold} : null,
     party: partyLive,
     feed: ovFeed.slice(-8),
+    toasts: alertToasts.slice(-3),   // the conditions engine's fired alerts (renderer-alerts.js), aged out by the overlay
     th: {c: r.c, mode: r.mode}};
 }
 function ovSend(force){

@@ -110,12 +110,26 @@ const path = require("path"), {chromium} = require("playwright");
   const gl = await page.evaluate(() => { const t = Date.now() - 200e3; session.add({t, type: "bar", exp: 5000, pct: 5000 / GAMEDATA.exp[22] * 100, level: 22});
     session.add({t: t + 10e3, type: "bar", exp: 6000, pct: 6000 / GAMEDATA.exp[22] * 100, level: 22}); session.add({t: t + 20e3, type: "bar", exp: 5500, pct: 5500 / GAMEDATA.exp[22] * 100, level: 22});
     session.state.lastExpT = Date.now() - 130e3;   // last EXP over 2 minutes ago
-    render(); return [document.querySelector("#deaths").textContent, document.querySelector("#goalK").textContent, document.querySelector("#goalV").textContent, document.querySelector("#status").textContent] });
-  if (gl[0] !== "1" || gl[1] !== "Level 23 in" || !/h|min/.test(gl[2]) || !/No EXP for 2 minutes/.test(gl[3])) throw new Error("goal/deaths/stop: " + gl);
+    render(); alertsTick(); return [document.querySelector("#deaths").textContent, document.querySelector("#goalK").textContent, document.querySelector("#goalV").textContent, document.querySelector("#status").textContent] });
+  if (gl[0] !== "1" || gl[1] !== "Level 23 in" || !/h|min/.test(gl[2]) || !/No EXP for 2 min/.test(gl[3])) throw new Error("goal/deaths/stop: " + gl);
   // Next level (the default) and Off
   await page.click("#goalNext"); await page.waitForTimeout(50);
   const gn = await page.evaluate(() => [settings.goal, document.querySelector("#goal").value, document.querySelector("#goalNext").getAttribute("aria-pressed"), session.stats().goalLevel === session.stats().level + 1]);
   if (gn.join() !== "next,,true,true") throw new Error("goal next: " + gn);
+  // conditions & alerts (0.2.78): the migrated row renders, a new alert edits + saves through, Test fires the real path
+  const arow0 = await page.evaluate(() => [...document.querySelectorAll("#alertList .arow")].map(r => r.querySelector(".akind").value));
+  if (arow0.join() !== "idleExp") throw new Error("alerts migration row: " + arow0);
+  await page.click("#alertAdd"); await page.waitForTimeout(60);
+  await page.selectOption("#alertList .arow >> nth=1 >> .akind", "lootWorth");
+  await page.fill('#alertList .arow >> nth=1 >> .ap[data-k="v"]', "123");
+  await page.dispatchEvent('#alertList .arow >> nth=1 >> .ap[data-k="v"]', "change");
+  await page.waitForTimeout(450);   // the save debounces 300 ms
+  const asaved = await page.evaluate(() => window.st.alerts);
+  if (!Array.isArray(asaved) || asaved.length !== 2 || asaved[1].kind !== "lootWorth" || asaved[1].v !== 123) throw new Error("alerts saved: " + JSON.stringify(asaved));
+  await page.click('#alertList .arow >> nth=1 >> .atest');
+  if (!/picked up \(test\)/.test(await page.textContent("#status"))) throw new Error("alert test fire: " + await page.textContent("#status"));
+  await page.click('#alertList .arow >> nth=1 >> .adel'); await page.waitForTimeout(450);
+  if (await page.evaluate(() => window.st.alerts.length) !== 1) throw new Error("alert removed: " + JSON.stringify(window.st.alerts));
   await page.click("#goalOff"); await page.waitForTimeout(50);
   if (await page.evaluate(() => session.stats().goalLevel) !== null) throw new Error("goal off");
   // potions used (from the quick-slot counts): cost per hour and the list

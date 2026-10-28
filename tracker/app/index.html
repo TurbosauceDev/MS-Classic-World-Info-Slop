@@ -281,6 +281,16 @@
   button.keyset { font-family:ui-monospace, "Cascadia Mono", Consolas, monospace; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-bottom-width:2px; }
   button.keyset.off { color:var(--muted); font-style:italic; font-family:inherit; }
   /* on/off switches (every checkbox with a label: Settings and the Alerts box) */
+  /* conditions & alerts rows (0.2.78): one line per alert — on, kind, its fields, sound, test, remove */
+  #alertList .arow { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:7px 0 2px; padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:color-mix(in srgb, var(--panel) 60%, transparent); }
+  #alertList .arow:has(.aon:not(:checked)) { opacity:.55; }
+  #alertList .arow > * { flex:none; }
+  #alertList .akind { min-width:130px; }
+  #alertList .ap { width:90px; } #alertList .ap[data-k="names"], #alertList .ap[data-k="name"] { width:190px; }
+  #alertList .apw { display:inline-flex; gap:4px; align-items:center; font-size:12px; color:var(--muted); }
+  #alertList .anote { flex-basis:100%; font-size:11px; color:var(--muted); margin:0; }
+  #alertList button.adel { background:none; border:0; color:var(--muted); font:inherit; cursor:pointer; padding:1px 6px; border-radius:6px; }
+  #alertList button.adel:hover { color:var(--bad); }
   label.chk { gap:10px; cursor:pointer; } label.chk input[type=checkbox] { appearance:none; flex:none; width:32px; height:18px; margin:1px 0 0; border-radius:9px; background:var(--line); position:relative; cursor:pointer; transition:background .15s; border:0; }
   label.chk input[type=checkbox]::before { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:var(--panel); box-shadow:0 1px 2px rgba(0,0,0,.3); transition:transform .15s; }
   label.chk input[type=checkbox]:checked { background:var(--accent); } label.chk input[type=checkbox]:checked::before { transform:translateX(14px); }
@@ -502,9 +512,8 @@
       <div class="note" id="kpqNote">During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.</div></div>
     <div class="card folded" id="alertsBox" data-box="alerts" data-title="Alerts and goal"><h3>Alerts and goal</h3>
       <div class="row"><span>Goal:</span> <button id="goalNext" class="alt" aria-pressed="true" title="Always the level after the one you're on">Next level</button> <label>or level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="-"></label> <button id="goalOff" class="alt" aria-pressed="false">Off</button></div>
-      <div class="row"><label>Beep for drops worth <input type="number" id="alert" min="0" step="1000"> mesos or more</label> <span class="note">0 = off</span></div>
-      <div class="row"><label style="flex:1;min-width:0">Beep for these drops <input id="alertItems" maxlength="500" style="width:100%;box-sizing:border-box" placeholder="e.g. Bronze Ore, Glove scroll"></label> <span class="note" id="alertItemsNote"></span></div>
-      <label class="chk"><input type="checkbox" id="stopBeep"> <span>Beep when EXP stops for 2 minutes (died, disconnected, map taken)</span></label>
+      <div id="alertList"></div>
+      <div class="row"><button id="alertAdd" class="alt">Add alert</button> <span class="note">A condition fires its sound, a toast on the overlay and a run-log line while it holds. Test previews one.</span></div>
     </div>
     <div class="card" id="mesoBox" data-box="mesos" data-title="Mesos"><h3>Mesos</h3><div class="grid" id="mesoGrid"><div class="empty" style="grid-column:1/-1">Mesos picked up and spent, loot worth and net show here once you press Start.</div></div><div class="note" id="mesoNote"></div></div>
     <div class="card" data-box="items" data-title="Items looted"><h3>Items looted</h3><table id="items"></table><div class="empty" id="itemsEmpty">Nothing picked up yet.</div>
@@ -726,12 +735,14 @@
   <script src="../core/session.js"></script>
   <script src="../core/feed.js"></script>
   <script src="../core/history.js"></script>
+  <script src="../core/alerts.js"></script>
   <script src="readers.js"></script>
   <script src="themes.js"></script>
   <script src="changelog.js"></script>
   <script src="renderer.js"></script>
   <script src="renderer-layout.js"></script>
   <script src="renderer-live.js"></script>
+  <script src="renderer-alerts.js"></script>
   <script src="renderer-run.js"></script>
   <script src="renderer-history.js"></script>
   <script src="renderer-settings.js"></script>

@@ -167,6 +167,29 @@ function apply(d){
     const el = $("#ovw-" + id);
     if (el?.isConnected) el.querySelector(".b").innerHTML = RENDER[id](d);
   }
+  toastsShow(d.toasts);
+}
+// the conditions engine's toasts (0.2.78): a glass stack top-right, gone after 6.5 s or when the tracker pulls them;
+// the card they belong to pulses three times (WeakAuras' region flash). Never while editing — edit mode is for layout.
+const flashed = new Set();
+function toastsShow(list){
+  const box = $("#ovtoasts"), now = Date.now();
+  const live = (Array.isArray(list) ? list : []).filter(x => x && now - x.at < 6500);
+  box.classList.toggle("hidden", CFG.edit || !live.length);
+  const have = new Set([...box.children].map(el => el.dataset.at));
+  for (const x of live){
+    if (!have.has(String(x.at))){
+      const el = document.createElement("div");
+      el.className = "toast " + (x.sev || "info"); el.dataset.at = x.at; el.textContent = x.text;
+      box.appendChild(el);
+    }
+    if (x.w && !flashed.has(x.at) && !CFG.edit){
+      flashed.add(x.at); if (flashed.size > 8) flashed.delete(flashed.values().next().value);
+      const c = $("#ovw-" + x.w);
+      if (c){ c.classList.remove("flash"); void c.offsetWidth; c.classList.add("flash"); setTimeout(() => c.classList.remove("flash"), 2400) }
+    }
+  }
+  for (const el of [...box.children]) if (!live.some(x => String(x.at) === el.dataset.at)) el.remove();
 }
 
 // ---- the edit panel (was a checkbox strip; now one in-style card): rows with an eye toggle and size steppers, a detail
@@ -398,6 +421,7 @@ addEventListener("keydown", e => {
     $("#ovpanel").classList.toggle("hidden", !CFG.edit);
     if (!CFG.edit){ hideGuides(); pick(null) }
     gridShow();   // the grid follows edit mode: locked hides it, editing brings it back if the preference says so
+    toastsShow(DATA ? DATA.toasts : []);   // toasts too: hidden at once while editing, back when the push resumes
     place(); ovSave();
   });
   window.ovhost.onScreens(d => { if (d?.width){ DESK = d; place() } });

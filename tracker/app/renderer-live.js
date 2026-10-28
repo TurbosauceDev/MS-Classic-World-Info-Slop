@@ -71,12 +71,15 @@ function alertSet(){
 }
 function flash(){ $("#top").classList.remove("flash"); void $("#top").offsetWidth; $("#top").classList.add("flash") }
 function dropAlert(id){
-  const min = +settings.alertWorth || 0, worth = GrindSession.lootPrice(G, id).each;
-  if (alertSet().has(String(id))){ beep(660, 0.15); setTimeout(() => beep(990, 0.25), 180); flash(); $("#status").textContent = `Drop you're watching for: ${G.items[id]?.n || "item " + id}`; return }
+  const worth = GrindSession.lootPrice(G, id).each, name = G.items[id]?.n || "item " + id;
+  // the conditions engine owns drop alerts once it has any (0.2.78); the old keys stay for a page that booted without it
+  if (typeof alertHas === "function" && (alertHas("lootWorth") || alertHas("lootNamed"))){ alertEvent({t: Date.now(), name, worth}); return }
+  const min = +settings.alertWorth || 0;
+  if (alertSet().has(String(id))){ beep(660, 0.15); setTimeout(() => beep(990, 0.25), 180); flash(); $("#status").textContent = `Drop you're watching for: ${name}`; return }
   if (!min || worth < min) return;
   flash();
   beep(880, 0.25);
-  $("#status").textContent = `Valuable drop: ${G.items[id]?.n || "item " + id} (worth ~${fmt(worth)})`;
+  $("#status").textContent = `Valuable drop: ${name} (worth ~${fmt(worth)})`;
 }
 
 // party view: every minute, our numbers go up with the party code and everyone's come back
@@ -99,10 +102,11 @@ async function sendParty(){
     + `</table><div class="note">Each member's own EXP/hr, updated every minute. Members who stopped drop off after 3 minutes.</div>`;
 }
 
-// EXP stopped: one low beep when no EXP for 2 minutes after some came in; again only after EXP comes back and stops again
+// EXP stopped: one low beep when no EXP for 2 minutes after some came in; again only after EXP comes back and stops again.
+// The conditions engine's "No EXP for" alert replaces this when one exists (0.2.78) — same words, editable, cool-headed.
 let stopWarned = false;
 function stopCheck(s){
-  if (wrap || settings.stopBeep === false || !s.lastExpT) return;
+  if (wrap || settings.stopBeep === false || (typeof alertHas === "function" && alertHas("idleExp")) || !s.lastExpT) return;
   const quiet = Date.now() - s.lastExpT > 120e3;
   if (quiet && !stopWarned){ stopWarned = true; beep(330, 0.6); $("#status").textContent = "No EXP for 2 minutes. Died, disconnected, or someone took the map?" }
   if (!quiet) stopWarned = false;

@@ -12,8 +12,6 @@ $("#meatOnly").onchange = () => host.settings({meatOnly: $("#meatOnly").checked}
 const setGoal = v => host.settings({goal: v}).then(s => { settings = s; session?.setGoal(goalOf()); goalUi(); if (session) render(); if (typeof etaDraw === "function") etaDraw() });
 $("#goal").onchange = e => { const v = Math.round(+e.target.value || 0); setGoal(v >= 2 ? Math.min(200, v) : "next") };
 $("#goalNext").onclick = () => setGoal("next"); $("#goalOff").onclick = () => setGoal("off");
-$("#alertItems").onchange = e => host.settings({alertItems: e.target.value.slice(0, 500)}).then(s => { settings = s; const n = alertSet().size; $("#alertItemsNote").textContent = n ? n + " item" + (n > 1 ? "s" : "") + " watched" : "" });
-$("#alert").onchange = e => host.settings({alertWorth: Math.max(0, +e.target.value || 0)}).then(s => settings = s);
 const fullView = () => { document.body.classList.remove("mini"); document.body.classList.remove("focus"); if (fitsWindow()) requestAnimationFrame(() => compactFit(true)); else host.mini(false) };
 $("#miniBtn").onclick = () => { document.body.classList.remove("focus"); document.body.classList.add("mini"); miniH = 0; if (session) renderMini(session.stats()); else miniFit(true) };
 $("#miniFull").onclick = fullView;

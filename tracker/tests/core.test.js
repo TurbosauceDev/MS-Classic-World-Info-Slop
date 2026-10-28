@@ -521,4 +521,84 @@ console.log("today, goal ETA, setup codes, autosave ok");
   }
   for (const [v, d, t] of LOG) assert.ok(/^\d+\.\d+\.\d+$/.test(v) && /^2026-\d\d-\d\d$/.test(d) && t.length > 5, "entry " + v);
 }
+
+// conditions & alerts (0.2.78): the engine over synthetic snapshots — thresholds held and crossed, respawn/KPQ/session/goal
+// triggers, drop events, idle, migration from the pre-0.2.78 keys (no screen needed)
+{ const A = require("../core/alerts.js"), T = T0 + 3600e3, mins = m => T + m * 6e4;
+  const base = {on: true, paused: false, respawns: [], events: [], kpq: null, runT0: 0};
+  // normalize: unknown kinds out, numbers finite, defaults in
+  const nl = A.normalize([{kind: "nope"}, {kind: "expHrBelow", v: "x"}, {kind: "lootWorth", v: 5, on: false}]);
+  assert.strictEqual(nl.length, 2);
+  assert.strictEqual(nl[0].v, 1000); assert.strictEqual(nl[0].min, 2); assert.strictEqual(nl[0].sound, "low");
+  assert.strictEqual(nl[1].v, 5); assert.strictEqual(nl[1].on, false);
+  // migration from the pre-0.2.78 keys
+  const mig = A.synth({alertWorth: 1e6, alertItems: "Bronze Ore, Glove scroll", stopBeep: false});
+  assert.deepStrictEqual(mig.map(a => a.kind), ["lootWorth", "lootNamed"]);
+  assert.deepStrictEqual(A.synth({}).map(a => a.kind), ["idleExp"]);
+  assert.deepStrictEqual(A.synth({stopBeep: false}).map(a => a.kind), []);
+  // sustained: EXP/hr (last 5 min) under 1,000 for 2 min; refire after 10; recover re-arms
+  const al = [{id: "x", kind: "expHrBelow", on: true, sound: "low", toast: true, log: true, v: 1000, min: 2}], sx = {};
+  assert.strictEqual(A.evaluate(al, {...base, st: {expHr5: 2000}}, sx, mins(0)).length, 0);
+  assert.strictEqual(A.evaluate(al, {...base, st: {expHr5: 500}}, sx, mins(1)).length, 0, "holding, not long enough");
+  assert.strictEqual(A.evaluate(al, {...base, st: {expHr5: 500}}, sx, mins(2)).length, 0, "held 1 of 2 min");
+  let f = A.evaluate(al, {...base, st: {expHr5: 500}}, sx, mins(3) + 1000);
+  assert.strictEqual(f.length, 1); assert.match(f[0].text, /500/); assert.strictEqual(f[0].w, "exp");
+  assert.strictEqual(A.evaluate(al, {...base, st: {expHr5: 400}}, sx, mins(4)).length, 0, "still bad: cooldown");
+  assert.ok(A.evaluate(al, {...base, st: {expHr5: 400}}, sx, mins(14)).length >= 1, "refire after 10 min");
+  assert.strictEqual(A.evaluate(al, {...base, st: {expHr5: 5000}}, sx, mins(15)).length, 0, "recovered");
+  assert.strictEqual(A.evaluate(al, {...base, st: {expHr5: 500}}, sx, mins(16)).length, 0, "needs the hold again");
+  assert.strictEqual(A.evaluate(al, {...base, st: {expHr5: 500}}, sx, mins(18)).length, 0, "cooldown from the earlier refire");
+  assert.strictEqual(A.evaluate(al, {...base, st: {expHr5: 500}}, sx, mins(24) + 1000).length, 1, "cool again: says it");
+  // crossing: fires on the rise, again only after a dip back under
+  const up = [{id: "y", kind: "expHrAbove", on: true, sound: "mid", toast: true, log: true, v: 1000}], su = {};
+  assert.strictEqual(A.evaluate(up, {...base, st: {expHr5: 800}}, su, mins(0)).length, 0);
+  assert.strictEqual(A.evaluate(up, {...base, st: {expHr5: 1500}}, su, mins(1)).length, 1);
+  assert.strictEqual(A.evaluate(up, {...base, st: {expHr5: 1600}}, su, mins(2)).length, 0);
+  assert.strictEqual(A.evaluate(up, {...base, st: {expHr5: 900}}, su, mins(3)).length, 0, "dips: re-arms");
+  assert.strictEqual(A.evaluate(up, {...base, st: {expHr5: 1500}}, su, mins(5)).length, 0, "within the anti-flap guard");
+  assert.strictEqual(A.evaluate(up, {...base, st: {expHr5: 1500}}, su, mins(6) + 1000).length, 1, "past the guard: fires");
+  // boss due: once per kill, again on the next kill; gone when the map has no timers
+  const bd = [{id: "b", kind: "bossDue", on: true, sound: "high", toast: true, log: true, min: 2}], sb = {};
+  const R = k => [{name: "Mushmom", boss: true, killed: k, dueIn: 30e3}];
+  assert.strictEqual(A.evaluate(bd, {...base, respawns: R(T - 6e5)}, sb, T).length, 1);
+  assert.strictEqual(A.evaluate(bd, {...base, respawns: R(T - 6e5)}, sb, T + 1e4).length, 0, "same kill: once");
+  assert.strictEqual(A.evaluate(bd, {...base, respawns: R(T + 6e4)}, sb, T + 6e4).length, 1, "next kill fires again");
+  assert.strictEqual(A.evaluate(bd, {...base, respawns: []}, sb, T + 7e4).length, 0);
+  // KPQ clock: once per round
+  const kp = [{id: "k", kind: "kpqClock", on: true, sound: "high", toast: true, log: true, sec: 60}], sk = {};
+  assert.strictEqual(A.evaluate(kp, {...base, kpq: {left: 45e3, rounds: 3}}, sk, T).length, 1);
+  assert.strictEqual(A.evaluate(kp, {...base, kpq: {left: 20e3, rounds: 3}}, sk, T + 5e3).length, 0);
+  assert.strictEqual(A.evaluate(kp, {...base, kpq: {left: 50e3, rounds: 4}}, sk, T + 6e3).length, 1);
+  // session break: at the mark, then every 15 min
+  const br = [{id: "r", kind: "sessionTime", on: true, sound: "mid", toast: true, log: true, min: 120}], sr = {};
+  assert.strictEqual(A.evaluate(br, {...base, runT0: T}, sr, T + 119 * 6e4).length, 0);
+  assert.strictEqual(A.evaluate(br, {...base, runT0: T}, sr, T + 121 * 6e4).length, 1);
+  assert.strictEqual(A.evaluate(br, {...base, runT0: T}, sr, T + 130 * 6e4).length, 0);
+  assert.strictEqual(A.evaluate(br, {...base, runT0: T}, sr, T + 137 * 6e4).length, 1);
+  // goal reached, once per level/goal pair
+  const gl = [{id: "g", kind: "goalReached", on: true, sound: "high", toast: true, log: true}], sg = {};
+  assert.strictEqual(A.evaluate(gl, {...base, st: {level: 29, goalLevel: 30}}, sg, T).length, 0);
+  assert.strictEqual(A.evaluate(gl, {...base, st: {level: 30, goalLevel: 30}}, sg, T + 1e3).length, 1);
+  assert.strictEqual(A.evaluate(gl, {...base, st: {level: 31, goalLevel: 30}}, sg, T + 2e3).length, 0);
+  // drop events: worth + watched names, no refire on the same pickup
+  const lw = [{id: "w", kind: "lootWorth", on: true, sound: "mid", toast: true, log: true, v: 1e6},
+    {id: "n", kind: "lootNamed", on: true, sound: "high", toast: true, log: true, names: "glove"}], sw = {};
+  const ev = [{t: T, name: "Glove ATK Scroll", worth: 2e6}];
+  f = A.evaluate(lw, {...base, events: ev}, sw, T);
+  assert.deepStrictEqual(f.map(x => x.id).sort(), ["n", "w"]);
+  assert.strictEqual(A.evaluate(lw, {...base, events: ev}, sw, T + 1).length, 0, "same pickup: once");
+  assert.strictEqual(A.evaluate(lw, {...base, events: [{t: T + 1, name: "Bronze Ore", worth: 5}]}, sw, T + 2).length, 0);
+  // idle: fires once per quiet stretch, not while paused, back after EXP returns and stops again
+  const id = [{id: "i", kind: "idleExp", on: true, sound: "low", toast: true, log: true, min: 2}], si = {};
+  const iq = {...base, st: {lastExpT: T - 3 * 6e4}};
+  assert.strictEqual(A.evaluate(id, iq, si, T).length, 1);
+  assert.strictEqual(A.evaluate(id, iq, si, T + 1e4).length, 0);
+  assert.strictEqual(A.evaluate(id, {...base, paused: true, st: {lastExpT: T - 3 * 6e4}}, si, T + 2e4).length, 0, "paused: no idle alert");
+  assert.strictEqual(A.evaluate(id, {...base, st: {lastExpT: T}}, si, T + 2e4).length, 0, "EXP came back");
+  assert.strictEqual(A.evaluate(id, iq, si, T + 3e4).length, 1, "quiet again: fires again");
+  // has(): the renderer's gates for the legacy paths
+  assert.ok(A.has([{kind: "idleExp", on: true}], "idleExp", true) && !A.has([{kind: "idleExp", on: false}], "idleExp", true));
+}
+console.log("alerts ok");
+
 console.log("patch notes ok");

@@ -255,3 +255,14 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - 0.2.71 (Danny OK'd mockup card 2): #snaps and #invBox boxes are gone; their contents live in #mainStrip in the main card (ids kept: s0lv/s1pct/snapStart/snapEnd/#invTabs/#invAsk; fields behind #snapFix). Old saves listing "snaps"/"invcheck" skip them. Tiles: Per hour/Total (settings.tileTotal, renderTiles in renderer.js) + Loot tile.
 - Simple Mode = simpleDraw/smChart (renderer-layout.js) from stats() perMin/bestMin/firstBar/bar (session.js pmBar/pmMsg per clock minute). Spawns = sum of G.maps[id][2] counts (OSMS). Not built yet: minimap crop and region name from the mockup.
 - Loot value rule: session.js `lootPrice` (exported): Etc except 4003/4004/4005/4010/4011/4020/4021 ids at NPC price, the rest meso.watch median else NPC. All loot values (tables, History, best drop, drop alert) go through it.
+- Conditions & alerts (0.2.78, the ElvUI/WeakAuras arc build 1): core/alerts.js is the pure engine — KINDS (13 trigger kinds:
+  rate under/over with a hold, bossDue, kpqClock, sessionTime, goalReached, idleExp, lootWorth, lootNamed), normalize,
+  synth (migrates the pre-0.2.78 keys alertWorth/alertItems/stopBeep into alerts[] once; renderer-settings.js's boot calls
+  alertsBoot()), evaluate(alerts, ctx, st, now) -> fired[{id, text, sev, sound, toast, log, w}]. Sustained triggers refire
+  at most every COOL 10 min; crossing triggers re-arm only after a dip (5-min anti-flap); events (drops) fire at once via
+  alertEvent() in renderer-alerts.js, the rest on its 5 s alertsTick(). Actions: alertSound (WebAudio patterns via beep:
+  low/mid/high/double), flash, #status, note() run-log line, and alertToasts[] -> ovBuild payload.toasts -> overlay
+  toastsShow (glass stack top-right, aged 6.5 s, hidden while CFG.edit, the toast's w card pulses via .ovw.flash).
+  dropAlert keeps the legacy alertWorth/alertItems path only when the engine has no enabled loot alert (ui.test drives it
+  that way); stopCheck skips when an enabled idleExp alert exists. Settings UI: #alertList rows (kind select rebuilds the
+  row's fields, number inputs save as numbers, sound select, Test, ✕), debounced host.settings({alerts}).

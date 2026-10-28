@@ -80,6 +80,19 @@
   /* snap guides (WeakAuras' alignment lines): one vertical + one horizontal accent line while a dragged card aligns. */
   .gl { position:fixed; z-index:8; pointer-events:none; background:var(--accent); box-shadow:0 0 6px var(--accent); }
   #ovgv { top:0; bottom:0; width:1px; } #ovgh { left:0; right:0; height:1px; }
+  /* alert toasts (0.2.78, the conditions engine): the tracker's triggers pop these top-right while you play; the card
+     they belong to pulses (WeakAuras' region flash). Hidden while editing, like the grid — edit mode is for layout. */
+  #ovtoasts { position:fixed; top:12px; right:12px; z-index:9; display:grid; gap:6px; justify-items:end; pointer-events:none; }
+  #ovtoasts.hidden { display:none; }
+  .toast { max-width:300px; padding:7px 11px; border-radius:10px; font-size:12px; font-weight:600; color:var(--ink);
+    background:color-mix(in srgb, var(--panel) 94%, transparent);
+    -webkit-backdrop-filter:blur(16px) saturate(1.2); backdrop-filter:blur(16px) saturate(1.2);
+    border:1px solid var(--line); box-shadow:0 1px 2px rgba(0,0,0,.22), 0 12px 32px -12px rgba(0,0,0,.45); }
+  .toast.warn { border-color:color-mix(in srgb, var(--warn) 65%, var(--line)); }
+  .toast.good { border-color:color-mix(in srgb, var(--leaf) 65%, var(--line)); }
+  @keyframes ovflash { 0%,100% { box-shadow:0 1px 2px rgba(0,0,0,.22), 0 12px 32px -12px rgba(0,0,0,.45); }
+    50% { box-shadow:0 0 0 3px var(--accent), 0 12px 32px -12px rgba(0,0,0,.45); } }
+  .ovw.flash { animation:ovflash .7s ease-in-out 3; }
   /* edit panel: the checkbox strip grew into a proper panel (Danny: "an in-style selection menu instead of that strip of
      boxes") — one glass card, one row per widget, per-widget detail under the picked row, options in the footer. */
   #ovpanel { position:fixed; top:12px; left:50%; transform:translateX(-50%); z-index:10; width:302px; max-width:calc(100vw - 20px);
@@ -122,6 +135,7 @@
   <div id="ovgrid" class="hidden"></div>
   <div id="ovgv" class="gl hidden"></div>
   <div id="ovgh" class="gl hidden"></div>
+  <div id="ovtoasts" class="hidden"></div>
   <div id="ovpanel" class="hidden"></div>
   <div id="ovroot"></div>
   <script src="themes.js"></script>

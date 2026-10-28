@@ -257,4 +257,3 @@ $("#nick").onchange = e => host.settings({nick: e.target.value.trim().slice(0, 1
 const guideDone = share => host.settings({share, guideDone: true}).then(s => { settings = s; $("#share").checked = share; $("#guide").classList.add("hidden") });
 $("#guideShare").onclick = () => guideDone(true);
 $("#guideNo").onclick = () => guideDone(false);
-$("#stopBeep").onchange = e => host.settings({stopBeep: e.target.checked}).then(s => settings = s);

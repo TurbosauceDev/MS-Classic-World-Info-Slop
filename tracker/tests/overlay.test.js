@@ -57,6 +57,24 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.evaluate(d => window.ovData(d), {...structuredClone(payload), th: {c: {bg: "#101010", accent: "#ff8800", panel: "#202020", ink: "#ffffff"}, mode: "dark"}});
     if (!await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() === "#ff8800")) fail("theme tokens", 0);
     await page.evaluate(d => window.ovData(d), structuredClone(payload));   // back to the plain payload
+    // alert toasts (0.2.78): the engine's toasts hide while editing, show the moment the overlay locks (the card they
+    // belong to pulses, WeakAuras' region flash) and age out on a later push
+    const toastAt = Date.now();
+    await page.evaluate(d => window.ovData(d), {...structuredClone(payload), toasts: [{id: "x1", text: "Mushmom (boss) is back now", at: toastAt, sev: "info", w: "map"}]});
+    st = await page.evaluate(() => [document.querySelector("#ovtoasts").classList.contains("hidden"), document.querySelector("#ovtoasts").children.length]);
+    if (st[0] !== true || st[1] !== 1) fail("toasts staged while editing", st);
+    await page.evaluate(() => window.ovMode(false));
+    st = await page.evaluate(() => { const b = document.querySelector("#ovtoasts");
+      return [!b.classList.contains("hidden"), b.children.length, b.children[0]?.textContent, b.children[0]?.className,
+        document.querySelector("#ovw-map").classList.contains("flash")] });
+    if (!st[0] || st[1] !== 1 || st[2] !== "Mushmom (boss) is back now" || !/toast info/.test(st[3]) || !st[4]) fail("toast shows when locked", st);
+    await page.evaluate(() => window.ovMode(true));
+    if (!await page.evaluate(() => document.querySelector("#ovtoasts").classList.contains("hidden"))) fail("toasts hide on edit", 0);
+    await page.evaluate(() => window.ovMode(false));
+    await page.evaluate(d => window.ovData(d), {...structuredClone(payload), toasts: [{id: "x0", text: "old", at: toastAt - 7000, sev: "info"}]});
+    st = await page.evaluate(() => [document.querySelector("#ovtoasts").classList.contains("hidden"), document.querySelector("#ovtoasts").children.length]);
+    if (st[0] !== true || st[1] !== 0) fail("aged toast gone", st);
+    await page.evaluate(() => window.ovMode(true));
     // pick and choose: the panel's eye toggles Party, Kills, Loot, KPQ and the run log on; each saves
     for (const w of ["party", "kills", "loot", "kpq", "log"]) await page.click(`.wrow[data-w="${w}"] .eye`);
     await page.waitForTimeout(350);
