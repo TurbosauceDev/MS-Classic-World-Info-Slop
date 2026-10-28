@@ -493,6 +493,13 @@ console.log("history ok");
     assert.deepStrictEqual(TH.winFit({w: 400, h: 500}, 1, b, c, wa), {w: 400, h: 500, x: 1500, y: 300}, "a small size stays put");
     assert.deepStrictEqual(TH.winFit({w: 400, h: 500}, 1, {...b, x: 1800}, c, {...wa, x: -1920}), {w: 400, h: 500, x: -416, y: 300}, "pulled back onto a left monitor") }
 }
+// the overlay boots from the whole saved overlay settings, not just its widgets (0.2.87: profiles, Snap/Grid and the panel's spot were lost on every restart)
+{ const O = require("../core/overlaycfg.js");
+  const st = O.state({overlay: {edit: false, widgets: {exp: {x: 5}}, snap: false, grid: true, gsize: 32, panel: {x: 9, y: 8}, profile: "Boss", profiles: {Boss: {widgets: {}}}, junk: 1}});
+  assert.deepStrictEqual([st.snap, st.grid, st.gsize, st.profile, Object.keys(st.profiles), st.panel.x, st.junk], [false, true, 32, "Boss", ["Boss"], 9, undefined]);
+  assert.ok(/ov-state", \(\) => \(\{\.\.\.OVCFG\.state\(readSettings\(\)\)/.test(require("fs").readFileSync(require("path").join(__dirname, "../app/main.js"), "utf8")), "main.js ov-state must hand over the whole saved overlay");
+  assert.deepStrictEqual(O.state({}), {widgets: {}}); assert.deepStrictEqual(O.state({overlay: {widgets: [1], profiles: [], panel: 3, profile: 4}}), {widgets: {}});
+}
 // crash recovery (0.2.60): the autosave is swapped in whole, read back, never listed as a session, and cleared
 { const A = require("../core/autosave.js"), fs = require("fs"), os = require("os"), path = require("path");
   const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "msct-")), "sessions");

@@ -289,3 +289,9 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   #ovProfName; Del is arm-then-confirm and never deletes the last profile. Share = profCode() "OVL1." + base64 JSON;
   profImport() validates every widget (known KINDS keys, clamped s/o, rounded x/y) before swapping the live layout.
   Boot: profiles missing or lacking the active name -> seeded from the live layout; the active profile always re-mirrors.
+
+## Simple Mode restyle + overlay esc fix 2026-10-28 (0.2.86, thread "Make tracker customizable like ElvUI and WeakAuras")
+- Simple Mode (#mini .sm*) now uses one accent (--accent) for the hero number and chart, ink for the map name, flat 6 px panels, 10 px uppercase labels; --warn gold is gone from it. Focus Mode shares .smMap/.smWho/.smBox, so check both after touching them.
+- overlay.js `esc` mapped ">" to &quot; (profile names with > broke the select). Test in overlay.test.js. Study + roadmap: [tracker-customization.md](tracker-customization.md).
+- ov-state (main.js) now returns core/overlaycfg.js state(settings): the WHOLE saved overlay. Before, only widgets came back, so profiles/snap/grid/panel spot reset every launch. core.test.js pins both the helper and the main.js wiring.
+- Widget instances (0.2.86, overlay.js): card id = kind or kind_N (INST regex; "_" because the id lands in a CSS selector), ids() lists base kinds then instances, baseOf()/wName() map back. TOKENS (Stat number) and BARS (Level bar) are the display-data registry: one line adds a choice; widgets[id].tok saves it. addInst/delInst; profImport validates ids against KINDS, caps MAX_INST 12, drops unknown tok. New code touching the card list must loop ids(), not Object.keys(KINDS). Next roadmap steps (conditions, load rules, groups) are in tracker-customization.md.
