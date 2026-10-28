@@ -75,6 +75,16 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     st = await page.evaluate(() => [document.querySelector("#ovtoasts").classList.contains("hidden"), document.querySelector("#ovtoasts").children.length]);
     if (st[0] !== true || st[1] !== 0) fail("aged toast gone", st);
     await page.evaluate(() => window.ovMode(true));
+    // card sparklines (0.2.80): a payload with a spark series draws the trend under the EXP card's big number; cards that
+    // are off draw nothing; a payload without the series (old shape) leaves the slot empty
+    const spk = [...Array(8)].map((_, i) => ({t: toastAt - (8 - i) * 6e4, exp: 40000 + i * 900, mesos: 200000 + i * 4000, kills: 5000 + i * 90}));
+    await page.evaluate(d => window.ovData(d), {...structuredClone(payload), spark: spk});
+    st = await page.evaluate(sp => { const s = document.querySelector("#ovw-exp svg.spark polyline");
+      return [!!s, s ? s.getAttribute("points").split(" ").length : 0, document.querySelector("#ovw-mesos") === null,
+        RENDER.mesos({spark: sp}).includes("svg class=\"spark\""), RENDER.kills({spark: sp}).includes("svg class=\"spark\"")] }, spk);
+    if (!st[0] || st[1] !== 8 || !st[2] || !st[3] || !st[4]) fail("card sparkline", st);
+    await page.evaluate(d => window.ovData(d), structuredClone(payload));
+    if (!await page.evaluate(() => document.querySelector("#ovw-exp .spk")?.children.length === 0)) fail("sparkline clears without a series", 0);
     // pick and choose: the panel's eye toggles Party, Kills, Loot, KPQ and the run log on; each saves
     for (const w of ["party", "kills", "loot", "kpq", "log"]) await page.click(`.wrow[data-w="${w}"] .eye`);
     await page.waitForTimeout(350);

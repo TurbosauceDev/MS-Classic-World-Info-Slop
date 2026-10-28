@@ -25,6 +25,17 @@ let DATA = null, CFG = {edit: true, widgets: {}, snap: true, grid: false, gsize:
 const picked = {id: null};
 
 // ---- the widgets -----------------------------------------------------------
+// the card sparkline (0.2.80): a tiny polyline of the rate's last samples, current-coloured, a dot on the newest value.
+// Gaps (null samples) drop out; one sample or none draws nothing. Reads the theme vars live, so it follows re-themes.
+function SPK(d, k){
+  const vs = (Array.isArray(d.spark) ? d.spark : []).map(x => x?.[k]).filter(v => Number.isFinite(v));
+  if (vs.length < 2) return "";
+  const w = 122, h = 26, min = Math.min(...vs), span = (Math.max(...vs) - min) || 1;
+  const pts = vs.map((v, i) => `${(i / (vs.length - 1) * (w - 3)).toFixed(1)},${(h - 3 - (v - min) / span * (h - 6)).toFixed(1)}`);
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="${pts.join(" ")}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" opacity=".8"/>
+    <circle cx="${pts.at(-1).split(",")[0]}" cy="${pts.at(-1).split(",")[1]}" r="2.2" fill="currentColor"/></svg>`;
+}
 const RENDER = {
   status(d){
     return `<div class="big" style="font-size:14px;color:var(--ink)"><span class="dot ${d.on ? (d.paused ? "warn" : "ok") : ""}"></span>${esc(d.state || (d.on ? "Tracking" : "Stopped"))}</div>
@@ -41,15 +52,18 @@ const RENDER = {
         <div class="sub pos">+${gained.toFixed(2)}% this run</div>`;
     }
     return `<div class="big">${fmt(s.expHr || 0)}<small> EXP/hr</small></div>
+      <div class="spk">${SPK(d, "exp")}</div>
       <div class="sub">${s.expHr5 != null ? "last 5 min " + fmt(s.expHr5) : "last 5 min —"}</div>
       <div class="rows"><div><span>gained</span><b class="pos">+${fmt(s.exp || 0)}</b></div><div><span>next level</span><b>${next}</b></div></div>` + lv;
   },
   kills(d){
     return `<div class="big">${fmt(d.st?.killsHr || 0)}<small> kills/hr</small></div>
+      <div class="spk">${SPK(d, "kills")}</div>
       <div class="rows"><div><span>total</span><b>${fmt(d.st?.kills || 0)}</b></div><div><span>deaths</span><b class="${d.st?.deaths ? "neg" : ""}">${fmt(d.st?.deaths || 0)}</b></div></div>`;
   },
   mesos(d){
     return `<div class="big">${fmt(d.st?.mesosHr || 0)}<small> mesos/hr</small></div>
+      <div class="spk">${SPK(d, "mesos")}</div>
       <div class="rows"><div><span>picked up</span><b class="pos">+${fmt(d.st?.mesos || 0)}</b></div><div><span>loot/hr</span><b>${fmt(d.st?.lootHr || 0)}</b></div></div>`;
   },
   loot(d){

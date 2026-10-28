@@ -46,6 +46,10 @@
   body.locked .ovw .rsz { display:none; }
   .big { font-size:20px; font-weight:800; line-height:1.15; color:var(--accent); text-shadow:0 1px 2px rgba(0,0,0,.35); }
   .big small { font-size:11px; font-weight:600; color:var(--muted); text-shadow:none; }
+  /* the card sparkline (0.2.80): the rate's recent trend in the card's accent colour, tucked under the big number */
+  .spk { margin:3px 0 2px; color:var(--accent); }
+  .spk:empty { margin:0; }
+  .spk svg { display:block; }
   .mapname { font-size:16px; font-weight:700; color:var(--warn); line-height:1.2; overflow-wrap:anywhere; text-shadow:0 1px 2px rgba(0,0,0,.35); }
   .sub { font-size:11px; color:var(--muted); margin-top:1px; }
   .sect { font-size:10px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:7px 0 2px; }

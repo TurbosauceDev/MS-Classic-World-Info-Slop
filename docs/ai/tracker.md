@@ -266,6 +266,12 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   dropAlert keeps the legacy alertWorth/alertItems path only when the engine has no enabled loot alert (ui.test drives it
   that way); stopCheck skips when an enabled idleExp alert exists. Settings UI: #alertList rows (kind select rebuilds the
   row's fields, number inputs save as numbers, sound select, Test, ✕), debounced host.settings({alerts}).
+- Card sparklines (0.2.80): renderer-overlay.js keeps ovSpark (a ring, one ovSparkSample() every 20 s, 90 samples = 30 min;
+  reset when the session object changes) and ovBuild carries spark: ovSpark.slice(-60); overlay.js SPK(d, k) draws a tiny
+  current-coloured SVG polyline + newest dot under the big number in the EXP/Mesos/Kills cards (.spk, empty-safe: <2 samples
+  draws nothing and .spk:empty collapses the margin), so an old payload shape renders unchanged.
+- ui.test's Start wait is now waitForFunction(session != null) instead of a fixed 1.5 s sleep: the 0.2.79 dispatch run's ui
+  job lost that race on CI (same commit's push run passed) — Start's capture flow is async and runners vary.
 - Layout profiles (0.2.79, ElvUI's profiles + WeakAuras' export ritual): overlay.js CFG gains profile (active name) and
   profiles ({name: {widgets, panel}}). The live layout IS the active profile — ovSave mirrors profSnap() into
   profiles[CFG.profile] before sending, so there is nothing to remember to save; profApply(name) loads the snapshot

@@ -15,6 +15,17 @@ function ovFeedPush(lines){
   for (const l of lines) if (l?.kind) ovFeed.push({t: l.t || Date.now(), kind: l.kind, text: ovPlain(l)});
   if (ovFeed.length > 30) ovFeed.splice(0, ovFeed.length - 30);
 }
+// the rate trend (0.2.80, the card sparklines): a ring of samples, one every 20 s (30 min window), pushed with the
+// snapshot so the overlay's EXP / Mesos / Kills cards can draw where the rate has been, not just where it is
+let ovSpark = [], ovSparkSess = null;
+function ovSparkSample(){
+  if (session !== ovSparkSess){ ovSparkSess = session; ovSpark = [] }   // a new session starts a new trend
+  if (!session || timer == null) return;
+  const s = session.stats();
+  ovSpark.push({t: Date.now(), exp: s.expHr5 ?? s.expHr ?? null, mesos: s.mesosHr ?? null, kills: s.killsHr ?? null});
+  if (ovSpark.length > 90) ovSpark.shift();
+}
+setInterval(ovSparkSample, 20000);
 function ovBuild(s){
   const mid = s.nowMap != null ? String(s.nowMap) : s.map != null ? String(s.map) : null;
   const list = mid && G.maps[mid] ? G.maps[mid][2] : [];   // [mob, count] per the game data
@@ -30,6 +41,7 @@ function ovBuild(s){
       round: kpq.round ? {t0: kpq.round.t0} : null, clock: kpq.left !== null ? {left: kpq.left, leftT: kpq.leftT} : null, hold: !!kpq.hold} : null,
     party: partyLive,
     feed: ovFeed.slice(-8),
+    spark: ovSpark.slice(-60),   // the rate trend for the card sparklines (renderer-alerts.js's toasts ride along too)
     toasts: alertToasts.slice(-3),   // the conditions engine's fired alerts (renderer-alerts.js), aged out by the overlay
     th: {c: r.c, mode: r.mode}};
 }

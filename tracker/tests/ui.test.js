@@ -49,7 +49,8 @@ const path = require("path"), {chromium} = require("playwright");
   await page.waitForTimeout(100); if (dj) throw new Error("dummy data while starting");
   await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(100);
   await page.dblclick("#go");
-  await page.waitForTimeout(1500);
+  await page.waitForFunction(() => session != null, null, {timeout: 20000});   // Start's capture flow is async; CI runners are slower
+  await page.waitForTimeout(400);
   const dm2 = await page.evaluate(() => [document.querySelector("#dummyBar").classList.contains("hidden"), /Dummy/.test(document.querySelector("#feed").textContent), session.state.kills]);
   if (!dm2[0] || dm2[1] || dm2[2]) throw new Error("dummy data after Start: " + dm2);
   // run log: a batch of kills and pickups becomes one line per kind, newest at the bottom (Danny, 2026-10-18)
@@ -130,6 +131,11 @@ const path = require("path"), {chromium} = require("playwright");
   if (!/picked up \(test\)/.test(await page.textContent("#status"))) throw new Error("alert test fire: " + await page.textContent("#status"));
   await page.click('#alertList .arow >> nth=1 >> .adel'); await page.waitForTimeout(450);
   if (await page.evaluate(() => window.st.alerts.length) !== 1) throw new Error("alert removed: " + JSON.stringify(window.st.alerts));
+  // the overlay's rate trend (0.2.80): each sample lands in the ring (a new session empties it), ovBuild carries the series
+  const sp = await page.evaluate(() => { ovSparkSample(); const n0 = ovBuild(session.stats()).spark.length;
+    session.add({t: Date.now(), type: "exp", gain: 5}); render(); ovSparkSample();
+    return [n0, ovBuild(session.stats()).spark.length] });
+  if (sp[0] !== 1 || sp[1] !== 2) throw new Error("overlay spark samples: " + sp);
   await page.click("#goalOff"); await page.waitForTimeout(50);
   if (await page.evaluate(() => session.stats().goalLevel) !== null) throw new Error("goal off");
   // potions used (from the quick-slot counts): cost per hour and the list
