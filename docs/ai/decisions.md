@@ -291,7 +291,7 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 Each entry blocks something. When Danny calls it, transcribe above with the date and note the resolution here.
 
 - **maplestory.market partner key** — blocks the dashboard price slot (request at his account page; secret goes to the sandbox secrets path).
-- **classicrank.com partner key from Kitten** — blocks classicrank ingestion (same secrets path).
+- **classicrank.com partner key from Kitten** — now blocks the "Who plays what" job census, not just ingestion: the site moved its job/min_level filters behind a key (site change, docs read 2026-10-28), so the daily census refreshes chars/top/scan only (`key_required: true` in `data/sources/classicrank.json`) until a read key lands in the sandbox secrets path as BCR_KEY. Same secrets path as the others.
 - **Cron pile-up** — cut meso.watch to 2 polls/hour vs add push-retry to the poll script (Z.ai leans retry).
 - **Draft batch** — merge vs archive the web instance's `download/ms-classic-enhancements/` draft batch.
 - **web-PAT revoke** — confirm the web instance's old PAT is revoked (hygiene; fine-grained replacement already in use).
