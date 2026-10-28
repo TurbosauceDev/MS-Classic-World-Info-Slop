@@ -165,8 +165,10 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
   { const ph = await b.newPage({viewport: {width: 390, height: 800}}), e2 = []; ph.on("pageerror", e => e2.push(e.message));
     await ph.goto(URL); await ph.evaluate(() => { const b = document.querySelector("#t-snipe"); document.querySelector("#c-town").click(); b.click() });
     await ph.waitForTimeout(600);
-    const w = await ph.evaluate(() => ({page: document.documentElement.scrollWidth, top: document.querySelector("#sntop").scrollWidth > document.querySelector("#sntop").clientWidth}));
-    check(w.page <= 390 && w.top && !e2.length, `390px: no page overflow, cards swipe (${JSON.stringify(w)})`); await ph.close() }
+    // the swipe layout is the CSS contract (overflow-x auto under 600px); scrollWidth > clientWidth also depends on which
+    // items happen to be deals today (card text widths), which made this check flaky in CI (10-27)
+    const w = await ph.evaluate(() => ({page: document.documentElement.scrollWidth, top: ["auto", "scroll"].includes(getComputedStyle(document.querySelector("#sntop")).overflowX), cards: document.querySelector("#sntop").children.length}));
+    check(w.page <= 390 && w.top && w.cards >= 1 && !e2.length, `390px: no page overflow, top cards in a swipe row (${JSON.stringify(w)})`); await ph.close() }
 
   // file:// (the artifact) never fetches market.json; a listing missing from the last-seen list is marked new
   { const ap = await b.newPage(), e3 = []; ap.on("pageerror", e => e3.push(e.message)); let fetched = 0; ap.on("request", r => { if (/market\.json/.test(r.url())) fetched++ });
