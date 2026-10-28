@@ -150,18 +150,18 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
         window.ovSaved.overlay.widgets.status.s] });
     if (st[0] !== "105%" || !/scale\(1.05\)/.test(st[1]) || st[2] !== 1.05) fail("size stepper", st);
     await page.click(`.wrow[data-w="status"] .nm`);   // pick: the row's detail strip opens on the page too
-    st = await page.evaluate(() => [document.querySelector(`.wdet[data-w="status"]`).classList.contains("open"),
+    st = await page.evaluate(() => [document.querySelector(`#ovinsp .wdet[data-w="status"]`).classList.contains("open"),
       document.querySelector("#ovw-status").classList.contains("sel")]);
     if (!st[0] || !st[1]) fail("pick opens detail + ring", st);
-    await page.evaluate(() => { const r = document.querySelector(`.wdet[data-w="status"] input[data-k="o"]`);
+    await page.evaluate(() => { const r = document.querySelector(`#ovinsp .wdet[data-w="status"] input[data-k="o"]`);
       r.value = "60"; r.dispatchEvent(new Event("input", {bubbles: true})) });
     st = await page.evaluate(() => [document.querySelector("#ovw-status").style.opacity, window.ovSaved.overlay.widgets.status.o]);
     if (st[0] !== "0.6" || st[1] !== 0.6) fail("opacity slider", st);
     // the x/y inputs place the card in desktop coordinates (ElvUI's nudge HUD); parked low so the corner grip sits clear
     // of the panel (a data-filled card is wide enough for its grip to reach the panel's footprint)
-    await page.evaluate(() => { const nx = document.querySelector(`.wdet[data-w="status"] input[data-k="x"]`);
+    await page.evaluate(() => { const nx = document.querySelector(`#ovinsp .wdet[data-w="status"] input[data-k="x"]`);
       nx.value = "300"; nx.dispatchEvent(new Event("change", {bubbles: true}));
-      const ny = document.querySelector(`.wdet[data-w="status"] input[data-k="y"]`);
+      const ny = document.querySelector(`#ovinsp .wdet[data-w="status"] input[data-k="y"]`);
       ny.value = "560"; ny.dispatchEvent(new Event("change", {bubbles: true})) });
     st = await page.evaluate(() => { const el = document.querySelector("#ovw-status"); return [el.offsetLeft, el.offsetTop, window.ovSaved.overlay.widgets.status.x, window.ovSaved.overlay.widgets.status.y] });
     if (st[0] !== 300 || st[1] !== 560 || st[2] !== 300 || st[3] !== 560) fail("x/y inputs place card", st);
@@ -277,7 +277,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     st = await page.evaluate(() => [document.querySelectorAll(".ovw").length, !!$("#ovw-stat_1"), !!$("#ovw-exp_1"), $("#ovw-stat_1 .big")?.textContent, $("#ovw-bar_1 .trk i")?.style.width,
       document.querySelector('.wrow[data-w="exp_1"] .nm').textContent]);
     if (st[0] !== nIn0 + 3 || !st[1] || !st[2] || st[3] !== "12,345" || st[4] !== "42.5%" || st[5] !== "EXP 1") fail("widget instances added", [st, nIn0]);
-    await page.evaluate(() => pick("stat_1")); await page.selectOption('.wdet[data-w="stat_1"] select[data-k="tok"]', "mesosHr"); await page.waitForTimeout(300);
+    await page.evaluate(() => pick("stat_1")); await page.selectOption('#ovinsp .wdet[data-w="stat_1"] select[data-k="tok"]', "mesosHr"); await page.waitForTimeout(300);
     st = await page.evaluate(() => [$("#ovw-stat_1 .big").textContent, window.ovSaved.overlay.widgets.stat_1?.tok]);
     if (st[0] !== "777" || st[1] !== "mesosHr") fail("stat token picker", st);
     const code2 = await page.evaluate(() => profCode());
@@ -307,6 +307,30 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     st = await page.evaluate(() => ["status", "mesos", "kills"].map(k => document.querySelector("#ovw-" + k).offsetLeft + "," + document.querySelector("#ovw-" + k).offsetTop).join(" "));
     if (st !== "100,500 330,500 520,500") fail("cards settle back when the numbers shrink", st);
     await page.evaluate(k => { CFG.widgets = JSON.parse(k); profCards(); place(); syncPanel(); ovSave() }, keepW); await page.waitForTimeout(400);   // back to the layout the later scenes expect
+    // the per-module inspector (Danny 10-28): picking a card opens its own pop-up (x/y filled in, not part of the main panel),
+    // the glass fits the content, params change the card, "show when" hides it, bad saved/imported values fall back to defaults
+    await page.evaluate(() => { CFG.widgets = {status: {on: true, x: 100, y: 560}, exp: {on: true, x: 400, y: 560}}; profCards(); place(); pick("status"); apply({t: Date.now(), on: true, state: "Tracking", runT0: Date.now() - 6e4, st: {activeMin: 1, exp: 5, expHr: 100}}) });
+    st = await page.evaluate(() => { const b = document.querySelector("#ovinsp"), c = document.querySelector("#ovw-status"), pn = document.querySelector("#ovpanel");
+      return {open: !b.classList.contains("hidden"), inMain: pn.contains(b), x: b.querySelector('input[data-k="x"]').value, y: b.querySelector('input[data-k="y"]').value,
+        params: b.querySelectorAll("[data-k]").length, cardW: c.offsetWidth, body: c.querySelector(".b").getBoundingClientRect().width, panelScroll: pn.scrollWidth > pn.clientWidth} });
+    if (!st.open || st.inMain || st.x !== "100" || st.y !== "560" || st.params < 15 || st.panelScroll || st.cardW > st.body + 40) fail("inspector opens on pick, fits content", st);
+    await page.evaluate(() => { const r = document.querySelector('#ovinsp input[data-k="rad"]'); r.value = "0"; r.dispatchEvent(new Event("input", {bubbles: true}));
+      const g = document.querySelector('#ovinsp input[data-k="bg"]'); g.value = "20"; g.dispatchEvent(new Event("input", {bubbles: true}));
+      const f = document.querySelector('#ovinsp input[data-k="fs"]'); f.value = "150"; f.dispatchEvent(new Event("input", {bubbles: true})) });
+    st = await page.evaluate(() => { const c = document.querySelector("#ovw-status"), cs = getComputedStyle(c); return [cs.borderTopLeftRadius, c.style.getPropertyValue("--glass"), c.style.getPropertyValue("--fs"), CFG.widgets.status.rad, CFG.widgets.status.bg, CFG.widgets.status.fs] });
+    if (st[0] !== "0px" || st[1] !== "20%" || st[2] !== "1.5" || st[3] !== 0 || st[4] !== 20 || st[5] !== 1.5) fail("inspector params restyle the card", st);
+    await page.evaluate(() => { const s = document.querySelector('#ovinsp select[data-k="show"]'); s.value = "idle"; s.dispatchEvent(new Event("change", {bubbles: true})); CFG.edit = false; document.body.classList.add("locked"); vis() });
+    st = await page.evaluate(() => [document.querySelector("#ovw-status").classList.contains("ovhide"), document.querySelector("#ovw-exp").classList.contains("ovhide")]);
+    if (!st[0] || st[1]) fail("show-when hides a card while tracking (locked)", st);
+    await page.evaluate(() => { CFG.edit = true; document.body.classList.remove("locked"); vis() });
+    st = await page.evaluate(() => document.querySelector("#ovw-status").classList.contains("ovhide"));
+    if (st) fail("show-when never hides while editing", st);
+    st = await page.evaluate(() => { const ok = {on: true, x: 1, y: 2, rad: 99, bg: "x", acc: "red", brd: "evil", fs: "1.2", shd: "no", lines: 5, show: "idle", tok: "nope"};
+      CFG.widgets = {status: ok}; $("#ovShareIn").value = "OVL1." + btoa(JSON.stringify({widgets: {status: ok, exp: ok}})); profImport(); const w = CFG.widgets.status;
+      return {w, expHasLines: "lines" in CFG.widgets.exp} });
+    if (st.w.rad !== 26 || "bg" in st.w || "acc" in st.w || "brd" in st.w || st.w.fs !== 1.2 || "shd" in st.w || st.w.show !== "idle" || "tok" in st.w || st.expHasLines) fail("import cleans params", st);
+    await page.evaluate(() => pick(null));
+    if (!await page.evaluate(() => document.querySelector("#ovinsp").classList.contains("hidden"))) fail("inspector closes with no pick", 1);
     await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.left = "500px"; savePos("exp") });
     await page.waitForTimeout(350);   // the save (and the profile mirror) debounce
     const movedX = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);

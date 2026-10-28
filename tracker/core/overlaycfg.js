@@ -2,7 +2,7 @@
 // page only {edit, widgets, desk}, so the Snap/Grid preferences, the edit panel's spot and every layout profile were
 // saved on each change but never restored on the next launch (found 2026-10-28).
 (function (root){
-  const KEYS = ["edit", "widgets", "snap", "grid", "gsize", "panel", "profile", "profiles"];
+  const KEYS = ["edit", "widgets", "snap", "grid", "gsize", "panel", "insp", "profile", "profiles"];
   const plain = o => o && typeof o === "object" && !Array.isArray(o);
   function state(settings){
     const o = plain(settings && settings.overlay) ? settings.overlay : {}, out = {};
