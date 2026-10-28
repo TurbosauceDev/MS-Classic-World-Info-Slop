@@ -39,7 +39,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       st: {activeMin: 12.5, exp: 148000, expHr: 42500, expHr5: 51200, toLevelHrs: 2.4, kills: 1200, killsHr: 5760, mesos: 48000, mesosHr: 230000,
         lootHr: 88000, deaths: 1, level: 34, pct: 42.31, firstBar: {level: 33, pct: 12.4}, party: 3},
       map: {id: "10000013", name: "Henesys Hunting Ground I", spawns: [{name: "Green Mushroom", lv: 20, exp: 42, n: 25}, {name: "Orange Mushroom", lv: 22, exp: 50, n: 15}, {name: "Slime", lv: 15, exp: 24, n: 10}],
-        respawns: [{name: "Mano", boss: true, sec: 3600, killed: t - 37 * 60e3}, {name: "Stumpy", boss: true, sec: 1800, killed: t - 5 * 60e3}, {name: "King Slime", boss: true, sec: 900, killed: null}]},
+        respawns: [{name: "Mano", boss: true, sec: 3600, killed: t - 37 * 60e3}, {name: "Stumpy", boss: true, sec: 1800, killed: t - 5 * 60e3}, {name: "King Slime", boss: true, sec: 900, killed: null}, {name: "Mushmom", boss: true, sec: 4800, killed: t - 78 * 60e3}]},
       kpq: null, party: {expHr: 90000, members: [{you: true, level: 34, expHr: 42500}, {nick: "Bo", level: 36, expHr: 47500}]},
       feed: [{t: t - 4000, kind: "exp", text: "You gained 20 EXP"}, {t: t - 2000, kind: "loot", text: "You looted 1 Red Potion"}, {t: t - 1000, kind: "level", text: "Level 34!"}],
       th: null};
@@ -53,6 +53,9 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       fail("map card spawns", st[2]);
     if (!/Mano \(boss\).*back in ~23 min/.test(st[2]) || !/Stumpy \(boss\).*back in ~25 min/.test(st[2]) || !/King Slime \(boss\).*every 15 min/.test(st[2]))
       fail("map card respawns", st[2]);
+    // due-soon (0.2.81): a respawn back within 2 min wears the warn colour so it reads at a glance
+    st = await page.evaluate(() => [...document.querySelectorAll("#ovw-map .mrow")].map(r => r.querySelector("span").className + "|" + r.textContent).find(x => x.includes("Mushmom")));
+    if (!st || !st.startsWith("soon|") || !st.includes("back in ~2 min")) fail("due-soon respawn", st);
     // the theme tokens follow the tracker's push
     await page.evaluate(d => window.ovData(d), {...structuredClone(payload), th: {c: {bg: "#101010", accent: "#ff8800", panel: "#202020", ink: "#ffffff"}, mode: "dark"}});
     if (!await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() === "#ff8800")) fail("theme tokens", 0);

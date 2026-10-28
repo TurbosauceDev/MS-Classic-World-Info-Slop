@@ -510,6 +510,18 @@ console.log("history ok");
 }
 console.log("today, goal ETA, setup codes, autosave ok");
 
+// markKill (0.2.81): a kill the readers missed restarts a timed monster's respawn by hand — only for the timed monsters
+// of the map you're on
+{ const s2 = createSession(G); s2.add({t: T0, type: "map", id: "10000013"});   // Henesys Hunting Ground I: Mano (boss, 1 h)
+  const before = s2.respawns(T0 + 1e3);
+  assert.strictEqual(before.length, 1); assert.strictEqual(before[0].killed, null, "not killed yet");
+  assert.strictEqual(before[0].name, "Mano"); assert.strictEqual(before[0].boss, true);
+  assert.strictEqual(s2.markKill("999999"), false, "not a timed monster on this map: refused");
+  assert.ok(s2.markKill("700004"), "Mano marked killed");
+  const after = s2.respawns(Date.now() + 2e3);   // markKill stamps the real clock
+  assert.ok(after[0].killed > 0 && Math.abs(after[0].dueIn - 3600e3) < 5e3, "timer restarted for the full respawn");
+}
+
 // patch notes (changelog.js): the top entry is the version being built, so a release can't ship without its line
 { const LOG = require("../app/changelog.js"), pkg = require("../package.json");
   assert.equal(LOG[0][0], pkg.version, "add a changelog.js line for " + pkg.version);

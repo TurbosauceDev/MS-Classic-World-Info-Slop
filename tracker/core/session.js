@@ -296,7 +296,9 @@
     }
 
     const setGoal = lv => { opts.goalLevel = lv }, setFree = ids => { opts.freeIds = ids };
-    return {add, stats, shareable, respawns, setGoal, setFree, state: S};
+    // a kill the readers missed (the boss died behind a log line that didn't read): restart its timer by hand (0.2.81)
+    const markKill = id => { if (!(G.timed?.[S.map] || []).some(([mid]) => mid === String(id))) return false; S.timedKills[id] = Date.now(); return true };
+    return {add, stats, shareable, respawns, markKill, setGoal, setFree, state: S};
   }
 
   /* Shared runs (the same rules as beanguri's Maple Classic Exp Overlay): 15 minutes of non-stop farming on one map with

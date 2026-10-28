@@ -152,7 +152,11 @@ function renderRespawns(){
   if (!list.length) return;
   const mm = ms => { const m = Math.ceil(ms / 6e4); return m > 60 ? Math.floor(m / 60) + " h " + (m % 60) + " min" : m + " min" };
   box.innerHTML = `<div class="k">Respawns on this map (game data)</div><table>` + list.map(r => `<tr><td>${esc(r.name)}${r.boss ? " (boss)" : ""}</td>
-    <td class="n">${r.killed ? r.dueIn > 0 ? "back in ~" + mm(r.dueIn) : "due now" : "every " + mm(r.sec * 1000)}</td></tr>`).join("") + "</table>";
+    <td class="n${r.killed && r.dueIn != null && r.dueIn > 0 && r.dueIn <= 120e3 ? " soon" : ""}">${r.killed ? r.dueIn > 0 ? "back in ~" + mm(r.dueIn) : "due now" : "every " + mm(r.sec * 1000)}</td>
+    <td class="rk"><button class="markKill" data-id="${r.id}" title="It just died but the log line didn't read — restart the timer by hand">killed it</button></td></tr>`).join("") + "</table>";
+  box.querySelectorAll(".markKill").forEach(b => b.onclick = () => { const r = list.find(x => String(x.id) === b.dataset.id);
+    if (!session.markKill(b.dataset.id)) return;
+    note(`${r ? r.name : "Monster"} marked killed — its timer restarted`, "run"); render() });
 }
 // main card tiles: per hour of farming or totals for the run (Danny 2026-10-23), remembered in settings.tileTotal
 function renderTiles(s){

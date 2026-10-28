@@ -266,6 +266,10 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   dropAlert keeps the legacy alertWorth/alertItems path only when the engine has no enabled loot alert (ui.test drives it
   that way); stopCheck skips when an enabled idleExp alert exists. Settings UI: #alertList rows (kind select rebuilds the
   row's fields, number inputs save as numbers, sound select, Test, ✕), debounced host.settings({alerts}).
+- Respawn polish (0.2.81): due-soon = killed && 0 < dueIn <= 120e3 -> the warn colour (overlay .mrow span.soon, tracker
+  #respawn td.n.soon); session.markKill(id) (exported) stamps S.timedKills[id] = Date.now() and refuses ids that aren't
+  timed monsters of the current map; the tracker's respawn card grew a "killed it" button per row (renderer.js
+  renderRespawns -> note() run-log line + render()). The overlay stays read-only: it's click-through while locked.
 - Card sparklines (0.2.80): renderer-overlay.js keeps ovSpark (a ring, one ovSparkSample() every 20 s, 90 samples = 30 min;
   reset when the session object changes) and ovBuild carries spark: ovSpark.slice(-60); overlay.js SPK(d, k) draws a tiny
   current-coloured SVG polyline + newest dot under the big number in the EXP/Mesos/Kills cards (.spk, empty-safe: <2 samples

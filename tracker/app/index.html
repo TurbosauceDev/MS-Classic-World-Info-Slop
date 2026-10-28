@@ -149,6 +149,11 @@
   button.del { padding:1px 7px; font-size:12px; } button.del.sure { background:var(--bad); color:var(--panel); }
   #snaps input.need { border-color:var(--warn); background:var(--accent-soft); }
   #snaps table { width:auto; max-width:100%; } #snaps td { padding-right:10px; vertical-align:middle; } #snaps td:last-child { padding-right:0; }   /* Lv and % next to their labels */
+  /* respawn card (0.2.81): a due-soon tint, and the hand mark for a kill the readers missed */
+  #respawn td.n.soon { color:var(--warn); font-weight:600; }
+  #respawn td.rk { text-align:right; }
+  #respawn button.markKill { background:none; border:1px solid var(--line); color:var(--muted); font:inherit; font-size:11px; padding:1px 7px; border-radius:8px; cursor:pointer; opacity:.75; }
+  #respawn button.markKill:hover { opacity:1; color:var(--ink); border-color:var(--accent); }
   #helpBtn { padding:5px 10px; font-size:12px; font-weight:600; }
   #help details { border-top:1px solid var(--line); padding:6px 0; } #help details:first-of-type { border-top:0; }
   #help summary { cursor:pointer; font-weight:600; } #help ul { margin:6px 0 2px; padding-left:18px; } #help li { margin:3px 0; }
