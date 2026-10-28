@@ -300,17 +300,21 @@ function pwSpark(id, big){ const h = PWH[id]; if (!h) return "";
 const pwSell = id => { const p = PW[id], v = p?.[6]; return v == null || p[4] & 1 ? null : v };
 // P13/P14/P15 (Danny 2026-10-27): honesty about how far a meso.watch median can be trusted.
 // pwBand: low-data items and items whose p25-p75 band spans more than 40% of the median get a "likely" range instead of
-// a single number that pretends precision (null = the median is tight enough to stand alone).
-const pwBand = id => { const p = PW[id]; if (!p || p[0] <= 0 || p[1] == null || p[2] == null) return null;
+// a single number that pretends precision (null = the median is tight enough to stand alone). Spike-held items hide the
+// band: the quartiles describe today while the headline is yesterday's held median, so together they contradict
+// themselves (audit 2026-10-28: "Usual 469 · likely 62-275" on White Undershirt).
+const pwBand = id => { const p = PW[id]; if (!p || p[0] <= 0 || p[1] == null || p[2] == null || (p[4] & 4)) return null;
   return (p[4] & 1) || (p[2] - p[1]) / p[0] > 0.4 ? [p[1], p[2]] : null };
 // pwMoving: the last two daily medians disagree by more than 25%, so the price is in flux (138 items today).
 const pwMoving = id => { const h = PWH[id]; if (!h || h.length < 2 || !h[h.length - 2][1]) return false;
   return Math.abs(h[h.length - 1][1] - h[h.length - 2][1]) / h[h.length - 2][1] > 0.25 };
 // pwUsual: what the Usual tile should say for a meso.watch item. A moving price gets a 3-day weighted average of the
-// daily medians (today heaviest: 0.5/0.3/0.2), which tracks where the market is instead of where one day sat.
+// daily medians (today heaviest), which tracks where the market is instead of where one day sat. The weights are listed
+// oldest-first to match the history order; the audit on 2026-10-28 caught them applied backwards (the oldest of the 3
+// days got 0.5, today 0.2), so the headline under-reacted to the very move it was reporting.
 const pwUsual = id => { const p = PW[id]; if (!p || p[0] <= 0) return null;
   if (!pwMoving(id) || (p[4] & 4)) return {v: p[0], moving: false};
-  const t = (PWH[id] || []).slice(-3).map(x => x[1]).filter(v => v > 0), w = [0.5, 0.3, 0.2].slice(3 - t.length);
+  const t = (PWH[id] || []).slice(-3).map(x => x[1]).filter(v => v > 0), w = [0.2, 0.3, 0.5].slice(3 - t.length);
   if (t.length < 2) return {v: p[0], moving: false};
   return {v: t.reduce((a, v, i) => a + v * w[i], 0) / w.reduce((a, b) => a + b, 0), moving: true} };
 const pwSellTag = id => { const v = pwSell(id); return v == null ? "" : v >= 0.4 ? ` <span class="pill p-good" title="${Math.round(v * 100)}% of units put up for sale were bought (meso.watch)">sells fast</span>`

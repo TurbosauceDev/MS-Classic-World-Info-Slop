@@ -234,6 +234,34 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id]] = keep; D.cmp.read = keep[7];
       if (keep[8]) PWH[id] = keep[8]; else delete PWH[id]; return out });
     check(JSON.stringify(q) === "[true,true,true,true]", `prices: stale pill + sources context (${q})`);
+    // P13-P16 accuracy (audit 2026-10-28): the weighted headline weights TODAY heaviest (the old code applied
+    // 0.5/0.3/0.2 oldest-first, under-reacting to the move it reported); the consensus tile counts the sales behind
+    // the pooled markets, not the market count; the p25-p75 band hides when the spike breaker held yesterday's median
+    // (band = today's quartiles, headline = yesterday's: together they read "Usual 469, likely 62-275").
+    { const w = await p.evaluate(() => {
+      const id = "2000000", keep = [PW[id], CMP[id], MW[id], MI[id], PWH[id]], out = [];
+      const day = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+      delete CMP[id]; delete MW[id]; delete MI[id]; delete PWH[id];
+      PW[id] = [200, 180, 220, 30, 0];   // solid today median 200; history says the market moved 100 -> 200
+      PWH[id] = [[day(2), 100, 8], [day(1), 100, 8], [day(0), 200, 8]];
+      const u = pwUsual(id);   // today-heavy: 100*0.2 + 100*0.3 + 200*0.5 = 150 (old inverted code gave 120)
+      out.push(u.moving === true && Math.abs(u.v - 150) < 0.01);
+      PWH[id] = [[day(2), 100, 8], [day(0), 200, 8]];   // hole in the middle: weights must still pair newest with 0.5
+      out.push(Math.abs(pwUsual(id).v - (100 * 0.3 + 200 * 0.5) / 0.8) < 0.01);
+      // consensus: three solid markets (8 + 6 + 7 = 21 sales), median of [100, 120, 80] = 100, tile says 21 sales
+      delete PWH[id]; delete PW[id];
+      CMP[id] = [100, 90, 110, 8, 20, 5, day(0)]; MW[id] = [120, 6, 90, 5, null, 0]; MI[id] = [80, 70, 90, 7, 9, 60, 2, 2, 0, 0];
+      const best = pwPrice(id);
+      out.push(best.src === "consensus of 3 markets" && best.v === 100 && best.n === 21 && /21 sales/.test(priceBox(id)));
+      // spike-held item: band hidden (it would describe a different day than the held headline), moving pill stays
+      delete CMP[id]; delete MW[id]; delete MI[id];
+      PW[id] = [469, 62, 275, 10, 4]; PWH[id] = [[day(1), 469, 2], [day(0), 100, 1]];
+      out.push(pwBand(id) === null && pwMoving(id) === true && !/likely \d/.test(priceBox(id)));
+      PW[id] = [469, 62, 275, 10, 0];
+      out.push(JSON.stringify(pwBand(id)) === "[62,275]");   // without the hold the band is honest again
+      [PW[id], CMP[id], MW[id], MI[id]] = keep;
+      if (keep[4]) PWH[id] = keep[4]; else delete PWH[id]; return out });
+      check(JSON.stringify(w) === "[true,true,true,true,true]", `prices: weighted today-heaviest, consensus sales count, held band hidden (${w})`) }
     // Danny 2026-10-21: "Where to buy" lists every listing with a place (meso.watch cheapest + meowdb posts), cheapest first
     await p.evaluate(() => { const id = "2000000", kn = PWNOW[id], kl = MDBL[id], now = Math.round(Date.now() / 6e4);
       PWNOW[id] = [70, 5, 6, "Free Market <4>", "CINDY"];
@@ -350,12 +378,30 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     const row = await p.innerText("#srchres li"); await p.keyboard.press("Enter"); await p.waitForTimeout(100);
     const sc = await p.evaluate(() => ({S: BLD.S.cls + "|" + BLD.S.branch + "|" + BLD.S.lvl, plan: !$("#plan").hidden, open: !$("#srch").hidden}));
     check(!errs.length && asked.join() === "GGboom" && /Character/.test(row) && sc.S === "Warrior|Spearman|74" && sc.plan && !sc.open, `@char search asks once and loads the builder (${asked.join()}; ${row.replace(/\s+/g, " ")}; ${JSON.stringify(sc)})`);
-    // job census card (D.crank): every launch job with players listed, the builder's job highlighted and summed up
-    const cen = await p.evaluate(() => ({rows: document.querySelectorAll("#pcensusbody tbody tr").length, want: D.crank.jobs.filter(j => j[3] > 0 && j[1] <= 2).length,
-      hi: document.querySelector("#pcensusbody tr.vrow td")?.innerText, line: document.querySelector("#pcensusbody p")?.innerText, badge: document.querySelector('.crl[data-for="plan"] .crlout').innerText}));
-    check(cen.rows === cen.want && cen.rows >= 10 && /^Spearman/.test(cen.hi) && /^Spearman is the .*most played 2nd job of \d+: [\d,]+ characters/.test(cen.line) && /Spearman #1 of [\d,]+/.test(cen.badge),
-      `job census card + "of N" on the badge (${JSON.stringify(cen)})`);
-    await ctx.close() }
+    // job census card (D.crank): every launch job with players listed, the builder's job highlighted and summed up.
+    // Since 10-28 classicrank's keyless census can no longer read jobs (their filters retired; the BCR_KEY read key is
+    // pending), so the live build ships jobs=[] and the card goes quiet while the badge keeps the plain rank. CR reads
+    // D.crank once at load, so the render branch is proven on a route-patched build (fake jobs swapped into the embedded
+    // crank JSON, the only "jobs":[] in the file), then the live quiet build is asserted the way players see it.
+    const dist = path.resolve(__dirname, "../dist/index.html");
+      const fakeJobs = '[["Warrior",1,"",500,30,0],["Magician",1,"",420,25,0],["Spearman",2,"",200,10,0],["Page",2,"",150,8,0]]';
+      const html = fs.readFileSync(dist, "utf8");
+      const patchedHtml = html.replace(/("crank":\{.*?"jobs":)\[\]/, "$1" + fakeJobs);
+      if (patchedHtml === html) throw new Error("census patch missed");
+      await ctx.route("**/index.html", r => r.fulfill({status: 200, contentType: "text/html", body: patchedHtml}));
+      await p.reload(); await open(p, "plan"); await p.waitForTimeout(80);
+      const cen = await p.evaluate(() => ({rows: document.querySelectorAll("#pcensusbody tbody tr").length,
+        hi: document.querySelector("#pcensusbody tr.vrow td")?.innerText, line: document.querySelector("#pcensusbody p")?.innerText,
+        badge: document.querySelector('.crl[data-for="plan"] .crlout').innerText}));
+      check(cen.rows === 4 && /^Spearman/.test(cen.hi) && /^Spearman is the most played 2nd job of 2: 200 characters/.test(cen.line) && /Spearman #1 of 200/.test(cen.badge),
+        `job census card + "of N" on the badge (${JSON.stringify(cen)})`);
+      await ctx.unroute("**/index.html");
+      await p.goto(URL); await open(p, "plan"); await p.waitForTimeout(80);
+      const quiet = await p.evaluate(() => ({rows: document.querySelectorAll("#pcensusbody tbody tr").length, line: document.querySelector("#pcensusbody p")?.innerText,
+        badge: document.querySelector('.crl[data-for="plan"] .crlout').innerText}));
+      check(quiet.rows === 0 && /No census/.test(quiet.line) && !/ of \d/.test(quiet.badge),
+        `empty census goes quiet, badge keeps the plain rank (${JSON.stringify(quiet)})`);
+      await ctx.close() }
 
   // audit P10: mob pages show "players' actual" mesos/kill from shared runs beside the meowdb estimate (>= 100 kills to mean anything)
   { const {p, errs, ctx} = await page(); await p.goto(URL); await open(p, "mobs");

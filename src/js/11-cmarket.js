@@ -26,7 +26,9 @@ function pwPrice(id){
   if (MW[id]?.[0] > 0 && MW[id][1] >= 5) pool.push(MW[id][0]);
   if (MI[id]?.[0] > 0 && MI[id][3] >= 5) pool.push(MI[id][0]);
   if (pool.length >= 2){ const mid = median(pool), spread = Math.max(...pool) / Math.min(...pool);
-    return {v: mid, src: `consensus of ${pool.length} markets`, n: pool.length, unit: "sale", rough: spread > 1.5, cons: 1} }
+    // n is what the tile prints as "N sales": count the sales behind the pooled markets, not the market count
+    // (audit 2026-10-28: "consensus of 2 markets · 2 sales" when 41 sales actually fed the median)
+    return {v: mid, src: `consensus of ${pool.length} markets`, n: (k?.[3] || 0) + (MW[id]?.[1] || 0) + (MI[id]?.[3] || 0), unit: "sale", rough: spread > 1.5, cons: 1} }
   if (p && p[0] > 0) return {v: p[0], src: "meso.watch", n: p[3], unit: "sale", rough: true, per: !!(p[4] & 2)};
   if (k?.[0] > 0) return {v: k[0], src: "classicmarket.kr market", n: k[3], unit: "sale", rough: k[3] < 5};
   if (m?.[0] > 0) return {v: m[0], src: "meowdb", n: m[1] + m[2], unit: "price", rough: m[2] < 5};   // rough: under 5 sales among its prices
