@@ -176,6 +176,8 @@ for id_, lst in per_item.items():
         continue
     prices = [p for _, p, _ in solid]
     lo, hi = min(prices), max(prices)
+    if hi < 1000:
+        continue  # 1-meso items (arrows): 1 vs 100 is bundle pricing noise, not a unit error (2060000, 10-28)
     spread = hi / lo if lo > 0 else 0
     if spread >= 100:
         spread100 += 1

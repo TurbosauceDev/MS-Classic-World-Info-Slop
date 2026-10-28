@@ -63,3 +63,4 @@ YYYY-MM-DD HH:MMZ | <agent-name> | <one-line summary> | <commit hash or files to
 
 (empty — this file is brand new on 2026-10-22)
 2026-10-25 18:38Z | Claude Agent : T-06 | added docs/ai/design.md style guide + links | docs/ai/design.md
+2026-10-28 18:05Z | Claude Agent : T-08 | caught up from handoff; data_quality 100x-spread check now ignores items whose top price is under 1,000 meso (item 2060000 Arrows: meowdb 100 vs 1 elsewhere is bundle pricing, not a unit error); mesoindex stamp was a normal 8 h poll gap, now fresh | tests/data_quality_test.py
