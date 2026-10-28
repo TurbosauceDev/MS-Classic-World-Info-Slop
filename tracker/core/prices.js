@@ -82,6 +82,30 @@
     return String(Math.round(n));
   }
 
-  const api = {parse, quote, movers, watchRows, priceCtx, fmtM};
+  // cross-source compare (0.2.84). PR = the site's prices payload (prices-<hash>.json via the
+  // prices.json pointer: {pw, cm, cmp, mdb, ma, mw, mi, srcd, ...} — every per-poll market source the
+  // site builds). Price/sales field positions match the site's per-source shapes (the same ones
+  // tests/data_quality_test.py's SOURCES table pins). srcd holds each raw source file's read stamp.
+  const SRC_FIELDS = [
+    ["pw", "meso.watch", 0, 3, "mesowatch_prices"],
+    ["cmp", "classicmarket.kr", 0, 3, "classicmarket_market"],
+    ["mi", "mesoindex.com", 0, 3, "mesoindex"],
+    ["mdb", "meowdb", 0, 2, "meowdb_market"],
+    ["ma", "mesoarbitrage.com", 0, 1, "mesoarbitrage_prices"],
+    ["mw", "maplestory.watch", 0, 1, "maplestorywatch_prices"]];
+  function sources(PR, id){
+    return SRC_FIELDS.map(([k, label, pi, si, src]) => {
+      const d = PR && PR[k] && PR[k].it && PR[k].it[id];
+      if (!d || !(typeof d[pi] === "number" && d[pi] > 0)) return null;
+      return {key: k, label, price: d[pi], sales: typeof d[si] === "number" ? d[si] : 0, read: PR.srcd ? (PR.srcd[src] || "") : ""};
+    }).filter(Boolean);
+  }
+  // spread across sources as a multiplier (max/min), or null with fewer than 2 priced rows
+  function spreadOf(rows){
+    const ps = (rows || []).map(r => r.price).filter(p => p > 0);
+    return ps.length >= 2 ? Math.max(...ps) / Math.min(...ps) : null;
+  }
+
+  const api = {parse, quote, movers, watchRows, priceCtx, fmtM, sources, spreadOf, SRC_FIELDS};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.SitePrices = api;
 })(typeof window !== "undefined" ? window : globalThis);

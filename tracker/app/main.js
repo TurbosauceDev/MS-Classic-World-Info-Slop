@@ -329,7 +329,27 @@ const SITE_MK = path.join(app.getPath("userData"), "site-market.json");
 let siteMk = null, siteMkAt = 0, siteMkBusy = false;
 try { siteMk = JSON.parse(fs.readFileSync(SITE_MK, "utf8")); if (!siteMk || !siteMk.it) siteMk = null; } catch {}
 try { if (siteMk) siteMkAt = fs.statSync(SITE_MK).mtimeMs } catch {}
-const sendSiteMk = () => { if (win && !win.isDestroyed()) win.webContents.send("site-market", siteMk, siteMkAt) };
+const sendSiteMk = () => { if (win && !win.isDestroyed()) win.webContents.send("site-market", siteMk, siteMkAt, sitePr) };
+// the site's cross-source prices payload (prices-<hash>.json behind the prices.json pointer; v0.2.84):
+// every per-poll source the site builds (pw/cm/cmp/mdb/ma/mw/mi + per-file read stamps in srcd), for
+// the Watchlist's Compare modal. The pointer is a tiny URL; the payload ~1.3 MB raw / ~400 KB gzip —
+// refetched only when the pointer's hash changes.
+const SITE_PR = path.join(app.getPath("userData"), "site-prices.json");
+let sitePr = null, sitePrUrl = null;
+try { const c = JSON.parse(fs.readFileSync(SITE_PR, "utf8")); if (c && c.data && c.data.pw){ sitePr = c.data; sitePrUrl = c.url } } catch {}
+async function sitePrices(){
+  try {
+    const rp = await fetch(SITE_HOME + "/prices.json", {signal: AbortSignal.timeout(20e3)});
+    if (!rp.ok) return;
+    const ptr = await rp.json();
+    if (!ptr || !ptr.url || ptr.url === sitePrUrl) return;
+    const r = await fetch(SITE_HOME + "/" + ptr.url, {signal: AbortSignal.timeout(30e3)});
+    if (r.ok){
+      const j = await r.json();
+      if (j && j.pw){ sitePr = j; sitePrUrl = ptr.url; writeAtomic(SITE_PR, JSON.stringify({url: sitePrUrl, data: sitePr})); sendSiteMk() }
+    }
+  } catch {}   // offline: the cached copy stands, the modal says how old it is
+}
 async function siteMarket(force){
   if (siteMkBusy || !SITE_HOME) return siteMk;
   if (!force && siteMk && Date.now() - siteMkAt < 30 * 60e3) return siteMk;
@@ -341,10 +361,11 @@ async function siteMarket(force){
       if (j && j.it && Object.keys(j.it).length){ siteMk = j; siteMkAt = Date.now(); writeAtomic(SITE_MK, JSON.stringify(siteMk)); sendSiteMk() }
     }
   } catch {}   // offline or the site is down: keep the cached copy, the cards show its age
+  await sitePrices().catch(() => {});
   siteMkBusy = false;
   return siteMk;
 }
-ipcMain.handle("site-market", () => siteMk ? [siteMk, siteMkAt] : null);
+ipcMain.handle("site-market", () => siteMk ? [siteMk, siteMkAt, sitePr] : null);
 ipcMain.handle("site-market-refresh", () => siteMarket(true));
 app.whenReady().then(() => siteMarket(false).catch(() => {}));   // warm the cache once the app is up
 setInterval(() => siteMarket(true).catch(() => {}), 30 * 60e3);   // every 30 minutes

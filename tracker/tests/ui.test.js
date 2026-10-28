@@ -586,7 +586,17 @@ const path = require("path"), {chromium} = require("playwright");
   if (/Orange Potion/.test(wrow) || !await page.evaluate(() => (window.st.siteWatch || []).length === 0))
     throw new Error("watchlist remove: " + wrow);
   const amb = await page.evaluate(async () => { $("#watchSearch").value = "Mushroom"; $("#watchAdd").click(); return $("#watchNote").textContent });
-  if (!/no single item/.test(amb)) throw new Error("ambiguous watch add: " + amb) }
+  if (!/no single item/.test(amb)) throw new Error("ambiguous watch add: " + amb);
+  // compare modal (0.2.84): a fake cross-source payload; the modal shows per-source prices + the spread mark
+  { const cmp = await page.evaluate(async () => { window.sitePrFake = {pw: {it: {"2000001": [50]}}, cmp: {it: {"2000001": [49, 48, 55, 8]}},
+      mdb: {it: {"2000001": [500, 58, 3]}}, srcd: {mesowatch_prices: "2026-10-17 12:00", classicmarket_market: "2026-10-17 11:52", meowdb_market: "2026-10-17 10:23"}};
+      window.siteMkCb(window.siteMkFake, Date.now(), window.sitePrFake);
+      settings = await host.settings({siteWatch: ["2000001"]}); siteRender();
+      $("#watchCmp").click(); return [$("#cmpRows").textContent, $("#cmpNote").textContent] });
+    const flat = cmp[0].replace(/\s+/g, "");
+    if (!/meowdb/.test(flat) || !/500/.test(flat) || !/498sales/.test(flat) || !/classicmarket\.kr/.test(flat) || !/×10 spread/.test(cmp[0]) || !/read stamp/.test(cmp[1]))
+      throw new Error("compare modal: " + JSON.stringify(cmp));
+    await page.click("#cmpClose") } }
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (!/Red Snail/.test(mobs) || !/Blue Snail/.test(mobs)) throw new Error("mobs table: " + mobs);

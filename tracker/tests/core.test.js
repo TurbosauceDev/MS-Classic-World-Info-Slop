@@ -638,6 +638,17 @@ console.log("alerts ok");
   assert.ok(!mv[1].up && Math.abs(mv[1].pct - (-10 / 310)) < 1e-9, "down mover math");
   assert.strictEqual(P.fmtM(999), "999"); assert.strictEqual(P.fmtM(12300), "12.3k"); assert.strictEqual(P.fmtM(1200000), "1.2m");
   assert.strictEqual(P.priceCtx(p, id => id === "4010001" ? "Red Potion" : null).length, 1, "ctx rows only for named items");
+  // cross-source compare (0.2.84): field positions per source, spread multiplier, empty-safe
+  const PR = {pw: {it: {"4010001": [300, 299, 330, 16866]}}, cmp: {it: {"4010001": [310, 300, 330, 12]}},
+    mdb: {it: {"4010001": [305, 310, 6]}}, mi: {it: {"4010001": [0, 0, 0, 0]}}, srcd: {mesowatch_prices: "2026-10-28 17:00", classicmarket_market: "2026-10-28 16:52", meowdb_market: "2026-10-28 16:23"}};
+  const srcs = P.sources(PR, "4010001");
+  assert.deepStrictEqual(srcs.map(s => s.key), ["pw", "cmp", "mdb"], "zero-price sources drop out");
+  assert.strictEqual(srcs[0].sales, 16866); assert.strictEqual(srcs[2].sales, 6, "meowdb's sales idx is 2");
+  assert.strictEqual(srcs[0].read, "2026-10-28 17:00");
+  assert.strictEqual(P.sources(PR, "nope").length, 0); assert.strictEqual(P.sources(null, "4010001").length, 0);
+  assert.ok(Math.abs(P.spreadOf(srcs) - 310 / 300) < 1e-9, "spread = max/min");
+  assert.strictEqual(P.spreadOf(srcs.slice(0, 1)), null, "one source: no spread");
+  assert.strictEqual(P.spreadOf([]), null);
   // price alerts: crossing fires, holding is quiet, falls back under re-arms (5-min firedAt guard respected)
   const A = require("../core/alerts.js"), T = T0 + 3600e3;
   const mk = m => ({on: true, paused: false, respawns: [], events: [], kpq: null, runT0: 0,

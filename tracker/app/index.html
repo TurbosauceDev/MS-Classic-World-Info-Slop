@@ -340,6 +340,7 @@
   #pulseBox .plist li:last-child { border-bottom:0; }
   #pulseBox .plist .sub { color:var(--muted); font-variant-numeric:tabular-nums; }
   :is(#watchBox, #pulseBox) b.up { color:var(--leaf); } :is(#watchBox, #pulseBox) b.down { color:var(--bad); }
+  #cmpPop { max-width:900px; } #cmpRows table { font-size:13px; } #cmpRows th { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; padding:2px 4px; border-bottom:1px solid var(--line); white-space:nowrap; } #cmpRows td { padding:3px 4px; }
   @keyframes feedIn { from { opacity:0; transform:translateY(6px); } }
   .over-drop { background:var(--accent-soft) !important; }
   #hist > .row:has(> #csv) { padding-right:72px; }
@@ -532,7 +533,7 @@
     <div class="card folded" id="watchBox" data-box="watch" data-title="Watchlist (site prices)"><h3>Watchlist</h3>
       <div class="row"><input id="watchSearch" list="watchNames" placeholder="Add an item to watch…" style="flex:1;min-width:0" aria-label="Search an item to watch"><datalist id="watchNames"></datalist><button id="watchAdd" class="alt" title="Add it to the watchlist">Add</button></div>
       <table id="watchRows"></table><div class="empty" id="watchEmpty">Nothing watched yet — search an item above and press Add. Prices are the site's meso.watch medians, refreshed every 30 minutes.</div>
-      <div class="note" id="watchNote"></div></div>
+      <div class="row"><button id="watchCmp" class="alt" title="Every source's price for the watched items, side by side">Compare watched</button><span class="note" id="watchNote" style="flex:1;min-width:0"></span></div></div>
     <div class="card folded" id="pulseBox" data-box="pulse" data-title="Market pulse"><h3>Market pulse</h3>
       <div class="grid" id="pulseGrid"></div>
       <div id="pulseMovers"></div>
@@ -567,6 +568,11 @@
         <select id="histSort" aria-label="Sort"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="expHr">Most EXP/hr</option><option value="mesosHr">Most mesos/hr</option><option value="netHr">Most net/hr</option><option value="min">Longest</option></select>
         <button class="alt" id="cmpShown" hidden title="Tick the first sessions in the list below for Compare">Compare the top 6</button></div>
       <div class="note" id="histCount"></div><div id="trend"></div><div id="cmp"></div><table id="histRows"></table><div id="histMore" class="row"></div></div>
+  </section>
+  <!-- Compare watched items: every source's price side by side (v0.2.84); opened from the Watchlist card -->
+  <section id="cmpPop" class="modal hidden" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="cmpTitle">
+    <div class="pophead"><h2 id="cmpTitle">Compare watched items</h2><button id="cmpClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>
+    <div class="card" id="cmpCard"><div id="cmpRows"></div><div class="note" id="cmpNote"></div></div>
   </section>
   <section id="helpPop" class="modal hidden" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
     <div class="pophead"><h2 id="helpTitle">Help</h2><button id="helpClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>

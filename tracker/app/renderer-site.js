@@ -5,8 +5,8 @@
 // Loaded after renderer-alerts.js (which reads window.sitePriceCtx on its 5 s tick) and before
 // renderer-run.js.
 const SP = SitePrices;
-// one parsed snapshot {P, at, human age}; P is null until the first pull lands
-let siteMk = {P: null, at: 0, raw: null};
+// one parsed snapshot {P, at, raw}; plus the site's cross-source prices payload (0.2.84)
+let siteMk = {P: null, at: 0, raw: null}, sitePr = null;
 
 // name <-> id over the tracker's own gamedata (G.items: {id: {n: name, ...}}); built once, lazily —
 // a 2,258-entry scan on first use is nothing, and most boots never open the Watchlist
@@ -24,15 +24,16 @@ function nameIndex(){
 const nameOf = id => G.items[id]?.n || "";
 
 // ---- data plumbing ---------------------------------------------------------------------------
-function siteApply(j, at){
+function siteApply(j, at, pr){
   siteMk.raw = j; siteMk.at = at || Date.now();
   const p = SP.parse(j);
   siteMk.P = p.ok ? p : null;
+  if (pr && pr.pw) sitePr = pr;
   if (!p.ok && j) console.warn("site market parse:", p.why);
   siteRender();
 }
-host.onSiteMarket((j, at) => siteApply(j, at));
-host.siteMarket().then(x => { if (x) siteApply(x[0], x[1]); else host.siteMarketReady() });
+host.onSiteMarket((j, at, pr) => siteApply(j, at, pr));
+host.siteMarket().then(x => { if (x) siteApply(x[0], x[1], x[2]); else host.siteMarketReady() });
 host.siteMarketReady();   // main answers with the current copy if the invoke raced the boot
 setInterval(siteRender, 60e3);   // keep the "updated X ago" honest between pulls
 
@@ -112,4 +113,33 @@ function pulseRender(){
   note.textContent = `meso.watch via the site · day over day, items with 20+ sales today · updated ${siteAgo()}`;
 }
 
-function siteRender(){ watchRender(); pulseRender() }
+function siteRender(){ watchRender(); pulseRender(); if (siteMk.P && sitePr && modalIsOpen($("#cmpPop"))) cmpRender() }
+
+// ---- Compare watched items (0.2.84): every source's price, side by side ------------------------
+function cmpRender(){
+  const rows = watchIds(), box = $("#cmpRows"), note = $("#cmpNote");
+  if (!rows.length){ box.innerHTML = `<div class="empty">Nothing watched yet — add items on the Watchlist card first.</div>`; note.textContent = ""; return }
+  const labels = SP.SRC_FIELDS.map(f => f[1]);
+  const head = `<tr><th style="text-align:left">Item</th><th style="text-align:right">Site median</th>${labels.map(l => `<th>${esc(l)}</th>`).join("")}</tr>`;
+  const body = rows.map(id => {
+    const q = SP.quote(siteMk.P, id);
+    const srcs = sitePr ? SP.sources(sitePr, id) : [];
+    const spread = SP.spreadOf(srcs);
+    const cells = SP.SRC_FIELDS.map(([k]) => {
+      const s = srcs.find(x => x.key === k);
+      if (!s) return `<td class="n"><span class="note">—</span></td>`;
+      return `<td class="n">${COIN}${SP.fmtM(s.price)}<div class="note">${s.sales ? s.sales.toLocaleString() + " sales" : ""}${s.read ? (s.sales ? " · " : "") + s.read : ""}</div></td>`;
+    }).join("");
+    return `<tr><td>${ico(id)} ${esc(G.items[id].n)}${spread != null && spread >= 10 ? ` <b class="down" title="Highest price is ${Math.round(spread)}x the lowest across sources — usually thin data, not a bug">×${Math.round(spread)} spread</b>` : ""}</td>` +
+      `<td class="n">${q ? COIN + SP.fmtM(q.median) : `<span class="note">—</span>`}</td>${cells}</tr>`;
+  }).join("");
+  box.innerHTML = `<table>${head}${body}</table>`;
+  note.textContent = sitePr ? "What each source reports today, with its own sales count and read stamp. Sources read at different times; a big spread is usually thin data, not a bug." : "The cross-source prices file has not arrived yet — only the site median is shown. It follows the same 30-minute refresh.";
+}
+function cmpOpen(){
+  cmpRender();
+  $("#cmpPop").scrollTop = 0; modalOpen($("#cmpPop"), $("#cmpClose"));
+}
+$("#cmpPop")._close = el => modalClose(el, $("#watchCmp"));
+$("#cmpClose").onclick = () => modalClose($("#cmpPop"), $("#watchCmp"));
+$("#watchCmp").onclick = cmpOpen;
