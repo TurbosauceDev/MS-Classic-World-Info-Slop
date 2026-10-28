@@ -235,6 +235,37 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       Object.keys(window.ovSaved.overlay.widgets).length,
       document.querySelector("#ovw-status").offsetLeft, document.querySelector("#ovw-status").offsetTop]);
     if (st[0] !== 3 || st[1] || st[2] || st[3] !== 0 || st[4] !== 24 || st[5] !== 24) fail("reset layout", st);
+    // layout profiles (0.2.79, ElvUI's profiles): the live layout is the active profile — Save copies it under a new
+    // name, switching swaps the cards back out of the snapshot, Share round-trips a versioned code (WeakAuras' ritual)
+    st = await page.evaluate(() => [!!document.querySelector("#ovProf"), document.querySelectorAll("#ovProf option").length,
+      window.ovSaved?.overlay?.profile, Object.keys(window.ovSaved?.overlay?.profiles || {}).length]);
+    if (!st[0] || st[1] !== 1 || st[2] !== "Default" || st[3] !== 1) fail("profile boot", st);
+    await page.fill("#ovProfName", "Bossing"); await page.click("#ovProfSave"); await page.waitForTimeout(350);
+    st = await page.evaluate(() => [document.querySelectorAll("#ovProf option").length, document.querySelector("#ovProf").value,
+      Object.keys(window.ovSaved.overlay.profiles).length, window.ovSaved.overlay.profile]);
+    if (st[0] !== 2 || st[1] !== "Bossing" || st[2] !== 2 || st[3] !== "Bossing") fail("profile save-as", st);
+    await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.left = "500px"; savePos("exp") });
+    await page.waitForTimeout(350);   // the save (and the profile mirror) debounce
+    const movedX = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);
+    if (movedX !== 500) fail("profile: move before switch", movedX);
+    await page.selectOption("#ovProf", "Default"); await page.waitForTimeout(350);
+    st = await page.evaluate(() => [document.querySelector("#ovProf").value, document.querySelector("#ovw-exp").offsetLeft,
+      window.ovSaved.overlay.profile]);
+    if (st[0] !== "Default" || st[1] === 500 || st[2] !== "Default") fail("profile switch restores the old spot", st);
+    await page.selectOption("#ovProf", "Bossing"); await page.waitForTimeout(350);
+    st = await page.evaluate(() => [document.querySelector("#ovw-exp").offsetLeft, window.ovSaved.overlay.profile]);
+    if (st[0] !== 500 || st[1] !== "Bossing") fail("profile switch brings the move back", st);
+    await page.click("#ovProfShare");
+    const code = await page.inputValue("#ovShareIn");
+    if (!code.startsWith("OVL1.")) fail("profile export code", code.slice(0, 8));
+    await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.left = "42px"; savePos("exp") });
+    await page.waitForTimeout(350);
+    await page.fill("#ovShareIn", code); await page.click("#ovShareApply"); await page.waitForTimeout(350);
+    st = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);
+    if (st !== 500) fail("profile import restores the code's layout", st);
+    await page.fill("#ovShareIn", "OVL1.nonsense"); await page.click("#ovShareApply");
+    if (!/didn't read/.test(await page.inputValue("#ovShareIn"))) fail("bad code rejected", await page.inputValue("#ovShareIn"));
+    await page.click("#ovProfShare");   // fold the strip away again
     // Done locks: the page says so and the panel goes; the ack comes back from main (ovMode) and the cards lose their titles
     await page.click("#ovDone");
     if (!await page.evaluate(() => window.ovEditCalls.at(-1) === false)) fail("Done asks main to lock", window.ovEditCalls);

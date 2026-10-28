@@ -129,6 +129,14 @@
   #ovpanel select { background:var(--accent-soft); color:var(--ink); border:0; border-radius:7px; font:inherit; font-size:11px; padding:2px 4px; }
   #ovpanel .foot .rw-all { margin-left:auto; background:none; border:0; color:var(--muted); font:inherit; font-size:11px; cursor:pointer; padding:2px 4px; }
   #ovpanel .foot .rw-all:hover { color:var(--bad); }
+  /* layout profiles (0.2.79, ElvUI's profiles): the active profile select + save-as row, and the Share code strip */
+  #ovpanel .foot.prof { margin-top:6px; }
+  #ovpanel .foot.prof select { max-width:104px; }
+  #ovpanel .foot.prof input, #ovShare input { background:color-mix(in srgb, var(--panel) 70%, transparent); border:1px solid var(--line); color:var(--ink); border-radius:7px; font:inherit; font-size:11px; padding:2px 5px; margin:0; }
+  #ovpanel .foot.prof input { width:84px; }
+  #ovShare { margin-top:6px; }
+  #ovShare input { width:100%; box-sizing:border-box; font:11px/1.3 ui-monospace, "Cascadia Mono", Consolas, monospace; padding:4px 6px; }
+  #ovShare .shBtns { display:flex; gap:5px; margin-top:5px; }
 </style>
 </head>
 <body>

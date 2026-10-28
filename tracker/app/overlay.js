@@ -21,7 +21,7 @@ const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loo
 const HOME = {status: {on: true, x: 24, y: 24}, exp: {on: true, x: 24, y: 108}, map: {on: true, x: 24, y: 250},
   kills: {on: false, x: 24, y: 620}, mesos: {on: false, x: 24, y: 700}, loot: {on: false, x: 24, y: 780},
   party: {on: false, x: 24, y: 860}, kpq: {on: false, x: 24, y: 940}, log: {on: false, x: 24, y: 1020}};
-let DATA = null, CFG = {edit: true, widgets: {}, snap: true, grid: false, gsize: 64, panel: null}, DESK = {x: 0, y: 0, width: 1920, height: 1080}, zTop = 1;
+let DATA = null, CFG = {edit: true, widgets: {}, snap: true, grid: false, gsize: 64, panel: null, profile: "Default", profiles: null}, DESK = {x: 0, y: 0, width: 1920, height: 1080}, zTop = 1;
 const picked = {id: null};
 
 // ---- the widgets -----------------------------------------------------------
@@ -156,8 +156,12 @@ function setS(id, s){ s = clamp(Math.round(s * 100) / 100, .5, 2); CFG.widgets[i
 function setO(id, o){ CFG.widgets[id] = {...(CFG.widgets[id] || {}), o: clamp(Math.round(o * 100) / 100, .25, 1)};
   const el = $("#ovw-" + id); if (el) styleCard(el, id); syncDetail(id); ovSave() }
 let saveT = null;
-const ovSave = () => { clearTimeout(saveT); saveT = setTimeout(() =>
-  window.ovhost.settings({overlay: {edit: CFG.edit, widgets: CFG.widgets, snap: CFG.snap, grid: CFG.grid, gsize: CFG.gsize, panel: CFG.panel}}).catch(() => {}), 200) };
+const profSnap = () => ({widgets: JSON.parse(JSON.stringify(CFG.widgets)), panel: CFG.panel ? {...CFG.panel} : null});
+const ovSave = () => { clearTimeout(saveT); saveT = setTimeout(() => {
+  CFG.profiles[CFG.profile] = profSnap();   // the live layout IS the active profile (ElvUI's model): every save mirrors into it
+  window.ovhost.settings({overlay: {edit: CFG.edit, widgets: CFG.widgets, snap: CFG.snap, grid: CFG.grid, gsize: CFG.gsize, panel: CFG.panel,
+    profile: CFG.profile, profiles: CFG.profiles}}).catch(() => {});
+}, 200) };
 
 // ---- data: re-render every card (a push, or the 1 s tick for the countdowns) -------------------------------
 function apply(d){
@@ -203,7 +207,14 @@ function buildPanel(){
     <div id="ovpRows"></div>
     <div class="foot"><label><input type="checkbox" id="ovSnap"> Snap</label><label><input type="checkbox" id="ovGrid"> Grid</label>
       <select id="ovGsize" title="Grid spacing"><option value="32">32 px</option><option value="64">64 px</option><option value="128">128 px</option></select>
-      <button class="rw-all" id="ovReset">Reset layout</button></div>`;
+      <button class="rw-all" id="ovReset">Reset layout</button></div>
+    <div class="foot prof"><select id="ovProf" title="Layout profile"></select>
+      <input id="ovProfName" maxlength="24" placeholder="new name" title="Type a name and press Save to copy this layout into it">
+      <button class="btn alt" id="ovProfSave" title="Copy this layout into the name on the left">Save</button>
+      <button class="btn alt" id="ovProfDel" title="Delete this profile">Del</button>
+      <button class="btn alt" id="ovProfShare" title="Export or import this layout as a code">Share</button></div>
+    <div id="ovShare" class="hidden"><input id="ovShareIn" spellcheck="false" title="The whole layout as a code — copy it somewhere safe, or paste one and Apply">
+      <div class="shBtns"><button class="btn alt" id="ovShareCopy">Copy</button><button class="btn" id="ovShareApply">Apply code</button></div></div>`;
   $("#ovDone").onclick = () => window.ovhost.done();
   $("#ovClose").onclick = () => window.ovhost.close();
   $("#ovSnap").onchange = e => { CFG.snap = e.target.checked; ovSave() };
@@ -212,6 +223,22 @@ function buildPanel(){
   $("#ovReset").onclick = () => { const b = $("#ovReset");
     if (b.dataset.arm){ delete b.dataset.arm; b.textContent = "Reset layout"; resetAll() }
     else { b.dataset.arm = "1"; b.textContent = "Reset everything?"; setTimeout(() => { if (b.isConnected){ delete b.dataset.arm; b.textContent = "Reset layout" } }, 2600) } };
+  profUi();
+  $("#ovProf").onchange = e => profApply(e.target.value);
+  $("#ovProfSave").onclick = () => { const n = $("#ovProfName").value.trim().slice(0, 24);
+    if (!n) return;
+    CFG.profiles[n] = profSnap(); CFG.profile = n; profUi(); ovSave(); $("#ovProfName").value = "" };
+  $("#ovProfDel").onclick = () => { const b = $("#ovProfDel");
+    if (!b.dataset.arm){ b.dataset.arm = "1"; b.textContent = "Delete?"; setTimeout(() => { if (b.isConnected && b.dataset.arm){ delete b.dataset.arm; b.textContent = "Del" } }, 2600); return }
+    delete b.dataset.arm; b.textContent = "Del";
+    const names = Object.keys(CFG.profiles); if (names.length <= 1) return;   // the last profile stays
+    const gone = CFG.profile; delete CFG.profiles[gone];
+    profApply(names.find(n => n !== gone) || names[0]) };
+  $("#ovProfShare").onclick = () => { const sh = $("#ovShare");
+    sh.classList.toggle("hidden");
+    if (!sh.classList.contains("hidden")) $("#ovShareIn").value = profCode() };
+  $("#ovShareCopy").onclick = () => { const i = $("#ovShareIn"); i.focus(); i.select(); navigator.clipboard?.writeText(i.value).catch(() => {}) };
+  $("#ovShareApply").onclick = profImport;
   // the panel moves by its header, like any card; its spot saves too
   let pd = null;
   p.querySelector("#ovpHead").addEventListener("pointerdown", e => {
@@ -296,6 +323,42 @@ function gridShow(){
   const g = $("#ovgrid");
   g.classList.toggle("hidden", !CFG.grid || !CFG.edit);
   g.style.setProperty("--gs", CFG.gsize + "px");
+}
+
+// ---- layout profiles (0.2.79, ElvUI's profiles + WeakAuras' export ritual): named snapshots of the cards; the live
+// layout is the active profile and mirrors on every save, switching loads the snapshot back out, and Share hands you a
+// versioned code string to paste elsewhere (Apply reads one back, validating every widget). -------------------------------
+const profCode = () => "OVL1." + btoa(JSON.stringify({widgets: CFG.widgets, panel: CFG.panel}));
+function profCards(){
+  for (const id of Object.keys(KINDS)){ const el = $("#ovw-" + id); if (!wPos(id).on && el?.isConnected) el.remove() }
+  for (const id of Object.keys(KINDS)) if (wPos(id).on && !$("#ovw-" + id)?.isConnected) $("#ovroot").appendChild(mkCard(id));
+}
+function profApply(name){
+  const p = CFG.profiles[name]; if (!p) return;
+  CFG.profile = name;
+  CFG.widgets = JSON.parse(JSON.stringify(p.widgets || {}));
+  CFG.panel = p.panel ? {...p.panel} : null;
+  profCards(); pick(null); place(); syncPanel(); profUi(); ovSave();
+}
+function profUi(){
+  const sel = $("#ovProf"); if (!sel) return;
+  sel.innerHTML = Object.keys(CFG.profiles).sort().map(n => `<option${n === CFG.profile ? " selected" : ""}>${esc(n)}</option>`).join("");
+}
+function profImport(){
+  try {
+    const v = $("#ovShareIn").value.trim();
+    if (!v.startsWith("OVL1.")) throw new Error("prefix");
+    const o = JSON.parse(atob(v.slice(5)));
+    if (!o || typeof o.widgets !== "object" || !o.widgets) throw new Error("shape");
+    const clean = {};
+    for (const id of Object.keys(KINDS)){ const w = o.widgets[id];
+      if (w && typeof w === "object") clean[id] = {on: w.on !== false, x: Math.round(+w.x || 0), y: Math.round(+w.y || 0),
+        s: clamp(Number.isFinite(+w.s) ? +w.s : 1, .5, 2), o: clamp(Number.isFinite(+w.o) ? +w.o : 1, .25, 1)} }
+    CFG.widgets = clean;
+    if (o.panel && Number.isFinite(+o.panel.x)) CFG.panel = {x: Math.round(+o.panel.x), y: Math.round(+o.panel.y)};
+    profCards(); pick(null); place(); syncPanel(); ovSave();
+    return true;
+  } catch { $("#ovShareIn").value = "that code didn't read — paste the whole OVL1. line"; return false }
 }
 
 // ---- dragging + snapping (edit mode only): ElvUI's sticky snap — 15 px to the screen edges/centre or another card's
@@ -397,9 +460,15 @@ addEventListener("keydown", e => {
   try {
     const st = await window.ovhost.state();
     CFG = {edit: st.edit !== false, widgets: st.widgets && typeof st.widgets === "object" ? st.widgets : {},
-      snap: st.snap !== false, grid: st.grid === true, gsize: [32, 64, 128].includes(+st.gsize) ? +st.gsize : 64, panel: st.panel || null};
+      snap: st.snap !== false, grid: st.grid === true, gsize: [32, 64, 128].includes(+st.gsize) ? +st.gsize : 64, panel: st.panel || null,
+      profile: typeof st.profile === "string" && st.profile ? st.profile : "Default",
+      profiles: st.profiles && typeof st.profiles === "object" ? st.profiles : null};
     if (st.desk?.width) DESK = st.desk;
   } catch {}
+  // profiles: the live layout is the truth, so the active profile starts as a mirror of it (first boot makes Default)
+  if (!CFG.profiles || typeof CFG.profiles !== "object" || !CFG.profiles[CFG.profile])
+    CFG.profiles = {[CFG.profile]: profSnap()};
+  CFG.profiles[CFG.profile] = profSnap();
   for (const id of Object.keys(KINDS)) if (wPos(id).on) $("#ovroot").appendChild(mkCard(id));
   buildPanel();
   gridShow();
