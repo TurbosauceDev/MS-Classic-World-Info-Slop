@@ -23,6 +23,12 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     return [Math.round(r.left - b.left), Math.round(b.left + document.body.clientWidth - r.right)] });
   if (Math.abs(centre[0] - centre[1]) > 2) fail("focus column centred", centre);
   if (!await page.evaluate(() => getComputedStyle(document.querySelector("#focus .fzCard")).boxShadow !== "none")) fail("fzCard shadow", 0);
+  // regression 0.2.88 (Danny: "glow and not shadows"): shadows were made of --ink, the light colour in dark themes. Every shadow colour must be black, hover included.
+  const shCols = await page.evaluate(async () => { const c = document.querySelector("#focus .fzCard"), out = [getComputedStyle(c).boxShadow];
+    c.classList.add("hov"); const css = [...document.styleSheets].flatMap(ss => [...ss.cssRules]).find(r => r.selectorText === ".fzCard:hover"); out.push(css ? css.style.getPropertyValue("box-shadow") : "no hover rule");
+    out.push(getComputedStyle(document.querySelector("#focus")).getPropertyValue("--fzShUp")); return out });
+  for (const sh of shCols) for (const m of sh.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)) if (+m[1] || +m[2] || +m[3]) fail("focus shadows are black, not a light glow", sh);
+  if (!/var\(--fzShUp\)/.test(shCols[1])) fail("hover shadow uses the shared dark token", shCols[1]);
   // Dummy data fills the Focus view: hero, tiles, chart, lists, run log; a taller column asks the window to grow
   await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(300);
   const d = await page.evaluate(() => [$("#fzMap").textContent, $("#fzTotal").textContent, $("#fzPerMin").textContent, $("#fzChart").children.length > 0,
