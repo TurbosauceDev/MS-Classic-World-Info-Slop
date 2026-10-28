@@ -18,16 +18,27 @@
     background:color-mix(in srgb, var(--panel) 82%, transparent);
     -webkit-backdrop-filter:blur(14px) saturate(1.2); backdrop-filter:blur(14px) saturate(1.2);
     border:1px solid color-mix(in srgb, var(--line) 72%, transparent);
-    box-shadow:0 1px 2px rgba(0,0,0,.22), 0 12px 32px -12px rgba(0,0,0,.45); }
-  body.edit .ovw { background:color-mix(in srgb, var(--panel) 94%, transparent); cursor:move; }
+    box-shadow:0 1px 2px rgba(0,0,0,.22), 0 12px 32px -12px rgba(0,0,0,.45);
+    transition:filter .15s ease, border-color .15s ease, box-shadow .15s ease; }
+  body.edit .ovw { background:color-mix(in srgb, var(--panel) 94%, transparent); cursor:move;
+    border-color:color-mix(in srgb, var(--line) 90%, var(--accent) 10%); }
   body.edit .ovw:hover, body.edit .ovw.moving { border-color:var(--accent); }
   body.edit .ovw.moving { opacity:.85; }
+  /* edit mode v2 (Danny 2026-10-28, ElvUI's Toggle Anchors + WeakAuras' MoverSizer): the picked card gets a bright ring,
+     a hovered panel row spotlights its card (ElvUI dims the rest), the corner grip resizes (WeakAuras' handles). */
+  body.edit .ovw.sel { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), 0 12px 32px -12px rgba(0,0,0,.45); }
+  body.dim .ovw:not(.spot) { filter:brightness(.55); }
+  .ovw .rsz { display:none; position:absolute; right:1px; bottom:1px; width:15px; height:15px; cursor:nwse-resize;
+    border-right:2px solid var(--accent); border-bottom:2px solid var(--accent); border-radius:0 0 10px 0; opacity:.65; }
+  body.edit .ovw .rsz { display:block; }
+  body.edit .ovw .rsz:hover { opacity:1; }
   .ovw header { display:flex; align-items:center; margin:0 0 3px; }
   .ovw header .t { flex:1; font-size:10px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
     text-shadow:0 1px 2px rgba(0,0,0,.3); }
   .ovw header button { background:none; border:0; color:var(--muted); font:inherit; font-size:13px; line-height:1; padding:1px 5px; border-radius:6px; cursor:pointer; }
   .ovw header button:hover { color:var(--bad); }
   body.locked .ovw header { display:none; }   /* locked = pure overlay: nothing on a card but its numbers */
+  body.locked .ovw .rsz { display:none; }
   .big { font-size:20px; font-weight:800; line-height:1.15; color:var(--accent); text-shadow:0 1px 2px rgba(0,0,0,.35); }
   .big small { font-size:11px; font-weight:600; color:var(--muted); text-shadow:none; }
   .mapname { font-size:16px; font-weight:700; color:var(--warn); line-height:1.2; overflow-wrap:anywhere; text-shadow:0 1px 2px rgba(0,0,0,.35); }
@@ -54,22 +65,59 @@
   .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--muted); margin-right:7px; vertical-align:1px; }
   .dot.ok { background:var(--leaf); } .dot.warn { background:var(--warn); }
   .lico { height:1.2em; width:auto; image-rendering:pixelated; vertical-align:-0.28em; margin-right:4px; }
-  /* edit-mode toolbar: pick what to track, then Done locks the overlay (clicks go through to the game again) */
-  #ovbar { position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:9; display:flex; flex-wrap:wrap; align-items:center; gap:2px 10px;
-    max-width:min(94vw, 780px); padding:8px 14px; border-radius:12px; background:color-mix(in srgb, var(--panel) 94%, transparent);
+  /* the alignment grid (WoW Edit Mode / ElvUI): 1 px lines on the grid spacing, red-ish centre axes like ElvUI's. */
+  #ovgrid { position:fixed; inset:0; z-index:1; pointer-events:none; --gs:64px;
+    background-image:linear-gradient(to right, color-mix(in srgb, var(--ink) 22%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--ink) 22%, transparent) 1px, transparent 1px);
+    background-size:var(--gs) var(--gs); }
+  #ovgrid::before { content:""; position:absolute; left:50%; top:0; bottom:0; width:1px; background:color-mix(in srgb, var(--bad) 55%, transparent); }
+  #ovgrid::after { content:""; position:absolute; top:50%; left:0; right:0; height:1px; background:color-mix(in srgb, var(--bad) 55%, transparent); }
+  /* snap guides (WeakAuras' alignment lines): one vertical + one horizontal accent line while a dragged card aligns. */
+  .gl { position:fixed; z-index:8; pointer-events:none; background:var(--accent); box-shadow:0 0 6px var(--accent); }
+  #ovgv { top:0; bottom:0; width:1px; } #ovgh { left:0; right:0; height:1px; }
+  /* edit panel: the checkbox strip grew into a proper panel (Danny: "an in-style selection menu instead of that strip of
+     boxes") — one glass card, one row per widget, per-widget detail under the picked row, options in the footer. */
+  #ovpanel { position:fixed; top:12px; left:50%; transform:translateX(-50%); z-index:10; width:302px; max-width:calc(100vw - 20px);
+    max-height:calc(100vh - 24px); overflow:auto; padding:9px 11px 10px; border-radius:12px;
+    background:color-mix(in srgb, var(--panel) 94%, transparent);
     -webkit-backdrop-filter:blur(16px) saturate(1.2); backdrop-filter:blur(16px) saturate(1.2);
     border:1px solid var(--line); box-shadow:0 1px 2px rgba(0,0,0,.22), 0 12px 32px -12px rgba(0,0,0,.45); }
-  #ovbar.hidden { display:none; }
-  #ovbar b { font-size:12px; color:var(--accent); margin-right:2px; }
-  #ovbar .hint { flex-basis:100%; font-size:11px; color:var(--muted); margin:0 0 2px; }
-  #ovbar label { display:inline-flex; gap:5px; align-items:center; font-size:12px; padding:2px 0; cursor:pointer; white-space:nowrap; }
-  #ovbar label input { accent-color:var(--accent); margin:0; }
-  #ovbar button { background:var(--accent); color:var(--on-accent); border:0; border-radius:8px; padding:4px 12px; font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
-  #ovbar button.alt { background:var(--accent-soft); color:var(--ink); }
+  #ovpanel.hidden { display:none; }
+  #ovpanel > header { display:flex; align-items:center; gap:6px; cursor:move; }
+  #ovpanel > header .t { flex:1; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); }
+  #ovpanel .btn { background:var(--accent); color:var(--on-accent); border:0; border-radius:8px; padding:3px 11px; font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
+  #ovpanel .btn.alt { background:var(--accent-soft); color:var(--ink); }
+  #ovpanel .hint { font-size:11px; color:var(--muted); margin:4px 0 5px; }
+  .wrow { display:flex; align-items:center; gap:5px; padding:2px 4px; border-radius:8px; }
+  .wrow:hover, .wrow.sel { background:color-mix(in srgb, var(--accent-soft) 55%, transparent); }
+  .wrow .eye, .wrow .st { background:none; border:0; color:var(--muted); cursor:pointer; font:inherit; width:21px; height:21px; border-radius:6px; line-height:1; padding:0; display:grid; place-items:center; }
+  .wrow .eye:hover, .wrow .st:hover { color:var(--accent); background:color-mix(in srgb, var(--panel) 60%, transparent); }
+  .wrow .eye.off { color:var(--muted); opacity:.6; }
+  .wrow .nm { flex:1; text-align:left; background:none; border:0; color:var(--ink); font:inherit; font-size:12px; font-weight:600; cursor:pointer; padding:2px 4px; border-radius:6px; white-space:nowrap; }
+  .wrow.off .nm { color:var(--muted); font-weight:400; }
+  .wrow .sv { font-size:11px; color:var(--muted); min-width:36px; text-align:center; }
+  .wdet { display:none; padding:5px 6px 7px 31px; border-top:1px dashed color-mix(in srgb, var(--line) 60%, transparent); }
+  .wdet.open { display:block; }
+  .wdet label { display:flex; gap:8px; align-items:center; font-size:11px; color:var(--muted); margin:4px 0; }
+  .wdet label b { min-width:38px; font-weight:600; }
+  .wdet input[type=range] { flex:1; accent-color:var(--accent); height:14px; margin:0; }
+  .wdet .xy { display:flex; gap:6px; align-items:center; margin:4px 0; font-size:11px; color:var(--muted); }
+  .wdet input[type=number] { width:64px; background:color-mix(in srgb, var(--panel) 70%, transparent); border:1px solid var(--line); color:var(--ink); border-radius:6px; font:inherit; font-size:11px; padding:2px 5px; }
+  .wdet .rw { margin-left:auto; background:none; border:0; color:var(--muted); font:inherit; font-size:11px; cursor:pointer; padding:2px 6px; border-radius:6px; text-decoration:underline; }
+  .wdet .rw:hover { color:var(--bad); }
+  #ovpanel .foot { display:flex; align-items:center; gap:9px; margin-top:7px; padding-top:7px; border-top:1px solid color-mix(in srgb, var(--line) 65%, transparent); }
+  #ovpanel .foot label { display:inline-flex; gap:5px; align-items:center; font-size:12px; cursor:pointer; }
+  #ovpanel .foot input { accent-color:var(--accent); margin:0; }
+  #ovpanel select { background:var(--accent-soft); color:var(--ink); border:0; border-radius:7px; font:inherit; font-size:11px; padding:2px 4px; }
+  #ovpanel .foot .rw-all { margin-left:auto; background:none; border:0; color:var(--muted); font:inherit; font-size:11px; cursor:pointer; padding:2px 4px; }
+  #ovpanel .foot .rw-all:hover { color:var(--bad); }
 </style>
 </head>
 <body>
-  <div id="ovbar" class="hidden"></div>
+  <div id="ovgrid" class="hidden"></div>
+  <div id="ovgv" class="gl hidden"></div>
+  <div id="ovgh" class="gl hidden"></div>
+  <div id="ovpanel" class="hidden"></div>
   <div id="ovroot"></div>
   <script src="themes.js"></script>
   <script src="overlay.js"></script>

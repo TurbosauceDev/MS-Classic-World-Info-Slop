@@ -108,6 +108,16 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   Edit = toolbar with a checkbox per widget + Done; locked = setIgnoreMouseEvents(true,{forward:true}) + body.locked (no titles).
   The map card: G.maps[id][2] resolved to names/Lv/EXP + session.respawns() rows (overlay computes dueIn from killed+sec).
   Theme: the push carries the tracker's resolved tokens (TH.resolve(themeNow(), darkQ.matches)) — overlay follows live.
+  Edit mode v2 (0.2.75, Danny 2026-10-28, after ElvUI's Toggle Anchors + WoW Edit Mode + WeakAuras' MoverSizer): the checkbox
+  strip became the edit panel (in-style glass card, draggable, spot saved in settings.overlay.panel): one row per widget with
+  an eye toggle + size steppers, picking a row opens a detail strip (size .5-2x, opacity .25-1, exact x/y, per-widget reset);
+  footer = Snap + Grid (32/64/128) + Reset layout (arm-then-confirm). Cards magnet-snap to each other's edges/centres and the
+  screen edges/centre (SNAP_PX 15, per-axis min-delta, Shift skips; guides #ovgv/#ovgh), the grid rounds drops when on, cards
+  resize via corner grip / Ctrl+scroll / slider (transform scale, transform-origin top left; getBoundingClientRect for the
+  scaled rect), arrows nudge the picked card 1 px (Shift 10), Esc = Done, row hover spotlights the card (body.dim + .spot).
+  Bounds fix: the page clamps to the window's REAL content area (innerWidth/Height), and main.js reports ovDesk() =
+  getContentBounds() (re-asserts setBounds(ovBounds()) after show + on display-metrics-changed) instead of the intended
+  display union — mixed-DPI/Windows-nudged windows left a dead strip around the perimeter with cards cut off.
   Tests: overlay.test.js (page part + tracker part); ui-host stubs overlay/overlayPush/onOverlay/overlayEdit; ui.test rows = 15.
 - Compact view retired 0.2.58; compactFit stays as the "window height follows the boxes" sizer (fitWin). Adding a shortcut:
   KEYS (main.js), KEY_NAMES, and the ui test's shortcut row count.

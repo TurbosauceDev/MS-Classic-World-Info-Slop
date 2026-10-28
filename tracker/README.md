@@ -21,10 +21,15 @@ npm start           # run it (Windows, Electron)
   (`renderer-overlay.js` ovBuild: stats-lite, the map's spawn table and respawn timers from G.timed, KPQ clock, the last
   run-log lines in plain text, the resolved theme tokens) and pushes it on every re-render (500 ms throttle); the overlay
   just renders it, and a 1 s tick advances the countdowns between pushes. Edit mode (Ctrl+Shift+E / View menu / Done in
-  the toolbar): cards drag anywhere (pointer events, saved in desktop pixels via settings.overlay.widgets, re-clamped on
-  `display-metrics-changed`), the toolbar's checkboxes pick what to track. Locked (Done / same keys):
-  `setIgnoreMouseEvents(true, {forward: true})` — every click reaches the game; the cards drop their titles. Widgets:
-  Status, EXP (with the level bar), Kills, Mesos, Loot, Map & spawns, Party, KPQ, Run log. tests/overlay.test.js.
+  the panel): cards drag anywhere (pointer events, saved in desktop pixels via settings.overlay.widgets, re-clamped on
+  `display-metrics-changed`). Edit mode v2 (v0.2.75, after ElvUI / WoW Edit Mode / WeakAuras): the checkbox strip is now
+  an in-style editor panel — one row per widget (eye toggle + size steppers), the picked row opens size / opacity / exact
+  x-y / reset controls, with Snap, Grid (32/64/128 px) and Reset layout in the footer. Cards magnet-snap to each other and
+  the screen (15 px, Shift skips) with alignment guides, resize by corner grip / Ctrl+scroll / slider (0.5-2x), arrow keys
+  nudge 1 px (Shift 10), Esc = Done, and Reset layout restores the factory layout after a confirm. Cards clamp to the
+  window's real content area, so nothing gets cut off in the dead strip some monitor setups used to leave. Locked (Done /
+  same keys): `setIgnoreMouseEvents(true, {forward: true})` — every click reaches the game; the cards drop their titles.
+  Widgets: Status, EXP (with the level bar), Kills, Mesos, Loot, Map & spawns, Party, KPQ, Run log. tests/overlay.test.js.
 - `core/session.js`: events -> rates. Pure; idle gaps over 60 s are left out. Kills are placed by matching each EXP pickup
   to the map's monsters (exact base EXP, or the party share); mesos/items are credited to the last kill (a guess on maps
   with several monsters).

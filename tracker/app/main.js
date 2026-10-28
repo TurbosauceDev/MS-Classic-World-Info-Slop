@@ -81,7 +81,7 @@ app.whenReady().then(() => {
   win.on("closed", () => ovCloseWin());
   // monitors plugged in or removed, resolution changed: the overlay re-spans the desktop and its page re-clamps the widgets
   require("electron").screen.on("display-metrics-changed", () => {
-    if (ovWin && !ovWin.isDestroyed()){ try { ovWin.setBounds(ovBounds()); ovWin.webContents.send("ov-screens", ovBounds()) } catch {} }
+    if (ovWin && !ovWin.isDestroyed()){ try { ovWin.setBounds(ovBounds()); ovWin.webContents.send("ov-screens", ovDesk()) } catch {} }
   });
   // our own menu instead of Electron's default (its Help menu only linked to Electron's site)
   const show = what => () => win && !win.isDestroyed() && win.webContents.send("menu", what);
@@ -191,6 +191,13 @@ function ovBounds(){
   const x = Math.min(...ds.map(d => d.bounds.x)), y = Math.min(...ds.map(d => d.bounds.y));
   return {x, y, width: Math.max(...ds.map(d => d.bounds.x + d.bounds.width)) - x, height: Math.max(...ds.map(d => d.bounds.y + d.bounds.height)) - y};
 }
+// the desk the page should trust: the window's REAL content bounds, not the union we asked for. Windows may nudge or
+// DPI-fit a transparent window that spans displays, and the page clamping to the intended rect instead of the real one
+// is what cut widgets off and left a dead strip around the perimeter (Danny 2026-10-28).
+function ovDesk(){
+  if (ovWin && !ovWin.isDestroyed()){ try { const b = ovWin.getContentBounds(); if (b.width > 0) return b } catch {} }
+  return ovBounds();
+}
 const ovWidgets = () => { const w = readSettings().overlay?.widgets; return w && typeof w === "object" && !Array.isArray(w) ? w : {} };
 const ovSendState = () => { if (win && !win.isDestroyed()) win.webContents.send("ov-state", {open: !!(ovWin && !ovWin.isDestroyed()), edit: ovEditing}) };
 function ovEditSet(on){
@@ -209,7 +216,12 @@ function ovOpenWin(){
   ovWin.on("closed", () => { ovWin = null; ovSendState() });
   // edit: true unless the player locked it and it was still open when the app last quit
   const edit = readSettings().overlay?.edit !== false;
-  ovWin.loadFile(path.join(__dirname, "overlay.html")).then(() => { ovWin.showInactive(); ovEditSet(edit) }).catch(() => {});
+  ovWin.loadFile(path.join(__dirname, "overlay.html")).then(() => {
+    ovWin.showInactive();
+    try { ovWin.setBounds(ovBounds()) } catch {}   // some setups nudge a freshly shown transparent window: re-assert the span
+    ovEditSet(edit);
+    try { ovWin.webContents.send("ov-screens", ovDesk()) } catch {}   // and tell the page the real content area
+  }).catch(() => {});
   ovSendState();
 }
 function ovCloseWin(){ if (ovWin && !ovWin.isDestroyed()) ovWin.close() }
@@ -218,7 +230,7 @@ ipcMain.handle("overlay", () => { ovToggle(); return !!(ovWin && !ovWin.isDestro
 ipcMain.handle("ov-edit", (_, on) => { if (ovWin && !ovWin.isDestroyed()) ovEditSet(on !== false); return ovEditing });
 ipcMain.handle("ov-edit-toggle", () => { if (ovWin && !ovWin.isDestroyed()) ovEditSet(!ovEditing); return ovEditing });
 ipcMain.handle("ov-close", () => { ovCloseWin(); return true });
-ipcMain.handle("ov-state", () => ({edit: ovEditing, widgets: ovWidgets(), desk: ovBounds()}));
+ipcMain.handle("ov-state", () => ({edit: ovEditing, widgets: ovWidgets(), desk: ovDesk()}));
 ipcMain.on("ov-push", (_, d) => { if (ovWin && !ovWin.isDestroyed()) ovWin.webContents.send("ov-data", d) });
 
 // "Show me where": a full-screen window with the frozen game picture; the player drags a box (snipping-tool style)
