@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Fetch pricing data from maplestory.watch and mesoarbitrage.com.
 
-Both sites have PUBLIC APIs (no auth, no Cloudflare challenge):
-- maplestory.watch: GET /api/items — 944 items, 12 fields (typical, range, dayAgo, samples, prices, lowest, listed, sold, units, volume, seen)
+Both sites have PUBLIC APIs (no auth):
+- maplestory.watch: GET /api/items — 944 items, 12 fields (typical, range, dayAgo, samples, prices, lowest, listed, sold, units, volume, seen).
+  Behind a Cloudflare challenge for non-browser clients since 10-28 (same class of block as classicrank.com); fetches fail 403
+  and we keep the old file — no bypassing, per the 10-20 rule. The site's stale pills / Source-health panel flag the freeze.
 - mesoarbitrage.com: GET /data/prices.json — 983 items, 15 fields (id, name, group, sub, jobs, n, soldN, sold, ask, last, npc, sold72, n72, sold14, n14)
 
 Both use crowdsourced shop scans (browser-based game window sharing via getDisplayMedia API).
@@ -120,11 +122,22 @@ def fetch_mesoarbitrage():
 
 
 def main():
+    # A failed fetch keeps the old file and exits 0 so CI never breaks (same contract as fetch_shopscans.py).
+    # Before the 10-28 fix any HTTP error here crashed the shopscans poll step under `bash -e` (2 failed runs).
     SRC_DIR.mkdir(parents=True, exist_ok=True)
-    fetch_maplestorywatch()
-    print()
-    fetch_mesoarbitrage()
-    print("\nDone. Both sources fetched.")
+    bad = []
+    for label, fn in (("maplestorywatch", fetch_maplestorywatch), ("mesoarbitrage", fetch_mesoarbitrage)):
+        try:
+            fn()
+        except Exception as e:
+            bad.append(label)
+            print(f"::warning::{label} fetch failed, keeping the old file: {type(e).__name__}: {e}")
+        else:
+            print()
+    if bad:
+        print(f"\nDone with {len(bad)} failed source(s) ({', '.join(bad)}); fresh files kept for the rest.")
+    else:
+        print("\nDone. Both sources fetched.")
 
 
 if __name__ == "__main__":
