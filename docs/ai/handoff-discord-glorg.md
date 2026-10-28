@@ -1,9 +1,10 @@
 # Standing handoff — Discord surface (Glorg [z.ai])
 
 ## Snapshot
-- Last updated: 2026-10-25 19:5xZ by Glorg [z.ai]
-- Repo HEAD: 51560e5 + the comms-upgrade commit this file ships in (CI: docs check success; site tests/pages/tracker green on 1568924)
-- Deployed site: v0.18.1, built Oct 25 2026 19:13 UTC (includes T-07's UI copy fixes)
+- Last updated: 2026-10-28 17:15Z by Glorg [z.ai]
+- Repo HEAD: 2248350 + the handoff commit this file ships in (CI: green; meowdb dispatch run 40720150137 landed c3add61)
+- Deployed site: v0.19.4, meowdb data stamped 2026-10-28 16:23 live
+- Tracker: v0.2.82 published 10-28 09:53Z (v0.2.75-0.2.82 all shipped that morning)
 - My sandbox: /home/z/my-project (alive)
 
 ## What I own
@@ -12,7 +13,9 @@
 - The agent ping bridge for Discord-side agents (#agent-pings webhook; rules in `docs/ai/agent-mailbox.md` § How to use).
 
 ## In flight right now
-- Digest cron (04:45 PT, lint-gated, contract shape): next unattended run produces Issue #5. State file says last_issue 4, archived_through 4, so tomorrow archives nothing and only deletes the stale #daily-updates post.
+- Digest cron (04:45 PT, lint-gated, contract shape): issue 7 posted 10-28 (state: last_issue 7, archived_through 5); rotation proven live — issue 6 archived to the [Archive] thread, stale channel post deleted.
+- The meowdb market outage is closed (headed-Chromium fix, `ea0fffe` + `c3add61`); the 3 h cron owns it from here. Watch the 17:41 UTC scheduled run once, then hands off.
+- Week catch-up for Claude written: `docs/ai/handoff-to-claude-2026-10-28.md` + mailbox thread (Danny's ask, 10-28).
 - Quiet-day carve-out question parked in the mailbox (bare heartbeats vs full short issues) — awaiting T-07/Danny; my default is full short issues.
 
 ## State pointers (paths, never values)
@@ -34,6 +37,11 @@
 - `?thread_id=` lands the post in the thread; bad ids give 400/403, so 2xx is positive confirmation.
 - Webhooks cannot read channel history or discovery endpoints (no bot token) — don't try.
 - Digest lint bans em-dashes and "basically/obviously" on top of design.md §10 — write the digest with that in mind from the first draft.
+- Discord webhook multipart: `curl -F 'payload_json=<inline JSON>'` corrupts the JSON with this curl build (400 "Expected payload_json to be a valid JSON string") — write it to a temp file and use `-F 'payload_json=</tmp/p.json;type=application/json'`.
+- The update manifest (latest.yml) is a Release asset, not a repo file — backticking it in any docs/ai file fails the docs test path check.
+- Sandbox IP is Cloudflare-walled harder than GH runners (headless AND headed browsers stuck on challenges; r.jina.ai rejects it too) — probe blocked sites from a throwaway CI workflow, never from the sandbox.
+- Local git clone is shallow (back to 10-25 17:22) — older history lives in decisions.md / site-history.md, not git log.
+- A workflow file that exists only on a side branch 404s on API dispatch — the workflow must be on the default branch first.
 
 ## If I vanish tomorrow
 1. Clone the repo; read `docs/ai/digest-contract.md`, `config/digest.json` and `docs/ai/discord-digest-runbook.md`.

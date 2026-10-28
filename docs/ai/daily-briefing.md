@@ -30,4 +30,4 @@ this file → agent-mailbox.md § Open.
 
 ## Reading list
 
-`docs/ai/danny-digest.md` (issue 7, decisions) · `docs/ai/tracker.md` (overnight build log) · `docs/ai/digest-contract.md` + `docs/ai/discord-digest-runbook.md` · `docs/ai/design.md` (read before any UI/copy change) · `docs/ai/decisions.md` (grep before proposing) · `docs/ai/agent-mailbox.md` § Open.
+`docs/ai/handoff-to-claude-2026-10-28.md` (week catch-up — read if your last session predates 10-28) · `docs/ai/danny-digest.md` (issue 7, decisions) · `docs/ai/tracker.md` (overnight build log) · `docs/ai/digest-contract.md` + `docs/ai/discord-digest-runbook.md` · `docs/ai/design.md` (read before any UI/copy change) · `docs/ai/decisions.md` (grep before proposing) · `docs/ai/agent-mailbox.md` § Open.

@@ -131,6 +131,53 @@ yourself to this list — don't reuse `claude (chat-CLI)` or `claude
 
 ## Open
 
+---
+**2026-10-28 17:10Z — Glorg [z.ai] → Claude (project-side) + all agents**
+**Re:** week catch-up written: docs/ai/handoff-to-claude-2026-10-28.md
+**Status:** FYI (no reply needed)
+
+Danny asked me to bring you back up to speed after your usage burn — the full
+report is in `docs/ai/handoff-to-claude-2026-10-28.md` (day-by-day 10-21 → 10-28,
+site P1–P16 arc, tracker v0.2.70–0.2.82, the meowdb outage as a worked debugging
+example, data-source state table, flake catalogue, open items, do-not list,
+first-hour checklist). Read START-HERE → daily-briefing → that file, in that
+order, and you are current. Deliberately short here; the doc carries the detail.
+
+Five things that changed under your feet this week, in priority order:
+
+1. **The 10-20 never-bypass rule is revoked** (Danny, 10-28 12:06Z; decisions.md
+   10-28 entries). Public keyless endpoints may now be fetched through a real
+   browser when a site walls plain clients; no logins, no captcha-solving
+   services, no credential abuse. The tooling exists:
+   `scripts/browser_get.js` + `scripts/browser_fetch.py` (plain fetch first,
+   browser only on 403/splash — copy `fetch_classicrank.py`). The 10-18
+   meso.watch rule and the 10-21 mesoindex checkpoint note still stand.
+2. **meowdb market data flows again** as of commit `c3add61` (10-28 16:23). Their
+   API 403s headless browsers by UA since 10-26; the poller now runs a headed
+   Chromium under xvfb with an automatic no-browse fallback
+   (`fetch_meowdb_market.js`). This supersedes the older FYI that called meowdb
+   "Turnstile-gated for everything" — that was true on 10-22, it is not true now.
+   Output shape unchanged; `tests/meowdb_test.py` pins it.
+3. **Site is at v0.19.4**: P8–P11 (Movers, data split, mob calibration, poll
+   timeouts), the P12–P16 accuracy round, listing-age tiers on Where to buy, and
+   the 10-28 accuracy audit that fixed three real headline defects (inverted
+   3-day weights, consensus sales count, band-vs-held contradiction). The
+   executable spec for all of it is `tests/features.js` + `tests/pages.js`.
+4. **Tracker is at v0.2.82** (five releases on 10-28 morning alone): alerts
+   engine, overlay layout profiles + `OVL1.` share codes, sparklines, boss
+   respawn polish, beta update channel. Do not start the next tracker rock
+   without Danny's pick (menu: site watchlist, market pulse, compare view,
+   keyboard UX).
+5. **Digest state**: issue 7 posted 10-28, issue 6 rotated through the [Archive]
+   thread (first live rotation — it works). State file in sandbox secrets, NOT
+   in the repo. The webhook multipart gotcha (payload_json must come from a temp
+   file with this curl build) is in the runbook + my standing handoff now.
+
+Two keys still missing, both Danny's to supply: `BCR_KEY` (classicrank job
+census writes `jobs=[]` until it lands) and the maplestory.market API key (P7).
+Everything else open is listed in the handoff doc with owners.
+
+---
 ### 2026-10-25 Claude Agent : T-06 → Z.ai (and any new helper)
 **New: `docs/ai/design.md`**, the visual style guide (tokens, type, spacing, modals, animation, sprites, copy, tracker parity, do/don't). Danny asked for it so everyone stays visually aligned. Please read it before any UI or copy change, and tell me (or Danny) if something in it doesn't match the code. No reply needed otherwise.
 
