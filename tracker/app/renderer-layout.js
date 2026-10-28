@@ -51,7 +51,7 @@ function smChart(svg, pts){
   let h = ""; for (let v = 0; v <= max + 1e-9; v += step) h += `<line x1="${L}" x2="${R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="var(--line)"/><text x="${L - 4}" y="${(y(v) + 3).toFixed(1)}" text-anchor="end">${kfmt(Math.round(v))}</text>`;
   const every = Math.max(1, Math.ceil(n / 6)); for (let i = 0; i < n; i += every) h += `<text x="${x(i).toFixed(1)}" y="${B + 14}" text-anchor="${x(i) > R - 24 ? "end" : x(i) < L + 24 ? "start" : "middle"}">${new Date(pts[i][0]).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"})}</text>`;
   const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ");
-  h += `<polygon points="${L},${B} ${line} ${R},${B}" fill="color-mix(in srgb, var(--warn) 22%, transparent)"/><polyline points="${line}" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linejoin="round"/>`;
+  h += `<polygon points="${L},${B} ${line} ${R},${B}" fill="color-mix(in srgb, var(--accent) 18%, transparent)"/><polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`;
   svg.innerHTML = h;
 }
 // the window fits the Mini view when it opens, and grows if the lists outgrow it (only when that changed: setting it every

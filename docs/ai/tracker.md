@@ -289,3 +289,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   #ovProfName; Del is arm-then-confirm and never deletes the last profile. Share = profCode() "OVL1." + base64 JSON;
   profImport() validates every widget (known KINDS keys, clamped s/o, rounded x/y) before swapping the live layout.
   Boot: profiles missing or lacking the active name -> seeded from the live layout; the active profile always re-mirrors.
+
+## Simple Mode restyle + overlay esc fix 2026-10-28 (0.2.86, thread "Make tracker customizable like ElvUI and WeakAuras")
+- Simple Mode (#mini .sm*) now uses one accent (--accent) for the hero number and chart, ink for the map name, flat 6 px panels, 10 px uppercase labels; --warn gold is gone from it. Focus Mode shares .smMap/.smWho/.smBox, so check both after touching them.
+- overlay.js `esc` mapped ">" to &quot; (profile names with > broke the select). Test in overlay.test.js. Study + roadmap: [tracker-customization.md](tracker-customization.md).

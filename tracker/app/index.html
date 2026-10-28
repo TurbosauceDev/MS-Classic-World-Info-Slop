@@ -46,20 +46,21 @@
   #mini > .smHead, #mini > .smRow3, #mini > .smBox, #mini > .mgrid { margin-top:8px; }
   #mini .mhead { margin:0; } #mini .mgrid { margin-top:2px; } #mini > .note:empty { display:none; }
   .smHead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
-  .smMap { font-size:22px; font-weight:700; line-height:1.15; color:var(--warn); overflow-wrap:anywhere; }
-  .smWho { display:inline-flex; gap:6px; margin-top:6px; padding:3px 9px; border:1px solid var(--line); border-radius:8px; background:var(--bg); font-weight:700; font-size:13px; }
-  .smWho b { color:var(--warn); } .smSpawns { white-space:nowrap; }
-  .smBox { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 10px; min-width:0; }
+  .smMap { font-size:18px; font-weight:700; line-height:1.2; color:var(--ink); letter-spacing:.01em; overflow-wrap:anywhere; }
+  .smWho { display:inline-flex; gap:6px; margin-top:3px; padding:0; border:0; background:none; color:var(--muted); font-weight:600; font-size:12px; }
+  .smWho b { color:var(--ink); } .smSpawns { white-space:nowrap; }
+  .smBox { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px 10px; min-width:0; }
+  #mini .smBox .k, #mini .mgrid .k { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
   .smRow3 { display:grid; grid-template-columns:2fr 1fr 1fr; gap:6px; } @media (max-width: 420px){ .smRow3 { grid-template-columns:1fr 1fr; } .smHero { grid-column:1 / -1; } }
-  .smHero { border-color:var(--warn); background:color-mix(in srgb, var(--warn) 12%, var(--bg)); }
-  .smBig { font-size:28px; font-weight:800; color:var(--warn); line-height:1.1; font-variant-numeric:tabular-nums; } .smBig small { font-size:12px; color:var(--ink); font-weight:700; }
-  .smMid { font-size:19px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .smHero { border-left:3px solid var(--accent); }
+  .smBig { font-size:28px; font-weight:700; color:var(--accent); line-height:1.1; font-variant-numeric:tabular-nums; } .smBig small { font-size:12px; color:var(--ink); font-weight:700; }
+  .smMid { font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; }
   .smLvl { display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; gap:8px; align-items:center; font-weight:700; color:var(--muted); }
-  .smLvl b { color:var(--warn); } .smLvl .gain { color:var(--leaf); font-size:16px; font-variant-numeric:tabular-nums; }
-  .smTrack { position:relative; height:12px; border-radius:6px; background:var(--panel); border:1px solid var(--line); }
-  .smTrack i { position:absolute; top:0; bottom:0; border-radius:5px; } .smTrack .was { left:0; background:color-mix(in srgb, var(--leaf) 35%, var(--panel)); } .smTrack .now { background:var(--leaf); }
+  .smLvl b { color:var(--ink); } .smLvl .gain { color:var(--leaf); font-size:16px; font-variant-numeric:tabular-nums; }
+  .smTrack { position:relative; height:8px; border-radius:4px; background:var(--panel); border:1px solid var(--line); }
+  .smTrack i { position:absolute; top:0; bottom:0; border-radius:3px; } .smTrack .was { left:0; background:color-mix(in srgb, var(--leaf) 35%, var(--panel)); } .smTrack .now { background:var(--leaf); }
   .smTrack .up { position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--ink); }
-  .smPots { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; } .smPots > .k { color:var(--warn); }
+  .smPots { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; } .smPots > .k { color:var(--muted); }
   .smPotList { display:flex; flex-wrap:wrap; gap:6px 12px; } .smPot { display:flex; align-items:center; gap:5px; } .smPot b { font-variant-numeric:tabular-nums; } .smPot .note { display:block; line-height:1.1; }
   .smMoney { margin-left:auto; display:grid; grid-template-columns:auto auto auto; gap:1px 8px; align-items:baseline; font-size:12px; }
   .smMoney .v { font-weight:800; font-size:15px; text-align:right; font-variant-numeric:tabular-nums; } .smMoney .note { text-align:right; }

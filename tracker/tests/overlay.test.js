@@ -257,6 +257,16 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     st = await page.evaluate(() => [document.querySelectorAll("#ovProf option").length, document.querySelector("#ovProf").value,
       Object.keys(window.ovSaved.overlay.profiles).length, window.ovSaved.overlay.profile]);
     if (st[0] !== 2 || st[1] !== "Bossing" || st[2] !== 2 || st[3] !== "Bossing") fail("profile save-as", st);
+    // regression (0.2.84): esc() turned ">" into &quot;, so a profile named "Tank>DPS" showed as Tank"DPS and its option value no longer matched
+    st = await page.evaluate(() => esc("a>b<c&\"d"));
+    if (st !== "a&gt;b&lt;c&amp;&quot;d") fail("esc escapes >", st);
+    await page.fill("#ovProfName", "Tank>DPS"); await page.click("#ovProfSave"); await page.waitForTimeout(350);
+    await page.selectOption("#ovProf", "Bossing"); await page.waitForTimeout(350);
+    await page.selectOption("#ovProf", "Tank>DPS"); await page.waitForTimeout(350);
+    st = await page.evaluate(() => window.ovSaved.overlay.profile);
+    if (st !== "Tank>DPS") fail("profile with > in its name selectable", st);
+    await page.selectOption("#ovProf", "Bossing"); await page.waitForTimeout(350);
+    await page.evaluate(() => { CFG.profiles["Tank>DPS"] && delete CFG.profiles["Tank>DPS"]; profUi(); ovSave() }); await page.waitForTimeout(350);
     await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.left = "500px"; savePos("exp") });
     await page.waitForTimeout(350);   // the save (and the profile mirror) debounce
     const movedX = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);

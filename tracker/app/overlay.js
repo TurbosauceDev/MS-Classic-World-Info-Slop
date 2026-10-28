@@ -6,7 +6,7 @@
 // corner grip / Ctrl+scroll / a scale slider, and arrows nudge the picked card. Done locks the overlay and every click
 // goes through to the game until Ctrl+Shift+E (or View menu) edits again.
 const $ = s => document.querySelector(s);
-const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&quot;", '"': "&quot;"})[c]);
+const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
 const fmt = n => Math.round(n).toLocaleString();
 const hm = h => h < 1 ? Math.round(h * 60) + " min" : h.toFixed(1) + " h";
 const mss = sec => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0") };
