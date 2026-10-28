@@ -38,6 +38,23 @@ Not taken on purpose: ElvUI's near-black *borders* (they read against the game w
 own dark page — we keep a visible grey edge), and no shadows on overlay cards (authentic; per-card
 opacity covers bright maps).
 
+## 0.2.93 — the button pass (Danny, 10-29, on the first screenshots)
+
+"more intentional and in alignment… the text is hard to read… instead of orange accents, use the purple we
+like." Three moves, all still in the skin's rules (colours stay tokens):
+
+- **One toolbar rhythm.** ElvUI's real discipline is uniformity, and the first build had four button sizes in
+  one row (? at 12 px, Simple Mode at 5 px padding, the rest at 7 px, Start at 9 px). Now every button in the
+  main card's bar is the same 30 px at one face and size (14 px PT Sans Narrow 600), flat grey fill (`ink` 7 %
+  over `panel`), a 1 px `line` border and bright text; hover walks the border to the accent. Start stays the
+  filled button, ? squares off. Flex ate the `.nw` spans' leading spaces — `gap:5px` puts them back.
+- **The accent is ours.** The Elv preset swaps ElvUI's #1785d1 for the Purple preset's dark-side **#b49bff**
+  with dark text on it (7.5:1 on the panels), and warn softens from #e5821f orange to the purple family's gold
+  #e6ad52. Grey panels untouched. (soft rides along as #2b2347, the dark-violet button wash.)
+- **Alignment debts.** The main card's grip/fold pair now rides the bar's centre (`#top .boxctl{top:16px}` —
+  it was parked at h3 height, but #top has no h3), the Per hour/Total switch steps up to 13 px with quieter
+  unpressed text, and the Dummy banner speaks the accent (it was an info note wearing --warn's orange).
+
 ## Edit-mode ledger (ElvUI's Toggle Anchors heritage, WoW-free)
 
 Already in (0.2.74–0.2.82): picker panel with per-widget eye/size/opacity/x-y/reset, magnetic snap to

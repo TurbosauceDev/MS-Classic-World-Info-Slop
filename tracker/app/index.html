@@ -129,6 +129,7 @@
   #top .bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-right:46px; container-type:inline-size; }
   /* the main card is a box too (Danny, 2026-10-18); folded it keeps its Start bar */
   #top.box.folded > .bar { display:flex !important; } #top.folded .boxctl { position:absolute; } #top.folded .btitle { display:none; }
+  #top .boxctl { top:16px; }   /* no h3 here: grip + fold ride the Start bar's centre, not the h3 line (0.2.93) */
   #go { padding:9px 18px; font-weight:600; min-width:78px; } #go.on { background:var(--bad); }
   #state { font-weight:600; } #state .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--muted); margin-right:5px; vertical-align:1px; }
   #state.on .dot { background:var(--leaf); } #state.paused .dot { background:var(--warn); }
@@ -408,6 +409,25 @@
   body.skin-elv #modalBack { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.55); }
   body.skin-elv h3 { text-shadow:none; letter-spacing:.07em; }
   body.skin-elv .smMap, body.skin-elv .smBig, body.skin-elv .fzBig { text-shadow:none; }   /* clean type, no glow */
+  /* Elv toolbar (0.2.93, Danny: "more intentional and in alignment… the text is hard to read… instead of orange
+     accents, use the purple we like"): one rhythm for every button in the main card's bar — the same 30 px height,
+     one face at one size, flat grey fill, a crisp 1 px border, bright text; hover walks the border to the accent.
+     Start stays the filled button (purple now, dark text on it), ? squares off to match the row. */
+  body.skin-elv #top .bar > button { height:30px; padding:0 12px; font-size:14px; font-weight:600; line-height:1;
+    display:inline-flex; align-items:center; justify-content:center; gap:5px;   /* flex eats the .nw spans' leading spaces */
+    background:color-mix(in srgb, var(--ink) 7%, var(--panel)); border:1px solid var(--line); color:var(--ink); }
+  body.skin-elv #top .bar > button:hover { border-color:var(--accent); }
+  body.skin-elv #top .bar > #go { background:var(--accent); color:var(--on-accent); min-width:78px; padding:0 16px;
+    border-color:color-mix(in srgb, #000 30%, var(--accent)); }
+  body.skin-elv #top .bar > #go:hover { background:color-mix(in srgb, #fff 10%, var(--accent)); }
+  body.skin-elv #top .bar > #go.on { background:var(--bad); border-color:color-mix(in srgb, #000 30%, var(--bad)); }
+  body.skin-elv #top .bar > #helpBtn { width:30px; padding:0; }
+  body.skin-elv .seg button { font-size:13px; padding:4px 12px; color:color-mix(in srgb, var(--ink) 78%, var(--panel)); }
+  body.skin-elv .seg button[aria-pressed=true] { background:var(--accent); color:var(--on-accent); }
+  /* the Dummy banner speaks the accent now (it was an info note wearing --warn's orange) */
+  body.skin-elv #dummyBar { border-color:color-mix(in srgb, var(--accent) 55%, var(--line));
+    background:color-mix(in srgb, var(--accent) 12%, var(--panel)); }
+  body.skin-elv #dummyBar b { color:var(--accent); }
 </style>
 </head>
 <body>

@@ -34,9 +34,11 @@
     T("Perion sand", "light", "e9dfcf f4ede1 3a2d22 6f5f51 d9c8b1 9c4f2b e7d5c1 ffffff 4d8b3a a8680f b8322a"),
     T("High contrast", "dark", "000000 0d0d0d ffffff d0d0d0 6a6a6a ffd400 2b2600 000000 4cff7a ffb000 ff5050"),
     // "Elv" (0.2.92): the ElvUI panel look as colours — near-black faded backdrop and panels (backdropcolor 0.1,
-    // backdropfadecolor 0.06 @ .8), a visible grey edge, and the signature value colour #1785d1 (0.09/0.52/0.82) for
-    // numbers and buttons. Dark only: the original has no light side. Pair it with sk:"elv" (below) for the full re-skin.
-    T("Elv", "dark", "0f0f0f 1a1a1a e8e8e8 9a9a9a 3f3f3f 1785d1 14304a ffffff 55b76b e5821f ef4d4d", "elv")];
+    // backdropfadecolor 0.06 @ .8) and a visible grey edge. 0.2.93 (Danny: "instead of orange accents... use the purple
+    // we like"): the accent is ours now — the Purple preset's dark-side #b49bff with dark text on it — where ElvUI's
+    // blue #1785d1 used to sit, and warn softens to the purple family's gold #e6ad52 so nothing screams orange. Dark
+    // only: the original has no light side. Pair it with sk:"elv" (below) for the full re-skin.
+    T("Elv", "dark", "0f0f0f 1a1a1a e8e8e8 9a9a9a 3f3f3f b49bff 2b2347 1a1a1a 55b76b e6ad52 ef4d4d", "elv")];
   const HEX = /^#[0-9a-f]{6}$/i;
   // a theme from outside (a share code, a file, settings): only a name, light/dark, the known tokens as #rrggbb and the
   // panel style (sk "elv", anything else drops to the glass look) survive
