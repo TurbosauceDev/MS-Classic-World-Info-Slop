@@ -34,6 +34,9 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
     r.writeHead(200, {"content-type": TYPES[path.extname(f)] || "application/octet-stream"}); r.end(fs.readFileSync(f)) });
   await new Promise(res => srv.listen(0, "127.0.0.1", res));
   const URL = `http://localhost:${srv.address().port}/`;
+  // audit P9: the Pages copy boots through the prices fetch (window.__PRICES wrapper) — clicks before it lands race the
+  // listeners and the scene times out (flaked CI 10-27/28); wait for the boot flag on every pages-copy navigation
+  const booted = pg => pg.waitForFunction(() => window.__BOOTED === true, null, {timeout: 30000});
   const b = await chromium.launch();
   const ctx = await b.newContext({viewport: {width: 1400, height: 900}}), p = await ctx.newPage(), errs = [];
   p.on("pageerror", e => errs.push(e.message.slice(0, 200)));
@@ -42,7 +45,7 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
   const row = n => p.$$eval("#snrows tr", (l, n) => (l.find(r => r.querySelector(".itname")?.textContent === n) || {}).textContent || "", n);
   const view = async v => { await p.click(`#snview [data-v="${v}"]`); await p.waitForTimeout(30) };
 
-  await p.goto(URL); await open();
+  await p.goto(URL); await booted(p); await open();
   await p.waitForFunction(() => !document.querySelector("#sntoast").hidden, null, {timeout: 10000});
   check(hits === 1 && /New listings/.test(await p.textContent("#sntoast")), "first open fetches market.json, a newer list shows a toast");
   check(/11 live listings/.test(await p.textContent("#pwstate")), "footer meso.watch line counts the new list (unknown item ids dropped)");
@@ -138,7 +141,7 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
   check(await p.getAttribute('#snrows [data-w="4020000"]', "aria-pressed") === "true", "star a row");
   await view("deal"); await p.click("#snwatch"); check((await names()).join() === "Garnet Ore", "Watched only");
   await p.click("#snwatch");
-  await p.reload(); await open(); await p.waitForTimeout(400);
+  await p.reload(); await booted(p); await open(); await p.waitForTimeout(400);
   check(await p.getAttribute('#snrows [data-w="4020000"]', "aria-pressed") === "true" && await p.getAttribute('#snview [data-v="deal"]', "aria-checked") === "true", "watch list and view survive a reload");
   await p.click('#snrows [data-w="4020000"]');
 
@@ -155,15 +158,15 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
 
   // share link: view + sort come back; a hostile one is cleaned up
   const enc = o => Buffer.from(JSON.stringify(o)).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  await p.goto(URL + "#f=" + enc({v: "over", sort: "pct", min: 0})); await p.reload(); await p.waitForTimeout(400);
+  await p.goto(URL + "#f=" + enc({v: "over", sort: "pct", min: 0})); await p.reload(); await booted(p); await p.waitForTimeout(400);
   check(!(await p.isHidden("#snipe")) && await p.getAttribute('#snview [data-v="over"]', "aria-checked") === "true" && await p.inputValue("#snsort") === "pct", "#f= share link opens the page with its view and sort");
-  await p.goto(URL + "#f=" + enc({v: "<img>", sort: "constructor", max: "1e400", min: 7, cat: "__proto__", q: 5, rough: "yes"})); await p.reload(); await p.waitForTimeout(400);
+  await p.goto(URL + "#f=" + enc({v: "<img>", sort: "constructor", max: "1e400", min: 7, cat: "__proto__", q: 5, rough: "yes"})); await p.reload(); await booted(p); await p.waitForTimeout(400);
   check(await p.getAttribute('#snview [data-v="deal"]', "aria-checked") === "true" && await p.inputValue("#snsort") === "score" && await p.inputValue("#snmax") === "" && await p.inputValue("#sncat") === "", "bad share link values fall back to defaults");
   check(!errs.length, "no page errors" + (errs.length ? ": " + errs.join("; ") : ""));
 
   // phone: no sideways page scroll, top cards swipe inside their row
   { const ph = await b.newPage({viewport: {width: 390, height: 800}}), e2 = []; ph.on("pageerror", e => e2.push(e.message));
-    await ph.goto(URL); await ph.evaluate(() => { const b = document.querySelector("#t-snipe"); document.querySelector("#c-town").click(); b.click() });
+    await ph.goto(URL); await booted(ph); await ph.evaluate(() => { const b = document.querySelector("#t-snipe"); document.querySelector("#c-town").click(); b.click() });
     await ph.waitForTimeout(600);
     // the swipe layout is the CSS contract (overflow-x auto under 600px); scrollWidth > clientWidth also depends on which
     // items happen to be deals today (card text widths), which made this check flaky in CI (10-27)
