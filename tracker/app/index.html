@@ -332,6 +332,14 @@
   .feedlist .fl.exp > span { color:var(--leaf); } .feedlist .fl.meso > span { color:var(--warn); } .feedlist .fl.exp .dim, .feedlist .fl.meso .dim { color:inherit; } .feedlist .fl.level { background:var(--accent-soft); } .feedlist .fl.death span { color:var(--bad); }
   .feedlist .fl.map, .feedlist .fl.sep { color:var(--muted); font-style:italic; } .feedlist .fl.bad span { color:var(--bad); } .feedlist .fl.kpq > span, .feedlist .fl.run > span { color:var(--accent); }
   .feedlist .ic { height:1.25em; width:auto; vertical-align:-0.3em; image-rendering:pixelated; margin-right:1px; }
+  /* site market cards (v0.2.83): Watchlist + Market pulse */
+  #watchBox td:first-child { width:1%; }   /* icon column hugs, like the loot table */
+  #watchRows .ico { height:1.4em; width:auto; vertical-align:-0.35em; image-rendering:pixelated; }
+  #pulseBox .plist { list-style:none; margin:2px 0 6px; padding:0; }
+  #pulseBox .plist li { padding:2px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  #pulseBox .plist li:last-child { border-bottom:0; }
+  #pulseBox .plist .sub { color:var(--muted); font-variant-numeric:tabular-nums; }
+  :is(#watchBox, #pulseBox) b.up { color:var(--leaf); } :is(#watchBox, #pulseBox) b.down { color:var(--bad); }
   @keyframes feedIn { from { opacity:0; transform:translateY(6px); } }
   .over-drop { background:var(--accent-soft) !important; }
   #hist > .row:has(> #csv) { padding-right:72px; }
@@ -521,6 +529,14 @@
       <div class="row"><button id="alertAdd" class="alt">Add alert</button> <span class="note">A condition fires its sound, a toast on the overlay and a run-log line while it holds. Test previews one.</span></div>
     </div>
     <div class="card" id="mesoBox" data-box="mesos" data-title="Mesos"><h3>Mesos</h3><div class="grid" id="mesoGrid"><div class="empty" style="grid-column:1/-1">Mesos picked up and spent, loot worth and net show here once you press Start.</div></div><div class="note" id="mesoNote"></div></div>
+    <div class="card folded" id="watchBox" data-box="watch" data-title="Watchlist (site prices)"><h3>Watchlist</h3>
+      <div class="row"><input id="watchSearch" list="watchNames" placeholder="Add an item to watch…" style="flex:1;min-width:0" aria-label="Search an item to watch"><datalist id="watchNames"></datalist><button id="watchAdd" class="alt" title="Add it to the watchlist">Add</button></div>
+      <table id="watchRows"></table><div class="empty" id="watchEmpty">Nothing watched yet — search an item above and press Add. Prices are the site's meso.watch medians, refreshed every 30 minutes.</div>
+      <div class="note" id="watchNote"></div></div>
+    <div class="card folded" id="pulseBox" data-box="pulse" data-title="Market pulse"><h3>Market pulse</h3>
+      <div class="grid" id="pulseGrid"></div>
+      <div id="pulseMovers"></div>
+      <div class="note" id="pulseNote"></div></div>
     <div class="card" data-box="items" data-title="Items looted"><h3>Items looted</h3><table id="items"></table><div class="empty" id="itemsEmpty">Nothing picked up yet.</div>
       <div class="note" id="priceNote"></div></div>
     <div class="card" id="usedBox" data-box="used" data-title="Consumables used"><h3>Consumables used</h3>
@@ -742,6 +758,7 @@
   <script src="../core/feed.js"></script>
   <script src="../core/history.js"></script>
   <script src="../core/alerts.js"></script>
+  <script src="../core/prices.js"></script>
   <script src="readers.js"></script>
   <script src="themes.js"></script>
   <script src="changelog.js"></script>
@@ -749,6 +766,7 @@
   <script src="renderer-layout.js"></script>
   <script src="renderer-live.js"></script>
   <script src="renderer-alerts.js"></script>
+  <script src="renderer-site.js"></script>
   <script src="renderer-run.js"></script>
   <script src="renderer-history.js"></script>
   <script src="renderer-settings.js"></script>

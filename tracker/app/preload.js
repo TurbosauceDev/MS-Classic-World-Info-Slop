@@ -33,6 +33,11 @@ contextBridge.exposeInMainWorld("host", {
   updateState: () => ipcRenderer.invoke("update-state"),
   updateCheck: () => ipcRenderer.invoke("update-check"),
   updateInstall: () => ipcRenderer.invoke("update-install"),
+  // the site's market prices (main fetches market.json, the page's CSP keeps the renderer offline)
+  siteMarket: () => ipcRenderer.invoke("site-market"),
+  siteMarketRefresh: () => ipcRenderer.invoke("site-market-refresh"),
+  siteMarketReady: () => ipcRenderer.send("site-market-ready"),
+  onSiteMarket: cb => ipcRenderer.on("site-market", (_, j, at) => cb(j, at)),
   onMenu: cb => ipcRenderer.on("menu", (_, what) => cb(what)),
   onUpdate: cb => ipcRenderer.on("update", (_, u) => cb(u)),
   onShare: cb => ipcRenderer.on("share", (_, s) => cb(s)),

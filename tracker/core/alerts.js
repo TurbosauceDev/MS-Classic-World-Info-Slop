@@ -9,12 +9,14 @@
    has(list, kind, on) -> is there an alert of this kind (on: only an enabled one)
    evaluate(alerts, ctx, st, now) -> fired[]   st: the caller's state map, mutated in place
      ctx: {on, paused, runT0, st: {expHr, expHr5, killsHr, mesosHr, level, goalLevel, lastExpT},
-           respawns: [{name, boss, killed, dueIn}], kpq: {left, rounds}|null, events: [{t, name, worth}]}
+           respawns: [{name, boss, killed, dueIn}], kpq: {left, rounds}|null, events: [{t, name, worth}],
+           prices: [{id, name, median}]|null}   prices feed the site-price kinds (priceAbove/priceBelow)
    Triggers that hold ("under X for M min") refire every COOL ms while they stay true; crossing and event triggers
    re-arm only after their condition clears, so nothing spams. */
 (function (root){
   const COOL = 10 * 6e4;   // a held trigger says it again at most every 10 min
   const fmt = n => Math.round(n).toLocaleString("en-US");
+  const num = v => (typeof v === "number" && Number.isFinite(v)) ? v : 0;   // price kinds: a bad field is 0 -> never fires
   // fields: [key, label, default, type]; sound/sev/w are the defaults for the fired entries (w = the overlay widget to flash)
   const KINDS = {
     expHrBelow:  {label: "EXP/hr under", fields: [["v", "EXP/hr under", 1000, "n"], ["min", "for this long (min)", 2, "n"]],
@@ -43,6 +45,10 @@
       sound: "mid", sev: "info", w: "loot", note: "any pickup whose price is at least this (NPC or player price)"},
     lootNamed:   {label: "Watched drops", fields: [["names", "names (comma separated)", "", "t"]],
       sound: "high", sev: "info", w: "loot", note: "part of the item's name matches, 3+ letters per name"},
+    priceAbove:  {label: "Site price at or over", fields: [["name", "item (name or id)", "", "t"], ["v", "median at or over", 1000000, "n"]],
+      sound: "mid", sev: "good", w: "status", note: "watches the site's meso.watch median (Watchlist card pulls it every 30 min); fires on the crossing, re-arms once the price falls back under"},
+    priceBelow:  {label: "Site price at or under", fields: [["name", "item (name or id)", "", "t"], ["v", "median at or under", 100000, "n"]],
+      sound: "mid", sev: "info", w: "status", note: "watches the site's meso.watch median; fires on the crossing, re-arms once the price climbs back over"},
   };
   const SOUNDS = ["low", "mid", "high", "double"];
   // clean one list: unknown kinds out, numbers finite, defaults in, ids stable; params live flat on the alert (a.v, a.min...)
@@ -128,6 +134,23 @@
           if (!ctx.runT0 || !ctx.on){ s.next = null; break }
           if (s.next == null || s.t0 !== ctx.runT0){ s.t0 = ctx.runT0; s.next = ctx.runT0 + a.min * 6e4 }
           if (now >= s.next){ s.next = now + 15 * 6e4; say(`${Math.round((now - ctx.runT0) / 6e4)} min this session — time for a break?`) }
+          break;
+        }
+        case "priceAbove": case "priceBelow": {
+          // ctx.prices: [{id, name, median}] from the latest site pull (renderer-site.js). Exact id
+          // or exact (case-insensitive) name; every match fires once per crossing.
+          const want = String(a.name || "").trim(), v = num(a.v);
+          if (!want || !(v > 0)) break;
+          const wl = want.toLowerCase();
+          for (const p of ctx.prices || []){
+            if (String(p.id) !== want && String(p.name || "").toLowerCase() !== wl) continue;
+            if (!(p.median > 0)) continue;
+            const key = a.kind === "priceAbove" ? p.median >= v : p.median <= v;
+            const st2 = (s.m = s.m || {})[p.id] = s.m[p.id] || {};
+            if (key && st2.armed !== false && now - (st2.firedAt || 0) >= 5 * 6e4){ st2.armed = false; st2.firedAt = now;
+              say(`${p.name} is ${a.kind === "priceAbove" ? "at or over" : "at or under"} ${fmt(v)} (median ${fmt(p.median)})`) }
+            if (!key) st2.armed = true;
+          }
           break;
         }
         case "goalReached": {

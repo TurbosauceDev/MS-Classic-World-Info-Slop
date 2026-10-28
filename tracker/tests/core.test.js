@@ -613,4 +613,48 @@ console.log("today, goal ETA, setup codes, autosave ok");
 }
 console.log("alerts ok");
 
+// site market data (0.2.83): core/prices.js parse/quote/movers/fmtM + the priceAbove/priceBelow alert kinds
+{ const P = require("../core/prices.js");
+  const j = {read: "2026-10-28", listed: "2026-10-28 17:00",
+    it: {"4010001": [300, 299, 330, 16866, 0, -0.06], "4010002": [500, 480, 520, 60, 0, 0.5], "4000000": [10, 9, 11, 5, 1, 0]},
+    hist: {"4010001": [["2026-10-26", 350, 2014], ["2026-10-27", 310, 2326], ["2026-10-28", 300, 1662]],
+           "4010002": [["2026-10-27", 400, 50], ["2026-10-28", 500, 60]],
+           "4000000": [["2026-10-28", 10, 3]]},
+    asks: {"4010001": [[299, 1, 15, "FM <10>", "Levon", 29886734], [310, 2, 12, "FM <1>", "A", 1]]},
+    tot: {sales: 721874, top: ["4010001", 330, 2, "12:00"]}};
+  const p = P.parse(j);
+  assert.ok(p.ok, "parses");
+  const q1 = P.quote(p, "4010001");
+  assert.strictEqual(q1.median, 300); assert.strictEqual(q1.live, 299); assert.strictEqual(q1.listings, 2);
+  assert.strictEqual(P.quote(p, "nope"), null);
+  assert.strictEqual(P.parse({}).ok, false, "no items: bad");
+  assert.strictEqual(P.parse({it: {"1": "x"}}).ok, false, "non-array row: bad");
+  assert.strictEqual(P.parse({it: {"1": [-5]}}).ok, false, "negative median: bad");
+  assert.strictEqual(P.parse({it: {"1": [0]}, asks: 7}).ok, false, "non-object asks: bad");
+  // movers: needs 2 history days + >= 20 sales today; flat days skipped; sorted by |pct|
+  const mv = P.movers(p, 5, 20);
+  assert.deepStrictEqual(mv.map(m => m.id), ["4010002", "4010001"], "by |pct| desc, thin rows out");
+  assert.ok(mv[0].up && Math.abs(mv[0].pct - 0.25) < 1e-9, "up mover math");
+  assert.ok(!mv[1].up && Math.abs(mv[1].pct - (-10 / 310)) < 1e-9, "down mover math");
+  assert.strictEqual(P.fmtM(999), "999"); assert.strictEqual(P.fmtM(12300), "12.3k"); assert.strictEqual(P.fmtM(1200000), "1.2m");
+  assert.strictEqual(P.priceCtx(p, id => id === "4010001" ? "Red Potion" : null).length, 1, "ctx rows only for named items");
+  // price alerts: crossing fires, holding is quiet, falls back under re-arms (5-min firedAt guard respected)
+  const A = require("../core/alerts.js"), T = T0 + 3600e3;
+  const mk = m => ({on: true, paused: false, respawns: [], events: [], kpq: null, runT0: 0,
+    prices: [{id: "4010001", name: "Red Potion", median: m}]});
+  const above = [{id: "pa", kind: "priceAbove", on: true, sound: "mid", toast: true, log: true, name: "red potion", v: 250}];
+  const sa = {};
+  assert.strictEqual(A.evaluate(above, mk(300), sa, T).length, 1, "over the mark fires");
+  assert.strictEqual(A.evaluate(above, mk(300), sa, T + 1e4).length, 0, "staying over is quiet");
+  A.evaluate(above, mk(200), sa, T + 2e4);   // falls back under: re-arms
+  assert.strictEqual(A.evaluate(above, mk(200), sa, T + 3e4).length, 0, "under the mark: silent");
+  assert.strictEqual(A.evaluate(above, mk(300), sa, T + 2e4).length, 0, "inside the firedAt guard");
+  assert.strictEqual(A.evaluate(above, mk(300), sa, T + 31 * 6e4).length, 1, "re-armed crossing fires again");
+  const below = [{id: "pb", kind: "priceBelow", on: true, sound: "mid", toast: true, log: true, name: "4010001", v: 250}];
+  assert.strictEqual(A.evaluate(below, mk(200), {}, T).length, 1, "by id, under the mark fires");
+  assert.strictEqual(A.evaluate(below, {on: true, paused: false, respawns: [], events: [], kpq: null, runT0: 0, prices: []}, {}, T).length, 0, "no price data: silent");
+  assert.strictEqual(A.evaluate([{id: "px", kind: "priceAbove", on: true, sound: "mid", toast: true, log: true, name: "", v: 100}], mk(300), {}, T).length, 0, "blank item: silent");
+}
+console.log("site prices ok");
+
 console.log("patch notes ok");

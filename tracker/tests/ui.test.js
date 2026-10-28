@@ -16,7 +16,7 @@ const path = require("path"), {chromium} = require("playwright");
   // tab, all in one layout (Danny, 2026-10-19: modules instead of tabs); Past sessions is a pop-up (F2) since 0.2.70, so the toolbox starts empty
   const lay0 = await page.evaluate(() => [[...document.querySelectorAll('#dock > [data-box]')].map(b => b.dataset.box + (b.classList.contains("folded") ? "-" : "")).join(),
     [...document.querySelectorAll("#tbList .tbItem")].map(x => x.dataset.mod).join(), !!document.querySelector(".tabs, section[data-tab=session]")]);
-  if (lay0.join("|") !== "main,log,events,stats,mobs,kpq-,alerts-,mesos,items,used||false") throw new Error("default layout: " + lay0);
+  if (lay0.join("|") !== "main,log,events,stats,mobs,kpq-,alerts-,mesos,watch-,pulse-,items,used||false") throw new Error("default layout: " + lay0);
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click()));
   // a capture that never sends a frame (minimized game): Start says so instead of waiting for good, and works after (2026-10-19)
   await page.evaluate(() => { window.gdm0 = navigator.mediaDevices.getDisplayMedia; navigator.mediaDevices.getDisplayMedia = async () => document.createElement("canvas").captureStream(4) });
@@ -214,7 +214,7 @@ const path = require("path"), {chromium} = require("playwright");
     const moved = [document.querySelector("#mesoBox").parentElement.id, document.querySelector("[data-box=mobs]").classList.contains("folded")];
     document.querySelector("#layoutReset").click(); await new Promise(r => setTimeout(r, 50));
     return [...moved, document.querySelector("#mesoBox").previousElementSibling.id, document.querySelector("[data-box=mobs]").classList.contains("folded"), JSON.stringify(settings.layout.order.dock), settings.layout.v] });
-  if (lay[0] !== "dock" || !lay[1] || lay[2] !== "alertsBox" || lay[3] || lay[4] !== '["main","log","events","stats","mobs","kpq","alerts","mesos","items","used"]' || lay[5] !== 2) throw new Error("box layout: " + lay);
+  if (lay[0] !== "dock" || !lay[1] || lay[2] !== "alertsBox" || lay[3] || lay[4] !== '["main","log","events","stats","mobs","kpq","alerts","mesos","watch","pulse","items","used"]' || lay[5] !== 2) throw new Error("box layout: " + lay);
   { const old = await page.evaluate(() => { layoutLoad({order: {dock: ["main", "log"], session: ["stats", {row: ["mobs", "events"], w: [1, 1]}], loot: ["items"], hist: ["hist"]}});
       const r = [JSON.stringify([...document.querySelectorAll("#dock > *")].slice(0, 6).map(e => e.dataset.box || [...e.children].map(x => x.dataset.box).join("+"))), !!document.querySelector("#hist").closest("#histPop") && !document.querySelector("#dock #hist")];
       document.querySelector("#layoutReset").click(); return r });
@@ -308,7 +308,7 @@ const path = require("path"), {chromium} = require("playwright");
     layoutLoad(saved); const re = document.querySelector("#mesoBox").parentElement.className + "/" + Math.round(document.querySelector("#usedBox").getBoundingClientRect().width);
     return [flat, re, document.querySelector("#usedBox").parentElement.className] });
   if (unw[0] !== 0 || !unw[1].startsWith("boxcol/") || unw[2] !== "boxrow") throw new Error("unwrap/load: " + unw);
-  await page.evaluate(() => window.menu("settings")); await page.click("#layoutReset"); await page.click("#prefsClose"); if ((await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join())) !== "kpq,alerts") throw new Error("reset folds");
+  await page.evaluate(() => window.menu("settings")); await page.click("#layoutReset"); await page.click("#prefsClose"); if ((await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join())) !== "kpq,alerts,watch,pulse") throw new Error("reset folds");
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click())); await page.setViewportSize({width: 1280, height: 720});
   // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened
   await page.waitForTimeout(3200);
@@ -564,6 +564,29 @@ const path = require("path"), {chromium} = require("playwright");
       document.querySelector("#histRows").getBoundingClientRect().right]);
     if (w[0] !== "Delete?" || w[1] > w[2] || w[3] > r0 + 1) throw new Error("history at 340 px: " + w + " (was " + r0 + ")");
     await p2.close() }
+  // site market cards (0.2.83): a fake market.json through the stubbed bridge; watchlist add → row → remove, pulse rows
+  { const mk = await page.evaluate(() => { window.siteMkFake = {read: "2026-10-17", listed: "2026-10-17 12:00",
+      it: {"4000019": [300, 290, 330, 16866, 0, -0.06], "2000001": [50, 48, 55, 120, 0, 0.4]},
+      hist: {"4000019": [["2026-10-15", 350, 2014], ["2026-10-16", 310, 2326], ["2026-10-17", 300, 1662]],
+             "2000001": [["2026-10-16", 40, 50], ["2026-10-17", 50, 60]]},
+      asks: {"4000019": [[299, 1, 15, "FM <10>", "Levon", 29886734]]},
+      tot: {sales: 721874, top: ["4000019", 330, 2, "12:00"]}};
+    window.siteMkCb(window.siteMkFake, Date.now()); return true });
+  await page.evaluate(() => { document.querySelectorAll("#watchBox.folded .fold, #pulseBox.folded .fold").forEach(b => b.click()) });
+  const pulse = await page.evaluate(() => [$("#pulseGrid").textContent, $("#pulseMovers").textContent]);
+  if (!/721,874/.test(pulse[0]) || !/Horny Mushroom Cap/.test(pulse[0]) || !/Rising/.test(pulse[1]) || !/Orange Potion/.test(pulse[1]) || !/Falling/.test(pulse[1]) || !/Horny Mushroom Cap/.test(pulse[1]))
+    throw new Error("market pulse: " + JSON.stringify(pulse));
+  await page.fill("#watchSearch", "Orange Potion"); await page.click("#watchAdd");
+  await page.waitForTimeout(50);
+  let wrow = await page.evaluate(() => [$("#watchRows").textContent, $("#watchNote").textContent]);
+  if (!/Orange Potion/.test(wrow[0]) || !/50/.test(wrow[0]) || !/▲ \+40%/.test(wrow[0]) || !/updated /.test(wrow[1]))
+    throw new Error("watchlist add: " + wrow);
+  await page.click("#watchRows [data-wdrop]");
+  wrow = await page.evaluate(() => $("#watchRows").textContent);
+  if (/Orange Potion/.test(wrow) || !await page.evaluate(() => (window.st.siteWatch || []).length === 0))
+    throw new Error("watchlist remove: " + wrow);
+  const amb = await page.evaluate(async () => { $("#watchSearch").value = "Mushroom"; $("#watchAdd").click(); return $("#watchNote").textContent });
+  if (!/no single item/.test(amb)) throw new Error("ambiguous watch add: " + amb) }
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (!/Red Snail/.test(mobs) || !/Blue Snail/.test(mobs)) throw new Error("mobs table: " + mobs);

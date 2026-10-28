@@ -9,6 +9,11 @@ module.exports = () => {
         {saved: Date.now() - 9 * 864e5, date: "2026-10-08", mapName: "Old", level: 10, activeMin: 60, exp: 1, mesos: 1}], updateSession: async (saved, p) => (window.updated = {saved, ...p}, true), exportCsv: async () => "", mini: async (on, h) => ((window.miniCalls = window.miniCalls || []).push([on, h]), true), winSize: async (w, h) => (window.winSized = [w, h], true), snip: async () => null,
       version: async () => "0.2.17", updateState: async () => ({state: "idle"}), updateCheck: async () => (window.upd?.({state: "downloading", version: "0.2.18", pct: 40}), {state: "ready", version: "0.2.18"}),
       updateInstall: async () => (window.installed = true), onUpdate: cb => window.upd = cb, onMenu: cb => window.menu = cb, onShare: cb => window.shareReply = cb, themeBar: async c => (window.bar = c, true),
+      // the site's market prices (v0.2.83): tests push a payload through window.siteMkFake, the bridge delivers it
+      siteMarket: async () => [window.siteMkFake || null, window.siteMkFake ? Date.now() : 0],
+      siteMarketRefresh: async () => (window.siteMkRefreshed = true, [window.siteMkFake || null, window.siteMkFake ? Date.now() : 0]),
+      siteMarketReady: () => (window.siteMkReady = true),
+      onSiteMarket: cb => { window.siteMkCb = cb; if (window.siteMkFake) cb(window.siteMkFake, Date.now()) },
       // overlay mode: the button opens/closes it, overlayPush is the data pipeline, onOverlay the state coming back
       overlay: async on => (window.ovCalls = (window.ovCalls || []).concat([on]), true), overlayEdit: async () => (window.ovEditCalls = (window.ovEditCalls || []).concat([1]), true),
       overlayPush: d => (window.ovPushed = (window.ovPushed || []).concat([d])), onOverlay: cb => window.ovState = cb,

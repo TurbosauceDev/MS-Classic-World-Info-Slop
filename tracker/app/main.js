@@ -319,6 +319,36 @@ ipcMain.handle("summary", async () => {
   }
   return summary;
 });
+// the site's market prices (market.json on maplestory.scumlord.studio, built by build_data.py's price
+// steps; v0.2.83) for the Watchlist and Market pulse cards and the site-price alerts. Cached on disk
+// so a grind starts with the last known numbers rather than nothing when the site is unreachable.
+// The fetch lives here: the page's CSP keeps the renderer offline, and main already talks to the net
+// (speed check, share queue, auto-updater). Refreshed at most every 30 minutes.
+const SITE_HOME = "https://maplestory.scumlord.studio";
+const SITE_MK = path.join(app.getPath("userData"), "site-market.json");
+let siteMk = null, siteMkAt = 0, siteMkBusy = false;
+try { siteMk = JSON.parse(fs.readFileSync(SITE_MK, "utf8")); if (!siteMk || !siteMk.it) siteMk = null; } catch {}
+try { if (siteMk) siteMkAt = fs.statSync(SITE_MK).mtimeMs } catch {}
+const sendSiteMk = () => { if (win && !win.isDestroyed()) win.webContents.send("site-market", siteMk, siteMkAt) };
+async function siteMarket(force){
+  if (siteMkBusy || !SITE_HOME) return siteMk;
+  if (!force && siteMk && Date.now() - siteMkAt < 30 * 60e3) return siteMk;
+  siteMkBusy = true;
+  try {
+    const r = await fetch(SITE_HOME + "/market.json", {signal: AbortSignal.timeout(20e3)});
+    if (r.ok){
+      const j = await r.json();
+      if (j && j.it && Object.keys(j.it).length){ siteMk = j; siteMkAt = Date.now(); writeAtomic(SITE_MK, JSON.stringify(siteMk)); sendSiteMk() }
+    }
+  } catch {}   // offline or the site is down: keep the cached copy, the cards show its age
+  siteMkBusy = false;
+  return siteMk;
+}
+ipcMain.handle("site-market", () => siteMk ? [siteMk, siteMkAt] : null);
+ipcMain.handle("site-market-refresh", () => siteMarket(true));
+app.whenReady().then(() => siteMarket(false).catch(() => {}));   // warm the cache once the app is up
+setInterval(() => siteMarket(true).catch(() => {}), 30 * 60e3);   // every 30 minutes
+ipcMain.on("site-market-ready", () => sendSiteMk());   // the page asks for the current copy after boot
 // session history: the saved session summaries, newest first, and a CSV of them in Documents
 function sessions(){
   try {

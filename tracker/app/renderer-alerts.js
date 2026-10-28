@@ -44,7 +44,8 @@ function alertsTick(){
   const ctx = {on: timer != null, paused: s.paused, runT0, st: s,
     respawns: session.respawns ? session.respawns(now) : [],
     kpq: kpq?.on && kpq.left !== null ? {left: kpq.left, rounds: kpq.rounds} : null,
-    events: evts};
+    events: evts,
+    prices: window.sitePriceCtx ? window.sitePriceCtx() : []};   // site-price alerts (renderer-site.js)
   for (const f of A.evaluate(alertList(), ctx, alertStates, now)) alertFire(f);
 }
 setInterval(alertsTick, 5000);
