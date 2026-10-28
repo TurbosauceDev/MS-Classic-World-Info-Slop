@@ -86,26 +86,29 @@
   /* Focus Mode (Danny, 2026-10-26: a third view beside Simple Mode, skinned after maplestory.watch's market page): one
      centred column with air around the numbers, soft shadows and quiet hover highlights. Every colour is a theme token, so
      all themes and light/dark keep working; the window shrinks to fit like Simple Mode's (the width stays: more width = more air) */
-  body.focus { background:linear-gradient(color-mix(in srgb, var(--accent) 9%, var(--bg)) 0%, var(--bg) 44%, color-mix(in srgb, var(--ink) 7%, var(--bg)) 100%) fixed; }
+  body.focus { background:linear-gradient(color-mix(in srgb, var(--accent) 6%, var(--bg)) 0%, var(--bg) 40%, color-mix(in srgb, #000 12%, var(--bg)) 100%) fixed; }   /* never --ink in a shadow or tint: it is the LIGHT colour in dark themes, so a shadow made of it is a glow (Danny 10-28) */
+  #focus { --fzSh:0 1px 2px rgba(0,0,0,.30), 0 2px 6px -2px rgba(0,0,0,.28), 0 12px 26px -12px rgba(0,0,0,.50); --fzShUp:0 1px 2px rgba(0,0,0,.34), 0 4px 10px -3px rgba(0,0,0,.32), 0 18px 34px -14px rgba(0,0,0,.55); }
   body.focus > *:not(#focus):not(#titlebar) { display:none !important; } body.focus #focus { display:block; }
   #focus { display:none; width:100%; max-width:840px; margin:0 auto; padding:16px 26px 26px; }   /* body is a flex column: width:100% or the column shrink-to-fits instead of centring */
-  .fzCard { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 20px; margin-top:14px;
-    box-shadow:0 1px 2px color-mix(in srgb, var(--ink) 13%, transparent), 0 14px 30px -16px color-mix(in srgb, var(--ink) 42%, transparent);
+  .fzCard { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin-top:14px;
+    box-shadow:var(--fzSh);
     transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
-  .fzCard:hover { border-color:color-mix(in srgb, var(--accent) 42%, var(--line));
-    box-shadow:0 1px 2px color-mix(in srgb, var(--ink) 13%, transparent), 0 16px 34px -14px color-mix(in srgb, var(--ink) 48%, transparent); }
+  .fzCard:hover { border-color:color-mix(in srgb, var(--accent) 38%, var(--line)); box-shadow:var(--fzShUp); }
+  #focus .k { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
   #focus .fzHead { display:flex; align-items:center; gap:10px; margin:0 2px; }
   #focus .fzWord { flex:1; font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #focus .fzWord b { color:var(--accent); } #fzState { font-size:12px; color:var(--muted); white-space:nowrap; } #fzFull { padding:4px 12px; font-size:12px; }
   #fzWrap { margin:8px 0 0; } #fzWrap button { padding:2px 8px; }
-  .fzHero { text-align:center; padding:26px 22px 22px; background:linear-gradient(color-mix(in srgb, var(--accent) 11%, var(--panel)) 0%, var(--panel) 78%); }
+  .fzHero { text-align:center; padding:26px 22px 22px; border-top:2px solid var(--accent); }
   #focus .smMap { font-size:27px; } #focus .smWho { margin-top:9px; } #focus .smSpawns { margin-top:7px; }
   .fzHeroK { margin-top:16px; text-transform:uppercase; letter-spacing:.1em; font-size:11px; }
-  .fzBig { font-size:clamp(30px, 7vw, 44px); font-weight:800; line-height:1.08; color:var(--accent); font-variant-numeric:tabular-nums; }
+  .fzBig { font-size:clamp(30px, 7vw, 44px); font-weight:700; line-height:1.08; color:var(--accent); font-variant-numeric:tabular-nums; }
   .fzBig small { font-size:13px; font-weight:600; color:var(--muted); }
-  .fzTiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(148px, 1fr)); gap:10px; margin-top:14px; }
+  .fzTiles { display:grid; grid-template-columns:repeat(12, 1fr); gap:10px; margin-top:14px; }   /* 7 tiles: 3 + 4 fill both rows, no orphan row */
+  .fzTiles > :nth-child(-n+3) { grid-column:span 4; } .fzTiles > :nth-child(n+4) { grid-column:span 3; }
+  @media (max-width: 640px){ .fzTiles { grid-template-columns:repeat(2, 1fr); } .fzTiles > :nth-child(n) { grid-column:span 1; } .fzTiles > :last-child:nth-child(odd) { grid-column:span 2; } }
   .fzTiles .fzCard { margin-top:0; padding:12px 14px; } .fzTiles .fzCard:hover { transform:translateY(-1px); }
-  .fzMid { font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .fzMid { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; }
   #focus .v { font-size:19px; } #focus .note:empty { display:none; }
   #fzLvl { padding:14px 18px; }
   #fzFeed { height:9.5em; } #focus .mk { color:var(--muted); }
