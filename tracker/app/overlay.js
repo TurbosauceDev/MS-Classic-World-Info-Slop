@@ -218,8 +218,8 @@ const PADS = {compact: [6, 9], normal: [9, 13], roomy: [13, 18]};
 // union of the displays — trusting the desk is what left cards cut off in a dead strip around the edge (Danny 10-28).
 function clampCard(el){
   const r = el.getBoundingClientRect(), w = r.width || 200, h = r.height || 60;
-  el.style.left = Math.min(Math.max(0, el.offsetLeft), Math.max(0, innerWidth - w)) + "px";
-  el.style.top = Math.min(Math.max(0, el.offsetTop), Math.max(0, innerHeight - h)) + "px";
+  el.style.left = Math.min(Math.max(0, el.offsetLeft), Math.max(0, Math.floor(innerWidth - w))) + "px";
+  el.style.top = Math.min(Math.max(0, el.offsetTop), Math.max(0, Math.floor(innerHeight - h))) + "px";
 }
 // Cards keep apart (Danny 10-28: Status ran under Mesos, Mesos' "loot/hr 16,9.." was cut off by Kills): numbers grow wider as a
 // run goes on, so after every render and every placement the cards are walked top-left to bottom-right and any that overlap

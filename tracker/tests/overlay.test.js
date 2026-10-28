@@ -224,6 +224,10 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       const r = el.getBoundingClientRect();
       return [el.offsetLeft + r.width <= innerWidth, el.offsetTop + r.height <= innerHeight] });
     if (!st[0] || !st[1]) fail("clamp to the real viewport", st);
+    // fractional widths (max-content text) must not leave the card a sub-pixel past the edge (the 0.2.89 CI-only failure)
+    st = await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.width = "213.4px"; el.style.left = "1900px"; clampCard(el);
+      const r = el.getBoundingClientRect(), ok = el.offsetLeft + r.width <= innerWidth; el.style.width = ""; clampCard(el); return ok });
+    if (!st) fail("clamp holds with a fractional width", st);
     // the panel itself drags by its header and saves its spot
     const pbox = await page.locator("#ovpHead").boundingBox();
     await page.mouse.move(pbox.x + 40, pbox.y + 8); await page.mouse.down();
