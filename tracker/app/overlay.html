@@ -19,11 +19,13 @@
   body { margin:0; color:var(--ink); font:13px/1.4 system-ui, sans-serif; font-variant-numeric:tabular-nums; user-select:none; }
   /* a widget: one small glass card (Focus Mode's shadow language, maplestory.watch's air), floating wherever the player
      put it, on any monitor (the window spans the whole desktop). backdrop-filter blurs the game behind it. */
-  .ovw { position:absolute; min-width:170px; max-width:330px; padding:9px 13px 10px; border-radius:12px;
-    background:color-mix(in srgb, var(--panel) 82%, transparent);
-    -webkit-backdrop-filter:blur(14px) saturate(1.2); backdrop-filter:blur(14px) saturate(1.2);
-    border:1px solid color-mix(in srgb, var(--line) 72%, transparent);
-    box-shadow:0 1px 2px rgba(0,0,0,.22), 0 12px 32px -12px rgba(0,0,0,.45);
+  /* a card fits its content (Danny 10-28): max-content width up to --mw (a long run-log line ellipsises there), no minimum.
+     Every look knob is a custom property the inspector sets per card (styleCard in overlay.js), defaults below = the old look. */
+  .ovw { position:absolute; box-sizing:border-box; width:max-content; min-width:0; max-width:var(--mw, 360px); padding:var(--pv, 9px) var(--ph, 13px); border-radius:var(--rad, 12px);
+    background:color-mix(in srgb, var(--panel) var(--glass, 82%), transparent);
+    -webkit-backdrop-filter:blur(var(--blur, 14px)) saturate(1.2); backdrop-filter:blur(var(--blur, 14px)) saturate(1.2);
+    border:1px solid var(--bc, color-mix(in srgb, var(--line) 72%, transparent));
+    box-shadow:var(--sh, 0 1px 2px rgba(0,0,0,.22), 0 12px 32px -12px rgba(0,0,0,.45));
     transition:filter .15s ease, border-color .15s ease, box-shadow .15s ease; }
   body.edit .ovw { background:color-mix(in srgb, var(--panel) 94%, transparent); cursor:move;
     border-color:color-mix(in srgb, var(--line) 90%, var(--accent) 10%); }
@@ -42,7 +44,9 @@
     text-shadow:0 1px 2px rgba(0,0,0,.3); }
   .ovw header button { background:none; border:0; color:var(--muted); font:inherit; font-size:13px; line-height:1; padding:1px 5px; border-radius:6px; cursor:pointer; }
   .ovw header button:hover { color:var(--bad); }
-  body.locked .ovw header { display:none; }   /* locked = pure overlay: nothing on a card but its numbers */
+  .ovw .b { zoom:var(--fs, 1); }
+  .ovw.ovhide { display:none; }
+  body.locked .ovw:not(.showt) header { display:none; } body.locked .ovw.showt header button { display:none; }   /* locked = pure overlay: nothing on a card but its numbers */
   body.locked .ovw .rsz { display:none; }
   .big { font-size:20px; font-weight:800; line-height:1.15; color:var(--accent); text-shadow:0 1px 2px rgba(0,0,0,.35); }
   .big small { font-size:11px; font-weight:600; color:var(--muted); text-shadow:none; }
@@ -129,6 +133,7 @@
   .wdet input[type=number] { width:64px; background:color-mix(in srgb, var(--panel) 70%, transparent); border:1px solid var(--line); color:var(--ink); border-radius:6px; font:inherit; font-size:11px; padding:2px 5px; }
   .wdet .rw { margin-left:auto; background:none; border:0; color:var(--muted); font:inherit; font-size:11px; cursor:pointer; padding:2px 6px; border-radius:6px; text-decoration:underline; }
   .wdet .rw:hover { color:var(--bad); }
+  #ovpanel { overflow-x:hidden; } #ovpanel .foot { flex-wrap:wrap; }
   #ovpRows { max-height:calc(100vh - 300px); overflow-y:auto; scrollbar-width:thin; }
   #ovpanel .foot { display:flex; align-items:center; gap:9px; margin-top:7px; padding-top:7px; border-top:1px solid color-mix(in srgb, var(--line) 65%, transparent); }
   #ovpanel .foot label { display:inline-flex; gap:5px; align-items:center; font-size:12px; cursor:pointer; }
@@ -144,6 +149,28 @@
   #ovShare { margin-top:6px; }
   #ovShare input { width:100%; box-sizing:border-box; font:11px/1.3 ui-monospace, "Cascadia Mono", Consolas, monospace; padding:4px 6px; }
   #ovShare .shBtns { display:flex; gap:5px; margin-top:5px; }
+  /* the per-module inspector (Danny 10-28): its own pop-up beside the main panel, opens when a card is picked */
+  #ovinsp { position:fixed; z-index:11; width:286px; max-width:calc(100vw - 20px); max-height:calc(100vh - 24px); overflow-y:auto; overflow-x:hidden; padding:9px 12px 11px; border-radius:12px;
+    background:color-mix(in srgb, var(--panel) 95%, transparent); -webkit-backdrop-filter:blur(16px) saturate(1.2); backdrop-filter:blur(16px) saturate(1.2);
+    border:1px solid var(--line); box-shadow:0 1px 2px rgba(0,0,0,.22), 0 12px 32px -12px rgba(0,0,0,.45); scrollbar-width:thin; }
+  #ovinsp.hidden { display:none; }
+  #ovinsp > header { display:flex; align-items:center; gap:6px; cursor:move; margin-bottom:3px; }
+  #ovinsp > header .t { flex:1; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); }
+  #ovinsp .btn { background:var(--accent-soft); color:var(--ink); border:0; border-radius:8px; padding:2px 9px; font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
+  #ovinsp .wdet { display:block; padding:0; border:0; }
+  #ovinsp h4 { margin:9px 0 2px; font-size:10px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); padding-top:7px; border-top:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+  #ovinsp .wdet > h4:first-child { border-top:0; padding-top:0; margin-top:4px; }
+  #ovinsp label { display:flex; gap:8px; align-items:center; font-size:11px; color:var(--muted); margin:5px 0; }
+  #ovinsp label b { min-width:78px; font-weight:600; flex:none; }
+  #ovinsp label .pv { min-width:42px; text-align:right; color:var(--ink); flex:none; }
+  #ovinsp input[type=range] { flex:1; min-width:0; }
+  #ovinsp input[type=checkbox] { accent-color:var(--accent); margin:0; }
+  #ovinsp input[type=color] { width:30px; height:20px; padding:0; border:1px solid var(--line); border-radius:5px; background:none; cursor:pointer; }
+  #ovinsp select { background:var(--accent-soft); color:var(--ink); border:0; border-radius:7px; font:inherit; font-size:11px; padding:2px 4px; flex:1; min-width:0; }
+  #ovinsp .clr { background:none; border:0; color:var(--muted); font:inherit; font-size:11px; cursor:pointer; text-decoration:underline; padding:0 2px; }
+  #ovinsp .acts { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; padding-top:8px; border-top:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+  #ovinsp .acts button { background:var(--accent-soft); color:var(--ink); border:0; border-radius:7px; padding:3px 9px; font:inherit; font-size:11px; cursor:pointer; }
+  #ovinsp .acts button:hover { background:var(--accent); color:var(--on-accent); } #ovinsp .acts .danger:hover { background:var(--bad); }
 </style>
 </head>
 <body>
@@ -152,6 +179,7 @@
   <div id="ovgh" class="gl hidden"></div>
   <div id="ovtoasts" class="hidden"></div>
   <div id="ovpanel" class="hidden"></div>
+  <div id="ovinsp" class="hidden"></div>
   <div id="ovroot"></div>
   <script src="themes.js"></script>
   <script src="overlay.js"></script>
