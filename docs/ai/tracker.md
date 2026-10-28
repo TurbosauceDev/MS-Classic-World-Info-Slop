@@ -118,6 +118,12 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   Grid visibility is edit-gated (0.2.76, Danny caught it staying on after Done): gridShow() hides #ovgrid unless
   CFG.grid && CFG.edit — the checkbox stays the saved preference, but the lines only render while editing (onMode and the
   boot path both go through gridShow()), so a locked boot with Grid ticked never draws it.
+  0.2.77: that gate was fine but its switch was wired to missing CSS — the 0.2.75 rewrite dropped the generic
+  .hidden rule (0.2.74's #ovbar.hidden died with the bar, nothing replaced it for the new bare-hidden elements), so the
+  class toggle had no visual effect and the grid painted permanently; the snap guides carried the same latent bug.
+  overlay.html now has one real .hidden { display:none } (grid + guides + panel), and overlay.test.js asserts
+  getComputedStyle().display, not just classList, on every grid/guide/locked-boot scene. Lesson: a class-only
+  visibility toggle needs its rule proven by a computed-style test in THIS stylesheet's document.
   Bounds fix: the page clamps to the window's REAL content area (innerWidth/Height), and main.js reports ovDesk() =
   getContentBounds() (re-asserts setBounds(ovBounds()) after show + on display-metrics-changed) instead of the intended
   display union — mixed-DPI/Windows-nudged windows left a dead strip around the perimeter with cards cut off.

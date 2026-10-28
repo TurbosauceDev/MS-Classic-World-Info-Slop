@@ -10,6 +10,11 @@
   :root { --bg:#e7ddf9; --panel:#f7f1ff; --ink:#2a2142; --muted:#685c94; --line:#cfbff0; --accent:#7d58d6; --accent-soft:#dccbfa; --on-accent:#f7f1ff; --leaf:#3d7a5c; --warn:#9a6a00; --bad:#a3322b; }
   @media (prefers-color-scheme: dark) { :root { --bg:#1f1931; --panel:#2a2243; --ink:#f0eafd; --muted:#b6aad8; --line:#453a64; --accent:#d2bffb; --accent-soft:#41346a; --on-accent:#2a2243; --leaf:#7cc9a2; --warn:#e2b44a; --bad:#ef7a70; } }
   * { box-sizing:border-box; }
+  /* .hidden is the JS visibility switch for #ovgrid, the snap guides and the panel — it MUST exist as a real rule.
+     The 0.2.75 rewrite dropped the old #ovbar.hidden rule and the bare class toggled nothing, so the alignment grid
+     painted over the game permanently, edit mode or not (Danny 10-28, twice: "the grid is always there edit mode or
+     not" on 0.2.76, whose logic gate was fine but whose switch was wired to missing CSS). */
+  .hidden { display:none; }
   html, body { background:transparent; overflow:hidden; }
   body { margin:0; color:var(--ink); font:13px/1.4 system-ui, sans-serif; font-variant-numeric:tabular-nums; user-select:none; }
   /* a widget: one small glass card (Focus Mode's shadow language, maplestory.watch's air), floating wherever the player

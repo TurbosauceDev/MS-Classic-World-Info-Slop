@@ -89,14 +89,14 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     const sdx = ebox.x + 6 - off[0], sdy = ebox.y + 6 - off[1];   // pointer offset from the card's top-left while held
     await page.mouse.move(ebox.x + 6, ebox.y + 6); await page.mouse.down();
     await page.mouse.move(-8 + sdx, 700 + sdy, {steps: 5});   // card left would land 8 px off-screen: inside the 15 px snap
-    st = await page.evaluate(() => { const v = parseFloat(document.querySelector("#ovgv").style.left);
-      return [document.querySelector("#ovgv").classList.contains("hidden"), Number.isFinite(v) ? Math.round(v) : -1] });
-    if (st[0] || st[1] !== 0) fail("snap guide while dragging", st);
+    st = await page.evaluate(() => { const g = document.querySelector("#ovgv"), v = parseFloat(g.style.left);
+      return [g.classList.contains("hidden"), getComputedStyle(g).display === "none", Number.isFinite(v) ? Math.round(v) : -1] });
+    if (st[0] || st[1] || st[2] !== 0) fail("snap guide while dragging (class + computed + at x 0)", st);
     await page.mouse.up();
     await page.waitForTimeout(350);
-    st = await page.evaluate(() => { const e = document.querySelector("#ovw-exp");
-      return [e.offsetLeft, window.ovSaved.overlay.widgets.exp.x, document.querySelector("#ovgv").classList.contains("hidden")] });
-    if (st[0] !== 0 || st[1] !== 0 || !st[2]) fail("snaps to the screen edge and saves 0 as a real spot", st);
+    st = await page.evaluate(() => { const e = document.querySelector("#ovw-exp"), g = document.querySelector("#ovgv");
+      return [e.offsetLeft, window.ovSaved.overlay.widgets.exp.x, g.classList.contains("hidden"), getComputedStyle(g).display === "none"] });
+    if (st[0] !== 0 || st[1] !== 0 || !st[2] || !st[3]) fail("snaps to the screen edge, saves 0, guide really hides", st);
     // Shift skips snapping (ElvUI/WeakAuras): same approach, no alignment, guides stay hidden
     const off2 = await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); return [el.offsetLeft, el.offsetTop] });
     const ebox2 = await page.locator("#ovw-exp header .t").boundingBox();
@@ -104,8 +104,10 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.keyboard.down("Shift");
     await page.mouse.move(ebox2.x + 6, ebox2.y + 6); await page.mouse.down();
     await page.mouse.move(10 + sdx2, 700 + sdy2, {steps: 4});   // inside the 15 px band: would snap without Shift
-    st = await page.evaluate(() => [document.querySelector("#ovgv").classList.contains("hidden"), document.querySelector("#ovgh").classList.contains("hidden")]);
-    if (!st[0] || !st[1]) fail("shift skips snap (guides hidden)", st);
+    st = await page.evaluate(() => { const v = document.querySelector("#ovgv"), h = document.querySelector("#ovgh");
+      return [v.classList.contains("hidden"), h.classList.contains("hidden"),
+        getComputedStyle(v).display === "none", getComputedStyle(h).display === "none"] });
+    if (!st[0] || !st[1] || !st[2] || !st[3]) fail("shift skips snap (guides hidden, class + computed)", st);
     await page.mouse.up(); await page.keyboard.up("Shift");
     await page.waitForTimeout(350);
     st = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);
@@ -161,7 +163,9 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.evaluate(() => window.ovMode(true));   // back to editing for the grid + clamp scenes
     // the alignment grid shows and hides, and while it's on (with snap off) drops round to the grid lines (WoW Edit Mode)
     await page.check("#ovGrid");
-    if (!await page.evaluate(() => !document.querySelector("#ovgrid").classList.contains("hidden"))) fail("grid shows", 0);
+    st = await page.evaluate(() => { const g = document.querySelector("#ovgrid");
+      return [!g.classList.contains("hidden"), getComputedStyle(g).display !== "none"] });
+    if (!st[0] || !st[1]) fail("grid shows (class + computed)", st);
     await page.uncheck("#ovSnap");
     const gx = await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.left = "70px"; el.style.top = "130px";
       return [el.offsetLeft, el.offsetTop] });
@@ -174,9 +178,13 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     // the grid is an edit-mode affordance (Danny 10-28: it used to stay on after Done — and survive a restart): with the
     // preference still checked, locking hides the lines and editing brings them back
     await page.evaluate(() => window.ovMode(false));
-    if (!await page.evaluate(() => document.querySelector("#ovgrid").classList.contains("hidden"))) fail("grid hides when locked", 0);
+    st = await page.evaluate(() => { const g = document.querySelector("#ovgrid");
+      return [g.classList.contains("hidden"), getComputedStyle(g).display === "none"] });
+    if (!st[0] || !st[1]) fail("grid hides when locked (class + computed)", st);
     await page.evaluate(() => window.ovMode(true));
-    if (!await page.evaluate(() => !document.querySelector("#ovgrid").classList.contains("hidden"))) fail("grid returns with edit", 0);
+    st = await page.evaluate(() => { const g = document.querySelector("#ovgrid");
+      return [!g.classList.contains("hidden"), getComputedStyle(g).display !== "none"] });
+    if (!st[0] || !st[1]) fail("grid returns with edit (class + computed)", st);
     await page.uncheck("#ovGrid"); await page.check("#ovSnap");
     // the clamp trusts the window's real viewport, not the reported desk: a desk bigger than the window leaves no dead
     // strip where cards vanish past the edge (the 10-28 cut-off fix)
@@ -249,13 +257,18 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     });
     await page.goto("file://" + path.join(__dirname, "../app/overlay.html"));
     await page.waitForSelector("#ovw-status");
-    let st = await page.evaluate(() => [document.body.classList.contains("locked"), document.querySelector("#ovpanel").classList.contains("hidden"),
-      document.querySelector("#ovgrid").classList.contains("hidden")]);
-    if (!st[0] || !st[1] || !st[2]) fail("locked boot keeps the grid hidden", st);
+    let st = await page.evaluate(() => { const g = document.querySelector("#ovgrid"), p = document.querySelector("#ovpanel");
+      return [document.body.classList.contains("locked"), p.classList.contains("hidden"), g.classList.contains("hidden"),
+        getComputedStyle(g).display === "none", getComputedStyle(p).display === "none"] });
+    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4]) fail("locked boot keeps grid + panel hidden (class + computed)", st);
     await page.evaluate(() => window.ovMode(true));   // Ctrl+Shift+E's ack: editing starts, the saved preference shows the grid
-    if (!await page.evaluate(() => !document.querySelector("#ovgrid").classList.contains("hidden"))) fail("grid returns on edit after locked boot", 0);
+    st = await page.evaluate(() => { const g = document.querySelector("#ovgrid");
+      return [!g.classList.contains("hidden"), getComputedStyle(g).display !== "none"] });
+    if (!st[0] || !st[1]) fail("grid returns on edit after locked boot (computed)", st);
     await page.evaluate(() => window.ovMode(false));
-    if (!await page.evaluate(() => document.querySelector("#ovgrid").classList.contains("hidden"))) fail("grid hides again on lock", 0);
+    st = await page.evaluate(() => { const g = document.querySelector("#ovgrid");
+      return [g.classList.contains("hidden"), getComputedStyle(g).display === "none"] });
+    if (!st[0] || !st[1]) fail("grid hides again on lock (computed)", st);
     if (errors.length) throw new Error("overlay locked-boot errors: " + errors.join(" | "));
     await page.close();
   }
