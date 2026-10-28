@@ -218,10 +218,14 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       if (kh) PWH[id] = kh; else delete PWH[id]; return out });
     check(JSON.stringify(c) === '[true,"meso.watch","classicmarket.kr market 65","meowdb 55","classicmarket.kr asks 45","classicmarket.kr buy orders","mesoarbitrage.com 24000","mesoarbitrage.com 300","maplestory.watch 25000","mesoindex.com 26000","none"]', `prices: source rows + fallback order (${c})`);
     // P3 + P4 (Danny 2026-10-26): a source row past its cadence gets a stale pill; the Usual tile carries a sources range + agreement pill
-    const q = await p.evaluate(() => { const id = "2000000", keep = [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id], D.cmp.read, PWH[id]];
+    const q = await p.evaluate(() => { const id = "2000000", keep = [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id], D.cmp.read, D.mdb.read, PWH[id]];
       // fresh/old timestamps relative to now: hardcoding a date broke at UTC midnight when it crossed the 48 h staleness line (10-28)
+      // D.mdb.read is faked fresh too: the meowdb ROW's pill rides the REAL embedded read, which ages while the test runs and
+      // crossed its own 48 h line on CI at 14:29 UTC 10-28 (meowdb upstream frozen since 10-26 14:23) - the flake e44555e fixed
+      // for the cmp fake, still alive in a second spot (assert 4 wants a pill-free box, any stale row fails it).
       const fresh = new Date(Date.now() - 36e5).toISOString().slice(0, 16).replace("T", " "), old = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 16).replace("T", " ");
       delete PWH[id]; delete MA[id]; delete MW[id]; delete MI[id]; delete CM[id];   // PWH: real history must not outvote the fakes
+      D.mdb.read = fresh;
       PW[id] = [100, 90, 110, 30, 0]; CMP[id] = [105, 95, 115, 20, 30, 5, fresh]; MDB[id] = [110, 50, 8, 100, null, 4, null, 0, null, 0];
       const out = [];
       out.push(/3 solid sources · 100-110/.test(priceBox(id)) && /sources within 25%/.test(priceBox(id)));
@@ -231,8 +235,8 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       out.push(/stale \d+ d/.test(priceBox(id)));
       D.cmp.read = fresh;
       out.push(!/stale \d/.test(priceBox(id)));
-      [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id]] = keep; D.cmp.read = keep[7];
-      if (keep[8]) PWH[id] = keep[8]; else delete PWH[id]; return out });
+      [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id]] = keep; D.cmp.read = keep[7]; D.mdb.read = keep[8];
+      if (keep[9]) PWH[id] = keep[9]; else delete PWH[id]; return out });
     check(JSON.stringify(q) === "[true,true,true,true]", `prices: stale pill + sources context (${q})`);
     // P13-P16 accuracy (audit 2026-10-28): the weighted headline weights TODAY heaviest (the old code applied
     // 0.5/0.3/0.2 oldest-first, under-reacting to the move it reported); the consensus tile counts the sales behind
