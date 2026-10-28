@@ -213,7 +213,7 @@ for id_, lst in per_item.items():
             examples.append((id_, round(spread, 1), solid))
 
 if spread100:
-    fail(f'cross-source: {spread100} items with spread >= 100x across sources with >=5 sales each (definite unit error)')
+    fail(f'cross-source: {spread100} items with spread >= 100x across sources with >=5 sales each (definite unit error); worst: {examples[:3]}')
 else:
     ok('cross-source: no item has spread >= 100x across solid sources')
 if spread10:

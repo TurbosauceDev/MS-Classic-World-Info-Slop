@@ -22,10 +22,10 @@ this file → agent-mailbox.md § Open.
 
 ## What needs doing next
 
-- **Danny:** Decisions 1-4 in `docs/ai/danny-digest.md` (issue 7): classicrank call, maplestory.watch call, cron pile-up, standing asks (market key, draft batch, web-PAT revoke).
-- **Next agent on digest duty:** rotation is proven; state file `/home/z/my-project/.secrets/digest-state.json` is the source of truth (backup at `/home/z/my-project/upload/digest-state-backup.json`, keeper cron 474950 self-restores at 04:21 PT).
-- **Tracker side:** next-up menu from the overnight list, not yet built: site watchlist, market pulse, compare view, keyboard UX. Do not start big tracker work without a Danny pick.
-- **Data side:** the 10-20 never-bypass rule is revoked (Danny 10-28, decisions.md): public keyless endpoints may be fetched through a real browser; no logins, no captcha-solving services. Keep per-source graceful degradation. If a blocked source self-heals, note it in the worklog and the digest.
+- **Danny:** still open: classicrank BCR_KEY, the maplestory.market key (data gathering there is licensed but the API is key-gated by design — probed 10-28), the cron pile-up call, web-PAT revoke confirm, the meowdb email (he takes that himself). Digest issue 8 carries the list.
+- **Next agent on digest duty:** rotation is proven; state file `/home/z/my-project/.secrets/digest-state.json` is the source of truth (backup at `/home/z/my-project/upload/digest-state-backup.json`, keeper cron 474950 self-restores at 04:21 PT). Quiet-day policy decided 10-28: full short issues every day.
+- **Tracker side:** the whole overnight menu SHIPPED 10-28 evening (v0.2.83-0.2.85: Watchlist + Market pulse + price alerts, Compare watched, Ctrl+K quick jump). Next rocks are unpicked — do not start big tracker work without a Danny pick.
+- **Data side:** `data/price_blacklist.json` is the canonical price-tracking blacklist (quest block + arrows, Danny 10-28); any new price step or source check must import `scripts/price_blacklist.py` `is_bl()`. The 10-20 never-bypass rule stays revoked (public keyless endpoints may be fetched through a real browser; no logins, no captcha-solving services). Keep per-source graceful degradation.
 - **Do not** re-add the digest offer-on-check-in block (retired, decisions log 10-25); any src/ commit ships its changelog card in the same push.
 
 ## Reading list

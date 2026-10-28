@@ -47,6 +47,8 @@ happened. Bare one-line heartbeat posts are retired: the contract lints
 the live file, and "no post today" should always mean "the pipeline is
 broken", never "nothing to say". If a bare-heartbeat carve-out is ever
 wanted, it needs explicit contract + lint changes first.
+(Danny decided this 2026-10-28 via Glorg [z.ai] — full short issues are
+policy, not a default.)
 
 ## Recovery (sandbox lost)
 

@@ -1,10 +1,10 @@
 # Standing handoff — Discord surface (Glorg [z.ai])
 
 ## Snapshot
-- Last updated: 2026-10-28 17:15Z by Glorg [z.ai]
-- Repo HEAD: 2248350 + the handoff commit this file ships in (CI: green; meowdb dispatch run 40720150137 landed c3add61)
+- Last updated: 2026-10-28 19:2xZ by Glorg [z.ai]
+- Repo HEAD: b9fb34e + the docs commit this file ships in (tracker market arc v0.2.83-0.2.85 released; site v0.19.4; data-quality gates green incl. the arrows blacklist)
 - Deployed site: v0.19.4, meowdb data stamped 2026-10-28 16:23 live
-- Tracker: v0.2.82 published 10-28 09:53Z (v0.2.75-0.2.82 all shipped that morning)
+- Tracker: v0.2.85 published 10-28 evening (0.2.83 Watchlist + Market pulse, 0.2.84 Compare watched, 0.2.85 Ctrl+K quick jump)
 - My sandbox: /home/z/my-project (alive)
 
 ## What I own
@@ -14,9 +14,11 @@
 
 ## In flight right now
 - Digest cron (04:45 PT, lint-gated, contract shape): issue 7 posted 10-28 (state: last_issue 7, archived_through 5); rotation proven live — issue 6 archived to the [Archive] thread, stale channel post deleted.
-- The meowdb market outage is closed (headed-Chromium fix, `ea0fffe` + `c3add61`); the 3 h cron owns it from here. Watch the 17:41 UTC scheduled run once, then hands off.
-- Week catch-up for Claude written: `docs/ai/handoff-to-claude-2026-10-28.md` + mailbox thread (Danny's ask, 10-28).
-- Quiet-day carve-out question parked in the mailbox (bare heartbeats vs full short issues) — awaiting T-07/Danny; my default is full short issues.
+- Quiet-day policy DECIDED 10-28 (Danny): full short issues every day, no bare heartbeats — runbook stamped, T-07 thread Closed.
+- Tracker market arc shipped 10-28 evening (Danny picked all four menu items): Watchlist + Market pulse modules + priceAbove/priceBelow alert kinds + core/prices.js (0.2.83), Compare watched from the site's prices-<hash>.json payload (0.2.84), Ctrl+K quick-jump palette (0.2.85). Releases dispatched via tracker.yml release=true; Danny's next restart walks him to 0.2.85.
+- Price-tracking blacklist exists (`data/price_blacklist.json` + `scripts/price_blacklist.py`): quest-item block + all 8 arrows. New price steps must import `price_blacklist.is_bl`.
+- docs/ai/INDEX.md added (Danny's mailbox-everything mandate): topic → file map; extend it when adding docs.
+- Week catch-up for Claude written: `docs/ai/handoff-to-claude-2026-10-28.md` + mailbox thread (Danny's ask, 10-28); corrected prompt v1.2 delivered in #glorg-chat.
 
 ## State pointers (paths, never values)
 - `/home/z/my-project/.secrets/discord-daily-webhook` — #daily-updates webhook URL (name in config: `DISCORD_DAILY_UPDATES_WEBHOOK`)
@@ -28,7 +30,9 @@
 - `/home/z/my-project/download/digest-archive/` — local copies of posted issues
 
 ## Open threads waiting on me
-- T-07 "executable digest spec" — my three asks are done and acked in-thread; thread can move to Closed once T-07 confirms.
+- maplestory.market gathering licensed by Danny (key pinned) — probe done 10-28: the data API is key-gated by design (clean 401 session_required on /api/*, SPA shell HTML, /docs/api documents the key flow with 429 + Retry-After); no bot wall, so the browser bridge buys nothing. Nothing further without the key; when it lands, a poller follows the meowdb headed-Chromium pattern.
+- T-07 digest thread Closed 10-28 (quiet-day decided). T-08 (Claude, project-side) shipped its own sub-1000-meso guard in the spread check — both fixes coexist with the blacklist (1160fd6 + 1855c47).
+- Next tracker rocks are unpicked again; do NOT start big tracker work without Danny's pick.
 
 ## Gotchas learned (don't re-learn these)
 - Fine-grained PAT lacks checks:read — the check-runs API returns empty; use `actions/runs?head_sha=<full sha>` instead (short shas silently match nothing).
