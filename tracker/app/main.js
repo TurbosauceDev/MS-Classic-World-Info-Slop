@@ -99,7 +99,7 @@ app.whenReady().then(() => {
   // the top back when this window loses focus, and every few seconds
   win.on("blur", pinOnTop);
   setInterval(pinOnTop, 5000);
-  if (app.isPackaged) autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+  if (app.isPackaged){ applyChannel(); autoUpdater.checkForUpdatesAndNotify().catch(() => {}) }
   flushRuns().catch(() => {});
   setInterval(() => flushRuns().catch(() => {}), 10 * 60e3);   // runs queued while a send was going, or while offline
   setInterval(() => app.isPackaged && autoUpdater.checkForUpdatesAndNotify().catch(() => {}), 6 * 3600e3);
@@ -107,6 +107,9 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => app.quit());
 // updates: checked at launch and every 6 h, downloaded in the background and installed when the app closes. The window
 // can also check now ("Check for updates") and restart into a downloaded one right away; it's told each step.
+// The channel (0.2.82): settings.beta opts the copy into pre-release builds (electron-updater skips pre-releases unless
+// allowPrerelease) — test builds go to whoever asks for them, wide releases to everyone else.
+function applyChannel(st = readSettings()){ autoUpdater.allowPrerelease = st.beta === true; autoUpdater.allowDowngrade = false }
 let upd = {state: "idle"};
 const sendUpd = p => { upd = {...upd, ...p}; if (win && !win.isDestroyed()) win.webContents.send("update", upd); return upd };
 autoUpdater.on("checking-for-update", () => sendUpd({state: "checking"}));
@@ -279,6 +282,7 @@ ipcMain.handle("settings", (_, s) => {
   writeSettings({...cur, ...(s || {})});
   if (s && "onTop" in s) pinOnTop();
   if (s && "opacity" in s) applyOpacity();
+  if (s && "beta" in s){ applyChannel(readSettings()); sendUpd({state: "idle"}); if (app.isPackaged) autoUpdater.checkForUpdatesAndNotify().catch(() => {}) }   // the channel changed: look again right away
   if (s && s.share === false) writeAtomic(QUEUE, "[]");   // sharing turned off: runs still waiting to go up are dropped, not sent later
   return readSettings();
 });

@@ -225,7 +225,8 @@ const path = require("path"), {chromium} = require("playwright");
   const dragTo = async (from, to, dy = 0) => { const a = await page.locator(from).boundingBox();
     await page.mouse.move(a.x + 10, a.y + a.height / 2); await page.mouse.down(); await page.mouse.move(a.x + 30, a.y + 20, {steps: 3});
     await page.waitForTimeout(150); const b = await page.locator(to).boundingBox();
-    await page.mouse.move(b.x + b.width / 2, b.y + (dy || b.height / 2), {steps: 5}); await page.mouse.up(); await page.waitForTimeout(50) };
+    await page.mouse.move(b.x + b.width / 2, b.y + (dy || b.height / 2), {steps: 5}); await page.waitForTimeout(120);   // let the drop detector see the pointer rest
+    await page.mouse.up(); await page.waitForTimeout(50) };
   await page.setViewportSize({width: 600, height: 2400}); 
   await page.click("#usedBox .shut"); await page.waitForTimeout(250);
   await page.click("#tbBtn"); if (!await page.isVisible("#toolbox") || await page.textContent("#tbList") !== "⠿Consumables used+") throw new Error("toolbox open: " + await page.textContent("#tbList"));
@@ -243,7 +244,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.click("#usedBox .shut");
   { const t = await page.evaluate(() => [!!document.querySelector("#usedBox").closest("#shelf"), document.querySelector("#tbList").textContent, settings.layout.order.dock.includes("used")]);
     if (!t[0] || !/Consumables used/.test(t[1]) || t[2]) throw new Error("× puts away: " + t) }
-  await page.waitForTimeout(250); await dragTo("#mesoBox h3", "#tbList");   // (after the boxes stop gliding)
+  await page.waitForTimeout(450); await dragTo("#mesoBox h3", "#tbList");   // (after the boxes stop gliding — a gliding start point aims the drag at empty space)
   { const t = await page.evaluate(() => [!!document.querySelector("#mesoBox").closest("#shelf"), [...document.querySelectorAll("#tbList .tbItem")].map(x => x.dataset.mod).sort().join(), !document.querySelector("#main .shut, #top .shut")]);
     if (!t[0] || t[1] !== "mesos,used" || !t[2]) throw new Error("dragged onto the toolbox: " + t) }
   await page.click("#tbList [data-mod=used] button"); await page.click("#tbList [data-mod=mesos] button");
@@ -535,6 +536,11 @@ const path = require("path"), {chromium} = require("playwright");
   await page.evaluate(() => window.menu("mute")); await page.waitForTimeout(50);
   const mute = await page.evaluate(() => [window.st.muted, document.querySelector("#muted").checked]);
   await page.evaluate(() => window.menu("mute")); await page.waitForTimeout(50);
+  // beta channel (0.2.82): the checkbox saves through (main.js re-applies allowPrerelease on the real thing)
+  await page.evaluate(() => { $("#beta").checked = true; $("#beta").dispatchEvent(new Event("change")) }); await page.waitForTimeout(60);
+  if (await page.evaluate(() => window.st.beta) !== true) throw new Error("beta on not saved");
+  await page.evaluate(() => { $("#beta").checked = false; $("#beta").dispatchEvent(new Event("change")) }); await page.waitForTimeout(60);
+  if (await page.evaluate(() => window.st.beta) !== false) throw new Error("beta off not saved");
   await page.evaluate(() => window.menu("clickThrough:true")); const thr = await page.evaluate(() => [document.body.classList.contains("through"), document.querySelector("#status").textContent]);
   await page.evaluate(() => window.menu("clickThrough:false"));
   const rows = await page.$$eval("#keyRows [data-key]", b => b.length);

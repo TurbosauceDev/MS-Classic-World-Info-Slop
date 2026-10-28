@@ -266,6 +266,12 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   dropAlert keeps the legacy alertWorth/alertItems path only when the engine has no enabled loot alert (ui.test drives it
   that way); stopCheck skips when an enabled idleExp alert exists. Settings UI: #alertList rows (kind select rebuilds the
   row's fields, number inputs save as numbers, sound select, Test, ✕), debounced host.settings({alerts}).
+- Beta channel (0.2.82): settings.beta -> main.js applyChannel() sets autoUpdater.allowPrerelease (allowDowngrade false),
+  applied at boot and on save (the settings handler re-checks for updates when beta changes). Test builds ship as semver
+  pre-releases (x.y.z-beta.n -> electron-builder flags the GitHub release pre-release); stable copies skip them, beta
+  copies take them, and the next stable supersedes. Renderer: #beta checkbox in Settings > App (betaSet in
+  renderer-settings.js). ui.test's toolbox drag waits out the box glide + gives the drop detector a settled pointer
+  (the 2026-10-19 flake class, hit again on 10-28).
 - Respawn polish (0.2.81): due-soon = killed && 0 < dueIn <= 120e3 -> the warn colour (overlay .mrow span.soon, tracker
   #respawn td.n.soon); session.markKill(id) (exported) stamps S.timedKills[id] = Date.now() and refuses ids that aren't
   timed monsters of the current map; the tracker's respawn card grew a "killed it" button per row (renderer.js

@@ -338,6 +338,10 @@ async function saveNumbers(){
 }
 const muteSet = on => host.settings({muted: !!on}).then(x => { settings = x; $("#muted").checked = !!on; $("#status").textContent = on ? "Sounds muted." : "Sounds on." });
 $("#muted").onchange = e => muteSet(e.target.checked);
+// the update channel (0.2.82): beta = pre-release builds reach this copy (main.js applies allowPrerelease on save)
+const betaSet = on => host.settings({beta: !!on}).then(x => { settings = x; $("#beta").checked = !!on;
+  $("#status").textContent = on ? "Beta channel on: test builds arrive as they're built." : "Back to the stable channel." });
+$("#beta").onchange = e => betaSet(e.target.checked);
 $("#fitBoxes").onchange = e => { flip(() => fitSet(e.target.checked)); host.settings({fit: e.target.checked}).then(x => settings = x) };
 $("#fitWin").onchange = e => { fitWinSet(e.target.checked); host.settings({fitWin: e.target.checked}).then(x => settings = x) };
 $("#layoutFit").onclick = () => fitAll();
@@ -364,7 +368,7 @@ $("#updGo").onclick = async () => {
   $("#job").value = settings.job || "";
   $("#ontop").checked = settings.onTop !== false;
   const op = Math.round((+settings.opacity || 1) * 100); $("#opacity").value = op; $("#opacityV").textContent = op + "%";
-  keysSet(null); themeShow(); themeUi(); profUi(); $("#muted").checked = !!settings.muted;
+  keysSet(null); themeShow(); themeUi(); profUi(); $("#muted").checked = !!settings.muted; $("#beta").checked = settings.beta === true;
   // the old "Show me where my potions are" box (removed in 0.2.36): counts are looked for on the whole screen again
   if (settings.countArea) settings = await host.settings({countArea: null});
   await alertsBoot();   // conditions & alerts: migrate the pre-0.2.78 keys once, then render the rows
