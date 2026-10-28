@@ -14,5 +14,6 @@ jobs:
         with: { node-version: 22 }
       - run: npm i --no-save playwright@1.64.1 && npx playwright install --with-deps chromium
         timeout-minutes: 12
-      - run: node scripts/probe_meowdb.js
+      - run: which xvfb-run || sudo apt-get install -y xvfb
+      - run: xvfb-run -a node scripts/probe_meowdb.js
         timeout-minutes: 10
