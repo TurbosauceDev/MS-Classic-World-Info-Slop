@@ -341,6 +341,9 @@
   #pulseBox .plist .sub { color:var(--muted); font-variant-numeric:tabular-nums; }
   :is(#watchBox, #pulseBox) b.up { color:var(--leaf); } :is(#watchBox, #pulseBox) b.down { color:var(--bad); }
   #cmpPop { max-width:900px; } #cmpRows table { font-size:13px; } #cmpRows th { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; padding:2px 4px; border-bottom:1px solid var(--line); white-space:nowrap; } #cmpRows td { padding:3px 4px; }
+  #palPop { max-width:440px; } #palList { list-style:none; margin:6px 0 0; padding:0; max-height:46vh; overflow-y:auto; }
+  #palList li { display:flex; justify-content:space-between; gap:8px; padding:6px 8px; border-radius:7px; cursor:pointer; }
+  #palList li.sel { background:var(--accent-soft); } #palList li span:first-child { min-width:0; }
   @keyframes feedIn { from { opacity:0; transform:translateY(6px); } }
   .over-drop { background:var(--accent-soft) !important; }
   #hist > .row:has(> #csv) { padding-right:72px; }
@@ -574,6 +577,13 @@
     <div class="pophead"><h2 id="cmpTitle">Compare watched items</h2><button id="cmpClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>
     <div class="card" id="cmpCard"><div id="cmpRows"></div><div class="note" id="cmpNote"></div></div>
   </section>
+  <!-- Quick palette (Ctrl+K, v0.2.85): type to jump to any module, view, pop-up or run control -->
+  <section id="palPop" class="modal short hidden" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="palTitle">
+    <div class="pophead"><h2 id="palTitle">Quick jump</h2><button id="palClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>
+    <div class="card"><input id="palQ" type="text" placeholder="Type to jump — modules, views, pop-ups, run controls…" style="width:100%" aria-label="Search the quick palette" role="combobox" aria-expanded="true" aria-controls="palList">
+    <ul id="palList" role="listbox" aria-label="Quick jump actions"></ul>
+    <div class="note">Ctrl+K opens this from anywhere in the window. Enter runs the pick, arrows move, Esc closes. For shortcuts that work while the game has focus, see Settings > Keyboard shortcuts.</div></div>
+  </section>
   <section id="helpPop" class="modal hidden" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
     <div class="pophead"><h2 id="helpTitle">Help</h2><button id="helpClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>
     <div class="card" id="help">
@@ -733,7 +743,7 @@
     <div class="card" id="prefs" data-nav="Shortcuts"><h3>Shortcuts and window</h3>
       <div class="k">Keyboard shortcuts</div>
       <div class="note">These work from anywhere, the game too. Click one and press the new keys (Ctrl, Alt or Shift plus a key, or an F key on its own); Esc cancels, Backspace turns it off.
-        While the tracker runs, a shortcut's keys don't reach other programs, so free any that clash with your game keys.</div>
+        While the tracker runs, a shortcut's keys don't reach other programs, so free any that clash with your game keys. Inside the window, <b>Ctrl+K</b> opens the quick jump — type to reach any module, view or pop-up.</div>
       <table id="keyRows"></table>
       <div class="row"><button id="keysReset" class="alt">Reset shortcuts</button> <span class="note" id="keysNote" role="status"></span></div>
       <label class="chk"><input type="checkbox" id="muted"> <span>Mute sounds (drop alerts, the no-EXP warning)</span></label>
@@ -776,6 +786,7 @@
   <script src="renderer-run.js"></script>
   <script src="renderer-history.js"></script>
   <script src="renderer-settings.js"></script>
+  <script src="renderer-palette.js"></script>
   <script src="renderer-overlay.js"></script>
   <script src="renderer-dummy.js"></script>
 </body>

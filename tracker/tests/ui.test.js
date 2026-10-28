@@ -597,6 +597,21 @@ const path = require("path"), {chromium} = require("playwright");
     if (!/meowdb/.test(flat) || !/500/.test(flat) || !/498sales/.test(flat) || !/classicmarket\.kr/.test(flat) || !/×10 spread/.test(cmp[0]) || !/read stamp/.test(cmp[1]))
       throw new Error("compare modal: " + JSON.stringify(cmp));
     await page.click("#cmpClose") } }
+  // quick palette (0.2.85): Ctrl+K opens, filter narrows, Enter runs the pick, Esc closes
+  { await page.keyboard.press("Control+k");
+    if (!await page.isVisible("#palPop") || !(await page.textContent("#palList")).includes("Past sessions")) throw new Error("palette open");
+    await page.fill("#palQ", "sessions");
+    const narrow = await page.evaluate(() => [...document.querySelectorAll("#palList li")].map(l => l.textContent).join("|"));
+    if (!/Past sessions/.test(narrow) || /Settings/.test(narrow)) throw new Error("palette filter: " + narrow);
+    await page.keyboard.press("ArrowDown"); await page.keyboard.press("ArrowUp"); await page.keyboard.press("Enter");
+    await page.waitForTimeout(250);
+    if (!await page.evaluate(() => modalIsOpen($("#histPop")))) throw new Error("palette Enter ran the pick");
+    await page.keyboard.press("Escape"); await page.waitForTimeout(150);
+    if (await page.evaluate(() => modalIsOpen($("#histPop")) || modalIsOpen($("#palPop")))) throw new Error("palette Esc chain");
+    await page.evaluate(() => { modalClose($("#histPop")) });
+    await page.keyboard.press("Control+k"); await page.fill("#palQ", "overlay mode"); await page.keyboard.press("Enter"); await page.waitForTimeout(300);
+    if (!await page.evaluate(() => (window.ovCalls || []).includes(true))) throw new Error("palette toggles overlay");
+    await page.evaluate(() => window.menu("overlay")); await page.waitForTimeout(200) }
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (!/Red Snail/.test(mobs) || !/Blue Snail/.test(mobs)) throw new Error("mobs table: " + mobs);
