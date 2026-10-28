@@ -342,7 +342,7 @@ const PRICE_SRC = [
     return {src: "meso.watch", kind: "sales seen on stream", v: p[0], per: p[4] & 2 ? "per set" : "", trend: pwTrend(id),
       detail: `half sold for ${fmt(p[1])}-${fmt(p[2])}${sv != null ? ` · ${Math.round(sv * 100)}% of units listed were bought` : ""}`,
       n: `${fmt(p[3])} sale${p[3] === 1 ? "" : "s"}`, few: !!(p[4] & 1), when: D.pw.read, spark: pwSpark(id)} }];
-// Every live listing with a place to find it, cheapest first (Items page "Where to buy"). A source with locations pushes a function
+// Every live listing with a place to find it (Items page "Where to buy"; 12-prices.js sorts freshest shops first). A source with locations pushes a function
 // id -> [{v, qty, ch, room, spot, who, ago, src, buy, note}] onto LIST_SRC. meso.watch keeps only the cheapest listing per item.
 // meso.watch: every live listing (D.pw.asks, last field = first seen unix min, fetch_mesowatch.py "seen"); cheapest only when absent.
 // Listed = how long it has been up; 3+ days = stale tag (Z.ai todo #1, Danny 2026-10-22)

@@ -241,6 +241,42 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       if (kn) PWNOW[id] = kn; else delete PWNOW[id]; if (kl) MDBL[id] = kl; else delete MDBL[id]; if (kw) MWLS[id] = kw; if (ki) MILS[id] = ki; if (ka) PWASK[id] = ka; return t });
     check(w.length === 2 && /^Each.*60 cheapest.*Ch 7 · FM 7 · middle ChadX.*70.*Ch 6 · FM 4 CINDY.*90.*Ch 3 · Kerning bottom left Jayce/i.test(w[0]) && /40.*×100.*whisper \/ meet up Buyer/.test(w[1]),
       `prices: where to buy sorted, buy orders apart (${w.join(" | ").slice(0, 300)})`);
+    // Danny 2026-10-28: freshness tiers on Where to buy - <=8 h shops first, 8-12 h marked low-confidence, older ones
+    // hide behind "Show older" while anything fresher exists (a shop that old has usually closed)
+    await p.evaluate(() => { const id = "2000000", now = Math.round(Date.now() / 6e4);
+      window._frkeep = [PWNOW[id], MDBL[id], PWASK[id], MWLS[id], MILS[id]];
+      delete PWNOW[id]; delete PWASK[id]; delete MWLS[id]; delete MILS[id];
+      MDBL[id] = [[0, 100, 1, 1, 1, "", "FreshShop", now - 30, 0, ""], [0, 80, 1, 2, 2, "", "AgingShop", now - 9 * 60, 0, ""],
+        [0, 60, 1, 3, 3, "", "DeadShop", now - 20 * 60, 0, ""], [0, 90, 1, 4, 4, "", "GoneShop", now - 26 * 60, 0, ""]];
+      const e = document.createElement("span"); e.className = "itname"; e.dataset.item = id; document.querySelector("#items").prepend(e); e.click() });
+    await p.waitForTimeout(150);
+    const fr1 = await p.evaluate(() => { const tbl = document.querySelector("#itprices .pxls"), rows = [...tbl.querySelectorAll("tbody tr:not(.pxx)")];
+      return { ord: rows.map(r => (r.innerText.match(/FreshShop|AgingShop|DeadShop|GoneShop/) || [])[0]).filter(Boolean).join(","),
+        hid: tbl.querySelectorAll("tbody tr.pxx").length, btn: document.querySelector("#itprices [data-pxall]")?.textContent,
+        warn: !!document.querySelector("#itprices .pxold"), text: tbl.innerText.replace(/\s+/g, " ") } });
+    check(fr1.ord === "FreshShop,AgingShop" && fr1.hid === 2 && fr1.warn === false && /low-confidence/.test(fr1.text)
+      && !/may be closed/.test(fr1.text) && fr1.btn === "Show 2 older listings — shops may have closed",
+      `prices: fresh shops first, older hidden (${JSON.stringify(fr1).slice(0, 240)})`);
+    const fr2 = await p.evaluate(() => { document.querySelector("#itprices [data-pxall]").click();
+      const id = "2000000", [kn, kl, ka, kw, ki] = window._frkeep, txt = document.querySelector("#itprices .pxls").innerText.replace(/\s+/g, " ");
+      if (kn) PWNOW[id] = kn; else delete PWNOW[id]; if (kl) MDBL[id] = kl; else delete MDBL[id];
+      if (ka) PWASK[id] = ka; else delete PWASK[id]; if (kw) MWLS[id] = kw; else delete MWLS[id]; if (ki) MILS[id] = ki; else delete MILS[id];
+      delete window._frkeep; return { dead: /DeadShop/.test(txt), closed: /may be closed/.test(txt) } });
+    check(fr2.dead && fr2.closed, `prices: show-older reveals the closed shops (${JSON.stringify(fr2)})`);
+    // all-stale item: nothing fresher exists, so the old shops show inline with the closed-shop warning and no toggle
+    const old = await p.evaluate(() => { const id = "2000000", now = Math.round(Date.now() / 6e4);
+      window._oldkeep = [PWNOW[id], MDBL[id], PWASK[id], MWLS[id], MILS[id]];
+      delete PWNOW[id]; delete PWASK[id]; delete MWLS[id]; delete MILS[id];
+      MDBL[id] = [[0, 60, 1, 3, 3, "", "DeadShop", now - 20 * 60, 0, ""], [0, 90, 1, 4, 4, "", "GoneShop", now - 26 * 60, 0, ""]];
+      const e = document.createElement("span"); e.className = "itname"; e.dataset.item = id; document.querySelector("#items").prepend(e); e.click() });
+    await p.waitForTimeout(150);
+    const oldOut = await p.evaluate(() => { const id = "2000000", [kn, kl, ka, kw, ki] = window._oldkeep, box = document.querySelector("#itprices");
+      const out = { warn: /12 h\+ old/.test(box.innerText), closed: /may be closed/.test(box.innerText),
+        nobtn: !box.querySelector("[data-pxall]"), cheap: /may be closed/.test(box.querySelector(".pxtiles").innerText) };
+      if (kn) PWNOW[id] = kn; else delete PWNOW[id]; if (kl) MDBL[id] = kl; else delete MDBL[id];
+      if (ka) PWASK[id] = ka; else delete PWASK[id]; if (kw) MWLS[id] = kw; else delete MWLS[id]; if (ki) MILS[id] = ki; else delete MILS[id];
+      delete window._oldkeep; return out });
+    check(oldOut.warn && oldOut.closed && oldOut.nobtn && oldOut.cheap, `prices: all-stale warning, no toggle (${JSON.stringify(oldOut)})`);
     // Z.ai todo #1 (Danny 2026-10-22): meso.watch listings show how long they've been up (D.pw.asks first-seen), 3+ days = stale tag
     const st = await p.evaluate(() => { const id = "2000000", now = Math.round(Date.now() / 6e4), k = PWASK[id];
       PWASK[id] = [[50, 1, 2, "Free Market <1>", "Old", now - 4 * 1440], [55, 1, 3, "Free Market <2>", "Fresh", now - 120], [60, 1, 4, "Free Market <3>", "NoSeen", null]];
