@@ -44,12 +44,17 @@ let AUTH = "";   // optional bearer value, set with an "auth <value>" line; sent
   }
 
   async function pageFetch(url, wantJson) {
-    // in-page fetch: same browser context (cookies, TLS), no navigation; falls back to goto on a wall
+    // in-page fetch: same browser context (cookies, TLS), no navigation; falls back to goto on a wall.
+    // The evaluate is bounded (25 s): a site that accepts the connection and never answers (rate-limit tarpit)
+    // must not block the line protocol forever — the shopscans poll hung 20 min exactly like that on 10-28.
     try {
-      const r = await page.evaluate(async ({ u, auth }) => {
-        const res = await fetch(u, { headers: { accept: "application/json", ...(auth ? { authorization: "Bearer " + auth } : {}) } });
-        return { status: res.status, text: await res.text() };
-      }, { url, auth: AUTH });
+      const r = await Promise.race([
+        page.evaluate(async ({ u, auth }) => {
+          const res = await fetch(u, { headers: { accept: "application/json", ...(auth ? { authorization: "Bearer " + auth } : {}) } });
+          return { status: res.status, text: await res.text() };
+        }, { url, auth: AUTH }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("in-page fetch timed out after 25000 ms")), 25000)),
+      ]);
       if (r.status === 200 && !CHALLENGE.test(r.text.slice(0, 500)) && (!wantJson || looksJson(r.text))) {
         return { ok: true, status: r.status, body: r.text };
       }

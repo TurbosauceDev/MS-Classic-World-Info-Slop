@@ -26,6 +26,10 @@ MW = "https://maplestory.watch/api/items"
 MW_ITEM = "https://maplestory.watch/api/item?name=%s"
 UA = {"User-Agent": "ms-classic-world-info site build (price summary)", "Accept": "application/json"}
 LS_MAX, DAY = 8, 86400
+# wall-clock cap on the per-item listing loop (mesoindex's BUDGET pattern): the number of items whose summary moved is
+# unbounded, and after the 10-28 bridge fix each call runs through a real browser - a hung run must still finish inside
+# the 20 min step ceiling with the summary + whatever listings it gathered (the rest keep their old rows).
+LIST_BUDGET = 8 * 60
 BROWSER = None
 
 def get(url):
@@ -118,13 +122,17 @@ def fetch(old):
         name = {nid[r["name"].lower()]: r["name"] for r in j["items"] if r["name"].lower() in nid}
         # per-item listings only where the summary moved since last run (or listings may have aged out), ~0.3 s apart
         ols, oit, ls, calls = (old.get("mw") or {}).get("ls", {}), (old.get("mw") or {}).get("it", {}), {}, 0
+        skipped = 0
         for i, r in it.items():
             if not r[3]: continue
             if oit.get(i) == r and i in ols and all(now / 60 - x[6] < DAY / 60 for x in ols[i]): ls[i] = ols[i]; continue
+            if time.time() - now > LIST_BUDGET: skipped += 1; ls[i] = ols.get(i, []); continue
             try: rows = mw_listings(get(MW_ITEM % urllib.parse.quote(name[i])), now)
             except Exception as e: print("listing fetch failed for", name[i], e); rows = ols.get(i, [])
             calls += 1; time.sleep(0.3)
+            if calls % 50 == 0: print(f"  {calls} listing calls, {time.time() - now:.0f} s", flush=True)
             if rows: ls[i] = rows
+        if skipped: print(f"::warning::listing budget ({LIST_BUDGET}s) hit: {skipped} items kept their old listings")
         out["mw"] = {"read": ts(j.get("at") or now), "it": it, "ls": ls}
         print(f"maplestory.watch: {len(j['items'])} items, {len(it)} mapped, {calls} listing calls, {len(ls)} with listings")
     except Exception as e:
