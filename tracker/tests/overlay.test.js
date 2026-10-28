@@ -2,7 +2,8 @@
 // 2026-10-28, after ElvUI's Toggle Anchors, WoW Edit Mode and WeakAuras' MoverSizer). Part 1 loads the overlay page with
 // the bridge stubbed: default widgets, values, the map card's spawn table and respawn countdowns, the panel picker (rows
 // with eye toggles, per-widget detail: size / opacity / x-y / reset), dragging with magnetic snapping (guides, Shift
-// bypass), grid display + grid rounding, resize (corner grip, Ctrl+scroll, scale slider), arrow nudging, Esc = Done,
+// bypass), grid display + grid rounding (edit mode only — Done and a locked boot hide it, Danny 10-28), resize (corner
+// grip, Ctrl+scroll, scale slider), arrow nudging, Esc = Done,
 // clamping to the window's real viewport (not the reported desk — the dead-strip fix), the panel's own drag, reset
 // layout, lock (Done) and the theme following the tracker. Part 2 loads the tracker window like ui.test.js: the Overlay
 // button, the View-menu actions, the state coming back, and dummy data reaching the push. Needs playwright.
@@ -170,6 +171,12 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.waitForTimeout(350);
     st = await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); return [el.offsetLeft % 64, el.offsetTop % 64, window.ovSaved.overlay.widgets.exp.x] });
     if (st[0] !== 0 || st[1] !== 0 || st[2] % 64 !== 0) fail("grid rounding", st);
+    // the grid is an edit-mode affordance (Danny 10-28: it used to stay on after Done — and survive a restart): with the
+    // preference still checked, locking hides the lines and editing brings them back
+    await page.evaluate(() => window.ovMode(false));
+    if (!await page.evaluate(() => document.querySelector("#ovgrid").classList.contains("hidden"))) fail("grid hides when locked", 0);
+    await page.evaluate(() => window.ovMode(true));
+    if (!await page.evaluate(() => !document.querySelector("#ovgrid").classList.contains("hidden"))) fail("grid returns with edit", 0);
     await page.uncheck("#ovGrid"); await page.check("#ovSnap");
     // the clamp trusts the window's real viewport, not the reported desk: a desk bigger than the window leaves no dead
     // strip where cards vanish past the edge (the 10-28 cut-off fix)
@@ -225,6 +232,31 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.click("#ovClose");
     if (!await page.evaluate(() => window.ovClosed)) fail("close", 0);
     if (errors.length) throw new Error("overlay page errors: " + errors.join(" | "));
+    await page.close();
+  }
+  // ---- part 1b: a locked boot with the grid preference still on (Danny's 10-28 report: the grid used to survive Done
+  // and even a restart) — the lines must stay hidden while locked and appear only once editing starts ----
+  {
+    const page = await browser.newPage({viewport: {width: 1400, height: 900}}), errors = [];
+    page.on("pageerror", e => errors.push(e.message));
+    await page.addInitScript(() => {
+      window.ovhost = {
+        state: async () => ({edit: false, widgets: null, snap: true, grid: true, gsize: 64, desk: {x: 0, y: 0, width: 1400, height: 900}}),
+        settings: async p => (window.ovSaved = {...(window.ovSaved || {}), ...p}, window.ovSaved),
+        edit: async () => true, done: async () => true, close: async () => true,
+        onData: cb => window.ovData = cb, onMode: cb => window.ovMode = cb, onScreens: cb => window.ovScreens = cb,
+      };
+    });
+    await page.goto("file://" + path.join(__dirname, "../app/overlay.html"));
+    await page.waitForSelector("#ovw-status");
+    let st = await page.evaluate(() => [document.body.classList.contains("locked"), document.querySelector("#ovpanel").classList.contains("hidden"),
+      document.querySelector("#ovgrid").classList.contains("hidden")]);
+    if (!st[0] || !st[1] || !st[2]) fail("locked boot keeps the grid hidden", st);
+    await page.evaluate(() => window.ovMode(true));   // Ctrl+Shift+E's ack: editing starts, the saved preference shows the grid
+    if (!await page.evaluate(() => !document.querySelector("#ovgrid").classList.contains("hidden"))) fail("grid returns on edit after locked boot", 0);
+    await page.evaluate(() => window.ovMode(false));
+    if (!await page.evaluate(() => document.querySelector("#ovgrid").classList.contains("hidden"))) fail("grid hides again on lock", 0);
+    if (errors.length) throw new Error("overlay locked-boot errors: " + errors.join(" | "));
     await page.close();
   }
   // ---- part 2: the tracker window (ui-host stubbed): the button, the menu actions, the push ----

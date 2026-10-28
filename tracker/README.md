@@ -24,7 +24,8 @@ npm start           # run it (Windows, Electron)
   the panel): cards drag anywhere (pointer events, saved in desktop pixels via settings.overlay.widgets, re-clamped on
   `display-metrics-changed`). Edit mode v2 (v0.2.75, after ElvUI / WoW Edit Mode / WeakAuras): the checkbox strip is now
   an in-style editor panel — one row per widget (eye toggle + size steppers), the picked row opens size / opacity / exact
-  x-y / reset controls, with Snap, Grid (32/64/128 px) and Reset layout in the footer. Cards magnet-snap to each other and
+  x-y / reset controls, with Snap, Grid (32/64/128 px, drawn only while editing — ElvUI style) and Reset layout in the
+  footer. Cards magnet-snap to each other and
   the screen (15 px, Shift skips) with alignment guides, resize by corner grip / Ctrl+scroll / slider (0.5-2x), arrow keys
   nudge 1 px (Shift 10), Esc = Done, and Reset layout restores the factory layout after a confirm. Cards clamp to the
   window's real content area, so nothing gets cut off in the dead strip some monitor setups used to leave. Locked (Done /

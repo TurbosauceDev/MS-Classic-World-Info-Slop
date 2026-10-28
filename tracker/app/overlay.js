@@ -266,9 +266,12 @@ function resetAll(){
   for (const id of Object.keys(KINDS)) if ((HOME[id] || {}).on) $("#ovroot").appendChild(mkCard(id));
   pick(null); place(); syncPanel(); ovSave();
 }
+// the grid is an edit-mode affordance (ElvUI draws its grid only while anchors are unlocked): the checkbox is the
+// preference and survives Done, but the lines only render while editing — locked play never sees them (Danny 10-28:
+// "the grid is only supposed to be active during edit mode. why is it permanently active?")
 function gridShow(){
   const g = $("#ovgrid");
-  g.classList.toggle("hidden", !CFG.grid);
+  g.classList.toggle("hidden", !CFG.grid || !CFG.edit);
   g.style.setProperty("--gs", CFG.gsize + "px");
 }
 
@@ -394,6 +397,7 @@ addEventListener("keydown", e => {
     document.body.classList.toggle("locked", !CFG.edit);
     $("#ovpanel").classList.toggle("hidden", !CFG.edit);
     if (!CFG.edit){ hideGuides(); pick(null) }
+    gridShow();   // the grid follows edit mode: locked hides it, editing brings it back if the preference says so
     place(); ovSave();
   });
   window.ovhost.onScreens(d => { if (d?.width){ DESK = d; place() } });

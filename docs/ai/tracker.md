@@ -115,6 +115,9 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   screen edges/centre (SNAP_PX 15, per-axis min-delta, Shift skips; guides #ovgv/#ovgh), the grid rounds drops when on, cards
   resize via corner grip / Ctrl+scroll / slider (transform scale, transform-origin top left; getBoundingClientRect for the
   scaled rect), arrows nudge the picked card 1 px (Shift 10), Esc = Done, row hover spotlights the card (body.dim + .spot).
+  Grid visibility is edit-gated (0.2.76, Danny caught it staying on after Done): gridShow() hides #ovgrid unless
+  CFG.grid && CFG.edit — the checkbox stays the saved preference, but the lines only render while editing (onMode and the
+  boot path both go through gridShow()), so a locked boot with Grid ticked never draws it.
   Bounds fix: the page clamps to the window's REAL content area (innerWidth/Height), and main.js reports ovDesk() =
   getContentBounds() (re-asserts setBounds(ovBounds()) after show + on display-metrics-changed) instead of the intended
   display union — mixed-DPI/Windows-nudged windows left a dead strip around the perimeter with cards cut off.
