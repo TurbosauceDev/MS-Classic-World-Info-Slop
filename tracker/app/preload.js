@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld("host", {
   themeBar: c => ipcRenderer.invoke("theme-bar", c),
   keys: (keys, pause) => ipcRenderer.invoke("keys", keys, pause),
   version: () => ipcRenderer.invoke("version"),
+  perfMetrics: () => ipcRenderer.invoke("perf-metrics"),
   updateState: () => ipcRenderer.invoke("update-state"),
   updateCheck: () => ipcRenderer.invoke("update-check"),
   updateInstall: () => ipcRenderer.invoke("update-install"),

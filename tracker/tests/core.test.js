@@ -725,3 +725,13 @@ console.log("site prices ok");
 console.log("bag stale ok");
 
 console.log("patch notes ok");
+
+// performance monitor maths (core/perfwatch.js): rows sorted by CPU, warnings only past our limits
+{ const P = require("../core/perfwatch.js"), m = (type, c, kb) => ({type, cpu: {percentCPUUsage: c}, memory: {workingSetSize: kb}});
+  const rows = P.procs([m("GPU", 3, 102400), m("Browser", 12, 204800), m("Tab", 20, 307200)]);
+  assert.deepStrictEqual(rows.map(r => r.name), ["Window or reader", "App (main)", "Graphics"]);
+  assert.strictEqual(P.warnings(rows, {}, null, 0).list.length, 1, "35% CPU warns");
+  assert.strictEqual(P.warnings(P.procs([m("Tab", 5, 1024)]), {busy: 10, read: 20}, 2, 2).list.length, 0, "light load: no warning");
+  const st = P.stages({tick: {n: 2, sum: 100, max: 60}, read: {n: 2, sum: 90, max: 70}}, 1000);
+  assert.strictEqual(st.busy, 10); assert.strictEqual(st.read, 45);
+  assert.ok(P.warnings([], {read: 120}, 0.5, 2).list.length === 2, "slow read + low rate both warn"); }

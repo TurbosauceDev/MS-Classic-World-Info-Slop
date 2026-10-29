@@ -844,6 +844,10 @@
       <div class="row"><button id="frames" class="alt" title="One full game picture every 3 s for 3 minutes">Save sample frames</button></div>
     </div>
   </section>
+<div id="perfPop" class="modal hidden" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="perfTitle">
+  <div class="pophead"><h2 id="perfTitle">Performance monitor</h2><button id="perfClose" class="alt" aria-label="Close">✕</button></div>
+  <div class="card"><div id="perfWarn"></div><div id="perfBody" class="note">Reading…</div>
+    <div class="note">Updates every 2 seconds while open. CPU is the share of one core (100% = a whole core). Warning limits are our own rule of thumb, not game numbers.</div></div></div>
 <div id="bugPop" class="modal short hidden" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="bugTitle">
   <div class="pophead"><h2 id="bugTitle">Report a bug</h2></div>
   <div class="card">
@@ -861,6 +865,7 @@
   <script src="../core/ocrcache.js"></script>
   <script src="../core/bagstale.js"></script>
   <script src="../core/combatlog.js"></script>
+  <script src="../core/perfwatch.js"></script>
   <script src="readers.js"></script>
   <script src="themes.js"></script>
   <script src="changelog.js"></script>
@@ -876,5 +881,6 @@
   <script src="renderer-palette.js"></script>
   <script src="renderer-overlay.js"></script>
   <script src="renderer-dummy.js"></script>
+  <script src="renderer-perf.js"></script>
 </body>
 </html>

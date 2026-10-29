@@ -55,6 +55,7 @@ for (const b of document.querySelectorAll("#titlebar [data-menu]")) b.onclick = 
 host.onMenu?.(what => {
   if (what === "help") openHelp();
   else if (what === "patchnotes") openPatchNotes();
+  else if (what === "perf") openPerf();
   else if (what === "settings") openPrefs();
   else if (what === "history") openHist();
   else if (what === "reset") resetTracker();

@@ -89,7 +89,7 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {label: "File", submenu: [{label: "Settings", accelerator: "CmdOrCtrl+,", click: show("settings")}, {label: "Past sessions", accelerator: "F2", registerAccelerator: false, click: show("history")}, {label: "Reset tracker (clear the screen)", click: show("reset")}, {type: "separator"}, {label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
     {label: "View", submenu: [{label: "Modules toolbox", click: show("toolbox")}, {label: "Simple Mode", click: show("mini")}, {label: "Focus mode", click: show("focus")}, {label: "Overlay mode", click: show("overlay")}, {label: "Edit overlay layout", click: show("overlayEdit")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {label: "Fit every box to its content", click: show("fit")}, {label: "Line up every box", accelerator: "CmdOrCtrl+Shift+L", click: show("align")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
-    {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Patch notes", click: show("patchnotes")}, {label: "Check for updates", click: show("update")},
+    {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Patch notes", click: show("patchnotes")}, {label: "Performance monitor", click: show("perf")}, {label: "Check for updates", click: show("update")},
       {label: "Report a bug", click: show("report")}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
   ]));
   pinOnTop(); applyOpacity();
@@ -120,6 +120,7 @@ autoUpdater.on("download-progress", p => sendUpd({state: "downloading", pct: Mat
 autoUpdater.on("update-downloaded", i => sendUpd({state: "ready", version: i.version}));
 autoUpdater.on("error", e => sendUpd({state: "error", why: String(e?.message || e).split("\n")[0].slice(0, 160)}));
 ipcMain.handle("version", () => app.getVersion());
+ipcMain.handle("perf-metrics", () => app.getAppMetrics().map(m => ({pid: m.pid, type: m.type, name: m.name, cpu: {percentCPUUsage: m.cpu.percentCPUUsage}, memory: {workingSetSize: m.memory.workingSetSize}})));   // Performance monitor
 ipcMain.handle("update-state", () => upd);   // the window asks once loaded: events sent before that were missed
 ipcMain.handle("update-check", async () => {
   if (!app.isPackaged) return sendUpd({state: "dev"});   // running from source: nothing to update
