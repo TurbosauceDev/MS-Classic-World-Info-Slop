@@ -2,6 +2,7 @@
 // maths stay here — this file only builds a small snapshot of the session and pushes it to the overlay window every time
 // the view re-renders (throttled). The overlay (app/overlay.js) renders it as floating widgets; main.js relays and owns
 // the window. Dummy data flows through the same path, so layouts can be tried without tracking.
+let ovVit = null;   // last HP / MP read ({hp:[cur,max], mp:[cur,max], t}) for the Chat blocker bars (overlay.js RENDER.blocker)
 let ovOpen = false, ovSentT = 0, ovFeed = [];
 // the run log in plain text for the overlay (feedAdd's lines, HTML stripped there)
 function ovPlain(l){
@@ -51,6 +52,7 @@ function ovBuild(s){
     kpq: kpq?.on ? {rounds: kpq.rounds, stage: kpq.stage ? KPQ_STAGE[kpq.stage.id] : null, stageT0: kpq.stage?.t0 ?? null,
       round: kpq.round ? {t0: kpq.round.t0} : null, clock: kpq.left !== null ? {left: kpq.left, leftT: kpq.leftT} : null, hold: !!kpq.hold} : null,
     party: partyLive,
+    vit: ovVit,
     sm: ovSm(s),
     feed: ovFeed.slice(-8),
     spark: ovSpark.slice(-60),   // the rate trend for the card sparklines (renderer-alerts.js's toasts ride along too)

@@ -112,6 +112,17 @@
   .lr.map, .lr.sep, .lr.msg { color:var(--muted); font-style:italic; }
   .pos { color:var(--leaf); } .neg { color:var(--bad); } .dim { color:var(--muted); }
   .empty { color:var(--muted); font-size:12px; padding:2px 0; }
+  /* Chat blocker (0.2.108): opaque, sits under the other cards; the bars are tracker-drawn from the HP/MP + EXP reads */
+  .ovw[data-k="blocker"] { z-index:-1 !important; background:color-mix(in srgb, var(--panel) var(--glass, 100%), #000); }
+  body.edit .ovw[data-k="blocker"] { background:color-mix(in srgb, var(--panel) 100%, #000); }
+  .ovw[data-k="blocker"] .b { height:100%; display:flex; align-items:center; }
+  .vbars { display:flex; gap:8px; width:100%; } .vbars.col { flex-direction:column; }
+  .vb { position:relative; flex:1 1 0; min-width:0; height:20px; border-radius:3px; overflow:hidden; background:color-mix(in srgb, var(--bg) 55%, #000); border:1px solid color-mix(in srgb, var(--line) 70%, transparent); font-size:11px; font-weight:700; color:#fff; }
+  .vb i { position:absolute; inset:0 auto 0 0; transition:width .25s ease; }
+  .vb.hp i { background:#c8372d; } .vb.mp i { background:#2f6fd0; } .vb.xp i { background:#d9a21b; }
+  .vb span { position:absolute; top:0; bottom:0; display:flex; align-items:center; padding:0 6px; text-shadow:0 1px 2px rgba(0,0,0,.8); white-space:nowrap; }
+  .vb .vl { left:0; } .vb .vn { right:0; }
+  .vb.stale { opacity:.55; }
   body:not(.edit) .ovw.nobg { background:none !important; border-color:transparent !important; box-shadow:none !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important }
   .bagin { margin-top:8px; display:flex; justify-content:center }
   .bagrow { display:flex; gap:8px; align-items:center } .bagrow.col { flex-direction:column; align-items:flex-start }

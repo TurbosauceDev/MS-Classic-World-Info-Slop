@@ -215,7 +215,7 @@ function ovOpenWin(){
   ovWin = new BrowserWindow({...ovBounds(), frame: false, transparent: true, hasShadow: false, resizable: false, movable: false,
     fullscreenable: false, minimizable: false, maximizable: false, skipTaskbar: true, show: false, focusable: false,
     webPreferences: {preload: path.join(__dirname, "overlay-preload.js"), contextIsolation: true, backgroundThrottling: false}});
-  ovWin.setAlwaysOnTop(true, "screen-saver");
+  ovWin.setAlwaysOnTop(true, "screen-saver"); ovProtectApply();
   ovWin.webContents.setWindowOpenHandler(() => ({action: "deny"}));
   ovWin.webContents.on("will-navigate", e => e.preventDefault());
   ovWin.on("closed", () => { ovWin = null; ovSendState(); bdExit() });
@@ -277,6 +277,9 @@ ipcMain.handle("ov-close", () => { ovCloseWin(); return true });
 ipcMain.handle("ov-state", () => { const bd = bdPending; bdPending = null; return {...OVCFG.state(readSettings()), edit: ovEditing, desk: ovDesk(), bd} });   // the whole saved overlay (snap, grid, panel, profiles), not only the widgets
 ipcMain.on("ov-bag", (_, tab) => { if (win && !win.isDestroyed() && typeof tab === "string") win.webContents.send("ov-bag", tab) });
 // click-through stays on (forward: true still delivers mouse moves); over a clickable widget bit the page asks to catch clicks
+let ovProtect = false;   // Chat blocker present: the overlay window is left out of screen capture (WDA_EXCLUDEFROMCAPTURE on Windows 10 2004+; older builds show it black, still unreadable by the capture)
+const ovProtectApply = () => { if (ovWin && !ovWin.isDestroyed()) try { ovWin.setContentProtection(ovProtect) } catch {} };
+ipcMain.on("ov-protect", (_, on) => { ovProtect = !!on; ovProtectApply() });
 ipcMain.on("ov-hit", (_, on) => { if (ovWin && !ovWin.isDestroyed() && !ovEditing) ovWin.setIgnoreMouseEvents(!on, {forward: true}) });
 ipcMain.on("ov-push", (_, d) => { if (ovWin && !ovWin.isDestroyed()) ovWin.webContents.send("ov-data", d) });
 

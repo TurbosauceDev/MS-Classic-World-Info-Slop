@@ -17,11 +17,11 @@ const runClock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 // what can be tracked: the panel lists these, in this order. HOME is where each lands the first time (desktop pixels)
-const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar", bag: "Bag check", simple: "Simple view", focus: "Focus view"};
+const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar", bag: "Bag check", simple: "Simple view", focus: "Focus view", blocker: "Chat blocker"};
 const HOME = {status: {on: true, x: 24, y: 24}, exp: {on: true, x: 24, y: 108}, map: {on: true, x: 24, y: 250},
   kills: {on: false, x: 24, y: 620}, mesos: {on: false, x: 24, y: 700}, loot: {on: false, x: 24, y: 780},
   party: {on: false, x: 24, y: 860}, kpq: {on: false, x: 24, y: 940}, log: {on: false, x: 24, y: 1020},
-  stat: {on: false, x: 300, y: 24}, bar: {on: false, x: 300, y: 110}, bag: {on: false, x: 300, y: 190}, simple: {on: false, x: 24, y: 24}, focus: {on: false, x: 24, y: 24}};
+  stat: {on: false, x: 300, y: 24}, bar: {on: false, x: 300, y: 110}, bag: {on: false, x: 300, y: 190}, simple: {on: false, x: 24, y: 24}, focus: {on: false, x: 24, y: 24}, blocker: {on: false, x: 24, y: 800}};
 let BD = null, DATA = null, CFG = {edit: true, widgets: {}, snap: true, grid: false, gsize: 64, panel: null, insp: null, profile: "Default", profiles: null}, DESK = {x: 0, y: 0, width: 1920, height: 1080}, zTop = 1;
 const picked = {id: null};
 // Widget instances (0.2.87, WeakAuras' "make as many displays as you like"): a card id is a kind ("exp") or a kind plus an
@@ -59,16 +59,16 @@ const PARAMS = [
   // fixed width/height (Danny 10-29: "resize these windows into strange boxes... very long or very wide, skinny or
   // fat"): the corner grip or a number here pins one or both axes — blank means fit the content like before. The
   // content adapts inside (the logs scroll a short box, lines wrap a skinny one) instead of the card following it.
-  {k: "w", sec: "Size & fit", lab: "Width (px, blank = fit)", t: "n", min: 60, max: 2000, def: null, ph: "auto"},
-  {k: "h", sec: "Size & fit", lab: "Height (px, blank = fit)", t: "n", min: 40, max: 2000, def: null, ph: "auto"},
+  {k: "w", sec: "Size & fit", lab: "Width (px, blank = fit)", t: "n", min: 60, max: 2000, def: {_: null, blocker: 560}, ph: "auto"},
+  {k: "h", sec: "Size & fit", lab: "Height (px, blank = fit)", t: "n", min: 40, max: 2000, def: {_: null, blocker: 150}, ph: "auto"},
   {k: "pad", sec: "Size & fit", lab: "Padding", t: "s", opts: {compact: "Compact", normal: "Normal", roomy: "Roomy"}, def: "normal"},
   {k: "al", sec: "Size & fit", lab: "Text align", t: "s", opts: {left: "Left", center: "Centre", right: "Right"}, def: "left"},
   {k: "o", sec: "Look", lab: "Opacity", t: "r", min: .25, max: 1, step: .05, def: 1, u: 100, f: pct},
-  {k: "bg", sec: "Look", lab: "Glass tint", t: "r", min: 0, max: 100, step: 2, def: 82, f: pct},
-  {k: "blur", sec: "Look", lab: "Blur", t: "r", min: 0, max: 30, step: 1, def: 14, f: px},
-  {k: "rad", sec: "Look", lab: "Corners", t: "r", min: 0, max: 26, step: 1, def: 12, f: px},
-  {k: "brd", sec: "Look", lab: "Border", t: "s", opts: {none: "None", soft: "Soft", accent: "Accent"}, def: "soft"},
-  {k: "shd", sec: "Look", lab: "Shadow", t: "b", def: true},
+  {k: "bg", sec: "Look", lab: "Glass tint", t: "r", min: 0, max: 100, step: 2, def: {_: 82, blocker: 100}, f: pct},
+  {k: "blur", sec: "Look", lab: "Blur", t: "r", min: 0, max: 30, step: 1, def: {_: 14, blocker: 0}, f: px},
+  {k: "rad", sec: "Look", lab: "Corners", t: "r", min: 0, max: 26, step: 1, def: {_: 12, blocker: 4}, f: px},
+  {k: "brd", sec: "Look", lab: "Border", t: "s", opts: {none: "None", soft: "Soft", accent: "Accent"}, def: {_: "soft", blocker: "none"}},
+  {k: "shd", sec: "Look", lab: "Shadow", t: "b", def: {_: true, blocker: false}},
   {k: "acc", sec: "Look", lab: "Accent colour", t: "c"},
   {k: "txt", sec: "Look", lab: "Text colour", t: "c"},
   {k: "show", sec: "Show when", lab: "Visible", t: "s", opts: {always: "Always", tracking: "Only while tracking", idle: "Only while stopped"}, def: "always"},
@@ -81,6 +81,11 @@ const PARAMS = [
   {k: "spark", sec: "This card", lab: "Sparkline", t: "b", def: true, kinds: ["exp", "kills", "mesos"]},
   {k: "sub", sec: "This card", lab: "Detail rows", t: "b", def: true, kinds: ["exp", "kills", "mesos", "status", "kpq"]},
   {k: "lines", sec: "This card", lab: "Lines shown", t: "r", min: 2, max: 14, step: 1, def: {_: 6, loot: 5}, f: Math.round, kinds: ["log", "loot"]},
+  {k: "vhp", sec: "This card", lab: "HP bar", t: "b", def: true, kinds: ["blocker"]},
+  {k: "vmp", sec: "This card", lab: "MP bar", t: "b", def: true, kinds: ["blocker"]},
+  {k: "vex", sec: "This card", lab: "EXP bar", t: "b", def: true, kinds: ["blocker"]},
+  {k: "vnum", sec: "This card", lab: "Numbers on the bars", t: "b", def: true, kinds: ["blocker"]},
+  {k: "vlay", sec: "This card", lab: "Bars", t: "s", opts: {row: "Side by side", col: "Stacked"}, def: "row", kinds: ["blocker"]},
   {k: "bagi", sec: "This card", lab: "Bag check icons", t: "b", def: false, kinds: ["exp"]},
   {k: "bagl", sec: "This card", lab: "Icons", t: "s", opts: {row: "Side by side", col: "Stacked"}, def: "row", kinds: ["bag"]},
   {k: "bgon", sec: "This card", lab: "Card background", t: "b", def: true, kinds: ["bag"]},
@@ -152,7 +157,23 @@ function bagRow(d, lay, names){
   const B = window.GrindBag, L = B.tabs(Object.fromEntries(Object.entries(d.inv || {}).map(([k, last]) => [k, {last}])), d.runT0, d.t, d.bagEvery, d.on || d.dummy);
   return `<div class="bagrow ${lay}">${L.map(l => `<span class="bagI ${l.stage}${l.pulse ? " pulse" : ""}" role="button" data-bag="${l.k}" style="color:${B.color(l)}" title="${esc(l.name)}: ${l.stage === "idle" ? "starts when you press Start" : l.last ? "read " + Math.round(l.age / 60e3) + " min ago" : "not read yet"}. Click to read it now">${B.ICONS[l.k]}${names ? `<em>${esc(l.name)}</em>` : ""}</span>`).join("")}</div>`;
 }
+// the Chat blocker (0.2.108): an opaque panel the player cannot see past; the tracker draws its own HP / MP / EXP bars on it from what
+// the readers found in the game pixels (HP/MP: readVitalsAny, EXP: the level bar). Nothing here reads the game. The window is
+// excluded from screen capture (setContentProtection, see protect() below), so the readers still see the real bars under it.
+function vbar(cls, label, cur, max, pct, num, stale){
+  const f = pct == null ? 0 : clamp(pct, 0, 100);
+  return `<div class="vb ${cls}${stale ? " stale" : ""}" title="${esc(label)}"><i style="width:${f.toFixed(1)}%"></i><span class="vl">${esc(label)}</span><span class="vn">${num ? (cur == null ? "—" : cur === "pct" ? pct.toFixed(2) + "%" : fmt(cur) + " / " + fmt(max)) : ""}</span></div>`;
+}
 const RENDER = {
+  blocker(d, id){
+    const vt = d.vit || {}, stale = !vt.t || !(d.on || d.dummy),   // a vitals event is sent on change only, so age says nothing; dim when nothing is being read
+       num = wv(id, "vnum"), pc = (a) => a && a[1] > 0 ? a[0] / a[1] * 100 : null;
+    const bars = [];
+    if (wv(id, "vhp")) bars.push(vbar("hp", "HP", vt.hp?.[0] ?? null, vt.hp?.[1], pc(vt.hp), num, stale));
+    if (wv(id, "vmp")) bars.push(vbar("mp", "MP", vt.mp?.[0] ?? null, vt.mp?.[1], pc(vt.mp), num, stale));
+    if (wv(id, "vex")){ const p = d.st?.pct; bars.push(vbar("xp", d.st?.level != null ? "Lv " + d.st.level : "EXP", p == null ? null : "pct", 0, p ?? null, num, false)) }
+    return `<div class="vbars ${wv(id, "vlay")}">${bars.join("")}</div>`;
+  },
   simple: (d) => svHtml(d, false),
   focus: (d) => svHtml(d, true),
   status(d, id){
@@ -255,7 +276,7 @@ function mkCard(id){
   el.className = "ovw"; el.id = "ovw-" + id; el.dataset.w = id; el.dataset.k = baseOf(id);
   el.innerHTML = `<header><span class="t">${esc(wName(id))}</span><button class="x" title="Hide ${esc(wName(id))}" aria-label="Hide ${esc(wName(id))}">×</button></header><div class="b"></div><i class="rsz" title="Drag to resize"></i>`;
   el.querySelector(".x").onclick = () => { setOn(id, false); if (picked.id === id) pick(null) };
-  el.addEventListener("pointerenter", () => { if (CFG.edit) el.style.zIndex = ++zTop });
+  el.addEventListener("pointerenter", () => { if (CFG.edit && baseOf(id) !== "blocker") el.style.zIndex = ++zTop });
   return el;
 }
 function styleCard(el, id){
@@ -290,8 +311,8 @@ function clampCard(el){
 const GAP = 8;
 function reflow(){
   if (drag || rz) return;
-  const els = [...document.querySelectorAll(".ovw")].filter(el => el.isConnected);
-  for (const el of els){ const id = el.dataset.w; el.style.left = Math.round(wPos(id).x - DESK.x) + "px"; el.style.top = Math.round(wPos(id).y - DESK.y) + "px"; clampCard(el) }
+  const all = [...document.querySelectorAll(".ovw")].filter(el => el.isConnected), els = all.filter(el => el.dataset.k !== "blocker");   // the Chat blocker sits under everything: others may overlap it
+  for (const el of all){ const id = el.dataset.w; el.style.left = Math.round(wPos(id).x - DESK.x) + "px"; el.style.top = Math.round(wPos(id).y - DESK.y) + "px"; clampCard(el) }
   const rect = el => { const r = el.getBoundingClientRect(); return {l: r.left, t: r.top, r: r.right, b: r.bottom} };
   const placed = [], order = els.map(el => ({el, r: rect(el)})).sort((a, b) => a.r.t - b.r.t || a.r.l - b.r.l);
   for (const o of order){
@@ -308,6 +329,13 @@ function reflow(){
     placed.push(rect(o.el));
   }
 }
+// the Chat blocker hides the chat from the player only: while one is on, the overlay window is left out of screen capture
+// (Electron setContentProtection -> WDA_EXCLUDEFROMCAPTURE on Windows), so the tracker's capture of the game never sees it.
+let protectOn = null;
+function protect(){
+  const on = ids().some(id => baseOf(id) === "blocker" && wPos(id).on);
+  if (on !== protectOn){ protectOn = on; try { window.ovhost.protect?.(on) } catch {} }
+}
 function place(){
   for (const id of ids()){
     const el = $("#ovw-" + id); if (!el || !el.isConnected) continue;
@@ -316,7 +344,7 @@ function place(){
     styleCard(el, id);
     clampCard(el);
   }
-  reflow();
+  reflow(); protect();
 }
 function setOn(id, on){
   CFG.widgets[id] = {...(CFG.widgets[id] || HOME[baseOf(id)] || {x: 24, y: 24}), on};
@@ -325,7 +353,7 @@ function setOn(id, on){
     c.style.left = Math.round(wPos(id).x - DESK.x) + "px"; c.style.top = Math.round(wPos(id).y - DESK.y) + "px";
     styleCard(c, id); clampCard(c) }
   else if (!on && el?.isConnected) el.remove();
-  syncPanel(); ovSave(); if (on && DATA) apply(DATA); else reflow();
+  syncPanel(); ovSave(); protect(); if (on && DATA) apply(DATA); else reflow();
 }
 function addInst(kind){
   if (!KINDS[kind] || ids().filter(i => INST.test(i)).length >= MAX_INST) return null;

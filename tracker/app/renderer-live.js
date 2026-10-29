@@ -320,7 +320,7 @@ async function tick(){
       if (wrap && e.type !== "inv" && e.type !== "wallet" && e.type !== "glyph") continue;   // after Stop: only the end inventory look counts
       if (held && /^(exp|bonus|meso|item|itemraw)$/.test(e.type)) continue;   // paused by hand: a break, nothing picked up counts
       if (e.type === "kpqtime"){ if (kpq) kpqTime(e.left, e.t); continue }
-      if (e.type === "vitals"){ jr.event(e); continue }   // HP / MP: for the journey log only, the session doesn't count them
+      if (e.type === "vitals"){ jr.event(e); ovVit = {hp: e.hp, mp: e.mp, t: Date.now()}; try { ovSend?.() } catch {}; continue }   // HP / MP: journey log + Chat blocker bars; the session doesn't count them
       // a pickup-line letter learned from an item name: kept for next time (at most 300)
       if (e.type === "glyph"){ const g = [...(settings.glyphs || []), {ch: e.ch, w: e.w, h: e.h, bits: e.bits}].slice(-300); host.settings({glyphs: g}).then(x => settings = x); log("glyph", {ch: e.ch}); continue }
       // a box (Companion's Magic Box) gone from the Use tab: it was opened, its rewards are in the chat box
