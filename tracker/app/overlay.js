@@ -158,8 +158,7 @@ function bagRow(d, lay, names){
   return `<div class="bagrow ${lay}">${L.map(l => `<span class="bagI ${l.stage}${l.pulse ? " pulse" : ""}" role="button" data-bag="${l.k}" style="color:${B.color(l)}" title="${esc(l.name)}: ${l.stage === "idle" ? "starts when you press Start" : l.last ? "read " + Math.round(l.age / 60e3) + " min ago" : "not read yet"}. Click to read it now">${B.ICONS[l.k]}${names ? `<em>${esc(l.name)}</em>` : ""}</span>`).join("")}</div>`;
 }
 // the Chat blocker (0.2.108): an opaque panel the player cannot see past; the tracker draws its own HP / MP / EXP bars on it from what
-// the readers found in the game pixels (HP/MP: readVitalsAny, EXP: the level bar). Nothing here reads the game. The window is
-// excluded from screen capture (setContentProtection, see protect() below), so the readers still see the real bars under it.
+// the readers found in the game pixels (HP/MP: readVitalsAny, EXP: the level bar). Nothing here reads the game.
 function vbar(cls, label, cur, max, pct, num, stale){
   const f = pct == null ? 0 : clamp(pct, 0, 100);
   return `<div class="vb ${cls}${stale ? " stale" : ""}" title="${esc(label)}"><i style="width:${f.toFixed(1)}%"></i><span class="vl">${esc(label)}</span><span class="vn">${num ? (cur == null ? "—" : cur === "pct" ? pct.toFixed(2) + "%" : fmt(cur) + " / " + fmt(max)) : ""}</span></div>`;
@@ -329,13 +328,6 @@ function reflow(){
     placed.push(rect(o.el));
   }
 }
-// the Chat blocker hides the chat from the player only: while one is on, the overlay window is left out of screen capture
-// (Electron setContentProtection -> WDA_EXCLUDEFROMCAPTURE on Windows), so the tracker's capture of the game never sees it.
-let protectOn = null;
-function protect(){
-  const on = ids().some(id => baseOf(id) === "blocker" && wPos(id).on);
-  if (on !== protectOn){ protectOn = on; try { window.ovhost.protect?.(on) } catch {} }
-}
 function place(){
   for (const id of ids()){
     const el = $("#ovw-" + id); if (!el || !el.isConnected) continue;
@@ -344,7 +336,7 @@ function place(){
     styleCard(el, id);
     clampCard(el);
   }
-  reflow(); protect();
+  reflow();
 }
 function setOn(id, on){
   CFG.widgets[id] = {...(CFG.widgets[id] || HOME[baseOf(id)] || {x: 24, y: 24}), on};
@@ -353,7 +345,7 @@ function setOn(id, on){
     c.style.left = Math.round(wPos(id).x - DESK.x) + "px"; c.style.top = Math.round(wPos(id).y - DESK.y) + "px";
     styleCard(c, id); clampCard(c) }
   else if (!on && el?.isConnected) el.remove();
-  syncPanel(); ovSave(); protect(); if (on && DATA) apply(DATA); else reflow();
+  syncPanel(); ovSave(); if (on && DATA) apply(DATA); else reflow();
 }
 function addInst(kind){
   if (!KINDS[kind] || ids().filter(i => INST.test(i)).length >= MAX_INST) return null;

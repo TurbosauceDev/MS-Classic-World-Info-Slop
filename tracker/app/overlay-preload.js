@@ -8,7 +8,6 @@ contextBridge.exposeInMainWorld("ovhost", {
   done: () => ipcRenderer.invoke("ov-edit", false),
   bag: tab => ipcRenderer.send("ov-bag", tab),   // a bag icon clicked: the tracker window runs the scan
   hit: on => ipcRenderer.send("ov-hit", !!on),   // the mouse is over a clickable bit: take clicks there, pass the rest through
-  protect: on => ipcRenderer.send("ov-protect", !!on),   // Chat blocker on/off: leave the overlay window out of screen capture
   close: () => ipcRenderer.invoke("ov-close"),
   onData: cb => ipcRenderer.on("ov-data", (_, d) => cb(d)),
   onMode: cb => ipcRenderer.on("ov-mode", (_, on) => cb(on)),

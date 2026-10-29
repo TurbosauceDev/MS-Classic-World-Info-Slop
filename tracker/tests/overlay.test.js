@@ -526,7 +526,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
         state: async () => ({edit: false, widgets: {blocker: {on: true, x: 100, y: 600}, bag: {on: true, x: 110, y: 610}}, desk: {x: 0, y: 0, width: 1400, height: 900}}),
         settings: async p => (window.ovSaved = {...(window.ovSaved || {}), ...p}, window.ovSaved),
         edit: async () => true, done: async () => true, close: async () => true,
-        hit: () => {}, bag: () => {}, protect: on => (window.ovProt = (window.ovProt || []).concat([!!on])),
+        hit: () => {}, bag: () => {},
         onData: cb => window.ovData = cb, onMode: cb => window.ovMode = cb, onScreens: cb => window.ovScreens = cb,
       };
     });
@@ -535,11 +535,10 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     const t = Date.now();
     await page.evaluate(t => window.ovData({t, on: true, st: {level: 40, pct: 12.5}, vit: {hp: [450, 900], mp: [100, 400], t}, map: {}, feed: [], th: null}), t);
     let st = await page.evaluate(() => { const b = document.querySelector("#ovw-blocker"), cs = getComputedStyle(b), w = [...b.querySelectorAll(".vb")].map(e => [e.className, e.querySelector("i").style.width, e.querySelector(".vn").textContent]);
-      return [cs.backgroundColor.endsWith(", 1)") || !cs.backgroundColor.startsWith("rgba"), Math.round(b.getBoundingClientRect().width), Math.round(b.getBoundingClientRect().height), w, window.ovProt] });
+      return [cs.backgroundColor.endsWith(", 1)") || !cs.backgroundColor.startsWith("rgba"), Math.round(b.getBoundingClientRect().width), Math.round(b.getBoundingClientRect().height), w] });
     if (!st[0]) fail("blocker is opaque", st);
     if (st[1] !== 560 || st[2] !== 150) fail("blocker default size", st);
     if (JSON.stringify(st[3]) !== JSON.stringify([["vb hp", "50%", "450 / 900"], ["vb mp", "25%", "100 / 400"], ["vb xp", "12.5%", "12.50%"]])) fail("blocker bars", st[3]);
-    if (JSON.stringify(st[4]) !== "[true]") fail("blocker asks main to exclude the window from capture", st[4]);
     // other cards may sit on top of it: the blocker neither moves them nor is moved by them
     const pos = await page.evaluate(() => { const r = e => { const b = document.querySelector(e).getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top)] }; return [r("#ovw-bag"), r("#ovw-blocker")] });
     if (JSON.stringify(pos) !== JSON.stringify([[110, 610], [100, 600]])) fail("blocker does not repel cards", pos);
@@ -551,7 +550,6 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     st = await page.evaluate(() => [...document.querySelectorAll("#ovw-blocker .vb")].map(e => e.classList.contains("stale") + ":" + e.querySelector(".vn").textContent));
     if (JSON.stringify(st) !== JSON.stringify(["true:—", "true:—", "false:—"])) fail("blocker with no read", st);
     await page.evaluate(() => setOn("blocker", false));
-    if (JSON.stringify(await page.evaluate(() => window.ovProt)) !== "[true,false]") fail("capture exclusion lifted", 0);
     if (errors.length) throw new Error("blocker page errors: " + errors.join(" | "));
     await page.close();
   }
