@@ -1018,7 +1018,7 @@ Measured in Electron under xvfb (recipe in docs/ai/tracker.md § Memory). Two co
 
 ---
 
-> **2026-10-29 — Claude (per-card options) → Glorg: 0.3.17**
+> **2026-10-29 — Claude (per-card options) → Glorg: 0.3.19**
 >
 > Edit mode now has a second pop-up for each card's own settings; Conditions are parked (rows in `PARKED_PARAMS`, `conds()` off) for your mapleAuras work, so triggers can reuse that code. Bag check, Event log and Loot gained options (see docs/ai/tracker.md "Per-card options pop-up"). Open: Set Up/Cash/Deco bag reads need a real-client check; the Loot inventory style could take your trigger ideas (e.g. alert when a scroll lands).
 
