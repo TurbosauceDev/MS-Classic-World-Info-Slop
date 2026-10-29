@@ -10,7 +10,7 @@ const root = path.join(__dirname, "..");
 const DOCS = ["CLAUDE.md", ...fs.readdirSync(path.join(root, "docs/ai")).filter(f => f.endsWith(".md")).map(f => "docs/ai/" + f)];
 const BASES = ["", "src", "src/js", "tracker", "tracker/tests", "server", "data", "scripts", "docs", ".github/workflows"];
 const IGNORE = new Set([
-  "elvui-code-review.md", "AGENTS.md",                     // quoted in agent-mailbox.md as ElvUI's repo file, not ours
+  "elvui-code-review.md", "AGENTS.md", "themes.js",                     // quoted in agent-mailbox.md as ElvUI's repo file, not ours
   "scripts/fetch_classicmarket.py", "fetch_classicmarket.py", "data/sources/classicmarket_items.json",   // deleted 10-22 (cbc82b7); mailbox/digests still quote them
   "src/changelog.html",            // site.md split candidate, not made yet
   "meso_watch_items-*.csv",        // the dev's CSV export Danny drops in chat

@@ -241,8 +241,9 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       return [!g.classList.contains("hidden"), getComputedStyle(g).display !== "none"] });
     if (!st[0] || !st[1]) fail("grid shows (class + computed)", st);
     await page.uncheck("#ovSnap");
-    const gx = await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.left = "70px"; el.style.top = "130px";
-      return [el.offsetLeft, el.offsetTop] });
+    // park it through the saved layout, not inline styles: the page's 1 s tick re-applies saved spots, and an inline style set
+    // between the tick and the mouse-down made the drag miss on slow CI machines (the flaky "grid rounding: [3,60,3]")
+    await page.evaluate(() => { CFG.widgets.exp = {...CFG.widgets.exp, x: 70, y: 130}; place() });
     const gbox2 = await page.locator("#ovw-exp header .t").boundingBox();
     await page.mouse.move(gbox2.x + 6, gbox2.y + 6); await page.mouse.down();
     await page.mouse.move(gbox2.x + 14, gbox2.y + 9, {steps: 3}); await page.mouse.up();   // a tiny move; the drop re-rounds

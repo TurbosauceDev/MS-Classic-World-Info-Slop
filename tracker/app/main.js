@@ -1,6 +1,6 @@
 // Electron main process: one small always-on-top window. Captures only the MapleStory window's pixels (the same API OBS
 // and Discord use); it never opens the game's files or memory and never sends input to it.
-const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu, globalShortcut, nativeTheme} = require("electron");
+const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu, globalShortcut, nativeTheme, dialog} = require("electron");
 const fs = require("fs"), path = require("path");
 const {autoUpdater} = require("electron-updater");
 
@@ -296,6 +296,25 @@ ipcMain.handle("snip", async (_, url) => { const d = await gameDisplay(); return
   snipWin.loadFile(path.join(__dirname, "snip.html")).then(() => { snipWin.webContents.send("snip-image", url); snipWin.show(); snipWin.focus() });
 }) });
 ipcMain.handle("whole-screen", (_, on) => { wholeScreen = !!on; return wholeScreen });
+// alert sounds the player adds (0.2.92): copied into userData/sounds (wav/mp3/ogg, 3 MB each, 60 files) and read back by name only
+const SOUNDS_DIR = path.join(app.getPath("userData"), "sounds"), SND_OK = /^[\w .()\-]{1,80}\.(wav|mp3|ogg)$/i;
+const soundList = () => { try { return fs.readdirSync(SOUNDS_DIR).filter(f => SND_OK.test(f)).sort() } catch { return [] } };
+ipcMain.handle("sounds-list", () => soundList());
+ipcMain.handle("sounds-add", async () => {
+  const r = await dialog.showOpenDialog(win, {title: "Add alert sounds", properties: ["openFile", "multiSelections"], filters: [{name: "Sounds", extensions: ["wav", "mp3", "ogg"]}]});
+  if (r.canceled) return soundList();
+  fs.mkdirSync(SOUNDS_DIR, {recursive: true});
+  for (const f of r.filePaths){
+    const name = path.basename(f).replace(/[^\w .()\-]/g, "_").slice(-80);
+    try { if (SND_OK.test(name) && fs.statSync(f).size <= 3e6 && soundList().length < 60) fs.copyFileSync(f, path.join(SOUNDS_DIR, name)) } catch {}
+  }
+  return soundList();
+});
+ipcMain.handle("sounds-remove", (_, name) => { if (soundList().includes(name)) try { fs.unlinkSync(path.join(SOUNDS_DIR, name)) } catch {} return soundList() });
+ipcMain.handle("sounds-read", (_, name) => {
+  if (!soundList().includes(name)) return null;
+  try { return fs.readFileSync(path.join(SOUNDS_DIR, name)) } catch { return null }
+});
 ipcMain.handle("game-found", async () => !!(await gameSource()));
 ipcMain.handle("settings", (_, s) => {
   const cur = readSettings();

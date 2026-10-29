@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:">
 <title>MS Classic Grind Tracker</title>
 <style>
   /* Elv skin font (0.2.92): PT Sans Narrow — one of ElvUI's own faces, bundled under ParaType's free font licence
@@ -603,7 +603,7 @@
     <div class="card folded" id="alertsBox" data-box="alerts" data-title="Alerts and goal"><h3>Alerts and goal</h3>
       <div class="row"><span>Goal:</span> <button id="goalNext" class="alt" aria-pressed="true" title="Always the level after the one you're on">Next level</button> <label>or level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="-"></label> <button id="goalOff" class="alt" aria-pressed="false">Off</button></div>
       <div id="alertList"></div>
-      <div class="row"><button id="alertAdd" class="alt">Add alert</button> <span class="note">A condition fires its sound, a toast on the overlay and a run-log line while it holds. Test previews one.</span></div>
+      <div class="row"><button id="alertAdd" class="alt">Add alert</button> <button id="soundAdd" class="alt" title="Pick .wav / .mp3 / .ogg files; they join every alert's Sound list">Add sounds…</button> <span class="note">A condition fires its sound, a toast on the overlay and a run-log line while it holds. Test previews one.</span></div>
     </div>
     <div class="card" id="mesoBox" data-box="mesos" data-title="Mesos"><h3>Mesos</h3><div class="grid" id="mesoGrid"><div class="empty" style="grid-column:1/-1">Mesos picked up and spent, loot worth and net show here once you press Start.</div></div><div class="note" id="mesoNote"></div></div>
     <div class="card folded" id="watchBox" data-box="watch" data-title="Watchlist (site prices)"><h3>Watchlist</h3>
