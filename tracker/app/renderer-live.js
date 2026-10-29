@@ -290,7 +290,7 @@ function setFps(rate, why){
 }
 function pace(t, active){
   if (active) lastActive = t;
-  const idle = t - lastActive, base = idle > 180e3 ? 0.5 : idle > 45e3 ? 1 : 2, want = ovBlocker && base >= 2 ? BAR_FPS : base;   // a Chat blocker wants the HP/MP bars quicker
+  const idle = t - lastActive, base = idle > 180e3 ? 0.5 : idle > 45e3 ? 1 : 2, want = ovBlocker ? Math.max(base, BAR_FPS) : base;   // a Chat blocker wants the HP/MP bars quicker, idle or not (slowCap still holds it to 1)
   setFps(slowCap ? Math.min(want, 1) : want, want < 2 ? "quiet" : "active");
 }
 

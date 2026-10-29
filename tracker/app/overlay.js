@@ -435,7 +435,7 @@ let saveT = null;
 // undo/redo (Danny 10-29): every save that changed the cards' layout/settings pushes the previous state; Ctrl+Z / Ctrl+Y
 // or the panel buttons step through it. Edits within one 200 ms save window merge into a single step.
 const HIST = {undo: [], redo: [], cur: null, max: 100};
-const histNow = () => JSON.stringify(CFG.widgets);
+const histNow = () => JSON.stringify({w: CFG.widgets, snap: CFG.snap, grid: CFG.grid, gsize: CFG.gsize});   // cards + the Snap / Grid toggles
 function histRecord(){
   const now = histNow();
   if (HIST.cur === null){ HIST.cur = now; return }
@@ -452,7 +452,7 @@ function histStep(from, to){
   clearTimeout(saveT); histRecord();   // fold any pending edit in first, so it can be undone too
   const snap = HIST[from].pop(); if (snap === undefined) return false;
   HIST[to].push(HIST.cur); HIST.cur = snap;
-  CFG.widgets = JSON.parse(snap);
+  const o = JSON.parse(snap); CFG.widgets = o.w; CFG.snap = o.snap; CFG.grid = o.grid; CFG.gsize = o.gsize; gridShow();
   profCards(); document.querySelectorAll(".ovw").forEach(el => styleCard(el, el.dataset.w));
   pick(null); place(); if (DATA) apply(DATA); syncPanel(); histUi(); ovSave();
   return true;

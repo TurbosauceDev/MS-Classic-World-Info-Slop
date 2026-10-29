@@ -144,6 +144,12 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.click("#ovRedo"); await page.waitForTimeout(350);
     const pr = await posNow();
     if (pr[0] !== p0[0] || pr[1] !== p0[1]) fail("redo returns the drag", {p0, pr});
+    // undo also steps the Snap / Grid toggles (0.3.14)
+    const gridWas = await page.evaluate(() => CFG.grid);
+    await page.evaluate(() => { const g = document.querySelector("#ovGrid"); g.checked = !g.checked; g.onchange({target: g}) }); await page.waitForTimeout(350);
+    if (await page.evaluate(() => CFG.grid) === gridWas) fail("grid toggle did not flip", gridWas);
+    await page.keyboard.press("Control+z"); await page.waitForTimeout(350);
+    if (await page.evaluate(() => [CFG.grid, document.querySelector("#ovGrid").checked]).then(r => r[0] !== gridWas || r[1] !== gridWas)) fail("undo restores the Grid toggle", gridWas);
     // magnetic snap (ElvUI's 15 px sticky): put EXP at a known spot (status moved aside so no stronger candidate wins),
     // drag it so its left edge lands within 15 px of the screen's left edge — the drop aligns to 0 and the vertical guide
     // shows while the drag is live

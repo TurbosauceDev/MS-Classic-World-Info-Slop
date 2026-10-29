@@ -25,12 +25,12 @@ const HIST = require("../core/history.js");   // applyEdit: History > Edit run  
 app.commandLine.appendSwitch("enable-features", "WebRtcAllowWgcWindowCapturer,WebRtcAllowWgcScreenCapturer,AllowWgcWindowCapturer,AllowWgcScreenCapturer");
 // memory pass 3 (Danny 10-29 "figure out a solution its still very heavy"): the helpers trim themselves. The audio
 // helper merges into this process (alerts still play — one whole process less), the HTTP cache is capped, the GPU
-// process keeps a smaller spare-cache budget, and every JS heap GCs hard past 512 MB instead of parking at whatever
+// process keeps a smaller spare-cache budget, and every JS heap GCs hard past 1 GB (a hard cap crashes a renderer that passes it, so it sits well above the real heap) instead of parking at whatever
 // it once grew to. All reversible by deleting the switch.
 app.commandLine.appendSwitch("disable-features", "AudioServiceOutOfProcess");
 app.commandLine.appendSwitch("disk-cache-size", "33554432");
 app.commandLine.appendSwitch("force-gpu-mem-available-mb", "256");
-app.commandLine.appendSwitch("js-flags", "--max-old-space-size=512");
+app.commandLine.appendSwitch("js-flags", "--max-old-space-size=1024");
 
 let themeBar = null, setBar = () => {};   // the theme's title bar colours {color, symbolColor, bg}, from the page
 // the page's theme (Settings > Theme): the Windows-drawn title bar buttons and the window's background follow it
