@@ -864,6 +864,23 @@
     if (!changed) return false;
     return barJump(bar, last, level) ? !!(steady && fits) : !!(steady && fits || agrees);
   }
+  /* Final Attack proc buff: the buff icon in the top-right row (Danny's frame, 2026-10-29). Opaque 32x32 icon at native scale;
+     the centre holds the countdown digits, so only the rows above (0-4) and below (25-31) the digit plate are compared,
+     columns 3-28 (the corners show the scene). Gray values of those 12 rows x 26 cols, base64. Not checked at 1x/1.5x UI. */
+  const PROC_TPL = (() => { const s = typeof atob === "function" ? atob("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC6uru8vb29vr6/v8DAv8DAv8C/wL/Av7+/v+Pk5OTl5ubn6Ofo6ejq6erp6unq6Oro6enp4+Tj4+Tl5ubn6Ojo6enp6ejp5+jo5+jo6OjjuLm5ubq7vLy9vr6+vr6+vr2+vb68vr2+vt3e3t7e3t/e3t/e37UM374NDQ0ODd+/Dbbg3d7d3t7f3t/e39/ftA3fvg20tba0DeC+Drbd3d7e3t7e397e3t61DN6+DLXf39+2Dd+/Dd3e3t3f3d/e3t7f3t61DAy039/f39+1Dg213d3d3t7d3d7d3t7e3960td/f3t/e4N+1td+YmJeXmJiYl5iXmJiYmJmZmJmZmZmZmJqZmgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA") : Buffer.from("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC6uru8vb29vr6/v8DAv8DAv8C/wL/Av7+/v+Pk5OTl5ubn6Ofo6ejq6erp6unq6Oro6enp4+Tj4+Tl5ubn6Ojo6enp6ejp5+jo5+jo6OjjuLm5ubq7vLy9vr6+vr6+vr2+vb68vr2+vt3e3t7e3t/e3t/e37UM374NDQ0ODd+/Dbbg3d7d3t7f3t/e39/ftA3fvg20tba0DeC+Drbd3d7e3t7e397e3t61DN6+DLXf39+2Dd+/Dd3e3t3f3d/e3t7f3t61DAy039/f39+1Dg213d3d3t7d3d7d3t7e3960td/f3t/e4N+1td+YmJeXmJiYl5iXmJiYmJmZmJmZmZmZmJqZmgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "base64").toString("binary"); return Uint8Array.from(s, c => c.charCodeAt(0)) })();
+  const PROC_ROWS = [0, 1, 2, 3, 4, 25, 26, 27, 28, 29, 30, 31];
+  function readProc(img){   // -> {x, y, diff} of the proc icon in the top rows, or null
+    const {w, d} = img, gray = (x, y) => { const i = (y * w + x) * 4; return (d[i] + d[i + 1] + d[i + 2]) / 3 };
+    let best = null;
+    for (let y0 = 0; y0 <= 8; y0++) for (let x0 = Math.floor(w / 2); x0 + 32 <= w; x0++){
+      // cheap look first: the black icon border along the top and bottom edge
+      if (gray(x0 + 8, y0) > 70 || gray(x0 + 20, y0) > 70 || gray(x0 + 8, y0 + 31) > 70 || gray(x0 + 20, y0 + 31) > 70) continue;
+      let sum = 0, n = 0;
+      for (let r = 0; r < PROC_ROWS.length; r++) for (let c = 0; c < 26; c++){ sum += Math.abs(gray(x0 + 3 + c, y0 + PROC_ROWS[r]) - PROC_TPL[r * 26 + c]); n++ }
+      if (sum / n <= 14 && (!best || sum / n < best.diff)) best = {x: x0, y: y0, diff: Math.round(sum / n * 10) / 10};
+    }
+    return best;
+  }
   function createReaders(G, icons = null){
     ITEMS = Object.entries(G.items);
     const memos = new Map(), memoStats = {hits: 0, reads: 0, off: false};
@@ -895,7 +912,7 @@
       prev = cur;
       return cur.slice(cur.length - n);
     }
-    let lastLeft = null, lastLeftT = -Infinity;
+    let lastLeft = null, lastLeftT = -Infinity, procSeen = 0, procGone = 0, procOn = false;
     function readFrame(raw, t, nat = null){   // nat: the native frame, when the caller already made it
       const img = nat || (raw.k ? raw : native(raw)), ev = [];
       const bar = memo("bar", img, 0, img.h - 40, img.w, img.h, () => readBar(img)) || barAny(raw, t);   // pixel-exact fast path (skipped while the bar strip is unchanged), else any scale
@@ -924,6 +941,13 @@
       // KPQ clock: sent when it changes, at most every 5 s
       const left = memo("kpq", img, Math.round(img.w / 2) - 37, 44, Math.round(img.w / 2) + 110, 76, () => readKpqTimer(img));
       if (left !== null && (lastLeft === null || left !== lastLeft && t - lastLeftT >= 5000)){ ev.push({t, type: "kpqtime", left}); lastLeft = left; lastLeftT = t }
+      // Final Attack proc buff icon: "proc" when it shows up (read twice running), "procoff" when it's gone for 3 frames
+      {
+        const on = !!readProc(img);
+        if (on){ procSeen = Math.max(1, procSeen + 1); procGone = 0 } else { procGone++; procSeen = 0 }
+        if (on && procSeen >= 2 && !procOn){ procOn = true; ev.push({t, type: "proc"}) }
+        if (procOn && procGone >= 3) procOn = false;
+      }
       const picked = fresh(readPickups(img));
       if (LEARNED.length) ev.push(...LEARNED.splice(0).map(g => ({t, type: "glyph", ...g})));
       for (const p of picked){
@@ -1096,6 +1120,6 @@
     if (want.chat) crops.chat = chatCrop(img);
     return {ev, info, crops, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {readProc, readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

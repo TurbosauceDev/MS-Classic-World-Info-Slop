@@ -306,3 +306,4 @@ Each entry blocks something. When Danny calls it, transcribe above with the date
 - 2026-10-29 (Danny): bag check icons: sword/potion/etc, green -> yellow -> +30 s orange -> red, gentle glow at 2 min; clickable = same CV scan as the bag buttons; toggle on the main card and a standalone overlay widget.
 - 2026-10-29 (Danny): Borderless mode = Simple/Focus as transparent click-through overlay cards, edited with the overlay edit mode (docs/ai/tracker.md).
 - 2026-10-29: Danny: build an always-on "combat log" (WoW-style) that logs the whole journey while the app is open, even with no run tracked; any accuracy or efficiency gain is worth it, and an EXP jump the app cannot explain must be treated as a red herring and double-checked, not dropped or logged as fact. Built as the opt-in Journey log (0.2.101, T-14).
+- 2026-10-29: Final Attack proc = the buff icon top-right plus the highlighted skill slot (Danny). Computer vision only; built on the buff icon first.
