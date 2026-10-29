@@ -91,3 +91,5 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 
 ## tracker/tests/frames-overlay/ (tracker/tests/overlay.test.js, the "cards keep apart" scene)
 - `overlap-status-mesos-kills-2026-10-28.png` (816x232 crop of Danny's screen): overlay with Status, Mesos and Kills cards side by side; Status runs under Mesos ("wrapping u...") and Mesos' "loot/hr 16,9..." is cut off by Kills. The test rebuilds that spacing and expects no two cards to overlap, saved x/y unchanged.
+
+- HP/MP reader (0.2.102, tracker/tests/vitals.test.js): reuses the status-bar frames above. frame-000 HP 464/708 MP 196/567 (checked by eye), frame-006 368/708 303/567, frame-042 485/708 282/567, frame-046 485/708 213/567, statusbar-native-1440.png 549/823 618/652.

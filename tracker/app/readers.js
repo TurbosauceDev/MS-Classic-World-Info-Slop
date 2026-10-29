@@ -188,6 +188,34 @@
     return {exp: f.exp, pct: f.pct, y: y0 + f.cy, bh: f.bh};
   }
 
+  /* HP and MP: "HP [464/708]" and "MP [196/567]" sit left of the EXP number on the same status-bar line, in the same green
+     brackets with the same white 5x7 digits as the [64.09%] (UI at 2x). Same method as readBarAny: pair the brackets, read the
+     white blobs between them; a "/" (a thin diagonal blob, far fewer lit cells than a digit) splits current from max.
+     Returns {hp: [cur, max], mp: [cur, max], y: the line} when both boxes read, else null. No screen pixels beyond the bar are read. */
+  function readVitalsAny(img, band = null){
+    const y0 = band ? Math.max(0, band.y0) : img.h < 200 ? 0 : Math.floor(img.h * 0.78), y1 = band ? Math.min(img.h, band.y1) : img.h;
+    const G = blobs(img, 0, y0, img.w, y1, isGreen), W = blobs(img, 0, y0, img.w, y1, isWhite);
+    const br = G.out.filter(b => b.h >= 5 && b.w <= 0.6 * b.h).sort((a, b) => a.x - b.x), pairs = [];
+    for (const o of br){
+      const bh = o.h, on = b => Math.abs(b.cy - o.cy) <= 0.3 * bh;
+      const c = br.find(c => c.x > o.x1 && c.x - o.x <= 12 * bh && on(c) && Math.abs(c.h - bh) <= 0.25 * bh);
+      if (!c) continue;
+      const inside = W.out.filter(b => on(b) && b.h >= 0.1 * bh && b.x > o.x1 && b.x1 < c.x).sort((a, b) => a.x - b.x);
+      const tall = inside.filter(b => b.h >= 0.6 * bh);
+      if (tall.length < 3 || tall.some(b => b.h > 1.25 * bh)) continue;
+      const dh = Math.max(...tall.map(b => b.h)), slash = tall.findIndex(b => b.w >= 0.25 * b.h && b.n < 0.4 * b.w * b.h && b.w < 0.95 * b.h && b.h < dh);   // the "/" is a row or two shorter than the digits
+      if (slash < 1 || slash > tall.length - 2) continue;   // no "/" = not an HP/MP box ("[64.09%]")
+      const num = bs => { const d = bs.map(b => readDigit(W, b)); return d.length && !d.includes(null) && d.length <= 6 ? +d.join("") : null };
+      const cur = num(tall.slice(0, slash)), max = num(tall.slice(slash + 1));
+      if (cur == null || max == null || cur > max || max < 1) continue;
+      pairs.push({cy: o.cy, x: o.x, bh, cur, max});
+    }
+    if (pairs.length < 2) return null;   // HP is the left one, MP the next: one box alone could be either, so it says nothing
+    const low = Math.max(...pairs.map(f => f.cy)), row = pairs.filter(f => f.cy >= low - 4).sort((a, b) => a.x - b.x);
+    if (row.length < 2) return null;
+    return {hp: [row[0].cur, row[0].max], mp: [row[1].cur, row[1].max], y: y0 + low, bh: row[0].bh};
+  }
+
   // ---- pickup messages (bottom right) ----
   const msgInk = (r, g, b) => r > 215 && g > 215 && b < 150 || Math.min(r, g, b) > 165 && Math.max(r, g, b) - Math.min(r, g, b) < 60;
   function readLines(img){
@@ -886,6 +914,11 @@
       if (take){
         ev.push({t, type: "bar", exp: bar.exp, pct: bar.pct, level}); lastBar = {...bar, level: level || lastBar?.level};
       }
+      if (bar){
+        const v = memo("vit", img, 0, img.h - 40, img.w, img.h, () => vitals(raw, t)), k = v && v.hp + "|" + v.mp;
+        if (k && k === vitNext && k !== vitKey){ vitKey = k; ev.push({t, type: "vitals", hp: v.hp, mp: v.mp}) }
+        vitNext = k || null;
+      }
       // anything but a calm repeat of the accepted reading is looked at again from fresh pixels next frame, never from the memo
       if (!bar || !lastBar || bar.exp !== lastBar.exp || bar.pct !== lastBar.pct) memos.delete("bar");
       // KPQ clock: sent when it changes, at most every 5 s
@@ -992,6 +1025,16 @@
       if (b) barBand = {y0: (b.y - 2 * b.bh) / raw.h, y1: (b.y + 2 * b.bh) / raw.h};
       return b && {exp: b.exp, pct: b.pct};
     }
+    // HP / MP boxes: looked for in the rows found last time, over the whole bottom at most every 2 s, and only while the EXP bar
+    // reads (the HUD is up). A change is sent once the same HP and MP read twice running ("vitals" events), like the bar
+    let vitBand = null, lastFullVit = -Infinity, vitNext = null, vitKey = null;
+    function vitals(raw, t){
+      const band = vitBand && {y0: Math.floor(vitBand.y0 * raw.h), y1: Math.ceil(vitBand.y1 * raw.h)};
+      let v = band && readVitalsAny(raw, band);
+      if (!v && t - lastFullVit >= 2000){ lastFullVit = t; v = readVitalsAny(raw) }
+      if (v) vitBand = {y0: (v.y - 2 * v.bh) / raw.h, y1: (v.y + 2 * v.bh) / raw.h};
+      return v;
+    }
     /* the open inventory tab, every 2 s: looked for where it was last seen, over the whole frame every 6 s. A tab's items
        count once the same read comes twice running; "inv" events carry {tab, items: {id: n}, unknown} (unknown: slots
        whose item or count didn't read; one picture shared by several items is listed under the first of them) */
@@ -1053,6 +1096,6 @@
     if (want.chat) crops.chat = chatCrop(img);
     return {ev, info, crops, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

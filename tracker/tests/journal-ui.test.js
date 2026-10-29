@@ -29,6 +29,8 @@ const path = require("path"), {chromium} = require("playwright");
   function GJ(l){ const m = /^(\d{4}-\d\d-\d\dT[\d:.]+Z)  ([A-Z_]+)(.*)$/.exec(l); return m ? m[2] : "BAD:" + l }
   for (const k of ["WATCH_START", "RUN_START", "MAP_CHANGE", "COMBAT_START", "EXP_GAIN", "MESO_GAIN"]) if (!on.includes(k)) fail("missing " + k, on);
   if (on.some(k => k.startsWith("BAD:"))) fail("unparseable line", on);
+  await page.evaluate(() => { const t = Date.now(); jr.event({t, type: "vitals", hp: [700, 700], mp: [500, 500]}); jr.event({t: t + 1, type: "vitals", hp: [650, 700], mp: [500, 500]}) });
+  if (!(await lines()).some(l => /  HP_LOSS,50,650,700/.test(l))) fail("HP_LOSS not logged", await lines());
   await page.evaluate(() => stopNow());
   const after = (await lines()).map(GJ); if (!after.includes("RUN_STOP") || !after.includes("COMBAT_END")) fail("run end not logged", after);
   // between runs: with "also log between runs" the app watches the game by itself; a run takes the capture over and hands it back

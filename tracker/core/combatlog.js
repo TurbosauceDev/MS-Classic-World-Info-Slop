@@ -46,7 +46,11 @@
     CHARACTER: "name", JOB: "name", PARTY: "size",
     MAP_CHANGE: "map_id, name, from_id, from_name",
     COMBAT_START: "map_id, name",
-    COMBAT_END: "seconds, kills, exp, map_id, why (idle|map|hud|stop)",
+    COMBAT_END: "seconds, kills, exp, map_id, why (idle|map|hud|stop|level), hp_lost",
+    VITALS: "hp, hp_max, mp, mp_max (first reading, and again when a maximum changes)",
+    HP_LOSS: "lost, hp, hp_max (starts combat when none is on)", HP_GAIN: "gained, hp, hp_max (potion, regen, heal)",
+    HP_ZERO: "hp_max (HP read 0: a death; the chat line confirms it as DEATH)",
+    MP_LOSS: "lost, mp, mp_max", MP_GAIN: "gained, mp, mp_max",
     EXP_GAIN: "gain, source (kill|party_bonus), combat_exp",
     EXP_BAR: "level, pct, exp, delta_exp",
     EXP_JUMP: "verdict (suspect|confirmed|rejected), level, pct, delta_exp, unexplained_exp",
@@ -77,11 +81,11 @@
       const c = S.combat; if (!c) return;
       S.combat = null;
       if (S.bar && S.bar.exp !== S.barLoggedExp) barLine(t, S.bar, S.bar.exp - (S.barLoggedExp ?? S.bar.exp), true);   // the bar as combat ended
-      out(t, "COMBAT_END", Math.round((c.last - c.t0) / 100) / 10, c.kills, c.exp, S.map, why);   // stamped now (lines stay in time order); seconds run to the last EXP
+      out(t, "COMBAT_END", Math.round((c.last - c.t0) / 100) / 10, c.kills, c.exp, S.map, why, c.hp);   // stamped now (lines stay in time order); seconds run to the last EXP
     }
-    function combatTouch(t, gain, kill){
-      if (!S.combat){ S.combat = {t0: t, last: t, kills: 0, exp: 0}; out(t, "COMBAT_START", S.map, S.mapName) }
-      const c = S.combat; c.last = t; c.exp += gain; if (kill) c.kills++;
+    function combatTouch(t, gain, kill, hpLost = 0){
+      if (!S.combat){ S.combat = {t0: t, last: t, kills: 0, exp: 0, hp: 0}; out(t, "COMBAT_START", S.map, S.mapName) }
+      const c = S.combat; c.last = t; c.exp += gain; c.hp += hpLost; if (kill) c.kills++;
       return c.exp;
     }
     function barLine(t, e, delta, force){
@@ -128,6 +132,14 @@
       barLine(t, S.bar, delta);
     }
 
+    // HP / MP (core of the reader's two-reading rule is in readers.js: an event only comes once the same pair read twice)
+    function vitals(e){
+      const t = e.t, [h, hm] = e.hp, [m, mm] = e.mp, p = S.vit; S.vit = {h, hm, m, mm};
+      if (!p || hm !== p.hm || mm !== p.mm){ out(t, "VITALS", h, hm, m, mm); return }
+      if (h < p.h){ combatTouch(t, 0, false, p.h - h); out(t, "HP_LOSS", p.h - h, h, hm); if (h === 0) out(t, "HP_ZERO", hm) }
+      else if (h > p.h) out(t, "HP_GAIN", h - p.h, h, hm);
+      if (m < p.m) out(t, "MP_LOSS", p.m - m, m, mm); else if (m > p.m) out(t, "MP_GAIN", m - p.m, m, mm);
+    }
     function wallet(e){
       const t = e.t, n = e.n;
       if (S.wallet == null){ S.wallet = n; S.pickedSinceWallet = 0; out(t, "WALLET", n); return }
@@ -154,6 +166,7 @@
       const t = e.t ?? Date.now();
       switch (e.type){
         case "bar": hudBack(t); bar(e); break;
+        case "vitals": vitals(e); break;
         case "exp": { S.msgSinceBar += e.gain; S.lastExpT = t; const tot = combatTouch(t, e.gain, true); out(t, "EXP_GAIN", e.gain, "kill", tot); break }
         case "bonus": { S.msgSinceBar += e.gain; S.lastExpT = t; const tot = combatTouch(t, e.gain, false); out(t, "EXP_GAIN", e.gain, "party_bonus", tot); break }
         case "meso": S.pickedSinceWallet += e.amount; out(t, "MESO_GAIN", e.amount); break;
@@ -190,7 +203,7 @@
     // a watch or run starts: fresh = a new stretch (app launch, game was closed), so LOGIN and the first map/wallet read count again;
     // not fresh = handing the capture between a run and the watch, where nothing about the game changed
     function begin(t, mode, fresh = true){
-      if (fresh) Object.assign(S, {seenBar: false, bar: null, map: null, mapName: null, party: null, job: null, wallet: null, pickedSinceWallet: 0, inv: {}, lastLevelAt: null});
+      if (fresh) Object.assign(S, {seenBar: false, bar: null, map: null, mapName: null, party: null, job: null, wallet: null, pickedSinceWallet: 0, inv: {}, vit: null, lastLevelAt: null});
       Object.assign(S, {hud: true, hudGoneAt: null, hudAwayAt: null, suspect: null, msgSinceBar: 0, combat: null});
       out(t, "WATCH_START", mode) }
     function end(t, mode, why){ combatEnd(t, "stop"); out(t, "WATCH_STOP", mode, why || "") }

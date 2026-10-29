@@ -22,7 +22,7 @@ const kinds = out => out.map(x => x[1]);
     {t: 1000, type: "exp", gain: 20}, {t: 2000, type: "exp", gain: 20}, {t: 2500, type: "meso", amount: 15}, {t: 2600, type: "item", id: 4000000, qty: 1},
     {t: 3000, type: "bar", level: 10, pct: 54, exp: 540}, {t: 5000, type: "map", id: 200, name: "Hunting Ground"}]);
   assert.deepStrictEqual(kinds(out), ["LOGIN", "MAP_CHANGE", "COMBAT_START", "EXP_GAIN", "EXP_GAIN", "MESO_GAIN", "ITEM_PICKUP", "EXP_BAR", "COMBAT_END", "MAP_CHANGE"], kinds(out).join());
-  assert.deepStrictEqual(out.find(x => x[1] === "COMBAT_END").slice(2), [1, 2, 40, 100, "map"]);   // 1 s from first to last EXP
+  assert.deepStrictEqual(out.find(x => x[1] === "COMBAT_END").slice(2), [1, 2, 40, 100, "map", 0]);   // 1 s from first to last EXP
   assert.deepStrictEqual(out.find(x => x[1] === "ITEM_PICKUP").slice(2), [4000000, "Blue Snail Shell", 1, "kill"]);
   assert.strictEqual(out.filter(x => x[1] === "MAP_CHANGE").length, 2, "the same map twice is one change");
   o.event({t: T0 + 6000, type: "bar", level: 11, pct: 1, exp: 15}); assert.strictEqual(out.at(-2)[1], "LEVEL_UP"); assert.strictEqual(out.at(-2)[2], 11); }
@@ -49,6 +49,15 @@ const kinds = out => out.map(x => x[1]);
 { const {out} = run([{t: 0, type: "bar", level: 10, pct: 50, exp: 500}, {t: 1000, type: "bar", level: 10, pct: 50, exp: 497}, {t: 2000, type: "bar", level: 10, pct: 40, exp: 400}]);
   assert.deepStrictEqual(out.filter(x => x[1] === "EXP_LOSS").map(x => x[4]), [97]); }
 
+// HP / MP: a baseline, losses start combat (no EXP needed), gains and MP are logged, a changed maximum is a new baseline
+{ const v = (t, h, m, hm = 700, mm = 500) => ({t, type: "vitals", hp: [h, hm], mp: [m, mm]});
+  const {out, o} = run([v(0, 700, 500), v(1000, 600, 500), v(2000, 550, 450), v(3000, 650, 450)]);
+  assert.deepStrictEqual(kinds(out), ["VITALS", "COMBAT_START", "HP_LOSS", "HP_LOSS", "MP_LOSS", "HP_GAIN"], kinds(out).join());
+  assert.deepStrictEqual(out[2].slice(2), [100, 600, 700]);
+  o.tick(T0 + 3000 + J.COMBAT_IDLE_MS + 5000); const end = out.at(-1); assert.deepStrictEqual([end[1], end[6], end[7]], ["COMBAT_END", "idle", 150], "hp lost this combat");
+  o.event(v(40000, 700, 500, 800, 500)); assert.strictEqual(out.at(-1)[1], "VITALS", "a new maximum = new baseline, not a gain");
+  o.event(v(41000, 0, 500, 800)); assert.deepStrictEqual(kinds(out).slice(-3), ["COMBAT_START", "HP_LOSS", "HP_ZERO"]); }
+
 // wallet: pickups explain a rise, the rest is "other_income"; a fall is "spent"
 { const {out} = run([{t: 0, type: "wallet", n: 1000}, {t: 1000, type: "meso", amount: 50}, {t: 2000, type: "wallet", n: 1050}, {t: 3000, type: "wallet", n: 800}, {t: 4000, type: "wallet", n: 5800}]);
   assert.deepStrictEqual(out.filter(x => x[1] === "MESO_CHANGE").map(x => x.slice(2)), [[-250, 800, "spent"], [5000, 5800, "other_income"]]); }
@@ -65,7 +74,7 @@ const kinds = out => out.map(x => x[1]);
   o.hud(T0 + 20000, true); assert.deepStrictEqual(out.at(-1).slice(1), ["HUD_BACK", 19]); }
 
 // every line the observer makes parses back, with kinds that are documented
-{ const {out} = run([{t: 0, type: "bar", level: 10, pct: 10, exp: 100}, {t: 1, type: "map", id: 100}, {t: 2, type: "exp", gain: 5}, {t: 3, type: "party", size: 3}, {t: 4, type: "job", name: "Archer"}, {t: 5, type: "pause", hold: true}, {t: 6, type: "resume"}, {t: 7, type: "itemraw", text: 'Red "Pot', qty: 2}]);
+{ const {out} = run([{t: 0, type: "bar", level: 10, pct: 10, exp: 100}, {t: 1, type: "map", id: 100}, {t: 2, type: "exp", gain: 5}, {t: 3, type: "party", size: 3}, {t: 4, type: "job", name: "Archer"}, {t: 5, type: "pause", hold: true}, {t: 6, type: "resume"}, {t: 6.5, type: "vitals", hp: [5, 9], mp: [5, 9]}, {t: 6.7, type: "vitals", hp: [3, 9], mp: [5, 9]}, {t: 7, type: "itemraw", text: 'Red "Pot', qty: 2}]);
   for (const x of out){ assert(J.KINDS[x[1]] !== undefined, "undocumented " + x[1]); const l = J.line(T0 + x[0], x[1], ...x.slice(2)); assert.strictEqual(J.parse(l).kind, x[1]) } }
 
 // rotation: prune keeps the newest, trims by count and by bytes

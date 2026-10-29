@@ -52,18 +52,25 @@ const jr = (() => {
       if (!sameAsLast(f)){
         const want = {};
         if (!ocrBusy){
-          if (t - me.mapT > 5000 && t - me.last < 600e3) want.map = true;   // a long-quiet player's map can't have changed without the bar or chat moving
+          if (me.death && t - me.death.last >= 1000){ me.death.last = t; want.chat = true }   // HP 0 or a bar drop: the chat line says what the death cost
+          else if (t - me.mapT > 5000 && t - me.last < 600e3) want.map = true;   // a long-quiet player's map can't have changed without the bar or chat moving
           else if ((!me.charName || !me.job) && t - me.jobT > 30e3) want.job = true;
         }
         const r = await jwEng.read({frame: f, t, want});
         if (w !== me || !r) throw null;
         if (r.scale){ scale = r.scale; fastLeft = 19 }
         for (const e of r.ev){
-          if (/^(exp|bonus|meso|item|itemraw|bar|wallet|inv|use|party)$/.test(e.type)){ jr.event(e); if (/^(exp|bonus|meso|item|itemraw|party)$/.test(e.type) || e.type === "bar" && me.bar != null && e.exp !== me.bar) me.last = t; if (e.type === "bar") me.bar = e.exp }
+          if (/^(exp|bonus|meso|item|itemraw|bar|wallet|inv|use|party|vitals)$/.test(e.type)){
+            jr.event(e);
+            if (/^(exp|bonus|meso|item|itemraw|party)$/.test(e.type) || e.type === "bar" && me.bar != null && e.exp !== me.bar || e.type === "vitals" && me.hp != null && e.hp[0] !== me.hp) me.last = t;
+            if (e.type === "bar"){ if (me.bar != null && me.bar - e.exp > 5 && !(e.level > me.level) && !me.death) me.death = {last: 0, tries: 0}; me.bar = e.exp; me.level = e.level || me.level }
+            if (e.type === "vitals"){ if (e.hp[0] === 0 && me.hp > 0 && !me.death) me.death = {last: 0, tries: 0}; me.hp = e.hp[0] }
+          }
         }
         if (r.info.invAt) lastInvTab = r.info.inv || null;
         jr.hud(t, !!r.info.bar);
         if (want.map){ me.mapT = t; ocrBusy = true; mapRead(r.crops.map, t, me).catch(() => {}).finally(() => ocrBusy = false) }
+        else if (want.chat){ ocrBusy = true; deathRead(r.crops.chat, t, me).catch(() => {}).finally(() => ocrBusy = false) }
         else if (want.job){ me.jobT = t; ocrBusy = true; jobRead(r.crops.job, r.crops.name, t, me).catch(() => {}).finally(() => ocrBusy = false) }
       }
       get().tick(t);
@@ -76,6 +83,12 @@ const jr = (() => {
     const m = GrindReaders.mapFromText(await ocrText(c), G), key = m && (m.id || m.name);
     if (key && key === me.mapSeen) { jr.event({t, type: "map", id: m.id, name: m.name}); me.last = Math.max(me.last, t - 25e3) }   // a map change is activity, but not a full reset of the pace
     me.mapSeen = key;
+  }
+  // the chat box after a death: "You have lost N EXP" (GrindReaders.deathFromText); three tries, then it's left as an unconfirmed drop
+  async function deathRead(c, t, me){
+    if (!me.death) return;
+    const lost = c ? GrindReaders.deathFromText(await host.ocr(await toPng(c))) : null;
+    if (lost){ jr.death(t, lost); me.death = null } else if (++me.death.tries >= 3) me.death = null;
   }
   async function jobRead(c, nc, t, me){
     if (nc){ const n = GrindReaders.nameFromText(await ocrText(nc)); if (n && n === me.nameSeen && n !== me.charName){ me.charName = n; jr.note(t, "CHARACTER", n) } me.nameSeen = n }
