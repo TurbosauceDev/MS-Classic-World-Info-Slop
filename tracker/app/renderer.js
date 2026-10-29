@@ -10,13 +10,23 @@ let session = null, slicer = null, engine = null, video = null, timer = null, se
 const canvas = document.createElement("canvas"), g = canvas.getContext("2d", {willReadFrequently: true});
 
 async function openStream(){
-  video?.srcObject?.getTracks().forEach(tr => tr.stop());
+  video?.drop?.(); video?.srcObject?.getTracks().forEach(tr => tr.stop());
   const stream = await navigator.mediaDevices.getDisplayMedia({video: {frameRate: FPS}, audio: false});
-  video = document.createElement("video"); video.srcObject = stream; video.muted = true;
-  // a capture that never sends a frame (a minimized game window) left play() waiting for good and Start dead (2026-10-19)
-  const play = video.play(); play.catch(() => {});
-  if (!await Promise.race([play.then(() => true), new Promise(r => setTimeout(r, 5000, false))])){
-    stream.getTracks().forEach(tr => tr.stop()); throw new Error("no picture from the game window. Is it minimized? Restore it and press Start again") }
+  // frames straight off the track (framesrc.js); the <video> element only where that can't run
+  let src = FrameSrc.open(stream);
+  if (src && !await Promise.race([src.ready, new Promise(r => setTimeout(r, 5000, false))])){
+    src.drop();
+    if (!src.failed){ stream.getTracks().forEach(tr => tr.stop()); throw new Error("no picture from the game window. Is it minimized? Restore it and press Start again") }   // no frame came
+    src = null;   // frames came but couldn't be copied out: the video element reads them
+  }
+  if (src) video = src;
+  else {
+    video = document.createElement("video"); video.srcObject = stream; video.muted = true;
+    // a capture that never sends a frame (a minimized game window) left play() waiting for good and Start dead (2026-10-19)
+    const play = video.play(); play.catch(() => {});
+    if (!await Promise.race([play.then(() => true), new Promise(r => setTimeout(r, 5000, false))])){
+      stream.getTracks().forEach(tr => tr.stop()); throw new Error("no picture from the game window. Is it minimized? Restore it and press Start again") }
+  }
   await new Promise(r => setTimeout(r, 700));   // first frames can be blank while capture starts
 }
 // a frame that is (almost) all black: the game window couldn't be captured
@@ -43,6 +53,7 @@ async function oneFrame(){
   try { return grab() } finally { if (timer == null){ video?.srcObject?.getTracks().forEach(tr => tr.stop()); if (/^Reading the MapleStory/.test($("#status").textContent) && st !== $("#status").textContent){ statusUndo = true; $("#status").textContent = st } } }
 }
 function grab(){
+  if (video.pump) return video.full();
   // resize only when the window size changed: setting it every frame reallocates the canvas twice a second
   if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight){ canvas.width = video.videoWidth; canvas.height = video.videoHeight }
   g.drawImage(video, 0, 0);
@@ -57,6 +68,7 @@ function grabFrame(){
   const vw = video.videoWidth, vh = video.videoHeight;
   if (!scale || scale.w !== vw || scale.h !== vh || fastLeft <= 0) return grab();
   fastLeft--;
+  if (video.pump) return video.shrunk(scale);
   const {k, ox, oy} = scale, W = Math.floor((vw - ox) / k), H = Math.floor((vh - oy) / k);
   if (canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H }
   g.imageSmoothingEnabled = false;
@@ -119,9 +131,10 @@ function runClockMs(){
 function log(kind, data){ LOG.push({t: Date.now(), kind, ...data}); if (LOG.length > 300) LOG.shift() }
 new MutationObserver(() => { const text = $("#status").textContent; if (LOG.findLast(l => l.kind === "status")?.text !== text) log("status", {text}) }).observe($("#status"), {childList: true, characterData: true, subtree: true});
 let lastKeep = 0;
-function keepFrame(t){
+function keepFrame(t, f){
   if (t - lastKeep < 3000) return;
   lastKeep = t;
+  if (video.pump){ canvas.width = f.w; canvas.height = f.h; g.putImageData(new ImageData(f.d, f.w, f.h), 0, 0) }   // f is the frame just grabbed, copied in before it goes to the reader
   canvas.toBlob(async b => { if (!b) return; RECENT.push({t, bytes: new Uint8Array(await b.arrayBuffer())}); if (RECENT.length > 8) RECENT.shift() }, "image/png");
 }
 

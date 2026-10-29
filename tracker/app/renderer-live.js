@@ -304,7 +304,7 @@ async function tick(){
     if (!video.srcObject?.active){ $("#status").textContent = "The game window closed. Press Stop, then Start once it's back."; throw null }
     if (!video.videoWidth){ $("#status").textContent = "No picture from the game (minimized?). Waiting..."; throw null }   // skip this tick
     const f = grabFrame(); perf("grab", Date.now() - t);
-    keepFrame(t);
+    keepFrame(t, f);
     const t1 = Date.now(), same = sameAsLast(f); perf("same", Date.now() - t1);
     if (same){ skipped++; throw null }
     // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between

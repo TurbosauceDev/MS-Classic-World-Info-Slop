@@ -23,6 +23,16 @@ const path = require("path"), {chromium} = require("playwright");
   await page.click("#go"); await page.waitForTimeout(6000);
   const nf = await page.evaluate(() => { navigator.mediaDevices.getDisplayMedia = window.gdm0; return [$("#status").textContent, starting, timer] });
   if (!/minimized/.test(nf[0]) || nf[1] || nf[2] != null) throw new Error("capture with no frames: " + JSON.stringify(nf));
+  // frames come off the capture track (framesrc.js), not a video element + canvas read-back (which grew the window by ~600 MB, 2026-10-29): exact colours, full and 2x-shrunk
+  const fr = await page.evaluate(async () => {
+    const gd = navigator.mediaDevices.getDisplayMedia;
+    navigator.mediaDevices.getDisplayMedia = async () => { const c = document.createElement("canvas"); c.width = 640; c.height = 480; const x = c.getContext("2d"); setInterval(() => { x.fillStyle = "#336699"; x.fillRect(0, 0, 640, 480); x.fillStyle = "#ff0000"; x.fillRect(2, 0, 2, 2) }, 50); return c.captureStream(10) };
+    try {
+      await startCapture(); const a = grab(), b = video.pump && video.shrunk({k: 2, ox: 2, oy: 0}); video.srcObject.getTracks().forEach(t => t.stop());
+      return {pump: !!video.pump, w: a.w, h: a.h, px: [...a.d.slice(0, 4)], red: [...a.d.slice((2) * 4, 2 * 4 + 4)], sw: b.w, sh: b.h, spx: [...b.d.slice(0, 4)], len: a.d.length};
+    } finally { navigator.mediaDevices.getDisplayMedia = gd }
+  });
+  if (!fr.pump || fr.w !== 640 || fr.h !== 480 || fr.len !== 640 * 480 * 4 || fr.px.join() !== "51,102,153,255" || fr.red.join() !== "255,0,0,255" || fr.sw !== 319 || fr.sh !== 240 || fr.spx.join() !== "255,0,0,255") throw new Error("frame source: " + JSON.stringify(fr));
   // Dummy data (View menu): every box filled, marked, nothing saved or shared; Start wipes it and tracks for real
   await page.evaluate(() => window.menu("dummy")); await page.waitForTimeout(100);
   const dm = await page.evaluate(() => [!document.querySelector("#dummyBar").classList.contains("hidden"), document.querySelectorAll("#items tr").length, document.querySelectorAll("#mobs tr").length,

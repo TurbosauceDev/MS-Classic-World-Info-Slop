@@ -239,7 +239,7 @@ $("#frames").onclick = async () => {
     busy = true;
     try {
       if (!video.videoWidth || !video.srcObject?.active) throw new Error("capture stopped (Stop pressed or game closed)");
-      canvas.width = video.videoWidth; canvas.height = video.videoHeight; g.drawImage(video, 0, 0);
+      if (video.pump){ const f = video.full(); canvas.width = f.w; canvas.height = f.h; g.putImageData(new ImageData(f.d, f.w, f.h), 0, 0) } else { canvas.width = video.videoWidth; canvas.height = video.videoHeight; g.drawImage(video, 0, 0) }
       const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
       dir = await host.saveFrame(`frame-${String(n).padStart(3, "0")}.png`, new Uint8Array(await blob.arrayBuffer()));
       $("#status").textContent = `Saving sample frames: ${n + 1}/60`;
