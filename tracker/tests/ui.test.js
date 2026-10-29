@@ -129,6 +129,16 @@ const path = require("path"), {chromium} = require("playwright");
   if (!Array.isArray(asaved) || asaved.length !== 2 || asaved[1].kind !== "lootWorth" || asaved[1].v !== 123) throw new Error("alerts saved: " + JSON.stringify(asaved));
   await page.click('#alertList .arow >> nth=1 >> .atest');
   if (!/picked up \(test\)/.test(await page.textContent("#status"))) throw new Error("alert test fire: " + await page.textContent("#status"));
+  // 0.2.92: a new trigger kind rebuilds the row; the player's own sounds join the Sound list and save as file:<name>
+  await page.selectOption("#alertList .arow >> nth=1 >> .akind", "died"); await page.waitForTimeout(60);
+  await page.click("#soundAdd"); await page.waitForTimeout(80);
+  const snd = await page.evaluate(() => [...document.querySelectorAll("#alertList .arow")[1].querySelectorAll(".asnd option")].map(o => o.value));
+  if (!snd.includes("file:ding.wav") || !snd.includes("file:boom.mp3")) throw new Error("sounds in the list: " + snd);
+  await page.selectOption("#alertList .arow >> nth=1 >> .asnd", "file:boom.mp3"); await page.waitForTimeout(450);
+  const sv = await page.evaluate(() => [window.st.alerts[1].kind, window.st.alerts[1].act.sound]);
+  if (sv.join() !== "died,file:boom.mp3") throw new Error("file sound saved: " + sv);
+  await page.click('#alertList .arow >> nth=1 >> .atest'); await page.waitForTimeout(100);   // unreadable file: falls back to the chime, no throw
+  if (!/You died/.test(await page.textContent("#status"))) throw new Error("died test fire: " + await page.textContent("#status"));
   await page.click('#alertList .arow >> nth=1 >> .adel'); await page.waitForTimeout(450);
   if (await page.evaluate(() => window.st.alerts.length) !== 1) throw new Error("alert removed: " + JSON.stringify(window.st.alerts));
   // the overlay's rate trend (0.2.80): each sample lands in the ring (a new session empties it), ovBuild carries the series

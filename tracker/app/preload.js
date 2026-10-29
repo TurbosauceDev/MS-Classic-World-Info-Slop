@@ -1,5 +1,9 @@
 const {contextBridge, ipcRenderer} = require("electron");
 contextBridge.exposeInMainWorld("host", {
+  soundsList: () => ipcRenderer.invoke("sounds-list"),
+  soundsAdd: () => ipcRenderer.invoke("sounds-add"),
+  soundsRemove: n => ipcRenderer.invoke("sounds-remove", n),
+  soundsRead: n => ipcRenderer.invoke("sounds-read", n),
   gameFound: () => ipcRenderer.invoke("game-found"),
   wholeScreen: on => ipcRenderer.invoke("whole-screen", on),
   settings: s => ipcRenderer.invoke("settings", s),

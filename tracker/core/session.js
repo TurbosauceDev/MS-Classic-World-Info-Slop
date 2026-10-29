@@ -122,6 +122,7 @@
         case "party": S.party = Math.max(1, e.size | 0); break;
         case "job": S.job = e.name; break;
         case "exp": {
+          (S.gains = S.gains || []).push({t: e.t, gain: e.gain}); if (S.gains.length > 12) S.gains.shift();   // the last few EXP messages (the big-kill alert)
           S.msgExp += e.gain; S.lastExpT = Math.max(S.lastExpT || 0, e.t); here().msg += e.gain; pm(S.pmMsg, e.t, e.gain);
           if (!G.maps[S.map]){ S.kills++; here().kills++; S.unknownKills++; S.lastKillMob = null; break }   // map not known: a kill, monster unknown
           const id = matchMob(e.gain);
@@ -277,7 +278,7 @@
         readShare: S.barExp > 0 ? Math.min(1, S.msgExp / S.barExp) : null,
         // kills if the missed lines were kills at the same rate as the ones read (an estimate; only from 20% read up)
         killsEstHr: S.barExp > 0 && S.msgExp / S.barExp >= 0.2 && S.msgExp < S.barExp ? per(S.kills * S.barExp / S.msgExp) : null,
-        expHr5: recentExpHr(), deaths: S.deaths, paused: S.pausedAt !== null, levelUps: S.levelUps, toGoalHrs, goalLevel: goal || null, lastExpT: S.lastExpT,
+        expHr5: recentExpHr(), gains: S.gains || [], deaths: S.deaths, paused: S.pausedAt !== null, levelUps: S.levelUps, toGoalHrs, goalLevel: goal || null, lastExpT: S.lastExpT,
         mesos: S.mesos, mesosHr: per(S.mesos), mesoPerKill: S.kills ? S.mesos / S.kills : 0, unreadItems: unreadLeft, unreadLines: S.unreadItems, inv, invTabs: Object.fromEntries(Object.entries(S.inv).map(([k, v]) => [k, {first: v.first.t, last: v.last.t}])), lootValue, lootLo, lootHi, lootRough, lootHr: per(lootValue), items, mobs,
         used, usedCost, usedCostHr: per(usedCost), netHr: per(S.mesos + lootValue - usedCost),
         // inventory mesos now minus at the first read: real money in or out, shop trips included (loot not sold yet isn't in it)

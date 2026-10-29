@@ -21,7 +21,18 @@ function alertFire(f){
   if (typeof ovSend === "function") try { ovSend(true) } catch {}
 }
 // the synthesized chimes (no asset files): patterns of the existing beep()
+let soundFiles = [];   // names in userData/sounds (the player's own), offered beside the synthesized chimes
+const soundCache = {};
+async function soundsLoad(){ soundFiles = await host.soundsList().catch(() => []) }
+async function playFile(name){
+  try {
+    if (!soundCache[name]){ const buf = await host.soundsRead(name); if (!buf) return false;
+      soundCache[name] = URL.createObjectURL(new Blob([buf], {type: /\.mp3$/i.test(name) ? "audio/mpeg" : /\.ogg$/i.test(name) ? "audio/ogg" : "audio/wav"})) }
+    const a = new Audio(soundCache[name]); a.volume = .8; await a.play(); return true;
+  } catch { return false }
+}
 function alertSound(kind){
+  if (A.isFile(kind)){ playFile(kind.slice(5)).then(ok => { if (!ok) alertSound("mid") }); return }   // a missing/unplayable file falls back to the chime
   const seq = {low: [[330, .6]], mid: [[880, .25]], high: [[660, .15], [990, .25]],
     double: [[660, .15], [990, .25], [660, .15]]}[kind] || [[880, .25]];
   let t = 0;
@@ -57,13 +68,18 @@ const ALERT_TEST = {expHrBelow: "EXP/hr fell under the threshold (test)", expHrA
   bossDue: "Mushmom (boss) is back now (test)", kpqClock: "KPQ clock under 60 s (test)",
   sessionTime: "120 min this session — time for a break? (test)", goalReached: "Goal reached: level 30 (test)",
   idleExp: "No EXP for 2 min (test)", lootWorth: "A drop worth 1,000,000 picked up (test)",
-  lootNamed: "Drop you're watching for: Glove ATK Scroll (test)"};
+  lootNamed: "Drop you're watching for: Glove ATK Scroll (test)", died: "You died (1 this run) (test)", levelUp: "Level up! Now level 31 (test)",
+  mapEntered: "Now in Henesys Hunting Ground I (test)", itemLow: "Red Potion is running low (12 left) (test)",
+  bigKill: "Big kill: +12,345 EXP (test)", partyChange: "Party is now 3 (was 2) (test)", mesosBurst: "+150,000 mesos in 20 s (test)",
+  readTrouble: "Only 40% of the EXP gain is showing up as chat lines. Is the chat hidden or covered? (test)"};
 function alertRow(a){
   const def = A.KINDS[a.kind];
   const fields = def.fields.map(([k, label, , t]) => t === "t"
     ? `<input class="ap" data-k="${k}" type="text" value="${esc(String(a[k] ?? ""))}" placeholder="${esc(label)}" title="${esc(label)}">`
     : `<label class="apw">${esc(label)} <input class="ap" data-k="${k}" type="number" value="${esc(String(a[k] ?? ""))}"></label>`).join(" ");
-  const sounds = ["none", ...A.SOUNDS].map(s => `<option${a.sound === s ? " selected" : ""}>${s}</option>`).join("");
+  const names = ["none", ...A.SOUNDS, ...soundFiles.map(f => "file:" + f)];
+  if (A.isFile(a.sound) && !names.includes(a.sound)) names.push(a.sound);   // a sound whose file went missing stays visible
+  const sounds = names.map(s => `<option value="${esc(s)}"${a.sound === s ? " selected" : ""}>${esc(s.startsWith("file:") ? s.slice(5) : s)}</option>`).join("");
   return `<div class="arow" data-id="${esc(a.id)}">
     <input type="checkbox" class="aon" title="On/off" ${a.on !== false ? "checked" : ""}>
     <select class="akind" title="What it watches">${Object.entries(A.KINDS).map(([k, d]) => `<option value="${k}"${k === a.kind ? " selected" : ""}>${esc(d.label)}</option>`).join("")}</select>
@@ -115,6 +131,7 @@ function alertsSave(){
     settings = await host.settings({alerts: settings.alerts}).catch(() => settings);
   }, 300);
 }
+$("#soundAdd")?.addEventListener("click", async () => { soundFiles = await host.soundsAdd().catch(() => soundFiles); alertsUi() });
 $("#alertAdd")?.addEventListener("click", () => {
   const list = alertList(), def = A.KINDS.expHrBelow;
   list.push({id: "a" + Date.now().toString(36), kind: "expHrBelow", on: true, act: {sound: def.sound},
@@ -126,6 +143,7 @@ $("#alertAdd")?.addEventListener("click", () => {
 // would race the boot's own fetch). The three pre-0.2.78 alerts (drop worth, watched names, the 2-min no-EXP beep)
 // become engine alerts once; the old keys are cleared so the legacy paths in renderer-live.js stay quiet behind the engine.
 async function alertsBoot(){
+  await soundsLoad();
   if (!Array.isArray(settings.alerts)){
     settings = await host.settings({alerts: A.synth(settings), alertWorth: null, alertItems: null, stopBeep: false}).catch(() => settings);
   }

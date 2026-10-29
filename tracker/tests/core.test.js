@@ -619,6 +619,31 @@ console.log("today, goal ETA, setup codes, autosave ok");
   assert.strictEqual(A.evaluate(id, {...base, paused: true, st: {lastExpT: T - 3 * 6e4}}, si, T + 2e4).length, 0, "paused: no idle alert");
   assert.strictEqual(A.evaluate(id, {...base, st: {lastExpT: T}}, si, T + 2e4).length, 0, "EXP came back");
   assert.strictEqual(A.evaluate(id, iq, si, T + 3e4).length, 1, "quiet again: fires again");
+  // 0.2.92 triggers: baseline first (a trigger added mid-run never fires for what already happened), then once per change
+  const mk = (kind, extra = {}) => [{id: kind, kind, on: true, sound: "low", toast: true, log: true, ...extra}];
+  { const d = mk("died"), sd = {}; const run = (n, t) => A.evaluate(d, {...base, st: {deaths: n}}, sd, T + t).length;
+    assert.strictEqual(run(2, 0), 0, "baseline"); assert.strictEqual(run(2, 1), 0); assert.strictEqual(run(3, 2), 1, "a new death"); assert.strictEqual(run(3, 3), 0, "once"); assert.strictEqual(run(0, 4), 0, "reset run"); }
+  { const l = mk("levelUp"), sl = {}; const run = (lv, t) => A.evaluate(l, {...base, st: {level: 30 + lv.length, levelUps: lv.map(x => ({level: x}))}}, sl, T + t);
+    assert.strictEqual(run([], 0).length, 0); const f2 = run([31], 1); assert.strictEqual(f2.length, 1); assert.ok(/level 31/.test(f2[0].text)); assert.strictEqual(run([31], 2).length, 0); }
+  { const m2 = mk("mapEntered", {name: "ellinia"}), sm = {}; const run = (nm, t) => A.evaluate(m2, {...base, st: {nowMapName: nm}}, sm, T + t).length;
+    assert.strictEqual(run("Henesys Hunting Ground I", 0), 0); assert.strictEqual(run("Ant Tunnel", 1), 0, "other map: filtered"); assert.strictEqual(run("Ellinia Tree Dungeon", 2), 1); assert.strictEqual(run("Ellinia Tree Dungeon", 3), 0); assert.strictEqual(run(null, 4), 0); }
+  { const il = mk("itemLow", {name: "red potion", v: 50}), si2 = {}; const run = (have, t) => A.evaluate(il, {...base, st: {used: [{id: "2000000", name: "Red Potion", have}, {id: "2000001", name: "Orange Potion", have: 1}]}}, si2, T + t).length;
+    assert.strictEqual(run(80, 0), 0); assert.strictEqual(run(49, 1), 1, "under the line"); assert.strictEqual(run(30, 2), 0, "once"); assert.strictEqual(run(200, 3), 0); assert.strictEqual(run(10, 4), 1, "restocked, low again");
+    assert.strictEqual(A.evaluate(mk("itemLow", {name: "", v: 5}), {...base, st: {used: [{id: "1", name: "x", have: 0}]}}, {}, T).length, 0, "no item named: quiet"); }
+  { const bk = mk("bigKill", {v: 5000}), sb = {}; const run = (g, t) => A.evaluate(bk, {...base, st: {gains: g}}, sb, T + t);
+    assert.strictEqual(run([{t: 1, gain: 9999}], 0).length, 0, "baseline: past kills stay quiet");
+    assert.strictEqual(run([{t: 1, gain: 9999}, {t: 2, gain: 100}], 1).length, 0, "small kill");
+    const f3 = run([{t: 1, gain: 9999}, {t: 2, gain: 100}, {t: 3, gain: 7000}], 2); assert.strictEqual(f3.length, 1); assert.ok(/7,000/.test(f3[0].text));
+    assert.strictEqual(run([{t: 3, gain: 7000}], 3).length, 0, "once"); }
+  { const pc = mk("partyChange"), sp = {}; const run = (n, t) => A.evaluate(pc, {...base, st: {party: n}}, sp, T + t).length;
+    assert.strictEqual(run(1, 0), 0); assert.strictEqual(run(3, 1), 1); assert.strictEqual(run(3, 2), 0); assert.strictEqual(run(1, 3), 1); }
+  { const mb = mk("mesoBurst", {v: 1000, sec: 30}), sm2 = {}; const run = (m, s) => A.evaluate(mb, {...base, st: {mesos: m}}, sm2, T + s * 1e3).length;
+    assert.strictEqual(run(0, 0), 0); assert.strictEqual(run(400, 10), 0); assert.strictEqual(run(1500, 20), 1, "1500 within 30 s"); assert.strictEqual(run(2600, 30), 0, "once a minute");
+    assert.strictEqual(run(2600, 100), 0, "a quiet window is quiet"); }
+  { const rt = mk("readTrouble", {v: 50, min: 5}), sr = {}; const run = (share, am, t) => A.evaluate(rt, {...base, st: {readShare: share, activeMin: am}}, sr, T + t).length;
+    assert.strictEqual(run(0.2, 2, 0), 0, "too early"); assert.strictEqual(run(0.2, 6, 1), 1); assert.strictEqual(run(0.2, 7, 2), 0, "once per stretch"); assert.strictEqual(run(0.9, 8, 3), 0); assert.strictEqual(run(0.3, 9, 4), 1, "again after recovering"); assert.strictEqual(run(null, 9, 5), 0); }
+  { const ns = A.normalize([{kind: "died", act: {sound: "file:boom.mp3"}}, {kind: "died", act: {sound: "file:../../evil.exe"}}, {kind: "died", act: {sound: "file:a/b.wav"}}]);
+    assert.deepStrictEqual(ns.map(x => x.sound), ["file:boom.mp3", "low", "low"], "file sounds: plain names only"); }
   // has(): the renderer's gates for the legacy paths
   assert.ok(A.has([{kind: "idleExp", on: true}], "idleExp", true) && !A.has([{kind: "idleExp", on: false}], "idleExp", true));
 }

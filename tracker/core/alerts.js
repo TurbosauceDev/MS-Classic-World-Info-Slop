@@ -49,8 +49,23 @@
       sound: "mid", sev: "good", w: "status", note: "watches the site's meso.watch median (Watchlist card pulls it every 30 min); fires on the crossing, re-arms once the price falls back under"},
     priceBelow:  {label: "Site price at or under", fields: [["name", "item (name or id)", "", "t"], ["v", "median at or under", 100000, "n"]],
       sound: "mid", sev: "info", w: "status", note: "watches the site's meso.watch median; fires on the crossing, re-arms once the price climbs back over"},
+    // 0.2.92 — triggers off numbers the screen readers already produce (no new vision work)
+    died:        {label: "You died", fields: [], sound: "low", sev: "warn", w: "status", note: "the tracker's death count went up (the 'you died' read); once per death"},
+    levelUp:     {label: "Level up", fields: [], sound: "high", sev: "good", w: "exp", note: "the session's level rose; once per level"},
+    mapEntered:  {label: "Map changed", fields: [["name", "map name contains (blank = any)", "", "t"]], sound: "mid", sev: "info", w: "map",
+      note: "the minimap title read as a different map; once per change"},
+    itemLow:     {label: "Item running low", fields: [["name", "item (name or id)", "", "t"], ["v", "fewer than", 50, "n"]], sound: "low", sev: "warn", w: "status",
+      note: "the quick-slot / Use-tab count of that item (potions, arrows); fires once, re-arms when you restock"},
+    bigKill:     {label: "Big kill", fields: [["v", "one kill gave at least (EXP)", 5000, "n"]], sound: "high", sev: "good", w: "kills",
+      note: "a single EXP message at or over this (a boss, or a tough monster); once per message"},
+    partyChange: {label: "Party size changed", fields: [], sound: "mid", sev: "info", w: "party", note: "the party HP bars show a different head-count; once per change"},
+    mesoBurst:   {label: "Mesos burst", fields: [["v", "mesos gained within the window", 100000, "n"], ["sec", "window (sec)", 30, "n"]], sound: "mid", sev: "good", w: "mesos",
+      note: "picked-up mesos over the window (a rich drop or a mesos box); at most once a minute"},
+    readTrouble: {label: "Screen reading trouble", fields: [["v", "chat read under (%)", 50, "n"], ["min", "after this many play minutes", 5, "n"]], sound: "low", sev: "warn", w: "status",
+      note: "the share of the EXP bar's gain that showed up as readable chat lines is low: the chat is hidden, covered or too small. Once per stretch"},
   };
   const SOUNDS = ["low", "mid", "high", "double"];
+  const isFile = v => typeof v === "string" && /^file:[\w .()\-]{1,80}\.(wav|mp3|ogg)$/i.test(v);   // a sound the player added (0.2.92): file:<name> in userData/sounds
   // clean one list: unknown kinds out, numbers finite, defaults in, ids stable; params live flat on the alert (a.v, a.min...)
   function normalize(list){
     if (!Array.isArray(list)) return [];
@@ -63,7 +78,7 @@
       }
       const act = a.act && typeof a.act === "object" ? a.act : {};
       return {id: typeof a.id === "string" && a.id ? a.id : "a" + (i + 1), kind: a.kind, on: a.on !== false,
-        sound: SOUNDS.includes(act.sound) || act.sound === "none" ? act.sound : def.sound,
+        sound: SOUNDS.includes(act.sound) || act.sound === "none" || isFile(act.sound) ? act.sound : def.sound,
         toast: act.toast !== false, log: act.log !== false, ...p};
     });
   }
@@ -153,6 +168,61 @@
           }
           break;
         }
+        case "died": {
+          const n = num(cs.deaths); if (s.n == null || n < s.n){ s.n = n; break }
+          if (n > s.n){ s.n = n; say(`You died (${n} this run)`) }
+          break;
+        }
+        case "levelUp": {
+          const L = Array.isArray(cs.levelUps) ? cs.levelUps : [], n = L.length; if (s.n == null || n < s.n){ s.n = n; break }
+          if (n > s.n){ s.n = n; say(`Level up! Now level ${L.at(-1)?.level ?? cs.level}`) }
+          break;
+        }
+        case "mapEntered": {
+          const nm = cs.nowMapName || null; if (nm == null) break;
+          if (s.m == null){ s.m = nm; break }
+          if (nm !== s.m){ s.m = nm; const want = String(a.name || "").trim().toLowerCase();
+            if (!want || nm.toLowerCase().includes(want)) say(`Now in ${nm}`) }
+          break;
+        }
+        case "itemLow": {
+          const want = String(a.name || "").trim().toLowerCase(), v = num(a.v); if (!want || !(v > 0)) break;
+          const seen = (s.i = s.i || {});
+          for (const u of Array.isArray(cs.used) ? cs.used : []){
+            if (u.have == null || (String(u.id) !== want && !String(u.name || "").toLowerCase().includes(want))) continue;
+            const low = u.have < v, st2 = seen[u.id] = seen[u.id] || {};
+            if (low && st2.armed !== false){ st2.armed = false; say(`${u.name || "Item"} is running low (${fmt(u.have)} left)`) }
+            if (!low) st2.armed = true;
+          }
+          break;
+        }
+        case "bigKill": {
+          const g = Array.isArray(cs.gains) ? cs.gains : [], top = g.length ? g[g.length - 1].t : null;
+          if (s.t == null){ s.t = top ?? 0; break }
+          for (const x of g) if (x.t > s.t && x.gain >= num(a.v) && a.v > 0) say(`Big kill: +${fmt(x.gain)} EXP`);
+          if (top != null && top > s.t) s.t = top;
+          break;
+        }
+        case "partyChange": {
+          const n = num(cs.party); if (!n) break;
+          if (s.n == null){ s.n = n; break }
+          if (n !== s.n){ const was = s.n; s.n = n; say(`Party is now ${n} (was ${was})`) }
+          break;
+        }
+        case "mesoBurst": {
+          const m = num(cs.mesos), w = Math.max(5, num(a.sec)) * 1e3, h = (s.h = s.h || []);
+          if (h.length && m < h.at(-1)[1]) h.length = 0;   // a new run
+          h.push([now, m]); while (h.length > 1 && h[0][0] < now - w) h.shift();
+          const gain = m - h[0][1];
+          if (a.v > 0 && gain >= a.v && now - (s.firedAt || 0) >= 6e4){ s.firedAt = now; say(`+${fmt(gain)} mesos in ${Math.round((now - h[0][0]) / 1e3)} s`) }
+          break;
+        }
+        case "readTrouble": {
+          const share = cs.readShare, bad = share != null && share * 100 < a.v && cs.activeMin >= a.min;
+          if (!bad){ s.q = false; break }
+          if (!s.q){ s.q = true; say(`Only ${Math.round(share * 100)}% of the EXP gain is showing up as chat lines. Is the chat hidden or covered?`) }
+          break;
+        }
         case "goalReached": {
           const lv = cs.level, goal = cs.goalLevel, k = goal ? String(goal) : null;
           if (!k || !(lv >= goal)){ s.k = null; break }
@@ -174,6 +244,6 @@
     }
     return fired;
   }
-  const api = {KINDS, SOUNDS, COOL, synth, normalize, has, evaluate};
+  const api = {KINDS, SOUNDS, isFile, COOL, synth, normalize, has, evaluate};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindAlerts = api;
 })(typeof window !== "undefined" ? window : globalThis);
