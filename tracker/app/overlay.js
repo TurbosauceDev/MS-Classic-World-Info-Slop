@@ -339,7 +339,30 @@ function clampCard(el){
 // are the user's layout and stay put; the old GAP-expanded test separated flush pairs by 8 px on every push, so the sticky
 // snap's flush never survived the release (the card drifted off its neighbour without being touched).
 const GAP = 8, COVER_EPS = 0.5;   // fit-content cards measure fractionally: a sub-pixel kiss is a flush pair, not a cover
+// Auto-fit (Danny 10-29: "we basically do not ever want to show the user a scroll bar"): a card's body is measured after every
+// render; if its content is wider/taller than the box (a pinned size, or the Max width cap) or any line is ellipsised, the body's
+// zoom (--af) shrinks until it fits, floor 50%. Flow cards (log/loot/map) fill by rows instead, so only their width is judged.
+const AF_MIN = .5;
+function afOver(b, flow){
+  if (b.scrollWidth > b.clientWidth + 1 || (!flow && b.scrollHeight > b.clientHeight + 1)) return Math.min(b.clientWidth / b.scrollWidth, flow ? 1 : b.clientHeight / b.scrollHeight);
+  if (flow) return 1;
+  let worst = 1;
+  for (const e of b.querySelectorAll(".mrow b, .lr, .mapname, .vl, .vn, td")) if (e.scrollWidth > e.clientWidth + 1) worst = Math.min(worst, e.clientWidth / e.scrollWidth);
+  return worst;
+}
+function fitCard(el){
+  const b = el.querySelector(".b"); if (!b || el.classList.contains("ovhide")) return;
+  const flow = b.classList.contains("flow");
+  b.style.removeProperty("--af");
+  let af = 1;
+  for (let n = 0; n < 4; n++){
+    const r = afOver(b, flow); if (r >= 1) break;
+    af = Math.max(AF_MIN, af * r * .97); b.style.setProperty("--af", af.toFixed(3));
+    if (af <= AF_MIN) break;
+  }
+}
 function reflow(){
+  for (const el of document.querySelectorAll(".ovw")) fitCard(el);
   if (drag || rz) return;
   const all = [...document.querySelectorAll(".ovw")].filter(el => el.isConnected), els = all.filter(el => el.dataset.k !== "blocker");   // the Chat blocker sits under everything: others may overlap it
   for (const el of all){ const id = el.dataset.w; el.style.left = Math.round(wPos(id).x - DESK.x) + "px"; el.style.top = Math.round(wPos(id).y - DESK.y) + "px"; clampCard(el) }

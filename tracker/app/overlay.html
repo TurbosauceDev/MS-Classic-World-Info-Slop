@@ -63,20 +63,18 @@
     text-shadow:0 1px 2px rgba(0,0,0,.3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }   /* ellipsis, not a wrap, in a skinny box */
   .ovw header button { background:none; border:0; color:var(--muted); font:inherit; font-size:13px; line-height:1; padding:1px 5px; border-radius:6px; cursor:pointer; }
   .ovw header button:hover { color:var(--bad); }
-  .ovw .b { zoom:var(--fs, 1); }
+  .ovw .b { zoom:calc(var(--fs, 1) * var(--af, 1)); }   /* --af: fitCard's auto-shrink when the content outgrows the card (no scrollbars, Danny 10-29) */
   /* strange boxes (Danny 10-29): the corner grip — or a Width/Height number in the inspector — pins an axis, and the
      card stops following its content: a wide box lets the lines spread, a tall one shows more of the log, a short one
      scrolls inside, a skinny one ellipsises. Blank = fit the content, exactly like before. */
   .ovw.sizedW { width:var(--w); max-width:none; }
   .ovw.sizedH { height:var(--h); display:flex; flex-direction:column; }
   .ovw.sizedH header { flex:none; }
-  .ovw.sizedH .b { flex:1 1 auto; min-height:0; overflow:auto; scrollbar-width:thin; display:flex; flex-direction:column; }
+  .ovw.sizedH .b { flex:1 1 auto; min-height:0; overflow:hidden; display:flex; flex-direction:column; }
   /* a pinned-tall card centres its content (auto margins above and below collapse to 0 when the content overflows, so
      scrolling still starts at the top); flow cards (log, loot, map) stay top-aligned and grow lines to fill instead */
   .ovw.sizedH .b:not(.flow)::before { content:""; margin-top:auto; }
   .ovw.sizedH .b:not(.flow)::after { content:""; margin-bottom:auto; }
-  .ovw.sizedH .b::-webkit-scrollbar { width:8px; } .ovw.sizedH .b::-webkit-scrollbar-track { background:transparent; }
-  .ovw.sizedH .b::-webkit-scrollbar-thumb { background:var(--line); border-radius:4px; }
   .ovw.sizedW .rows > div { min-width:0; } .ovw.sizedW .spk svg { width:100%; }   /* a wide card: the trend line stretches, rows shrink to fit */
   .ovw.sizedW .mrow { flex-wrap:wrap; row-gap:1px; } .ovw.sizedW .mrow b { min-width:0; }   /* a skinny card: name and its number stack instead of fighting */
   .ovw.sizedW .lvbar { grid-template-columns:auto minmax(24px, 1fr) auto; }
@@ -299,8 +297,7 @@
   body.skin-elv .trk { background:color-mix(in srgb, var(--bg) 55%, #000); }   /* the ElvUI bar: dark track, flat fill */
   /* Claude's 0.2.96-0.2.109 cards fall in line too: the Chat blocker's HP/MP/EXP bars and the Bag check icon pills
      were born after the skin and kept their rounded corners — square in Elv like every other bar and button. */
-  body.skin-elv .vb, body.skin-elv .vb i, body.skin-elv .bagI,
-  body.skin-elv .ovw .b::-webkit-scrollbar-thumb { border-radius:0; }
+  body.skin-elv .vb, body.skin-elv .vb i, body.skin-elv .bagI { border-radius:0; }
   body.skin-elv .ovw header .t, body.skin-elv .ovw .big, body.skin-elv .mapname { text-shadow:none; }   /* clean type */
   /* readability pass 2 (Danny 10-29: "another iteration on readability"): the Elv face is condensed, so the small
      grey text steps up a point where it carries real information — sub-lines, detail rows, section marks. */
