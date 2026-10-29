@@ -630,6 +630,12 @@ const path = require("path"), {chromium} = require("playwright");
     await page.keyboard.press("Control+k"); await page.fill("#palQ", "overlay mode"); await page.keyboard.press("Enter"); await page.waitForTimeout(300);
     if (!await page.evaluate(() => (window.ovCalls || []).includes(true))) throw new Error("palette toggles overlay");
     await page.evaluate(() => window.menu("overlay")); await page.waitForTimeout(200) }
+  // adaptive pace (T-13): 2 reads a second while things happen, 1 after 45 s quiet, 0.5 after 3 min, back to 2 on activity;
+  // slow reads cap it at 1
+  { const r = await page.evaluate(() => { const t0 = Date.now(), out = []; paceReset(); lastActive = t0;
+      for (const [dt, act] of [[10e3, false], [46e3, false], [181e3, false], [182e3, true], [183e3, false]]){ pace(t0 + dt, act); out.push(FPS) }
+      slowCap = true; pace(t0 + 300e3, true); out.push(FPS); pace(t0 + 500e3, false); out.push(FPS); paceReset(); setFps(2); return out });
+    if (JSON.stringify(r) !== "[2,1,0.5,2,2,1,0.5]") throw new Error("pace steps: " + JSON.stringify(r)) }
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (!/Red Snail/.test(mobs) || !/Blue Snail/.test(mobs)) throw new Error("mobs table: " + mobs);

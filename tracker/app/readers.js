@@ -805,8 +805,46 @@
     return {tab: inv.tab, slots, unknown, missed};
   }
 
+  /* Dirty-region check (T-13, Danny 10-29: "every little improvement"). A reader that looks at one fixed rectangle gives the
+     same answer for the same pixels, so the answer is kept under a hash of that rectangle and reused while it is unchanged
+     (hash 0.05 ms vs the read's 0.5-1.5 ms). Redundancy so a stale answer can't stick: every 8th identical frame is read
+     anyway, a changed size drops it, and the bar read is dropped after any change or doubtful jump (see barVerdict). */
+  function regionHash(img, x0, y0, x1, y1){
+    x0 = Math.max(0, x0 | 0); y0 = Math.max(0, y0 | 0); x1 = Math.min(img.w, x1 | 0); y1 = Math.min(img.h, y1 | 0);
+    const d = img.d, aligned = d.byteOffset % 4 === 0 && d.byteLength % 4 === 0, p = aligned ? new Uint32Array(d.buffer, d.byteOffset, d.byteLength >> 2) : null;
+    let a = 0x811c9dc5, b = 0x9e3779b9;
+    for (let y = y0; y < y1; y++) for (let x = x0, i = y * img.w + x0; x < x1; x++, i++){
+      const v = p ? p[i] : d[i * 4] | d[i * 4 + 1] << 8 | d[i * 4 + 2] << 16;
+      a = Math.imul(a ^ v, 16777619); b = Math.imul(b + v, 0x85ebca6b) ^ (b >>> 13);
+    }
+    return (a >>> 0) + ":" + (b >>> 0);
+  }
+  /* A new EXP bar reading is taken when it is read the same twice running (steady), or at once when its EXP and % agree for
+     the level (agrees). A jump (up more than 5 % of a level in half a second, or down at all without a level-up) is a red
+     herring until proven otherwise: a misread digit can agree with itself, so a jump needs the same reading twice. */
+  const JUMP_PCT = 5;
+  function barJump(bar, last, level){
+    if (!bar || !last) return false;
+    if (level && last.level && level !== last.level) return false;   // a level-up resets the %: not a jump
+    const dp = bar.pct - last.pct;
+    return dp > JUMP_PCT || dp < -0.005 || bar.exp < last.exp;
+  }
+  function barVerdict({bar, last, level, steady, agrees, fits}){
+    if (!bar) return false;
+    if (!last) return !!fits;
+    const changed = bar.exp !== last.exp || bar.pct !== last.pct;
+    if (!changed) return false;
+    return barJump(bar, last, level) ? !!(steady && fits) : !!(steady && fits || agrees);
+  }
   function createReaders(G, icons = null){
     ITEMS = Object.entries(G.items);
+    const memos = new Map(), memoStats = {hits: 0, reads: 0, off: false};
+    function memo(name, img, x0, y0, x1, y1, fn){
+      if (memoStats.off){ memoStats.reads++; return fn() }
+      const h = regionHash(img, x0, y0, x1, y1), m = memos.get(name);
+      if (m && m.h === h && m.w === img.w && m.ht === img.h && ++m.n % 8){ memoStats.hits++; return m.v }
+      const v = fn(); memos.set(name, {h, w: img.w, ht: img.h, v, n: 0}); memoStats.reads++; return v;
+    }
     let prev = [], lastBar = null, lastParty = null, bonusAt = -Infinity, partyNext = null, partySeen = 0, barNext = null;
     // new pickup lines since the previous frame. Each new message pushes the stack up one line, so the smallest shift n
     // (in lines) where every older line in this frame sits n lines above the same text in the last frame says how many
@@ -832,7 +870,7 @@
     let lastLeft = null, lastLeftT = -Infinity;
     function readFrame(raw, t, nat = null){   // nat: the native frame, when the caller already made it
       const img = nat || (raw.k ? raw : native(raw)), ev = [];
-      const bar = readBar(img) || barAny(raw, t);   // pixel-exact fast path, else any scale
+      const bar = memo("bar", img, 0, img.h - 40, img.w, img.h, () => readBar(img)) || barAny(raw, t);   // pixel-exact fast path (skipped while the bar strip is unchanged), else any scale
       // a new bar value counts when its EXP and % agree for the level (EXP / level total = %), or when it's read the same
       // twice in a row (after a level-up); one misread digit would otherwise add fake EXP
       const key = bar && bar.exp + "/" + bar.pct, steady = key && key === barNext;
@@ -844,11 +882,14 @@
       // read twice the same is only trusted when it fits some level (or the % is too small to tell): a misread EXP number
       // can repeat ("1 [68.01%]" on Danny's KPQ run, while the % kept reading right)
       const fits = level || bar && bar.pct <= 0.5;
-      if (bar && (!lastBar ? fits : (steady && fits || agrees) && (bar.exp !== lastBar.exp || bar.pct !== lastBar.pct))){
+      const take = barVerdict({bar, last: lastBar, level, steady, agrees, fits});
+      if (take){
         ev.push({t, type: "bar", exp: bar.exp, pct: bar.pct, level}); lastBar = {...bar, level: level || lastBar?.level};
       }
+      // anything but a calm repeat of the accepted reading is looked at again from fresh pixels next frame, never from the memo
+      if (!bar || !lastBar || bar.exp !== lastBar.exp || bar.pct !== lastBar.pct) memos.delete("bar");
       // KPQ clock: sent when it changes, at most every 5 s
-      const left = readKpqTimer(img);
+      const left = memo("kpq", img, Math.round(img.w / 2) - 37, 44, Math.round(img.w / 2) + 110, 76, () => readKpqTimer(img));
       if (left !== null && (lastLeft === null || left !== lastLeft && t - lastLeftT >= 5000)){ ev.push({t, type: "kpqtime", left}); lastLeft = left; lastLeftT = t }
       const picked = fresh(readPickups(img));
       if (LEARNED.length) ev.push(...LEARNED.splice(0).map(g => ({t, type: "glyph", ...g})));
@@ -988,7 +1029,7 @@
       return {t, type: "inv", tab: inv.tab, items, alike, stacks, partial, unknown: r.unknown, slots: r.slots.length + r.missed.length};
     }
     let info = {bar: false, partyWindow: null, counts: 0};
-    return {readFrame, get info(){ return info }, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,
+    return {readFrame, get info(){ return info }, memoStats, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,
       // all item pictures (loadIcons on G.iicons), sorted by tab: matching only looks at the open tab's kind of items
       // a tab chip was clicked: look everywhere now and send the next steady read even when it didn't change
       invNow(){ for (const k in invSent) delete invSent[k]; invNext = null; lastInv = -Infinity },
@@ -1010,8 +1051,8 @@
     if (want.map) crops.map = mapTextCrop(img);
     if (want.job){ crops.job = jobTextCrop(img); crops.name = nameTextCrop(img) }
     if (want.chat) crops.chat = chatCrop(img);
-    return {ev, info, crops, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
+    return {ev, info, crops, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

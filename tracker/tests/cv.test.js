@@ -26,6 +26,34 @@ const crop = (w, h, f) => { const d = new Uint8ClampedArray(w * h * 4); for (let
     for (const f of ["frame-046.png", "frame-042.png"]) assert.strictEqual(k("frame-000.png", "nameTextCrop"), k(f, "nameTextCrop"), "name crop stable") }
   console.log("ocrcache ok");
 
+  // EXP bar verdicts: a jump is a red herring until the same reading comes twice (Danny 10-29)
+  { const {barVerdict, barJump} = require("../app/readers.js"), last = {exp: 18572, pct: 64.09, level: 22};
+    const v = (bar, o = {}) => barVerdict({bar, last, level: 22, steady: false, agrees: true, fits: true, ...o});
+    assert.strictEqual(barVerdict({bar: {exp: 5, pct: 1}, last: null, level: 22, fits: true}), true, "first reading");
+    assert.strictEqual(v({exp: 18757, pct: 64.72}), true, "a normal gain agreeing with the level is taken at once");
+    assert.strictEqual(v({exp: 18572, pct: 64.09}), false, "no change: no event");
+    assert.strictEqual(v({exp: 20000, pct: 76}), false, "+12 % in one read: wait for the repeat");
+    assert.strictEqual(v({exp: 20000, pct: 76}, {steady: true}), true, "the same jump read twice is real");
+    assert.strictEqual(v({exp: 20000, pct: 76}, {steady: true, fits: false}), false, "a repeat that fits no level is still a misread");
+    assert.strictEqual(v({exp: 18000, pct: 62.1}), false, "EXP going down (misread digit) is a jump too");
+    assert.strictEqual(v({exp: 18000, pct: 62.1}, {steady: true}), true, "a death loss shows twice and is taken");
+    assert.strictEqual(barJump({exp: 30, pct: 0.4}, last, 23), false, "a level-up resets the bar: not a jump");
+    assert.strictEqual(barJump({exp: 18757, pct: 68}, last, 22), false, "+3.9 % is under the 5 % line") }
+
+  // dirty-region memo: same events with it on or off over a run of real frames (repeats, changes, back again), and a stale
+  // answer can't stick: every 8th identical frame is read anyway
+  { const R = require("../app/readers.js"), G = require("../app/gamedata.json"), readPng = require("./cv_util.js");
+    const imgs = Object.fromEntries(["frame-000", "frame-006", "frame-046", "frame-042"].map(n => [n, R.native(readPng(path.join(__dirname, "frames", n + ".png")))]));
+    const seq = [..."0000600066604626004444"].map(c => ({0: "frame-000", 6: "frame-006", 4: "frame-046", 2: "frame-042"})[c] || "frame-042");
+    const run = off => { const rd = R.createReaders(G, null); rd.memoStats.off = off; const out = []; let t = 1e6;
+      for (const n of seq){ t += 500; out.push(JSON.stringify(rd.readFrame(imgs[n], t, imgs[n]))) } return {out, st: rd.memoStats} };
+    const on = run(false), off = run(true);
+    assert.deepStrictEqual(on.out, off.out, "memo on = memo off, frame by frame");
+    assert.ok(on.st.hits > 0 && on.st.hits > on.st.reads / 2, `memo used (${on.st.hits} skipped, ${on.st.reads} read)`);
+    const rd = R.createReaders(G, null); let n = 0; for (let i = 0; i < 24; i++) rd.readFrame(imgs["frame-000"], 1e6 + i * 500, imgs["frame-000"]);
+    assert.ok(rd.memoStats.reads >= 2 + 2 * 2, "identical frames are still re-read every 8th: " + rd.memoStats.reads);
+    console.log(`memo ok (${on.st.hits} skipped, ${on.st.reads} read over ${seq.length} frames)`) }
+
   // speed guard: a whole 2560x1440 frame must stay far from the 500 ms budget (measured ~7 ms in 0.2.93; the limit is
   // loose so a slow CI box doesn't flake, tight enough to catch an accidental per-pixel scan of the whole frame)
   const {bench} = require("./cv_bench.js"), {rows} = bench(), ms = Object.fromEntries(rows);

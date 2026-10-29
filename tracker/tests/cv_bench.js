@@ -22,6 +22,10 @@ function bench(){
   add("chat crop (death/box checks only)", time(() => R.chatCrop(img)));
   let t = 0; const small = {...img};
   add("whole frame read (steady state)", time(() => R.work(rd, {frame: small, t: t += 500, want: {}})));
+  const rd2 = R.createReaders(G, null); rd2.memoStats.off = true; let t2 = 0;
+  add("  same, region memo off", time(() => rd2.readFrame(img, t2 += 500, img), 40));
+  const rd3 = R.createReaders(G, null); let t3 = 0;
+  add("  same, region memo on", time(() => rd3.readFrame(img, t3 += 500, img), 40));
   return {img, rows};
 }
 module.exports = {bench, full};

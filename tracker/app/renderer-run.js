@@ -39,7 +39,7 @@ async function start(){
   kpqReset(); held = false; barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; boxHad = 0; boxPending = null; boxSeen = new Map(); Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
   engine = makeEngine(ICONS, null, settings.invArea || null, settings.glyphs || [], settings.invLast || null); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
-  mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; kpqSent = 0; FPS = 2; slowTicks = 0;
+  mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; kpqSent = 0; FPS = 2; slowTicks = 0; perfReset();
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   feed = GrindFeed.createFeed(G); feedSep("Started tracking");
@@ -61,7 +61,7 @@ async function stop(){
     const t = Date.now(); wrap = {t};
     if (session.state.pausedAt === null) pauseAt(t);
     if (kpq?.on) kpqEnd(t, true, "stopped");
-    log("wrap", {}); feedAdd(feed?.step(session.state, t, feedWho(), true)); feedSep("Stopped");
+    log("wrap", {}); feedAdd(feed?.step(session.state, t, feedWho(), true)); feedSep("Stopped"); { const pl = perfLine(); if (pl) note(pl) }
     if (video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {});
     $("#status").textContent = "Stopped. Open your inventory on Equip, Use and Etc for a second each, then add a name or note if you like and press Finalize log.";
     render(); $("#wrap").scrollIntoView?.({block: "nearest"});

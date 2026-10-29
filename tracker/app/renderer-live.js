@@ -7,15 +7,22 @@ async function toPng(c){
 }
 // job from the status bar every 30 s, when the player left the job on "Auto": taken once the same job is read twice running
 const ocrCache = GrindOcrCache.createOcrCache();   // core/ocrcache.js: same crop pixels, same text, no second Tesseract run
-const ocrText = c => ocrCache.run(c, async c => host.ocr(await toPng(c)));
+const ocrText = c => ocrCache.run(c, async c => { const t = Date.now(); try { return await host.ocr(await toPng(c)) } finally { perf("ocr", Date.now() - t) } });
 let lastJob = 0, jobSeen = null, jobNow = null, charName = null, charSeen = null;   // charName: History, and KPQ rounds (Settings > KPQ board name)
 async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders.jobTextCrop), or null; nc: the name crop
   const sess = session, sl = slicer;
   // the character name (History, KPQ board): taken once the same name reads twice in a row
-  if (nc){ const n = GrindReaders.nameFromText(await ocrText(nc)); if (n && n === charSeen && n !== charName){ charName = n; note("Character: " + n) } charSeen = n }
+  // the job box holds both ("Archer" over "Turbow") and its pixels only change with a new job or name, so this crop is read
+  // from the OCR cache nearly every time; the wide status bar crop (HP/MP/EXP digits make it different every time, ~100 ms)
+  // is only the fallback when the box didn't give a job
+  let boxText = "";
+  if (nc){ boxText = await ocrText(nc); const n = GrindReaders.nameFromText(boxText); if (n && n === charSeen && n !== charName){ charName = n; note("Character: " + n) } charSeen = n }
   if (settings.job) return;
-  if (!c){ if (check && !check.job) check.jobWhy = "The level and job text on the status bar wasn't found."; return }
-  const text = await ocrText(c), job = GrindReaders.jobFromText(text);
+  let job = boxText ? GrindReaders.jobFromText(boxText) : null;
+  if (!job){
+    if (!c){ if (check && !check.job) check.jobWhy = "The level and job text on the status bar wasn't found."; return }
+    job = GrindReaders.jobFromText(await ocrText(c));
+  }
   log("job", {job});   // not the OCR text: the character name sits in the same box
   if (check && sess === session){ if (!job) check.jobWhy = "The status bar text was found but the job didn't read. Pick it by hand."; else if (!check.job){ check.job = job; check.late = check.ended } }
   if (job && job === jobSeen && job !== jobNow && sess === session && !settings.job){ jobNow = job; const e = {t, type: "job", name: job}; sess.add(e); sl.add(e) }
@@ -254,27 +261,60 @@ function levelNote(s){
 }
 const hm = h => h < 1 ? Math.round(h * 60) + " min" : h.toFixed(1) + " h";
 
+/* what reading costs on this PC, per stage (ms): shown at Stop in the event log and kept in the bug report. busy = share of
+   the time between Start and Stop that the window spent reading. */
+let PERF = {}, perfT0 = 0, perfLogged = 0, lastMemo = null;
+const perf = (k, ms) => { const p = PERF[k] ||= {n: 0, sum: 0, max: 0}; p.n++; p.sum += ms; if (ms > p.max) p.max = ms };
+function perfLine(){
+  const el = Date.now() - perfT0, avg = k => PERF[k] ? (PERF[k].sum / PERF[k].n).toFixed(1) : "-", hit = ocrCache.stats;
+  if (!PERF.tick || el < 5000) return "";
+  return `Reading cost: ${PERF.tick.n} frames read, ${skipped} skipped as unchanged; per frame: capture ${avg("grab")} ms, compare ${avg("same")} ms, read ${avg("read")} ms (slowest ${PERF.read ? Math.round(PERF.read.max) : "-"}), whole tick ${avg("tick")} ms = ${Math.round(PERF.tick.sum / el * 100)}% of one core's time; ${lastMemo && lastMemo.hits + lastMemo.reads ? Math.round(lastMemo.hits / (lastMemo.hits + lastMemo.reads) * 100) + "% of bar/clock reads skipped (strip unchanged); " : ""}text reader ${hit.misses} runs${PERF.ocr ? " (" + avg("ocr") + " ms each)" : ""}, ${hit.hits} answered from memory.`;
+}
+function perfReset(){ PERF = {}; perfT0 = Date.now(); perfLogged = 0; paceReset() }
+/* adaptive pace (Danny 10-29: "slow the capture if the user is stalled or went AFK"): 2 reads a second while anything is
+   happening (a bar change, pickup, map...), 1 after 45 s of nothing, one every 2 s after 3 min. The first thing that
+   changes puts it back to 2. slowCap: reads that run long keep it at 1 at best. The capture itself is told the same rate. */
+let lastActive = Date.now(), slowCap = false, paceNote = 0;
+const PACE_LABEL = {2: "", 1: "Quiet for 45 s: reading once a second.", 0.5: "Quiet for 3 min (AFK?): reading every 2 seconds."};
+function paceReset(){ lastActive = Date.now(); slowCap = false; paceNote = 0 }
+function setFps(rate, why){
+  if (rate === FPS) return;
+  FPS = rate;
+  try { video.srcObject.getVideoTracks()[0].applyConstraints({frameRate: rate}).catch(() => {}) } catch {}
+  log("pace", {fps: rate, why});
+  if (!slowCap || rate >= 2){ const m = PACE_LABEL[rate] || "Something moved: back to 2 reads a second."; if (rate < 2 || paceNote) note(m); paceNote = rate < 2 ? 1 : 0 }
+}
+function pace(t, active){
+  if (active) lastActive = t;
+  const idle = t - lastActive, want = idle > 180e3 ? 0.5 : idle > 45e3 ? 1 : 2;
+  setFps(slowCap ? Math.min(want, 1) : want, want < 2 ? "quiet" : "active");
+}
+
 let slowTicks = 0, skipped = 0;
 async function tick(){
   if (timer == null) return;   // stopped
   const t = Date.now(), eng = engine, sess = session;
+  let active = false;
   try {
     // game closed: the capture ends and the last frame would be read forever; minimized: no picture until it's back
     if (!video.srcObject?.active){ $("#status").textContent = "The game window closed. Press Stop, then Start once it's back."; throw null }
     if (!video.videoWidth){ $("#status").textContent = "No picture from the game (minimized?). Waiting..."; throw null }   // skip this tick
-    const f = grabFrame();
+    const f = grabFrame(); perf("grab", Date.now() - t);
     keepFrame(t);
-    if (sameAsLast(f)){ skipped++; throw null }
-    // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between (2 min once job and name are known)
+    const t1 = Date.now(), same = sameAsLast(f); perf("same", Date.now() - t1);
+    if (same){ skipped++; throw null }
+    // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between
     const want = {};
     if (!ocrBusy){
       if (deathPending && t - deathPending.last >= 1000){ deathPending.last = t; want.chat = true }
       else if (boxPending && t - boxPending.last >= 1000){ boxPending.last = t; want.chat = true; want.box = true }
       else if (t - lastOcr > 5000){ lastOcr = t; want.map = true }
-      else if ((!settings.job || !charName) && t - lastJob > (jobNow && charName ? 120e3 : 30e3)){ lastJob = t; want.job = true }
+      else if ((!settings.job || !charName) && t - lastJob > 30e3){ lastJob = t; want.job = true }
     }
-    const r = await eng.read({frame: f, t, want});
+    const t2 = Date.now(), r = await eng.read({frame: f, t, want}); perf("read", Date.now() - t2);
     if (timer == null || sess !== session || !r) throw null;   // stopped (or restarted) while reading, or the frame was lost
+    active = r.ev.some(e => e.type !== "glyph")
+    if (r.memo) lastMemo = r.memo;
     if (r.scale){ scale = r.scale; fastLeft = 19 }   // also at 1x: finding the scale is the slow part, so it's checked every 20 frames only
     for (const e of r.ev){
       if (wrap && e.type !== "inv" && e.type !== "wallet" && e.type !== "glyph") continue;   // after Stop: only the end inventory look counts
@@ -314,9 +354,11 @@ async function tick(){
   try { renderSnaps(render()) } catch {}
   try { feedAdd(feed?.step(session.state, t, feedWho())) } catch {}
   // over 250 ms a frame, 10 times running: read once a second instead of twice
-  const ms = Date.now() - t;
+  const ms = Date.now() - t; perf("tick", ms);
   slowTicks = ms > 250 ? slowTicks + 1 : 0;
-  if (slowTicks >= 10 && FPS === 2){ FPS = 1; $("#status").textContent = "Reading once a second to keep your PC smooth (big screen)." }
+  if (slowTicks >= 10 && !slowCap){ slowCap = true; $("#status").textContent = "Reading once a second to keep your PC smooth (big screen)." }
+  pace(t, active);
+  if (t - perfLogged > 60e3){ perfLogged = t; const l = perfLine(); if (l) log("perf", {text: l}) }
   timer = setTimeout(tick, Math.max(50, 1000 / FPS - ms));
 }
 
