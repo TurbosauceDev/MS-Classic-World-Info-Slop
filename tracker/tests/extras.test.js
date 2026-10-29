@@ -142,6 +142,10 @@ const path = require("path"), {chromium} = require("playwright");
     settings = {...settings, bag: {main: true, every: 5}}; return {idle, live, hot, off} });
   if (bag.idle.join() !== "equip:idle,use:idle,etc:idle" || bag.live.join() !== "equip:ok,use:soon,etc:now" || bag.hot !== "etc" || !bag.off) fail("bag icons", bag);
 
+  // monkey seed 7 (CI 10-29): the bag setting toggled with no session used to render() into session.stats() on null
+  const bagNoSess = await page.evaluate(async () => { const keep = session; session = null; try { $("#bagMain").click(); await new Promise(r => setTimeout(r, 100)); return "ok" } catch (e) { return String(e) } finally { session = keep } });
+  if (bagNoSess !== "ok") fail("bag setting without a session", bagNoSess);
+
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   console.log("extras test passed");

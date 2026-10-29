@@ -247,7 +247,7 @@ function recap(list){
     + (best ? `. Fastest map: ${esc(best[0])} (${fmt(best[1].exp / best[1].min * 60)} EXP/hr)` : "") + `</div>`;
 }
 $("#csv").onclick = async () => { const r = await host.exportCsv(); $("#status").textContent = r?.error || "Saved to Documents: " + (r?.file || "").split(/[\\/]/).pop() };
-const bagSave = () => host.settings({bag: {main: $("#bagMain").checked, every: GrindBag.every($("#bagEvery").value)}}).then(s => { settings = s; render() });
+const bagSave = () => host.settings({bag: {main: $("#bagMain").checked, every: GrindBag.every($("#bagEvery").value)}}).then(s => { settings = s; if (session) render() });
 $("#bagMain").onchange = $("#bagEvery").onchange = bagSave;
 $("#autoPause").onchange = e => host.settings({autoPause: e.target.checked}).then(s => settings = s);
 $("#ontop").onchange = e => host.settings({onTop: e.target.checked}).then(s => settings = s);
