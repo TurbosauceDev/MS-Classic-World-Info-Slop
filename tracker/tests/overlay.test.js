@@ -612,6 +612,11 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     // other cards may sit on top of it: the blocker neither moves them nor is moved by them
     const pos = await page.evaluate(() => { const r = e => { const b = document.querySelector(e).getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top)] }; return [r("#ovw-bag"), r("#ovw-blocker")] });
     if (JSON.stringify(pos) !== JSON.stringify([[110, 610], [100, 600]])) fail("blocker does not repel cards", pos);
+    // stacked bars (Danny 10-29: Stacked showed nothing): each keeps its height, one under the other
+    await page.evaluate(() => setP("blocker", "vlay", "col"));
+    st = await page.evaluate(() => [...document.querySelectorAll("#ovw-blocker .vb")].map(e => { const r = e.getBoundingClientRect(); return [Math.round(r.height), Math.round(r.top)] }));
+    if (st.some(x => x[0] !== 20) || !(st[0][1] < st[1][1] && st[1][1] < st[2][1])) fail("stacked blocker bars", st);
+    await page.evaluate(() => setP("blocker", "vlay", "row"));
     // resize like any card, no vitals yet = empty bars (dimmed), removing the blocker lifts the capture exclusion
     await page.evaluate(() => setP("blocker", "w", 800));
     const w = await page.evaluate(() => Math.round(document.querySelector("#ovw-blocker").getBoundingClientRect().width));
