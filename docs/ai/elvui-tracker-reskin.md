@@ -27,7 +27,7 @@ ElvUI's entire visual identity is a handful of defaults plus one discipline:
 
 | ElvUI idea | Tracker implementation |
 |---|---|
-| Theme carries the look | `themes.js` themes now have an optional `sk` panel style; the new **Elv preset** is exactly ElvUI's palette (#0f0f0f / #1a1a1a / #3f3f3f / **#1785d1**) and sets `sk:"elv"` |
+| Theme carries the look | `tracker/app/themes.js` themes now have an optional `sk` panel style; the new **Elv preset** is exactly ElvUI's palette (#0f0f0f / #1a1a1a / #3f3f3f / **#1785d1**) and sets `sk:"elv"` |
 | Editor picks the style | Theme editor gained **Panel style: Glass / Elv (crisp)**; any custom palette can wear the re-skin; it round-trips through `clean()`/`encode()` so share codes and `.mstheme` files carry it |
 | One source of truth drives every surface | `body.skin-elv` toggled in the tracker window (`themeShow`) and the overlay window (rides the 500 ms push as `th.sk`) — same class, two stylesheets |
 | Square + crisp + flat | `.skin-elv` blocks in index.html/overlay.html: radius 0 on cards/buttons/inputs/scrollbars/bars, `backdrop-filter:none`, card shadows off, bars on dark tracks, focus-view gradients flattened |
