@@ -133,7 +133,7 @@ function resetTracker(){
 $("#resetBtn").onclick = resetTracker;
 // what History keeps of a run (saved at Finalize log; the same thing autosaved every minute while tracking)
 function sessionRecord(snapRec){
-  return {shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), name: runName() || null, note: $("#runNote").value.trim() || null, ...runExtras(), kpq: kpq?.on ? {mode: settings.kpqMode || "Bonus", rounds: kpq.rounds, timeline: kpqTimeline(Date.now()), best: kpq.times.length ? Math.round(Math.min(...kpq.times)) : null, avg: kpq.times.length ? Math.round(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length) : null} : null, lootValue: Math.round(session.stats().lootValue), levelUps: session.state.levelUps.map(({t, ...l}) => l),
+  return {shared: !!settings.share, ...session.shareable(), snap: snapRec, inv: session.stats().inv.map(({id, n, alike}) => ({id, n, alike})), name: runName() || null, note: $("#runNote").value.trim() || null, ...runExtras(), kpq: kpq?.on ? {mode: kpq.history.some(h => h.raw?.bonus) ? "Bonus" : "Rush", points: kpq.history.reduce((a, h) => a + (h.score?.total || 0), 0), rounds: kpq.rounds, timeline: kpqTimeline(Date.now()), best: kpq.times.length ? Math.round(Math.min(...kpq.times)) : null, avg: kpq.times.length ? Math.round(kpq.times.reduce((a, b) => a + b, 0) / kpq.times.length) : null} : null, lootValue: Math.round(session.stats().lootValue), levelUps: session.state.levelUps.map(({t, ...l}) => l),
     // EXP, farming time and kills per map visited (the run's map is the one with the most EXP, not where it ended)
     maps: session.stats().maps.slice(0, 12).map(m => ({map: m.map, name: m.name, exp: Math.round(m.exp), min: Math.round(m.min * 10) / 10, kills: m.kills}))};
 }
@@ -179,7 +179,7 @@ function showSummary(t1){
   const s = session.stats(), a = snaps.start, b = snaps.end;
   const snapExp = a && b && b.t > a.t && a.level != null && b.level != null ? GrindSession.expBetween(G, a, b) : null, exp = snapExp ?? s.exp;
   const clockH = Math.max(1 / 60, (t1 - runT0) / 3.6e6), act = s.activeMin;
-  const bonus = kpq?.on && (settings.kpqMode || "Bonus") === "Bonus" ? {min: (kpq.stageTimes["80000500"] || []).reduce((x, y) => x + y, 0) / 60, exp: kpq.stageExp["80000500"] || 0} : null;
+  const bonus = kpq?.on && kpq.history.some(h => h.raw?.bonus) ? {min: (kpq.stageTimes["80000500"] || []).reduce((x, y) => x + y, 0) / 60, exp: kpq.stageExp["80000500"] || 0} : null;
   const perMin = bonus?.min > 0 ? bonus.exp / bonus.min : act > 0 ? exp / act : 0, net = s.mesos + s.lootValue - s.usedCost;
   const inv = s.inv.filter(x => x.alike === 1).slice(0, 40), tabName = k => INV_TABS.find(x => x[0] === k)?.[1] || k;
   $("#sumBody").innerHTML = (sumName ? `<div style="font-weight:600">${esc(sumName)}</div>` : "") + (sumNote ? `<div class="hnote">${esc(sumNote)}</div>` : "") + `<div class="note">${clock(runT0)} → ${clock(t1)} · ${hm(clockH)} on the clock, ${hm(act / 60)} farming`
@@ -188,7 +188,7 @@ function showSummary(t1){
     + cell("EXP gained", sg(exp), snapExp != null ? "from the start and end EXP bar" : "from the live count")
     + cell("EXP/hr", fmt(exp / clockH), "over the whole run (" + hm(clockH) + ")")
     + cell("EXP per active minute", fmt(perMin), bonus?.min > 0 ? `Bonus stage only: ${fmt(bonus.exp)} EXP in ${mss(bonus.min * 60)}` : "time spent farming only")
-    + cell("Kills · deaths", `${fmt(s.kills)} · <span class="${s.deaths ? "neg" : ""}">${s.deaths}</span>`, kpq?.on ? `KPQ ${settings.kpqMode || "Bonus"}: ${kpq.rounds} round${kpq.rounds === 1 ? "" : "s"}` : "")
+    + cell("Kills · deaths", `${fmt(s.kills)} · <span class="${s.deaths ? "neg" : ""}">${s.deaths}</span>`, kpq?.on ? `KPQ: ${kpq.rounds} round${kpq.rounds === 1 ? "" : "s"}` + (kpq.history.some(h => h.score) ? ", " + fmt(kpq.history.reduce((a, h) => a + (h.score?.total || 0), 0)) + " pts" : "") : "")
     + cell("Mesos looted", sgm(s.mesos), mz(s.mesos / clockH) + "/hr over the run")
     + cell("Mesos used", s.used.some(u => u.n) ? sgm(-s.usedCost) : "-", s.used.some(u => u.n) ? "potions, food, arrows" : "nothing counted")
     + cell("Items looted are worth", `<span class="pos">~${mz(s.lootValue)}</span>`, "approx., player-shop or NPC price")

@@ -68,6 +68,8 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       hostile: {runs: X, players: X, hours: "x", updated: X, rows: [{map: X, mapName: X, party: X, level: X, expHr: X, group: X}, {map: 100000000, level: -5, expHr: 1e308}],
         mobs: {[X]: {kills: X, players: X, items: {[X]: X}}, "100100": {kills: 5, players: X, items: {"2000000": 1e9}}},
         kpq: {rounds: X, groups: X, board: {Rush: [{best: null, median: X, rounds: X, names: [X, 5], party: X, level: X, job: X, date: X}], Bonus: [{best: X, rounds: X, names: X, level: X}]}}},
+      scored: {runs: 3, players: 1, hours: 1, rows: [], kpq: {rounds: 1, groups: 1, board: {}, list: [{g: "k0", d: "2026-10-29", p: 1, c: 300, k: 1, s: [60, 60, 60, 60, 60, null], n: [X]}],
+        weights: {PAN_PTS: 1000}, scores: {ref: {n: 3, minRounds: 10, med: {}}, total: [{pts: 1000, names: [X], party: 1, provisional: true, rush: 1000, bonus: null, date: "2026-10-29"}], rush: [{pts: X, names: [X], party: X, clear: 300, speed: X}], bonus: [], could: [], mmr: []}}},
       hostileName: {runs: 3, players: 1, hours: 1, rows: [], kpq: {rounds: 2, groups: 1, board: {Bonus: [{best: 5000, exp: 4000, mesos: 1000, clear: 600, rounds: 1, names: [X]}]}}}};
     for (const [name, body] of Object.entries(replies)){
       const {p, errs, ctx} = await page();
@@ -76,7 +78,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       const r = await p.evaluate(re => ({x: window.__x, live: /Live from/.test(document.body.innerText), bad: (document.querySelector("#trkruns").innerText + document.querySelector("#trkkpq").innerText).match(new RegExp(re))?.[0],
         asText: document.querySelector("#trkkpq").innerText.includes('<img src=x onerror="window.__x=1">')}), BADTEXT.source);
       // a hostile player name shows up as the literal text, not as markup and not dropped
-      check(!errs.length && !r.x && r.live && !r.bad && (name !== "hostileName" || r.asText), `tracker server reply "${name}" (${JSON.stringify(r)} ${errs.join("; ")})`); await ctx.close() } }
+      check(!errs.length && !r.x && r.live && !r.bad && (!["hostileName", "scored"].includes(name) || r.asText), `tracker server reply "${name}" (${JSON.stringify(r)} ${errs.join("; ")})`); await ctx.close() } }
 
   // 6. Price check: a file that isn't a picture is reported, not left on "Reading…"
   { const {p, errs, ctx} = await page(); await p.goto(URL); await open(p, "inv");

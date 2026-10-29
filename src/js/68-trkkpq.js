@@ -254,6 +254,42 @@ function board(list){
   }
   return [...g.values()].sort(F.mode === "Rush" ? (a, b) => a.best.c - b.best.c : (a, b) => score(b.best) - score(a.best));
 }
+/* Scored boards (server summary.kpq.scores, 2026-10-29): points per round from the tracker's raw numbers, computed by the server with
+   tracker/core/kpqscore.js. Five boards, one line per party or player; filters above don't apply (they work on the plain round list). */
+const SB = [["total", "Best full run"], ["rush", "Rush"], ["bonus", "Bonus"], ["could", "What could have been"], ["mmr", "Average score"]];
+let sbSel = (savedState("trkks", {b: "total"}).b);
+function scoreCard(k, mine, crank, rank){
+  const sc = k.scores, w = k.weights || {}, ref = sc?.ref || {};
+  if (!sc || !SB.some(([id]) => sc[id]?.length)) return `<div class="card kb-card kb-scored"><h3>Scored boards</h3><p class="sub">Rounds sent from Grind Tracker 0.3.20 and later are scored: Rush from stage speed, Bonus from EXP, mesos and drops. None have arrived yet.</p></div>`;
+  if (!sc[sbSel]?.length) sbSel = SB.find(([id]) => sc[id]?.length)[0];
+  const list = sc[sbSel], pv = e => e.provisional ? ' <span class="sub" title="No recorded average yet: speed points are 0 and the Bonus scale is a placeholder">†</span>' : "";
+  const who = e => ((e.names || []).length ? `<b>${e.names.map(crank).join(", ")}</b> <span class="sub">` : "<span>") + (e.party > 1 ? "party of " + e.party : "solo") + "</span>";
+  const lj = e => `<td>${e.level ? "Lv " + e.level : "–"}${e.job ? ` <span class="sub">${esc(e.job)}</span>` : ""}</td>`;
+  const cols = {
+    total: [["Score", e => `<b>${fmt(e.pts)}</b>${pv(e)}`], ["Rush", e => fmt(e.rush)], ["Bonus", e => e.bonus == null ? "–" : fmt(e.bonus)]],
+    rush: [["Rush points", e => `<b>${fmt(e.pts)}</b>${pv(e)}`], ["Clear", e => mss(e.clear)], ["Speed points", e => (e.speed >= 0 ? "+" : "") + fmt(e.speed) + (e.perfect ? ' <span class="pill p-good">perfect</span>' : "")]],
+    bonus: [["Bonus points", e => `<b>${fmt(e.pts)}</b>${pv(e)}`], ["EXP", e => fmt(e.exp)], ["Mesos", e => fmt(e.mesos)], ["Drops (NPC value)", e => fmt(e.npc)], ["Bonus time", e => mss(e.sec)]],
+    could: [["Score", e => `<b>${fmt(e.pts)}</b>${pv(e)}`], ["Best Rush", e => fmt(e.rush)], ["Best Bonus", e => fmt(e.bonus)], ["Same round", e => e.sameRound ? "yes" : "no"]],
+    mmr: [["Average", e => `<b>${fmt(e.pts)}</b>${pv(e)}`], ["Rounds", e => fmt(e.rounds)], ["Best round", e => fmt(e.best)]],
+  }[sbSel];
+  const trs = list.map((e, i) => { const me = mine && (e.names || []).some(n => n.toLowerCase() === mine);
+    return `<tr${me ? ' class="kb-me"' : ""}><td class="num">${rank(i)}</td>${cols.map(([, f]) => `<td class="num">${f(e)}</td>`).join("")}<td>${who(e)}</td>${lj(e)}<td class="sub">${esc(e.date || "")}</td></tr>` }).join("");
+  const seg = `<div class="seg small" role="radiogroup" aria-label="Scored board">${SB.map(([id, t]) => `<button role="radio" type="button" aria-checked="${id === sbSel}" data-sb="${id}"${sc[id]?.length ? "" : " disabled"}>${t}</button>`).join("")}</div>`;
+  const hasRef = Object.keys(ref.med || {}).length, desc = {
+    total: "One round's Rush points plus its Bonus points, best round per party or player.",
+    rush: "Stage speed against the recorded average and best, plus drops.",
+    bonus: "EXP, mesos and drops (at their NPC sell price) gained in the Bonus map, plus item bonuses.",
+    could: "A player's best Rush plus their best Bonus, even from different rounds: the run they could have had.",
+    mmr: `Average total over a player's rounds, ${3}+ rounds needed so one lucky run doesn't rank.`}[sbSel];
+  return `<div class="card kb-card kb-scored"><h3>Scored boards</h3>${seg}<p class="sub">${desc}</p>
+    <div class="tblwrap"><table><thead><tr><th class="num">Rank</th>${cols.map(([h]) => `<th class="num">${h}</th>`).join("")}<th>Who</th><th>Level and job</th><th>Date</th></tr></thead><tbody>${trs}</tbody></table></div>
+    <details class="kb-how"><summary>How rounds are scored</summary><ul class="tiny">
+      <li><b>Rush</b> = ${fmt(w.CLEAR_BASE || 1000)} for a clear + ${w.STAGE_W || 100} per stage for how far it beat the recorded average (the fastest recorded stage = +${w.STAGE_W || 100}, up to +${(w.STAGE_W || 100) * 1.5} for a new record, as far over average as the record is under = −${w.STAGE_W || 100}) + ${w.PERFECT || 500} for a near-perfect round (every stage ≥ ${Math.round((w.PERFECT_Z || .8) * 100)}% of the way to the record) + drop points.</li>
+      <li><b>Bonus</b> = (EXP + mesos + NPC sell price of every drop) × a scale that makes the median recorded Bonus worth 1,000, + drop points.</li>
+      <li><b>Drop points</b>: ${w.ETC_PTS || 5} per Etc item, ${w.USE_PTS || 10} per Use item, ${w.SCROLL_PTS || 150} per scroll, ${w.EQUIP_PTS || 25} per equip, ${fmt(w.PAN_PTS || 1000)} for a Pan Lid. NPC prices are the game's (OSMS export); the weights are our own design.</li>
+      <li>${hasRef ? `Averages come from ${fmt(ref.n || 0)} recorded rounds (a stage needs ${ref.minRounds || 10}), so scores shift a little as more rounds arrive.` : `No averages yet (each stage needs ${ref.minRounds || 10} recorded rounds, ${fmt(ref.n || 0)} so far): speed points are 0 and rounds are marked †. Nothing is made up; the averages come from rounds players send.`}</li>
+      <li>The tracker also shows market value (player prices) for drops; only the points use NPC prices.</li></ul></details></div>`;
+}
 const sel = (id, label, opts) => `<label>${label} <select data-f="${id}">${opts.map(([v, t]) => `<option value="${v}"${F[id] === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>`;
 function render(k){
   const list = k.list, mine = KPQT.name().toLowerCase();
@@ -311,7 +347,7 @@ function render(k){
     <p class="sub">The filters above don't apply here. "~" = timed with the PC clock, "⌨" = timed on the site's <a href="#" data-go="kpqt">KPQ timer</a>.</p>`
     : `<p class="sub">No rounds recorded yet today${latest ? `. The latest on file is ${esc(latest)}` : ""}.</p>`}</div>`;
   return `<div class="card kb-card">${filt}<p class="sub kb-count">${fmt(shown)} round${shown === 1 ? "" : "s"} from ${fmt(b.length)} ${b.length === 1 ? "party or player" : "parties and players"}${shown < list.length ? ` (of ${fmt(list.length)})` : ""}. Click a line for its stage times.</p>${body}
-    <p class="sub">${rush ? "" : "EXP and mesos are the best a party member's tracker saw that round. "}Level and job are the sender's. "~" = timed with the PC clock, "⌨" = timed on the site's <a href="#" data-go="kpqt">KPQ timer</a>.</p></div>${todayCard}${fastHtml}`;
+    <p class="sub">${rush ? "" : "EXP and mesos are the best a party member's tracker saw that round. "}Level and job are the sender's. "~" = timed with the PC clock, "⌨" = timed on the site's <a href="#" data-go="kpqt">KPQ timer</a>.</p></div>${scoreCard(k, mine, crank, rank)}${todayCard}${fastHtml}`;
 }
 function splits(e){
   const tot = e.s.slice(0, 5).reduce((a, x) => a + (x || 0), 0) || 1;
@@ -320,6 +356,7 @@ function splits(e){
 function wire(root, redraw){
   root.addEventListener("change", e => { const s = e.target.closest("select[data-f]"); if (s){ F[s.dataset.f] = s.value; keep(); redraw() } });
   root.addEventListener("click", e => {
+    const sb = e.target.closest("[data-sb]"); if (sb){ sbSel = sb.dataset.sb; try { localStorage.setItem("trkks", JSON.stringify({b: sbSel})) } catch(e) {} redraw(); return }
     if (e.target.closest("[data-kreset]")){ Object.assign(F, DEF); keep(); redraw(); return }
     if (e.target.closest("a")) return;
     const r = e.target.closest("tr.kb-row, tr.kb-trow"); if (r){ if (r.dataset.ti != null){ open = null; today = today === +r.dataset.ti ? null : +r.dataset.ti }

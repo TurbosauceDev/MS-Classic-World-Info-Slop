@@ -52,6 +52,19 @@ const KPQ_IDS = ["80000000", "80000100", "80000200", "80000300", "80000400", "80
 const kpqName = v => typeof v === "string" && /^[A-Za-z0-9]{2,12}$/.test(v.trim()) ? v.trim() : null;
 // fastest believable KPQ clear: 4 minutes (Danny 2026-10-21); faster ones are kept but never counted
 export const KPQ_MIN = 240;
+// the v2 raw round (tracker 0.3.20+): numbers only, each bounded, anything else dropped; scores are never trusted from the client
+const LOOT_KEYS = ["etc", "use", "scroll", "equip", "pan"];
+function cleanLoot(l){
+  const n = (v, hi) => typeof v === "number" && isFinite(v) ? Math.min(hi, Math.max(0, Math.round(v))) : 0;
+  l = l && typeof l === "object" ? l : {};
+  return {...Object.fromEntries(LOOT_KEYS.map(k => [k, n(l[k], 500)])), npc: n(l.npc, 5e7)};
+}
+function cleanRaw(v, stages){
+  if (!v || typeof v !== "object") return null;
+  const n = (x, hi) => typeof x === "number" && isFinite(x) ? Math.min(hi, Math.max(0, Math.round(x))) : 0;
+  const b = v.bonus && typeof v.bonus === "object" ? {sec: n(v.bonus.sec, 3600), exp: n(v.bonus.exp, 1e7), mesos: n(v.bonus.mesos, 1e7), kills: n(v.bonus.kills, 5000), loot: cleanLoot(v.bonus.loot)} : null;
+  return {stages, rush: {loot: cleanLoot(v.rush?.loot)}, bonus: b && b.kills > 0 ? b : null};
+}
 export function cleanKpq(r){
   const num = (v, lo, hi) => typeof v === "number" && isFinite(v) && v >= lo && v <= hi;
   if (!r || typeof r !== "object") return {error: "not a round"};
@@ -66,7 +79,7 @@ export function cleanKpq(r){
     mode: r.mode === "Rush" ? "Rush" : "Bonus", party: r.party | 0, level: r.level == null ? null : Math.round(r.level),
     job: typeof r.job === "string" ? r.job.slice(0, 40) || null : null, clear: Math.round(r.clear), total: cnt(r.total, 7200),
     clock: r.clock ? 1 : 0, exp: cnt(r.exp, 1e7), mesos: cnt(r.mesos, 1e7), stages, name: kpqName(r.name),
-    src: r.src === "site" ? "site" : "tracker"};   // site = the site's KPQ timer (stages split by key press, 2026-10-21)
+    src: r.src === "site" ? "site" : "tracker", raw: cleanRaw(r.v2, stages)};   // site = the site's KPQ timer (stages split by key press, 2026-10-21)
   let why = null;
   if (round.clear < KPQ_MIN || round.clear > 3600) why = "clear time";
   else if (round.total != null && round.total < round.clear) why = "total under clear";

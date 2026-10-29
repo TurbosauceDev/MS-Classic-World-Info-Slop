@@ -13,6 +13,7 @@
                      (localStorage fbkey) */
 import G from "./gamedata.json" with {type: "json"};
 import {cleanRun, cleanKpq, median, KPQ_MIN} from "./check.js";
+import Kpq from "../../tracker/core/kpqscore.js";   // the same scoring the tracker previews with
 import {ADMIN_HTML} from "./admin.js";
 
 const CORS = {"access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST", "access-control-allow-headers": "content-type, authorization"};
@@ -60,6 +61,46 @@ async function postRun(req, env){
 
 // KPQ rounds: a round takes minutes, so 12 an hour per tracker is plenty; per IP the same daily cap as runs
 const KPQ_PER_HOUR = 12;
+// KPQ scored boards (2026-10-29): Rush, Bonus, best full run, "what could have been" (a group's best Rush + best Bonus, which
+// can be different rounds) and an MMR-style average. Scores come from core/kpqscore.js over the raw numbers, never from the client.
+// One line per party/player like the older boards; a party's trackers send the same round, so those pair into one round whose
+// best-scoring member counts. Rounds sent before 0.3.20 have stage times only: they score Rush (no loot), never Bonus.
+const MMR_MIN_ROUNDS = 3;   // our own floor: an average of 1-2 rounds is a fluke, not a rating
+function kpqScores(kq, pfind, net, lab){
+  const pj = t => { try { return JSON.parse(t || "{}") } catch { return {} } };
+  const rounds = [], open = new Map();
+  for (const r of kq){
+    const g = r.party > 1 && r.grp ? "P" + pfind("p" + r.grp) : "S" + net(r.install), key = [g, r.date, r.hour].join("|");
+    const prev = (open.get(key) || []).find(e => Math.abs(e.rows[0].clear - r.clear) <= 5 && !e.rows.some(x => x.install === r.install));
+    if (prev){ prev.rows.push(r); continue }
+    const e = {g, rows: [r]}; rounds.push(e); (open.get(key) || open.set(key, []).get(key)).push(e);
+  }
+  const rawOf = r => r.raw ? pj(r.raw) : {stages: pj(r.stages), rush: {loot: Kpq.emptyLoot()}, bonus: null};
+  const ref = Kpq.buildRef(rounds.map(e => { const raws = e.rows.map(rawOf); return {stages: raws[0].stages, bonus: raws.map(x => x.bonus).filter(Boolean).sort((a, b) => ((b.exp || 0) + (b.mesos || 0)) - ((a.exp || 0) + (a.mesos || 0)))[0] || null} }));
+  for (const e of rounds){
+    let best = null;
+    for (const r of e.rows){ const raw = rawOf(r), sc = Kpq.score(raw, ref); if (!best || sc.total > best.sc.total) best = {sc, raw, r} }
+    const r = e.rows[0], names = [...new Set(e.rows.map(x => x.name).filter(Boolean))].slice(0, 6);
+    Object.assign(e, best, {names, rush: best.sc.rush, bonusSc: best.sc.bonus, row: {party: r.party, level: best.r.level, job: best.r.job, date: r.date, at: r.received, clear: r.clear}});
+  }
+  const groups = new Map();
+  for (const e of rounds){ if (!groups.has(e.g)) groups.set(e.g, []); groups.get(e.g).push(e) }
+  const line = (g, e, pts, extra) => ({group: lab(g), pts: Math.round(pts), names: e.names, ...e.row, rounds: groups.get(g).length, provisional: e.sc.provisional, ...extra});
+  const top = a => a.sort((x, y) => y.pts - x.pts).slice(0, 50);
+  const out = {ref: {...ref, minRounds: Kpq.REF_MIN}, rush: [], bonus: [], total: [], could: [], mmr: []};
+  for (const [g, list] of groups){
+    const pick = f => list.filter(e => f(e) != null).sort((a, b) => f(b) - f(a))[0];
+    const br = pick(e => e.rush.pts), bb = pick(e => e.bonusSc?.pts), bt = pick(e => e.sc.total);
+    out.rush.push(line(g, br, br.rush.pts, {clear: br.row.clear, speed: br.rush.speed, perfect: br.rush.perfect > 0}));
+    if (bb) out.bonus.push(line(g, bb, bb.bonusSc.pts, {exp: bb.raw.bonus.exp, mesos: bb.raw.bonus.mesos, npc: bb.raw.bonus.loot.npc, sec: bb.raw.bonus.sec}));
+    out.total.push(line(g, bt, bt.sc.total, {rush: bt.rush.pts, bonus: bt.bonusSc?.pts ?? null}));
+    if (bb) out.could.push(line(g, br, br.rush.pts + bb.bonusSc.pts, {rush: br.rush.pts, bonus: bb.bonusSc.pts, sameRound: br === bb}));
+    if (list.length >= MMR_MIN_ROUNDS) out.mmr.push(line(g, bt, list.reduce((a, e) => a + e.sc.total, 0) / list.length, {best: bt.sc.total}));
+  }
+  for (const k of ["rush", "bonus", "total", "could", "mmr"]) out[k] = top(out[k]);
+  return out;
+}
+
 async function postKpq(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const c = cleanKpq(body);
@@ -77,6 +118,7 @@ async function postKpq(req, env){
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(body.install, ipday, now.toISOString(), r.date, r.hour, r.mode, r.party, r.level, r.job,
     r.clear, r.total, r.clock, r.exp, r.mesos, JSON.stringify(r.stages), grp, c.ok ? 1 : 0, c.why).run();
   if (r.name) await env.DB.prepare("INSERT OR REPLACE INTO kpq_names (kpq_id, name) VALUES (?, ?)").bind(ins.meta.last_row_id, r.name).run();
+  if (r.raw) await env.DB.prepare("INSERT OR REPLACE INTO kpq_raw (kpq_id, raw) VALUES (?, ?)").bind(ins.meta.last_row_id, JSON.stringify(r.raw)).run();
   if (r.src !== "tracker") await env.DB.prepare("INSERT OR REPLACE INTO kpq_src (kpq_id, src) VALUES (?, ?)").bind(ins.meta.last_row_id, r.src).run();
   return json({ok: true, counted: c.ok, why: c.why});
 }
@@ -139,8 +181,8 @@ export async function summary(db){
   // one person with fresh installs (or a whole household) can't make up the "3+ players" a map needs on their own
   const uf = new Map(), find = k => { let r = k; while (uf.has(r) && uf.get(r) !== r) r = uf.get(r); uf.set(k, r); return r },
     join = (a, b) => { const x = find(a), y = find(b); if (x !== y) uf.set(x, y) };
-  const kqFrom = t => `SELECT ${t}.install, ${t}.ipday, ${t}.date, ${t}.mode, ${t}.party, ${t}.level, ${t}.job, ${t}.clear, ${t}.total, ${t}.clock, ${t}.exp, ${t}.mesos, ${t}.stages, ${t}.grp, ${t}.hour, ${t}.received, n.name, x.src, ${t}.id AS id
-    FROM ${t} LEFT JOIN kpq_names n ON n.kpq_id = ${t}.id LEFT JOIN kpq_src x ON x.kpq_id = ${t}.id WHERE ${t}.ok = 1 AND ${t}.clear >= ?`;
+  const kqFrom = t => `SELECT ${t}.install, ${t}.ipday, ${t}.date, ${t}.mode, ${t}.party, ${t}.level, ${t}.job, ${t}.clear, ${t}.total, ${t}.clock, ${t}.exp, ${t}.mesos, ${t}.stages, ${t}.grp, ${t}.hour, ${t}.received, n.name, x.src, w.raw, ${t}.id AS id
+    FROM ${t} LEFT JOIN kpq_names n ON n.kpq_id = ${t}.id LEFT JOIN kpq_src x ON x.kpq_id = ${t}.id LEFT JOIN kpq_raw w ON w.kpq_id = ${t}.id WHERE ${t}.ok = 1 AND ${t}.clear >= ?`;
   // live + archive: an all-time board never loses a record to the archive move (the archive tables keep the same ids, so
   // the union comes back in send order and the merge below still pairs a party's trackers)
   const kq = (await db.prepare(`${kqFrom("kpq_rounds")} UNION ALL ${kqFrom("kpq_rounds_archive")} ORDER BY id`).bind(KPQ_MIN, KPQ_MIN).all()).results;
@@ -223,6 +265,8 @@ export async function summary(db){
       s: KS.map(id => st[id] ?? null), n: r.name ? [r.name] : [], src: r.src || "tracker", ins: new Set([r.install])};
     merged.push(e); (open.get(key) || open.set(key, []).get(key)).push(e);
   }
+  kpq.scores = kpqScores(kq, pfind, net, lab);
+  kpq.ref = kpq.scores.ref; kpq.weights = Kpq.WEIGHTS;
   kpq.list = merged.slice(-3000).map(({ins, ...e}) => e);
   const players = new Set(results.map(r => r.install)).size, hours = results.reduce((a, r) => a + r.minutes, 0) / 60;
   return {updated: new Date().toISOString(), runs: results.length, players, hours: Math.round(hours * 10) / 10, rows, mobs, times, kpq};

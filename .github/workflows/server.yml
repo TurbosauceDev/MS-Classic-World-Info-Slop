@@ -5,7 +5,7 @@ name: server
 on:
   push:
     branches: ["main"]
-    paths: ["server/**", ".github/workflows/server.yml"]
+    paths: ["server/**", "tracker/core/kpqscore.js", ".github/workflows/server.yml"]
   workflow_dispatch:
 jobs:
   deploy:

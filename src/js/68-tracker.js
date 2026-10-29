@@ -30,7 +30,13 @@ function trkKpqClean(k0){
   const list = arr(k.list).map(e0 => { const e = obj(e0), s = arr(e.s);
     return {g: tS(e.g), d: tS(e.d), at: tS(e.at), p: tI(e.p), l: tN(e.l), j: tS(e.j), c: tI(e.c), k: !!e.k, x: tN(e.x), m: tN(e.m), s: [0, 1, 2, 3, 4, 5].map(i => tN(s[i])),
       n: arr(e.n).map(tS).slice(0, 6), src: e.src === "site" ? "site" : "tracker"} }).filter(e => e.g && e.c > 0 && /^\d{4}-\d\d-\d\d$/.test(e.d));
-  return {rounds: tI(k.rounds), groups: tI(k.groups), board, list};
+  // scored boards (server 2026-10-29): numbers and short strings only, like the rest
+  const sc = obj(k.scores), rf = obj(sc.ref), W = obj(k.weights), scores = {ref: {n: tI(rf.n), minRounds: tI(rf.minRounds), med: Object.fromEntries(Object.keys(obj(rf.med)).filter(x => /^\d{8}$/.test(x)).map(x => [x, 1]))}};
+  for (const b of ["total", "rush", "bonus", "could", "mmr"]) scores[b] = arr(sc[b]).slice(0, 50).map(e0 => { const e = obj(e0);
+    return {pts: tI(e.pts), names: arr(e.names).map(tS).slice(0, 6), party: tI(e.party), level: tN(e.level), job: tS(e.job), date: tS(e.date), rounds: tI(e.rounds), provisional: !!e.provisional, clear: tI(e.clear), speed: tI(e.speed),
+      perfect: !!e.perfect, exp: tI(e.exp), mesos: tI(e.mesos), npc: tI(e.npc), sec: tI(e.sec), rush: tI(e.rush), bonus: e.bonus == null ? null : tI(e.bonus), sameRound: !!e.sameRound, best: tI(e.best)} });
+  const weights = Object.fromEntries(["CLEAR_BASE", "STAGE_W", "PERFECT", "PERFECT_Z", "ETC_PTS", "USE_PTS", "SCROLL_PTS", "EQUIP_PTS", "PAN_PTS"].map(x => [x, tN(W[x])]).filter(([, v]) => v != null));
+  return {rounds: tI(k.rounds), groups: tI(k.groups), board, list, scores, weights};
 }
 const trkMapName = r => D.mapnames[r.map] ?? D.maps[r.map]?.[0] ?? r.name ?? r.map;
 const trkMed = a => { const v = a.filter(x => x != null); return v.length ? median(v) : null };

@@ -262,4 +262,26 @@ assert.deepStrictEqual(again.archived, archived.archived, "a second rebuild does
 const archId = sql.prepare("SELECT id FROM runs_archive WHERE install = 'archrun0000000001'").get().id;
 [s, r] = await runsInbox("k".repeat(32));
 assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT COUNT(*) n FROM runs").get().n, "the inbox lists the hot table only, total matches");
+// KPQ scored boards (2026-10-29): v2 rounds carry raw stage/loot/Bonus numbers; the server scores them. No reference until 10 rounds.
+{
+  for (const t of ["kpq_rounds", "kpq_rounds_archive", "kpq_names", "kpq_src", "kpq_raw"]) sql.exec("DELETE FROM " + t);
+  const stg = c => ({"80000000": 60, "80000100": 50 + c, "80000200": 50, "80000300": 50, "80000400": 60}), loot = (o = {}) => ({etc: 0, use: 0, scroll: 0, equip: 0, pan: 0, npc: 0, ...o});
+  const v2 = (c, b, rl) => ({v2: {rush: {loot: loot(rl)}, bonus: b ? {sec: 60, exp: b.exp, mesos: b.mesos, kills: 20, loot: loot(b.loot)} : null}});
+  const r2 = (i, c, b, rl, extra = {}) => kpost({...kr("kpqscore0000" + String(i).padStart(4, "0"), 300 + c, {party: 1, stages: stg(c), exp: 5000, mesos: 500, ...v2(c, b, rl), ...extra}), clear: 300 + c}, "30.0." + (i >> 8) + "." + (i & 255));
+  await r2(1, 20, {exp: 4000, mesos: 1000});
+  let k = (await fresh()).kpq;
+  assert.ok(k.scores.rush.length === 1 && k.scores.rush[0].provisional, "no recorded average yet: provisional, no speed points");
+  assert.strictEqual(k.scores.rush[0].pts, 1000, "base only while provisional");
+  assert.deepStrictEqual(k.ref.med, {}, "no reference under 10 rounds");
+  for (let i = 2; i <= 12; i++) await r2(i, i === 12 ? 0 : 20, {exp: 4000, mesos: 1000, loot: i === 12 ? {pan: 1, npc: 2000, scroll: 1} : {}}, i === 12 ? {etc: 4, npc: 40} : {});
+  k = (await fresh()).kpq;
+  assert.strictEqual(k.ref.med["80000100"], 70, "median stage 2 time = 70 s"); assert.strictEqual(k.ref.best["80000100"], 50);
+  assert.ok(k.ref.perPoint > 0 && k.ref.bonusMed === 5000, "Bonus scale from the recorded median gain: " + JSON.stringify(k.ref));
+  const rushTop = k.scores.rush[0], bonusTop = k.scores.bonus[0];
+  assert.ok(rushTop.pts > 1000 && rushTop.speed > 0, "faster than average earns speed points: " + JSON.stringify(rushTop));
+  assert.ok(bonusTop.pts >= 1000 + 1000 + 150 + 2000 * k.ref.perPoint - 1, "Pan Lid + scroll + NPC drop value in the Bonus score: " + JSON.stringify(bonusTop));
+  assert.ok(k.scores.total.length && k.scores.could.length && JSON.stringify(k.scores).includes("pts"), "all boards present");
+  assert.ok(!JSON.stringify(k.scores).includes("kpqscore"), "no install ids in the scored boards");
+  [s, r] = await r2(99, 20, {exp: 1, mesos: 1}, {etc: 9999, npc: 1e12}); assert.ok(r.counted, "huge loot numbers are clamped, round still counts");
+}
 console.log("server tests passed");
