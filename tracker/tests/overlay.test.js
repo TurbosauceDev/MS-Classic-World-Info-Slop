@@ -269,12 +269,12 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     // the log card's inspector renders too: the Lines shown row carried no formatter, so picking a log/loot/map card
     // threw and left the inspector empty for everyone since 0.2.89 (found while shooting the strange boxes, 10-29)
     await page.click(`.wrow[data-w="log"] .nm`);
-    st = await page.evaluate(() => { const i = document.querySelector("#ovinsp");
-      return [!i.classList.contains("hidden"), !!i.querySelector('input[data-k="lines"]'), !!i.querySelector('input[data-k="w"]'),
-        !!i.querySelector('input[data-k="x"]')] });
-    if (!st[0] || !st[1] || !st[2] || !st[3]) fail("log card inspector renders (lines, width, position rows)", st);
+    st = await page.evaluate(() => { const i = document.querySelector("#ovinsp"), o = document.querySelector("#ovopt");
+      return [!i.classList.contains("hidden"), !!o.querySelector('input[data-k="lines"]') && !i.querySelector('[data-k="lines"]'), !!i.querySelector('input[data-k="w"]'),
+        !!i.querySelector('input[data-k="x"]'), !o.classList.contains("hidden")] });
+    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4]) fail("log card: common inspector (width, position) + its own options pop-up (lines)", st);
     // arrow keys nudge the picked card by 1 px (Shift = 10), saving each step; Esc = Done
-    await page.evaluate(() => document.activeElement?.blur());
+    await page.evaluate(() => { document.activeElement?.blur(); pick(null) });   // the options pop-up can sit over the panel in this small window
     await page.click(`.wrow[data-w="exp"] .nm`);
     const n0 = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);
     await page.keyboard.press("ArrowRight"); await page.keyboard.press("ArrowRight"); await page.keyboard.press("ArrowRight");
@@ -462,7 +462,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     st = await page.evaluate(() => [document.querySelectorAll(".ovw").length, !!$("#ovw-stat_1"), !!$("#ovw-exp_1"), $("#ovw-stat_1 .big")?.textContent, $("#ovw-bar_1 .trk i")?.style.width,
       document.querySelector('.wrow[data-w="exp_1"] .nm').textContent]);
     if (st[0] !== nIn0 + 3 || !st[1] || !st[2] || st[3] !== "12,345" || st[4] !== "42.5%" || st[5] !== "EXP 1") fail("widget instances added", [st, nIn0]);
-    await page.evaluate(() => pick("stat_1")); await page.selectOption('#ovinsp .wdet[data-w="stat_1"] select[data-k="tok"]', "mesosHr"); await page.waitForTimeout(300);
+    await page.evaluate(() => pick("stat_1")); await page.selectOption('#ovopt .wdet[data-w="stat_1"] select[data-k="tok"]', "mesosHr"); await page.waitForTimeout(300);
     st = await page.evaluate(() => [$("#ovw-stat_1 .big").textContent, window.ovSaved.overlay.widgets.stat_1?.tok]);
     if (st[0] !== "777" || st[1] !== "mesosHr") fail("stat token picker", st);
     const code2 = await page.evaluate(() => profCode());
@@ -571,25 +571,58 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       CFG.widgets = {status: ok}; $("#ovShareIn").value = "OVL1." + btoa(JSON.stringify({widgets: {status: ok, exp: ok}})); profImport(); const w = CFG.widgets.status;
       return {w, expHasLines: "lines" in CFG.widgets.exp} });
     if (st.w.rad !== 26 || "bg" in st.w || "acc" in st.w || "brd" in st.w || st.w.fs !== 1.2 || "shd" in st.w || st.w.show !== "idle" || "tok" in st.w || st.expHasLines) fail("import cleans params", st);
-    // conditions: a card watching EXP/hr recolours while it is below the line, pulses/hides on request, and reverts above it; hide never applies while editing
-    await page.evaluate(() => { CFG.widgets = {exp: {on: true, x: 400, y: 560}}; profCards(); place(); pick("exp") });
-    await page.evaluate(() => { const set = (k, v) => { const e = document.querySelector(`#ovinsp [data-k="${k}"]`); e.value = v; e.dispatchEvent(new Event("change", {bubbles: true})) };
-      set("cv", "expHr"); set("cn", "5000"); set("cact", "color") });
-    const feed = hr => page.evaluate(h => apply({t: Date.now(), on: true, state: "Tracking", runT0: Date.now() - 6e4, st: {activeMin: 1, exp: 5, expHr: h}}), hr);
-    await feed(100);
-    st = await page.evaluate(() => { const c = document.querySelector("#ovw-exp"); return [c.classList.contains("cmet-color"), getComputedStyle(c.querySelector(".b")).getPropertyValue("--accent").trim(), CFG.widgets.exp.cn, CFG.widgets.exp.cv] });
-    if (!st[0] || st[1] !== "#ef4444" || st[2] !== 5000 || st[3] !== "expHr") fail("condition recolours below the line", st);
-    await feed(9000);
-    if (await page.evaluate(() => document.querySelector("#ovw-exp").classList.contains("cmet-color"))) fail("condition clears above the line", 1);
-    await page.evaluate(() => { const e = document.querySelector('#ovinsp [data-k="cact"]'); e.value = "hide"; e.dispatchEvent(new Event("change", {bubbles: true})) });
-    await feed(100);
-    st = await page.evaluate(() => [getComputedStyle(document.querySelector("#ovw-exp")).display, (document.body.classList.toggle("edit", false), getComputedStyle(document.querySelector("#ovw-exp")).display), document.body.classList.toggle("edit", true) && 0]);
-    if (st[0] === "none" || st[1] !== "none") fail("condition hides when locked, never while editing", st);
-    st = await page.evaluate(() => { const ok = {on: true, x: 1, y: 2, cv: "mesos<script>", cop: "eq", cn: "abc", cact: "boom", ccol: "red"}; CFG.widgets = {exp: ok}; return [wv("exp", "cv"), wv("exp", "cop"), wv("exp", "cn"), wv("exp", "cact"), wv("exp", "ccol")] });
-    if (st.join() !== "none,lt,0,color,") fail("condition params fall back to defaults when invalid", st);
+    // conditions are parked until mapleAuras (Danny 10-29): no Condition section in either pop-up, a saved rule is ignored and cleaned
+    await page.evaluate(() => { CFG.widgets = {exp: {on: true, x: 400, y: 560, cv: "expHr", cn: 5000, cact: "hide"}}; profCards(); place(); pick("exp") });
+    await page.evaluate(() => apply({t: Date.now(), on: true, state: "Tracking", runT0: Date.now() - 6e4, st: {activeMin: 1, exp: 5, expHr: 100}}));
+    st = await page.evaluate(() => [!!document.querySelector('#ovinsp [data-k="cv"], #ovopt [data-k="cv"]'), /Condition/.test(document.querySelector("#ovinsp").textContent + document.querySelector("#ovopt").textContent),
+      document.querySelector("#ovw-exp").className, cleanParams("exp", CFG.widgets.exp).cv]);
+    if (st[0] || st[1] || /cmet-/.test(st[2]) || st[3] !== undefined) fail("conditions are parked: no rows, no effect, saved rule dropped", st);
+    // the card's own options live in the second pop-up, the common ones stay in the first (Danny 10-29)
+    st = await page.evaluate(() => { const i = document.querySelector("#ovinsp"), o = document.querySelector("#ovopt"), has = (b, k) => !!b.querySelector(`[data-k="${k}"]`);
+      return [has(i, "s") && has(i, "fs") && has(i, "o") && has(i, "show"), has(o, "spark") && has(o, "sub") && has(o, "bagi"), has(i, "spark") || has(i, "sub"), has(o, "s") || has(o, "o"), !o.classList.contains("hidden")] });
+    if (st.join() !== "true,true,false,false,true") fail("common knobs in the inspector, card-only knobs in the options pop-up", st);
+    await page.evaluate(() => { CFG.widgets = {bag: {on: true, x: 400, y: 560}}; profCards(); place(); pick("bag") });
+    st = await page.evaluate(() => { const o = document.querySelector("#ovopt"); return ["equip", "use", "setup", "etc", "cash", "deco"].map(k => !!o.querySelector(`input[data-k="bt_${k}"]`)).concat(!!o.querySelector('select[data-k="bagm"]'), !!o.querySelector('input[data-k="bgon"]')) });
+    if (st.join() !== "true,true,true,true,true,true,true,true") fail("Bag check options: six tabs, Show, Background", st);
+    // tabs watched, Show mode, stacked layout
+    st = await page.evaluate(() => { const set = (k, v) => { const e = document.querySelector(`#ovopt [data-k="${k}"]`); if (e.type === "checkbox") e.checked = v; else e.value = v; e.dispatchEvent(new Event("change", {bubbles: true})) };
+      const row = () => [...document.querySelectorAll("#ovw-bag [data-bag]")].map(e => e.dataset.bag).join();
+      apply({t: Date.now(), on: true, inv: {}, st: {}}); const base = row(); set("bt_cash", true); set("bt_deco", true); set("bt_setup", true); const six = row(); set("bt_equip", false); set("bt_use", false); set("bt_etc", false); const three = row();
+      set("bagm", "text"); const txt = [!!document.querySelector("#ovw-bag .bagI svg"), document.querySelector("#ovw-bag .bagI em")?.textContent];
+      set("bagm", "both"); const both = [!!document.querySelector("#ovw-bag .bagI svg"), !!document.querySelector("#ovw-bag .bagI em")];
+      set("bagl", "col"); const col = !!document.querySelector("#ovw-bag .bagrow.col"); set("bgon", false); const nobg = document.querySelector("#ovw-bag").classList.contains("nobg");
+      return [base, six, three, txt.join(), both.join(), col, nobg] });
+    if (st.join("|") !== "equip,use,etc|equip,use,setup,etc,cash,deco|setup,cash,deco|false,Set Up|true,true|true|true") fail("Bag check tabs, icon/text/both, stacked, no background", st);
+    // Event log: type filters, minimums, time style, order, highlight
+    await page.evaluate(() => { CFG.widgets = {log: {on: true, x: 400, y: 300}}; profCards(); place(); pick("log") });
+    st = await page.evaluate(() => { const set = (k, v) => { const e = document.querySelector(`#ovopt [data-k="${k}"]`); if (e.type === "checkbox") e.checked = v; else e.value = v; e.dispatchEvent(new Event("change", {bubbles: true})) };
+      const t = Date.now(), feed = [{t: t - 9e4, kind: "exp", text: "A gained 50 EXP", n: 50}, {t: t - 6e4, kind: "meso", text: "A picked up 20 mesos", n: 20}, {t: t - 4e4, kind: "loot", text: "A looted 1 Pan Lid"},
+        {t: t - 3e4, kind: "map", text: "Entered Kerning City"}, {t: t - 2e4, kind: "exp", text: "A gained 900 EXP", n: 900}];
+      apply({t, on: true, feed, st: {}}); const txt = () => [...document.querySelectorAll("#ovw-log .lr span")].map(e => e.textContent).join("|"), all = txt();
+      set("lgl", false); set("lgv", false); const f1 = txt(); set("lgl", true); set("lgv", true); set("lgmin", "100"); set("lgmm", "30"); const f2 = txt(); set("lgmin", ""); set("lgmm", "");
+      set("lgt", "ago"); const ago = document.querySelector("#ovw-log .lr time").textContent; set("lgt", "off"); const none = !document.querySelector("#ovw-log .lr time"); set("lgt", "clock");
+      set("lgo", "bottom"); const first = document.querySelector("#ovw-log .lr span").textContent; set("lgh", "500"); const big = [...document.querySelectorAll("#ovw-log .lr.big span")].map(e => e.textContent).join("|");
+      set("lgf", true); const fade = document.querySelector("#ovw-log .lr").style.opacity; set("lgc", false); const plain = !!document.querySelector("#ovw-log .lr.plain");
+      return [all, f1, f2, ago, none, first, big, fade !== "", plain] });
+    if (st.join("~") !== "A gained 900 EXP|Entered Kerning City|A looted 1 Pan Lid|A picked up 20 mesos|A gained 50 EXP~A gained 900 EXP|A picked up 20 mesos|A gained 50 EXP~A gained 900 EXP|Entered Kerning City|A looted 1 Pan Lid~20s~true~A gained 50 EXP~A gained 900 EXP~true~true") fail("Event log options (filters, minimums, time, order, highlight, fade, colour)", st);
+    // Loot card: chat-log lines with icons / names, inventory grid, item-type filters, minimum, order, total
+    await page.evaluate(() => { CFG.widgets = {loot: {on: true, x: 400, y: 300}}; profCards(); place(); pick("loot") });
+    st = await page.evaluate(() => { const set = (k, v) => { const e = document.querySelector(`#ovopt [data-k="${k}"]`); if (e.type === "checkbox") e.checked = v; else e.value = v; e.dispatchEvent(new Event("input", {bubbles: true})); e.dispatchEvent(new Event("change", {bubbles: true})) };
+      const t = Date.now(), px = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+      const loot = [{id: 1, name: "Pan Lid", n: 1, v: 5000, c: "Equipment", ic: px}, {id: 2, name: "Orange Potion", n: 12, v: 600, c: "Consumable", ic: px}, {id: 3, name: "Snail Shell", n: 40, v: 80, c: "Etc", ic: ""}];
+      apply({t, on: true, feed: [{t, kind: "loot", text: "A looted ...", parts: [loot[0], loot[1]]}, {t, kind: "loot", text: "A looted ...", parts: [loot[2]]}], loot, st: {}});
+      const q = s => document.querySelectorAll("#ovw-loot " + s).length, rows = () => [...document.querySelectorAll("#ovw-loot .lp, #ovw-loot .li")].map(e => e.textContent.replace(/\s+/g, " ").trim()).join("|");
+      const logBoth = [q(".lp img"), q(".lp .nm"), rows()]; set("ldisp", "icon"); const icon = [q(".lp .nm"), q(".lp img")]; set("ldisp", "name"); const name = [q(".lp img"), q(".lp .nm")]; set("ldisp", "both");
+      set("lf_eq", false); const noEq = rows(); set("lf_eq", true);
+      set("lmode", "inv"); const inv = rows(); set("lsort", "count"); const byCount = rows(); set("lmin", "100"); const min = rows(); set("lmin", ""); set("lf_etc", false); const noEtc = rows(); set("lf_etc", true); set("ltot", true); const tot = document.querySelector("#ovw-loot .ltot b")?.textContent;
+      set("lcols", "3"); const cols = document.querySelector("#ovw-loot .linv").style.getPropertyValue("--lc"); set("ldisp", "icon"); const iconInv = [q(".li .nm"), q(".li img")];
+      return {logBoth, icon, name, noEq, inv, byCount, min, noEtc, tot, cols, iconInv} });
+    const want = {logBoth: [2, 3, "Snail Shell × 40|Pan Lid × 1|Orange Potion × 12"], icon: [1, 2], name: [0, 3], noEq: "Snail Shell × 40|Orange Potion × 12",
+      inv: "Pan Lid× 1|Orange Potion× 12|Snail Shell× 40", byCount: "Snail Shell× 40|Orange Potion× 12|Pan Lid× 1", min: "Orange Potion× 12|Pan Lid× 1", noEtc: "Orange Potion× 12|Pan Lid× 1", tot: "5,680", cols: "3", iconInv: [1, 2]};
+    if (JSON.stringify(st) !== JSON.stringify(want)) fail("Loot card options", {got: st, want});
     await page.evaluate(k => { CFG.widgets = JSON.parse(k); profCards(); place(); syncPanel(); ovSave() }, keepW); await page.waitForTimeout(400);
     await page.evaluate(() => pick(null));
-    if (!await page.evaluate(() => document.querySelector("#ovinsp").classList.contains("hidden"))) fail("inspector closes with no pick", 1);
+    if (!await page.evaluate(() => document.querySelector("#ovinsp").classList.contains("hidden") && document.querySelector("#ovopt").classList.contains("hidden"))) fail("inspector + options close with no pick", 1);
     await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.left = "500px"; savePos("exp") });
     await page.waitForTimeout(350);   // the save (and the profile mirror) debounce
     const movedX = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);
@@ -633,6 +666,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     st = await page.evaluate(() => [!document.querySelector("#ovw-exp"), window.ovSaved.overlay.widgets.exp.on]);
     if (!st[0] || st[1]) fail("card ✕ hides it", st);
     // Close asks main to shut the window
+    await page.evaluate(() => pick(null));
     await page.click("#ovClose");
     if (!await page.evaluate(() => window.ovClosed)) fail("close", 0);
     if (errors.length) throw new Error("overlay page errors: " + errors.join(" | "));

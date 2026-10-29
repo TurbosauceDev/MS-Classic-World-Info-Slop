@@ -129,6 +129,7 @@ function compactFit(force){ if (!fitsWindow() || document.body.classList.contain
 
 // inventory: which tabs were read and when, and what changed since the first look
 const INV_TABS = [["equip", "Equip"], ["use", "Use"], ["etc", "Etc"]];
+const BAG_NAMES = Object.fromEntries(GrindBag.ALL);   // every tab the Bag check cards can watch (Set Up, Cash and Deco too)
 // bag check reminders (core/bagstale.js): sword / potion / crate, green -> yellow -> orange -> red -> glow as a tab's last read gets stale
 const bagCfg = () => ({main: settings.bag?.main !== false, every: GrindBag.every(settings.bag?.every)});
 function renderBag(s){

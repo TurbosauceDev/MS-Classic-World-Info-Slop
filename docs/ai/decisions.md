@@ -314,3 +314,5 @@ Each entry blocks something. When Danny calls it, transcribe above with the date
 - 2026-10-29 (Danny): Chat blocker HP/MP/EXP bars should work outside tracked runs too; built on the journey-log watch (0.3.4).
 - 2026-10-29 (Danny): Chat blocker bars should animate smoothly and be read more often; 4 reads/s while a blocker is on (0.3.6).
 - 2026-10-29 (Danny): Chat windows: capture party, buddy, all chat (whispers + red errors optional) by text colour into configurable windows; ignore every megaphone (gold, blue, pink full-row backgrounds, loot-box alert, baby-blue local) and yellow [Notice] lines; RAM/CPU efficiency is critical (0.3.17).
+- 2026-10-29 (Danny): Overlay edit mode: card-specific options open as a separate pop-up, the main one keeps the common knobs; Condition section removed for now (mapleAuras later, built on conditions/triggers). Bag check gets Set Up/Cash/Deco tabs, a no-background toggle, icon/text/both and stacked layouts. Event log and Loot card are to be highly customizable; Claude may add ideas without asking.
+
