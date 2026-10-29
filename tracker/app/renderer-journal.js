@@ -2,6 +2,7 @@
 // Off by default (Settings > Journey log). On: every event the readers see goes to the log, during a tracked run (tapped off
 // session.add) and between runs ("watch": the game window read at a low, self-slowing rate, bar + chat lines + map name only,
 // nothing counted). Screen pixels only. A run takes the capture over from the watch; Stop hands it back.
+let ovBlocker = false;   // a Chat blocker card is on (main.js ov-state, set in renderer-overlay.js): the idle watch keeps reading HP/MP/EXP. Here because this file loads first
 const jr = (() => {
   const J = GrindJournal;
   let obs = null, buf = [], lines = 0;
@@ -12,12 +13,15 @@ const jr = (() => {
   // the watch: pace follows how long nothing changed (a stalled or AFK player costs less); any event speeds it back up
   const PACE = [[30e3, 1000], [120e3, 2000], [600e3, 5000], [Infinity, 10000]];   // [quiet for under, ms between reads]
   let w = null, jwEng = null;   // w: {t0, timer, last, miss, mapSeen, mapT, jobT}
-  const wanted = () => on() && settings.journalWatch !== false && timer == null && !starting && !dummyOn;
+  // the watch runs for the journey log, and (0.3.4) for a Chat blocker on the overlay: HP / MP / EXP bars keep moving between runs
+  const idle = () => timer == null && !starting && !dummyOn;
+  const logging = () => on() && settings.journalWatch !== false;
+  const wanted = () => (logging() || ovBlocker) && idle();   // order matters: at load jrUi calls this before renderer-dummy.js defines dummyOn
   const pace = (t, last) => PACE.find(([q]) => t - last < q)[1];
   async function open(){
     if (!await host.gameFound()) return false;
     await host.wholeScreen(false);
-    FPS = 1;   // capture rate (openStream asks for it); a run sets 2 itself
+    FPS = ovBlocker ? 2 : 1;   // capture rate (openStream asks for it); a run sets 2 itself. A blocker wants the bars twice a second
     try { await openStream() } catch { return false }
     if (!video.videoWidth || isBlack()){ video.srcObject?.getTracks().forEach(tr => tr.stop()); return false }
     return true;
@@ -29,19 +33,19 @@ const jr = (() => {
     if (!wanted()){ video.srcObject?.getTracks().forEach(tr => tr.stop()); return }   // a run was started while the capture opened
     jwEng = makeEngine(ICONS || [], null, settings.invArea || null, settings.glyphs || [], settings.invLast || null); scale = null; fastLeft = 0; lastPix = null;
     const t = Date.now(); w = {t0: t, timer: null, last: t, miss: 0, mapSeen: null, mapT: 0, jobT: 0, jobSeen: null};
-    get().begin(t, "watch", !jr.warm); jr.warm = true; loop();
+    if (on()) get().begin(t, "watch", !jr.warm); jr.warm = true; loop();
   }
   function end(why){
     if (!w) return;
     clearTimeout(w.timer); w = null; jwEng?.close(); jwEng = null;
     if (timer == null) video?.srcObject?.getTracks().forEach(tr => tr.stop());
-    get().end(Date.now(), "watch", why);
+    if (on()) get().end(Date.now(), "watch", why);
     if (why === "game_closed" || why === "off") jr.warm = false;
   }
   async function loop(){
     const me = w; if (!me) return;
     if (!wanted()) return end(on() ? "run" : "off");
-    const t = Date.now(); let wait = pace(t, me.last);
+    const t = Date.now(); let wait = ovBlocker ? 500 : pace(t, me.last);
     try {
       if (!video?.srcObject?.active){   // closed game, or a snapshot/potion look stopped the stream
         if (!await open()){ if (++me.miss >= 3) return end("game_closed"); throw null }
@@ -51,7 +55,7 @@ const jr = (() => {
       const f = grabFrame();
       if (!sameAsLast(f)){
         const want = {};
-        if (!ocrBusy){
+        if (!ocrBusy && logging()){
           if (me.death && t - me.death.last >= 1000){ me.death.last = t; want.chat = true }   // HP 0 or a bar drop: the chat line says what the death cost
           else if (t - me.mapT > 5000 && t - me.last < 600e3) want.map = true;   // a long-quiet player's map can't have changed without the bar or chat moving
           else if ((!me.charName || !me.job) && t - me.jobT > 30e3) want.job = true;
@@ -62,6 +66,8 @@ const jr = (() => {
         for (const e of r.ev){
           if (/^(exp|bonus|meso|item|itemraw|bar|wallet|inv|use|party|vitals)$/.test(e.type)){
             jr.event(e);
+            if (e.type === "vitals") ovVit = {hp: e.hp, mp: e.mp, t};
+            if (e.type === "bar") me.barPct = {level: e.level, pct: e.pct};
             if (/^(exp|bonus|meso|item|itemraw|party)$/.test(e.type) || e.type === "bar" && me.bar != null && e.exp !== me.bar || e.type === "vitals" && me.hp != null && e.hp[0] !== me.hp) me.last = t;
             if (e.type === "bar"){ if (me.bar != null && me.bar - e.exp > 5 && !(e.level > me.level) && !me.death) me.death = {last: 0, tries: 0}; me.bar = e.exp; me.level = e.level || me.level }
             if (e.type === "vitals"){ if (e.hp[0] === 0 && me.hp > 0 && !me.death) me.death = {last: 0, tries: 0}; me.hp = e.hp[0] }
@@ -73,10 +79,13 @@ const jr = (() => {
         else if (want.chat){ ocrBusy = true; deathRead(r.crops.chat, t, me).catch(() => {}).finally(() => ocrBusy = false) }
         else if (want.job){ me.jobT = t; ocrBusy = true; jobRead(r.crops.job, r.crops.name, t, me).catch(() => {}).finally(() => ocrBusy = false) }
       }
-      get().tick(t);
+      if (on()) get().tick(t);
+      if (ovBlocker) ovIdlePush(me, t);
     } catch (e) { if (e) wait = 5000 }
     if (w === me) me.timer = setTimeout(loop, wait);
   }
+  // no session between runs, so the overlay gets a bare snapshot: the bars the blocker draws (watch: true = being read, not dimmed)
+  function ovIdlePush(me, t){ try { host.overlayPush?.({t, on: false, watch: true, st: {level: me.barPct?.level ?? null, pct: me.barPct?.pct ?? null}, vit: ovVit, map: {}, feed: [], th: null}) } catch {} }
   // the map name twice running (like readMap in renderer-live.js, minus the session)
   async function mapRead(c, t, me){
     if (!c) return;
@@ -115,7 +124,7 @@ const jr = (() => {
       get().begin(Date.now(), "run", false);
       get().note(Date.now(), "RUN_START");
     },
-    runStop(why){ if (!on()) return; get().note(Date.now(), "RUN_STOP", Math.round((Date.now() - runT0) / 1e3)); get().end(Date.now(), "run", why); flush(); setTimeout(() => wanted() && begin().catch(() => {}), 2500) },
+    runStop(why){ if (on()){ get().note(Date.now(), "RUN_STOP", Math.round((Date.now() - runT0) / 1e3)); get().end(Date.now(), "run", why); flush() } setTimeout(() => wanted() && begin().catch(() => {}), 2500) },
     yield(){ end("run") },
     wake(){ if (wanted()) begin().catch(() => {}); else if (w) end(on() ? "run" : "off") },
     flush, stats: () => ({lines, buffered: buf.length, watching: !!w}),

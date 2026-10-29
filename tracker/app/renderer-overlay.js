@@ -78,7 +78,8 @@ $("#miniBd").onclick = () => host.borderless?.("simple");
 $("#fzBd").onclick = () => host.borderless?.("focus");
 $("#overlayBtn").onclick = () => host.overlay?.(!ovOpen);
 host.onOverlay?.(st => {
-  const was = ovOpen; ovOpen = !!st.open;
+  const was = ovOpen, wasB = ovBlocker; ovOpen = !!st.open; ovBlocker = ovOpen && !!st.blocker;
+  if (wasB !== ovBlocker) setTimeout(() => jr.wake(), 0);   // not inline: this file loads before renderer-dummy.js (dummyOn)
   $("#overlayBtn").setAttribute("aria-pressed", String(ovOpen));
   if (ovOpen) ovSend(true);
   else if (was) $("#status").textContent = "Overlay closed.";

@@ -3,6 +3,7 @@
 // Releasing? Add a line for the new version at the top: tests/core.test.js fails if the top entry isn't package.json's version.
 (function (root){
   const LOG = [
+    ["0.3.4", "2026-10-29", "The Chat blocker's HP, MP and EXP bars now keep moving when no run is being tracked. While a blocker card is on, the tracker reads the game window twice a second between runs, as long as the game is open. Nothing is counted or logged unless the Journey log is on."],
     ["0.3.3", "2026-10-29", "Overlay edit mode: Undo, and boxes only move on purpose. A new Undo and Redo pair in the edit panel (or Ctrl+Z and Ctrl+Y) steps back through every position, size and setting change, up to 100 steps. A click on a card or a resize handle now only selects it: the box stays put until you drag it more than 6 px, so picking a card to edit a setting no longer nudges it."],
     ["0.3.2", "2026-10-29", "Final Attack proc alert reads the buff countdown. The tracker now reads the yellow number on the Final Attack buff icon, so a proc that lands while the buff is still running (the number jumps back up) counts as its own proc, not just the first one. The faded icon after the buff ends no longer counts as a proc. Still screen pixels only."],
     ["0.3.1", "2026-10-29", "Chat blocker fix: the Stacked bars option showed nothing. The HP, MP and EXP bars now stack one under the other."],

@@ -43,6 +43,12 @@ const path = require("path"), {chromium} = require("playwright");
   await page.click("#go"); await page.waitForFunction(() => timer != null && !starting);
   seen = await lines(); if (await page.evaluate(() => jr.stats().watching) || !seen.some(l => /  WATCH_STOP,watch,run/.test(l)) || !seen.some(l => /  WATCH_START,run/.test(l))) fail("run did not take over from the watch", seen);
   await page.evaluate(() => stopNow());
+  // a Chat blocker on the overlay keeps the watch reading with the journal OFF (Danny 10-29: HP/MP bars between runs), and pushes a bare snapshot
+  await page.evaluate(() => { settings.journal = false; jr.wake(); window.pushes = []; host.overlayPush = d => window.pushes.push(d); ovBlocker = true });
+  await page.evaluate(() => jr.wake()); await page.waitForFunction(() => jr.stats().watching, null, {timeout: 15000}).catch(() => fail("blocker watch never started", null));
+  await page.waitForFunction(() => window.pushes.some(d => d.watch && d.on === false), null, {timeout: 8000}).catch(() => fail("no idle snapshot for the blocker", null));
+  await page.evaluate(() => { ovBlocker = false; jr.wake() });
+  if (await page.evaluate(() => jr.stats().watching)) fail("watch should stop when the blocker goes and the journal is off", null);
   if (errors.length) fail("page errors", errors);
   await browser.close(); console.log("journal ui ok");
 })().catch(e => { console.error(e); process.exit(1) });

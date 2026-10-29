@@ -177,7 +177,7 @@ function vbar(cls, label, cur, max, pct, num, stale){
 }
 const RENDER = {
   blocker(d, id){
-    const vt = d.vit || {}, stale = !vt.t || !(d.on || d.dummy),   // a vitals event is sent on change only, so age says nothing; dim when nothing is being read
+    const vt = d.vit || {}, stale = !vt.t || !(d.on || d.dummy || d.watch),   // a vitals event is sent on change only, so age says nothing; dim when nothing is being read
        num = wv(id, "vnum"), pc = (a) => a && a[1] > 0 ? a[0] / a[1] * 100 : null;
     const bars = [];
     if (wv(id, "vhp")) bars.push(vbar("hp", "HP", vt.hp?.[0] ?? null, vt.hp?.[1], pc(vt.hp), num, stale));
