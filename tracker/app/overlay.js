@@ -809,9 +809,11 @@ addEventListener("keydown", e => {
   const bdCard = b => {
     if (!b || !HOME[b.kind] || !["simple", "focus"].includes(b.kind)) return;
     const w = CFG.widgets[b.kind], placed = w && Number.isFinite(+w.x);
-    if (!placed && Number.isFinite(+b.x) && Number.isFinite(+b.y)) CFG.widgets[b.kind] = {...(w || {}), x: Math.round(b.x), y: Math.round(b.y), ...(Number.isFinite(+b.mw) && !w?.mw ? {mw: clamp(Math.round(+b.mw), 160, 900)} : {})};
+    // first time: the card IS the window's content — no glass, border, shadow or blur, only the text over the game
+    if (!placed && Number.isFinite(+b.x) && Number.isFinite(+b.y)) CFG.widgets[b.kind] = {bg: 0, blur: 0, brd: "none", shd: false, ...(w || {}), x: Math.round(b.x), y: Math.round(b.y), ...(Number.isFinite(+b.mw) && !w?.mw ? {mw: clamp(Math.round(+b.mw), 160, 900)} : {})};
     for (const k of ["simple", "focus"]) if (k !== b.kind && wPos(k).on) setOn(k, false);
     setOn(b.kind, true); place();
+    const el = $("#ovw-" + b.kind); if (el){ el.classList.add("bdIn"); setTimeout(() => el.classList.remove("bdIn"), 450) }   // fades in as the window fades out
   };
   window.ovhost.onBorderless?.(bdCard);
   if (BD) bdCard(BD);   // the overlay was opened by Borderless: its first card request rode in with the state

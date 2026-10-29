@@ -153,6 +153,7 @@ function keyAction(a){
   // click-through: the mouse goes to the game under the window (an overlay); only its shortcut turns it back off, so it
   // starts off every launch and can't be turned on while that shortcut is off
   if (a === "clickThrough"){ clickThrough = !clickThrough; win.setIgnoreMouseEvents(clickThrough, {forward: true}); win.webContents.send("menu", "clickThrough:" + clickThrough); return }
+  if (a === "show" && bdKind){ bdExit(); return }
   if (a === "show"){ if (win.isVisible() && !win.isMinimized()) win.minimize(); else { win.restore(); win.show(); pinOnTop() } return }
   if (a === "report"){ win.show(); win.focus() }
   if (a === "overlay"){ ovToggle(); return }
@@ -233,9 +234,12 @@ function ovToggle(){ ovWin && !ovWin.isDestroyed() ? ovCloseWin() : ovOpenWin() 
 ipcMain.handle("overlay", () => { ovToggle(); return !!(ovWin && !ovWin.isDestroyed()) });
 ipcMain.handle("ov-edit", (_, on) => { if (ovWin && !ovWin.isDestroyed()) ovEditSet(on !== false); return ovEditing });
 ipcMain.handle("ov-edit-toggle", () => { if (ovWin && !ovWin.isDestroyed()) ovEditSet(!ovEditing); return ovEditing });
-// Borderless mode (0.2.94, Danny 10-29): Simple / Focus without the window. The tracker window steps aside (minimized: it still
-// reads the screen) and that view opens as a card in the overlay, at the window's old spot and width, in edit mode so it can be
-// placed and scaled with the rest. "Back to tracker window" in the edit panel (or closing the overlay) brings the window back.
+// Borderless mode (Danny 10-29; reworked after "borderless didn't work": he wanted THIS window to fade into the overlay, not a
+// new panel). The tracker window stays exactly where it is — not minimized — and fades to fully clear and click-through, while
+// the same view fades in as a frameless, background-free overlay card at the same spot and width (edit mode on, so it can be
+// placed and scaled with the rest). A truly transparent main window can't be switched on at runtime in Electron (transparent is
+// fixed at creation, and a transparent frameless window can't be resized on Windows), so the window is faded with setOpacity.
+// "Back to tracker window" in the edit panel, Ctrl+Shift+H, or closing the overlay fades it back.
 let bdKind = null, bdPending = null;
 function bdOpen(kind){
   if (!win || win.isDestroyed() || !["simple", "focus"].includes(kind)) return false;
@@ -244,10 +248,29 @@ function bdOpen(kind){
   bdKind = kind;
   if (ovWin && !ovWin.isDestroyed()){ ovEditSet(true); ovWin.webContents.send("ov-borderless", msg) }
   else { bdPending = msg; ovOpenWin() }
-  win.minimize();
+  bdFade(0, () => { if (bdKind && win && !win.isDestroyed()) win.setIgnoreMouseEvents(true, {forward: true}) });
   return true;
 }
-function bdExit(){ if (bdKind){ bdKind = null; if (win && !win.isDestroyed()){ win.restore(); win.show(); pinOnTop() } } }
+let bdT = null;
+function bdFade(to, done){
+  clearInterval(bdT);
+  if (!win || win.isDestroyed()) return;
+  const from = win.getOpacity(), t0 = Date.now(), ms = 320;
+  bdT = setInterval(() => {
+    if (!win || win.isDestroyed()){ clearInterval(bdT); return }
+    const k = Math.min(1, (Date.now() - t0) / ms);
+    try { win.setOpacity(from + (to - from) * k) } catch {}
+    if (k >= 1){ clearInterval(bdT); done && done() }
+  }, 16);
+}
+function bdExit(){
+  if (!bdKind) return;
+  bdKind = null;
+  if (!win || win.isDestroyed()) return;
+  win.setIgnoreMouseEvents(clickThrough, {forward: true});   // the window takes the mouse again (unless Ctrl+Shift+X click-through is on)
+  if (win.isMinimized()) win.restore();
+  bdFade(1, () => pinOnTop());
+}
 ipcMain.handle("borderless", (_, kind) => bdOpen(kind));
 ipcMain.handle("bd-exit", () => { bdExit(); return true });
 ipcMain.handle("ov-close", () => { ovCloseWin(); return true });

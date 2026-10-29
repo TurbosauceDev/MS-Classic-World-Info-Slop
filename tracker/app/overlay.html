@@ -63,6 +63,8 @@
   .ovw.ovhide { display:none; }
   /* Borderless cards (0.2.94): Simple / Focus views. Fixed width = Max width; the corner grip scales the whole card */
   .ovw[data-k="simple"], .ovw[data-k="focus"] { width:var(--mw, 380px); }
+  .ovw[data-k="simple"], .ovw[data-k="focus"] { text-shadow:0 1px 3px rgba(0,0,0,.65); }
+  .ovw.bdIn { animation:bdin .32s ease-out; } @keyframes bdin { from { opacity:0; } }
   .svHead { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
   .svMap { font-size:15px; font-weight:800; color:var(--ink); line-height:1.2; }
   .sub b { color:var(--ink); }
