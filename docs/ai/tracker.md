@@ -368,3 +368,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - 0.3.15 (polish, Danny 10-29 "no permission needed for polish"): blocker keeps BAR_FPS when idle (`pace()`), undo history = `{w, snap, grid, gsize}` (`histNow`), heap cap 1024 MB. Drag-start offset is deliberately pointer-absolute (overlay.test snap scenes depend on it): don't "fix" the 6 px start jump.
 - 0.3.16 (round 2, Danny's idle main = 916 MB): not reproducible in xvfb (main JS heap 9 MB flat, OCR on big/noisy crops peaks ~330 MB, overlay + 4 min flat), so Windows-only: suspects are WGC capture buffers in the browser process, updater downloads (a 108 MB installer per release), repeated `desktopCapturer.getSources`. Perf monitor now prints `perf-main` detail (rss/heap/buffers/OCR up/game checks/capture opens/updater state); read that screenshot before guessing again. `game-found` is cached 20 s (pass `true` for a fresh look).
 
+
+## Overlay auto-fit 2026-10-29 (0.3.17, Danny: never show a scrollbar on a card)
+- overlay.js fitCard() (run first in reflow()) measures each `.b`; if content overflows the box or a line is ellipsised it sets `--af` (body zoom multiplier, floor AF_MIN .5). Pinned-height cards are `overflow:hidden` now (scrollbars only in the edit panel/inspector). Flow cards (log/loot/map) fill by rows, so only width is judged. Test: overlay.test.js "card auto-fits".
+- Trap: a CSS selector-list line can hide a rule (the elv radius rule shared a line with the scrollbar thumb selector).

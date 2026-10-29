@@ -492,6 +492,10 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     st = await page.evaluate(() => ["status", "mesos", "kills"].map(k => document.querySelector("#ovw-" + k).offsetLeft + "," + document.querySelector("#ovw-" + k).offsetTop).join(" "));
     if (st !== "100,500 330,500 520,500") fail("cards settle back when the numbers shrink", st);
     await page.evaluate(k => { CFG.widgets = JSON.parse(k); profCards(); place(); syncPanel(); ovSave() }, keepW); await page.waitForTimeout(400);   // back to the layout the later scenes expect
+    // auto-fit (Danny 10-29): a pinned-small card whose numbers outgrow it shrinks its text instead of scrolling or clipping
+    await page.evaluate(() => { CFG.widgets = {mesos: {on: true, x: 100, y: 300, w: 200, h: 110}}; profCards(); place(); apply({t: Date.now(), on: true, state: "Tracking", st: {activeMin: 43, mesosHr: 15928123, mesos: 1131512345, lootHr: 1691234567, killsHr: 1200}}) });
+    st = await page.evaluate(() => { const b = document.querySelector("#ovw-mesos .b"); return {af: b.style.getPropertyValue("--af"), over: b.scrollWidth > b.clientWidth + 1 || b.scrollHeight > b.clientHeight + 1, ov: getComputedStyle(b).overflowY} });
+    if (!st.af || st.over || st.ov === "auto" || st.ov === "scroll") fail("card auto-fits (no scrollbar)", st);
     // the per-module inspector (Danny 10-28): picking a card opens its own pop-up (x/y filled in, not part of the main panel),
     // the glass fits the content, params change the card, "show when" hides it, bad saved/imported values fall back to defaults
     await page.evaluate(() => { CFG.widgets = {status: {on: true, x: 100, y: 560}, exp: {on: true, x: 400, y: 560}}; profCards(); place(); pick("status"); apply({t: Date.now(), on: true, state: "Tracking", runT0: Date.now() - 6e4, st: {activeMin: 1, exp: 5, expHr: 100}}) });
