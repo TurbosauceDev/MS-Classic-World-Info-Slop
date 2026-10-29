@@ -75,8 +75,10 @@ const PARAMS = [
   {k: "h", sec: "Size & fit", lab: "Height (px, blank = fit)", t: "n", min: 40, max: 2000, def: {_: null, blocker: 150}, ph: "auto"},
   {k: "pad", sec: "Size & fit", lab: "Padding", t: "s", opts: {compact: "Compact", normal: "Normal", roomy: "Roomy"}, def: "normal"},
   {k: "al", sec: "Size & fit", lab: "Text align", t: "s", opts: {left: "Left", center: "Centre", right: "Right"}, def: "left"},
-  {k: "o", sec: "Look", lab: "Opacity", t: "r", min: .25, max: 1, step: .05, def: 1, u: 100, f: pct},
-  {k: "bg", sec: "Look", lab: "Glass tint", t: "r", min: 0, max: 100, step: 2, def: {_: 82, blocker: 100}, f: pct},
+  {k: "o", sec: "Look", lab: "Opacity", t: "r", min: .25, max: 1, step: .05, def: 1, u: 100, f: pct, tip: "Fades the whole card, text included"},
+  // solid by default (Danny 10-29: "things are too translucent for my liking" with opacity already at 100% — the
+  // see-through lived here, at the old 82% default, while Opacity promised a solid card): 100 now, glass is opt-in
+  {k: "bg", sec: "Look", lab: "Glass tint", t: "r", min: 0, max: 100, step: 2, def: {_: 100, blocker: 100}, f: pct, tip: "How solid the panel is: 100% is fully solid, lower shows the game through the card"},
   {k: "blur", sec: "Look", lab: "Blur", t: "r", min: 0, max: 30, step: 1, def: {_: 14, blocker: 0}, f: px},
   {k: "rad", sec: "Look", lab: "Corners", t: "r", min: 0, max: 26, step: 1, def: {_: 12, blocker: 4}, f: px},
   {k: "brd", sec: "Look", lab: "Border", t: "s", opts: {none: "None", soft: "Soft", accent: "Accent"}, def: {_: "soft", blocker: "none"}},
@@ -609,12 +611,12 @@ function syncPanel(){
 // ---- the per-module inspector: its own pop-up (not part of the main panel), opened by picking a card --------------------
 const insp = {id: null};
 function paramRow(p, id){
-  const v = wv(id, p.k), id2 = "in-" + p.k;
-  if (p.t === "r") return `<label><b>${p.lab}</b><input type="range" id="${id2}" data-k="${p.k}" min="${p.min * (p.u || 1)}" max="${p.max * (p.u || 1)}" step="${p.step * (p.u || 1)}" value="${v * (p.u || 1)}"><span class="pv">${p.f(v * (p.u || 1))}</span></label>`;
-  if (p.t === "s") return `<label><b>${p.lab}</b><select data-k="${p.k}">${Object.entries(p.opts).map(([k, n]) => `<option value="${k}"${k === v ? " selected" : ""}>${n}</option>`).join("")}</select></label>`;
-  if (p.t === "n") return `<label><b>${p.lab}</b><input type="number" data-k="${p.k}" min="${p.min}" max="${p.max}" step="any" placeholder="${p.ph || ""}" value="${v ?? ""}"></label>`;
-  if (p.t === "b") return `<label><b>${p.lab}</b><input type="checkbox" data-k="${p.k}"${v ? " checked" : ""}></label>`;
-  return `<label><b>${p.lab}</b><input type="color" data-k="${p.k}" value="${v || "#a78bfa"}"><button class="clr" data-clr="${p.k}" title="Follow the tracker's theme again">Theme</button></label>`;
+  const v = wv(id, p.k), id2 = "in-" + p.k, lab = p.tip ? `<b title="${esc(p.tip)}">${p.lab}</b>` : `<b>${p.lab}</b>`;
+  if (p.t === "r") return `<label>${lab}<input type="range" id="${id2}" data-k="${p.k}" min="${p.min * (p.u || 1)}" max="${p.max * (p.u || 1)}" step="${p.step * (p.u || 1)}" value="${v * (p.u || 1)}"><span class="pv">${p.f(v * (p.u || 1))}</span></label>`;
+  if (p.t === "s") return `<label>${lab}<select data-k="${p.k}">${Object.entries(p.opts).map(([k, n]) => `<option value="${k}"${k === v ? " selected" : ""}>${n}</option>`).join("")}</select></label>`;
+  if (p.t === "n") return `<label>${lab}<input type="number" data-k="${p.k}" min="${p.min}" max="${p.max}" step="any" placeholder="${p.ph || ""}" value="${v ?? ""}"></label>`;
+  if (p.t === "b") return `<label>${lab}<input type="checkbox" data-k="${p.k}"${v ? " checked" : ""}></label>`;
+  return `<label>${lab}<input type="color" data-k="${p.k}" value="${v || "#a78bfa"}"><button class="clr" data-clr="${p.k}" title="Follow the tracker's theme again">Theme</button></label>`;
 }
 function buildInsp(id){
   const box = $("#ovinsp"); if (!box) return;

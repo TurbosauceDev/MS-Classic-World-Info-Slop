@@ -24,13 +24,17 @@
      put it, on any monitor (the window spans the whole desktop). backdrop-filter blurs the game behind it. */
   /* a card fits its content (Danny 10-28): max-content width up to --mw (a long run-log line ellipsises there), no minimum.
      Every look knob is a custom property the inspector sets per card (styleCard in overlay.js), defaults below = the old look. */
+  /* solid by default (Danny 10-29: "too translucent" with Opacity already at 100%): the fallback matches the Glass tint
+     default — 82% left every card 18% see-through out of the box; 100% is a solid panel, glass is opt-in per card */
   .ovw { position:absolute; box-sizing:border-box; width:max-content; min-width:0; max-width:var(--mw, 360px); padding:var(--pv, 9px) var(--ph, 13px); border-radius:var(--rad, 12px);
-    background:color-mix(in srgb, var(--panel) var(--glass, 82%), transparent);
+    background:color-mix(in srgb, var(--panel) var(--glass, 100%), transparent);
     -webkit-backdrop-filter:blur(var(--blur, 14px)) saturate(1.2); backdrop-filter:blur(var(--blur, 14px)) saturate(1.2);
     border:1px solid var(--bc, color-mix(in srgb, var(--line) 72%, transparent));
     box-shadow:var(--sh, 0 1px 2px rgba(0,0,0,.22), 0 12px 32px -12px rgba(0,0,0,.45));
     transition:filter .15s ease, border-color .15s ease, box-shadow .15s ease; }
-  body.edit .ovw { background:color-mix(in srgb, var(--panel) 94%, transparent); cursor:move;
+  /* edit mode keeps the card's own Glass tint — WYSIWYG: it used to repaint every card near-solid (94%) while you
+     arranged them, so a locked overlay came out more translucent than anything the editor showed (Danny 10-29) */
+  body.edit .ovw { cursor:move;
     border-color:color-mix(in srgb, var(--line) 90%, var(--accent) 10%); }
   body.edit .ovw:hover, body.edit .ovw.moving { border-color:var(--accent); }
   body.edit .ovw.moving { opacity:.85; }

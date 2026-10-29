@@ -495,6 +495,20 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.evaluate(() => { CFG.edit = true; document.body.classList.remove("locked"); vis() });
     st = await page.evaluate(() => document.querySelector("#ovw-status").classList.contains("ovhide"));
     if (st) fail("show-when never hides while editing", st);
+    // solid by default (Danny 10-29: "things are too translucent for my liking" — Opacity already at 100%): the
+    // see-through lived in Glass tint's old 82% default, so a fresh card must now render a fully opaque panel, and
+    // edit mode must preview the very background the locked overlay shows (it used to repaint cards at 94%)
+    st = await page.evaluate(() => { const keep = JSON.stringify(CFG.widgets);
+      CFG.widgets = {status: {on: true, x: 100, y: 560}}; profCards(); place();
+      const c = document.querySelector("#ovw-status"), bg = () => getComputedStyle(c).backgroundColor;
+      const editBg = bg();
+      CFG.edit = false; document.body.classList.add("locked"); vis();
+      const lockedBg = bg();
+      CFG.edit = true; document.body.classList.remove("locked"); vis();
+      return [c.style.getPropertyValue("--glass"), editBg, lockedBg, keep] });
+    // Chromium reports the computed mix as color(srgb ...) — an alpha < 1 only ever appears after a " / " (or as rgba())
+    if (st[0] !== "100%" || st[1] !== st[2] || / \//.test(st[1]) || /rgba\(/.test(st[1])) fail("cards are solid by default and edit previews it", st);
+    await page.evaluate(k => { CFG.widgets = JSON.parse(k); profCards(); place() }, st[3]);   // hand the layout back
     st = await page.evaluate(() => { const ok = {on: true, x: 1, y: 2, rad: 99, bg: "x", acc: "red", brd: "evil", fs: "1.2", shd: "no", lines: 5, show: "idle", tok: "nope"};
       CFG.widgets = {status: ok}; $("#ovShareIn").value = "OVL1." + btoa(JSON.stringify({widgets: {status: ok, exp: ok}})); profImport(); const w = CFG.widgets.status;
       return {w, expHasLines: "lines" in CFG.widgets.exp} });

@@ -955,3 +955,15 @@ Claude T-08: ingest `elvui-code-review.md` (and skim the briefing for license hi
 > - **Bonus bug found + fixed**: Run log / Loot / Map & spawns inspectors were blank since 0.2.89 (missing `f` formatter on the "lines/monsters shown" params — paramRow threw on pick). Regression test added.
 >
 > Write-up: `docs/ai/elvui-tracker-reskin.md` § 0.2.94 (includes why container queries were deliberately NOT used on the dock boxes — they'd kill the fit-floor min-content trick). Tests: core, fuzz, ui, layout, monkey, overlay (new scenes: free w/h grip, width-only drag, pinned box across pushes, log inspector renders). Screenshots: `download/resize-overlay-boxes.png`, `resize-overlay-inspector.png`, `resize-tracker-skinny.png`, `resize-tracker-long.png`. Note for screenshot authors: file:// pages never paint a root-element background on the canvas (white/dark default only) — inject a fixed backdrop div for fake-game shots.
+
+---
+
+> **2026-10-29 ~03:1xZ — Glorg [z.ai] → Turbozo: 0.3.6 — solid cards (the translucency fix)**
+>
+> "Too translucent" with every slider at 100% — not user error, exactly the trap: the see-through never lived in **Opacity** (that fades the whole card, text included) but in **Glass tint**, the panel-strength knob, which shipped at an 82% default. So a fresh card was born 18% see-through and Opacity 100% couldn't save it.
+>
+> - **Glass tint now defaults to 100%** — solid panel, game fully covered. The frosted-glass look is one pull away per card when you want it (blur stays at 14 for when you do). Cards you never touched pick this up on restart; a card you deliberately set keeps its value (defaults are stored as absence, and Reset gives the new default).
+> - **Edit mode is honest now**: it used to repaint every card near-solid (94%) while you arranged them, so the locked overlay came out more translucent than anything the editor previewed. Edit and locked now show the very same background (WYSIWYG) — regression-tested.
+> - The Glass tint and Opacity rows in the inspector explain themselves on hover ("100% is fully solid…", "Fades the whole card, text included").
+>
+> Chat blocker was already 100% by default — it stays solid. Tests: npm test, overlay (new scene: fresh card renders opaque + edit==locked), ui, layout, extras, focus, monkey 3x150. Release dispatched after CI.
