@@ -1,7 +1,7 @@
 {
   "name": "ms-classic-grind-tracker",
   "productName": "MS Classic Grind Tracker",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "description": "MS Classic Grind Tracker",
   "main": "app/main.js",
   "scripts": {

@@ -358,3 +358,8 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 ## Performance monitor 2026-10-29 (0.3.8)
 - Help > Performance monitor (`#perfPop`, `tracker/app/renderer-perf.js`): per-process CPU/memory from main's `perf-metrics` IPC (`app.getAppMetrics`), read rate (PERF.tick.n delta), per-step avg ms from `PERF` (renderer-live.js). Polls every 2 s only while open. Maths + warnings: `tracker/core/perfwatch.js` (`LIMIT` thresholds are our judgement, not sourced; CPU % is of one core). Tested in core.test.js + ui.test.js pop-up loop.
 - Trap: PERF only fills during a run, so the panel shows "not running" otherwise; the Chat-blocker idle watch isn't measured.
+
+## Memory 2026-10-29 (0.3.11)
+- Measure with Electron under xvfb: fake `getDisplayMedia` = a 2560x1440 canvas `captureStream`, click Start, sample `app.getAppMetrics()` (privateBytes). The old `<video>` → `drawImage` → `getImageData` path took the window from 155 to ~850 MB; `tracker/app/framesrc.js` (MediaStreamTrackProcessor + `VideoFrame.copyTo` RGBA into two reused buffers) holds ~380 MB. `drawImage(VideoFrame)` is as bad as the video element — never read pixels through a canvas.
+- `video` in renderer*.js is a FrameSrc (`.pump`) or, if `copyTo` throws on the first frame, the old `<video>` (fallback). New code reading the picture: `grab()`/`grabFrame()`, never `g.drawImage(video…)` without a `video.pump` branch. `keepFrame(t, f)` and the frames loop paint the canvas themselves now.
+- Electron 33 ignores webPreferences `affinity`; `process-per-site` (main.js, top) is what merges the overlay into the tracker renderer. OCR worker closes after 2 min idle (~110 MB). Network Service read 205 MB on Danny's PC vs ~68 here: unexplained, not chased.

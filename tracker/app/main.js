@@ -20,6 +20,9 @@ const OVCFG = require("../core/overlaycfg.js");
 const HIST = require("../core/history.js");   // applyEdit: History > Edit run   // the running session, autosaved there (crash recovery)
 
 // Windows Graphics Capture (what OBS uses) instead of the old GDI window grab, which gives black frames for DirectX games
+// one renderer process for every window of ours (the overlay shares the tracker's instead of a second one: measured 997 -> 858 MB
+// in a run with the overlay open). The webPreferences "affinity" option does nothing since Electron 14, this switch does.
+app.commandLine.appendSwitch("process-per-site");
 app.commandLine.appendSwitch("enable-features", "WebRtcAllowWgcWindowCapturer,WebRtcAllowWgcScreenCapturer,AllowWgcWindowCapturer,AllowWgcScreenCapturer");
 
 let themeBar = null, setBar = () => {};   // the theme's title bar colours {color, symbolColor, bg}, from the page
@@ -56,10 +59,8 @@ app.whenReady().then(() => {
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#1f1931" : "#e7ddf9",
     // backgroundThrottling off: behind the game or minimized, Chromium would slow the frame timer to once a second and,
     // after 5 minutes, once a minute, so pickup lines would scroll away unread
-    // affinity "tracker": the overlay window shares this renderer process instead of getting its own — one whole
-    // Chromium renderer (~150-300 MB) off the total the Performance monitor shows. Trade-off: a renderer crash takes
-    // both pages down together; the main process stays and Windows' own window close/reopen recovers them.
-    webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false, affinity: "tracker"}});
+    // (the overlay shares this renderer process, see process-per-site above. Trade-off: a renderer crash takes both pages down)
+    webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false}});
   // getDisplayMedia() in the page gets the game window, chosen here (no picker)
   session.defaultSession.setDisplayMediaRequestHandler(async (req, cb) => {
     const src = await captureSource();
@@ -221,8 +222,7 @@ function ovOpenWin(){
   if (ovWin && !ovWin.isDestroyed()) return;
   ovWin = new BrowserWindow({...ovBounds(), frame: false, transparent: true, hasShadow: false, resizable: false, movable: false,
     fullscreenable: false, minimizable: false, maximizable: false, skipTaskbar: true, show: false, focusable: false,
-    // affinity "tracker": shares the tracker window's renderer process (one Chromium renderer less; see the main window)
-    webPreferences: {preload: path.join(__dirname, "overlay-preload.js"), contextIsolation: true, backgroundThrottling: false, affinity: "tracker"}});
+    webPreferences: {preload: path.join(__dirname, "overlay-preload.js"), contextIsolation: true, backgroundThrottling: false}});
   ovWin.setAlwaysOnTop(true, "screen-saver");
   ovWin.webContents.setWindowOpenHandler(() => ({action: "deny"}));
   ovWin.webContents.on("will-navigate", e => e.preventDefault());
@@ -587,7 +587,7 @@ function ocrWorker(){
   }
   return ocr;
 }
-// a fresh worker every 200 reads, and one idle for 10 minutes is torn down entirely: Tesseract's WASM heap stays at
+// a fresh worker every 200 reads, and one idle for 2 minutes is torn down entirely: Tesseract's WASM heap stays at
 // its peak for the worker's whole life (100-200 MB of the total the Performance monitor shows), and with the text
 // cache (core/ocrcache.js) answering every repeat read, OCR sits unused most of a session. The next read just builds
 // a new worker (a second or two, local model).
@@ -601,4 +601,4 @@ ipcMain.handle("ocr", async (_, pngBytes) => {
     return text;
   } catch { const o = ocr; ocr = null; ocrIdleT = 0; o?.then(w => w.terminate()).catch(() => {}); return "" }   // broken worker: a new one next time
 });
-setInterval(() => { if (ocr && ocrIdleT && Date.now() - ocrIdleT > 10 * 60e3){ const o = ocr; ocr = null; ocrReads = 0; ocrIdleT = 0; o.then(w => w.terminate()).catch(() => {}) } }, 60e3).unref?.();
+setInterval(() => { if (ocr && ocrIdleT && Date.now() - ocrIdleT > 2 * 60e3){ const o = ocr; ocr = null; ocrReads = 0; ocrIdleT = 0; o.then(w => w.terminate()).catch(() => {}) } }, 60e3).unref?.();

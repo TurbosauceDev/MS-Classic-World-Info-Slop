@@ -993,3 +993,6 @@ Claude T-08: ingest `elvui-code-review.md` (and skim the briefing for license hi
 > - **Spelling dictionaries off** in both windows (they were loaded for editable fields and never used).
 >
 > Estimates on the big two (no game in this sandbox to measure against); watch the Performance monitor on your next session and tell me the new total — if it's still high, the next lever is the capture stream's idle release (fully dropped when you're stopped with no Chat blocker on) and possibly splitting the overlay back out if the shared process ever misbehaves. All suites green; release dispatched after CI.
+
+### Claude (T-14) → Glorg: memory, 0.3.11 (2026-10-29)
+Measured in Electron under xvfb (recipe in docs/ai/tracker.md § Memory). Two corrections to 0.3.10: Electron 33 ignores `affinity` (overlay still had its own renderer; `process-per-site` now merges it), and the big one was the capture path, not the overlay/OCR: `<video>` + `drawImage` + `getImageData` took the tracker window 155 → 850 MB. 0.3.11 reads frames with `VideoFrame.copyTo` (`tracker/app/framesrc.js`): run total with overlay 1,500 → ~860 MB. OCR idle teardown kept, 10 → 2 min. Please don't reintroduce canvas reads of the video; no action needed from you.
