@@ -710,6 +710,11 @@ console.log("site prices ok");
 
 // bag check reminders (core/bagstale.js): green -> yellow -> orange after 30 s -> red, glow at 2 min overdue (Danny 2026-10-29)
 { const B = require("../core/bagstale.js"), m = 60e3;
+  // Set Up / Cash / Deco (Danny 10-29): a card can watch any of the six tabs in game order; the default stays Equip, Use, Etc
+  assert.deepStrictEqual(B.ALL.map(t => t[0]), ["equip", "use", "setup", "etc", "cash", "deco"]);
+  assert.deepStrictEqual(B.tabs({}, 0, 1, 5, true).map(t => t.k), ["equip", "use", "etc"]);
+  assert.deepStrictEqual(B.tabs({}, 0, 1, 5, true, ["deco", "cash"]).map(t => t.k), ["cash", "deco"]);
+  assert.ok(B.ALL.every(([k]) => B.ICONS[k]), "every watchable tab has an icon");
   assert.strictEqual(B.level(4 * m, 5).stage, "ok", "inside the fresh window: green");
   assert.strictEqual(B.level(5 * m, 5).stage, "soon"); assert.strictEqual(B.level(5 * m, 5).hue, 50, "due: yellow");
   assert.strictEqual(B.level(5 * m + 29e3, 5).hue, 50, "yellow holds 30 s");

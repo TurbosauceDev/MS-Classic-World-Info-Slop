@@ -5,7 +5,7 @@ let lastInvTab = null, invSavedT = 0;
 $("#invTabs").onclick = $("#wrapTabs").onclick = $("#bagIcons").onclick = e => { const b = e.target.closest("[data-tab]"); if (b) bagRead(b.dataset.tab) };
 // also the overlay's bag icons (main.js relays ov-bag to the window): same scan as the chips
 async function bagRead(tab){
-  const name = INV_TABS.find(x => x[0] === tab)[1], say = t => $("#status").textContent = t;
+  const name = BAG_NAMES[tab], say = t => $("#status").textContent = t;
   if (timer == null || !engine?.invNow) return say("Press Start first, then click a tab to read it.");
   // read = a new reading of that tab reached the session after the click (a tab counts once two reads agree, ~4 s)
   const wait = async () => { const t0 = Date.now(); lastInvTab = null; engine.invNow();
@@ -14,7 +14,7 @@ async function bagRead(tab){
   if (await wait()){ render(); return say(`${name} tab read.`) }
   if (timer == null) return;
   if (lastInvTab === tab) return say(`Your ${name} tab is open but didn't read the same twice in a row: keep the mouse off it for a few seconds and click again.`);
-  if (lastInvTab) return say(`That's your ${INV_TABS.find(x => x[0] === lastInvTab)[1]} tab: switch the inventory to ${name} and click again.`);
+  if (lastInvTab) return say(`That's your ${BAG_NAMES[lastInvTab] || lastInvTab} tab: switch the inventory to ${name} and click again.`);
   say("Couldn't find your inventory: drag a box around it (with the " + name + " tab open).");
   const f = await oneFrame(), c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
   const rect = await host.snip(c.toDataURL("image/jpeg", 0.9));
@@ -22,7 +22,7 @@ async function bagRead(tab){
   settings = await host.settings({invArea: rect}); engine.setInvHint(rect);
   say(await wait() ? `${name} tab read. That spot is remembered; moving the window is fine too.` : `Still can't read the ${name} tab there. Report a bug (Ctrl+Shift+B) with it open so it can be fixed.`);
 }
-host.onBag?.(tab => { if (INV_TABS.some(x => x[0] === tab)) bagRead(tab) });
+host.onBag?.(tab => { if (BAG_NAMES[tab]) bagRead(tab) });
 
 let starting = false, ICONS = null;
 async function start(){

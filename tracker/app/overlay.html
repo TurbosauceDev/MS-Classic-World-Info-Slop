@@ -137,6 +137,11 @@
   .lr time { color:var(--muted); margin-right:6px; }
   .lr.exp span { color:var(--leaf); } .lr.meso span { color:var(--warn); } .lr.loot span { color:var(--ink); }
   .lr.level span, .lr.kpq span, .lr.run span { color:var(--accent); } .lr.death span, .lr.bad span { color:var(--bad); }
+  .lr.plain span { color:var(--ink); } .lr.big span { font-weight:700; }
+  .lr.lrp { white-space:normal; display:flex; flex-wrap:wrap; gap:2px 12px; } .lp { display:inline-flex; align-items:center; gap:4px; } .lp .ic, .li .ic { width:20px; height:20px; image-rendering:pixelated; flex:none; }
+  .linv { display:grid; grid-template-columns:repeat(var(--lc,2), minmax(0, 1fr)); gap:3px 10px; } .li { display:flex; align-items:center; gap:5px; min-width:0; padding:1px 0; }
+  .li .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .li b { flex:none; color:var(--leaf); font-weight:600; }
+  .ltot { display:flex; justify-content:space-between; margin-top:5px; padding-top:4px; border-top:1px solid color-mix(in srgb, var(--line) 60%, transparent); color:var(--muted); } .ltot b { color:var(--ink); }
   .lr.map, .lr.sep, .lr.msg { color:var(--muted); font-style:italic; }
   .pos { color:var(--leaf); } .neg { color:var(--bad); } .dim { color:var(--muted); }
   .empty { color:var(--muted); font-size:12px; padding:2px 0; }
@@ -162,7 +167,7 @@
   .bagin { margin-top:8px; display:flex; justify-content:center }
   .bagrow { display:flex; gap:8px; align-items:center } .bagrow.col { flex-direction:column; align-items:flex-start }
   .bagI { display:inline-flex; align-items:center; gap:6px; padding:4px; border-radius:8px; border:1px solid color-mix(in srgb, currentColor 45%, transparent); background:color-mix(in srgb, currentColor 14%, transparent); cursor:pointer; transition:color .6s, background .6s; font-size:11px; font-weight:700; }
-  .bagI svg { width:24px; height:24px; display:block } .bagI em { font-style:normal; padding-right:4px }
+  .bagI.txt { padding:4px 9px; } .bagI svg { width:24px; height:24px; display:block } .bagI em { font-style:normal; padding-right:4px }
   .bagI.idle { opacity:.55 } .bagI:hover { background:color-mix(in srgb, currentColor 28%, transparent) }
   .bagI.pulse { animation:bagGlow 2.2s ease-in-out infinite }
   @keyframes bagGlow { 0%,100% { box-shadow:0 0 0 0 transparent } 50% { box-shadow:0 0 10px 2px color-mix(in srgb, currentColor 70%, transparent) } }
@@ -250,28 +255,28 @@
   #ovShare input { width:100%; box-sizing:border-box; font:11px/1.3 ui-monospace, "Cascadia Mono", Consolas, monospace; padding:4px 6px; }
   #ovShare .shBtns { display:flex; gap:5px; margin-top:5px; }
   /* the per-module inspector (Danny 10-28): its own pop-up beside the main panel, opens when a card is picked */
-  #ovinsp { position:fixed; z-index:11; width:286px; max-width:calc(100vw - 20px); max-height:calc(100vh - 24px); overflow-y:auto; overflow-x:hidden; padding:9px 12px 11px; border-radius:12px;
+  #ovinsp, #ovopt { position:fixed; z-index:11; width:286px; max-width:calc(100vw - 20px); max-height:calc(100vh - 24px); overflow-y:auto; overflow-x:hidden; padding:9px 12px 11px; border-radius:12px;
     background:color-mix(in srgb, var(--panel) 95%, transparent); -webkit-backdrop-filter:blur(16px) saturate(1.2); backdrop-filter:blur(16px) saturate(1.2);
     border:1px solid var(--line); box-shadow:0 1px 2px rgba(0,0,0,.22), 0 12px 32px -12px rgba(0,0,0,.45); scrollbar-width:thin; }
-  #ovinsp.hidden { display:none; }
-  #ovinsp > header { display:flex; align-items:center; gap:6px; cursor:move; margin-bottom:3px; }
-  #ovinsp > header .t { flex:1; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); }
-  #ovinsp .btn { background:var(--accent-soft); color:var(--ink); border:0; border-radius:8px; padding:2px 9px; font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
-  #ovinsp .wdet { display:block; padding:0; border:0; }
-  #ovinsp h4 { margin:9px 0 2px; font-size:10px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); padding-top:7px; border-top:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
-  #ovinsp .wdet > h4:first-child { border-top:0; padding-top:0; margin-top:4px; }
-  #ovinsp label { display:flex; gap:8px; align-items:center; font-size:11px; color:var(--muted); margin:5px 0; }
-  #ovinsp label b { min-width:78px; font-weight:600; flex:none; }
-  #ovinsp label .pv { min-width:42px; text-align:right; color:var(--ink); flex:none; }
-  #ovinsp input[type=range] { flex:1; min-width:0; }
-  #ovinsp input[type=number] { width:96px; padding:3px 6px; border:1px solid var(--line); border-radius:6px; background:color-mix(in srgb, var(--bg) 60%, transparent); color:var(--ink); font:inherit; }
-  #ovinsp input[type=checkbox] { accent-color:var(--accent); margin:0; }
-  #ovinsp input[type=color] { width:30px; height:20px; padding:0; border:1px solid var(--line); border-radius:5px; background:none; cursor:pointer; }
-  #ovinsp select { background:var(--accent-soft); color:var(--ink); border:0; border-radius:7px; font:inherit; font-size:11px; padding:2px 4px; flex:1; min-width:0; }
-  #ovinsp .clr { background:none; border:0; color:var(--muted); font:inherit; font-size:11px; cursor:pointer; text-decoration:underline; padding:0 2px; }
-  #ovinsp .acts { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; padding-top:8px; border-top:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
-  #ovinsp .acts button { background:var(--accent-soft); color:var(--ink); border:0; border-radius:7px; padding:3px 9px; font:inherit; font-size:11px; cursor:pointer; }
-  #ovinsp .acts button:hover { background:var(--accent); color:var(--on-accent); } #ovinsp .acts .danger:hover { background:var(--bad); }
+  #ovinsp.hidden, #ovopt.hidden { display:none; }
+  #ovinsp > header, #ovopt > header { display:flex; align-items:center; gap:6px; cursor:move; margin-bottom:3px; }
+  #ovinsp > header .t, #ovopt > header .t { flex:1; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); }
+  #ovinsp .btn, #ovopt .btn { background:var(--accent-soft); color:var(--ink); border:0; border-radius:8px; padding:2px 9px; font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
+  #ovinsp .wdet, #ovopt .wdet { display:block; padding:0; border:0; }
+  #ovinsp h4, #ovopt h4 { margin:9px 0 2px; font-size:10px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); padding-top:7px; border-top:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+  #ovinsp .wdet > h4:first-child, #ovopt .wdet > h4:first-child { border-top:0; padding-top:0; margin-top:4px; }
+  #ovinsp label, #ovopt label { display:flex; gap:8px; align-items:center; font-size:11px; color:var(--muted); margin:5px 0; }
+  #ovinsp label b, #ovopt label b { min-width:78px; font-weight:600; flex:none; }
+  #ovinsp label .pv, #ovopt label .pv { min-width:42px; text-align:right; color:var(--ink); flex:none; }
+  #ovinsp input[type=range], #ovopt input[type=range] { flex:1; min-width:0; }
+  #ovinsp input[type=number], #ovopt input[type=number] { width:96px; padding:3px 6px; border:1px solid var(--line); border-radius:6px; background:color-mix(in srgb, var(--bg) 60%, transparent); color:var(--ink); font:inherit; }
+  #ovinsp input[type=checkbox], #ovopt input[type=checkbox] { accent-color:var(--accent); margin:0; }
+  #ovinsp input[type=color], #ovopt input[type=color] { width:30px; height:20px; padding:0; border:1px solid var(--line); border-radius:5px; background:none; cursor:pointer; }
+  #ovinsp select, #ovopt select { background:var(--accent-soft); color:var(--ink); border:0; border-radius:7px; font:inherit; font-size:11px; padding:2px 4px; flex:1; min-width:0; }
+  #ovinsp .clr, #ovopt .clr { background:none; border:0; color:var(--muted); font:inherit; font-size:11px; cursor:pointer; text-decoration:underline; padding:0 2px; }
+  #ovinsp .acts, #ovopt .acts { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; padding-top:8px; border-top:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+  #ovinsp .acts button, #ovopt .acts button { background:var(--accent-soft); color:var(--ink); border:0; border-radius:7px; padding:3px 9px; font:inherit; font-size:11px; cursor:pointer; }
+  #ovinsp .acts button:hover, #ovopt .acts button:hover { background:var(--accent); color:var(--on-accent); } #ovinsp .acts .danger:hover { background:var(--bad); }
   /* live x/y chip (0.2.92, ElvUI's movers say where they are while dragged): a small mono readout over the card being
      dragged, resized or nudged — desktop pixels, the same numbers the x/y inputs save. Hidden the moment you let go. */
   #ovxy { position:fixed; z-index:12; pointer-events:none; padding:1px 7px; font:11px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -282,10 +287,10 @@
      condensed PT Sans Narrow. Colours stay tokens, so any palette can wear the skin; the inspector's per-card radius,
      shadow and blur still win over the skin where a card sets them explicitly. */
   body.skin-elv { font-family:"PT Sans Narrow", "Arial Narrow", "Liberation Sans Narrow", Arial, system-ui, sans-serif; }
-  body.skin-elv .ovw, body.skin-elv .toast, body.skin-elv #ovpanel, body.skin-elv #ovinsp, body.skin-elv .trk, body.skin-elv .trk i,
-  body.skin-elv #ovpanel .btn, body.skin-elv #ovinsp .btn, body.skin-elv #ovinsp .acts button, body.skin-elv .wrow .eye,
-  body.skin-elv .wrow .st, body.skin-elv .wrow .nm, body.skin-elv .wdet input[type=number], body.skin-elv #ovinsp input[type=number],
-  body.skin-elv #ovinsp input[type=color], body.skin-elv #ovpanel select, body.skin-elv #ovinsp select,
+  body.skin-elv .ovw, body.skin-elv .toast, body.skin-elv #ovpanel, body.skin-elv #ovinsp, body.skin-elv #ovopt, body.skin-elv .trk, body.skin-elv .trk i,
+  body.skin-elv #ovpanel .btn, body.skin-elv #ovinsp .btn, body.skin-elv #ovopt .btn, body.skin-elv #ovinsp .acts button, body.skin-elv #ovopt .acts button, body.skin-elv .wrow .eye,
+  body.skin-elv .wrow .st, body.skin-elv .wrow .nm, body.skin-elv .wdet input[type=number], body.skin-elv #ovinsp input[type=number], body.skin-elv #ovopt input[type=number],
+  body.skin-elv #ovinsp input[type=color], body.skin-elv #ovopt input[type=color], body.skin-elv #ovpanel select, body.skin-elv #ovinsp select, body.skin-elv #ovopt select,
   body.skin-elv #ovpanel .foot.prof input, body.skin-elv #ovShare input, body.skin-elv #ovxy, body.skin-elv .ovw header button,
   body.skin-elv .ovw .gb, body.skin-elv .wrow .wgb { border-radius:0; }
   /* the pull corners fall in line too (Danny 10-29: the resize handles were still styled for rounded edges) */
@@ -297,7 +302,7 @@
      Loot's 82 = the clear he asked for — while the .solid cards above stay fully opaque in the skin too. */
   body.skin-elv .ovw { background:color-mix(in srgb, var(--panel) var(--glass, 100%), transparent);
     -webkit-backdrop-filter:none; backdrop-filter:none; border-color:var(--line); box-shadow:none; }
-  body.skin-elv .toast, body.skin-elv #ovpanel, body.skin-elv #ovinsp { -webkit-backdrop-filter:none; backdrop-filter:none;
+  body.skin-elv .toast, body.skin-elv #ovpanel, body.skin-elv #ovinsp , body.skin-elv #ovopt{ -webkit-backdrop-filter:none; backdrop-filter:none;
     background:color-mix(in srgb, var(--panel) 96%, transparent); box-shadow:none; }
   body.skin-elv .trk { background:color-mix(in srgb, var(--bg) 55%, #000); }   /* the ElvUI bar: dark track, flat fill */
   /* Claude's 0.2.96-0.2.109 cards fall in line too: the Chat blocker's HP/MP/EXP bars and the Bag check icon pills
@@ -318,6 +323,7 @@
   <div id="ovtoasts" class="hidden"></div>
   <div id="ovpanel" class="hidden"></div>
   <div id="ovinsp" class="hidden"></div>
+  <div id="ovopt" class="hidden"></div>
   <div id="ovroot"></div>
   <script src="themes.js"></script>
   <script src="../core/bagstale.js"></script>

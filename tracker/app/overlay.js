@@ -22,7 +22,7 @@ const HOME = {status: {on: true, x: 24, y: 24}, exp: {on: true, x: 24, y: 108}, 
   kills: {on: false, x: 24, y: 620}, mesos: {on: false, x: 24, y: 700}, loot: {on: false, x: 24, y: 780},
   party: {on: false, x: 24, y: 860}, kpq: {on: false, x: 24, y: 940}, log: {on: false, x: 24, y: 1020},
   stat: {on: false, x: 300, y: 24}, bar: {on: false, x: 300, y: 110}, bag: {on: false, x: 300, y: 190}, simple: {on: false, x: 24, y: 24}, focus: {on: false, x: 24, y: 24}, blocker: {on: false, x: 24, y: 800}, chat: {on: false, x: 600, y: 800}};
-let BD = null, DATA = null, CFG = {edit: true, widgets: {}, snap: true, grid: false, gsize: 64, panel: null, insp: null, profile: "Default", profiles: null}, DESK = {x: 0, y: 0, width: 1920, height: 1080}, zTop = 1;
+let BD = null, DATA = null, CFG = {edit: true, widgets: {}, snap: true, grid: false, gsize: 64, panel: null, insp: null, opt: null, profile: "Default", profiles: null}, DESK = {x: 0, y: 0, width: 1920, height: 1080}, zTop = 1;
 const picked = {id: null};
 // Widget instances (0.2.87, WeakAuras' "make as many displays as you like"): a card id is a kind ("exp") or a kind plus an
 // instance number ("exp_2"), so one kind can be placed twice. The panel's Add widget makes them, an instance's x removes it.
@@ -90,14 +90,8 @@ const PARAMS = [
   {k: "txt", sec: "Look", lab: "Text colour", t: "c"},
   {k: "show", sec: "Show when", lab: "Visible", t: "s", opts: {always: "Always", tracking: "Only while tracking", idle: "Only while stopped"}, def: "always"},
   {k: "ttl", sec: "Show when", lab: "Title while playing", t: "b", def: false},
-  {k: "cv", sec: "Condition", lab: "Watch", t: "s", opts: {none: "Off", expHr: "EXP / hr", mesosHr: "Mesos / hr", killsHr: "Kills / hr", lootHr: "Loot value / hr", kills: "Kills", deaths: "Deaths", pct: "Level progress %"}, def: "none"},
-  {k: "cop", sec: "Condition", lab: "When it is", t: "s", opts: {lt: "Below", gt: "Above"}, def: "lt"},
-  {k: "cn", sec: "Condition", lab: "This number", t: "n", min: 0, max: 1e9, def: 0},
-  {k: "cact", sec: "Condition", lab: "Then", t: "s", opts: {color: "Recolour the card", pulse: "Pulse the card", hide: "Hide the card"}, def: "color"},
-  {k: "ccol", sec: "Condition", lab: "Colour", t: "c"},
   {k: "spark", sec: "This card", lab: "Sparkline", t: "b", def: true, kinds: ["exp", "kills", "mesos"]},
   {k: "sub", sec: "This card", lab: "Detail rows", t: "b", def: true, kinds: ["exp", "kills", "mesos", "status", "kpq"]},
-  {k: "lines", sec: "This card", lab: "Lines shown", t: "r", min: 2, max: 14, step: 1, def: {_: 6, loot: 5, chat: 8}, f: Math.round, kinds: ["log", "loot", "chat"]},
   {k: "cpa", sec: "This card", lab: "Party chat", t: "b", def: true, kinds: ["chat"]},
   {k: "cbu", sec: "This card", lab: "Buddy chat", t: "b", def: true, kinds: ["chat"]},
   {k: "cal", sec: "This card", lab: "All chat", t: "b", def: false, kinds: ["chat"]},
@@ -113,10 +107,51 @@ const PARAMS = [
   {k: "vnum", sec: "This card", lab: "Numbers on the bars", t: "b", def: true, kinds: ["blocker"]},
   {k: "vlay", sec: "This card", lab: "Bars", t: "s", opts: {row: "Side by side", col: "Stacked"}, def: "row", kinds: ["blocker"]},
   {k: "bagi", sec: "This card", lab: "Bag check icons", t: "b", def: false, kinds: ["exp"]},
-  {k: "bagl", sec: "This card", lab: "Icons", t: "s", opts: {row: "Side by side", col: "Stacked"}, def: "row", kinds: ["bag"]},
-  {k: "bgon", sec: "This card", lab: "Card background", t: "b", def: true, kinds: ["bag"]},
-  {k: "bagn", sec: "This card", lab: "Tab names", t: "b", def: false, kinds: ["bag"]},
+  // Bag check (Danny 10-29): which inventory tabs to watch, how the reminders are laid out and what each one shows
+  {k: "bt_equip", sec: "Tabs watched", lab: "Equip", t: "b", def: true, kinds: ["bag"]},
+  {k: "bt_use", sec: "Tabs watched", lab: "Use", t: "b", def: true, kinds: ["bag"]},
+  {k: "bt_setup", sec: "Tabs watched", lab: "Set Up", t: "b", def: false, kinds: ["bag"]},
+  {k: "bt_etc", sec: "Tabs watched", lab: "Etc", t: "b", def: true, kinds: ["bag"]},
+  {k: "bt_cash", sec: "Tabs watched", lab: "Cash", t: "b", def: false, kinds: ["bag"]},
+  {k: "bt_deco", sec: "Tabs watched", lab: "Deco", t: "b", def: false, kinds: ["bag"]},
+  {k: "bagl", sec: "Layout", lab: "Reminders", t: "s", opts: {row: "Side by side", col: "Stacked"}, def: "row", kinds: ["bag"]},
+  {k: "bagm", sec: "Layout", lab: "Show", t: "s", opts: {icon: "Icon only", text: "Text only", both: "Icon and text"}, def: "icon", kinds: ["bag"]},
+  {k: "bgon", sec: "Layout", lab: "Background", t: "b", def: true, kinds: ["bag"], tip: "Off leaves just the reminder buttons, no card behind them"},
+  // Event log (Danny 10-29: "highly, highly customizable")
+  {k: "lgx", sec: "Lines to show", lab: "EXP gains", t: "b", def: true, kinds: ["log"]},
+  {k: "lgm", sec: "Lines to show", lab: "Mesos", t: "b", def: true, kinds: ["log"]},
+  {k: "lgl", sec: "Lines to show", lab: "Loot", t: "b", def: true, kinds: ["log"]},
+  {k: "lgv", sec: "Lines to show", lab: "Events (maps, level-ups…)", t: "b", def: true, kinds: ["log"]},
+  {k: "lgmin", sec: "Lines to show", lab: "EXP gain at least", t: "n", min: 0, max: 1e9, def: null, ph: "any", kinds: ["log"], tip: "Hides EXP lines smaller than this"},
+  {k: "lgmm", sec: "Lines to show", lab: "Mesos at least", t: "n", min: 0, max: 1e9, def: null, ph: "any", kinds: ["log"], tip: "Hides pickups smaller than this"},
+  {k: "lines", sec: "Lines to show", lab: "Lines shown", t: "r", min: 2, max: 14, step: 1, def: {_: 6, loot: 5, chat: 8}, f: Math.round, kinds: ["log", "loot", "chat"]},
+  {k: "lgt", sec: "How it reads", lab: "Time", t: "s", opts: {clock: "Clock time", ago: "How long ago", off: "Hidden"}, def: "clock", kinds: ["log"]},
+  {k: "lgo", sec: "How it reads", lab: "Newest line", t: "s", opts: {top: "On top", bottom: "At the bottom"}, def: "top", kinds: ["log"]},
+  {k: "lgc", sec: "How it reads", lab: "Colour by type", t: "b", def: true, kinds: ["log"]},
+  {k: "lgf", sec: "How it reads", lab: "Fade older lines", t: "b", def: false, kinds: ["log"]},
+  {k: "lgh", sec: "How it reads", lab: "Highlight EXP gain from", t: "n", min: 0, max: 1e9, def: null, ph: "never", kinds: ["log"], tip: "Bold line for a gain this big or bigger"},
+  // Loot card (Danny 10-29): chat-log lines or an inventory grid, with names / icons, filtered by item type
+  {k: "lmode", sec: "Layout", lab: "Style", t: "s", opts: {log: "Chat log", inv: "Inventory"}, def: "log", kinds: ["loot"]},
+  {k: "ldisp", sec: "Layout", lab: "Shows", t: "s", opts: {both: "Icon and name", icon: "Icon only", name: "Name only"}, def: "both", kinds: ["loot"]},
+  {k: "lcols", sec: "Layout", lab: "Columns", t: "r", min: 1, max: 4, step: 1, def: 2, f: Math.round, kinds: ["loot"], when: id => wv(id, "lmode") === "inv"},
+  {k: "lsort", sec: "Layout", lab: "Order by", t: "s", opts: {value: "Most valuable", count: "Most picked up", name: "Name"}, def: "value", kinds: ["loot"], when: id => wv(id, "lmode") === "inv"},
+  {k: "ltot", sec: "Layout", lab: "Total value at the bottom", t: "b", def: false, kinds: ["loot"], when: id => wv(id, "lmode") === "inv"},
+  {k: "lf_eq", sec: "Item types", lab: "Equipment", t: "b", def: true, kinds: ["loot"]},
+  {k: "lf_use", sec: "Item types", lab: "Use (potions…)", t: "b", def: true, kinds: ["loot"]},
+  {k: "lf_scr", sec: "Item types", lab: "Scrolls", t: "b", def: true, kinds: ["loot"]},
+  {k: "lf_etc", sec: "Item types", lab: "Etc", t: "b", def: true, kinds: ["loot"]},
+  {k: "lf_set", sec: "Item types", lab: "Set Up", t: "b", def: true, kinds: ["loot"]},
+  {k: "lmin", sec: "Item types", lab: "Worth at least (mesos)", t: "n", min: 0, max: 1e9, def: null, ph: "any", kinds: ["loot"], when: id => wv(id, "lmode") === "inv", tip: "Hides items whose total is under this"},
   {k: "rows", sec: "This card", lab: "Monsters shown", t: "r", min: 2, max: 14, step: 1, def: 6, f: Math.round, kinds: ["map"]},
+];
+// Parked (Danny 10-29): the Condition rule leaves the inspector until the "mapleAuras" function builds on conditions/triggers.
+// conds() below still knows these keys; put the rows back in PARAMS to switch it on again.
+const PARKED_PARAMS = [
+  {k: "cv", sec: "Condition", lab: "Watch", t: "s", opts: {none: "Off", expHr: "EXP / hr", mesosHr: "Mesos / hr", killsHr: "Kills / hr", lootHr: "Loot value / hr", kills: "Kills", deaths: "Deaths", pct: "Level progress %"}, def: "none"},
+  {k: "cop", sec: "Condition", lab: "When it is", t: "s", opts: {lt: "Below", gt: "Above"}, def: "lt"},
+  {k: "cn", sec: "Condition", lab: "This number", t: "n", min: 0, max: 1e9, def: 0},
+  {k: "cact", sec: "Condition", lab: "Then", t: "s", opts: {color: "Recolour the card", pulse: "Pulse the card", hide: "Hide the card"}, def: "color"},
+  {k: "ccol", sec: "Condition", lab: "Colour", t: "c"}
 ];
 const PMAP = Object.fromEntries(PARAMS.map(p => [p.k, p]));
 const defOf = (p, id) => p.def !== null && typeof p.def === "object" ? (p.def[baseOf(id)] ?? p.def._) : p.def;
@@ -179,9 +214,10 @@ function svHtml(d, full){
   return `<div class="svTwo"><div>${top}</div><div>${mid}${lists}</div></div>`;
 }
 // the Bag check icons (also inside the EXP card when its "Bag check icons" switch is on)
-function bagRow(d, lay, names){
-  const B = window.GrindBag, L = B.tabs(Object.fromEntries(Object.entries(d.inv || {}).map(([k, last]) => [k, {last}])), d.runT0, d.t, d.bagEvery, d.on || d.dummy);
-  return `<div class="bagrow ${lay}">${L.map(l => `<span class="bagI ${l.stage}${l.pulse ? " pulse" : ""}" role="button" data-bag="${l.k}" style="color:${B.color(l)}" title="${esc(l.name)}: ${l.stage === "idle" ? "starts when you press Start" : l.last ? "read " + Math.round(l.age / 60e3) + " min ago" : "not read yet"}. Click to read it now">${B.ICONS[l.k]}${names ? `<em>${esc(l.name)}</em>` : ""}</span>`).join("")}</div>`;
+// mode: icon | text | both (the Bag check card's "Show"); keys = the tabs it watches (default the three base tabs)
+function bagRow(d, lay, mode, keys){
+  const B = window.GrindBag, L = B.tabs(Object.fromEntries(Object.entries(d.inv || {}).map(([k, last]) => [k, {last}])), d.runT0, d.t, d.bagEvery, d.on || d.dummy, keys);
+  return `<div class="bagrow ${lay}">${L.map(l => `<span class="bagI ${l.stage}${l.pulse ? " pulse" : ""}${mode === "text" ? " txt" : ""}" role="button" data-bag="${l.k}" style="color:${B.color(l)}" title="${esc(l.name)}: ${l.stage === "idle" ? "starts when you press Start" : l.last ? "read " + Math.round(l.age / 60e3) + " min ago" : "not read yet"}. Click to read it now">${mode === "text" ? "" : B.ICONS[l.k]}${mode !== "icon" ? `<em>${esc(l.name)}</em>` : ""}</span>`).join("")}</div>`;
 }
 // the Chat blocker (0.2.108): an opaque panel the player cannot see past; the tracker draws its own HP / MP / EXP bars on it from what
 // the readers found in the game pixels (HP/MP: readVitalsAny, EXP: the level bar). Nothing here reads the game.
@@ -220,7 +256,7 @@ const RENDER = {
       ${sp ? `<div class="spk">${SPK(d, "exp")}</div>` : ""}
       ${sub ? `<div class="sub">${s.expHr5 != null ? "last 5 min " + fmt(s.expHr5) : "last 5 min —"}</div>
       <div class="rows"><div><span>gained</span><b class="pos">+${fmt(s.exp || 0)}</b></div><div><span>next level</span><b>${next}</b></div></div>` : ""}` + lv
-      + (wv(id, "bagi") ? `<div class="bagin">${bagRow(d, "row", false)}</div>` : "");
+      + (wv(id, "bagi") ? `<div class="bagin">${bagRow(d, "row", "icon")}</div>` : "");
   },
   kills(d, id){
     const sp = wv(id, "spark"), sub = wv(id, "sub");
@@ -235,9 +271,21 @@ const RENDER = {
       ${sub ? `<div class="rows"><div><span>picked up</span><b class="pos">+${fmt(d.st?.mesos || 0)}</b></div><div><span>loot/hr</span><b>${fmt(d.st?.lootHr || 0)}</b></div></div>` : ""}`;
   },
   loot(d, id){
+    const CAT = {Equipment: "lf_eq", Consumable: "lf_use", Scroll: "lf_scr", Etc: "lf_etc", Setup: "lf_set"}, ok = c => !CAT[c] || wv(id, CAT[c]),   // an unknown category is never hidden
+      disp = wv(id, "ldisp"), cell = (ic, name) => (disp !== "name" && ic ? `<img class="ic" alt="" src="data:image/png;base64,${ic}">` : "") + (disp !== "icon" || !ic ? `<span class="nm">${esc(name)}</span>` : "");
+    if (wv(id, "lmode") === "inv"){
+      let list = (d.loot || []).filter(i => ok(i.c)); const min = wv(id, "lmin"), by = wv(id, "lsort");
+      if (min != null) list = list.filter(i => i.v >= min);
+      list = [...list].sort((a, b) => by === "name" ? a.name.localeCompare(b.name) : by === "count" ? b.n - a.n : b.v - a.v);
+      const total = list.reduce((a, i) => a + (i.v || 0), 0), n = Math.max(wv(id, "lines"), fitRows(id, 24) * wv(id, "lcols"));
+      return list.length ? `<div class="linv" style="--lc:${wv(id, "lcols")}">${list.slice(0, n).map(i => `<div class="li" title="${esc(i.name)}${i.v ? " · " + fmt(i.v) + " mesos" : ""}">${cell(i.ic, i.name)}<b>× ${fmt(i.n)}</b></div>`).join("")}</div>`
+        + (list.length > n ? `<div class="sub dim">and ${list.length - n} more</div>` : "") + (wv(id, "ltot") ? `<div class="ltot"><span>total</span><b>${fmt(total)}</b></div>` : "") : `<div class="empty">Nothing yet.</div>`;
+    }
     const feed = (d.feed || []).filter(l => l.kind === "loot"), n = Math.min(feed.length, Math.max(wv(id, "lines"), fitRows(id, 20)));
-    const lines = feed.slice(-n).reverse();
-    return lines.length ? lines.map(l => `<div class="lr loot"><span>${esc(l.text)}</span></div>`).join("") : `<div class="empty">Nothing yet.</div>`;
+    const rows = feed.slice(-n).reverse().map(l => { const ps = (l.parts || []).filter(p => ok(p.c));
+      if (!l.parts) return `<div class="lr loot"><span>${esc(l.text)}</span></div>`;   // an older tracker sent text only
+      return ps.length ? `<div class="lr loot lrp">${ps.map(p => `<span class="lp">${cell(p.ic, p.name)} <b>× ${fmt(p.n)}</b></span>`).join("")}</div>` : "" }).filter(Boolean);
+    return rows.length ? rows.join("") : `<div class="empty">Nothing yet.</div>`;
   },
   map(d, id){
     const m = d.map || {}, list = m.spawns || [], nm = Math.min(list.length, Math.max(wv(id, "rows"), fitRows(id, 22)));
@@ -273,7 +321,6 @@ const RENDER = {
       : `<div class="lvbar"><span>Lv <b>${d.st?.level ?? "-"}</b></span><div class="trk"><i style="width:${v}%"></i></div><span>${v.toFixed(1)}%</span></div><div class="sub">${esc(BARS[t][0])}</div>` },
   // Bag check (0.2.96): sword / potion / crate, coloured by how stale the tab's last read is (core/bagstale.js). Clicking one
   // asks the tracker window to scan that tab (same as the chips); see the pointerdown handler near the end.
-  bag(d, id){ return bagRow(d, wv(id, "bagl"), wv(id, "bagn")) },
   // Chat window (0.3.18): the chat the tracker read off the game's chat box (core/chatlines.js, OCR of new lines only), filtered
   // by channel. Megaphones, [Notice] lines and the like are never captured. Oldest lines clip first; no scroll bar.
   chat(d, id){
@@ -284,11 +331,19 @@ const RENDER = {
     return rows.length ? rows.map(m => `<div class="cm ${esc(m.cls)}${gc ? " gc" : ""}">${ts ? `<time>${clockT(m.t)}</time>` : ""}${nm && m.who ? `<b>${esc(m.who)}${m.dir === "to" ? " &rsaquo;" : m.dir === "from" ? " &lsaquo;" : ""}</b> ` : ""}<span>${esc(m.text)}</span></div>`).join("")
       : `<div class="empty">${d.chatOn ? "No messages yet." : "Waiting for the game's chat box."}</div>`;
   },
+  bag(d, id){ const keys = window.GrindBag.ALL.map(t => t[0]).filter(k => wv(id, "bt_" + k));
+    return keys.length ? bagRow(d, wv(id, "bagl"), wv(id, "bagm"), keys) : `<div class="empty">Pick a tab to watch.</div>` },
   log(d, id){
     // a pinned-tall card shows as many lines as fit (Danny 10-29: growing a card must never leave strange empty space)
-    const feed = d.feed || [], n = Math.min(feed.length, Math.max(wv(id, "lines"), fitRows(id, 20)));
-    const lines = feed.slice(-n).reverse();
-    return lines.length ? lines.map(l => `<div class="lr ${esc(l.kind)}"><time>${clockT(l.t)}</time><span>${esc(l.text)}</span></div>`).join("") : `<div class="empty">Nothing yet.</div>`;
+    const KEY = {exp: "lgx", meso: "lgm", loot: "lgl"}, minE = wv(id, "lgmin"), minM = wv(id, "lgmm"), hi = wv(id, "lgh"), tm = wv(id, "lgt");
+    const feed = (d.feed || []).filter(l => !(KEY[l.kind] ? !wv(id, KEY[l.kind]) : !wv(id, "lgv"))
+      && !(l.kind === "exp" && minE != null && l.n != null && l.n < minE) && !(l.kind === "meso" && minM != null && l.n != null && l.n < minM));
+    const n = Math.min(feed.length, Math.max(wv(id, "lines"), fitRows(id, 20))), top = wv(id, "lgo") === "top";
+    const lines = feed.slice(-n); if (top) lines.reverse();
+    const ago = t => { const s = Math.max(0, Math.round((d.t - t) / 1e3)); return s < 60 ? s + "s" : s < 3600 ? Math.floor(s / 60) + "m" : Math.floor(s / 3600) + "h" },
+      cl = wv(id, "lgc") ? "" : " plain", fade = wv(id, "lgf");
+    return lines.length ? lines.map((l, i) => { const age = top ? i : lines.length - 1 - i, big = hi != null && l.kind === "exp" && l.n != null && l.n >= hi;
+      return `<div class="lr ${esc(l.kind)}${cl}${big ? " big" : ""}"${fade && age ? ` style="opacity:${Math.max(.35, 1 - age * .12).toFixed(2)}"` : ""}>${tm === "off" ? "" : `<time>${tm === "ago" ? ago(l.t) : clockT(l.t)}</time>`}<span>${esc(l.text)}</span></div>` }).join("") : `<div class="empty">Nothing yet.</div>`;
   },
 };
 
@@ -462,6 +517,7 @@ function setGrp(id, g){
 const CONDV = {expHr: d => d.st?.expHr, mesosHr: d => d.st?.mesosHr, killsHr: d => d.st?.killsHr, lootHr: d => d.st?.lootHr,
   kills: d => d.st?.kills, deaths: d => d.st?.deaths, pct: d => d.st?.pct};
 function conds(d){
+  if (!PMAP.cv) return;   // parked: the Condition rows are out of PARAMS until mapleAuras (see PARKED_PARAMS)
   for (const el of document.querySelectorAll(".ovw")){ const id = el.dataset.w, k = wv(id, "cv"), val = k !== "none" && CONDV[k] ? CONDV[k](d) : null;
     const met = Number.isFinite(val) && (wv(id, "cop") === "lt" ? val < wv(id, "cn") : val > wv(id, "cn")), act = wv(id, "cact");
     for (const a of ["color", "pulse", "hide"]) el.classList.toggle("cmet-" + a, met && act === a);
@@ -504,7 +560,7 @@ const profSnap = () => ({widgets: JSON.parse(JSON.stringify(CFG.widgets)), panel
 const ovSave = () => { clearTimeout(saveT); saveT = setTimeout(() => {
   histRecord();
   CFG.profiles[CFG.profile] = profSnap();   // the live layout IS the active profile (ElvUI's model): every save mirrors into it
-  window.ovhost.settings({overlay: {edit: CFG.edit, widgets: CFG.widgets, snap: CFG.snap, grid: CFG.grid, gsize: CFG.gsize, panel: CFG.panel, insp: CFG.insp,
+  window.ovhost.settings({overlay: {edit: CFG.edit, widgets: CFG.widgets, snap: CFG.snap, grid: CFG.grid, gsize: CFG.gsize, panel: CFG.panel, insp: CFG.insp, opt: CFG.opt,
     profile: CFG.profile, profiles: CFG.profiles}}).catch(() => {});
 }, 200) };
 
@@ -668,24 +724,16 @@ function paramRow(p, id){
   if (p.t === "b") return `<label>${lab}<input type="checkbox" data-k="${p.k}"${v ? " checked" : ""}></label>`;
   return `<label>${lab}<input type="color" data-k="${p.k}" value="${v || "#a78bfa"}"><button class="clr" data-clr="${p.k}" title="Follow the tracker's theme again">Theme</button></label>`;
 }
-function buildInsp(id){
-  const box = $("#ovinsp"); if (!box) return;
-  if (!id || !CFG.edit){ insp.id = null; box.classList.add("hidden"); box.innerHTML = ""; return }
-  const base = baseOf(id), inst = INST.test(id), name = wName(id), secs = {};
-  for (const p of PARAMS) if ((!p.kinds || p.kinds.includes(base)) && (!p.notKinds || !p.notKinds.includes(base))) (secs[p.sec] = secs[p.sec] || []).push(p);
-  const tokSet = TOK_SETS[base], tokKey = tokSet ? tokOf(id, tokSet, Object.keys(tokSet)[0]) : null;
-  const was = box.scrollTop;
-  box.innerHTML = `<header id="ovinHead"><span class="t">${esc(name)}</span><button class="btn" id="ovinClose" title="Close (the card stays)">×</button></header>
-    <div class="wdet open" data-w="${id}">
-      ${tokSet ? `<h4>Shows</h4><label><b>Value</b><select data-k="tok">${Object.entries(tokSet).map(([k, v]) => `<option value="${k}"${tokKey === k ? " selected" : ""}>${esc(v[0])}</option>`).join("")}</select></label>` : ""}
-      ${Object.entries(secs).map(([sec, ps]) => `<h4>${sec}</h4>${ps.map(p => paramRow(p, id)).join("")}`).join("")}
-      <h4>Position</h4><div class="xy">x <input type="number" step="1" data-k="x"> y <input type="number" step="1" data-k="y"></div>
-      <label><b>Group</b><select data-k="grp" title="Cards sharing a letter move together (drag or nudge one, the letter follows)"><option value="">None — moves alone</option>${GRPS.split("").map(l => `<option value="${l}"${grpOf(id) === l ? " selected" : ""}>${l}${grpCount(l) ? ` · ${grpCount(l)} card${grpCount(l) === 1 ? "" : "s"}` : ""}</option>`).join("")}</select></label>
-      <div class="acts"><button data-a="reset" title="Back to the default look and spot">Reset ${esc(name)}</button><button data-a="copy" title="Give every card this card's look (size, glass, colours)">Copy look to all</button><button data-a="dup">Duplicate</button>${inst ? `<button data-a="del" class="danger">Remove</button>` : ""}</div>
-    </div>`;
-  const first = insp.id !== id; insp.id = id; box.classList.remove("hidden"); box.scrollTop = first ? 0 : was;
-  const det = box.querySelector(".wdet");
-  const live = e => { const k = e.target.dataset.k; if (!k) return; const el = e.target;
+// Two pop-ups (Danny 10-29): #ovinsp keeps what every card shares (size, look, show-when, position, group); #ovopt holds what only
+// this kind of card has (Bag check tabs, Event log filters, Loot style…), opened beside it. A param with `kinds` is the card's own.
+const opt = {id: null};
+const secHtml = (id, ps) => { const secs = {};
+  for (const p of ps) if ((!p.when || p.when(id))) (secs[p.sec] = secs[p.sec] || []).push(p);
+  return Object.entries(secs).map(([sec, l]) => `<h4>${sec}</h4>${l.map(p => paramRow(p, id)).join("")}`).join("") };
+const kindParams = id => PARAMS.filter(p => (!p.kinds || p.kinds.includes(baseOf(id))) && (!p.notKinds || !p.notKinds.includes(baseOf(id))));
+// one handler for both pop-ups: a changed knob is saved on its card; selects and switches rebuild the options so rows that depend on them follow
+function liveFor(id, rebuildOpt){
+  return e => { const k = e.target.dataset.k; if (!k) return; const el = e.target;
     if (k === "x" || k === "y"){ const c = $("#ovw-" + id); if (!c) return; c.style[k === "x" ? "left" : "top"] = (Math.round(+el.value || 0) - DESK[k]) + "px"; clampCard(c); savePos(id); return }
     if (k === "grp"){ setGrp(id, el.value || null); return }
     if (k === "tok"){ setP(id, "tok", el.value); return }
@@ -693,7 +741,46 @@ function buildInsp(id){
     let raw = p.t === "b" ? el.checked : p.t === "r" ? +el.value / (p.u || 1) : el.value;
     if (p.t === "r" && p.inv) raw = p.min + p.max - raw;
     setP(id, k, raw);
-    const pv = el.parentElement.querySelector(".pv"); if (pv && p.t === "r"){ const w = wv(id, k); pv.textContent = p.f((p.inv ? p.min + p.max - w : w) * (p.u || 1)) } };
+    const pv = el.parentElement.querySelector(".pv"); if (pv && p.t === "r"){ const w = wv(id, k); pv.textContent = p.f((p.inv ? p.min + p.max - w : w) * (p.u || 1)) }
+    if (rebuildOpt && (p.t === "s" || p.t === "b")) buildOpt(id) } }
+function buildOpt(id){
+  const box = $("#ovopt"); if (!box) return;
+  const ps = id && CFG.edit ? kindParams(id).filter(p => p.kinds) : [], base = id ? baseOf(id) : "", tokSet = TOK_SETS[base];
+  if (!ps.length && !tokSet){ opt.id = null; box.classList.add("hidden"); box.innerHTML = ""; return }
+  const tokKey = tokSet ? tokOf(id, tokSet, Object.keys(tokSet)[0]) : null, was = box.scrollTop, first = opt.id !== id, name = wName(id);
+  box.innerHTML = `<header id="ovoptHead"><span class="t">${esc(name)} options</span></header>
+    <div class="wdet open" data-w="${id}">
+      ${tokSet ? `<h4>Shows</h4><label><b>Value</b><select data-k="tok">${Object.entries(tokSet).map(([k, v]) => `<option value="${k}"${tokKey === k ? " selected" : ""}>${esc(v[0])}</option>`).join("")}</select></label>` : ""}
+      ${secHtml(id, ps)}
+    </div>`;
+  opt.id = id; box.classList.remove("hidden"); box.scrollTop = first ? 0 : was;
+  const det = box.querySelector(".wdet"), live = liveFor(id, true);
+  det.addEventListener("input", e => { if (e.target.type === "range" || e.target.type === "color") live(e) });
+  det.addEventListener("change", e => { if (e.target.type !== "range" && e.target.type !== "color") live(e) });
+  det.addEventListener("click", e => { const b = e.target.closest("button"); if (b?.dataset.clr){ setP(id, b.dataset.clr, ""); buildOpt(id) } });
+  if (first) placeOpt(box);
+  syncDetail(id);
+}
+// beside the common pop-up (right of it, else left), or where the player last dragged it
+function placeOpt(box){
+  const ib = $("#ovinsp").getBoundingClientRect(), w = box.offsetWidth || 286;
+  const sx = CFG.opt && Number.isFinite(+CFG.opt.x) ? CFG.opt.x - DESK.x : (ib.right + 10 + w <= innerWidth ? ib.right + 10 : Math.max(0, ib.left - w - 10)), sy = CFG.opt && Number.isFinite(+CFG.opt.y) ? CFG.opt.y - DESK.y : ib.top;
+  box.style.left = clamp(sx, 0, Math.max(0, innerWidth - w)) + "px"; box.style.top = clamp(sy, 0, Math.max(0, innerHeight - box.offsetHeight)) + "px";
+}
+function buildInsp(id){
+  const box = $("#ovinsp"); if (!box) return;
+  if (!id || !CFG.edit){ insp.id = null; box.classList.add("hidden"); box.innerHTML = ""; buildOpt(null); return }
+  const inst = INST.test(id), name = wName(id);
+  const was = box.scrollTop;
+  box.innerHTML = `<header id="ovinHead"><span class="t">${esc(name)}</span><button class="btn" id="ovinClose" title="Close (the card stays)">×</button></header>
+    <div class="wdet open" data-w="${id}">
+      ${secHtml(id, kindParams(id).filter(p => !p.kinds))}
+      <h4>Position</h4><div class="xy">x <input type="number" step="1" data-k="x"> y <input type="number" step="1" data-k="y"></div>
+      <label><b>Group</b><select data-k="grp" title="Cards sharing a letter move together (drag or nudge one, the letter follows)"><option value="">None — moves alone</option>${GRPS.split("").map(l => `<option value="${l}"${grpOf(id) === l ? " selected" : ""}>${l}${grpCount(l) ? ` · ${grpCount(l)} card${grpCount(l) === 1 ? "" : "s"}` : ""}</option>`).join("")}</select></label>
+      <div class="acts"><button data-a="reset" title="Back to the default look and spot">Reset ${esc(name)}</button><button data-a="copy" title="Give every card this card's look (size, glass, colours)">Copy look to all</button><button data-a="dup">Duplicate</button>${inst ? `<button data-a="del" class="danger">Remove</button>` : ""}</div>
+    </div>`;
+  const first = insp.id !== id; insp.id = id; box.classList.remove("hidden"); box.scrollTop = first ? 0 : was;
+  const det = box.querySelector(".wdet"), live = liveFor(id, true);
   det.addEventListener("input", e => { if (e.target.type === "range" || e.target.type === "color") live(e) });
   det.addEventListener("change", e => { if (e.target.type !== "range" && e.target.type !== "color") live(e) });
   det.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
@@ -715,18 +802,20 @@ function buildInsp(id){
   if (first){ const pn = $("#ovpanel").getBoundingClientRect(), w = box.offsetWidth || 286;
     let x = CFG.insp && Number.isFinite(+CFG.insp.x) ? CFG.insp.x - DESK.x : (pn.right + 10 + w <= innerWidth ? pn.right + 10 : pn.left - w - 10), y = CFG.insp && Number.isFinite(+CFG.insp.y) ? CFG.insp.y - DESK.y : pn.top;
     box.style.left = clamp(x, 0, Math.max(0, innerWidth - w)) + "px"; box.style.top = clamp(y, 0, Math.max(0, innerHeight - box.offsetHeight)) + "px" }
+  buildOpt(id);
   syncDetail(id);
 }
-(function(){ const box = $("#ovinsp"); let d = null;
-  box.addEventListener("pointerdown", e => { if (!e.target.closest("#ovinHead") || e.target.closest("button") || e.button) return;
+function dragBox(box, headId, key){ let d = null;
+  box.addEventListener("pointerdown", e => { if (!e.target.closest("#" + headId) || e.target.closest("button") || e.button) return;
     const r = box.getBoundingClientRect(); d = {dx: e.clientX - r.left, dy: e.clientY - r.top}; box.setPointerCapture(e.pointerId); e.preventDefault() });
   box.addEventListener("pointermove", e => { if (!d) return;
     box.style.left = clamp(e.clientX - d.dx, 0, Math.max(0, innerWidth - box.offsetWidth)) + "px"; box.style.top = clamp(e.clientY - d.dy, 0, Math.max(0, innerHeight - box.offsetHeight)) + "px" });
-  box.addEventListener("pointerup", () => { if (!d) return; d = null; CFG.insp = {x: DESK.x + box.offsetLeft, y: DESK.y + box.offsetTop}; ovSave() }) })();
+  box.addEventListener("pointerup", () => { if (!d) return; d = null; CFG[key] = {x: DESK.x + box.offsetLeft, y: DESK.y + box.offsetTop}; ovSave() }) }
+dragBox($("#ovinsp"), "ovinHead", "insp"); dragBox($("#ovopt"), "ovoptHead", "opt");
 function syncDetail(id){
-  const det = document.querySelector(`#ovinsp .wdet[data-w="${id}"]`), el = $("#ovw-" + id);
-  if (!det || !el) return;
-  for (const inp of det.querySelectorAll("[data-k]")){ const k = inp.dataset.k, p = PMAP[k];
+  const el = $("#ovw-" + id);
+  if (!el) return;
+  for (const det of document.querySelectorAll(`#ovinsp .wdet[data-w="${id}"], #ovopt .wdet[data-w="${id}"]`)) for (const inp of det.querySelectorAll("[data-k]")){ const k = inp.dataset.k, p = PMAP[k];
     if (k === "x") inp.value = Math.round(DESK.x + el.offsetLeft); else if (k === "y") inp.value = Math.round(DESK.y + el.offsetTop);
     else if (p && p.t === "r" && document.activeElement !== inp){ const w = wv(id, k), d = (p.inv ? p.min + p.max - w : w) * (p.u || 1); inp.value = d; const pv = inp.parentElement.querySelector(".pv"); if (pv) pv.textContent = p.f(d) } }
 }
@@ -872,7 +961,7 @@ addEventListener("pointerdown", e => {
     }
     pick(card.dataset.w);
     e.preventDefault();
-  } else if (!e.target.closest("#ovpanel") && !e.target.closest("#ovinsp")) pick(null);
+  } else if (!e.target.closest("#ovpanel") && !e.target.closest("#ovinsp") && !e.target.closest("#ovopt")) pick(null);
 });
 addEventListener("pointermove", e => {
   if ((rz || drag) && e.buttons === 0) return endPtr();   // the release was missed: don't carry on moving
@@ -964,7 +1053,7 @@ addEventListener("keydown", e => {
   try {
     const st = await window.ovhost.state();
     CFG = {edit: st.edit !== false, widgets: st.widgets && typeof st.widgets === "object" ? st.widgets : {},
-      snap: st.snap !== false, grid: st.grid === true, gsize: [32, 64, 128].includes(+st.gsize) ? +st.gsize : 64, panel: st.panel || null, insp: st.insp && Number.isFinite(+st.insp.x) ? {x: +st.insp.x, y: +st.insp.y} : null,
+      snap: st.snap !== false, grid: st.grid === true, gsize: [32, 64, 128].includes(+st.gsize) ? +st.gsize : 64, panel: st.panel || null, insp: st.insp && Number.isFinite(+st.insp.x) ? {x: +st.insp.x, y: +st.insp.y} : null, opt: st.opt && Number.isFinite(+st.opt.x) ? {x: +st.opt.x, y: +st.opt.y} : null,
       profile: typeof st.profile === "string" && st.profile ? st.profile : "Default",
       profiles: st.profiles && typeof st.profiles === "object" ? st.profiles : null};
     if (st.desk?.width) DESK = st.desk;

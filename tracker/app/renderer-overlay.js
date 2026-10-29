@@ -13,7 +13,10 @@ function ovPlain(l){
 }
 function ovFeedPush(lines){
   if (!Array.isArray(lines)) return;
-  for (const l of lines) if (l?.kind) ovFeed.push({t: l.t || Date.now(), kind: l.kind, text: ovPlain(l)});
+  // n = the line's amount (EXP / mesos, for the log card's minimum filters); parts = loot with category + icon (the Loot card's
+  // names / icons / type filters). Icons ride along only for the few lines kept, so the snapshot stays small.
+  for (const l of lines) if (l?.kind) ovFeed.push({t: l.t || Date.now(), kind: l.kind, text: ovPlain(l), n: Number.isFinite(l.n) ? l.n : null,
+    parts: l.kind === "loot" ? (l.parts || []).map(p => ({id: p.id, name: p.name, n: p.n, c: G.items[p.id]?.c || "", ic: G.iicons?.[p.id] || ""})) : undefined});
   if (ovFeed.length > 30) ovFeed.splice(0, ovFeed.length - 30);
 }
 // the rate trend (0.2.80, the card sparklines): a ring of samples, one every 20 s (30 min window), pushed with the
@@ -46,7 +49,7 @@ function ovBuild(s){
   const bar = session.state.bar, r = TH.resolve(themeNow(), darkQ.matches);
   return {t: Date.now(), on: timer != null, wrap: !!wrap, held: !!held, paused: s.paused, dummy: dummyOn,
     runT0, clockMs: runClockMs(),   // frozen while paused by you / wrapping up (Danny 10-29: it kept counting)
-    inv: Object.fromEntries(["equip", "use", "etc"].map(k => [k, s.invTabs?.[k]?.last ?? null])), bagEvery: bagCfg().every, state: $("#stateText").textContent,
+    inv: Object.fromEntries(GrindBag.ALL.map(([k]) => [k, s.invTabs?.[k]?.last ?? null])), bagEvery: bagCfg().every, state: $("#stateText").textContent,
     st: {activeMin: s.activeMin, exp: s.exp, expHr: s.expHr, expHr5: s.expHr5, toLevelHrs: s.toLevelHrs, kills: s.kills, killsHr: s.killsHr,
       mesos: s.mesos, mesosHr: s.mesosHr, lootHr: s.lootHr, deaths: s.deaths, level: s.level, pct: bar?.pct ?? null, firstBar: s.firstBar, party: s.party},
     map: {id: mid, name: s.nowMapName || s.mapName, spawns, respawns},
@@ -56,7 +59,8 @@ function ovBuild(s){
     vit: ovVit,
     chat: chatSnap(), chatOn: ovChatOn,
     sm: ovSm(s),
-    feed: ovFeed.slice(-8),
+    feed: ovFeed.slice(-16),
+    loot: s.items.slice(0, 40).map(i => ({id: i.id, name: i.name, n: i.n, v: Math.round(i.total || 0), c: G.items[i.id]?.c || "", ic: G.iicons?.[i.id] || ""})),   // the Loot card's inventory mode
     spark: ovSpark.slice(-60),   // the rate trend for the card sparklines (renderer-alerts.js's toasts ride along too)
     toasts: alertToasts.slice(-3),   // the conditions engine's fired alerts (renderer-alerts.js), aged out by the overlay
     th: {c: r.c, mode: r.mode, sk: r.sk}};   // sk (0.2.92): the panel style rides with the colours, the overlay re-skins live

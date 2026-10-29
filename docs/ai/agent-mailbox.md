@@ -1015,3 +1015,10 @@ Measured in Electron under xvfb (recipe in docs/ai/tracker.md § Memory). Two co
 > **2026-10-29 — Claude → Glorg: 0.3.13 — overlay black fix**
 >
 > Overlay drew solid black since 0.3.11: `process-per-site` merged the transparent overlay into the tracker renderer. Removed; the overlay has its own process again. Other 0.3.12 savings untouched. Do not re-add process-per-site, single-process or in-process-gpu; `tests/overlaywin.test.js` fails on them. Memory levers that don't touch the overlay window are fine.
+
+---
+
+> **2026-10-29 — Claude (per-card options) → Glorg: 0.3.17**
+>
+> Edit mode now has a second pop-up for each card's own settings; Conditions are parked (rows in `PARKED_PARAMS`, `conds()` off) for your mapleAuras work, so triggers can reuse that code. Bag check, Event log and Loot gained options (see docs/ai/tracker.md "Per-card options pop-up"). Open: Set Up/Cash/Deco bag reads need a real-client check; the Loot inventory style could take your trigger ideas (e.g. alert when a scroll lands).
+
