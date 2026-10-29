@@ -878,16 +878,48 @@
      the centre holds the countdown digits, so only the rows above (0-4) and below (25-31) the digit plate are compared,
      columns 3-28 (the corners show the scene). Gray values of those 12 rows x 26 cols, base64. Not checked at 1x/1.5x UI. */
   const PROC_TPL = (() => { const s = typeof atob === "function" ? atob("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC6uru8vb29vr6/v8DAv8DAv8C/wL/Av7+/v+Pk5OTl5ubn6Ofo6ejq6erp6unq6Oro6enp4+Tj4+Tl5ubn6Ojo6enp6ejp5+jo5+jo6OjjuLm5ubq7vLy9vr6+vr6+vr2+vb68vr2+vt3e3t7e3t/e3t/e37UM374NDQ0ODd+/Dbbg3d7d3t7f3t/e39/ftA3fvg20tba0DeC+Drbd3d7e3t7e397e3t61DN6+DLXf39+2Dd+/Dd3e3t3f3d/e3t7f3t61DAy039/f39+1Dg213d3d3t7d3d7d3t7e3960td/f3t/e4N+1td+YmJeXmJiYl5iXmJiYmJmZmJmZmZmZmJqZmgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA") : Buffer.from("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC6uru8vb29vr6/v8DAv8DAv8C/wL/Av7+/v+Pk5OTl5ubn6Ofo6ejq6erp6unq6Oro6enp4+Tj4+Tl5ubn6Ojo6enp6ejp5+jo5+jo6OjjuLm5ubq7vLy9vr6+vr6+vr2+vb68vr2+vt3e3t7e3t/e3t/e37UM374NDQ0ODd+/Dbbg3d7d3t7f3t/e39/ftA3fvg20tba0DeC+Drbd3d7e3t7e397e3t61DN6+DLXf39+2Dd+/Dd3e3t3f3d/e3t7f3t61DAy039/f39+1Dg213d3d3t7d3d7d3t7e3960td/f3t/e4N+1td+YmJeXmJiYl5iXmJiYmJmZmJmZmZmZmJqZmgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "base64").toString("binary"); return Uint8Array.from(s, c => c.charCodeAt(0)) })();
+  const PROC_DARK = PROC_TPL.reduce((a, v) => a + (v < 80 ? 1 : 0), 0);
   const PROC_ROWS = [0, 1, 2, 3, 4, 25, 26, 27, 28, 29, 30, 31];
-  function readProc(img){   // -> {x, y, diff} of the proc icon in the top rows, or null
+  /* the countdown digits (yellow, proportional 9-row font) learned from Danny's 60-second clip, 2026-10-29: every second of
+     the buff 59..4 read off the video at the UI's native pixel grid. Per digit: the bitmap variants (rows joined with "/"). */
+  const PROC_GLYPHS = {"0":["011110/100011/100001/100001/100001/100001/100001/110011/011110"],"1":["011/111/001/001/001/001/001/001/001"],"2":["11111/00001/00001/00001/00010/00110/01100/11000/11111","11111/00001/00001/00001/00011/00110/01100/11000/11111"],"3":["11110/00001/00001/00011/01110/00001/00001/00011/11110","11110/00011/00001/00011/01110/00011/00001/00011/11110","11110/00011/00001/00011/01110/00001/00001/00011/11110","11110/00001/00001/00011/01110/00011/00001/00011/11110"],"4":["000110/000110/001110/001010/010010/110110/111111/000010/000010","000110/000110/001110/001010/010010/110010/111111/000010/000010","1000110/0000110/0001110/0001010/0010010/0110010/0111111/0000010/0000010"],"5":["11111/10000/10000/10000/11110/00011/00001/00011/11110","11111/10000/10000/10000/11110/00001/00001/00011/11110"],"6":["011111/110000/100000/100000/111110/100001/100001/110011/011110","011111/110000/100000/100000/111110/100011/100001/110011/011110"],"7":["111111/000011/000010/000110/000100/001100/001000/001000/010000","111111/000011/000010/000110/000100/000100/001000/001000/010000"],"8":["011110/100001/100001/110010/011110/110011/100001/110011/011110"],"9":["011110/100011/100001/100011/011111/000001/000001/000011/111110","011110/100011/100001/100011/011111/000001/000001/000011/111100","011110/100011/100001/100001/011111/000001/000001/000011/111110","011110/100011/100001/100001/011111/000001/000001/000011/111100"]};
+  function procNum(img, ix, iy){   // the number on the icon at (ix, iy), or null when a digit isn't one of the ten
+    const {w, d} = img, y0 = iy + 12, rows = 9, x0 = ix + 7, wd = 20, col = [];
+    const yel = (x, y) => { const i = (y * w + x) * 4; return d[i] > 170 && d[i + 1] > 150 && d[i + 2] < 120 };
+    for (let c = 0; c < wd; c++){ let any = false; for (let r = 0; r < rows; r++) if (yel(x0 + c, y0 + r)){ any = true; break } col.push(any) }
+    const blobs = []; for (let c = 0; c < wd;){ if (!col[c]){ c++; continue } let e = c; while (e < wd && col[e]) e++; blobs.push([c, e]); c = e }
+    if (blobs.length < 1 || blobs.length > 2) return null;
+    let num = 0;
+    for (const [c0, c1] of blobs){
+      if (c1 - c0 > 7) return null;
+      const bm = []; for (let r = 0; r < rows; r++){ let s = ""; for (let c = c0; c < c0 + 7; c++) s += c < c1 && yel(x0 + c, y0 + r) ? "1" : "0"; bm.push(s) }
+      let best = 99, who = null;
+      for (const ch in PROC_GLYPHS) for (const v of PROC_GLYPHS[ch]){
+        const g = v.split("/"); let bad = 0;
+        for (let r = 0; r < rows; r++){ const row = g[r].padEnd(7, "0"); for (let c = 0; c < 7; c++) if (row[c] !== bm[r][c]) bad++ }
+        if (bad < best){ best = bad; who = ch }
+      }
+      if (best > 5) return null;
+      num = num * 10 + +who;
+    }
+    return num;
+  }
+  function readProc(img){   // -> {x, y, diff, yellow} of the proc icon in the top rows, or null
     const {w, d} = img, gray = (x, y) => { const i = (y * w + x) * 4; return (d[i] + d[i + 1] + d[i + 2]) / 3 };
     let best = null;
     for (let y0 = 0; y0 <= 8; y0++) for (let x0 = Math.floor(w / 2); x0 + 32 <= w; x0++){
       // cheap look first: the black icon border along the top and bottom edge
       if (gray(x0 + 8, y0) > 70 || gray(x0 + 20, y0) > 70 || gray(x0 + 8, y0 + 31) > 70 || gray(x0 + 20, y0 + 31) > 70) continue;
-      let sum = 0, n = 0;
-      for (let r = 0; r < PROC_ROWS.length; r++) for (let c = 0; c < 26; c++){ sum += Math.abs(gray(x0 + 3 + c, y0 + PROC_ROWS[r]) - PROC_TPL[r * 26 + c]); n++ }
-      if (sum / n <= 14 && (!best || sum / n < best.diff)) best = {x: x0, y: y0, diff: Math.round(sum / n * 10) / 10};
+      // the dark outline pixels only: the icon's pale body greys out from the top as the buff runs down (a cooldown sweep)
+      let bad = 0;
+      for (let r = 0; r < PROC_ROWS.length; r++) for (let c = 0; c < 26; c++) if ((gray(x0 + 3 + c, y0 + PROC_ROWS[r]) < 80) !== (PROC_TPL[r * 26 + c] < 80)) bad++
+      const diff = bad / PROC_DARK;   // mismatched outline pixels, as a share of the template's own
+      if (diff <= 0.25 && (!best || diff < best.diff)) best = {x: x0, y: y0, diff: Math.round(diff * 1000) / 1000};
+    }
+    if (best){   // yellow countdown digits on the black plate: no digits = the faded icon, the buff is over
+      let yel = 0;
+      for (let y = best.y + 12; y <= best.y + 20; y++) for (let x = best.x + 7; x < best.x + 27; x++){ const i = (y * w + x) * 4; if (d[i] > 170 && d[i + 1] > 150 && d[i + 2] < 120) yel++ }
+      best.yellow = yel; best.n = yel >= 8 ? procNum(img, best.x, best.y) : null;
     }
     return best;
   }
@@ -922,7 +954,7 @@
       prev = cur;
       return cur.slice(cur.length - n);
     }
-    let lastLeft = null, lastLeftT = -Infinity, procSeen = 0, procGone = 0, procOn = false;
+    let lastLeft = null, lastLeftT = -Infinity, procSeen = 0, procGone = 0, procOn = false, procNum = null, procRead = null;
     function readFrame(raw, t, nat = null){   // nat: the native frame, when the caller already made it
       const img = nat || (raw.k ? raw : native(raw)), ev = [];
       const bar = memo("bar", img, 0, img.h - 40, img.w, img.h, () => readBar(img)) || barAny(raw, t);   // pixel-exact fast path (skipped while the bar strip is unchanged), else any scale
@@ -951,12 +983,18 @@
       // KPQ clock: sent when it changes, at most every 5 s
       const left = memo("kpq", img, Math.round(img.w / 2) - 37, 44, Math.round(img.w / 2) + 110, 76, () => readKpqTimer(img));
       if (left !== null && (lastLeft === null || left !== lastLeft && t - lastLeftT >= 5000)){ ev.push({t, type: "kpqtime", left}); lastLeft = left; lastLeftT = t }
-      // Final Attack proc buff icon: "proc" when it shows up (read twice running), "procoff" when it's gone for 3 frames
+      // Final Attack proc buff: the icon with its yellow countdown on it. "proc" when it shows up (read twice running) and
+      // again when the countdown jumps up while it's running (a proc during a proc refreshes the buff); gone for 3 frames re-arms it
       {
-        const on = !!readProc(img);
-        if (on){ procSeen = Math.max(1, procSeen + 1); procGone = 0 } else { procGone++; procSeen = 0 }
-        if (on && procSeen >= 2 && !procOn){ procOn = true; ev.push({t, type: "proc"}) }
-        if (procOn && procGone >= 3) procOn = false;
+        const pr = readProc(img), on = !!pr && pr.yellow >= 8;
+        if (on){ procSeen++; procGone = 0 } else { procGone++; procSeen = 0 }
+        if (on && procSeen >= 2 && !procOn){ procOn = true; procNum = pr.n; procRead = pr.n; ev.push({t, type: "proc"}) }
+        else if (on && procOn && pr.n !== null){
+          // a new number counts after the same value is read twice running; higher than the last accepted one = refreshed
+          if (pr.n === procRead){ if (procNum !== null && pr.n > procNum) ev.push({t, type: "proc", refresh: true}); procNum = pr.n }
+          procRead = pr.n;
+        }
+        if (procOn && procGone >= 3){ procOn = false; procNum = null; procRead = null }
       }
       const picked = fresh(readPickups(img));
       if (LEARNED.length) ev.push(...LEARNED.splice(0).map(g => ({t, type: "glyph", ...g})));

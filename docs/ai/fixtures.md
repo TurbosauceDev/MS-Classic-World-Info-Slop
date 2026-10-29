@@ -95,3 +95,5 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 - HP/MP reader (0.2.102, tracker/tests/vitals.test.js): reuses the status-bar frames above. frame-000 HP 464/708 MP 196/567 (checked by eye), frame-006 368/708 303/567, frame-042 485/708 282/567, frame-046 485/708 213/567, statusbar-native-1440.png 549/823 618/652.
 
 - tracker/tests/frames-proc/proc-strip-native.png: 160x44 top-right strip of Danny's 10-29 frame (Hunter Turbow, Final Attack buff "58" at x 126,y 3 in the strip). proc.test.js.
+- tracker/tests/frames-proc/noproc-strip-native.png + proc2-strip-native.png: same 160x44 strip (right edge) of Danny's 10-29 "no proc" / "2nd proc" frames (buff 58 in the second). proc.test.js.
+- tracker/tests/frames-proc/countdown-icons-native.png: 8 native 32x32 buff icons cut from Danny's 10-29 60 s clip (left to right 57, 42, 32, 20, 9, 7, 5, faded no-digits). proc.test.js.
