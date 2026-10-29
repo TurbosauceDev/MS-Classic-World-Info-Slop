@@ -274,7 +274,7 @@ const RENDER = {
   // Bag check (0.2.96): sword / potion / crate, coloured by how stale the tab's last read is (core/bagstale.js). Clicking one
   // asks the tracker window to scan that tab (same as the chips); see the pointerdown handler near the end.
   bag(d, id){ return bagRow(d, wv(id, "bagl"), wv(id, "bagn")) },
-  // Chat window (0.3.17): the chat the tracker read off the game's chat box (core/chatlines.js, OCR of new lines only), filtered
+  // Chat window (0.3.18): the chat the tracker read off the game's chat box (core/chatlines.js, OCR of new lines only), filtered
   // by channel. Megaphones, [Notice] lines and the like are never captured. Oldest lines clip first; no scroll bar.
   chat(d, id){
     const on = {party: wv(id, "cpa"), buddy: wv(id, "cbu"), all: wv(id, "cal"), whisper: wv(id, "cwh"), error: wv(id, "cer")};
