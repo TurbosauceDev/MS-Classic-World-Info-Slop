@@ -103,7 +103,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   10-20 audit: 5 small ships (footer move, favicon, offline on custom domain, builder avatar, "listings updated ago") had no card; caught up as v0.8.1. Add only at the top: a card inserted lower renumbers every newer version.
   Each card = one site version, numbered by build.py (oldest = 0.1.0; `class="card" data-minor` starts the next 0.x.0, for a big addition).
   Site-only: tracker app changes go in `tracker/app/changelog.js`.
-- **Item count** asserted in smoke.js (2,258; also 308 recipes, 84 monsters in smoke + edge); update when items change.
+- **Item count** asserted in smoke.js (2,259; also 308 recipes, 84 monsters in smoke + edge); update when items change.
 - **Tooltips:** one floating `#qtip`; classes `.qname` quest, `.ri` item icon, `.itname` item name, `.mname` map
   (`mapLink()`, click opens World Map card), `.nname` NPC (`npcLink()`), `.mobname` monster (`mobLink()`).
 - **Per-viewer state:** localStorage in try/catch; load an object with `savedState(key, S)` (00-core.js: drops unknown keys and wrong types), then range-check enums/levels.
@@ -374,3 +374,7 @@ top-level in the Pages copy - `const D` is wrapper-scoped (window.D is the test 
 - MCI Source-health panel: `src/js/56c-mcihealth.js` (additive — injects `#mcihealth` after `#mcisrc`, zero edits to mci.html). Flags stale sources (meso.watch uses `D.pw.generated` full-ISO, 180 min; the others only have date-only `read`, so 2 days = definitively missed several 3h polls) + surfaces the `now ⊆ asks` contract live (mirrors `tests/data_quality_test.py` § 3). Re-renders on MCI tab open.
 - `@deal` in Ctrl+K search (`src/js/69-search.js`): mirrors MCI's `deal = ask.v / mid` over the same 6 sources (`DEAL_SRC`); cached 5 min via `dealsIndex()`. Equips excluded (any roll, no "% under", matches MCI). Returns `kind:"item"` rows → clicking opens the item page (with its priceBox + history).
 - Tests: `tests/cadence_test.js` (poll max-gap + watchdog `POLL_MAX >= 2x meso.watch` cross-check, complements cron.test.js) + `tests/data_quality_test.py` (cross-source shape/id-format/timestamp + meso.watch now⊆asks + cross-source spread). Both wired into `tests.yml`.
+
+## OSMS 7e1c4eb re-pin 2026-10-29 (CW v1.1.0)
+- Pin 6f003e7 -> 7e1c4eb (build 5236f08e = Nexon v110 manifest). Diff (OSMS patch-notes diff 53df5677 to 5236f08e): 4 mob HP cuts, 8 skills (Poison Breath/Thunder Bolt +10, Focus accuracy, Final Attack absorb 25->15%, Rush range 150), arrow recipes 10:5 -> 100:50, +1 hat item (2,259 items now). Full report: project files reports/patch-v110-2026-10-29.md.
+- Trap repeated: full `build_data.py` again regressed `pw` and mobdb `sp`. Rebuilt, then copied only changed keys (mobs, skills, craft, items, armor, iicons, mobimg, osms) onto the old data.json and patched mobdb hp by hand. Do that, not a straight full rebuild.

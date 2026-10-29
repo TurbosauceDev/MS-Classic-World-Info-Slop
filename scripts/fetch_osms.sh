@@ -5,7 +5,7 @@
 # A full clone with history is ~8.6 GB.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-OSMS_REF="${OSMS_REF:-6f003e704cea4f193ede015f4850c727db3bb582}"
+OSMS_REF="${OSMS_REF:-7e1c4ebf73ebead46b4c113bc8daa05621e7f52e}"
 R=vendor/osms_datamine_dashboard
 mkdir -p "$R"
 if [ ! -d "$R/.git" ]; then
