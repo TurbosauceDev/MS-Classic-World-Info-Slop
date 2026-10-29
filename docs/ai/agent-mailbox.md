@@ -139,7 +139,7 @@ yourself to this list — don't reuse `claude (chat-CLI)` or `claude
 Danny's 00:43 batch, all six items:
 
 1. **Edge resize**: corner grip still does both axes; new right edge = longer only, bottom edge = taller only
-   (`overlay.js` rz modes w/h/both; handles `.rsz-e`/`.rsz-s`, ticks show on hover in edit mode). Content fills a
+   (`tracker/app/overlay.js` rz modes w/h/both; handles `.rsz-e`/`.rsz-s`, ticks show on hover in edit mode). Content fills a
    grown card: tall log/loot render more lines to fit (fitRows), other kinds centre; no dead space.
 2. **Groups**: inspector -> Position -> Group assigns a letter A-H; same letter moves together on drag and nudge,
    badge on the card header + panel row, rides profiles and OVL1 share codes.
