@@ -217,13 +217,13 @@ function ovOpenWin(){
   ovWin.setAlwaysOnTop(true, "screen-saver");
   ovWin.webContents.setWindowOpenHandler(() => ({action: "deny"}));
   ovWin.webContents.on("will-navigate", e => e.preventDefault());
-  ovWin.on("closed", () => { ovWin = null; ovSendState() });
+  ovWin.on("closed", () => { ovWin = null; ovSendState(); bdExit() });
   // edit: true unless the player locked it and it was still open when the app last quit
   const edit = readSettings().overlay?.edit !== false;
   ovWin.loadFile(path.join(__dirname, "overlay.html")).then(() => {
     ovWin.showInactive();
     try { ovWin.setBounds(ovBounds()) } catch {}   // some setups nudge a freshly shown transparent window: re-assert the span
-    ovEditSet(edit);
+    ovEditSet(edit || !!bdKind);   // Borderless opens the overlay in edit mode so the card can be placed
     try { ovWin.webContents.send("ov-screens", ovDesk()) } catch {}   // and tell the page the real content area
   }).catch(() => {});
   ovSendState();
@@ -233,8 +233,25 @@ function ovToggle(){ ovWin && !ovWin.isDestroyed() ? ovCloseWin() : ovOpenWin() 
 ipcMain.handle("overlay", () => { ovToggle(); return !!(ovWin && !ovWin.isDestroyed()) });
 ipcMain.handle("ov-edit", (_, on) => { if (ovWin && !ovWin.isDestroyed()) ovEditSet(on !== false); return ovEditing });
 ipcMain.handle("ov-edit-toggle", () => { if (ovWin && !ovWin.isDestroyed()) ovEditSet(!ovEditing); return ovEditing });
+// Borderless mode (0.2.94, Danny 10-29): Simple / Focus without the window. The tracker window steps aside (minimized: it still
+// reads the screen) and that view opens as a card in the overlay, at the window's old spot and width, in edit mode so it can be
+// placed and scaled with the rest. "Back to tracker window" in the edit panel (or closing the overlay) brings the window back.
+let bdKind = null, bdPending = null;
+function bdOpen(kind){
+  if (!win || win.isDestroyed() || !["simple", "focus"].includes(kind)) return false;
+  const {screen} = require("electron"), b = win.getContentBounds(), o = ovBounds(), z = win.webContents.getZoomFactor() || 1;
+  const msg = {kind, x: b.x - o.x, y: b.y - o.y, mw: Math.round(b.width / z)};
+  bdKind = kind;
+  if (ovWin && !ovWin.isDestroyed()){ ovEditSet(true); ovWin.webContents.send("ov-borderless", msg) }
+  else { bdPending = msg; ovOpenWin() }
+  win.minimize();
+  return true;
+}
+function bdExit(){ if (bdKind){ bdKind = null; if (win && !win.isDestroyed()){ win.restore(); win.show(); pinOnTop() } } }
+ipcMain.handle("borderless", (_, kind) => bdOpen(kind));
+ipcMain.handle("bd-exit", () => { bdExit(); return true });
 ipcMain.handle("ov-close", () => { ovCloseWin(); return true });
-ipcMain.handle("ov-state", () => ({...OVCFG.state(readSettings()), edit: ovEditing, desk: ovDesk()}));   // the whole saved overlay (snap, grid, panel, profiles), not only the widgets
+ipcMain.handle("ov-state", () => { const bd = bdPending; bdPending = null; return {...OVCFG.state(readSettings()), edit: ovEditing, desk: ovDesk(), bd} });   // the whole saved overlay (snap, grid, panel, profiles), not only the widgets
 ipcMain.on("ov-bag", (_, tab) => { if (win && !win.isDestroyed() && typeof tab === "string") win.webContents.send("ov-bag", tab) });
 // click-through stays on (forward: true still delivers mouse moves); over a clickable widget bit the page asks to catch clicks
 ipcMain.on("ov-hit", (_, on) => { if (ovWin && !ovWin.isDestroyed() && !ovEditing) ovWin.setIgnoreMouseEvents(!on, {forward: true}) });

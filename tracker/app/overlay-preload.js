@@ -11,5 +11,7 @@ contextBridge.exposeInMainWorld("ovhost", {
   close: () => ipcRenderer.invoke("ov-close"),
   onData: cb => ipcRenderer.on("ov-data", (_, d) => cb(d)),
   onMode: cb => ipcRenderer.on("ov-mode", (_, on) => cb(on)),
+  showMain: () => ipcRenderer.invoke("bd-exit"),
+  onBorderless: cb => ipcRenderer.on("ov-borderless", (_, b) => cb(b)),
   onScreens: cb => ipcRenderer.on("ov-screens", (_, d) => cb(d)),
 });

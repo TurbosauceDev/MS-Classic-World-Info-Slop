@@ -304,3 +304,4 @@ Each entry blocks something. When Danny calls it, transcribe above with the date
 
 - 2026-10-29 Danny: Discard run goes next to Finalize log and must ask for confirmation (accidental Starts leave a seconds-long log). Patch notes should be human-readable (headings + bullets), not one block.
 - 2026-10-29 (Danny): bag check icons: sword/potion/etc, green -> yellow -> +30 s orange -> red, gentle glow at 2 min; clickable = same CV scan as the bag buttons; toggle on the main card and a standalone overlay widget.
+- 2026-10-29 (Danny): Borderless mode = Simple/Focus as transparent click-through overlay cards, edited with the overlay edit mode (docs/ai/tracker.md).

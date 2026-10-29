@@ -49,6 +49,29 @@
   .ovw header button:hover { color:var(--bad); }
   .ovw .b { zoom:var(--fs, 1); }
   .ovw.ovhide { display:none; }
+  /* Borderless cards (0.2.94): Simple / Focus views. Fixed width = Max width; the corner grip scales the whole card */
+  .ovw[data-k="simple"], .ovw[data-k="focus"] { width:var(--mw, 380px); }
+  .svHead { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+  .svMap { font-size:15px; font-weight:800; color:var(--ink); line-height:1.2; }
+  .sub b { color:var(--ink); }
+  .svK { font-size:10px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); }
+  .svHero { margin-top:8px; } .svHero .big { font-size:26px; }
+  .svTiles { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px; }
+  .svTiles b { display:block; font-size:16px; color:var(--ink); } .svTiles span { font-size:11px; color:var(--muted); }
+  .svLvl { display:grid; grid-template-columns:auto 1fr auto auto; gap:7px; align-items:center; margin-top:8px; font-weight:700; font-size:11px; color:var(--muted); }
+  .svLvl b { color:var(--warn); } .svLvl .trk { height:8px; min-width:60px; }
+  .svChart { margin-top:8px; color:var(--accent); } .svChart svg { display:block; width:100%; height:56px; }
+  .svPots { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:8px; }
+  .svPot { display:flex; gap:6px; align-items:center; } .svPot div { display:grid; line-height:1.15; } .svPot span { font-size:10px; color:var(--muted); }
+  .svMoney { display:grid; grid-template-columns:auto auto 1fr; gap:1px 10px; margin-top:8px; font-size:12px; }
+  .svMoney span { color:var(--muted); font-size:11px; }
+  .svTwo { display:grid; grid-template-columns:1fr 1fr; gap:14px; } .svCols { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px; }
+  .ovw[data-k="focus"] .b { container-type:inline-size; }
+  @container (max-width: 520px) { .svTwo { grid-template-columns:1fr; } .svCols { grid-template-columns:1fr 1fr; } }
+  @container (max-width: 300px) { .svCols { grid-template-columns:1fr; } .svTiles { grid-template-columns:1fr; } }
+  .svl { width:100%; border-collapse:collapse; font-size:12px; } .svl td { padding:1px 0; } .svl td.n { text-align:right; font-weight:700; }
+  .svl .more td { color:var(--muted); font-size:11px; } .svl .ico, .svPot .ico { width:20px; height:20px; vertical-align:middle; margin-right:5px; image-rendering:pixelated; }
+  #ovBd[hidden] { display:none; }
   body.locked .ovw:not(.showt) header { display:none; } body.locked .ovw.showt header button { display:none; }   /* locked = pure overlay: nothing on a card but its numbers */
   body.locked .ovw .rsz { display:none; }
   .big { font-size:20px; font-weight:800; line-height:1.15; color:var(--accent); text-shadow:0 1px 2px rgba(0,0,0,.35); }

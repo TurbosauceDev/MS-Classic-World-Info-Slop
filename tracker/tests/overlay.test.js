@@ -22,7 +22,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
         edit: async on => (window.ovEditCalls = (window.ovEditCalls || []).concat([on !== false]), true),
         done: async () => (window.ovEditCalls = (window.ovEditCalls || []).concat([false]), true),
         close: async () => (window.ovClosed = true, true),
-        hit: on => (window.ovHits = (window.ovHits || []).concat([!!on])), bag: t => (window.ovBags = (window.ovBags || []).concat([t])), onData: cb => window.ovData = cb, onMode: cb => window.ovMode = cb, onScreens: cb => window.ovScreens = cb,
+        hit: on => (window.ovHits = (window.ovHits || []).concat([!!on])), bag: t => (window.ovBags = (window.ovBags || []).concat([t])), onBorderless: cb => window.ovBd = cb, showMain: async () => (window.ovBack = true, true), onData: cb => window.ovData = cb, onMode: cb => window.ovMode = cb, onScreens: cb => window.ovScreens = cb,
       };
     });
     await page.goto("file://" + path.join(__dirname, "../app/overlay.html"));
@@ -32,7 +32,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       !document.querySelector("#ovw-kills"), !document.querySelector("#ovw-mesos"), !document.querySelector("#ovw-log"),
       !document.querySelector("#ovpanel").classList.contains("hidden"), document.body.classList.contains("edit"),
       document.querySelectorAll("#ovpRows .wrow").length, !!document.querySelector("#ovSnap"), !!document.querySelector("#ovGrid"), !!document.querySelector("#ovReset")]);
-    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || st[8] !== 12 || !st[9] || !st[10] || !st[11]) fail("overlay defaults", st);
+    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || st[8] !== 14 || !st[9] || !st[10] || !st[11]) fail("overlay defaults", st);
     // a push fills the cards; the map card shows the spawn table and the respawn countdowns
     const t = Date.now();
     const payload = {t, on: true, paused: false, dummy: false, runT0: t - 7530e3, state: "Tracking · 12 min farmed",
@@ -476,6 +476,32 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     if (errors.length) throw new Error("bag page errors: " + errors.join(" | "));
     await page.close();
   }
+  // ---- Borderless cards (0.2.94): main asks for a view; it lands as a card at the window's old spot, with the same numbers ----
+  {
+    const pg = await browser.newPage({viewport: {width: 1400, height: 900}});
+    await pg.addInitScript(() => { window.ovhost = {state: async () => ({edit: true, widgets: null, desk: {x: 0, y: 0, width: 1400, height: 900}}), settings: async () => ({}),
+      edit: async () => true, done: async () => true, close: async () => true, onData: cb => window.ovData = cb, onMode: () => {}, onScreens: () => {},
+      onBorderless: cb => window.ovBd = cb, showMain: async () => (window.ovBack = true, true)} });
+    await pg.goto("file://" + path.join(__dirname, "../app/overlay.html"));
+    await pg.waitForSelector("#ovw-status");
+    const t = Date.now(), sm = {map: "Subway Depot", spawns: 40, level: 34, job: "Magician", min: 12, exp: 148000, best: 21000, a: {level: 33, pct: 12.4}, b: {level: 34, pct: 42.3},
+      perMin: [[t - 120000, 9000], [t - 60000, 14000], [t, 21000]], pots: [{n: -30, name: "Red Potion", ic: ""}], spent: 1500, mesos: 48000, loot: 9000,
+      items: [{name: "Snail Shell", n: 12, ic: ""}], itemsMore: 2, mobs: [{name: "Slime", n: 40}], mobsMore: 0};
+    await pg.evaluate(() => window.ovBd({kind: "simple", x: 100, y: 80, mw: 420}));
+    await pg.evaluate(s => window.ovData({t: s.t, on: true, state: "Tracking", st: {activeMin: 12}, sm: s.sm}), {t, sm});
+    let r = await pg.evaluate(() => { const c = document.querySelector("#ovw-simple"), b = c?.getBoundingClientRect();
+      return [!!c, c?.style.left, c?.style.top, Math.round(b?.width), c?.textContent, !document.querySelector("#ovBd").hidden, !!c?.querySelector(".svChart polyline")] });
+    if (!r[0] || r[1] !== "100px" || r[3] !== 420 || !r[4].includes("Subway Depot") || !r[4].includes("+148,000") || !r[4].includes("12,333") || !r[4].includes("Red Potion")) fail("borderless simple card", r);
+    if (!r[5] || !r[6]) fail("borderless panel button / chart", r);
+    // Focus replaces Simple (one borderless view at a time) and adds the top lists
+    await pg.evaluate(() => window.ovBd({kind: "focus", x: 100, y: 80, mw: 700}));
+    r = await pg.evaluate(() => [!document.querySelector("#ovw-simple"), document.querySelector("#ovw-focus")?.textContent || ""]);
+    if (!r[0] || !r[1].includes("Snail Shell") || !r[1].includes("and 2 more") || !r[1].includes("Slime")) fail("borderless focus card", r);
+    await pg.click("#ovBack");
+    r = await pg.evaluate(() => [window.ovBack, !document.querySelector("#ovw-focus"), document.querySelector("#ovBd").hidden]);
+    if (!r[0] || !r[1] || !r[2]) fail("back to tracker window", r);
+    await pg.close();
+  }
   // ---- part 2: the tracker window (ui-host stubbed): the button, the menu actions, the push ----
   {
     const page = await browser.newPage({viewport: {width: 1100, height: 900}}), errors = [];
@@ -505,6 +531,10 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
         !!d?.th?.c?.accent, d?.feed?.length >= 1, d?.on, d?.kpq] });
     if (st[0] < 2 || !st[1] || !/Dummy/.test(st[2]) || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || !st[8] || st[9] !== false || st[10] !== null)
       fail("dummy data push", st);
+    // Borderless (0.2.94): the Simple / Focus buttons ask main for it, and the push carries the view's numbers
+    await page.evaluate(() => { document.querySelector("#miniBd").click(); document.querySelector("#fzBd").click() });
+    const bd = await page.evaluate(() => [(window.bdCalls || []).join(), window.ovPushed.at(-1).sm?.map, window.ovPushed.at(-1).sm?.perMin?.length > 0]);
+    if (bd[0] !== "simple,focus" || !bd[1] || !bd[2]) fail("borderless buttons + sm payload", bd);
     if (errors.length) throw new Error("tracker page errors: " + errors.join(" | "));
     await page.close();
   }

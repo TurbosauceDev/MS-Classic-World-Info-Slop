@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld("host", {
   winSize: (w, h) => ipcRenderer.invoke("win-size", w, h),
   // overlay mode: a second, transparent window over the game (main.js owns it; this page builds the data for it)
   overlay: on => ipcRenderer.invoke("overlay", on),
+  borderless: kind => ipcRenderer.invoke("borderless", kind),
   overlayEdit: () => ipcRenderer.invoke("ov-edit-toggle"),
   overlayPush: d => ipcRenderer.send("ov-push", d),
   onOverlay: cb => ipcRenderer.on("ov-state", (_, s) => cb(s)),

@@ -440,7 +440,7 @@
 <body>
   <div id="titlebar"><span class="tbname">Grind Tracker</span><button data-menu="File">File</button><button data-menu="View">View</button><button data-menu="Help">Help</button><button id="tbBtn" aria-expanded="false" title="Modules toolbox: drag modules into your layout (Ctrl+Shift+K)" aria-label="Modules">▦<span class="tbw"> Modules</span></button></div>
   <div class="card" id="mini">
-    <div class="mhead"><span id="miniState"></span><button id="miniFull" class="alt" title="Back to the full window">Full view</button></div>
+    <div class="mhead"><span id="miniState"></span><button id="miniBd" class="alt" title="Borderless: this view as a transparent, click-through card in the overlay, placed and scaled with its edit mode">Borderless</button><button id="miniFull" class="alt" title="Back to the full window">Full view</button></div>
     <div class="row hidden" id="miniWrap" role="status"><span id="miniWrapText" style="flex:1;min-width:0"></span><button id="miniWrapEnd" title="Saves the run to History (the summary waits in the full view)">Finalize log</button><button id="miniWrapDrop" class="alt discard" title="Throws this run away without saving it">Discard run</button></div>
     <!-- Simple Mode (Danny 2026-10-23, his B2 <Subway Depot> mockup): where, who, EXP gained, level bar, potions + money, EXP per minute -->
     <div class="smHead"><div style="min-width:0"><div class="smMap" id="smMap">No map yet</div><div class="smWho" id="smWho" hidden></div></div><div class="smSpawns note" id="smSpawns" title="Monster spawn points on this map (game files)"></div></div>
@@ -470,7 +470,7 @@
   <!-- Focus Mode (Danny 2026-10-26, a third view beside Simple Mode, skinned after maplestory.watch/market): the same session
        data as Simple Mode in one centred column — hero, stat tiles, level bar, chart, potions and mesos, run log, top lists -->
   <div id="focus">
-    <div class="fzHead"><span class="fzWord"><b>Grind</b> Tracker</span><span id="fzState"></span><button id="fzFull" class="alt" title="Back to the full window">Full view</button></div>
+    <div class="fzHead"><span class="fzWord"><b>Grind</b> Tracker</span><span id="fzState"></span><button id="fzBd" class="alt" title="Borderless: this view as a transparent, click-through card in the overlay, placed and scaled with its edit mode">Borderless</button><button id="fzFull" class="alt" title="Back to the full window">Full view</button></div>
     <div class="row hidden" id="fzWrap" role="status"><span id="fzWrapText" style="flex:1;min-width:0"></span><button id="fzWrapEnd" title="Saves the run to History (the summary waits in the full view)">Finalize log</button><button id="fzWrapDrop" class="alt discard" title="Throws this run away without saving it">Discard run</button></div>
     <div class="fzCard fzHero">
       <div class="smMap" id="fzMap">No map yet</div>

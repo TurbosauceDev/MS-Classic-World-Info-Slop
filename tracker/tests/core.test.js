@@ -497,7 +497,7 @@ console.log("history ok");
 { const O = require("../core/overlaycfg.js");
   const st = O.state({overlay: {edit: false, widgets: {exp: {x: 5}}, snap: false, grid: true, gsize: 32, panel: {x: 9, y: 8}, profile: "Boss", profiles: {Boss: {widgets: {}}}, junk: 1}});
   assert.deepStrictEqual([st.snap, st.grid, st.gsize, st.profile, Object.keys(st.profiles), st.panel.x, st.junk], [false, true, 32, "Boss", ["Boss"], 9, undefined]);
-  assert.ok(/ov-state", \(\) => \(\{\.\.\.OVCFG\.state\(readSettings\(\)\)/.test(require("fs").readFileSync(require("path").join(__dirname, "../app/main.js"), "utf8")), "main.js ov-state must hand over the whole saved overlay");
+  assert.ok(/ov-state", \(\) => \{[^\n]*\{\.\.\.OVCFG\.state\(readSettings\(\)\)/.test(require("fs").readFileSync(require("path").join(__dirname, "../app/main.js"), "utf8")), "main.js ov-state must hand over the whole saved overlay");
   assert.deepStrictEqual(O.state({}), {widgets: {}}); assert.deepStrictEqual(O.state({overlay: {widgets: [1], profiles: [], panel: 3, profile: 4}}), {widgets: {}});
 }
 // crash recovery (0.2.60): the autosave is swapped in whole, read back, never listed as a session, and cleared

@@ -17,12 +17,12 @@ const runClock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 // what can be tracked: the panel lists these, in this order. HOME is where each lands the first time (desktop pixels)
-const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar", bag: "Bag check"};
+const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar", bag: "Bag check", simple: "Simple view", focus: "Focus view"};
 const HOME = {status: {on: true, x: 24, y: 24}, exp: {on: true, x: 24, y: 108}, map: {on: true, x: 24, y: 250},
   kills: {on: false, x: 24, y: 620}, mesos: {on: false, x: 24, y: 700}, loot: {on: false, x: 24, y: 780},
   party: {on: false, x: 24, y: 860}, kpq: {on: false, x: 24, y: 940}, log: {on: false, x: 24, y: 1020},
-  stat: {on: false, x: 300, y: 24}, bar: {on: false, x: 300, y: 110}, bag: {on: false, x: 300, y: 190}};
-let DATA = null, CFG = {edit: true, widgets: {}, snap: true, grid: false, gsize: 64, panel: null, insp: null, profile: "Default", profiles: null}, DESK = {x: 0, y: 0, width: 1920, height: 1080}, zTop = 1;
+  stat: {on: false, x: 300, y: 24}, bar: {on: false, x: 300, y: 110}, bag: {on: false, x: 300, y: 190}, simple: {on: false, x: 24, y: 24}, focus: {on: false, x: 24, y: 24}};
+let BD = null, DATA = null, CFG = {edit: true, widgets: {}, snap: true, grid: false, gsize: 64, panel: null, insp: null, profile: "Default", profiles: null}, DESK = {x: 0, y: 0, width: 1920, height: 1080}, zTop = 1;
 const picked = {id: null};
 // Widget instances (0.2.87, WeakAuras' "make as many displays as you like"): a card id is a kind ("exp") or a kind plus an
 // instance number ("exp_2"), so one kind can be placed twice. The panel's Add widget makes them, an instance's x removes it.
@@ -55,7 +55,7 @@ const pct = v => Math.round(v) + "%", px = v => Math.round(v) + " px";
 const PARAMS = [
   {k: "s", sec: "Size & fit", lab: "Size", t: "r", min: .5, max: 2, step: .05, def: 1, u: 100, f: pct},
   {k: "fs", sec: "Size & fit", lab: "Text size", t: "r", min: .7, max: 1.8, step: .05, def: 1, u: 100, f: pct},
-  {k: "mw", sec: "Size & fit", lab: "Max width", t: "r", min: 160, max: 720, step: 10, def: 360, f: px},
+  {k: "mw", sec: "Size & fit", lab: "Max width", t: "r", min: 160, max: 900, step: 10, def: {_: 360, simple: 380, focus: 640}, f: px},
   {k: "pad", sec: "Size & fit", lab: "Padding", t: "s", opts: {compact: "Compact", normal: "Normal", roomy: "Roomy"}, def: "normal"},
   {k: "al", sec: "Size & fit", lab: "Text align", t: "s", opts: {left: "Left", center: "Centre", right: "Right"}, def: "left"},
   {k: "o", sec: "Look", lab: "Opacity", t: "r", min: .25, max: 1, step: .05, def: 1, u: 100, f: pct},
@@ -109,7 +109,40 @@ function SPK(d, k){
     <polyline points="${pts.join(" ")}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" opacity=".8"/>
     <circle cx="${pts.at(-1).split(",")[0]}" cy="${pts.at(-1).split(",")[1]}" r="2.2" fill="currentColor"/></svg>`;
 }
+// Borderless mode (0.2.94): Simple Mode and Focus Mode as cards. Same numbers as renderMini/renderFocus (d.sm is built from
+// the same stats); Focus adds the top lists. The corner grip scales the whole card, so it reads at any size on a second monitor.
+function svChart(pts){
+  if (pts.length < 2) return `<svg viewBox="0 0 300 60" preserveAspectRatio="none"><text x="150" y="34" text-anchor="middle" fill="currentColor" style="font-size:11px;opacity:.6">Chart starts after the first minute of EXP</text></svg>`;
+  const max = Math.max(1, ...pts.map(p => p[1])), n = pts.length, x = i => 300 * i / (n - 1), y = v => 56 - 52 * v / max;
+  const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 0 300 60" preserveAspectRatio="none"><polygon points="0,56 ${line} 300,56" fill="currentColor" opacity=".18"/><polyline points="${line}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+}
+const svIc = b => b ? `<img class="ico" alt="" src="data:image/png;base64,${b}">` : `<span class="ico"></span>`;
+function svList(rows, cell, empty, more){
+  return `<table class="svl">` + (rows.length ? rows.map(cell).join("") + (more > 0 ? `<tr class="more"><td colspan="2">and ${more} more</td></tr>` : "") : `<tr class="more"><td colspan="2">${empty}</td></tr>`) + `</table>`;
+}
+function svHtml(d, full){
+  const m = d.sm; if (!m) return `<div class="sub">Waiting for the tracker…</div>`;
+  const min = m.min || 0, pm = v => min >= 1 ? fmt(v / min) + "/min" : "";
+  let lv = "";
+  if (m.a && m.b){
+    const ups = m.b.level - m.a.level, gained = ups * 100 + m.b.pct - m.a.pct, from = ups ? 0 : m.a.pct;
+    lv = `<div class="svLvl"><span>Lv. <b>${m.a.level}</b></span><div class="trk"><i style="left:${from}%;width:${clamp(m.b.pct - from, 0, 100)}%"></i></div><span>Lv. <b>${m.b.level}</b></span><span class="gain ${gained >= 0 ? "pos" : "neg"}">${gained >= 0 ? "+" : "−"}${Math.abs(gained).toFixed(2)}%</span></div>`;
+  }
+  const pots = m.pots.length ? m.pots.map(p => `<div class="svPot">${svIc(p.ic)}<div><b class="${p.n < 0 ? "neg" : "pos"}">${p.n < 0 ? "−" : "+"}${fmt(Math.abs(p.n))}</b><span>${esc(p.name)}</span></div></div>`).join("") : `<span class="sub">None used yet</span>`;
+  const money = `<span>spent</span><b class="neg">−${fmt(m.spent || 0)}</b><span>${pm(m.spent || 0)}</span><span>picked up</span><b class="pos">+${fmt(m.mesos || 0)}</b><span>${pm(m.mesos || 0)}</span><span>loot value</span><b class="pos">+${fmt(m.loot || 0)}</b><span>${pm(m.loot || 0)}</span>`;
+  const top = `<div class="svHead"><div><div class="svMap">${esc(m.map || "No map yet")}</div>${m.level || m.job ? `<div class="sub">${m.level ? `Lv. <b>${m.level}</b>` : ""} ${esc(m.job)}</div>` : ""}</div>${m.spawns ? `<div class="sub">${m.spawns} spawns</div>` : ""}</div>
+    <div class="svHero"><div class="svK">EXP gained</div><div class="big">${m.exp > 0 ? "+" : ""}${fmt(m.exp || 0)} <small>${min >= 1 ? "in " + hm(min / 60) : ""}</small></div></div>
+    <div class="svTiles"><div><b>${min >= 1 ? fmt(m.exp / min) : "-"}</b><span>EXP / min</span></div><div><b>${m.best ? fmt(m.best) : "-"}</b><span>best minute</span></div></div>${lv}`;
+  const mid = `<div class="svChart">${svChart(m.perMin)}</div><div class="svPots">${pots}</div><div class="svMoney">${money}</div>`;
+  if (!full) return top + mid;
+  const lists = `<div class="svCols"><div><div class="svK">Loot</div>${svList(m.items, i => `<tr><td>${svIc(i.ic)}${esc(i.name)}</td><td class="n">×${fmt(i.n)}</td></tr>`, "Nothing yet", m.itemsMore)}</div>
+    <div><div class="svK">Monsters killed</div>${svList(m.mobs, x => `<tr><td>${esc(x.name)}</td><td class="n">${fmt(x.n)}</td></tr>`, "None yet", m.mobsMore)}</div></div>`;
+  return `<div class="svTwo"><div>${top}</div><div>${mid}${lists}</div></div>`;
+}
 const RENDER = {
+  simple: (d) => svHtml(d, false),
+  focus: (d) => svHtml(d, true),
   status(d, id){
     const sub = wv(id, "sub");
     return `<div class="big" style="font-size:14px;color:var(--ink)"><span class="dot ${d.on ? (d.paused ? "warn" : "ok") : ""}"></span>${esc(d.state || (d.on ? "Tracking" : "Stopped"))}</div>
@@ -209,7 +242,7 @@ function wPos(id){
 }
 function mkCard(id){
   const el = document.createElement("section");
-  el.className = "ovw"; el.id = "ovw-" + id; el.dataset.w = id;
+  el.className = "ovw"; el.id = "ovw-" + id; el.dataset.w = id; el.dataset.k = baseOf(id);
   el.innerHTML = `<header><span class="t">${esc(wName(id))}</span><button class="x" title="Hide ${esc(wName(id))}" aria-label="Hide ${esc(wName(id))}">×</button></header><div class="b"></div><i class="rsz" title="Drag to resize"></i>`;
   el.querySelector(".x").onclick = () => { setOn(id, false); if (picked.id === id) pick(null) };
   el.addEventListener("pointerenter", () => { if (CFG.edit) el.style.zIndex = ++zTop });
@@ -377,6 +410,7 @@ const EYEOFF = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stro
 function buildPanel(){
   const p = $("#ovpanel");
   p.innerHTML = `<header id="ovpHead"><span class="t">Overlay edit</span><button class="btn" id="ovDone">Done</button><button class="btn alt" id="ovClose" title="Close the overlay">×</button></header>
+    <div class="foot" id="ovBd" hidden><button class="btn alt" id="ovBack" title="Bring the tracker window back and hide the Simple / Focus card">Back to tracker window</button></div>
     <p class="hint">Drag the cards — Shift skips snapping, arrows nudge. Ctrl+scroll or the corner grip resizes. All saves by itself.</p>
     <div id="ovpRows"></div>
     <div class="foot add"><select id="ovAddKind" title="What to add">${Object.entries(KINDS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select>
@@ -393,6 +427,7 @@ function buildPanel(){
       <div class="shBtns"><button class="btn alt" id="ovShareCopy">Copy</button><button class="btn" id="ovShareApply">Apply code</button></div></div>`;
   $("#ovDone").onclick = () => window.ovhost.done();
   $("#ovClose").onclick = () => window.ovhost.close();
+  $("#ovBack").onclick = () => { for (const k of ["simple", "focus"]) if (wPos(k).on) setOn(k, false); window.ovhost.showMain?.() };
   $("#ovAdd").onclick = () => addInst($("#ovAddKind").value);
   $("#ovSnap").onchange = e => { CFG.snap = e.target.checked; ovSave() };
   $("#ovGrid").onchange = e => { CFG.grid = e.target.checked; gridShow() ; ovSave() };
@@ -434,6 +469,7 @@ function buildPanel(){
 }
 function syncPanel(){
   const rows = $("#ovpRows"); if (!rows) return;
+  const bd = $("#ovBd"); if (bd) bd.hidden = !(wPos("simple").on || wPos("focus").on);
   rows.innerHTML = ids().map(id => { const name = wName(id), p = wPos(id), inst = INST.test(id);
     return `<div class="wrow${p.on ? "" : " off"}${picked.id === id ? " sel" : ""}" data-w="${id}">
       <button class="eye${p.on ? "" : " off"}" title="${p.on ? "Hide" : "Show"} ${esc(name)}">${p.on ? EYE : EYEOFF}</button>
@@ -718,6 +754,7 @@ addEventListener("keydown", e => {
       profile: typeof st.profile === "string" && st.profile ? st.profile : "Default",
       profiles: st.profiles && typeof st.profiles === "object" ? st.profiles : null};
     if (st.desk?.width) DESK = st.desk;
+    BD = st.bd || null;
   } catch {}
   // profiles: the live layout is the truth, so the active profile starts as a mirror of it (first boot makes Default)
   if (!CFG.profiles || typeof CFG.profiles !== "object" || !CFG.profiles[CFG.profile])
@@ -747,6 +784,16 @@ addEventListener("keydown", e => {
     toastsShow(DATA ? DATA.toasts : []);   // toasts too: hidden at once while editing, back when the push resumes
     place(); vis(); if (!CFG.edit) reflow(); ovSave();
   });
+  // borderless (main.js): the tracker window stepped aside; the view it was showing becomes a card. A card placed before keeps its spot
+  const bdCard = b => {
+    if (!b || !HOME[b.kind] || !["simple", "focus"].includes(b.kind)) return;
+    const w = CFG.widgets[b.kind], placed = w && Number.isFinite(+w.x);
+    if (!placed && Number.isFinite(+b.x) && Number.isFinite(+b.y)) CFG.widgets[b.kind] = {...(w || {}), x: Math.round(b.x), y: Math.round(b.y), ...(Number.isFinite(+b.mw) && !w?.mw ? {mw: clamp(Math.round(+b.mw), 160, 900)} : {})};
+    for (const k of ["simple", "focus"]) if (k !== b.kind && wPos(k).on) setOn(k, false);
+    setOn(b.kind, true); place();
+  };
+  window.ovhost.onBorderless?.(bdCard);
+  if (BD) bdCard(BD);   // the overlay was opened by Borderless: its first card request rode in with the state
   window.ovhost.onScreens(d => { if (d?.width){ DESK = d; place() } });
   setInterval(() => { if (DATA) apply({...DATA, t: Date.now()}) }, 1000);   // the countdowns and clocks tick between pushes
 })();

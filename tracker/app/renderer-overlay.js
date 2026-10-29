@@ -26,6 +26,17 @@ function ovSparkSample(){
   if (ovSpark.length > 90) ovSpark.shift();
 }
 setInterval(ovSparkSample, 20000);
+// Borderless mode (0.2.94): the Simple and Focus views drawn as overlay cards (overlay.js RENDER.simple/focus), so they sit
+// beside the other widgets, click-through, and are laid out with the overlay's edit mode. Same numbers, same helpers' data.
+function ovSm(s){
+  const mid = s.nowMap || s.map, rows = (l, f) => l.slice(0, 5).map(f), more = l => Math.max(0, l.length - 5);
+  const pots = [...s.used.filter(u => u.n > 0).map(u => ({id: u.id, name: u.name, n: -u.n})), ...s.items.filter(i => G.items[i.id]?.c === "Consumable").map(i => ({id: i.id, name: i.name, n: i.n}))].slice(0, 6);
+  const ic = id => G.iicons?.[id] || G.icons?.[id] || "";
+  return {map: s.nowMapName || s.mapName || "", spawns: (G.maps[mid]?.[2] || []).reduce((a, [, c]) => a + (c || 0), 0), level: s.level || null, job: s.job || "",
+    min: s.activeMin, exp: s.exp, best: s.bestMin || 0, a: s.firstBar || null, b: s.bar || null, perMin: (s.perMin || []).slice(-90),
+    pots: pots.map(p => ({n: p.n, name: p.name, ic: ic(p.id)})), spent: s.usedCost, mesos: s.mesos, loot: s.lootValue,
+    items: rows(s.items, i => ({name: i.name, n: i.n, ic: ic(i.id)})), itemsMore: more(s.items), mobs: rows(s.mobs, m => ({name: m.name, n: m.kills})), mobsMore: more(s.mobs)};
+}
 function ovBuild(s){
   const mid = s.nowMap != null ? String(s.nowMap) : s.map != null ? String(s.map) : null;
   const list = mid && G.maps[mid] ? G.maps[mid][2] : [];   // [mob, count] per the game data
@@ -40,6 +51,7 @@ function ovBuild(s){
     kpq: kpq?.on ? {rounds: kpq.rounds, stage: kpq.stage ? KPQ_STAGE[kpq.stage.id] : null, stageT0: kpq.stage?.t0 ?? null,
       round: kpq.round ? {t0: kpq.round.t0} : null, clock: kpq.left !== null ? {left: kpq.left, leftT: kpq.leftT} : null, hold: !!kpq.hold} : null,
     party: partyLive,
+    sm: ovSm(s),
     feed: ovFeed.slice(-8),
     spark: ovSpark.slice(-60),   // the rate trend for the card sparklines (renderer-alerts.js's toasts ride along too)
     toasts: alertToasts.slice(-3),   // the conditions engine's fired alerts (renderer-alerts.js), aged out by the overlay
@@ -59,6 +71,8 @@ render = function(...a){ const r = _render.apply(this, a); try { ovSend() } catc
 const _feedAdd = feedAdd;
 feedAdd = function(lines){ const r = _feedAdd.apply(this, arguments); try { ovFeedPush(lines) } catch {} return r };
 // the Overlay button beside Focus Mode's, and the View-menu actions
+$("#miniBd").onclick = () => host.borderless?.("simple");
+$("#fzBd").onclick = () => host.borderless?.("focus");
 $("#overlayBtn").onclick = () => host.overlay?.(!ovOpen);
 host.onOverlay?.(st => {
   const was = ovOpen; ovOpen = !!st.open;

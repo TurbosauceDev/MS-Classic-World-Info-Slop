@@ -16,7 +16,7 @@ module.exports = () => {
       onSiteMarket: cb => { window.siteMkCb = cb; if (window.siteMkFake) cb(window.siteMkFake, Date.now(), window.sitePrFake || null) },
       // overlay mode: the button opens/closes it, overlayPush is the data pipeline, onOverlay the state coming back
       overlay: async on => (window.ovCalls = (window.ovCalls || []).concat([on]), true), overlayEdit: async () => (window.ovEditCalls = (window.ovEditCalls || []).concat([1]), true),
-      overlayPush: d => (window.ovPushed = (window.ovPushed || []).concat([d])), onOverlay: cb => window.ovState = cb, onBag: cb => window.bagCb = cb,
+      borderless: async k => (window.bdCalls = (window.bdCalls || []).concat([k]), true), overlayPush: d => (window.ovPushed = (window.ovPushed || []).concat([d])), onOverlay: cb => window.ovState = cb, onBag: cb => window.bagCb = cb,
       keys: async (k, pause) => { const D = {onTop: "CommandOrControl+Shift+T", startStop: "CommandOrControl+Shift+S", pause: "CommandOrControl+Shift+P", mini: "CommandOrControl+Shift+M", focus: "CommandOrControl+Shift+F", overlay: "CommandOrControl+Shift+O", overlayEdit: "CommandOrControl+Shift+E", show: "CommandOrControl+Shift+H", invNow: "CommandOrControl+Shift+I", report: "CommandOrControl+Shift+B"};
         D.clickThrough = "CommandOrControl+Shift+X"; D.mark = "CommandOrControl+Shift+N"; D.saveImage = "CommandOrControl+Shift+G"; D.mute = "CommandOrControl+Shift+U";
         window.keysPaused = !!pause; if (k) window.keysSt = {...(window.keysSt || {}), ...k}; return {keys: {...D, ...(window.keysSt || {})}, defaults: D, failed: []} }};
