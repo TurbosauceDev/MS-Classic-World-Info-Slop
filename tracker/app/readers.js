@@ -412,12 +412,24 @@
     // the minimap folded to its title bar: one line, "Hidden Street : 1st Accompaniment <Exit>", white on a light bar from
     // the left edge at the very top (Danny's KPQ run, 2026-10-18): the bar's rows run light from x < 8 for 150+ px, except
     // where the text cuts through them; the text is the rows between the bar's top and bottom edges
+    // The bar may be dragged anywhere in the top-left: the long runs' start x must agree between the bar's top and bottom
+    // edges, and the fill must be the UI's light grey (a white sign or cloud isn't). Maps without a minimap show only this
+    // bar (Danny 10-29, "Victoria Road : Kerning City Pharmacy" on black).
     let one = null;
     if (two < 0){
-      const bar = y => { let x = 0; while (x < 8 && !ink((y * img.w + x) * 4)) x++; const s = x; while (x < X && ink((y * img.w + x) * 4)) x++; return s < 8 && x - s > 150 };
-      let y = 0; while (y < 12 && !bar(y)) y++; while (y < 20 && bar(y)) y++;
-      const a = y; while (y < 30 && !bar(y)) y++;
-      if (y < 30 && y - a >= 6 && y - a <= 14) one = [a, y];
+      const run = y => { let bs = -1, bn = 0; for (let x = 0; x < X;){ if (!ink((y * img.w + x) * 4)){ x++; continue } const s = x; while (x < X && ink((y * img.w + x) * 4)) x++; if (x - s > bn){ bn = x - s; bs = s } } return bn > 150 ? bs : -1 };
+      const sx = []; for (let y = 0; y < Y; y++) sx.push(run(y));
+      const near = (a, b) => a >= 0 && b >= 0 && Math.abs(a - b) < 8;
+      for (let y = 0; y < Y - 8 && !one; y++){
+        if (sx[y] < 0) continue;
+        let a = y; while (a < Y && near(sx[a], sx[y])) a++;
+        let b = a; while (b < Y && b - a <= 14 && !near(sx[b], sx[y])) b++;
+        if (b < Y && b - a >= 6 && b - a <= 14){
+          const o = (((a + b) >> 1) * img.w + sx[y] + 1) * 4, v = d[o];
+          if (Math.abs(v - d[o + 1]) < 16 && Math.abs(v - d[o + 2]) < 16 && v >= 195 && v <= 246) one = [a, b];
+        }
+        y = a;
+      }
     }
     if (two < 0 && !one) return null;
     const y0 = Math.max(0, (one || bands[two])[0] - 2), y1 = (one || bands[two + 1])[1] + 2;

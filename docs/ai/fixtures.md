@@ -71,6 +71,7 @@ EXP-bar crops at other window sizes; all read 68,601 [71.68%].
 | video-a.png | 360x200 | tracker's own (video) capture, Use tab + quick slots | quick slots White 24, Lemon 9, Orange 5; Use arrows 375+668, crossbow 765+1000, Red 20, Blue 18, Pure Water 10 |
 | minimap-kpq.png | 250x205 | KPQ minimap, two title lines bridged by icon | map text crop > 50 px tall |
 | minimap-folded-2x.png | 660x44 | minimap folded to one line | crop < 50 px |
+| minimap-folded-pharmacy.png | 752x103 | no-minimap map: only the folded bar, black bg, dragged away from the corner in the test | crop < 50 px, reads Kerning City Pharmacy |
 | statusbar-native-1440.png | 2560x118 | bottom status bar at native 1440 | screen scale k = 2 |
 
 ## tracker/tests/frames-kpq/ (tracker/tests/kpq.test.js)

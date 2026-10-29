@@ -169,13 +169,15 @@ const WANT = [[91, "2010003"], [85, "2010005"], [29, "2000002"], [8, "2000001"],
     const rd = GrindReaders.createReaders(GAMEDATA, []); rd.setInvIcons(all);
     const ev = [...rd.readFrame(etc, 0), ...rd.readFrame(etc, 2100), ...rd.readFrame(etc, 4200)].filter(e => e.type === "inv");
     const ptr = GrindReaders.findInventory(frame(await load(files.ptr), 1280, 720, 945, 170))?.tab;   // mouse over Set Up, its hand on the red line
-    const mm = GrindReaders.mapTextCrop(frame(await load(files.mm), 1280, 720)), fold = GrindReaders.mapTextCrop(frame(await load(files.fold), 1280, 720, 0, 0, 2));
+    const mm = GrindReaders.mapTextCrop(frame(await load(files.mm), 1280, 720)), fold = GrindReaders.mapTextCrop(frame(await load(files.fold), 1280, 720, 0, 0, 2)),
+      // no minimap: just the folded bar, on black, dragged away from the corner (Danny 10-29)
+      ph = GrindReaders.mapTextCrop(frame(await load(files.ph), 1280, 720, 150, 90, 2)), ph0 = GrindReaders.mapTextCrop(frame(await load(files.ph), 1280, 720, 0, 0, 2));
     const sb = await load(files.sb), raw = frame(sb, 2560, 1440, 0, 1440 - sb.height, 1, true);
-    return {inv: ev[0], ptr, mm: mm && mm.h, fold: fold && fold.h, k: GrindReaders.native({w: raw.w, h: raw.h, d: raw.d}).k,
+    return {inv: ev[0], ptr, mm: mm && mm.h, fold: fold && fold.h, ph: ph && ph.h, ph0: ph0 && ph0.h, pharm: GrindReaders.mapFromText("Yictoria Road : Kerning City Pharmacy SE (IEE)", GAMEDATA)?.id, k: GrindReaders.native({w: raw.w, h: raw.h, d: raw.d}).k,
       exit: GrindReaders.mapFromText("Hidden Street : 1st Accompaniment <Exit> [=][@] WORLD", GAMEDATA)?.id, mini: GrindReaders.mapFromText("MINI MAP", GAMEDATA)};
-  }, Object.fromEntries([["etc", "etc-pale-tab"], ["mm", "minimap-kpq"], ["fold", "minimap-folded-2x"], ["sb", "statusbar-native-1440"], ["ptr", "use-pointer-on-tabs"]].map(([k, f]) => [k, fs.readFileSync(path.join(dir, f + ".png")).toString("base64")])));
+  }, Object.fromEntries([["etc", "etc-pale-tab"], ["mm", "minimap-kpq"], ["fold", "minimap-folded-2x"], ["ph", "minimap-folded-pharmacy"], ["sb", "statusbar-native-1440"], ["ptr", "use-pointer-on-tabs"]].map(([k, f]) => [k, fs.readFileSync(path.join(dir, f + ".png")).toString("base64")])));
   const it = fx.inv?.items || {}, fxOk = fx.inv?.tab === "etc" && it["4000019"] === 121 && it["4010000"] === 26 && it["4000013"] === 13 && it["4000063"] === 4 && it["4010104"] === 19 && fx.inv.unknown <= 2
-    && fx.ptr === "use" && fx.mm > 50 && fx.fold && fx.fold < 50 && fx.k === 2 && fx.exit === "80000600" && fx.mini === null;
+    && fx.ptr === "use" && fx.mm > 50 && fx.fold && fx.fold < 50 && fx.ph < 50 && fx.ph0 < 50 && fx.pharm === "10003002" && fx.k === 2 && fx.exit === "80000600" && fx.mini === null;
   console.log("KPQ run frames", fxOk ? "ok" : "FAIL " + JSON.stringify(fx));
   if (!fxOk) fail++;
   // Danny's KPQ runs (2026-10-18, v0.2.42): bow arrows 1 + Bronze 592, 800, 800, 583 = 2,775. One stack's count missed on a
