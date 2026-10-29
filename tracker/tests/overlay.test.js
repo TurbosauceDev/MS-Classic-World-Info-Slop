@@ -485,7 +485,8 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
         params: b.querySelectorAll("[data-k]").length, cardW: c.offsetWidth, body: c.querySelector(".b").getBoundingClientRect().width, panelScroll: pn.scrollWidth > pn.clientWidth} });
     if (!st.open || st.inMain || st.x !== "100" || st.y !== "560" || st.params < 15 || st.panelScroll || st.cardW > st.body + 40) fail("inspector opens on pick, fits content", st);
     await page.evaluate(() => { const r = document.querySelector('#ovinsp input[data-k="rad"]'); r.value = "0"; r.dispatchEvent(new Event("input", {bubbles: true}));
-      const g = document.querySelector('#ovinsp input[data-k="bg"]'); g.value = "20"; g.dispatchEvent(new Event("input", {bubbles: true}));
+      // Glass tint reads inverted since 0.3.9 (max = most glass): shown 80 stores panel-strength 20
+      const g = document.querySelector('#ovinsp input[data-k="bg"]'); g.value = "80"; g.dispatchEvent(new Event("input", {bubbles: true}));
       const f = document.querySelector('#ovinsp input[data-k="fs"]'); f.value = "150"; f.dispatchEvent(new Event("input", {bubbles: true})) });
     st = await page.evaluate(() => { const c = document.querySelector("#ovw-status"), cs = getComputedStyle(c); return [cs.borderTopLeftRadius, c.style.getPropertyValue("--glass"), c.style.getPropertyValue("--fs"), CFG.widgets.status.rad, CFG.widgets.status.bg, CFG.widgets.status.fs] });
     if (st[0] !== "0px" || st[1] !== "20%" || st[2] !== "1.5" || st[3] !== 0 || st[4] !== 20 || st[5] !== 1.5) fail("inspector params restyle the card", st);
@@ -509,6 +510,44 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     // Chromium reports the computed mix as color(srgb ...) — an alpha < 1 only ever appears after a " / " (or as rgba())
     if (st[0] !== "100%" || st[1] !== st[2] || / \//.test(st[1]) || /rgba\(/.test(st[1])) fail("cards are solid by default and edit previews it", st);
     await page.evaluate(k => { CFG.widgets = JSON.parse(k); profCards(); place() }, st[3]);   // hand the layout back
+    // glass reads as "amount of glass" (Danny 10-29: "glass tint isnt doing anything. At max glass tint it is still
+    // opaque"): the slider inverts — 100 shown = fully see-through — while storage keeps the panel-strength scale;
+    // the Run log + Loot default to the clear look he approved, and the Chat blocker + Map & spawns are forced
+    // completely opaque (stored bg can't thin them) with no Glass row in their inspectors at all
+    st = await page.evaluate(() => { const keep = JSON.stringify(CFG.widgets);
+      CFG.widgets = {status: {on: true, x: 40, y: 40}, log: {on: true, x: 40, y: 160}, loot: {on: true, x: 40, y: 300},
+        map: {on: true, x: 500, y: 40, bg: 0}, blocker: {on: true, x: 500, y: 220, bg: 0}};
+      profCards(); place(); pick("log");
+      const shown = +document.querySelector('#ovinsp input[data-k="bg"]').value;
+      const logBg = () => getComputedStyle(document.querySelector("#ovw-log")).backgroundColor;
+      const g = document.querySelector('#ovinsp input[data-k="bg"]'); g.value = "100"; g.dispatchEvent(new Event("input", {bubbles: true}));
+      return {keep, shown, stored: CFG.widgets.log.bg, glass: document.querySelector("#ovw-log").style.getPropertyValue("--glass"),
+        maxed: logBg(), statusGlass: document.querySelector("#ovw-status").style.getPropertyValue("--glass"),
+        lootGlass: document.querySelector("#ovw-loot").style.getPropertyValue("--glass"),
+        mapSolid: document.querySelector("#ovw-map").classList.contains("solid"),
+        blockSolid: document.querySelector("#ovw-blocker").classList.contains("solid"),
+        mapBg: getComputedStyle(document.querySelector("#ovw-map")).backgroundColor,
+        blockBg: getComputedStyle(document.querySelector("#ovw-blocker")).backgroundColor} });
+    if (st.shown !== 18 || st.stored !== 0 || st.glass !== "0%" || !/ \//.test(st.maxed) && st.maxed !== "transparent") fail("glass slider inverts: max shown = see-through, log defaults clear", st);
+    if (st.statusGlass !== "100%" || st.lootGlass !== "82%") fail("defaults: status solid, loot clear", st);
+    if (!st.mapSolid || !st.blockSolid || / \//.test(st.mapBg) || / \//.test(st.blockBg)) fail("blocker + map forced opaque even with a thin saved bg", st);
+    const keepW2 = st.keep;   // held apart: st is about to be reused by the row checks
+    st = await page.evaluate(() => { pick("map"); const noMapRow = !document.querySelector('#ovinsp input[data-k="bg"]');
+      CFG.widgets = {blocker: {on: true, x: 500, y: 220}}; profCards(); pick("blocker");
+      return [noMapRow, !document.querySelector('#ovinsp input[data-k="bg"]')] });
+    if (!st[0] || !st[1]) fail("no Glass tint row for the forced-opaque kinds", st);
+    await page.evaluate(k => { CFG.widgets = JSON.parse(k); profCards(); place() }, keepW2);
+    // the Elv skin must respect the knob too — the actual root cause of "glass tint isnt doing anything": the skin
+    // pinned EVERY card to a fixed 90% panel alpha, so the slider moved nothing on Danny's screen and even the
+    // blocker sat 10% see-through. In the skin: solid default stays opaque, log default is clear, map stays solid.
+    await page.evaluate(t => window.ovData({t, on: true, st: {level: 34, pct: 12.5}, map: {}, feed: [], vit: null,
+      th: {c: {bg: "#101010", panel: "#202020", ink: "#ffffff", muted: "#999999", line: "#3f3f3f", accent: "#ff8800", soft: "#222222", on: "#ffffff", leaf: "#55b76b", warn: "#e5821f", bad: "#e63333"}, mode: "dark", sk: "elv"}}), t);
+    st = await page.evaluate(() => { CFG.widgets = {status: {on: true, x: 40, y: 40}, log: {on: true, x: 40, y: 160}, map: {on: true, x: 500, y: 40, bg: 0}}; profCards(); place();
+      return ["status", "log", "map"].map(k => getComputedStyle(document.querySelector("#ovw-" + k)).backgroundColor) });
+    if (/ \//.test(st[0])) fail("elv skin: solid default card is opaque", st);
+    if (!/ \//.test(st[1])) fail("elv skin: log default is clear", st);
+    if (/ \//.test(st[2])) fail("elv skin: map stays opaque in the skin", st);
+    await page.evaluate(t => window.ovData({t, on: true, st: {level: 34, pct: 12.5}, map: {}, feed: [], vit: null, th: {c: {accent: "#ff8800"}, mode: "dark"}}), t);   // back to the glass look for the later scenes
     st = await page.evaluate(() => { const ok = {on: true, x: 1, y: 2, rad: 99, bg: "x", acc: "red", brd: "evil", fs: "1.2", shd: "no", lines: 5, show: "idle", tok: "nope"};
       CFG.widgets = {status: ok}; $("#ovShareIn").value = "OVL1." + btoa(JSON.stringify({widgets: {status: ok, exp: ok}})); profImport(); const w = CFG.widgets.status;
       return {w, expHasLines: "lines" in CFG.widgets.exp} });

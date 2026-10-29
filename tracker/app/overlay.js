@@ -76,9 +76,12 @@ const PARAMS = [
   {k: "pad", sec: "Size & fit", lab: "Padding", t: "s", opts: {compact: "Compact", normal: "Normal", roomy: "Roomy"}, def: "normal"},
   {k: "al", sec: "Size & fit", lab: "Text align", t: "s", opts: {left: "Left", center: "Centre", right: "Right"}, def: "left"},
   {k: "o", sec: "Look", lab: "Opacity", t: "r", min: .25, max: 1, step: .05, def: 1, u: 100, f: pct, tip: "Fades the whole card, text included"},
-  // solid by default (Danny 10-29: "things are too translucent for my liking" with opacity already at 100% — the
-  // see-through lived here, at the old 82% default, while Opacity promised a solid card): 100 now, glass is opt-in
-  {k: "bg", sec: "Look", lab: "Glass tint", t: "r", min: 0, max: 100, step: 2, def: {_: 100, blocker: 100}, f: pct, tip: "How solid the panel is: 100% is fully solid, lower shows the game through the card"},
+  // the slider reads as "amount of glass" (Danny 10-29: "at max glass tint it is still opaque" — max has to mean most
+  // see-through): the displayed number inverts (p.inv), storage keeps the panel-strength scale so no saved value or share
+  // code needs migrating. The Run log + Loot keep the clear look he approved; the Chat blocker + Map & spawns are FORCED
+  // opaque ("the chat blocker as well as the map information should be completely opaque") — no Glass row for them at all.
+  {k: "bg", sec: "Look", lab: "Glass tint", t: "r", min: 0, max: 100, step: 2, inv: true, notKinds: ["blocker", "map"],
+    def: {_: 100, log: 82, loot: 82}, f: pct, tip: "How glassy the panel is: 100% shows the most game through, 0% is a solid panel"},
   {k: "blur", sec: "Look", lab: "Blur", t: "r", min: 0, max: 30, step: 1, def: {_: 14, blocker: 0}, f: px},
   {k: "rad", sec: "Look", lab: "Corners", t: "r", min: 0, max: 26, step: 1, def: {_: 12, blocker: 4}, f: px},
   {k: "brd", sec: "Look", lab: "Border", t: "s", opts: {none: "None", soft: "Soft", accent: "Accent"}, def: {_: "soft", blocker: "none"}},
@@ -305,6 +308,7 @@ function styleCard(el, id){
   el.style.opacity = p.o === 1 ? "" : p.o;
   const [pv, ph] = PADS[v("pad")], W = v("w"), H = v("h");
   el.classList.toggle("sizedW", !!W); el.classList.toggle("sizedH", !!H);   // a pinned box (Danny's strange boxes)
+  el.classList.toggle("solid", SOLID.has(baseOf(id)));
   set("--glass", v("bg") + "%"); set("--blur", v("blur") + "px"); set("--rad", v("rad") + "px"); set("--mw", v("mw") + "px");
   set("--w", W ? W + "px" : null); set("--h", H ? H + "px" : null);
   set("--pv", pv + "px"); set("--ph", ph + "px"); set("--fs", v("fs") === 1 ? null : v("fs"));
@@ -316,6 +320,9 @@ function styleCard(el, id){
   el.classList.toggle("nobg", baseOf(id) === "bag" && !v("bgon"));   // Bag check without its glass card: just the icons
 }
 const PADS = {compact: [6, 9], normal: [9, 13], roomy: [13, 18]};
+// cards that never go glass (Danny 10-29: the blocker hides chat behind itself, the map card carries the spawn table —
+// both must read even over a bright town): .solid pins the background to the theme panel whatever a saved value carries
+const SOLID = new Set(["blocker", "map"]);
 // clamp inside the window's own viewport, not the reported desk: the window is the only place a card can live, and on
 // some setups (mixed-DPI monitors, Windows nudging a transparent window) the real content area is smaller than the
 // union of the displays — trusting the desk is what left cards cut off in a dead strip around the edge (Danny 10-28).
@@ -612,7 +619,8 @@ function syncPanel(){
 const insp = {id: null};
 function paramRow(p, id){
   const v = wv(id, p.k), id2 = "in-" + p.k, lab = p.tip ? `<b title="${esc(p.tip)}">${p.lab}</b>` : `<b>${p.lab}</b>`;
-  if (p.t === "r") return `<label>${lab}<input type="range" id="${id2}" data-k="${p.k}" min="${p.min * (p.u || 1)}" max="${p.max * (p.u || 1)}" step="${p.step * (p.u || 1)}" value="${v * (p.u || 1)}"><span class="pv">${p.f(v * (p.u || 1))}</span></label>`;
+  const d = p.inv ? p.min + p.max - v : v;   // inv knobs read one way and store the other (Glass tint: max = most glass)
+  if (p.t === "r") return `<label>${lab}<input type="range" id="${id2}" data-k="${p.k}" min="${p.min * (p.u || 1)}" max="${p.max * (p.u || 1)}" step="${p.step * (p.u || 1)}" value="${d * (p.u || 1)}"><span class="pv">${p.f(d * (p.u || 1))}</span></label>`;
   if (p.t === "s") return `<label>${lab}<select data-k="${p.k}">${Object.entries(p.opts).map(([k, n]) => `<option value="${k}"${k === v ? " selected" : ""}>${n}</option>`).join("")}</select></label>`;
   if (p.t === "n") return `<label>${lab}<input type="number" data-k="${p.k}" min="${p.min}" max="${p.max}" step="any" placeholder="${p.ph || ""}" value="${v ?? ""}"></label>`;
   if (p.t === "b") return `<label>${lab}<input type="checkbox" data-k="${p.k}"${v ? " checked" : ""}></label>`;
@@ -622,7 +630,7 @@ function buildInsp(id){
   const box = $("#ovinsp"); if (!box) return;
   if (!id || !CFG.edit){ insp.id = null; box.classList.add("hidden"); box.innerHTML = ""; return }
   const base = baseOf(id), inst = INST.test(id), name = wName(id), secs = {};
-  for (const p of PARAMS) if (!p.kinds || p.kinds.includes(base)) (secs[p.sec] = secs[p.sec] || []).push(p);
+  for (const p of PARAMS) if ((!p.kinds || p.kinds.includes(base)) && (!p.notKinds || !p.notKinds.includes(base))) (secs[p.sec] = secs[p.sec] || []).push(p);
   const tokSet = TOK_SETS[base], tokKey = tokSet ? tokOf(id, tokSet, Object.keys(tokSet)[0]) : null;
   const was = box.scrollTop;
   box.innerHTML = `<header id="ovinHead"><span class="t">${esc(name)}</span><button class="btn" id="ovinClose" title="Close (the card stays)">×</button></header>
@@ -640,9 +648,10 @@ function buildInsp(id){
     if (k === "grp"){ setGrp(id, el.value || null); return }
     if (k === "tok"){ setP(id, "tok", el.value); return }
     const p = PMAP[k]; if (!p) return;
-    const raw = p.t === "b" ? el.checked : p.t === "r" ? +el.value / (p.u || 1) : el.value;
+    let raw = p.t === "b" ? el.checked : p.t === "r" ? +el.value / (p.u || 1) : el.value;
+    if (p.t === "r" && p.inv) raw = p.min + p.max - raw;
     setP(id, k, raw);
-    const pv = el.parentElement.querySelector(".pv"); if (pv && p.t === "r") pv.textContent = p.f(wv(id, k) * (p.u || 1)) };
+    const pv = el.parentElement.querySelector(".pv"); if (pv && p.t === "r"){ const w = wv(id, k); pv.textContent = p.f((p.inv ? p.min + p.max - w : w) * (p.u || 1)) } };
   det.addEventListener("input", e => { if (e.target.type === "range" || e.target.type === "color") live(e) });
   det.addEventListener("change", e => { if (e.target.type !== "range" && e.target.type !== "color") live(e) });
   det.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
@@ -677,7 +686,7 @@ function syncDetail(id){
   if (!det || !el) return;
   for (const inp of det.querySelectorAll("[data-k]")){ const k = inp.dataset.k, p = PMAP[k];
     if (k === "x") inp.value = Math.round(DESK.x + el.offsetLeft); else if (k === "y") inp.value = Math.round(DESK.y + el.offsetTop);
-    else if (p && p.t === "r" && document.activeElement !== inp){ inp.value = wv(id, k) * (p.u || 1); const pv = inp.parentElement.querySelector(".pv"); if (pv) pv.textContent = p.f(wv(id, k) * (p.u || 1)) } }
+    else if (p && p.t === "r" && document.activeElement !== inp){ const w = wv(id, k), d = (p.inv ? p.min + p.max - w : w) * (p.u || 1); inp.value = d; const pv = inp.parentElement.querySelector(".pv"); if (pv) pv.textContent = p.f(d) } }
 }
 function pick(id){
   picked.id = id;

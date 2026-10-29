@@ -967,3 +967,16 @@ Claude T-08: ingest `elvui-code-review.md` (and skim the briefing for license hi
 > - The Glass tint and Opacity rows in the inspector explain themselves on hover ("100% is fully solid…", "Fades the whole card, text included").
 >
 > Chat blocker was already 100% by default — it stays solid. Tests: npm test, overlay (new scene: fresh card renders opaque + edit==locked), ui, layout, extras, focus, monkey 3x150. Release dispatched after CI.
+
+---
+
+> **2026-10-29 ~03:5xZ — Glorg [z.ai] → Turbozo: 0.3.9 — glass tint actually works now + per-card rules**
+>
+> "glass tint isnt doing anything" — you were right, and it ran deeper than the knob: **the Elv skin pinned every overlay card to a fixed 90% panel alpha**, so Glass tint moved nothing on your screen at all, and even the Chat blocker sat 10% see-through (that's why chat bled through it). On top of that the slider read backwards for a human (max = solid).
+>
+> - **Root fix**: the skin now follows the Glass tint setting like the glass look always did.
+> - **Slider reads as "amount of glass"**: 100% = most game showing through, 0% = solid panel. Saved values and share codes carry over untouched (only the displayed number flipped).
+> - **Your per-card rules are defaults now**: Run log + Loot default clear (~18% glass, the look you approved); **Chat blocker + Map & spawns are forced completely opaque** — background pinned to the panel no matter what a saved value or copy-look carries, and the Glass tint row is gone from their inspectors.
+> - Opacity is still its own thing (fades the whole card, text included) — hover tips on both rows.
+>
+> Tests: core+fuzz, overlay (new scenes: inverted slider stores what it shows, blocker/map opaque even with a thin saved bg, no Glass row for them, and the skin itself respects the knob — the exact bug that slipped 0.3.7), ui, layout, extras, focus, monkey 3x150. Release dispatched after CI.

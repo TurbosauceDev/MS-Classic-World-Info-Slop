@@ -140,6 +140,11 @@
   /* Chat blocker (0.2.108): opaque, sits under the other cards; the bars are tracker-drawn from the HP/MP + EXP reads */
   .ovw[data-k="blocker"] { z-index:-1 !important; background:color-mix(in srgb, var(--panel) var(--glass, 100%), #000); }
   body.edit .ovw[data-k="blocker"] { background:color-mix(in srgb, var(--panel) 100%, #000); }
+  /* forced-opaque cards (Danny 10-29: "the chat blocker as well as the map information should be completely opaque"):
+     the background pins to the theme panel whatever a saved value, a share code or a copy-look carries — styleCard
+     puts .solid on the blocker and the Map & spawns card, and the Glass tint row is not offered for them at all.
+     The skin-elv variant outranks the skin's own .ovw rule below (it used to hold every Elv card at a fixed 90%). */
+  .ovw.solid, body.skin-elv .ovw.solid { background: var(--panel); }
   .ovw[data-k="blocker"] .b { height:100%; display:flex; align-items:center; }
   .vbars { display:flex; gap:8px; width:100%; } .vbars.col { flex-direction:column; } .vbars.col .vb { flex:0 0 20px; }   /* stacked: a 0 basis collapsed the bars to nothing */
   .vb { position:relative; flex:1 1 0; min-width:0; height:20px; border-radius:3px; overflow:hidden; background:color-mix(in srgb, var(--bg) 55%, #000); border:1px solid color-mix(in srgb, var(--line) 70%, transparent); font-size:11px; font-weight:700; color:#fff; }
@@ -283,7 +288,11 @@
   /* the pull corners fall in line too (Danny 10-29: the resize handles were still styled for rounded edges) */
   body.skin-elv .ovw .rsz { border-radius:0; }
   body.skin-elv .ovw .rsz-e::after, body.skin-elv .ovw .rsz-s::after { border-radius:0; }
-  body.skin-elv .ovw { background:color-mix(in srgb, var(--panel) 90%, transparent);
+  /* THE GLASS KNOB WORKS IN THE SKIN (Danny 10-29: "glass tint isnt doing anything"): this rule used to pin every
+     Elv card to a fixed 90% panel alpha, so the slider moved nothing on his screen and even the blocker sat 10%
+     see-through. It now reads the same --glass the glass look does — 100% stored = a solid panel, the Run log and
+     Loot's 82 = the clear he asked for — while the .solid cards above stay fully opaque in the skin too. */
+  body.skin-elv .ovw { background:color-mix(in srgb, var(--panel) var(--glass, 100%), transparent);
     -webkit-backdrop-filter:none; backdrop-filter:none; border-color:var(--line); box-shadow:none; }
   body.skin-elv .toast, body.skin-elv #ovpanel, body.skin-elv #ovinsp { -webkit-backdrop-filter:none; backdrop-filter:none;
     background:color-mix(in srgb, var(--panel) 96%, transparent); box-shadow:none; }
