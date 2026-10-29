@@ -41,6 +41,7 @@ ipcMain.handle("theme-bar", (_, c) => {
 });
 let win, wholeScreen = false;   // fallback when the game window still comes back black: the readers find the UI anywhere on screen
 async function gameSource(){
+  perfCount.games++;
   const srcs = await desktopCapturer.getSources({types: ["window"], thumbnailSize: {width: 0, height: 0}});
   return srcs.find(s => /^maplestory$/i.test(s.name)) || srcs.find(s => /maplestory/i.test(s.name) && !/chrome|launcher|tracker/i.test(s.name)) || null;
 }
@@ -69,6 +70,7 @@ app.whenReady().then(() => {
     webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false}});
   // getDisplayMedia() in the page gets the game window, chosen here (no picker)
   session.defaultSession.setDisplayMediaRequestHandler(async (req, cb) => {
+    perfCount.captures++;
     const src = await captureSource();
     cb(src ? {video: src} : {});
   });
@@ -133,6 +135,11 @@ autoUpdater.on("update-downloaded", i => sendUpd({state: "ready", version: i.ver
 autoUpdater.on("error", e => sendUpd({state: "error", why: String(e?.message || e).split("\n")[0].slice(0, 160)}));
 ipcMain.handle("version", () => app.getVersion());
 ipcMain.handle("perf-metrics", () => app.getAppMetrics().map(m => ({pid: m.pid, type: m.type, name: m.name, cpu: {percentCPUUsage: m.cpu.percentCPUUsage}, memory: {workingSetSize: m.memory.workingSetSize, privateBytes: m.memory.privateBytes ?? null}})));   // Performance monitor; privateBytes (win) = the process's own memory, Task Manager style
+// what the main process itself holds, for the Performance monitor's detail line (0.3.16: Danny's idle main process read 916 MB
+// and nothing here could be measured off-Windows, so the next screenshot names the part): JS heap, native buffers, the OCR
+// engine up or not, how often the game window was looked for and the capture opened
+const perfCount = {games: 0, captures: 0};
+ipcMain.handle("perf-main", () => { const m = process.memoryUsage(), mb = v => Math.round(v / 1048576); return {rss: mb(m.rss), heap: mb(m.heapUsed), ext: mb(m.external), buf: mb(m.arrayBuffers), ocr: !!ocr, ocrReads, games: perfCount.games, captures: perfCount.captures, upd: upd.state} });
 ipcMain.handle("update-state", () => upd);   // the window asks once loaded: events sent before that were missed
 ipcMain.handle("update-check", async () => {
   if (!app.isPackaged) return sendUpd({state: "dev"});   // running from source: nothing to update
@@ -352,7 +359,9 @@ ipcMain.handle("sounds-read", (_, name) => {
   if (!soundList().includes(name)) return null;
   try { return fs.readFileSync(path.join(SOUNDS_DIR, name)) } catch { return null }
 });
-ipcMain.handle("game-found", async () => !!(await gameSource()));
+// asked every 15 s by the journey watch while the game is closed: one window list per 20 s is enough (each list is a native call)
+let gameFoundAt = 0, gameFoundV = false;
+ipcMain.handle("game-found", async (_, fresh) => { if (fresh || Date.now() - gameFoundAt > 20e3){ gameFoundV = !!(await gameSource()); gameFoundAt = Date.now() } return gameFoundV });
 ipcMain.handle("settings", (_, s) => {
   const cur = readSettings();
   if (!cur.install) cur.install = require("crypto").randomUUID();   // random ID of this copy: one vote per player

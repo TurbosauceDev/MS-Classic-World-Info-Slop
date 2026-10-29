@@ -520,7 +520,7 @@ const path = require("path"), {chromium} = require("playwright");
     await page.evaluate(m => window.menu(m), open); await page.waitForTimeout(350);
     const m = await page.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(), b = document.querySelector("#modalBack");
       return {l: r.left, t: r.top, r: innerWidth - r.right, b: innerHeight - r.bottom, back: getComputedStyle(b).display !== "none" && /blur/.test(getComputedStyle(b).backdropFilter), docH: document.documentElement.scrollHeight} }, sel);
-    if (open === "perf" && !await page.evaluate(() => /Screen reading/.test(document.querySelector("#perfBody").textContent) && /Load looks fine|⚠/.test(document.querySelector("#perfWarn").textContent))) throw new Error("performance monitor empty");
+    if (open === "perf" && !await page.evaluate(() => /Screen reading/.test(document.querySelector("#perfBody").textContent) && /text reader on \(7 reads\)/.test(document.querySelector("#perfBody").textContent) && /Load looks fine|⚠/.test(document.querySelector("#perfWarn").textContent))) throw new Error("performance monitor empty");
     if (Math.min(m.l, m.r, m.b) < 10 || m.t < 40 || !m.back) throw new Error(`${open} pop-up not inset over a blurred backdrop: ` + JSON.stringify(m));
     if (open === "patchnotes" && !await page.evaluate(() => { const r = document.querySelector("#patchNotes").getBoundingClientRect(), p = document.querySelector("#helpPop").getBoundingClientRect(); return document.querySelector("#patchNotes").open && r.top >= p.top && r.top < p.bottom - 40 })) throw new Error("patch notes not scrolled into view");
     await page.keyboard.press("Escape"); await page.waitForTimeout(250);

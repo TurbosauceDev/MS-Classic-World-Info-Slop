@@ -384,6 +384,6 @@ $("#updGo").onclick = async () => {
   $("#nick").value = settings.nick || "";
   $("#guide").classList.toggle("hidden", !!settings.guideDone);
   recoverCheck().catch(() => {});   // a run left by a crash or power cut (its autosave)
-  const found = await host.gameFound();
+  const found = await host.gameFound(true);
   $("#status").textContent = found ? "MapleStory window found." : "Start MapleStory, then press Start.";
 })();

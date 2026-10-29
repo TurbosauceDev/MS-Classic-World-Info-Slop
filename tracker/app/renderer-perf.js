@@ -4,6 +4,7 @@
 let perfTimer = null, perfPrev = null;
 const esc2 = s => String(s).replace(/[&<>]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"}[c]));
 async function perfRefresh(){
+  const pm = await (host.perfMain?.() ?? Promise.resolve(null)).catch(() => null);
   const rows = GrindPerf.procs(await (host.perfMetrics?.() ?? Promise.resolve(null)).catch(() => null)), now = Date.now(), n = PERF.tick?.n || 0;
   let rate = null;
   if (perfPrev && n >= perfPrev.n && now > perfPrev.t) rate = (n - perfPrev.n) / ((now - perfPrev.t) / 1000);
@@ -14,6 +15,7 @@ async function perfRefresh(){
   $("#perfBody").innerHTML =
     `<b>Total</b>: ${w.cpu}% of one core, ${w.mem} MB<table style="width:100%;margin:6px 0"><tr><th align=left>Process</th><th align=right>CPU %</th><th align=right>Memory MB</th></tr>`
     + rows.map(r => `<tr><td>${esc2(r.name)}</td><td align=right>${r.cpu}</td><td align=right>${r.mem}</td></tr>`).join("") + `</table>`
+    + (pm ? `<div class="note">App (main) detail: ${pm.rss} MB total, JS ${pm.heap} MB, buffers ${pm.buf + pm.ext} MB, text reader ${pm.ocr ? "on (" + pm.ocrReads + " reads)" : "off"}, game looked for ${pm.games}x, capture opened ${pm.captures}x, updates ${esc2(pm.upd || "-")}.</div>` : "")
     + `<div class="note">Memory counts what each process holds itself (JS heap, frame buffers); Windows system libraries shared between the processes count once — the same per-process figures Task Manager's Memory column shows.</div>`
     + (reading
       ? `<b>Screen reading</b>: ${rate == null ? "-" : rate.toFixed(1)} reads a second (wanted ${FPS}), ${skipped} frames skipped as unchanged, busy ${f(st.busy, 0)}% of the time<table style="width:100%;margin:6px 0"><tr><th align=left>Step</th><th align=right>avg ms</th></tr>`
