@@ -306,7 +306,7 @@ async function tick(){
     const f = grabFrame(); perf("grab", Date.now() - t);
     keepFrame(t, f);
     const t1 = Date.now(), same = sameAsLast(f); perf("same", Date.now() - t1);
-    if (same){ skipped++; throw null }
+    if (same){ skipped++; if (video?.pump) FRBUF.give(f.d.buffer); throw null }   // unchanged: the buffer is free again
     // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between
     const want = {};
     if (!ocrBusy){
@@ -316,6 +316,7 @@ async function tick(){
       else if ((!settings.job || !charName) && t - lastJob > 30e3){ lastJob = t; want.job = true }
     }
     const t2 = Date.now(), r = await eng.read({frame: f, t, want}); perf("read", Date.now() - t2);
+    if (eng.kind !== "worker" && video?.pump) FRBUF.give(f.d.buffer);   // inline readers ran in this window: the buffer never left, pool it again (the worker mode got it back with the reply)
     if (timer == null || sess !== session || !r) throw null;   // stopped (or restarted) while reading, or the frame was lost
     active = r.ev.some(e => e.type !== "glyph")
     if (r.memo) lastMemo = r.memo;

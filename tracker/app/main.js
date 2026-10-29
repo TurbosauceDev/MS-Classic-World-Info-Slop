@@ -24,6 +24,14 @@ const HIST = require("../core/history.js");   // applyEdit: History > Edit run  
 // in a run with the overlay open). The webPreferences "affinity" option does nothing since Electron 14, this switch does.
 app.commandLine.appendSwitch("process-per-site");
 app.commandLine.appendSwitch("enable-features", "WebRtcAllowWgcWindowCapturer,WebRtcAllowWgcScreenCapturer,AllowWgcWindowCapturer,AllowWgcScreenCapturer");
+// memory pass 3 (Danny 10-29 "figure out a solution its still very heavy"): the helpers trim themselves. The audio
+// helper merges into this process (alerts still play — one whole process less), the HTTP cache is capped, the GPU
+// process keeps a smaller spare-cache budget, and every JS heap GCs hard past 512 MB instead of parking at whatever
+// it once grew to. All reversible by deleting the switch.
+app.commandLine.appendSwitch("disable-features", "AudioServiceOutOfProcess");
+app.commandLine.appendSwitch("disk-cache-size", "33554432");
+app.commandLine.appendSwitch("force-gpu-mem-available-mb", "256");
+app.commandLine.appendSwitch("js-flags", "--max-old-space-size=512");
 
 let themeBar = null, setBar = () => {};   // the theme's title bar colours {color, symbolColor, bg}, from the page
 // the page's theme (Settings > Theme): the Windows-drawn title bar buttons and the window's background follow it
@@ -126,7 +134,7 @@ autoUpdater.on("download-progress", p => sendUpd({state: "downloading", pct: Mat
 autoUpdater.on("update-downloaded", i => sendUpd({state: "ready", version: i.version}));
 autoUpdater.on("error", e => sendUpd({state: "error", why: String(e?.message || e).split("\n")[0].slice(0, 160)}));
 ipcMain.handle("version", () => app.getVersion());
-ipcMain.handle("perf-metrics", () => app.getAppMetrics().map(m => ({pid: m.pid, type: m.type, name: m.name, cpu: {percentCPUUsage: m.cpu.percentCPUUsage}, memory: {workingSetSize: m.memory.workingSetSize}})));   // Performance monitor
+ipcMain.handle("perf-metrics", () => app.getAppMetrics().map(m => ({pid: m.pid, type: m.type, name: m.name, cpu: {percentCPUUsage: m.cpu.percentCPUUsage}, memory: {workingSetSize: m.memory.workingSetSize, privateBytes: m.memory.privateBytes ?? null}})));   // Performance monitor; privateBytes (win) = the process's own memory, Task Manager style
 ipcMain.handle("update-state", () => upd);   // the window asks once loaded: events sent before that were missed
 ipcMain.handle("update-check", async () => {
   if (!app.isPackaged) return sendUpd({state: "dev"});   // running from source: nothing to update

@@ -14,6 +14,7 @@ async function perfRefresh(){
   $("#perfBody").innerHTML =
     `<b>Total</b>: ${w.cpu}% of one core, ${w.mem} MB<table style="width:100%;margin:6px 0"><tr><th align=left>Process</th><th align=right>CPU %</th><th align=right>Memory MB</th></tr>`
     + rows.map(r => `<tr><td>${esc2(r.name)}</td><td align=right>${r.cpu}</td><td align=right>${r.mem}</td></tr>`).join("") + `</table>`
+    + `<div class="note">Memory counts what each process holds itself (JS heap, frame buffers); Windows system libraries shared between the processes count once — the same per-process figures Task Manager's Memory column shows.</div>`
     + (reading
       ? `<b>Screen reading</b>: ${rate == null ? "-" : rate.toFixed(1)} reads a second (wanted ${FPS}), ${skipped} frames skipped as unchanged, busy ${f(st.busy, 0)}% of the time<table style="width:100%;margin:6px 0"><tr><th align=left>Step</th><th align=right>avg ms</th></tr>`
         + [["Capture the game picture", st.grab], ["Compare with the last picture", st.same], ["Read it (EXP, loot, bars...)", st.read], ["Whole pass", st.tick]].map(([k, v]) => `<tr><td>${k}</td><td align=right>${f(v)}</td></tr>`).join("")

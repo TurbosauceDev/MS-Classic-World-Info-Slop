@@ -735,3 +735,26 @@ console.log("patch notes ok");
   const st = P.stages({tick: {n: 2, sum: 100, max: 60}, read: {n: 2, sum: 90, max: 70}}, 1000);
   assert.strictEqual(st.busy, 10); assert.strictEqual(st.read, 45);
   assert.ok(P.warnings([], {read: 120}, 0.5, 2).list.length === 2, "slow read + low rate both warn"); }
+
+// performance monitor memory: privateBytes (Windows, what the process holds itself) wins over the working set, which
+// counts the same shared system libraries once per process and warned at totals that were mostly double-counting
+{ const P = require("../core/perfwatch.js"), m = (type, c, kb, pb) => ({type, cpu: {percentCPUUsage: c}, memory: {workingSetSize: kb, privateBytes: pb}});
+  const rows = P.procs([m("Tab", 2, 409600, 102400), m("Browser", 1, 409600, 51200)]);
+  assert.strictEqual(rows.reduce((a, r) => a + r.mem, 0), 150, "privateBytes summed when present");
+  assert.strictEqual(P.procs([m("Tab", 2, 102400)]).reduce((a, r) => a + r.mem, 0), 100, "no privateBytes (non-Windows): working set stands in");
+  assert.strictEqual(P.procs([m("Tab", 2, 102400, 0)]).reduce((a, r) => a + r.mem, 0), 0, "privateBytes 0 counts as 0, not a fallback"); }
+
+// frame buffer pool (core/bufpool.js): exact-size take, give dedupes and rejects non-buffers, the cap drops the oldest
+{ const BP = require("../core/bufpool.js"), p = BP.createBufPool(2), a = new ArrayBuffer(16), b = new ArrayBuffer(32);
+  assert.strictEqual(p.take(16), null, "empty pool: miss");
+  assert.strictEqual(p.give(a), true);
+  assert.strictEqual(p.take(32), null, "size must match exactly");
+  assert.strictEqual(p.take(16), a, "exact-size take returns the buffer");
+  assert.strictEqual(p.take(16), null, "a taken buffer has left the pool");
+  assert.strictEqual(p.give(b), true);
+  assert.strictEqual(p.give(b), false, "the same buffer is never pooled twice");
+  assert.strictEqual(p.give({}), false, "only real ArrayBuffers are pooled");
+  assert.strictEqual(p.give(new ArrayBuffer(0)), false, "empty buffers are refused");
+  assert.strictEqual(p.give(new ArrayBuffer(8)), true); assert.strictEqual(p.give(new ArrayBuffer(64)), true);
+  assert.strictEqual(p.size, 2, "the cap holds and dropped the oldest");
+  p.clear(); assert.strictEqual(p.size, 0, "clear empties the pool"); }

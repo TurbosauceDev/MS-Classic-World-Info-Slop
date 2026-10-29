@@ -8,12 +8,16 @@ const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&
 let FPS = 2;   // drops to 1 a second when reading a frame takes long (big screens, slow PCs)
 let session = null, slicer = null, engine = null, video = null, timer = null, settings = {};
 const canvas = document.createElement("canvas"), g = canvas.getContext("2d", {willReadFrequently: true});
+// frame buffers circle through this pool: the reader worker sends each one back with its reply, a frame dropped as
+// unchanged comes straight back, and the next grab reuses the same memory. Without it every read allocated a fresh
+// frame (3.7-14.7 MB) for the worker to throw away — 30-60 MB/s of churn that kept both processes' memory high.
+const FRBUF = GrindBufPool.createBufPool(4);
 
 async function openStream(){
   video?.drop?.(); video?.srcObject?.getTracks().forEach(tr => tr.stop());
   const stream = await navigator.mediaDevices.getDisplayMedia({video: {frameRate: FPS}, audio: false});
   // frames straight off the track (framesrc.js); the <video> element only where that can't run
-  let src = FrameSrc.open(stream);
+  let src = FrameSrc.open(stream, FRBUF);
   if (src && !await Promise.race([src.ready, new Promise(r => setTimeout(r, 5000, false))])){
     src.drop();
     if (!src.failed){ stream.getTracks().forEach(tr => tr.stop()); throw new Error("no picture from the game window. Is it minimized? Restore it and press Start again") }   // no frame came
@@ -86,7 +90,8 @@ function makeEngine(icons, area, invHint, glyphs, invLast){
   try { w = new Worker("reader-worker.js") } catch { return inline() }
   let id = 0, waiting = null, eng;
   const fallBack = why => { log("engine", {kind: "window", why}); w.terminate(); waiting?.(null); waiting = null; Object.assign(eng, inline()) };
-  w.onmessage = ({data}) => { if (data.id !== id || !waiting) return; const r = waiting; waiting = null; r(data.error ? null : data) };
+  w.onmessage = ({data}) => { if (data.back) FRBUF.give(data.back);   // the frame buffer is ours again: pool it even on a stale reply
+    if (data.id !== id || !waiting) return; const r = waiting; waiting = null; r(data.error ? null : data) };
   w.onerror = e => { e.preventDefault?.(); fallBack(e.message || "worker failed to load") };
   w.postMessage({type: "reset", icons, area, invHint, glyphs, invLast});
   return eng = {kind: "worker", close(){ w.terminate(); const r = waiting; waiting = null; r?.(null) },

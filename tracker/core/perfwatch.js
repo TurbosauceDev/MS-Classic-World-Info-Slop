@@ -7,9 +7,13 @@
   const KIND = {Browser: "App (main)", Tab: "Window or reader", GPU: "Graphics", Utility: "Helper", "Zygote": "Helper"};
   const name = m => (m.name && m.type === "Utility" ? m.name : KIND[m.type] || m.type || "Other");
   const MB = kb => Math.round((kb || 0) / 1024);
-  /* metrics: getAppMetrics() rows ({type, name?, cpu:{percentCPUUsage}, memory:{workingSetSize KB}}) */
+  /* metrics: getAppMetrics() rows ({type, name?, cpu:{percentCPUUsage}, memory:{workingSetSize KB, privateBytes? KB}}).
+     privateBytes (Windows) is the memory the process holds itself — JS heap, frame buffers, its own copy of shared
+     pages — the same figure Task Manager's Memory column shows. Summing working sets instead counted the system
+     libraries every Electron process maps (200-300 MB each) once per process, so the total warned at 2+ GB that was
+     mostly the same shared pages counted six times. Elsewhere privateBytes is missing and the working set stands in. */
   function procs(metrics){
-    return (metrics || []).map(m => ({name: name(m), cpu: +(m.cpu?.percentCPUUsage || 0).toFixed(1), mem: MB(m.memory?.workingSetSize)}))
+    return (metrics || []).map(m => ({name: name(m), cpu: +(m.cpu?.percentCPUUsage || 0).toFixed(1), mem: MB(m.memory?.privateBytes ?? m.memory?.workingSetSize)}))
       .sort((a, b) => b.cpu - a.cpu || b.mem - a.mem);
   }
   /* perf: PERF-shaped {tick:{n,sum,max}, grab, same, read}; el = ms since reading started; rate = reads/s measured over the last

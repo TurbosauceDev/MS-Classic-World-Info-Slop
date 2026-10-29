@@ -2,14 +2,16 @@
 // into two reused RGBA buffers, so there's no video-to-canvas draw and no canvas read-back (that path grew the window's
 // memory by ~600 MB on a 2560x1440 capture, measured 2026-10-29; this one stays flat). Same shape as the video element where
 // renderer*.js reads it: srcObject, videoWidth, videoHeight. open() returns null where VideoFrame isn't there, and the
-// caller falls back to the old video element.
+// caller falls back to the old video element. open(stream, pool) takes a GrindBufPool so frame copies reuse buffers.
 const FrameSrc = (() => {
   const gone = () => { throw new Error("the capture has ended") };
-  function open(stream){
+  function open(stream, pool){
     if (typeof MediaStreamTrackProcessor !== "function" || typeof VideoFrame !== "function") return null;
     const tr = stream.getVideoTracks()[0];
     if (!tr) return null;
     const rd = new MediaStreamTrackProcessor({track: tr}).readable.getReader();
+    // a pooled buffer of exactly n bytes, or null (caller allocates then); see core/bufpool.js for the circle
+    const take = n => { const b = pool?.take?.(n); return b && b.byteLength === n ? b : null };
     const s = {pump: true, srcObject: stream, videoWidth: 0, videoHeight: 0, cur: null, failed: false};
     let first, spare = null; s.ready = new Promise(r => first = r);
     (async () => {
@@ -30,12 +32,15 @@ const FrameSrc = (() => {
       s.cur = spare = null;   // capture over: the two frame buffers go with it
       first(false);
     })();
-    // a fresh copy of the whole frame (the caller may hand its buffer to the worker)
-    s.full = () => !s.cur ? gone() : ({w: s.videoWidth, h: s.videoHeight, d: s.cur.slice()});
+    // the frame for a read: copied into a pooled buffer when one of the right size is free (the reader worker sends it
+    // back with its reply), else a fresh one — same copy either way, but no new allocation when the pool is warm
+    s.full = () => { if (!s.cur) gone();
+      const n = s.videoWidth * s.videoHeight * 4, b = take(n), d = b ? new Uint8ClampedArray(b) : new Uint8ClampedArray(n);
+      d.set(s.cur); return {w: s.videoWidth, h: s.videoHeight, d} };
     // the game at its own size: one pixel per k x k block starting at (ox, oy), same pick as GrindReaders.shrink
     s.shrunk = ({k, ox, oy}) => {
       if (!s.cur) gone();
-      const w = s.videoWidth, h = s.videoHeight, d = s.cur, W = Math.floor((w - ox) / k), H = Math.floor((h - oy) / k), out = new Uint8ClampedArray(W * H * 4);
+      const w = s.videoWidth, h = s.videoHeight, d = s.cur, W = Math.floor((w - ox) / k), H = Math.floor((h - oy) / k), n = W * H * 4, b = take(n), out = b ? new Uint8ClampedArray(b) : new Uint8ClampedArray(n);
       for (let y = 0; y < H; y++) for (let x = 0, i = ((oy + y * k) * w + ox) * 4, o = y * W * 4; x < W; x++, i += k * 4, o += 4){ out[o] = d[i]; out[o + 1] = d[i + 1]; out[o + 2] = d[i + 2]; out[o + 3] = 255 }
       return {w: W, h: H, d: out, k};
     };
@@ -44,3 +49,4 @@ const FrameSrc = (() => {
   }
   return {open};
 })();
+if (typeof module !== "undefined" && module.exports) module.exports = FrameSrc;   // the node tests drive it with a mocked capture

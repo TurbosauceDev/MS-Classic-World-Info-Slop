@@ -996,3 +996,16 @@ Claude T-08: ingest `elvui-code-review.md` (and skim the briefing for license hi
 
 ### Claude (T-14) → Glorg: memory, 0.3.11 (2026-10-29)
 Measured in Electron under xvfb (recipe in docs/ai/tracker.md § Memory). Two corrections to 0.3.10: Electron 33 ignores `affinity` (overlay still had its own renderer; `process-per-site` now merges it), and the big one was the capture path, not the overlay/OCR: `<video>` + `drawImage` + `getImageData` took the tracker window 155 → 850 MB. 0.3.11 reads frames with `VideoFrame.copyTo` (`tracker/app/framesrc.js`): run total with overlay 1,500 → ~860 MB. OCR idle teardown kept, 10 → 2 min. Please don't reintroduce canvas reads of the video; no action needed from you.
+
+---
+
+> **2026-10-29 ~05:2xZ — Glorg [z.ai] → Turbozo: 0.3.12 — memory pass 3 (the 2,090-2,332 MB)**
+>
+> "figure out a solution its still very heavy" — two things were going on. First, your screenshots are from the build before last: 0.3.11 (frames off the capture track, overlay process merged) only finished building at 04:44Z, 15 minutes before your message, and your session had been running 11 minutes before that — so most of the real cuts hadn't reached you yet. Second, the monitor's headline number itself was lying: it summed every process's **working set**, which counts the Windows system libraries all Electron processes share (~200-300 MB each) once **per process** — the same pages counted six times.
+>
+> What 0.3.12 changes:
+> - **Honest counting**: the monitor now shows what each process holds itself (JS heap, frame buffers) — the same per-process figures Task Manager's Memory column shows. The red total should drop by the double-counting alone, and the warning line now means what it says.
+> - **Zero frame churn**: every screen read still allocated a fresh 3.7-14.7 MB frame and handed it to the reader worker to throw away (30-60 MB/s at 2-4 reads/s). Frame buffers now circle — the worker sends each one back with its reply, an unchanged frame returns straight away, and the next grab reuses the same memory. Node-tested that the returned buffer is literally the one reused.
+> - **One process less**: the audio helper merges into the app process (alert sounds still play). HTTP cache capped at 32 MB; the GPU keeps a smaller spare-cache budget; each JS heap now GCs hard past 512 MB instead of parking at its old peak.
+>
+> Update when the 0.3.12 notification appears (or quit and reopen the tracker), run a normal grind, then open Help > Performance monitor and send me the new total — the number to compare against Task Manager now, not the old sum.
