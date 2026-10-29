@@ -3,6 +3,7 @@
 // session.add) and between runs ("watch": the game window read at a low, self-slowing rate, bar + chat lines + map name only,
 // nothing counted). Screen pixels only. A run takes the capture over from the watch; Stop hands it back.
 const BAR_FPS = 4;   // reads a second while a Chat blocker is on (0.3.5; was 2). Whole-frame read ~6 ms (tests/cv_bench.js), so ~2.4 % of one core
+let ovChatOn = false;   // a Chat window card is on (main.js ov-state): the game's chat box is scanned every read (renderer-chat.js). Here for the same load-order reason as ovBlocker
 let ovBlocker = false;   // a Chat blocker card is on (main.js ov-state, set in renderer-overlay.js): the idle watch keeps reading HP/MP/EXP. Here because this file loads first
 const jr = (() => {
   const J = GrindJournal;
@@ -17,12 +18,12 @@ const jr = (() => {
   // the watch runs for the journey log, and (0.3.4) for a Chat blocker on the overlay: HP / MP / EXP bars keep moving between runs
   const idle = () => timer == null && !starting && !dummyOn;
   const logging = () => on() && settings.journalWatch !== false;
-  const wanted = () => (logging() || ovBlocker) && idle();   // order matters: at load jrUi calls this before renderer-dummy.js defines dummyOn
+  const wanted = () => (logging() || ovBlocker || ovChatOn) && idle();   // order matters: at load jrUi calls this before renderer-dummy.js defines dummyOn
   const pace = (t, last) => PACE.find(([q]) => t - last < q)[1];
   async function open(){
     if (!await host.gameFound()) return false;
     await host.wholeScreen(false);
-    FPS = ovBlocker ? BAR_FPS : 1;   // capture rate (openStream asks for it); a run sets 2 itself. A blocker wants the bars BAR_FPS times a second
+    FPS = ovBlocker ? BAR_FPS : ovChatOn ? 2 : 1;   // capture rate (openStream asks for it); a run sets 2 itself. A blocker wants the bars BAR_FPS times a second
     try { await openStream() } catch { return false }
     if (!video.videoWidth || isBlack()){ video.srcObject?.getTracks().forEach(tr => tr.stop()); return false }
     return true;
@@ -46,7 +47,7 @@ const jr = (() => {
   async function loop(){
     const me = w; if (!me) return;
     if (!wanted()) return end(on() ? "run" : "off");
-    const t = Date.now(); let wait = ovBlocker ? 1000 / BAR_FPS : pace(t, me.last);
+    const t = Date.now(); let wait = ovBlocker ? 1000 / BAR_FPS : ovChatOn ? 500 : pace(t, me.last);
     try {
       if (!video?.srcObject?.active){   // closed game, or a snapshot/potion look stopped the stream
         if (!await open()){ if (++me.miss >= 3) return end("game_closed"); throw null }
@@ -61,6 +62,7 @@ const jr = (() => {
           else if (t - me.mapT > 5000 && t - me.last < 600e3) want.map = true;   // a long-quiet player's map can't have changed without the bar or chat moving
           else if ((!me.charName || !me.job) && t - me.jobT > 30e3) want.job = true;
         }
+        chatWant(want);
         const r = await jwEng.read({frame: f, t, want});
         if (w !== me || !r) throw null;
         if (r.scale){ scale = r.scale; fastLeft = 19 }
@@ -75,18 +77,18 @@ const jr = (() => {
           }
         }
         if (r.info.invAt) lastInvTab = r.info.inv || null;
-        jr.hud(t, !!r.info.bar);
+        jr.hud(t, !!r.info.bar); chatIngest(r.chat);
         if (want.map){ me.mapT = t; ocrBusy = true; mapRead(r.crops.map, t, me).catch(() => {}).finally(() => ocrBusy = false) }
         else if (want.chat){ ocrBusy = true; deathRead(r.crops.chat, t, me).catch(() => {}).finally(() => ocrBusy = false) }
         else if (want.job){ me.jobT = t; ocrBusy = true; jobRead(r.crops.job, r.crops.name, t, me).catch(() => {}).finally(() => ocrBusy = false) }
       }
       if (on()) get().tick(t);
-      if (ovBlocker) ovIdlePush(me, t);
+      if (ovBlocker || ovChatOn) ovIdlePush(me, t);
     } catch (e) { if (e) wait = 5000 }
     if (w === me) me.timer = setTimeout(loop, wait);
   }
   // no session between runs, so the overlay gets a bare snapshot: the bars the blocker draws (watch: true = being read, not dimmed)
-  function ovIdlePush(me, t){ try { host.overlayPush?.({t, on: false, watch: true, st: {level: me.barPct?.level ?? null, pct: me.barPct?.pct ?? null}, vit: ovVit, map: {}, feed: [], th: null}) } catch {} }
+  function ovIdlePush(me, t){ try { host.overlayPush?.({t, on: false, watch: true, st: {level: me.barPct?.level ?? null, pct: me.barPct?.pct ?? null}, vit: ovVit, map: {}, feed: [], chat: chatSnap(), chatOn: ovChatOn, th: null}) } catch {} }
   // the map name twice running (like readMap in renderer-live.js, minus the session)
   async function mapRead(c, t, me){
     if (!c) return;

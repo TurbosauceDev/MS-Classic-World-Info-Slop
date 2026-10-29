@@ -290,7 +290,7 @@ function setFps(rate, why){
 }
 function pace(t, active){
   if (active) lastActive = t;
-  const idle = t - lastActive, base = idle > 180e3 ? 0.5 : idle > 45e3 ? 1 : 2, want = ovBlocker ? Math.max(base, BAR_FPS) : base;   // a Chat blocker wants the HP/MP bars quicker, idle or not (slowCap still holds it to 1)
+  const idle = t - lastActive, base = idle > 180e3 ? 0.5 : idle > 45e3 ? 1 : 2, want = ovBlocker ? Math.max(base, BAR_FPS) : ovChatOn ? Math.max(base, 2) : base;   // a Chat blocker wants the HP/MP bars quicker, idle or not (slowCap still holds it to 1)
   setFps(slowCap ? Math.min(want, 1) : want, want < 2 ? "quiet" : "active");
 }
 
@@ -315,11 +315,13 @@ async function tick(){
       else if (t - lastOcr > 5000){ lastOcr = t; want.map = true }
       else if ((!settings.job || !charName) && t - lastJob > 30e3){ lastJob = t; want.job = true }
     }
+    chatWant(want);
     const t2 = Date.now(), r = await eng.read({frame: f, t, want}); perf("read", Date.now() - t2);
     if (eng.kind !== "worker" && video?.pump) FRBUF.give(f.d.buffer);   // inline readers ran in this window: the buffer never left, pool it again (the worker mode got it back with the reply)
     if (timer == null || sess !== session || !r) throw null;   // stopped (or restarted) while reading, or the frame was lost
     active = r.ev.some(e => e.type !== "glyph")
     if (r.memo) lastMemo = r.memo;
+    chatIngest(r.chat);
     if (r.scale){ scale = r.scale; fastLeft = 19 }   // also at 1x: finding the scale is the slow part, so it's checked every 20 frames only
     for (const e of r.ev){
       if (wrap && e.type !== "inv" && e.type !== "wallet" && e.type !== "glyph") continue;   // after Stop: only the end inventory look counts

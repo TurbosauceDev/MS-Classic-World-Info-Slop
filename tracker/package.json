@@ -1,12 +1,12 @@
 {
   "name": "ms-classic-grind-tracker",
   "productName": "MS Classic Grind Tracker",
-  "version": "0.3.17",
+  "version": "0.3.18",
   "description": "MS Classic Grind Tracker",
   "main": "app/main.js",
   "scripts": {
     "data": "node build_data.js",
-    "test": "node tests/core.test.js && node tests/fuzz.test.js && node tests/cv.test.js && node tests/journal.test.js && node tests/vitals.test.js && node tests/proc.test.js && node tests/overlaywin.test.js && node tests/bufcircle.test.js",
+    "test": "node tests/core.test.js && node tests/fuzz.test.js && node tests/cv.test.js && node tests/journal.test.js && node tests/vitals.test.js && node tests/proc.test.js && node tests/overlaywin.test.js && node tests/bufcircle.test.js && node tests/chat.test.js",
     "start": "electron .",
     "dist": "electron-builder --win --publish never",
     "release": "electron-builder --win --publish always"

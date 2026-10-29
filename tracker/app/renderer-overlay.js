@@ -54,6 +54,7 @@ function ovBuild(s){
       round: kpq.round ? {t0: kpq.round.t0} : null, clock: kpq.left !== null ? {left: kpq.left, leftT: kpq.leftT} : null, hold: !!kpq.hold} : null,
     party: partyLive,
     vit: ovVit,
+    chat: chatSnap(), chatOn: ovChatOn,
     sm: ovSm(s),
     feed: ovFeed.slice(-8),
     spark: ovSpark.slice(-60),   // the rate trend for the card sparklines (renderer-alerts.js's toasts ride along too)
@@ -78,8 +79,8 @@ $("#miniBd").onclick = () => host.borderless?.("simple");
 $("#fzBd").onclick = () => host.borderless?.("focus");
 $("#overlayBtn").onclick = () => host.overlay?.(!ovOpen);
 host.onOverlay?.(st => {
-  const was = ovOpen, wasB = ovBlocker; ovOpen = !!st.open; ovBlocker = ovOpen && !!st.blocker;
-  if (wasB !== ovBlocker) setTimeout(() => jr.wake(), 0);   // not inline: this file loads before renderer-dummy.js (dummyOn)
+  const was = ovOpen, wasB = ovBlocker, wasC = ovChatOn; ovOpen = !!st.open; ovBlocker = ovOpen && !!st.blocker; ovChatOn = ovOpen && !!st.chat;
+  if (wasB !== ovBlocker || wasC !== ovChatOn) setTimeout(() => jr.wake(), 0);   // not inline: this file loads before renderer-dummy.js (dummyOn)
   $("#overlayBtn").setAttribute("aria-pressed", String(ovOpen));
   if (ovOpen) ovSend(true);
   else if (was) $("#status").textContent = "Overlay closed.";
