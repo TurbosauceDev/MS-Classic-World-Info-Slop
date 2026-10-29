@@ -75,6 +75,11 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   await page.setViewportSize({width: 900, height: 950});
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => r())));
   if (!await page.evaluate(() => getComputedStyle($("#focusBtn")).display !== "none")) fail("focusBtn back when wide", 0);
+  // windowed scaling (0.2.98): the Focus chart is drawn at its box's real width, so labels keep their size and redraw on resize
+  await page.evaluate(() => window.menu("focus"));
+  const vb = async w => { await page.setViewportSize({width: w, height: 900}); await page.waitForTimeout(250); return page.evaluate(() => +document.querySelector("#fzChart").getAttribute("viewBox").split(" ")[2]) };
+  const [narrow, wide] = [await vb(420), await vb(900)];
+  if (!(narrow < wide && narrow < 420 && wide > 520)) fail("chart redraws at the window width", {narrow, wide});
   if (errors.length) throw new Error("page errors: " + errors.join(" | "));
   console.log("focus.test: ok");
   await browser.close();

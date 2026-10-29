@@ -68,7 +68,17 @@
   .smPotList { display:flex; flex-wrap:wrap; gap:6px 12px; } .smPot { display:flex; align-items:center; gap:5px; } .smPot b { font-variant-numeric:tabular-nums; } .smPot .note { display:block; line-height:1.1; }
   .smMoney { margin-left:auto; display:grid; grid-template-columns:auto auto auto; gap:1px 8px; align-items:baseline; font-size:12px; }
   .smMoney .v { font-weight:800; font-size:15px; text-align:right; font-variant-numeric:tabular-nums; } .smMoney .note { text-align:right; }
-  .smChart svg { display:block; width:100%; height:auto; } .smChart text { fill:var(--muted); font-size:10px; }
+  .smChart svg { display:block; width:100%; height:auto; }
+  /* windowed Simple / Focus at narrow widths (Danny 10-29: second monitor, window shrunk over a video): the window's own width decides, not the screen's */
+  #mini, #focus { container-type:inline-size; }
+  @container (max-width: 380px){
+    .smRow3 { grid-template-columns:1fr 1fr; } .smHero { grid-column:1 / -1; }
+    .smHead { flex-wrap:wrap; gap:2px 8px; }
+    .smPots { flex-direction:column; align-items:stretch; } .smMoney { margin-left:0; grid-template-columns:auto auto 1fr; justify-content:start; } .smMoney .v, .smMoney .note { text-align:left; }
+    .smBox { padding:7px 8px; } .smMid { font-size:17px; }
+  }
+  @container (max-width: 380px){ #mini .mhead, #focus .fzHead { flex-wrap:wrap; } #miniState, #fzState { flex:1 1 100%; order:-1; } #mini .mhead button, #focus .fzHead button { flex:1 0 auto; white-space:nowrap; padding:4px 8px; } #focus .fzWord { flex:1 1 100%; order:-2; } }
+  @container (max-width: 220px){ .smRow3 { grid-template-columns:1fr; } .smBig { font-size:24px; } } .smChart text { fill:var(--muted); font-size:10px; }
   .smChart .k, .smPots .k { margin-bottom:2px; }
   /* Consumables used footer: the source note, and a small switch for potions you never buy (was the "I only buy meat and lemons"
      button, Danny 2026-10-18: "make it look and fit better") */

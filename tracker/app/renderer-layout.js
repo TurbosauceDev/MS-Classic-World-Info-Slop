@@ -43,13 +43,17 @@ function simpleDraw(s){
   smChart($("#smChart"), s.perMin || []);
 }
 function smChart(svg, pts){
-  const L = 34, R = 512, T = 8, B = 128;
-  if (pts.length < 2){ svg.innerHTML = `<text x="260" y="70" text-anchor="middle">The chart starts after the first minute of EXP</text>`; return }
+  // drawn at the box's real pixel width (not a 520-wide picture scaled down), so the labels stay 10 px at any window size
+  svg._pts = pts;
+  const W = Math.round(Math.min(1200, Math.max(220, svg.clientWidth || 520))), H = Math.round(Math.min(220, Math.max(96, W * 0.29)));
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const L = 34, R = W - 8, T = 8, B = H - 22;
+  if (pts.length < 2){ svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">The chart starts after the first minute of EXP</text>`; return }
   const top = Math.max(...pts.map(p => p[1])), step = top <= 0 ? 1 : Math.pow(10, Math.floor(Math.log10(top))) * (top / Math.pow(10, Math.floor(Math.log10(top))) > 5 ? 2 : top / Math.pow(10, Math.floor(Math.log10(top))) > 2 ? 1 : 0.5);
   const max = Math.max(step, Math.ceil(top / step) * step), n = pts.length, x = i => L + (R - L) * i / (n - 1), y = v => B - (B - T) * v / max;
   const kfmt = v => v >= 1000 ? (v / 1000).toFixed(v % 1000 ? 1 : 0) + "K" : String(v);
   let h = ""; for (let v = 0; v <= max + 1e-9; v += step) h += `<line x1="${L}" x2="${R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="var(--line)"/><text x="${L - 4}" y="${(y(v) + 3).toFixed(1)}" text-anchor="end">${kfmt(Math.round(v))}</text>`;
-  const every = Math.max(1, Math.ceil(n / 6)); for (let i = 0; i < n; i += every) h += `<text x="${x(i).toFixed(1)}" y="${B + 14}" text-anchor="${x(i) > R - 24 ? "end" : x(i) < L + 24 ? "start" : "middle"}">${new Date(pts[i][0]).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"})}</text>`;
+  const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor((R - L) / 62)))); for (let i = 0; i < n; i += every) h += `<text x="${x(i).toFixed(1)}" y="${B + 14}" text-anchor="${x(i) > R - 24 ? "end" : x(i) < L + 24 ? "start" : "middle"}">${new Date(pts[i][0]).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"})}</text>`;
   const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ");
   h += `<polygon points="${L},${B} ${line} ${R},${B}" fill="color-mix(in srgb, var(--accent) 18%, transparent)"/><polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`;
   svg.innerHTML = h;
@@ -75,7 +79,9 @@ function miniFit(force){ if (!document.body.classList.contains("mini")) return c
 }
 // refit in the resize event itself, before the frame paints (it waited a frame, so a window edge being dragged showed the
 // view a step behind: cut off growing, a gap shrinking)
-addEventListener("resize", () => { if (document.body.classList.contains("mini")) miniFit() });
+addEventListener("resize", () => { if (document.body.classList.contains("mini")) miniFit();
+  // the charts redraw at the new width (next frame: the layout has to settle first)
+  requestAnimationFrame(() => { for (const id of ["smChart", "fzChart"]){ const s = document.getElementById(id); if (s?._pts && s.clientWidth) smChart(s, s._pts) } if (document.body.classList.contains("mini")) miniFit() }) });   // (the chart's height follows its width: fit again)
 // Focus Mode (Danny, 2026-10-26: a third view beside Simple Mode, skinned after maplestory.watch's market page): the same
 // session data as Simple Mode in one centred column — hero, stat tiles, level bar, chart, potions and mesos, run log, top
 // lists. No zoom games: the roominess is the point; a wider window just leaves more air around the column
