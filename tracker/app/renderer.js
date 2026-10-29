@@ -95,7 +95,12 @@ function sameAsLast(f){
   const p = new Uint32Array(f.d.buffer);
   let same = !!lastPix && lastPix.length === p.length && f.k === lastPix.k;
   for (let i = p.length - 1; same && i >= 0; i--) same = p[i] === lastPix[i];   // bottom up: the status bar changes first
-  if (!same){ lastPix = p.slice(); lastPix.k = f.k; sameRun = 0; return false }
+  if (!same){
+    // copy into the kept buffer instead of slicing a fresh one every changed frame (a 1280x720 frame is 3.7 MB, a
+    // full one 14.7 — at 2-4 reads a second the old way was pure allocator churn that kept the working set high)
+    if (lastPix && lastPix.length === p.length) lastPix.set(p); else lastPix = p.slice();
+    lastPix.k = f.k; sameRun = 0; return false;
+  }
   return ++sameRun <= 4 || (sameRun = 0, false);
 }
 

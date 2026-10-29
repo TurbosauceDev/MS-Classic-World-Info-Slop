@@ -56,7 +56,10 @@ app.whenReady().then(() => {
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#1f1931" : "#e7ddf9",
     // backgroundThrottling off: behind the game or minimized, Chromium would slow the frame timer to once a second and,
     // after 5 minutes, once a minute, so pickup lines would scroll away unread
-    webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false}});
+    // affinity "tracker": the overlay window shares this renderer process instead of getting its own — one whole
+    // Chromium renderer (~150-300 MB) off the total the Performance monitor shows. Trade-off: a renderer crash takes
+    // both pages down together; the main process stays and Windows' own window close/reopen recovers them.
+    webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false, affinity: "tracker"}});
   // getDisplayMedia() in the page gets the game window, chosen here (no picker)
   session.defaultSession.setDisplayMediaRequestHandler(async (req, cb) => {
     const src = await captureSource();
@@ -65,6 +68,8 @@ app.whenReady().then(() => {
   // the window only ever shows our own page: no new windows, no navigating away
   win.webContents.setWindowOpenHandler(() => ({action: "deny"}));
   win.webContents.on("will-navigate", e => e.preventDefault());
+  // no editable-document spellcheck anywhere: each renderer otherwise loads a spelling dictionary it never uses
+  try { session.defaultSession.setSpellCheckerEnabled(false) } catch {}
   win.loadFile(path.join(__dirname, "index.html"));
   nativeTheme.on("updated", () => setBar());
   // with the title bar hidden, the menu's zoom keys are handled here (F1 is the page's own)
@@ -216,7 +221,8 @@ function ovOpenWin(){
   if (ovWin && !ovWin.isDestroyed()) return;
   ovWin = new BrowserWindow({...ovBounds(), frame: false, transparent: true, hasShadow: false, resizable: false, movable: false,
     fullscreenable: false, minimizable: false, maximizable: false, skipTaskbar: true, show: false, focusable: false,
-    webPreferences: {preload: path.join(__dirname, "overlay-preload.js"), contextIsolation: true, backgroundThrottling: false}});
+    // affinity "tracker": shares the tracker window's renderer process (one Chromium renderer less; see the main window)
+    webPreferences: {preload: path.join(__dirname, "overlay-preload.js"), contextIsolation: true, backgroundThrottling: false, affinity: "tracker"}});
   ovWin.setAlwaysOnTop(true, "screen-saver");
   ovWin.webContents.setWindowOpenHandler(() => ({action: "deny"}));
   ovWin.webContents.on("will-navigate", e => e.preventDefault());
@@ -581,12 +587,18 @@ function ocrWorker(){
   }
   return ocr;
 }
-// a fresh worker every 500 reads (about 40 minutes): Tesseract's memory creeps up over thousands of reads in one worker
-let ocrReads = 0;
+// a fresh worker every 200 reads, and one idle for 10 minutes is torn down entirely: Tesseract's WASM heap stays at
+// its peak for the worker's whole life (100-200 MB of the total the Performance monitor shows), and with the text
+// cache (core/ocrcache.js) answering every repeat read, OCR sits unused most of a session. The next read just builds
+// a new worker (a second or two, local model).
+let ocrReads = 0, ocrIdleT = 0;
 ipcMain.handle("ocr", async (_, pngBytes) => {
   try {
-    const w = await ocrWorker(), text = (await w.recognize(Buffer.from(pngBytes))).data.text;
-    if (++ocrReads >= 500){ ocrReads = 0; ocr = null; w.terminate().catch(() => {}) }
+    const w = await ocrWorker();
+    ocrIdleT = Date.now();
+    const text = (await w.recognize(Buffer.from(pngBytes))).data.text;
+    if (++ocrReads >= 200){ ocrReads = 0; ocr = null; ocrIdleT = 0; w.terminate().catch(() => {}) }
     return text;
-  } catch { const o = ocr; ocr = null; o?.then(w => w.terminate()).catch(() => {}); return "" }   // broken worker: a new one next time
+  } catch { const o = ocr; ocr = null; ocrIdleT = 0; o?.then(w => w.terminate()).catch(() => {}); return "" }   // broken worker: a new one next time
 });
+setInterval(() => { if (ocr && ocrIdleT && Date.now() - ocrIdleT > 10 * 60e3){ const o = ocr; ocr = null; ocrReads = 0; ocrIdleT = 0; o.then(w => w.terminate()).catch(() => {}) } }, 60e3).unref?.();

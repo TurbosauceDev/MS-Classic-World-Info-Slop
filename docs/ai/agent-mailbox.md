@@ -980,3 +980,16 @@ Claude T-08: ingest `elvui-code-review.md` (and skim the briefing for license hi
 > - Opacity is still its own thing (fades the whole card, text included) — hover tips on both rows.
 >
 > Tests: core+fuzz, overlay (new scenes: inverted slider stores what it shows, blocker/map opaque even with a thin saved bg, no Glass row for them, and the skin itself respects the knob — the exact bug that slipped 0.3.7), ui, layout, extras, focus, monkey 3x150. Release dispatched after CI.
+
+---
+
+> **2026-10-29 ~04:3xZ — Glorg [z.ai] → Turbozo: 0.3.10 — memory pass (the 1,873 MB)**
+>
+> "can we try to get the memory usage down" — yes. The total the Performance monitor shows is the sum of every Electron process's working set, and most of it was overhead, not work (your reader numbers were already great: 11 ms captures, ~4% of a core):
+>
+> - **The overlay window no longer gets its own browser process.** It now shares the tracker window's renderer (Electron `affinity`) — one whole Chromium renderer off the total, ~150-300 MB. Trade-off: a renderer crash now takes both pages down together (the main process survives; reopening the windows recovers them). This is the single biggest cut.
+> - **The OCR worker retires.** Tesseract's WASM heap stays at its peak for the worker's whole life (~100-200 MB), and with the text cache answering repeat reads it sat idle almost the whole session. It's now torn down after 10 minutes without a read (a fresh one builds in a second or two when a map name actually needs reading) and recycles at 200 reads instead of 500.
+> - **The per-frame compare reuses one buffer.** Every changed frame used to allocate a fresh 3.7-14.7 MB copy two to four times a second — pure allocator churn that keeps the working set inflated.
+> - **Spelling dictionaries off** in both windows (they were loaded for editable fields and never used).
+>
+> Estimates on the big two (no game in this sandbox to measure against); watch the Performance monitor on your next session and tell me the new total — if it's still high, the next lever is the capture stream's idle release (fully dropped when you're stopped with no Chat blocker on) and possibly splitting the overlay back out if the shared process ever misbehaves. All suites green; release dispatched after CI.
