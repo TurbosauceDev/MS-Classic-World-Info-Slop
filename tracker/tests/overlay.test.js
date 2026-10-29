@@ -178,9 +178,9 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.evaluate(() => { const nx = document.querySelector(`#ovinsp .wdet[data-w="status"] input[data-k="x"]`);
       nx.value = "300"; nx.dispatchEvent(new Event("change", {bubbles: true}));
       const ny = document.querySelector(`#ovinsp .wdet[data-w="status"] input[data-k="y"]`);
-      ny.value = "560"; ny.dispatchEvent(new Event("change", {bubbles: true})) });
+      ny.value = "700"; ny.dispatchEvent(new Event("change", {bubbles: true})) });
     st = await page.evaluate(() => { const el = document.querySelector("#ovw-status"); return [el.offsetLeft, el.offsetTop, window.ovSaved.overlay.widgets.status.x, window.ovSaved.overlay.widgets.status.y] });
-    if (st[0] !== 300 || st[1] !== 560 || st[2] !== 300 || st[3] !== 560) fail("x/y inputs place card", st);
+    if (st[0] !== 300 || st[1] !== 700 || st[2] !== 300 || st[3] !== 700) fail("x/y inputs place card", st);
     // the corner grip resizes (WeakAuras' handle): dragging it in shrinks the card and saves the scale
     const s0 = await page.evaluate(() => window.ovSaved.overlay.widgets.status.s);
     const gbox = await page.locator("#ovw-status .rsz").boundingBox();
