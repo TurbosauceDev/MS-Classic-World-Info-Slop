@@ -38,7 +38,10 @@
     // we like"): the accent is ours now — the Purple preset's dark-side #b49bff with dark text on it — where ElvUI's
     // blue #1785d1 used to sit, and warn softens to the purple family's gold #e6ad52 so nothing screams orange. Dark
     // only: the original has no light side. Pair it with sk:"elv" (below) for the full re-skin.
-    T("Elv", "dark", "0f0f0f 1a1a1a e8e8e8 9a9a9a 3f3f3f b49bff 2b2347 1a1a1a 55b76b e6ad52 ef4d4d", "elv")];
+    // 0.2.94 (Danny: "another iteration on readability"): faded text steps up from #9a9a9a to #b3b3b3 — 8.3:1 on the
+    // panels (was 6.2:1), so the small notes, labels and log stamps read without squinting, while the grey still sits
+    // back behind the bright values.
+    T("Elv", "dark", "0f0f0f 1a1a1a e8e8e8 b3b3b3 3f3f3f b49bff 2b2347 1a1a1a 55b76b e6ad52 ef4d4d", "elv")];
   const HEX = /^#[0-9a-f]{6}$/i;
   // a theme from outside (a share code, a file, settings): only a name, light/dark, the known tokens as #rrggbb and the
   // panel style (sk "elv", anything else drops to the glass look) survive

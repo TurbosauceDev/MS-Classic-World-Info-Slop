@@ -43,11 +43,23 @@
   body.edit .ovw .rsz { display:block; }
   body.edit .ovw .rsz:hover { opacity:1; }
   .ovw header { display:flex; align-items:center; margin:0 0 3px; }
-  .ovw header .t { flex:1; font-size:10px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
-    text-shadow:0 1px 2px rgba(0,0,0,.3); }
+  .ovw header .t { flex:1; min-width:0; font-size:10px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
+    text-shadow:0 1px 2px rgba(0,0,0,.3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }   /* ellipsis, not a wrap, in a skinny box */
   .ovw header button { background:none; border:0; color:var(--muted); font:inherit; font-size:13px; line-height:1; padding:1px 5px; border-radius:6px; cursor:pointer; }
   .ovw header button:hover { color:var(--bad); }
   .ovw .b { zoom:var(--fs, 1); }
+  /* strange boxes (Danny 10-29): the corner grip — or a Width/Height number in the inspector — pins an axis, and the
+     card stops following its content: a wide box lets the lines spread, a tall one shows more of the log, a short one
+     scrolls inside, a skinny one ellipsises. Blank = fit the content, exactly like before. */
+  .ovw.sizedW { width:var(--w); max-width:none; }
+  .ovw.sizedH { height:var(--h); display:flex; flex-direction:column; }
+  .ovw.sizedH header { flex:none; }
+  .ovw.sizedH .b { flex:1 1 auto; min-height:0; overflow:auto; scrollbar-width:thin; }
+  .ovw.sizedH .b::-webkit-scrollbar { width:8px; } .ovw.sizedH .b::-webkit-scrollbar-track { background:transparent; }
+  .ovw.sizedH .b::-webkit-scrollbar-thumb { background:var(--line); border-radius:4px; }
+  .ovw.sizedW .rows > div { min-width:0; } .ovw.sizedW .spk svg { width:100%; }   /* a wide card: the trend line stretches, rows shrink to fit */
+  .ovw.sizedW .mrow { flex-wrap:wrap; row-gap:1px; } .ovw.sizedW .mrow b { min-width:0; }   /* a skinny card: name and its number stack instead of fighting */
+  .ovw.sizedW .lvbar { grid-template-columns:auto minmax(24px, 1fr) auto; }
   .ovw.ovhide { display:none; }
   /* Borderless cards (0.2.94): Simple / Focus views. Fixed width = Max width; the corner grip scales the whole card */
   .ovw[data-k="simple"], .ovw[data-k="focus"] { width:var(--mw, 380px); }
@@ -231,6 +243,11 @@
     background:color-mix(in srgb, var(--panel) 96%, transparent); box-shadow:none; }
   body.skin-elv .trk { background:color-mix(in srgb, var(--bg) 55%, #000); }   /* the ElvUI bar: dark track, flat fill */
   body.skin-elv .ovw header .t, body.skin-elv .ovw .big, body.skin-elv .mapname { text-shadow:none; }   /* clean type */
+  /* readability pass 2 (Danny 10-29: "another iteration on readability"): the Elv face is condensed, so the small
+     grey text steps up a point where it carries real information — sub-lines, detail rows, section marks. */
+  body.skin-elv .sub, body.skin-elv .rows span { font-size:12px; }
+  body.skin-elv .sect { font-size:11px; }
+  body.skin-elv .empty { font-size:13px; }
 </style>
 </head>
 <body>

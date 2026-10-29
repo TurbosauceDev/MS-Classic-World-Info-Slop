@@ -196,6 +196,10 @@
   #summary { border:2px solid var(--leaf); }
   .sgrid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:8px 0; } .sgrid > div { background:var(--bg); border-radius:8px; padding:6px 8px; }
   .sgrid .v { font-size:17px; }
+  /* strange boxes (Danny 10-29): the window is the user's — skinny or fat, the stat grids reflow instead of cramming.
+     The two-column grids stack below 460 px; every cell can shrink (min-width:0) so a long number wraps, never overflows. */
+  .tiles > .tile, .grid > div, .sgrid > div { min-width:0; }
+  @media (max-width: 460px){ .tiles, .grid, .sgrid { grid-template-columns:1fr; } }
   /* boxes: dragged by the grip like OBS sources; folded to their title */
   .box { position:relative; } .boxctl { position:absolute; top:5px; right:6px; display:flex; gap:2px; align-items:center; }
   .boxctl .grip { cursor:grab; color:var(--muted); padding:0 4px; font-size:14px; user-select:none; }
@@ -445,6 +449,11 @@
   body.skin-elv #dummyBar { border-color:color-mix(in srgb, var(--accent) 55%, var(--line));
     background:color-mix(in srgb, var(--accent) 12%, var(--panel)); }
   body.skin-elv #dummyBar b { color:var(--accent); }
+  /* readability pass 2 (Danny 10-29: "another iteration on readability"): PT Sans Narrow is condensed, so the small
+     text steps up one point where it carries real information — the notes under the numbers, the empty-state lines and
+     the run log itself (the surface you read while playing). --muted brightens with the Elv preset in themes.js. */
+  body.skin-elv .note, body.skin-elv .empty { font-size:13px; }
+  body.skin-elv .feedlist { font-size:13px; }
 </style>
 </head>
 <body>

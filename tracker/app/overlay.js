@@ -56,6 +56,11 @@ const PARAMS = [
   {k: "s", sec: "Size & fit", lab: "Size", t: "r", min: .5, max: 2, step: .05, def: 1, u: 100, f: pct},
   {k: "fs", sec: "Size & fit", lab: "Text size", t: "r", min: .7, max: 1.8, step: .05, def: 1, u: 100, f: pct},
   {k: "mw", sec: "Size & fit", lab: "Max width", t: "r", min: 160, max: 900, step: 10, def: {_: 360, simple: 380, focus: 640}, f: px},
+  // fixed width/height (Danny 10-29: "resize these windows into strange boxes... very long or very wide, skinny or
+  // fat"): the corner grip or a number here pins one or both axes — blank means fit the content like before. The
+  // content adapts inside (the logs scroll a short box, lines wrap a skinny one) instead of the card following it.
+  {k: "w", sec: "Size & fit", lab: "Width (px, blank = fit)", t: "n", min: 60, max: 2000, def: null, ph: "auto"},
+  {k: "h", sec: "Size & fit", lab: "Height (px, blank = fit)", t: "n", min: 40, max: 2000, def: null, ph: "auto"},
   {k: "pad", sec: "Size & fit", lab: "Padding", t: "s", opts: {compact: "Compact", normal: "Normal", roomy: "Roomy"}, def: "normal"},
   {k: "al", sec: "Size & fit", lab: "Text align", t: "s", opts: {left: "Left", center: "Centre", right: "Right"}, def: "left"},
   {k: "o", sec: "Look", lab: "Opacity", t: "r", min: .25, max: 1, step: .05, def: 1, u: 100, f: pct},
@@ -75,10 +80,10 @@ const PARAMS = [
   {k: "ccol", sec: "Condition", lab: "Colour", t: "c"},
   {k: "spark", sec: "This card", lab: "Sparkline", t: "b", def: true, kinds: ["exp", "kills", "mesos"]},
   {k: "sub", sec: "This card", lab: "Detail rows", t: "b", def: true, kinds: ["exp", "kills", "mesos", "status", "kpq"]},
-  {k: "lines", sec: "This card", lab: "Lines shown", t: "r", min: 2, max: 14, step: 1, def: {_: 6, loot: 5}, kinds: ["log", "loot"]},
+  {k: "lines", sec: "This card", lab: "Lines shown", t: "r", min: 2, max: 14, step: 1, def: {_: 6, loot: 5}, f: Math.round, kinds: ["log", "loot"]},
   {k: "bagl", sec: "This card", lab: "Icons", t: "s", opts: {row: "Side by side", col: "Stacked"}, def: "row", kinds: ["bag"]},
   {k: "bagn", sec: "This card", lab: "Tab names", t: "b", def: false, kinds: ["bag"]},
-  {k: "rows", sec: "This card", lab: "Monsters shown", t: "r", min: 2, max: 14, step: 1, def: 6, kinds: ["map"]},
+  {k: "rows", sec: "This card", lab: "Monsters shown", t: "r", min: 2, max: 14, step: 1, def: 6, f: Math.round, kinds: ["map"]},
 ];
 const PMAP = Object.fromEntries(PARAMS.map(p => [p.k, p]));
 const defOf = (p, id) => p.def !== null && typeof p.def === "object" ? (p.def[baseOf(id)] ?? p.def._) : p.def;
@@ -252,8 +257,10 @@ function styleCard(el, id){
   const p = wPos(id), v = k => wv(id, k), set = (n, val) => val == null ? el.style.removeProperty(n) : el.style.setProperty(n, val);
   el.style.transform = p.s === 1 ? "" : `scale(${p.s})`;   // transform-origin top left: x/y stay the card's anchor
   el.style.opacity = p.o === 1 ? "" : p.o;
-  const [pv, ph] = PADS[v("pad")];
+  const [pv, ph] = PADS[v("pad")], W = v("w"), H = v("h");
+  el.classList.toggle("sizedW", !!W); el.classList.toggle("sizedH", !!H);   // a pinned box (Danny's strange boxes)
   set("--glass", v("bg") + "%"); set("--blur", v("blur") + "px"); set("--rad", v("rad") + "px"); set("--mw", v("mw") + "px");
+  set("--w", W ? W + "px" : null); set("--h", H ? H + "px" : null);
   set("--pv", pv + "px"); set("--ph", ph + "px"); set("--fs", v("fs") === 1 ? null : v("fs"));
   set("--bc", v("brd") === "none" ? "transparent" : v("brd") === "accent" ? "var(--accent)" : null);
   set("--sh", v("shd") ? null : "none");
@@ -411,7 +418,7 @@ function buildPanel(){
   const p = $("#ovpanel");
   p.innerHTML = `<header id="ovpHead"><span class="t">Overlay edit</span><button class="btn" id="ovDone">Done</button><button class="btn alt" id="ovClose" title="Close the overlay">×</button></header>
     <div class="foot" id="ovBd" hidden><button class="btn alt" id="ovBack" title="Bring the tracker window back and hide the Simple / Focus card">Back to tracker window</button></div>
-    <p class="hint">Drag the cards — Shift skips snapping, arrows nudge. Ctrl+scroll or the corner grip resizes. All saves by itself.</p>
+    <p class="hint">Drag the cards — Shift skips snapping, arrows nudge. The corner grip stretches a card into any box (long, wide, skinny, fat); Ctrl+scroll scales it. All saves by itself.</p>
     <div id="ovpRows"></div>
     <div class="foot add"><select id="ovAddKind" title="What to add">${Object.entries(KINDS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select>
       <button class="btn alt" id="ovAdd" title="Place another card of this kind, with its own spot, size and (for stats) number">Add widget</button></div>
@@ -497,7 +504,7 @@ function paramRow(p, id){
   const v = wv(id, p.k), id2 = "in-" + p.k;
   if (p.t === "r") return `<label><b>${p.lab}</b><input type="range" id="${id2}" data-k="${p.k}" min="${p.min * (p.u || 1)}" max="${p.max * (p.u || 1)}" step="${p.step * (p.u || 1)}" value="${v * (p.u || 1)}"><span class="pv">${p.f(v * (p.u || 1))}</span></label>`;
   if (p.t === "s") return `<label><b>${p.lab}</b><select data-k="${p.k}">${Object.entries(p.opts).map(([k, n]) => `<option value="${k}"${k === v ? " selected" : ""}>${n}</option>`).join("")}</select></label>`;
-  if (p.t === "n") return `<label><b>${p.lab}</b><input type="number" data-k="${p.k}" min="${p.min}" max="${p.max}" step="any" value="${v}"></label>`;
+  if (p.t === "n") return `<label><b>${p.lab}</b><input type="number" data-k="${p.k}" min="${p.min}" max="${p.max}" step="any" placeholder="${p.ph || ""}" value="${v ?? ""}"></label>`;
   if (p.t === "b") return `<label><b>${p.lab}</b><input type="checkbox" data-k="${p.k}"${v ? " checked" : ""}></label>`;
   return `<label><b>${p.lab}</b><input type="color" data-k="${p.k}" value="${v || "#a78bfa"}"><button class="clr" data-clr="${p.k}" title="Follow the tracker's theme again">Theme</button></label>`;
 }
@@ -678,8 +685,11 @@ addEventListener("pointerdown", e => {
   if (card){
     if (e.target.closest("button")) return;
     if (e.target.closest(".rsz")){
-      const r = card.getBoundingClientRect();
-      rz = {id: card.dataset.w, card, x0: r.left, y0: r.top, w0: r.width || 1, h0: r.height || 1, s0: wPos(card.dataset.w).s};
+      // free resize (Danny 10-29: strange boxes): each axis goes on its own once the drag means it, so a card can
+      // come out very long, very wide, skinny or fat — not just bigger and smaller. offsetWidth/Height ignore the
+      // scale transform, and the delta is divided by the scale so the edge tracks the cursor exactly.
+      rz = {id: card.dataset.w, card, px0: e.clientX, py0: e.clientY, w0: card.offsetWidth, h0: card.offsetHeight,
+        s0: wPos(card.dataset.w).s, mx: false, my: false};
       card.setPointerCapture(e.pointerId);
     } else {
       drag = {id: card.dataset.w, dx: e.clientX - card.offsetLeft, dy: e.clientY - card.offsetTop, card};
@@ -691,9 +701,12 @@ addEventListener("pointerdown", e => {
 });
 addEventListener("pointermove", e => {
   if (rz){
-    const k = Math.max((e.clientX - rz.x0) / rz.w0, (e.clientY - rz.y0) / rz.h0);
-    setS(rz.id, rz.s0 * k);
-    chip(Math.round(wPos(rz.id).s * 100) + "%", rz.card);
+    const dx = e.clientX - rz.px0, dy = e.clientY - rz.py0;
+    if (!rz.mx && Math.abs(dx) > 2) rz.mx = true;   // one axis at a time: a horizontal drag leaves the height alone
+    if (!rz.my && Math.abs(dy) > 2) rz.my = true;
+    if (rz.mx) setP(rz.id, "w", clamp(Math.round(rz.w0 + dx / rz.s0), 60, 2000));
+    if (rz.my) setP(rz.id, "h", clamp(Math.round(rz.h0 + dy / rz.s0), 40, 2000));
+    chip(rz.card.offsetWidth + " × " + rz.card.offsetHeight + " px", rz.card);
     return;
   }
   if (!drag) return;
@@ -714,7 +727,7 @@ addEventListener("pointermove", e => {
 });
 addEventListener("pointerup", () => {
   chipHide();
-  if (rz){ rz = null; return }
+  if (rz){ const c = rz.card; rz = null; clampCard(c); reflow(); return }   // a grown box can hang past an edge
   if (!drag) return;
   const {card, id} = drag; drag = null;
   card.classList.remove("moving");

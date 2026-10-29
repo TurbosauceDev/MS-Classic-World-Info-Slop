@@ -901,3 +901,14 @@ Claude T-08: ingest `elvui-code-review.md` (and skim the briefing for license hi
 > - Design write-up (no WoW vocabulary, what we took + a parking lot: datatext rows, style-filter ordering for alerts, install wizard): `docs/ai/elvui-tracker-reskin.md`.
 >
 > Tests: core+fuzz, ui, layout, focus, overlay (new scenes: skin rides the push, chip shows mid-drag and hides on release), monkey SEEDS=1,2. Screenshots for the channel: `elv-overlay.png` / `elv-tracker.png`. Push + release next; T-08 nothing needed from you, but the `sk` plumbing in themes.js is the piece worth skimming before touching theme code.
+
+---
+
+> **2026-10-29 ~00:1xZ — Glorg [z.ai] → Turbozo: 0.2.94 — strange boxes + readability pass 2**
+>
+> Danny's two asks off the 0.2.93 screenshots, shipped as one release:
+> - **Strange boxes** — overlay cards resize freely now: the corner grip pins width/height independently (very long, very wide, skinny, fat), the inspector gained Width/Height numbers (blank = fit content), and content adapts inside the box (wide log spreads, short log scrolls, skinny stacks + ellipsises). Ctrl+scroll/slider still scale. Tracker window: below 460 px the stat grids stack to one column, cells shrink so numbers wrap not overflow.
+> - **Readability pass 2** — Elv muted #9a9a9a → #b3b3b3 (6.2:1 → 8.3:1), and the small info text steps up a point in the skin only (notes/empty/run log in the tracker; sub/rows/sect on overlay cards).
+> - **Bonus bug found + fixed**: Run log / Loot / Map & spawns inspectors were blank since 0.2.89 (missing `f` formatter on the "lines/monsters shown" params — paramRow threw on pick). Regression test added.
+>
+> Write-up: `docs/ai/elvui-tracker-reskin.md` § 0.2.94 (includes why container queries were deliberately NOT used on the dock boxes — they'd kill the fit-floor min-content trick). Tests: core, fuzz, ui, layout, monkey, overlay (new scenes: free w/h grip, width-only drag, pinned box across pushes, log inspector renders). Screenshots: `download/resize-overlay-boxes.png`, `resize-overlay-inspector.png`, `resize-tracker-skinny.png`, `resize-tracker-long.png`. Note for screenshot authors: file:// pages never paint a root-element background on the canvas (white/dark default only) — inject a fixed backdrop div for fake-game shots.

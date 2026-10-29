@@ -480,6 +480,14 @@ const path = require("path"), {chromium} = require("playwright");
   // Esc with nothing open: Settings (Danny 2026-10-23)
   await page.keyboard.press("Escape"); await page.waitForTimeout(250); if (!await page.isVisible("#prefsPop")) throw new Error("Esc opens Settings");
   await page.keyboard.press("Escape"); await page.waitForTimeout(250);
+  // strange boxes (Danny 10-29): a skinny window stacks the two-column stat grids into one column instead of cramming
+  // the numbers; back at a normal width the two columns return
+  { const v0 = page.viewportSize(); await page.setViewportSize({width: 380, height: 900}); await page.waitForTimeout(150);
+    const cols = await page.evaluate(() => ["#top .tiles", "[data-box=stats] .grid"].map(s =>
+      getComputedStyle(document.querySelector(s)).gridTemplateColumns.split(" ").length));
+    await page.setViewportSize(v0); await page.waitForTimeout(150);
+    const back = await page.evaluate(() => getComputedStyle(document.querySelector("#top .tiles")).gridTemplateColumns.split(" ").length);
+    if (cols[0] !== 1 || cols[1] !== 1 || back !== 2) throw new Error("skinny window stat grids: " + JSON.stringify({skinny: cols, back})) }
   // Settings: a popup from File → Settings; no panel tabs any more (modules, 2026-10-19)
   if (await page.$(".tabs")) throw new Error("panel tabs are back");
   await page.evaluate(() => window.menu("settings")); if (!await page.isVisible("#prefsPop #themeSw")) throw new Error("preferences popup not shown");

@@ -3,7 +3,7 @@
 // the bridge stubbed: default widgets, values, the map card's spawn table and respawn countdowns, the panel picker (rows
 // with eye toggles, per-widget detail: size / opacity / x-y / reset), dragging with magnetic snapping (guides, Shift
 // bypass), grid display + grid rounding (edit mode only — Done and a locked boot hide it, Danny 10-28), resize (corner
-// grip, Ctrl+scroll, scale slider), arrow nudging, Esc = Done,
+// grip into any box — free width/height, Danny 10-29 — Ctrl+scroll and the slider scale), arrow nudging, Esc = Done,
 // clamping to the window's real viewport (not the reported desk — the dead-strip fix), the panel's own drag, reset
 // layout, lock (Done) and the theme following the tracker. Part 2 loads the tracker window like ui.test.js: the Overlay
 // button, the View-menu actions, the state coming back, and dummy data reaching the push. Needs playwright.
@@ -181,19 +181,46 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       ny.value = "700"; ny.dispatchEvent(new Event("change", {bubbles: true})) });
     st = await page.evaluate(() => { const el = document.querySelector("#ovw-status"); return [el.offsetLeft, el.offsetTop, window.ovSaved.overlay.widgets.status.x, window.ovSaved.overlay.widgets.status.y] });
     if (st[0] !== 300 || st[1] !== 700 || st[2] !== 300 || st[3] !== 700) fail("x/y inputs place card", st);
-    // the corner grip resizes (WeakAuras' handle): dragging it in shrinks the card and saves the scale
-    const s0 = await page.evaluate(() => window.ovSaved.overlay.widgets.status.s);
+    // the corner grip resizes freely now (Danny 10-29: "strange boxes... very long or very wide, skinny or fat"):
+    // dragging it in pins the card's own width and height (saved as w/h), the card really gets smaller, and the box
+    // stays pinned across a later push (the content reflows inside instead of the card following the numbers)
+    const g0 = await page.evaluate(() => { const el = document.querySelector("#ovw-status");
+      return [el.offsetWidth, el.offsetHeight, window.ovSaved.overlay.widgets.status.w, window.ovSaved.overlay.widgets.status.h] });
     const gbox = await page.locator("#ovw-status .rsz").boundingBox();
     await page.mouse.move(gbox.x + 7, gbox.y + 7); await page.mouse.down();
     await page.mouse.move(gbox.x - 30, gbox.y - 22, {steps: 4}); await page.mouse.up();
     await page.waitForTimeout(350);
-    st = await page.evaluate(() => window.ovSaved.overlay.widgets.status.s);
-    if (!(st < s0)) fail("corner grip resize", {before: s0, after: st});
-    // Ctrl+scroll resizes too
+    const g1 = await page.evaluate(() => { const el = document.querySelector("#ovw-status");
+      return [el.offsetWidth, el.offsetHeight, window.ovSaved.overlay.widgets.status.w, window.ovSaved.overlay.widgets.status.h,
+        el.classList.contains("sizedW"), el.classList.contains("sizedH")] });
+    if (!(g1[0] < g0[0] && g1[1] < g0[1]) || g1[2] !== g1[0] || g1[3] !== g1[1] || !g1[4] || !g1[5]) fail("corner grip free resize (strange boxes)", {before: g0, after: g1});
+    await page.evaluate(d => window.ovData(d), structuredClone(payload));
+    const g2 = await page.evaluate(() => { const el = document.querySelector("#ovw-status"); return [el.offsetWidth, el.offsetHeight] });
+    if (g2[0] !== g1[0] || g2[1] !== g1[1]) fail("pinned box keeps its size across a push", {after: g1, repush: g2});
+    // one axis at a time: a horizontal drag leaves the height (and the content's natural height) alone
+    await page.evaluate(() => { const w = {...(window.ovSaved.overlay.widgets.status || {})}; delete w.h; window.ovSaved.overlay.widgets.status = w;
+      CFG.widgets.status = {...CFG.widgets.status, h: undefined}; delete CFG.widgets.status.h; styleCard(document.querySelector("#ovw-status"), "status") });
+    const g3 = await page.evaluate(() => document.querySelector("#ovw-status").offsetHeight);
+    const gbox3 = await page.locator("#ovw-status .rsz").boundingBox();
+    await page.mouse.move(gbox3.x + 7, gbox3.y + 7); await page.mouse.down();
+    await page.mouse.move(gbox3.x + 44, gbox3.y + 7, {steps: 4}); await page.mouse.up();   // same y: a purely horizontal drag
+    await page.waitForTimeout(350);
+    const g4 = await page.evaluate(() => { const el = document.querySelector("#ovw-status");
+      return [el.offsetWidth, el.offsetHeight, window.ovSaved.overlay.widgets.status.w, window.ovSaved.overlay.widgets.status.h] });
+    if (g4[2] !== g4[0] || g4[3] != null) fail("grip width-only drag keeps the height auto", {heightBefore: g3, after: g4});
+    if (await page.evaluate(() => document.querySelector("#ovw-status").classList.contains("sizedH"))) fail("width-only drag pins no height", 0);
+    // Ctrl+scroll still scales
     const s1 = await page.evaluate(() => window.ovSaved.overlay.widgets.status.s);
     await page.evaluate(() => document.querySelector("#ovw-status").dispatchEvent(new WheelEvent("wheel", {ctrlKey: true, deltaY: -120, bubbles: true, cancelable: true})));
     st = await page.evaluate(() => window.ovSaved.overlay.widgets.status.s);
     if (!(st > s1)) fail("ctrl+scroll resize", {before: s1, after: st});
+    // the log card's inspector renders too: the Lines shown row carried no formatter, so picking a log/loot/map card
+    // threw and left the inspector empty for everyone since 0.2.89 (found while shooting the strange boxes, 10-29)
+    await page.click(`.wrow[data-w="log"] .nm`);
+    st = await page.evaluate(() => { const i = document.querySelector("#ovinsp");
+      return [!i.classList.contains("hidden"), !!i.querySelector('input[data-k="lines"]'), !!i.querySelector('input[data-k="w"]'),
+        !!i.querySelector('input[data-k="x"]')] });
+    if (!st[0] || !st[1] || !st[2] || !st[3]) fail("log card inspector renders (lines, width, position rows)", st);
     // arrow keys nudge the picked card by 1 px (Shift = 10), saving each step; Esc = Done
     await page.evaluate(() => document.activeElement?.blur());
     await page.click(`.wrow[data-w="exp"] .nm`);

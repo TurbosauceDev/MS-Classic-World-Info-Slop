@@ -1,4 +1,4 @@
-# The Elv skin — ElvUI's panel language on the tracker (0.2.92)
+# The Elv skin — ElvUI's panel language on the tracker (0.2.92–0.2.94)
 
 Danny, 2026-10-29: "reimagine this without ANY world of warcraft context… take inspirations from it to
 make our edit mode even better… a theme edit option to be Elv-like. the crisp, clean borders, bars,
@@ -54,6 +54,33 @@ like." Three moves, all still in the skin's rules (colours stay tokens):
 - **Alignment debts.** The main card's grip/fold pair now rides the bar's centre (`#top .boxctl{top:16px}` —
   it was parked at h3 height, but #top has no h3), the Per hour/Total switch steps up to 13 px with quieter
   unpressed text, and the Dummy banner speaks the accent (it was an info note wearing --warn's orange).
+
+## 0.2.94 — strange boxes + readability pass 2 (Danny, 10-29, "this is going great")
+
+Two asks: "another iteration on readability", and "make sure that we can resize these windows into strange boxes
+whether very long or very wide, skinny or fat, the app should proper react and adapt to whatever size the user
+desires."
+
+- **The grip got ElvUI's mover honesty: it moves the frame, not a zoom of it.** Overlay cards resized only by uniform
+  scale before (the grip multiplied `s`); now the corner grip pins **width and height independently** — drag one way
+  and only that axis moves, so a card can come out very long, very wide, skinny or fat. The new `w`/`h` params (one
+  registry line each, blank = fit the content like before) ride the inspector as Width/Height numbers, share codes and
+  profiles. The card stops following its content and the **content adapts to the box**: a wide log spreads its lines
+  and stretches the sparkline, a short one scrolls inside, a skinny one stacks a name over its number and ellipsises
+  the title. Ctrl+scroll and the Size slider still scale. Scale deltas divide by `s` so the edge tracks the cursor.
+- **The tracker window itself takes any shape.** Below 460 px the two-column grids (this-run tiles, session numbers,
+  run summary) stack to one column instead of cramming, and every cell got `min-width:0` so a long number wraps.
+  Container queries were the wrong tool here on purpose: `container-type:inline-size` would zero the boxes' intrinsic
+  min-content width and silently kill the fit-floor trick (`--floor` + the `::after` spacer) that keeps side-by-side
+  boxes readable — so the breakpoint is a plain viewport media query and the floors stay.
+- **Readability pass 2.** The Elv preset's faded text brightens #9a9a9a → **#b3b3b3** (6.2:1 → 8.3:1 on the panels) —
+  one token, so notes, labels, log stamps and box controls all lift while the grey still sits behind the values. And
+  where the condensed face carries real information, the small text steps up a point in the skin's rules only:
+  `.note`/`.empty`/`.feedlist` 12 → 13 px in the tracker, `.sub`/`.rows span`/`.sect` up on the overlay cards.
+- **Bonus find while shooting:** the Run log / Loot / Map & spawns inspectors have been **blank since 0.2.89** —
+  the "Lines shown"/"Monsters shown" params are range params without a formatter, so `paramRow` threw on pick and the
+  whole inspector (position, x/y, reset, copy look) never rendered for those kinds. One missing `f: Math.round` each;
+  a regression test now opens the log card's inspector.
 
 ## Edit-mode ledger (ElvUI's Toggle Anchors heritage, WoW-free)
 
