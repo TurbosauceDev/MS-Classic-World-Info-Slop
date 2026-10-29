@@ -17,11 +17,11 @@ const runClock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 // what can be tracked: the panel lists these, in this order. HOME is where each lands the first time (desktop pixels)
-const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar", bag: "Bag check", simple: "Simple view", focus: "Focus view", blocker: "Chat blocker"};
+const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar", bag: "Bag check", simple: "Simple view", focus: "Focus view", blocker: "Chat blocker", chat: "Chat window"};
 const HOME = {status: {on: true, x: 24, y: 24}, exp: {on: true, x: 24, y: 108}, map: {on: true, x: 24, y: 250},
   kills: {on: false, x: 24, y: 620}, mesos: {on: false, x: 24, y: 700}, loot: {on: false, x: 24, y: 780},
   party: {on: false, x: 24, y: 860}, kpq: {on: false, x: 24, y: 940}, log: {on: false, x: 24, y: 1020},
-  stat: {on: false, x: 300, y: 24}, bar: {on: false, x: 300, y: 110}, bag: {on: false, x: 300, y: 190}, simple: {on: false, x: 24, y: 24}, focus: {on: false, x: 24, y: 24}, blocker: {on: false, x: 24, y: 800}};
+  stat: {on: false, x: 300, y: 24}, bar: {on: false, x: 300, y: 110}, bag: {on: false, x: 300, y: 190}, simple: {on: false, x: 24, y: 24}, focus: {on: false, x: 24, y: 24}, blocker: {on: false, x: 24, y: 800}, chat: {on: false, x: 600, y: 800}};
 let BD = null, DATA = null, CFG = {edit: true, widgets: {}, snap: true, grid: false, gsize: 64, panel: null, insp: null, profile: "Default", profiles: null}, DESK = {x: 0, y: 0, width: 1920, height: 1080}, zTop = 1;
 const picked = {id: null};
 // Widget instances (0.2.87, WeakAuras' "make as many displays as you like"): a card id is a kind ("exp") or a kind plus an
@@ -97,7 +97,16 @@ const PARAMS = [
   {k: "ccol", sec: "Condition", lab: "Colour", t: "c"},
   {k: "spark", sec: "This card", lab: "Sparkline", t: "b", def: true, kinds: ["exp", "kills", "mesos"]},
   {k: "sub", sec: "This card", lab: "Detail rows", t: "b", def: true, kinds: ["exp", "kills", "mesos", "status", "kpq"]},
-  {k: "lines", sec: "This card", lab: "Lines shown", t: "r", min: 2, max: 14, step: 1, def: {_: 6, loot: 5}, f: Math.round, kinds: ["log", "loot"]},
+  {k: "lines", sec: "This card", lab: "Lines shown", t: "r", min: 2, max: 14, step: 1, def: {_: 6, loot: 5, chat: 8}, f: Math.round, kinds: ["log", "loot", "chat"]},
+  {k: "cpa", sec: "This card", lab: "Party chat", t: "b", def: true, kinds: ["chat"]},
+  {k: "cbu", sec: "This card", lab: "Buddy chat", t: "b", def: true, kinds: ["chat"]},
+  {k: "cal", sec: "This card", lab: "All chat", t: "b", def: false, kinds: ["chat"]},
+  {k: "cwh", sec: "This card", lab: "Whispers", t: "b", def: true, kinds: ["chat"]},
+  {k: "cer", sec: "This card", lab: "Red errors", t: "b", def: false, kinds: ["chat"]},
+  {k: "cnm", sec: "This card", lab: "Names", t: "b", def: true, kinds: ["chat"]},
+  {k: "cts", sec: "This card", lab: "Time stamps", t: "b", def: false, kinds: ["chat"]},
+  {k: "ccl", sec: "This card", lab: "Game colours", t: "b", def: true, kinds: ["chat"]},
+  {k: "cord", sec: "This card", lab: "Newest message", t: "s", opts: {bottom: "At the bottom", top: "At the top"}, def: "bottom", kinds: ["chat"]},
   {k: "vhp", sec: "This card", lab: "HP bar", t: "b", def: true, kinds: ["blocker"]},
   {k: "vmp", sec: "This card", lab: "MP bar", t: "b", def: true, kinds: ["blocker"]},
   {k: "vex", sec: "This card", lab: "EXP bar", t: "b", def: true, kinds: ["blocker"]},
@@ -265,6 +274,16 @@ const RENDER = {
   // Bag check (0.2.96): sword / potion / crate, coloured by how stale the tab's last read is (core/bagstale.js). Clicking one
   // asks the tracker window to scan that tab (same as the chips); see the pointerdown handler near the end.
   bag(d, id){ return bagRow(d, wv(id, "bagl"), wv(id, "bagn")) },
+  // Chat window (0.3.17): the chat the tracker read off the game's chat box (core/chatlines.js, OCR of new lines only), filtered
+  // by channel. Megaphones, [Notice] lines and the like are never captured. Oldest lines clip first; no scroll bar.
+  chat(d, id){
+    const on = {party: wv(id, "cpa"), partysys: wv(id, "cpa"), buddy: wv(id, "cbu"), all: wv(id, "cal"), whisper: wv(id, "cwh"), error: wv(id, "cer")};
+    const list = (d.chat || []).filter(m => on[m.cls]), n = Math.min(list.length, Math.max(wv(id, "lines"), fitRows(id, 20)));
+    const rows = list.slice(-n); if (wv(id, "cord") === "top") rows.reverse();
+    const nm = wv(id, "cnm"), ts = wv(id, "cts"), gc = wv(id, "ccl");
+    return rows.length ? rows.map(m => `<div class="cm ${esc(m.cls)}${gc ? " gc" : ""}">${ts ? `<time>${clockT(m.t)}</time>` : ""}${nm && m.who ? `<b>${esc(m.who)}${m.dir === "to" ? " &rsaquo;" : m.dir === "from" ? " &lsaquo;" : ""}</b> ` : ""}<span>${esc(m.text)}</span></div>`).join("")
+      : `<div class="empty">${d.chatOn ? "No messages yet." : "Waiting for the game's chat box."}</div>`;
+  },
   log(d, id){
     // a pinned-tall card shows as many lines as fit (Danny 10-29: growing a card must never leave strange empty space)
     const feed = d.feed || [], n = Math.min(feed.length, Math.max(wv(id, "lines"), fitRows(id, 20)));
@@ -492,7 +511,7 @@ const ovSave = () => { clearTimeout(saveT); saveT = setTimeout(() => {
 // ---- data: re-render every card (a push, or the 1 s tick for the countdowns) -------------------------------
 // flow cards (lists) keep their lines at the top and scroll; the rest centre in a pinned-tall box, so growing a card
 // never leaves a strange void under the number (Danny 10-29: "never start looking like there's strange empty space")
-const FLOW = new Set(["log", "loot", "map"]);
+const FLOW = new Set(["log", "loot", "map", "chat"]);
 // how many text rows fit in a pinned-height card's body (log/loot/map render to fill it; fitRows says 0 when free)
 function fitRows(id, lineH){
   const el = $("#ovw-" + id); if (!el || !el.classList.contains("sizedH")) return 0;

@@ -32,7 +32,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       !document.querySelector("#ovw-kills"), !document.querySelector("#ovw-mesos"), !document.querySelector("#ovw-log"),
       !document.querySelector("#ovpanel").classList.contains("hidden"), document.body.classList.contains("edit"),
       document.querySelectorAll("#ovpRows .wrow").length, !!document.querySelector("#ovSnap"), !!document.querySelector("#ovGrid"), !!document.querySelector("#ovReset")]);
-    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || st[8] !== 15 || !st[9] || !st[10] || !st[11]) fail("overlay defaults", st);
+    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || st[8] !== 16 || !st[9] || !st[10] || !st[11]) fail("overlay defaults", st);
     // a push fills the cards; the map card shows the spawn table and the respawn countdowns
     const t = Date.now();
     const payload = {t, on: true, paused: false, dummy: false, runT0: t - 7530e3, state: "Tracking · 12 min farmed",
@@ -764,6 +764,37 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     if (st[0] !== false || st[1] !== "3px" || st[2] !== "8px") fail("glass keeps the bars' own radii", st);
     await page.evaluate(() => setOn("blocker", false));
     if (errors.length) throw new Error("blocker page errors: " + errors.join(" | "));
+    await page.close();
+  }
+  // ---- part 1e: Chat window (0.3.17): the captured chat, filtered per card by channel, newest at the bottom, never a scroll bar ----
+  {
+    const page = await browser.newPage({viewport: {width: 1400, height: 900}}), errors = [];
+    page.on("pageerror", e => errors.push(e.message));
+    await page.addInitScript(() => {
+      window.ovhost = {
+        state: async () => ({edit: false, widgets: {chat: {on: true, x: 100, y: 100, h: 120}, chat_2: {on: true, x: 600, y: 100, cal: true, cpa: false, cbu: false, cwh: false, cord: "top"}}, desk: {x: 0, y: 0, width: 1400, height: 900}}),
+        settings: async p => (window.ovSaved = {...(window.ovSaved || {}), ...p}, window.ovSaved),
+        edit: async () => true, done: async () => true, close: async () => true, hit: () => {}, bag: () => {},
+        onData: cb => window.ovData = cb, onMode: cb => window.ovMode = cb, onScreens: cb => window.ovScreens = cb,
+      };
+    });
+    await page.goto("file://" + path.join(__dirname, "../app/overlay.html"));
+    await page.waitForSelector("#ovw-chat");
+    const t = Date.now(), msg = (i, cls, who, text, dir) => ({t: t + i, cls, who, text, dir});
+    const chat = [msg(1, "party", "Turbow", "one moment"), msg(2, "all", "Gild", "S> emerald earring"), msg(3, "buddy", "UncleDan", "hoi"), msg(4, "whisper", "Ghettomama", "hi", "from"),
+      msg(5, "error", "", "You cannot do that"), msg(6, "party", "Turbow", "sorry about that " + "x".repeat(300))];
+    await page.evaluate(([t, chat]) => window.ovData({t, on: true, st: {}, map: {}, feed: [], chat, chatOn: true, th: null}), [t, chat]);
+    let st = await page.evaluate(() => { const rows = id => [...document.querySelectorAll(`#ovw-${id} .cm`)].map(e => e.className.split(" ")[1] + ":" + (e.querySelector("b")?.textContent || "") + ":" + e.querySelector("span").textContent.slice(0, 10));
+      const b = document.querySelector("#ovw-chat .b"); return {a: rows("chat"), b: rows("chat_2"), clip: b.scrollHeight <= b.clientHeight + 1 || getComputedStyle(b).overflow === "hidden"} });
+    if (JSON.stringify(st.a) !== JSON.stringify(["party:Turbow:one moment", "buddy:UncleDan:hoi", "whisper:Ghettomama \u2039:hi", "party:Turbow:sorry abou"])) fail("chat card default channels (party, buddy, whispers)", st.a);
+    if (JSON.stringify(st.b) !== JSON.stringify(["all:Gild:S> emerald"])) fail("second chat card: all chat only", st.b);
+    if (!st.clip) fail("chat card never scrolls", st);
+    await page.evaluate(() => { setP("chat", "cer", true); setP("chat", "cnm", false); setP("chat", "cts", true) });
+    st = await page.evaluate(() => [...document.querySelectorAll("#ovw-chat .cm")].map(e => !!e.querySelector("b") + ":" + !!e.querySelector("time") + ":" + e.className.split(" ")[1]));
+    if (st.length < 3 || st.some(x => !x.startsWith("false:true:")) || !st.some(x => x.endsWith(":error"))) fail("chat card toggles (errors on, names off, time on)", st);
+    await page.evaluate(([t]) => window.ovData({t, on: true, st: {}, map: {}, feed: [], chat: [], chatOn: false, th: null}), [t]);
+    if (!(await page.evaluate(() => document.querySelector("#ovw-chat .empty").textContent)).includes("Waiting")) fail("chat card empty state");
+    if (errors.length) throw new Error("chat page errors: " + errors.join(" | "));
     await page.close();
   }
   // ---- Borderless cards (0.2.94): main asks for a view; it lands as a card at the window's old spot, with the same numbers ----

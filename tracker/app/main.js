@@ -225,7 +225,8 @@ function ovDesk(){
 }
 const ovWidgets = () => { const w = readSettings().overlay?.widgets; return w && typeof w === "object" && !Array.isArray(w) ? w : {} };
 const ovBlocker = () => Object.entries(ovWidgets()).some(([id, w]) => /^blocker(_\d+)?$/.test(id) && w && w.on);   // a Chat blocker card is on: the window reads HP/MP between runs
-const ovSendState = () => { if (win && !win.isDestroyed()) win.webContents.send("ov-state", {open: !!(ovWin && !ovWin.isDestroyed()), edit: ovEditing, blocker: ovBlocker()}) };
+const ovChat = () => Object.entries(ovWidgets()).some(([id, w]) => /^chat(_\d+)?$/.test(id) && w && w.on);   // a Chat window card is on: the window reads the game's chat box
+const ovSendState = () => { if (win && !win.isDestroyed()) win.webContents.send("ov-state", {open: !!(ovWin && !ovWin.isDestroyed()), edit: ovEditing, blocker: ovBlocker(), chat: ovChat()}) };
 function ovEditSet(on){
   ovEditing = !!on;
   if (ovWin && !ovWin.isDestroyed()){ ovWin.setIgnoreMouseEvents(!ovEditing, {forward: true}); ovWin.webContents.send("ov-mode", ovEditing) }
@@ -366,7 +367,7 @@ ipcMain.handle("settings", (_, s) => {
   const cur = readSettings();
   if (!cur.install) cur.install = require("crypto").randomUUID();   // random ID of this copy: one vote per player
   writeSettings({...cur, ...(s || {})});
-  if (s && s.overlay) ovSendState();   // the overlay page saved its cards: tell the window whether a Chat blocker is on
+  if (s && s.overlay) ovSendState();   // the overlay page saved its cards: tell the window whether a Chat blocker / Chat window is on
   if (s && "onTop" in s) pinOnTop();
   if (s && "opacity" in s) applyOpacity();
   if (s && "beta" in s){ applyChannel(readSettings()); sendUpd({state: "idle"}); if (app.isPackaged) autoUpdater.checkForUpdatesAndNotify().catch(() => {}) }   // the channel changed: look again right away

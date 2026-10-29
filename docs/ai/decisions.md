@@ -313,3 +313,4 @@ Each entry blocks something. When Danny calls it, transcribe above with the date
 - 2026-10-29: Danny: OCR'd map names not matching a known map are junk noise, discard (no keep-as-read for unknown maps).
 - 2026-10-29 (Danny): Chat blocker HP/MP/EXP bars should work outside tracked runs too; built on the journey-log watch (0.3.4).
 - 2026-10-29 (Danny): Chat blocker bars should animate smoothly and be read more often; 4 reads/s while a blocker is on (0.3.6).
+- 2026-10-29 (Danny): Chat windows: capture party, buddy, all chat (whispers + red errors optional) by text colour into configurable windows; ignore every megaphone (gold, blue, pink full-row backgrounds, loot-box alert, baby-blue local) and yellow [Notice] lines; RAM/CPU efficiency is critical (0.3.17).

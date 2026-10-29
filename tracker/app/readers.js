@@ -937,6 +937,7 @@
   }
   function createReaders(G, icons = null){
     ITEMS = Object.entries(G.items);
+    let chatPrev = null, chatArea = null, chatKey = "";
     const memos = new Map(), memoStats = {hits: 0, reads: 0, off: false};
     function memo(name, img, x0, y0, x1, y1, fn){
       if (memoStats.off){ memoStats.reads++; return fn() }
@@ -1162,6 +1163,18 @@
       // a tab chip was clicked: look everywhere now and send the next steady read even when it didn't change
       invNow(){ for (const k in invSent) delete invSent[k]; invNext = null; lastInv = -Infinity },
       setInvHint(a){ invHint = a && a.w > 0 && a.h > 0 ? a : null },
+      // Chat windows (core/chatlines.js): the new chat messages since the last scan, each as an OCR picture. Nothing is kept but
+      // last frame's line fingerprints; a scan that finds no chat box hands back nothing and forgets them.
+      chatOff(){ chatPrev = null },
+      chatScan(img, a){   // a: where the chat box is ({x, y, w, h} fractions of the picture) or null for the default spot
+        const C = root.GrindChat; if (!C) return null;
+        const key = a && a.w > 0 && a.h > 0 ? [a.x, a.y, a.w, a.h].join() : "";
+        if (key !== chatKey){ chatKey = key; chatArea = key ? a : null; chatPrev = null }
+        const sc = C.scan(img, chatArea), {now, out} = C.newGroups(chatPrev, sc.groups);
+        const first = chatPrev === null; chatPrev = sc.groups.length ? now : null;
+        if (first) return {n: now.size, items: []};   // the first look only learns what is on screen
+        return {n: now.size, items: out.slice(-12).map(g => ({cls: g.cls, crop: C.cropFor(img, g, sc)}))};
+      },
       setInvLast(p){ invLast = p && p.x >= 0 && p.y >= 0 ? p : null },   // where the last session saw it (settings.invLast)
       setInvIcons(list){
         const tabOf = {Equipment: "equip", Consumable: "use", Scroll: "use", Etc: "etc"};
@@ -1183,7 +1196,8 @@
     }
     if (want.job){ crops.job = jobTextCrop(img); crops.name = nameTextCrop(img) }
     if (want.chat) crops.chat = chatCrop(img);
-    return {ev, info, crops, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
+    const chat = want.chatScan ? rd.chatScan(img, want.chatArea) : (rd.chatOff(), null);
+    return {ev, info, crops, chat, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
   const api = {readProc, readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
