@@ -81,6 +81,7 @@ const PARAMS = [
   {k: "spark", sec: "This card", lab: "Sparkline", t: "b", def: true, kinds: ["exp", "kills", "mesos"]},
   {k: "sub", sec: "This card", lab: "Detail rows", t: "b", def: true, kinds: ["exp", "kills", "mesos", "status", "kpq"]},
   {k: "lines", sec: "This card", lab: "Lines shown", t: "r", min: 2, max: 14, step: 1, def: {_: 6, loot: 5}, f: Math.round, kinds: ["log", "loot"]},
+  {k: "bagi", sec: "This card", lab: "Bag check icons", t: "b", def: false, kinds: ["exp"]},
   {k: "bagl", sec: "This card", lab: "Icons", t: "s", opts: {row: "Side by side", col: "Stacked"}, def: "row", kinds: ["bag"]},
   {k: "bgon", sec: "This card", lab: "Card background", t: "b", def: true, kinds: ["bag"]},
   {k: "bagn", sec: "This card", lab: "Tab names", t: "b", def: false, kinds: ["bag"]},
@@ -146,6 +147,11 @@ function svHtml(d, full){
     <div><div class="svK">Monsters killed</div>${svList(m.mobs, x => `<tr><td>${esc(x.name)}</td><td class="n">${fmt(x.n)}</td></tr>`, "None yet", m.mobsMore)}</div></div>`;
   return `<div class="svTwo"><div>${top}</div><div>${mid}${lists}</div></div>`;
 }
+// the Bag check icons (also inside the EXP card when its "Bag check icons" switch is on)
+function bagRow(d, lay, names){
+  const B = window.GrindBag, L = B.tabs(Object.fromEntries(Object.entries(d.inv || {}).map(([k, last]) => [k, {last}])), d.runT0, d.t, d.bagEvery, d.on || d.dummy);
+  return `<div class="bagrow ${lay}">${L.map(l => `<span class="bagI ${l.stage}${l.pulse ? " pulse" : ""}" role="button" data-bag="${l.k}" style="color:${B.color(l)}" title="${esc(l.name)}: ${l.stage === "idle" ? "starts when you press Start" : l.last ? "read " + Math.round(l.age / 60e3) + " min ago" : "not read yet"}. Click to read it now">${B.ICONS[l.k]}${names ? `<em>${esc(l.name)}</em>` : ""}</span>`).join("")}</div>`;
+}
 const RENDER = {
   simple: (d) => svHtml(d, false),
   focus: (d) => svHtml(d, true),
@@ -167,7 +173,8 @@ const RENDER = {
     return `<div class="big">${fmt(s.expHr || 0)}<small> EXP/hr</small></div>
       ${sp ? `<div class="spk">${SPK(d, "exp")}</div>` : ""}
       ${sub ? `<div class="sub">${s.expHr5 != null ? "last 5 min " + fmt(s.expHr5) : "last 5 min —"}</div>
-      <div class="rows"><div><span>gained</span><b class="pos">+${fmt(s.exp || 0)}</b></div><div><span>next level</span><b>${next}</b></div></div>` : ""}` + lv;
+      <div class="rows"><div><span>gained</span><b class="pos">+${fmt(s.exp || 0)}</b></div><div><span>next level</span><b>${next}</b></div></div>` : ""}` + lv
+      + (wv(id, "bagi") ? `<div class="bagin">${bagRow(d, "row", false)}</div>` : "");
   },
   kills(d, id){
     const sp = wv(id, "spark"), sub = wv(id, "sub");
@@ -219,10 +226,7 @@ const RENDER = {
       : `<div class="lvbar"><span>Lv <b>${d.st?.level ?? "-"}</b></span><div class="trk"><i style="width:${v}%"></i></div><span>${v.toFixed(1)}%</span></div><div class="sub">${esc(BARS[t][0])}</div>` },
   // Bag check (0.2.96): sword / potion / crate, coloured by how stale the tab's last read is (core/bagstale.js). Clicking one
   // asks the tracker window to scan that tab (same as the chips); see the pointerdown handler near the end.
-  bag(d, id){
-    const B = window.GrindBag, L = B.tabs(Object.fromEntries(Object.entries(d.inv || {}).map(([k, last]) => [k, {last}])), d.runT0, d.t, d.bagEvery, d.on || d.dummy), names = wv(id, "bagn");
-    return `<div class="bagrow ${wv(id, "bagl")}">${L.map(l => `<span class="bagI ${l.stage}${l.pulse ? " pulse" : ""}" role="button" data-bag="${l.k}" style="color:${B.color(l)}" title="${esc(l.name)}: ${l.stage === "idle" ? "starts when you press Start" : l.last ? "read " + Math.round(l.age / 60e3) + " min ago" : "not read yet"}. Click to read it now">${B.ICONS[l.k]}${names ? `<em>${esc(l.name)}</em>` : ""}</span>`).join("")}</div>`;
-  },
+  bag(d, id){ return bagRow(d, wv(id, "bagl"), wv(id, "bagn")) },
   log(d, id){
     const lines = (d.feed || []).slice(-wv(id, "lines")).reverse();
     return lines.length ? lines.map(l => `<div class="lr ${esc(l.kind)}"><time>${clockT(l.t)}</time><span>${esc(l.text)}</span></div>`).join("") : `<div class="empty">Nothing yet.</div>`;
@@ -674,7 +678,7 @@ function chipHide(){ clearTimeout(xyT); xyChip?.classList.add("hidden") }
 // hands them back the moment it leaves. A click asks the tracker window to scan that tab. Never while editing (edit
 // mode is for layout, and the whole window already takes the mouse).
 let bagHit = false;
-const bagCard = el => { const c = el?.closest?.(".ovw"); return !!c && baseOf(c.dataset.w) === "bag" };
+const bagCard = el => !!el?.closest?.(".ovw")?.querySelector("[data-bag]");   // any card showing bag icons (Bag check, or EXP with the switch on)
 addEventListener("mousemove", e => {
   const on = !CFG.edit && bagCard(e.target);   // the whole Bag check card takes the mouse, not only the icons
   if (on !== bagHit){ bagHit = on; window.ovhost.hit(on) }

@@ -507,6 +507,10 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.evaluate(() => { CFG.widgets.bag = {...CFG.widgets.bag, bgon: false}; styleCard(document.querySelector("#ovw-bag"), "bag") });
     st = await page.evaluate(() => [document.querySelector("#ovw-bag").classList.contains("nobg"), getComputedStyle(document.querySelector("#ovw-bag")).backgroundColor]);
     if (!st[0] || st[1] !== "rgba(0, 0, 0, 0)") fail("bag card background off", st);
+    // EXP card with its Bag check icons switch on: icons inside, and the card takes the mouse
+    await page.evaluate(([t]) => { CFG.widgets.exp = {...CFG.widgets.exp, on: true, bagi: true}; document.querySelector("#ovw-exp") || document.querySelector("#ovroot").appendChild(mkCard("exp")); place(); apply({...DATA, t}) }, [t]);
+    st = await page.evaluate(() => [document.querySelectorAll("#ovw-exp [data-bag]").length, PMAP.bagi?.kinds]);
+    if (st[0] !== 3 || String(st[1]) !== "exp") fail("EXP card bag icons switch", st);
     await page.evaluate(([t, m]) => window.ovData({t, on: false, runT0: null, inv: {}, st: {}, map: {}, feed: [], th: null}), [t, m]);
     st = await page.evaluate(() => [...document.querySelectorAll("#ovw-bag [data-bag]")].map(e => e.classList.contains("idle")));
     if (st.some(x => !x)) fail("bag icons grey when not tracking", st);
