@@ -20,9 +20,8 @@ const OVCFG = require("../core/overlaycfg.js");
 const HIST = require("../core/history.js");   // applyEdit: History > Edit run   // the running session, autosaved there (crash recovery)
 
 // Windows Graphics Capture (what OBS uses) instead of the old GDI window grab, which gives black frames for DirectX games
-// one renderer process for every window of ours (the overlay shares the tracker's instead of a second one: measured 997 -> 858 MB
-// in a run with the overlay open). The webPreferences "affinity" option does nothing since Electron 14, this switch does.
-app.commandLine.appendSwitch("process-per-site");
+// NO process-per-site / single-process / in-process-gpu: 0.3.11 merged the overlay into the tracker's renderer with
+// process-per-site and the transparent overlay window rendered solid black (Danny 10-29). tests/overlaywin.test.js guards it.
 app.commandLine.appendSwitch("enable-features", "WebRtcAllowWgcWindowCapturer,WebRtcAllowWgcScreenCapturer,AllowWgcWindowCapturer,AllowWgcScreenCapturer");
 // memory pass 3 (Danny 10-29 "figure out a solution its still very heavy"): the helpers trim themselves. The audio
 // helper merges into this process (alerts still play — one whole process less), the HTTP cache is capped, the GPU

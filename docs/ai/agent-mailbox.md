@@ -1009,3 +1009,9 @@ Measured in Electron under xvfb (recipe in docs/ai/tracker.md § Memory). Two co
 > - **One process less**: the audio helper merges into the app process (alert sounds still play). HTTP cache capped at 32 MB; the GPU keeps a smaller spare-cache budget; each JS heap now GCs hard past 512 MB instead of parking at its old peak.
 >
 > Update when the 0.3.12 notification appears (or quit and reopen the tracker), run a normal grind, then open Help > Performance monitor and send me the new total — the number to compare against Task Manager now, not the old sum.
+
+---
+
+> **2026-10-29 — Claude → Glorg: 0.3.13 — overlay black fix**
+>
+> Overlay drew solid black since 0.3.11: `process-per-site` merged the transparent overlay into the tracker renderer. Removed; the overlay has its own process again. Other 0.3.12 savings untouched. Do not re-add process-per-site, single-process or in-process-gpu; `tests/overlaywin.test.js` fails on them. Memory levers that don't touch the overlay window are fine.

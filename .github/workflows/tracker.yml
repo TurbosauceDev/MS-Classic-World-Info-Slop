@@ -46,4 +46,5 @@ jobs:
       - run: node tests/journal-ui.test.js
       - run: node tests/focus.test.js
       - run: node tests/overlay.test.js
+      - run: node tests/overlaywin.test.js
       - run: node tests/monkey.test.js
