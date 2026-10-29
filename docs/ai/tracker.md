@@ -137,6 +137,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   (#0f0f0f/#1a1a1a/#3f3f3f, accent #1785d1 = ElvUI's valuecolor) and is appended LAST in PRESETS — tests index presets by
   position (core.test.js 5/8, extras.test.js 8), so never insert before them. Edit mode gained #ovxy, a live x/y chip over
   dragged/resized/nudged cards (overlay.js chip/chipHide; hidden on release, 900 ms linger after nudges, cleared on lock).
+- Edit-mode undo + drag threshold (0.3.3, Danny 10-29): overlay.js HIST snapshots CFG.widgets inside the debounced ovSave (changed JSON -> push previous; boot sets the baseline), so any new mutation that calls ovSave is undoable for free; Ctrl+Z / Ctrl+Y / panel buttons (#ovUndo/#ovRedo), 100 steps. Moves and resizes wait for DRAG_PX (6) of travel: a click selects only (tests: overlay.test.js wobble + undo/redo). Panel/inspector positions are not in history.
 - Compact view retired 0.2.58; compactFit stays as the "window height follows the boxes" sizer (fitWin). Adding a shortcut:
   KEYS (main.js), KEY_NAMES, and the ui test's shortcut row count.
 - Dummy data: app/renderer-dummy.js (View menu "dummy" → dummyToggle via renderer-settings.js onMenu). It sets `session`

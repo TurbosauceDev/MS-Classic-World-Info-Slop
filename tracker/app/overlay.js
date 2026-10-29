@@ -420,8 +420,35 @@ function vis(){
     el.classList.toggle("ovhide", !CFG.edit && ((m === "tracking" && !on) || (m === "idle" && on))) });
 }
 let saveT = null;
+// undo/redo (Danny 10-29): every save that changed the cards' layout/settings pushes the previous state; Ctrl+Z / Ctrl+Y
+// or the panel buttons step through it. Edits within one 200 ms save window merge into a single step.
+const HIST = {undo: [], redo: [], cur: null, max: 100};
+const histNow = () => JSON.stringify(CFG.widgets);
+function histRecord(){
+  const now = histNow();
+  if (HIST.cur === null){ HIST.cur = now; return }
+  if (now === HIST.cur) return;
+  HIST.undo.push(HIST.cur); if (HIST.undo.length > HIST.max) HIST.undo.shift();
+  HIST.redo = []; HIST.cur = now; histUi();
+}
+function histUi(){
+  const u = $("#ovUndo"), r = $("#ovRedo");
+  if (u) u.disabled = !HIST.undo.length;
+  if (r) r.disabled = !HIST.redo.length;
+}
+function histStep(from, to){
+  clearTimeout(saveT); histRecord();   // fold any pending edit in first, so it can be undone too
+  const snap = HIST[from].pop(); if (snap === undefined) return false;
+  HIST[to].push(HIST.cur); HIST.cur = snap;
+  CFG.widgets = JSON.parse(snap);
+  profCards(); document.querySelectorAll(".ovw").forEach(el => styleCard(el, el.dataset.w));
+  pick(null); place(); if (DATA) apply(DATA); syncPanel(); histUi(); ovSave();
+  return true;
+}
+const undo = () => histStep("undo", "redo"), redo = () => histStep("redo", "undo");
 const profSnap = () => ({widgets: JSON.parse(JSON.stringify(CFG.widgets)), panel: CFG.panel ? {...CFG.panel} : null});
 const ovSave = () => { clearTimeout(saveT); saveT = setTimeout(() => {
+  histRecord();
   CFG.profiles[CFG.profile] = profSnap();   // the live layout IS the active profile (ElvUI's model): every save mirrors into it
   window.ovhost.settings({overlay: {edit: CFG.edit, widgets: CFG.widgets, snap: CFG.snap, grid: CFG.grid, gsize: CFG.gsize, panel: CFG.panel, insp: CFG.insp,
     profile: CFG.profile, profiles: CFG.profiles}}).catch(() => {});
@@ -484,6 +511,7 @@ function buildPanel(){
     <div id="ovpRows"></div>
     <div class="foot add"><select id="ovAddKind" title="What to add">${Object.entries(KINDS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select>
       <button class="btn alt" id="ovAdd" title="Place another card of this kind, with its own spot, size and (for stats) number">Add widget</button></div>
+    <div class="foot"><button class="btn alt" id="ovUndo" title="Undo the last change (Ctrl+Z)" disabled>Undo</button><button class="btn alt" id="ovRedo" title="Redo (Ctrl+Y)" disabled>Redo</button></div>
     <div class="foot"><label><input type="checkbox" id="ovSnap"> Snap</label><label><input type="checkbox" id="ovGrid"> Grid</label>
       <select id="ovGsize" title="Grid spacing"><option value="32">32 px</option><option value="64">64 px</option><option value="128">128 px</option></select>
       <button class="rw-all" id="ovReset">Reset layout</button></div>
@@ -498,6 +526,7 @@ function buildPanel(){
   $("#ovClose").onclick = () => window.ovhost.close();
   $("#ovBack").onclick = () => { for (const k of ["simple", "focus"]) if (wPos(k).on) setOn(k, false); window.ovhost.showMain?.() };
   $("#ovAdd").onclick = () => addInst($("#ovAddKind").value);
+  $("#ovUndo").onclick = undo; $("#ovRedo").onclick = redo;
   $("#ovSnap").onchange = e => { CFG.snap = e.target.checked; ovSave() };
   $("#ovGrid").onchange = e => { CFG.grid = e.target.checked; gridShow() ; ovSave() };
   $("#ovGsize").onchange = e => { CFG.gsize = +e.target.value || 64; gridShow(); ovSave() };
@@ -720,6 +749,7 @@ function magnet(L, T, W, H, skipId){
   return {L: bx ? L + bx.d : null, T: by ? T + by.d : null, v: bx?.t, h: by?.t};
 }
 let drag = null, rz = null;
+const DRAG_PX = 6;
 // live readout while moving (0.2.92, ElvUI's movers say where they are): a tiny chip over the card with desktop pixels —
 // the same numbers the panel's x/y inputs keep — or the size % while resizing. Gone the moment you let go.
 let xyChip = null, xyT = null;
@@ -759,7 +789,7 @@ addEventListener("pointerdown", e => {
       // transform, and the delta is divided by the scale so the edge tracks the cursor exactly.
       const mode = hz.classList.contains("rsz-e") ? "w" : hz.classList.contains("rsz-s") ? "h" : "both";
       rz = {id: card.dataset.w, card, px0: e.clientX, py0: e.clientY, w0: card.offsetWidth, h0: card.offsetHeight,
-        s0: wPos(card.dataset.w).s, both: mode === "both", mx: mode === "w", my: mode === "h"};
+        s0: wPos(card.dataset.w).s, px1: e.clientX, py1: e.clientY, on: false, both: mode === "both", mx: mode === "w", my: mode === "h"};
       card.setPointerCapture(e.pointerId);
     } else {
       // a grouped card takes its letter along (Danny 10-29: groups move together): every mate keeps its offset from the
@@ -768,7 +798,7 @@ addEventListener("pointerdown", e => {
       drag = {id: card.dataset.w, dx: e.clientX - card.offsetLeft, dy: e.clientY - card.offsetTop, card, snap: null,
         mates: g ? grpIds(g).filter(x => x !== card.dataset.w).map(mid => { const el = $("#ovw-" + mid);
           return el ? {id: mid, el, dx: el.offsetLeft - card.offsetLeft, dy: el.offsetTop - card.offsetTop} : null }).filter(Boolean) : []};
-      card.setPointerCapture(e.pointerId); card.classList.add("moving");
+      card.setPointerCapture(e.pointerId); drag.px0 = e.clientX; drag.py0 = e.clientY;   // "moving" waits for the threshold
     }
     pick(card.dataset.w);
     e.preventDefault();
@@ -776,6 +806,7 @@ addEventListener("pointerdown", e => {
 });
 addEventListener("pointermove", e => {
   if (rz){
+    if (!rz.on){ if (Math.hypot(e.clientX - rz.px0, e.clientY - rz.py0) < DRAG_PX) return; rz.on = true }   // a click on a handle never resizes
     const dx = e.clientX - rz.px0, dy = e.clientY - rz.py0;
     if (rz.both){ if (!rz.mx && Math.abs(dx) > 2) rz.mx = true; if (!rz.my && Math.abs(dy) > 2) rz.my = true }   // corner: one axis at a time, once the drag means it
     if (rz.mx) setP(rz.id, "w", clamp(Math.round(rz.w0 + dx / rz.s0), 60, 2000));
@@ -784,6 +815,10 @@ addEventListener("pointermove", e => {
     return;
   }
   if (!drag) return;
+  if (!drag.on){   // a click only selects (Danny 10-29: "moving a box should be intentional"): the card stays put until the pointer travels DRAG_PX
+    if (Math.hypot(e.clientX - drag.px0, e.clientY - drag.py0) < DRAG_PX) return;
+    drag.on = true; drag.card.classList.add("moving");
+  }
   let L = Math.round(e.clientX - drag.dx), T = Math.round(e.clientY - drag.dy);
   const r = drag.card.getBoundingClientRect(), free = e.shiftKey;
   if (!free){
@@ -810,9 +845,10 @@ addEventListener("pointermove", e => {
 });
 addEventListener("pointerup", () => {
   chipHide();
-  if (rz){ const c = rz.card; rz = null; clampCard(c); reflow(); return }   // a grown box can hang past an edge
+  if (rz){ const c = rz.card, was = rz.on; rz = null; if (was){ clampCard(c); reflow() } return }   // a grown box can hang past an edge
   if (!drag) return;
-  const {card, id, mates} = drag; drag = null;
+  const {card, id, mates, on} = drag; drag = null;
+  if (!on) return;   // never crossed the threshold: nothing moved, nothing to save
   card.classList.remove("moving");
   hideGuides();
   clampCard(card);
@@ -829,8 +865,10 @@ addEventListener("wheel", e => {
 }, {passive: false});
 // arrows nudge the picked card (ElvUI's nudge panel: 1 px, Shift = 10); Esc = Done
 addEventListener("keydown", e => {
-  if (!CFG.edit || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName || "")) return;
+  if (!CFG.edit || /SELECT|TEXTAREA/.test(e.target.tagName || "") || (e.target.tagName === "INPUT" && !/^(checkbox|radio|range|button)$/.test(e.target.type))) return;
   if (e.key === "Escape"){ window.ovhost.done(); return }
+  if ((e.ctrlKey || e.metaKey) && /^[zy]$/i.test(e.key)){
+    e.preventDefault(); (e.key.toLowerCase() === "y" || e.shiftKey ? redo : undo)(); return }
   if (!picked.id) return;
   const d = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]}[e.key];
   if (!d) return;
@@ -873,7 +911,7 @@ addEventListener("keydown", e => {
     p.style.left = clamp(CFG.panel.x - DESK.x, 0, Math.max(0, innerWidth - p.offsetWidth || 0)) + "px";
     p.style.top = clamp(CFG.panel.y - DESK.y, 0, Math.max(0, innerHeight - p.offsetHeight || 0)) + "px";
   }
-  place();
+  place(); HIST.cur = histNow();   // undo baseline: the layout as booted
   window.ovhost.onData(apply);
   window.ovhost.onMode(on => {
     CFG.edit = !!on;

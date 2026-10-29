@@ -119,6 +119,22 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.waitForTimeout(350);
     st = await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); return [el.offsetLeft, el.offsetTop, window.ovSaved?.overlay?.widgets?.exp] });
     if (st[0] === before[0] || st[1] === before[1] || st[2]?.x !== st[0] || st[2]?.y !== st[1]) fail("drag", {before, after: st});
+    // a click that wobbles a few px selects but never moves the card (Danny 10-29: "moving a box should be intentional")
+    const wob = await page.locator("#ovw-exp header .t").boundingBox(), posNow = () => page.evaluate(() => [document.querySelector("#ovw-exp").offsetLeft, document.querySelector("#ovw-exp").offsetTop]);
+    const p0 = await posNow();
+    await page.mouse.move(wob.x + 6, wob.y + 6); await page.mouse.down();
+    await page.mouse.move(wob.x + 9, wob.y + 8, {steps: 3}); await page.mouse.up();
+    await page.waitForTimeout(350);
+    const p1 = await posNow();
+    if (p1[0] !== p0[0] || p1[1] !== p0[1]) fail("click moved the card", {p0, p1});
+    // undo (Ctrl+Z) puts the dragged card back where it was; redo (Ctrl+Y) returns it; the buttons mirror the keys
+    if (await page.evaluate(() => document.querySelector("#ovUndo").disabled)) fail("undo enabled after a drag", 0);
+    await page.keyboard.press("Control+z"); await page.waitForTimeout(350);
+    const pu = await posNow();
+    if (pu[0] !== before[0] || pu[1] !== before[1]) fail("undo restores the pre-drag spot", {before, pu});
+    await page.click("#ovRedo"); await page.waitForTimeout(350);
+    const pr = await posNow();
+    if (pr[0] !== p0[0] || pr[1] !== p0[1]) fail("redo returns the drag", {p0, pr});
     // magnetic snap (ElvUI's 15 px sticky): put EXP at a known spot (status moved aside so no stronger candidate wins),
     // drag it so its left edge lands within 15 px of the screen's left edge — the drop aligns to 0 and the vertical guide
     // shows while the drag is live
