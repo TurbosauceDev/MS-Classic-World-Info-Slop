@@ -46,4 +46,8 @@ const alerts = A.normalize([{id: "a", kind: "finalAttack", on: true, act: {sound
 let fired = A.evaluate(alerts, {st: {procs: 3}}, st, 0); assert.strictEqual(fired.length, 0, "baseline");
 fired = A.evaluate(alerts, {st: {procs: 4}}, st, 5000); assert.strictEqual(fired.length, 1, "new proc fires");
 fired = A.evaluate(alerts, {st: {procs: 4}}, st, 10000); assert.strictEqual(fired.length, 0, "same count: quiet");
+// the two more frames Danny sent (no proc / 2nd proc, same strip, right-aligned to the frame edge): icon sits at x 126 again in the proc one
+const none = png(path.join(__dirname, "frames-proc/noproc-strip-native.png")), again = png(path.join(__dirname, "frames-proc/proc2-strip-native.png"));
+assert.strictEqual(R.readProc(none), null, "frame without the buff -> null");
+r = R.readProc(again); assert(r && r.y === 3 && r.diff < 10, "2nd proc frame found: " + JSON.stringify(r));
 console.log("proc: ok");
