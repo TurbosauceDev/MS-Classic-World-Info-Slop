@@ -42,6 +42,18 @@
     border-right:2px solid var(--accent); border-bottom:2px solid var(--accent); border-radius:0 0 10px 0; opacity:.65; }
   body.edit .ovw .rsz { display:block; }
   body.edit .ovw .rsz:hover { opacity:1; }
+  /* edge resize (Danny 10-29: "dragging an edge should make it taller, or longer"): the right edge stretches it wider,
+     the bottom edge taller, the corner still does both. The ticks stay invisible until the card or the edge is hovered,
+     so a locked overlay never shows them and edit mode stays quiet. */
+  .ovw .rsz-e, .ovw .rsz-s { display:none; position:absolute; opacity:0; transition:opacity .12s ease; }
+  .ovw .rsz-e { right:0; top:14px; bottom:14px; width:8px; cursor:ew-resize; }
+  .ovw .rsz-s { left:14px; right:14px; bottom:0; height:8px; cursor:ns-resize; }
+  .ovw .rsz-e::after, .ovw .rsz-s::after { content:""; position:absolute; background:var(--accent); border-radius:2px; opacity:.55; }
+  .ovw .rsz-e::after { right:2px; top:50%; width:3px; height:26px; transform:translateY(-50%); }
+  .ovw .rsz-s::after { bottom:2px; left:50%; width:26px; height:3px; transform:translateX(-50%); }
+  body.edit .ovw .rsz-e, body.edit .ovw .rsz-s { display:block; }
+  body.edit .ovw:hover .rsz-e, body.edit .ovw:hover .rsz-s { opacity:.5; }
+  body.edit .ovw .rsz-e:hover, body.edit .ovw .rsz-s:hover { opacity:1; }
   .ovw header { display:flex; align-items:center; margin:0 0 3px; }
   .ovw header .t { flex:1; min-width:0; font-size:10px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
     text-shadow:0 1px 2px rgba(0,0,0,.3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }   /* ellipsis, not a wrap, in a skinny box */
@@ -54,7 +66,11 @@
   .ovw.sizedW { width:var(--w); max-width:none; }
   .ovw.sizedH { height:var(--h); display:flex; flex-direction:column; }
   .ovw.sizedH header { flex:none; }
-  .ovw.sizedH .b { flex:1 1 auto; min-height:0; overflow:auto; scrollbar-width:thin; }
+  .ovw.sizedH .b { flex:1 1 auto; min-height:0; overflow:auto; scrollbar-width:thin; display:flex; flex-direction:column; }
+  /* a pinned-tall card centres its content (auto margins above and below collapse to 0 when the content overflows, so
+     scrolling still starts at the top); flow cards (log, loot, map) stay top-aligned and grow lines to fill instead */
+  .ovw.sizedH .b:not(.flow)::before { content:""; margin-top:auto; }
+  .ovw.sizedH .b:not(.flow)::after { content:""; margin-bottom:auto; }
   .ovw.sizedH .b::-webkit-scrollbar { width:8px; } .ovw.sizedH .b::-webkit-scrollbar-track { background:transparent; }
   .ovw.sizedH .b::-webkit-scrollbar-thumb { background:var(--line); border-radius:4px; }
   .ovw.sizedW .rows > div { min-width:0; } .ovw.sizedW .spk svg { width:100%; }   /* a wide card: the trend line stretches, rows shrink to fit */
@@ -87,7 +103,12 @@
   .svl .more td { color:var(--muted); font-size:11px; } .svl .ico, .svPot .ico { width:20px; height:20px; vertical-align:middle; margin-right:5px; image-rendering:pixelated; }
   #ovBd[hidden] { display:none; }
   body.locked .ovw:not(.showt) header { display:none; } body.locked .ovw.showt header button { display:none; }   /* locked = pure overlay: nothing on a card but its numbers */
-  body.locked .ovw .rsz { display:none; }
+  body.locked .ovw .rsz, body.locked .ovw .rsz-e, body.locked .ovw .rsz-s, body.locked .ovw .gb { display:none; }
+  /* the group badge (Danny 10-29: grouped modules move together): the letter sits in the header while editing */
+  .ovw .gb { display:none; font-size:9px; font-weight:700; line-height:1; padding:2px 5px; margin-right:5px;
+    background:var(--accent); color:var(--on-accent); border-radius:7px; }
+  body.edit .ovw .gb.on { display:inline-block; }
+  .wrow .wgb { font-size:9px; font-weight:700; line-height:1; padding:2px 4px; background:var(--accent); color:var(--on-accent); border-radius:6px; }
   .big { font-size:20px; font-weight:800; line-height:1.15; color:var(--accent); text-shadow:0 1px 2px rgba(0,0,0,.35); }
   .big small { font-size:11px; font-weight:600; color:var(--muted); text-shadow:none; }
   /* the card sparkline (0.2.80): the rate's recent trend in the card's accent colour, tucked under the big number */
@@ -251,7 +272,11 @@
   body.skin-elv #ovpanel .btn, body.skin-elv #ovinsp .btn, body.skin-elv #ovinsp .acts button, body.skin-elv .wrow .eye,
   body.skin-elv .wrow .st, body.skin-elv .wrow .nm, body.skin-elv .wdet input[type=number], body.skin-elv #ovinsp input[type=number],
   body.skin-elv #ovinsp input[type=color], body.skin-elv #ovpanel select, body.skin-elv #ovinsp select,
-  body.skin-elv #ovpanel .foot.prof input, body.skin-elv #ovShare input, body.skin-elv #ovxy, body.skin-elv .ovw header button { border-radius:0; }
+  body.skin-elv #ovpanel .foot.prof input, body.skin-elv #ovShare input, body.skin-elv #ovxy, body.skin-elv .ovw header button,
+  body.skin-elv .ovw .gb, body.skin-elv .wrow .wgb { border-radius:0; }
+  /* the pull corners fall in line too (Danny 10-29: the resize handles were still styled for rounded edges) */
+  body.skin-elv .ovw .rsz { border-radius:0; }
+  body.skin-elv .ovw .rsz-e::after, body.skin-elv .ovw .rsz-s::after { border-radius:0; }
   body.skin-elv .ovw { background:color-mix(in srgb, var(--panel) 90%, transparent);
     -webkit-backdrop-filter:none; backdrop-filter:none; border-color:var(--line); box-shadow:none; }
   body.skin-elv .toast, body.skin-elv #ovpanel, body.skin-elv #ovinsp { -webkit-backdrop-filter:none; backdrop-filter:none;

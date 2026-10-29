@@ -30,17 +30,21 @@ async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders
 }
 
 // map name every 5 s: cut the minimap title out, OCR it in the main process, take it once the same map is read twice in a row
-let ocrBusy = false, lastOcr = 0, mapSeen = null, mapNow = null, mapMissing = 0;
-async function readMap(c, t){   // c: the minimap title crop (GrindReaders.mapTextCrop), or null
+let ocrBusy = false, lastOcr = 0, mapSeen = null, mapNow = null, mapMissing = 0, mapMiss = 0;
+async function readMap(c, fb, t){   // c: the minimap title crop (GrindReaders.mapTextCrop); fb: the last good title rect re-cut from this frame (the band hunt failed but the minimap may be fine)
   const sess = session, sl = slicer;   // an OCR that finishes after Stop/Start belongs to the old session
   // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
-  if (!c){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; note("Map name not seen for 30 s (minimap closed or covered): map unknown until it's back.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
+  if (!c && !fb){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; note("Map name not seen for 30 s (minimap closed or covered): map unknown until it's back.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
   mapMissing = 0;
-  const text = await ocrText(c), m = GrindReaders.mapFromText(text, G), key = m && (m.id || m.name);
-  log("map", {text, id: m?.id ?? null, name: m?.name ?? null});
+  const text = await ocrText(fb || c), m = GrindReaders.mapFromText(text, G), key = m && (m.id || m.name);
+  log("map", {text, id: m?.id ?? null, name: m?.name ?? null, fb: !!fb});
   if (check && sess === session){ if (!m) check.mapWhy = "Minimap found, but its name didn't read. Is something over the minimap title?"; else if (!check.map){ check.map = m.name || "map " + m.id; check.late = check.ended } }
   // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
   const same = (a, b) => a === b || a && b && !G.maps[a] && !G.maps[b] && GrindReaders.similar(a, b) >= 0.75;
+  // the name holds through flaky band hunts (Danny 10-29: it dropped while the minimap sat untouched): the fallback
+  // crop re-reads the last good rect, and only 30 s of nothing reading at all clears the map — never one missed band
+  if (key) mapMiss = 0;
+  else if (++mapMiss === 6 && mapNow && sess){ mapNow = mapSeen = null; note("Map name not read for 30 s (minimap closed, covered or unreadable): map unknown until it reads again.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) }
   if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session && !wrap){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e); kpqMap(m.id, t) }
   mapSeen = key;
 }
@@ -348,7 +352,7 @@ async function tick(){
     const ocr = fn => { ocrBusy = true; fn.catch(() => {}).finally(() => ocrBusy = false) };
     if (want.box) ocr(checkBox(r.crops.chat, t));
     else if (want.chat) ocr(checkDeath(r.crops.chat, t));
-    else if (want.map) ocr(readMap(r.crops.map, t));
+    else if (want.map) ocr(readMap(r.crops.map, r.crops.mapFb, t));
     else if (want.job) ocr(readJob(r.crops.job, t, r.crops.name));
     if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
   } catch (err){ if (err) $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking

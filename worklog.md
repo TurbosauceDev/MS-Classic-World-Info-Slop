@@ -12,3 +12,13 @@
 - Proof: dispatch run 40720150137 -> "5386 catalog items; browse discovery, 20608 live listings; 1363 items priced, 1116 with listings" (pre-outage: 1109 / 875); commit c3add61 "meowdb market prices 2026-10-28 16:23" landed; D.mdb.it 1156 / D.mdb.ls 905 after build; fetch took 32 min (cap 40).
 - Docs: decisions.md 10-28 entry (wall + approach under Danny's revoked 10-20 rule; sustainable path = contact@meowdb.com); daily-briefing.md refreshed (10-20 rescission + meowdb status).
 - Cleanup: probe workflow/script removed (cc44c75), debug/meowdb-probe branch deleted. Next scheduled cron 17:41 UTC runs the same code.
+
+## 2026-10-29 ~00:55Z — Glorg: tracker 0.3.0 (Danny's 00:43 edit-mode batch)
+- Edge resize: corner=both, right edge=wider, bottom edge=taller (rz modes); ticks on hover, edit mode only.
+- Content fill: fitRows() grows log/loot/map lines in pinned-tall cards; non-flow kinds centre via auto-margin flex.
+- Groups: grp A-H per widget; drag/nudge moves the letter; badges on card + panel row; survives profiles/share codes.
+- Snap: other-axis overlap gating + hysteresis lock (SNAP_BRK 26 > SNAP_PX 15) — flush pairs don't squeeze out.
+- Clock: runClockMs() (frozen on hand-pause + wrap) -> mini/fz/overlay (payload clockMs, legacy fallback).
+- Minimap name: mapTextRect/mapCropAt split + rd.mapRect fallback crop; readMap clears only after 30 s of no reads.
+- Elv: resize handles + group badges square (skin-elv radius 0 list).
+- Tests: overlay.test.js += edge-only, group-delta, snap engage/hold/release; 12/12 suites green; version 0.3.0.

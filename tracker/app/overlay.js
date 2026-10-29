@@ -29,6 +29,15 @@ const picked = {id: null};
 // "_" not "~": the id lands in a CSS selector (#ovw-exp_2).
 const INST = /^([a-z]+)_([1-9]\d?)$/, MAX_INST = 12;
 const baseOf = id => (INST.exec(id) || [null, id])[1];
+// groups (Danny 10-29: "a way to group modules, so that they stay aligned and can be moved together"): a card carries a
+// letter (inspector → Position → Group); dragging or nudging any member moves the whole letter with it. Letters A-H,
+// kept per widget (profiles save them; Share codes carry them too).
+const GRPS = "ABCDEFGH";
+const grpOf = id => GRPS.includes(CFG.widgets[id]?.grp) ? CFG.widgets[id].grp : null;
+const grpIds = g => g ? ids().filter(x => grpOf(x) === g) : [];
+const grpCount = g => grpIds(g).length;
+function badge(id){ const el = $("#ovw-" + id), gb = el?.querySelector(".gb"); if (!gb) return;
+  const g = grpOf(id); gb.textContent = g || ""; gb.classList.toggle("on", !!g) }
 const validId = id => !!KINDS[id] || (INST.test(id) && !!KINDS[baseOf(id)]);
 const ids = () => [...Object.keys(KINDS), ...Object.keys(CFG.widgets).filter(id => INST.test(id) && validId(id))
   .sort((a, b) => baseOf(a).localeCompare(baseOf(b)) || +INST.exec(a)[2] - +INST.exec(b)[2])];
@@ -41,7 +50,10 @@ const TOKENS = {
   mesosHr: ["Mesos / hr", d => fmt(d.st?.mesosHr || 0)], mesos: ["Mesos picked up", d => "+" + fmt(d.st?.mesos || 0)],
   lootHr: ["Loot value / hr", d => fmt(d.st?.lootHr || 0)], killsHr: ["Kills / hr", d => fmt(d.st?.killsHr || 0)],
   kills: ["Kills", d => fmt(d.st?.kills || 0)], deaths: ["Deaths", d => fmt(d.st?.deaths || 0)],
-  runClock: ["On the clock", d => d.runT0 && (d.on || d.dummy) ? runClock(d.t - d.runT0) : "-"],
+  // the clock the tracker sends (clockMs, 0.3.0): frozen while paused by you and at the Stop while wrapping up — it
+  // used to keep counting (Danny 10-29: "the tracker keeps counting even when paused or stopped, hangs on wrapping up")
+  // an older tracker that doesn't send clockMs still computes from runT0, exactly like before
+  runClock: ["On the clock", d => d.clockMs != null ? runClock(d.clockMs) : d.runT0 && (d.on || d.dummy) ? runClock(d.t - d.runT0) : "-"],
   farming: ["Farming time", d => d.st ? hm((d.st.activeMin || 0) / 60) : "-"],
 };
 const TOK_SETS = {};   // kind -> token set, filled just below
@@ -178,7 +190,7 @@ const RENDER = {
   status(d, id){
     const sub = wv(id, "sub");
     return `<div class="big" style="font-size:14px;color:var(--ink)"><span class="dot ${d.on ? (d.paused ? "warn" : "ok") : ""}"></span>${esc(d.state || (d.on ? "Tracking" : "Stopped"))}</div>
-      ${sub ? `<div class="rows"><div><span>On the clock</span><b>${d.runT0 && (d.on || d.dummy) ? runClock(d.t - d.runT0) : "-"}</b></div>
+      ${sub ? `<div class="rows"><div><span>On the clock</span><b>${d.clockMs != null ? runClock(d.clockMs) : d.runT0 && (d.on || d.dummy) ? runClock(d.t - d.runT0) : "-"}</b></div>
       <div><span>Farming</span><b>${d.st ? hm((d.st.activeMin || 0) / 60) : "-"}</b></div></div>` : ""}`;
   },
   exp(d, id){
@@ -209,11 +221,12 @@ const RENDER = {
       ${sub ? `<div class="rows"><div><span>picked up</span><b class="pos">+${fmt(d.st?.mesos || 0)}</b></div><div><span>loot/hr</span><b>${fmt(d.st?.lootHr || 0)}</b></div></div>` : ""}`;
   },
   loot(d, id){
-    const lines = (d.feed || []).filter(l => l.kind === "loot").slice(-wv(id, "lines")).reverse();
+    const feed = (d.feed || []).filter(l => l.kind === "loot"), n = Math.min(feed.length, Math.max(wv(id, "lines"), fitRows(id, 20)));
+    const lines = feed.slice(-n).reverse();
     return lines.length ? lines.map(l => `<div class="lr loot"><span>${esc(l.text)}</span></div>`).join("") : `<div class="empty">Nothing yet.</div>`;
   },
   map(d, id){
-    const m = d.map || {}, list = m.spawns || [], nm = wv(id, "rows");
+    const m = d.map || {}, list = m.spawns || [], nm = Math.min(list.length, Math.max(wv(id, "rows"), fitRows(id, 22)));
     const mobs = list.slice(0, nm).map(x => `<div class="mrow"><b>${esc(x.name)}</b><span>${x.n ? "×" + x.n + " · " : ""}Lv ${x.lv} · ${fmt(x.exp)} EXP</span></div>`).join("");
     const resp = (m.respawns || []).map(r => { const due = r.killed ? r.killed + r.sec * 1000 - d.t : null;
       return `<div class="mrow"><b>${esc(r.name)}${r.boss ? " (boss)" : ""}</b><span class="${due != null && due <= 0 ? "pos" : due != null && due <= 120e3 ? "soon" : ""}">${r.killed ? due > 0 ? "back in ~" + respT(due) : "due now" : "every " + respT(r.sec * 1000)}</span></div>` }).join("");
@@ -248,7 +261,9 @@ const RENDER = {
   // asks the tracker window to scan that tab (same as the chips); see the pointerdown handler near the end.
   bag(d, id){ return bagRow(d, wv(id, "bagl"), wv(id, "bagn")) },
   log(d, id){
-    const lines = (d.feed || []).slice(-wv(id, "lines")).reverse();
+    // a pinned-tall card shows as many lines as fit (Danny 10-29: growing a card must never leave strange empty space)
+    const feed = d.feed || [], n = Math.min(feed.length, Math.max(wv(id, "lines"), fitRows(id, 20)));
+    const lines = feed.slice(-n).reverse();
     return lines.length ? lines.map(l => `<div class="lr ${esc(l.kind)}"><time>${clockT(l.t)}</time><span>${esc(l.text)}</span></div>`).join("") : `<div class="empty">Nothing yet.</div>`;
   },
 };
@@ -273,9 +288,13 @@ function wPos(id){
 function mkCard(id){
   const el = document.createElement("section");
   el.className = "ovw"; el.id = "ovw-" + id; el.dataset.w = id; el.dataset.k = baseOf(id);
-  el.innerHTML = `<header><span class="t">${esc(wName(id))}</span><button class="x" title="Hide ${esc(wName(id))}" aria-label="Hide ${esc(wName(id))}">×</button></header><div class="b"></div><i class="rsz" title="Drag to resize"></i>`;
+  el.innerHTML = `<header><i class="gb" hidden></i><span class="t">${esc(wName(id))}</span><button class="x" title="Hide ${esc(wName(id))}" aria-label="Hide ${esc(wName(id))}">×</button></header><div class="b"></div>` +
+    // three ways to resize (Danny 10-29: "dragging the corner like we already do, but dragging an edge should make it
+    // taller, or longer"): the corner does both axes, the right edge is width only, the bottom edge height only.
+    `<i class="rsz" title="Drag to resize (both ways)"></i><i class="rsz-e" title="Drag to make it longer"></i><i class="rsz-s" title="Drag to make it taller"></i>`;
   el.querySelector(".x").onclick = () => { setOn(id, false); if (picked.id === id) pick(null) };
   el.addEventListener("pointerenter", () => { if (CFG.edit && baseOf(id) !== "blocker") el.style.zIndex = ++zTop });
+  badge(id);
   return el;
 }
 function styleCard(el, id){
@@ -378,6 +397,12 @@ function setP(id, k, v){
   syncDetail(id); ovSave();
 }
 const setS = (id, s) => setP(id, "s", s), setO = (id, o) => setP(id, "o", o);
+// assign a card to a group letter (or take it out): the badge updates, the panel row shows the letter, the inspector
+// rebuilds so the counts in the options read true
+function setGrp(id, g){
+  const w = {...(CFG.widgets[id] || {})}; if (g) w.grp = g; else delete w.grp;
+  CFG.widgets[id] = w; badge(id); syncPanel(); buildInsp(id); ovSave();
+}
 // conditions (WeakAuras' idea, one rule per card): watch a number the tracker read off the screen; while it is below/above the
 // line the card recolours, pulses or hides. Numbers only ever come from the snapshot (computer vision output).
 const CONDV = {expHr: d => d.st?.expHr, mesosHr: d => d.st?.mesosHr, killsHr: d => d.st?.killsHr, lootHr: d => d.st?.lootHr,
@@ -403,12 +428,22 @@ const ovSave = () => { clearTimeout(saveT); saveT = setTimeout(() => {
 }, 200) };
 
 // ---- data: re-render every card (a push, or the 1 s tick for the countdowns) -------------------------------
+// flow cards (lists) keep their lines at the top and scroll; the rest centre in a pinned-tall box, so growing a card
+// never leaves a strange void under the number (Danny 10-29: "never start looking like there's strange empty space")
+const FLOW = new Set(["log", "loot", "map"]);
+// how many text rows fit in a pinned-height card's body (log/loot/map render to fill it; fitRows says 0 when free)
+function fitRows(id, lineH){
+  const el = $("#ovw-" + id); if (!el || !el.classList.contains("sizedH")) return 0;
+  const head = el.querySelector("header"), cs = getComputedStyle(el);
+  const h = (el.offsetHeight || 0) - (head?.offsetHeight || 0) - (parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + 2);
+  return Math.max(0, Math.floor(h / lineH));
+}
 function apply(d){
   DATA = d;
   if (d.th) theme(d.th);
   for (const id of ids()){
     const el = $("#ovw-" + id);
-    if (el?.isConnected) el.querySelector(".b").innerHTML = RENDER[baseOf(id)](d, id);
+    if (el?.isConnected){ const b = el.querySelector(".b"); b.classList.toggle("flow", FLOW.has(baseOf(id))); b.innerHTML = RENDER[baseOf(id)](d, id); }
   }
   conds(d); vis(); reflow();
   if (bagHit && !document.querySelector(".ovw:hover")){ bagHit = false; window.ovhost.hit(false) }   // the card went away under the mouse
@@ -445,7 +480,7 @@ function buildPanel(){
   const p = $("#ovpanel");
   p.innerHTML = `<header id="ovpHead"><span class="t">Overlay edit</span><button class="btn" id="ovDone">Done</button><button class="btn alt" id="ovClose" title="Close the overlay">×</button></header>
     <div class="foot" id="ovBd" hidden><button class="btn alt" id="ovBack" title="Bring the tracker window back and hide the Simple / Focus card">Back to tracker window</button></div>
-    <p class="hint">Drag the cards — Shift skips snapping, arrows nudge. The corner grip stretches a card into any box (long, wide, skinny, fat); Ctrl+scroll scales it. All saves by itself.</p>
+    <p class="hint">Drag the cards — Shift skips snapping, arrows nudge. The corner grip stretches a card into any box (long, wide, skinny, fat); an edge makes it longer or taller; Ctrl+scroll scales it. Group cards (inspector → Group) to move them together. All saves by itself.</p>
     <div id="ovpRows"></div>
     <div class="foot add"><select id="ovAddKind" title="What to add">${Object.entries(KINDS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select>
       <button class="btn alt" id="ovAdd" title="Place another card of this kind, with its own spot, size and (for stats) number">Add widget</button></div>
@@ -504,10 +539,10 @@ function buildPanel(){
 function syncPanel(){
   const rows = $("#ovpRows"); if (!rows) return;
   const bd = $("#ovBd"); if (bd) bd.hidden = !(wPos("simple").on || wPos("focus").on);
-  rows.innerHTML = ids().map(id => { const name = wName(id), p = wPos(id), inst = INST.test(id);
+  rows.innerHTML = ids().map(id => { const name = wName(id), p = wPos(id), inst = INST.test(id), g = grpOf(id);
     return `<div class="wrow${p.on ? "" : " off"}${picked.id === id ? " sel" : ""}" data-w="${id}">
       <button class="eye${p.on ? "" : " off"}" title="${p.on ? "Hide" : "Show"} ${esc(name)}">${p.on ? EYE : EYEOFF}</button>
-      <button class="nm" title="Pick ${esc(name)}">${esc(name)}</button>
+      <button class="nm" title="Pick ${esc(name)}">${esc(name)}</button>${g ? `<span class="wgb" title="Group ${g}: these cards move together">${g}</span>` : ""}
       <button class="st" data-d="-1" title="Smaller">−</button><span class="sv">${Math.round(p.s * 100)}%</span><button class="st" data-d="1" title="Bigger">+</button>${inst ? `<button class="st del" title="Remove ${esc(name)}">×</button>` : ""}
     </div>`; }).join("");
   rows.querySelectorAll(".wrow").forEach(row => {
@@ -547,12 +582,14 @@ function buildInsp(id){
       ${tokSet ? `<h4>Shows</h4><label><b>Value</b><select data-k="tok">${Object.entries(tokSet).map(([k, v]) => `<option value="${k}"${tokKey === k ? " selected" : ""}>${esc(v[0])}</option>`).join("")}</select></label>` : ""}
       ${Object.entries(secs).map(([sec, ps]) => `<h4>${sec}</h4>${ps.map(p => paramRow(p, id)).join("")}`).join("")}
       <h4>Position</h4><div class="xy">x <input type="number" step="1" data-k="x"> y <input type="number" step="1" data-k="y"></div>
+      <label><b>Group</b><select data-k="grp" title="Cards sharing a letter move together (drag or nudge one, the letter follows)"><option value="">None — moves alone</option>${GRPS.split("").map(l => `<option value="${l}"${grpOf(id) === l ? " selected" : ""}>${l}${grpCount(l) ? ` · ${grpCount(l)} card${grpCount(l) === 1 ? "" : "s"}` : ""}</option>`).join("")}</select></label>
       <div class="acts"><button data-a="reset" title="Back to the default look and spot">Reset ${esc(name)}</button><button data-a="copy" title="Give every card this card's look (size, glass, colours)">Copy look to all</button><button data-a="dup">Duplicate</button>${inst ? `<button data-a="del" class="danger">Remove</button>` : ""}</div>
     </div>`;
   const first = insp.id !== id; insp.id = id; box.classList.remove("hidden"); box.scrollTop = first ? 0 : was;
   const det = box.querySelector(".wdet");
   const live = e => { const k = e.target.dataset.k; if (!k) return; const el = e.target;
     if (k === "x" || k === "y"){ const c = $("#ovw-" + id); if (!c) return; c.style[k === "x" ? "left" : "top"] = (Math.round(+el.value || 0) - DESK[k]) + "px"; clampCard(c); savePos(id); return }
+    if (k === "grp"){ setGrp(id, el.value || null); return }
     if (k === "tok"){ setP(id, "tok", el.value); return }
     const p = PMAP[k]; if (!p) return;
     const raw = p.t === "b" ? el.checked : p.t === "r" ? +el.value / (p.u || 1) : el.value;
@@ -646,7 +683,7 @@ function profImport(){
     let inst = 0;
     for (const id of Object.keys(o.widgets)){ const w = o.widgets[id];
       if (!validId(id) || !w || typeof w !== "object" || (INST.test(id) && ++inst > MAX_INST)) continue;
-      clean[id] = {on: w.on !== false, x: Math.round(+w.x || 0), y: Math.round(+w.y || 0), ...cleanParams(id, w)} }
+      clean[id] = {on: w.on !== false, x: Math.round(+w.x || 0), y: Math.round(+w.y || 0), ...cleanParams(id, w), ...(GRPS.includes(w.grp) ? {grp: w.grp} : {})} }
     CFG.widgets = clean;
     if (o.panel && Number.isFinite(+o.panel.x)) CFG.panel = {x: Math.round(+o.panel.x), y: Math.round(+o.panel.y)};
     profCards(); pick(null); place(); syncPanel(); ovSave();
@@ -655,9 +692,11 @@ function profImport(){
 }
 
 // ---- dragging + snapping (edit mode only): ElvUI's sticky snap — 15 px to the screen edges/centre or another card's
-// edges/centre on each axis (only when the cards overlap on the other axis, like LibSimpleSticky), Shift skips. Grid on
-// also rounds to the grid lines (WoW Edit Mode's "snap to grid"). Guides show the live alignment. -------------------------------
-const SNAP_PX = 15;
+// edges/centre on each axis, and a card's candidates only count when it really sits beside the moving card (they
+// overlap on the other axis, like LibSimpleSticky) — a card half a screen away can't yank the drag sideways. Shift skips.
+// A lock, once taken, holds until the drag clearly leaves it (SNAP_BRK > SNAP_PX): scooting a card flush against its
+// neighbour no longer squeezes it out like a wet bar of soap (Danny 10-29), the snap works with you, not against you.
+const SNAP_PX = 15, SNAP_BRK = 26;
 const guides = {v: $("#ovgv"), h: $("#ovgh")};
 function guide(kind, at){
   const el = guides[kind]; if (at == null){ el.classList.add("hidden"); return }
@@ -666,11 +705,12 @@ function guide(kind, at){
 }
 function hideGuides(){ guide("v", null); guide("h", null) }
 function magnet(L, T, W, H, skipId){
+  const tol = 8;   // near-overlap still counts: rows of cards rarely sit pixel-exact
   const xs = [0, innerWidth / 2, innerWidth], ys = [0, innerHeight / 2, innerHeight];
   for (const el of document.querySelectorAll(".ovw")) if (el.dataset.w !== skipId){
     const r = el.getBoundingClientRect();
-    xs.push(r.left, r.left + r.width / 2, r.left + r.width);
-    ys.push(r.top, r.top + r.height / 2, r.top + r.height);
+    if (r.top - tol < T + H && r.bottom + tol > T) xs.push(r.left, r.left + r.width / 2, r.left + r.width);
+    if (r.left - tol < L + W && r.right + tol > L) ys.push(r.top, r.top + r.height / 2, r.top + r.height);
   }
   const best = (card, cands) => { let b = null;
     for (const c of card) for (const t of cands){ const d = t - c;
@@ -712,15 +752,22 @@ addEventListener("pointerdown", e => {
   const card = e.target.closest?.(".ovw");
   if (card){
     if (e.target.closest("button")) return;
-    if (e.target.closest(".rsz")){
-      // free resize (Danny 10-29: strange boxes): each axis goes on its own once the drag means it, so a card can
-      // come out very long, very wide, skinny or fat — not just bigger and smaller. offsetWidth/Height ignore the
-      // scale transform, and the delta is divided by the scale so the edge tracks the cursor exactly.
+    const hz = e.target.closest(".rsz, .rsz-e, .rsz-s");
+    if (hz){
+      // three resize handles (Danny 10-29): the corner free-resizes (each axis joins in once the drag means it), the
+      // right edge is width only (longer), the bottom edge height only (taller). offsetWidth/Height ignore the scale
+      // transform, and the delta is divided by the scale so the edge tracks the cursor exactly.
+      const mode = hz.classList.contains("rsz-e") ? "w" : hz.classList.contains("rsz-s") ? "h" : "both";
       rz = {id: card.dataset.w, card, px0: e.clientX, py0: e.clientY, w0: card.offsetWidth, h0: card.offsetHeight,
-        s0: wPos(card.dataset.w).s, mx: false, my: false};
+        s0: wPos(card.dataset.w).s, both: mode === "both", mx: mode === "w", my: mode === "h"};
       card.setPointerCapture(e.pointerId);
     } else {
-      drag = {id: card.dataset.w, dx: e.clientX - card.offsetLeft, dy: e.clientY - card.offsetTop, card};
+      // a grouped card takes its letter along (Danny 10-29: groups move together): every mate keeps its offset from the
+      // card at pickup and rides the same delta
+      const g = grpOf(card.dataset.w);
+      drag = {id: card.dataset.w, dx: e.clientX - card.offsetLeft, dy: e.clientY - card.offsetTop, card, snap: null,
+        mates: g ? grpIds(g).filter(x => x !== card.dataset.w).map(mid => { const el = $("#ovw-" + mid);
+          return el ? {id: mid, el, dx: el.offsetLeft - card.offsetLeft, dy: el.offsetTop - card.offsetTop} : null }).filter(Boolean) : []};
       card.setPointerCapture(e.pointerId); card.classList.add("moving");
     }
     pick(card.dataset.w);
@@ -730,8 +777,7 @@ addEventListener("pointerdown", e => {
 addEventListener("pointermove", e => {
   if (rz){
     const dx = e.clientX - rz.px0, dy = e.clientY - rz.py0;
-    if (!rz.mx && Math.abs(dx) > 2) rz.mx = true;   // one axis at a time: a horizontal drag leaves the height alone
-    if (!rz.my && Math.abs(dy) > 2) rz.my = true;
+    if (rz.both){ if (!rz.mx && Math.abs(dx) > 2) rz.mx = true; if (!rz.my && Math.abs(dy) > 2) rz.my = true }   // corner: one axis at a time, once the drag means it
     if (rz.mx) setP(rz.id, "w", clamp(Math.round(rz.w0 + dx / rz.s0), 60, 2000));
     if (rz.my) setP(rz.id, "h", clamp(Math.round(rz.h0 + dy / rz.s0), 40, 2000));
     chip(rz.card.offsetWidth + " × " + rz.card.offsetHeight + " px", rz.card);
@@ -742,14 +788,23 @@ addEventListener("pointermove", e => {
   const r = drag.card.getBoundingClientRect(), free = e.shiftKey;
   if (!free){
     if (CFG.grid){ L = Math.round(L / CFG.gsize) * CFG.gsize; T = Math.round(T / CFG.gsize) * CFG.gsize }
-    if (CFG.snap){ const s = magnet(L, T, r.width, r.height, drag.id);
-      if (s){ if (s.L != null){ L = s.L; guide("v", s.v) } else guide("v", null);
-        if (s.T != null){ T = s.T; guide("h", s.h) } else guide("h", null) }
-      else hideGuides() }
+    if (CFG.snap){
+      // the snap lock: each axis keeps its engaged target until the drag moves SNAP_BRK past it, so a flush pair
+      // survives the pointer pushing on (no more slip), and re-arms from magnet() once you're clearly moving again
+      const hold = drag.snap, keep = (t, raw) => t != null && Math.abs(raw - t) <= SNAP_BRK;
+      if (!keep(hold?.x, L) || !keep(hold?.y, T)){
+        const s = magnet(L, T, r.width, r.height, drag.id);
+        drag.snap = {x: keep(hold?.x, L) ? hold.x : s.L, y: keep(hold?.y, T) ? hold.y : s.T,
+          v: keep(hold?.x, L) ? hold.v : s.v, h: keep(hold?.y, T) ? hold.h : s.h};
+      }
+      if (drag.snap.x != null){ L = drag.snap.x; guide("v", drag.snap.v) } else guide("v", null);
+      if (drag.snap.y != null){ T = drag.snap.y; guide("h", drag.snap.h) } else guide("h", null);
+    }
     else hideGuides();
   } else hideGuides();
   drag.card.style.left = L + "px";
   drag.card.style.top = T + "px";
+  for (const m of drag.mates){ m.el.style.left = (L + m.dx) + "px"; m.el.style.top = (T + m.dy) + "px" }   // the letter moves with its card
   chip(Math.round(DESK.x + L) + ", " + Math.round(DESK.y + T), drag.card);
   syncDetail(drag.id);
 });
@@ -757,11 +812,13 @@ addEventListener("pointerup", () => {
   chipHide();
   if (rz){ const c = rz.card; rz = null; clampCard(c); reflow(); return }   // a grown box can hang past an edge
   if (!drag) return;
-  const {card, id} = drag; drag = null;
+  const {card, id, mates} = drag; drag = null;
   card.classList.remove("moving");
   hideGuides();
   clampCard(card);
-  savePos(id); reflow();
+  savePos(id);
+  for (const m of mates){ clampCard(m.el); savePos(m.id) }   // the whole letter lands where the drag left it
+  reflow();
 });
 // Ctrl+scroll resizes the hovered card (WeakAuras' scale slider, at the pointer)
 addEventListener("wheel", e => {
@@ -780,7 +837,10 @@ addEventListener("keydown", e => {
   const step = e.shiftKey ? 10 : 1, el = $("#ovw-" + picked.id); if (!el) return;
   el.style.left = el.offsetLeft + d[0] * step + "px";
   el.style.top = el.offsetTop + d[1] * step + "px";
-  clampCard(el); savePos(picked.id); syncDetail(picked.id);
+  clampCard(el); savePos(picked.id);
+  for (const mid of grpIds(grpOf(picked.id))) if (mid !== picked.id){ const m = $("#ovw-" + mid);   // nudge the letter, not just the card
+    if (m){ m.style.left = m.offsetLeft + d[0] * step + "px"; m.style.top = m.offsetTop + d[1] * step + "px"; clampCard(m); savePos(mid) } }
+  syncDetail(picked.id);
   chip(Math.round(DESK.x + el.offsetLeft) + ", " + Math.round(DESK.y + el.offsetTop), el);
   xyT = setTimeout(chipHide, 900);   // nudges end from the keyboard: the chip lingers a beat, then leaves on its own
   e.preventDefault();

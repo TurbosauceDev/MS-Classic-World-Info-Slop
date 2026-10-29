@@ -378,7 +378,11 @@
   // ---- map name: the two white lines (street, map) next to the minimap icon, top-left. The minimap font isn't in our
   // tables, so this makes a clean black-on-white crop for OCR (Tesseract, in the main process) and fuzzy-matches the result.
   // Approach borrowed from beanguri/Maple-Classic-Exp-Overlay (MIT).
-  function mapTextCrop(img){
+  // mapTextRect finds the title's rect in the frame; mapCropAt cuts the OCR crop out of any rect. They're separate so a
+  // frame whose band hunt fails can re-cut the LAST good rect (the title doesn't move while the minimap stays put) —
+  // that's what keeps the name on the cards when the background under the text changes but nothing is actually covered
+  // (Danny 10-29: "the tracker loses the minimap name even when it's never covered").
+  function mapTextRect(img){
     const X = Math.floor(img.w * 0.4), Y = Math.floor(img.h * 0.3), d = img.d, ink = i => Math.min(d[i], d[i + 1], d[i + 2]) > 190;
     // per row, white in short runs only (letters); long runs are bars and frames (the "MINI MAP" title, the map's border)
     const cnt = [];
@@ -424,6 +428,11 @@
     if (!runs.length) return null;
     const x0 = runs[0].a, x1 = runs.reduce((p, q) => q.n > p.n ? q : p).b;
     if (x1 <= x0) return null;
+    return {x0, y0, x1, y1};
+  }
+  // the OCR crop for a title rect: white text made black on white (flipped when the folded bar's light rows dominate)
+  function mapCropAt(img, r){
+    const {x0, y0, x1, y1} = r, d = img.d, ink = i => Math.min(d[i], d[i + 1], d[i + 2]) > 190;
     const S = 2, P = 8, w = (x1 - x0 + 1) * S + 2 * P, h = (y1 - y0) * S + 2 * P, out = new Uint8ClampedArray(w * h * 4).fill(255);
     // mostly ink: white text on the light folded bar, which reads as the background: flipped so the text is the black part
     let all = 0, inked = 0; for (let y = y0; y < y1; y++) for (let x = x0; x <= x1; x++){ all++; if (ink((y * img.w + x) * 4)) inked++ }
@@ -432,6 +441,7 @@
       for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++){ const o = ((P + (y - y0) * S + dy) * w + P + (x - x0) * S + dx) * 4; out[o] = out[o + 1] = out[o + 2] = 0 }
     return {w, h, d: out};
   }
+  function mapTextCrop(img){ const r = mapTextRect(img); return r ? {...mapCropAt(img, r), rect: r} : null }
   // ---- job: the status bar shows "LV. 22 | Archer / <name>" bottom-left. Same idea as the map name: white text -> black on
   // white for OCR; jobFromText keeps only a job name (the character name in the same box is never kept or sent).
   function jobTextCrop(img){
@@ -1097,6 +1107,7 @@
     }
     let info = {bar: false, partyWindow: null, counts: 0};
     return {readFrame, get info(){ return info }, memoStats, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,
+      mapRect: null,   // the last good minimap-title rect (see work(): the fallback re-cuts it when the band hunt fails)
       // all item pictures (loadIcons on G.iicons), sorted by tab: matching only looks at the open tab's kind of items
       // a tab chip was clicked: look everywhere now and send the next steady read even when it didn't change
       invNow(){ for (const k in invSent) delete invSent[k]; invNext = null; lastInv = -Infinity },
@@ -1115,7 +1126,11 @@
      (only looked for when the EXP bar isn't: auto-pause). */
   function work(rd, {frame, t, want = {}}){
     const img = frame.k ? frame : native(frame), ev = rd.readFrame(frame, t, img), info = {...rd.info}, crops = {};
-    if (want.map) crops.map = mapTextCrop(img);
+    if (want.map){
+      crops.map = mapTextCrop(img);
+      if (crops.map) rd.mapRect = crops.map.rect;   // where the title was: re-cut from here when a later band hunt fails
+      else if (rd.mapRect){ crops.mapFb = mapCropAt(img, rd.mapRect); crops.mapFb.fb = true }
+    }
     if (want.job){ crops.job = jobTextCrop(img); crops.name = nameTextCrop(img) }
     if (want.chat) crops.chat = chatCrop(img);
     return {ev, info, crops, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};

@@ -102,6 +102,15 @@ function sameAsLast(f){
 // bug reports: the last 300 log lines and the last 8 frames (one every 3 s, so about 25 s back), saved by "Report a bug"
 const LOG = [], RECENT = [];
 let wrap = null, runT0 = 0, held = false;   // held: paused by hand (Pause); wrap: {t} after Stop, until End run (the end inventory look); runT0: when Start was pressed
+// "On the clock" (Danny 10-29: it kept counting while paused and while wrapping up, hanging on "wrapping up"): wall time
+// since Start, frozen at the pause's first moment while paused by you, and frozen at the Stop while wrapping up.
+// Screen-gone pauses (Cash Shop, channel change) keep counting — they're part of the run's wall time, like the
+// summary's clock hours. Null when no run is up (the displays show "-").
+function runClockMs(){
+  if (!runT0 || (timer == null && !dummyOn)) return null;
+  const end = wrap ? wrap.t : held && session?.state?.pausedAt != null ? session.state.pausedAt : Date.now();
+  return Math.max(0, end - runT0);
+}
 function log(kind, data){ LOG.push({t: Date.now(), kind, ...data}); if (LOG.length > 300) LOG.shift() }
 new MutationObserver(() => { const text = $("#status").textContent; if (LOG.findLast(l => l.kind === "status")?.text !== text) log("status", {text}) }).observe($("#status"), {childList: true, characterData: true, subtree: true});
 let lastKeep = 0;

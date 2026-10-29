@@ -209,6 +209,27 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       return [el.offsetWidth, el.offsetHeight, window.ovSaved.overlay.widgets.status.w, window.ovSaved.overlay.widgets.status.h] });
     if (g4[2] !== g4[0] || g4[3] != null) fail("grip width-only drag keeps the height auto", {heightBefore: g3, after: g4});
     if (await page.evaluate(() => document.querySelector("#ovw-status").classList.contains("sizedH"))) fail("width-only drag pins no height", 0);
+    // edge grips (Danny 10-29: "dragging an edge should make it taller, or longer"): the right edge is width only
+    // (even when the drag also moves down), the bottom edge height only, and each keeps what the other pinned
+    await page.evaluate(() => { const w = {...(window.ovSaved.overlay.widgets.status || {})}; delete w.w; delete w.h;
+      window.ovSaved.overlay.widgets.status = w; delete CFG.widgets.status.w; delete CFG.widgets.status.h;
+      styleCard(document.querySelector("#ovw-status"), "status") });
+    const eb0 = await page.evaluate(() => document.querySelector("#ovw-status").offsetWidth);
+    const edgeBox = await page.locator("#ovw-status .rsz-e").boundingBox();
+    await page.mouse.move(edgeBox.x + 3, edgeBox.y + 6); await page.mouse.down();
+    await page.mouse.move(edgeBox.x + 60, edgeBox.y + 30, {steps: 4}); await page.mouse.up();   // moves down too: an edge must not pin the other axis
+    await page.waitForTimeout(350);
+    st = await page.evaluate(() => { const el = document.querySelector("#ovw-status");
+      return [el.offsetWidth, el.classList.contains("sizedW"), el.classList.contains("sizedH"), window.ovSaved.overlay.widgets.status.h, window.ovSaved.overlay.widgets.status.w] });
+    if (!(st[0] > eb0) || !st[1] || st[2] || st[3] != null || st[4] !== st[0]) fail("right edge = longer only", {before: eb0, after: st});
+    const wPinned = st[4], hb0 = await page.evaluate(() => document.querySelector("#ovw-status").offsetHeight);
+    const edgeSBox = await page.locator("#ovw-status .rsz-s").boundingBox();
+    await page.mouse.move(edgeSBox.x + 6, edgeSBox.y + 3); await page.mouse.down();
+    await page.mouse.move(edgeSBox.x + 50, edgeSBox.y + 46, {steps: 4}); await page.mouse.up();   // moves right too: height only
+    await page.waitForTimeout(350);
+    st = await page.evaluate(() => { const el = document.querySelector("#ovw-status");
+      return [el.offsetHeight, el.classList.contains("sizedH"), window.ovSaved.overlay.widgets.status.h, window.ovSaved.overlay.widgets.status.w, el.offsetWidth] });
+    if (!(st[0] > hb0) || !st[1] || st[2] !== st[0] || st[3] !== wPinned || st[4] !== wPinned) fail("bottom edge = taller only, width stays pinned", {before: hb0, after: st});
     // Ctrl+scroll still scales
     const s1 = await page.evaluate(() => window.ovSaved.overlay.widgets.status.s);
     await page.evaluate(() => document.querySelector("#ovw-status").dispatchEvent(new WheelEvent("wheel", {ctrlKey: true, deltaY: -120, bubbles: true, cancelable: true})));
@@ -234,7 +255,56 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     if (st !== n0 + 3 - 10) fail("shift-arrow nudge", st);
     await page.keyboard.press("Escape");
     if (!await page.evaluate(() => window.ovEditCalls.at(-1) === false)) fail("Esc asks main to lock", window.ovEditCalls);
-    await page.evaluate(() => window.ovMode(true));   // back to editing for the grid + clamp scenes
+    await page.evaluate(() => window.ovMode(true));   // back to editing for the group + snap + grid scenes
+    // groups (Danny 10-29: "a way to group modules, so that they stay aligned and can be moved together"): two cards
+    // share a letter, dragging one carries the other by the same delta (and saves both), the letter shows on the card,
+    // in the panel row, and the inspector offers the Group select
+    await page.uncheck("#ovSnap");   // keep snapping out of the way: the move must be exactly the pointer's delta
+    await page.evaluate(() => { const w = {...(window.ovSaved.overlay.widgets.status || {})}; delete w.w; delete w.h;   // the edge test left Status pinned fat
+      window.ovSaved.overlay.widgets.status = w; delete CFG.widgets.status.w; delete CFG.widgets.status.h;
+      styleCard(document.querySelector("#ovw-status"), "status");
+      CFG.widgets.exp = {...CFG.widgets.exp, grp: "A", x: 150, y: 700};
+      CFG.widgets.status = {...CFG.widgets.status, grp: "A", x: 1000, y: 700}; badge("exp"); badge("status"); place(); syncPanel() });
+    await page.evaluate(() => pick("exp"));   // (a row click would toggle: exp is still picked from the nudge test)
+    st = await page.evaluate(() => [!!document.querySelector('.wrow[data-w="exp"] .wgb'), document.querySelector("#ovw-exp .gb").textContent,
+      !!document.querySelector('#ovinsp select[data-k="grp"]')]);
+    if (!st[0] || st[1] !== "A" || !st[2]) fail("group letter on card + panel row + inspector select", st);
+    const grpA = await page.evaluate(() => [document.querySelector("#ovw-exp").offsetLeft, document.querySelector("#ovw-exp").offsetTop,
+      document.querySelector("#ovw-status").offsetLeft, document.querySelector("#ovw-status").offsetTop]);
+    const grpBox = await page.locator("#ovw-exp .b").boundingBox();
+    await page.mouse.move(grpBox.x + 4, grpBox.y + 4); await page.mouse.down();
+    await page.mouse.move(grpBox.x + 59, grpBox.y + 29, {steps: 4}); await page.mouse.up();   // +55, +25
+    await page.waitForTimeout(350);
+    st = await page.evaluate(() => { const e = document.querySelector("#ovw-exp"), s = document.querySelector("#ovw-status");
+      return [e.offsetLeft, e.offsetTop, s.offsetLeft, s.offsetTop, window.ovSaved.overlay.widgets.status.x, window.ovSaved.overlay.widgets.status.y] });
+    if (st[0] !== grpA[0] + 55 || st[1] !== grpA[1] + 25 || st[2] !== grpA[2] + 55 || st[3] !== grpA[3] + 25 || st[4] !== grpA[2] + 55 || st[5] !== grpA[3] + 25)
+      fail("group move: the letter rides the same delta and saves", {before: grpA, after: st});
+    // the snap lock (Danny 10-29: a flush card used to "slip out like squeezing a wet bar of soap"): once the edge
+    // snap engages, pushing the pointer further holds the card on the line well past the old 15 px band, and only a
+    // clear pull (26 px) lets go; the drop clamps the card back inside
+    await page.evaluate(() => { pick(null); for (const k of ["exp", "status"]){ const w = {...(CFG.widgets[k] || {})}; delete w.grp; CFG.widgets[k] = w; badge(k) }
+      CFG.widgets.status = {...CFG.widgets.status, x: 300, y: 60}; syncPanel(); place() });
+    await page.check("#ovSnap");
+    await page.evaluate(() => { CFG.widgets.exp = {...CFG.widgets.exp, x: 1000, y: 700}; place() });
+    const lp = await page.evaluate(() => { const el = document.querySelector("#ovw-exp"), r = el.getBoundingClientRect();
+      return {x: el.offsetLeft, y: el.offsetTop, w: r.width} });
+    const snapT = Math.floor(1400 - lp.w);   // where the right screen edge snaps the card's right side (clampCard's own math)
+    const lockBox = await page.locator("#ovw-exp .b").boundingBox();
+    const downX = lockBox.x + 4, downY = lockBox.y + 4, dx = downX - lp.x;   // the pointer's offset inside the card
+    await page.mouse.move(downX, downY); await page.mouse.down();
+    await page.mouse.move(snapT - 10 + dx, downY, {steps: 4});   // inside the 15 px band: the edge snap takes
+    st = await page.evaluate(() => [document.querySelector("#ovw-exp").offsetLeft, document.querySelector("#ovgv").classList.contains("hidden")]);
+    if (Math.abs(st[0] - snapT) > 1 || st[1]) fail("right-edge snap engages with the guide up", {want: snapT, got: st});   // ±1: magnet rounds a float rect
+    await page.mouse.move(snapT + 22 + dx, downY, {steps: 4});   // pushed 22 px past it: the lock holds (this used to slip)
+    st = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);
+    if (Math.abs(st - snapT) > 1) fail("snap lock holds under pressure (no wet-soap slip)", {want: snapT, got: st});
+    await page.mouse.move(snapT + 42 + dx, downY, {steps: 4});   // a clear pull: the lock lets go
+    st = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);
+    if (st !== snapT + 42 && Math.abs(st - (snapT + 42)) > 1) fail("snap lock releases on a clear pull", {want: snapT + 42, got: st});
+    await page.mouse.up();
+    st = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);
+    if (st !== snapT) fail("dropped card clamps back inside", {want: snapT, got: st});
+    await page.evaluate(() => { CFG.widgets.status = {...CFG.widgets.status, x: 900, y: 60}; place() });   // out of the grid scene's way
     // the alignment grid shows and hides, and while it's on (with snap off) drops round to the grid lines (WoW Edit Mode)
     await page.check("#ovGrid");
     st = await page.evaluate(() => { const g = document.querySelector("#ovgrid");

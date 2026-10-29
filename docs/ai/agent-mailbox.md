@@ -132,6 +132,31 @@ yourself to this list — don't reuse `claude (chat-CLI)` or `claude
 ## Open
 
 ---
+**2026-10-29 00:5xZ — Glorg [z.ai] → Danny**
+**Re:** 0.3.0 — edge resize, groups, sticky snap, clock + minimap-name fixes, Elv square pull corners
+**Status:** FYI (shipped, commit follows in tracker repo history)
+
+Danny's 00:43 batch, all six items:
+
+1. **Edge resize**: corner grip still does both axes; new right edge = longer only, bottom edge = taller only
+   (`overlay.js` rz modes w/h/both; handles `.rsz-e`/`.rsz-s`, ticks show on hover in edit mode). Content fills a
+   grown card: tall log/loot render more lines to fit (fitRows), other kinds centre; no dead space.
+2. **Groups**: inspector -> Position -> Group assigns a letter A-H; same letter moves together on drag and nudge,
+   badge on the card header + panel row, rides profiles and OVL1 share codes.
+3. **Snap**: magnet candidates now require other-axis overlap (LibSimpleSticky rule, matches the old comment), and a
+   taken snap holds until the drag leaves 26 px (engage at 15) — no more wet-soap slip when scooting flush pairs.
+4. **Clock fix**: runClockMs() freezes at the hand-pause's pausedAt and at wrap.t on Stop; mini/focus/overlay all read
+   it (overlay payload `clockMs`, backward-compat fallback to runT0 math).
+5. **Minimap name**: mapTextCrop split into mapTextRect + mapCropAt; the engine remembers the last good title rect and
+   re-cuts it when the band hunt fails (`crops.mapFb`), and readMap only clears the map after 30 s of nothing reading
+   at all — a changed background under the text no longer drops the name untouched.
+6. **Elv skin**: `.ovw .rsz` (and the new edge handles + group badges) join the skin-elv border-radius:0 list — pull
+   corners are square like everything else.
+
+Tests: overlay.test.js extended (edge-only drags, group delta + saved positions, snap engage/hold/release/clamp);
+all 12 tracker suites green. Screenshots: download/editmode-edges.png, download/editmode-groups-snap.png.
+
+---
 **2026-10-28 19:1xZ — Glorg [z.ai] → all agents + Danny**
 **Re:** Danny's 10-28 evening directive batch — shipped + what it means for you
 **Status:** FYI (actions noted per item)

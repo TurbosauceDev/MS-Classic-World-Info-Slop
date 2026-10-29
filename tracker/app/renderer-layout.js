@@ -5,7 +5,8 @@ function miniList(rows, cell, empty){ if (!rows.length) return `<tr class="more"
   const more = rows.length - MINI_ROWS; return rows.slice(0, MINI_ROWS).map(cell).join("") + (more > 0 ? `<tr class="more"><td colspan="2">and ${more} more</td></tr>` : "") }
 function renderMini(s){
   $("#miniTotal").textContent = fmt(s.exp); $("#miniActive").textContent = hm(s.activeMin / 60);
-  $("#miniClock").textContent = runT0 && (timer != null || dummyOn) ? hm((Date.now() - runT0) / 3.6e6) : "-";
+  const rcm = runClockMs();
+  $("#miniClock").textContent = rcm != null ? hm(rcm / 3.6e6) : "-";
   $("#miniState").textContent = [$("#stateText").textContent, s.nowMapName].filter(Boolean).join(" · ");
   $("#miniItems").innerHTML = miniList(s.items, i => `<tr><td>${ico(i.id)}${esc(i.name)}</td><td class="n">×${fmt(i.n)}</td></tr>`, "Nothing yet");
   $("#miniMobs").innerHTML = miniList(s.mobs, m => `<tr><td>${esc(m.name)}</td><td class="n">${fmt(m.kills)}</td></tr>`, "None yet");
@@ -98,7 +99,8 @@ function renderFocus(s){
   $("#fzPots").innerHTML = potsHtml(s);
   $("#fzMoney").innerHTML = moneyHtml(s);
   smChart($("#fzChart"), s.perMin || []);
-  $("#fzActive").textContent = hm(min / 60); $("#fzClock").textContent = runT0 && (timer != null || dummyOn) ? hm((Date.now() - runT0) / 3.6e6) : "-";
+  const fzClockMs = runClockMs();
+  $("#fzActive").textContent = hm(min / 60); $("#fzClock").textContent = fzClockMs != null ? hm(fzClockMs / 3.6e6) : "-";
   $("#fzItems").innerHTML = miniList(s.items, i => `<tr><td>${ico(i.id)}${esc(i.name)}</td><td class="n">×${fmt(i.n)}</td></tr>`, "Nothing yet");
   $("#fzMobs").innerHTML = miniList(s.mobs, m => `<tr><td>${esc(m.name)}</td><td class="n">${fmt(m.kills)}</td></tr>`, "None yet");
   $("#fzUsed").innerHTML = miniList(s.used.filter(u => u.n), u => `<tr><td>${ico(u.id)}${esc(u.name)}</td><td class="n">×${fmt(u.n)}</td></tr>`, "None yet");
