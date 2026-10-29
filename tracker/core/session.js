@@ -15,6 +15,7 @@
      {t, type: "item",  id, qty?}         item pickup message (id resolved by the reader from the item name)
      {t, type: "map",   id, name?}        map read from the minimap (id null: a map our data doesn't have, name as read)
      {t, type: "party", size}             party size from the party HP bars (1 = solo)
+     {t, type: "proc"}                    the Final Attack proc buff icon appeared (colour pixels only)
      {t, type: "job",   name}             class read from the screen
      {t, type: "have",  items}            {id: count} on the quick slots (a quick slot shows the item's total)
      {t, type: "use",   id, n}            n of an item used up (potion, food, arrows), from the quick-slot / Use-tab counts
@@ -28,7 +29,7 @@
   const localDate = t => { const d = new Date(t); return new Date(t - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
   function createSession(G, opts = {}){
     const idleMs = opts.idleMs || IDLE_MS;
-    const S = {start: null, last: null, activeMs: 0, map: null, party: 1, job: null, level: null,
+    const S = {start: null, last: null, activeMs: 0, map: null, party: 1, procs: 0, procAt: null, job: null, level: null,
       msgExp: 0, barExp: 0, recent: [], kills: 0, unknownKills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, itemT: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
       pausedAt: null, held: false, pausedMs: 0, byMap: {}, pmBar: {}, pmMsg: {}, firstBar: null, levelUps: [], levelAt: null, used: {}, have: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
 
@@ -120,6 +121,7 @@
       switch (e.type){
         case "map": S.map = e.id == null ? null : String(e.id); S.mapName = e.name || null; S.bigKilled.clear(); break;
         case "party": S.party = Math.max(1, e.size | 0); break;
+        case "proc": S.procs++; S.procAt = e.t; break;
         case "job": S.job = e.name; break;
         case "exp": {
           (S.gains = S.gains || []).push({t: e.t, gain: e.gain}); if (S.gains.length > 12) S.gains.shift();   // the last few EXP messages (the big-kill alert)
@@ -272,7 +274,7 @@
       const pmSrc = useBar ? S.pmBar : S.pmMsg, pmKeys = Object.keys(pmSrc).map(Number), perMin = [];
       if (pmKeys.length){ const k0 = Math.floor(S.start / 6e4), k1 = Math.max(...pmKeys, Math.floor((S.last ?? S.start) / 6e4)); for (let k = Math.max(k0, k1 - 1439); k <= k1; k++) perMin.push([k * 6e4, pmSrc[k] || 0]) }   // last 24 h at most
       return {activeMin: S.activeMs / 6e4, perMin, bestMin: perMin.length ? Math.max(...perMin.map(p => p[1])) : 0, firstBar: S.firstBar, bar: S.bar && S.bar.level ? {level: S.bar.level, pct: S.bar.pct, t: S.bar.t} : null,
-        map: top ? top.map : S.map, mapName: top ? top.name : nowName, nowMap: S.map, nowMapName: nowName, maps, party: S.party,
+        map: top ? top.map : S.map, mapName: top ? top.name : nowName, nowMap: S.map, nowMapName: nowName, maps, party: S.party, procs: S.procs, procAt: S.procAt,
         job: S.job, level: S.level, kills: S.kills, unknownKills: S.unknownKills, killsHr: per(S.kills), exp, expHr, toLevelHrs, otherExp: S.otherExp,
         // share of the bar's EXP that showed up as readable messages: below ~70%, kills/mesos/drops are undercounted
         readShare: S.barExp > 0 ? Math.min(1, S.msgExp / S.barExp) : null,

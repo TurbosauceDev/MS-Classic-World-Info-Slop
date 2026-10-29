@@ -70,7 +70,7 @@ const ALERT_TEST = {expHrBelow: "EXP/hr fell under the threshold (test)", expHrA
   idleExp: "No EXP for 2 min (test)", lootWorth: "A drop worth 1,000,000 picked up (test)",
   lootNamed: "Drop you're watching for: Glove ATK Scroll (test)", died: "You died (1 this run) (test)", levelUp: "Level up! Now level 31 (test)",
   mapEntered: "Now in Henesys Hunting Ground I (test)", itemLow: "Red Potion is running low (12 left) (test)",
-  bigKill: "Big kill: +12,345 EXP (test)", partyChange: "Party is now 3 (was 2) (test)", mesosBurst: "+150,000 mesos in 20 s (test)",
+  bigKill: "Big kill: +12,345 EXP (test)", partyChange: "Party is now 3 (was 2) (test)", finalAttack: "Final Attack proc (test)", mesosBurst: "+150,000 mesos in 20 s (test)",
   readTrouble: "Only 40% of the EXP gain is showing up as chat lines. Is the chat hidden or covered? (test)"};
 function alertRow(a){
   const def = A.KINDS[a.kind];

@@ -93,3 +93,5 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 - `overlap-status-mesos-kills-2026-10-28.png` (816x232 crop of Danny's screen): overlay with Status, Mesos and Kills cards side by side; Status runs under Mesos ("wrapping u...") and Mesos' "loot/hr 16,9..." is cut off by Kills. The test rebuilds that spacing and expects no two cards to overlap, saved x/y unchanged.
 
 - HP/MP reader (0.2.102, tracker/tests/vitals.test.js): reuses the status-bar frames above. frame-000 HP 464/708 MP 196/567 (checked by eye), frame-006 368/708 303/567, frame-042 485/708 282/567, frame-046 485/708 213/567, statusbar-native-1440.png 549/823 618/652.
+
+- tracker/tests/frames-proc/proc-strip-native.png: 160x44 top-right strip of Danny's 10-29 frame (Hunter Turbow, Final Attack buff "58" at x 126,y 3 in the strip). proc.test.js.

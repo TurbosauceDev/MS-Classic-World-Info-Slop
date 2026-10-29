@@ -59,6 +59,7 @@
     bigKill:     {label: "Big kill", fields: [["v", "one kill gave at least (EXP)", 5000, "n"]], sound: "high", sev: "good", w: "kills",
       note: "a single EXP message at or over this (a boss, or a tough monster); once per message"},
     partyChange: {label: "Party size changed", fields: [], sound: "mid", sev: "info", w: "party", note: "the party HP bars show a different head-count; once per change"},
+    finalAttack: {label: "Final Attack proc", fields: [], sound: "high", sev: "good", w: "kills", note: "the Final Attack buff icon (top-right row) appears on screen; read from pixels only, once per proc"},
     mesoBurst:   {label: "Mesos burst", fields: [["v", "mesos gained within the window", 100000, "n"], ["sec", "window (sec)", 30, "n"]], sound: "mid", sev: "good", w: "mesos",
       note: "picked-up mesos over the window (a rich drop or a mesos box); at most once a minute"},
     readTrouble: {label: "Screen reading trouble", fields: [["v", "chat read under (%)", 50, "n"], ["min", "after this many play minutes", 5, "n"]], sound: "low", sev: "warn", w: "status",
@@ -201,6 +202,11 @@
           if (s.t == null){ s.t = top ?? 0; break }
           for (const x of g) if (x.t > s.t && x.gain >= num(a.v) && a.v > 0) say(`Big kill: +${fmt(x.gain)} EXP`);
           if (top != null && top > s.t) s.t = top;
+          break;
+        }
+        case "finalAttack": {
+          const n = num(cs.procs); if (s.n == null){ s.n = n; break }
+          if (n > s.n){ s.n = n; say("Final Attack proc") } else if (n < s.n) s.n = n;
           break;
         }
         case "partyChange": {
