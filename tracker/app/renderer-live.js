@@ -6,14 +6,16 @@ async function toPng(c){
   return new Uint8Array(await (await new Promise(r => cv.toBlob(r, "image/png"))).arrayBuffer());
 }
 // job from the status bar every 30 s, when the player left the job on "Auto": taken once the same job is read twice running
+const ocrCache = GrindOcrCache.createOcrCache();   // core/ocrcache.js: same crop pixels, same text, no second Tesseract run
+const ocrText = c => ocrCache.run(c, async c => host.ocr(await toPng(c)));
 let lastJob = 0, jobSeen = null, jobNow = null, charName = null, charSeen = null;   // charName: History, and KPQ rounds (Settings > KPQ board name)
 async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders.jobTextCrop), or null; nc: the name crop
   const sess = session, sl = slicer;
   // the character name (History, KPQ board): taken once the same name reads twice in a row
-  if (nc){ const n = GrindReaders.nameFromText(await host.ocr(await toPng(nc))); if (n && n === charSeen && n !== charName){ charName = n; note("Character: " + n) } charSeen = n }
+  if (nc){ const n = GrindReaders.nameFromText(await ocrText(nc)); if (n && n === charSeen && n !== charName){ charName = n; note("Character: " + n) } charSeen = n }
   if (settings.job) return;
   if (!c){ if (check && !check.job) check.jobWhy = "The level and job text on the status bar wasn't found."; return }
-  const text = await host.ocr(await toPng(c)), job = GrindReaders.jobFromText(text);
+  const text = await ocrText(c), job = GrindReaders.jobFromText(text);
   log("job", {job});   // not the OCR text: the character name sits in the same box
   if (check && sess === session){ if (!job) check.jobWhy = "The status bar text was found but the job didn't read. Pick it by hand."; else if (!check.job){ check.job = job; check.late = check.ended } }
   if (job && job === jobSeen && job !== jobNow && sess === session && !settings.job){ jobNow = job; const e = {t, type: "job", name: job}; sess.add(e); sl.add(e) }
@@ -27,7 +29,7 @@ async function readMap(c, t){   // c: the minimap title crop (GrindReaders.mapTe
   // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
   if (!c){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; note("Map name not seen for 30 s (minimap closed or covered): map unknown until it's back.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
   mapMissing = 0;
-  const text = await host.ocr(await toPng(c)), m = GrindReaders.mapFromText(text, G), key = m && (m.id || m.name);
+  const text = await ocrText(c), m = GrindReaders.mapFromText(text, G), key = m && (m.id || m.name);
   log("map", {text, id: m?.id ?? null, name: m?.name ?? null});
   if (check && sess === session){ if (!m) check.mapWhy = "Minimap found, but its name didn't read. Is something over the minimap title?"; else if (!check.map){ check.map = m.name || "map " + m.id; check.late = check.ended } }
   // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
@@ -263,13 +265,13 @@ async function tick(){
     const f = grabFrame();
     keepFrame(t);
     if (sameAsLast(f)){ skipped++; throw null }
-    // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between
+    // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between (2 min once job and name are known)
     const want = {};
     if (!ocrBusy){
       if (deathPending && t - deathPending.last >= 1000){ deathPending.last = t; want.chat = true }
       else if (boxPending && t - boxPending.last >= 1000){ boxPending.last = t; want.chat = true; want.box = true }
       else if (t - lastOcr > 5000){ lastOcr = t; want.map = true }
-      else if ((!settings.job || !charName) && t - lastJob > 30e3){ lastJob = t; want.job = true }
+      else if ((!settings.job || !charName) && t - lastJob > (jobNow && charName ? 120e3 : 30e3)){ lastJob = t; want.job = true }
     }
     const r = await eng.read({frame: f, t, want});
     if (timer == null || sess !== session || !r) throw null;   // stopped (or restarted) while reading, or the frame was lost

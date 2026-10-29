@@ -312,3 +312,8 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 ## Discard run + patch note layout (0.2.94, 10-29)
 - `discard()`/`armDiscard()` in renderer-run.js: #wrapDrop / #miniWrapDrop / #fzWrapDrop, two clicks (arms 5 s), stops capture, clears autosave, then `resetTracker()`; nothing saved. Tested in ui.test.js.
 - `TrackerChangelog.parts(text)` (changelog.js) = lead sentence + bullets; used by Help (#patchList) and site 68-tracker.js. Write changelog lines as short sentences; abbreviations e.g./i.e./Lv. don't split.
+
+## CV efficiency 2026-10-29 (0.2.95, T-13)
+- Measured on frame-000 (node, `node tests/cv_bench.js`): whole-frame read ~6 ms, shrink ~4 ms; Tesseract ~90 ms a crop. OCR, not the readers, was the biggest recurring cost.
+- `core/ocrcache.js`: map/job/name OCR text is cached under a hash of the crop pixels (renderer-live `ocrText`). The job crop includes HP/EXP digits so it never hits; its look is every 2 min once job + name are known. `tests/cv.test.js` (in `npm test`) guards the cache and a 60 ms frame ceiling.
+- Not measured: Windows capture/GPU copy, real scenery cost (fixtures have the playfield blanked). Capture is already `frameRate: 2`.
