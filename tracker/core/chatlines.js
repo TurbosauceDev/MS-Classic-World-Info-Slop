@@ -1,8 +1,7 @@
 /* Chat box reader (pure, Node-tested; runs in the reader worker, parse() also in the window). The game paints every chat
-   channel in its own flat colour (Danny's screenshots, 2026-10-29): all chat white, party pink (255,153,204), party notices
-   (255,175,175), buddy orange (255,153,0), whispers green (0,255,0), [Notice] yellow (255,255,0). Megaphones are told by the
+   channel in its own flat colour (Danny's screenshots, 2026-10-29): all chat white, party pink (255,153,204), , buddy orange (255,153,0), whispers green (0,255,0), [Notice] yellow (255,255,0). Megaphones are told by the
    row's background instead: their colour starts at the box edge, left of the timestamp, where a normal line is black.
-   Red errors (255,0,0) are our estimate: no red-error sample yet (docs/ai/tracker.md, Chat windows).
+   The red-looking error / system lines ("'x' have left the party") are (255,175,175): Danny called that one the error colour, 10-29.
 
    scan(img) -> {groups: [{cls, hash, bands, mega}], L, pitch}: one pass over the chat region counts each class per pixel row,
    finds the text lines (bands of rows with ink), joins wrapped lines (indented, no timestamp) to the line above and drops
@@ -11,7 +10,7 @@
    cropFor(img, group) -> black-on-white 2x picture of one message for OCR (only the class colour is ink).
    Memory: a few typed arrays the size of the region's rows; the picture itself is never copied. */
 (function (root){
-  const CL = [["party", 255, 153, 204], ["partysys", 255, 175, 175], ["buddy", 255, 153, 0], ["whisper", 0, 255, 0], ["notice", 255, 255, 0], ["all", 255, 255, 255], ["error", 255, 0, 0]];
+  const CL = [["party", 255, 153, 204], ["buddy", 255, 153, 0], ["whisper", 0, 255, 0], ["notice", 255, 255, 0], ["all", 255, 255, 255], ["error", 255, 175, 175]];
   const NC = CL.length, TOL = 14;
   const NAMES = CL.map(c => c[0]);
   const AREA = {x: 0, y: 0.35, w: 0.6, h: 0.63};   // default chat spot: lower left (fractions of the game picture)
@@ -130,7 +129,7 @@
     if (cls === "whisper"){
       const m = new RegExp("^" + NAME + "(?:\\[[^\\]]*\\])?\\s*(<<|<-|\u00ab|>>|=>|==|\u00bb)\\s*(.*)$").exec(s);
       if (m) return {who: m[1], dir: /^(<<|<-|\u00ab)$/.test(m[2]) ? "from" : "to", text: m[3].trim()};
-    } else if (cls !== "notice" && cls !== "error" && cls !== "partysys"){
+    } else if (cls !== "notice" && cls !== "error"){
       const m = new RegExp("^" + NAME + "\\W{0,8}?[:\u00a9;]\\s+(.*)$").exec(s);
       if (m) return {who: m[1], text: m[2].trim()};
     }

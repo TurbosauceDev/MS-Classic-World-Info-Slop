@@ -12,7 +12,7 @@ const stack = (...p) => { const w = p[0].w, h = p.reduce((a, q) => a + q.h, 0), 
   assert.deepStrictEqual(kinds(mixed), ["buddy", "mega:gold", "mega:teal", "buddy", "mega:pink", "buddy", "buddy", "mega:pink", "notice"]);
   assert.deepStrictEqual(kinds(fx("whisper")), ["mega:teal", "whisper", "buddy", "whisper", "whisper", "mega:pink", "whisper", "buddy", "mega:mega"]);   // last: the white chat input bar
   assert.deepStrictEqual(kinds(fx("party")), ["party", "party"]);
-  assert.deepStrictEqual(kinds(fx("partysys")), ["partysys"]);   // "'nivisr' have left the party." is (255,175,175), not party pink
+  assert.deepStrictEqual(kinds(fx("partysys")), ["error"]);   // "'nivisr' have left the party." is (255,175,175) = the error / system colour, not party pink
   assert.deepStrictEqual(kinds(fx("crate-red")), ["mega:red"]);   // white text on a red row: not all chat
   assert.deepStrictEqual(kinds(fx("local-blue")), []);
   assert.deepStrictEqual(kinds(fx("notice")), ["notice", "notice"]);
@@ -53,7 +53,7 @@ const stack = (...p) => { const w = p[0].w, h = p.reduce((a, q) => a + q.h, 0), 
   assert.deepStrictEqual(C.parse("[Ta:42] Unclelan() \u00a9 morgenavond maak Ik nieuwe char", "buddy"), {who: "Unclelan", text: "morgenavond maak Ik nieuwe char"});
   assert.deepStrictEqual(C.parse("[15:45] Ghettomama<< hi | Just need\nt for my", "whisper"), {who: "Ghettomama", dir: "from", text: "hi | Just need t for my"});
   assert.deepStrictEqual(C.parse("[18:48] Ghettomama[Windia-39]>> omg tracker tool!", "whisper"), {who: "Ghettomama", dir: "to", text: "omg tracker tool!"});
-  assert.deepStrictEqual(C.parse("[Ta:49] 'nivisr have [eft the party.", "partysys"), {who: "", text: "'nivisr have [eft the party."});
+  assert.deepStrictEqual(C.parse("[Ta:49] 'nivisr have [eft the party.", "error"), {who: "", text: "'nivisr have [eft the party."});
   assert.deepStrictEqual(C.parse("garbled line with no stamp", "all"), {who: "", text: "garbled line with no stamp"});
   console.log("chat ok");
 })().catch(e => { console.error(e); process.exit(1) });

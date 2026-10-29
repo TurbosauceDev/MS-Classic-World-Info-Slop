@@ -98,10 +98,10 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 - tracker/tests/frames-proc/proc-strip-native.png: 160x44 top-right strip of Danny's 10-29 frame (Hunter Turbow, Final Attack buff "58" at x 126,y 3 in the strip). proc.test.js.
 - tracker/tests/frames-proc/noproc-strip-native.png + proc2-strip-native.png: same 160x44 strip (right edge) of Danny's 10-29 "no proc" / "2nd proc" frames (buff 58 in the second). proc.test.js.
 - tracker/tests/frames-proc/countdown-icons-native.png: 8 native 32x32 buff icons cut from Danny's 10-29 60 s clip (left to right 57, 42, 32, 20, 9, 7, 5, faded no-digits). proc.test.js.
-- tracker/tests/frames-chat/mixed.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): buddy lines, gold/teal/pink megaphones, a [Notice]. tests/chat.test.js (no red-error sample yet).
-- tracker/tests/frames-chat/whisper.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): whispers, buddy, megaphones and the white chat input bar. tests/chat.test.js (no red-error sample yet).
-- tracker/tests/frames-chat/party.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): two pink party lines. tests/chat.test.js (no red-error sample yet).
-- tracker/tests/frames-chat/partysys.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): "have left the party" (255,175,175), not party pink. tests/chat.test.js (no red-error sample yet).
-- tracker/tests/frames-chat/crate-red.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): loot-box alert, white text on a red row. tests/chat.test.js (no red-error sample yet).
-- tracker/tests/frames-chat/local-blue.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): local megaphone, dark text on blue (no class ink). tests/chat.test.js (no red-error sample yet).
-- tracker/tests/frames-chat/notice.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): yellow [Notice], wrapped without indent. tests/chat.test.js (no red-error sample yet).
+- tracker/tests/frames-chat/mixed.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): buddy lines, gold/teal/pink megaphones, a [Notice]. tests/chat.test.js.
+- tracker/tests/frames-chat/whisper.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): whispers, buddy, megaphones and the white chat input bar. tests/chat.test.js.
+- tracker/tests/frames-chat/party.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): two pink party lines. tests/chat.test.js.
+- tracker/tests/frames-chat/partysys.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): "have left the party" (255,175,175) = error/system colour, not party pink. tests/chat.test.js.
+- tracker/tests/frames-chat/crate-red.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): loot-box alert, white text on a red row. tests/chat.test.js.
+- tracker/tests/frames-chat/local-blue.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): local megaphone, dark text on blue (no class ink). tests/chat.test.js.
+- tracker/tests/frames-chat/notice.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): yellow [Notice], wrapped without indent. tests/chat.test.js.

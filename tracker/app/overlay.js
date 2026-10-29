@@ -102,7 +102,7 @@ const PARAMS = [
   {k: "cbu", sec: "This card", lab: "Buddy chat", t: "b", def: true, kinds: ["chat"]},
   {k: "cal", sec: "This card", lab: "All chat", t: "b", def: false, kinds: ["chat"]},
   {k: "cwh", sec: "This card", lab: "Whispers", t: "b", def: true, kinds: ["chat"]},
-  {k: "cer", sec: "This card", lab: "Red errors", t: "b", def: false, kinds: ["chat"]},
+  {k: "cer", sec: "This card", lab: "Errors & system", t: "b", def: false, kinds: ["chat"]},
   {k: "cnm", sec: "This card", lab: "Names", t: "b", def: true, kinds: ["chat"]},
   {k: "cts", sec: "This card", lab: "Time stamps", t: "b", def: false, kinds: ["chat"]},
   {k: "ccl", sec: "This card", lab: "Game colours", t: "b", def: true, kinds: ["chat"]},
@@ -277,7 +277,7 @@ const RENDER = {
   // Chat window (0.3.17): the chat the tracker read off the game's chat box (core/chatlines.js, OCR of new lines only), filtered
   // by channel. Megaphones, [Notice] lines and the like are never captured. Oldest lines clip first; no scroll bar.
   chat(d, id){
-    const on = {party: wv(id, "cpa"), partysys: wv(id, "cpa"), buddy: wv(id, "cbu"), all: wv(id, "cal"), whisper: wv(id, "cwh"), error: wv(id, "cer")};
+    const on = {party: wv(id, "cpa"), buddy: wv(id, "cbu"), all: wv(id, "cal"), whisper: wv(id, "cwh"), error: wv(id, "cer")};
     const list = (d.chat || []).filter(m => on[m.cls]), n = Math.min(list.length, Math.max(wv(id, "lines"), fitRows(id, 20)));
     const rows = list.slice(-n); if (wv(id, "cord") === "top") rows.reverse();
     const nm = wv(id, "cnm"), ts = wv(id, "cts"), gc = wv(id, "ccl");
