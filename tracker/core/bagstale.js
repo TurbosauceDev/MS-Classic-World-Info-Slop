@@ -26,7 +26,7 @@
   const color = l => l.hue == null ? "currentColor" : `hsl(${l.hue} 72% ${l.stage === "ok" ? 48 : 52}%)`;
   // small line icons, stroke = currentColor (the caller sets it to the stage colour)
   const ICONS = {
-    equip: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 3l-9.5 9.5"/><path d="M20 3v5M20 3h-5"/><path d="M7.5 12.5l4 4M5 15l4 4M4 20l3-3"/></svg>`,
+    equip: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="rotate(45 12 12)"><path d="M12 1.5l2.2 3.2V14h-4.4V4.7z"/><path d="M7 14h10"/><path d="M12 14v5.2"/><circle cx="12" cy="21" r="1.1"/></g></svg>`,
     use: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3h5M10.5 3v5L5.5 18a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3l-5-10V3"/><path d="M7.5 15h9"/></svg>`,
     etc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg>`,
   };

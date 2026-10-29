@@ -498,6 +498,15 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.mouse.move(5, 5);
     st = await page.evaluate(() => [window.ovBags, window.ovHits]);
     if (JSON.stringify(st) !== JSON.stringify([["use"], [true, false]])) fail("bag click + click-through hand-off", st);
+    // the whole card takes the mouse (Danny 10-29): its padding counts, not only the icons; the Background toggle drops the glass
+    await page.mouse.move(5, 5); await page.evaluate(() => { window.ovHits = [] });
+    const cb = await page.locator("#ovw-bag").boundingBox();
+    await page.mouse.move(cb.x + 2, cb.y + 2); await page.mouse.move(cb.x + 3, cb.y + 3);
+    st = await page.evaluate(() => window.ovHits);
+    if (JSON.stringify(st) !== JSON.stringify([true])) fail("bag card padding takes the mouse", st);
+    await page.evaluate(() => { CFG.widgets.bag = {...CFG.widgets.bag, bgon: false}; styleCard(document.querySelector("#ovw-bag"), "bag") });
+    st = await page.evaluate(() => [document.querySelector("#ovw-bag").classList.contains("nobg"), getComputedStyle(document.querySelector("#ovw-bag")).backgroundColor]);
+    if (!st[0] || st[1] !== "rgba(0, 0, 0, 0)") fail("bag card background off", st);
     await page.evaluate(([t, m]) => window.ovData({t, on: false, runT0: null, inv: {}, st: {}, map: {}, feed: [], th: null}), [t, m]);
     st = await page.evaluate(() => [...document.querySelectorAll("#ovw-bag [data-bag]")].map(e => e.classList.contains("idle")));
     if (st.some(x => !x)) fail("bag icons grey when not tracking", st);

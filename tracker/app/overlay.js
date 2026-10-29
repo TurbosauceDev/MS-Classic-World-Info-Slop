@@ -82,6 +82,7 @@ const PARAMS = [
   {k: "sub", sec: "This card", lab: "Detail rows", t: "b", def: true, kinds: ["exp", "kills", "mesos", "status", "kpq"]},
   {k: "lines", sec: "This card", lab: "Lines shown", t: "r", min: 2, max: 14, step: 1, def: {_: 6, loot: 5}, f: Math.round, kinds: ["log", "loot"]},
   {k: "bagl", sec: "This card", lab: "Icons", t: "s", opts: {row: "Side by side", col: "Stacked"}, def: "row", kinds: ["bag"]},
+  {k: "bgon", sec: "This card", lab: "Card background", t: "b", def: true, kinds: ["bag"]},
   {k: "bagn", sec: "This card", lab: "Tab names", t: "b", def: false, kinds: ["bag"]},
   {k: "rows", sec: "This card", lab: "Monsters shown", t: "r", min: 2, max: 14, step: 1, def: 6, f: Math.round, kinds: ["map"]},
 ];
@@ -267,6 +268,7 @@ function styleCard(el, id){
   set("--accent", v("acc") || null); set("--ink", v("txt") || null);
   el.style.textAlign = v("al") === "left" ? "" : v("al");
   el.classList.toggle("showt", v("ttl"));
+  el.classList.toggle("nobg", baseOf(id) === "bag" && !v("bgon"));   // Bag check without its glass card: just the icons
 }
 const PADS = {compact: [6, 9], normal: [9, 13], roomy: [13, 18]};
 // clamp inside the window's own viewport, not the reported desk: the window is the only place a card can live, and on
@@ -385,6 +387,7 @@ function apply(d){
     if (el?.isConnected) el.querySelector(".b").innerHTML = RENDER[baseOf(id)](d, id);
   }
   conds(d); vis(); reflow();
+  if (bagHit && !document.querySelector(".ovw:hover")){ bagHit = false; window.ovhost.hit(false) }   // the card went away under the mouse
   toastsShow(d.toasts);
 }
 // the conditions engine's toasts (0.2.78): a glass stack top-right, gone after 6.5 s or when the tracker pulls them;
@@ -671,8 +674,9 @@ function chipHide(){ clearTimeout(xyT); xyChip?.classList.add("hidden") }
 // hands them back the moment it leaves. A click asks the tracker window to scan that tab. Never while editing (edit
 // mode is for layout, and the whole window already takes the mouse).
 let bagHit = false;
+const bagCard = el => { const c = el?.closest?.(".ovw"); return !!c && baseOf(c.dataset.w) === "bag" };
 addEventListener("mousemove", e => {
-  const on = !CFG.edit && !!e.target.closest?.("[data-bag]");
+  const on = !CFG.edit && bagCard(e.target);   // the whole Bag check card takes the mouse, not only the icons
   if (on !== bagHit){ bagHit = on; window.ovhost.hit(on) }
 });
 addEventListener("pointerdown", e => {
