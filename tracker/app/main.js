@@ -66,7 +66,6 @@ app.whenReady().then(() => {
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#1f1931" : "#e7ddf9",
     // backgroundThrottling off: behind the game or minimized, Chromium would slow the frame timer to once a second and,
     // after 5 minutes, once a minute, so pickup lines would scroll away unread
-    // (the overlay shares this renderer process, see process-per-site above. Trade-off: a renderer crash takes both pages down)
     webPreferences: {preload: path.join(__dirname, "preload.js"), contextIsolation: true, backgroundThrottling: false}});
   // getDisplayMedia() in the page gets the game window, chosen here (no picker)
   session.defaultSession.setDisplayMediaRequestHandler(async (req, cb) => {

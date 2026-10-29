@@ -127,6 +127,15 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.waitForTimeout(350);
     const p1 = await posNow();
     if (p1[0] !== p0[0] || p1[1] !== p0[1]) fail("click moved the card", {p0, p1});
+    // a cancelled drag (focus lost mid-drag) ends like a release: the card stays put when the mouse moves on
+    await page.mouse.move(wob.x + 6, wob.y + 6); await page.mouse.down();
+    await page.mouse.move(wob.x + 40, wob.y + 30, {steps: 3});
+    await page.evaluate(() => dispatchEvent(new Event("blur")));
+    const pc = await posNow();
+    await page.mouse.move(wob.x + 140, wob.y + 90, {steps: 3}); await page.mouse.up(); await page.waitForTimeout(350);
+    const pc2 = await posNow();
+    if (pc2[0] !== pc[0] || pc2[1] !== pc[1]) fail("a card kept following the mouse after the drag was cancelled", {pc, pc2});
+    await page.keyboard.press("Control+z"); await page.waitForTimeout(350);   // this scene's move is one undo step; the next scene expects the earlier layout
     // undo (Ctrl+Z) puts the dragged card back where it was; redo (Ctrl+Y) returns it; the buttons mirror the keys
     if (await page.evaluate(() => document.querySelector("#ovUndo").disabled)) fail("undo enabled after a drag", 0);
     await page.keyboard.press("Control+z"); await page.waitForTimeout(350);

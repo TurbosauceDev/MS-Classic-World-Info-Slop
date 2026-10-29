@@ -833,6 +833,7 @@ addEventListener("pointerdown", e => {
   } else if (!e.target.closest("#ovpanel") && !e.target.closest("#ovinsp")) pick(null);
 });
 addEventListener("pointermove", e => {
+  if ((rz || drag) && e.buttons === 0) return endPtr();   // the release was missed: don't carry on moving
   if (rz){
     if (!rz.on){ if (Math.hypot(e.clientX - rz.px0, e.clientY - rz.py0) < DRAG_PX) return; rz.on = true }   // a click on a handle never resizes
     const dx = e.clientX - rz.px0, dy = e.clientY - rz.py0;
@@ -871,7 +872,7 @@ addEventListener("pointermove", e => {
   chip(Math.round(DESK.x + L) + ", " + Math.round(DESK.y + T), drag.card);
   syncDetail(drag.id);
 });
-addEventListener("pointerup", () => {
+const endPtr = () => {
   chipHide();
   if (rz){ const c = rz.card, was = rz.on; rz = null; if (was){ clampCard(c); reflow() } return }   // a grown box can hang past an edge
   if (!drag) return;
@@ -883,7 +884,11 @@ addEventListener("pointerup", () => {
   savePos(id);
   for (const m of mates){ clampCard(m.el); savePos(m.id) }   // the whole letter lands where the drag left it
   reflow();
-});
+};
+addEventListener("pointerup", endPtr);
+// a drag the browser cancelled (focus left the window, the click-through hand-off): end it like a release, or the card keeps following a free mouse
+addEventListener("pointercancel", endPtr);
+addEventListener("blur", endPtr);
 // Ctrl+scroll resizes the hovered card (WeakAuras' scale slider, at the pointer)
 addEventListener("wheel", e => {
   if (!CFG.edit || !e.ctrlKey) return;
