@@ -657,6 +657,21 @@ const path = require("path"), {chromium} = require("playwright");
       for (const [dt, act] of [[10e3, false], [46e3, false], [181e3, false], [182e3, true], [183e3, false]]){ pace(t0 + dt, act); out.push(FPS) }
       slowCap = true; pace(t0 + 300e3, true); out.push(FPS); pace(t0 + 500e3, false); out.push(FPS); paceReset(); setFps(2); return out });
     if (JSON.stringify(r) !== "[2,1,0.5,2,2,1,0.5]") throw new Error("pace steps: " + JSON.stringify(r)) }
+  // slowCap must release (0.3.20): a burst of slow ticks caps reads at 1 Hz, but it used to hold for the whole session —
+  // ~40 healthy ticks give full speed back, and the cap re-arms if the ticks go slow again
+  { const r = await page.evaluate(() => { const out = []; paceReset(); lastActive = Date.now(); out.push([slowCap, FPS]);
+      for (let i = 0; i < 10; i++) slowCheck(260);
+      out.push(slowCap, document.querySelector("#status").textContent);
+      for (let i = 0; i < 39; i++) slowCheck(100); pace(Date.now(), false); out.push(slowCap, FPS);
+      slowCheck(100); pace(Date.now(), false); out.push(slowCap, FPS);
+      for (let i = 0; i < 10; i++) slowCheck(300); out.push(slowCap);
+      paceReset(); setFps(2); return out });
+    const pre = r[0], SLOW = "Reading once a second to keep your PC smooth (big screen).";
+    if (pre[0] !== false || pre[1] !== 2) throw new Error("slow pre: " + JSON.stringify(r));
+    if (r[1] !== true || r[2] !== SLOW) throw new Error("slow engage: " + JSON.stringify(r));
+    if (r[3] !== true || r[4] !== 1) throw new Error("slow holds during burst recovery: " + JSON.stringify(r));
+    if (r[5] !== false || r[6] !== 2) throw new Error("slow release: " + JSON.stringify(r));
+    if (r[7] !== true) throw new Error("slow re-engage: " + JSON.stringify(r)); }
   // KPQ states (2026-10-29): Kerning City primes it, the 1st stage records the Rush, the first kill in the Bonus map records the Bonus; the
   // round is scored (provisional with no recorded reference) and goes out with the raw numbers
   const ph = await page.evaluate(async () => { const keep = settings, t = Date.now() + 8e5, out = {}; settings = {...settings, share: true}; window.shared = []; session = GrindSession.createSession(G); slicer = {add(){}}; kpqReset();

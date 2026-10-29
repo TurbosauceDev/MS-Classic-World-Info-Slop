@@ -325,7 +325,19 @@ function pace(t, active){
   setFps(slowCap ? Math.min(want, 1) : want, want < 2 ? "quiet" : "active");
 }
 
-let slowTicks = 0, skipped = 0;
+let slowTicks = 0, fastTicks = 0, skipped = 0;
+const SLOW_NOTE = "Reading once a second to keep your PC smooth (big screen).";
+/* slowCap must also release: a single burst of slow ticks (a map load, the first OCR run) used to hold reads at 1 Hz
+   for the rest of the session, which also kept a Chat blocker's bars at 1 Hz (0.3.15's pace fix never got to apply).
+   ~40 healthy ticks (10 s at the blocker's 4 Hz, 40 s at 1 Hz) earns full speed back; a slow tick restarts the count. */
+function slowCheck(ms){
+  if (ms > 250){ if (++slowTicks >= 10 && !slowCap){ slowCap = true; $("#status").textContent = SLOW_NOTE } fastTicks = 0; return }
+  slowTicks = 0;
+  if (!slowCap) return;
+  if (++fastTicks < 40) return;
+  slowCap = false; fastTicks = 0;
+  if ($("#status").textContent === SLOW_NOTE) $("#status").textContent = "";
+}
 async function tick(){
   if (timer == null) return;   // stopped
   const t = Date.now(), eng = engine, sess = session;
@@ -393,10 +405,9 @@ async function tick(){
   if (timer == null || sess !== session) return;
   try { renderSnaps(render()) } catch {}
   try { feedAdd(feed?.step(session.state, t, feedWho())) } catch {}
-  // over 250 ms a frame, 10 times running: read once a second instead of twice
+  // over 250 ms a frame, 10 times running: read once a second instead of twice; fast again for ~40 ticks: full speed back
   const ms = Date.now() - t; perf("tick", ms);
-  slowTicks = ms > 250 ? slowTicks + 1 : 0;
-  if (slowTicks >= 10 && !slowCap){ slowCap = true; $("#status").textContent = "Reading once a second to keep your PC smooth (big screen)." }
+  slowCheck(ms);
   pace(t, active);
   if (t - perfLogged > 60e3){ perfLogged = t; const l = perfLine(); if (l) log("perf", {text: l}) }
   timer = setTimeout(tick, Math.max(50, 1000 / FPS - ms));
