@@ -16,7 +16,7 @@ async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders
   // from the OCR cache nearly every time; the wide status bar crop (HP/MP/EXP digits make it different every time, ~100 ms)
   // is only the fallback when the box didn't give a job
   let boxText = "";
-  if (nc){ boxText = await ocrText(nc); const n = GrindReaders.nameFromText(boxText); if (n && n === charSeen && n !== charName){ charName = n; note("Character: " + n) } charSeen = n }
+  if (nc){ boxText = await ocrText(nc); const n = GrindReaders.nameFromText(boxText); if (n && n === charSeen && n !== charName){ charName = n; note("Character: " + n); jr.note(t, "CHARACTER", n) } charSeen = n }
   if (settings.job) return;
   let job = boxText ? GrindReaders.jobFromText(boxText) : null;
   if (!job){
@@ -335,6 +335,7 @@ async function tick(){
       if (check && /^(exp|bonus|meso|item|itemraw)$/.test(e.type) && !check.lines){ check.lines = true; check.late = check.ended }
     }
     const info = r.info; lastInvTab = info.inv || null;
+    jr.hud(t, !!info.bar); jr.tick(t);   // journey log (renderer-journal.js)
     // the inventory's spot, remembered for next time (saved when it moved, at most every 10 s)
     const ia = info.invAt, il = settings.invLast;
     if (ia && (!il || Math.abs(ia.x - il.x) + Math.abs(ia.y - il.y) > 0.005) && t - invSavedT > 10e3){ invSavedT = t; host.settings({invLast: ia}).then(x => settings = x) }
@@ -499,7 +500,7 @@ const deaths = {confirmed: 0, lost: 0, unseen: 0};
 async function checkDeath(c, t){   // c: the chat box crop (GrindReaders.chatCrop)
   const sess = session, text = await host.ocr(await toPng(c)), lost = GrindReaders.deathFromText(text);
   if (sess !== session || !deathPending) return;
-  if (lost){ deaths.confirmed++; deaths.lost += lost; deathPending = null; log("death", {lost}); note(`Death confirmed in chat: lost ${fmt(lost)} EXP`, "death") }
+  if (lost){ deaths.confirmed++; deaths.lost += lost; deathPending = null; log("death", {lost}); note(`Death confirmed in chat: lost ${fmt(lost)} EXP`, "death"); jr.death(t, lost) }
   else if (++deathPending.tries >= 3){ deaths.unseen++; deathPending = null; log("death", {lost: null}) }
 }
 

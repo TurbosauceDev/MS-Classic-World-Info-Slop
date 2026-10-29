@@ -27,6 +27,7 @@ host.onBag?.(tab => { if (INV_TABS.some(x => x[0] === tab)) bagRead(tab) });
 let starting = false, ICONS = null;
 async function start(){
   if (starting) return;   // a double click starts one capture, not two
+  jr.yield();   // the journey log's watch hands the capture over
   starting = true; $("#status").className = ""; $("#status").textContent = "Opening the MapleStory window...";
   FPS = 2; slowTicks = 0;   // before the capture opens: it runs at FPS frames a second
   try { await startCapture(); ICONS ||= await GrindReaders.loadIcons(G).catch(() => []) }   // once: potion/arrow pictures for the counts
@@ -35,6 +36,7 @@ async function start(){
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: goalOf(), freeIds: freeIds()}); stopWarned = false;
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
+  jr.runStart(session);
   wrap = null; runT0 = Date.now(); $("#summary").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   kpqReset(); held = false; barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; boxHad = 0; boxPending = null; boxSeen = new Map(); Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
@@ -86,7 +88,7 @@ async function discard(){
   if (stopping || timer == null) return;
   stopping = true; lockGo(3000);
   try {
-    clearTimeout(timer); timer = null; engine?.close(); clearInterval(autoTimer); autoTimer = null;
+    jr.runStop("discard"); clearTimeout(timer); timer = null; engine?.close(); clearInterval(autoTimer); autoTimer = null;
     video?.srcObject?.getTracks().forEach(tr => tr.stop());
     await host.autosave?.(null);
   } finally { stopping = false; wrap = null }
@@ -101,7 +103,7 @@ for (const id of ["#wrapDrop", "#miniWrapDrop", "#fzWrapDrop"]) $(id).onclick = 
 async function stopNow(){
   log("stop", {engine: engine?.kind, skipped});
   if (!wrap && video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {}); if (check && !check.ended){ check = null; renderCheck() }
-  clearTimeout(timer); timer = null; engine?.close(); $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = ""; $("#fzParty").textContent = "";
+  jr.runStop("stop"); clearTimeout(timer); timer = null; engine?.close(); $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = ""; $("#fzParty").textContent = "";
   video?.srcObject?.getTracks().forEach(tr => tr.stop());
   // a failed save (disk full, folder locked) must not leave the button saying Stop
   // the start/end readings go with it: History's EXP/hr comes from them when both are complete

@@ -770,6 +770,13 @@
       <label class="chk" title="How long a bag tab stays green after it was read. Yellow after that, orange after 30 s, red and glowing at 2 min."><span>Bag tab stays fresh for</span> <input type="number" id="bagEvery" min="1" max="30" step="1" style="width:52px" aria-label="Bag check minutes"> <span>min</span></label>
       <label class="chk"><input type="checkbox" id="autoPause"> <span>Pause when the game screen is gone (Cash Shop, changing channel)</span></label>
     </div>
+    <div class="card" data-nav="Journey log"><h3>Journey log</h3>
+      <p class="note">A timestamped text log of what the tracker sees on screen: login, map changes, combat starting and ending, EXP, level-ups, deaths, mesos, pickups, potions used, inventory changes. Screen reading only. Off by default; the file never leaves your PC.</p>
+      <label class="chk"><input type="checkbox" id="jrOn"> <span>Write the journey log</span></label>
+      <label class="chk" title="Reads the game window slowly (once a second, slower when nothing changes) while no run is tracked. Windows shows its capture border while it does."><input type="checkbox" id="jrWatch"> <span>Also log between runs (the app watches the game while no run is tracked)</span></label>
+      <label class="chk"><span>Keep at most</span> <input type="number" id="jrMb" min="5" max="500" step="5" style="width:64px" aria-label="Journey log size in megabytes"> <span>MB (oldest files are deleted)</span></label>
+      <div class="row"><button id="jrOpen" class="alt">Open the log folder</button> <span id="jrInfo" class="note"></span></div>
+    </div>
     <div class="card" data-nav="Party"><h3>Party</h3>
       <div class="row"><label>Party code <input id="pcode" maxlength="20" size="10" placeholder="optional"></label>
         <label>Name <input id="nick" maxlength="12" size="8" placeholder="optional"></label></div>
@@ -853,6 +860,7 @@
   <script src="../core/prices.js"></script>
   <script src="../core/ocrcache.js"></script>
   <script src="../core/bagstale.js"></script>
+  <script src="../core/combatlog.js"></script>
   <script src="readers.js"></script>
   <script src="themes.js"></script>
   <script src="changelog.js"></script>
@@ -862,6 +870,7 @@
   <script src="renderer-alerts.js"></script>
   <script src="renderer-site.js"></script>
   <script src="renderer-run.js"></script>
+  <script src="renderer-journal.js"></script>
   <script src="renderer-history.js"></script>
   <script src="renderer-settings.js"></script>
   <script src="renderer-palette.js"></script>

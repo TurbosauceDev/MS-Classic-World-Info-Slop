@@ -378,7 +378,7 @@ $("#updGo").onclick = async () => {
   $("#kpqAct").value = settings.kpqAct || "auto"; $("#kpqMode").value = settings.kpqMode === "Rush" ? "Rush" : "Bonus";
   $("#bagMain").checked = bagCfg().main; $("#bagEvery").value = bagCfg().every;
   $("#autoPause").checked = settings.autoPause !== false;   // on unless turned off   // on unless turned off
-  goalUi(); meatUi();
+  goalUi(); meatUi(); jrUi();
   $("#pcode").value = settings.partyCode || "";
   $("#nick").value = settings.nick || "";
   $("#guide").classList.toggle("hidden", !!settings.guideDone);

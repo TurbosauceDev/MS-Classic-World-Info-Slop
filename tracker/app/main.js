@@ -476,6 +476,14 @@ ipcMain.handle("save-session", (_, summary) => {   // kept on this PC only (shar
 // crash recovery (core/autosave.js): the running session every minute, offered back on the next launch
 ipcMain.handle("autosave", (_, summary) => summary ? AUTO.write(SESSIONS, summary) : AUTO.clear(SESSIONS));
 ipcMain.handle("autosave-get", () => AUTO.read(SESSIONS));
+// journey log (core/combatlog.js lines, written by core/journalfile.js): only while settings.journal is on; the cap is
+// settings.journalMb (total, 5-500, default 40), files of 4 MB, at most 10 kept
+const JOURNAL = path.join(app.getPath("userData"), "journal");
+let journalW = null, journalMb = 0;
+const journal = () => { const mb = Math.min(500, Math.max(5, Math.round(+readSettings().journalMb) || 40)); if (!journalW || mb !== journalMb){ journalMb = mb; journalW = require("../core/journalfile.js").createWriter(JOURNAL, {app: app.getVersion(), maxBytes: mb * 1e6, maxFiles: Math.max(10, Math.ceil(mb / 4))}) } return journalW };
+ipcMain.handle("journal-write", (_, lines) => readSettings().journal ? journal().append(lines) : 0);
+ipcMain.handle("journal-info", () => journal().info());
+ipcMain.handle("journal-open", () => shell.openPath(JOURNAL));
 // party view: post this tracker's live numbers with the party code, get everyone with the same code (server keeps them an hour)
 ipcMain.handle("party", async (_, live) => {
   const st = readSettings();
