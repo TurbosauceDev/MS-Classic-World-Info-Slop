@@ -282,6 +282,10 @@
   body.skin-elv .toast, body.skin-elv #ovpanel, body.skin-elv #ovinsp { -webkit-backdrop-filter:none; backdrop-filter:none;
     background:color-mix(in srgb, var(--panel) 96%, transparent); box-shadow:none; }
   body.skin-elv .trk { background:color-mix(in srgb, var(--bg) 55%, #000); }   /* the ElvUI bar: dark track, flat fill */
+  /* Claude's 0.2.96-0.2.109 cards fall in line too: the Chat blocker's HP/MP/EXP bars and the Bag check icon pills
+     were born after the skin and kept their rounded corners — square in Elv like every other bar and button. */
+  body.skin-elv .vb, body.skin-elv .vb i, body.skin-elv .bagI,
+  body.skin-elv .ovw .b::-webkit-scrollbar-thumb { border-radius:0; }
   body.skin-elv .ovw header .t, body.skin-elv .ovw .big, body.skin-elv .mapname { text-shadow:none; }   /* clean type */
   /* readability pass 2 (Danny 10-29: "another iteration on readability"): the Elv face is condensed, so the small
      grey text steps up a point where it carries real information — sub-lines, detail rows, section marks. */

@@ -22,3 +22,10 @@
 - Minimap name: mapTextRect/mapCropAt split + rd.mapRect fallback crop; readMap clears only after 30 s of no reads.
 - Elv: resize handles + group badges square (skin-elv radius 0 list).
 - Tests: overlay.test.js += edge-only, group-delta, snap engage/hold/release; 12/12 suites green; version 0.3.0.
+
+## 2026-10-29 ~02:4xZ — Glorg: clash review of Claude's 0.2.96→0.3.3 arc (Danny's "make sure it doesnt clash")
+- Verdict: arc is cleanly integrated (blocker/bag ride KINDS/PARAMS; blocker excluded from reflow+z; undo/redo composes with snap/groups). Nothing reverted.
+- Fix 1 (0.3.5): keep-apart reflow triggered on GAP-expanded rects — flush snap pairs drifted 8 px on every push; now real-cover only with 0.5 px epsilon (fit-content fractional heights); GAP kept in the correction distance.
+- Fix 2 (0.3.5): Elv skin squares the blocker HP/MP/EXP bars + bag pills (born after the skin, stayed rounded).
+- Housekeeping: docs-gate red on 0.3.0 (bare overlay.js path in mailbox note) fixed; monkey seed 1 flake confirmed pre-existing (fails ~3/4 clean-tree, step 81 logBox width); version → 0.3.5 + changelog entry (renumbered from 0.3.4 — Claude released a 0.3.4 mid-review).
+- Tests: 13/13 suites green on merged tree; overlay.test += flush-survives-reflow (pinned + fit-content) and cover-still-separates scenes; screenshot download/elv-clash-review.png; mailbox note for Claude (epsilon rule + skin fall-in-line rule for new components).

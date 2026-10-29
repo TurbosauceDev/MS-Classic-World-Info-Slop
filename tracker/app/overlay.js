@@ -323,10 +323,13 @@ function clampCard(el){
   el.style.top = Math.min(Math.max(0, el.offsetTop), Math.max(0, Math.floor(innerHeight - h))) + "px";
 }
 // Cards keep apart (Danny 10-28: Status ran under Mesos, Mesos' "loot/hr 16,9.." was cut off by Kills): numbers grow wider as a
-// run goes on, so after every render and every placement the cards are walked top-left to bottom-right and any that overlap
-// are nudged — right if there is room, else down — a GAP clear of what is already placed. Only the DISPLAY moves: x/y in
+// run goes on, so after every render and every placement the cards are walked top-left to bottom-right and any that COVER each
+// other are nudged — right if there is room, else down — a GAP clear of what is already placed. Only the DISPLAY moves: x/y in
 // settings stay where the player put them, so the cards settle back when the numbers shrink. Skipped mid-drag/resize.
-const GAP = 8;
+// The trigger is a real cover (0.3.0): cards that are merely CLOSE — a snapped-flush pair, or two cards set a few px apart —
+// are the user's layout and stay put; the old GAP-expanded test separated flush pairs by 8 px on every push, so the sticky
+// snap's flush never survived the release (the card drifted off its neighbour without being touched).
+const GAP = 8, COVER_EPS = 0.5;   // fit-content cards measure fractionally: a sub-pixel kiss is a flush pair, not a cover
 function reflow(){
   if (drag || rz) return;
   const all = [...document.querySelectorAll(".ovw")].filter(el => el.isConnected), els = all.filter(el => el.dataset.k !== "blocker");   // the Chat blocker sits under everything: others may overlap it
@@ -336,7 +339,7 @@ function reflow(){
   for (const o of order){
     for (let n = 0; n < 24; n++){
       let r = rect(o.el);
-      const hit = placed.find(p => r.l < p.r + GAP && r.r + GAP > p.l && r.t < p.b + GAP && r.b + GAP > p.t);
+      const hit = placed.find(p => r.l < p.r - COVER_EPS && r.r > p.l + COVER_EPS && r.t < p.b - COVER_EPS && r.b > p.t + COVER_EPS);
       if (!hit) break;
       const dx = hit.r + GAP - r.l, dy = hit.b + GAP - r.t, w = r.r - r.l, h = r.b - r.t;
       const canX = r.l + dx + w <= innerWidth, canY = r.t + dy + h <= innerHeight;

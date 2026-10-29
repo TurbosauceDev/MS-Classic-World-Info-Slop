@@ -320,6 +320,42 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.mouse.up();
     st = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);
     if (st !== snapT) fail("dropped card clamps back inside", {want: snapT, got: st});
+    // flush pairs survive reflow (0.3.0 review finding): keep-apart (0.2.87) triggered on GAP-expanded rects, so a
+    // pair the sticky snap held flush was pushed 8 px apart on release and again on every push — snap has to work
+    // with the user, so the trigger is now a real cover and a flush pair stays flush. Pinned boxes: exact rects,
+    // no dependence on leftover state or text metrics.
+    st = await page.evaluate(() => { const keep = JSON.stringify(CFG.widgets);
+      CFG.widgets = {stat: {on: true, x: 300, y: 300, w: 200, h: 80}, bar: {on: true, x: 300, y: 380, w: 200, h: 60}};
+      profCards(); place();
+      const b1 = document.querySelector("#ovw-bar"), flush = [b1.offsetLeft, b1.offsetTop];
+      apply({t: Date.now(), on: true, state: "Tracking · 12 min farmed", runT0: Date.now() - 7530e3, st: {activeMin: 12.5, expHr: 42500, pct: 42}, map: {}, feed: [], th: null});   // a push re-runs reflow
+      const b2 = document.querySelector("#ovw-bar"), s2 = document.querySelector("#ovw-stat");
+      return [flush, b2.offsetLeft, b2.offsetTop, s2.offsetTop + s2.offsetHeight, keep] });
+    if (st[2] !== 380 || st[1] !== 300 || st[2] !== st[3]) fail("flush pair survives reflow", st);
+    const keepAll = st[4];   // the layout the earlier scenes left, handed back after the reflow scenes
+    // fit-content cards measure fractionally: the 0.5 px epsilon keeps a sub-pixel kiss from counting as a cover
+    st = await page.evaluate(() => { CFG.widgets = {stat: {on: true, x: 300, y: 300}, bar: {on: true, x: 300, y: 0}};
+      profCards(); place();
+      const s = document.querySelector("#ovw-stat"), b = document.querySelector("#ovw-bar");
+      CFG.widgets.bar = {...CFG.widgets.bar, x: 300, y: s.offsetTop + s.offsetHeight};
+      place(); reflow();
+      const s2 = document.querySelector("#ovw-stat"), b2 = document.querySelector("#ovw-bar");
+      return [b2.offsetLeft, b2.offsetTop, s2.offsetTop + s2.offsetHeight] });
+    if (st[0] !== 300 || Math.abs(st[1] - st[2]) > 1) fail("fit-content flush pair survives reflow", st);
+    // a real cover still separates (the 0.2.87 bug stays fixed): a card dropped onto another is nudged GAP clear, and
+    // only the display moves — the saved spots come back when the cards are placed again
+    st = await page.evaluate(() => { CFG.widgets = {stat: {on: true, x: 300, y: 300, w: 200, h: 80}, mesos: {on: false, x: 450, y: 340}};
+      profCards(); place();
+      const c = mkCard("mesos"); $("#ovroot").appendChild(c);   // dropped on stat raw: no reflow yet
+      c.style.left = "450px"; c.style.top = "340px";
+      const cov = () => { const a = document.querySelector("#ovw-stat").getBoundingClientRect(), b = document.querySelector("#ovw-mesos").getBoundingClientRect();
+        return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top };
+      const before = cov(), saved = CFG.widgets.mesos.x + "," + CFG.widgets.mesos.y;
+      reflow();
+      const savedAfter = CFG.widgets.mesos.x + "," + CFG.widgets.mesos.y;
+      return [before, cov(), saved, savedAfter] });
+    if (!st[0] || st[1] || st[2] !== st[3]) fail("real cover separates, saved spots stay", st);
+    await page.evaluate(k => { CFG.widgets = JSON.parse(k); profCards(); place() }, keepAll);   // hand the layout back
     await page.evaluate(() => { CFG.widgets.status = {...CFG.widgets.status, x: 900, y: 60}; place() });   // out of the grid scene's way
     // the alignment grid shows and hides, and while it's on (with snap off) drops round to the grid lines (WoW Edit Mode)
     await page.check("#ovGrid");
@@ -640,6 +676,15 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.evaluate(t => window.ovData({t, on: false, st: {}, vit: null, map: {}, feed: [], th: null}), t);
     st = await page.evaluate(() => [...document.querySelectorAll("#ovw-blocker .vb")].map(e => e.classList.contains("stale") + ":" + e.querySelector(".vn").textContent));
     if (JSON.stringify(st) !== JSON.stringify(["true:—", "true:—", "false:—"])) fail("blocker with no read", st);
+    // the Elv skin squares Claude's later additions too (0.3.0 review): the blocker's HP/MP/EXP bars and the Bag check
+    // pills were born after the skin and kept rounded corners — in Elv they fall in line, in glass they keep their own
+    await page.evaluate(t => window.ovData({t, on: true, st: {level: 40, pct: 12.5}, vit: {hp: [450, 900], mp: [100, 400], t}, map: {}, feed: [],
+      th: {c: {bg: "#101010", panel: "#202020", ink: "#ffffff", muted: "#999999", line: "#3f3f3f", accent: "#ff8800", soft: "#222222", on: "#ffffff", leaf: "#55b76b", warn: "#e5821f", bad: "#e63333"}, mode: "dark", sk: "elv"}}), t);
+    st = await page.evaluate(() => [document.body.classList.contains("skin-elv"), getComputedStyle(document.querySelector("#ovw-blocker .vb")).borderRadius, getComputedStyle(document.querySelector("#ovw-bag .bagI")).borderRadius]);
+    if (st[0] !== true || st[1] !== "0px" || st[2] !== "0px") fail("elv squares the blocker bars + bag pills", st);
+    await page.evaluate(t => window.ovData({t, on: true, st: {level: 40, pct: 12.5}, vit: {hp: [450, 900], mp: [100, 400], t}, map: {}, feed: [], th: {c: {accent: "#ff8800"}, mode: "dark"}}), t);
+    st = await page.evaluate(() => [document.body.classList.contains("skin-elv"), getComputedStyle(document.querySelector("#ovw-blocker .vb")).borderRadius, getComputedStyle(document.querySelector("#ovw-bag .bagI")).borderRadius]);
+    if (st[0] !== false || st[1] !== "3px" || st[2] !== "8px") fail("glass keeps the bars' own radii", st);
     await page.evaluate(() => setOn("blocker", false));
     if (errors.length) throw new Error("blocker page errors: " + errors.join(" | "));
     await page.close();
