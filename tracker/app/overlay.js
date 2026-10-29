@@ -173,7 +173,7 @@ function bagRow(d, lay, names){
 // the readers found in the game pixels (HP/MP: readVitalsAny, EXP: the level bar). Nothing here reads the game.
 function vbar(cls, label, cur, max, pct, num, stale){
   const f = pct == null ? 0 : clamp(pct, 0, 100);
-  return `<div class="vb ${cls}${stale ? " stale" : ""}" title="${esc(label)}"><i style="width:${f.toFixed(1)}%"></i><span class="vl">${esc(label)}</span><span class="vn">${num ? (cur == null ? "—" : cur === "pct" ? pct.toFixed(2) + "%" : fmt(cur) + " / " + fmt(max)) : ""}</span></div>`;
+  return `<div class="vb ${cls}${stale ? " stale" : ""}" title="${esc(label)}"><u style="width:${f.toFixed(1)}%"></u><i style="width:${f.toFixed(1)}%"></i><span class="vl">${esc(label)}</span><span class="vn">${num ? (cur == null ? "—" : cur === "pct" ? pct.toFixed(2) + "%" : fmt(cur) + " / " + fmt(max)) : ""}</span></div>`;
 }
 const RENDER = {
   blocker(d, id){
@@ -468,12 +468,26 @@ function fitRows(id, lineH){
   const h = (el.offsetHeight || 0) - (head?.offsetHeight || 0) - (parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + 2);
   return Math.max(0, Math.floor(h / lineH));
 }
+// The Chat blocker's bars are patched in place, never rebuilt: a rebuilt element has no old width to ease from, so nothing could
+// animate. Same bars as before -> only widths and numbers change (CSS eases the fill; the <u> ghost trails behind it slowly).
+function barsPatch(b, html, bars){
+  if (bars){
+    const t = document.createElement("div"); t.innerHTML = html;
+    const old = [...b.querySelectorAll(".vb")], nu = [...t.querySelectorAll(".vb")];
+    if (old.length && old.length === nu.length && old.every((e, i) => e.className.split(" ")[1] === nu[i].className.split(" ")[1]) && b.querySelector(".vbars")?.className === t.querySelector(".vbars").className){
+      old.forEach((e, i) => { e.className = nu[i].className; e.title = nu[i].title; e.querySelector("i").style.width = nu[i].querySelector("i").style.width; e.querySelector("u").style.width = nu[i].querySelector("u").style.width;
+        e.querySelector(".vl").textContent = nu[i].querySelector(".vl").textContent; e.querySelector(".vn").textContent = nu[i].querySelector(".vn").textContent });
+      return;
+    }
+  }
+  b.innerHTML = html;
+}
 function apply(d){
   DATA = d;
   if (d.th) theme(d.th);
   for (const id of ids()){
     const el = $("#ovw-" + id);
-    if (el?.isConnected){ const b = el.querySelector(".b"); b.classList.toggle("flow", FLOW.has(baseOf(id))); b.innerHTML = RENDER[baseOf(id)](d, id); }
+    if (el?.isConnected){ const b = el.querySelector(".b"); b.classList.toggle("flow", FLOW.has(baseOf(id))); barsPatch(b, RENDER[baseOf(id)](d, id), baseOf(id) === "blocker"); }
   }
   conds(d); vis(); reflow();
   if (bagHit && !document.querySelector(".ovw:hover")){ bagHit = false; window.ovhost.hit(false) }   // the card went away under the mouse

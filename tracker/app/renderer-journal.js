@@ -2,6 +2,7 @@
 // Off by default (Settings > Journey log). On: every event the readers see goes to the log, during a tracked run (tapped off
 // session.add) and between runs ("watch": the game window read at a low, self-slowing rate, bar + chat lines + map name only,
 // nothing counted). Screen pixels only. A run takes the capture over from the watch; Stop hands it back.
+const BAR_FPS = 4;   // reads a second while a Chat blocker is on (0.3.5; was 2). Whole-frame read ~6 ms (tests/cv_bench.js), so ~2.4 % of one core
 let ovBlocker = false;   // a Chat blocker card is on (main.js ov-state, set in renderer-overlay.js): the idle watch keeps reading HP/MP/EXP. Here because this file loads first
 const jr = (() => {
   const J = GrindJournal;
@@ -21,7 +22,7 @@ const jr = (() => {
   async function open(){
     if (!await host.gameFound()) return false;
     await host.wholeScreen(false);
-    FPS = ovBlocker ? 2 : 1;   // capture rate (openStream asks for it); a run sets 2 itself. A blocker wants the bars twice a second
+    FPS = ovBlocker ? BAR_FPS : 1;   // capture rate (openStream asks for it); a run sets 2 itself. A blocker wants the bars BAR_FPS times a second
     try { await openStream() } catch { return false }
     if (!video.videoWidth || isBlack()){ video.srcObject?.getTracks().forEach(tr => tr.stop()); return false }
     return true;
@@ -45,7 +46,7 @@ const jr = (() => {
   async function loop(){
     const me = w; if (!me) return;
     if (!wanted()) return end(on() ? "run" : "off");
-    const t = Date.now(); let wait = ovBlocker ? 500 : pace(t, me.last);
+    const t = Date.now(); let wait = ovBlocker ? 1000 / BAR_FPS : pace(t, me.last);
     try {
       if (!video?.srcObject?.active){   // closed game, or a snapshot/potion look stopped the stream
         if (!await open()){ if (++me.miss >= 3) return end("game_closed"); throw null }

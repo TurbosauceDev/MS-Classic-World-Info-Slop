@@ -312,3 +312,4 @@ Each entry blocks something. When Danny calls it, transcribe above with the date
 - 2026-10-29 (Danny): Overlay edit mode needs Undo (button + Ctrl+Z) and boxes must not move on a click: drag threshold 6 px.
 - 2026-10-29: Danny: OCR'd map names not matching a known map are junk noise, discard (no keep-as-read for unknown maps).
 - 2026-10-29 (Danny): Chat blocker HP/MP/EXP bars should work outside tracked runs too; built on the journey-log watch (0.3.4).
+- 2026-10-29 (Danny): Chat blocker bars should animate smoothly and be read more often; 4 reads/s while a blocker is on (0.3.6).

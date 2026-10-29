@@ -139,7 +139,9 @@
   .ovw[data-k="blocker"] .b { height:100%; display:flex; align-items:center; }
   .vbars { display:flex; gap:8px; width:100%; } .vbars.col { flex-direction:column; } .vbars.col .vb { flex:0 0 20px; }   /* stacked: a 0 basis collapsed the bars to nothing */
   .vb { position:relative; flex:1 1 0; min-width:0; height:20px; border-radius:3px; overflow:hidden; background:color-mix(in srgb, var(--bg) 55%, #000); border:1px solid color-mix(in srgb, var(--line) 70%, transparent); font-size:11px; font-weight:700; color:#fff; }
-  .vb i { position:absolute; inset:0 auto 0 0; transition:width .25s ease; }
+  .vb i, .vb u { position:absolute; inset:0 auto 0 0; }
+  .vb i { transition:width .4s cubic-bezier(.22,.8,.3,1); }   /* the fill eases to each new reading */
+  .vb u { text-decoration:none; background:rgba(255,255,255,.35); transition:width 1s ease .3s; }   /* the ghost: a drop shows as a pale trail that drains after the fill */
   .vb.hp i { background:#c8372d; } .vb.mp i { background:#2f6fd0; } .vb.xp i { background:#d9a21b; }
   .vb span { position:absolute; top:0; bottom:0; display:flex; align-items:center; padding:0 6px; text-shadow:0 1px 2px rgba(0,0,0,.8); white-space:nowrap; }
   .vb .vl { left:0; } .vb .vn { right:0; }

@@ -669,6 +669,11 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     st = await page.evaluate(() => [...document.querySelectorAll("#ovw-blocker .vb")].map(e => { const r = e.getBoundingClientRect(); return [Math.round(r.height), Math.round(r.top)] }));
     if (st.some(x => x[0] !== 20) || !(st[0][1] < st[1][1] && st[1][1] < st[2][1])) fail("stacked blocker bars", st);
     await page.evaluate(() => setP("blocker", "vlay", "row"));
+    // smooth bars (Danny 10-29): a new reading patches the same elements (so CSS can ease) and a ghost trail follows the fill
+    st = await page.evaluate(t => { const el = document.querySelector("#ovw-blocker .vb.hp i"); el.dataset.keep = "1";
+      window.ovData({t, on: true, st: {level: 40, pct: 12.5}, vit: {hp: [300, 900], mp: [100, 400], t}, map: {}, feed: [], th: null});
+      const n = document.querySelector("#ovw-blocker .vb.hp i"); return [n.dataset.keep, n.style.width, document.querySelector("#ovw-blocker .vb.hp u").style.width, getComputedStyle(n).transitionProperty, getComputedStyle(n).transitionDuration] }, t);
+    if (st[0] !== "1" || st[1] !== "33.3%" || st[2] !== st[1] || st[3] !== "width" || st[4] === "0s") fail("blocker bars patched in place with easing", st);
     // resize like any card, no vitals yet = empty bars (dimmed), removing the blocker lifts the capture exclusion
     await page.evaluate(() => setP("blocker", "w", 800));
     const w = await page.evaluate(() => Math.round(document.querySelector("#ovw-blocker").getBoundingClientRect().width));
