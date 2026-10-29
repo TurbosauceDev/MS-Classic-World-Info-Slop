@@ -78,6 +78,24 @@ async function finish(){
   try { showSummary(t1) } catch (e){ log("summary", {err: e.message}) }
   $("#runName").value = $("#wrapName").value = $("#runNote").value = "";
 }
+// Discard run (Danny 2026-10-29: an accidental Start leaves a few-second log): same wrap-up as Finalize but nothing is saved.
+// Two clicks: the first arms the button (red, "Really discard?") for 5 s, the second throws the run away.
+async function discard(){
+  if (stopping || timer == null) return;
+  stopping = true; lockGo(3000);
+  try {
+    clearTimeout(timer); timer = null; engine?.close(); clearInterval(autoTimer); autoTimer = null;
+    video?.srcObject?.getTracks().forEach(tr => tr.stop());
+    await host.autosave?.(null);
+  } finally { stopping = false; wrap = null }
+  renderState(session?.stats()); resetTracker(); $("#status").textContent = "Run discarded. Nothing was saved."
+}
+function armDiscard(btn){
+  if (btn.classList.contains("armed")){ clearTimeout(btn._t); btn.classList.remove("armed"); btn.textContent = btn.dataset.label; return discard() }
+  btn.dataset.label = btn.textContent; btn.classList.add("armed"); btn.textContent = "Really discard?";
+  btn._t = setTimeout(() => { btn.classList.remove("armed"); btn.textContent = btn.dataset.label }, 5000);
+}
+for (const id of ["#wrapDrop", "#miniWrapDrop", "#fzWrapDrop"]) $(id).onclick = () => armDiscard($(id));
 async function stopNow(){
   log("stop", {engine: engine?.kind, skipped});
   if (!wrap && video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {}); if (check && !check.ended){ check = null; renderCheck() }

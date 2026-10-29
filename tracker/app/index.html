@@ -166,7 +166,7 @@
   #helpBtn { padding:5px 10px; font-size:12px; font-weight:600; }
   #help details { border-top:1px solid var(--line); padding:6px 0; } #help details:first-of-type { border-top:0; }
   #help summary { cursor:pointer; font-weight:600; } #help ul { margin:6px 0 2px; padding-left:18px; } #help li { margin:3px 0; }
-  #patchList p { margin:4px 0; } #patchList b { font-variant-numeric:tabular-nums; }
+  #patchList p { margin:4px 0; } .patchv { margin:10px 0 2px; } .patchv ~ ul, #patchList ul { margin:2px 0 6px; padding-left:18px; } #patchList li { margin:2px 0; } .discard.armed { background:#a33; border-color:#c55; color:#fff } #patchList b { font-variant-numeric:tabular-nums; }
   /* green = gained, red = lost or spent */
   .pos { color:var(--leaf); } .neg { color:var(--bad); }
   tr.th td { color:var(--muted); font-size:12px; border-bottom:1px solid var(--line); }
@@ -434,7 +434,7 @@
   <div id="titlebar"><span class="tbname">Grind Tracker</span><button data-menu="File">File</button><button data-menu="View">View</button><button data-menu="Help">Help</button><button id="tbBtn" aria-expanded="false" title="Modules toolbox: drag modules into your layout (Ctrl+Shift+K)" aria-label="Modules">▦<span class="tbw"> Modules</span></button></div>
   <div class="card" id="mini">
     <div class="mhead"><span id="miniState"></span><button id="miniFull" class="alt" title="Back to the full window">Full view</button></div>
-    <div class="row hidden" id="miniWrap" role="status"><span id="miniWrapText" style="flex:1;min-width:0"></span><button id="miniWrapEnd" title="Saves the run to History (the summary waits in the full view)">Finalize log</button></div>
+    <div class="row hidden" id="miniWrap" role="status"><span id="miniWrapText" style="flex:1;min-width:0"></span><button id="miniWrapEnd" title="Saves the run to History (the summary waits in the full view)">Finalize log</button><button id="miniWrapDrop" class="alt discard" title="Throws this run away without saving it">Discard run</button></div>
     <!-- Simple Mode (Danny 2026-10-23, his B2 <Subway Depot> mockup): where, who, EXP gained, level bar, potions + money, EXP per minute -->
     <div class="smHead"><div style="min-width:0"><div class="smMap" id="smMap">No map yet</div><div class="smWho" id="smWho" hidden></div></div><div class="smSpawns note" id="smSpawns" title="Monster spawn points on this map (game files)"></div></div>
     <div class="smRow3">
@@ -464,7 +464,7 @@
        data as Simple Mode in one centred column — hero, stat tiles, level bar, chart, potions and mesos, run log, top lists -->
   <div id="focus">
     <div class="fzHead"><span class="fzWord"><b>Grind</b> Tracker</span><span id="fzState"></span><button id="fzFull" class="alt" title="Back to the full window">Full view</button></div>
-    <div class="row hidden" id="fzWrap" role="status"><span id="fzWrapText" style="flex:1;min-width:0"></span><button id="fzWrapEnd" title="Saves the run to History (the summary waits in the full view)">Finalize log</button></div>
+    <div class="row hidden" id="fzWrap" role="status"><span id="fzWrapText" style="flex:1;min-width:0"></span><button id="fzWrapEnd" title="Saves the run to History (the summary waits in the full view)">Finalize log</button><button id="fzWrapDrop" class="alt discard" title="Throws this run away without saving it">Discard run</button></div>
     <div class="fzCard fzHero">
       <div class="smMap" id="fzMap">No map yet</div>
       <div class="smWho" id="fzWho" hidden></div>
@@ -516,7 +516,7 @@
     <div class="step">2. Name and note (optional)</div>
     <input id="wrapName" maxlength="60" aria-label="Run name" placeholder="Run name, e.g. KPQ run 1" style="width:100%">
     <textarea id="runNote" maxlength="1000" rows="3" aria-label="Note about this run" placeholder="A note for later: party, channel, buffs, what went well or wrong..."></textarea>
-    <div class="row"><button id="wrapEnd" title="Saves the run to History and shows the summary">Finalize log</button></div></div>
+    <div class="row"><button id="wrapEnd" title="Saves the run to History and shows the summary">Finalize log</button> <button id="wrapDrop" class="alt discard" title="Throws this run away without saving it (started by accident?)">Discard run</button></div></div>
   <div class="card hidden" id="summary"><div class="row" style="margin-top:0"><h3 style="flex:1;margin:0">Run summary</h3><button id="sumImg" class="alt" title="Saves a picture of this summary and copies it, ready to paste">Save as image</button> <button id="sumClose" class="alt">Close</button></div>
     <div id="sumBody"></div></div>
   <div id="rzLayer" aria-hidden="true"></div>

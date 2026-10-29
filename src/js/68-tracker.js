@@ -134,7 +134,8 @@ for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click",
 /*@TRKLOG*/
 (() => {
   const L = window.TrackerChangelog || [], fmt = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-  const row = ([v, d, t]) => `<p><b>${esc(v)}</b> <span class="sub">${esc(fmt(d))}</span> · ${esc(t)}</p>`;
+  const row = ([v, d, t]) => { const { lead, bullets } = L.parts(t);
+    return `<p><b>${esc(v)}</b> <span class="sub">${esc(fmt(d))}</span> · ${esc(lead)}</p>` + (bullets.length ? `<ul>${bullets.map(b => `<li>${esc(b)}</li>`).join("")}</ul>` : "") };
   if (!L.length) return;
   $("#trkpatchver").textContent = "latest " + L[0][0];
   $("#trkpatchnew").innerHTML = L.slice(0, 5).map(row).join("");

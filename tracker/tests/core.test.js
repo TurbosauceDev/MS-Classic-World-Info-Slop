@@ -529,6 +529,10 @@ console.log("today, goal ETA, setup codes, autosave ok");
   assert.ok(after[0].killed > 0 && Math.abs(after[0].dueIn - 3600e3) < 5e3, "timer restarted for the full respawn");
 }
 
+// patch notes split into a lead + bullets for the app and the site (abbreviations don't end a sentence)
+{ const LOG = require("../app/changelog.js"), r = LOG.parts("One. Two e.g. this thing. Lv. 10 is first job. Three!");
+  assert.equal(r.lead, "One."); assert.deepEqual(r.bullets, ["Two e.g. this thing.", "Lv. 10 is first job.", "Three!"]);
+  assert.deepEqual(LOG.parts("Just one."), {lead: "Just one.", bullets: []}) }
 // patch notes (changelog.js): the top entry is the version being built, so a release can't ship without its line
 { const LOG = require("../app/changelog.js"), pkg = require("../package.json");
   assert.equal(LOG[0][0], pkg.version, "add a changelog.js line for " + pkg.version);

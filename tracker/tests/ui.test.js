@@ -439,6 +439,16 @@ const path = require("path"), {chromium} = require("playwright");
   if (!(mz[0] > 1.3) || mz[1] < mz[2] - 30) throw new Error("mini fill: " + mz);
   await page.setViewportSize(vp);
   await page.click("#miniFull"); const back = await page.isVisible("#go");
+  // Discard run (Danny 2026-10-29): next to Finalize log, two clicks, saves nothing
+  { await page.evaluate(() => { window.saved = null }); await page.click("#go"); await page.waitForTimeout(1500); await page.click("#go"); await page.waitForTimeout(400);
+    const d0 = await page.evaluate(() => [!$("#wrap").classList.contains("hidden"), $("#wrapDrop").offsetParent != null, !!$("#miniWrapDrop"), !!$("#fzWrapDrop")]);
+    if (d0.includes(false)) throw new Error("discard buttons: " + d0);
+    await page.click("#wrapDrop");
+    const d1 = await page.evaluate(() => [$("#wrapDrop").textContent, timer != null, !!window.saved]);
+    if (d1[0] !== "Really discard?" || !d1[1] || d1[2]) throw new Error("discard first click must only arm: " + d1);
+    await page.click("#wrapDrop"); await page.waitForTimeout(400);
+    const d2 = await page.evaluate(() => [timer, !!window.saved, $("#wrap").classList.contains("hidden"), $("#wrapDrop").textContent, $("#status").textContent]);
+    if (d2[0] != null || d2[1] || !d2[2] || d2[3] !== "Discard run" || !/discarded/.test(d2[4])) throw new Error("discard: " + d2) }
   // resize bars (Danny, 2026-10-19): hidden and not grabbable until Shift or Alt is held; the bar under a box sets its height
   if (await page.isVisible("#sumClose")) await page.click("#sumClose");   // the run summary sits above the layout now
   const rz0 = await page.evaluate(() => [!!document.querySelector("#rzLayer").offsetParent, document.querySelector("#logBox").getBoundingClientRect().height]);

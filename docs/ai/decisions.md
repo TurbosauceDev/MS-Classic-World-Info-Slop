@@ -301,3 +301,5 @@ Each entry blocks something. When Danny calls it, transcribe above with the date
 - **Cron pile-up** — cut meso.watch to 2 polls/hour vs add push-retry to the poll script (Z.ai leans retry).
 - **web-PAT revoke** — confirm the web instance's old PAT is revoked (hygiene; fine-grained replacement already in use).
 - ~~**Draft batch**~~ — RESOLVED by reality 2026-10-28: the web instance's sandbox was wiped, `download/ms-classic-enhancements/` no longer exists anywhere; the archive option won by forfeit. The one surviving idea (a Danny-facing integrity dashboard) is covered on-site by the MCI panel + Source-health card.
+
+- 2026-10-29 Danny: Discard run goes next to Finalize log and must ask for confirmation (accidental Starts leave a seconds-long log). Patch notes should be human-readable (headings + bullets), not one block.

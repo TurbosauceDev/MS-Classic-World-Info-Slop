@@ -17,7 +17,8 @@ function openHelp(){
 }
 $("#helpBtn").onclick = openHelp;
 // Patch notes (Help, or Help > Patch notes in the menu): changelog.js, newest first
-$("#patchList").innerHTML = (window.TrackerChangelog || []).map(([v, d, t]) => `<p><b>${esc(v)}</b> <span class="note">${esc(d)}</span> ${esc(t)}</p>`).join("");
+$("#patchList").innerHTML = (window.TrackerChangelog || []).map(([v, d, t]) => { const {lead, bullets} = window.TrackerChangelog.parts(t);
+  return `<p class="patchv"><b>${esc(v)}</b> <span class="note">${esc(d)}</span> · ${esc(lead)}</p>` + (bullets.length ? `<ul>${bullets.map(b => `<li>${esc(b)}</li>`).join("")}</ul>` : "") }).join("");
 function openPatchNotes(){ $("#patchNotes").open = true; openHelp(); $("#helpPop").scrollTop += $("#patchNotes").getBoundingClientRect().top - $("#helpPop .pophead").getBoundingClientRect().bottom - 6 }
 $("#helpPop")._close = el => modalClose(el, $("#helpBtn"));
 $("#helpClose").onclick = () => modalClose($("#helpPop"), $("#helpBtn"));

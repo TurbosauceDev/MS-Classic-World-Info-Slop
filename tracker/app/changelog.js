@@ -3,6 +3,7 @@
 // Releasing? Add a line for the new version at the top: tests/core.test.js fails if the top entry isn't package.json's version.
 (function (root){
   const LOG = [
+    ["0.2.94", "2026-10-29", "Discard run, and patch notes you can read. A Discard run button now sits next to Finalize log in the wrap-up card, Simple view and Focus view. Press it once and it turns red and asks \"Really discard?\"; press again within 5 seconds to throw the run away, nothing saved to History or shared. Patch notes in Help and on the site now show each version as a heading line with one bullet per change instead of one big block."],
     ["0.2.93", "2026-10-29", "Toolbar pass on the Elv skin, from Danny's look at the first screenshots: every button in the main card's bar now shares one rhythm — the same 30 px height, one font at one size, a flat grey fill with a crisp 1 px border and bright, readable text (the little ? is a neat square beside them), and hovering walks the border to the accent. Start keeps the filled look, now in the theme's purple with dark text on it. The Per hour / Total switch stepped up a size so its words read at a glance, the drag grip and fold button sit centred on the bar instead of floating high, and the Dummy data banner wears the accent instead of orange. The Elv preset itself swaps ElvUI's blue for our purple — the Purple theme's own accent — and softens its warning gold; the dark grey panels stay exactly as they were."],
     ["0.2.92", "2026-10-29", "The Elv skin — a complete re-skin of the tracker and the overlay in the crisp, clean style Danny asked for (the ElvUI study, no game involved): square corners, thin 1 px borders at full strength, flat bars on dark tracks, no blur and no soft shadows, and a condensed UI face (PT Sans Narrow, bundled; one of ElvUI's own fonts, under ParaType's free font licence). It lives in the theme rather than a hidden switch: the new \"Elv\" preset in Settings > Theme carries it (near-black panels, the signature #1785d1 value colour for numbers and buttons), and the theme editor grew a Panel style pick — Glass or Elv (crisp) — so any palette, yours included, can wear the re-skin. The style rides share codes, profiles and the overlay push, so the floating cards trade their frosted glass for the same crisp panels live. Edit mode borrowed one more habit from ElvUI's movers: a small live readout chip follows the card you drag, resize or nudge — desktop pixels, the same numbers the x/y inputs keep — and it's gone the moment you let go."],
     ["0.2.91", "2026-10-28", "Overlay conditions (the WeakAuras idea, one rule per card): in a card's inspector, Condition lets it watch EXP/hr, mesos/hr, kills/hr, loot value/hr, kills, deaths or level progress and, while that number is below or above a line you set, recolour the card, pulse it, or hide it (hiding never happens while you are editing; the card just dims). The numbers are the ones the tracker already read off the screen."],
@@ -108,5 +109,16 @@
     ["0.1.1", "2026-10-17", "Captures the game window, whole-screen fallback when frames come back black."],
     ["0.1.0", "2026-10-17", "First build: session tracking, Windows app, auto-update."],
   ];
+  // readable patch notes: the lead sentence, then one bullet per further sentence (split on ". " + capital, not after e.g./i.e./Lv)
+  LOG.parts = text => {
+    const out = []; let cur = "";
+    for (const w of String(text).split(/(?<=[.!?])\s+(?=[A-Z0-9"(])/)){
+      cur = cur ? cur + " " + w : w;
+      if (/(?:e\.g|i\.e|vs|Lv|No|approx)\.$/.test(cur)) continue;
+      out.push(cur); cur = "";
+    }
+    if (cur) out.push(cur);
+    return {lead: out[0] || "", bullets: out.slice(1)};
+  };
   if (typeof module !== "undefined" && module.exports) module.exports = LOG; else root.TrackerChangelog = LOG;
 })(typeof window !== "undefined" ? window : globalThis);
