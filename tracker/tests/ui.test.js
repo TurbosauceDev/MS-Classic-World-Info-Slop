@@ -196,7 +196,7 @@ const path = require("path"), {chromium} = require("playwright");
     const tl = kpqTimeline(t + 126000).map(r => [r.n, r.end, r.stages.map(x => x[0] + " " + x[2]).join(", "), r.total]);
     return {tl, times, st, off, r1, held, stillHeld, reheld, back, rounds: kpq.rounds, note: document.querySelector("#kpqNote").textContent, where: document.querySelector("#where").textContent} });
   if (JSON.stringify(kq.tl) !== JSON.stringify([[1, "Exit", "1st 0, 2nd 0", 0], [2, "Exit", "1st 60, 2nd 60", 120]])) throw new Error("kpq timeline: " + JSON.stringify(kq.tl));
-  if (kq.off || kq.r1 !== 1 || !kq.held || !kq.stillHeld || !kq.reheld || !kq.back || kq.rounds !== 2 || !/KPQ \(Bonus\): 2 rounds/.test(kq.note) || !/^KPQ \(Bonus\)/.test(kq.where) || kq.times.at(-1) !== 120 || kq.st?.at(-1) !== 60 || !/best round /.test(kq.note)) throw new Error("kpq: " + JSON.stringify(kq));
+  if (kq.off || kq.r1 !== 1 || !kq.held || !kq.stillHeld || !kq.reheld || !kq.back || kq.rounds !== 2 || !/^KPQ [\w ,-]+: 2 rounds/.test(kq.note) || !/^KPQ \(Rush\)/.test(kq.where) || kq.times.at(-1) !== 120 || kq.st?.at(-1) !== 60 || !/best round /.test(kq.note)) throw new Error("kpq: " + JSON.stringify(kq));
   // Grinding picked: KPQ stages don't turn it on
   const kg = await page.evaluate(async () => { const keep = kpq; settings = await host.settings({kpqAct: "grind"}); kpqReset(); kpqMap("80000000", Date.now() + 3e4); const on = kpq.on;
     settings = await host.settings({kpqAct: "auto"}); kpq = keep; return on });
@@ -212,7 +212,7 @@ const path = require("path"), {chromium} = require("playwright");
   const [al1, al2] = kl.splice(-2);
   if (al1 !== "Archer8981" || al2 !== al1) throw new Error("kpq alias: " + [al1, al2]);
   // the name: a Name that isn't letters/digits falls back to the one read from the status bar
-  if (kl.length !== 1 || !kl[0].kpq || kl[0].name !== "Turbow" || kl[0].clear !== 300 || kl[0].total !== 360 || kl[0].mode !== "Bonus" || Object.keys(kl[0].stages).length !== 6) throw new Error("kpq share: " + JSON.stringify(kl));
+  if (kl.length !== 1 || !kl[0].kpq || kl[0].name !== "Turbow" || kl[0].clear !== 300 || kl[0].total !== 360 || kl[0].mode !== "Rush" || !kl[0].v2 || kl[0].v2.bonus !== null || kl[0].v2.stages["80000400"] !== 60 || Object.keys(kl[0].stages).length !== 6) throw new Error("kpq share: " + JSON.stringify(kl));
   // inventory: Etc read at the start and later -> fills unread pickup lines; Stop goes to the wrap-up card, where each tab
   // turns green once read after Stop; Resume goes back to tracking
   const iv = await page.evaluate(async () => { const t = Date.now();
@@ -657,6 +657,18 @@ const path = require("path"), {chromium} = require("playwright");
       for (const [dt, act] of [[10e3, false], [46e3, false], [181e3, false], [182e3, true], [183e3, false]]){ pace(t0 + dt, act); out.push(FPS) }
       slowCap = true; pace(t0 + 300e3, true); out.push(FPS); pace(t0 + 500e3, false); out.push(FPS); paceReset(); setFps(2); return out });
     if (JSON.stringify(r) !== "[2,1,0.5,2,2,1,0.5]") throw new Error("pace steps: " + JSON.stringify(r)) }
+  // KPQ states (2026-10-29): Kerning City primes it, the 1st stage records the Rush, the first kill in the Bonus map records the Bonus; the
+  // round is scored (provisional with no recorded reference) and goes out with the raw numbers
+  const ph = await page.evaluate(async () => { const keep = settings, t = Date.now() + 8e5, out = {}; settings = {...settings, share: true}; window.shared = []; session = GrindSession.createSession(G); slicer = {add(){}}; kpqReset();
+    kpqMap("10003000", t); out.primed = kpq.phase + "/" + kpq.on;
+    for (const [i, id] of ["80000000", "80000100", "80000200", "80000300", "80000400"].entries()){ session.add({t: t + 1000 + i * 6e4, type: "map", id: +id}); kpqMap(id, t + 1000 + i * 6e4) }
+    out.rush = kpq.phase; session.add({t: t + 3.1e5, type: "map", id: 80000500}); kpqMap("80000500", t + 3.1e5); out.wait = kpq.phase;
+    const mob = G.maps["80000500"][2][0][0]; session.add({t: t + 3.2e5, type: "exp", gain: G.mobs[mob][3]}); session.add({t: t + 3.2e5, type: "meso", amount: 120}); session.add({t: t + 3.2e5, type: "item", id: 1092002});
+    kpqWatch(session.stats()); out.bonus = kpq.phase; render(); out.note = document.querySelector("#kpqNote").textContent;
+    session.add({t: t + 3.7e5, type: "map", id: 80000600}); kpqMap("80000600", t + 3.7e5); out.idle = kpq.phase; const h = kpq.history.at(-1);
+    out.score = h.score; out.raw = h.raw; out.sent = window.shared.at(-1); settings = keep; return out });
+  if (ph.primed !== "primed/false" || ph.rush !== "rush" || ph.wait !== "bonusWait" || ph.bonus !== "bonus" || ph.idle !== "idle" || !/recording Bonus.*Bonus so far/.test(ph.note)) throw new Error("kpq phases: " + JSON.stringify(ph));
+  if (!ph.raw.bonus || ph.raw.bonus.kills !== 1 || ph.raw.bonus.mesos !== 120 || ph.raw.bonus.loot.pan !== 1 || !ph.score.bonus || ph.score.total !== ph.score.rush + ph.score.bonus || ph.sent?.v2?.bonus?.loot?.pan !== 1 || ph.sent.mode !== "Bonus") throw new Error("kpq round score: " + JSON.stringify(ph));
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (!/Red Snail/.test(mobs) || !/Blue Snail/.test(mobs)) throw new Error("mobs table: " + mobs);

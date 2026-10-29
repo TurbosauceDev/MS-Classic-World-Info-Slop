@@ -763,3 +763,23 @@ console.log("patch notes ok");
   assert.strictEqual(p.give(new ArrayBuffer(8)), true); assert.strictEqual(p.give(new ArrayBuffer(64)), true);
   assert.strictEqual(p.size, 2, "the cap holds and dropped the oldest");
   p.clear(); assert.strictEqual(p.size, 0, "clear empties the pool"); }
+
+// KPQ scoring (core/kpqscore.js, 2026-10-29): speed against a recorded reference, NPC-priced drops, item bonuses, Pan Lid, no reference = provisional
+{ const K = require("../core/kpqscore.js"), W = K.WEIGHTS;
+  const items = {"4000000": {c: "Etc", p: 10}, "2000000": {c: "Consumable", p: 50}, "2040000": {c: "Scroll", p: 0}, "1002000": {c: "Equipment", p: 300}, "1092002": {c: "Equipment", p: 2000}};
+  const l = K.lootSummary(items, {"4000000": 3, "2000000": 1, "2040000": 2, "1092002": 1, "9999999": 5});
+  assert.deepStrictEqual(l, {etc: 3, use: 1, scroll: 2, equip: 1, pan: 1, npc: 3 * 10 + 50 + 2000}, "loot counted per tab, Pan Lid apart, unknown ids ignored");
+  assert.strictEqual(K.lootBonus(l), 3 * W.ETC_PTS + W.USE_PTS + 2 * W.SCROLL_PTS + W.EQUIP_PTS + W.PAN_PTS);
+  const st = {"80000000": 60, "80000100": 60, "80000200": 60, "80000300": 60, "80000400": 60}, base = {stages: st, rush: {loot: K.emptyLoot()}, bonus: null};
+  let r = K.score(base, null); assert.strictEqual(r.rush.pts, W.CLEAR_BASE); assert.ok(r.provisional && r.rush.speed === 0, "no reference: base points only, flagged provisional");
+  const rows = Array.from({length: 10}, (_, i) => ({stages: Object.fromEntries(K.RUSH_STAGES.map(id => [id, 60 + i * 2])), bonus: {exp: 900 + i * 20, mesos: 100, loot: {npc: 0}}}));
+  const ref = K.buildRef(rows); assert.strictEqual(ref.med["80000000"], 69); assert.strictEqual(ref.best["80000000"], 60); assert.ok(Math.abs(ref.perPoint - 1000 / 1090) < 1e-9, "Bonus scale: median Bonus gain = 1000 points");
+  assert.strictEqual(K.buildRef(rows.slice(0, 9)).perPoint, null, "under 10 rounds: no reference");
+  const at = sec => K.score({...base, stages: Object.fromEntries(K.RUSH_STAGES.map(id => [id, sec]))}, ref).rush;
+  assert.strictEqual(at(69).pts, W.CLEAR_BASE, "average pace = base"); assert.ok(at(60).perfect === W.PERFECT && at(60).pts === W.CLEAR_BASE + 5 * W.STAGE_W + W.PERFECT, "record pace on all five = perfect");
+  assert.ok(at(50).pts > at(60).pts && at(50).pts <= W.CLEAR_BASE + 5 * 1.5 * W.STAGE_W + W.PERFECT, "beating the record keeps paying, capped");
+  assert.strictEqual(at(200).pts, W.CLEAR_BASE - 5 * W.STAGE_W, "far slower than average loses points, floored per stage"); assert.ok(at(200).provisional === false);
+  const b = K.bonus({bonus: {sec: 60, exp: 1000, mesos: 99, kills: 5, loot: {...K.emptyLoot(), pan: 1, npc: 2000}}}, ref); assert.strictEqual(b.pts, Math.round((1000 + 99 + 2000) * ref.perPoint + W.PAN_PTS), "EXP + mesos + NPC drop value, plus Pan Lid");
+  assert.strictEqual(K.bonus(base, ref), null, "no Bonus kills: no Bonus section");
+}
+console.log("kpq score ok");

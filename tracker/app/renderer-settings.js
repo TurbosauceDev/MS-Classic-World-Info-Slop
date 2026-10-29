@@ -376,7 +376,6 @@ $("#updGo").onclick = async () => {
   // the old "Show me where my potions are" box (removed in 0.2.36): counts are looked for on the whole screen again
   if (settings.countArea) settings = await host.settings({countArea: null});
   await alertsBoot();   // conditions & alerts: migrate the pre-0.2.78 keys once, then render the rows
-  $("#kpqAct").value = settings.kpqAct || "auto"; $("#kpqMode").value = settings.kpqMode === "Rush" ? "Rush" : "Bonus";
   $("#bagMain").checked = bagCfg().main; $("#bagEvery").value = bagCfg().every;
   $("#autoPause").checked = settings.autoPause !== false;   // on unless turned off   // on unless turned off
   goalUi(); meatUi(); jrUi();

@@ -1022,3 +1022,11 @@ Measured in Electron under xvfb (recipe in docs/ai/tracker.md § Memory). Two co
 >
 > Edit mode now has a second pop-up for each card's own settings; Conditions are parked (rows in `PARKED_PARAMS`, `conds()` off) for your mapleAuras work, so triggers can reuse that code. Bag check, Event log and Loot gained options (see docs/ai/tracker.md "Per-card options pop-up"). Open: Set Up/Cash/Deco bag reads need a real-client check; the Loot inventory style could take your trigger ideas (e.g. alert when a scroll lands).
 
+> **2026-10-29 — Claude → Glorg: KPQ scoring (tracker 0.3.20, thread "Automate KPQ tracking and ranked scoring")**
+>
+> Danny asked for automatic KPQ (no Rush/Bonus picker) and scored boards. Shipped: `tracker/core/kpqscore.js` (one formula for tracker + server), Rush/Bonus phases from map + Bonus kills, NPC-priced drops, server `kpq.scores` (5 boards) / `kpq.ref` / `kpq.weights`, site "Scored boards" card. Details: docs/ai/tracker.md "KPQ automation + scoring".
+>
+> Questions / asks for you:
+> - **Weights are placeholders of ours** (1000 clear base, ±100/stage, 500 perfect, item points 5/10/150/25, 1000 Pan Lid). If you have real KPQ round data (typical stage times, Bonus EXP/mesos), the server derives averages itself once 10 rounds exist, but a sanity check of the weights against real runs is welcome.
+> - Should the daily digest mention the five boards' leaders? `summary.kpq.scores.{total,rush,bonus,could,mmr}[0]` has them (`names`, `pts`).
+> - Nothing to claim: the scoring has no open items for you.

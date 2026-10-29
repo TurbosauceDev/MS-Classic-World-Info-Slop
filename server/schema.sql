@@ -73,6 +73,9 @@ CREATE TABLE IF NOT EXISTS kpq_rounds_archive (
 CREATE TABLE IF NOT EXISTS kpq_names (kpq_id INTEGER PRIMARY KEY, name TEXT NOT NULL);
 -- KPQ round source (2026-10-21): 'site' for the site's KPQ timer page; no row = the grind tracker. Side table, same reason
 CREATE TABLE IF NOT EXISTS kpq_src (kpq_id INTEGER PRIMARY KEY, src TEXT NOT NULL);
+-- KPQ scoring (2026-10-29): the raw v2 round a tracker sends (stage seconds, Rush/Bonus loot counts by tab + NPC value, Bonus EXP/mesos/
+-- kills) as JSON. Scores are NOT stored: summary() recomputes them with tracker/core/kpqscore.js, so a formula change re-scores history
+CREATE TABLE IF NOT EXISTS kpq_raw (kpq_id INTEGER PRIMARY KEY, raw TEXT NOT NULL);
 -- the one round sent before names existed (Rush 4:37, 2026-10-18) was Danny's Turbow (Danny, 2026-10-18)
 INSERT OR IGNORE INTO kpq_names (kpq_id, name) SELECT id, 'Turbow' FROM kpq_rounds WHERE date = '2026-10-18' AND mode = 'Rush' AND clear = 277 AND received < '2026-10-18T21:00';
 -- site Feedback page (2026-10-21): notes visitors leave for us. Read by Danny on the site with the FEEDBACK_KEY secret

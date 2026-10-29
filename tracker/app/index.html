@@ -597,8 +597,6 @@
     </div></div>
     <div class="card" data-box="mobs" data-title="Monsters killed"><h3>Monsters killed</h3><table id="mobs"></table><div class="empty" id="mobsEmpty">No kills yet.</div></div>
     <div class="card folded" id="kpqBox" data-box="kpq" data-title="KPQ"><h3>KPQ</h3>
-      <div class="row"><label>Doing <select id="kpqAct"><option value="auto">Auto (spots KPQ)</option><option value="grind">Grinding</option><option value="kpq">KPQ</option></select></label>
-        <label>Mode <select id="kpqMode"><option>Bonus</option><option>Rush</option></select></label></div>
       <div class="note" id="kpqNote">During KPQ the session pauses outside the KPQ stages (Kerning City between rounds) and picks back up on the next 1st stage.</div></div>
     <div class="card folded" id="alertsBox" data-box="alerts" data-title="Alerts and goal"><h3>Alerts and goal</h3>
       <div class="row"><span>Goal:</span> <button id="goalNext" class="alt" aria-pressed="true" title="Always the level after the one you're on">Next level</button> <label>or level <input type="number" id="goal" min="2" max="200" style="width:60px" placeholder="-"></label> <button id="goalOff" class="alt" aria-pressed="false">Off</button></div>
@@ -718,11 +716,12 @@
           read again; the run summary shows each item before and after.</li>
       </ul></details>
       <details><summary>KPQ runs</summary><ul>
-        <li>On <b>Auto</b>, KPQ turns on by itself once a KPQ stage shows on the minimap. Pick <b>KPQ</b> in the KPQ box to
-          also skip the wait in Kerning City before the first round.</li>
+        <li>Nothing to pick: Kerning City tells the tracker KPQ is likely, the 1st stage starts the <b>Rush</b> recording, and
+          the first kill in the Bonus map starts the <b>Bonus</b> recording. The KPQ box only shows where it is.</li>
         <li>During KPQ the session pauses on any map that isn't a KPQ stage (Kerning City between rounds) and picks back up
           on the next stage. Each trip into the stages is one round.</li>
-        <li>Bonus or Rush is only the label saved with the session. History shows rounds, and EXP/hr counts time in the stages only.</li>
+        <li>Each round is scored: Rush from stage speed against the recorded average (none yet = provisional), Bonus from EXP,
+          mesos and drops at their NPC sell price, plus small bonuses per item type and a big one for a Pan Lid. The site's KPQ page lists the weights and the five boards.</li>
         <li>KPQ rounds don't count as farming runs. With sharing on, each round cleared from the 1st stage goes to the KPQ leaderboard on the site instead (clear time, party size, level, job and your character name, unless you turn the name off in Settings).</li>
       </ul></details>
       <details><summary>Window tips</summary><ul>
@@ -861,6 +860,7 @@
   <script src="../core/feed.js"></script>
   <script src="../core/history.js"></script>
   <script src="../core/alerts.js"></script>
+  <script src="../core/kpqscore.js"></script>
   <script src="../core/prices.js"></script>
   <script src="../core/ocrcache.js"></script>
   <script src="../core/bagstale.js"></script>
