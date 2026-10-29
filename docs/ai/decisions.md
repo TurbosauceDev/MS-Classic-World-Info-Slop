@@ -310,3 +310,4 @@ Each entry blocks something. When Danny calls it, transcribe above with the date
 - 2026-10-29 (Danny): Chat blocker overlay card, opaque, resizable, hidden from the CV capture, with tracker-drawn HP/MP/EXP bars on it. Built 0.2.108.
 - 2026-10-29 (Danny): the overlay must always be visible to capture; no setContentProtection / capture exclusion for the Chat blocker.
 - 2026-10-29 (Danny): Overlay edit mode needs Undo (button + Ctrl+Z) and boxes must not move on a click: drag threshold 6 px.
+- 2026-10-29: Danny: OCR'd map names not matching a known map are junk noise, discard (no keep-as-read for unknown maps).

@@ -556,7 +556,7 @@
     return p[b.length];
   }
   const similar = (a, b) => { a = norm(a); b = norm(b); return 1 - lev(a, b) / Math.max(a.length, b.length, 1) };
-  // OCR text -> {id, name}: the closest map name to the last line (75%+ alike), else the map line as read (maps our data doesn't have)
+  // OCR text -> {id, name}: the closest map name to the last line (75%+ alike), else null (junk is dropped, Danny 10-29)
   function mapFromText(text, G){
     // one line "Street : Map" when the minimap is folded to its title bar: the map is after the colon
     const lines = text.split("\n").filter(l => !/mini\s*map/i.test(l)).map(l => l.replace(/^.*:/, "").replace(/(<[^<>=]*)[>=].*$/, "$1>").replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9>)]+$/g, "").trim()).filter(l => l.length >= 3);
@@ -573,7 +573,7 @@
       }
     }
     if (best && best.sim >= 0.75) return {id: best.id, name: best.name};
-    return {id: null, name: l};
+    return null;   // not a map we know: OCR noise ("I i it Cr", "1 CY Ara you looking"), never an event
   }
 
   // item pickup: names are cut to ~13 letters ("Horny Mushroo...") and letters the font table doesn't know yet read as "?",

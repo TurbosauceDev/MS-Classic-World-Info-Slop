@@ -111,7 +111,9 @@ assert.strictEqual(st.mobs.length, 0, "no monster guess without a map");
 const {mapFromText} = require("../app/readers.js");
 assert.deepStrictEqual(mapFromText("Victoria Road\nSnail Hunting Graund lll\n", G), {id: "42", name: "Snail Hunting Ground III"});
 assert.deepStrictEqual(mapFromText("| Hidden Street\n1st Accompaniment <Bonus=\n", G), {id: "80000500", name: "1st Accompaniment <Bonus>"}, "KPQ bonus stage");
-assert.deepStrictEqual(mapFromText("Hidden Street\nSecret Garden of Nowhere=\n", G), {id: null, name: "Secret Garden of Nowhere"}, "a map we don't have");
+assert.strictEqual(mapFromText("Hidden Street\nSecret Garden of Nowhere=\n", G), null, "a map we don't have is dropped, not logged as read");
+// Danny's event log 10-29: Kerning City's minimap title misread as junk, logged as "entered" between real Kerning City events
+for (const junk of ["I i it Cr", "I i LI", "1 CY Ara you looking", "Victoria Road\nI i it Cr\n"]) assert.strictEqual(mapFromText(junk, G), null, "junk: " + junk);
 s = createSession(G);
 s.add({t: sec(0), type: "map", id: null, name: "1st Accompaniment <Bonus"});
 assert.strictEqual(s.stats().mapName, "1st Accompaniment <Bonus");
