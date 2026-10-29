@@ -235,6 +235,9 @@ ipcMain.handle("ov-edit", (_, on) => { if (ovWin && !ovWin.isDestroyed()) ovEdit
 ipcMain.handle("ov-edit-toggle", () => { if (ovWin && !ovWin.isDestroyed()) ovEditSet(!ovEditing); return ovEditing });
 ipcMain.handle("ov-close", () => { ovCloseWin(); return true });
 ipcMain.handle("ov-state", () => ({...OVCFG.state(readSettings()), edit: ovEditing, desk: ovDesk()}));   // the whole saved overlay (snap, grid, panel, profiles), not only the widgets
+ipcMain.on("ov-bag", (_, tab) => { if (win && !win.isDestroyed() && typeof tab === "string") win.webContents.send("ov-bag", tab) });
+// click-through stays on (forward: true still delivers mouse moves); over a clickable widget bit the page asks to catch clicks
+ipcMain.on("ov-hit", (_, on) => { if (ovWin && !ovWin.isDestroyed() && !ovEditing) ovWin.setIgnoreMouseEvents(!on, {forward: true}) });
 ipcMain.on("ov-push", (_, d) => { if (ovWin && !ovWin.isDestroyed()) ovWin.webContents.send("ov-data", d) });
 
 // "Show me where": a full-screen window with the frozen game picture; the player drags a box (snipping-tool style)

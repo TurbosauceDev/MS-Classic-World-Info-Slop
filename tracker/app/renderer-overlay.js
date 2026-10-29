@@ -33,7 +33,7 @@ function ovBuild(s){
   const respawns = (session.respawns ? session.respawns(Date.now()) : []).map(r => ({name: r.name, boss: r.boss, sec: r.sec, killed: r.killed}));
   const bar = session.state.bar, r = TH.resolve(themeNow(), darkQ.matches);
   return {t: Date.now(), on: timer != null, wrap: !!wrap, held: !!held, paused: s.paused, dummy: dummyOn,
-    runT0, state: $("#stateText").textContent,
+    runT0, inv: Object.fromEntries(["equip", "use", "etc"].map(k => [k, s.invTabs?.[k]?.last ?? null])), bagEvery: bagCfg().every, state: $("#stateText").textContent,
     st: {activeMin: s.activeMin, exp: s.exp, expHr: s.expHr, expHr5: s.expHr5, toLevelHrs: s.toLevelHrs, kills: s.kills, killsHr: s.killsHr,
       mesos: s.mesos, mesosHr: s.mesosHr, lootHr: s.lootHr, deaths: s.deaths, level: s.level, pct: bar?.pct ?? null, firstBar: s.firstBar, party: s.party},
     map: {id: mid, name: s.nowMapName || s.mapName, spawns, respawns},

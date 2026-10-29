@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld("host", {
   overlayEdit: () => ipcRenderer.invoke("ov-edit-toggle"),
   overlayPush: d => ipcRenderer.send("ov-push", d),
   onOverlay: cb => ipcRenderer.on("ov-state", (_, s) => cb(s)),
+  onBag: cb => ipcRenderer.on("ov-bag", (_, tab) => cb(tab)),
   menu: (label, x, y) => ipcRenderer.invoke("menu-popup", label, x, y),
   snip: url => ipcRenderer.invoke("snip", url),
   themeBar: c => ipcRenderer.invoke("theme-bar", c),

@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld("ovhost", {
   settings: s => ipcRenderer.invoke("settings", s),
   edit: on => ipcRenderer.invoke("ov-edit", on),
   done: () => ipcRenderer.invoke("ov-edit", false),
+  bag: tab => ipcRenderer.send("ov-bag", tab),   // a bag icon clicked: the tracker window runs the scan
+  hit: on => ipcRenderer.send("ov-hit", !!on),   // the mouse is over a clickable bit: take clicks there, pass the rest through
   close: () => ipcRenderer.invoke("ov-close"),
   onData: cb => ipcRenderer.on("ov-data", (_, d) => cb(d)),
   onMode: cb => ipcRenderer.on("ov-mode", (_, on) => cb(on)),

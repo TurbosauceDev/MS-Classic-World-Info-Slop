@@ -121,7 +121,16 @@ function compactFit(force){ if (!fitsWindow() || document.body.classList.contain
 
 // inventory: which tabs were read and when, and what changed since the first look
 const INV_TABS = [["equip", "Equip"], ["use", "Use"], ["etc", "Etc"]];
+// bag check reminders (core/bagstale.js): sword / potion / crate, green -> yellow -> orange -> red -> glow as a tab's last read gets stale
+const bagCfg = () => ({main: settings.bag?.main !== false, every: GrindBag.every(settings.bag?.every)});
+function renderBag(s){
+  const c = bagCfg(), box = $("#bagIcons"); box.classList.toggle("hidden", !c.main);
+  if (!c.main) return;
+  const L = GrindBag.tabs(s?.invTabs, runT0, Date.now(), c.every, timer != null || dummyOn);
+  box.innerHTML = L.map(l => `<button class="bagI ${l.stage}${l.pulse ? " pulse" : ""}" data-tab="${l.k}" style="color:${GrindBag.color(l)}" aria-label="${l.name} bag check: ${l.stage === "idle" ? "start tracking first" : l.last ? "last read " + Math.round(l.age / 60e3) + " min ago" : "not read yet"}" title="${l.name}: ${l.stage === "idle" ? "starts when you press Start" : l.last ? "read " + Math.round(l.age / 60e3) + " min ago" : "not read yet"}. Click to read it now (have the ${l.name} tab open in the game)">${GrindBag.ICONS[l.k]}</button>`).join("");
+}
 function renderInv(s){
+  renderBag(s);
   const tabs = s?.invTabs || {}, at = t => new Date(t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
   $("#invTabs").innerHTML = INV_TABS.map(([k, name]) => { const v = tabs[k];
     return `<button class="chip ${v ? v.last > v.first ? "ok" : "half" : "need"}" data-tab="${k}" title="${(v ? "first read " + at(v.first) + ", last " + at(v.last) : "not seen yet") + ". Click to read it now (have the " + name + " tab open in the game)"}">${v ? v.last > v.first ? "✓✓" : "✓" : "○"} ${name}</button>` }).join(" ");

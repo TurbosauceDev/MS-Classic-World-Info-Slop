@@ -22,7 +22,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
         edit: async on => (window.ovEditCalls = (window.ovEditCalls || []).concat([on !== false]), true),
         done: async () => (window.ovEditCalls = (window.ovEditCalls || []).concat([false]), true),
         close: async () => (window.ovClosed = true, true),
-        onData: cb => window.ovData = cb, onMode: cb => window.ovMode = cb, onScreens: cb => window.ovScreens = cb,
+        hit: on => (window.ovHits = (window.ovHits || []).concat([!!on])), bag: t => (window.ovBags = (window.ovBags || []).concat([t])), onData: cb => window.ovData = cb, onMode: cb => window.ovMode = cb, onScreens: cb => window.ovScreens = cb,
       };
     });
     await page.goto("file://" + path.join(__dirname, "../app/overlay.html"));
@@ -32,7 +32,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       !document.querySelector("#ovw-kills"), !document.querySelector("#ovw-mesos"), !document.querySelector("#ovw-log"),
       !document.querySelector("#ovpanel").classList.contains("hidden"), document.body.classList.contains("edit"),
       document.querySelectorAll("#ovpRows .wrow").length, !!document.querySelector("#ovSnap"), !!document.querySelector("#ovGrid"), !!document.querySelector("#ovReset")]);
-    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || st[8] !== 11 || !st[9] || !st[10] || !st[11]) fail("overlay defaults", st);
+    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || st[8] !== 12 || !st[9] || !st[10] || !st[11]) fail("overlay defaults", st);
     // a push fills the cards; the map card shows the spawn table and the respawn countdowns
     const t = Date.now();
     const payload = {t, on: true, paused: false, dummy: false, runT0: t - 7530e3, state: "Tracking · 12 min farmed",
@@ -426,7 +426,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
         state: async () => ({edit: false, widgets: null, snap: true, grid: true, gsize: 64, desk: {x: 0, y: 0, width: 1400, height: 900}}),
         settings: async p => (window.ovSaved = {...(window.ovSaved || {}), ...p}, window.ovSaved),
         edit: async () => true, done: async () => true, close: async () => true,
-        onData: cb => window.ovData = cb, onMode: cb => window.ovMode = cb, onScreens: cb => window.ovScreens = cb,
+        hit: on => (window.ovHits = (window.ovHits || []).concat([!!on])), bag: t => (window.ovBags = (window.ovBags || []).concat([t])), onData: cb => window.ovData = cb, onMode: cb => window.ovMode = cb, onScreens: cb => window.ovScreens = cb,
       };
     });
     await page.goto("file://" + path.join(__dirname, "../app/overlay.html"));
@@ -444,6 +444,36 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       return [g.classList.contains("hidden"), getComputedStyle(g).display === "none"] });
     if (!st[0] || !st[1]) fail("grid hides again on lock (computed)", st);
     if (errors.length) throw new Error("overlay locked-boot errors: " + errors.join(" | "));
+    await page.close();
+  }
+  // ---- part 1c: Bag check widget (core/bagstale.js): icons coloured by staleness, click = scan request, click-through
+  // only gives way while the mouse is over an icon ----
+  {
+    const page = await browser.newPage({viewport: {width: 1400, height: 900}}), errors = [];
+    page.on("pageerror", e => errors.push(e.message));
+    await page.addInitScript(() => {
+      window.ovhost = {
+        state: async () => ({edit: false, widgets: {bag: {on: true, x: 100, y: 100}}, desk: {x: 0, y: 0, width: 1400, height: 900}}),
+        settings: async p => p, edit: async () => true, done: async () => true, close: async () => true,
+        hit: on => (window.ovHits = (window.ovHits || []).concat([!!on])), bag: t => (window.ovBags = (window.ovBags || []).concat([t])),
+        onData: cb => window.ovData = cb, onMode: cb => window.ovMode = cb, onScreens: cb => window.ovScreens = cb,
+      };
+    });
+    await page.goto("file://" + path.join(__dirname, "../app/overlay.html"));
+    await page.waitForSelector("#ovw-bag");
+    const t = Date.now(), m = 60e3;
+    await page.evaluate(([t, m]) => window.ovData({t, on: true, runT0: t - 20 * m, bagEvery: 5, inv: {equip: t - 2 * m, use: t - (5 * m + 10e3), etc: t - 8 * m}, st: {}, map: {}, feed: [], th: null}), [t, m]);
+    let st = await page.evaluate(() => [...document.querySelectorAll("#ovw-bag [data-bag]")].map(e => [e.dataset.bag, e.className.replace("bagI ", ""), e.querySelector("svg") ? 1 : 0]));
+    if (JSON.stringify(st) !== JSON.stringify([["equip", "ok", 1], ["use", "soon", 1], ["etc", "now pulse", 1]])) fail("bag icon stages", st);
+    const box = await page.locator("#ovw-bag [data-bag=use]").boundingBox();
+    await page.mouse.move(box.x + 8, box.y + 8); await page.mouse.down(); await page.mouse.up();
+    await page.mouse.move(5, 5);
+    st = await page.evaluate(() => [window.ovBags, window.ovHits]);
+    if (JSON.stringify(st) !== JSON.stringify([["use"], [true, false]])) fail("bag click + click-through hand-off", st);
+    await page.evaluate(([t, m]) => window.ovData({t, on: false, runT0: null, inv: {}, st: {}, map: {}, feed: [], th: null}), [t, m]);
+    st = await page.evaluate(() => [...document.querySelectorAll("#ovw-bag [data-bag]")].map(e => e.classList.contains("idle")));
+    if (st.some(x => !x)) fail("bag icons grey when not tracking", st);
+    if (errors.length) throw new Error("bag page errors: " + errors.join(" | "));
     await page.close();
   }
   // ---- part 2: the tracker window (ui-host stubbed): the button, the menu actions, the push ----

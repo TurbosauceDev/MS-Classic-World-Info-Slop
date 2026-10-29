@@ -303,3 +303,4 @@ Each entry blocks something. When Danny calls it, transcribe above with the date
 - ~~**Draft batch**~~ — RESOLVED by reality 2026-10-28: the web instance's sandbox was wiped, `download/ms-classic-enhancements/` no longer exists anywhere; the archive option won by forfeit. The one surviving idea (a Danny-facing integrity dashboard) is covered on-site by the MCI panel + Source-health card.
 
 - 2026-10-29 Danny: Discard run goes next to Finalize log and must ask for confirmation (accidental Starts leave a seconds-long log). Patch notes should be human-readable (headings + bullets), not one block.
+- 2026-10-29 (Danny): bag check icons: sword/potion/etc, green -> yellow -> +30 s orange -> red, gentle glow at 2 min; clickable = same CV scan as the bag buttons; toggle on the main card and a standalone overlay widget.

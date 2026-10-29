@@ -2,9 +2,10 @@
 // a tab chip clicked: read that tab now. The inventory is looked for anywhere on screen (it can be moved during the
 // session); if it isn't found in 4 s, the player drags a box around it (snip window), saved as settings.invArea
 let lastInvTab = null, invSavedT = 0;
-$("#invTabs").onclick = $("#wrapTabs").onclick = async e => {
-  const b = e.target.closest("[data-tab]"); if (!b) return;
-  const tab = b.dataset.tab, name = INV_TABS.find(x => x[0] === tab)[1], say = t => $("#status").textContent = t;
+$("#invTabs").onclick = $("#wrapTabs").onclick = $("#bagIcons").onclick = e => { const b = e.target.closest("[data-tab]"); if (b) bagRead(b.dataset.tab) };
+// also the overlay's bag icons (main.js relays ov-bag to the window): same scan as the chips
+async function bagRead(tab){
+  const name = INV_TABS.find(x => x[0] === tab)[1], say = t => $("#status").textContent = t;
   if (timer == null || !engine?.invNow) return say("Press Start first, then click a tab to read it.");
   // read = a new reading of that tab reached the session after the click (a tab counts once two reads agree, ~4 s)
   const wait = async () => { const t0 = Date.now(); lastInvTab = null; engine.invNow();
@@ -20,7 +21,8 @@ $("#invTabs").onclick = $("#wrapTabs").onclick = async e => {
   if (!rect) return say("No box drawn: the inventory is still looked for by itself.");
   settings = await host.settings({invArea: rect}); engine.setInvHint(rect);
   say(await wait() ? `${name} tab read. That spot is remembered; moving the window is fine too.` : `Still can't read the ${name} tab there. Report a bug (Ctrl+Shift+B) with it open so it can be fixed.`);
-};
+}
+host.onBag?.(tab => { if (INV_TABS.some(x => x[0] === tab)) bagRead(tab) });
 
 let starting = false, ICONS = null;
 async function start(){

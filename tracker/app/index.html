@@ -175,6 +175,13 @@
   .chip.ok { border-color:var(--leaf); background:color-mix(in srgb, var(--leaf) 18%, transparent); }
   .chip.half { border-color:var(--warn); }
   .chip.need { color:var(--muted); background:var(--bg); }
+  .bagIcons{display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle} .bagIcons.hidden{display:none}
+  .bagI{width:26px;height:26px;padding:3px;border-radius:7px;border:1px solid color-mix(in srgb, currentColor 45%, transparent);background:color-mix(in srgb, currentColor 12%, transparent);cursor:pointer;transition:color .6s,background .6s,border-color .6s}
+  .bagI svg{width:100%;height:100%;display:block}
+  .bagI.idle{opacity:.55} .bagI:hover{background:color-mix(in srgb, currentColor 24%, transparent)}
+  .bagI.pulse{animation:bagGlow 2.2s ease-in-out infinite}
+  @keyframes bagGlow{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 9px 2px color-mix(in srgb, currentColor 70%, transparent)}}
+  @media (prefers-reduced-motion:reduce){.bagI.pulse{animation:none;box-shadow:0 0 6px 1px currentColor}}
   #wrap { border:2px solid var(--accent); } #wrapEnd { margin-left:auto; }
   #summary { border:2px solid var(--leaf); }
   .sgrid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:8px 0; } .sgrid > div { background:var(--bg); border-radius:8px; padding:6px 8px; }
@@ -545,7 +552,7 @@
       <span class="k">Start → now</span>
       <div class="snapLine"><span id="snapLine">Read at Start</span><button id="snapFix" class="link" aria-expanded="false" aria-controls="snapEdit">fix</button></div>
       <span class="k">Inventory</span>
-      <div class="invLine"><div class="row" id="invTabs" title="Open your inventory on Equip, Use and Etc for a second each, after Start and again before Stop: the difference is your real loot. Click a tab to read it now."></div><div class="ask hidden" id="invAsk"></div></div>
+      <div class="invLine"><div class="row" id="invTabs" title="Open your inventory on Equip, Use and Etc for a second each, after Start and again before Stop: the difference is your real loot. Click a tab to read it now."></div><div class="bagIcons" id="bagIcons" title="Bag check reminders"></div><div class="ask hidden" id="invAsk"></div></div>
       <div id="snapEdit" class="snapEdit" hidden>
         <div class="note">Your EXP bar is read at Start and at Stop, and the difference is what Past sessions saves. If a level or % read wrong, fix it here.</div>
       <div class="row"><button id="snapStart" class="alt">Snap start</button> <button id="snapEnd" class="alt">Snap end</button></div>
@@ -740,6 +747,8 @@
     <div class="pophead"><h2 id="prefsTitle">Settings</h2><button id="prefsClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button><nav class="pnav" id="prefsNav" aria-label="Settings sections"></nav></div>
     <div class="card" data-nav="Game"><h3>Reading the game</h3>
       <div class="row"><label>Job <select id="job"><option value="">Auto (read from the status bar)</option><option>Beginner</option><option>Swordman</option><option>Fighter</option><option>Page</option><option>Spearman</option><option>Magician</option><option>Wizard (Fire,Poison)</option><option>Wizard (Ice,Lightning)</option><option>Cleric</option><option>Archer</option><option>Hunter</option><option>Crossbowman</option><option>Rogue</option><option>Assassin</option><option>Bandit</option></select></label></div>
+      <label class="chk"><input type="checkbox" id="bagMain"> <span>Bag check reminder icons on the main card: sword, potion, crate turn yellow, orange, then red as a tab gets stale. Click one to read it.</span></label>
+      <label class="chk" title="How long a bag tab stays green after it was read. Yellow after that, orange after 30 s, red and glowing at 2 min."><span>Bag tab stays fresh for</span> <input type="number" id="bagEvery" min="1" max="30" step="1" style="width:52px" aria-label="Bag check minutes"> <span>min</span></label>
       <label class="chk"><input type="checkbox" id="autoPause"> <span>Pause when the game screen is gone (Cash Shop, changing channel)</span></label>
     </div>
     <div class="card" data-nav="Party"><h3>Party</h3>
@@ -824,6 +833,7 @@
   <script src="../core/alerts.js"></script>
   <script src="../core/prices.js"></script>
   <script src="../core/ocrcache.js"></script>
+  <script src="../core/bagstale.js"></script>
   <script src="readers.js"></script>
   <script src="themes.js"></script>
   <script src="changelog.js"></script>

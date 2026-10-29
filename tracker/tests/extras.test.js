@@ -132,6 +132,16 @@ const path = require("path"), {chromium} = require("playwright");
     || bi.got.dock !== "alerts,events,items,kpq,log,main,mesos,mobs,stats,used" || !/built in/.test(bi.got.note)) fail("built-in profile", bi);
   if (bi.again !== "Default" || bi.kept || bi.opt !== "Yours,Built in") fail("built-in profile stays as shipped", bi);
 
+  // bag check icons on the main card (core/bagstale.js): grey before Start, then coloured by how stale each tab's last read is,
+  // a click runs the same scan as the chips, and the setting hides them
+  const bag = await page.evaluate(async () => { const g = () => [...document.querySelectorAll("#bagIcons .bagI")].map(e => e.dataset.tab + ":" + (e.className.match(/idle|ok|soon|late|now/) || [""])[0]);
+    const idle = g(); const t = Date.now(); runT0 = t - 20 * 60e3; timer = timer ?? setTimeout(() => {}, 1e9);
+    renderBag({invTabs: {equip: {first: t, last: t - 60e3}, use: {first: t, last: t - (5 * 60e3 + 10e3)}}});
+    const live = g(), hot = document.querySelector("#bagIcons .bagI.pulse")?.dataset.tab;
+    settings = {...settings, bag: {main: false}}; renderBag({}); const off = $("#bagIcons").classList.contains("hidden");
+    settings = {...settings, bag: {main: true, every: 5}}; return {idle, live, hot, off} });
+  if (bag.idle.join() !== "equip:idle,use:idle,etc:idle" || bag.live.join() !== "equip:ok,use:soon,etc:now" || bag.hot !== "etc" || !bag.off) fail("bag icons", bag);
+
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   console.log("extras test passed");

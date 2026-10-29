@@ -17,11 +17,11 @@ const runClock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 // what can be tracked: the panel lists these, in this order. HOME is where each lands the first time (desktop pixels)
-const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar"};
+const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar", bag: "Bag check"};
 const HOME = {status: {on: true, x: 24, y: 24}, exp: {on: true, x: 24, y: 108}, map: {on: true, x: 24, y: 250},
   kills: {on: false, x: 24, y: 620}, mesos: {on: false, x: 24, y: 700}, loot: {on: false, x: 24, y: 780},
   party: {on: false, x: 24, y: 860}, kpq: {on: false, x: 24, y: 940}, log: {on: false, x: 24, y: 1020},
-  stat: {on: false, x: 300, y: 24}, bar: {on: false, x: 300, y: 110}};
+  stat: {on: false, x: 300, y: 24}, bar: {on: false, x: 300, y: 110}, bag: {on: false, x: 300, y: 190}};
 let DATA = null, CFG = {edit: true, widgets: {}, snap: true, grid: false, gsize: 64, panel: null, insp: null, profile: "Default", profiles: null}, DESK = {x: 0, y: 0, width: 1920, height: 1080}, zTop = 1;
 const picked = {id: null};
 // Widget instances (0.2.87, WeakAuras' "make as many displays as you like"): a card id is a kind ("exp") or a kind plus an
@@ -76,6 +76,8 @@ const PARAMS = [
   {k: "spark", sec: "This card", lab: "Sparkline", t: "b", def: true, kinds: ["exp", "kills", "mesos"]},
   {k: "sub", sec: "This card", lab: "Detail rows", t: "b", def: true, kinds: ["exp", "kills", "mesos", "status", "kpq"]},
   {k: "lines", sec: "This card", lab: "Lines shown", t: "r", min: 2, max: 14, step: 1, def: {_: 6, loot: 5}, kinds: ["log", "loot"]},
+  {k: "bagl", sec: "This card", lab: "Icons", t: "s", opts: {row: "Side by side", col: "Stacked"}, def: "row", kinds: ["bag"]},
+  {k: "bagn", sec: "This card", lab: "Tab names", t: "b", def: false, kinds: ["bag"]},
   {k: "rows", sec: "This card", lab: "Monsters shown", t: "r", min: 2, max: 14, step: 1, def: 6, kinds: ["map"]},
 ];
 const PMAP = Object.fromEntries(PARAMS.map(p => [p.k, p]));
@@ -176,6 +178,12 @@ const RENDER = {
   bar(d, id){ const t = tokOf(id, BARS, "levelPct"), v = BARS[t][1](d);
     return v == null ? `<div class="empty">Waiting for the EXP bar.</div>`
       : `<div class="lvbar"><span>Lv <b>${d.st?.level ?? "-"}</b></span><div class="trk"><i style="width:${v}%"></i></div><span>${v.toFixed(1)}%</span></div><div class="sub">${esc(BARS[t][0])}</div>` },
+  // Bag check (0.2.96): sword / potion / crate, coloured by how stale the tab's last read is (core/bagstale.js). Clicking one
+  // asks the tracker window to scan that tab (same as the chips); see the pointerdown handler near the end.
+  bag(d, id){
+    const B = window.GrindBag, L = B.tabs(Object.fromEntries(Object.entries(d.inv || {}).map(([k, last]) => [k, {last}])), d.runT0, d.t, d.bagEvery, d.on || d.dummy), names = wv(id, "bagn");
+    return `<div class="bagrow ${wv(id, "bagl")}">${L.map(l => `<span class="bagI ${l.stage}${l.pulse ? " pulse" : ""}" role="button" data-bag="${l.k}" style="color:${B.color(l)}" title="${esc(l.name)}: ${l.stage === "idle" ? "starts when you press Start" : l.last ? "read " + Math.round(l.age / 60e3) + " min ago" : "not read yet"}. Click to read it now">${B.ICONS[l.k]}${names ? `<em>${esc(l.name)}</em>` : ""}</span>`).join("")}</div>`;
+  },
   log(d, id){
     const lines = (d.feed || []).slice(-wv(id, "lines")).reverse();
     return lines.length ? lines.map(l => `<div class="lr ${esc(l.kind)}"><time>${clockT(l.t)}</time><span>${esc(l.text)}</span></div>`).join("") : `<div class="empty">Nothing yet.</div>`;
@@ -616,6 +624,18 @@ function chip(text, card){
   xyChip.style.top = Math.max(4, r.top - xyChip.offsetHeight - 6) + "px";
 }
 function chipHide(){ clearTimeout(xyT); xyChip?.classList.add("hidden") }
+// bag icons: the window is click-through, so while the mouse is over an icon it asks main.js to catch clicks (ov-hit), and
+// hands them back the moment it leaves. A click asks the tracker window to scan that tab. Never while editing (edit
+// mode is for layout, and the whole window already takes the mouse).
+let bagHit = false;
+addEventListener("mousemove", e => {
+  const on = !CFG.edit && !!e.target.closest?.("[data-bag]");
+  if (on !== bagHit){ bagHit = on; window.ovhost.hit(on) }
+});
+addEventListener("pointerdown", e => {
+  const b = !CFG.edit && !e.button && e.target.closest?.("[data-bag]");
+  if (b) window.ovhost.bag(b.dataset.bag);
+});
 addEventListener("pointerdown", e => {
   if (!CFG.edit || e.button) return;
   const card = e.target.closest?.(".ovw");

@@ -679,4 +679,20 @@ console.log("alerts ok");
 }
 console.log("site prices ok");
 
+// bag check reminders (core/bagstale.js): green -> yellow -> orange after 30 s -> red, glow at 2 min overdue (Danny 2026-10-29)
+{ const B = require("../core/bagstale.js"), m = 60e3;
+  assert.strictEqual(B.level(4 * m, 5).stage, "ok", "inside the fresh window: green");
+  assert.strictEqual(B.level(5 * m, 5).stage, "soon"); assert.strictEqual(B.level(5 * m, 5).hue, 50, "due: yellow");
+  assert.strictEqual(B.level(5 * m + 29e3, 5).hue, 50, "yellow holds 30 s");
+  const o = B.level(5 * m + 31e3, 5); assert.ok(o.stage === "late" && o.hue < 50 && o.hue > 30, "then orange");
+  assert.ok(B.level(5 * m + 100e3, 5).hue < o.hue, "redder as it goes stale");
+  const n = B.level(7 * m, 5); assert.ok(n.stage === "now" && n.pulse && n.hue === 0, "2 min overdue: red + glow");
+  assert.strictEqual(B.every("x"), 5); assert.strictEqual(B.every(0), 1); assert.strictEqual(B.every(99), 30);
+  const t = B.tabs({equip: {last: 1000 + 3 * m, first: 1000}}, 1000, 1000 + 5 * m + 10e3, 5, true);
+  assert.deepStrictEqual(t.map(x => x.stage), ["ok", "soon", "soon"], "a read tab counts from its read, an unread one from the run start");
+  assert.ok(B.tabs({}, 0, 1e9, 5, false).every(x => x.stage === "idle"), "not tracking: grey, no urgency");
+  assert.ok(B.ICONS.equip && B.ICONS.use && B.ICONS.etc);
+}
+console.log("bag stale ok");
+
 console.log("patch notes ok");
