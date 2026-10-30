@@ -2034,9 +2034,9 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <details class="howto">
     <summary>About the KPQ leaderboard</summary>
     <ul>
-      <li>Kerning PQ rounds from <a href="#" data-go="trk">Grind Tracker</a> players with sharing on, and from the site's <a href="#" data-go="kpqt">KPQ timer</a> with sending on. Rounds joined part-way aren't counted.</li>
+      <li>Kerning PQ rounds from <a href="#" data-go="trk">Grind Tracker</a> players with sharing on. Only tracker rounds count; the site's <a href="#" data-go="kpqt">KPQ timer</a> doesn't submit. Rounds joined part-way aren't counted.</li>
       <li><b>Rush</b>: fastest clear, 1st stage to beating King Slime and leaving the Last stage. The Bonus stage isn't counted.</li>
-      <li><b>Bonus</b>: rounds that went into the Bonus stage, ranked by EXP + mesos gained that round (1 meso = 1 point, our own weighting). A faster Rush leaves more Bonus time, which shows up as more EXP and mesos. Only the tracker reads EXP, so site-timed rounds are on Rush only.</li>
+      <li><b>Bonus</b>: rounds that went into the Bonus stage, ranked by EXP + mesos gained that round (1 meso = 1 point, our own weighting). A faster Rush leaves more Bonus time, which shows up as more EXP and mesos.</li>
       <li><b>Scored boards</b> (below the lists): rounds from Grind Tracker 0.3.20 on get points, a Rush score from stage speed, a Bonus score from EXP, mesos and drops, and the five scored boards rank them. How the points work is under the table.</li>
       <li>One line per party (same party code) or player (home network). A party's trackers each send the same round; it counts once.</li>
       <li><b>Today's runs</b> below the board: every round recorded today (this browser's date), in the order the server received them, each with its time (shown in your time), the day's best highlighted. Rounds from before the server kept times list fastest first. It doesn't follow the filters, so the whole day stays visible when the board is filtered down.</li>
@@ -3529,7 +3529,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-30T18:13:18Z" data-ver="0.19.9">Site version: v0.19.9 · built Oct 30, 2026 · 18:13 UTC</p>
+  <p class="sitever" data-built="2026-10-30T18:18:04Z" data-ver="0.19.9">Site version: v0.19.9 · built Oct 30, 2026 · 18:18 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
