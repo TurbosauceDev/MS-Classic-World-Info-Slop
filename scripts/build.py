@@ -14,6 +14,11 @@ assert not set(p.stem for p in (src / "pages").glob("*.html")) - set(re.findall(
 # an unclosed <div> nests every later box inside it (10-21: a stray changelog card swallowed all older ones, smoke red)
 for p in (src / "pages").glob("*.html"):
     t = p.read_text(); assert len(re.findall(r"<div\b", t)) == t.count("</div>"), f"{p.name}: <div> and </div> counts differ"
+# a changelog entry outside a card (10-30: a <p> lost its card header and rendered loose above the first day) is never shipped
+_log = (src / "pages" / "log.html").read_text(); _body = _log.split('<div class="changelog">', 1)[1]; _depth = 0
+for _ln in _body.splitlines():
+    if _depth == 0 and _ln.strip() and not _ln.lstrip().startswith(('<div class="card"', '</div>')): raise SystemExit(f"log.html: entry outside a card: {_ln.strip()[:80]}")
+    _depth += len(re.findall(r"<div\b", _ln)) - _ln.count("</div>")
 css = (src / "styles.css").read_text()
 js = "\n".join(p.read_text() for p in sorted((src / "js").glob("*.js")))
 # the grind tracker's screen readers (inventory price check uses them); one IIFE, exports window.GrindReaders

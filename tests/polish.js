@@ -61,6 +61,8 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
   const lg = await p.evaluate(() => { const c = [...document.querySelectorAll("#log .changelog .card")], d = [...document.querySelectorAll("#log .logday")];
     return {cards: c.length, t: c.filter(x => /^\d{4}-\d\d-\d\d/.test(x.dataset.t || "")).length, times: document.querySelectorAll("#log .vtime").length,
       days: d.length, open: d.map(x => x.open ? 1 : 0).join("")} });
+  const loose = await p.$$eval("#log .changelog > :not(.card):not(.logday)", l => l.length);
+  check(loose === 0, `changelog: no entry outside a day card (${loose} loose)`);
   check(lg.cards > 80 && lg.t === lg.cards && lg.times >= lg.cards - 1 && lg.days > 5 && /^10+$/.test(lg.open), `changelog: times on every version, days folded (${JSON.stringify(lg)})`);
 
   // 7. World Map: before a click the side card lists the best spots (dots 1-3); a pick opens that spot's card
