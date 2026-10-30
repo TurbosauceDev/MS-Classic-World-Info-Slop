@@ -65,15 +65,8 @@ const SUMMARY = {updated: "2026-10-21T12:00:00Z", runs: 0, players: 0, hours: 0,
   R = await p.evaluate(() => KPQT.rounds);
   check(R.at(-1).clock === true, "clock-timed round marked");
 
-  // sending: opt-in; the body is what the server's cleanKpq takes; no name = a made-up one
-  check(!sent.length, "nothing sent with sending off");
-  await p.selectOption("#ktjob", "Hunter"); await p.check("#ktsend");
-  await p.click('#kthist [data-send]'); await p.waitForTimeout(100);
-  const s0 = sent[0] || {};
-  check(sent.length === 1 && s0.src === "site" && s0.kpq === true && /^site-[0-9a-f]{24}$/.test(s0.install) && s0.stages["80000000"] > 0 && s0.stages["80000400"] > 0 && s0.clear > 60,
-    `round sent with src site and stage ids (${JSON.stringify(s0).slice(0, 200)})`);
-  check(/^Archer\d{4}$/.test(s0.name) && s0.job === "Hunter" && s0.party === 4, `no name: made-up first-job name (${s0.name})`);
-  check(await p.$$eval("#kthist .pill.p-good", l => l.length) === 1, "row shows sent");
+  // no submit path: no Send control, nothing posted (leaderboard takes tracker rounds only)
+  check(!(await p.$("#ktsend, #ktcode, #kthist [data-send]")) && !sent.length, "timer has no leaderboard submit and posted nothing");
 
   // leaderboard from the round list
   await open("trkkpq"); await p.waitForTimeout(300);

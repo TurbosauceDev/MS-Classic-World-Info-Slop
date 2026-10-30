@@ -70,6 +70,7 @@ export function cleanKpq(r){
   if (!r || typeof r !== "object") return {error: "not a round"};
   if (typeof r.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(r.install)) return {error: "install id"};
   if (!num(r.clear, 1, 7200) || !num(r.party, 1, 6)) return {error: "numbers"};
+  if (r.src === "site") return {error: "tracker only"};   // the site's KPQ timer no longer submits (Danny 2026-10-30)
   if (r.level != null && !num(r.level, 1, 200)) return {error: "level"};
   if (r.date && (typeof r.date !== "string" || !/^\d{4}-\d\d-\d\d$/.test(r.date))) return {error: "date"};
   const cnt = (v, hi) => v == null ? null : Math.min(hi, Math.max(0, Math.round(+v) || 0));
@@ -79,7 +80,7 @@ export function cleanKpq(r){
     mode: r.mode === "Rush" ? "Rush" : "Bonus", party: r.party | 0, level: r.level == null ? null : Math.round(r.level),
     job: typeof r.job === "string" ? r.job.slice(0, 40) || null : null, clear: Math.round(r.clear), total: cnt(r.total, 7200),
     clock: r.clock ? 1 : 0, exp: cnt(r.exp, 1e7), mesos: cnt(r.mesos, 1e7), stages, name: kpqName(r.name),
-    src: r.src === "site" ? "site" : "tracker", raw: cleanRaw(r.v2, stages)};   // site = the site's KPQ timer (stages split by key press, 2026-10-21)
+    src: "tracker", raw: cleanRaw(r.v2, stages)};
   let why = null;
   if (round.clear < KPQ_MIN || round.clear > 3600) why = "clear time";
   else if (round.total != null && round.total < round.clear) why = "total under clear";

@@ -5,7 +5,7 @@
       <li>A stopwatch for Kerning PQ rounds, split by stage: 1st, 2nd, 3rd, 4th, Last (King Slime), then the Bonus stage. Press <kbd>Space</kbd> as each stage ends. Each stage shows how it compares with your best.</li>
       <li><b>Clear</b> = 1st stage to leaving the Last stage, the same time the <a href="#" data-go="trkkpq">KPQ leaderboard</a> ranks by. The Bonus stage doesn't count toward it.</li>
       <li><b>Share game window</b> (optional, desktop browser): the page reads the in-game "Time Left" clock, so a new round starts by itself when its clock appears and the times follow the game's clock. The picture stays in your browser; nothing is uploaded. Stage changes are still your key press: the page can't see which map you're on.</li>
-      <li>Rounds are saved in this browser only. Turn on <b>Send cleared rounds</b> to put them on the KPQ leaderboard with your character name; they're marked as timed on the site. The <a href="#" data-go="trk">Grind Tracker</a> app does all of this by itself, stages and EXP included.</li>
+      <li>Rounds are saved in this browser only. This timer can't submit to the leaderboard: only the <a href="#" data-go="trk">Grind Tracker</a> app's rounds count, and it does stages and EXP by itself.</li>
       <li>Keys: <kbd>Space</kbd> start / next stage, <kbd>Enter</kbd> end the round here, <kbd>Backspace</kbd> undo the last split, <kbd>Esc</kbd> throw the round away.</li>
     </ul>
   </details>
@@ -38,16 +38,14 @@
   </div>
 
   <div class="card kt-card">
-    <h3>Leaderboard details</h3>
+    <h3>Round details</h3>
     <div class="kt-form">
       <label>Character name <input id="ktname" maxlength="12" autocomplete="off" spellcheck="false" placeholder="in-game name"></label>
       <label>Job <select id="ktjob"></select></label>
       <label>Level <input id="ktlevel" type="number" min="1" max="200" inputmode="numeric"></label>
       <label>Party size <select id="ktparty"><option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
-      <label>Party code <input id="ktcode" maxlength="20" autocomplete="off" spellcheck="false" placeholder="optional"></label>
     </div>
-    <label class="chk kt-sendsw"><input type="checkbox" id="ktsend"> Send cleared rounds to the KPQ leaderboard</label>
-    <p class="tiny">Sent with each round: the times, party size, job, level, the name above and the party code (only to group your party as one line, never shown). Without a name the board shows a made-up one, like Archer4821. Same party code as your party's trackers = one line for the whole party.</p>
+    <p class="tiny">Kept in this browser only. The KPQ leaderboard takes rounds from the Grind Tracker app only; this timer doesn't send anything.</p>
   </div>
 <style>
 .kt-card{margin-bottom:14px}
@@ -86,7 +84,6 @@
 .kt-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 14px;margin:8px 0 12px}
 .kt-form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
 .kt-form input,.kt-form select{font:15px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0}
-.kt-sendsw{display:flex;margin:4px 0}
 #kthist td.kt-when{white-space:nowrap}
 @media (max-width:760px){.kt-stages{grid-template-columns:repeat(3,minmax(0,1fr))}.kt-st .d{white-space:normal}}
 </style>

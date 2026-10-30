@@ -2,23 +2,21 @@
 // The timer: a stopwatch split by KPQ stage (1st … Last, then Bonus), keyed by the player (Space = next stage). Optional
 // screen share reads the in-game "Time Left" clock with the tracker's reader (readers.js readKpqTimer, inlined by build.py):
 // the round then starts when a new clock appears and its time follows the game clock. Stages stay a key press: the site has
-// no map reader. Rounds live in localStorage ("kpqt"); cleared ones go to the tracker server's /api/kpq when the player
-// turns sending on (src "site", 2026-10-21). Clear = 1st stage to leaving the Last stage, like the tracker.
+// no map reader. Rounds live in localStorage ("kpqt"); nothing is sent: the KPQ leaderboard takes tracker rounds only
+// (Danny 2026-10-30). Clear = 1st stage to leaving the Last stage, like the tracker.
 const KPQT = (() => {
 const STG = ["1st", "2nd", "3rd", "4th", "Last", "Bonus"];
 const KS = ["80000000", "80000100", "80000200", "80000300", "80000400", "80000500"];   // KPQ map ids, same order
-const API = TRK_API.replace(/\/api\/summary$/, "/api/kpq");
 // jobs as the tracker reads them off the stat window; first job names for the made-up board name (tracker kpqAlias)
 const JOBS = ["Beginner", "Swordman", "Fighter", "Page", "Spearman", "Magician", "Wizard (Fire, Poison)", "Wizard (Ice, Lightning)", "Cleric",
   "Archer", "Hunter", "Crossbowman", "Rogue", "Assassin", "Bandit"];
-const FIRST = {Fighter: "Swordman", Page: "Swordman", Spearman: "Swordman", Cleric: "Magician", Hunter: "Archer", Crossbowman: "Archer", Assassin: "Rogue", Bandit: "Rogue"};
 const $k = id => document.getElementById(id);
 const tenths = s => { s = Math.max(0, s); const m = Math.floor(s / 60), r = s - m * 60; return m + ":" + (r < 10 ? "0" : "") + r.toFixed(1) };
 const secs = s => s == null ? "–" : mss(s);
 const dlt = d => (d < 0 ? "−" : "+") + (Math.abs(d) >= 60 ? mss(Math.abs(d)) : Math.abs(d).toFixed(1) + "s");
 
 /* ---- saved state ---- */
-const SET = Object.assign({name: "", job: "", level: "", party: 4, code: "", send: false, id: ""}, savedState("kpqtset", {name: "", job: "", level: "", party: 4, code: "", send: false, id: ""}));
+const SET = Object.assign({name: "", job: "", level: "", party: 4, id: ""}, savedState("kpqtset", {name: "", job: "", level: "", party: 4, id: ""}));
 if (!/^site-[0-9a-f]{24}$/.test(SET.id)) SET.id = "site-" + [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(16).padStart(2, "0")).join("");
 let ROUNDS = [];
 try { const v = JSON.parse(localStorage.getItem("kpqt") || "[]"); if (Array.isArray(v)) ROUNDS = v.filter(r => r && Array.isArray(r.st) && r.st.length === 6) } catch(e) {}
@@ -60,30 +58,10 @@ function end(){
   const st = STG.map((_, k) => sp[k] == null ? null : Math.round((sp[k] - (k ? sp[k - 1] : 0)) * 10) / 10);
   const cleared = sp.length >= 5, clear = cleared ? sp[4] : null;
   const r = {id: Date.now(), at: cur.at, date: new Date(cur.t0).toLocaleDateString("sv"), hour: new Date(cur.t0).getUTCHours(), st, clear,
-    total: sp.at(-1), clock: !!cur.clk, party: +SET.party || 4, job: SET.job || null, level: +SET.level || null, sent: null};
+    total: sp.at(-1), clock: !!cur.clk, party: +SET.party || 4, job: SET.job || null, level: +SET.level || null};
   ROUNDS.push(r); cur = null; keepCur(); save(); render();
   if (S) S.armed = false;   // the clock still shows (Bonus, Exit): wait for it to go before a new round starts by itself
-  if (cleared && SET.send) send(r);
-  else toast(cleared ? `Cleared in <b>${tenths(clear)}</b>` : "Round saved (not cleared: ended before the Last stage)", 4000);
-}
-
-/* ---- leaderboard ---- */
-const alias = () => { const j = SET.job || "", b = j.startsWith("Wizard") ? "Magician" : FIRST[j] || (/^(Beginner|Swordman|Magician|Archer|Rogue)$/.test(j) ? j : "Player");
-  return b + (parseInt(SET.id.slice(5, 13), 16) % 9000 + 1000) };
-async function send(r){
-  if (r.clear == null || r.sent === "sent") return;
-  const stages = {}; r.st.forEach((s, k) => { if (s != null) stages[KS[k]] = Math.round(s) });
-  const name = /^[A-Za-z0-9]{2,12}$/.test(SET.name) ? SET.name : alias();
-  const body = {kpq: true, v: 1, src: "site", install: SET.id, date: r.date, hour: r.hour, mode: r.st[5] != null ? "Bonus" : "Rush", party: r.party, level: r.level || +SET.level || null,
-    job: r.job || SET.job || null, clear: Math.round(r.clear), total: Math.round(r.total), clock: r.clock, stages, partyCode: SET.code.trim() || null, name};
-  r.sent = "sending"; render();
-  try {
-    const res = await fetch(API, {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(body), signal: AbortSignal.timeout(15e3)});
-    const j = await res.json().catch(() => ({}));
-    r.sent = res.ok ? (j.counted || j.why === "already sent" ? "sent" : "not counted: " + (j.why || "?")) : res.status === 429 ? "too many rounds this hour" : "refused: " + (j.error || res.status);
-  } catch(e){ r.sent = "couldn't reach the server" }
-  save(); render();
-  toast(r.sent === "sent" ? `Sent to the <a href="#" data-go="trkkpq">KPQ leaderboard</a> as <b>${esc(name)}</b>` : "Not sent: " + esc(r.sent), 5000);
+  toast(cleared ? `Cleared in <b>${tenths(clear)}</b>` : "Round saved (not cleared: ended before the Last stage)", 4000);
 }
 
 /* ---- screen share: the in-game KPQ clock ---- */
@@ -183,13 +161,11 @@ function render(){
     ["Average Bonus", bon.length ? mss(bon.reduce((a, x) => a + x, 0) / bon.length) : "–"]].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
   if (!ROUNDS.length){ $k("kthist").innerHTML = `<p class="tiny">No rounds yet. They're saved in this browser as you finish them.</p>`; return }
   const rows = ROUNDS.slice(-50).reverse().map(r => {
-    const sent = r.clear == null ? `<span class="sub">not cleared</span>` : r.sent === "sent" ? `<span class="pill p-good">sent</span>` : r.sent === "sending" ? `<span class="sub">sending…</span>`
-      : `<button class="btn sm" type="button" data-send="${r.id}">Send</button>${r.sent ? ` <span class="sub">${esc(r.sent)}</span>` : ""}`;
     return `<tr><td class="sub kt-when" title="${esc(r.date)}">${esc(r.date.slice(5))} ${new Date(r.at).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</td><td class="num${r.clear != null && r.clear === b.clear ? " best" : ""}"><b>${secs(r.clear)}</b></td>`
       + r.st.map((s, k) => `<td class="num${s != null && s === b.stage[k] ? " best" : ""}">${secs(s)}</td>`).join("")
-      + `<td class="num">${r.party}</td><td>${r.clock ? "game clock" : "key presses"}</td><td>${sent}</td><td><button class="kt-x" type="button" data-del="${r.id}" title="Delete this round" aria-label="Delete this round">×</button></td></tr>`;
+      + `<td class="num">${r.party}</td><td>${r.clock ? "game clock" : "key presses"}</td><td><button class="kt-x" type="button" data-del="${r.id}" title="Delete this round" aria-label="Delete this round">×</button></td></tr>`;
   }).join("");
-  $k("kthist").innerHTML = `<div class="tblwrap"><table class="mini"><thead><tr><th>When</th><th class="num">Clear</th>${STG.map(n => `<th class="num">${n}</th>`).join("")}<th class="num">Party</th><th>Timed by</th><th>Leaderboard</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
+  $k("kthist").innerHTML = `<div class="tblwrap"><table class="mini"><thead><tr><th>When</th><th class="num">Clear</th>${STG.map(n => `<th class="num">${n}</th>`).join("")}<th class="num">Party</th><th>Timed by</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
     + (ROUNDS.length > 50 ? `<p class="tiny">Newest 50 of ${fmt(ROUNDS.length)} shown; bests and averages use all of them.</p>` : "");
 }
 let toastT = 0;
@@ -197,16 +173,14 @@ function toast(html, ms){ const el = $k("kttoast"); el.innerHTML = html; el.clas
 
 /* ---- wiring ---- */
 $k("ktjob").innerHTML = `<option value="">–</option>` + JOBS.map(j => `<option>${j}</option>`).join("");
-const form = {name: "ktname", job: "ktjob", level: "ktlevel", party: "ktparty", code: "ktcode"};
+const form = {name: "ktname", job: "ktjob", level: "ktlevel", party: "ktparty"};
 for (const [k, id] of Object.entries(form)){ $k(id).value = SET[k] ?? ""; $k(id).addEventListener("input", () => { SET[k] = $k(id).value; save() }) }
 $k("ktname").addEventListener("change", () => { const v = $k("ktname").value.trim(); $k("ktname").setCustomValidity(v && !/^[A-Za-z0-9]{2,12}$/.test(v) ? "Letters and digits, 2 to 12" : ""); $k("ktname").reportValidity() });
-$k("ktsend").checked = !!SET.send; $k("ktsend").addEventListener("change", () => { SET.send = $k("ktsend").checked; save() });
 $k("ktnext").addEventListener("click", next); $k("ktend").addEventListener("click", end); $k("ktundo").addEventListener("click", undo); $k("ktcancel").addEventListener("click", cancel);
 $k("ktshare").addEventListener("click", share);
 $k("kpqt").addEventListener("click", e => {
   const a = e.target.closest("a[data-go]"); if (a){ e.preventDefault(); $("#t-" + a.dataset.go).click(); window.scrollTo({top: 0}); return }
   if (e.target.closest("[data-undo]") && undoBin && !cur){ cur = undoBin; undoBin = null; keepCur(); render(); loop(); $k("kttoast").classList.remove("on"); return }
-  const s = e.target.closest("[data-send]"); if (s){ const r = ROUNDS.find(x => x.id === +s.dataset.send); if (r) send(r); return }
   const d = e.target.closest("[data-del]"); if (d){ ROUNDS = ROUNDS.filter(x => x.id !== +d.dataset.del); save(); render() }
 });
 document.addEventListener("keydown", e => {
