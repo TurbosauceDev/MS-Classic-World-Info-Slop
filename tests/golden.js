@@ -33,6 +33,9 @@ const path = require("path");
   // Critical Rate +10%: the builder showed 26%); full masteries = 77% mastery. Guide build, no gear: 5 + 20 + 10 = 35%, +20 +15 = +35%.
   const hb = await p.evaluate(() => { const r = buildAt("Bowman", "Hunter", "Bow", 41, false, true, true); return [r.crit, r.critDmg, r.mast] });
   check(hb.join() === [35, 35, 0.77].join(), "Lv 41 Hunter crit 35% for +35%, mastery 77% (Bow Mastery crit rate counted)", hb);
+  // scale factors (statWeights): a Hunter's DEX is the main stat, so +1 DEX beats +1 STR, +1 INT is worth nothing, +1 W.ATK is positive
+  const sw = await p.evaluate(() => BLD.weightsAt("Bowman", "Hunter", "Bow", 41));
+  check(sw.DEX > sw.STR && sw.STR > 0 && sw.INT === 0 && sw["W.ATK"] > 0, "Hunter stat weights: DEX > STR > 0, INT 0, W.ATK > 0", sw);
   // portals to the nearest potion NPC (meowdb class guides)
   const pots = await p.evaluate(() => { const id = n => Object.keys(D.maps).find(k => D.maps[k][0].trim() === n && D.maps[k][1]);
     return ["Line 1 <Area 1>", "Transfer Area", "Tree Dungeon, Forest Up North IV", "Ant Tunnel III"].map(n => POTS[id(n)]?.[0]) });

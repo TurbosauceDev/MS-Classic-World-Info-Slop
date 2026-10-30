@@ -448,6 +448,16 @@ function fillControls(){
 // armor selects: pieces your class can wear at this level (and gender, if set), best level first
 const CRAFTED = new Set((D.craft?.rec || []).map(r => r[3]));
 const QREWARD = new Set([...D.quests, ...D.citq].flatMap(r => (r.ri || []).flatMap(g => g.it.map(x => x[0]))));
+/* simc-style scale factors: re-run the same calc() with +1 of one input and report the DPS change (after misses, like r.eff).
+   Every number comes from calc(), so it is only as sourced as the damage model itself. */
+function statWeights(r){
+  const base = r.eff, out = [], w = r.w;
+  for (const k of ["STR","DEX","INT","LUK"]){
+    S.ap[k]++; const d = calc(S.sp).eff - base; S.ap[k]--; out.push([k, d]);
+  }
+  if (w){ w.pad++; const d = calc(S.sp).eff - base; w.pad--; out.push(["W.ATK", d]) }
+  return out;
+}
 const STAT_SHORT = {STR:"STR", DEX:"DEX", INT:"INT", LUK:"LUK", PDD:"W.DEF", MDD:"M.DEF", MHP:"HP", MMP:"MP", ACC:"ACC", EVA:"Avoid", CRT:"Crit %", CRD:"Crit dmg %", Speed:"Speed", Jump:"Jump"};
 const armorSrc = a => a[8] ? `shop ${fmt(a[8])}` : CRAFTED.has(a[0]) ? "craft" : QREWARD.has(a[0]) ? "quest" : "drop / FM";
 function fillGear(){
@@ -542,6 +552,8 @@ function render(){
     row("Crit", `${r.crit}% for +${r.critDmg}%`),
     ...(r.faRate ? [row("Final Attack", `${r.faRate}% for ${r.faPct}%`)] : [])
   ].join("") : `<p class="tiny">No damage until the attack skill has points.</p>`;
+  const sw = r.ai ? statWeights(r) : [], swTop = Math.max(...sw.map(x => x[1]), 0);
+  $("#pweights").innerHTML = swTop > 0 ? sw.map(([k, d]) => row("+1 " + k, `${d >= 0.05 ? "+" + d.toFixed(d < 10 ? 2 : 1) : "0"} <span class="tiny">(${Math.round(d / swTop * 100)}%)</span>`)).join("") : `<p class="tiny">Needs an attack with points in it.</p>`;
   $("#pstats").innerHTML = [
     row("STR / DEX", `${ap.STR + gt.STR} / ${ap.DEX + gt.DEX}`), row("INT / LUK", `${ap.INT + gt.INT} / ${ap.LUK + gt.LUK}`),
     row("Accuracy", Math.round(r.acc)), row("Avoid", r.avoid),
@@ -640,7 +652,8 @@ $("#psend").addEventListener("click", () => {
   document.querySelector('[data-tab="maps"]').click();
   rankMaps();
 });
-BLD = {get S(){ return S }, W, ARMOR, BRANCHES, JOBLABEL, PRIMARY, SLOTS, apTotal, kindOf, faStats, TWO_HANDED,
+BLD = {get S(){ return S }, weightsAt: (cls, branch, fam, lvl) => { const keep = S; S = {cls, lvl, branch, fam, weapon:null, skill:null, ammo:null, ap:null, sp:{}, buffs:true, aoe:false, obt:true, gear:{}};
+    try { applyDefaults(); guideBuild(); return Object.fromEntries(statWeights(calc(S.sp))) } finally { S = keep } }, W, ARMOR, BRANCHES, JOBLABEL, PRIMARY, SLOTS, apTotal, kindOf, faStats, TWO_HANDED,
   apply(fn){ fn(S); refresh() }, skills: jobSkills, tierOf, spPool, spentIn, addSP, canSP, autoSP, onRender: f => onRender.push(f), extra: null,
   group(fn){ HIST.hold = true; try { fn() } finally { HIST.hold = false; track() } }};   // several changes, one Undo step
 if (!Object.keys(S.sp).length) rebuild();
