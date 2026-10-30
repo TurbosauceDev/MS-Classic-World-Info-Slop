@@ -4,6 +4,10 @@
 // A theme can also carry a panel style, sk: "elv" (0.2.92, Danny: "a complete re-skin in the ElvUI style") — the tracker
 // and the overlay windows both get body.skin-elv and the stylesheets square the corners, flatten the bars and swap in the
 // condensed face. sk is optional everywhere: absent = the glass look, old share codes and settings keep working.
+// 0.3.22 (Turbozo 10-30: "make the elv-ui like style the default style... create a button called 'Clanker Chic'"):
+// Elv is PRESETS[0] now, so an unpicked theme wears the re-skin on the tracker, the overlay and the site (whose
+// styles.css :root carries the same colours). The old purple glass default lives on as the "Clanker Chic" preset; a
+// saved "p:Default" pick or an old share code saying preset "Default" maps to it (defaultAlias below).
 (function (root){
   // token -> [CSS variable, label in the editor]
   const TOKENS = {bg: ["--bg", "Background"], panel: ["--panel", "Boxes"], ink: ["--ink", "Text"], muted: ["--muted", "Faded text"],
@@ -15,13 +19,23 @@
   const PURPLE = {name: "Purple", mode: "system",
     light: T("Purple", "light", "f8f6fe ffffff 2b2638 6c6580 e3dcf2 8566d6 efe8ff ffffff 3f8f5a b7791f c0392b").c,
     dark: T("Purple", "dark", "1d1929 282338 f0ecf8 aba3bf 3e3651 b49bff 362d4e 1d1929 64c784 e6ad52 f2705f").c};
-  // "Default" is the planner site's own colours (src/styles.css :root, light and dark; text on accent = --panel like the
-  // site's buttons) so the tracker sits next to the site seamlessly (Danny, 2026-10-18)
-  const DEFAULT = {name: "Default", mode: "system",
-    light: T("Default", "light", "e7ddf9 f7f1ff 2a2142 685c94 cfbff0 7d58d6 dccbfa f7f1ff 3d7a5c 9a6a00 a3322b").c,
-    dark: T("Default", "dark", "1f1931 2a2243 f0eafd b6aad8 453a64 d2bffb 41346a 2a2243 7cc9a2 e2b44a ef7a70").c};
+  // "Clanker Chic" (0.3.22) was the default until the Elv pivot: the planner site's own colours (text on accent = --panel
+  // like the site's buttons), light and dark, on the rounded glass panels — the classic look, one click away (Turbozo 10-30)
+  const CLANKER = {name: "Clanker Chic", mode: "system",
+    light: T("Clanker Chic", "light", "e7ddf9 f7f1ff 2a2142 685c94 cfbff0 7d58d6 dccbfa f7f1ff 3d7a5c 9a6a00 a3322b").c,
+    dark: T("Clanker Chic", "dark", "1f1931 2a2243 f0eafd b6aad8 453a64 d2bffb 41346a 2a2243 7cc9a2 e2b44a ef7a70").c};
+  // "Elv" (0.2.92): the ElvUI panel look as colours — near-black faded backdrop and panels (backdropcolor 0.1,
+  // backdropfadecolor 0.06 @ .8) and a visible grey edge. 0.2.93 (Danny: "instead of orange accents... use the purple
+  // we like"): the accent is ours now — the Purple preset's dark-side #b49bff with dark text on it — where ElvUI's
+  // blue #1785d1 used to sit, and warn softens to the purple family's gold #e6ad52 so nothing screams orange.
+  // Dark only: the original has no light side. sk:"elv" below drives the full re-skin.
+  // 0.2.94 (Danny: "another iteration on readability"): faded text steps up from #9a9a9a to #b3b3b3 — 8.3:1 on the
+  // panels (was 6.2:1), so the small notes, labels and log stamps read without squinting, while the grey still sits
+  // back behind the bright values.
+  // 0.3.22: the default (PRESETS[0] — an unpicked theme lands here, and the site's styles.css carries the same colours).
+  const ELV = T("Elv", "dark", "0f0f0f 1a1a1a e8e8e8 b3b3b3 3f3f3f b49bff 2b2347 1a1a1a 55b76b e6ad52 ef4d4d", "elv");
   // the light presets use tinted backgrounds and boxes, not pure white (Danny: Lilac/Henesys/Perion sand were "flash bang" white)
-  const PRESETS = [DEFAULT, PURPLE,
+  const PRESETS = [ELV, CLANKER, PURPLE,
     T("Purple night", "dark", "1a1430 241c40 f3eeff b0a6cc 3a3060 c4a5ff 34295a 1a1430 6fd394 f0b95a ff7a6b"),
     T("Amethyst", "dark", "160f1f 21172e f2e9fb b39fc6 3b2a50 e08cff 3a2350 160f1f 6fcf97 f2b25c ff6f7d"),
     T("Grape soda", "dark", "120d26 1d1640 f5f2ff aaa0d8 362b6e 9d7bff 2c2263 120d26 6fd394 f0b95a ff7a6b"),
@@ -32,16 +46,7 @@
     T("Midnight", "dark", "0f1420 171e2e e9eef8 9aa6bf 2a3449 6ea8ff 1f2c47 0f1420 5fcf8a e8b65a f26d6d"),
     T("Henesys", "light", "efe3d1 f8f0e4 33281c 6f5f4d dfccb2 b0560b f2dcc3 ffffff 3f8f5a a8680f c0392b"),
     T("Perion sand", "light", "e9dfcf f4ede1 3a2d22 6f5f51 d9c8b1 9c4f2b e7d5c1 ffffff 4d8b3a a8680f b8322a"),
-    T("High contrast", "dark", "000000 0d0d0d ffffff d0d0d0 6a6a6a ffd400 2b2600 000000 4cff7a ffb000 ff5050"),
-    // "Elv" (0.2.92): the ElvUI panel look as colours — near-black faded backdrop and panels (backdropcolor 0.1,
-    // backdropfadecolor 0.06 @ .8) and a visible grey edge. 0.2.93 (Danny: "instead of orange accents... use the purple
-    // we like"): the accent is ours now — the Purple preset's dark-side #b49bff with dark text on it — where ElvUI's
-    // blue #1785d1 used to sit, and warn softens to the purple family's gold #e6ad52 so nothing screams orange. Dark
-    // only: the original has no light side. Pair it with sk:"elv" (below) for the full re-skin.
-    // 0.2.94 (Danny: "another iteration on readability"): faded text steps up from #9a9a9a to #b3b3b3 — 8.3:1 on the
-    // panels (was 6.2:1), so the small notes, labels and log stamps read without squinting, while the grey still sits
-    // back behind the bright values.
-    T("Elv", "dark", "0f0f0f 1a1a1a e8e8e8 b3b3b3 3f3f3f b49bff 2b2347 1a1a1a 55b76b e6ad52 ef4d4d", "elv")];
+    T("High contrast", "dark", "000000 0d0d0d ffffff d0d0d0 6a6a6a ffd400 2b2600 000000 4cff7a ffb000 ff5050")];
   const HEX = /^#[0-9a-f]{6}$/i;
   // a theme from outside (a share code, a file, settings): only a name, light/dark, the known tokens as #rrggbb and the
   // panel style (sk "elv", anything else drops to the glass look) survive
@@ -107,10 +112,13 @@
     return Object.keys(r).length ? r : null;
   }
   const cleanName = n => typeof n === "string" ? n.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40) || null : null;
+  // a setup code or profile saved before 0.3.22 says preset "Default" for the purple look that is "Clanker Chic" now
+  const defaultAlias = n => n === "Default" ? "Clanker Chic" : n;
   function cleanSetup(x, ids){
     if (!x || typeof x !== "object") return null;
     const layout = cleanLayout(x.layout, ids), p = x.theme && typeof x.theme === "object" ? x.theme : null;
-    const theme = p && typeof p.preset === "string" ? (PRESETS.some(t => t.name === p.preset) ? {preset: p.preset} : null) : clean(p);
+    const pn = p && typeof p.preset === "string" ? defaultAlias(p.preset) : null;
+    const theme = pn ? (PRESETS.some(t => t.name === pn) ? {preset: pn} : null) : clean(p);
     if (!layout && !theme) return null;
     const r = {layout, theme}, name = cleanName(x.name), prefs = cleanPrefs(x.prefs), w = num(x.win?.w, 200, 4000), h = num(x.win?.h, 100, 3000);
     if (name) r.name = name; if (prefs) r.prefs = prefs; if (w && h) r.win = {w, h};
@@ -123,7 +131,7 @@
     try { return cleanSetup(JSON.parse(decodeURIComponent(escape(atob(m[1])))), ids) } catch { return null }
   }
   // built-in profiles (Danny, 2026-10-20): shown under Profiles for everyone, can't be deleted or overwritten
-  const BUILTIN = ["MSCS1.eyJsYXlvdXQiOnsidiI6Miwib3JkZXIiOnsiZG9jayI6WyJtYWluIiwiaW52Y2hlY2siLHsicm93IjpbImV2ZW50cyIsIm1lc29zIiwic3RhdHMiLCJsb2ciXSwidyI6WzEsMSwxLDFdLCJoIjoyOTZ9LHsicm93IjpbInVzZWQiLCJpdGVtcyIsIm1vYnMiXSwidyI6WzEsMSwxXSwiaCI6MTcwfSx7InJvdyI6WyJzbmFwcyIsImFsZXJ0cyIsImtwcSJdLCJ3IjpbMSwxLDFdLCJoIjoyNDN9XX0sImZvbGRlZCI6W10sImgiOnsibWFpbiI6MjY1LCJpbnZjaGVjayI6Nzh9fSwidGhlbWUiOnsicHJlc2V0IjoiRGVmYXVsdCJ9LCJuYW1lIjoiRGFubnkncyBEZWZhdWx0IiwicHJlZnMiOnsiZml0Ijp0cnVlLCJmaXRXaW4iOnRydWUsInNuYXAiOnRydWUsIm9wYWNpdHkiOjF9LCJ3aW4iOnsidyI6MjU2MCwiaCI6MTM5Mn19"];
+  const BUILTIN = ["MSCS1.eyJsYXlvdXQiOnsidiI6Miwib3JkZXIiOnsiZG9jayI6WyJtYWluIiwiaW52Y2hlY2siLHsicm93IjpbImV2ZW50cyIsIm1lc29zIiwic3RhdHMiLCJsb2ciXSwidyI6WzEsMSwxLDFdLCJoIjoyOTZ9LHsicm93IjpbInVzZWQiLCJpdGVtcyIsIm1vYnMiXSwidyI6WzEsMSwxXSwiaCI6MTcwfSx7InJvdyI6WyJzbmFwcyIsImFsZXJ0cyIsImtwcSJdLCJ3IjpbMSwxLDFdLCJoIjoyNDN9XX0sImZvbGRlZCI6W10sImgiOnsibWFpbiI6MjY1LCJpbnZjaGVjayI6Nzh9fSwidGhlbWUiOnsicHJlc2V0IjoiQ2xhbmtlciBDaGljIn0sIm5hbWUiOiJEYW5ueSdzIERlZmF1bHQiLCJwcmVmcyI6eyJmaXQiOnRydWUsImZpdFdpbiI6dHJ1ZSwic25hcCI6dHJ1ZSwib3BhY2l0eSI6MX0sIndpbiI6eyJ3IjoyNTYwLCJoIjoxMzkyfX0="];
   const builtins = ids => BUILTIN.map(c => decodeSetup(c, ids)).filter(p => p?.name);
   // a profile's window size (page px) on this monitor: zoomed, never bigger than the work area (a 2560-wide profile on a
   // 1920 screen gets the whole width, not more), and moved so all of it is on screen. b/c = window bounds/content size

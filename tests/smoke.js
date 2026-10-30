@@ -331,12 +331,12 @@ const boxGaps = require("./boxgaps");
     const bg = () => p.evaluate(() => [document.documentElement.style.getPropertyValue("--bg"), document.documentElement.dataset.theme || ""].join());
     await p.click("#thopen"); await p.click('#thsw [data-th="p:Slime"]');
     const slime = await bg();
-    const code = await p.evaluate(() => TrackerThemes.encode({name: "Smoke pink", mode: "light", c: {...TrackerThemes.PRESETS[5].c, accent: "#ff00aa"}}));
+    const code = await p.evaluate(() => TrackerThemes.encode({name: "Smoke pink", mode: "light", c: {...TrackerThemes.PRESETS.find(t => t.name === "Lilac").c, accent: "#ff00aa"}}));
     await p.fill("#thcode", code); await p.click("#thadd");
     const pink = await p.evaluate(() => [document.documentElement.style.getPropertyValue("--accent"), document.documentElement.dataset.theme].join());
     await p.reload(); await p.waitForTimeout(300);
     const kept = await p.evaluate(() => document.documentElement.style.getPropertyValue("--accent"));
-    await p.click("#thopen"); await p.click('#thsw [data-th="p:Default"]'); const def = await bg();
+    await p.click("#thopen"); await p.click('#thsw [data-th="p:Elv"]'); const def = await bg();
     await p.fill("#thcode", "nope"); await p.click("#thadd"); const bad = await p.textContent("#thmsg"); await p.click("#thclose");
     check(slime === "#111a14,dark" && pink === "#ff00aa,light" && kept === "#ff00aa" && def === "," && /isn't a theme/.test(bad),
       `theme picker (${slime} | ${pink} | ${kept} | ${def})`);

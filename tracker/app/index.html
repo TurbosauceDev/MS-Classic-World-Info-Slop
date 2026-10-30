@@ -9,9 +9,9 @@
      (app/fonts/, licence note beside the files). Only the Elv skin asks for it; every other theme keeps system-ui. */
   @font-face { font-family:"PT Sans Narrow"; src:url("fonts/PT_Sans-Narrow-Web-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
   @font-face { font-family:"PT Sans Narrow"; src:url("fonts/PT_Sans-Narrow-Web-Bold.ttf") format("truetype"); font-weight:700; font-display:swap; }
-  /* the colours: themes.js sets these from the chosen theme (Settings > Theme); these are the default Purple, for the first paint */
-  :root { --bg:#e7ddf9; --panel:#f7f1ff; --ink:#2a2142; --muted:#685c94; --line:#cfbff0; --accent:#7d58d6; --accent-soft:#dccbfa; --on-accent:#f7f1ff; --leaf:#3d7a5c; --warn:#9a6a00; --bad:#a3322b; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#1f1931; --panel:#2a2243; --ink:#f0eafd; --muted:#b6aad8; --line:#453a64; --accent:#d2bffb; --accent-soft:#41346a; --on-accent:#2a2243; --leaf:#7cc9a2; --warn:#e2b44a; --bad:#ef7a70; } }
+  /* the colours: themes.js sets these from the chosen theme (Settings > Theme); these are the 0.3.22 default (the Elv
+     theme: near-black panels, the #b49bff accent, sk elv) for the first paint, before the saved theme lands */
+  :root { --bg:#0f0f0f; --panel:#1a1a1a; --ink:#e8e8e8; --muted:#b3b3b3; --line:#3f3f3f; --accent:#b49bff; --accent-soft:#2b2347; --on-accent:#1a1a1a; --leaf:#55b76b; --warn:#e6ad52; --bad:#ef4d4d; }
   * { box-sizing:border-box; }
   body { margin:0; padding:42px 10px 10px; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; overflow-wrap:break-word; }   /* a 60-letter run name with no spaces ran off the summary (2026-10-19) */
   .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px; }
@@ -131,10 +131,12 @@
   .fzLists td { border-bottom-color:color-mix(in srgb, var(--line) 55%, transparent); padding:4px 0; }
   .fzLists tr:hover td { background:color-mix(in srgb, var(--accent-soft) 38%, transparent); }
   .fzLists .ico { height:1.2em; width:auto; vertical-align:-0.25em; margin-right:3px; } .fzLists .more td { color:var(--muted); }
-  /* a narrow window hides the Focus button (the column wants room): the View menu and Ctrl+Shift+F still switch */
-  @container (max-width: 400px){ #focusBtn { display:none; } }
+  /* the narrow-window hides need to out-rank the 0.2.93 Elv toolbar rule (body.skin-elv #top .bar > button is
+     (1,2,2), a bare #focusBtn is (1,0,0): with the skin on, the buttons never hid — latent until 0.3.22 made Elv the
+     default and focus.test caught it). Skin-scoped selectors inside the query win the tie by order. */
+  @container (max-width: 400px){ #focusBtn, body.skin-elv #top .bar > #focusBtn { display:none; } }
   /* the Overlay button hides even later: it opens a window of its own, it needs no room here */
-  @container (max-width: 330px){ #overlayBtn { display:none; } }
+  @container (max-width: 330px){ #overlayBtn, body.skin-elv #top .bar > #overlayBtn { display:none; } }
   /* top: Start/Stop, what's going on, the four numbers that matter */
   #top .bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-right:46px; container-type:inline-size; }
   /* the main card is a box too (Danny, 2026-10-18); folded it keeps its Start bar */
@@ -153,7 +155,7 @@
   #top .bar .grow { flex:1; min-width:0; } #miniBtn { padding:5px 9px; font-size:12px; }
   /* a narrow main card: Start and the buttons on one line, what's going on under them (it was squeezed into a 100 px column) */
   @container (max-width: 470px) { #top .bar > .grow { order:9; flex-basis:100%; } #helpBtn { margin-left:auto; } }
-  @container (max-width: 330px) { #helpBtn { display:none; } #bugBtn { margin-left:auto; } #miniBtn, #bugBtn, #helpBtn, #pauseBtn, #resetBtn { padding-left:7px; padding-right:7px; } #resetBtn .nw { display:none; } #go { min-width:64px; padding-left:12px; padding-right:12px; } #miniBtn { padding-left:6px; padding-right:6px; } }
+  @container (max-width: 330px) { #helpBtn, body.skin-elv #top .bar > #helpBtn { display:none; } #bugBtn { margin-left:auto; } #miniBtn, #bugBtn, #helpBtn, #pauseBtn, #resetBtn { padding-left:7px; padding-right:7px; } #resetBtn .nw { display:none; } #go { min-width:64px; padding-left:12px; padding-right:12px; } #miniBtn { padding-left:6px; padding-right:6px; } }
   .tiles { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
   .tile { background:var(--bg); border-radius:8px; padding:6px 8px; } .tile .v { font-size:20px; line-height:1.2; }
   .tile.main .v { color:var(--accent); } .tile.main { grid-column:1 / -1; }   /* 5 tiles: EXP across the top, then 2 x 2 (0.2.71) */

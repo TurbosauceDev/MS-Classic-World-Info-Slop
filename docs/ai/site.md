@@ -116,11 +116,16 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   Round 2: smart guides (header center/edges, title/tagline text via Range, other part) win over the grid, Alt = free; scale `s` 0.5-2.5 (transform-origin 0 0); F1 toggles (preventDefault stops Chrome help), Esc = Done; Colours panel = theme editor, uses `window.SITETHEME` from 70-theme.js (preview/revert/save into "themes"). Unsaved colour edits revert on close.
 - **Themes:** `src/js/70-theme.js` + the `siteTheme` head script in index.html; presets/share codes come from
   `tracker/app/themes.js` (build.py `/*@THEMES*/`). Text on accent: `var(--on-accent,var(--panel))`. Default sets nothing,
-  so styles.css :root stays the source; tracker core.test.js fails if the tracker's Default drifts from it.
+  so styles.css :root stays the source; tracker core.test.js fails if the tracker's default drifts from it.
+  0.3.22 (Turbozo 10-30): styles.css :root IS the Elv scheme (single dark, no system following; the nav hairline glow rule
+  is unconditional now and opts out on `[data-theme="light"]`). The old purple look = the "Clanker Chic" preset at
+  PRESETS[1] ("Default" renamed; a saved `p:Default` migrates in 70-theme.js, old codes alias in cleanSetup). smoke.js
+  resets to default via `p:Elv`.
 
 ## Conventions
-- CSS tokens only: --bg --panel --ink --muted --line --accent --accent-soft --leaf --warn --bad. Lavender/purple/grey.
-  Light + dark must both work; no horizontal scroll at 390px (smoke checks).
+- CSS tokens only: --bg --panel --ink --muted --line --accent --accent-soft --leaf --warn --bad. 0.3.22: the default is
+  the Elv dark scheme (near-black + the #b49bff purple accent); picked themes (Clanker Chic's light side included) ride
+  inline vars + data-theme. No horizontal scroll at 390px (smoke checks).
 - Padding (Danny 10-21): nested boxes keep padding from their container on every side, nothing flush to or past a card edge;
   stacked cards get a gap (`section>.card+.card` 14px, `.pcol`/`.grid2` gaps). `tests/boxgaps.js` checks it (smoke: every page at 390px; craftplan.js filled page).
 - Plain player language; say when a number is estimated (assumed drop rates: 5% loot default, 30% quest items).

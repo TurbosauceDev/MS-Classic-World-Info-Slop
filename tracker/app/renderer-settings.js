@@ -363,6 +363,9 @@ $("#updGo").onclick = async () => {
   host.version?.().then(v => { if (!v) return; $("#appVer").textContent = v; $("#helpVer").textContent = "MS Classic Grind Tracker " + v }).catch(() => {});
   host.updateState?.().then(u => u.state !== "idle" && showUpdate(u)).catch(() => {});
   settings = await host.settings();
+  if (settings.theme === "p:Default"){   // 0.3.22: "Default" (the purple look) is "Clanker Chic" now; keep explicit picks
+    settings = await host.settings({theme: "p:Clanker Chic"});
+  }
   $("#share").checked = !!settings.share;
   $("#kpqName").checked = settings.kpqName !== false;
   fitSet(settings.fit !== false); $("#fitBoxes").checked = settings.fit !== false; $("#fitWin").checked = !!settings.fitWin;

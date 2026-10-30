@@ -1,23 +1,18 @@
 /* Layout: one working column; a control strip on top of each tab, dense data tables below. */
+/* 0.3.22 (Turbozo 10-30): the site's default look is the Elv scheme — the same colours the tracker's "Elv" theme
+   (themes.js, 0.2.92-0.2.94) wears, always dark, no system following. The classic purple look lives on as the
+   "Clanker Chic" theme preset (Settings > Theme); picking it re-applies the old colours inline and sets
+   data-theme for its light/dark sides, which is what the remaining [data-theme] hooks below are for. */
 :root{
-  --bg:#e7ddf9; --panel:#f7f1ff; --ink:#2a2142; --muted:#685c94; --line:#cfbff0;
-  --accent:#7d58d6; --accent-soft:#dccbfa; --leaf:#3d7a5c; --leaf-soft:#e1efe7;
-  --warn:#9a6a00; --warn-soft:#fbefcf; --bad:#a3322b;
+  --bg:#0f0f0f; --panel:#1a1a1a; --ink:#e8e8e8; --muted:#b3b3b3; --line:#3f3f3f;
+  --accent:#b49bff; --accent-soft:#2b2347; --leaf:#55b76b; --leaf-soft:#233327;
+  --warn:#e6ad52; --warn-soft:#3b3223; --bad:#ef4d4d;
   --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
-  --shadow:0 1px 2px rgba(42,33,66,.05),0 6px 16px -10px rgba(85,56,160,.28); --tshadow:0 1px 1px rgba(125,88,214,.14);
+  --shadow:0 1px 2px rgba(0,0,0,.22),0 8px 18px -12px rgba(0,0,0,.6); --tshadow:0 1px 2px rgba(0,0,0,.45);
+  color-scheme:dark
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#1f1931; --panel:#2a2243; --ink:#f0eafd; --muted:#b6aad8; --line:#453a64;
-  --accent:#d2bffb; --accent-soft:#41346a; --leaf:#7cc9a2; --leaf-soft:#1d3029;
-  --warn:#e2b44a; --warn-soft:#352b14; --bad:#ef7a70; --shadow:0 1px 2px rgba(0,0,0,.22),0 8px 18px -12px rgba(0,0,0,.6); --tshadow:0 1px 2px rgba(0,0,0,.45);
-  color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#1f1931; --panel:#2a2243; --ink:#f0eafd; --muted:#b6aad8; --line:#453a64;
-  --accent:#d2bffb; --accent-soft:#41346a; --leaf:#7cc9a2; --leaf-soft:#1d3029;
-  --warn:#e2b44a; --warn-soft:#352b14; --bad:#ef7a70; --shadow:0 1px 2px rgba(0,0,0,.22),0 8px 18px -12px rgba(0,0,0,.6); --tshadow:0 1px 2px rgba(0,0,0,.45);
-  color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font:17px/1.5 var(--f-body)}
 .wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:28px 60px}
 header h1{font:800 clamp(30px,4.4vw,44px)/1.05 var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
@@ -720,11 +715,10 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
   html[data-nav="basic"] nav .subs button[data-tab],html[data-nav="basic"] nav .sbhome{font:500 14.5px var(--f-body);color:var(--ink);padding:4px 10px}
   html[data-nav="basic"] nav .subs button[aria-selected="true"]{font-weight:600}
 }
-/* dark themes: the dark outline melts into the background, so a hairline outline plus a faint glow instead */
-@media (min-width:761px) and (prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-nav]) nav .subs button[data-tab],:root:not([data-theme="light"]):not([data-nav]) nav .sbhome{
-  font-size:15px;text-shadow:-.6px -.6px 0 #120d20,.6px -.6px 0 #120d20,-.6px .6px 0 #120d20,.6px .6px 0 #120d20,0 0 7px rgba(210,191,251,.38),0 1px 3px rgba(0,0,0,.45)}}
-@media (min-width:761px){:root[data-theme="dark"]:not([data-nav]) nav .subs button[data-tab],:root[data-theme="dark"]:not([data-nav]) nav .sbhome{
-  font-size:15px;text-shadow:-.6px -.6px 0 #120d20,.6px -.6px 0 #120d20,-.6px .6px 0 #120d20,.6px .6px 0 #120d20,0 0 7px rgba(210,191,251,.38),0 1px 3px rgba(0,0,0,.45)}}
+/* dark themes: the dark outline melts into the background, so a hairline outline plus a faint glow instead —
+   unconditional now (the stylesheet's default IS dark); picked light themes (Clanker Chic's light side) opt out */
+@media (min-width:761px){:root:not([data-nav]):not([data-theme="light"]) nav .subs button[data-tab],:root:not([data-nav]):not([data-theme="light"]) nav .sbhome{
+  font-size:15px;text-shadow:-.6px -.6px 0 #0a0a0a,.6px -.6px 0 #0a0a0a,-.6px .6px 0 #0a0a0a,.6px .6px 0 #0a0a0a,0 0 7px rgba(180,155,255,.3),0 1px 3px rgba(0,0,0,.45)}}
 @media (prefers-reduced-motion:reduce){nav .nic{transition:none}}
 /* page size on wide screens (Theme popup): wider page and everything scaled up; 1 = the old fixed width */
 @media (min-width:1700px){

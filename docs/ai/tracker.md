@@ -134,8 +134,10 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   live-previewed), and the overlay push (th.sk). Both windows toggle body.skin-elv; the .skin-elv CSS blocks in index.html
   (~line 376) and overlay.html square the corners, kill blur/shadows, flatten bars onto dark tracks and swap in bundled
   PT Sans Narrow (app/fonts/, ParaType free licence note beside the files). The "Elv" preset is ElvUI's palette verbatim
-  (#0f0f0f/#1a1a1a/#3f3f3f, accent #1785d1 = ElvUI's valuecolor) and is appended LAST in PRESETS — tests index presets by
-  position (core.test.js 5/8, extras.test.js 8), so never insert before them. Edit mode gained #ovxy, a live x/y chip over
+  (#0f0f0f/#1a1a1a/#3f3f3f) with our #b49bff accent (0.2.93). 0.3.22 (Turbozo 10-30): Elv moved to PRESETS[0] and IS the
+  default (tracker, overlay and site); the old purple default is "Clanker Chic" at PRESETS[1], and cleanSetup aliases a
+  legacy preset name "Default" to it. Tests that index presets by position were re-pinned (core.test.js 0/1, extras/ui
+  scenes); check any hardcoded index before inserting a preset. Edit mode gained #ovxy, a live x/y chip over
   dragged/resized/nudged cards (overlay.js chip/chipHide; hidden on release, 900 ms linger after nudges, cleared on lock).
 - Edit-mode undo + drag threshold (0.3.3, Danny 10-29): overlay.js HIST snapshots CFG.widgets inside the debounced ovSave (changed JSON -> push previous; boot sets the baseline), so any new mutation that calls ovSave is undoable for free; Ctrl+Z / Ctrl+Y / panel buttons (#ovUndo/#ovRedo), 100 steps. Moves and resizes wait for DRAG_PX (6) of travel: a click selects only (tests: overlay.test.js wobble + undo/redo). Panel/inspector positions are not in history.
 - Compact view retired 0.2.58; compactFit stays as the "window height follows the boxes" sizer (fitWin). Adding a shortcut:
@@ -149,8 +151,10 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   its Start bar). #selfcheck sits after #dock; #wrap/#summary above it (0.2.59).
 - Leaderboards aren't anonymous: don't call sharing "anonymous" in the UI.
 - beanguri's /api/stats needs their permission; we only borrowed MIT reader ideas.
-- Themes: PRESETS[0] "Default" = the site's src/styles.css colours (light+dark); core.test.js fails if they drift, so a
-  site recolour must update app/themes.js, the index.html :root fallback and main.js window/title-bar colours too.
+- Themes: PRESETS[0] "Elv" (sk elv) = the site's src/styles.css :root, single dark scheme (0.3.22 pivot; core.test.js
+  fails if they drift, so a site recolour must update app/themes.js, the index.html/overlay.html :root fallbacks and
+  main.js window/title-bar colours too). PRESETS[1] "Clanker Chic" = the old purple glass default (light+dark); a saved
+  "p:Default" pick migrates at boot (renderer-settings.js) and old codes alias in cleanSetup.
 - Run log (core/feed.js, box `log` pinned in #dock by default): diffs session.state every 2 s (feed.step), so it shows
   what the session counted, not raw events. Box ids saved in a user's layout.order win; an unsaved new box stays at home.
   The dock now holds a box, so drag tests that drop "onto the dock" land relative to #logBox.

@@ -8,10 +8,10 @@
   /* Elv skin font (0.2.92): PT Sans Narrow under ParaType's free font licence — same files as the tracker window. */
   @font-face { font-family:"PT Sans Narrow"; src:url("fonts/PT_Sans-Narrow-Web-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
   @font-face { font-family:"PT Sans Narrow"; src:url("fonts/PT_Sans-Narrow-Web-Bold.ttf") format("truetype"); font-weight:700; font-display:swap; }
-  /* the tracker's own colour tokens (themes.js applies the player's theme to :root each push; these are the Default theme,
-     light and dark, for the first paint). The window itself is transparent: only the widgets draw. */
-  :root { --bg:#e7ddf9; --panel:#f7f1ff; --ink:#2a2142; --muted:#685c94; --line:#cfbff0; --accent:#7d58d6; --accent-soft:#dccbfa; --on-accent:#f7f1ff; --leaf:#3d7a5c; --warn:#9a6a00; --bad:#a3322b; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#1f1931; --panel:#2a2243; --ink:#f0eafd; --muted:#b6aad8; --line:#453a64; --accent:#d2bffb; --accent-soft:#41346a; --on-accent:#2a2243; --leaf:#7cc9a2; --warn:#e2b44a; --bad:#ef7a70; } }
+  /* the tracker's own colour tokens (themes.js applies the player's theme to :root each push; these are the 0.3.22
+     default — the Elv theme, 0.2.92 — for the first paint before the push lands). The window itself is transparent:
+     only the widgets draw. */
+  :root { --bg:#0f0f0f; --panel:#1a1a1a; --ink:#e8e8e8; --muted:#b3b3b3; --line:#3f3f3f; --accent:#b49bff; --accent-soft:#2b2347; --on-accent:#1a1a1a; --leaf:#55b76b; --warn:#e6ad52; --bad:#ef4d4d; }
   * { box-sizing:border-box; }
   /* .hidden is the JS visibility switch for #ovgrid, the snap guides and the panel — it MUST exist as a real rule.
      The 0.2.75 rewrite dropped the old #ovbar.hidden rule and the bare class toggled nothing, so the alignment grid

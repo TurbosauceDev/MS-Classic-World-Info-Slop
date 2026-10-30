@@ -172,7 +172,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check((await st()).size === "5" && /"search"/.test((await st()).a), "profiles: switching away saved the page size change into Big");
     await p.click("#setupCopy"); const code = await p.inputValue("#setupCode");
     const app = await p.evaluate(c => TrackerThemes.decodeSetup(c, ["main"]), code);
-    check(/^MSCS1\./.test(code) && app?.theme?.preset === "Default" && app.layout === null && app.name === "Big", "profiles: the app reads a site code as a theme-only setup");
+    check(/^MSCS1\./.test(code) && app?.theme?.preset === "Elv" && app.layout === null && app.name === "Big", "profiles: the app reads a site code as a theme-only setup");
     const tc = await p.evaluate(() => TrackerThemes.encodeSetup({layout: {v: 2, order: {dock: ["main"]}}, theme: {preset: "Slime"}, name: "App"}, ["main"]));
     await p.fill("#setupCode", tc); await p.click("#setupPaste");
     check(/theme only here/.test(await p.textContent("#spName")) && /for the app/.test(await p.textContent("#spInfo")), "profiles: an app code previews as theme only");

@@ -519,9 +519,10 @@ const path = require("path"), {chromium} = require("playwright");
   for (const [open, sel] of [["settings", "#prefsPop"], ["help", "#helpPop"], ["patchnotes", "#helpPop"], ["report", "#bugPop"], ["perf", "#perfPop"]]){
     await page.evaluate(m => window.menu(m), open); await page.waitForTimeout(350);
     const m = await page.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(), b = document.querySelector("#modalBack");
-      return {l: r.left, t: r.top, r: innerWidth - r.right, b: innerHeight - r.bottom, back: getComputedStyle(b).display !== "none" && /blur/.test(getComputedStyle(b).backdropFilter), docH: document.documentElement.scrollHeight} }, sel);
+      return {l: r.left, t: r.top, r: innerWidth - r.right, b: innerHeight - r.bottom, back: getComputedStyle(b).display !== "none", blur: /blur/.test(getComputedStyle(b).backdropFilter), elv: document.body.classList.contains("skin-elv"), docH: document.documentElement.scrollHeight} }, sel);
     if (open === "perf" && !await page.evaluate(() => /Screen reading/.test(document.querySelector("#perfBody").textContent) && /text reader on \(7 reads\)/.test(document.querySelector("#perfBody").textContent) && /Load looks fine|⚠/.test(document.querySelector("#perfWarn").textContent))) throw new Error("performance monitor empty");
-    if (Math.min(m.l, m.r, m.b) < 10 || m.t < 40 || !m.back) throw new Error(`${open} pop-up not inset over a blurred backdrop: ` + JSON.stringify(m));
+    // the backdrop is always shown; it blurs on the glass look only (0.3.22 default Elv flattens it: skin-elv #modalBack)
+    if (Math.min(m.l, m.r, m.b) < 10 || m.t < 40 || !m.back || (!m.elv && !m.blur)) throw new Error(`${open} pop-up not inset over a blurred backdrop: ` + JSON.stringify(m));
     if (open === "patchnotes" && !await page.evaluate(() => { const r = document.querySelector("#patchNotes").getBoundingClientRect(), p = document.querySelector("#helpPop").getBoundingClientRect(); return document.querySelector("#patchNotes").open && r.top >= p.top && r.top < p.bottom - 40 })) throw new Error("patch notes not scrolled into view");
     await page.keyboard.press("Escape"); await page.waitForTimeout(250);
     const after = await page.evaluate(s => [document.querySelector(s).classList.contains("hidden"), document.querySelector("#modalBack").classList.contains("hidden"), resized.join(), document.documentElement.scrollHeight - docH], sel);
@@ -532,7 +533,7 @@ const path = require("path"), {chromium} = require("playwright");
   // themes (Settings): a preset swatch recolours the page and the title bar; the editor saves your own; share code round trip
   await page.evaluate(() => window.menu("settings"));
   const sw = await page.$$eval("#themeSw [data-th]", b => b.map(x => x.dataset.th));
-  if (sw.length < 12 || sw[0] !== "p:Default") throw new Error("theme swatches: " + sw);
+  if (sw.length < 12 || sw[0] !== "p:Elv") throw new Error("theme swatches: " + sw);
   await page.click('#themeSw [data-th="p:Slime"]'); await page.waitForTimeout(50);
   const th1 = await page.evaluate(() => [document.documentElement.style.getPropertyValue("--bg"), window.bar?.bg, window.st.theme, document.querySelector('[data-th="p:Slime"]').getAttribute("aria-checked")]);
   if (th1.join() !== "#111a14,#111a14,p:Slime,true") throw new Error("theme pick: " + th1);
@@ -552,7 +553,7 @@ const path = require("path"), {chromium} = require("playwright");
   const th3 = await page.evaluate(() => [window.st.themes.length, window.st.theme]);
   if (!/^MSCT1\./.test(code) || thBack?.c.accent !== "#ff00aa" || thBack.name !== "Danny's pink" || !/isn't a theme/.test(bad) || th3.join() !== "1,u:Danny's pink") throw new Error("theme share: " + JSON.stringify({code, thBack, bad, th3}));
   // a hostile code can't get markup or odd values in
-  const evil = await page.evaluate(() => TrackerThemes.decode(TrackerThemes.encode({name: "<img src=x onerror=alert(1)>", mode: "dark", c: {...TrackerThemes.PRESETS[1].c, bg: "red;background:url(x)"}})));
+  const evil = await page.evaluate(() => TrackerThemes.decode(TrackerThemes.encode({name: "<img src=x onerror=alert(1)>", mode: "dark", c: {...TrackerThemes.PRESETS.find(t => t.name === "Purple night").c, bg: "red;background:url(x)"}})));
   if (evil !== null) throw new Error("theme validation: " + JSON.stringify(evil));
   // shortcuts: click one, press new keys; Shift + a letter is refused; Backspace turns one off; keys from the game (main) act
   await page.click('#keyRows [data-key="onTop"]');

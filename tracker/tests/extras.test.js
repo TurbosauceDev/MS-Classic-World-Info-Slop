@@ -128,9 +128,9 @@ const path = require("path"), {chromium} = require("playwright");
     await themePick("p:Midnight"); $("#profSel").value = "KPQ"; $("#profUse").click(); await wait(250);
     const again = TH.builtins(boxIds())[0].theme.preset, kept = settings.profiles.some(p => /Danny/.test(p.name));
     return {del, got, again, kept, opt: [...$("#profSel").querySelectorAll("optgroup")].map(g => g.label).join()} });
-  if (!bi.del || bi.got.theme !== "p:Default" || bi.got.profile !== "b:Danny's Default" || String(bi.got.win) !== "2560,1392" || !bi.got.hist
+  if (!bi.del || bi.got.theme !== "p:Clanker Chic" || bi.got.profile !== "b:Danny's Default" || String(bi.got.win) !== "2560,1392" || !bi.got.hist
     || bi.got.dock !== "alerts,events,items,kpq,log,main,mesos,mobs,stats,used" || !/built in/.test(bi.got.note)) fail("built-in profile", bi);
-  if (bi.again !== "Default" || bi.kept || bi.opt !== "Yours,Built in") fail("built-in profile stays as shipped", bi);
+  if (bi.again !== "Clanker Chic" || bi.kept || bi.opt !== "Yours,Built in") fail("built-in profile stays as shipped", bi);
 
   // bag check icons on the main card (core/bagstale.js): grey before Start, then coloured by how stale each tab's last read is,
   // a click runs the same scan as the chips, and the setting hides them

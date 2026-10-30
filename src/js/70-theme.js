@@ -9,6 +9,7 @@
   const mine = () => (ls("themes") || []).map(TH.clean).filter(Boolean);
   const all = () => [...TH.PRESETS.map(t => ["p:" + t.name, t]), ...mine().map(t => ["u:" + t.name, t])];
   let cur = ls("theme") || "p:" + TH.PRESETS[0].name;
+  if (cur === "p:Default"){ cur = "p:Clanker Chic"; ls("theme", cur); }   // 0.3.22 rename: keep the explicit pick
   const now = () => all().find(([id]) => id === cur)?.[1] || TH.PRESETS[0];
   function use(id){
     cur = id; ls("theme", id);

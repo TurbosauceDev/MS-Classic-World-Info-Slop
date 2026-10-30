@@ -325,18 +325,24 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
   s.add({t: sec(10), type: "exp", gain: 5}); assert.ok(s.state.pausedAt !== null && s.state.held, "still paused by hand");
   s.add({t: sec(100), type: "resume"}); s.add({t: sec(110), type: "exp", gain: 5}); s.add({t: sec(130), type: "exp", gain: 5});
   assert.strictEqual(s.state.pausedAt, null); assert.strictEqual(s.state.activeMs, 20e3, "only the time after Go on counts") }
-// the Default theme is the planner site's colours exactly (Danny 2026-10-18: "match our webtool perfectly"): read them from
-// src/styles.css so a site recolour that skips themes.js fails here; text on accent is --panel like the site's buttons
+// the default theme (Elv, 0.3.22) is the planner site's colours exactly: read them from src/styles.css :root so a site
+// recolour that skips themes.js fails here (the 2026-10-18 "match our webtool perfectly" rule, now on the Elv scheme);
+// text on accent is --panel like the site's buttons. Clanker Chic (the old purple default) and the "Default" preset-name
+// alias for old share codes and profiles are pinned too
 {
   const TH = require("../app/themes.js"), css = require("fs").readFileSync(require("path").join(__dirname, "../../src/styles.css"), "utf8");
   const vars = block => Object.fromEntries([...block.matchAll(/--([a-z-]+):(#[0-9a-f]{6})/g)].map(m => [m[1], m[2]]));
-  const site = {light: vars(css.slice(css.indexOf(":root{"), css.indexOf("@media (prefers-color-scheme: dark)"))),
-    dark: vars(css.slice(css.indexOf(':root[data-theme="dark"]{')))};
-  const d = TH.PRESETS[0]; assert.equal(d.name, "Default", "Default theme is first");
-  for (const side of ["light", "dark"]) for (const [k, [v]] of Object.entries(TH.TOKENS)){
-    const want = site[side][v === "--on-accent" ? "panel" : v.slice(2)];
-    assert.equal(d[side][k], want, `Default ${side} ${k} matches site ${v}`);
+  const site = vars(css.slice(css.indexOf(":root{"), css.indexOf("body{")));
+  const d = TH.PRESETS[0]; assert.equal(d.name, "Elv", "Elv theme is first (the default)");
+  assert.equal(d.sk, "elv", "the default wears the elv panel skin");
+  for (const [k, [v]] of Object.entries(TH.TOKENS)){
+    const want = site[v === "--on-accent" ? "panel" : v.slice(2)];
+    assert.equal(d.c[k], want, `Elv ${k} matches site ${v}`);
   }
+  const cl = TH.PRESETS[1]; assert.equal(cl.name, "Clanker Chic", "the classic look is one click away");
+  assert.equal(cl.mode, "system", "Clanker Chic keeps its light and dark sides");
+  const legacy = TH.decodeSetup("MSCS1." + Buffer.from(JSON.stringify({layout: {v: 2, order: {dock: ["main"]}}, theme: {preset: "Default"}, name: "Old"})).toString("base64"), ["main"]);
+  assert.deepEqual(legacy.theme, {preset: "Clanker Chic"}, "old Default preset codes read as Clanker Chic");
 }
 console.log("core tests passed");
 
@@ -465,7 +471,7 @@ console.log("history ok");
 // setup codes (layout + theme in one line, 0.2.60): round trip, and junk in a pasted code never reaches the layout
 { const TH = require("../app/themes.js"), ids = ["main", "log", "mobs", "items", "hist"];
   const layout = {v: 2, order: {dock: ["main", {row: ["log", ["mobs", "items"]], w: [2, 3], h: 300}]}, folded: ["log"], h: {main: 240}};
-  for (const theme of [{preset: "Slime"}, TH.clean({name: "Mine", mode: "light", c: TH.PRESETS[5].c})]){
+  for (const theme of [{preset: "Slime"}, TH.clean({name: "Mine", mode: "light", c: TH.PRESETS.find(t => t.name === "Slime").c})]){
     const code = TH.encodeSetup({layout, theme}, ids); assert.ok(/^MSCS1\.[A-Za-z0-9+/=]+$/.test(code));
     assert.deepStrictEqual(TH.decodeSetup("look: " + code + " (mine)", ids), {layout, theme}, "setup round trip") }
   const enc = x => "MSCS1." + Buffer.from(JSON.stringify(x)).toString("base64");
@@ -482,12 +488,12 @@ console.log("history ok");
   assert.deepStrictEqual(TH.decodeSetup(TH.encodeSetup(full, ids), ids), full, "profile round trip");
   assert.deepStrictEqual(TH.decodeSetup(enc({layout, name: "<x>\u0007" + "n".repeat(60), prefs: {fit: "yes", snap: 1, opacity: 0.1, evil: true}, win: {w: 1e9, h: 500}}), ids),
     {layout, theme: null, name: "x" + "n".repeat(39)}, "profile junk dropped");
-  const thc = TH.decode(TH.encode({name: "x", mode: "dark", c: TH.PRESETS[2].c}));
+  const thc = TH.decode(TH.encode({name: "x", mode: "dark", c: TH.PRESETS.find(t => t.name === "Purple night").c}));
   assert.deepStrictEqual(TH.decodeSetup(TH.encode(thc), ids), {layout: null, theme: thc, name: "x"}, "theme code as a setup");
   // built-in profiles (Danny's Default, 2026-10-20): decode against the real box ids with every box Danny placed; a
   // profile's window size never leaves the monitor (his 2560x1392 on a 1920x1040 work area, zoom 1 and 1.25, off to the right)
   { const fs = require("fs"), path = require("path"), real = [...fs.readFileSync(path.join(__dirname, "../app/index.html"), "utf8").matchAll(/data-box="([a-z]+)"/g)].map(m => m[1]), B = TH.builtins(real);
-    assert.ok(B.length >= 1 && B[0].name === "Danny's Default" && B[0].win.w === 2560 && B[0].theme.preset === "Default", "built-in decodes");
+    assert.ok(B.length >= 1 && B[0].name === "Danny's Default" && B[0].win.w === 2560 && B[0].theme.preset === "Clanker Chic", "built-in decodes");
     assert.equal(B[0].layout.order.dock.flatMap(i => typeof i === "string" ? [i] : i.row.flat()).length, 10, "every box Danny placed survives (12 before Start and end + Inventory check moved into the main card, 0.2.71)");
     const wa = {x: 0, y: 0, width: 1920, height: 1040}, b = {x: 1500, y: 300, width: 376, height: 640}, c = [360, 600];
     for (const z of [1, 1.25]){ const f = TH.winFit(B[0].win, z, b, c, wa);
