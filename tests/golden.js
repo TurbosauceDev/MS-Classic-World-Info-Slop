@@ -29,6 +29,10 @@ const path = require("path");
   // the assumed stats (DEX 5, LUK 4): trunc((6 + 10 + 2.4) / 2.5 + 5) = 12; Lv 10 switches to the Warrior branch, also truncated
   const bacc = await p.evaluate(() => [classAcc("Warrior", 5), classAcc("Bowman", 5), Math.round(classAcc("Warrior", 10) * 100) / 100]);
   check(bacc.join() === [12, 25, 23].join(), "Beginner accuracy Lv 5 Warrior/Bowman = 12/25; Warrior Lv 10 = trunc(23.76) = 23", bacc);
+  // Danny's Lv 41 Hunter stat window (10-29): CRIT RATE 36%, CRIT DAMAGE 137% with Critical Shot 15 + Bow Mastery 20 (Bow Mastery adds
+  // Critical Rate +10%: the builder showed 26%); full masteries = 77% mastery. Guide build, no gear: 5 + 20 + 10 = 35%, +20 +15 = +35%.
+  const hb = await p.evaluate(() => { const r = buildAt("Bowman", "Hunter", "Bow", 41, false, true, true); return [r.crit, r.critDmg, r.mast] });
+  check(hb.join() === [35, 35, 0.77].join(), "Lv 41 Hunter crit 35% for +35%, mastery 77% (Bow Mastery crit rate counted)", hb);
   // portals to the nearest potion NPC (meowdb class guides)
   const pots = await p.evaluate(() => { const id = n => Object.keys(D.maps).find(k => D.maps[k][0].trim() === n && D.maps[k][1]);
     return ["Line 1 <Area 1>", "Transfer Area", "Tree Dungeon, Forest Up North IV", "Ant Tunnel III"].map(n => POTS[id(n)]?.[0]) });

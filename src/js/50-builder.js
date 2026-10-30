@@ -193,9 +193,9 @@ function calc(sp){
   let evaB = gear.EVA + num(T("Nimble Body"), /Evasion \+(\d+)/) + (wk === "Bow" ? num(T("Bow Mastery"), /Evasion \+(\d+)/) : 0);
   let crit = 5 + gear.CRT + num(T("Precise Strikes"), /Critical Rate \+(\d+)%/) + num(T("Critical Shot"), /Critical Rate \+(\d+)%/)
            + num(T("Critical Throw"), /Critical Rate \+(\d+)%/)
-           + (wk === "Spear" ? num(T("Spear Mastery"), /Critical Rate \+(\d+)%/) : 0)
-           + (wk === "Dagger" ? num(T("Dagger Mastery"), /Critical Rate \+(\d+)%/) : 0);
-  let critDmg = 20 + gear.CRD + num(T("Critical Shot"), /Critical Damage \+(\d+)%/) + num(T("Critical Throw"), /Critical Damage \+(\d+)%/);
+           + (wk ? num(T(wk + " Mastery"), /Critical Rate \+(\d+)%/) : 0);   // weapon mastery (Bow +10, Dagger +20; Bow was missed: Danny stat window 10-29)
+  let critDmg = 20 + gear.CRD + num(T("Critical Shot"), /Critical Damage \+(\d+)%/) + num(T("Critical Throw"), /Critical Damage \+(\d+)%/)
+           + (wk ? num(T(wk + " Mastery"), /Critical Damage \+(\d+)%/) : 0);   // Blunt, Crossbow Mastery
   let atkB = wk === "Claw" ? num(T("Claw Mastery"), /Attack Power \+(\d+)/) : 0;
   let matkB = 0, booster = false, steal = 0;
   if (buffs){
@@ -535,6 +535,7 @@ function render(){
   $("#pattack").innerHTML = r.ai ? [
     row("Damage range", `${fmt(r.min)} – ${fmt(r.max)}`),
     row("Average hit", fmt(r.avg)),
+    ...(r.sk?.id !== "basic" && r.ai.kind === "phys" ? [row("Stat window", `${fmt(r.min * 100 / r.ai.pct)} – ${fmt(r.max * 100 / r.ai.pct)}`)] : []),
     row("Hits × targets", `${r.ai.hits} × ${r.ai.targets}`),
     row("Skill", r.ai.kind === "magic" ? "Basic Attack " + r.ai.pct : r.ai.pct + "%"),
     row("Mastery", Math.round(r.mast * 100) + "%"),
