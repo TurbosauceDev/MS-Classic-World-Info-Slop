@@ -12,7 +12,7 @@ site_version: "0.19.8"
 
 ## Where things stand
 
-Tracker `0.3.21` and site `0.19.8` are live. CI is green on `6f73a6d`, Pages stamped 10:51 UTC. Eight tracker releases shipped since yesterday morning (`v0.3.14` through `v0.3.21`). maplestory.watch is gone from the whole stack per your call (PR `#23`); mesoarbitrage stays. The memory verdict is still open: we need a Performance monitor total from a session on `0.3.13` or later. Four decisions wait on you (below).
+Tracker `0.3.21` and site `0.19.8` are live. CI is green on `6f73a6d`, Pages stamped 10:51 UTC. Eight tracker releases shipped since yesterday morning (`v0.3.14` through `v0.3.21`). maplestory.watch was removed by mistake (PR `#23`) and is being restored; maplestory.market (Sen's bot site) is scrubbed instead. The memory verdict is still open: we need a Performance monitor total from a session on `0.3.13` or later. Four decisions wait on you (below).
 
 ## Wins since issue 8
 
@@ -27,7 +27,7 @@ Tracker:
 Site and data:
 - Builder: weapon-mastery crit counted plus a stat window row (PR `#20`), simc-style stat weights card with a golden check (PR `#21`).
 - OSMS re-pin `7e1c4eb` (Classic World `v1.1.0`): mob HP, 8 skills, arrow recipes, +1 hat.
-- maplestory.watch removed end to end (PR `#23`): fetchers, `D.mw`, Prices, Where-to-buy, MCI and Movers rows, consensus use, tracker Compare column, credits. Consensus now pools classicmarket + mesoindex. meso.watch is a different site and unchanged.
+- Danny 10-30: maplestory.watch is legit (a tracker) and PR `#23` removing it was a mix-up, reverted. maplestory.market is Sen's bot site and is removed everywhere.
 - KPQ scored boards took their first scores: Turbow leads total at 1,258 points (server `/api/summary`, read 11:55 UTC today). Rush matches; the Bonus and "what could have been" boards are empty.
 
 ## Anything broken or weird
@@ -38,10 +38,9 @@ Site and data:
 
 ## Decisions I need from you
 
-1. **maplestory.market key** - maplestory.market is also Sen's site. With maplestory.watch disavowed, keep the partner-key request or drop the source? Its inert UI hooks are removed; nothing builds until you call.
-2. **classicrank partner key from Kitten** - without a read key the daily census refreshes chars, top and scan only (`BCR_KEY` in the sandbox secrets path).
-3. **Cron pile-up** - cut meso.watch to 2 polls/hour or add push-retry to the poll script. We lean retry.
-4. **web-PAT revoke** - confirm the old web PAT is revoked (hygiene; the fine-grained replacement is in use).
+1. **classicrank partner key from Kitten** - without a read key the daily census refreshes chars, top and scan only (`BCR_KEY` in the sandbox secrets path).
+2. **Cron pile-up** - cut meso.watch to 2 polls/hour or add push-retry to the poll script. We lean retry.
+3. **web-PAT revoke** - confirm the old web PAT is revoked (hygiene; the fine-grained replacement is in use).
 
 ## Today's priorities
 
@@ -53,6 +52,6 @@ Site and data:
 ## Where to go deeper
 
 - `docs/ai/tracker.md` for `0.3.14`-`0.3.21`, KPQ scoring and per-card options.
-- `docs/ai/decisions.md` 10-30 entry: the maplestory.watch removal scope, marked "do not re-add".
+- `docs/ai/decisions.md` 10-30 entry: maplestory.watch kept, maplestory.market scrubbed.
 - Mailbox: Claude's `0.3.19` and KPQ threads hold the asks above.
 - Site: https://maplestory.scumlord.studio

@@ -9,7 +9,8 @@ const cmPosts = n => `${fmt(n)} post${n === 1 ? "" : "s"}`;
 // classicmarket.kr wherever shown): CMP[id] = [median, low, high, sold, seen, forSaleNow, day]
 const CMP = D.cmp?.it || {};
 // the price to use: meso.watch sale median -> classicmarket.kr combined median -> meowdb usual price -> classicmarket.kr ask
-// median -> buy-order median -> (P5, Danny 2026-10-26) mesoarbitrage sale median (or cheapest ask) -> mesoindex usual (or cheapest ask), each labelled with its kind; thin data stays rough (null: none).
+// median -> buy-order median -> (P5, Danny 2026-10-26) mesoarbitrage sale median (or cheapest ask) -> maplestory.watch
+// typical (or lowest ask) -> mesoindex usual (or cheapest ask), each labelled with its kind; thin data stays rough (null: none).
 function pwPrice(id){
   const p = PW[id], c = CM[id], m = MDB[id], k = CMP[id];
   // P16 (Danny 2026-10-27): a thin meso.watch median (low data, spike-held, or under 3 sales) no longer headlines; the
@@ -22,11 +23,12 @@ function pwPrice(id){
   }
   const pool = [];
   if (k?.[0] > 0 && k[3] >= 5) pool.push(k[0]);
+  if (MW[id]?.[0] > 0 && MW[id][1] >= 5) pool.push(MW[id][0]);
   if (MI[id]?.[0] > 0 && MI[id][3] >= 5) pool.push(MI[id][0]);
   if (pool.length >= 2){ const mid = median(pool), spread = Math.max(...pool) / Math.min(...pool);
     // n is what the tile prints as "N sales": count the sales behind the pooled markets, not the market count
     // (audit 2026-10-28: "consensus of 2 markets · 2 sales" when 41 sales actually fed the median)
-    return {v: mid, src: `consensus of ${pool.length} markets`, n: (k?.[3] || 0) + (MI[id]?.[3] || 0), unit: "sale", rough: spread > 1.5, cons: 1} }
+    return {v: mid, src: `consensus of ${pool.length} markets`, n: (k?.[3] || 0) + (MW[id]?.[1] || 0) + (MI[id]?.[3] || 0), unit: "sale", rough: spread > 1.5, cons: 1} }
   if (p && p[0] > 0) return {v: p[0], src: "meso.watch", n: p[3], unit: "sale", rough: true, per: !!(p[4] & 2)};
   if (k?.[0] > 0) return {v: k[0], src: "classicmarket.kr market", n: k[3], unit: "sale", rough: k[3] < 5};
   if (m?.[0] > 0) return {v: m[0], src: "meowdb", n: m[1] + m[2], unit: "price", rough: m[2] < 5};   // rough: under 5 sales among its prices
@@ -37,6 +39,9 @@ function pwPrice(id){
   const a = MA[id];
   if (a?.[0] > 0 && a[1]) return {v: a[0], src: "mesoarbitrage.com", n: a[1], unit: "sale", rough: a[1] < 5};
   if (a?.[2] > 0) return {v: a[2], src: "mesoarbitrage.com", n: a[3], unit: "listing", rough: true};
+  const w = MW[id];
+  if (w?.[0] > 0 && w[1]) return {v: w[0], src: "maplestory.watch", n: w[1], unit: "sale", rough: w[1] < 5};
+  if (w?.[2] > 0) return {v: w[2], src: "maplestory.watch", n: w[3], unit: "listing", rough: true};
   const i = MI[id];
   if (i?.[0] > 0 && i[3]) return {v: i[0], src: "mesoindex.com", n: i[3], unit: "sale", rough: i[3] < 5 || i[7] === 0};
   if (i?.[5] > 0) return {v: i[5], src: "mesoindex.com", n: i[6], unit: "listing", rough: true};

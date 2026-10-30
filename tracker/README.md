@@ -15,7 +15,7 @@ node tests/readers.test.js [dir]   # screen readers on real frames (tests/frames
 npm start           # run it (Windows, Electron)
 ```
 
-- Overlay Mode (v0.2.74, Danny: "a true overlay style mode"): a second, transparent
+- Overlay Mode (v0.2.74, Danny: "a true overlay style mode", shown maplestory.watch's live overlay): a second, transparent
   frameless window (`app/overlay.html` + `overlay.js`, owned by main.js) spanning the whole virtual desktop, always on top,
   `showInactive` + `focusable: false` so the game never loses focus. The tracker window builds a small snapshot
   (`renderer-overlay.js` ovBuild: stats-lite, the map's spawn table and respawn timers from G.timed, KPQ clock, the last

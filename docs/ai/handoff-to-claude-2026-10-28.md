@@ -80,7 +80,7 @@ price source (`b10640f`) — both born from the 3-day silent freeze. The overnig
 price audit produced the P1–P11 proposal table (`docs/ai/overnight-price-audit-2026-10-26.md`);
 Danny approved P1–P5, kept P6 for himself. P3+P4+P5 shipped same day (`e88d659`):
 stale pills on Prices rows, a sources-context line under the Usual tile, and the
-pwPrice fallback tail (mesoarbitrage → [removed source] → mesoindex). Digest issue #5.
+pwPrice fallback tail (mesoarbitrage → maplestory.watch → mesoindex). Digest issue #5.
 
 **10-27.** Danny approved P8–P11; all four shipped: P8 Movers page (`a9e0f62`),
 P10 shared-runs real mesos/kill beside the estimate on mob pages (`0bda4f8`), P11
@@ -94,7 +94,7 @@ Digest issue #6.
 **10-28 (the day I'm writing this).** Six hours of Danny feedback, five ships, one
 outage root-caused. In order:
 
-- 01:16Z — [removed source] goes 403 (Cloudflare challenge for non-browser
+- 01:16Z — maplestory.watch goes 403 (Cloudflare challenge for non-browser
   clients). The shopscans poll dies twice because `scripts/fetch_alt_sources.py`
   had no error handling (`c2a6f9c` fixes it: per-source try/except, keep old file,
   exit 0).
@@ -118,7 +118,7 @@ outage root-caused. In order:
   for what that unlocked.
 - 12:52Z — the real-browser bridge lands (`90d5e60`): `scripts/browser_get.js` +
   `scripts/browser_fetch.py`, wired into `fetch_alt_sources.py`,
-  `fetch_shopscans.py` and `fetch_classicrank.py`. [removed source] clears through
+  `fetch_shopscans.py` and `fetch_classicrank.py`. maplestory.watch clears through
   it; classicrank's stats endpoint comes back alive (219,949 chars, top Lv 87);
   the classicrank job census needs `BCR_KEY` (their keyless filters retired 10-28)
   and writes `jobs=[]` until the key lands.
@@ -132,7 +132,6 @@ outage root-caused. In order:
 
 ## The 10-20 rule arc (this changes what you're allowed to do)
 
-- 2026-10-19/20: an embargo regime existed — maplestory.market/classicrank banned,
   then un-banned, with a standing clause "never bypass a site's anti-bot wall".
 - 2026-10-28 12:06Z, Danny in #glorg-chat: "you can disregard the 10-20 rule that
   is depreciated and irrelevant now." The never-bypass-anti-bot clauses are revoked
@@ -158,13 +157,12 @@ outage root-caused. In order:
 |---|---|---|---|---|
 | meso.watch | `.github/workflows/mesowatch-poll.yml` + `scripts/fetch_mesowatch.py` | ~every 1–2 h | healthy, ~500–900 items moving per refresh | 10-18 agent-side rule intact; never bypass its Cloudflare check from an agent session |
 | mesoarbitrage | `scripts/fetch_shopscans.py` → `D.ma` | every 3 h | healthy | keep-old-file exit-0 contract |
-| [removed source] | same poll → [removed field] | every 3 h | CF 403 to plain clients since 10-28 01:16; clears through the browser bridge | bridge fetches are bounded (25 s/fetch, 8-min listing budget) |
+| maplestory.watch | same poll → `D.mw` | every 3 h | CF 403 to plain clients since 10-28 01:16; clears through the browser bridge | bridge fetches are bounded (25 s/fetch, 8-min listing budget) |
 | classicmarket.kr | `.github/workflows/classicmarket-poll.yml` + `scripts/fetch_classicmarket_listings.py` | every 2 h | healthy | — |
 | mesoindex.com | `.github/workflows/mesoindex-poll.yml` + `scripts/fetch_mesoindex.py` | every 3 h | healthy (browser UA since 10-26) | Vercel checkpoint untouched |
 | meowdb market | `.github/workflows/meowdb-market-poll.yml` + `scripts/fetch_meowdb_market.js` | every 3 h | FIXED 10-28 (was walled since 10-26 14:23) | headed Chromium under xvfb; see below |
 | meowdb shops/drops/mesos | `scripts/fetch_meowdb_shops.js`, `scripts/fetch_meowdb_drops.js` | manual | endpoints open (not walled) | refresh → `build_data.py extras` → `build.py` |
 | classicrank | `.github/workflows/classicrank-census.yml` + `scripts/fetch_classicrank.py` | daily | stats alive via bridge (219,949 chars); job census `jobs=[]` until `BCR_KEY` | key = nxneko read key, ask Danny |
-| maplestory.market | none (blocked) | — | blocked on Danny's API key (P7) | authenticated REST API mapped in decisions.md 10-20 |
 
 The universal poll contract: **a failed fetch keeps the old file and exits 0 so CI
 never breaks**; every poll prints a CI-visible `::warning::` on failure; the
@@ -341,7 +339,6 @@ consensus-counting and held-band-suppression scenes are the executable spec.
 1. **BCR_KEY (classicrank read key)** — ask Danny; nxneko's developer key resumes
    the full per-job census. Until then the census writes chars/top/scan with
    `jobs=[]` and the Who-plays-what card hides itself (by design).
-2. **maplestory.market API key (P7)** — Danny's settings page, localStorage
    `mm.apiKey`; the authenticated REST flow is fully mapped in decisions.md 10-20.
    Nothing to build until the key lands.
 3. **meowdb relationship** — their 403 invites data-reuse mail to

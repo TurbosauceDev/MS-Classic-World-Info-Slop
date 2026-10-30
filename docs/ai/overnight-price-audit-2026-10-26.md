@@ -27,7 +27,7 @@ beyond the three known name-collision drops.
 | meowdb | ~4-6×/day | data/sources/meowdb_market.json | `D.mdb` | "usual" = 14-day median of **asks seen in shops + sold reports + finished trades** (mixed) |
 | classicmarket.kr posts | ~3 h | data/sources/classicmarket_prices.json | `D.cm` | trade-board **ask** / **bid** medians |
 | mesoarbitrage.com | ~3 h | data/sources/mesoarbitrage_prices.json | `D.ma` | median **sold** + cheapest ask, 72 h/14 d windows, 2 h hold |
-| [removed source] | ~3 h | data/sources/shopscans.json ([removed field]) | [removed field] | "typical" over 14 days of shop scans |
+| maplestory.watch | ~3 h | data/sources/shopscans.json (`D.mw`) | `D.mw` | "typical" over 14 days of shop scans |
 | mesoindex.com | ~3 h | data/sources/mesoindex.json | `D.mi` | "usual" from cozy.markets shop scans (+conf, trend) |
 
 One function, `pwPrice()` (src/js/11-cmarket.js), picks the number the rest of the site uses, in Danny's fixed order
@@ -38,11 +38,11 @@ usual → classicmarket asks → classicmarket bids. The Items page "Prices" tab
 ## 2. What checks out (verified, not assumed)
 
 - **Transform fidelity is exact.** Live-fetched mesoarbitrage vs our committed `D.ma`: median relative drift **0.000**
-  over 698 shared items (0 items >30 % off). Same for [removed source]: median drift **0.000**, 0.9 % of 1,159 matched
+  over 698 shared items (0 items >30 % off). Same for maplestory.watch: median drift **0.000**, 0.9 % of 1,159 matched
   items >30 % (name-collision items and same-day drift, expected). classicmarket.kr combined: all 1,101 rows carry
   today's date. Nothing in our fetchers rewrites a source's numbers.
 - **Freshness on the healthy sources:** meso.watch prices 8.6 h old at audit time (their own list.json cadence),
-  listings 2.2 h, classicmarket 3.1 h, meowdb 8.5 h, [removed source] 2.5 h, mesoarbitrage 3.1 h. All inside cadence.
+  listings 2.2 h, classicmarket 3.1 h, meowdb 8.5 h, maplestory.watch 2.5 h, mesoarbitrage 3.1 h. All inside cadence.
 - **No stale-median absurdities:** 0 items where the headline price is ≥3× the cheapest live ask (a classic
   "median moved, listing didn't" detector).
 - **The "rough headline" case is rare:** exactly **1** item (Soft Feather) has a low-data meso.watch median while a
@@ -71,7 +71,7 @@ Related and found while fixing F1: all polls share one `main-pipeline` concurren
 other source's refresh (see P11).
 
 ### F3 — 51 items have source prices but no site price
-The fallback chain stops at classicmarket, so items priced **only** by mesoarbitrage / [removed source] / mesoindex
+The fallback chain stops at classicmarket, so items priced **only** by mesoarbitrage / maplestory.watch / mesoindex
 (e.g. White Dye 24,999, Red-Hearted Earrings 1,288,888 asked, Square Hammer) show "no player prices yet" on the Usual
 price tile — and get no loot/keep/craft/FM-Sniper valuation — while their source rows sit one inch lower on the same
 page. Proposal **P5** below closes this without touching Danny's meso.watch-first rule.
@@ -79,7 +79,7 @@ page. Proposal **P5** below closes this without touching Danny's meso.watch-firs
 ### F4 — when sources disagree, they disagree loudly (semantics, not bugs)
 For 834 items we hold ≥3 solid sources (≥5 data points each): 229 agree within 1.25×, **85 differ >2×**. Against the
 meso.watch headline specifically, with the other source holding ≥20 data points: **147 items** differ >1.5× from meowdb
-(ask-mixed semantics — expected skew upward), 49 from mesoarbitrage, 22 from [removed source], 4 from mesoindex.
+(ask-mixed semantics — expected skew upward), 49 from mesoarbitrage, 22 from maplestory.watch, 4 from mesoindex.
 Examples: Blue Sauna Robe meso.watch 20,000 vs meowdb 40,000 (226 pts); Yellow Icarus Cape 18,944 vs 49,999; Wolbi
 Throwing Stars meso.watch 7,950/set vs mesoarbitrage 26,488. These are ask-vs-sold and window-length differences, not
 fetch errors — the Items page already shows both numbers honestly. The gap is that the **single number the rest of the
@@ -118,9 +118,8 @@ Expected — most items are not in the Free Market — listed so nobody mistakes
 | P2 | watchdog covers all 7 sources | **shipped** (this commit) | a freeze now files its own issue |
 | P3 | Stale-age pill on Prices rows: any source row whose data is past its cadence gets a quiet "stale N d" tint, like the listing-stale pill | S | makes F1-class outages visible on the page itself |
 | P4 | "Sources" context on the headline: one sub-line under the Usual price tile — range across solid sources + an "all sources within ±25 %" style agreement pill | S | answers "why does classicmarket say 40k?" without leaving the tile |
-| P5 | Extend the pwPrice **fallback** (not the head): after classicmarket asks/bids, try mesoarbitrage sold median → [removed source] typical → mesoindex usual, labelled with their kind as the chain already does | S | closes F3; respects "pwPrice stays on meso.watch" |
+| P5 | Extend the pwPrice **fallback** (not the head): after classicmarket asks/bids, try mesoarbitrage sold median → maplestory.watch typical → mesoindex usual, labelled with their kind as the chain already does | S | closes F3; respects "pwPrice stays on meso.watch" |
 | P6 | Show stored askMedian on the meso.watch row ("asks now ~X") | XS | F5 |
-| P7 | Cross-marketplace comparison page — already planned 2026-10-20 (decisions log), still blocked on the maplestory.market API key | M | blocked on key |
 | P8 | Movers page: biggest day-over-day price changes from fields already stored (`dayAgo`, `trend`, cmp `day`) | M | new page, data ready |
 | P9 | Split price data out of index.html: the SW is network-first, so every poll commit re-serves ~1.7 MB gzip to every returning visitor; icons are already a hashed second file — do the same for data.json (cached shell + data URL) | L | biggest perf win available |
 | P10 | Mob meso: show shared-runs "players' actual mesos/kill" beside meowdb's estimate once coverage grows; calibrate the map meso model | M | grows with shared runs |
@@ -130,7 +129,7 @@ Expected — most items are not in the Free Market — listed so nobody mistakes
 
 - Coverage: 2,258 items · 1,218 with ≥1 source price · 1,169 with a headline (meso.watch 1,069, classicmarket 86,
   meowdb 12, CM bids 2) · 51 with prices but no headline · 1,040 with no source price at all (mostly untradeables).
-- Headline vs ≥20-point source >1.5×: 178 items (meowdb 147, mesoarbitrage 49, [removed source] 22, mesoindex 4 — overlapping).
+- Headline vs ≥20-point source >1.5×: 178 items (meowdb 147, mesoarbitrage 49, maplestory.watch 22, mesoindex 4 — overlapping).
 - Source pairs (n≥5 each) compared: 4,667 · >1.5×: 876 · >2×: 331.
 - Agreement among ≥3 solid sources: 834 items · within 1.25×: 229 · over 2×: 85.
 - Worst cross-source pairs: Mushmom Balloon 10,000 vs 194,443 (19×); Rower 157,499 vs 2,799,999 (18×); Bottomwear MP

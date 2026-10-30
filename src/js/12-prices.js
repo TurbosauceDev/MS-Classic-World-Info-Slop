@@ -39,7 +39,7 @@ const pxEach = v => v < 10 && v % 1 ? v : fmt(v);
 // expose a date-only read (3 h polls -> 2 days, since "today" parses as 0-24 h old).
 const pxSrcTs = r => r.src === "meso.watch" ? D.pw?.generated
   : r.src === "classicmarket.kr" ? (r.kind === "market (combined)" ? D.cmp?.read : D.cm?.read)
-  : {meowdb: D.mdb?.read, "mesoarbitrage.com": D.ma?.read, "mesoindex.com": D.mi?.read}[r.src];
+  : {meowdb: D.mdb?.read, "mesoarbitrage.com": D.ma?.read, "maplestory.watch": D.mw?.read, "mesoindex.com": D.mi?.read}[r.src];
 const pxSrcStale = r => { const t = Date.parse(String(pxSrcTs(r) || "").replace(" ", "T") + "Z"); if (isNaN(t)) return "";
   const min = Math.max(0, (Date.now() - t) / 6e4), max = r.src === "meso.watch" ? 180 : 2880;
   if (min <= max) return "";
@@ -59,8 +59,8 @@ function priceBox(id){
     : spread > 2 ? ` <span class="pill p-warn" title="The solid sources disagree (ask-vs-sold windows or thin data): compare the rows below before trusting one number">sources ${Math.round(spread)}x apart</span>` : "";
   const pxCtx = solid.length >= 2 ? `${solid.length} solid sources · ${fmt(lo)}-${fmt(hi)}${agree}` : "";
   const unit = best?.src?.startsWith("consensus") ? "sales" : {"meso.watch": "sales", "classicmarket.kr market": "sold", "meowdb": "prices",
-    "mesoarbitrage.com": "sales", "mesoindex.com": "sales",
-    "mesoarbitrage.com listing": "listings", "mesoindex.com listing": "listings"}[best?.src + (best?.unit === "listing" ? " listing" : "")] || "posts";
+    "mesoarbitrage.com": "sales", "maplestory.watch": "sales", "mesoindex.com": "sales",
+    "mesoarbitrage.com listing": "listings", "maplestory.watch listing": "listings", "mesoindex.com listing": "listings"}[best?.src + (best?.unit === "listing" ? " listing" : "")] || "posts";
   // P13/P14 (Danny 2026-10-27): a meso.watch headline carries its trust context - the p25-p75 band when the median is
   // thin or wide, and a "price moving" flag when the daily medians disagree (P15's weighted value says so itself).
   const band = pwBand(id), moving = pwMoving(id);
@@ -70,7 +70,7 @@ function priceBox(id){
   const tile = (k, v, sub, tip, sub2) => `<div class="pxt"${tip ? ` title="${esc(tip)}"` : ""}><span class="pxk">${k}</span><b class="pxv">${v}</b><span class="pxs">${sub}</span>${sub2 ? `<span class="pxs">${sub2}</span>` : ""}</div>`;
   const tiles = `<div class="pxtiles">
     ${tile("Usual price", best ? fmt(best.v) + (best.per ? `<small> per set</small>` : "") : "–", best ? `${esc(best.src)} · ${fmt(best.n)} ${unit}${best.wt ? ` · 3-day weighted` : ""}${best.rough ? ` <span class="pill p-warn">rough</span>` : ""}` : "no player prices yet",
-      best ? `The price the rest of the site uses: solid meso.watch sales first, then a consensus median of the solid markets for thin items, then classicmarket.kr market, meowdb, the classicmarket.kr posts and the shop-scan sources (mesoarbitrage, mesoindex)` : "", [pxCtx, trust].filter(Boolean).join(" · "))}
+      best ? `The price the rest of the site uses: solid meso.watch sales first, then a consensus median of the solid markets for thin items, then classicmarket.kr market, meowdb, the classicmarket.kr posts and the shop-scan sources (mesoarbitrage, maplestory.watch, mesoindex)` : "", [pxCtx, trust].filter(Boolean).join(" · "))}
     ${tile("Cheapest listed", cheap ? pxEach(cheap.v) : "–", cheap ? `${pxWhere(cheap)}${vs(cheap.v) ? " · " + vs(cheap.v) : ""}${pxTier(cheap) < 2 ? ` · ${cheap.ago || "older listing"}${pxTier(cheap) === 0 ? " · may be closed" : ""}` : ""}` : "no live listing with a place")}
     ${tile("NPC shop", shop ? fmt(shop[3]) : "–", shop ? esc(shop[0]) + (shop[4] ? ` · ${shop[4]} price` : "") : "no shop sells it", shop ? `${shop[0]}, ${shop[2]} (meowdb shop list)` : "")}
     ${tile("NPC buys", it?.p ? fmt(it.p) : "–", it?.p ? "game files" : "can't be sold to NPCs")}</div>`;
@@ -89,5 +89,5 @@ function priceBox(id){
     : `<h4 class="pxh">Where to buy</h4><p class="sub">No live listing with a channel or FM room right now.</p>`);
   const h = PWH[id], chart = h ? `<div class="pxchart">${pwSpark(id, 1)}<span class="sub">meso.watch median sale price, ${h[0][0]} to ${h[h.length - 1][0]}: ${fmt(Math.min(...h.map(x => x[1])))}-${fmt(Math.max(...h.map(x => x[1])))} · ${fmt(h.reduce((a, x) => a + x[2], 0))} sold</span></div>` : "";
   return `${tiles}${chart}${src}${where}${buys.length ? ltab(buys, "Buy orders", buys.length === 1 ? "player wants it" : "players want it, freshest offers first") : ""}
-    <p class="sub pxfoot">Listings come from meso.watch (cheapest per item only, from streams, updated ${pwListedAgo() || "–"}), meowdb (players post their own shops, updated ${mdbAgo() || "–"}; gone after 7 days without a bump), and mesoindex.com shop scans (seen in the last day). classicmarket.kr posts have no location. Shops open and close fast - people leave them up while they sleep or work, about 8-12 h: listings up to 8 h old come first, 8-12 h ones carry a low-confidence tag, and anything older hides behind Show older unless it is all there is. If a shop is gone, try the next.</p>`;
+    <p class="sub pxfoot">Listings come from meso.watch (cheapest per item only, from streams, updated ${pwListedAgo() || "–"}), meowdb (players post their own shops, updated ${mdbAgo() || "–"}; gone after 7 days without a bump), and maplestory.watch + mesoindex.com shop scans (seen in the last day). classicmarket.kr posts have no location. Shops open and close fast - people leave them up while they sleep or work, about 8-12 h: listings up to 8 h old come first, 8-12 h ones carry a low-confidence tag, and anything older hides behind Show older unless it is all there is. If a shop is gone, try the next.</p>`;
 }

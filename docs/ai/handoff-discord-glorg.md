@@ -30,7 +30,6 @@
 - `/home/z/my-project/download/digest-archive/` — local copies of posted issues
 
 ## Open threads waiting on me
-- maplestory.market gathering licensed by Danny (key pinned) — probe done 10-28: the data API is key-gated by design (clean 401 session_required on /api/*, SPA shell HTML, /docs/api documents the key flow with 429 + Retry-After); no bot wall, so the browser bridge buys nothing. Nothing further without the key; when it lands, a poller follows the meowdb headed-Chromium pattern.
 - T-07 digest thread Closed 10-28 (quiet-day decided). T-08 (Claude, project-side) shipped its own sub-1000-meso guard in the spread check — both fixes coexist with the blacklist (1160fd6 + 1855c47).
 - Next tracker rocks are unpicked again; do NOT start big tracker work without Danny's pick.
 

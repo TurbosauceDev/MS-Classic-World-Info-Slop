@@ -254,11 +254,13 @@ fetches the two crowdsourced shop-scan sources for cross-marketplace comparison:
 
 | URL | Updates | Output files |
 |---|---|---|
+| `https://maplestory.watch/api/items` + `/api/item?name=` | 14-day rolling window | `data/sources/maplestorywatch_prices.json` (raw, written by `scripts/fetch_alt_sources.py`) + `data/sources/shopscans.json` (combined, written by `scripts/fetch_shopscans.py` with per-listing seller/shop/FM room info) |
 | `https://mesoarbitrage.com/data/prices.json` | 2h anti-abuse hold | `data/sources/mesoarbitrage_prices.json` (raw, written by `scripts/fetch_alt_sources.py`) + `data/sources/shopscans.json` (combined, with NPC prices + 72h/14-day windows) |
 
 `fetch_alt_sources.py` writes the raw per-source files (for the site's data-freshness
-panel and human inspection). `fetch_shopscans.py` writes
-the combined `shopscans.json` that the frontend reads as `D.ma`.
+panel and human inspection). `fetch_shopscans.py` does the heavier per-item work (fetching
+maplestory.watch's per-item listing details with seller + shop + FM room info) and writes
+the combined `shopscans.json` that the frontend reads as `D.mw` / `D.ma`.
 
 ## Decisions log
 
