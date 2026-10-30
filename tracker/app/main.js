@@ -419,7 +419,7 @@ try { siteMk = JSON.parse(fs.readFileSync(SITE_MK, "utf8")); if (!siteMk || !sit
 try { if (siteMk) siteMkAt = fs.statSync(SITE_MK).mtimeMs } catch {}
 const sendSiteMk = () => { if (win && !win.isDestroyed()) win.webContents.send("site-market", siteMk, siteMkAt, sitePr) };
 // the site's cross-source prices payload (prices-<hash>.json behind the prices.json pointer; v0.2.84):
-// every per-poll source the site builds (pw/cm/cmp/mdb/ma/mw/mi + per-file read stamps in srcd), for
+// every per-poll source the site builds (pw/cm/cmp/mdb/ma/mi + per-file read stamps in srcd), for
 // the Watchlist's Compare modal. The pointer is a tiny URL; the payload ~1.3 MB raw / ~400 KB gzip —
 // refetched only when the pointer's hash changes.
 const SITE_PR = path.join(app.getPath("userData"), "site-prices.json");

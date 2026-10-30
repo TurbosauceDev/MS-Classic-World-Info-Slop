@@ -23,7 +23,6 @@ PW  = (D.get("pw")  or {}).get("it", {})
 CMP = (D.get("cmp") or {}).get("it", {})
 CM  = (D.get("cm")  or {}).get("it", {})
 MDB = (D.get("mdb") or {}).get("it", {})
-MW  = (D.get("mw")  or {}).get("it", {})
 MA  = (D.get("ma")  or {}).get("it", {})
 MI  = (D.get("mi")  or {}).get("it", {})
 ITEMS = D["items"]
@@ -50,8 +49,6 @@ def solid_sources(iid):
     if m and m[0]: out["meowdb"] = (m[0], m[2])
     ma = MA.get(iid)
     if ma and ma[0]: out["mesoarbitrage"] = (ma[0], ma[1])
-    w = MW.get(iid)
-    if w and w[0]: out["maplestory.watch"] = (w[0], w[1])
     mi = MI.get(iid)
     if mi and mi[0]: out["mesoindex"] = (mi[0], mi[3])
     return out
@@ -64,7 +61,7 @@ report["coverage"] = {
     "items_headline": len(headline),
     "items_no_source_price": sum(1 for i in ITEMS if not solid_sources(i)),
     "per_source": {"meso.watch": len(PW), "classicmarket.combined": len(CMP), "classicmarket.posts": len(CM),
-                   "meowdb": len(MDB), "maplestory.watch": len(MW), "mesoarbitrage": len(MA), "mesoindex": len(MI),
+                   "meowdb": len(MDB), "mesoarbitrage": len(MA), "mesoindex": len(MI),
                    "live_listings_pw": len(PWNOW)},
     "headline_from": {},
 }
@@ -110,7 +107,7 @@ report["mob_meso_meowdb_vs_shared"] = [
     (ob, D["mobs"].get(ob, ["?"])[0] if ob in D["mobs"] else ob, est[ob][0] if ob in est else None,
      round(v.get("mesos", 0) / v["kills"], 1) if v.get("kills") else None, v.get("kills")) for ob, v in sh.items()]
 
-top = {k: (D.get(k) or {}).get("read") for k in ("pw", "cm", "cmp", "mdb", "mw", "ma", "mi")}
+top = {k: (D.get(k) or {}).get("read") for k in ("pw", "cm", "cmp", "mdb", "ma", "mi")}
 report["freshness_hours"] = {k: (round(a, 1) if (a := age_h(v)) is not None else None) for k, v in top.items()}
 report["freshness_hours"]["pw.listed"] = (round(a, 1) if (a := age_h((D.get("pw") or {}).get("listed"))) is not None else None)
 

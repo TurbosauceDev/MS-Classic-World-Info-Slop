@@ -23,7 +23,7 @@ from datetime import datetime, timezone
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'data', 'sources')
 
-# price-tracking blacklist (data/price_blacklist.json): items excluded from D.pw/cm/cmp/mi/mdb/ma/mw
+# price-tracking blacklist (data/price_blacklist.json): items excluded from D.pw/cm/cmp/mi/mdb/ma
 # by the build steps. The raw source files still legitimately contain them (the sources are the
 # fetchers' output, unfiltered), so the cross-source spread check must skip them too or it red-gates
 # on items nobody tracks (2026-10-28: meowdb's 100-meso arrows row vs 1-meso elsewhere).
@@ -91,7 +91,7 @@ SHAPES = {
     'classicmarket_prices.json': {'source', 'read', 'it'},
     'meowdb_market.json': {'source', 'read', 'it'},
     'mesoindex.json': {'source', 'read', 'it'},
-    'shopscans.json': {'source', 'ma', 'mw'},
+    'shopscans.json': {'source', 'ma'},
 }
 
 # per-source price/sales extractor: (label, file, path-to-item-dict, price-idx, sales-idx)
@@ -102,7 +102,6 @@ SOURCES = [
     ('meowdb',             'meowdb_market.json',        'it',            0, 2),
     ('mesoindex.com',      'mesoindex.json',            'it',            0, 3),
     ('mesoarbitrage.com',  'shopscans.json',             ('ma', 'it'),    0, 1),
-    ('maplestory.watch',   'shopscans.json',             ('mw', 'it'),    0, 1),
 ]
 
 

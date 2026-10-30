@@ -26,7 +26,6 @@ const DROPBY = {}; for (const [mid, m] of Object.entries(D.mobdb)) for (const [i
 const DEAL_MIN = 0.9;
 const DEAL_SRC = [
   id => { const p = PW[id]; return p?.[0] > 0 ? [p[0], p[3]] : null },          // meso.watch
-  id => { const w = MW[id]; return w?.[0] > 0 && w[1] > 0 ? [w[0], w[1]] : null }, // maplestory.watch
   id => { const m = MI[id]; return m?.[0] > 0 && m[3] ? [m[0], m[3]] : null },     // mesoindex
   id => { const m = MA[id]; return m?.[0] > 0 && m[1] ? [m[0], m[1]] : null },     // mesoarbitrage
   id => { const k = CMP[id]; return k?.[0] > 0 ? [k[0], k[3]] : null },           // classicmarket
@@ -36,9 +35,9 @@ let DEALS = null, DEALS_AT = 0;
 function dealsIndex(){
   if (DEALS && Date.now() - DEALS_AT < 5 * 60000) return DEALS;
   DEALS = []; DEALS_AT = Date.now();
-  // only items that have ANY live listing (meso.watch now, meowdb, mesoindex, maplestory.watch) — a much smaller
+  // only items that have ANY live listing (meso.watch now, meowdb, mesoindex) — a much smaller
   // set than all D.items, and the only ones that can be a "deal"
-  const ids = [...new Set([...Object.keys(PWNOW || {}), ...Object.keys(MDBL || {}), ...Object.keys(MILS || {}), ...Object.keys(MWLS || {})])];
+  const ids = [...new Set([...Object.keys(PWNOW || {}), ...Object.keys(MDBL || {}), ...Object.keys(MILS || {})])];
   for (const id of ids) {
     const it = D.items[id]; if (!it || it.c === "Equipment") continue;   // equips: any roll, no "% under" (matches MCI)
     const vs = DEAL_SRC.map(f => f(id)).filter(Boolean).map(x => x[0]); if (vs.length < 2) continue;

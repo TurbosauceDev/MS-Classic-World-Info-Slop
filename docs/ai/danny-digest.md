@@ -27,7 +27,7 @@ The heaviest day of the project so far, and the subject was weight itself: your 
 - **Journey log (0.2.101 `4f0ee10`, 0.2.102 `87aaf8c`)**: opt-in timestamped log of everything the readers see, HP/MP reader feeding it, and a suspect EXP jump asks for confirm instead of logging as fact. Eight more alert triggers and custom sounds shipped alongside (0.2.102 `04f14ba`).
 - **Overlay night batch**: bag check icons with aging colors on the card and the EXP card (0.2.94 `52466b3`, 0.2.105 `103b421`), Borderless fade rework with no minimize (0.2.106 `b3e7ee3`), edit mode Undo/Redo plus a 6 px drag threshold (0.3.3 `3c4c52b`), Discard run with a two-click confirm (0.2.94 `87be7d1`).
 - **Site accuracy audit (`0544a50`, site v0.19.4)**: three real defects fixed: the 3-day weighted Usual value applied its weights backwards on 118 of 119 moving items, the consensus tile counted markets instead of sales, and the p25-p75 band contradicted spike-held headlines.
-- **maplestory.watch is answering again**: fresh rows at 11:45 UTC today, and meowdb rows fresh at 06:54 UTC. No bypass used on either.
+- **meowdb is answering again**: rows fresh at 06:54 UTC today. No bypass used.
 
 ## Anything broken or weird
 

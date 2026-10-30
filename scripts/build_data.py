@@ -700,7 +700,7 @@ def step_mdbmarket(D):
     meowdb_market.step(D)
 
 def step_shopscans(D):
-    """ma / mw: mesoarbitrage.com + maplestory.watch shop-scan prices and maplestory.watch listings (scripts/fetch_shopscans.py)."""
+    """ma: mesoarbitrage.com shop-scan prices (scripts/fetch_shopscans.py)."""
     import fetch_shopscans
     fetch_shopscans.step(D)
 
@@ -725,7 +725,7 @@ def osms_info():
         return {"ref": h, "date": d}
     except Exception: return None
 
-PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "classicrank": ("crank", lambda D: step_classicrank(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: (D.pop("cmp", None), step_cmarket(D))), "shopscans": ("mw", lambda D: step_shopscans(D)), "mdbmarket": ("mdb", lambda D: step_mdbmarket(D)), "mesoindex": ("mi", lambda D: step_mesoindex(D)), "reqitems": ("_none", lambda D: step_reqitems(D)), "weapon_sources": ("wsrc", lambda D: step_weapon_sources(D))}   # (key it owns, step)
+PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "classicrank": ("crank", lambda D: step_classicrank(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: (D.pop("cmp", None), step_cmarket(D))), "shopscans": ("ma", lambda D: step_shopscans(D)), "mdbmarket": ("mdb", lambda D: step_mdbmarket(D)), "mesoindex": ("mi", lambda D: step_mesoindex(D)), "reqitems": ("_none", lambda D: step_reqitems(D)), "weapon_sources": ("wsrc", lambda D: step_weapon_sources(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)

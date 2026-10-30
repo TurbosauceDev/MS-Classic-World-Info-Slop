@@ -27,7 +27,6 @@ independence is the whole basis for telling "them" from "us".
 | Source | File | Own timestamp | Independent? |
 |---|---|---|---|
 | meso.watch list.json | `data/sources/mesowatch_prices.json` | `read` | yes |
-| maplestory.watch | `data/sources/maplestorywatch_prices.json` | `generated_at` | yes |
 | mesoarbitrage.com | `data/sources/mesoarbitrage_prices.json` | `generated_at` | yes |
 | classicmarket.kr | `data/sources/classicmarket_prices.json` | `read` | yes |
 | meowdb | `data/sources/meowdb_market.json` | `read` | yes |
@@ -123,7 +122,7 @@ Rules, in order — first match wins:
 `sales_delta` is against the previous sample, so it needs history — which is why
 polls.jsonl exists rather than a stateless check.
 
-Confidence is raised by cross-source agreement: if `mw` and `ma` are also stale,
+Confidence is raised by cross-source agreement: if `ma` is also stale,
 `EXTERNAL_STANDSTILL` goes to high confidence; if they are fresh and advancing while
 meso.watch is not, that points at meso.watch specifically.
 

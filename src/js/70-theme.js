@@ -87,11 +87,8 @@
   const [id, price, qty, time] = t.top || [], it = id && D.items[id];
   const when = time ? new Date(time).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
   el.innerHTML = `<b>Market today</b> ${fmt(t.sales)} player-shop sales tracked${it ? ` · top sale: <span class="itname" tabindex="0" data-item="${id}">${esc(it.n)}</span>${qty > 1 ? ` ×${qty}` : ""} for ${fmt(price)} mesos${when ? ` (${when})` : ""}` : ""}`;
-  // Rows: first source with data wins. maplestory.market /api/market/overview (D.mkt.ov {movers, best, listed}: [[itemId, text]])
-  // slots in ahead once Danny's partner key + Z.ai's poll provide it; until then our own from meso.watch (trend [5], sold [3]).
+  // Rows: first source with data wins; ours come from meso.watch (trend [5], sold [3]).
   const sources = [
-    () => D.mkt?.ov && { credit: `<a href="https://maplestory.market" target="_blank" rel="noopener">maplestory.market</a>`,
-      rows: [["Movers", D.mkt.ov.movers], ["Best sellers", D.mkt.ov.best], ["Most listed", D.mkt.ov.listed]] },
     () => { const ok = Object.entries(D.pw.it || {}).filter(([k, p]) => D.items[k] && p[0] > 0 && p[3] >= 50 && !(p[4] & 1));   // 50+ sales, not low data
       const pct = t => `${t > 0 ? "▲" : "▼"}${Math.round(Math.abs(t) * 100)}%`, by = f => ok.slice().sort((a, b) => f(b) - f(a));
       return { credit: "meso.watch", rows: [

@@ -5,8 +5,7 @@
      fetch <url>   in-page fetch() from the current origin (fast; cookies apply; JSON APIs)
    Reply line: {ok, status, body} — body is response text (JSON APIs come back as text).
    A goto that lands on a challenge page retries up to 3 times with a 6 s wait, then reports ok:false.
-   Used by the Python pollers when a site answers its anti-bot challenge to plain urllib (maplestory.watch
-   10-28, classicrank runner 403s). Allowed since Danny lifted the 10-20 never-bypass rule (decisions.md
+   Used by the Python pollers when a site answers its anti-bot challenge to plain urllib (classicrank runner 403s). Allowed since Danny lifted the 10-20 never-bypass rule (decisions.md
    2026-10-28): public keyless endpoints only, no logins, no solving services. Needs playwright chromium. */
 const { chromium } = require("playwright");
 const readline = require("readline");
