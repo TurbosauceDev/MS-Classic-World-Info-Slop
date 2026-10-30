@@ -445,6 +445,14 @@
   body.skin-elv #top .bar > #go:hover { background:color-mix(in srgb, #fff 10%, var(--accent)); }
   body.skin-elv #top .bar > #go.on { background:var(--bad); border-color:color-mix(in srgb, #000 30%, var(--bad)); }
   body.skin-elv #top .bar > #helpBtn { width:30px; padding:0; }
+  /* narrow windows: the skin's roomier buttons (14px + 12px padding) overflow the bar where the glass sizes fit —
+     Start, Bug, Reset and Simple Mode must stay on one line at 340 px (layout.test's narrow main card scene, 244 px
+     of buttons vs 242 px of bar), so under 470 px they take the glass trims */
+  @container (max-width: 470px){
+    body.skin-elv #top .bar > button { padding:0 8px; font-size:13px; }
+    body.skin-elv #top .bar > #go { min-width:64px; padding:0 12px; }
+    body.skin-elv #top .bar > #helpBtn { width:28px; padding:0; }
+  }
   body.skin-elv .seg button { font-size:13px; padding:4px 12px; color:color-mix(in srgb, var(--ink) 78%, var(--panel)); }
   body.skin-elv .seg button[aria-pressed=true] { background:var(--accent); color:var(--on-accent); }
   /* the Dummy banner speaks the accent now (it was an info note wearing --warn's orange) */

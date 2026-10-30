@@ -109,7 +109,7 @@ const path = require("path"), {chromium} = require("playwright");
     $("#profSel").value = "KPQ"; $("#profUse").click(); await wait(200);
     const b = [settings.theme, settings.fit, settings.profile, settings.profiles.find(p => p.name === "Grind").theme.preset];
     $("#profSel").value = "Grind"; $("#profDel").click(); await wait(50);
-    const theme = TH.encode(TH.PRESETS[8]); $("#setupCode").value = theme; $("#setupPaste").click(); await wait(30);
+    const theme = TH.encode(TH.PRESETS.find(t => t.name === "Kerning neon")); $("#setupCode").value = theme; $("#setupPaste").click(); await wait(30);
     const tinfo = $("#spName").textContent + " / " + $("#spMap").textContent; $("#spUse").click(); await wait(100);
     return {a, b, left: settings.profiles.map(p => p.name), used: settings.profile, opts: $("#profSel").options.length, tinfo, theme2: settings.theme} });
   if (pf.a[0] !== "p:Slime" || pf.a[1] !== true || pf.a[2] !== "Grind" || !/Grind \(in use\)/.test(pf.a[3])) fail("profile switch", pf);
