@@ -84,3 +84,18 @@ CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY, received TEXT NOT N
   msg TEXT NOT NULL, contact TEXT, page TEXT, ver TEXT, done INTEGER NOT NULL DEFAULT 0);
 CREATE INDEX IF NOT EXISTS feedback_ipday ON feedback (ipday);
 CREATE INDEX IF NOT EXISTS feedback_received ON feedback (received);
+
+-- KPQ reset (Danny, 2026-10-30): all KPQ rounds, names, sources, raw v2 data and archive moved to kpq_bak_20261030_* once
+-- (guarded by the meta flag, so re-running this file changes nothing); boards and stage averages (derived from rounds) start empty.
+CREATE TABLE IF NOT EXISTS kpq_bak_20261030_rounds AS SELECT * FROM kpq_rounds WHERE NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
+CREATE TABLE IF NOT EXISTS kpq_bak_20261030_archive AS SELECT * FROM kpq_rounds_archive WHERE NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
+CREATE TABLE IF NOT EXISTS kpq_bak_20261030_names AS SELECT * FROM kpq_names WHERE NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
+CREATE TABLE IF NOT EXISTS kpq_bak_20261030_src AS SELECT * FROM kpq_src WHERE NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
+CREATE TABLE IF NOT EXISTS kpq_bak_20261030_raw AS SELECT * FROM kpq_raw WHERE NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
+DELETE FROM kpq_rounds WHERE NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
+DELETE FROM kpq_rounds_archive WHERE NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
+DELETE FROM kpq_names WHERE NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
+DELETE FROM kpq_src WHERE NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
+DELETE FROM kpq_raw WHERE NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
+DELETE FROM meta WHERE k = 'summary' AND NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
+INSERT OR IGNORE INTO meta (k, v) VALUES ('kpq_reset_20261030', '1');

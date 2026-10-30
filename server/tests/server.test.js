@@ -284,4 +284,20 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   assert.ok(!JSON.stringify(k.scores).includes("kpqscore"), "no install ids in the scored boards");
   [s, r] = await r2(99, 20, {exp: 1, mesos: 1}, {etc: 9999, npc: 1e12}); assert.ok(r.counted, "huge loot numbers are clamped, round still counts");
 }
+// KPQ reset 2026-10-30: schema.sql backs the KPQ tables up and empties them once; re-running it later keeps new rounds
+{
+  const schema = readFileSync(new URL("../schema.sql", import.meta.url), "utf8"), db = new DatabaseSync(":memory:");
+  const pre = schema.slice(0, schema.indexOf("-- KPQ reset")), reset = schema.slice(schema.indexOf("-- KPQ reset"));
+  db.exec(pre);
+  db.exec("INSERT INTO kpq_rounds (id, install, ipday, received, date, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why) VALUES (1,'a','d','2026-10-20','2026-10-20','Rush',1,30,'Magician',300,300,1,0,0,'[]','g',1,'')");
+  db.exec("INSERT INTO kpq_raw VALUES (1,'{}')");
+  db.exec(reset);
+  assert.strictEqual(db.prepare("SELECT COUNT(*) n FROM kpq_rounds").get().n, 0, "KPQ rounds emptied");
+  assert.strictEqual(db.prepare("SELECT COUNT(*) n FROM kpq_raw").get().n, 0, "raw rounds emptied");
+  assert.strictEqual(db.prepare("SELECT COUNT(*) n FROM kpq_bak_20261030_rounds").get().n, 1, "old round backed up");
+  db.exec("INSERT INTO kpq_rounds (id, install, ipday, received, date, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why) VALUES (2,'a','d','2026-10-31','2026-10-31','Rush',1,30,'Magician',280,280,1,0,0,'[]','g',1,'')");
+  db.exec(reset);
+  assert.strictEqual(db.prepare("SELECT COUNT(*) n FROM kpq_rounds").get().n, 1, "re-running schema.sql keeps new rounds");
+  assert.strictEqual(db.prepare("SELECT COUNT(*) n FROM kpq_bak_20261030_rounds").get().n, 1, "backup untouched on re-run");
+}
 console.log("server tests passed");
