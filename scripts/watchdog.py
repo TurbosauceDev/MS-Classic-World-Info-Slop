@@ -24,6 +24,7 @@ POLL_MAX, PRICES_MAX, LISTED_MAX = 120, 180, 360   # minutes
 # every other price source: file, json path to its read time ([] = top level), max age (minutes), name for the issue
 SOURCES = [
     ("shopscans.json", ["ma", "read"], 24 * 60, "mesoarbitrage.com (shop scans)"),
+    ("shopscans.json", ["mw", "read"], 24 * 60, "maplestory.watch (shop scans)"),
     ("classicmarket_prices.json", [], 36 * 60, "classicmarket.kr trade posts"),
     ("classicmarket_market.json", [], 36 * 60, "classicmarket.kr combined prices"),
     ("meowdb_market.json", [], 24 * 60, "meowdb Free Market"),

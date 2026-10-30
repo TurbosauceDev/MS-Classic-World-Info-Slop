@@ -1,4 +1,5 @@
-// node tests/focus.test.js — Focus Mode, the third view beside Simple Mode (Danny, 2026-10-26): opens from the button and the View menu, shows the run in a centred column with soft shadows,
+// node tests/focus.test.js — Focus Mode, the third view beside Simple Mode (Danny, 2026-10-26, skinned after
+// maplestory.watch/market): opens from the button and the View menu, shows the run in a centred column with soft shadows,
 // the window shrinks to fit it (the same host.mini Simple Mode uses), and Full view brings everything back. A pop-up
 // (Settings) leaves Focus like it leaves Simple. Needs playwright, like ui.test.js.
 const path = require("path"), {chromium} = require("playwright");

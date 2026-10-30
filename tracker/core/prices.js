@@ -83,7 +83,7 @@
   }
 
   // cross-source compare (0.2.84). PR = the site's prices payload (prices-<hash>.json via the
-  // prices.json pointer: {pw, cm, cmp, mdb, ma, mi, srcd, ...} — every per-poll market source the
+  // prices.json pointer: {pw, cm, cmp, mdb, ma, mw, mi, srcd, ...} — every per-poll market source the
   // site builds). Price/sales field positions match the site's per-source shapes (the same ones
   // tests/data_quality_test.py's SOURCES table pins). srcd holds each raw source file's read stamp.
   const SRC_FIELDS = [
@@ -91,7 +91,8 @@
     ["cmp", "classicmarket.kr", 0, 3, "classicmarket_market"],
     ["mi", "mesoindex.com", 0, 3, "mesoindex"],
     ["mdb", "meowdb", 0, 2, "meowdb_market"],
-    ["ma", "mesoarbitrage.com", 0, 1, "mesoarbitrage_prices"]];
+    ["ma", "mesoarbitrage.com", 0, 1, "mesoarbitrage_prices"],
+    ["mw", "maplestory.watch", 0, 1, "maplestorywatch_prices"]];
   function sources(PR, id){
     return SRC_FIELDS.map(([k, label, pi, si, src]) => {
       const d = PR && PR[k] && PR[k].it && PR[k].it[id];

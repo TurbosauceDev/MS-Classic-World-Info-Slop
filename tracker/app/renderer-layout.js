@@ -83,7 +83,7 @@ function miniFit(force){ if (!document.body.classList.contains("mini")) return c
 addEventListener("resize", () => { if (document.body.classList.contains("mini")) miniFit();
   // the charts redraw at the new width (next frame: the layout has to settle first)
   requestAnimationFrame(() => { for (const id of ["smChart", "fzChart"]){ const s = document.getElementById(id); if (s?._pts && s.clientWidth) smChart(s, s._pts) } if (document.body.classList.contains("mini")) miniFit() }) });   // (the chart's height follows its width: fit again)
-// Focus Mode (Danny, 2026-10-26: a third view beside Simple Mode): the same
+// Focus Mode (Danny, 2026-10-26: a third view beside Simple Mode, skinned after maplestory.watch's market page): the same
 // session data as Simple Mode in one centred column — hero, stat tiles, level bar, chart, potions and mesos, run log, top
 // lists. No zoom games: the roominess is the point; a wider window just leaves more air around the column
 function renderFocus(s){

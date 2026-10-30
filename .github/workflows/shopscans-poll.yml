@@ -1,4 +1,5 @@
-# Every 3 hours: mesoarbitrage.com shop-scan prices -> data/sources/shopscans.json + D.ma, commit to main when changed (pages.yml builds the page).
+# Every 3 hours: mesoarbitrage.com + maplestory.watch shop-scan prices (and maplestory.watch per-shop listings for the Items
+# page where-to-buy list) -> data/sources/shopscans.json + D.ma / D.mw, commit to main when changed (pages.yml builds the page).
 # A failed fetch exits 0 and commits nothing. No vendor/ needed. Own workflow (the meso.watch poll belongs to the meso.watch
 # helper); same concurrency group as the other polls so commits queue.
 # Step-level timeouts (audit P11): a hung step releases the shared lock before the job ceiling.
@@ -21,24 +22,26 @@ jobs:
       - run: python3 tests/shopscans_test.py
         timeout-minutes: 2
       - name: Install headless chromium (browser fallback for challenge walls)
-        # the fetchers fall back to a real browser on a challenge wall (decisions.md 2026-10-28); the poll runs every 3 h so install up front
+        # maplestory.watch serves its Cloudflare challenge to non-browser clients (10-28): the fetchers
+        # fall back to a real browser (decisions.md 2026-10-28); the poll runs every 3 h so install up front
         timeout-minutes: 5
         run: npm install --no-save --ignore-scripts playwright@1.56.1 && npx playwright install --with-deps chromium
       - name: Fetch, build, commit if changed
         timeout-minutes: 20
         # on a push race (meso.watch poll commits often), start again from the new main, never merge data.json
-        # fetch_alt_sources.py writes the standalone raw-source file
-        # (mesoarbitrage_prices.json) so the data-freshness panel has a timestamp.
-        # fetch_shopscans.py then builds the combined shopscans.json (D.ma).
+        # fetch_alt_sources.py writes the two standalone raw-source files
+        # (maplestorywatch_prices.json + mesoarbitrage_prices.json) so the
+        # data-freshness panel on the site has timestamps for each source.
+        # fetch_shopscans.py then builds the combined shopscans.json (D.mw/D.ma).
         run: |
           python3 scripts/fetch_alt_sources.py > /tmp/alt.log 2>&1; cat /tmp/alt.log || true
           python3 scripts/fetch_shopscans.py > /tmp/ss.log; cat /tmp/ss.log
           [ -f data/sources/shopscans.json ] || exit 0   # first fetch failed
           cp data/sources/shopscans.json /tmp/ss.json
           for i in 1 2 3; do
-            git add data/sources/shopscans.json data/sources/mesoarbitrage_prices.json data/data.json
+            git add data/sources/shopscans.json data/sources/maplestorywatch_prices.json data/sources/mesoarbitrage_prices.json data/data.json
             if git diff --cached --quiet; then echo "no change"; exit 0; fi
-            git -c user.name="shopscans bot" -c user.email="actions@github.com" commit -qm "shop-scan prices (mesoarbitrage) $(date -u '+%F %H:%M')"
+            git -c user.name="shopscans bot" -c user.email="actions@github.com" commit -qm "shop-scan prices (mesoarbitrage, maplestory.watch) $(date -u '+%F %H:%M')"
             git push origin HEAD:main && exit 0
             sleep $((i*15)); git fetch -q origin main; git reset -q --hard origin/main
             cp /tmp/ss.json data/sources/shopscans.json

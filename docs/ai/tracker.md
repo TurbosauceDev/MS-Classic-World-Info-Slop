@@ -93,11 +93,11 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Mini (#mini, renderMini): its own copies of numbers, run log (#miniFeed, mirrored in feedAdd) and top-5 lists; host.mini(on, h)
   sizes the window's content height to the view (miniFit). #miniFull goes back; the card itself isn't clickable any more.
 - Focus Mode (0.2.73, #focus + body.focus, renderFocus/focusFit in renderer-layout.js): the third view, a centred 840 px
-  column (air, soft shadows, hover highlights) using only theme tokens. Same data as
+  column skinned after maplestory.watch/market (air, soft shadows, hover highlights) using only theme tokens. Same data as
   Simple via shared builders (lvlHtml/potsHtml/moneyHtml, smChart(svg, pts)); #fzFeed mirrors feedAdd; window fit reuses
   host.mini with no zoom. modalOpen/toolbox leave it; #focusBtn hides under a 400 px main card (container query — inside a
   hidden subtree no container matches, so the narrow-hide test runs in the full view). Tests: focus.test.js; ui.test shortcut rows = 15.
-- Overlay Mode (0.2.74, Danny: "a true overlay style mode"): a SECOND BrowserWindow, not a body class —
+- Overlay Mode (0.2.74, Danny: "a true overlay style mode", shown maplestory.watch): a SECOND BrowserWindow, not a body class —
   transparent, frameless, `focusable: false`, screen-saver on top, bounds = the union of all displays (ovBounds), so widgets can
   sit on any monitor. main.js owns it (ovOpenWin/ovEditSet/ovToggle; ipc `overlay`, `ov-edit(-toggle)`, `ov-close`, `ov-state`,
   `ov-push` relay); it re-pins in the same pinOnTop loop and closes with the tracker window. The tracker page (renderer-overlay.js,
@@ -394,4 +394,3 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Danny asked for a QA pass over Claude's 0.3.14-0.3.16 + the OSMS re-pin + the title-bar map read (and Danny's 0.3.17-0.3.19 rode along). All 20 tracker suites, the site suites (smoke, edge, kpq, features, cadence, docs, digest) and a new headless probe (`scripts/qa_probe_0320.js` in the Z.ai sandbox: fitCard shrink/recover/floor, options pop-up rows + `when` deps, cleared number fields falling back to defaults, per-kind `lines` defaults, chat channel filters + cord order, bag empty states, nobg) came back green; 13/13 probe checks.
 - One real bug found and fixed in 0.3.21 (tracker/app/renderer-live.js `slowCheck`): `slowCap` engaged on 10 slow ticks (250+ ms each) but never released until Stop/Start, so one burst of slowness (map load, first OCR) capped reads at 1 Hz for the whole session and kept the Chat blocker's bars at 1 Hz, the exact lag 0.3.15's idle fix targeted. Now ~40 healthy ticks release it (10 s at 4 Hz, 40 s at 1 Hz) and it re-arms on the next slow streak. Regression scene lives in tests/ui.test.js next to the pace steps.
 - Probe lessons recorded for future QA: flow cards (log/loot/map/chat) fill by rows on purpose, so fitCard's zoom only targets non-flow cards; the chat card's default `cord` is chronological (newest last) like the game's chat.
-- 2026-10-30: tracker Compare table (core/prices.js SRC_FIELDS) dropped the maplestory.watch column; no tracker feature may use Sen-site data.

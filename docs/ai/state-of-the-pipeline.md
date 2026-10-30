@@ -18,14 +18,11 @@ The site is healthy. The meso.watch poll runs hourly (6 cron entries at
 minute 7,17,27,37,47,57) and produces fresh pricing data with 12
 top-level fields in `data/sources/mesowatch_prices.json` (most recently
 198,764 total sales recorded). The cross-marketplace fetchers run on
-3-hourly cadences: shopscans (mesoarbitrage),
+3-hourly cadences: shopscans (maplestory.watch + mesoarbitrage),
 classicmarket.kr, meowdb, and the newly-added mesoindex.com. The
-classicrank.com daily job census is also wired. Two new external APIs
-landed this session: maplestory.market just released a public Bearer-auth
-API (admin-reviewed key, 6/hour default limit, no Turnstile for API
-keys), and classicrank.com has a v2 Ingest API for partner-key
-submissions of character sprites as base64 PNG. Both are pending partner
-keys from Danny. The agent mailbox + worklog are live in the repo and
+classicrank.com daily job census is also wired. classicrank.com has a v2 Ingest API for partner-key
+submissions of character sprites as base64 PNG (pending a partner key
+from Danny). The agent mailbox + worklog are live in the repo and
 being actively used by 5 agents (see `docs/ai/agent-mailbox.md` § Who's
 who).
 
@@ -39,17 +36,15 @@ dbe5405  chore(mesowatch): refresh prices — 630 items moved, 156 live listings
 d4972be  Shared runs refresh 2026-10-22
 7daf070  mesoindex.com prices 2026-10-22 14:16
 54fc13b  meowdb market prices 2026-10-22 13:06
-5c81b4b  shop-scan prices (mesoarbitrage) 2026-10-22 13:06
+5c81b4b  shop-scan prices (mesoarbitrage, maplestory.watch) 2026-10-22 13:06
 e87094f  classicmarket.kr prices 2026-10-22 12:33
 be2e238  classicrank job census 2026-10-22
 3f6fb07  classicmarket.kr prices 2026-10-22 12:07
-cc7eade  agent comms: reply to 2 Open threads + maplestory.market API FYI + mesowatch-sync notes
 958c007  chore(mesowatch): refresh prices — 227 items moved, 158 live listings changed
 ... (more chore(mesowatch) commits)
 ```
 
 Notable non-poll commits in this session:
-- **`cc7eade`** (claude chat-CLI, just landed) — mailbox replies + maplestory.market API FYI + mesowatch-sync.md updates
 - **`876f490`** (claude chat-CLI, earlier) — agent mailbox + worklog created
 - **`b911b628`** (claude chat-CLI, earlier) — seen tracking + alt-source wiring + (now-removed) Step 10 freshness check
 - **`04faa8d`** (claude review) — watchdog.yml + src_listed + generated fields, removed my buggy Step 10
@@ -89,7 +84,8 @@ signal — use `generated` + `src_listed` instead, which is what `watchdog.py` d
 | File | Source | Workflow | Cadence | Items | Notes |
 |---|---|---|---|---|---|
 | `mesowatch_prices.json` | meso.watch | mesowatch-poll.yml | hourly (6 crons) | 982 | primary, has sales + listings |
-| `shopscans.json` | combined (mesoarbitrage) | shopscans-poll.yml | 3h | varies | written by `fetch_shopscans.py` |
+| `shopscans.json` | combined (maplestory.watch + mesoarbitrage) | shopscans-poll.yml | 3h | varies | written by `fetch_shopscans.py` |
+| `maplestorywatch_prices.json` | maplestory.watch | shopscans-poll.yml | 3h | 957 | raw per-source, written by `fetch_alt_sources.py` |
 | `mesoarbitrage_prices.json` | mesoarbitrage.com | shopscans-poll.yml | 3h | 983 | raw per-source, written by `fetch_alt_sources.py` |
 | `classicmarket_items.json` | classicmarket.kr | (not currently scheduled — see Open thread) | — | 5,235 | static catalog: NPC prices + Korean names |
 | `classicmarket_market.json` | classicmarket.kr | classicmarket-poll.yml | 2h | varies | live trade posts |
@@ -98,7 +94,7 @@ signal — use `generated` + `src_listed` instead, which is what `watchdog.py` d
 | `meowdb_market.json` | meowdb.com | meowdb-market-poll.yml | TBD | varies | meowdb Free Market summaries + live listings |
 | `meowdb_drops.json`, `meowdb_shops.json`, `meowdb_mesos.json`, `meowdb_material_drops.json`, `meowdb_weapon_drops.json` | meowdb.com | various | varies | varies | meowdb's drop/shop/meso tables |
 | `shared_runs.json` | shared data | shared-data.yml | varies | varies | shared runs |
-| `shopscans.json` (combined) | mesoarbitrage | shopscans-poll.yml | 3h | varies | compact cross-source file |
+| `shopscans.json` (combined) | maplestory.watch + mesoarbitrage | shopscans-poll.yml | 3h | varies | compact cross-source with per-listing details |
 
 ### `data/data.json` (the compiled site data)
 
@@ -108,6 +104,7 @@ prefix:
 | Prefix | Source | Shape |
 |---|---|---|
 | `D.pw` | meso.watch (player-shop world) | full mesowatch_prices.json mirror |
+| `D.mw` | maplestory.watch | `{read, it: {itemId: [typical, unitsSold14d, lowest, listedNow, dayAgo, lastSeenUnixMin]}, ls: {itemId: [[priceEach, bundle, channel, fmRoom, seller, shopTitle, seenUnixMin], ...]}}` |
 | `D.ma` | mesoarbitrage.com | `{read, it: {itemId: [soldMedian, soldN, askMin, listingsSeen, sold72Median, sold72N, lastSeenUnixMin]}}` |
 | `D.cmp` | classicmarket.kr market | `{read, it: {itemId: [median, low, high, sold, seen, forSaleNow, day]}}` |
 | `D.cit` | classicmarket.kr trade posts | `{read, it: {itemId: [askMin, askMedian, askN, bidMax, bidMedian, bidN]}}` |
@@ -116,65 +113,8 @@ prefix:
 | `D.osms` | OSMS game data | `{ref, date}` for "Data last updated" credit |
 | `D.ishop`, `D.craft`, `D.mobatk`, `D.mobdb`, `D.wmap`, `D.kpq`, `D.wsrc` | various | game-data tables |
 
-When maplestory.market is integrated, its prefix will be `D.mm`.
 
 ## 4. New external APIs this session
-
-### 4.1 maplestory.market public API (Sen, released 2026-10-22 14:38Z)
-
-**Status:** Released. Awaiting partner key from Danny.
-
-**Auth:** `Authorization: Bearer <key>` — admin-reviewed, **NO Turnstile**
-for API keys (Turnstile is only for browser sessions via `X-Session`
-header + Cloudflare site key `0x4AAAAAAFeOcqFF8IPEiCPM`).
-
-**Rate limit:** 6 requests/hour per key by default. 429 + `Retry-After`
-when exceeded. Custom limits on request. Data is intentionally delayed
-"a few minutes behind" the live site.
-
-**Confirmed read endpoints (require API key OR session):**
-
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/api/items` | Every item for sale now |
-| GET | `/api/items/${id}` | One item's listings + price figures + recent sales |
-| GET | `/api/items/${id}/history` | Hourly prices, seen and sold |
-| GET | `/api/listings` | Every listing for sale now |
-| GET | `/api/listings/changes` | Listing diff endpoint (incremental) |
-| GET | `/api/prices` | Each item's established price over the last 3 days |
-| GET | `/api/deals` | Listings priced well under their usual price |
-| GET | `/api/market/overview` | Market movers, best sellers, most listed |
-| GET | `/api/stores` | Stores open now |
-| GET | `/api/stores/${id}` | One store + its items |
-| GET | `/api/owners/${name}` | Seller's open store + recent stores + sales |
-| GET | `/api/owners/${name}/character` | Seller's characters |
-| GET | `/api/characters/${name}` | One character |
-| GET | `/api/status` | When the newest capture arrived |
-| GET | `/api/removals/${name}` | Removal request status |
-
-Plus authenticated user endpoints under `/api/me/*` (Henesys SSO session
-required, not API key): key requests, key reveal/roll/revoke, watchlist,
-usage stats.
-
-**Terms (in short):**
-1. Credit maplestory.market with a link + `?ref=<key-link-code>` on every price shown
-2. No bulk resale (showing prices for items your users ask about is fine)
-3. Stay within your key's limit + cache what you can
-4. Key server-side only, never in a web page's code, don't share
-5. Revocable for terms violations
-
-**Integration plan (pending Danny getting a key):**
-1. Danny logs in at `https://maplestory.market/account` via Henesys SSO
-2. Submits a key request: project = planner site, runs in GitHub Actions cron hourly, ~2-3 requests/hour, use case = cross-marketplace comparison, will credit with `?ref=` link
-3. Once approved, reveals the key once at `/account` → copies it
-4. Drops the key in `/home/z/my-project/.secrets/maplestory-market-key` (chmod 600). Don't paste in chat.
-5. claude (chat-CLI) writes `scripts/fetch_maplestory_market.py`:
-   - GETs `/api/prices` → writes `data/sources/maplestory_market_prices.json`
-   - GETs `/api/status` → logs timestamp for freshness
-   - Optionally GETs `/api/listings` + `/api/deals` + `/api/market/overview`
-   - Exposes `step(D)` that updates `D.mm` in `data/data.json`
-6. Wires into new `.github/workflows/maplestory-market-poll.yml` — 3-hourly at off-minute (13 or 53 — 33 is taken by mesoindex). Same `main-pipeline` concurrency group.
-7. project-side Claude renders maplestory.market as 5th source in the cross-marketplace UI.
 
 ### 4.2 classicrank.com v2 Ingest API (Kitten — Danny's friend)
 
@@ -223,13 +163,13 @@ Kitten's note in Discord (2026-10-22 14:38Z): "Da key supports exporting the bas
 | Source | Owner | Type | Workflow | Cadence | Auth | Notes |
 |---|---|---|---|---|---|---|
 | meso.watch | meso.watch team (Danny's friends) | player-shop prices + live FM listings | mesowatch-poll.yml | hourly (6 crons at minute 7,17,27,37,47,57) | Cloudflare bot challenge (passed via agent-browser headless Chrome) | primary; 982 items + 800 live listings as of 2026-10-22 |
+| maplestory.watch | community | crowdsourced shop scans + per-listing seller/shop/FM room info | shopscans-poll.yml | 3h at minute 41 | none (public API) | 957 items; 14-day rolling window |
 | mesoarbitrage.com | community | crowdsourced shop scans + NPC prices + 72h/14-day windows | shopscans-poll.yml | 3h at minute 41 | none (public API) | 983 items; 2h anti-abuse hold |
 | classicmarket.kr | community | trade posts + market prices + 5,235-item static catalog | classicmarket-poll.yml | 2h | none (public) | catalog (`fetch_classicmarket.py`) currently unscheduled — see Open thread |
 | mesoindex.com | community | prices + Where to buy shops (channel, FM room, seller) | mesoindex-poll.yml | 3h at minute 33 | none (public API) | NEW (2026-10-22); 998 items, 693 with shops |
 | meowdb.com | community | Free Market summaries + live listings + drop/shop/meso tables | meowdb-market-poll.yml | TBD | none (public) | project-side Claude owns |
 | classicrank.com | Kitten (Danny's friend) | character rankings + job census | classicrank-census.yml | daily | none for v1 GET (public) | v2 Ingest API needs partner key — see §4.2 |
 | OSMS (game data) | OSMS project | monster/item/quest data | fetch_osms.sh (cached in CI) | on OSMS_REF change | none | game-file baseline; `D.osms` shows ref + date |
-| maplestory.market | Sen | market listings + prices + deals + market overview | (PENDING — awaiting partner key) | TBD (3h planned) | Bearer API key | see §4.1 |
 
 ## 6. CI workflow state
 
@@ -265,14 +205,13 @@ See `docs/ai/agent-mailbox.md` § Open for full text. Summary:
 | claude (review) → openclaw | your maintenance/outage detection proposal: review, what got built instead | **replied by claude (chat-CLI)** on 2026-10-22 18:00Z — acknowledged Step 10 bug, agreed watchdog.yml + src_listed is the right design |
 | claude (review) → claude (chat-CLI), claude (project-side), gemini | two scripts nothing uses: keep or delete? | **replied by claude (chat-CLI)** on 2026-10-22 18:00Z — defended fetch_classicmarket.py (5,235-item catalog with NPC prices + Korean names), proposed wiring into classicmarket-poll.yml for daily refresh |
 | claude (chat-CLI) → claude (project-side) | rendering the new `seen` field on the where-to-buy list | done 2026-10-22 |
-| claude (chat-CLI) → claude (project-side) | cross-marketplace comparison page — `D.ma` ready to render | **awaiting reply** |
+| claude (chat-CLI) → claude (project-side) | cross-marketplace comparison page — `D.mw` / `D.ma` ready to render | **awaiting reply** |
 | claude (chat-CLI) → gemini | Val Town / Cloudflare Worker fallback cron — still on hold? | **awaiting reply** |
 
 ## 8. Pending external unblocks (blocked on Danny, not agents)
 
 | Unblock | What's needed | What happens after |
 |---|---|---|
-| **maplestory.market partner key** | Danny logs in at `https://maplestory.market/account` (Henesys SSO), submits a key request (project: planner site, GitHub Actions cron, ~2-3 req/hour, cross-marketplace comparison, credit with `?ref=` link). Once approved, reveal the key once + drop in `/home/z/my-project/.secrets/maplestory-market-key` (chmod 600). | claude (chat-CLI) writes `scripts/fetch_maplestory_market.py` + `.github/workflows/maplestory-market-poll.yml`. Exposes `D.mm` in `data/data.json`. Project-side Claude renders 5th source in cross-marketplace UI. |
 | **classicrank.com partner key** | Danny asks Kitten for a v2 Ingest API partner key (she's actively nudging him — see Discord exchange). Drop in `/home/z/my-project/.secrets/classicrank-key` (chmod 600). | claude (chat-CLI) writes `scripts/submit_to_classicrank.py` that reads shop_visitors CSV + submits Phase 1 heartbeats. Phase 2 (level+job OCR) + Phase 3 (`avatar_b64` sprite capture) follow. |
 | **meowdb item-page HTML dumps** (for `parse_meowdb_drops.py` rebuild) | Anyone who has meowdb item-page HTML dumps drops them in `/home/z/my-project/upload/` | claude (chat-CLI) wires a rebuild test. (Asked in mailbox Open thread by claude (review) — see §7.) |
 
@@ -296,7 +235,6 @@ See `docs/ai/agent-mailbox.md` § Open for full text. Summary:
 ## 10. What to do next, per agent
 
 ### claude (chat-CLI) — me, awaiting keys
-1. Wait for Danny to drop `maplestory-market-key` in `/home/z/my-project/.secrets/`. Then write `scripts/fetch_maplestory_market.py` + wire into new `maplestory-market-poll.yml` workflow.
 2. Wait for Danny to drop `classicrank-key`. Then write `scripts/submit_to_classicrank.py` Phase 1 (heartbeat-only — read shop_visitors CSV + submit names).
 3. When project-side Claude replies to the seen-field rendering Open thread, respond to any follow-up.
 4. If gemini replies about Val Town/Cloudflare Worker status, follow up on the fallback cron.
@@ -304,7 +242,6 @@ See `docs/ai/agent-mailbox.md` § Open for full text. Summary:
 
 ### claude (project-side) — frontend work
 1. **Render the `seen` field** on the where-to-buy list (Items page → click item → "Where to buy"). Anything ≥3 days = visually flagged as stale. See Open thread in mailbox.
-2. **Cross-marketplace comparison page** — `D.pw` (meso.watch) + `D.ma` (mesoarbitrage) + `D.cmp`/`D.cit` (classicmarket) + `D.mdb` (meowdb) + `D.mi` (mesoindex) are all available now. Add `D.mm` (maplestory.market) when claude (chat-CLI) writes the fetcher. Suggested: "Markets" tab on Items page or new "Compare" page. Don't show every source for every item — only sources that have data, sorted by freshness.
 3. **Price history charts** — `D.pw.hist` is a 7-day rolling window per item. Suggested: inline SVG sparkline on Items page + fuller chart on per-item detail page.
 4. **Market overview/dashboard** — `D.pw.totals` exposes `{sales, topSale}`. Suggested: "Market today" widget on home page. For richer dashboard, propose schema growth to Danny first.
 5. **askMedian in Sell Helper** — `D.pw.items[iid][7]` is the median of current asking prices. One-line UI addition next to the median sale price.
@@ -321,7 +258,6 @@ See `docs/ai/agent-mailbox.md` § Open for full text. Summary:
 1. Reply to the Open thread about Val Town/Cloudflare Worker status. If GitHub Actions cron starts skipping regularly (watch the `[watchdog]` issues for the signal), revive the fallback cron.
 
 ### Danny — external unblocks (only Danny can do these)
-1. **maplestory.market partner key** — log in at `https://maplestory.market/account` via Henesys SSO. Submit a key request (project: MS-Classic-World-Info-Slop planner site, GitHub Actions cron hourly, ~2-3 req/hour, cross-marketplace comparison use case, will credit with `?ref=` link). Reveal the approved key once, copy it, drop in `/home/z/my-project/.secrets/maplestory-market-key` (chmod 600).
 2. **classicrank.com partner key** — ask Kitten for a v2 Ingest API partner key (she's actively nudging you in Discord). Drop in `/home/z/my-project/.secrets/classicrank-key` (chmod 600).
 3. **meowdb item-page HTML dumps** (for `parse_meowdb_drops.py` rebuild test) — if you have them from a past scraping session.
 

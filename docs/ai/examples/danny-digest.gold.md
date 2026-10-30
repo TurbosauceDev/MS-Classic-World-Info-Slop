@@ -27,7 +27,6 @@ Nothing. All workflows are green and no watchdog issues are open.
 
 ## Decisions I need from you
 
-1. **maplestory.market partner key.** Request it at https://maplestory.market/account, then place it in the sandbox secrets path. The dashboard slot is already built.
 2. **classicrank.com partner key from Kitten.** Same secrets path.
 3. **Cron pile-up.** Choose between cutting meso.watch to 2 polls per hour or adding push-retry to the poll script. Z.ai leans toward retry.
 
