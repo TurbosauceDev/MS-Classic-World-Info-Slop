@@ -382,8 +382,6 @@ const boxGaps = require("./boxgaps");
         if (![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
         const g = document.createRange(); g.selectNodeContents(e); for (const q of g.getClientRects()) r = Math.max(r, q.right) }
       return [Math.round(h.getBoundingClientRect().width), Math.round(r - x0)] }, id.slice(2));
-    // the KPQ board is wide when it has rows (tables) and only short text right after a data reset: not a narrow page
-    if (t && id === "t-trkkpq" && !(await p.$("#trkkpqdata table"))) continue;
     if (t) check(t[1] > t[0] * 0.95, `${id} at 1900px: content fills its About box width, no empty tail (content ${t[1]}/${t[0]} px; else add .narrowpage)`);
   }
   // Changelog: a page or section named in bold is a link to it (Danny 10-22), and the link works
