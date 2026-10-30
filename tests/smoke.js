@@ -375,7 +375,7 @@ const boxGaps = require("./boxgaps");
   // stretches far past it, the page needs .narrowpage on its <section>
   for (const id of await p.$$eval(".subs button[id^=t-]", bs => bs.map(b => b.id))){
     await p.evaluate(i => document.getElementById(i).click(), id); await p.waitForTimeout(150);
-    const t = await p.evaluate(sid => { const sec = document.getElementById(sid), h = sec && sec.querySelector(":scope > details.howto"); if (!h || !h.getClientRects().length) return null;
+    const t = await p.evaluate(sid => { const sec = document.getElementById(sid), h = sec && sec.querySelector(":scope > details.howto"); if (!h || !h.getClientRects().length || sec.querySelector(".trkempty")) return null;   // centered empty-state card (no data yet) is narrow by design
       const x0 = h.getBoundingClientRect().left, solid = /^(IMG|CANVAS|INPUT|SELECT|BUTTON|TEXTAREA|TABLE|svg)$/; let r = 0;
       for (const e of sec.querySelectorAll("*")){ if (h.contains(e) || !e.getClientRects().length) continue;
         if (solid.test(e.tagName)) { r = Math.max(r, e.getBoundingClientRect().right); continue }
