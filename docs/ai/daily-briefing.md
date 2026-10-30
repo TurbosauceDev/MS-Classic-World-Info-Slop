@@ -1,33 +1,20 @@
-# Daily Briefing — 2026-10-29 (Issue #8)
+# Daily briefing
 
-last-verified: 2026-10-29 by Glorg [z.ai]
+last-verified: 2026-10-30 by Glorg [z.ai]
 
-**For:** All agents.
-**From:** Glorg [z.ai]
-**Written:** 2026-10-29 11:55Z (04:45 PT).
-**Refresh rule:** overwrite this file at the start of your work session
-if it's >24h old. Keep history in git (`git log docs/ai/daily-briefing.md`).
-**Read order for new agents:** START-HERE.md → state-of-the-pipeline.md →
-this file → agent-mailbox.md § Open.
+TL;DR:
+- maplestory.watch (Sen's site) removed end to end by Danny's PR `#23` (community disavowal, botters). Do not re-add. meso.watch is a different site and unchanged. Consensus price now pools classicmarket + mesoindex.
+- Tracker `0.3.21` live: QA pass over the day's builds fixed the slowCap latch (one slow burst used to hold 1 Hz pace + the blocker idle fix all session). Also in: overlay auto-fit (`0.3.17`), chat card (`0.3.18`), per-card options (`0.3.19`), KPQ automation + 5 scored boards (`0.3.20`).
+- Builder: mastery crit + simc-style stat weights card (`#20`/`#21`). OSMS re-pinned to `7e1c4eb` (v1.1.0): mob HP, 8 skills, arrow recipes, +1 hat.
+- Release numbers walked backward mid-day (`0.3.17`-`0.3.19` shipped before `0.3.14`-`0.3.16` landed); all eight tags have releases and the update chain ends at `0.3.21`. Sandbox recycle rolled digest state to the 10-27 snapshot; reconciled from the keeper backup.
 
----
+Waiting on Danny:
+- Memory verdict: Performance monitor total on `0.3.13`+ after a real session. Next lever if still heavy: idle capture-stream release at Stop.
+- maplestory.market: also Sen's site, keep or drop the partner-key request (its inert UI hooks were removed in `#23`).
+- classicrank read key (`BCR_KEY`), cron pile-up call (retry preferred), web-PAT revoke confirmation.
 
-## TL;DR (5 bullets)
-
-1. **The memory arc shipped: 0.3.10, 0.3.11, 0.3.12 in three hours, then 0.3.13.** Danny's monitor read 2,090-2,332 MB at 05:01Z. Big cuts: frames read via `VideoFrame.copyTo` (window 850 → 380 MB in Claude's xvfb bench, run total 1,500 → ~860 MB measured), buffer pooling (`tracker/core/bufpool.js`), OCR idle teardown, honest private-bytes counting in the monitor. 0.3.11's renderer merge made the overlay solid black; 0.3.13 (`635fb09`) reverted that one cut and `tracker/tests/overlaywin.test.js` bans the bad switches. **Do not re-add process-per-site, single-process or in-process-gpu.**
-2. **Overlay transparency finally landed (0.3.7 + 0.3.9):** root cause was the Elv skin pinning 90% alpha and ignoring `--glass`. Slider inverted (max = most glass), Run log + Loot default clear (82), Chat blocker + Map & spawns forced opaque. Perf monitor shipped in 0.3.8.
-3. **Danny's 10-28 evening batch live:** site prices in the tracker (0.2.83-0.2.85: Watchlist, Market pulse, price alerts, Compare modal, Ctrl+K) and the price blacklist (`data/price_blacklist.json` + `scripts/price_blacklist.py`, canonical). Plus his own commits: Final Attack proc 0.2.107 + 0.3.2. Journey log 0.2.101/0.2.102, HP/MP reader, chat blocker arc, Borderless rework, bag check icons, Undo/Redo.
-4. **Site accuracy audit fixes live (0544a50, v0.19.4):** 3-day weights were inverted (118 of 119 moving items), consensus tile counted markets as sales, p25-p75 band contradicted spike-held headlines. Site stamp v0.19.5.
-5. **Feed health:** meowdb is answering again (fresh rows 06:54Z today). classicrank still key-walled. Digest issue 7 posted but its run died before statekeeping; rotation debt paid in issue 8's run (issues 6+7 archived, state matches backup).
-
-## What needs doing next
-
-- **Danny:** the memory verdict (restart → 0.3.13 → send Help > Performance monitor total) and the carried calls: classicrank BCR_KEY from Kitten, maplestory.market key, web-PAT revoke confirm, cron pile-up (Z.ai leans push-retry).
-- **Tracker side:** memory follow-up lever queued = capture-stream idle release while stopped with no Chat blocker on. Needs Danny's new monitor numbers first. Do not start other big tracker work without a Danny pick.
-- **Next agent on digest duty:** state file `/home/z/my-project/.secrets/digest-state.json` is the source of truth (backup at `/home/z/my-project/upload/digest-state-backup.json`, keeper cron 474950 self-restores at 04:21 PT). Lesson from issue 7's run: the post can succeed and the run still die before statekeeping — always append the worklog line LAST and verify state + backup both landed before ending.
-- **Data side:** `data/price_blacklist.json` is canonical for price tracking; new price steps must import `scripts/price_blacklist.py` `is_bl()`. Keep per-source graceful degradation.
-- **Do not** re-add the digest offer-on-check-in block (retired, decisions log 10-25); any src/ commit ships its changelog card in the same push.
-
-## Reading list
-
-`docs/ai/danny-digest.md` (issue 8, decisions) · `docs/ai/tracker.md` (memory arc + bench recipe, section Memory) · `docs/ai/handoff-to-claude-2026-10-28.md` (read if your last session predates 10-28) · `docs/ai/digest-contract.md` + `docs/ai/discord-digest-runbook.md` · `docs/ai/design.md` (read before any UI/copy change) · `docs/ai/decisions.md` (grep before proposing) · `docs/ai/agent-mailbox.md` § Open.
+Watch out:
+- Do not re-add `process-per-site`, `single-process` or `in-process-gpu` (the 0.3.13 black-overlay lesson, pinned by `tracker/tests/overlaywin.test.js`).
+- KPQ weights are placeholders; the server derives averages once 10 real rounds exist. First leader: Turbow, 1,258 pts total.
+- `digest-state.json` can silently roll back on sandbox recycle; when state and `upload/digest-state-backup.json` disagree, the backup wins. Verify before computing the next issue number.
+- Sen's sites: no new maplestory.watch/maplestory.market code without a Danny call.
