@@ -29,7 +29,6 @@ const FRESH = [
   ['meowdb',            () => D.mdb?.read,     2880],
   ['mesoindex.com',     () => D.mi?.read,      2880],
   ['mesoarbitrage.com', () => D.ma?.read,      2880],
-  ['maplestory.watch',  () => D.mw?.read,      2880],
 ];
 
 const ago = s => {   // "YYYY-MM-DD HH:MM" or ISO -> minutes ago, or null if unreadable

@@ -1,6 +1,6 @@
 """Price-tracking blacklist loader (data/price_blacklist.json). One canonical list consumed by
 every price step (build_data.py step_prices + the per-source fetchers' keep() filters) so a
-blacklisted item never reaches D.pw / D.cm / D.cmp / D.mi / D.mdb / D.ma / D.mw, and by
+blacklisted item never reaches D.pw / D.cm / D.cmp / D.mi / D.mdb / D.ma, and by
 tests/data_quality_test.py's cross-source spread check, which reads the raw source files.
 Rationale lives in the JSON's _readme; keep the two in sync."""
 import json, os

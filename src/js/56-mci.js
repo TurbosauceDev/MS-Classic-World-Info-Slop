@@ -1,12 +1,11 @@
 /* ---------------- Market Comparison Index: every price site side by side, one row per item ---------------- */
 (() => {
 // One column per site, each that site's typical SALE price for the item (asks-only rows are left out; the Items page Prices box
-// shows those). Same data the Prices box reads: PW (meso.watch), MW (maplestory.watch), MI (mesoindex), MA (mesoarbitrage),
+// shows those). Same data the Prices box reads: PW (meso.watch), MI (mesoindex), MA (mesoarbitrage),
 // CMP (classicmarket.kr combined, credit required), MDB (meowdb usual = asks + sales). Each fn: id -> [price, sales] or null.
-// maplestory.market (D.mm) adds a row here once its fetcher lands. Middle = median of sites, spread = max / min (ours, stated).
+// Middle = median of sites, spread = max / min (ours, stated).
 const SITES = [
   ["meso.watch", "meso.watch", D.pw?.read, id => { const p = PW[id]; return p?.[0] > 0 ? [p[0], p[3]] : null }],
-  ["maplestory.watch", "mswatch", D.mw?.read, id => { const w = MW[id]; return w?.[0] > 0 && w[1] > 0 ? [w[0], w[1]] : null }],
   ["mesoindex.com", "mesoindex", D.mi?.read, id => { const m = MI[id]; return m?.[0] > 0 && m[3] ? [m[0], m[3]] : null }],
   ["mesoarbitrage.com", "mesoarb", D.ma?.read, id => { const m = MA[id]; return m?.[0] > 0 && m[1] ? [m[0], m[1]] : null }],
   ["classicmarket.kr", "classicmkt", D.cmp?.read, id => { const k = CMP[id]; return k?.[0] > 0 ? [k[0], k[3]] : null }],
@@ -39,7 +38,7 @@ function render(){
     : `<tr><td colspan="${SITES.length + 5}" class="sub">No item matches. Try fewer sites or another type.</td></tr>`;
   $("#mcimore").innerHTML = !all && a.length > SHOW ? `Showing the first ${SHOW}. <button class="btn" id="mciall">Show all ${fmt(a.length)}</button>` : "";
 }
-const IDS = [...new Set([PW, MW, MI, MA, CMP, MDB].flatMap(o => Object.keys(o)))];
+const IDS = [...new Set([PW, MI, MA, CMP, MDB].flatMap(o => Object.keys(o)))];
 $("#mcisrc").innerHTML = SITES.map(([n, , read, f]) => `<div><b>${n}</b><span>${fmt(IDS.filter(f).length)} items with sales</span><span>updated ${esc(read || "?")}${read && read.length > 10 ? " UTC" : ""}</span></div>`).join("");
 $("#mcihd").innerHTML = `<th>Item</th>${SITES.map(x => `<th class="num" title="${x[0]}">${x[1]}</th>`).join("")}<th class="num" title="Median of the sites shown">Middle</th><th class="num" title="Most expensive site ÷ cheapest site">Spread</th><th class="num" title="meso.watch 7-day sale-price trend (↓ = getting cheaper)">7-day</th><th class="num">Cheapest live</th>`;
 const sync = () => { $("#mciq").value = S.q; $("#mcicat").value = S.cat; $("#mcimin").value = S.min; $("#mcisort").value = S.sort };

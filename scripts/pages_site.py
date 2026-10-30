@@ -3,7 +3,7 @@
 dist/index.html stays the one self-contained file (claude.ai artifact, file://). For Pages this script:
   - moves the item icons and minimaps (D.iicons, D.mmaps: about half the page) into assets-<hash>.json, which the page
     fetches right after it starts (00-core.js, D.lazy) and patches into anything already drawn. Icons Home shows stay inline.
-  - moves the per-poll market data (audit P9: pw/cm/cmp/mdb/ma/mw/mi + crank/shared/ishop, ~1.3 MB raw) into
+  - moves the per-poll market data (audit P9: pw/cm/cmp/mdb/ma/mi + crank/shared/ishop, ~1.3 MB raw) into
     prices-<hash>.json behind a stable-named pointer prices.json = {url, keys}. A boot script parses the inline shell
     data, fetches pointer + file, merges the keys into D (and the Credits source dates into window.__SRCD), and the
     whole app script runs only after that (wrapped in window.__PRICES.then by this script). The shell no longer changes
@@ -16,7 +16,7 @@ Prints first-load sizes (raw and gzip) before/after.
 import gzip, hashlib, json, pathlib, re, shutil, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LAZY = ("iicons", "mmaps")
-PRICES = ("pw", "cm", "cmp", "mdb", "ma", "mw", "mi", "crank", "shared", "ishop")
+PRICES = ("pw", "cm", "cmp", "mdb", "ma", "mi", "crank", "shared", "ishop")
 
 def split(html):
     m = re.search(r'(<script type="application/json" id="sitedata">)(.*?)(</script>)', html, re.S)

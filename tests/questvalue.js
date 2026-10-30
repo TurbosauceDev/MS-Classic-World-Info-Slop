@@ -17,14 +17,14 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     // fake prices: 2 turn-in items (one 403xxxx quest item, which never counts), get / pick 1 / random / class-only groups
     // PWH too: a solid fake PW row goes through pwUsual, which swaps in the item's real 3-day medians when the live
     // history moved >25% day-over-day — Red Shell 4000001 started moving overnight and the fake 50 became a real 16 (10-28)
-    const set = (id, v) => { PW[id] = [v, 0, 0, 10, 0]; delete PWH[id]; delete CM[id]; delete CMP[id]; delete MDB[id]; delete MA[id]; delete MW[id]; delete MI[id] };
+    const set = (id, v) => { PW[id] = [v, 0, 0, 10, 0]; delete PWH[id]; delete CM[id]; delete CMP[id]; delete MDB[id]; delete MA[id]; delete MI[id] };
     const A = "4000000", B = "4000001", C = "2000000", E = "2000001", F = "2000002", G = "2000003", H = "2000006";
     [[A, 100], [B, 50], [C, 10], [E, 30], [F, 70], [G, 5], [H, 1000]].forEach(([id, v]) => set(id, v));
     const q = {name: "Test quest", lvl: 20, mesos: 500, kl: [], il: [["a", 10, null, A], ["b", 4, null, B], ["q", 1, null, "4031000"]],
       ri: [{k: "get", it: [[C, 3]]}, {k: "pick", it: [[E, 1], [F, 1]]}, {k: "rand", it: [[G, 2, 50], [C, 1, 50]]},
            {k: "pick", job: "Warrior", it: [[H, 1]]}, {k: "pick", job: "Magician", it: [[G, 1]]}]};
     const m = questMarket(q);
-    delete PW[B]; delete CMP[B]; delete MDB[B]; delete MA[B]; delete MW[B]; delete MI[B]; const part = questMarket(q), cell = marketCell(q);
+    delete PW[B]; delete CMP[B]; delete MDB[B]; delete MA[B]; delete MI[B]; const part = questMarket(q), cell = marketCell(q);
     // stacking: Pia and the Blue Mushroom (kills Blue Mushroom) stacks with Jane and the Mushroom (needs Blue Mushroom Caps)
     const jane = D.quests.find(x => x.name === "Jane and the Mushroom"), st = stackWith(jane), far = st.some(([, x]) => Math.abs(x.lvl - jane.lvl) > 10);
     return {ids, rows, m, part, cell, pia: st.some(([, x]) => x.name === "Pia and the Blue Mushroom"), self: st.some(([, x]) => x === jane), far};

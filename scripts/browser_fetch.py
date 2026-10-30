@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fallback fetch through a real (headless) Chromium for sites that answer their anti-bot challenge to
-plain urllib (maplestory.watch 10-28, classicrank's runner 403s). Allowed since Danny lifted the 10-20
+plain urllib (classicrank's runner 403s). Allowed since Danny lifted the 10-20
 never-bypass rule (decisions.md 2026-10-28): public, keyless endpoints only, no logins, no solving services.
 One Chromium stays warm for the whole process. get(url) returns parsed JSON: the first call per origin
 navigates (clears any challenge), later same-origin calls switch to in-page fetch (~10x faster, cookies

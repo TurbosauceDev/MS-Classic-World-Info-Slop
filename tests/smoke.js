@@ -303,7 +303,7 @@ const boxGaps = require("./boxgaps");
     else check(r.every(([v]) => isNaN(v)) && tiles && !/NaN|undefined/.test(await p.textContent("#snipe")), `FM Sniper: no live listings, no deal rows (${r.length} rows)`) }
   // Market Comparison Index: rows with icons, a price on 3+ sites, middle between cheapest and dearest; name opens the item page
   await tab("#t-mci");
-  { const r = await p.$$eval("#mcirows tr", l => l.map(x => { const v = [...x.querySelectorAll("td.num")].slice(0, 7).map(t => parseInt(t.textContent.replace(/,/g, ""))); return [!!x.querySelector(".ri img"), v.slice(0, 6).filter(n => !isNaN(n)), v[6]] }));
+  { const r = await p.$$eval("#mcirows tr", l => l.map(x => { const v = [...x.querySelectorAll("td.num")].slice(0, 6).map(t => parseInt(t.textContent.replace(/,/g, ""))); return [!!x.querySelector(".ri img"), v.slice(0, 5).filter(n => !isNaN(n)), v[5]] }));
     check(r.length > 50 && r.every(([ic, s, m]) => ic && s.length >= 3 && m >= Math.min(...s) && m <= Math.max(...s)) && !/NaN|undefined/.test(await p.textContent("#mci")), `Market Comparison Index: rows with icons and 3+ sites (${r.length} rows)`);
     await p.click("#mcirows .itname >> nth=0"); check(!(await p.isHidden("#items")) && !(await p.isHidden("#itpage")), "Market Comparison Index: item name opens its page") }
   // Movers: day-over-day rows, every change pill shows a percent; name opens the item page

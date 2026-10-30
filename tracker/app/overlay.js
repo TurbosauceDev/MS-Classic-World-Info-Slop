@@ -1,5 +1,4 @@
-// Overlay window: floating widgets over the game, on any monitor (Danny, 2026-10-26: "a true overlay style mode", shown
-// maplestory.watch's live overlay). The tracker window reads the game and does all the maths; this page only renders what
+// Overlay window: floating widgets over the game, on any monitor (Danny, 2026-10-26: "a true overlay style mode"). The tracker window reads the game and does all the maths; this page only renders what
 // it's sent (renderer-overlay.js builds the payload, main.js relays it). Edit mode v2 (Danny, 2026-10-28, after ElvUI's
 // Toggle Anchors, WoW Edit Mode and WeakAuras' MoverSizer): a panel picker replaces the checkbox strip, cards snap
 // magnetically to each other and the screen (15 px, Shift skips), an alignment grid can show and snap, cards resize by

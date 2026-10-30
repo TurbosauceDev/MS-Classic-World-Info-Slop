@@ -110,7 +110,7 @@ function lineUp(reads){
 // per item: what to ask for in a player shop, and why
 function advice(id){
   const it = D.items[id], npc = it.p || 0, p = PW[id];
-  if (!npc && (!p || !p[0]) && !CM[id] && !MDB[id] && !MA[id] && !MW[id] && !MI[id]) return {each: 0, how: "Worth next to nothing.", cls: "na"};
+  if (!npc && (!p || !p[0]) && !CM[id] && !MDB[id] && !MA[id] && !MI[id]) return {each: 0, how: "Worth next to nothing.", cls: "na"};
   const f = !p && pwPrice(id);   // no meso.watch sales: the pwPrice chain (classicmarket.kr, meowdb, then the shop-scan sources)
   if (f && f.v > npc) return {each: f.v, how: `No player-shop sales seen. ${f.src}: ~<b>${fmt(f.v)}</b> (median of ${fmt(f.n)} ${f.unit}${f.n === 1 ? "" : "s"}${CM[id]?.[5] ? `; buy orders up to ${fmt(CM[id][3])}` : ""}).${npc ? ` NPC pays ${fmt(npc)}.` : ""}${f.rough ? ` <span class="pill p-warn" title="${f.unit === "sale" ? f.src === "classicmarket.kr market" ? "Under 5 sales on classicmarket.kr" : f.src === "meowdb" ? "meowdb's usual price mixes asking prices seen in shops with sales players reported" : "Under 5 sales seen by this source" : "Asking prices, not sales"}">rough</span>` : ""}`, cls: ""};
   if (!p) return {each: npc, how: npc ? `No player sales seen. NPC pays ${fmt(npc)}.` : "No player sales seen, NPC buys it for nothing.", cls: "na"};

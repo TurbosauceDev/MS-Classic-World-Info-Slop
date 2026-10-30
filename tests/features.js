@@ -197,9 +197,9 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(JSON.stringify(sp) === "[true,2,true,true,true,true]", `items: 7-day price sparkline (${sp})`);
     // classicmarket.kr + meowdb 2026-10-21: a Prices row per source with its sample count; pwPrice falls back
     // meso.watch -> classicmarket.kr market (combined, Layer B) -> meowdb usual -> classicmarket.kr asks -> buy orders
-    const c = await p.evaluate(() => { const id = "2000000", kp = PW[id], kc = CM[id], km = MDB[id], kk = CMP[id], ka = MA[id], kw = MW[id], ki = MI[id], kh = PWH[id], out = [];
+    const c = await p.evaluate(() => { const id = "2000000", kp = PW[id], kc = CM[id], km = MDB[id], kk = CMP[id], ka = MA[id], ki = MI[id], kh = PWH[id], out = [];
       delete PWH[id];   // the fakes must not meet the item's real daily medians (pwUsual swaps them in when the price is moving)
-      delete MA[id]; delete MW[id]; delete MI[id];
+      delete MA[id]; delete MI[id];
       CM[id] = [40, 45, 3, 30, 28, 2]; CMP[id] = [65, 50, 90, 12, 40, 3, "2026-10-21"]; MDB[id] = [55, 20, 7, 50, null, 4, null, 0, null, 0]; const rows = PRICE_SRC.map(f => f(id)).filter(Boolean);
       out.push(rows.some(r => r.src === "classicmarket.kr" && r.v === 45 && /3 posts/.test(r.n)) && rows.some(r => r.buy && r.v === 28) && rows.some(r => r.src === "meowdb" && r.v === 55 && /20 asks \+ 7 sales/.test(r.n)) && rows.some(r => r.src === "classicmarket.kr" && r.v === 65 && /12 sold · 40 seen/.test(r.n) && /50-90 · 3 for sale now/.test(r.detail)));
       PW[id] = [60, 50, 70, 9, 0]; out.push(pwPrice(id).src);
@@ -210,21 +210,20 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       delete CM[id];   // P5 tail starts only when the trade posts have nothing at all
       MA[id] = [24000, 9, 20000, 40, 23000, 5, 0]; out.push(pwPrice(id).src + " " + pwPrice(id).v);   // P5 tail: sale median first
       MA[id] = [0, 0, 300, 4, 0, 0, 0]; out.push(pwPrice(id).src + " " + pwPrice(id).v);   // no sales: cheapest ask, rough
-      delete MA[id]; MW[id] = [25000, 40, 22000, 10, 25000, 0]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
-      delete MW[id]; MI[id] = [26000, 24000, 28000, 7, 30, 25500, 20, 2, 0, 0]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
+      delete MA[id]; MI[id] = [26000, 24000, 28000, 7, 30, 25500, 20, 2, 0, 0]; out.push(pwPrice(id).src + " " + pwPrice(id).v);
       delete MI[id]; out.push(pwPrice(id) === null ? "none" : pwPrice(id).src);
       if (kp) PW[id] = kp; if (kc) CM[id] = kc; else delete CM[id]; if (km) MDB[id] = km; if (kk) CMP[id] = kk;
-      if (ka) MA[id] = ka; else delete MA[id]; if (kw) MW[id] = kw; else delete MW[id]; if (ki) MI[id] = ki; else delete MI[id];
+      if (ka) MA[id] = ka; else delete MA[id]; if (ki) MI[id] = ki; else delete MI[id];
       if (kh) PWH[id] = kh; else delete PWH[id]; return out });
-    check(JSON.stringify(c) === '[true,"meso.watch","classicmarket.kr market 65","meowdb 55","classicmarket.kr asks 45","classicmarket.kr buy orders","mesoarbitrage.com 24000","mesoarbitrage.com 300","maplestory.watch 25000","mesoindex.com 26000","none"]', `prices: source rows + fallback order (${c})`);
+    check(JSON.stringify(c) === '[true,"meso.watch","classicmarket.kr market 65","meowdb 55","classicmarket.kr asks 45","classicmarket.kr buy orders","mesoarbitrage.com 24000","mesoarbitrage.com 300","mesoindex.com 26000","none"]', `prices: source rows + fallback order (${c})`);
     // P3 + P4 (Danny 2026-10-26): a source row past its cadence gets a stale pill; the Usual tile carries a sources range + agreement pill
-    const q = await p.evaluate(() => { const id = "2000000", keep = [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id], D.cmp.read, D.mdb.read, PWH[id]];
+    const q = await p.evaluate(() => { const id = "2000000", keep = [PW[id], CMP[id], MDB[id], CM[id], MA[id], MI[id], D.cmp.read, D.mdb.read, PWH[id]];
       // fresh/old timestamps relative to now: hardcoding a date broke at UTC midnight when it crossed the 48 h staleness line (10-28)
       // D.mdb.read is faked fresh too: the meowdb ROW's pill rides the REAL embedded read, which ages while the test runs and
       // crossed its own 48 h line on CI at 14:29 UTC 10-28 (meowdb upstream frozen since 10-26 14:23) - the flake e44555e fixed
       // for the cmp fake, still alive in a second spot (assert 4 wants a pill-free box, any stale row fails it).
       const fresh = new Date(Date.now() - 36e5).toISOString().slice(0, 16).replace("T", " "), old = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 16).replace("T", " ");
-      delete PWH[id]; delete MA[id]; delete MW[id]; delete MI[id]; delete CM[id];   // PWH: real history must not outvote the fakes
+      delete PWH[id]; delete MA[id]; delete MI[id]; delete CM[id];   // PWH: real history must not outvote the fakes
       D.mdb.read = fresh;
       PW[id] = [100, 90, 110, 30, 0]; CMP[id] = [105, 95, 115, 20, 30, 5, fresh]; MDB[id] = [110, 50, 8, 100, null, 4, null, 0, null, 0];
       const out = [];
@@ -235,52 +234,52 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       out.push(/stale \d+ d/.test(priceBox(id)));
       D.cmp.read = fresh;
       out.push(!/stale \d/.test(priceBox(id)));
-      [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id]] = keep; D.cmp.read = keep[7]; D.mdb.read = keep[8];
-      if (keep[9]) PWH[id] = keep[9]; else delete PWH[id]; return out });
+      [PW[id], CMP[id], MDB[id], CM[id], MA[id], MI[id]] = keep; D.cmp.read = keep[6]; D.mdb.read = keep[7];
+      if (keep[8]) PWH[id] = keep[8]; else delete PWH[id]; return out });
     check(JSON.stringify(q) === "[true,true,true,true]", `prices: stale pill + sources context (${q})`);
     // P13-P16 accuracy (audit 2026-10-28): the weighted headline weights TODAY heaviest (the old code applied
     // 0.5/0.3/0.2 oldest-first, under-reacting to the move it reported); the consensus tile counts the sales behind
     // the pooled markets, not the market count; the p25-p75 band hides when the spike breaker held yesterday's median
     // (band = today's quartiles, headline = yesterday's: together they read "Usual 469, likely 62-275").
     { const w = await p.evaluate(() => {
-      const id = "2000000", keep = [PW[id], CMP[id], MW[id], MI[id], PWH[id]], out = [];
+      const id = "2000000", keep = [PW[id], CMP[id], MI[id], PWH[id]], out = [];
       const day = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
-      delete CMP[id]; delete MW[id]; delete MI[id]; delete PWH[id];
+      delete CMP[id]; delete MI[id]; delete PWH[id];
       PW[id] = [200, 180, 220, 30, 0];   // solid today median 200; history says the market moved 100 -> 200
       PWH[id] = [[day(2), 100, 8], [day(1), 100, 8], [day(0), 200, 8]];
       const u = pwUsual(id);   // today-heavy: 100*0.2 + 100*0.3 + 200*0.5 = 150 (old inverted code gave 120)
       out.push(u.moving === true && Math.abs(u.v - 150) < 0.01);
       PWH[id] = [[day(2), 100, 8], [day(0), 200, 8]];   // hole in the middle: weights must still pair newest with 0.5
       out.push(Math.abs(pwUsual(id).v - (100 * 0.3 + 200 * 0.5) / 0.8) < 0.01);
-      // consensus: three solid markets (8 + 6 + 7 = 21 sales), median of [100, 120, 80] = 100, tile says 21 sales
+      // consensus: two solid markets (8 + 7 = 15 sales), median of [100, 80] = 90, tile says 15 sales
       delete PWH[id]; delete PW[id];
-      CMP[id] = [100, 90, 110, 8, 20, 5, day(0)]; MW[id] = [120, 6, 90, 5, null, 0]; MI[id] = [80, 70, 90, 7, 9, 60, 2, 2, 0, 0];
+      CMP[id] = [100, 90, 110, 8, 20, 5, day(0)]; MI[id] = [80, 70, 90, 7, 9, 60, 2, 2, 0, 0];
       const best = pwPrice(id);
-      out.push(best.src === "consensus of 3 markets" && best.v === 100 && best.n === 21 && /21 sales/.test(priceBox(id)));
+      out.push(best.src === "consensus of 2 markets" && best.v === 90 && best.n === 15 && /15 sales/.test(priceBox(id)));
       // spike-held item: band hidden (it would describe a different day than the held headline), moving pill stays
-      delete CMP[id]; delete MW[id]; delete MI[id];
+      delete CMP[id]; delete MI[id];
       PW[id] = [469, 62, 275, 10, 4]; PWH[id] = [[day(1), 469, 2], [day(0), 100, 1]];
       out.push(pwBand(id) === null && pwMoving(id) === true && !/likely \d/.test(priceBox(id)));
       PW[id] = [469, 62, 275, 10, 0];
       out.push(JSON.stringify(pwBand(id)) === "[62,275]");   // without the hold the band is honest again
-      [PW[id], CMP[id], MW[id], MI[id]] = keep;
+      [PW[id], CMP[id], MI[id]] = keep;
       if (keep[4]) PWH[id] = keep[4]; else delete PWH[id]; return out });
       check(JSON.stringify(w) === "[true,true,true,true,true]", `prices: weighted today-heaviest, consensus sales count, held band hidden (${w})`) }
     // Danny 2026-10-21: "Where to buy" lists every listing with a place (meso.watch cheapest + meowdb posts), cheapest first
     await p.evaluate(() => { const id = "2000000", kn = PWNOW[id], kl = MDBL[id], now = Math.round(Date.now() / 6e4);
       PWNOW[id] = [70, 5, 6, "Free Market <4>", "CINDY"];
       MDBL[id] = [[0, 90, 10, 3, 0, "Kerning bottom left", "Jayce", now - 30, 0, ""], [0, 60, 1, 7, 7, "middle", "ChadX", now - 5, 0, ""], [1, 40, 100, 0, 0, "", "Buyer", now, 1, ""]];
-      window._pxkeep = [kn, kl, MWLS[id], MILS[id], PWASK[id]]; delete MWLS[id]; delete MILS[id]; delete PWASK[id]; const e = document.createElement("span"); e.className = "itname"; e.dataset.item = id; document.querySelector("#items").prepend(e); e.click() });
+      window._pxkeep = [kn, kl, MILS[id], PWASK[id]]; delete MILS[id]; delete PWASK[id]; const e = document.createElement("span"); e.className = "itname"; e.dataset.item = id; document.querySelector("#items").prepend(e); e.click() });
     await p.waitForTimeout(150);
-    const w = await p.evaluate(() => { const id = "2000000", [kn, kl, kw, ki, ka] = window._pxkeep, t = [...document.querySelectorAll("#itprices .pxls")].map(e => e.innerText.replace(/\s+/g, " "));
-      if (kn) PWNOW[id] = kn; else delete PWNOW[id]; if (kl) MDBL[id] = kl; else delete MDBL[id]; if (kw) MWLS[id] = kw; if (ki) MILS[id] = ki; if (ka) PWASK[id] = ka; return t });
+    const w = await p.evaluate(() => { const id = "2000000", [kn, kl, ki, ka] = window._pxkeep, t = [...document.querySelectorAll("#itprices .pxls")].map(e => e.innerText.replace(/\s+/g, " "));
+      if (kn) PWNOW[id] = kn; else delete PWNOW[id]; if (kl) MDBL[id] = kl; else delete MDBL[id]; if (ki) MILS[id] = ki; if (ka) PWASK[id] = ka; return t });
     check(w.length === 2 && /^Each.*60 cheapest.*Ch 7 · FM 7 · middle ChadX.*70.*Ch 6 · FM 4 CINDY.*90.*Ch 3 · Kerning bottom left Jayce/i.test(w[0]) && /40.*×100.*whisper \/ meet up Buyer/.test(w[1]),
       `prices: where to buy sorted, buy orders apart (${w.join(" | ").slice(0, 300)})`);
     // Danny 2026-10-28: freshness tiers on Where to buy - <=8 h shops first, 8-12 h marked low-confidence, older ones
     // hide behind "Show older" while anything fresher exists (a shop that old has usually closed)
     await p.evaluate(() => { const id = "2000000", now = Math.round(Date.now() / 6e4);
-      window._frkeep = [PWNOW[id], MDBL[id], PWASK[id], MWLS[id], MILS[id]];
-      delete PWNOW[id]; delete PWASK[id]; delete MWLS[id]; delete MILS[id];
+      window._frkeep = [PWNOW[id], MDBL[id], PWASK[id], MILS[id]];
+      delete PWNOW[id]; delete PWASK[id]; delete MILS[id];
       MDBL[id] = [[0, 100, 1, 1, 1, "", "FreshShop", now - 30, 0, ""], [0, 80, 1, 2, 2, "", "AgingShop", now - 9 * 60, 0, ""],
         [0, 60, 1, 3, 3, "", "DeadShop", now - 20 * 60, 0, ""], [0, 90, 1, 4, 4, "", "GoneShop", now - 26 * 60, 0, ""]];
       const e = document.createElement("span"); e.className = "itname"; e.dataset.item = id; document.querySelector("#items").prepend(e); e.click() });
@@ -293,23 +292,23 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       && !/may be closed/.test(fr1.text) && fr1.btn === "Show 2 older listings — shops may have closed",
       `prices: fresh shops first, older hidden (${JSON.stringify(fr1).slice(0, 240)})`);
     const fr2 = await p.evaluate(() => { document.querySelector("#itprices [data-pxall]").click();
-      const id = "2000000", [kn, kl, ka, kw, ki] = window._frkeep, txt = document.querySelector("#itprices .pxls").innerText.replace(/\s+/g, " ");
+      const id = "2000000", [kn, kl, ka, ki] = window._frkeep, txt = document.querySelector("#itprices .pxls").innerText.replace(/\s+/g, " ");
       if (kn) PWNOW[id] = kn; else delete PWNOW[id]; if (kl) MDBL[id] = kl; else delete MDBL[id];
-      if (ka) PWASK[id] = ka; else delete PWASK[id]; if (kw) MWLS[id] = kw; else delete MWLS[id]; if (ki) MILS[id] = ki; else delete MILS[id];
+      if (ka) PWASK[id] = ka; else delete PWASK[id]; if (ki) MILS[id] = ki; else delete MILS[id];
       delete window._frkeep; return { dead: /DeadShop/.test(txt), closed: /may be closed/.test(txt) } });
     check(fr2.dead && fr2.closed, `prices: show-older reveals the closed shops (${JSON.stringify(fr2)})`);
     // all-stale item: nothing fresher exists, so the old shops show inline with the closed-shop warning and no toggle
     const old = await p.evaluate(() => { const id = "2000000", now = Math.round(Date.now() / 6e4);
-      window._oldkeep = [PWNOW[id], MDBL[id], PWASK[id], MWLS[id], MILS[id]];
-      delete PWNOW[id]; delete PWASK[id]; delete MWLS[id]; delete MILS[id];
+      window._oldkeep = [PWNOW[id], MDBL[id], PWASK[id], MILS[id]];
+      delete PWNOW[id]; delete PWASK[id]; delete MILS[id];
       MDBL[id] = [[0, 60, 1, 3, 3, "", "DeadShop", now - 20 * 60, 0, ""], [0, 90, 1, 4, 4, "", "GoneShop", now - 26 * 60, 0, ""]];
       const e = document.createElement("span"); e.className = "itname"; e.dataset.item = id; document.querySelector("#items").prepend(e); e.click() });
     await p.waitForTimeout(150);
-    const oldOut = await p.evaluate(() => { const id = "2000000", [kn, kl, ka, kw, ki] = window._oldkeep, box = document.querySelector("#itprices");
+    const oldOut = await p.evaluate(() => { const id = "2000000", [kn, kl, ka, ki] = window._oldkeep, box = document.querySelector("#itprices");
       const out = { warn: /12 h\+ old/.test(box.innerText), closed: /may be closed/.test(box.innerText),
         nobtn: !box.querySelector("[data-pxall]"), cheap: /may be closed/.test(box.querySelector(".pxtiles").innerText) };
       if (kn) PWNOW[id] = kn; else delete PWNOW[id]; if (kl) MDBL[id] = kl; else delete MDBL[id];
-      if (ka) PWASK[id] = ka; else delete PWASK[id]; if (kw) MWLS[id] = kw; else delete MWLS[id]; if (ki) MILS[id] = ki; else delete MILS[id];
+      if (ka) PWASK[id] = ka; else delete PWASK[id]; if (ki) MILS[id] = ki; else delete MILS[id];
       delete window._oldkeep; return out });
     check(oldOut.warn && oldOut.closed && oldOut.nobtn && oldOut.cheap, `prices: all-stale warning, no toggle (${JSON.stringify(oldOut)})`);
     // Z.ai todo #1 (Danny 2026-10-22): meso.watch listings show how long they've been up (D.pw.asks first-seen), 3+ days = stale tag
@@ -326,17 +325,16 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       [MI[id], MILS[id]] = k; if (!k[0]) delete MI[id]; if (!k[1]) delete MILS[id];
       return [r?.v, r?.n, l.length, l[0].room, l[1].spot] });
     check(JSON.stringify(mi) === '[2949,"6 sales",2,"FM 3","Kerning City Construction Site"]', `prices: mesoindex row + shops (${mi})`);
-    // mesoarbitrage.com + maplestory.watch 2026-10-21: one Prices row each with sample counts; maplestory.watch shops seen in
-    // the last day join Where to buy with seller + FM room, older ones (likely closed) drop out
-    const ss = await p.evaluate(() => { const id = "2000000", now = Math.round(Date.now() / 6e4), k = [MA[id], MW[id], MWLS[id]];
-      MA[id] = [48, 60, 45, 143, 35, 15, now - 200]; MW[id] = [40, 20, 35, 22, 45, now - 10];
-      MWLS[id] = [[33, 100, null, 1, "Tomatos", "pots <b>cheap</b>", now - 20], [30, 1, 4, 4, "Gone", "old", now - 1500]];
-      const rows = PRICE_SRC.map(f => f(id)).filter(Boolean), ls = listingsOf(id).filter(x => x.src === "maplestory.watch");
-      [MA[id], MW[id], MWLS[id]] = k; for (const [o, v] of [[MA, k[0]], [MW, k[1]], [MWLS, k[2]]]) if (!v) delete o[id];
+    // mesoarbitrage.com 2026-10-21: one Prices row with sample counts; mesoindex shops seen in the last day join Where to buy
+    // with seller + FM room, shop titles are escaped
+    const ss = await p.evaluate(() => { const id = "2000000", now = Math.round(Date.now() / 6e4), k = [MA[id], MILS[id]];
+      MA[id] = [48, 60, 45, 143, 35, 15, now - 200];
+      MILS[id] = [[33, 100, null, 1, "Tomatos", "pots <b>cheap</b>", now - 20, ""]];
+      const rows = PRICE_SRC.map(f => f(id)).filter(Boolean), ls = listingsOf(id).filter(x => x.src === "mesoindex.com");
+      [MA[id], MILS[id]] = k; for (const [o, v] of [[MA, k[0]], [MILS, k[1]]]) if (!v) delete o[id];
       return [rows.some(r => r.src === "mesoarbitrage.com" && r.v === 48 && r.n === "60 sales" && !r.few),
-        rows.some(r => r.src === "maplestory.watch" && r.v === 40 && r.n === "20 sales" && /▼11%/.test(r.trend)),
-        ls.length === 1 && ls[0].who === "Tomatos" && ls[0].room === "FM 1" && ls[0].qty === 100 && pxWhere(ls[0]).includes("&lt;b&gt;")] });
-    check(JSON.stringify(ss) === "[true,true,true]", `prices: mesoarbitrage + maplestory.watch rows and listings (${ss})`);
+        ls.length === 1 && ls[0].who === "Tomatos" && pxWhere(ls[0]).includes("&lt;b&gt;")] });
+    check(JSON.stringify(ss) === "[true,true]", `prices: mesoarbitrage row + escaped shop titles (${ss})`);
     await ctx.close() }
 
   // classicrank.com "Load by IGN" (59-crlookup.js), API mocked: every job in GET /api/v1/jobs (2026-10-21) maps to a builder

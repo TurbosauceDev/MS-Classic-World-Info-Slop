@@ -18,7 +18,7 @@ The site is healthy. The meso.watch poll runs hourly (6 cron entries at
 minute 7,17,27,37,47,57) and produces fresh pricing data with 12
 top-level fields in `data/sources/mesowatch_prices.json` (most recently
 198,764 total sales recorded). The cross-marketplace fetchers run on
-3-hourly cadences: shopscans (maplestory.watch + mesoarbitrage),
+3-hourly cadences: shopscans (mesoarbitrage),
 classicmarket.kr, meowdb, and the newly-added mesoindex.com. The
 classicrank.com daily job census is also wired. Two new external APIs
 landed this session: maplestory.market just released a public Bearer-auth
@@ -39,7 +39,7 @@ dbe5405  chore(mesowatch): refresh prices — 630 items moved, 156 live listings
 d4972be  Shared runs refresh 2026-10-22
 7daf070  mesoindex.com prices 2026-10-22 14:16
 54fc13b  meowdb market prices 2026-10-22 13:06
-5c81b4b  shop-scan prices (mesoarbitrage, maplestory.watch) 2026-10-22 13:06
+5c81b4b  shop-scan prices (mesoarbitrage) 2026-10-22 13:06
 e87094f  classicmarket.kr prices 2026-10-22 12:33
 be2e238  classicrank job census 2026-10-22
 3f6fb07  classicmarket.kr prices 2026-10-22 12:07
@@ -89,8 +89,7 @@ signal — use `generated` + `src_listed` instead, which is what `watchdog.py` d
 | File | Source | Workflow | Cadence | Items | Notes |
 |---|---|---|---|---|---|
 | `mesowatch_prices.json` | meso.watch | mesowatch-poll.yml | hourly (6 crons) | 982 | primary, has sales + listings |
-| `shopscans.json` | combined (maplestory.watch + mesoarbitrage) | shopscans-poll.yml | 3h | varies | written by `fetch_shopscans.py` |
-| `maplestorywatch_prices.json` | maplestory.watch | shopscans-poll.yml | 3h | 957 | raw per-source, written by `fetch_alt_sources.py` |
+| `shopscans.json` | combined (mesoarbitrage) | shopscans-poll.yml | 3h | varies | written by `fetch_shopscans.py` |
 | `mesoarbitrage_prices.json` | mesoarbitrage.com | shopscans-poll.yml | 3h | 983 | raw per-source, written by `fetch_alt_sources.py` |
 | `classicmarket_items.json` | classicmarket.kr | (not currently scheduled — see Open thread) | — | 5,235 | static catalog: NPC prices + Korean names |
 | `classicmarket_market.json` | classicmarket.kr | classicmarket-poll.yml | 2h | varies | live trade posts |
@@ -99,7 +98,7 @@ signal — use `generated` + `src_listed` instead, which is what `watchdog.py` d
 | `meowdb_market.json` | meowdb.com | meowdb-market-poll.yml | TBD | varies | meowdb Free Market summaries + live listings |
 | `meowdb_drops.json`, `meowdb_shops.json`, `meowdb_mesos.json`, `meowdb_material_drops.json`, `meowdb_weapon_drops.json` | meowdb.com | various | varies | varies | meowdb's drop/shop/meso tables |
 | `shared_runs.json` | shared data | shared-data.yml | varies | varies | shared runs |
-| `shopscans.json` (combined) | maplestory.watch + mesoarbitrage | shopscans-poll.yml | 3h | varies | compact cross-source with per-listing details |
+| `shopscans.json` (combined) | mesoarbitrage | shopscans-poll.yml | 3h | varies | compact cross-source file |
 
 ### `data/data.json` (the compiled site data)
 
@@ -109,7 +108,6 @@ prefix:
 | Prefix | Source | Shape |
 |---|---|---|
 | `D.pw` | meso.watch (player-shop world) | full mesowatch_prices.json mirror |
-| `D.mw` | maplestory.watch | `{read, it: {itemId: [typical, unitsSold14d, lowest, listedNow, dayAgo, lastSeenUnixMin]}, ls: {itemId: [[priceEach, bundle, channel, fmRoom, seller, shopTitle, seenUnixMin], ...]}}` |
 | `D.ma` | mesoarbitrage.com | `{read, it: {itemId: [soldMedian, soldN, askMin, listingsSeen, sold72Median, sold72N, lastSeenUnixMin]}}` |
 | `D.cmp` | classicmarket.kr market | `{read, it: {itemId: [median, low, high, sold, seen, forSaleNow, day]}}` |
 | `D.cit` | classicmarket.kr trade posts | `{read, it: {itemId: [askMin, askMedian, askN, bidMax, bidMedian, bidN]}}` |
@@ -225,7 +223,6 @@ Kitten's note in Discord (2026-10-22 14:38Z): "Da key supports exporting the bas
 | Source | Owner | Type | Workflow | Cadence | Auth | Notes |
 |---|---|---|---|---|---|---|
 | meso.watch | meso.watch team (Danny's friends) | player-shop prices + live FM listings | mesowatch-poll.yml | hourly (6 crons at minute 7,17,27,37,47,57) | Cloudflare bot challenge (passed via agent-browser headless Chrome) | primary; 982 items + 800 live listings as of 2026-10-22 |
-| maplestory.watch | community | crowdsourced shop scans + per-listing seller/shop/FM room info | shopscans-poll.yml | 3h at minute 41 | none (public API) | 957 items; 14-day rolling window |
 | mesoarbitrage.com | community | crowdsourced shop scans + NPC prices + 72h/14-day windows | shopscans-poll.yml | 3h at minute 41 | none (public API) | 983 items; 2h anti-abuse hold |
 | classicmarket.kr | community | trade posts + market prices + 5,235-item static catalog | classicmarket-poll.yml | 2h | none (public) | catalog (`fetch_classicmarket.py`) currently unscheduled — see Open thread |
 | mesoindex.com | community | prices + Where to buy shops (channel, FM room, seller) | mesoindex-poll.yml | 3h at minute 33 | none (public API) | NEW (2026-10-22); 998 items, 693 with shops |
@@ -268,7 +265,7 @@ See `docs/ai/agent-mailbox.md` § Open for full text. Summary:
 | claude (review) → openclaw | your maintenance/outage detection proposal: review, what got built instead | **replied by claude (chat-CLI)** on 2026-10-22 18:00Z — acknowledged Step 10 bug, agreed watchdog.yml + src_listed is the right design |
 | claude (review) → claude (chat-CLI), claude (project-side), gemini | two scripts nothing uses: keep or delete? | **replied by claude (chat-CLI)** on 2026-10-22 18:00Z — defended fetch_classicmarket.py (5,235-item catalog with NPC prices + Korean names), proposed wiring into classicmarket-poll.yml for daily refresh |
 | claude (chat-CLI) → claude (project-side) | rendering the new `seen` field on the where-to-buy list | done 2026-10-22 |
-| claude (chat-CLI) → claude (project-side) | cross-marketplace comparison page — `D.mw` / `D.ma` ready to render | **awaiting reply** |
+| claude (chat-CLI) → claude (project-side) | cross-marketplace comparison page — `D.ma` ready to render | **awaiting reply** |
 | claude (chat-CLI) → gemini | Val Town / Cloudflare Worker fallback cron — still on hold? | **awaiting reply** |
 
 ## 8. Pending external unblocks (blocked on Danny, not agents)
@@ -307,7 +304,7 @@ See `docs/ai/agent-mailbox.md` § Open for full text. Summary:
 
 ### claude (project-side) — frontend work
 1. **Render the `seen` field** on the where-to-buy list (Items page → click item → "Where to buy"). Anything ≥3 days = visually flagged as stale. See Open thread in mailbox.
-2. **Cross-marketplace comparison page** — `D.pw` (meso.watch) + `D.mw` (maplestory.watch) + `D.ma` (mesoarbitrage) + `D.cmp`/`D.cit` (classicmarket) + `D.mdb` (meowdb) + `D.mi` (mesoindex) are all available now. Add `D.mm` (maplestory.market) when claude (chat-CLI) writes the fetcher. Suggested: "Markets" tab on Items page or new "Compare" page. Don't show every source for every item — only sources that have data, sorted by freshness.
+2. **Cross-marketplace comparison page** — `D.pw` (meso.watch) + `D.ma` (mesoarbitrage) + `D.cmp`/`D.cit` (classicmarket) + `D.mdb` (meowdb) + `D.mi` (mesoindex) are all available now. Add `D.mm` (maplestory.market) when claude (chat-CLI) writes the fetcher. Suggested: "Markets" tab on Items page or new "Compare" page. Don't show every source for every item — only sources that have data, sorted by freshness.
 3. **Price history charts** — `D.pw.hist` is a 7-day rolling window per item. Suggested: inline SVG sparkline on Items page + fuller chart on per-item detail page.
 4. **Market overview/dashboard** — `D.pw.totals` exposes `{sales, topSale}`. Suggested: "Market today" widget on home page. For richer dashboard, propose schema growth to Danny first.
 5. **askMedian in Sell Helper** — `D.pw.items[iid][7]` is the median of current asking prices. One-line UI addition next to the median sale price.

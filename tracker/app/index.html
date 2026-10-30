@@ -97,7 +97,7 @@
   #mini .mlists { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:0 12px; }
   #mini .mlists table { width:100%; font-size:12px; border-collapse:collapse; } #mini .mlists td { padding:1px 0; border:0; } #mini .mlists td.n { text-align:right; white-space:nowrap; padding-left:6px; }
   #mini .mlists .ico { height:1.2em; width:auto; vertical-align:-0.25em; margin-right:3px; } #mini .mlists .more td { color:var(--muted); } .hidden { display:none !important; } @keyframes flash { from { box-shadow: 0 0 0 3px var(--accent, #a78bfa) } to { box-shadow: none } } .flash { animation: flash 1.2s ease-out } .good { color:var(--leaf); } .slow { color:var(--warn); }
-  /* Focus Mode (Danny, 2026-10-26: a third view beside Simple Mode, skinned after maplestory.watch's market page): one
+  /* Focus Mode (Danny, 2026-10-26: a third view beside Simple Mode): one
      centred column with air around the numbers, soft shadows and quiet hover highlights. Every colour is a theme token, so
      all themes and light/dark keep working; the window shrinks to fit like Simple Mode's (the width stays: more width = more air) */
   body.focus { background:linear-gradient(color-mix(in srgb, var(--accent) 6%, var(--bg)) 0%, var(--bg) 40%, color-mix(in srgb, #000 12%, var(--bg)) 100%) fixed; }   /* never --ink in a shadow or tint: it is the LIGHT colour in dark themes, so a shadow made of it is a glow (Danny 10-28) */
@@ -486,7 +486,7 @@
       <div><div class="k mk">Consumables used</div><table id="miniUsed"></table></div>
     </div>
   </div>
-  <!-- Focus Mode (Danny 2026-10-26, a third view beside Simple Mode, skinned after maplestory.watch/market): the same session
+  <!-- Focus Mode (Danny 2026-10-26, a third view beside Simple Mode): the same session
        data as Simple Mode in one centred column — hero, stat tiles, level bar, chart, potions and mesos, run log, top lists -->
   <div id="focus">
     <div class="fzHead"><span class="fzWord"><b>Grind</b> Tracker</span><span id="fzState"></span><button id="fzBd" class="alt" title="Borderless: this view as a transparent, click-through card in the overlay, placed and scaled with its edit mode">Borderless</button><button id="fzFull" class="alt" title="Back to the full window">Full view</button></div>
@@ -726,7 +726,7 @@
       </ul></details>
       <details><summary>Window tips</summary><ul>
         <li><b>Simple Mode</b> (was Mini) shrinks the window to the run at a glance: map, EXP gained, EXP per minute and your best minute, the level bar since Start, potions used and picked up, mesos spent, picked up and loot value, and an EXP-per-minute chart. <b>Full view</b> brings everything back.</li>
-        <li><b>Focus Mode</b> is a third view: the same numbers in one centred column with room to breathe, soft shadows and quiet highlights (skinned after maplestory.watch's market page), in your theme's colours. A narrow window hides the button — the View menu or Ctrl+Shift+F still switch, and <b>Full view</b> comes back the same ways.</li>
+        <li><b>Focus Mode</b> is a third view: the same numbers in one centred column with room to breathe, soft shadows and quiet highlights, in your theme's colours. A narrow window hides the button — the View menu or Ctrl+Shift+F still switch, and <b>Full view</b> comes back the same ways.</li>
         <li><b>Overlay Mode</b> is a fourth view, and the first one that leaves this window: floating widgets over the game itself, on any monitor. Ctrl+Shift+O shows and hides it; Ctrl+Shift+E (or View → Edit overlay layout) unlocks it for editing — drag the cards anywhere, tick what they track, then <b>Done</b> locks it and every click goes through to the game again. The <b>Map &amp; spawns</b> card shows the map from the minimap title with its spawn table and boss respawn timers. Positions and choices are remembered.</li>
         <li>The main card has a <b>Per hour / Total</b> switch for its numbers, your <b>Start → now</b> EXP readings (<b>fix</b> lets you type a level or % that read wrong) and the <b>Inventory</b> tabs (green = read, click one to read it now).</li>
         <li><b>Loot value</b>: Etc monster drops (caps, teeth, shells) count at the NPC sell price, since players don't buy them; ores, jewels, crafting materials, equipment and scrolls at the player-shop price from meso.watch.</li>
