@@ -101,6 +101,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   shown only when the card is a billboard) and bump the sprite count in smoke.js (29 = 7 headers + 22 links).
 - **Changelog:** every user-visible change gets a dated entry at the top of `#log` (grep `id="log"`, read ~20 lines there).
   10-20 audit: 5 small ships (footer move, favicon, offline on custom domain, builder avatar, "listings updated ago") had no card; caught up as v0.8.1. Add only at the top: a card inserted lower renumbers every newer version.
+  10-31 (owner mandate, Turbozo: "make things correct and accurate"): one-time full sort — 5 retro-carded entries sat at their historical slot (date inversions the sitesync parser warned about); the whole list is strictly newest-first now and mid-history versions renumbered (v0.19.14 carded it). The add-at-top rule stands; `tracker/scripts/sync-site-changelog.js` still warns if a future card inverts.
   Each card = one site version, numbered by build.py (oldest = 0.1.0; `class="card" data-minor` starts the next 0.x.0, for a big addition).
   Site-only: tracker app changes go in `tracker/app/changelog.js`.
 - **Item count** asserted in smoke.js (2,259; also 308 recipes, 84 monsters in smoke + edge); update when items change.
