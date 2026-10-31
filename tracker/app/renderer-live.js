@@ -9,7 +9,7 @@ async function toPng(c){
 const ocrCache = GrindOcrCache.createOcrCache();   // core/ocrcache.js: same crop pixels, same text, no second Tesseract run
 const tolCache = GrindOcrCache.createTolCache(GrindFrameGate);   // near-identical crops (encoder jitter) answer from the last read: fixed UI text (map title, job box, name) only ever changes wholesale
 const rawOcr = async c => { const t = Date.now(); try { return await host.ocr(await toPng(c)) } finally { perf("ocr", Date.now() - t) } };
-const ocrText = (c, slot) => slot ? tolCache.run(slot, c, rawOcr) : rawOcr(c);   // slot = the tolerant cache ("map", "job", "name"); no slot = always read fresh (the chat-box death/box reads)
+const ocrText = (c, slot) => slot ? tolCache.run(slot, c, rawOcr) : ocrCache.run(c, rawOcr);   // slot = the tolerant cache ("map", "job", "name"); no slot = the exact cache, same pixels same text (the wide status bar's fallback read). The chat-box death/box reads bypass ocrText and always read fresh
 let lastJob = 0, jobSeen = null, jobNow = null, charName = null, charSeen = null;   // charName: History, and KPQ rounds (Settings > KPQ board name)
 async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders.jobTextCrop), or null; nc: the name crop
   const sess = session, sl = slicer;
@@ -324,7 +324,7 @@ function sendReadStats(t){
   if (statsPrev){
     const line = GrindReadStats.record(t, cur, statsPrev);
     const el = (t - statsT0) / 1000;
-    if (el > 0 && PERF.tick) line.busyPct = Math.round((cur.tickMs - statsPrev.tickMs) / el * 10) / 10;   // % of one core: read ms per wall ms
+    if (el > 0 && PERF.tick) line.busyPct = Math.max(0, Math.round((cur.tickMs - statsPrev.tickMs) / el) / 10);   // % of one core: read ms per wall second ÷ 10 (4,800 ms of reading in 60 s = 8%), 1 decimal; clamped at 0 (a Start mid-window makes the delta negative)
     if (Object.keys(line).length > 2) host.readStats?.(line);
   }
   statsPrev = cur; statsT0 = t;
