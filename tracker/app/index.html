@@ -178,7 +178,15 @@
   #helpBtn { padding:5px 10px; font-size:12px; font-weight:600; }
   #help details { border-top:1px solid var(--line); padding:6px 0; } #help details:first-of-type { border-top:0; }
   #help summary { cursor:pointer; font-weight:600; } #help ul { margin:6px 0 2px; padding-left:18px; } #help li { margin:3px 0; }
-  #patchList p { margin:4px 0; } .patchv { margin:10px 0 2px; } .patchv ~ ul, #patchList ul { margin:2px 0 6px; padding-left:18px; } #patchList li { margin:2px 0; } .discard.armed { background:#a33; border-color:#c55; color:#fff } #patchList b { font-variant-numeric:tabular-nums; }
+  /* patch notes: the site's card look (Turbozo 10-31), App/Site tabs like a class picker */
+  .pttabs { display:flex; gap:6px; margin:2px 0 10px; } .pttabs button { background:none; border:1px solid var(--line); color:var(--muted); padding:4px 16px; border-radius:8px; font-size:12px; font-weight:600; } .pttabs button.on { background:var(--accent-soft); border-color:var(--accent); color:var(--ink); }
+  .patchcard { border:1px solid var(--line); border-radius:10px; padding:8px 12px; margin:8px 0; background:color-mix(in srgb, var(--bg) 45%, var(--panel)); }
+  .patchcard .cardhead { display:flex; justify-content:space-between; align-items:baseline; gap:10px; border-bottom:1px solid var(--line); padding-bottom:5px; margin-bottom:6px; }
+  .patchcard h3 { margin:0; font-size:12.5px; font-weight:600; color:var(--ink); text-transform:none; letter-spacing:0; }
+  .patchcard .pver, .patchcard .pdate { font:600 11px ui-monospace, Consolas, monospace; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .patchcard p { margin:4px 0; } .patchcard ul { margin:2px 0 4px; padding-left:18px; } .patchcard li { margin:2px 0; }
+  .patchpill { font-size:10.5px; font-weight:600; padding:1px 8px; border-radius:999px; background:var(--accent-soft); color:var(--accent); white-space:nowrap; }
+  .discard.armed { background:#a33; border-color:#c55; color:#fff }
   /* green = gained, red = lost or spent */
   .pos { color:var(--leaf); } .neg { color:var(--bad); }
   tr.th td { color:var(--muted); font-size:12px; border-bottom:1px solid var(--line); }
@@ -423,7 +431,7 @@
   body.skin-elv .seg, body.skin-elv .modal, body.skin-elv #toolbox, body.skin-elv .fzCard, body.skin-elv .todayCard,
   body.skin-elv .sw button, body.skin-elv button, body.skin-elv input, body.skin-elv select, body.skin-elv .feedlist,
   body.skin-elv .cbar, body.skin-elv .smTrack, body.skin-elv .smTrack i, body.skin-elv tr.hdet > td,
-  body.skin-elv #titlebar button, body.skin-elv ::-webkit-scrollbar-thumb { border-radius:0; }
+  body.skin-elv .patchcard, body.skin-elv .patchpill, body.skin-elv #titlebar button, body.skin-elv ::-webkit-scrollbar-thumb { border-radius:0; }
   body.skin-elv .smTrack { background:color-mix(in srgb, var(--bg) 55%, #000); }   /* ElvUI bars: dark track, flat fill */
   body.skin-elv .fzCard, body.skin-elv .fzCard:hover, body.skin-elv .fzHero, body.skin-elv .modal,
   body.skin-elv #toolbox { box-shadow:none; }   /* crisp, not floating: the border does the separation */
@@ -771,7 +779,7 @@
         <li>Sharing (your choice, Settings) sends map, level, job, EXP, kills and drops per 15 minutes, never your character name. The name only goes with KPQ rounds, for the KPQ board
           (Settings can turn that off).</li>
       </ul></details>
-      <details id="patchNotes"><summary>Patch notes</summary><div id="patchList"></div></details>
+      <details id="patchNotes"><summary>Patch notes</summary><div class="pttabs" role="tablist" aria-label="Patch notes pages"><button id="ptTabApp" class="on" role="tab" aria-selected="true">App</button><button id="ptTabSite" role="tab" aria-selected="false">Site</button></div><div id="patchList"></div><div id="patchSiteList" class="hidden"></div></details>
       <div class="note" id="helpVer"></div>
     </div>
   </section>
@@ -890,6 +898,7 @@
   <script src="readers.js"></script>
   <script src="themes.js"></script>
   <script src="changelog.js"></script>
+  <script src="site-changelog.js"></script>
   <script src="framesrc.js"></script>
   <script src="renderer.js"></script>
   <script src="renderer-layout.js"></script>

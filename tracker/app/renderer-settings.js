@@ -16,9 +16,21 @@ function openHelp(){
   $("#helpPop").scrollTop = 0; modalOpen($("#helpPop"), $("#helpClose"));
 }
 $("#helpBtn").onclick = openHelp;
-// Patch notes (Help, or Help > Patch notes in the menu): changelog.js, newest first
+// Patch notes (Help, or Help > Patch notes in the menu): two tabs, like a class picker — App is this app's notes
+// (changelog.js), Site is the website's changelog cards (site-changelog.js, generated from the site's log page by
+// scripts/sync-site-changelog.js; a test keeps the copy in step, so it can't go stale). Newest first, the site's card look.
+const patchDay = d => { const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(d || ""); return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"}) : (d || "") };
 $("#patchList").innerHTML = (window.TrackerChangelog || []).map(([v, d, t]) => { const {lead, bullets} = window.TrackerChangelog.parts(t);
-  return `<p class="patchv"><b>${esc(v)}</b> <span class="note">${esc(d)}</span> · ${esc(lead)}</p>` + (bullets.length ? `<ul>${bullets.map(b => `<li>${esc(b)}</li>`).join("")}</ul>` : "") }).join("");
+  return `<div class="patchcard"><div class="cardhead"><h3><span class="pver">${esc(v)}</span> <span class="pdate">${esc(patchDay(d))}</span></h3></div><p>${esc(lead)}</p>` + (bullets.length ? `<ul>${bullets.map(b => `<li>${esc(b)}</li>`).join("")}</ul>` : "") + `</div>` }).join("");
+$("#patchSiteList").innerHTML = (window.SiteChangelog || []).map(([v, , h3, pill, body]) =>
+  `<div class="patchcard"><div class="cardhead"><h3><span class="pver">v${esc(v)}</span> ${h3}</h3>${pill ? `<span class="patchpill">${esc(pill)}</span>` : ""}</div>${body}</div>`).join("");
+for (const btn of ["#ptTabApp", "#ptTabSite"]) $(btn).onclick = () => {
+  const app = btn === "#ptTabApp";
+  $("#ptTabApp").classList.toggle("on", app); $("#ptTabSite").classList.toggle("on", !app);
+  $("#ptTabApp").setAttribute("aria-selected", app); $("#ptTabSite").setAttribute("aria-selected", !app);
+  $("#patchList").classList.toggle("hidden", !app); $("#patchSiteList").classList.toggle("hidden", app);
+};
+$("#patchSiteList").addEventListener("click", e => { const a = e.target.closest("a[href^='http']"); if (a){ e.preventDefault(); host.openExternal?.(a.href) } });   // the cards link to the site: open the browser, this window never navigates
 function openPatchNotes(){ $("#patchNotes").open = true; openHelp(); $("#helpPop").scrollTop += $("#patchNotes").getBoundingClientRect().top - $("#helpPop .pophead").getBoundingClientRect().bottom - 6 }
 $("#helpPop")._close = el => modalClose(el, $("#helpBtn"));
 $("#helpClose").onclick = () => modalClose($("#helpPop"), $("#helpBtn"));

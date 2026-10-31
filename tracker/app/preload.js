@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld("host", {
   journalWrite: lines => ipcRenderer.invoke("journal-write", lines),
   journalInfo: () => ipcRenderer.invoke("journal-info"),
   journalOpen: () => ipcRenderer.invoke("journal-open"),
+  openExternal: url => ipcRenderer.invoke("open-external", url),
   autosaveGet: () => ipcRenderer.invoke("autosave-get"),
   saveFrame: (name, bytes) => ipcRenderer.invoke("save-frame", name, bytes),
   saveImage: (name, bytes, quiet) => ipcRenderer.invoke("save-image", name, bytes, quiet),

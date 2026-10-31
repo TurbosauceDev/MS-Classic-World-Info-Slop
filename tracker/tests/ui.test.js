@@ -101,12 +101,19 @@ const path = require("path"), {chromium} = require("playwright");
   // Help: the ? button opens it as a pop-up over the layout, ✕ closes it; F1 opens it too
   await page.click("#helpBtn");
   if (!await page.isVisible("#help") || !/Getting started/.test(await page.textContent("#help")) ) throw new Error("help open");
-  // patch notes (changelog.js) listed in Help, newest = this version
-  if (await page.$$eval("#patchList p", a => a.length) < 50 || !(await page.textContent("#patchList p")).startsWith(require("../package.json").version + " ")) throw new Error("patch notes");
+  // patch notes (changelog.js) as the site's cards in Help, newest = this version; the Site tab carries the website's cards
+  // (driven with evaluate: three real clicks here would burn enough seconds to push the self-check scene past its window)
+  await page.evaluate(() => { document.querySelector("#patchNotes").open = true; document.querySelector("#ptTabSite").click() });
+  if (await page.$$eval("#patchSiteList .patchcard", a => a.length) < 100 || !await page.isVisible("#patchSiteList") || await page.isVisible("#patchList")) throw new Error("patch notes site tab");
+  if (!/^v0\.\d+\.\d+ /.test(await page.textContent("#patchSiteList .patchcard h3"))) throw new Error("site tab version head");
+  await page.evaluate(() => document.querySelector("#ptTabApp").click());
+  if (!await page.isVisible("#patchList") || await page.isVisible("#patchSiteList")) throw new Error("patch notes app tab");
+  if ((await page.$$eval("#patchList .patchcard", a => a.length)) < 50 || !(await page.textContent("#patchList .patchcard h3")).includes(require("../package.json").version)) throw new Error("patch notes");
   await page.click("#helpClose"); await page.waitForTimeout(250);
   if (await page.isVisible("#help") || !await page.isVisible("#itemsEmpty")) throw new Error("help close");
   await page.keyboard.press("F1"); if (!await page.isVisible("#help")) throw new Error("F1 help");
   await page.click("#helpClose"); await page.waitForTimeout(250);
+  await page.evaluate(() => { if (check) check.t0 = Date.now() });   // the patch-notes tab scene above costs real seconds — restart the self-check clock so its scene still sees the checking phase
   const eng = await page.evaluate(() => [engine.kind, LOG.filter(l => l.kind === "event").length, LOG.filter(l => l.kind === "engine").map(l => l.kind + ":" + (l.why || "")).join()]);
   if (eng[0] !== (process.env.INLINE ? "window" : "worker")) throw new Error("reader engine: " + eng);
   const party = await page.textContent("#partyBox");

@@ -580,6 +580,9 @@ const journal = () => { const mb = Math.min(500, Math.max(5, Math.round(+readSet
 ipcMain.handle("journal-write", (_, lines) => readSettings().journal ? journal().append(lines) : 0);
 ipcMain.handle("journal-info", () => journal().info());
 ipcMain.handle("journal-open", () => shell.openPath(JOURNAL));
+// the patch notes' Site tab shows the website's changelog cards, whose links open in the real browser
+// (the windows themselves never navigate — setWindowOpenHandler/will-navigate deny everything); https only
+ipcMain.handle("open-external", (_, url) => { if (typeof url === "string" && /^https:\/\//i.test(url)) shell.openExternal(url) });
 // shop prices (renderer-shop.js): the rows this tracker read off a merchant shop, item + quantity + price only, to the server's crowd table
 ipcMain.handle("shop-share", async (_, body) => {
   const st = readSettings();
