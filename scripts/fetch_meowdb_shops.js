@@ -6,8 +6,7 @@
 const { chromium } = require("playwright"), fs = require("fs"), path = require("path");
 const SRC = path.join(path.resolve(__dirname, ".."), "data/sources/meowdb_shops.json");
 (async () => {
-  const b = await chromium.launch(process.env.CHROMIUM ? {executablePath: process.env.CHROMIUM} : {}), p = await b.newPage();
-  await p.goto("https://meowdb.com/msclassic/npc-shops", {timeout: 60000});
+  const b = await chromium.launch(process.env.CHROMIUM ? {executablePath: process.env.CHROMIUM} : {}), p = await require("./meowdb_page.js").open(b, "https://meowdb.com/msclassic/npc-shops");
   const raw = await p.evaluate(() => (self.__next_f || []).map(x => typeof x[1] === "string" ? x[1] : "").join(""));
   await b.close();
   const shops = [];

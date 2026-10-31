@@ -1,5 +1,6 @@
 /* Shared grind data for MS Classic World Info (Cloudflare Worker + D1).
    POST /api/runs     a 15-minute run from the grind tracker (sharing on)
+   POST /api/shop     shop rows the tracker read off a merchant shop (item, qty, price, sold); GET /api/shop/summary = per-item medians, items seen by 3+ installs
    POST /api/kpq      a cleared KPQ round from the grind tracker (sharing on): the KPQ leaderboard
    POST /api/party    live party view: post your numbers, get your party's (same party code)
    GET  /api/summary  everything the site needs, anonymous: one row per player per map/party (their typical run),
@@ -12,7 +13,7 @@
                      public summary. The page itself carries no data; the key is asked once and kept in the browser
                      (localStorage fbkey) */
 import G from "./gamedata.json" with {type: "json"};
-import {cleanRun, cleanKpq, median, KPQ_MIN} from "./check.js";
+import {cleanRun, cleanKpq, cleanShop, median, KPQ_MIN} from "./check.js";
 import Kpq from "../../tracker/core/kpqscore.js";   // the same scoring the tracker previews with
 import {ADMIN_HTML} from "./admin.js";
 
@@ -348,11 +349,51 @@ async function getRunsRecent(req, env){
   })});
 }
 
+
+// Shop prices (tracker renderer-shop.js, Danny 2026-10-31): rows read off merchant shops. Same limits idea as runs: rows per
+// install per hour, rows per IP per day, installs per IP per day (one home network = one player).
+const SHOP_PER_HOUR = 240, SHOP_PER_IP_DAY = 1500, SHOP_KEEP_DAYS = 14, SHOP_MIN_INSTALLS = 3;
+async function postShop(req, env){
+  let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
+  const c = cleanShop(body, G);
+  if (c.error) return json({error: c.error}, 400);
+  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  const recent = await env.DB.prepare("SELECT COUNT(*) n FROM shop_obs WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
+  const today = await env.DB.prepare("SELECT COUNT(*) n, COUNT(DISTINCT install) k, SUM(install = ?) mine FROM shop_obs WHERE ipday = ?").bind(body.install, ipday).first();
+  if (recent.n + c.rows.length > SHOP_PER_HOUR || today.n + c.rows.length > SHOP_PER_IP_DAY || today.k >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rows"}, 429);
+  const t = now.toISOString();
+  await env.DB.batch(c.rows.map(r => env.DB.prepare("INSERT INTO shop_obs (install, ipday, received, item, qty, price, sold) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(body.install, ipday, t, r.id, r.qty, r.price, r.sold)));
+  return json({ok: true, stored: c.rows.length});
+}
+// per item over the last 7 days: median price each of open asks and of sold rows, with how many rows and how many different
+// installs. An item shows only once SHOP_MIN_INSTALLS installs have seen it (one tracker alone can't set a price).
+async function shopSummary(db){
+  await db.prepare("DELETE FROM shop_obs WHERE received < ?").bind(new Date(Date.now() - SHOP_KEEP_DAYS * 864e5).toISOString()).run();
+  const {results} = await db.prepare("SELECT item, install, qty, price, sold FROM shop_obs WHERE received > ? ORDER BY id DESC LIMIT 60000").bind(new Date(Date.now() - 7 * 864e5).toISOString()).all();
+  const by = {};
+  for (const r of results){ const o = by[r.item] || (by[r.item] = {installs: new Set(), ask: [], sold: []}); o.installs.add(r.install); (r.sold ? o.sold : o.ask).push(r.price / r.qty) }
+  const items = {};
+  for (const [id, o] of Object.entries(by)){
+    if (o.installs.size < SHOP_MIN_INSTALLS) continue;
+    items[id] = {installs: o.installs.size, ask: o.ask.length ? [Math.round(median(o.ask)), o.ask.length] : null, sold: o.sold.length ? [Math.round(median(o.sold)), o.sold.length] : null};
+  }
+  return {updated: new Date().toISOString(), days: 7, minInstalls: SHOP_MIN_INSTALLS, fields: "ask/sold: [median price each, rows]", items};
+}
+async function getShopSummary(env){
+  const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'shop_summary'").first();
+  let body = row?.v;
+  try { if (!body || Date.now() - Date.parse(JSON.parse(body).updated) > 10 * 60e3) body = null } catch { body = null }
+  if (!body){ body = JSON.stringify(await shopSummary(env.DB)); await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('shop_summary', ?)").bind(body).run() }
+  return new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=600", ...CORS}});
+}
+
 async function route(req, env){
   const url = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
   if (url.pathname === "/api/runs" && req.method === "POST") return postRun(req, env);
   if (url.pathname === "/api/kpq" && req.method === "POST") return postKpq(req, env);
+  if (url.pathname === "/api/shop" && req.method === "POST") return postShop(req, env);
+  if (url.pathname === "/api/shop/summary" && req.method === "GET") return getShopSummary(env);
   if (url.pathname === "/api/party" && req.method === "POST") return partyLive(req, env);
   if (url.pathname === "/api/feedback" && req.method === "POST") return postFeedback(req, env);
   if (url.pathname === "/api/feedback" && req.method === "GET") return getFeedback(req, env);

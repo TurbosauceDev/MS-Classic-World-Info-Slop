@@ -400,3 +400,8 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Probe lessons recorded for future QA: flow cards (log/loot/map/chat) fill by rows on purpose, so fitCard's zoom only targets non-flow cards; the chat card's default `cord` is chronological (newest last) like the game's chat.
 
 - KPQ reset 2026-10-30: server/schema.sql ends with a guarded one-shot that copies kpq_* tables to `kpq_bak_20261030_*` and empties them (re-runs keep new rounds; server.test.js covers it). Boards/stage references are derived from rounds, so they start empty (no reference until `REF_MIN` rounds).
+
+## Shop prices 2026-10-31 (0.3.24, thread "Build merchant shop price overlay")
+- Ctrl+Shift+K reads the open merchant shop: `core/shopread.js` (rows from the 40-px separator chain, name + "N for M mesos" via Tesseract, price read from two cuts and "sure" only when they agree, `matchName` fuzzy + prefix for "..." names) -> `app/renderer-shop.js` (pop-up, `shopSnap` for the overlay "Shop prices" card, opt-in share to `/api/shop`). Test `tests/shop.test.js`; fixture `tests/frames-shop/own-shop.png`.
+- Traps: `readers.native()` returns an image whose `.k` is the SHRINK factor (pixel scale 1), a raw frame has no `.k` (pass `{k: 2}`). One binarisation read 9,001 as 8,001: never trust a single cut. Geometry comes from Danny's OWN shop window; the visitor view and truncated names are unverified until he sends screenshots.
+- Server side: `server/src/index.js` postShop/shopSummary, `server/src/check.js` cleanShop; the site does not read `/api/shop/summary` yet (next step once there is data).

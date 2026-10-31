@@ -9,8 +9,7 @@ const ROOT = path.resolve(__dirname, ".."), SRC = path.join(ROOT, "data/sources/
 (async () => {
   const D = JSON.parse(fs.readFileSync(path.join(ROOT, "data/data.json")));
   const ids = [...new Set([...Object.keys(D.mobdb), ...Object.keys(D.mobs)])].sort((a, b) => a - b);
-  const b = await chromium.launch(process.env.CHROMIUM ? {executablePath: process.env.CHROMIUM} : {}), p = await b.newPage();
-  await p.goto("https://meowdb.com/msclassic", {timeout: 60000});
+  const b = await chromium.launch(process.env.CHROMIUM ? {executablePath: process.env.CHROMIUM} : {}), p = await require("./meowdb_page.js").open(b, "https://meowdb.com/msclassic");
   const got = await p.evaluate(async ids => { const o = {};
     for (const id of ids){ const r = await fetch("/msclassic/api/drops?monsterId=" + id);
       const m = await fetch("/msclassic/api/mesos-reports?monsterId=" + id);
