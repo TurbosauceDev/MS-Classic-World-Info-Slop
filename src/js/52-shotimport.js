@@ -18,10 +18,10 @@ async function readShot(f){
   await ASSETS;   // Pages: equipment icons arrive in a second file (00-core.js)
   const skIcons = Object.keys(SKJOB).filter(id => D.icons[id]).map(id => [id, D.icons[id]]);
   const eqIcons = Object.keys(BLD.ARMOR).concat(Object.keys(WBYID)).filter(id => D.iicons[id]).map(id => [id, D.iicons[id]]);
-  const img = shotNative(await shotLoad(f));
+  const img = shotNative(await shotLoad(f)), ink = img.fuzzy ? SHOT_INK_FUZZY : undefined, find = img.fuzzy ? shotFindIconsFuzzy : shotFindIcons;
   // stat window: pink labels NAME, JOB (two lines tall), LEVEL...; green labels STR, DEX, INT, LUK
   const pink = shotLabels(img, PINK), green = shotLabels(img, GREEN);
-  const val = b => num(shotText(img, b.x1 + 2, b.y0 - 2, b.x1 + 130, b.y1 + 3)[0]?.s);
+  const val = b => num(shotText(img, b.x1 + 2, b.y0 - 2, b.x1 + 130, b.y1 + 3, ink)[0]?.s);
   if (pink.length >= 3){
     const tall = pink.slice(0, 3).reduce((a, b, i, l) => b.y1 - b.y0 > l[a].y1 - l[a].y0 ? i : a, 0);
     const lb = pink[Math.min(tall + 1, pink.length - 1)], lv = val(lb);
@@ -35,16 +35,16 @@ async function readShot(f){
   if (r.lvl || r.shown) r.what.push("Stats");
   // skill window: an icon with its level written below-right of it
   let ns = 0;
-  for (const m of await shotFindIcons(img, skIcons)){
+  for (const m of await find(img, skIcons)){
     // from 60% down: skips descenders of the name above ("The Eye of Amazon" read as "??" from half way)
-    const line = shotText(img, m.x + m.w + 2, Math.round(m.y + m.h * 0.6), m.x + m.w + 80, m.y + m.h + 4).find(l => /^\d+$/.test(l.s));
+    const line = shotText(img, m.x + m.w + 2, Math.round(m.y + m.h * 0.6), m.x + m.w + 80, m.y + m.h + 4, ink).find(l => /^\d+$/.test(l.s));
     const lv = line && +line.s, s = SKJOB[m.key].s;
     if (lv && lv <= s.max){ r.skills[m.key] = Math.max(r.skills[m.key] || 0, lv); ns++; mark(m.x, m.y, m.w + 40, m.h, `${s.n} ${lv}`, "skill", D.icons[m.key]) }
   }
   if (ns) r.what.push(`${ns} skill${ns > 1 ? "s" : ""}`);
   // equipment window
   let ne = 0;
-  for (const m of await shotFindIcons(img, eqIcons)){
+  for (const m of await find(img, eqIcons)){
     const ids = [m.key, ...(m.alt || [])];
     if (WBYID[m.key]) r.weapon.push(...ids.filter(id => WBYID[id] && !r.weapon.includes(id)));
     else { const sl = BLD.ARMOR[m.key][2]; r.gear[sl] = (r.gear[sl] || []).concat(ids.filter(id => BLD.ARMOR[id]?.[2] === sl && !(r.gear[sl] || []).includes(id))) }
@@ -52,7 +52,7 @@ async function readShot(f){
     mark(m.x, m.y, m.w, m.h, nm(m.key) + (m.alt?.length ? ` (or ${m.alt.map(nm).join(", ")})` : ""), "item", D.iicons[m.key]);
   }
   if (ne) r.what.push(`${ne} item${ne > 1 ? "s" : ""} worn`);
-  r.k = img.k; r.thumb = crop(img, r.marks);
+  r.k = img.k; r.fuzzy = !!img.fuzzy; r.thumb = crop(img, r.marks);
   return r;
 }
 // the part of the screenshot that had something read in it (a full-screen shot shrinks to its windows), as a PNG data URL;
@@ -145,6 +145,9 @@ function note(){
   const ns = Object.keys(R.skills).length; if (ns) bits.push(`${ns} skill${ns > 1 ? "s" : ""}`);
   const worn = Object.fromEntries([R.pick.weapon, ...Object.values(R.pick.gear)].filter(Boolean).map(id => [id, 1]));
   let t = `<b>Applied:</b> ${bits.join(" · ")}${Object.keys(worn).length ? ` (${invPeek(worn, "see the gear")})` : ""}.`;
+  // smoothed shots (UI at 1.5x, 1.875x...) read worse: thin icons like bows and skill levels can be missed
+  const fz = READS.find(r => r.fuzzy && r.what.length);
+  if (fz) t += ` <span class="tiny">That screenshot is at ${fz.k.toFixed(2)}x game size, so it's smoothed; check the weapon and skills. 100% or 200% reads best.</span>`;
   if (!R.shown) return t + " No stat window yet, so AP is auto-filled.";
   const {ap, g} = baseAP(), tot = STATS.reduce((a, k) => a + ap[k], 0), budget = BLD.apTotal(Math.max(10, S.lvl));
   const gl = STATS.filter(k => g[k]).map(k => `${k} +${g[k]}`).join(", "), over = tot - budget, top = STATS.reduce((a, k) => ap[k] > ap[a] ? k : a, "STR");
@@ -189,7 +192,7 @@ function renderStatus(){
   if (!READS.some(r => r.what.length)){ st.textContent = "Nothing recognized"; st.className = "pill p-bad" }
   else { const miss = [!R.shown && "Stats", !Object.keys(R.gear).length && !R.weapon.length && "Equipment", !Object.keys(R.skills).length && "Skills"].filter(Boolean);
     st.textContent = miss.length ? "Add: " + miss.join(", ") : "Applied"; st.className = "pill " + (miss.length ? "p-warn" : "p-good") }
-  $("#pimpnote").innerHTML = READS.some(r => r.what.length) ? note() : "Nothing in that screenshot matched a game window. A PNG at 100% or 200% game size reads best.";
+  $("#pimpnote").innerHTML = READS.some(r => r.what.length) ? note() : "Nothing in that screenshot matched a game window. A PNG at 100% or 200% game size reads best; at other sizes, include the Character Stat window so its scale can be measured.";
   const ask = spAsk(); if ($("#pimpsp").innerHTML !== ask) $("#pimpsp").innerHTML = ask;
 }
 BLD.onRender(renderStatus);

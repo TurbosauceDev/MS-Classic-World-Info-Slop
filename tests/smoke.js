@@ -102,6 +102,12 @@ const boxGaps = require("./boxgaps");
   check(await p.$$eval("#pimpshots .pishot", l => l.length) === 0 && (await p.textContent("#psummary")).startsWith("Level 30 Fighter"), "Ctrl+Z takes the screenshot back off");
   await p.click("#predo"); check(await p.$$eval("#pimpshots .pishot", l => l.length) === 1 && (await p.textContent("#psummary")).startsWith("Level 30 Hunter"), "Redo puts it back");
   await p.click("#preset"); await shots(0);
+  // a tester's Lv 46 Hunter at 1.875x game size (smoothed, 2026-10-31: read "Nothing recognized"): scale from the stat
+  // window, AP after gear = the game's own base values (36+7, 206+8), 7 armor pieces by icon
+  await p.setInputFiles("#pimpfile", path.resolve(__dirname, "fixtures/bow-scaled.png")); await shots(1);
+  const sap = await p.$$eval("#pSTR,#pDEX,#pINT,#pLUK", l => l.map(x => x.value).join(" ")), ssum = await p.textContent("#psummary");
+  check(sap === "36 206 4 4" && ssum.startsWith("Level 46 Hunter") && (await p.textContent("#pgearsum")) === "7 pieces" && /1\.8\dx game size/.test(await p.textContent("#pimpnote")), `1.875x screenshot reads (AP ${sap}; ${ssum})`);
+  await p.click("#preset"); await shots(0);
   // Path Planner (opened from the builder)
   await p.click("#ppath");
   await p.waitForTimeout(300);
