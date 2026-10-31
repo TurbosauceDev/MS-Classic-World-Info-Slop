@@ -13,6 +13,7 @@ const OUT = path.join(__dirname, "..", "app", "site-changelog.js");
 const SITE = "https://maplestory.scumlord.studio/"; // data-go page links are rewritten to point here (opens in the browser)
 
 function parse(html) {
+  html = String(html).replace(/\r\n/g, "\n").replace(/\r/g, "\n");   // Windows checkouts hand CRLF over: normalize so the parse (and the generated file) is byte-identical everywhere
   const start = html.indexOf('<div class="changelog">');
   if (start < 0) throw new Error("no <div class=\"changelog\"> in log.html");
   let s = html.slice(start + '<div class="changelog">'.length);
