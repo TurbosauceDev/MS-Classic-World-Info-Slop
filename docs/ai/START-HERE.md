@@ -141,6 +141,7 @@ What are you here to do?
 - **TLS alert 112 "unrecognized name"** = no vhost for that name on the server. `curl --resolve base:443:IP -H "Host: sub"` separates a missing vhost from a dead box.
 - **crt.sh** `/json?q=` needs a 60 s+ timeout; `name_value` is newline-separated multi-SAN text, so split before comparing.
 - **Cloudflare Turnstile is not passable headless** from plain agent browsers; the Playwright Chromium in the cloud container reaches meowdb (see `scripts/fetch_meowdb_*.js`).
+- **CI: `ubuntu-latest` became Ubuntu 26.04 on 2026-10-31 and Playwright 1.56.1 refuses it** ("does not support chromium on ubuntu26.04-x64", job dies in the install step in ~10 s, tests skipped). Playwright jobs are pinned to `ubuntu-24.04` in pages/tests/tracker/shopscans-poll/classicrank-census; bump the pin only together with Playwright.
 - Outside price tools studied: cpan1995/maplepricechecker (no license: ideas only) and OkocimK/MaplePrices (MIT, but Old School Maple, a MapleStory Worlds game, so none of its data applies). Teardown artifact: https://claude.ai/artifact/TccpycesZB7wQ4JmhshUWm. Nothing adopted until Danny picks.
 
 ## If you only have 2 minutes

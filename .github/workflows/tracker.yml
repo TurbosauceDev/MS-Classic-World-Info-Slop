@@ -32,7 +32,7 @@ jobs:
         with: { name: installer, path: tracker/dist/*.exe }
   # the window's own tests in Chromium (Electron's host stubbed): every tab, the box layout and window resizing
   ui:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # not -latest: it became 26.04, which Playwright 1.56.1 refuses (2026-10-31)
     defaults: { run: { working-directory: tracker } }
     steps:
       - uses: actions/checkout@v4

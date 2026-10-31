@@ -17,7 +17,7 @@ permissions:
 concurrency: { group: pages, cancel-in-progress: true }
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # not -latest: it became 26.04, which Playwright 1.56.1 refuses (2026-10-31)
     timeout-minutes: 15
     environment: { name: github-pages, url: "${{ steps.dep.outputs.page_url }}" }
     steps:

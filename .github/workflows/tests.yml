@@ -11,7 +11,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # not -latest: it became 26.04, which Playwright 1.56.1 refuses (2026-10-31)
     timeout-minutes: 30   # the whole suite takes ~12 min; a hung browser would otherwise hold the runner 6 h
     steps:
       - uses: actions/checkout@v4
