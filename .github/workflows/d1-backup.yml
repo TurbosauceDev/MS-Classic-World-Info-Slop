@@ -39,7 +39,7 @@ jobs:
           gzip -9 ../backup.sql
           openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:BACKUP_PASSPHRASE -in ../backup.sql.gz -out ../ms-classic-runs.sql.gz.enc
           ls -l ../ms-classic-runs.sql.gz.enc
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: env.skip != '1'
         with:
           name: ms-classic-runs-${{ github.run_id }}

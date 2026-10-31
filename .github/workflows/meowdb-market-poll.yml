@@ -28,7 +28,7 @@ jobs:
         timeout-minutes: 40
       - name: Keep only a new file
         run: cmp -s data/sources/meowdb_market.json /tmp/old.json && rm data/sources/meowdb_market.json || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: meowdb-market, path: data/sources/meowdb_market.json, if-no-files-found: ignore, retention-days: 2 }
   commit:
     needs: fetch
