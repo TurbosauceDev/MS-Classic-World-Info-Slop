@@ -1,4 +1,11 @@
 
+## 2026-10-31 - changelog made whole: full git-history audit, one last retro card (Glorg [z.ai], Task: Turbozo "retroactively make the changelog whole")
+- Method: every package.json version bump and every site-code commit swept against both changelogs (scripts/audit_changelog.py, outside the repo). Boundary found: repo history starts 2026-10-25 — earlier eras predate git and are already represented (146 tracker entries, 135 site cards, both back to 0.1.0).
+- Tracker: whole. All 129 tagged releases match changelog entries 1:1 (the morning's release-body backfill proved the match); 0.3.25 included; 0.2.108's entry restored earlier today was the only historical gap.
+- Site: 27 site-code commits since Oct 25, 23 carded. Of the 4 uncarded: two are the KPQ tracker-only commits (covered by 0.19.10), one is how-to copy polish (1568924, not card-worthy), and one real gap — 28f8312 (#19, Oct 29) shipped the site's five scored KPQ boards (Best full run / Rush / Bonus / What could have been / Average score) with no card.
+- Fix: retro card at its historical timestamp (2026-10-29T20:26:50Z), slotted chronologically between Builder Bow Mastery and Game update v1.1.0; version walks to 0.19.12. docs/golden/smoke green; commit cd04ed4.
+- Bottom line: 146 tracker entries ↔ 130 release bodies ↔ 135 site cards — the changelog is whole as far as git can prove.
+
 ## 2026-10-31 - "latest 0.3.22" explained; v0.3.25 released; release-body gap root-caused (Glorg [z.ai], Task: Turbozo's tracker-notes screenshot)
 - Stale view explained by deploy history: 0.3.23's dist deployed 01:18Z, the 0.3.24/0.3.25 deploys failed in the ubuntu-26.04 CI window (fixed 7b237df 02:33Z), and sw.js serves a cached shell to returning tabs — his screenshot predates even the 01:18Z deploy. Live site verified at 0.3.25 notes + 0.19.11 after the ef9262a deploy.
 - Released v0.3.25 (tag at 16f7acb + workflow_dispatch release=true, the v0.3.23 pattern): update chain ends at 0.3.25; installed apps pick it up on restart.
