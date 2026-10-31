@@ -9,7 +9,7 @@
     "test": "node tests/core.test.js && node tests/fuzz.test.js && node tests/cv.test.js && node tests/journal.test.js && node tests/vitals.test.js && node tests/proc.test.js && node tests/overlaywin.test.js && node tests/bufcircle.test.js && node tests/chat.test.js && node tests/shop.test.js",
     "start": "electron .",
     "dist": "electron-builder --win --publish never",
-    "release": "electron-builder --win --publish always"
+    "release": "node scripts/release-notes.js && electron-builder --win --publish always"
   },
   "dependencies": {
     "@tesseract.js-data/eng": "1.0.0",
@@ -27,6 +27,9 @@
       "core/**",
       "package.json"
     ],
+    "releaseInfo": {
+      "releaseNotesFile": "build/release-notes.md"
+    },
     "win": {
       "target": "nsis",
       "icon": "app/icon.ico"
