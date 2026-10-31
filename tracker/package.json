@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@tesseract.js-data/eng": "1.0.0",
-    "electron-updater": "6.3.9",
+    "electron-updater": "6.8.11",
     "tesseract.js": "6.0.1"
   },
   "devDependencies": {
