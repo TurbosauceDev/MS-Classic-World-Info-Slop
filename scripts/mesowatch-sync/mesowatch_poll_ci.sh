@@ -204,7 +204,21 @@ else
   git commit -F /tmp/commit_msg.txt
   # Use GITHUB_TOKEN's git credentials — Actions auto-injects them via
   # extraheader config in the checkout step. Push to main.
-  git push origin HEAD:main
+  # On a push race (the other polls commit often), start again from the new main and rebuild; never merge data.json.
+  cp data/sources/mesowatch_prices.json /tmp/mw_prices.json
+  pushed=0
+  git push origin HEAD:main && pushed=1
+  for i in 1 2 3; do
+    [ "$pushed" = 1 ] && break
+    log "push rejected, rebuilding on the new main (try $i)"
+    sleep $((i*15)); git fetch -q origin main; git reset -q --hard origin/main
+    cp /tmp/mw_prices.json data/sources/mesowatch_prices.json
+    python3 scripts/build_data.py prices
+    git add data/sources/mesowatch_prices.json data/data.json
+    git commit -q -F /tmp/commit_msg.txt
+    git push origin HEAD:main && pushed=1
+  done
+  [ "$pushed" = 1 ] || { log "ERROR: push failed after 3 tries"; exit 1; }
 
   log "Done. Pages will redeploy via pages.yml workflow_run trigger."
 fi

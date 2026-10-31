@@ -11,7 +11,7 @@ it from [docs/ai/fixtures.md](docs/ai/fixtures.md) instead of opening images.
 ## Ground rules (Danny)
 - **Classic World only.** No modern/retail info; 2008-era only if confirmed for Classic. Magician 1st job is Lv 10.
 - **Launch content only.** Orbis, El Nath, Forgotten Hollow, 3rd job stay hidden unless asked.
-- **No made-up numbers.** Every value cites the OSMS export, meowdb, maplestory.quest (owner's permission), classicrank.com (trusted), meso.watch,
+- **No made-up numbers.** Every value cites the OSMS export, meowdb, maplestory.quest (owner's permission), classicrank.com (parked 2026-10-31, offline), meso.watch,
   docs/notes.md, or Danny's screenshots. Estimates say so on the page. Outside specs are idea lists: verify every number.
 - Terse replies, no filler. Push back when something is wrong, and when Danny asks for token-hungry work (full audits,
   rewrites, broad research) offer a cheaper alternative first (a test, a targeted check).

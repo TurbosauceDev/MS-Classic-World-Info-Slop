@@ -2,7 +2,7 @@
 # data only (pages.yml builds dist). Danny asked for the census 2026-10-21.
 name: classicrank-census
 on:
-  schedule: [{cron: "49 6 * * *"}]   # minute off the other polls (tests/cron.test.js)
+  # schedule parked 2026-10-31 (Danny): classicrank is offline. Restore: schedule: [{cron: "49 6 * * *"}]
   workflow_dispatch:
 permissions:
   contents: write

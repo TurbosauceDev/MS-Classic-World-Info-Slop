@@ -81,7 +81,7 @@ const ORDER = {mob: 0, item: 1, map: 2, quest: 3, skill: 4};
 function find(raw){
   let q = raw.trim(), kind = null; const m = q.match(/^@(\w+)\s*/);
   if (m && KINDS[m[1].toLowerCase()]){ kind = KINDS[m[1].toLowerCase()]; q = q.slice(m[0].length) }
-  if (kind === "char") return charRow(q.trim());
+  if (kind === "char") return CRL.on ? charRow(q.trim()) : [];
   if (kind === "deal") return findDeals(q.trim());
   q = norm(q); if (!q) return [];
   const toks = q.split(" "), hits = [];

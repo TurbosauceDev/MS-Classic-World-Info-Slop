@@ -19,7 +19,6 @@ const EXPECT = {
   'meowdb-market-poll.yml': 240,  // every 3h -> 180 min; allow 240
   'shopscans-poll.yml': 240,      // every 3h -> 180 min; allow 240
   'mesoindex-poll.yml': 240,      // every 3h -> 180 min; allow 240
-  'classicrank-census.yml': 1500, // daily -> 1440 min; allow 1500
   'shared-data.yml': 1500,        // daily -> 1440 min; allow 1500
 };
 

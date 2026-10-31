@@ -279,7 +279,7 @@ function render(k){
     ${sel("when", "When", [["all", "All time"], ["week", "Last 7 days"], ["today", "Today"]])}
     ${sel("timing", "Timed by", [["any", "Anything"], ["clock", "In-game clock"], ["tracker", "Grind Tracker only"]])}
     <button class="btn sm" type="button" data-kreset${Object.keys(DEF).every(x => F[x] === DEF[x]) ? " disabled" : ""}>Reset filters</button></div>`;
-  const crank = n => /^[A-Za-z0-9]{2,13}$/.test(n) ? `<a href="https://classicrank.com/user/${n}" target="_blank" rel="noopener" title="${n} on classicrank.com">${n}</a>` : esc(n);
+  const crank = n => esc(n);   // classicrank profile links parked 2026-10-31 (site offline)
   const rank = i => i < 3 ? `<span class="pill ${i ? "p-hot" : "p-good"}">#${i + 1}</span>` : "#" + (i + 1);
   const mark = e => (e.k ? "" : ' <span class="sub" title="Timed with the PC clock: the KPQ clock wasn\'t read">~</span>') + (e.src === "site" ? ' <span class="sub" title="Timed on this site\'s KPQ timer (stages by key press)">⌨</span>' : "");
   const cols = rush ? 7 : 9;

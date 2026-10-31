@@ -341,7 +341,12 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
 
   // classicrank.com "Load by IGN" (59-crlookup.js), API mocked: every job in GET /api/v1/jobs (2026-10-21) maps to a builder
   // class/branch (Beginner, Pirate -> none), the reply is sanitised (markup, foreign URLs), loading sets the builder and Where to train
-  { const {p, errs, ctx} = await page();
+  // classicrank parked 2026-10-31 (CRL.on = false in 59-crlookup.js); set CRANK_ON=1 and flip ON to run this block again
+  if (!process.env.CRANK_ON){ const {p, errs, ctx} = await page(); await p.goto(URL); await open(p, "plan"); await p.waitForTimeout(80);
+    const q = await p.evaluate(() => ({host: document.querySelector('.crl[data-for="plan"]').innerHTML, hid: document.querySelector("#pcensus").hidden, links: document.querySelectorAll('a[href*="classicrank"]').length}));
+    check(!errs.length && q.host === "" && q.hid && q.links === 0, `classicrank parked: no Load by IGN, census hidden, no profile links (${JSON.stringify(q)})`);
+    await ctx.close() }
+  if (process.env.CRANK_ON){ const {p, errs, ctx} = await page();
     const JOBS = [["Beginner","Beginner"],["Archer","Bowman"],["Magician","Magician"],["Pirate","Pirate"],["Thief","Thief"],["Swordsman","Warrior"],
       ["Crossbowman","Bowman"],["Hunter","Bowman"],["Cleric","Magician"],["Wizard (Fire/Poison)","Magician"],["Wizard (Ice/Lightning)","Magician"],
       ["Brawler","Pirate"],["Gunslinger","Pirate"],["Assassin","Thief"],["Bandit","Thief"],["Fighter","Warrior"],["Page","Warrior"],["Spearman","Warrior"],

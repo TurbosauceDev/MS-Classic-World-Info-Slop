@@ -2,6 +2,8 @@
    User-initiated only. Sets class, 2nd job and level in the Character Builder or Where to train; the badge cites the profile. */
 let CRL;
 (() => {
+// OFF 2026-10-31 (Danny): classicrank is offline, so lookup, census and profile links are parked. Flip to true if it returns.
+const ON = false;
 const API = "https://classicrank.com/api/v1/characters/", SITE = /^https:\/\/classicrank\.com\/[^\s"<>]*$/;
 const FIELDS = "name,display_name,level,job,job_tier,family,overall_rank,job_rank,level_updated,photo,profile_url";
 // classicrank job names (GET /api/v1/jobs) -> builder [class, branch]. 3rd jobs (not in the launch) fall back to their 2nd job.
@@ -65,6 +67,7 @@ function draw(where, note){ const b = BOX[where]; if (!b) return; b.out.innerHTM
 // one lookup: {c} or {note}. Replies are kept a minute (classicrank caches 30 s; the search box asks as you type)
 const SEEN = new Map();
 async function lookup(name){
+  if (!ON) return {note: "Character lookup is offline."};
   if (!/^[A-Za-z0-9]{1,13}$/.test(name)) return {note: "Names are letters and numbers, up to 13."};
   const k = name.toLowerCase(), hit = SEEN.get(k); if (hit && Date.now() - hit.t < 6e4) return hit.v;
   let v;
@@ -94,7 +97,7 @@ async function load(where){
   if (r.c) use(where, r.c); else draw(where, r.note);
 }
 for (const where of ["plan", "maps"]){
-  const host = document.querySelector(`.crl[data-for="${where}"]`); if (!host) continue;
+  const host = document.querySelector(`.crl[data-for="${where}"]`); if (!host || !ON) continue;
   host.innerHTML = `<label>Load by IGN<input type="text" maxlength="13" placeholder="Character name" spellcheck="false" autocomplete="off"></label>`
     + `<button class="btn sm" type="button">Load</button><div class="crlout" aria-live="polite"></div>`;
   const b = BOX[where] = {inp: host.querySelector("input"), btn: host.querySelector("button"), out: host.querySelector(".crlout")};
@@ -107,6 +110,8 @@ const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd",
 const TIER = ["Beginner", "1st job", "2nd job"];
 function census(){
   const el = $("#pcensusbody"); if (!el) return;
+  const card = $("#pcensus"); if (card) card.hidden = !ON;
+  if (!ON) return;
   if (!CR){ el.innerHTML = `<p class="tiny">No census in this build.</p>`; return }
   const rows = CR.jobs.filter(j => j[3] > 0 && j[1] <= 2).sort((a, b) => b[1] - a[1] || b[3] - a[3]);
   const tierN = t => rows.reduce((a, j) => a + (j[1] === t ? j[3] : 0), 0), share = j => Math.round(100 * j[3] / tierN(j[1]));
@@ -122,5 +127,5 @@ function census(){
 }
 if (typeof BLD !== "undefined" && BLD) BLD.onRender(census);
 census();
-CRL = {jobOf, clean, lookup, use, badge, get cur(){ return CUR }};
+CRL = {on: ON, jobOf, clean, lookup, use, badge, get cur(){ return CUR }};
 })();
