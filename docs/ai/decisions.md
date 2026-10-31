@@ -223,7 +223,7 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 
 - 2026-10-20 classicrank.com is trusted (Danny: a friend of the project, same status as meso.watch). The 2026-10-19 embargo is superseded for classicrank.com; it is sanctioned for ingestion into the planner site.
 
-- 2026-10-31 (Danny): approved the blind-spot report and asked to build everything fixable. Built: nightly encrypted D1 backup (`.github/workflows/d1-backup.yml`, needs repo secret BACKUP_PASSPHRASE), watchdog endpoint checks, shop-summary one-vote-per-install median, link-preview tags, first-load size limit, Dependabot, `docs/ai/runbook-recovery.md`. Not built yet: privacy page + delete-my-data, installer checksums/signing, tracker self-check and diagnostics button, accessibility tests, Nexon notice and LICENSE (his call).
+- 2026-10-31 (Danny): approved the blind-spot report and asked to build everything fixable. Built: nightly encrypted D1 backup (`.github/workflows/d1-backup.yml`, needs repo secret BACKUP_PASSPHRASE), watchdog endpoint checks, shop-summary one-vote-per-install median, link-preview tags, first-load size limit, Dependabot, `docs/ai/runbook-recovery.md`. Built later the same day: axe accessibility ratchet (`tests/a11y.js`), tracker 0.3.28 "Delete what I shared" + server `/api/forget`, installer SHA-256 in release notes, privacy page update. Already existed (report was wrong): privacy page + Nexon disclaimer, Start self-check, Report a bug bundle. Still open: code signing (paid), LICENSE choice (Danny's call), fixing the 86 contrast hits.
 
 ## Open decisions (pending Danny)
 

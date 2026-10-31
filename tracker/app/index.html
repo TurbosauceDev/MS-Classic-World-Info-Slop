@@ -778,6 +778,10 @@
           reads the game's memory or files and never presses keys or clicks for you.</li>
         <li>Sharing (your choice, Settings) sends map, level, job, EXP, kills and drops per 15 minutes, never your character name. The name only goes with KPQ rounds, for the KPQ board
           (Settings can turn that off).</li>
+        <li>Windows may say "unknown publisher" or "Windows protected your PC" the first time you run the installer: it is not
+          code-signed yet. Choose <b>More info</b> then <b>Run anyway</b>. Each release on GitHub lists the installer's SHA-256 so
+          you can check your download matches. Settings → Window and sharing → <b>Delete what I shared</b> erases everything this
+          copy sent to the server.</li>
       </ul></details>
       <details id="patchNotes"><summary>Patch notes</summary><div class="pttabs" role="tablist" aria-label="Patch notes pages"><button id="ptTabApp" class="on" role="tab" aria-selected="true">App</button><button id="ptTabSite" role="tab" aria-selected="false">Site</button></div><div id="patchList"></div><div id="patchSiteList" class="hidden"></div></details>
       <div class="note" id="helpVer"></div>
@@ -809,6 +813,7 @@
       <label class="chk"><input type="checkbox" id="ontop"> <span>Keep this window on top of everything</span></label>
       <label class="chk"><input type="checkbox" id="share"> <span>Share my sessions for the leaderboards (map, kills, drops, KPQ rounds)</span></label>
       <label class="chk"><input type="checkbox" id="kpqName"> <span>Show my character name on the KPQ board (the Name above if typed, else the name read from the status bar). Off: a made-up name that stays yours, like Archer4821</span></label>
+      <div class="row"><button id="shareForget" class="alt" title="Asks the server to delete every run, KPQ round and shop price this copy of the tracker ever sent">Delete what I shared</button> <span class="note" id="shareForgetNote" role="status"></span></div>
     </div>
     <div class="card" data-nav="Layout"><h3>Layout</h3>
       <label class="chk"><input type="checkbox" id="fitBoxes"> <span>Fit boxes to their content: boxes side by side never cut off their numbers, and stack under each other when the window gets too narrow for them</span></label>

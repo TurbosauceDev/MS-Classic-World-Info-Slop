@@ -34,3 +34,4 @@ for the site. Deployed by `.github/workflows/server.yml` on pushes to `server/**
 - `GET /api/shop/summary`: per item over 7 days `{installs, ask: [median each, rows], sold: [median each, rows]}`, only items seen by 3+ installs. Kept in `meta` for 10 minutes.
 - Tests: the shop block in `tests/server.test.js` (junk rows, junk bodies, the cap, the 3-install rule). Run `npm run data` first: `src/gamedata.json` carries the item ids.
 - Poisoning guard (2026-10-31): `shopSummary` takes each install's own median first, then the median of those, so one install flooding rows gets one vote. Test: the "poisoning" block in `tests/server.test.js`.
+- `POST /api/forget` {install} (2026-10-31): deletes everything that install sent (runs, KPQ rounds + names/src/raw, shop rows, party rows, archives) and drops the cached summaries. The random install ID is the proof. Test: the forget block in `tests/server.test.js`.

@@ -8,7 +8,7 @@ const sql = new DatabaseSync(":memory:");
 sql.exec(readFileSync(new URL("../schema.sql", import.meta.url), "utf8"));
 const DB = {async batch(list){ const out = []; for (const st of list) out.push(await st.run()); return out },   // D1 runs a batch in one go; here one after another
   prepare(q){ let args = []; const st = sql.prepare(q); return {
-  bind(...a){ args = a; return this }, async first(){ return st.get(...args) ?? null }, async run(){ const r = st.run(...args); return {meta: {last_row_id: Number(r.lastInsertRowid)}} },
+  bind(...a){ args = a; return this }, async first(){ return st.get(...args) ?? null }, async run(){ const r = st.run(...args); return {meta: {last_row_id: Number(r.lastInsertRowid), changes: Number(r.changes)}} },
   async all(){ return {results: st.all(...args)} } } }};
 const env = {DB};
 const post = (body, ip = "10.0.0." + body.install.charCodeAt(0)) => worker.fetch(new Request("https://x/api/runs", {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
@@ -343,3 +343,19 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   assert.strictEqual(sql.prepare("SELECT (SELECT COUNT(*) FROM runs) + (SELECT COUNT(*) FROM kpq_rounds) n").get().n, before, "junk stores nothing");
 }
 console.log("server tests passed");
+
+// "Delete what I shared" (blind-spot report A2): one install's rows vanish from every table, other installs stay, junk ids are refused
+{
+  const post = (path, body, ip = "10.6.6.6") => worker.fetch(new Request("https://x" + path, {method: "POST", body: typeof body === "string" ? body : JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
+  const mine = "forgetmeforgetme1", other = "keepmekeepmekeep1";
+  for (const [inst, ip] of [[mine, "10.6.6.1"], [other, "10.6.6.2"]]) await post("/api/shop", {install: inst, v: 1, rows: [{id: 1002000, qty: 1, price: 1000, sold: 0}]}, ip);
+  sql.exec("INSERT INTO party_live (grp, install, updated, ip, data) VALUES ('g', 'forgetmeforgetme1', '2026-10-31T00:00:00Z', 'h', '{}')");
+  const count = (t, i) => sql.prepare(`SELECT COUNT(*) n FROM ${t} WHERE install = ?`).get(i).n;
+  assert.strictEqual(count("shop_obs", mine), 1);
+  for (const b of ["not json", "{}", JSON.stringify({install: "short"}), JSON.stringify({install: "x".repeat(60)})]){ const [st] = await post("/api/forget", b); assert.strictEqual(st, 400, "forget junk " + b.slice(0, 20)) }
+  const [st, rb] = await post("/api/forget", {install: mine});
+  assert.strictEqual(st, 200); assert.ok(rb.removed >= 2, "counts what it removed: " + JSON.stringify(rb));
+  assert.strictEqual(count("shop_obs", mine) + count("party_live", mine), 0, "my rows are gone");
+  assert.strictEqual(count("shop_obs", other), 1, "another install is untouched");
+}
+

@@ -16,7 +16,14 @@ if (!fs.existsSync(notesPath)) {
   console.error(`${notesPath} not found - npm run release generates it before electron-builder; did the release step change?`);
   process.exit(1);
 }
-const body = fs.readFileSync(notesPath, "utf8").trim();
+let body = fs.readFileSync(notesPath, "utf8").trim();
+// SHA-256 of the installer (blind-spot report A3, 2026-10-31): lets anyone check the download is the one we built, and gives
+// SmartScreen / antivirus false-positive reports something to point at. Skipped quietly when no installer is in dist/.
+{
+  const dist = path.join(__dirname, "..", "dist");
+  const exe = fs.existsSync(dist) ? fs.readdirSync(dist).filter((f) => /\.exe$/i.test(f) && !/uninstall/i.test(f)) : [];
+  for (const f of exe) body += `\n\nSHA-256 of \`${f}\`: \`${require("crypto").createHash("sha256").update(fs.readFileSync(path.join(dist, f))).digest("hex")}\``;
+}
 const tag = `v${pkg.version}`;
 const base = `https://api.github.com/repos/${publish.owner}/${publish.repo}`;
 const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;

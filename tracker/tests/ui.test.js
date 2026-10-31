@@ -518,6 +518,10 @@ const path = require("path"), {chromium} = require("playwright");
   // Settings: a popup from File → Settings; no panel tabs any more (modules, 2026-10-19)
   if (await page.$(".tabs")) throw new Error("panel tabs are back");
   await page.evaluate(() => window.menu("settings")); if (!await page.isVisible("#prefsPop #themeSw")) throw new Error("preferences popup not shown");
+  // Delete what I shared: the first click only arms the button, the second asks the host (0.3.28)
+  await page.click("#shareForget"); if (await page.evaluate(() => window.forgot) || !/Click again/.test(await page.textContent("#shareForget"))) throw new Error("forget: first click must only arm");
+  await page.click("#shareForget"); await page.waitForTimeout(200);
+  if (await page.evaluate(() => window.forgot) !== 1 || !/Deleted 3 shared rows/.test(await page.textContent("#shareForgetNote"))) throw new Error("forget: second click deletes: " + await page.textContent("#shareForgetNote"));
   await page.keyboard.press("Escape"); await page.waitForTimeout(250); if (await page.isVisible("#prefsPop")) throw new Error("Esc didn't close preferences");
   // pop-ups (Settings, Help, Patch notes, Report a bug) float over the layout: inset from the window edges, blurred backdrop,
   // and opening or closing one never resizes the window (Help used to open under the layout and the window grew, Danny 2026-10-19)
