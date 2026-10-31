@@ -32,8 +32,7 @@ async function launch() {
   const want = new Set([...Object.keys(D.pw?.it || {}), ...Object.keys(D.pw?.now || {}), ...Object.keys(D.cm?.it || {})]);
   let { b, headed } = await launch();
   try {
-    const p = await b.newPage();
-    await p.goto("https://meowdb.com/msclassic", { timeout: 60000 });
+    const p = await require("./meowdb_page.js").open(b, "https://meowdb.com/msclassic");
     const got = await p.evaluate(async ({ want, KEEP_DAYS, WALL }) => {
       const nap = () => new Promise(z => setTimeout(z, 250));
       const get = async u => { for (let i = 0; i < 3; i++){ const r = await fetch(u);

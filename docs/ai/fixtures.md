@@ -105,3 +105,4 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 - tracker/tests/frames-chat/crate-red.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): loot-box alert, white text on a red row. tests/chat.test.js.
 - tracker/tests/frames-chat/local-blue.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): local megaphone, dark text on blue (no class ink). tests/chat.test.js.
 - tracker/tests/frames-chat/notice.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): yellow [Notice], wrapped without indent. tests/chat.test.js.
+- tracker/tests/frames-shop/own-shop.png: Danny's 10-31 screenshot of his own merchant shop window (a crop, 1199x1022, 2x UI): 6 rows, 3 sold (greyed). Rows 14,067 / 9,001 / 15,067 / 34,000 / 4,067, 'Please be aware that a 3% fee will be deducted from sales.' tests/shop.test.js (OCR recorded from real Tesseract). Visitor view and truncated names still need fixtures.

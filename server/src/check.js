@@ -88,3 +88,20 @@ export function cleanKpq(r){
   else if (KPQ_IDS.slice(0, 5).reduce((a, id) => a + (stages[id] || 0), 0) > round.clear + 60) why = "stage times over clear";
   return {round, ok: !why, why};
 }
+
+/* A shop upload: {install, v: 1, rows: [{id, qty, price, sold}]}. Only known fields, whole numbers in range, item ids the game has;
+   a row that fails is dropped (junk from the network never reaches the table), a body with no good row is refused. */
+export function cleanShop(b, G){
+  if (!b || typeof b !== "object" || Array.isArray(b)) return {error: "not a shop upload"};
+  if (typeof b.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(b.install)) return {error: "install id"};
+  if (!Array.isArray(b.rows)) return {error: "rows"};
+  const int = (v, lo, hi) => typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi;
+  const rows = [], seen = new Set();
+  for (const r of b.rows.slice(0, 40)){
+    if (!r || typeof r !== "object" || !int(r.id, 1, 1e9) || !Object.hasOwn(G.items, String(r.id)) || !int(r.qty, 1, 9999) || !int(r.price, 1, 1e10)) continue;
+    const sold = r.sold ? 1 : 0, k = [r.id, r.qty, r.price, sold].join("|");
+    if (seen.has(k)) continue;
+    seen.add(k); rows.push({id: r.id, qty: r.qty, price: r.price, sold});
+  }
+  return rows.length ? {rows} : {error: "no usable rows"};
+}

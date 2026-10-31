@@ -372,6 +372,7 @@
   #pulseBox .plist li:last-child { border-bottom:0; }
   #pulseBox .plist .sub { color:var(--muted); font-variant-numeric:tabular-nums; }
   :is(#watchBox, #pulseBox) b.up { color:var(--leaf); } :is(#watchBox, #pulseBox) b.down { color:var(--bad); }
+  #shopPop { max-width:760px; } #shopRows table { font-size:13px; } #shopRows th { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; padding:2px 4px; border-bottom:1px solid var(--line); white-space:nowrap; } #shopRows td { padding:3px 4px; }
   #cmpPop { max-width:900px; } #cmpRows table { font-size:13px; } #cmpRows th { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; padding:2px 4px; border-bottom:1px solid var(--line); white-space:nowrap; } #cmpRows td { padding:3px 4px; }
   #palPop { max-width:440px; } #palList { list-style:none; margin:6px 0 0; padding:0; max-height:46vh; overflow-y:auto; }
   #palList li { display:flex; justify-content:space-between; gap:8px; padding:6px 8px; border-radius:7px; cursor:pointer; }
@@ -658,6 +659,10 @@
     <div class="pophead"><h2 id="cmpTitle">Compare watched items</h2><button id="cmpClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>
     <div class="card" id="cmpCard"><div id="cmpRows"></div><div class="note" id="cmpNote"></div></div>
   </section>
+  <section id="shopPop" class="modal hidden" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+    <div class="pophead"><h2 id="shopTitle">Shop prices</h2><button id="shopClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>
+    <div class="card" id="shopCard"><div id="shopRows"></div><div class="note" id="shopNote"></div></div>
+  </section>
   <!-- Quick palette (Ctrl+K, v0.2.85): type to jump to any module, view, pop-up or run control -->
   <section id="palPop" class="modal short hidden" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="palTitle">
     <div class="pophead"><h2 id="palTitle">Quick jump</h2><button id="palClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>
@@ -872,6 +877,7 @@
   <script src="../core/alerts.js"></script>
   <script src="../core/kpqscore.js"></script>
   <script src="../core/prices.js"></script>
+  <script src="../core/shopread.js"></script>
   <script src="../core/ocrcache.js"></script>
   <script src="../core/framegate.js"></script>
   <script src="../core/readpace.js"></script>
@@ -897,6 +903,7 @@
   <script src="renderer-palette.js"></script>
   <script src="renderer-overlay.js"></script>
   <script src="renderer-chat.js"></script>
+  <script src="renderer-shop.js"></script>
   <script src="renderer-dummy.js"></script>
   <script src="renderer-perf.js"></script>
 </body>

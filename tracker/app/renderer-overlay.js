@@ -57,7 +57,7 @@ function ovBuild(s){
       round: kpq.round ? {t0: kpq.round.t0} : null, clock: kpq.left !== null ? {left: kpq.left, leftT: kpq.leftT} : null, hold: !!kpq.hold} : null,
     party: partyLive,
     vit: ovVit,
-    chat: chatSnap(), chatOn: ovChatOn,
+    chat: chatSnap(), chatOn: ovChatOn, shop: shopSnap(),
     sm: ovSm(s),
     feed: ovFeed.slice(-16),
     loot: s.items.slice(0, 40).map(i => ({id: i.id, name: i.name, n: i.n, v: Math.round(i.total || 0), c: G.items[i.id]?.c || "", ic: G.iicons?.[i.id] || ""})),   // the Loot card's inventory mode

@@ -77,6 +77,7 @@ host.onMenu?.(what => {
   else if (what === "startStop"){ if (!$("#go").disabled) $("#go").click() }
   else if (what === "pause") $("#pauseBtn").click();
   else if (what === "invNow"){ if (timer == null || !engine?.invNow) $("#status").textContent = "Press Start first."; else { engine.invNow(); $("#status").textContent = "Reading your open inventory tab: keep it open a few seconds..." } }
+  else if (what === "shopScan") shopScan();
   else if (what === "update"){ openPrefs(); prefsGo($("#updCheck").closest("[data-nav]")); $("#updCheck").click() }
 });
 // Theme (Settings): the presets (themes.js) and the player's own (settings.themes); settings.theme = "p:Name" or "u:Name".
@@ -282,7 +283,7 @@ $("#spKeep").onclick = () => spTake(false);
 
 // Settings: keyboard shortcuts (they work from the game too; main.js registers them) and the see-through window
 const KEY_NAMES = {onTop: "Keep on top on/off", startStop: "Start / Stop", pause: "Pause / go on", mini: "Simple Mode on/off", focus: "Focus mode on/off", overlay: "Overlay mode show/hide", overlayEdit: "Overlay: edit the layout", toolbox: "Modules toolbox open/close",
-  show: "Hide / show the tracker", invNow: "Read the open inventory tab now", report: "Report a bug",
+  show: "Hide / show the tracker", invNow: "Read the open inventory tab now", shopScan: "Read the open shop's prices", report: "Report a bug",
   clickThrough: "Click-through on/off (mouse goes to the game)", mark: "Mark this moment (in the run note)", saveImage: "Save the numbers as a picture", mute: "Mute sounds on/off"};
 const keyText = k => k ? k.replace("CommandOrControl", "Ctrl").replace("Super", "Win").replace(/\+/g, " + ") : "Off";
 const CODE_KEY = {Space: "Space", Tab: "Tab", Delete: "Delete", Insert: "Insert", Home: "Home", End: "End", PageUp: "PageUp", PageDown: "PageDown",

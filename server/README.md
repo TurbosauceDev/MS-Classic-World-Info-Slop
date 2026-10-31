@@ -28,3 +28,8 @@ for the site. Deployed by `.github/workflows/server.yml` on pushes to `server/**
   all-time bests never fall off a board. Rate limits and the owner inboxes (newest N) are unaffected.
 - Stored: the run plus the install ID and a salted hash of IP + day (rate limit only). Never the character name.
 - Local: `npm install && npm run data && npm test` (Node 22: tests use node:sqlite in place of D1).
+
+## Shop prices (2026-10-31)
+- `POST /api/shop` `{install, v: 1, rows: [{id, qty, price, sold}]}`: rows a tracker with sharing on read off a merchant shop. `check.js cleanShop` keeps only known item ids and whole numbers in range (up to 40 rows), drops the rest, answers 400 when nothing is usable. Limits: 240 rows/install/hour, 1,500 rows/IP/day, 6 installs/IP/day. Stored in `shop_obs` (no seller, no character, no map), deleted after 14 days.
+- `GET /api/shop/summary`: per item over 7 days `{installs, ask: [median each, rows], sold: [median each, rows]}`, only items seen by 3+ installs. Kept in `meta` for 10 minutes.
+- Tests: the shop block in `tests/server.test.js` (junk rows, junk bodies, the cap, the 3-install rule). Run `npm run data` first: `src/gamedata.json` carries the item ids.

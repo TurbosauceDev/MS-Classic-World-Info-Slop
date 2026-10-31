@@ -99,3 +99,19 @@ DELETE FROM kpq_src WHERE NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20
 DELETE FROM kpq_raw WHERE NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
 DELETE FROM meta WHERE k = 'summary' AND NOT EXISTS (SELECT 1 FROM meta WHERE k = 'kpq_reset_20261030');
 INSERT OR IGNORE INTO meta (k, v) VALUES ('kpq_reset_20261030', '1');
+
+-- Shop prices read off merchant shops by trackers with sharing on (Danny, 2026-10-31: crowd data of our own). One row per
+-- shop row: item, quantity, price for the bundle, sold out or not. No seller, no character, no map. Rows leave after 14 days.
+CREATE TABLE IF NOT EXISTS shop_obs (
+  id       INTEGER PRIMARY KEY,
+  install  TEXT NOT NULL,
+  ipday    TEXT NOT NULL,
+  received TEXT NOT NULL,
+  item     INTEGER NOT NULL,
+  qty      INTEGER NOT NULL,
+  price    INTEGER NOT NULL,
+  sold     INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS shop_obs_item ON shop_obs (item, received);
+CREATE INDEX IF NOT EXISTS shop_obs_install ON shop_obs (install, received);
+CREATE INDEX IF NOT EXISTS shop_obs_ipday ON shop_obs (ipday);

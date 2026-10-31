@@ -32,7 +32,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       !document.querySelector("#ovw-kills"), !document.querySelector("#ovw-mesos"), !document.querySelector("#ovw-log"),
       !document.querySelector("#ovpanel").classList.contains("hidden"), document.body.classList.contains("edit"),
       document.querySelectorAll("#ovpRows .wrow").length, !!document.querySelector("#ovSnap"), !!document.querySelector("#ovGrid"), !!document.querySelector("#ovReset")]);
-    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || st[8] !== 16 || !st[9] || !st[10] || !st[11]) fail("overlay defaults", st);
+    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || st[8] !== 17 || !st[9] || !st[10] || !st[11]) fail("overlay defaults", st);
     // a push fills the cards; the map card shows the spawn table and the respawn countdowns
     const t = Date.now();
     const payload = {t, on: true, paused: false, dummy: false, runT0: t - 7530e3, state: "Tracking · 12 min farmed",
@@ -209,9 +209,9 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.evaluate(() => { const nx = document.querySelector(`#ovinsp .wdet[data-w="status"] input[data-k="x"]`);
       nx.value = "300"; nx.dispatchEvent(new Event("change", {bubbles: true}));
       const ny = document.querySelector(`#ovinsp .wdet[data-w="status"] input[data-k="y"]`);
-      ny.value = "700"; ny.dispatchEvent(new Event("change", {bubbles: true})) });
+      ny.value = "740"; ny.dispatchEvent(new Event("change", {bubbles: true})) });
     st = await page.evaluate(() => { const el = document.querySelector("#ovw-status"); return [el.offsetLeft, el.offsetTop, window.ovSaved.overlay.widgets.status.x, window.ovSaved.overlay.widgets.status.y] });
-    if (st[0] !== 300 || st[1] !== 700 || st[2] !== 300 || st[3] !== 700) fail("x/y inputs place card", st);
+    if (st[0] !== 300 || st[1] !== 740 || st[2] !== 300 || st[3] !== 740) fail("x/y inputs place card", st);
     // the corner grip resizes freely now (Danny 10-29: "strange boxes... very long or very wide, skinny or fat"):
     // dragging it in pins the card's own width and height (saved as w/h), the card really gets smaller, and the box
     // stays pinned across a later push (the content reflows inside instead of the card following the numbers)

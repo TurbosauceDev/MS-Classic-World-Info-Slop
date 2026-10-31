@@ -6,6 +6,23 @@ pixels (same capture API as OBS/Discord); it never touches game files or memory 
 the full window, Simple Mode (the run at a glance), Focus Mode (one clean centred column) and Overlay Mode (floating
 glass widgets over the game itself, on any monitor, click-through when locked).
 
+## What it never does
+
+- No game memory, no packets, no injected code, no key presses or mouse input sent to the game. A screenshot of the game window
+  (Windows Graphics Capture, like OBS) and reading it: that is all it does.
+- It is a fan-made tool, not made, approved or reviewed by Nexon. We found no rule against screen readers, but that is our
+  reading, not Nexon's; use it at your own risk. (Wording borrowed in spirit from OkocimK/MaplePrices' policy paragraph, MIT.)
+- With sharing on, only numbers go up (runs, KPQ rounds, shop prices: item, quantity, price). No character names, no seller names,
+  no screenshots.
+
+## Shop prices (0.3.24)
+
+Ctrl+Shift+K (Settings > Keyboard shortcuts) reads the open merchant shop's item list: `core/shopread.js` finds the rows by their
+separator lines, reads each name and "N for M mesos" line with Tesseract (two cuts of the price, a row only counts when both agree),
+fuzzy-matches names to the game's item list (`matchName`, prefix match for names cut with "...") and sets each ask against the
+site's market median. `renderer-shop.js` shows the pop-up, shares sure rows to `/api/shop`, and feeds the Shop prices overlay card.
+Test: `node tests/shop.test.js` (fixture `tests/frames-shop/own-shop.png`, OCR recorded from real Tesseract so CI needs no install).
+
 ```
 npm install
 npm run data        # data/data.json -> app/gamedata.js(on), copies src/js/51-shot.js -> app/shot.js

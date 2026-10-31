@@ -6,7 +6,8 @@ import worker, {ARCHIVE_DAYS} from "../src/index.js";
 
 const sql = new DatabaseSync(":memory:");
 sql.exec(readFileSync(new URL("../schema.sql", import.meta.url), "utf8"));
-const DB = {prepare(q){ let args = []; const st = sql.prepare(q); return {
+const DB = {async batch(list){ const out = []; for (const st of list) out.push(await st.run()); return out },   // D1 runs a batch in one go; here one after another
+  prepare(q){ let args = []; const st = sql.prepare(q); return {
   bind(...a){ args = a; return this }, async first(){ return st.get(...args) ?? null }, async run(){ const r = st.run(...args); return {meta: {last_row_id: Number(r.lastInsertRowid)}} },
   async all(){ return {results: st.all(...args)} } } }};
 const env = {DB};
@@ -297,6 +298,31 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   db.exec(reset);
   assert.strictEqual(db.prepare("SELECT COUNT(*) n FROM kpq_rounds").get().n, 1, "re-running schema.sql keeps new rounds");
   assert.strictEqual(db.prepare("SELECT COUNT(*) n FROM kpq_bak_20261030_rounds").get().n, 1, "backup untouched on re-run");
+}
+
+// shop prices (Danny 2026-10-31): rows are checked, limited and only shown once 3 different installs saw the item
+{
+  const shop = (body, ip = "10.7.7.7") => worker.fetch(new Request("https://x/api/shop", {method: "POST", body: typeof body === "string" ? body : JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
+  const id = 1002000;   // Brown Skullcap
+  const row = (extra = {}) => ({id, qty: 1, price: 1000, sold: 0, ...extra});
+  const inst = c => c.repeat(16) + "9";
+  let [st, rb] = await shop({install: inst("a"), v: 1, rows: [row(), row({price: 1100}), row({id: 999999999}), row({qty: 0}), row({price: 1.5}), row({price: "5"}), null, {id: "__proto__"}]});
+  assert.strictEqual(st, 200); assert.strictEqual(rb.stored, 2, "unknown id, zero qty, fractions, strings and junk rows are dropped, the good rows kept");
+  for (const b of ["not json", "null", "[]", "{}", JSON.stringify({install: inst("b")}), JSON.stringify({install: inst("b"), rows: [row({id: 999999999})]}), JSON.stringify({install: "x", rows: [row()]})]){
+    [st] = await shop(b, "10.7.7.8"); assert.strictEqual(st, 400, "junk shop body " + String(b).slice(0, 30));
+  }
+  // limits: rows per install per hour
+  for (let i = 0; i < 6; i++) await shop({install: inst("c"), v: 1, rows: Array.from({length: 40}, (_, j) => row({price: 1000 + i * 40 + j}))}, "10.7.7.9");
+  [st] = await shop({install: inst("c"), v: 1, rows: [row({price: 5})]}, "10.7.7.9"); assert.strictEqual(st, 429, "over the hourly cap");
+  // the summary hides an item until 3 installs have seen it
+  const sum = async () => (await worker.fetch(new Request("https://x/api/shop/summary"), env)).json();
+  sql.exec("DELETE FROM meta WHERE k = 'shop_summary'");
+  let sm = await sum(); assert.ok(!sm.items[id], "two installs: hidden"); assert.strictEqual(sm.minInstalls, 3);
+  await shop({install: inst("d"), v: 1, rows: [row({price: 900}), row({price: 2000, sold: 1})]}, "10.7.7.10");
+  sql.exec("DELETE FROM meta WHERE k = 'shop_summary'");
+  sm = await sum(); assert.ok(sm.items[id] && sm.items[id].installs >= 3, "three installs: shown");
+  assert.deepStrictEqual(sm.items[id].sold, [2000, 1]); assert.ok(sm.items[id].ask[1] > 1);
+  assert.ok(!JSON.stringify(sm).includes("aaaaaaaa"), "no install ids in the shop summary");
 }
 
 // junk bodies (idea list from OkocimK/MaplePrices' clean_row, 2026-10-31): every POST endpoint answers 400, never 500, and stores nothing
