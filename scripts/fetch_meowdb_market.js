@@ -38,6 +38,7 @@ async function launch() {
       const nap = () => new Promise(z => setTimeout(z, 250));
       const get = async u => { for (let i = 0; i < 3; i++){ const r = await fetch(u);
           if (r.ok) return r.json();
+          if (r.status === 400) return null;   // "can't be traded on the Free Market": no price now or later, so don't retry or fail the run
           const slow = r.status === 429 || r.status >= 500;
           const t = await r.text().catch(() => "");
           if (t.includes(WALL)) throw new Error("WALL " + u);
@@ -60,10 +61,11 @@ async function launch() {
       const it = {}, ls = {}, cut = Date.now() - KEEP_DAYS * 864e5;
       for (const id of ids){ const g = game[id]; if (!g) continue;
         const s = await get(`/msclassic/api/item-market-summary?itemId=${id}&condition=clean`); await nap();
+        if (!s) continue;
         if (s.usual != null || s.cheapestSell != null) it[g] = s;
         if (listed && !listed.has(id)) continue;                    // browse mode: only fetch listings for known-listed items
         const l = await get("/msclassic/api/market-listings?itemId=" + id); await nap();
-        ls[g] = (l.listings || []).filter(x => x.status === "active" && x.price > 0 && Date.parse(x.bumpedAt.replace(" ", "T") + "Z") >= cut) }
+        ls[g] = ((l && l.listings) || []).filter(x => x.status === "active" && x.price > 0 && Date.parse(x.bumpedAt.replace(" ", "T") + "Z") >= cut) }
       return { cat: cat.length, live: live ? live.length : -1, it, ls } }, { want: [...want], KEEP_DAYS, WALL });
     const t = s => Math.round(Date.parse(s.replace(" ", "T") + "Z") / 6e4);   // UTC minutes since 1970
     const st = o => Object.entries(o || {}).filter(([, v]) => typeof v === "number" && v).map(([k, v]) => k + " " + v).join(", ");

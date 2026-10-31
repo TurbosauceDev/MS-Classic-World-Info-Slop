@@ -298,4 +298,16 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   assert.strictEqual(db.prepare("SELECT COUNT(*) n FROM kpq_rounds").get().n, 1, "re-running schema.sql keeps new rounds");
   assert.strictEqual(db.prepare("SELECT COUNT(*) n FROM kpq_bak_20261030_rounds").get().n, 1, "backup untouched on re-run");
 }
+
+// junk bodies (idea list from OkocimK/MaplePrices' clean_row, 2026-10-31): every POST endpoint answers 400, never 500, and stores nothing
+{
+  const before = sql.prepare("SELECT (SELECT COUNT(*) FROM runs) + (SELECT COUNT(*) FROM kpq_rounds) n").get().n;
+  const junk = ["not json", "null", "[]", "42", "\"str\"", "{}", JSON.stringify({install: "x".repeat(5000)}), JSON.stringify({install: {}, minutes: "15"}),
+    JSON.stringify(run("jjjjjjjjjjjjjjjj1", 1000, {exp: "1000"})), JSON.stringify(run("jjjjjjjjjjjjjjjj1", 1000, {kills: 1e12})), JSON.stringify(run("jjjjjjjjjjjjjjjj1", 1000, {party: -1}))];
+  for (const path of ["/api/runs", "/api/kpq"]) for (const b of junk){
+    const res = await worker.fetch(new Request("https://x" + path, {method: "POST", body: b, headers: {"cf-connecting-ip": "10.9.9.9"}}), env);
+    assert.ok(res.status === 400, path + " " + b.slice(0, 40) + " -> " + res.status);
+  }
+  assert.strictEqual(sql.prepare("SELECT (SELECT COUNT(*) FROM runs) + (SELECT COUNT(*) FROM kpq_rounds) n").get().n, before, "junk stores nothing");
+}
 console.log("server tests passed");
