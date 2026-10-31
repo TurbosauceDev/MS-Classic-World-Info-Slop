@@ -239,6 +239,15 @@ async function profSwitch(v){
   $("#setupNote").textContent = `Switched to "${to.name}".` + (v.startsWith("b:") ? " It's built in: to keep changes, save them under a name of your own." : "");
 }
 $("#profUse").onclick = () => profSwitch($("#profSel").value);
+// two clicks: the first arms the button for 5 s, the second deletes (no confirm() dialogs in this app)
+{ let armed = 0;
+  $("#shareForget").onclick = async () => {
+    const b = $("#shareForget"), note = $("#shareForgetNote");
+    if (!armed){ b.textContent = "Click again to delete"; armed = setTimeout(() => { armed = 0; b.textContent = "Delete what I shared" }, 5000); return }
+    clearTimeout(armed); armed = 0; b.textContent = "Delete what I shared"; b.disabled = true; note.textContent = "Asking the server…";
+    const r = await host.forgetShared(); b.disabled = false;
+    note.textContent = r.ok ? (r.removed ? `Deleted ${r.removed} shared rows. This copy now has a new anonymous ID.` : "The server had nothing from this copy. It now has a new anonymous ID.") : `Not deleted: ${r.why}. Try again later.`;
+  } }
 $("#profDel").onclick = async () => { const n = $("#profSel").value; if (!n || n.startsWith("b:")) return;
   settings = await host.settings({profiles: profs().filter(p => p.name !== n), ...(settings.profile === n ? {profile: null} : {})}); profUi();
   $("#setupNote").textContent = `Deleted profile "${n}". The boxes and theme on screen stay as they are.` };

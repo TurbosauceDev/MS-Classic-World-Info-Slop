@@ -2,7 +2,7 @@
   <details class="howto" open>
     <summary>About this page</summary>
     <ul>
-      <li>What this site and the Grind Tracker app keep about you, where it goes, and the usual disclaimers, in plain words. Last updated Oct 21, 2026.</li>
+      <li>What this site and the Grind Tracker app keep about you, where it goes, and the usual disclaimers, in plain words. Last updated Oct 31, 2026.</li>
       <li>Short version: no accounts, no ads, no analytics, no tracking cookies. Your settings stay in your browser. Only what you choose to send (a Feedback note, a shared tracker run) reaches our server.</li>
     </ul>
   </details>
@@ -26,9 +26,10 @@
       <p>Our server is a small Cloudflare Worker with a database. It only gets what you send it:</p>
       <ul>
         <li><b>Feedback notes:</b> the note, its type, the contact name if you add one, the page you came from and the site version. To stop spam, a one-way hash of your IP address mixed with the date and a secret is kept with the note; the IP itself is not stored and the hash can't be turned back into it.</li>
-        <li><b>Grind Tracker shared runs and KPQ rounds</b> (opt-in, off unless you turn it on in the app): the run's numbers (map, level, EXP, mesos, drops, time, party size), a random install ID made by the app, and the label you choose. The same daily IP hash limits spam. Shared runs are public: they feed the leaderboards and the "players" numbers on this site.</li>
+        <li><b>Grind Tracker shared runs and KPQ rounds</b> (opt-in, off unless you turn it on in the app): the run's numbers (map, level, EXP, mesos, drops, time, party size), a random install ID made by the app, and the label you choose. The same daily IP hash limits spam. Shared runs are public: they feed the leaderboards and the "players" numbers on this site. KPQ rounds also carry a name for the board: your character name, or a made-up one like Archer4821 if you turn the name off in the app's Settings.</li>
+        <li><b>Shop prices</b> (tracker, same sharing switch): when you read a merchant shop with Ctrl+Shift+K, each row's item, quantity, price and sold-out flag is sent with your install ID. No seller, character name or map. Rows are deleted after 14 days, and a price only shows on the site once 3 different players have seen the item.</li>
         <li><b>Party live view</b> (tracker, when you join a party code): your live numbers for the party, plus a hashed IP to cap copies per machine. These rows only last while the party is live.</li>
-        <li>No names, emails, accounts or game logins are ever asked for or kept.</li>
+        <li>No emails, accounts or game logins are ever asked for or kept. The only name that can reach the server is the KPQ board name above.</li>
       </ul></div>
 
     <div class="card"><div class="cardhead"><h3>Other sites this page talks to</h3></div>
@@ -58,6 +59,6 @@
       </ul></div>
 
     <div class="card"><div class="cardhead"><h3>Questions or removal</h3></div>
-      <p>Send a note on the <a href="#" data-go="feedback">Feedback</a> page (add a way to reach you). We can delete a Feedback note or shared run on request.</p></div>
+      <p>Send a note on the <a href="#" data-go="feedback">Feedback</a> page (add a way to reach you). We can delete a Feedback note on request. For anything the tracker shared (runs, KPQ rounds, shop prices, party rows), open the app's Settings &gt; Window and sharing and press <b>Delete what I shared</b>: the server removes everything that copy ever sent, and the app switches to a new anonymous ID.</p></div>
   </div>
 </section>

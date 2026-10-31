@@ -352,6 +352,22 @@ async function getRunsRecent(req, env){
 
 // Shop prices (tracker renderer-shop.js, Danny 2026-10-31): rows read off merchant shops. Same limits idea as runs: rows per
 // install per hour, rows per IP per day, installs per IP per day (one home network = one player).
+// "Delete what I shared" (tracker Settings, blind-spot report A2): removes everything one install ever sent. The install ID is a random
+// secret only that tracker copy knows, so knowing it is the proof; nothing else is needed and nothing is returned but counts.
+async function postForget(req, env){
+  let b; try { b = await req.json() } catch { return json({error: "bad json"}, 400) }
+  if (!b || typeof b.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(b.install)) return json({error: "install id"}, 400);
+  const db = env.DB, i = b.install, n = {};
+  const one = async (k, sql) => { n[k] = (await db.prepare(sql).bind(i).run()).meta?.changes ?? 0 };
+  await one("extra", "DELETE FROM run_extra WHERE run_id IN (SELECT id FROM runs WHERE install = ?)");
+  await one("groups", "DELETE FROM run_groups WHERE run_id IN (SELECT id FROM runs WHERE install = ?)");
+  for (const t of ["names", "src", "raw"]) await one("kpq_" + t, `DELETE FROM kpq_${t} WHERE kpq_id IN (SELECT id FROM kpq_rounds WHERE install = ?1 UNION SELECT id FROM kpq_rounds_archive WHERE install = ?1)`);
+  await one("runs", "DELETE FROM runs WHERE install = ?"); await one("runs_archive", "DELETE FROM runs_archive WHERE install = ?");
+  await one("kpq", "DELETE FROM kpq_rounds WHERE install = ?"); await one("kpq_archive", "DELETE FROM kpq_rounds_archive WHERE install = ?");
+  await one("party", "DELETE FROM party_live WHERE install = ?"); await one("shop", "DELETE FROM shop_obs WHERE install = ?");
+  await db.prepare("DELETE FROM meta WHERE k IN ('summary', 'shop_summary')").run();   // the cached public numbers rebuild without it
+  return json({ok: true, removed: n.runs + n.runs_archive + n.kpq + n.kpq_archive + n.shop + n.party});
+}
 const SHOP_PER_HOUR = 240, SHOP_PER_IP_DAY = 1500, SHOP_KEEP_DAYS = 14, SHOP_MIN_INSTALLS = 3;
 async function postShop(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
@@ -399,6 +415,7 @@ async function route(req, env){
   if (url.pathname === "/api/runs" && req.method === "POST") return postRun(req, env);
   if (url.pathname === "/api/kpq" && req.method === "POST") return postKpq(req, env);
   if (url.pathname === "/api/shop" && req.method === "POST") return postShop(req, env);
+  if (url.pathname === "/api/forget" && req.method === "POST") return postForget(req, env);
   if (url.pathname === "/api/shop/summary" && req.method === "GET") return getShopSummary(env);
   if (url.pathname === "/api/party" && req.method === "POST") return partyLive(req, env);
   if (url.pathname === "/api/feedback" && req.method === "POST") return postFeedback(req, env);

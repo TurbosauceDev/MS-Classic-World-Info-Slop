@@ -8,6 +8,7 @@ module.exports = () => {
         {saved: Date.now() - 7200e3, date: "2026-10-17", mapName: "Pig Beach", level: 21, activeMin: 20, exp: 2000, mesos: 300, deaths: 0},
         {saved: Date.now() - 9 * 864e5, date: "2026-10-08", mapName: "Old", level: 10, activeMin: 60, exp: 1, mesos: 1}], updateSession: async (saved, p) => (window.updated = {saved, ...p}, true), exportCsv: async () => "", mini: async (on, h) => ((window.miniCalls = window.miniCalls || []).push([on, h]), true), winSize: async (w, h) => (window.winSized = [w, h], true), snip: async () => null,
       version: async () => "0.2.17", updateState: async () => ({state: "idle"}), updateCheck: async () => (window.upd?.({state: "downloading", version: "0.2.18", pct: 40}), {state: "ready", version: "0.2.18"}),
+      forgetShared: async () => (window.forgot = (window.forgot || 0) + 1, {ok: true, removed: 3}),
       updateInstall: async () => (window.installed = true), onUpdate: cb => window.upd = cb, onMenu: cb => window.menu = cb, onShare: cb => window.shareReply = cb, themeBar: async c => (window.bar = c, true),
       // the site's market prices (v0.2.83+): tests push payloads through window.siteMkFake / sitePrFake, the bridge delivers them
       siteMarket: async () => [window.siteMkFake || null, window.siteMkFake ? Date.now() : 0, window.sitePrFake || null],

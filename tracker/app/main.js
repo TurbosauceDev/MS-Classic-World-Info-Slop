@@ -592,6 +592,19 @@ ipcMain.handle("shop-share", async (_, body) => {
     return r.ok;
   } catch { return false }
 });
+// "Delete what I shared" (Settings > Window and sharing): the server drops every run, KPQ round, shop row and party row this copy ever sent,
+// then this copy gets a new random ID (nothing later links back) and its unsent queue is emptied. Works with sharing off too.
+ipcMain.handle("forget-shared", async () => {
+  const st = readSettings();
+  if (!SERVER || !st.install) return {ok: false, why: "nothing to delete"};
+  try {
+    const r = await fetch(SERVER + "/api/forget", {signal: AbortSignal.timeout(15e3), method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({install: st.install})});
+    if (!r.ok) return {ok: false, why: "the server answered " + r.status};
+    const j = await r.json();
+    writeSettings({...readSettings(), install: require("crypto").randomUUID()}); writeAtomic(QUEUE, "[]");
+    return {ok: true, removed: j.removed || 0};
+  } catch { return {ok: false, why: "no connection to the server"} }
+});
 // party view: post this tracker's live numbers with the party code, get everyone with the same code (server keeps them an hour)
 ipcMain.handle("party", async (_, live) => {
   const st = readSettings();
