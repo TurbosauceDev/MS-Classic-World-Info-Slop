@@ -3,5 +3,5 @@
   "private": true,
   "type": "module",
   "scripts": { "data": "node build_data.cjs", "test": "node --no-warnings tests/server.test.js", "deploy": "wrangler deploy" },
-  "devDependencies": { "wrangler": "4.146.0" }
+  "devDependencies": { "wrangler": "4.154.0" }
 }
