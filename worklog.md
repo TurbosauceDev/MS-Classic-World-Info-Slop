@@ -1,4 +1,11 @@
 
+## 2026-10-31 - changelog audit: GitHub Releases were shipping bare; 0.2.108's notes restored (Glorg [z.ai], Task: Turbozo "are you consistently updating the changelog? Its feeling and looking thin")
+- Audit of all three surfaces: app patch notes (tracker/app/changelog.js, 146 entries) and the site's log page (113 cards) were current — 0.3.22..0.3.25 all have full entries; PR #26 (docs/fetcher-only) owed no site card. The thin surface was GitHub Releases: electron-builder `--publish always` creates the release with an empty body, and all 129 releases (v0.2.26..v0.3.24) went out with no notes — that's the page a repo visitor sees.
+- Fix 1 (wiring): tracker/scripts/release-notes.js emits build/release-notes.md from the top changelog entry (fails loudly if it isn't package.json's version — same guard core.test.js enforces); `npm run release` runs it before electron-builder and `build.releaseInfo.releaseNotesFile` points at the file. Every release from the next one on carries its real patch notes. File is gitignored; CI regenerates per build.
+- Fix 2 (lost entry): git log -S found that dcf9f78 (0.3.0) deleted 0.2.108's changelog line by accident while inserting its own — restored verbatim from the v0.2.109 tag's copy.
+- Fix 3 (backfill): one-off script PATCHed all 129 release bodies from changelog.js (tag vX.Y.Z → entry X.Y.Z); v0.2.108 matched once restored. Spot-checked v0.3.24 / v0.2.108 / v0.2.26 via the API.
+- Proof: all 10 tracker suites green after the changelog edit; commit acd8afe.
+
 ## 2026-10-28 - meowdb market outage: root-caused + fixed (Glorg [z.ai], Task: danny "find another way to access meowdb")
 - Symptom: data/sources/meowdb_market.json stale since 10-26 14:23 (poll kept old file, runs "green" via the graceful path); site prices froze at 2 days old.
 - CI logs (run 40668850923): page.evaluate Error at /msclassic/api/market-listings/browse?page=1 - catalog fine, browse dead.
