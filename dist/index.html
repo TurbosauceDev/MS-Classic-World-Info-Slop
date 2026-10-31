@@ -2855,20 +2855,23 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   </details>
 
   <div class="changelog">
-    <div class="card" data-t="2026-10-31T03:36:46Z"><div class="cardhead"><h3><span class="ver">v0.19.11</span> Oct 31, 2026 · Classicrank is parked until its source is back</h3></div>
+    <div class="card" data-t="2026-10-31T03:36:46Z"><div class="cardhead"><h3><span class="ver">v0.19.12</span> Oct 31, 2026 · Classicrank is parked until its source is back</h3></div>
       <p>classicrank.com stopped answering, so its pieces on our pages are tucked away for now: Load by IGN, the @char search, the job census card and character profile links. They come back when the source does.</p>
     </div>
-    <div class="card" data-t="2026-10-31T03:36:46Z"><div class="cardhead"><h3><span class="ver">v0.19.10</span> Oct 31, 2026 · KPQ leaderboard: tracker rounds only</h3></div>
+    <div class="card" data-t="2026-10-31T03:36:46Z"><div class="cardhead"><h3><span class="ver">v0.19.11</span> Oct 31, 2026 · KPQ leaderboard: tracker rounds only</h3></div>
       <p>The leaderboard starts fresh and only counts rounds tracked with the <a href="#" data-go="trk">Grind Tracker</a> app: the in-page timer still times your runs, but it no longer posts to the boards (the server accepts tracker rounds only), so every scored round comes from the same reader and the same scoring. The old board data was retired.</p>
     </div>
-    <div class="card" data-t="2026-10-30T16:32:41Z"><div class="cardhead"><h3><span class="ver">v0.19.9</span> Oct 30, 2026 · The sleek look is now the default</h3></div>
+    <div class="card" data-t="2026-10-30T16:32:41Z"><div class="cardhead"><h3><span class="ver">v0.19.10</span> Oct 30, 2026 · The sleek look is now the default</h3></div>
       <p>The site wears the Elv scheme out of the box: near-black panels, the purple accent, quiet lines. The classic purple look is still here: open Settings &gt; Theme and pick <b>Clanker Chic</b> to bring it back (it was called Default before). The Grind Tracker and its overlay switched to the same default, so all three match without touching a slider.</p>
     </div>
-    <div class="card" data-t="2026-10-30T02:00:00Z"><div class="cardhead"><h3><span class="ver">v0.19.8</span> Oct 30, 2026 · Builder: what one more point is worth</h3></div>
+    <div class="card" data-t="2026-10-30T02:00:00Z"><div class="cardhead"><h3><span class="ver">v0.19.9</span> Oct 30, 2026 · Builder: what one more point is worth</h3></div>
       <p>The Character Builder has a new card that re-runs its own damage model with +1 STR, DEX, INT, LUK and +1 weapon attack and shows the damage per second each one adds (misses included), with the best one at 100%. Idea borrowed from SimulationCraft's scale factors; the numbers come only from the builder's existing sourced formulas.</p>
     </div>
-    <div class="card" data-t="2026-10-29T23:00:00Z"><div class="cardhead"><h3><span class="ver">v0.19.7</span> Oct 29, 2026 · Builder: Bow Mastery crit rate and a stat window row</h3></div>
+    <div class="card" data-t="2026-10-29T23:00:00Z"><div class="cardhead"><h3><span class="ver">v0.19.8</span> Oct 29, 2026 · Builder: Bow Mastery crit rate and a stat window row</h3></div>
       <p>The Character Builder showed 26% crit for a Lv 41 Hunter whose in-game stat window says 36%: weapon masteries that add Critical Rate (Bow Mastery +10%) or Critical Damage (Blunt and Crossbow Mastery +20%) were skipped. All masteries now count. Physical builds also get a "Stat window" row, the plain attack range without the skill's %, so you can compare it with the in-game ATTACK line.</p>
+    </div>
+    <div class="card" data-t="2026-10-29T20:26:50Z"><div class="cardhead"><h3><span class="ver">v0.19.7</span> Oct 29, 2026 · KPQ: five scored boards</h3></div>
+      <p>The Kerning City Party Quest leaderboard grew into five scored boards — Best full run, Rush, Bonus, What could have been and Average score. Rounds tracked with the Grind Tracker (0.3.20 and on) are scored on the server: Rush points from stage speed against your own recorded average, Bonus points from EXP, mesos and drops at their NPC sell value, with small per-item bonuses and a big one for a Pan Lid. The KPQ page has a Scored boards card with the rankings, and how the points work is written under the table.</p>
     </div>
     <div class="card" data-t="2026-10-28T14:24:35Z"><div class="cardhead"><h3><span class="ver">v0.19.6</span> Oct 28, 2026 · Price accuracy: full-pipeline audit fixes</h3></div>
       <p>A bug hunt that re-derived every rule behind the price headlines against the raw data for all 2,258 items found three real defects, all fixed. <b>3-day weighted headlines were applied backwards</b>: the weights listed today as the heaviest but the code gave the oldest of the three days 0.5 and today 0.2, so a moving price under-reacted to the very move it was reporting - all 119 moving items now weight today at 0.5 as documented, and the weights stay aligned with the newest day even when a day is missing from history. <b>The consensus tile under-counted its evidence</b>: "consensus of N markets" printed N as the sales count, so a median drawn from 41 sales read as "2 sales"; it now counts the actual sales behind the pooled markets. <b>The likely range could contradict its own headline</b>: when the spike breaker holds yesterday's median, the p25-p75 band still describes today's sales, so an item could read "Usual 469, likely 62-275"; the band now hides while a hold is active. The same audit also drives a new accuracy scene in the test suite (weight direction, hole alignment, consensus counting, held-band suppression), and a job census card fix: the card's render path is tested with a patched build, so the quiet state that ships while the classicrank read key is pending is asserted too.</p>
@@ -3534,7 +3537,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-10-31T03:36:46Z" data-ver="0.19.11">Site version: v0.19.11 · built Oct 31, 2026 · 03:36 UTC</p>
+  <p class="sitever" data-built="2026-10-31T04:08:07Z" data-ver="0.19.12">Site version: v0.19.12 · built Oct 31, 2026 · 04:08 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
