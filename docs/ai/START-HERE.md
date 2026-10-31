@@ -134,6 +134,15 @@ What are you here to do?
 
 **The in-repo `docs/ai/agent-worklog.md` is the shared one.** The sandbox `/home/z/my-project/worklog.md` is just for chat-CLI claude's own session notes. Don't confuse them.
 
+## Tool tips (sandbox lessons, 2026-10-31)
+
+- **WebFetch can print its own failure as page content** ("Html Convert Error ... 'NoneType' object is not subscriptable"). It means the fetch failed or came back empty. Confirm with `curl -sS -i <url>`.
+- **GitHub REST unauthenticated = 60/hr per sandbox IP; search and repo endpoints 429 first.** Use `git clone --depth 1` (then `fetch --unshallow` for history), `raw.githubusercontent.com`, or the GitHub MCP tools. HTML `/commits` pages can 429 too.
+- **TLS alert 112 "unrecognized name"** = no vhost for that name on the server. `curl --resolve base:443:IP -H "Host: sub"` separates a missing vhost from a dead box.
+- **crt.sh** `/json?q=` needs a 60 s+ timeout; `name_value` is newline-separated multi-SAN text, so split before comparing.
+- **Cloudflare Turnstile is not passable headless** from plain agent browsers; the Playwright Chromium in the cloud container reaches meowdb (see `scripts/fetch_meowdb_*.js`).
+- Outside price tools studied: cpan1995/maplepricechecker (no license: ideas only) and OkocimK/MaplePrices (MIT, but Old School Maple, a MapleStory Worlds game, so none of its data applies). Teardown artifact: https://claude.ai/artifact/TccpycesZB7wQ4JmhshUWm. Nothing adopted until Danny picks.
+
 ## If you only have 2 minutes
 
 1. Read `docs/ai/state-of-the-pipeline.md` § 1 (snapshot, 1 paragraph)
