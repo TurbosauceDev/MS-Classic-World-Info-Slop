@@ -7,7 +7,9 @@ async function toPng(c){
 }
 // job from the status bar every 30 s, when the player left the job on "Auto": taken once the same job is read twice running
 const ocrCache = GrindOcrCache.createOcrCache();   // core/ocrcache.js: same crop pixels, same text, no second Tesseract run
-const ocrText = c => ocrCache.run(c, async c => { const t = Date.now(); try { return await host.ocr(await toPng(c)) } finally { perf("ocr", Date.now() - t) } });
+const tolCache = GrindOcrCache.createTolCache(GrindFrameGate);   // near-identical crops (encoder jitter) answer from the last read: fixed UI text (map title, job box, name) only ever changes wholesale
+const rawOcr = async c => { const t = Date.now(); try { return await host.ocr(await toPng(c)) } finally { perf("ocr", Date.now() - t) } };
+const ocrText = (c, slot) => slot ? tolCache.run(slot, c, rawOcr) : rawOcr(c);   // slot = the tolerant cache ("map", "job", "name"); no slot = always read fresh (the chat-box death/box reads)
 let lastJob = 0, jobSeen = null, jobNow = null, charName = null, charSeen = null;   // charName: History, and KPQ rounds (Settings > KPQ board name)
 async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders.jobTextCrop), or null; nc: the name crop
   const sess = session, sl = slicer;
@@ -16,7 +18,7 @@ async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders
   // from the OCR cache nearly every time; the wide status bar crop (HP/MP/EXP digits make it different every time, ~100 ms)
   // is only the fallback when the box didn't give a job
   let boxText = "";
-  if (nc){ boxText = await ocrText(nc); const n = GrindReaders.nameFromText(boxText); if (n && n === charSeen && n !== charName){ charName = n; note("Character: " + n); jr.note(t, "CHARACTER", n) } charSeen = n }
+  if (nc){ boxText = await ocrText(nc, "name"); const n = GrindReaders.nameFromText(boxText); if (n && n === charSeen && n !== charName){ charName = n; note("Character: " + n); jr.note(t, "CHARACTER", n) } charSeen = n }
   if (settings.job) return;
   let job = boxText ? GrindReaders.jobFromText(boxText) : null;
   if (!job){
@@ -36,7 +38,7 @@ async function readMap(c, fb, t){   // c: the minimap title crop (GrindReaders.m
   // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
   if (!c && !fb){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; note("Map name not seen for 30 s (minimap closed or covered): map unknown until it's back.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
   mapMissing = 0;
-  const text = await ocrText(fb || c), m = GrindReaders.mapFromText(text, G), key = m && (m.id || m.name);
+  const text = await ocrText(fb || c, "map"), m = GrindReaders.mapFromText(text, G), key = m && (m.id || m.name);
   log("map", {text, id: m?.id ?? null, name: m?.name ?? null, fb: !!fb});
   if (check && sess === session){ if (!m) check.mapWhy = "Minimap found, but its name didn't read. Is something over the minimap title?"; else if (!check.map){ check.map = m.name || "map " + m.id; check.late = check.ended } }
   // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
@@ -303,15 +305,37 @@ const perf = (k, ms) => { const p = PERF[k] ||= {n: 0, sum: 0, max: 0}; p.n++; p
 function perfLine(){
   const el = Date.now() - perfT0, avg = k => PERF[k] ? (PERF[k].sum / PERF[k].n).toFixed(1) : "-", hit = ocrCache.stats;
   if (!PERF.tick || el < 5000) return "";
-  return `Reading cost: ${PERF.tick.n} frames read, ${skipped} skipped as unchanged; per frame: capture ${avg("grab")} ms, compare ${avg("same")} ms, read ${avg("read")} ms (slowest ${PERF.read ? Math.round(PERF.read.max) : "-"}), whole tick ${avg("tick")} ms = ${Math.round(PERF.tick.sum / el * 100)}% of one core's time; ${lastMemo && lastMemo.hits + lastMemo.reads ? Math.round(lastMemo.hits / (lastMemo.hits + lastMemo.reads) * 100) + "% of bar/clock reads skipped (strip unchanged); " : ""}text reader ${hit.misses} runs${PERF.ocr ? " (" + avg("ocr") + " ms each)" : ""}, ${hit.hits} answered from memory.`;
+  return `Reading cost: ${PERF.tick.n} frames read, ${skipped} skipped as unchanged${skippedTol ? ` (${skippedTol} of those only jittered)` : ""}; per frame: capture ${avg("grab")} ms, compare ${avg("same")} ms, read ${avg("read")} ms (slowest ${PERF.read ? Math.round(PERF.read.max) : "-"}), whole tick ${avg("tick")} ms = ${Math.round(PERF.tick.sum / el * 100)}% of one core's time; ${lastMemo && lastMemo.hits + lastMemo.reads ? Math.round(lastMemo.hits / (lastMemo.hits + lastMemo.reads) * 100) + "% of bar/clock reads skipped (strip unchanged); " : ""}text reader ${hit.misses} runs${PERF.ocr ? " (" + avg("ocr") + " ms each)" : ""}, ${hit.hits} answered from memory.`;
 }
-function perfReset(){ PERF = {}; perfT0 = Date.now(); perfLogged = 0; paceReset() }
+function perfReset(){ PERF = {}; perfT0 = Date.now(); perfLogged = 0; paceReset(); statsPrev = null; statsT0 = Date.now() }
+// per-minute reader telemetry (core/readstats.js, customclassic-chat's reading.jsonl): the counters below are
+// cumulative; each minute their deltas go to the main process as one jsonl line (size-capped there) and the last
+// line shows in the Performance monitor. Set up to compare settings by numbers, not feel.
+let statsPrev = null, statsT0 = Date.now();
+const evCount = {exp: 0, meso: 0, bonus: 0, item: 0};
+let chatLooksT = 0, chatNewT = 0, chatGapsT = 0;
+function sendReadStats(t){
+  const cur = {fps: FPS, looks: PERF.tick?.n || 0, reads: PERF.read?.n || 0, skipExact: skipped, skipTol: skippedTol,
+    readMs: PERF.read?.sum || 0, tickMs: PERF.tick?.sum || 0, ocrRuns: PERF.ocr?.n || 0, ocrMs: PERF.ocr?.sum || 0,
+    cacheHits: ocrCache.stats.hits, tolHits: tolCache.stats.tolHits, memoHits: lastMemo?.hits || 0,
+    chatLooks: chatLooksT, chatNew: chatNewT, chatGaps: chatGapsT, chatOcrMs: PERF.chat?.sum || 0,
+    evExp: evCount.exp, evMeso: evCount.meso, evBonus: evCount.bonus, evItems: evCount.item,
+    reTries: lastMemo?.line?.tries || 0, reWins: lastMemo?.line?.wins || 0};
+  if (statsPrev){
+    const line = GrindReadStats.record(t, cur, statsPrev);
+    const el = (t - statsT0) / 1000;
+    if (el > 0 && PERF.tick) line.busyPct = Math.round((cur.tickMs - statsPrev.tickMs) / el * 10) / 10;   // % of one core: read ms per wall ms
+    if (Object.keys(line).length > 2) host.readStats?.(line);
+  }
+  statsPrev = cur; statsT0 = t;
+}
 /* adaptive pace (Danny 10-29: "slow the capture if the user is stalled or went AFK"): 2 reads a second while anything is
    happening (a bar change, pickup, map...), 1 after 45 s of nothing, one every 2 s after 3 min. The first thing that
    changes puts it back to 2. slowCap: reads that run long keep it at 1 at best. The capture itself is told the same rate. */
 let lastActive = Date.now(), slowCap = false, paceNote = 0;
+const chatPace = GrindReadPace.create();   // core/readpace.js: busy chat lines raise the read-rate floor, a missed box hurries it (customclassic-chat port)
 const PACE_LABEL = {2: "", 1: "Quiet for 45 s: reading once a second.", 0.5: "Quiet for 3 min (AFK?): reading every 2 seconds."};
-function paceReset(){ lastActive = Date.now(); slowCap = false; paceNote = 0 }
+function paceReset(){ lastActive = Date.now(); slowCap = false; paceNote = 0; chatPace.reset() }
 function setFps(rate, why){
   if (rate === FPS) return;
   FPS = rate;
@@ -321,11 +345,14 @@ function setFps(rate, why){
 }
 function pace(t, active){
   if (active) lastActive = t;
-  const idle = t - lastActive, base = idle > 180e3 ? 0.5 : idle > 45e3 ? 1 : 2, want = ovBlocker ? Math.max(base, BAR_FPS) : ovChatOn ? Math.max(base, 2) : base;   // a Chat blocker wants the HP/MP bars quicker, idle or not (slowCap still holds it to 1)
+  const idle = t - lastActive, base = idle > 180e3 ? 0.5 : idle > 45e3 ? 1 : 2;
+  // a Chat blocker wants the HP/MP bars quicker, idle or not; a busy chat raises the floor (rate x1.5 x1.3 wraps /
+  // lines shown, capped at the blocker's 4), a gap hurries it there for a while (core/readpace.js); slowCap still holds it to 1
+  const want = Math.max(base, ovBlocker ? BAR_FPS : 0, ovChatOn ? 2 : 0, chatPace.floor(t));
   setFps(slowCap ? Math.min(want, 1) : want, want < 2 ? "quiet" : "active");
 }
 
-let slowTicks = 0, fastTicks = 0, skipped = 0;
+let slowTicks = 0, fastTicks = 0, skipped = 0, skippedTol = 0;
 const SLOW_NOTE = "Reading once a second to keep your PC smooth (big screen).";
 /* slowCap must also release: a single burst of slow ticks (a map load, the first OCR run) used to hold reads at 1 Hz
    for the rest of the session, which also kept a Chat blocker's bars at 1 Hz (0.3.15's pace fix never got to apply).
@@ -348,8 +375,8 @@ async function tick(){
     if (!video.videoWidth){ $("#status").textContent = "No picture from the game (minimized?). Waiting..."; throw null }   // skip this tick
     const f = grabFrame(); perf("grab", Date.now() - t);
     keepFrame(t, f);
-    const t1 = Date.now(), same = sameAsLast(f); perf("same", Date.now() - t1);
-    if (same){ skipped++; if (video?.pump) FRBUF.give(f.d.buffer); throw null }   // unchanged: the buffer is free again
+    const t1 = Date.now(), sk = sameAsLast(f, !ovChatOn && !ovBlocker); perf("same", Date.now() - t1);
+    if (sk){ skipped++; if (sk === 2) skippedTol++; if (video?.pump) FRBUF.give(f.d.buffer); throw null }   // unchanged (or only encoder jitter moved): the buffer is free again
     // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between
     const want = {};
     if (!ocrBusy){
@@ -365,6 +392,11 @@ async function tick(){
     active = r.ev.some(e => e.type !== "glyph")
     if (r.memo) lastMemo = r.memo;
     chatIngest(r.chat);
+    if (r.chat){   // telemetry + pacing inputs: lines on screen, how many were new, whether the whole box turned over
+      const n = r.chat.items?.length || 0, shown = r.chat.n || 0, gap = shown >= 3 && n >= shown;
+      chatLooksT++; chatNewT += n; if (gap) chatGapsT++;
+      chatPace.note(t, n, shown, gap);
+    }
     if (r.scale){ scale = r.scale; fastLeft = 19 }   // also at 1x: finding the scale is the slow part, so it's checked every 20 frames only
     for (const e of r.ev){
       if (wrap && e.type !== "inv" && e.type !== "wallet" && e.type !== "glyph") continue;   // after Stop: only the end inventory look counts
@@ -376,6 +408,7 @@ async function tick(){
       // a box (Companion's Magic Box) gone from the Use tab: it was opened, its rewards are in the chat box
       if (e.type === "inv" && e.tab === "use"){ const n = +e.items[BOX] || 0; if (n < boxHad && !e.unknown) boxPending = {tries: 0, last: 0}; if (!e.partial?.[BOX]) boxHad = n }
       session.add(e); slicer.add(e); log("event", e);
+      if (/^(exp|meso|bonus|item|itemraw)$/.test(e.type)) evCount[e.type === "itemraw" ? "item" : e.type]++;   // telemetry
       if (e.type === "item") dropAlert(e.id);
       if (e.type === "bar"){
         // the start reading: taken at Start; when the bar didn't read then, the first good reading fills it in
@@ -409,7 +442,7 @@ async function tick(){
   const ms = Date.now() - t; perf("tick", ms);
   slowCheck(ms);
   pace(t, active);
-  if (t - perfLogged > 60e3){ perfLogged = t; const l = perfLine(); if (l) log("perf", {text: l}) }
+  if (t - perfLogged > 60e3){ perfLogged = t; const l = perfLine(); if (l) log("perf", {text: l}); try { sendReadStats(t) } catch {} }
   timer = setTimeout(tick, Math.max(50, 1000 / FPS - ms));
 }
 

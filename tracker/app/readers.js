@@ -218,22 +218,60 @@
 
   // ---- pickup messages (bottom right) ----
   const msgInk = (r, g, b) => r > 215 && g > 215 && b < 150 || Math.min(r, g, b) > 165 && Math.max(r, g, b) - Math.min(r, g, b) < 60;
+  // second looks at rows that read badly (customclassic-chat port, 2026-10-31): their reader re-OCRs a row whose
+  // confidence came back low, cropped on its own, and keeps the better read. Ours: a band taller than one line
+  // (two messages whose rows touch) is split at its quietest row, and a line with unread glyphs is re-cut with its
+  // edges trimmed one row (a neighbour line's edge pixel inside the band spoils the column it sits in). Counted so
+  // the reading.jsonl telemetry shows whether it earns its keep.
+  const LINE_STATS = {tries: 0, wins: 0};
   function readLines(img){
     const x0 = Math.max(0, img.w - 430), y0 = Math.floor(img.h / 3), M = mask(img, x0, y0, img.w, img.h - 60, msgInk), lines = [];
     let y = 0;
-    const rowInk = y => { let n = 0; for (let x = 0; x < M.W; x++) n += M.m[y * M.W + x]; return n >= 2 };
-    while (y < M.H){
-      if (!rowInk(y)){ y++; continue }
-      const s = y; while (y < M.H && rowInk(y)) y++;
-      if (y - s < 7 || y - s > 13) continue;
+    const rowN = y => { let n = 0; for (let x = 0; x < M.W; x++) n += M.m[y * M.W + x]; return n };
+    const rowInk = y => rowN(y) >= 2;
+    // one band of rows -> one line, or null (too short/tall, not right-aligned, no glyphs). The body of the old loop.
+    function readBand(s, y){
+      if (y - s < 7 || y - s > 13) return null;
       const gl = cut(M, s, y);
-      if (!gl.length || gl[gl.length - 1].x + gl[gl.length - 1].w < M.W - 12) continue;   // messages are right-aligned
+      if (!gl.length || gl[gl.length - 1].x + gl[gl.length - 1].w < M.W - 12) return null;   // messages are right-aligned
       const keep = [gl[gl.length - 1]];
       for (let i = gl.length - 2; i >= 0 && keep[0].x - (gl[i].x + gl[i].w) <= 9; i--) keep.unshift(gl[i]);
       let str = "", last = null;
       const chars = keep.map(g => match(g, MSG) || "?");
       keep.forEach((g, i) => { if (last !== null && g.x - last >= 4) str += " "; str += chars[i]; last = g.x + g.w });
-      lines.push({y: s + y0, text: str.replace(/ (?=[0-9)])|(?<=[(+0-9]) /g, ""), glyphs: keep, chars});
+      return {y: s + y0, text: str.replace(/ (?=[0-9)])|(?<=[(+0-9]) /g, ""), glyphs: keep, chars};
+    }
+    const misses = ln => ln.chars.reduce((a, c) => a + (c === "?"), 0);
+    while (y < M.H){
+      if (!rowInk(y)){ y++; continue }
+      const s = y; while (y < M.H && rowInk(y)) y++;
+      let ln = readBand(s, y);
+      if (!ln && y - s > 13 && y - s <= 27){
+        // two messages whose separating gap video blur bridged: split at the most gap-like row — fewest separate
+        // ink runs (a bridge is one run, a text row is many), ties toward the middle — where both halves are
+        // still line-sized, and read each half alone
+        LINE_STATS.tries++;
+        const rowRuns = yy => { let n = 0, on = false; for (let x = 0; x < M.W; x++){ const i = !!M.m[yy * M.W + x]; if (i && !on) n++; on = i } return n };
+        let q = -1, best = 1 << 30, mid = (s + y) / 2;
+        for (let qy = Math.max(s + 7, y - 14); qy <= Math.min(y - 8, s + 13); qy++){
+          const n = rowRuns(qy);
+          if (n < best || n === best && Math.abs(qy - mid) < Math.abs(q - mid)){ best = n; q = qy }
+        }
+        if (q > 0){
+          const halves = [readBand(s, q), readBand(q + 1, y)].filter(Boolean);
+          if (halves.length){ LINE_STATS.wins += halves.length; lines.push(...halves); continue }
+        }
+      }
+      if (ln && misses(ln)){
+        // unread glyphs: often a half-scrolled line's remnant row merged into this band's edge. Re-cut with each
+        // edge trimmed a row; keep the read with fewer "?" (accept only if better, like theirs)
+        LINE_STATS.tries++;
+        for (const [s2, y2] of [[s, y - 1], [s + 1, y], [s + 1, y - 1]]){
+          const again = readBand(s2, y2);
+          if (again && misses(again) < misses(ln)){ ln = again; LINE_STATS.wins++; break }
+        }
+      }
+      if (ln) lines.push(ln);
     }
     return lines;
   }
@@ -1197,8 +1235,8 @@
     if (want.job){ crops.job = jobTextCrop(img); crops.name = nameTextCrop(img) }
     if (want.chat) crops.chat = chatCrop(img);
     const chat = want.chatScan ? rd.chatScan(img, want.chatArea) : (rd.chatOff(), null);
-    return {ev, info, crops, chat, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
+    return {ev, info, crops, chat, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads, line: {tries: LINE_STATS.tries, wins: LINE_STATS.wins}}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {readProc, readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty};
+  const api = {readProc, readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty, lineStats: () => LINE_STATS};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

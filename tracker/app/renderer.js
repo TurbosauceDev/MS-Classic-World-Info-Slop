@@ -108,17 +108,22 @@ function makeEngine(icons, area, invHint, glyphs, invLast){
 // skip a frame that is exactly the last one (game idle, menus, a frozen capture): up to 4 in a row (2 s), so the
 // readers' "read the same twice" checks still come round
 let lastPix = null, sameRun = 0, ALL_ICONS = null;   // every item picture, decoded once when the worker can't run
-function sameAsLast(f){
+// returns 0 = read it, 1 = skip (exact same frame), 2 = skip (near-identical: only encoder jitter moved).
+// tolerant: the jitter gate (core/framegate.js, customclassic-chat's measured 60/255 on 1% of pixels) — off when a
+// Chat card needs every frame (a new chat line is only ~0.3% of the whole picture, under the gate's share).
+// The kept buffer is only updated on a real read, so slow drift still trips the gate eventually.
+function sameAsLast(f, tolerant){
   const p = new Uint32Array(f.d.buffer);
   let same = !!lastPix && lastPix.length === p.length && f.k === lastPix.k;
   for (let i = p.length - 1; same && i >= 0; i--) same = p[i] === lastPix[i];   // bottom up: the status bar changes first
+  if (!same && tolerant && lastPix && lastPix.length === p.length && !GrindFrameGate.changed(lastPix, p)) return ++sameRun <= 4 || (sameRun = 0, 2);
   if (!same){
     // copy into the kept buffer instead of slicing a fresh one every changed frame (a 1280x720 frame is 3.7 MB, a
     // full one 14.7 — at 2-4 reads a second the old way was pure allocator churn that kept the working set high)
     if (lastPix && lastPix.length === p.length) lastPix.set(p); else lastPix = p.slice();
-    lastPix.k = f.k; sameRun = 0; return false;
+    lastPix.k = f.k; sameRun = 0; return 0;
   }
-  return ++sameRun <= 4 || (sameRun = 0, false);
+  return ++sameRun <= 4 || (sameRun = 0, 0);
 }
 
 // bug reports: the last 300 log lines and the last 8 frames (one every 3 s, so about 25 s back), saved by "Report a bug"

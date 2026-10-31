@@ -92,7 +92,7 @@ const jr = (() => {
   // the map name twice running (like readMap in renderer-live.js, minus the session)
   async function mapRead(c, t, me){
     if (!c) return;
-    const m = GrindReaders.mapFromText(await ocrText(c), G), key = m && (m.id || m.name);
+    const m = GrindReaders.mapFromText(await ocrText(c, "map"), G), key = m && (m.id || m.name);
     if (key && key === me.mapSeen) { jr.event({t, type: "map", id: m.id, name: m.name}); me.last = Math.max(me.last, t - 25e3) }   // a map change is activity, but not a full reset of the pace
     me.mapSeen = key;
   }
@@ -103,7 +103,7 @@ const jr = (() => {
     if (lost){ jr.death(t, lost); me.death = null } else if (++me.death.tries >= 3) me.death = null;
   }
   async function jobRead(c, nc, t, me){
-    if (nc){ const n = GrindReaders.nameFromText(await ocrText(nc)); if (n && n === me.nameSeen && n !== me.charName){ me.charName = n; jr.note(t, "CHARACTER", n) } me.nameSeen = n }
+    if (nc){ const n = GrindReaders.nameFromText(await ocrText(nc, "name")); if (n && n === me.nameSeen && n !== me.charName){ me.charName = n; jr.note(t, "CHARACTER", n) } me.nameSeen = n }
     if (settings.job){ me.job = settings.job; jr.event({t, type: "job", name: settings.job}); return }
     if (!c) return;
     const job = GrindReaders.jobFromText(await ocrText(c));

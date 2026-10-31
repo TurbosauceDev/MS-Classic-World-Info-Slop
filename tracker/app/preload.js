@@ -41,6 +41,8 @@ contextBridge.exposeInMainWorld("host", {
   version: () => ipcRenderer.invoke("version"),
   perfMetrics: () => ipcRenderer.invoke("perf-metrics"),
   perfMain: () => ipcRenderer.invoke("perf-main"),
+  // one line a minute of reader telemetry (core/readstats.js); the main process appends it to reading.jsonl
+  readStats: line => ipcRenderer.send("read-stats", line),
   updateState: () => ipcRenderer.invoke("update-state"),
   updateCheck: () => ipcRenderer.invoke("update-check"),
   updateInstall: () => ipcRenderer.invoke("update-install"),

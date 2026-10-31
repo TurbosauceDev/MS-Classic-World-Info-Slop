@@ -24,6 +24,26 @@
     }
     return {key, run, stats, size: () => m.size};
   }
-  const api = {createOcrCache};
+  /* Tolerance layer (customclassic-chat port, 2026-10-31): the hash above only hits on identical pixels, and one
+     shimmering pixel from the video encoder is a miss and a ~90 ms Tesseract run for the same words. A slot keeps
+     the last crop it accepted plus its text; when the new crop's moved-pixel share stays under the change gate
+     (core/framegate.js), it answers from the slot instead. Measured there: real content moves >= 12% of a text
+     box, idle noise ~0 — these crops (map title, job, name) hold fixed UI text that only ever changes wholesale.
+     Only for crops whose freshness can wait one real change; the chat-box death/box reads stay exact.
+     createTolCache() -> {run(slot, crop, ocr, step, share), stats} */
+  function createTolCache(gate){
+    const slots = new Map(), stats = {tolHits: 0, runs: 0};
+    async function run(slot, c, ocr, step, share){
+      const p = c.d.byteOffset % 4 === 0 ? new Uint32Array(c.d.buffer, c.d.byteOffset, c.d.byteLength >> 2) : new Uint32Array(c.d.buffer.slice(c.d.byteOffset, c.d.byteOffset + c.d.byteLength));
+      const s = slots.get(slot);
+      if (s && s.pix.length === p.length && !gate.changed(s.pix, p, step, share)){ stats.tolHits++; return s.text }
+      stats.runs++;
+      const t = await ocr(c);
+      if (typeof t === "string" && t) slots.set(slot, {pix: p.slice(), text: t});   // "" = a broken worker: not kept
+      return t;
+    }
+    return {run, stats};
+  }
+  const api = {createOcrCache, createTolCache};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindOcrCache = api;
 })(typeof window !== "undefined" ? window : globalThis);

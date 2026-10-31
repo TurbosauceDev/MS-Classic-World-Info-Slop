@@ -139,7 +139,21 @@ ipcMain.handle("perf-metrics", () => app.getAppMetrics().map(m => ({pid: m.pid, 
 // and nothing here could be measured off-Windows, so the next screenshot names the part): JS heap, native buffers, the OCR
 // engine up or not, how often the game window was looked for and the capture opened
 const perfCount = {games: 0, captures: 0};
-ipcMain.handle("perf-main", () => { const m = process.memoryUsage(), mb = v => Math.round(v / 1048576); return {rss: mb(m.rss), heap: mb(m.heapUsed), ext: mb(m.external), buf: mb(m.arrayBuffers), ocr: !!ocr, ocrReads, games: perfCount.games, captures: perfCount.captures, upd: upd.state} });
+ipcMain.handle("perf-main", () => { const m = process.memoryUsage(), mb = v => Math.round(v / 1048576); return {rss: mb(m.rss), heap: mb(m.heapUsed), ext: mb(m.external), buf: mb(m.arrayBuffers), ocr: !!ocr, ocrReads, games: perfCount.games, captures: perfCount.captures, upd: upd.state, read: lastReadStats} });
+// reader telemetry (core/readstats.js): one jsonl line a minute from the renderer, appended here so settings can be
+// compared by real numbers later (customclassic-chat's reading.jsonl). Size-capped the same way: past 2 MB the
+// newest 6000 lines are kept, written atomically; the last line rides perf-main for the Performance monitor.
+// Local only: nothing here is sent anywhere.
+const READ_STATS = path.join(app.getPath("userData"), "reading.jsonl");
+let lastReadStats = null;
+ipcMain.on("read-stats", (_, line) => {
+  if (!line || typeof line !== "object" || Array.isArray(line)) return;
+  lastReadStats = line;
+  try {
+    if (fs.existsSync(READ_STATS) && fs.statSync(READ_STATS).size > 2e6) writeAtomic(READ_STATS, fs.readFileSync(READ_STATS, "utf8").split("\n").filter(Boolean).slice(-6000).join("\n") + "\n");
+    fs.appendFileSync(READ_STATS, JSON.stringify(line) + "\n");
+  } catch {}
+});
 ipcMain.handle("update-state", () => upd);   // the window asks once loaded: events sent before that were missed
 ipcMain.handle("update-check", async () => {
   if (!app.isPackaged) return sendUpd({state: "dev"});   // running from source: nothing to update
@@ -195,14 +209,26 @@ ipcMain.handle("keys", (_, keys, pause) => {
 // see-through window (Settings): 40-100 %
 function applyOpacity(){ if (win && !win.isDestroyed()){ const o = +readSettings().opacity; win.setOpacity(o >= 0.4 && o <= 1 ? o : 1) } }
 // on top of everything: the "screen-saver" level beats plain always-on-top windows (Danny: it kept going under other programs)
+// our own windows that must sit above the overlays while they're up (the snip tool; a native dialog): hold every
+// re-assert so we never cover ourselves (customclassic-chat's "ceiling": its overlays stay under the settings while it's open)
+let holdDialog = false;   // set around dialog.showOpenDialog in sounds-add
+function holdZ(){ return holdDialog || ovEditing || !!(snipWin && !snipWin.isDestroyed()) }
 function pinOnTop(){
   if (win && !win.isDestroyed()){
     if (readSettings().onTop === false) win.setAlwaysOnTop(false);
-    else { win.setAlwaysOnTop(true, "screen-saver"); win.moveTop() }
+    else { win.setAlwaysOnTop(true, "screen-saver"); if (!win.isMinimized() && !holdZ()) win.moveTop() }   // a minimized window stays put: moveTop would only fight the user
   }
-  // the overlay floats over the game: same treatment, and it doesn't care about the keep-on-top setting
-  if (ovWin && !ovWin.isDestroyed()){ ovWin.setAlwaysOnTop(true, "screen-saver"); ovWin.moveTop() }
+  ovPinTop();
 }
+// the overlay floats over the game: same treatment, and it doesn't care about the keep-on-top setting. Borderless
+// games push themselves above other topmost windows continuously, so the overlay re-asserts every 2 s (5 s left
+// stretches where the game covered the widgets; customclassic-chat's overlay runs the same dance at 2 s)
+function ovPinTop(){
+  if (!ovWin || ovWin.isDestroyed()) return;
+  ovWin.setAlwaysOnTop(true, "screen-saver");
+  if (!holdZ()) ovWin.moveTop();
+}
+setInterval(ovPinTop, 2000);
 
 /* Overlay mode (Danny, 2026-10-26: a fourth view, and the first one outside the tracker window): a transparent,
    frameless, click-through window over the game — spanning the whole virtual desktop, so a widget can live on any
@@ -346,7 +372,10 @@ const SOUNDS_DIR = path.join(app.getPath("userData"), "sounds"), SND_OK = /^[\w 
 const soundList = () => { try { return fs.readdirSync(SOUNDS_DIR).filter(f => SND_OK.test(f)).sort() } catch { return [] } };
 ipcMain.handle("sounds-list", () => soundList());
 ipcMain.handle("sounds-add", async () => {
-  const r = await dialog.showOpenDialog(win, {title: "Add alert sounds", properties: ["openFile", "multiSelections"], filters: [{name: "Sounds", extensions: ["wav", "mp3", "ogg"]}]});
+  holdDialog = true;   // our own dialog is up: the overlay's 2 s re-assert holds so it never covers the picker
+  let r;
+  try { r = await dialog.showOpenDialog(win, {title: "Add alert sounds", properties: ["openFile", "multiSelections"], filters: [{name: "Sounds", extensions: ["wav", "mp3", "ogg"]}]}); }
+  finally { holdDialog = false }
   if (r.canceled) return soundList();
   fs.mkdirSync(SOUNDS_DIR, {recursive: true});
   for (const f of r.filePaths){
