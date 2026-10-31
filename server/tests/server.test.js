@@ -323,6 +323,12 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   sm = await sum(); assert.ok(sm.items[id] && sm.items[id].installs >= 3, "three installs: shown");
   assert.deepStrictEqual(sm.items[id].sold, [2000, 1]); assert.ok(sm.items[id].ask[1] > 1);
   assert.ok(!JSON.stringify(sm).includes("aaaaaaaa"), "no install ids in the shop summary");
+  // poisoning: one install flooding 1-meso rows must not outvote the others (median of per-install medians, not of rows)
+  const id2 = 1002001;
+  for (const [c, ip] of [["e", "10.7.8.1"], ["f", "10.7.8.2"], ["g", "10.7.8.3"]]) await shop({install: inst(c), v: 1, rows: [row({id: id2, price: 5000})]}, ip);
+  for (let i = 0; i < 4; i++) await shop({install: inst("h"), v: 1, rows: Array.from({length: 40}, () => row({id: id2, price: 1}))}, "10.7.8.4");
+  sql.exec("DELETE FROM meta WHERE k = 'shop_summary'");
+  sm = await sum(); assert.strictEqual(sm.items[id2].ask[0], 5000, "a flooding install gets one vote: " + JSON.stringify(sm.items[id2]));
 }
 
 // junk bodies (idea list from OkocimK/MaplePrices' clean_row, 2026-10-31): every POST endpoint answers 400, never 500, and stores nothing

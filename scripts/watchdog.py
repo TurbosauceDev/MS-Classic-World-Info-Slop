@@ -14,7 +14,7 @@ Checks (problems() + source_problems(), pure, tested by tests/watchdog_test.py):
               here; the issue text says to check the poll logs first).
 Needs GITHUB_TOKEN (issues: write, actions: read) and GITHUB_REPOSITORY. Run with --dry to print without touching issues.
 """
-import json, os, pathlib, sys, urllib.request
+import json, os, pathlib, sys, urllib.error, urllib.request
 from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -80,6 +80,28 @@ def source_problems(now, files):
                              f"that poll workflow first; if its fetch log is clean, the upstream site itself went quiet."))
     return out
 
+ENDPOINTS = [("site", "https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/", None),
+             ("server", "https://ms-classic-tracker.maplestoryclassic.workers.dev/api/summary", "runs")]
+
+def endpoint_problems(results):
+    """[(key, text)]; results = {name: (http status or None, parsed json or None)} for ENDPOINTS (blind-spot report B1, 2026-10-31).
+    A dead Worker makes every tracker's sharing fail silently, so it gets its own check."""
+    out = []
+    for name, url, field in ENDPOINTS:
+        st, j = results.get(name, (None, None))
+        if st != 200: out.append(("up:" + name, f"{name} did not answer 200 ({st}): {url}"))
+        elif field and not (isinstance(j, dict) and isinstance(j.get(field), (int, float))): out.append(("up:" + name, f"{name} answered 200 but the body has no numeric '{field}': {url}"))
+    return out
+
+def probe(url):
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "ms-classic-watchdog"}), timeout=20) as r:
+            raw = r.read()
+            try: return r.status, json.loads(raw)
+            except ValueError: return r.status, None
+    except urllib.error.HTTPError as e: return e.code, None
+    except Exception: return None, None
+
 def body(now, probs, clean=0):
     lines = [f"Checked {now:%Y-%m-%d %H:%M} UTC by `scripts/watchdog.py`.", ""]
     lines += [f"- **{k}**: {v}" for k, v in probs] if probs else ["All checks pass."]
@@ -117,7 +139,7 @@ def main():
         try: files[f] = json.loads(p.read_text())
         except Exception: files[f] = None
     runs = api("GET", f"/repos/{repo}/actions/workflows/mesowatch-poll.yml/runs?status=success&per_page=1")["workflow_runs"]
-    probs = problems(now, runs[0]["updated_at"] if runs else None, pw) + source_problems(now, files)
+    probs = problems(now, runs[0]["updated_at"] if runs else None, pw) + source_problems(now, files) + endpoint_problems({n: probe(u) for n, u, _ in ENDPOINTS})
     issue = next((i for i in api("GET", f"/repos/{repo}/issues?state=open&per_page=50") if i["title"] in [TITLE] + OLD_TITLES and "pull_request" not in i), None)
     act, text = plan(issue, probs, now)
     print(act, *(f"{k}: {v}" for k, v in probs), sep="\n  ")

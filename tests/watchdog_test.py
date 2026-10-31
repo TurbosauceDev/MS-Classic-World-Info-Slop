@@ -22,6 +22,11 @@ check(keys(p) == ["listings"] and "stopped publishing" in p[0][1], f"stale listi
 p = w.problems(NOW, "2026-10-21T17:41:36Z", {**GOOD, "listed": ""})
 check("check scripts/fetch_mesowatch.py" in p[0][1], "fresh listing file but nothing kept = our side")
 
+okr = {"site": (200, None), "server": (200, {"runs": 12})}
+check(w.endpoint_problems(okr) == [], "endpoints up: no problems")
+check(keys(w.endpoint_problems({**okr, "server": (500, None)})) == ["up:server"] and keys(w.endpoint_problems({**okr, "site": (None, None)})) == ["up:site"], "endpoint down")
+check(keys(w.endpoint_problems({**okr, "server": (200, {"error": "x"})})) == ["up:server"], "server 200 but body wrong")
+
 bad = w.problems(NOW, None, GOOD)
 check(w.plan(None, [], NOW)[0] == "none" and w.plan(None, bad, NOW)[0] == "create", "no issue: nothing when clean, create on a problem")
 iss = {"body": w.body(NOW, bad)}

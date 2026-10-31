@@ -13,7 +13,7 @@ dist/index.html stays the one self-contained file (claude.ai artifact, file://).
     (56-snipe.js), so a deploy from the meso.watch poll reaches an open tab without a reload.
 Prints first-load sizes (raw and gzip) before/after.
 """
-import gzip, hashlib, json, pathlib, re, shutil, sys
+import os, gzip, hashlib, json, pathlib, re, shutil, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LAZY = ("iicons", "mmaps")
 PRICES = ("pw", "cm", "cmp", "mdb", "ma", "mw", "mi", "crank", "shared", "ishop")
@@ -59,7 +59,13 @@ def split(html):
     head = ('<link rel="manifest" href="manifest.webmanifest">\n<meta name="theme-color" content="#7d58d6">\n'
             '<link rel="icon" href="icon-32.png" sizes="32x32">\n<link rel="icon" href="icon-192.png" sizes="192x192">\n<link rel="apple-touch-icon" href="icon-maskable.png">\n'
             '<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n'
-            '<meta name="apple-mobile-web-app-title" content="MS Classic">\n')
+            '<meta name="apple-mobile-web-app-title" content="MS Classic">\n'
+            # link previews in Discord etc. (blind-spot report B6, 2026-10-31): one site-wide card, hash pages share it
+            '<meta property="og:type" content="website">\n<meta property="og:site_name" content="MS Classic World Data Slop">\n'
+            '<meta property="og:title" content="MS Classic World Data Slop">\n'
+            '<meta property="og:description" content="Planner, prices and grind tracker for MapleStory Classic World, built from the game files.">\n'
+            '<meta property="og:image" content="https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/icon-512.png">\n'
+            '<meta name="twitter:card" content="summary">\n<meta name="description" content="Planner, prices and grind tracker for MapleStory Classic World, built from the game files.">\n')
     assert "<title>" in out
     out = out.replace("<title>", head + "<title>", 1)
     return out, name, blob, pname, pblob, market
@@ -73,6 +79,9 @@ def main(dst):
     (dst / "market.json").write_text(market)
     for f in ("manifest.webmanifest", "sw.js", "icon-32.png", "icon-192.png", "icon-512.png", "icon-maskable.png"): shutil.copy(ROOT / "src" / "pwa" / f, dst / f)
     kb = lambda s: f"{len(s.encode()) / 1024:.0f} KB ({len(gzip.compress(s.encode())) / 1024:.0f} KB gzip)"
+    # page-weight limit (blind-spot report C1): fails the deploy if the first load grows past it. Now 1251 KB gzip; raise it on purpose.
+    limit = int(os.environ.get("FIRST_LOAD_GZIP_KB", "1600")); got = len(gzip.compress(out.encode())) // 1024
+    assert got <= limit, f"first load is {got} KB gzip, over the {limit} KB limit (scripts/pages_site.py)"
     print(f"first load: {kb(html)} -> {kb(out)}; {name} {kb(blob)} + {pname} {kb(pblob)} fetched after start")
 
 if __name__ == "__main__":

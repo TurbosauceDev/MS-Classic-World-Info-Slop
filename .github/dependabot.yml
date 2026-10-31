@@ -1,0 +1,7 @@
+# Security/version alerts for the three npm projects and the workflow actions (blind-spot report A4, 2026-10-31).
+# Monthly and capped so it can't flood the repo; merge nothing without CI green.
+version: 2
+updates:
+  - { package-ecosystem: npm, directory: /server, schedule: { interval: monthly }, open-pull-requests-limit: 2 }
+  - { package-ecosystem: npm, directory: /tracker, schedule: { interval: monthly }, open-pull-requests-limit: 2 }
+  - { package-ecosystem: github-actions, directory: /, schedule: { interval: monthly }, open-pull-requests-limit: 2 }

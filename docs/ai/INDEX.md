@@ -15,6 +15,7 @@ onboarding; this INDEX is the topic → file map for working. Keep both honest w
 | A decision Danny or an agent made | `docs/ai/decisions.md` (grep it before proposing anything) |
 | Where every open thread / request lives | `docs/ai/agent-mailbox.md` § Open (claim with a lease line) |
 | Site: pages, cards, internals, history | `docs/ai/site.md`, `docs/ai/site-history.md`, `docs/ai/design.md` (visual law), `tests/features.js` + `tests/pages.js` (executable spec) |
+| Roll back a bad push, restore the database | `docs/ai/runbook-recovery.md` |
 | Tracker: modules, readers, releases | `docs/ai/tracker.md`, `tracker/app/changelog.js`, `tracker/tests/core.test.js` |
 | Digest: shape, routing, runbook | `docs/ai/digest-contract.md`, `docs/ai/discord-digest-runbook.md`, `config/digest.json` |
 | Data: sources, pollers, cadence, watchdog | `docs/ai/state-of-the-pipeline.md`, `data/sources/` read stamps, `tests/data_quality_test.py`, `scripts/price_blacklist.py` |
