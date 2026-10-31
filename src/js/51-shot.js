@@ -43,6 +43,10 @@ function shotNative(img){
   }
   const {k, ox, oy} = best;
   if (k === 1) return shotFuzzy(img) || Object.assign({k}, img);
+  // a non-whole scale drawn without smoothing (1.875x, 2.5x) is mostly doubled pixels, so it can win the vote above: the
+  // stat window's label pitch (18 game px) says otherwise
+  const pitch = shotPitch(img);
+  if (pitch && Math.abs(pitch / 18 - k) > 0.04) return shotFuzzy(img) || Object.assign({k: 1}, img);
   const W = Math.floor((w - ox) / k), H = Math.floor((h - oy) / k), out = new Uint8ClampedArray(W * H * 4);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++){
     const i = ((oy + y * k) * w + ox + x * k) * 4, o = (y * W + x) * 4;
@@ -73,32 +77,38 @@ function shotResample(img, s, ox, oy, X0 = 0, Y0 = 0, X1 = Infinity, Y1 = Infini
   }
   return {w: W, h: H, d: out};
 }
+const SHOT_PINK = [203, 79, 130], SHOT_GREEN = [184, 199, 77];
+const shotStatLabels = img => shotLabels(img, SHOT_PINK).concat(shotLabels(img, SHOT_GREEN)).sort((a, b) => a.y0 - b.y0);
+// screen px between stat window rows (18 game px apart), or 0 with no stat window in view
+function shotPitch(img, labs = shotStatLabels(img)){
+  if (labs.length < 4) return 0;
+  const gaps = labs.slice(1).map((b, i) => b.y0 - labs[i].y0).sort((a, b) => a - b);
+  return gaps[Math.floor(gaps.length / 3)];   // most gaps are one row; JOB (2 rows) and the gap before STR are longer
+}
 function shotFuzzy(img, hint = SHOT_LAST_SCALE){
-  const PINK = [203, 79, 130], GREEN = [184, 199, 77];
-  const labs = shotLabels(img, PINK).concat(shotLabels(img, GREEN)).sort((a, b) => a.y0 - b.y0);
-  let s0 = 0;
-  if (labs.length >= 4){
-    const gaps = labs.slice(1).map((b, i) => b.y0 - labs[i].y0).sort((a, b) => a - b), pitch = gaps[Math.floor(gaps.length / 3)];
-    s0 = pitch / 18;   // most gaps are one row; JOB (2 rows) and the gap before STR are longer
-  }
+  const PINK = SHOT_PINK, GREEN = SHOT_GREEN, labs = shotStatLabels(img);
+  let s0 = shotPitch(img, labs) / 18;
   if (labs.length >= 4 && !(s0 > 1.1 && s0 < 4.5)) return null;   // 100% game size: pixel-exact already
   if (!s0) s0 = hint;
   if (!s0) return null;
   let best = {n: -1, s: s0, ox: 0, oy: 0};
   if (labs.length >= 4){
     // read the label values over a grid of scales and offsets, on just the labels' part of the screenshot
-    const X0 = Math.min(...labs.map(b => b.x0)) - 4, X1 = Math.max(...labs.map(b => b.x1)) + 140 * s0, Y0 = labs[0].y0 - 6, Y1 = labs[labs.length - 1].y1 + 6;
+    const X0 = Math.min(...labs.map(b => b.x0)) - 4, X1 = Math.max(...labs.map(b => b.x1)) + 140 * s0, Y0 = labs[0].y0 - 40 * s0, Y1 = labs[labs.length - 1].y1 + 90 * s0;   // labels the raw pass missed (all of STR..LUK in a smoothed 3x) are still in
     const score = (s, ox, oy) => {
       const im = shotResample(img, s, ox, oy, Math.floor(X0 / s), Math.floor(Y0 / s), Math.ceil(X1 / s), Math.ceil(Y1 / s));
       let n = 0;
-      for (const rgb of [PINK, GREEN]) for (const b of shotLabels(im, rgb)){   // a label with a number on it: +3, +1 a digit, -1 a "?"
-        const t = shotText(im, b.x1 + 2, b.y0 - 2, b.x1 + 130, b.y1 + 3, SHOT_INK_FUZZY)[0]?.s || "", dg = t.replace(/\D/g, "").length;
-        if (dg) n += 3 + dg - t.replace(/[^?]/g, "").length;
+      // a label whose number reads cleanly: +10 (so short ones like LEVEL count as much as long ones); half-read: +1 a digit,
+      // -1 a "?". Starts 3 px past the label: its smoothed edge would read as a "?" at 2
+      for (const rgb of [PINK, GREEN]) for (const b of shotLabels(im, rgb)){
+        const t = shotText(im, b.x1 + 3, b.y0 - 2, b.x1 + 130, b.y1 + 3, SHOT_INK_FUZZY)[0]?.s || "", dg = t.replace(/\D/g, "").length, q = t.replace(/[^?]/g, "").length;
+        if (dg) n += q ? dg - q : 10;
       }
       return n;
     };
-    const P = 4;
-    for (let s = s0 * 0.97; s <= s0 * 1.03; s += 0.005) for (let i = 0; i < P; i++) for (let j = 0; j < P; j++){
+    const P = 6;
+    const N = Math.ceil(s0 * 0.03 / 0.005);   // ±3% around the label estimate, through s0 itself (a smoothed whole 3x)
+    for (let t = -N; t <= N; t++) for (let i = 0, s = s0 + t * 0.005; i < P; i++) for (let j = 0; j < P; j++){
       const n = score(s, i * s / P, j * s / P); if (n > best.n) best = {n, s, ox: i * s / P, oy: j * s / P};
     }
     if (best.n < 8) return null;
@@ -255,7 +265,7 @@ function shotText(img, x0, y0, x1, y1, isInk = (r, g, b) => r + g + b < 150){
       let t = e, b = y; for (let yy = y; yy < e; yy++) for (let xx = gs; xx < x; xx++) if (ink(xx, yy)){ t = Math.min(t, yy); b = Math.max(b, yy) }
       const gw = x - gs, gh = b - t + 1; let bits = "";
       for (let yy = t; yy <= b; yy++) for (let xx = gs; xx < x; xx++) bits += ink(xx, yy) ? "1" : "0";
-      let ch = "?", bd = 3;
+      let ch = "?", bd = isInk === SHOT_INK_FUZZY ? 6 : 3;   // smoothed shots: a few more pixels off
       for (const g of SHOT_GLYPHS){ if (g.w !== gw || g.h !== gh) continue; let dd = 0; for (let i = 0; i < bits.length; i++) if (bits[i] !== g.bits[i]) dd++; if (dd < bd){ bd = dd; ch = g.ch } }
       if (last >= 0 && gs - last > 12) break;   // a far-off mark (a button) isn't part of this value
       if (last >= 0 && gs - last > 5) s += " ";   // digits sit 2-4 pixels apart ("1" is narrow)

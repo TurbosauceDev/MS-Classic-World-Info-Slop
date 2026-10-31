@@ -21,10 +21,12 @@ async function readShot(f){
   const img = shotNative(await shotLoad(f)), ink = img.fuzzy ? SHOT_INK_FUZZY : undefined, find = img.fuzzy ? shotFindIconsFuzzy : shotFindIcons;
   // stat window: pink labels NAME, JOB (two lines tall), LEVEL...; green labels STR, DEX, INT, LUK
   const pink = shotLabels(img, PINK), green = shotLabels(img, GREEN);
-  const val = b => num(shotText(img, b.x1 + 2, b.y0 - 2, b.x1 + 130, b.y1 + 3, ink)[0]?.s);
+  const val = b => num(shotText(img, b.x1 + (img.fuzzy ? 3 : 2), b.y0 - 2, b.x1 + 130, b.y1 + 3, ink)[0]?.s);
   if (pink.length >= 3){
     const tall = pink.slice(0, 3).reduce((a, b, i, l) => b.y1 - b.y0 > l[a].y1 - l[a].y0 ? i : a, 0);
-    const lb = pink[Math.min(tall + 1, pink.length - 1)], lv = val(lb);
+    // LEVEL sits 96 game px above STR (Danny's stat window); the label after the two-line JOB one when STR isn't in view.
+    // Smoothed shots can lose NAME/JOB, so STR wins (Turbow at 1.5x read HP as the level, 10-31)
+    const lb = (green.length && pink.find(b => Math.abs(green[0].y0 - 96 - b.y0) <= 3)) || pink[Math.min(tall + 1, pink.length - 1)], lv = val(lb);
     if (lv >= 1 && lv <= 200){ r.lvl = lv; mark(lb.x0, lb.y0, lb.x1 - lb.x0 + 78, lb.y1 - lb.y0 + 1, `Level ${lv}`, "stat") }
   }
   if (green.length >= 4){

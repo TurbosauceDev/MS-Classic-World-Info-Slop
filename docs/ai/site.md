@@ -28,6 +28,7 @@ node tests/edge.js | tail -5                # bad saved state/share links/server
 node tests/features.js | tail -5            # train hand-off reload, price check keep/sell, job compare, Credits dates
 node tests/pages.js | tail -5               # Pages split (late icons), manifest, offline service worker
 node tests/expclive.js | tail -3            # EXP/hr live reader on tracker/tests/frames, Stop saves a session, screenshot pair
+node tests/shotscales.js | tail -3         # builder screenshot import at 1x-3x, smoothed + blocky, redrawn from bow-turbow.png (~90 s)
 node tests/polish.js | tail -3              # list Reset + Copy link, Home masonry, changelog times, World Map idle card, item page
 node tests/snipe.js | tail -5               # FM Sniper on a fixture market.json: deal maths, views, filters, watch, new, live refresh, tools
 python3 tests/deal_life_test.py             # FM Sniper deal lifetimes from a fake snapshot git history
@@ -395,4 +396,5 @@ top-level in the Pages copy - `const D` is wrapper-scoped (window.D is the test 
 - `server/tests/server.test.js`: junk-body block, `/api/runs` and `/api/kpq` answer 400 and store nothing. Run `npm run data` once in `server/` first (gamedata.json is generated).
 - 10-31 builder import, non-integer scales: a tester's 1.875x shot (tests/fixtures/bow-scaled.png) read "Nothing recognized" because shotNative only knows pixel-exact 1-4x. `shotFuzzy` (51-shot.js) now runs when the doubling vote finds nothing: scale = stat-label pitch / 18, then a scale/offset grid search scored by digits read, then bilinear resample (`img.fuzzy`, digits with `SHOT_INK_FUZZY`). Icons: `shotFindIconsFuzzy` = anchor + coarse correlation on the resampled image, then the icon scaled up and correlated on the original at ±1 px shifts (true ≥0.97, false ≤0.75).
 - Traps: needs the stat window in the shot (or an earlier one this session, `SHOT_LAST_SCALE`); thin weapon icons (bows) are missed, so the note says to check weapon/skills; ~7 s for a 1068x593 shot, a fuzzy full screen will be slower. Smoke asserts AP 36/206/4/4 + 7 pieces.
+- 10-31 scale sweep (tests/shotscales.js, Danny's Turbow 2x): blocky non-whole scales (1.875x, 2.5x) won the doubling vote as k=2, so shotNative now checks k against the stat-label pitch (`shotPitch`); the search crop reaches past the labels (a smoothed 3x lost all green ones in the raw pass); LEVEL = the pink label 96 game px above STR; fuzzy text starts 3 px past a label (its smoothed edge read as "?") and allows 6 bad pixels per glyph; score = +10 per cleanly read label.
 

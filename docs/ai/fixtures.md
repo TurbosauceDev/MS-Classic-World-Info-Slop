@@ -22,6 +22,7 @@ that's gone.
 | bow-equip2.png | 355x587 | Archer equipment, uploaded first | "Add: Stats" prompt |
 | bow-stat2.png | 745x573 | Archer stats, uploaded after equip2 | weapon Battle Bow, no "over budget" note |
 | bow-full.png | 2557x1439 | Danny's whole screen, Lv 30 Hunter, Skill (1st job tab) + Equipment + Character Stat open | one paste: Lv 30 Hunter, Battle Bow, 6 armor, AP 29/133/4/4, 5 skills, asks for 1 Hunter SP; 17 boxes in big view (smoke.js) |
+| bow-turbow.png | 1118x590 | Danny's Lv 41 Hunter Turbow, pixel-exact 2x, Equipment + Character Stat + detail | Level 41 Hunter, AP 39/177/4/4, 7 armor + Vaulter 2000; shotscales.js redraws it at 1x-3x |
 | bow-scaled.png | 1068x593 | tester Scars, Lv 46 Hunter at 1.875x (smoothed, not pixel-exact): Equipment + Character Stat + detail panel | Level 46 Hunter, AP 36/206/4/4, 7 armor (bow not read); note says 1.8x game size (smoke.js) |
 | bank-0.png, bank-1.png, bank-2.png, bank-3.png, bank-4.png | ~425x730 | bank window scrolled 0-4 rows | together: Green Mushroom Cap 387, Arrows for Bows 1,970, Set of Match Cards 3, bank 5,825 mesos |
 | bank-inv.png | 846x735 | bank with inventory open beside it | inventory side ignored (no "Equip:" read) |

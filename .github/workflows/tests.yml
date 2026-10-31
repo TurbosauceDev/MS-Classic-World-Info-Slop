@@ -44,6 +44,8 @@ jobs:
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/expclive.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node tests/shotscales.js
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/questvalue.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/polish.js
