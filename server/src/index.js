@@ -370,12 +370,18 @@ async function postShop(req, env){
 async function shopSummary(db){
   await db.prepare("DELETE FROM shop_obs WHERE received < ?").bind(new Date(Date.now() - SHOP_KEEP_DAYS * 864e5).toISOString()).run();
   const {results} = await db.prepare("SELECT item, install, qty, price, sold FROM shop_obs WHERE received > ? ORDER BY id DESC LIMIT 60000").bind(new Date(Date.now() - 7 * 864e5).toISOString()).all();
+  // one vote per install: each install's own median first, then the median of those. A single install posting 240 rows an
+  // hour at 1 meso can't drag the price just because it has the most rows (2026-10-31 blind-spot report B2).
   const by = {};
-  for (const r of results){ const o = by[r.item] || (by[r.item] = {installs: new Set(), ask: [], sold: []}); o.installs.add(r.install); (r.sold ? o.sold : o.ask).push(r.price / r.qty) }
+  for (const r of results){
+    const o = by[r.item] || (by[r.item] = {installs: new Set(), ask: {}, sold: {}}), side = r.sold ? o.sold : o.ask;
+    o.installs.add(r.install); (side[r.install] || (side[r.install] = [])).push(r.price / r.qty);
+  }
+  const vote = side => { const v = Object.values(side); return v.length ? [Math.round(median(v.map(median))), v.reduce((n, x) => n + x.length, 0)] : null };
   const items = {};
   for (const [id, o] of Object.entries(by)){
     if (o.installs.size < SHOP_MIN_INSTALLS) continue;
-    items[id] = {installs: o.installs.size, ask: o.ask.length ? [Math.round(median(o.ask)), o.ask.length] : null, sold: o.sold.length ? [Math.round(median(o.sold)), o.sold.length] : null};
+    items[id] = {installs: o.installs.size, ask: vote(o.ask), sold: vote(o.sold)};
   }
   return {updated: new Date().toISOString(), days: 7, minInstalls: SHOP_MIN_INSTALLS, fields: "ask/sold: [median price each, rows]", items};
 }

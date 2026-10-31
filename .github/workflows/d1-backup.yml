@@ -1,0 +1,47 @@
+# Nightly encrypted copy of the shared-runs database (blind-spot report A1, 2026-10-31). The archive tables and the
+# kpq_bak_* tables live INSIDE the same D1 database, so they don't survive losing it; this copy does.
+# The repo is public and workflow artifacts of a public repo can be downloaded by any signed-in GitHub user, and the export
+# holds install IDs, so the file is encrypted before upload. Needs repo secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+# (already used by server.yml) and BACKUP_PASSPHRASE (any long random string; keep a copy in a password manager).
+# Without BACKUP_PASSPHRASE it warns and does nothing. Restore: docs/ai/runbook-recovery.md.
+name: d1-backup
+on:
+  schedule: [{cron: "37 9 * * *"}]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Check secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::warning::d1-backup skipped: CLOUDFLARE_API_TOKEN and BACKUP_PASSPHRASE repo secrets are both needed"; echo skip=1 >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@v4
+        if: env.skip != '1'
+      - uses: actions/setup-node@v4
+        if: env.skip != '1'
+        with: { node-version: 22 }
+      - name: Export and encrypt
+        if: env.skip != '1'
+        working-directory: server
+        run: |
+          npm install --silent
+          npx wrangler d1 export ms-classic-runs --remote --output ../backup.sql
+          test -s ../backup.sql && grep -q "CREATE TABLE" ../backup.sql   # an empty or error file must fail the run
+          gzip -9 ../backup.sql
+          openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:BACKUP_PASSPHRASE -in ../backup.sql.gz -out ../ms-classic-runs.sql.gz.enc
+          ls -l ../ms-classic-runs.sql.gz.enc
+      - uses: actions/upload-artifact@v4
+        if: env.skip != '1'
+        with:
+          name: ms-classic-runs-${{ github.run_id }}
+          path: ms-classic-runs.sql.gz.enc
+          retention-days: 30
