@@ -1,4 +1,11 @@
 
+## 2026-10-31 - "latest 0.3.22" explained; v0.3.25 released; release-body gap root-caused (Glorg [z.ai], Task: Turbozo's tracker-notes screenshot)
+- Stale view explained by deploy history: 0.3.23's dist deployed 01:18Z, the 0.3.24/0.3.25 deploys failed in the ubuntu-26.04 CI window (fixed 7b237df 02:33Z), and sw.js serves a cached shell to returning tabs — his screenshot predates even the 01:18Z deploy. Live site verified at 0.3.25 notes + 0.19.11 after the ef9262a deploy.
+- Released v0.3.25 (tag at 16f7acb + workflow_dispatch release=true, the v0.3.23 pattern): update chain ends at 0.3.25; installed apps pick it up on restart.
+- Bug 1 (mine, found via the 03:14Z CI failure): releaseInfo.releaseNotesFile pointed at a gitignored generated file only the release script created → every clean `npm run dist` aborted; dist now generates first (16f7acb).
+- Bug 2 (the real reason all 129 releases were bare): electron-publish 25.1.8's createRelease() sends no body field — releaseInfo alone can never set it. Fixed with scripts/publish-release-notes.js + a tracker.yml step after the release (f98f9b8); v0.3.25's body patched live (1178 chars, API-verified).
+- Lesson: "wired" isn't "ships" — the first release through the new flow still went out bare; verified against the publisher's actual behavior, then fixed at the right layer.
+
 ## 2026-10-31 - site changelog catch-up: two site changes shipped without cards after 0.19.9 (Glorg [z.ai], Task: Turbozo "the last changelog update is from 9am")
 - Follow-up sweep of every commit touching src/ after the 0.19.9 build (5854ac9) found the site HAD been worked on: KPQ leaderboard reset + tracker-rounds-only (8c65f65 + 7dd3ec0 + b1acab1, site timer no longer posts, server refuses site rounds) and classicrank parked with its site pieces hidden (6031f1e) — neither had a changelog card, so /log looked frozen at the 9:32am card. My earlier "site log was current" audit was wrong on this axis (only checked the newest commits against PR #26).
 - Fix: two cards on the log page (KPQ tracker-only 0.19.10, classicrank parked 0.19.11); build.py stamped + walked the version; data side was never frozen (25 price-refresh commits since the card). docs.test caught the briefing naming a gitignored generated file — reworded. Local: build.py, docs, golden, smoke all green; commit 3f51a9a.
