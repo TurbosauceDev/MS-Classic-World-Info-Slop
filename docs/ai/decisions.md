@@ -229,8 +229,8 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 
 Each entry blocks something. When Danny calls it, transcribe above with the date and note the resolution here.
 
-- **classicrank.com partner key from Kitten** — now blocks the "Who plays what" job census, not just ingestion: the site moved its job/min_level filters behind a key (site change, docs read 2026-10-28), so the daily census refreshes chars/top/scan only (`key_required: true` in `data/sources/classicrank.json`) until a read key lands in the sandbox secrets path as BCR_KEY. Same secrets path as the others.
-- **Cron pile-up** — cut meso.watch to 2 polls/hour vs add push-retry to the poll script (Z.ai leans retry).
+- ~~**classicrank.com partner key from Kitten**~~ — RESOLVED 2026-10-31: classicrank is offline and Danny parked the integration (Load by IGN, @char, census card, profile links, census cron; `6031f1e`) and said to forget the BCR_KEY read key. The ask dies with the park; restore it only if classicrank returns.
+- ~~**Cron pile-up**~~ — RESOLVED 2026-10-31: Danny asked for push-retry in the meso.watch poll script and it shipped (rebuild on the new main, 3 tries), so the poll cadence stays as is; the 2 polls/hour cut is off the table.
 - **web-PAT revoke** — confirm the web instance's old PAT is revoked (hygiene; fine-grained replacement already in use).
 - ~~**Draft batch**~~ — RESOLVED by reality 2026-10-28: the web instance's sandbox was wiped, `download/ms-classic-enhancements/` no longer exists anywhere; the archive option won by forfeit. The one surviving idea (a Danny-facing integrity dashboard) is covered on-site by the MCI panel + Source-health card.
 
