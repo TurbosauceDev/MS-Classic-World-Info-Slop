@@ -27,6 +27,8 @@ jobs:
       - run: python3 scripts/build.py | tail -2
       - name: Copy-detection canary
         run: python3 tests/canary_test.py
+      - name: static pages and sitemap
+        run: python3 tests/pages_gen_test.py
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/smoke.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
