@@ -14,7 +14,7 @@
 //   5. out/summary.json: frames read, EXP bar hit rate, events per type: a per-video CV score to compare across versions.
 //
 // Options: --out <dir> (default <video name>-frames next to the video)  --fps 2  --every 30  --max 150
-//          --markers <csv>  --pad 2  --from <s>  --to <s>  --crop x,y,w,h (only if the video isn't the whole game window)
+//          --markers <csv> (default: <video>.csv if it exists; 'none' reads the whole video)  --pad 2  --from <s>  --to <s>  --crop x,y,w,h (only if the video isn't the whole game window)
 // Needs ffmpeg + ffprobe on PATH (Windows: `winget install Gyan.FFmpeg`), or FFMPEG / FFPROBE env vars.
 const fs = require("fs"), path = require("path"), zlib = require("zlib"), {spawn, execFileSync} = require("child_process");
 const R = require("../app/readers.js"), G = require("../app/gamedata.json");
@@ -28,6 +28,10 @@ function args(argv){
     else o.video = a;
   }
   if (!o.video) throw new Error("usage: node scripts/video2fixtures.js <video> [--out dir] [--fps 2] [--markers markers.csv]");
+  // the Premiere panel (tracker/premiere) writes <video>.csv next to the recording: use it unless told otherwise
+  const side = o.video.replace(/\.[^.\\/]+$/, "") + ".csv";
+  if (!o.markers && o.markers !== "none" && fs.existsSync(side)) o.markers = side;
+  if (o.markers === "none") o.markers = null;
   o.out = o.out || path.join(path.dirname(o.video), path.basename(o.video, path.extname(o.video)) + "-frames");
   return o;
 }
@@ -138,7 +142,7 @@ async function run(o){
   return sum;
 }
 
-module.exports = {run, readMarkers, tc, writePng};
+module.exports = {run, args, readMarkers, tc, writePng};
 if (require.main === module) run(args(process.argv.slice(2))).then(s => {
   console.log(`${s.frames} frames read (${s.size}, UI x${s.scale}), EXP bar read on ${(s.barHitRate * 100).toFixed(1)}%, ${s.saved} saved`);
   console.log("events:", JSON.stringify(s.events));

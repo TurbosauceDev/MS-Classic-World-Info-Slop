@@ -1,0 +1,80 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>MS Classic Markers</title>
+<style>
+:root{--bg:#1f1931;--panel:#2a2243;--ink:#f0eafd;--muted:#b6aad8;--line:#453a64;--accent:#d2bffb;--soft:#41346a;--bad:#ef4d4d;--leaf:#55b76b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 "Segoe UI",system-ui,sans-serif;padding:10px;display:grid;gap:10px}
+h1{font-size:13px;margin:0;color:var(--accent);letter-spacing:.04em;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}
+button{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:7px 8px;font:inherit;text-align:left;cursor:pointer;display:flex;gap:6px;align-items:center}
+button:hover,button:focus-visible{border-color:var(--accent);outline:none}
+button kbd{font:600 11px/1 Consolas,monospace;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:2px 4px;min-width:18px;text-align:center}
+button i{width:9px;height:9px;border-radius:2px;flex:none}
+button small{color:var(--muted);margin-left:auto;font-size:11px}
+button.open{background:var(--soft);border-color:var(--accent)}
+input{width:100%;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:7px 8px;font:inherit}
+input:focus{border-color:var(--accent);outline:none}
+.row{display:flex;gap:6px}.row button{flex:1;justify-content:center}
+#export{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600}
+#status{min-height:2.8em;color:var(--muted);overflow-wrap:anywhere}
+#status.err{color:var(--bad)}#status.ok{color:var(--leaf)}
+ol{margin:0;padding-left:18px;color:var(--muted);font-size:12px}
+.hint{color:var(--muted);font-size:11.5px}
+</style></head>
+<body>
+<h1>MS Classic Markers</h1>
+<div class="grid" id="types"></div>
+<input id="note" placeholder="Note for the next marker (optional)">
+<div class="row"><button id="undo">Undo last <kbd>Z</kbd></button><button id="export">Export CSV <kbd>E</kbd></button></div>
+<div id="status">Click in this panel, then use the keys. Markers go at the playhead.</div>
+<ol id="log"></ol>
+<p class="hint">Range types (↔) take two presses: start, then end. Export writes one CSV per recording, next to it, in the recording's own time, so trims and multi-clip timelines are fine.</p>
+<script>
+// [name, key, seconds before playhead, seconds after, color (Premiere's marker colors), range?]
+const TYPES = [
+  ["misread", "1", 5, 5, "#e5484d"], ["loot", "2", 3, 5, "#e8c547"], ["levelup", "3", 3, 3, "#55b76b"],
+  ["death", "4", 6, 2, "#a67de8"], ["potion", "5", 2, 2, "#5cc8d6"], ["map-change", "6", 2, 4, "#d8d8d8"],
+  ["party", "7", 2, 2, "#d8d8d8"], ["chat", "8", 2, 2, "#d8d8d8"],
+  ["proc", "9", 0, 0, "#4f8de8", true], ["kpq-stage", "0", 0, 0, "#e8913a", true], ["measure", "M", 0, 0, "#d8d8d8", true]];
+const $ = id => document.getElementById(id), cep = window.__adobe_cep__;
+let openRange = null;
+function call(fn, args){
+  const src = fn + "(" + args.map(a => JSON.stringify(a)).join(",") + ")";
+  return new Promise(ok => cep ? cep.evalScript(src, ok) : ok("ERR:Not running inside Premiere."));
+}
+function show(r){
+  const s = $("status"), err = /^ERR:|EvalScript error/.test(r);
+  s.textContent = String(r).replace(/^(OK|ERR|RANGE):/, ""); s.className = err ? "err" : "ok";
+  if (/^OK:/.test(r) && !/Exported|removed|cancelled/.test(r)){ const li = document.createElement("li"); li.textContent = s.textContent; $("log").prepend(li); while ($("log").children.length > 6) $("log").lastChild.remove() }
+  return r;
+}
+async function press(t){
+  const [name, , pre, post, , range] = t, note = $("note").value.trim();
+  if (range){
+    if (openRange && openRange !== name){ await call("msctRangeCancel", []); markOpen(null) }
+    const r = show(await call("msctRange", [name, note]));
+    if (/^RANGE:/.test(r)){ markOpen(name); $("status").textContent = name + " started at " + r.slice(6) + ". Press again at the end." }
+    else { markOpen(null); $("note").value = "" }
+    return;
+  }
+  if (/^OK:/.test(show(await call("msctAdd", [name, pre, post, note])))) $("note").value = "";
+}
+function markOpen(name){ openRange = name; document.querySelectorAll("#types button").forEach(b => b.classList.toggle("open", b.dataset.name === name)) }
+for (const t of TYPES){
+  const b = document.createElement("button"); b.dataset.name = t[0];
+  b.innerHTML = `<kbd>${t[1]}</kbd><i style="background:${t[4]}"></i>${t[0]}<small>${t[5] ? "↔" : "-" + t[2] + "/+" + t[3] + "s"}</small>`;
+  b.onclick = () => press(t); $("types").append(b);
+}
+$("undo").onclick = async () => show(await call("msctUndo", []));
+$("export").onclick = async () => show(await call("msctExport", []));
+document.addEventListener("keydown", e => {
+  if (e.target === $("note")){ if (e.key === "Escape") $("note").blur(); return }
+  const k = e.key.toUpperCase(), t = TYPES.find(x => x[1] === k);
+  if (t){ e.preventDefault(); press(t) }
+  else if (k === "Z"){ e.preventDefault(); $("undo").click() }
+  else if (k === "E"){ e.preventDefault(); $("export").click() }
+  else if (k === "N"){ e.preventDefault(); $("note").focus() }
+  else if (k === "ESCAPE" && openRange){ call("msctRangeCancel", []).then(show); markOpen(null) }
+});
+</script>
+</body></html>

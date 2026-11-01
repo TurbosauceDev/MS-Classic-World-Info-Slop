@@ -92,10 +92,22 @@ td:first-child{font-weight:600;white-space:nowrap}
   <section class="card">
     <h2>1 · What to record and how to mark it</h2>
     <p>The most important rule: <b>give me the recording as close to raw as you can.</b> Every re-encode blurs the UI a little more, and the readers depend on the UI's pixel grid (you play at 2560x1440 with UI "Ideal Ratio", so every UI pixel is a crisp 2x2 block). So the best workflow is not to export at all. Leave the original file alone, use Premiere only to place markers, and export just the markers list.</p>
-    <h3>Markers (press M in Premiere)</h3>
-    <p>Name each marker with one of these words so the script and I can sort them. Give a marker a duration (drag its right edge) when the moment lasts a while, like a KPQ stage.</p>
+    <h3>The MS Classic Markers panel <span class="pill p-built">built</span></h3>
+    <p>Install once: double-click <code>install.cmd</code> in the panel folder, restart Premiere, then open <span class="mono">Window › Extensions › MS Classic Markers</span>. Click inside the panel and use the keys while you scrub:</p>
+    <div class="tw"><table>
+      <tr><th>Key</th><th>Marker</th><th>Covers</th></tr>
+      <tr><td>1</td><td>misread</td><td>5 s before to 5 s after the playhead</td></tr>
+      <tr><td>2 / 3 / 4</td><td>loot / levelup / death</td><td>-3/+5 s, -3/+3 s, -6/+2 s</td></tr>
+      <tr><td>5 to 8</td><td>potion, map-change, party, chat</td><td>a few seconds around the playhead</td></tr>
+      <tr><td>9 / 0 / M</td><td>proc / kpq-stage / measure</td><td>ranges: press at the start, press again at the end</td></tr>
+      <tr><td>N, Z, E</td><td>note, undo, export</td><td>N types a note for the next marker</td></tr>
+    </table></div>
+    <p><b>Export</b> writes one CSV per recording, next to the recording, in that recording's own time. So you can trim, rearrange and put many recordings on one timeline, and the times still point at the right spot in each original file. The script finds that CSV by itself.</p>
+    <p class="sub">Not tried in a real Premiere yet: your first install is the test. If a button shows an error, send me a screenshot of the panel.</p>
+    <h3>Marker names without the panel</h3>
+    <p>Plain Premiere markers (press M) work too if you name them with these words. Give a marker a duration (drag its right edge) when the moment lasts a while, like a KPQ stage.</p>
     <div class="chips"><code>loot</code><code>levelup</code><code>death</code><code>potion</code><code>proc</code><code>kpq-stage</code><code>map-change</code><code>party</code><code>misread</code><code>skill-arrow-blow</code><code>chat</code></div>
-    <p><code>misread</code> is the most valuable one: any time you noticed the tracker show something wrong while you played, mark it. Then export the list: <span class="mono">File › Export › Markers…</span> as CSV, saved next to the video with the same name (<code>run-05.mp4</code> + <code>run-05.csv</code>). The script reads Premiere's CSV as it comes out, including the In/Out times.</p>
+    <p><code>misread</code> is the most valuable one: any time you noticed the tracker show something wrong while you played, mark it. Without the panel, export the list with <span class="mono">File › Export › Markers…</span> as CSV, saved next to the video with the same name (<code>run-05.mp4</code> + <code>run-05.csv</code>). Those times are sequence times, so this only lines up when the sequence is one untrimmed recording starting at 0. The panel's export doesn't have that limit.</p>
     <h3>Clip lengths</h3>
     <div class="tw"><table>
       <tr><th>Kind</th><th>Length</th><th>What it's for</th></tr>
