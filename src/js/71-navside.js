@@ -35,7 +35,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
     // Henesys / Kerning City townsfolk from the citizenship quests, and the two towns' return scrolls
     cit: [...new Set(D.citq.map(q => q.npc))].filter(n => n && D.npcid[n] && D.npcimg[D.npcid[n]]).map(n => "n:" + D.npcid[n]).concat(["i:2030004", "i:2030005"]),
   };
-  Object.assign(P, { g_trk: [...P.trk, ...kpq], g_train: [...P.maps, ...P.plan, ...P.path, ...kpq],
+  Object.assign(P, { g_trk: [...P.trk, ...kpq], g_char: [...P.plan], g_train: [...P.maps, ...P.path, ...kpq],
     g_world: [...P.wmap, ...P.navi], g_db: [...P.items, ...P.mobs, ...P.quests, ...P.skills], g_town: [...P.snipe, ...P.mci, ...P.movers, ...P.inv, ...P.craft, ...P.keep] });
   const src = k => { const [t, id] = k.split(":"), b = t === "x" ? MESO_ICONS[id] : {i: D.iicons, m: D.mobimg, s: D.icons, n: D.npcimg}[t]?.[id];
     return b ? "data:image/png;base64," + b : null };

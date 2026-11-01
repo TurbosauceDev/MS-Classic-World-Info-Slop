@@ -1246,6 +1246,12 @@ html[data-nav="rows"] nav button.sgh .sgo{display:inline}
 @keyframes skrHit{0%,100%{opacity:1;transform:none}35%{opacity:.45;transform:translateX(3px)}}
 @keyframes skrTpFrom{from{opacity:1}to{opacity:.35}}
 @keyframes skrTpTo{from{opacity:0;transform:translateX(var(--dx))}to{opacity:1;transform:none}}
+/* Character Builder home (78-charhome.js) */
+.chstage{display:flex;align-items:flex-end;justify-content:center;min-height:150px;background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:10px;cursor:pointer}
+.chstage:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chstage img{image-rendering:pixelated;max-height:130px}
+#char .lpdemo .lab{display:flex;flex-direction:column;gap:4px}
+#char .lpdemo input[type=text]{width:100%;box-sizing:border-box}
 
 </style>
 <script>
@@ -1291,6 +1297,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <div class="cats" role="tablist" aria-label="Sections">
     <button role="tab" id="c-home" aria-selected="false" data-cat="home">Home</button>
     <button role="tab" id="c-trk" aria-selected="false" data-cat="trk">Grind Tracker</button>
+    <button role="tab" id="c-char" aria-selected="false" data-cat="char">Character Builder</button>
     <button role="tab" id="c-train" aria-selected="false" data-cat="train">Training</button>
     <button role="tab" id="c-world" aria-selected="false" data-cat="world">Victoria Island</button>
     <button role="tab" id="c-db" aria-selected="false" data-cat="db">Maple Database</button>
@@ -1305,9 +1312,10 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="t-trkruns" aria-selected="false" data-tab="trkruns" data-cat="trk" hidden><img class="nic" data-pool="trkruns" alt="">Shared runs</button>
     <button role="tab" id="t-kpqt" aria-selected="false" data-tab="kpqt" data-cat="trk" hidden><img class="nic" data-pool="kpqt" alt="">KPQ timer</button>
     <button role="tab" id="t-trkkpq" aria-selected="false" data-tab="trkkpq" data-cat="trk" hidden><img class="nic" data-pool="trkkpq" alt="">KPQ leaderboard</button>
+    <button role="tab" class="sgh" id="t-char" aria-selected="false" data-tab="char" data-cat="char" hidden><img class="nic" data-pool="g_char" alt=""><span class="sgt">Character Builder</span><span class="sgo">Overview</span></button>
+    <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="char" hidden><img class="nic" data-pool="plan" alt="">Build calculator</button>
     <button role="tab" class="sgh" id="t-train" aria-selected="false" data-tab="train" data-cat="train" hidden><img class="nic" data-pool="g_train" alt=""><span class="sgt">Training</span><span class="sgo">Overview</span></button>
     <button role="tab" id="t-maps" aria-selected="false" data-tab="maps" data-cat="train" hidden><img class="nic" data-pool="maps" alt="">Where to train</button>
-    <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="train" hidden><img class="nic" data-pool="plan" alt="">Character Builder</button>
     <button role="tab" id="t-path" aria-selected="false" data-tab="path" data-cat="train" hidden><img class="nic" data-pool="path" alt="">Path Planner</button>
     <button role="tab" id="t-qlog" aria-selected="false" data-tab="qlog" data-cat="train" hidden><img class="nic" data-pool="qlog" alt="">Quest log</button>
     <button role="tab" id="t-expc" aria-selected="false" data-tab="expc" data-cat="train" hidden><img class="nic" data-pool="expc" alt="">EXP/hr calculator</button>
@@ -1347,11 +1355,16 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       <button class="hlink" data-go="trkkpq"><img class="hic" data-ic="m:800003" alt=""><b>KPQ leaderboard</b><span>Fastest Kerning PQ clears by tracker parties.</span></button>
       </div>
     </div>
+    <div class="homecat" data-sec="char"><h2><button class="hcat" data-big="char" aria-expanded="false"><img class="hic" data-ic="s:1001001" alt="">Character Builder</button></h2>
+      <div class="hbill"><p>Your character in one place: name and class, screenshots of your stat, equipment and skill windows to build from, a preview you can pose, and the calculator for AP, skills and damage.</p><div class="hbillact"><button class="btn hopen" data-go="char">Open Character Builder →</button></div></div>
+      <div class="hlinks">
+      <button class="hlink" data-go="plan"><img class="hic" data-ic="s:1001001" alt=""><b>Build calculator</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
+      </div>
+    </div>
     <div class="homecat" data-sec="train"><h2><button class="hcat" data-big="train" aria-expanded="false"><img class="hic" data-ic="m:10" alt="">Training</button></h2>
-      <div class="hbill"><p>Where to grind for your build, a Character Builder for AP, skills and damage, a level-by-level plan with quests, how fast you really level, and the Kerning Party Quest stage by stage.</p><div class="hbillact"><button class="btn hopen" data-go="train">Open Training →</button></div></div>
+      <div class="hbill"><p>Where to grind for your build, a level-by-level plan with quests, how fast you really level, and the Kerning Party Quest stage by stage.</p><div class="hbillact"><button class="btn hopen" data-go="train">Open Training →</button></div></div>
       <div class="hlinks">
       <button class="hlink" data-go="maps"><img class="hic" data-ic="m:10" alt=""><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
-      <button class="hlink" data-go="plan"><img class="hic" data-ic="s:1001001" alt=""><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
       <button class="hlink" data-go="path"><img class="hic" data-ic="i:2010000" alt=""><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
       <button class="hlink" data-go="qlog"><img class="hic" data-ic="i:4031001" alt=""><b>Quest log</b><span>Read your in-game quest log from a recording, see what you can take on, and get one route for the quests you pick.</span></button>
       <button class="hlink" data-go="expc"><img class="hic" data-ic="s:4101001" alt=""><b>EXP/hr calculator</b><span>Time a session, get your real EXP per hour and time to level.</span></button>
@@ -2254,17 +2267,64 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
     </article>
   </div>
 </section>
+<section id="char" class="lp" hidden>
+  <div class="lphero">
+    <img class="lpic" data-ic="s:1001001" alt="">
+    <div>
+      <h2>Character Builder</h2>
+      <p>Your character in one place: name and class, screenshots of your stat, equipment and skill windows to build from, a preview you can pose, and the calculator for AP, skills and damage.</p>
+    </div>
+  </div>
+  <div class="lppages" aria-label="Pages in Character Builder">
+    <button class="lplink" data-go="plan"><img class="lpic sm" data-ic="s:1001001" alt=""><b>Build calculator</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
+  </div>
+  <div class="lpgrid">
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:1302000" alt=""><h3>Your character</h3><button class="btn sm" data-go="plan">Open calculator →</button></div>
+      <p class="sub">Saved in this browser. Class and level here are the calculator's.</p>
+      <div class="lpdemo">
+        <div class="lpctl"><label>Name <input type="text" id="chname" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Character name"></label></div>
+        <div class="seg small" id="chclass" role="group" aria-label="Class">
+          <button data-v="Warrior">Warrior</button><button data-v="Magician">Magician</button><button data-v="Bowman">Bowman</button><button data-v="Thief">Thief</button>
+        </div>
+        <label class="lab">Level <b id="chlvlout">30</b><input type="range" id="chlvl" min="10" max="100" value="30"></label>
+        <div class="lpbig" id="chsum"></div>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:2030000" alt=""><h3>Build from screenshots</h3></div>
+      <p class="sub">Your Character Stat, Equipment Inventory and Skill Inventory windows.</p>
+      <div class="lpdemo">
+        <label class="drop" id="chdrop"><input type="file" id="chfile" accept="image/*" multiple>
+          <span>Paste (Ctrl+V), drop or pick screenshots. One snip at a time, or one full-screen shot with all three windows open. Each is applied to the calculator right away.</span></label>
+        <p class="tiny" id="chst" role="status"></p>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:1002001" alt=""><h3>Preview</h3></div>
+      <p class="sub">Wears the gear picked in the calculator. Click the picture, then use the arrow keys and Space.</p>
+      <div class="lpdemo">
+        <div class="chstage" id="chstage" tabindex="0" aria-label="Character preview: left and right walk, up or Space jump, down crouch"><img id="chav" alt="" hidden></div>
+        <div class="seg small" id="chpose" role="group" aria-label="Pose">
+          <button data-p="stand">Stand</button><button data-p="walk1">Walk</button><button data-p="jump">Jump</button><button data-p="alert">Alert</button><button data-p="prone">Prone</button>
+        </div>
+        <div class="lpctl"><button class="btn sm" id="chplay" aria-pressed="true">Pause</button><button class="btn sm" id="chflip">Face right</button>
+          <label>Character <select id="chgender"><option value="">Male</option><option value="female">Female</option></select></label></div>
+        <p class="tiny" id="chavnote">Drawn live by maplestory.io from Classic World client data.</p>
+      </div>
+    </article>
+  </div>
+</section>
 <section id="train" class="lp" hidden>
   <div class="lphero">
     <img class="lpic" data-ic="m:10" alt="">
     <div>
       <h2>Training</h2>
-      <p>Where to grind for your build, a Character Builder for AP, skills and damage, a level-by-level plan with quests, how fast you really level, and the Kerning Party Quest stage by stage.</p>
+      <p>Where to grind for your build, a level-by-level plan with quests, how fast you really level, and the Kerning Party Quest stage by stage.</p>
     </div>
   </div>
   <div class="lppages" aria-label="Pages in Training">
     <button class="lplink" data-go="maps"><img class="lpic sm" data-ic="m:10" alt=""><b>Where to train</b><span>Every training map ranked by EXP per hour for your build.</span></button>
-    <button class="lplink" data-go="plan"><img class="lpic sm" data-ic="s:1001001" alt=""><b>Character Builder</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
     <button class="lplink" data-go="path"><img class="lpic sm" data-ic="i:2010000" alt=""><b>Path Planner</b><span>Level-by-level plan to 100: which quests to do and where to grind.</span></button>
     <button class="lplink" data-go="qlog"><img class="lpic sm" data-ic="i:4031001" alt=""><b>Quest log</b><span>Read your in-game quest log from a recording and get one route for the quests you pick.</span></button>
   </div>
@@ -2905,6 +2965,8 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   </details>
 
   <div class="changelog">
+    <div class="card" data-t="2026-11-01T16:45:29Z"><div class="cardhead"><h3><span class="ver">v0.20.8</span> Nov 1, 2026 · Character Builder has its own section</h3></div>
+      <p>Character Builder moved out of Training into its own section, between Grind Tracker and Training. Its home page has your name, class and level, a drop zone for your Stat, Equipment and Skill screenshots, and a preview of your character you can pose (stand, walk, jump, alert, prone; arrow keys and Space work too). The calculator is now called Build calculator.</p></div>
     <div class="card" data-t="2026-11-01T17:10:00Z"><div class="cardhead"><h3><span class="ver">v0.20.7</span> Nov 1, 2026 · NX / Decoration items</h3></div>
       <p>Cosmetic Cash Shop items are in the Maple Database now (3,116 from the game files), so "Slime T-Shirt" is found by search and under Items › NX / Decoration, with its NX price when the shop lists one. The Character Builder reads the Deco tab of an Equipment Inventory screenshot, lists those items under Decoration (NX) and draws them over your armor in the picture. A Character Info panel in the shot now gives your level.</p></div>
     <div class="card" data-t="2026-11-01T16:55:05Z"><div class="cardhead"><h3><span class="ver">v0.20.6</span> Nov 1, 2026 · Accessibility tidy-up</h3></div>
@@ -3621,7 +3683,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-11-01T18:08:59Z" data-ver="0.20.7">Site version: v0.20.7 · built Nov 1, 2026 · 18:08 UTC</p>
+  <p class="sitever" data-built="2026-11-01T18:32:38Z" data-ver="0.20.8">Site version: v0.20.8 · built Nov 1, 2026 · 18:32 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -7414,6 +7476,7 @@ async function handle(files){
   READS = READS.concat(add); merge();
   if (add.some(r => r.what.length)) applyR(); else BLD.apply(() => {});   // still one Undo step, so Ctrl+Z takes it back off
 }
+window.SHOTS = {handle};   // the Character Builder home (78-charhome.js) feeds its own drop zone through this
 $("#pimpfile").addEventListener("change", e => { handle(e.target.files); e.target.value = "" });
 const drop = $("#pimpdrop");
 drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over") });
@@ -14316,7 +14379,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
     // Henesys / Kerning City townsfolk from the citizenship quests, and the two towns' return scrolls
     cit: [...new Set(D.citq.map(q => q.npc))].filter(n => n && D.npcid[n] && D.npcimg[D.npcid[n]]).map(n => "n:" + D.npcid[n]).concat(["i:2030004", "i:2030005"]),
   };
-  Object.assign(P, { g_trk: [...P.trk, ...kpq], g_train: [...P.maps, ...P.plan, ...P.path, ...kpq],
+  Object.assign(P, { g_trk: [...P.trk, ...kpq], g_char: [...P.plan], g_train: [...P.maps, ...P.path, ...kpq],
     g_world: [...P.wmap, ...P.navi], g_db: [...P.items, ...P.mobs, ...P.quests, ...P.skills], g_town: [...P.snipe, ...P.mci, ...P.movers, ...P.inv, ...P.craft, ...P.keep] });
   const src = k => { const [t, id] = k.split(":"), b = t === "x" ? MESO_ICONS[id] : {i: D.iicons, m: D.mobimg, s: D.icons, n: D.npcimg}[t]?.[id];
     return b ? "data:image/png;base64," + b : null };
@@ -14366,7 +14429,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
   const hd = $("header"), wide = matchMedia("(min-width: 761px)");
   const IT = {title: {el: $("header h1"), name: "Title"}, tag: {el: $("header > p"), name: "Tagline"},
     search: {el: $("#srchopen"), name: "Search everything", rz: true}, cog: {el: $("#thopen"), name: "Settings"}};
-  const CATS = ["trk", "train", "world", "db", "town"], SECS = [...document.querySelectorAll(".homegrid > .homecat[data-sec]")].map(e => e.dataset.sec);
+  const CATS = ["trk", "char", "train", "world", "db", "town"], SECS = [...document.querySelectorAll(".homegrid > .homecat[data-sec]")].map(e => e.dataset.sec);
   const ls = (v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem("anchors") || "null"); if (v) localStorage.setItem("anchors", JSON.stringify(v)); else localStorage.removeItem("anchors") } catch { return null } };
   const num = v => typeof v === "number" && isFinite(v);
   const SMIN = 0.5, SMAX = 2.5, SNAPPX = 6;
@@ -14717,14 +14780,14 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
   const TH = window.TrackerThemes, ST = window.SITETHEME, A = window.ANCH, root = document.documentElement, dq = matchMedia("(prefers-color-scheme: dark)");
   const ls = (k, v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)) } catch { return null } };
   const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[ch]);
-  const CATS = ["trk", "train", "world", "db", "town"], NAV = {side: "Sidebar", basic: "Basic mode", rows: "Two rows"};
+  const CATS = ["trk", "char", "train", "world", "db", "town"], NAV = {side: "Sidebar", basic: "Basic mode", rows: "Two rows"};
   // built in: Default = the site as a new visitor sees it; Danny's Default = his 10-21 screenshot (Title, Tagline and a 1.35x
   // Search centered over the page column, cog top right, Mesos and Trade second, sidebar 285 px), measured on a 1961 px header
   const BUILTIN = [
     {name: "Default", theme: {preset: "Default"}, site: {nav: "side", size: 3, anchors: {}}},
     {name: "Danny's Default", theme: {preset: "Default"}, site: {nav: "side", size: 3, anchors: {
       title: {x: 0.4368, y: 0}, tag: {x: 0.4142, y: 48}, search: {x: 0.3987, y: 84, w: 526, s: 1.35}, cog: {x: 0.9761, y: 6, s: 1.1},
-      sb: {w: 285}, secs: ["trk", "town", "train", "world", "db"]}}},
+      sb: {w: 285}, secs: ["trk", "town", "char", "train", "world", "db"]}}},
   ];
   const cleanName = n => typeof n === "string" ? n.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40) || null : null;
   function cleanSite(s){
@@ -15158,6 +15221,71 @@ const RESET = (() => {
   return {LOOK};
 })();
 window.RESET = RESET;
+
+/* ---------------- Character Builder section home (#char) ---------------- */
+// Name, class and level (the calculator's own controls, kept in step), screenshot paste (52-shotimport.js SHOTS.handle) and a
+// posable preview: maplestory.io character endpoint, pose + frame in the URL, same gear ids the calculator's picture uses.
+(() => {
+const KEY = "charname", ok = f => { try { return f() } catch { return null } };
+$("#chname").value = ok(() => localStorage.getItem(KEY)) || "";
+$("#chname").addEventListener("input", () => { const v = $("#chname").value.replace(/[^\w ]/g, "").slice(0, 12); ok(() => localStorage.setItem(KEY, v)); sum() });
+/* class + level mirror the calculator (BLD.S); changing them here clicks its controls so Undo, saving and sharing still work */
+function sum(){
+  const s = BLD.S, n = $("#chname").value.trim();
+  document.querySelectorAll("#chclass button").forEach(b => b.setAttribute("aria-checked", b.dataset.v === s.cls));
+  $("#chlvl").value = s.lvl; $("#chlvlout").textContent = s.lvl;
+  $("#chsum").textContent = `${n ? n + " · " : ""}Level ${s.lvl} ${s.branch || s.cls}`;
+  $("#chgender").value = s.gender || "";
+}
+$("#chclass").addEventListener("click", e => { const b = e.target.closest("button"); if (b) $(`#pclass button[data-v="${b.dataset.v}"]`).click() });
+$("#chlvl").addEventListener("input", () => { const r = $("#plvl"); r.value = $("#chlvl").value; r.dispatchEvent(new Event("input", {bubbles: true})) });
+$("#chgender").addEventListener("change", () => { const g = $("#pgender"); g.value = $("#chgender").value; g.dispatchEvent(new Event("change", {bubbles: true})) });
+BLD.onRender(sum); sum();
+
+/* screenshots */
+async function shots(files){
+  $("#chst").textContent = "Reading…";
+  try { await SHOTS.handle(files) } catch(e){ console.error(e) }
+  $("#chst").textContent = ($("#pimpst")?.textContent || "").trim() + " Open the calculator to see the result.";
+}
+$("#chfile").addEventListener("change", e => { shots(e.target.files); e.target.value = "" });
+const drop = $("#chdrop");
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over") });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); shots(e.dataTransfer.files) });
+document.addEventListener("paste", e => { if ($("#char").hidden) return; const f = [...(e.clipboardData?.files || [])]; if (f.length){ e.preventDefault(); shots(f) } });
+
+/* preview */
+const img = $("#chav"), stage = $("#chstage"), POSE = {stand: "stand1", walk1: "walk1", jump: "jump", alert: "alert", prone: "prone"};
+let pose = "stand", frame = 0, count = {}, playing = true, flip = false, timer = 0, ids = "", two = false;
+const idsNow = () => { const m = /character\/2000\/([\d,]+)\/(stand\d)/.exec($("#pavatar")?.dataset.src || ""); two = m?.[2] === "stand2"; return m ? m[1] : "20000,30000" };
+const anim = () => { const a = POSE[pose]; return two && (a === "stand1" || a === "walk1") ? a.replace("1", "2") : a };
+function draw(){
+  ids = idsNow(); const key = anim(), f = frame, src = `https://maplestory.io/api/MCW/CBT2/character/2000/${ids}/${key}/${f}`;
+  img.onload = () => { img.hidden = false; $("#chavnote").textContent = "Drawn live by maplestory.io from Classic World client data." };
+  img.onerror = () => { if (f > 0){ count[key] = f; frame = 0; draw() } else { img.hidden = true; $("#chavnote").textContent = "The preview couldn't load (maplestory.io is blocked or offline)." } };
+  img.src = src;
+}
+function tick(){
+  clearInterval(timer); const key = anim();
+  timer = setInterval(() => { if ($("#char").hidden || !playing || count[key] === 1) return; frame = (frame + 1) % (count[key] || 99); draw() }, pose === "walk1" ? 180 : 320);
+}
+function setPose(p){ pose = p; frame = 0; document.querySelectorAll("#chpose button").forEach(b => b.setAttribute("aria-checked", b.dataset.p === p)); draw(); tick() }
+$("#chpose").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setPose(b.dataset.p) });
+$("#chplay").addEventListener("click", () => { playing = !playing; $("#chplay").textContent = playing ? "Pause" : "Play"; $("#chplay").setAttribute("aria-pressed", playing) });
+const setFlip = f => { flip = f; img.style.transform = f ? "scaleX(-1)" : ""; $("#chflip").textContent = f ? "Face left" : "Face right" };
+$("#chflip").addEventListener("click", () => setFlip(!flip));
+stage.addEventListener("click", () => stage.focus());
+stage.addEventListener("keydown", e => { const k = {ArrowLeft: () => { setFlip(false); setPose("walk1") }, ArrowRight: () => { setFlip(true); setPose("walk1") },
+  ArrowUp: () => setPose("jump"), " ": () => setPose("jump"), ArrowDown: () => setPose("prone")}[e.key]; if (k){ e.preventDefault(); k() } });
+stage.addEventListener("keyup", e => { if (e.key.startsWith("Arrow") || e.key === " ") setPose("stand") });
+// the calculator's picture is the source of the gear ids, so redraw when it changes and when this page opens
+BLD.onRender(() => { if (!$("#char").hidden && idsNow() !== ids) draw() });
+const open = () => { sum(); setPose(pose) };
+const when = () => document.readyState === "complete" ? open() : addEventListener("load", open, {once: true});
+$("#t-char").addEventListener("click", when);
+if (!$("#char").hidden) when();
+})();
 
 </script>
 

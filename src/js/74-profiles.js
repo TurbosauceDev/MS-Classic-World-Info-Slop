@@ -8,14 +8,14 @@
   const TH = window.TrackerThemes, ST = window.SITETHEME, A = window.ANCH, root = document.documentElement, dq = matchMedia("(prefers-color-scheme: dark)");
   const ls = (k, v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)) } catch { return null } };
   const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[ch]);
-  const CATS = ["trk", "train", "world", "db", "town"], NAV = {side: "Sidebar", basic: "Basic mode", rows: "Two rows"};
+  const CATS = ["trk", "char", "train", "world", "db", "town"], NAV = {side: "Sidebar", basic: "Basic mode", rows: "Two rows"};
   // built in: Default = the site as a new visitor sees it; Danny's Default = his 10-21 screenshot (Title, Tagline and a 1.35x
   // Search centered over the page column, cog top right, Mesos and Trade second, sidebar 285 px), measured on a 1961 px header
   const BUILTIN = [
     {name: "Default", theme: {preset: "Default"}, site: {nav: "side", size: 3, anchors: {}}},
     {name: "Danny's Default", theme: {preset: "Default"}, site: {nav: "side", size: 3, anchors: {
       title: {x: 0.4368, y: 0}, tag: {x: 0.4142, y: 48}, search: {x: 0.3987, y: 84, w: 526, s: 1.35}, cog: {x: 0.9761, y: 6, s: 1.1},
-      sb: {w: 285}, secs: ["trk", "town", "train", "world", "db"]}}},
+      sb: {w: 285}, secs: ["trk", "town", "char", "train", "world", "db"]}}},
   ];
   const cleanName = n => typeof n === "string" ? n.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40) || null : null;
   function cleanSite(s){

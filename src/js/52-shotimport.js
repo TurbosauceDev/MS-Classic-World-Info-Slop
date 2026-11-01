@@ -243,6 +243,7 @@ async function handle(files){
   READS = READS.concat(add); merge();
   if (add.some(r => r.what.length)) applyR(); else BLD.apply(() => {});   // still one Undo step, so Ctrl+Z takes it back off
 }
+window.SHOTS = {handle};   // the Character Builder home (78-charhome.js) feeds its own drop zone through this
 $("#pimpfile").addEventListener("change", e => { handle(e.target.files); e.target.value = "" });
 const drop = $("#pimpdrop");
 drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over") });

@@ -222,11 +222,11 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.reload(); await p.waitForTimeout(300);
     const old = await p.evaluate(() => [[...document.querySelectorAll("nav .sgh")].map(e => e.dataset.cat).join(), [...document.querySelectorAll(".homegrid>.homecat")].map(e => e.dataset.sec).join(),
       document.querySelectorAll("nav .subs [data-tab]").length, document.querySelector("#t-plan").dataset.cat + document.querySelector("#t-skills").dataset.cat].join("|"));
-    check(old === `db,trk,train,world,town|town,trk,train,world,db,more|${tabsDefault}|traindb`, `edit mode: layout saved with My Character still loads (${old})`);
+    check(old === `db,char,trk,train,world,town|town,char,trk,train,world,db,more|${tabsDefault}|chardb`, `edit mode: layout saved with My Character still loads (${old})`);
     await p.evaluate(() => localStorage.setItem("tab", "plan")); await p.goto(URL + "#"); await p.reload(); await p.waitForTimeout(300);
-    const bt = await p.evaluate(() => !document.querySelector("#plan").hidden && document.querySelector("#c-train").getAttribute("aria-selected") === "true");
+    const bt = await p.evaluate(() => !document.querySelector("#plan").hidden && document.querySelector("#c-char").getAttribute("aria-selected") === "true");
     await p.goto(URL + "#s=" + Buffer.from("{}").toString("base64")); await p.reload(); await p.waitForTimeout(300);
-    check(bt && await p.evaluate(() => !document.querySelector("#skills").hidden && document.querySelector("#c-db").getAttribute("aria-selected") === "true"), "saved Builder tab opens under Training, old #s= skill link under Maple Database");
+    check(bt && await p.evaluate(() => !document.querySelector("#skills").hidden && document.querySelector("#c-db").getAttribute("aria-selected") === "true"), "saved Builder tab opens under Character Builder, old #s= skill link under Maple Database");
     check(!errs.length, "anchors round 3: no JS errors " + errs.join(" | ")); await ctx.close() }
 
   // Home card -> billboard view transition: the browser default stretched each card's snapshot to the moving box (giant
