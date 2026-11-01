@@ -84,7 +84,7 @@ def build(D):
 
     for iid, it in items.items():
         st = it.get("st") or {}
-        kind = it.get("s") if it.get("c") == "Equipment" else f"Scroll for {it.get('s')}" if it.get("c") == "Scroll" and it.get("s") else it.get("c")
+        kind = f"NX / Decoration {it.get('s')}" if it.get("c") == "Cash" else it.get("s") if it.get("c") == "Equipment" else f"Scroll for {it.get('s')}" if it.get("c") == "Scroll" and it.get("s") else it.get("c")
         stats = "; ".join(f"{l} +{st[k]}" for k, l in STATNAME.items() if st.get(k))
         reqs = ", ".join(f"{k[3:]} {st[k]}" for k in ("reqSTR", "reqDEX", "reqINT", "reqLUK") if st.get(k))
         drops = sorted(dropped_by.get(iid, []), key=lambda r: -r[2])
