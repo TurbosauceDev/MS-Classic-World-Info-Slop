@@ -95,6 +95,16 @@ def shell(title, desc, canon, body, extra_head=""):
             f'Game data from the OSMS export; drop reports from meowdb players.</footer></div>\n{{CANARY}}</body></html>\n')
 
 
+BOTS = ("bot|crawl|spider|slurp|bing|yandex|baidu|duckduck|facebookexternalhit|embedly|preview|whatsapp|telegram|discord|slack|twitter|"
+        "linkedin|pinterest|quora|gpt|claude|anthropic|perplexity|ccbot|bytespider|petalbot|ahrefs|semrush|lighthouse|headless")
+
+
+def redirect_script(target):
+    """People get the real planner (same look as everything else, no second template to keep in sync); crawlers, link
+    previews and no-JS readers keep this static page. location.replace keeps the Back button working."""
+    return f'<script>(function(){{if(/{BOTS}/i.test(navigator.userAgent||""))return;location.replace({json.dumps(target)})}})()</script>'
+
+
 def sprite(b64, scale=2):
     """Real game sprite (OSMS export) as an inline PNG, drawn at scale x its size."""
     if not b64: return ""
@@ -127,6 +137,7 @@ VOTES = "Player-reported by meowdb users. The number is net votes, not a drop ra
 
 
 def item_kind(it):
+    if it.get("c") == "Cash": return f"NX / Decoration {it.get('s')}" if it.get("s") else "NX / Decoration"
     if it.get("c") == "Equipment": return it.get("s") or "Equipment"
     if it.get("c") == "Scroll" and it.get("s"): return f"Scroll for {it['s']}"
     return it.get("c") or "Other"
@@ -228,7 +239,8 @@ def generate(D, dst, prev_src=None, today=None):
         state[url] = {"h": h, "d": d}
         f = dst / url.strip("/") / "index.html"
         f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_text(shell(title, desc, url, body).replace("{CANARY}", cblock))
+        m = re.search(r'class="btn" href="(/#[^"]*)"', body) if url in real else None
+        f.write_text(shell(title, desc, url, body, redirect_script(m.group(1)) if m else "").replace("{CANARY}", cblock))
     # browse indexes: crawl paths + something for people to click
     groups = {}
     for iid, it in D["items"].items(): groups.setdefault(item_kind(it), []).append((it["n"], path("item", iid, it["n"])))
