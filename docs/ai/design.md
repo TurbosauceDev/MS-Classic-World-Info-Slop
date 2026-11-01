@@ -139,7 +139,7 @@ Crisp and subtle. Nothing bounces, nothing slides far, nothing resizes the layou
 | Bars | width .3s ease-out |
 
 Rules: durations 120-300ms; animate `opacity` and `transform` only (never width/height of a laid-out box); no looping
-motion except tiny status pulses (e.g. `snpulse`); the global `prefers-reduced-motion: reduce` block must keep working
+motion except tiny status pulses (e.g. `snpulse`) and the Skills range preview, which replays after a pause (Danny 11-01); the global `prefers-reduced-motion: reduce` block must keep working
 (don't add animation that bypasses it). Home cards expand to a billboard via view transitions: leave that alone.
 
 ## 8. Layout patterns

@@ -84,7 +84,7 @@ function vert(top, bot){ const h = bot - top;
 const ACTNAME = a => { const m = /^(swing|stab)([OTP])(\d|F)$/.exec(a); return m ? `${{O: "1H", T: "2H", P: "Polearm"}[m[2]]} ${m[1]} ${m[3]}` : a };
 const SKR = {lv: 0, plv: 0, wk: "", ak: "", key: ""};
 const pngSize = b64 => { try { const s = atob(b64.slice(0, 32)); return [s.charCodeAt(18) * 256 + s.charCodeAt(19), s.charCodeAt(22) * 256 + s.charCodeAt(23)] } catch(e) { return [37, 26] } };
-// Preview animation (plays once on open, weapon/swing change and Replay; sliders redraw still). With D.skanim (Classic client
+// Preview animation (plays on open, weapon/swing change and Replay, then repeats after a pause: skrLoop; sliders redraw still). With D.skanim (Classic client
 // frames from maplestory.io MCW, scripts/fetch_skill_anim.py) the character really swings/shoots/casts and the skill's own
 // effect, projectile and hit frames play at their client delays; without it (Pages: until the lazy assets arrive) only the
 // area, a dot shot and the target flash move. Release = start of the action's last frame and the projectile speed are for
@@ -241,7 +241,16 @@ function show(){
   if (!o){ render(); return }
   $("#skpage").innerHTML = page(o); skrStart(o);
 }
-function skrStart(o){ const r = o.s.rv && skRange(o.job, o.s, SKR.lv, SKR.plv, SKR.wk, SKR.ak); if (r) skrPlay($("#skr .skr-svg"), r, o.s.id) }
+// The preview repeats SKR_PAUSE ms after it ends (Danny 11-01, overrides design.md's no-loop rule for this card), only while
+// this skill's card is on screen and the tab is visible; never under reduced motion. Slider moves push the next play back.
+const SKR_PAUSE = 2500; let skrT = 0;
+const skrCalm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+function skrLoop(ms){ clearTimeout(skrT); if (skrCalm()) return; const key = S.open;
+  skrT = setTimeout(() => { if (S.open !== key || !$("#skr")) return;
+    if (document.hidden || $("#skpage").hidden || $("#skills").hidden) return skrLoop(SKR_PAUSE);
+    redrawRange(true) }, ms) }
+function skrStart(o){ const r = o.s.rv && skRange(o.job, o.s, SKR.lv, SKR.plv, SKR.wk, SKR.ak); if (!r) return;
+  skrPlay($("#skr .skr-svg"), r, o.s.id); const SP = skrSprites(r, o.s.id); skrLoop((SP ? SP.end : 1300) + SKR_PAUSE) }
 function openSkill(key){ S.open = key; save(); show(); $("#skills").scrollIntoView({block: "start"}) }
 $("#sksearch").addEventListener("input", e => { S.q = e.target.value; render() });
 for (const [k, el] of FIELDS) $(el).addEventListener("change", e => { S[k] = e.target.value; save(); render() });
@@ -256,11 +265,11 @@ $("#skpage").addEventListener("click", e => {
   const l = e.target.closest("[data-skopen]"); if (l) openSkill(l.dataset.skopen);
   const w = e.target.closest("[data-skrw],[data-skra]");
   if (w){ if (w.dataset.skrw) Object.assign(SKR, {wk: w.dataset.skrw, ak: ""}); else SKR.ak = w.dataset.skra; redrawRange(true) }
-  if (e.target.closest("[data-skrplay]")){ redrawRange(true); $("#skr [data-skrplay]")?.focus() }
+  if (e.target.closest("[data-skrplay]")) redrawRange(true);
 });
 function redrawRange(play){ const o = S.open && OPEN[S.open], el = $("#skr"); if (!o || !el) return;
-  const f = document.activeElement?.matches?.("[data-skrlv],[data-skrplv]") ? (document.activeElement.hasAttribute("data-skrlv") ? "[data-skrlv]" : "[data-skrplv]") : null;
-  const tmp = document.createElement("div"); tmp.innerHTML = rangeHtml(o, play); el.replaceWith(tmp.querySelector("#skr")); if (play) skrStart(o); if (f) $("#skr " + f)?.focus() }
+  const a = document.activeElement, f = el.contains(a) ? ["skrlv", "skrplv", "skrplay", "skrw", "skra"].map(k => k in a.dataset ? `[data-${k}${a.dataset[k] ? `="${a.dataset[k]}"` : ""}]` : "").find(Boolean) : null;
+  const tmp = document.createElement("div"); tmp.innerHTML = rangeHtml(o, play); el.replaceWith(tmp.querySelector("#skr")); if (play) skrStart(o); else skrLoop(SKR_PAUSE); if (f) $("#skr " + f)?.focus() }
 $("#skpage").addEventListener("input", e => { if (e.target.matches("[data-skrlv]")) SKR.lv = +e.target.value; else if (e.target.matches("[data-skrplv]")) SKR.plv = +e.target.value; else return; redrawRange() });
 window.skRange = skRange; window.skrAnim = skrAnim; window.skrSprites = skrSprites;
 ASSETS.then(() => { if (S.open && $("#skr") && !$("#skr .skr-sp")) redrawRange(true) }, () => {});   // Pages: frames arrive with the lazy assets
