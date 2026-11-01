@@ -13,3 +13,9 @@ assert d["skill"][1] == [("3101002", "Bow Booster (Hunter)")], d["skill"]
 assert d["item"] == ([], [], 1), d["item"]
 assert d["monster"] == ([], [], 0) and d["map"] == ([], [], 0)
 print("ok  name_diff finds the Arrow Bomb rename, a removed skill and an added item")
+
+# NX (Cash) items join/leave as the released list changes: never a rename/removal alert
+a = {"items": {"1007225": {"n": "Construction Hardhat", "c": "Cash"}, "2000000": {"n": "Red Potion", "c": "Consumable"}}}
+b = {"items": {"2000000": {"n": "Red Potion", "c": "Consumable"}}}
+assert nd.diff(nd.names(a), nd.names(b))["item"] == ([], [], 0)
+print("ok  name_diff ignores NX items leaving the released list")
