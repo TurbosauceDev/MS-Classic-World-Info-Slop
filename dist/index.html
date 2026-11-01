@@ -2873,6 +2873,9 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   </details>
 
   <div class="changelog">
+    <div class="card" data-minor data-t="2026-11-01T02:58:27Z"><div class="cardhead"><h3><span class="ver">v0.20.0</span> Nov 1, 2026 · Skill range and hitboxes</h3></div>
+      <p>Every skill page in <a href="#" data-go="skills">Skills</a> now has a <b>Range and hitbox</b> diagram: the box an attack hits, how far an arrow or spell searches (with The Eye of Amazon or Keen Eyes), each weapon swing's area for Power Strike, Double Stab and Final Attack, and Teleport's distance. Move the level slider to watch it grow. All sizes are game pixels from the OSMS game files.</p>
+      <p>Fixed: Steal, Savage Blow and Rush showed the wrong reach (their stored boxes were read backwards). Rush hits 220 px in front, Steal 180.</p></div>
     <div class="card" data-t="2026-11-01T02:39:44Z"><div class="cardhead"><h3><span class="ver">v0.19.17</span> Nov 1, 2026 · Screenshot import uses the game's own base stats</h3></div>
       <p><b>Character Builder</b> "Import from screenshots" now reads the split the Character Stat window shows, like STR 44 (40+4), and takes the 40 as your AP. It used to subtract your gear's average stats, which was off by a point or two whenever an item rolled above or below average. Screenshots without the brackets still work the old way.</p>
     </div>
@@ -3571,7 +3574,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-11-01T02:56:01Z" data-ver="0.19.17">Site version: v0.19.17 · built Nov 1, 2026 · 02:56 UTC</p>
+  <p class="sitever" data-built="2026-11-01T02:58:27Z" data-ver="0.20.0">Site version: v0.20.0 · built Nov 1, 2026 · 02:58 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
