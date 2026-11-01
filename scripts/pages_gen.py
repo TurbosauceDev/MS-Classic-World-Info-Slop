@@ -167,11 +167,11 @@ def build(D):
 
     for mid, m in mobdb.items():
         dr = sorted((r for r in (m.get("dr") or []) if isinstance(r, list) and len(r) >= 3 and isinstance(r[0], str) and r[0] in items), key=lambda r: -r[2])
-        ml = [(f'<a href="{path("map", r[0], r[1])}">{e(r[1])}</a>' if str(r[0]) in open_maps else e(r[1]), "", "") for r in (m.get("maps") or [])]
+        ml = [(f'<a href="{path("map", r[0], open_maps[str(r[0])][0])}">{e(open_maps[str(r[0])][0])}</a>' if str(r[0]) in open_maps else f'<span class="sub">{e(r[1])}</span>', "", "") for r in (m.get("maps") or [])]
         body = (hero(m["name"], f"Monster · level {m['level']}", sprite(mobimg.get(mid), 2))
                 + f'<section class="card">{facts([("Level", m["level"]), ("HP", fmt(m["hp"])), ("MP", fmt(m.get("mp"))), ("EXP", fmt(m["exp"])), ("Weapon attack", m.get("PADamage")), ("Weapon defense", m.get("PDDamage")), ("Accuracy", m.get("acc")), ("Speed", m.get("speed"))])}</section>'
                 + (card("Found in", rows(ml)) if ml else "")
-                + (card("Drops", rows([(f'<a href="{path("item", r[0], r[1])}">{e(r[1])}</a>', f"{r[2]} votes", sprite(icons.get(r[0]), 1)) for r in dr]), VOTES) if dr else "")
+                + (card("Drops", rows([(f'<a href="{path("item", r[0], items[r[0]]["n"])}">{e(items[r[0]]["n"])}</a>', f"{r[2]} votes", sprite(icons.get(r[0]), 1)) for r in dr]), VOTES) if dr else "")
                 + go("m", mid))
         desc = f"{m['name']} in MapleStory Classic World: level {m['level']}, {fmt(m['hp'])} HP, {fmt(m['exp'])} EXP."
         pages[path("mob", mid, m["name"])] = (m["name"], desc, body)
@@ -240,6 +240,13 @@ def generate(D, dst, prev_src=None, today=None):
         url = f"/{plural}/"
         (dst / plural).mkdir(parents=True, exist_ok=True)
         (dst / plural / "index.html").write_text(shell(label, f"All {len(links)} {label.lower()} in MapleStory Classic World.", url, body).replace("{CANARY}", cblock))
+    # /item/, /mob/ and /map/ alone would 404: send them to the browse index (meta refresh + canonical, no script)
+    for kind, plural in (("item", "items"), ("mob", "monsters"), ("map", "maps")):
+        (dst / kind).mkdir(parents=True, exist_ok=True)
+        (dst / kind / "index.html").write_text(
+            f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{NAME}</title><meta name="robots" content="noindex">'
+            f'<link rel="canonical" href="{SITE}/{plural}/"><meta http-equiv="refresh" content="0; url=/{plural}/"></head>'
+            f'<body><p><a href="/{plural}/">Browse all {plural}</a></p></body></html>\n')
     urls = ["/", "/items/", "/monsters/", "/maps/"] + sorted(state)
     rows = []
     for u in urls:
