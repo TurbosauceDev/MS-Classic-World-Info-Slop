@@ -120,6 +120,15 @@ const path = require("path");
       ps.act === D.skanim.act["2h-sword|swingT2"], ps.hits[0] === ps.rel, mc.ball.length, mc.eff.length > 0] });
   check(an.join() === "none,true,3,true,3,true,true,true,0,true",
     "skill previews: every range-card skill has client frames; Arrow Blow shoots (3-frame arrow) before it hits; Iron Arrow hits 3 Stumps in order; Power Strike follows the picked swing; Magic Claw has no projectile", an);
+  // playable preview: from the start spot skrHits matches the plain preview for every skill; turned around or jumped away it misses.
+  const pl = await p.evaluate(() => { const bad = [], o = {x: 0, y: 0, dir: 1};
+    for (const [j, l] of Object.entries(D.skills)) for (const s of l) if (s.rv){ const r = skRange(j, s, s.max, 0), sp = skrSprites(r, s.id);
+      if (JSON.stringify(skrHits(r, sp, o)) !== JSON.stringify(sp.hits) || JSON.stringify(skrHits(r, null, o)) !== JSON.stringify(skrAnim(r).hits)) bad.push(s.n) }
+    const f = (j, n) => { const s = D.skills[j].find(s => s.n === n), r = skRange(j, s, s.max, 0); return [r, skrSprites(r, s.id)] };
+    const [mr, ms] = f("Magician", "Magic Claw"), [ir, is] = f("Crossbowman", "Iron Arrow");
+    return [bad.join("/") || "none", skrHits(mr, ms, {x: 0, y: 0, dir: -1})[0], skrHits(mr, ms, {x: 0, y: 200, dir: 1})[0],
+      skrHits(ir, is, {x: 150, y: 0, dir: 1}).filter(t => t != null).length < 3] });
+  check(pl.join() === "none,,,true", "playable preview: start spot = plain preview hits; Magic Claw misses facing left or 200 px up; Iron Arrow from further on skips the first Stump", pl);
   console.log(errs.length ? "\n" + errs.join("\n") : "\nall reference numbers match");
   await b.close();
   process.exit(errs.length ? 1 : 0);

@@ -3,7 +3,8 @@ source as the Builder avatar and the meso icons, Danny OK'd 2026-10-19). OSMS ex
 frames (11-01 check), so this is the only first-party source.
 
 Saves data/sources/skill_anim.json; `build_data.py skills` copies it into D.skanim. Run: python3 scripts/fetch_skill_anim.py
-Cache: vendor/skill_anim/ (delete it to refetch). Every frame is [webp base64, ox, oy, delay ms, w, h]: (ox, oy) is the anchor
+Cache: vendor/skill_anim/ (delete it to refetch). `--acts` only fetches character actions missing from the saved file
+(e.g. after adding walk/jump below) and keeps everything else as is. Every frame is [webp base64, ox, oy, delay ms, w, h]: (ox, oy) is the anchor
 inside the image (character: feet; skill effect/hit/projectile: the WZ origin), facing LEFT like the client draws it.
   look  item ids worn in every character frame (default face/hair, Grey T-Shirt, Brown Cotton Shorts)
   wid   weapon key (D.hitact.weap) -> the item id drawn
@@ -85,8 +86,13 @@ def main():
     for wkey, label, setk, pre in H["weap"]:
         for a in H["sets"].get(setk, []):
             if not pre or a[0].startswith(pre): want(wkey, a[0])
-    for w in WID: want(w, "stand2" if w in TWO_H else "stand1")
+    for w in WID: want(w, "stand2" if w in TWO_H else "stand1"); want(w, "walk2" if w in TWO_H else "walk1"); want(w, "jump")   # playable preview
     for w, a in SHOOT.items(): want(w, a)
+    if "--acts" in sys.argv:
+        out = json.load(open(ROOT / "data/sources/skill_anim.json"))
+        for w, a in sorted(need):
+            if f"{w}|{a}" not in out["act"]: out["act"][f"{w}|{a}"] = char_frames(w, a); print("added", w, a)
+        (ROOT / "data/sources/skill_anim.json").write_text(json.dumps(out, separators=(",", ":")) + "\n"); return
     books = {}
     for job, lst in D["skills"].items():
         for s in lst:

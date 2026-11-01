@@ -110,10 +110,27 @@ const skrAnim = r => { const a = {lunge: 0, area: 120, hits: []};
     a.hits = r.path ? [.3, .6, .86].map(f => Math.round(a.shot.at + dur * (Math.round(65 + (r.far - 65) * f) - from) / (to - from))) : [a.shot.at + dur] }
   else if (r.tp) a.tp = {at: 160}; else if (r.mob != null && r.fam !== "effect_rectangle") a.hits = [r.ext ? 560 : 320];
   return a };
+// Playable preview (Danny 11-01): the player (SKP) walks, jumps and turns; the hit area moves with them. skrHits says which drawn
+// Stumps the attack reaches from there and when each is hit (pl = {x, y: jump height, dir: 1 right / -1 left}). Pure
+// (tests/golden.js): at the start spot it gives the same hits as the plain preview.
+function skrHits(r, SP, pl, mw = 46, mh = 46){
+  const mobX = SP ? SP.mobX : r.path ? [.3, .6, .86].map(f => Math.round(65 + (r.far - 65) * f)) : r.mob != null && r.fam !== "effect_rectangle" ? [r.mob] : [];
+  const A = SP ? null : skrAnim(r), xs = [], ys = [];
+  for (const b of [...r.boxes, r.ext].filter(Boolean)){ xs.push(b.l, b.r); ys.push(b.t, b.b) }
+  if (r.poly) for (const [x, y] of r.poly){ xs.push(x); ys.push(y) }
+  if (!xs.length && r.mob != null){ xs.push(0, r.mob); ys.push(-60, 0) }
+  const ax0 = Math.min(...xs), ax1 = Math.max(...xs), ay0 = Math.min(...ys), ay1 = Math.max(...ys);
+  return mobX.map((m, i) => { const c = (m - pl.x) * pl.dir;   // Stump centre in the attack's own frame (facing right)
+    if (!xs.length || c + mw / 2 < ax0 || c - mw / 2 > ax1 || pl.y - mh > ay1 || pl.y < ay0) return null;
+    if (SP) return SP.rel + (SP.ball.length ? Math.round(Math.max(0, c - SP.from) / SKR_SPEED) : 0);
+    return A.shot ? Math.round(A.shot.at + A.shot.dur * Math.max(0, c - A.shot.from) / A.shot.dx) : A.hits[i] ?? 320 }) }
+const SKP = {x: 0, y: 0, dir: 1, vy: 0, keys: new Set(), pad: null, ctl: 0, busy: 0, raf: 0, lt: 0, focus: false};
+const skpReset = () => Object.assign(SKP, {x: 0, y: 0, dir: 1, vy: 0, busy: 0});
+const skpXf = () => `translate(${SKP.x} ${-SKP.y})${SKP.dir < 0 ? " scale(-1 1)" : ""}`;
 const skImg = f => "data:image/webp;base64," + f[0];
 const skImgW = f => f[4], skImgH = f => f[5];
 function rangeSvg(r, play, id){
-  const SP = skrSprites(r, id), xs = [-45, 90], ys = [-90, 30], P = [], A = SP ? {lunge: 0, area: SP.rel, hits: SP.hits, tp: r.tp ? {at: 160} : null} : skrAnim(r), st = o => Object.entries(o).map(([k, v]) => `${k}:${v}`).join(";");
+  const SP = skrSprites(r, id), xs = [-45, 90], ys = [-90, 30], P = [], A = SP ? {lunge: 0, area: SP.rel, tp: r.tp ? {at: 160} : null} : skrAnim(r), st = o => Object.entries(o).map(([k, v]) => `${k}:${v}`).join(";");
   for (const b of [...r.boxes, r.ext].filter(Boolean)){ xs.push(b.l, b.r); ys.push(b.t, b.b) }
   if (r.poly) for (const [x, y] of r.poly){ xs.push(x); ys.push(y) }
   if (r.tp) xs.push(r.tp + 20);
@@ -125,12 +142,14 @@ function rangeSvg(r, play, id){
   P.push(`<defs><pattern id="skrgrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" class="skr-grid"/></pattern></defs>`,
     `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#skrgrid)"/>`, `<line x1="${x0}" y1="0" x2="${x1}" y2="0" class="skr-ground"/>`);
   const mob = D.mobimg?.["6"];   // Stump, as a size reference
+  { const [mw, mh] = mob ? pngSize(mob) : [46, 46]; A.hits = skrHits(r, SP, SKP, mw, mh) }
   let hit = 0;
   const mobAt = x => { const [mw, mh] = mob ? pngSize(mob) : [46, 46], at = A.hits[hit++];
     return `<g class="skr-target"${at != null ? ` style="--dl:${at}ms"` : ""}>` + (mob ? `<image href="data:image/png;base64,${mob}" x="${x - mw / 2}" y="${-mh}" width="${mw}" height="${mh}" class="skr-spr"/>` : "")
       + `<rect x="${x - mw / 2}" y="${-mh}" width="${mw}" height="${mh}" class="skr-mob"/></g>` };
   if (r.path) for (const f of [.3, .6, .86]) P.push(mobAt(Math.round(65 + (r.far - 65) * f)));
   else if (r.mob != null && r.fam !== "effect_rectangle") P.push(mobAt(r.mob));
+  P.push(`<g class="skr-pl" transform="${skpXf()}">`);
   // Area: corridor widens out from where it starts, stored boxes grow from your feet, swing boxes fade in, the extension slides forward.
   const grow = (ox, sy) => `class="skr-area" style="${st({"--dl": A.area + "ms", "--ox": ox + "px", "--sy": sy})}"`;
   if (r.poly) P.push(`<g ${grow(r.poly[0][0], 1)}><polygon points="${r.poly.map(p => p.join(",")).join(" ")}" class="skr-hit"/></g>`);
@@ -148,38 +167,40 @@ function rangeSvg(r, play, id){
   const me = SP && (SP.idle || SP.act?.[0]) ? spr(SP.idle || SP.act[0], "skr-me-spr") : you(0, "skr-me");
   if (r.tp) P.push(`<g class="skr-tpto" style="--dl:${A.tp.at}ms;--dx:${-r.tp}px">${SP && SP.idle ? `<g transform="translate(${r.tp} 0)" class="skr-ghost">${spr(SP.idle, "skr-ghost-spr")}</g>` : you(r.tp, "skr-ghost")}</g><line x1="24" y1="-80" x2="${r.tp - 4}" y2="-80" class="skr-aim"/>`);
   P.push(`<g class="skr-actor${r.tp ? " skr-tpfrom" : ""}" style="--dl:${r.tp ? A.tp.at : A.lunge}ms">${me}</g>`);
-  if (SP) P.push(`<g class="skr-fx" data-l="e"></g><g class="skr-fx" data-l="b" transform="translate(${SP.from} ${SP.y})"></g>${SP.mobX.map((x, i) => `<g class="skr-fx" data-l="h" data-i="${i}"></g>`).join("")}`);
-  P.push(T(0, -72, "you", "skr-mid"), `<circle cx="0" cy="0" r="3" class="skr-origin"/>`);
+  if (SP) P.push(`<g class="skr-fx" data-l="e"></g><g class="skr-fx" data-l="b" transform="translate(${SP.from} ${SP.y})"></g>`);
+  P.push(`<circle cx="0" cy="0" r="3" class="skr-origin"/></g><g class="skr-plt" transform="translate(${SKP.x} ${-SKP.y})">${T(0, -72, "you", "skr-mid")}</g>`);
+  if (SP) P.push(SP.mobX.map((x, i) => `<g class="skr-fx" data-l="h" data-i="${i}"></g>`).join(""));
   const right = r.ext?.r ?? r.poly?.[1][0] ?? r.boxes[0]?.r ?? r.tp;
   if (right != null) P.push(`<line x1="${right}" y1="${y1 - 14}" x2="${right}" y2="${y0 + 4}" class="skr-dim"/>`, T(right, y1 - 4, right + " px", "skr-mid"));
-  return `<svg class="skr-svg${play ? " skr-play" : ""}${SP ? " skr-sp" : ""}" viewBox="${x0} ${y0} ${w} ${h}" role="img" aria-label="${esc(r.label)}: measured from your feet, facing right">${P.join("")}</svg>`;
+  return `<svg class="skr-svg${play ? " skr-play" : ""}${SP ? " skr-sp" : ""}" viewBox="${x0} ${y0} ${w} ${h}" tabindex="0" data-skrstage role="application" aria-roledescription="playable preview" aria-label="${esc(r.label)}: measured from your feet, facing right. Focused: A/D or arrows walk, W, up or Space jumps, Ctrl, 1, 4, 6 or click uses the skill.">${P.join("")}</svg>`;
 }
+const skpPose = (me, f) => { if (!me || !f || me.__f === f) return; me.__f = f;
+  me.setAttribute("href", skImg(f)); me.setAttribute("x", -f[1]); me.setAttribute("y", -f[2]); me.setAttribute("width", f[4]); me.setAttribute("height", f[5]) };
 // Flipbook player for the sprite layers (one at a time; stops when its svg is replaced). Reduced motion: never starts.
 let skrRaf = 0;
-function skrPlay(svg, r, id){
-  cancelAnimationFrame(skrRaf); const SP = skrSprites(r, id);
+function skrPlay(svg, r, id, hits){
+  cancelAnimationFrame(skrRaf); const SP = skrSprites(r, id); hits = hits || SP?.hits;
   if (!SP || !svg || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const L = (q, i) => svg.querySelector(`.skr-fx[data-l="${q}"]${i != null ? `[data-i="${i}"]` : ""}`), me = svg.querySelector(".skr-me-spr image");
   const at = (fr, t, loop) => { const d = durOf(fr); if (!fr.length || t < 0 || (!loop && t >= d)) return null; t %= d || 1;
     for (const f of fr){ if (t < f[3]) return f; t -= f[3] } return fr[fr.length - 1] };
   const draw = (g, f) => { if (g.__f === f) return; g.__f = f;
     g.innerHTML = f ? `<g transform="scale(-1 1)"><image href="${skImg(f)}" x="${-f[1]}" y="${-f[2]}" width="${f[4]}" height="${f[5]}" class="skr-spr"/></g>` : "" };
-  const pose = f => { if (!me || !f || me.__f === f) return; me.__f = f;
-    me.setAttribute("href", skImg(f)); me.setAttribute("x", -f[1]); me.setAttribute("y", -f[2]); me.setAttribute("width", f[4]); me.setAttribute("height", f[5]) };
+  const pose = f => skpPose(me, f);
   const t0 = performance.now(), E = L("e"), B = L("b"), H = SP.mobX.map((x, i) => L("h", i));
   H.forEach((g, i) => g && g.setAttribute("transform", `translate(${SP.mobX[i]} -23)`));   // hit frames on the Stump's middle
   const tick = now => { if (!svg.isConnected) return; const t = now - t0;
-    pose(at(SP.act || [], t, false) || SP.idle);
+    const af = at(SP.act || [], t, false); if (af || !SKP.raf) pose(af || SP.idle);
     if (E) draw(E, at(SP.eff, t, false));
     if (B){ const u = t - SP.rel, on = SP.ball.length && u >= 0 && u < SP.travel; draw(B, on ? at(SP.ball, u, true) : null);
       if (on) B.setAttribute("transform", `translate(${SP.from + u * SKR_SPEED} ${SP.y})`) }
-    H.forEach((g, i) => g && draw(g, at(SP.hit, t - SP.hits[i], false)));
-    if (t < SP.end) skrRaf = requestAnimationFrame(tick); else pose(SP.idle) };
+    H.forEach((g, i) => g && hits[i] != null && draw(g, at(SP.hit, t - hits[i], false)));
+    if (t < SP.end) skrRaf = requestAnimationFrame(tick); else if (!SKP.raf) pose(SP.idle) };
   skrRaf = requestAnimationFrame(tick);
 }
 function rangeHtml(o, play){
   const s = o.s; if (!s.rv) return "";
-  if (SKR.key !== o.key) Object.assign(SKR, {key: o.key, lv: s.max, plv: s.rv.p ? s.rv.p[2].length : 0, wk: "", ak: ""});
+  if (SKR.key !== o.key){ Object.assign(SKR, {key: o.key, lv: s.max, plv: s.rv.p ? s.rv.p[2].length : 0, wk: "", ak: ""}); skpReset() }
   const r = skRange(o.job, s, SKR.lv, SKR.plv, SKR.wk, SKR.ak); if (!r) return "";
   const pas = s.rv.p, seg = (attr, list, cur) => `<div class="seg small" role="radiogroup">${list.map(([k, t]) => `<button role="radio" data-${attr}="${esc(k)}" aria-checked="${k === cur}">${esc(t)}</button>`).join("")}</div>`;
   const W = r.weapons || [], acts = W.find(w => w.key === r.wk)?.acts || [];
@@ -192,6 +213,7 @@ function rangeHtml(o, play){
     ${W.length > 1 ? seg("skrw", W.map(w => [w.key, w.label]), r.wk) : ""}${acts.length > 1 ? seg("skra", acts.map(a => [a[0], ACTNAME(a[0])]), r.ak) : ""}
     ${rangeSvg(r, play, s.id)}<button class="btn skr-replay" data-skrplay aria-label="Replay the range preview">▶ Replay</button>
     <dl class="stats mgrid"><div><dt>Shape</dt><dd>${esc(r.label)}</dd></div>${r.facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+    <p class="sub skr-keys">Click the preview to play: A/D or arrows walk, W, up or Space jumps, and Ctrl, 1, 4, 6 or a click uses the skill. A controller works too (stick or d-pad walks, the bottom face button jumps, the other face buttons use the skill). Walk speed and jump height are for show.</p>
     <p class="sub">Game pixels from your feet, facing right; the Stump shows monster size.${D.skanim?.sk?.[s.id] ? " Character, skill effect, projectile and hit frames come from the Classic World client (maplestory.io MCW); when the hit lands and how fast the shot flies are drawn for show." : ""} Source: ${src}${r.from ? `, level ${r.from}+ box` : ""}.</p></div>`;
 }
 
@@ -247,10 +269,12 @@ const SKR_PAUSE = 2500; let skrT = 0;
 const skrCalm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 function skrLoop(ms){ clearTimeout(skrT); if (skrCalm()) return; const key = S.open;
   skrT = setTimeout(() => { if (S.open !== key || !$("#skr")) return;
-    if (document.hidden || $("#skpage").hidden || $("#skills").hidden) return skrLoop(SKR_PAUSE);
+    if (document.hidden || $("#skpage").hidden || $("#skills").hidden || skpLive()) return skrLoop(SKR_PAUSE);
+    if (SKP.x || SKP.y || SKP.dir < 0) skpReset();   // player let go: next replay starts from the start spot again
     redrawRange(true) }, ms) }
 function skrStart(o){ const r = o.s.rv && skRange(o.job, o.s, SKR.lv, SKR.plv, SKR.wk, SKR.ak); if (!r) return;
-  skrPlay($("#skr .skr-svg"), r, o.s.id); const SP = skrSprites(r, o.s.id); skrLoop((SP ? SP.end : 1300) + SKR_PAUSE) }
+  const SP = skrSprites(r, o.s.id), mob = D.mobimg?.["6"], [mw, mh] = mob ? pngSize(mob) : [46, 46];
+  skrPlay($("#skr .skr-svg"), r, o.s.id, skrHits(r, SP, SKP, mw, mh)); skrLoop((SP ? SP.end : 1300) + SKR_PAUSE); return {r, SP} }
 function openSkill(key){ S.open = key; save(); show(); $("#skills").scrollIntoView({block: "start"}) }
 $("#sksearch").addEventListener("input", e => { S.q = e.target.value; render() });
 for (const [k, el] of FIELDS) $(el).addEventListener("change", e => { S[k] = e.target.value; save(); render() });
@@ -268,10 +292,62 @@ $("#skpage").addEventListener("click", e => {
   if (e.target.closest("[data-skrplay]")) redrawRange(true);
 });
 function redrawRange(play){ const o = S.open && OPEN[S.open], el = $("#skr"); if (!o || !el) return;
-  const a = document.activeElement, f = el.contains(a) ? ["skrlv", "skrplv", "skrplay", "skrw", "skra"].map(k => k in a.dataset ? `[data-${k}${a.dataset[k] ? `="${a.dataset[k]}"` : ""}]` : "").find(Boolean) : null;
-  const tmp = document.createElement("div"); tmp.innerHTML = rangeHtml(o, play); el.replaceWith(tmp.querySelector("#skr")); if (play) skrStart(o); else skrLoop(SKR_PAUSE); if (f) $("#skr " + f)?.focus() }
+  const a = document.activeElement, f = el.contains(a) ? ["skrlv", "skrplv", "skrplay", "skrw", "skra", "skrstage"].map(k => k in a.dataset ? `[data-${k}${a.dataset[k] ? `="${a.dataset[k]}"` : ""}]` : "").find(Boolean) : null;
+  const tmp = document.createElement("div"); tmp.innerHTML = rangeHtml(o, play); SKP.swap = true; el.replaceWith(tmp.querySelector("#skr"));
+  const out = play ? skrStart(o) : skrLoop(SKR_PAUSE); if (f) $("#skr " + f)?.focus({preventScroll: true}); SKP.swap = false; return out }
+// Player controls. Keys only while the preview has focus (no page scroll, no typing hijack); a controller (Gamepad API, standard
+// mapping: button 0 = bottom face = jump, 1-3 = other face buttons = skill, axis 0 / d-pad 14-15 = walk) works while the card is
+// on screen. Auto-replay waits while either is in use (skpLive). Speeds below are for show, not game data.
+const SKP_WALK = .125, SKP_JUMP = .5, SKP_G = .002;   // px/ms, px/ms, px/ms²
+const SKP_KEYS = {ArrowLeft: "l", KeyA: "l", ArrowRight: "r", KeyD: "r", ArrowUp: "j", KeyW: "j", Space: "j", ArrowDown: "", KeyS: "",
+  ControlLeft: "f", ControlRight: "f", Digit1: "f", Digit4: "f", Digit6: "f", Numpad1: "f", Numpad4: "f", Numpad6: "f"};
+const skpLive = () => SKP.focus || SKP.raf || performance.now() - SKP.ctl < 3000;
+const skpStage = () => $("#skr [data-skrstage]");
+function skpFire(){ const now = performance.now(); SKP.ctl = now; if (now < SKP.busy) return;
+  const out = redrawRange(true); if (!out) return; const {r, SP} = out;
+  SKP.busy = now + Math.max(250, SP?.act ? durOf(SP.act) : 450);
+  if (r.tp){ const key = S.open; setTimeout(() => { if (S.open !== key) return; skpMoveTo(SKP.x + SKP.dir * r.tp); redrawRange() }, 480) } }
+function skpMoveTo(x){ const vb = skpStage()?.viewBox.baseVal; SKP.x = vb ? Math.max(vb.x + 22, Math.min(vb.x + vb.width - 22, x)) : x }
+function skpTick(now){
+  const svg = skpStage(), dt = Math.min(50, now - (SKP.lt || now)); SKP.lt = now;
+  if (!svg || $("#skpage").hidden){ SKP.raf = 0; SKP.keys.clear(); return }
+  const k = SKP.keys, pad = SKP.pad, dx = (k.has("r") || pad?.dx > 0 ? 1 : 0) - (k.has("l") || pad?.dx < 0 ? 1 : 0);
+  const air = SKP.y > 0 || SKP.vy > 0, busy = now < SKP.busy;
+  if (dx && !(busy && !air)){ if (!busy) SKP.dir = dx; skpMoveTo(SKP.x + dx * SKP_WALK * dt) }
+  if ((k.has("j") || pad?.jump) && !air && !busy) SKP.vy = SKP_JUMP;
+  if (SKP.vy || SKP.y){ SKP.y = Math.max(0, SKP.y + SKP.vy * dt); SKP.vy -= SKP_G * dt; if (!SKP.y && SKP.vy < 0) SKP.vy = 0 }
+  if (k.has("f") || pad?.fire) skpFire();
+  svg.querySelector(".skr-pl")?.setAttribute("transform", skpXf());
+  svg.querySelector(".skr-plt")?.setAttribute("transform", `translate(${SKP.x} ${-SKP.y})`);
+  const o = OPEN[S.open], r = o && skRange(o.job, o.s, SKR.lv, SKR.plv, SKR.wk, SKR.ak), SP = r && skrSprites(r, o.s.id);
+  if (SP && now >= SKP.busy){ const A = D.skanim.act, two = SP.idle === (A[`${SP.w}|stand2`] || [])[0];
+    const walk = A[`${SP.w}|${two ? "walk2" : "walk1"}`], jump = A[`${SP.w}|jump`], d = walk ? durOf(walk) : 1;
+    let f = SP.idle; if (SKP.y > 0 && jump) f = jump[0]; else if (dx && walk){ let t = now % d; f = walk.find(x => (t -= x[3]) < 0) || walk[0] }
+    skpPose(svg.querySelector(".skr-me-spr image"), f) }
+  if (dx || SKP.y || SKP.vy || k.size || pad?.on) SKP.raf = requestAnimationFrame(skpTick);
+  else { SKP.raf = 0; SKP.lt = 0; if (SP && now >= SKP.busy) skpPose(svg.querySelector(".skr-me-spr image"), SP.idle) } }
+const skpGo = () => { SKP.ctl = performance.now(); if (!SKP.raf){ SKP.lt = 0; SKP.raf = requestAnimationFrame(skpTick) } };
+$("#skpage").addEventListener("keydown", e => { if (!e.target.matches?.("[data-skrstage]") || e.altKey || e.metaKey || (e.ctrlKey && !/^Control/.test(e.code))) return;
+  const a = SKP_KEYS[e.code]; if (a == null) return; e.preventDefault(); if (!a) return;
+  if (a === "f"){ if (!e.repeat) skpFire(); SKP.keys.add("f") } else SKP.keys.add(a);
+  if (a === "j" && !SKP.y && !SKP.vy && performance.now() >= SKP.busy) SKP.vy = SKP_JUMP;   // a quick tap still jumps
+  skpGo() });
+$("#skpage").addEventListener("keyup", e => { const a = SKP_KEYS[e.code]; if (a) SKP.keys.delete(a) });
+$("#skpage").addEventListener("focusin", e => { if (e.target.matches?.("[data-skrstage]")) SKP.focus = true });
+$("#skpage").addEventListener("focusout", e => { if (!e.target.matches?.("[data-skrstage]") || SKP.swap) return; SKP.focus = false; SKP.keys.clear(); SKP.ctl = performance.now() });
+$("#skpage").addEventListener("pointerdown", e => { if (e.button === 0 && e.target.closest?.("[data-skrstage]")){ e.preventDefault(); e.target.closest("[data-skrstage]").focus({preventScroll: true}); skpFire() } });
+// Gamepads: polled only while one is connected (browsers expose a pad after its first button press).
+let skpPads = 0;
+function skpPoll(){ let pad = null; try { pad = [...navigator.getGamepads()].find(Boolean) } catch(e) {}
+  if (!pad){ SKP.pad = null; skpPads = 0; return }
+  const b = i => pad.buttons[i]?.pressed, ax = pad.axes[0] || 0, dx = b(14) || ax < -.4 ? -1 : b(15) || ax > .4 ? 1 : 0;
+  const st = {dx, jump: b(0), fire: b(1) || b(2) || b(3)}; st.on = !!(st.dx || st.jump || st.fire);
+  const live = $("#skr [data-skrstage]") && !$("#skpage").hidden && !$("#skills").hidden && !document.hidden;
+  SKP.pad = live ? st : null; if (live && st.on) skpGo();
+  skpPads = requestAnimationFrame(skpPoll) }
+addEventListener("gamepadconnected", () => { if (!skpPads) skpPads = requestAnimationFrame(skpPoll) });
 $("#skpage").addEventListener("input", e => { if (e.target.matches("[data-skrlv]")) SKR.lv = +e.target.value; else if (e.target.matches("[data-skrplv]")) SKR.plv = +e.target.value; else return; redrawRange() });
-window.skRange = skRange; window.skrAnim = skrAnim; window.skrSprites = skrSprites;
+window.skRange = skRange; window.skrAnim = skrAnim; window.skrSprites = skrSprites; window.skrHits = skrHits;
 ASSETS.then(() => { if (S.open && $("#skr") && !$("#skr .skr-sp")) redrawRange(true) }, () => {});   // Pages: frames arrive with the lazy assets
 openSkillPage = key => { if (!OPEN[key]) return; $("#t-skills").click(); openSkill(key) };
 if (HASH.s && OPEN[HASH.s]) S.open = String(HASH.s);

@@ -199,6 +199,25 @@ const boxGaps = require("./boxgaps");
   { await p.waitForTimeout(3800); const seen = new Set();   // repeats on its own after a pause (Danny 11-01)
     for (let i = 0; i < 12; i++){ seen.add(await p.$eval("#skr .skr-me-spr image", i => i.getAttribute("href"))); await p.waitForTimeout(80) }
     check(seen.size > 1, "skill page: the preview repeats by itself after a pause", seen.size) }
+  { const xf = () => p.$eval("#skr .skr-pl", g => g.getAttribute("transform")), st = () => p.$eval("#skr [data-skrstage]", s => s.classList.contains("skr-play"));
+    await p.focus("#skr [data-skrstage]"); const y0 = await p.evaluate(() => scrollY);
+    await p.keyboard.down("ArrowLeft"); await p.waitForTimeout(400); await p.keyboard.up("ArrowLeft"); const left = await xf();
+    await p.keyboard.press("Space"); await p.waitForTimeout(120); const up = await xf(); await p.waitForTimeout(700);
+    await p.evaluate(() => $("#skr [data-skrstage]").classList.remove("skr-play")); await p.keyboard.press("Control"); await p.waitForTimeout(60);
+    const fired = await st(), miss = !(await p.$("#skr .skr-target[style]")), foc = await p.evaluate(() => document.activeElement?.matches("[data-skrstage]"));
+    await p.evaluate(() => $("#skr [data-skrstage]").__k = 1); await p.waitForTimeout(4200);
+    const held = await p.evaluate(() => $("#skr [data-skrstage]").__k === 1);   // auto-replay waits while the player has the preview
+    await p.keyboard.down("KeyD"); await p.waitForTimeout(300); await p.keyboard.up("KeyD"); await p.waitForTimeout(900); await p.keyboard.press("Digit4"); await p.waitForTimeout(60);
+    const r = [/translate\(-\d/.test(left) && /scale\(-1/.test(left), / -\d/.test(up.split(")")[0]), fired, miss, foc, held, await st(), await p.evaluate(() => scrollY) === y0];
+    check(r.every(Boolean), "skill page: preview is playable (arrows walk + turn, Space jumps, Ctrl/4 fire, facing away misses, keeps focus, no scroll, auto-replay waits)", r) }
+  { await p.waitForTimeout(1200); await p.evaluate(() => { const B = () => ({pressed: false, value: 0}); window.__pad = {axes: [0, 0, 0, 0], buttons: Array.from({length: 17}, B), connected: true, mapping: "standard"};
+      navigator.getGamepads = () => [__pad, null]; document.activeElement?.blur(); dispatchEvent(new Event("gamepadconnected")); __pad.axes[0] = -1 });   // stub pad: stick left
+    await p.waitForTimeout(400); await p.evaluate(() => { __pad.axes[0] = 0; __pad.buttons[0].pressed = true }); await p.waitForTimeout(100);
+    const xf = await p.$eval("#skr .skr-pl", g => g.getAttribute("transform"));
+    await p.evaluate(() => { __pad.buttons[0].pressed = false }); await p.waitForTimeout(900);
+    await p.evaluate(() => { $("#skr [data-skrstage]").classList.remove("skr-play"); __pad.buttons[3].pressed = true }); await p.waitForTimeout(80);
+    const fired = await p.$eval("#skr [data-skrstage]", s => s.classList.contains("skr-play")); await p.evaluate(() => { __pad.buttons[3].pressed = false });
+    check(/scale\(-1/.test(xf) && / -\d/.test(xf.split(")")[0]) && fired, "skill page: controller walks (stick), jumps (bottom button) and fires (top button)", xf) }
   await p.click("#skback"); await p.click("#skreset"); check(/^90 /.test(await p.textContent("#skcount")) && !/NaN|undefined/.test(await p.textContent("#skills")), "skill list: reset filters");
   check(/^https:\/\/maplestory\.io\/api\/MCW\/CBT2\/character\/2000\/\d+,\d+.*\/stand[12]\/0$/.test(await p.$eval("#pavatar", i => i.dataset.src || "")), "builder: avatar URL (maplestory.io MCW)");
   await tab("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); if (await p.isChecked("#itnoq")) await p.click("#itnoq"); check(/^2,259 /.test(await p.textContent("#itcount")), "item database lists 2,259 items");

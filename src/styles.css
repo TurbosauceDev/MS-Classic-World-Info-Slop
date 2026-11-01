@@ -1215,6 +1215,7 @@ html[data-nav="rows"] nav button.sgh .sgo{display:inline}
 /* Range preview animation (53-skills.js rangeSvg/skrAnim): plays once when .skr-play is set; base styles are the final frame,
    so the global reduced-motion block (animation:none) shows the finished diagram. The shot is hidden unless animating. */
 .skr-replay{display:block;margin:-4px 0 12px auto;padding:4px 12px;font-size:14px}
+.skr-svg[data-skrstage]{cursor:pointer;touch-action:manipulation}.skr-svg[data-skrstage]:focus-visible,.skr-svg[data-skrstage]:focus{outline:2px solid var(--accent);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.skr-replay{display:none}}
 .skr-me{image-rendering:auto}
 .skr-area,.skr-actor,.skr-target,.skr-tpto{transform-box:view-box}
