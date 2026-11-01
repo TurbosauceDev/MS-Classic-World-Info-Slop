@@ -9,6 +9,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.addInitScript(require("./ui-host"));
   await page.goto("file://" + path.join(__dirname, "../app/index.html"));
   await page.click("#guideNo");
+  await page.evaluate(() => { settings.autoRun = false; jr.wake() });   // always-on would start runs by itself on the stub frames
   const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
 
   // 1. Stop pressed in Mini (the Start/Stop shortcut): the wrap-up card is hidden there, so Mini shows one line with its own
