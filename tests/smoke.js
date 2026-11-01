@@ -224,8 +224,8 @@ const boxGaps = require("./boxgaps");
     check(/scale\(-1/.test(xf) && / -\d/.test(xf.split(")")[0]) && fired, "skill page: controller walks (stick), jumps (bottom button) and fires (top button)", xf) }
   await p.click("#skback"); await p.click("#skreset"); check(/^90 /.test(await p.textContent("#skcount")) && !/NaN|undefined/.test(await p.textContent("#skills")), "skill list: reset filters");
   check(/^https:\/\/maplestory\.io\/api\/MCW\/CBT2\/character\/2000\/\d+,\d+.*\/stand[12]\/0$/.test(await p.$eval("#pavatar", i => i.dataset.src || "")), "builder: avatar URL (maplestory.io MCW)");
-  await tab("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); if (await p.isChecked("#itnoq")) await p.click("#itnoq"); check(/^5,375 /.test(await p.textContent("#itcount")), "item database lists 5,375 items (2,259 game items + 3,116 NX)");
-  await p.click("#itsrc"); check(/^[\d,]+ /.test(await p.textContent("#itcount")) && !/^5,375/.test(await p.textContent("#itcount")), "item list: known-source filter");
+  await tab("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); if (await p.isChecked("#itnoq")) await p.click("#itnoq"); check(/^5,164 /.test(await p.textContent("#itcount")), "item database lists 5,164 items (2,259 game items + 2,905 NX)");
+  await p.click("#itsrc"); check(/^[\d,]+ /.test(await p.textContent("#itcount")) && !/^5,164/.test(await p.textContent("#itcount")), "item list: known-source filter");
   { const n = await p.textContent("#itcount"); await p.click("#itnoq"); await p.fill("#itsearch", "letter");
     check(!/Maria's Letter/.test(await p.textContent("#itrows")) && n !== await p.textContent("#itcount"), "item list: hide quest items");
   await p.fill("#itsearch", "") }

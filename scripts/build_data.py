@@ -615,11 +615,12 @@ def step_cash(D):
     """NX / Decoration: every Cash Shop item in the export's cash_shop.json (cosmetic equips like the Slime T-Shirt, pets,
     coupons, megaphones, ...) gets a D.items entry with c = "Cash", s = its slot/kind, nx = NX price (None = not on sale
     in the shop) and an icon. They have no stats, drops or shops, so the Items page lists them without a "known source"."""
+    for k in [k for k, v in D["items"].items() if v.get("c") == "Cash"]: D["items"].pop(k); D["iicons"].pop(k, None)   # rebuild from scratch
     kind = {101: "Face Accessory", 102: "Eye Decoration", 103: "Earring"}   # the export files all three under "Earring"; the Deco window has a slot for each
     for cat in json.load(open(C + "cash_shop.json"))["categories"]:
         for i in cat["items"]:
             iid = str(i["id"])
-            if iid in D["items"] and D["items"][iid].get("c") != "Cash": continue
+            if not (i.get("name") or "").strip() or (iid in D["items"] and D["items"][iid].get("c") != "Cash"): continue   # 2 export rows have no name
             D["items"][iid] = {"n": i["name"], "c": "Cash", "s": kind.get(i["id"] // 10000) or i.get("sub_category") or i["category"], "st": {}, "job": None, "p": None,
                                "d": (i.get("description") or "").strip(), "wt": None, "spd": None, "sp": None, "nx": i.get("price"), "k": i["category"]}
             p = C + f"images/items/{int(iid):08d}.png"
