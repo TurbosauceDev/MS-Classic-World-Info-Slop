@@ -108,3 +108,6 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 - tracker/tests/frames-chat/local-blue.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): local megaphone, dark text on blue (no class ink). tests/chat.test.js.
 - tracker/tests/frames-chat/notice.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): yellow [Notice], wrapped without indent. tests/chat.test.js.
 - tracker/tests/frames-shop/own-shop.png: Danny's 10-31 screenshot of his own merchant shop window (a crop, 1199x1022, 2x UI): 6 rows, 3 sold (greyed). Rows 14,067 / 9,001 / 15,067 / 34,000 / 4,067, 'Please be aware that a 3% fee will be deducted from sales.' tests/shop.test.js (OCR recorded from real Tesseract). Visitor view and truncated names still need fixtures.
+
+- tests/fixtures/deco-turbow.png: Danny's 11-01 Turbow, Equipment Inventory on the Deco tab + Character Info (1028x622, ~2.05x, smoothed). Reads 10 NX items (Slime T-Shirt, Silent Sea of Clouds, Founder's Label/Chat Ring, Slime Earrings, Black Sunglasses, White Jeans, Slime Slippers, Mark of the Founder (Black), Blue Watch) and Level 42. tests/nx.js.
+- tests/fixtures/equip-turbow.png: same character, Equip tab (1070x635). Reads 0 NX items, Level 42. tests/nx.js.

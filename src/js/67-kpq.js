@@ -5,7 +5,7 @@
 // box contents and tips from meowdb's KPQ guide (read 2026-10-08), which cites Nexon's Founder's Access notes for Ch 3-5.
 const MEOW = "https://meowdb.com/msclassic/guides/kerning-city-party-quest-kpq-guide";
 const NPCNAME = {"800001": "Cloto", "800002": "Nella"};
-const BYNAME = {}; for (const [id, it] of Object.entries(D.items)) BYNAME[it.n] ??= id;
+const BYNAME = {}; for (const [id, it] of Object.entries(D.items)) if (it.c !== "Cash") BYNAME[it.n] ??= id;
 const item = name => { const id = BYNAME[name]; return id ? `<span class="iname">${itemIcon(id, 1, true)}<span class="itname" tabindex="0" data-item="${id}">${esc(name)}</span></span>` : esc(name) };
 const mob = id => D.mobdb[id] ? mobLink(id) : esc(id);
 const npc = id => { const img = D.npcimg[id]; return `<span class="kpqnpc">${img ? `<img src="data:image/png;base64,${img}" alt="">` : ""}<b>${NPCNAME[id] || id}</b></span>` };

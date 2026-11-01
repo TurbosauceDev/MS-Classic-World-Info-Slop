@@ -3,7 +3,7 @@
 // every item in the launch game files (D.items: equipment, use, etc, setup, scrolls). Clicking an item (here, or any item
 // icon / .iname anywhere on the page) opens its own page: stats, where to get it (meowdb drop reports, NPC shops, crafting,
 // quest rewards) and what wants it (quests, recipes).
-const CAT = {Equipment: "Equip", Consumable: "Use", Etc: "Etc", Setup: "Setup", Scroll: "Scroll"};
+const CAT = {Equipment: "Equip", Consumable: "Use", Etc: "Etc", Setup: "Setup", Scroll: "Scroll", Cash: "NX / Deco"};
 const MAKE = {}, USE = {}; for (const r of D.craft.rec){ (MAKE[r[3]] = MAKE[r[3]] || []).push(r); for (const [id] of r[7]) (USE[id] = USE[id] || []).push(r) }
 const DISC = D.craft.disc.map(d => d[0]);
 const REW = {}, WANT = {};
@@ -13,7 +13,7 @@ for (const [src, list] of [["q", QLAUNCH], ["cit", D.citq]]) for (const r of lis
 }
 // names shared by several items (male/female versions, quest copies): quests ask by name, so give WANT to the non-equipment one
 const BYNAME = {}; for (const [id, it] of Object.entries(D.items)) (BYNAME[it.n] = BYNAME[it.n] || []).push(id);
-const wantsOf = (id, it) => { const ids = BYNAME[it.n]; return ids.length > 1 && it.c === "Equipment" && ids.some(x => D.items[x].c !== "Equipment") ? [] : WANT[it.n] || [] };
+const wantsOf = (id, it) => { const ids = BYNAME[it.n]; return it.c === "Cash" || (ids.length > 1 && it.c === "Equipment" && ids.some(x => D.items[x].c !== "Equipment" && D.items[x].c !== "Cash")) ? [] : WANT[it.n] || [] };
 const WSRC_BY_ID = {}; for (const w of D.weapons) if (D.wsrc[w[0]]) WSRC_BY_ID[w[12]] = D.wsrc[w[0]];
 // Confirmed Drops (grind tracker shared runs, D.shared): item -> [[mob, picked up, kills]]
 const CDROP = {}; for (const [m, c] of Object.entries(D.shared?.mobs || {})) for (const [iid, n] of Object.entries(c.items)) (CDROP[iid] = CDROP[iid] || []).push([m, n, c.kills]);
@@ -38,8 +38,9 @@ const OPEN = {}; for (const o of I) OPEN[o.id] = o;
 const grpOf = it => it.c !== "Equipment" ? "" : it.s === "Weapon" ? "Weapon" : it.s === "Earring" ? "Acc" : "Armor";
 for (const o of I) o.grp = grpOf(o.it);
 const catOk = (o, c) => !c || o.cat === c || o.grp === c;
-const SLOTS = [...new Set(I.filter(o => o.it.c === "Equipment").map(o => o.it.s === "Weapon" ? o.it.wt : o.it.s))].sort();
-const slotOpts = () => { const ok = SLOTS.filter(sl => I.some(o => o.it.c === "Equipment" && typeOf(o.it) === sl && catOk(o, S.cat)));
+const isGear = it => it.c === "Equipment" || it.c === "Cash";   // slot filter: NX equips share the slot names (Hat, Top, ...)
+const SLOTS = [...new Set(I.filter(o => isGear(o.it)).map(o => o.it.c === "Equipment" && o.it.s === "Weapon" ? o.it.wt : o.it.s))].sort();
+const slotOpts = () => { const ok = SLOTS.filter(sl => I.some(o => isGear(o.it) && typeOf(o.it) === sl && catOk(o, S.cat)));
   if (S.slot && !ok.includes(S.slot)) S.slot = "";
   $("#itslot").innerHTML = `<option value="">Any</option>` + ok.map(s => `<option>${esc(s)}</option>`).join(""); $("#itslot").value = S.slot };
 
@@ -54,9 +55,10 @@ const qn = ([src, r]) => `<span class="name qname" tabindex="0" data-src="${src}
 const mob = id => `<span class="mobname" tabindex="0" data-mob="${id}">${esc(D.mobdb[id].name)}</span> <span class="sub">Lv ${D.mobdb[id].level}</span>`;
 const place = ([npc, mid, map]) => `${npcLink(npc)} <span class="sub">in</span> ${mid && (D.mapnames[mid] != null || D.maps[mid]) ? mapLink(mid, map) : esc(map)}`;
 const iname = (id, n) => D.items[id] ? `<span class="iname">${itemIcon(id, n || 1, true)}<span class="itname" tabindex="0" data-item="${id}" data-n="${n || 1}">${esc(D.items[id].n)}</span>${n > 1 ? ` <span class="sub">×${fmt(n)}</span>` : ""}</span>` : "";
-const typeOf = it => it.c === "Equipment" ? (it.s === "Weapon" ? it.wt : it.s) : it.c === "Scroll" ? `Scroll for ${it.s}` : CAT[it.c] || it.c;
+const typeOf = it => it.c === "Cash" ? it.s : it.c === "Equipment" ? (it.s === "Weapon" ? it.wt : it.s) : it.c === "Scroll" ? `Scroll for ${it.s}` : CAT[it.c] || it.c;
 const jobOk = (it, j) => !j || (j === "Beginner" ? !it.job || it.job === "All" : (it.job || "All") === "All" || it.job.split("/").includes(j));
 const keyStats = it => { const s = it.st || {};
+  if (it.c === "Cash") return it.nx ? `${fmt(it.nx)} NX` : "";
   return [s.incPAD && `ATK ${s.incPAD}`, s.incMAD && `M.ATK ${s.incMAD}`, s.incPDD && `DEF ${s.incPDD}`, s.incMDD && `M.DEF ${s.incMDD}`,
     ...["STR", "DEX", "INT", "LUK"].filter(k => s["inc" + k]).map(k => `${k} +${s["inc" + k]}`), s.incMHP && `HP +${s.incMHP}`, s.incMMP && `MP +${s.incMMP}`,
     s.incACC && `ACC +${s.incACC}`, s.incEVA && `AVOID +${s.incEVA}`, s.incSpeed && `Speed +${s.incSpeed}`, s.incJump && `Jump +${s.incJump}`,
@@ -66,10 +68,11 @@ sync();
 
 function page(o){
   const it = o.it, s = it.st || {}, st = (k, v, t) => v == null || v === "" ? "" : `<div${String(v).length > 12 ? ' class="wide"' : ""}${t ? ` title="${esc(t)}"` : ""}><dt>${k}</dt><dd>${v}</dd></div>`;
-  const isEq = it.c === "Equipment";
+  const isEq = it.c === "Equipment", isCash = it.c === "Cash";
   const flags = [`<span class="pill p-hot">${esc(typeOf(it))}</span>`, o.quest && `<span class="pill p-warn" title="Quest item: only used for a quest">quest item</span>`, isEq && it.job && it.job !== "All" && `<span class="pill p-warn">${esc(it.job)} only</span>`,
     isEq && (!it.job || it.job === "All") && `<span class="pill p-good">any job</span>`, it.g && `<span class="pill p-warn">${esc(it.g)} only</span>`,
-    !o.src.length && `<span class="pill p-bad" title="No drop report, shop, recipe or quest reward we know of">no known source</span>`].filter(Boolean).join(" ");
+    isCash && (it.nx ? `<span class="pill p-good" title="Cash Shop price in the game files">${fmt(it.nx)} NX</span>` : `<span class="pill p-warn" title="The game files list no Cash Shop price: event, gift or retired item">not in the Cash Shop</span>`),
+    !o.src.length && !isCash && `<span class="pill p-bad" title="No drop report, shop, recipe or quest reward we know of">no known source</span>`].filter(Boolean).join(" ");
   const stats = isEq ? [st("Required level", s.reqLevel ?? 0), ...["STR", "DEX", "INT", "LUK"].map(k => st("Req " + k, s["req" + k] || null)),
       ...Object.entries(STATNAME).map(([k, l]) => st(l, s[k] ? "+" + s[k] : null)), st("Attack speed", it.spd), st("Upgrade slots", s.tuc, "Scrolls you can use on it")].join("")
     : [...Object.entries(it.sp || {}).filter(([k]) => SPEC[k]).map(([k, v]) => st("Effect", SPEC[k].replace("{}", fmt(v)))),
@@ -97,7 +100,7 @@ function page(o){
       <p class="sub">${esc(typeOf(it))}${isEq ? ` · level ${s.reqLevel || 0}+` : ""} · item ID ${o.id}${others ? ` · same name: ${others}` : ""}</p><p class="mflags">${flags}</p></div></div>
     ${it.d ? `<p class="idesc">${esc(it.d).replace(/\n/g, "<br>")}</p>` : ""}
     ${stats ? `<h3 class="msec">Stats</h3><dl class="stats mgrid">${stats}</dl>` : ""}</div>
-    <h3 class="msec">Where to get it</h3>
+    ${isCash ? `<h3 class="msec">Where to get it</h3><p class="sub">NX / Decoration item (Cash Shop list in the game files, OSMS export). ${it.nx ? `Sold for ${fmt(it.nx)} NX.` : "No NX price is listed, so it's likely an event, gift or retired item."} It shows over your equipped gear on the character and has no stats. Players can still trade it, so the price box below is the Free Market price.</p>` : `<h3 class="msec">Where to get it</h3>
     <div class="mcols">
       ${card(`Monster drops <span class="sub">(meowdb player reports; confirmed = net player votes)</span>`, drops, "No drop reports yet.")}
       ${cdrop ? card(`Confirmed Drops <span class="sub">(grind tracker players' own pickups, read ${esc(D.shared.read)}; real rates are at least this)</span>`, cdrop) : ""}
@@ -109,7 +112,7 @@ function page(o){
     <div class="mcols">
       ${card("Quests that want it", wants, "No quest asks for it.")}
       ${card("Crafting recipes that use it", makes, "No recipe uses it.")}
-    </div>
+    </div>`}
     <h3 class="msec">Prices ${npcCheaperPill(o.id)}</h3>
     <div id="itprices">${priceBox(o.id)}</div>
     ${like.length ? `<h3 class="msec">Similar ${esc(typeOf(it))} for ${esc(it.job && it.job !== "All" ? it.job : "any job")}</h3><div class="tblwrap"><table class="mini"><thead><tr><th>Item</th><th class="num">Lv</th><th>Stats</th><th>Get it</th></tr></thead>
@@ -122,7 +125,7 @@ const COLS = {name: o => o.it.n, type: o => typeOf(o.it), lv: o => o.lv, price: 
   trend: o => PW[o.id]?.[5] != null && !(PW[o.id][4] & 1) ? PW[o.id][5] : S.dir > 0 ? Infinity : -Infinity, now: o => pwNowRatio(o.id) ?? (S.dir > 0 ? Infinity : -Infinity)};
 function render(){
   const q = S.q.trim().toLowerCase(), f = COLS[S.sort] || COLS.name;
-  const rows = I.filter(o => catOk(o, S.cat) && (!S.slot || typeOf(o.it) === S.slot) && jobOk(o.it, S.job) && (!S.src || o.src.length) && (!S.noq || !o.quest) && (!S.cheap || pwCheap(o.id)) && (!S.from || o.src.includes(S.from)) && (!S.use || o.use.includes(S.use)) && (!q || o.hay.includes(q)))
+  const rows = I.filter(o => catOk(o, S.cat) && (!S.slot || typeOf(o.it) === S.slot) && jobOk(o.it, S.job) && (!S.src || o.src.length || o.it.c === "Cash") && (!S.noq || !o.quest) && (!S.cheap || pwCheap(o.id)) && (!S.from || o.src.includes(S.from)) && (!S.use || o.use.includes(S.use)) && (!q || o.hay.includes(q)))
     .sort((a, b) => { const x = f(a), y = f(b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * S.dir || a.it.n.localeCompare(b.it.n) });
   document.querySelectorAll("#ithead th[data-k]").forEach(th => { const on = th.dataset.k === S.sort;
     th.setAttribute("aria-sort", on ? (S.dir > 0 ? "ascending" : "descending") : "none");

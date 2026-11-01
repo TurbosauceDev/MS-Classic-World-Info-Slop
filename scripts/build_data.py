@@ -14,6 +14,7 @@ Steps, in order (each adds keys to the data dict):
   mobdb     mobdb, mskill (+ mobimg)                     <- monsters.json + meowdb drops/mesos (`build_data.py mobdb`)
   worldmap  wmap                                          <- maplestory.io MCW CBT2 WorldMap000/001 (`build_data.py worldmap`)
   crafting  craft (+ items)                               <- crafting.json + Crafting quests (`build_data.py crafting` = this step only)
+  cash      NX/Decoration items (c = Cash) into items/iicons <- cash_shop.json (`build_data.py cash`)
   itemdb    items/iicons for every item, ishop             <- items.json + meowdb shops (`build_data.py itemdb`)
 Then squash_images.py re-saves every embedded PNG as a smaller, pixel-identical PNG.
 """
@@ -610,6 +611,21 @@ def step_itemdb(D):
             for iid in ids: out.setdefault(iid, []).append([s["npc"], s.get("mapId") or mapid.get(s["map"], ""), s["map"], price, tag])
     D["ishop"] = out
 
+def step_cash(D):
+    """NX / Decoration: every Cash Shop item in the export's cash_shop.json (cosmetic equips like the Slime T-Shirt, pets,
+    coupons, megaphones, ...) gets a D.items entry with c = "Cash", s = its slot/kind, nx = NX price (None = not on sale
+    in the shop) and an icon. They have no stats, drops or shops, so the Items page lists them without a "known source"."""
+    for k in [k for k, v in D["items"].items() if v.get("c") == "Cash"]: D["items"].pop(k); D["iicons"].pop(k, None)   # rebuild from scratch
+    kind = {101: "Face Accessory", 102: "Eye Decoration", 103: "Earring"}   # the export files all three under "Earring"; the Deco window has a slot for each
+    for cat in json.load(open(C + "cash_shop.json"))["categories"]:
+        for i in cat["items"]:
+            iid = str(i["id"])
+            if not (i.get("name") or "").strip() or (iid in D["items"] and D["items"][iid].get("c") != "Cash"): continue   # 2 export rows have no name
+            D["items"][iid] = {"n": i["name"], "c": "Cash", "s": kind.get(i["id"] // 10000) or i.get("sub_category") or i["category"], "st": {}, "job": None, "p": None,
+                               "d": (i.get("description") or "").strip(), "wt": None, "spd": None, "sp": None, "nx": i.get("price"), "k": i["category"]}
+            p = C + f"images/items/{int(iid):08d}.png"
+            if os.path.exists(p): D["iicons"][iid] = b64(p)
+
 def step_kpq(D):
     """kpq [{id, name, mm (webp base64), dim [w, h], rate (mob rate), npc [[npcId, x, y]], mob [[mobId, x, y]]}]: the KPQ maps
     (1st Accompaniment, 80000000-80000600) for the KPQ tab, x/y as minimap fractions. Adds Cloto/Nella thumbnails to npcimg."""
@@ -721,7 +737,7 @@ def osms_info():
         return {"ref": h, "date": d}
     except Exception: return None
 
-PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "classicrank": ("crank", lambda D: step_classicrank(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: (D.pop("cmp", None), step_cmarket(D))), "shopscans": ("mw", lambda D: step_shopscans(D)), "mdbmarket": ("mdb", lambda D: step_mdbmarket(D)), "mesoindex": ("mi", lambda D: step_mesoindex(D)), "reqitems": ("_none", lambda D: step_reqitems(D)), "weapon_sources": ("wsrc", lambda D: step_weapon_sources(D))}   # (key it owns, step)
+PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "classicrank": ("crank", lambda D: step_classicrank(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: (D.pop("cmp", None), step_cmarket(D))), "shopscans": ("mw", lambda D: step_shopscans(D)), "mdbmarket": ("mdb", lambda D: step_mdbmarket(D)), "mesoindex": ("mi", lambda D: step_mesoindex(D)), "cash": ("_none", lambda D: step_cash(D)), "reqitems": ("_none", lambda D: step_reqitems(D)), "weapon_sources": ("wsrc", lambda D: step_weapon_sources(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)
@@ -735,7 +751,7 @@ if __name__ == "__main__":
     D = step_base()
     step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D)
     D = json.loads(json.dumps(D))  # str keys, as in the partial rebuild path (crafting/extras look mobs up by str id)
-    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D); step_itemdb(D); step_kpq(D); step_prices(D); step_shared(D); step_classicrank(D); step_cmarket(D); step_shopscans(D); step_mdbmarket(D); step_mesoindex(D)
+    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D); step_itemdb(D); step_cash(D); step_kpq(D); step_prices(D); step_shared(D); step_classicrank(D); step_cmarket(D); step_shopscans(D); step_mdbmarket(D); step_mesoindex(D)
     D["osms"] = osms_info()
     for k in ("mobdiff", "skilldiff", "latermobnames"): D.pop(k, None)   # only the removed "What changed since 2008" tab used these
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees

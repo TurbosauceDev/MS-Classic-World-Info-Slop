@@ -9,10 +9,10 @@ const ROWS = [];
 // Red Snail / Red Potion for "red")
 const add = (kind, key, name, sub, low = 0) => { const n = norm(name); ROWS.push({kind, key, name, sub, n, w: n.split(" "), low}) };
 for (const [id, m] of Object.entries(D.mobdb)) add("mob", id, m.name, `Lv ${m.level}`);
-const ICAT = {Equipment: "Equip", Consumable: "Use", Etc: "Etc", Setup: "Setup", Scroll: "Scroll"};
+const ICAT = {Equipment: "Equip", Consumable: "Use", Etc: "Etc", Setup: "Setup", Scroll: "Scroll", Cash: "NX / Deco"};
 // 36 names belong to more than one item (Red Potion 2000000 and 2000007): those rows show the item ID to tell them apart
 const NAMEN = {}; for (const it of Object.values(D.items)) NAMEN[it.n] = (NAMEN[it.n] || 0) + 1;
-for (const [id, it] of Object.entries(D.items)) add("item", id, it.n, (it.c === "Equipment" ? (it.s === "Weapon" ? it.wt || "Weapon" : it.s) : ICAT[it.c] || it.c) + (NAMEN[it.n] > 1 ? ` · ID ${id}` : ""), +(it.c === "Setup"));
+for (const [id, it] of Object.entries(D.items)) add("item", id, it.n, (it.c === "Cash" ? "NX " + it.s : it.c === "Equipment" ? (it.s === "Weapon" ? it.wt || "Weapon" : it.s) : ICAT[it.c] || it.c) + (NAMEN[it.n] > 1 ? ` · ID ${id}` : ""), +(it.c === "Setup" || it.c === "Cash"));
 // maps: one row per name (several maps share one, e.g. Mushroom Town), preferring one with monsters
 const MAPN = {}; for (const [id, m] of Object.entries(D.maps)) if (m[0] && (!(m[0] in MAPN) || (!D.maps[MAPN[m[0]]][2]?.length && m[2]?.length))) MAPN[m[0]] = id;
 for (const [id, n] of Object.entries(D.mapnames)) if (!(n in MAPN)) MAPN[n] = id;

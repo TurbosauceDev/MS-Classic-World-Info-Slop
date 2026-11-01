@@ -11,9 +11,10 @@ const WBYID = Object.fromEntries(BLD.W.map(w => [w.id, w]));
 const num = s => { const m = /\d+/.exec(s || ""); return m ? +m[0] : null };
 let READS = [], R = null, SEQ = 0;   // READS: one result per screenshot; R: all of them merged
 
+const CASH = (() => { let l; return () => l || (l = Object.keys(D.items).filter(id => D.items[id].c === "Cash" && D.items[id].k === "Equipment" && D.iicons[id]).map(id => [id, D.iicons[id], true])) })();   // [id, icon, ignore the Deco badge]
 // one screenshot -> whatever it shows: {name, lvl, shown, skills, gear, weapon, what}
 async function readShot(f){
-  const r = {id: ++SEQ, name: f.name && f.name !== "image.png" ? f.name : "", lvl: null, shown: null, skills: {}, gear: {}, weapon: [], what: [], marks: []};
+  const r = {id: ++SEQ, name: f.name && f.name !== "image.png" ? f.name : "", lvl: null, shown: null, skills: {}, gear: {}, weapon: [], deco: [], what: [], marks: []};
   const mark = (x, y, w, h, t, kind, icon) => r.marks.push({x, y, w, h, t, kind, icon});
   await ASSETS;   // Pages: equipment icons arrive in a second file (00-core.js)
   const skIcons = Object.keys(SKJOB).filter(id => D.icons[id]).map(id => [id, D.icons[id]]);
@@ -26,8 +27,11 @@ async function readShot(f){
     const tall = pink.slice(0, 3).reduce((a, b, i, l) => b.y1 - b.y0 > l[a].y1 - l[a].y0 ? i : a, 0);
     // LEVEL sits 96 game px above STR (Danny's stat window); the label after the two-line JOB one when STR isn't in view.
     // Smoothed shots can lose NAME/JOB, so STR wins (Turbow at 1.5x read HP as the level, 10-31)
-    const lb = (green.length && pink.find(b => Math.abs(green[0].y0 - 96 - b.y0) <= 3)) || pink[Math.min(tall + 1, pink.length - 1)], lv = val(lb);
-    if (lv >= 1 && lv <= 200){ r.lvl = lv; mark(lb.x0, lb.y0, lb.x1 - lb.x0 + 78, lb.y1 - lb.y0 + 1, `Level ${lv}`, "stat") }
+    // The Character Info panel (LEVEL / JOB / FAME / GUILD beside the Equipment window) has four equal pink labels and no
+    // two-line JOB: its LEVEL is the first one. Before this it read FAME as the level (Danny's Deco shot: "Level 10 Warrior")
+    const hs = pink.slice(0, 3).map(b => b.y1 - b.y0), info = !green.length && Math.max(...hs) < Math.min(...hs) * 1.4;
+    const lb = (green.length && pink.find(b => Math.abs(green[0].y0 - 96 - b.y0) <= 3)) || (info ? pink.find((b, i) => pink.length - i === 4) : pink[Math.min(tall + 1, pink.length - 1)]), lv = lb && val(lb);
+    if (lb && lv >= 1 && lv <= 200){ r.lvl = lv; mark(lb.x0, lb.y0, lb.x1 - lb.x0 + 78, lb.y1 - lb.y0 + 1, `Level ${lv}`, "stat") }
   }
   if (green.length >= 4){
     const v = green.slice(0, 4).map(val);
@@ -64,6 +68,16 @@ async function readShot(f){
     mark(m.x, m.y, m.w, m.h, nm(m.key) + (m.alt?.length ? ` (or ${m.alt.map(nm).join(", ")})` : ""), "item", D.iicons[m.key]);
   }
   if (ne) r.what.push(`${ne} item${ne > 1 ? "s" : ""} worn`);
+  // Deco tab (NX cosmetics): 2,760 icons to try, so only when that tab is open (or the shot showed nothing else at all)
+  if (shotDecoTab(img) || !(r.what.length)){
+    const seen = new Set(); let nd = 0;
+    for (const m of await find(img, CASH(), 0.9)){
+      const ids = [m.key, ...(m.alt || [])]; if (seen.has(m.key)) continue; seen.add(m.key);
+      r.deco.push(m.key); nd++; mark(m.x, m.y, m.w, m.h, D.items[m.key].n + (m.alt?.length ? ` (or ${m.alt.map(id => D.items[id].n).join(", ")})` : ""), "item", D.iicons[m.key]);
+    }
+    if (nd === 1 && !shotDecoTab(img)){ r.deco = []; r.marks.pop(); nd = 0 }   // a lone look-alike on a shot that isn't the Deco tab
+    if (nd) r.what.push(`${nd} NX / Deco item${nd > 1 ? "s" : ""}`);
+  }
   r.k = img.k; r.fuzzy = !!img.fuzzy; r.thumb = crop(img, r.marks);
   return r;
 }
@@ -84,13 +98,14 @@ function crop(img, marks){
 // shot with every window open)
 function merge(){
   if (!READS.length){ R = null; return }
-  const m = {lvl: null, shown: null, skills: {}, gear: {}, weapon: []};
+  const m = {lvl: null, shown: null, skills: {}, gear: {}, weapon: [], deco: []};
   for (const r of READS){
     if (r.lvl) m.lvl = r.lvl;
     if (r.shown){ m.shown = {...r.shown}; m.base = {...r.base} }
     for (const [id, v] of Object.entries(r.skills)) m.skills[id] = Math.max(m.skills[id] || 0, v);
     for (const [sl, ids] of Object.entries(r.gear)) m.gear[sl] = [...new Set((m.gear[sl] || []).concat(ids))];
     for (const id of r.weapon) if (!m.weapon.includes(id)) m.weapon.push(id);
+    for (const id of r.deco) if (!m.deco.includes(id)) m.deco.push(id);
   }
   // class: from skills, else the weapon, else the highest stat; nothing read keeps the builder's
   const jobs = Object.keys(m.skills).map(id => SKJOB[id].job), w = WBYID[m.weapon[0]];
@@ -132,6 +147,7 @@ function applyR0(){
     if (Object.keys(R.pick.gear).length){ S.gear = {...R.pick.gear};
       const gs = Object.values(S.gear).map(id => BLD.ARMOR[id][5]).find(Boolean); if (gs && S.gender && S.gender !== gs) S.gender = gs }
     else if (clsChanged) S.gear = {};
+    if (R.deco.length) S.deco = R.deco.slice(0, 24);   // the Deco tab replaces what was worn there before
     if (R.shown){
       const {ap} = baseAP(), over = STATS.reduce((a, k) => a + ap[k], 0) - BLD.apTotal(S.lvl);
       if (over > 0){ const top = STATS.reduce((a, k) => ap[k] > ap[a] ? k : a, "STR"); ap[top] = Math.max(4, ap[top] - over) }
@@ -156,6 +172,7 @@ function note(){
   const S = BLD.S, bits = [`Level ${S.lvl} ${esc(S.branch || S.cls)}${R.branchFrom === "weapon" ? " (job from your weapon)" : ""}`];
   if (R.pick.weapon) bits.push(esc(WBYID[R.pick.weapon].name));
   const ng = Object.keys(R.pick.gear).length; if (ng) bits.push(`${ng} armor piece${ng > 1 ? "s" : ""}`);
+  if (R.deco.length) bits.push(`${R.deco.length} NX / Deco item${R.deco.length > 1 ? "s" : ""}`);
   const ns = Object.keys(R.skills).length; if (ns) bits.push(`${ns} skill${ns > 1 ? "s" : ""}`);
   const worn = Object.fromEntries([R.pick.weapon, ...Object.values(R.pick.gear)].filter(Boolean).map(id => [id, 1]));
   let t = `<b>Applied:</b> ${bits.join(" · ")}${Object.keys(worn).length ? ` (${invPeek(worn, "see the gear")})` : ""}.`;
