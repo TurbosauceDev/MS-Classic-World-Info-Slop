@@ -3682,7 +3682,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-11-01T18:32:45Z" data-ver="0.20.8">Site version: v0.20.8 · built Nov 1, 2026 · 18:32 UTC</p>
+  <p class="sitever" data-built="2026-11-01T18:39:08Z" data-ver="0.20.8">Site version: v0.20.8 · built Nov 1, 2026 · 18:39 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -3924,6 +3924,38 @@ function dropRate(n, k){
   const z = 1.96, p = n / k, den = 1 + z * z / k, mid = (p + z * z / (2 * k)) / den, half = z * Math.sqrt(p * (1 - p) / k + z * z / (4 * k * k)) / den;
   const a = Math.round(1 / Math.min(1, mid + half)), b = Math.round(1 / Math.max(1e-6, mid - half));
   return `about 1 per ${fmt(Math.round(k / n))} kills` + (a !== b ? ` <span class="tiny" title="95% range from these counts (an estimate: it narrows as more kills are shared)">(likely ${fmt(a)}-${fmt(b)})</span>` : "");
+}
+
+/* Clean share addresses (Danny 2026-11-01): Copy link on an item, monster, skill or quest gives
+   https://maplestory.scumlord.studio/items/axe-pole-arm/ instead of a base64 #i=... hash. The same paths are written by
+   scripts/routes.py (static pages) and resolved by 404.html; tests/routes_test.py checks that this file and routes.py agree. */
+const ROUTE_HOST = "https://maplestory.scumlord.studio";
+const ROUTE_CLASS = {"Warrior": "warrior", "Fighter": "warrior", "Page": "warrior", "Spearman": "warrior",
+  "Magician": "magician", "F/P Wizard": "magician", "I/L Wizard": "magician", "Cleric": "magician",
+  "Archer": "archer", "Hunter": "archer", "Crossbowman": "archer", "Rogue": "thief", "Assassin": "thief", "Bandit": "thief"};
+const routeSlug = n => String(n).normalize("NFKD").replace(/[^\x00-\x7f]/g, "").toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "page";
+const ROUTE_CNT = {};
+// -> canonical path of one entry ("item" | "mob" | "skill" | "quest"), or null when it has no static page
+function cleanPath(kind, id, data = D){
+  id = String(id); let name, parent = "", plural, list;
+  if (kind === "item"){ const x = data.items[id]; if (!x) return null; name = x.n; plural = "items"; list = () => Object.values(data.items).map(v => [v.n, ""]) }
+  else if (kind === "mob"){ const x = data.mobdb[id]; if (!x) return null; name = x.name; plural = "monsters"; list = () => Object.values(data.mobdb).map(v => [v.name, ""]) }
+  else if (kind === "quest"){ const x = data.quests.find(q => String(q.id) === id); if (!x) return null; name = x.name; plural = "quests"; list = () => data.quests.map(q => [q.name, ""]) }
+  else if (kind === "skill"){
+    const job = Object.keys(data.skills).find(j => data.skills[j].some(s => String(s.id) === id)); if (!job) return null;
+    const c = ROUTE_CLASS[job]; parent = c + "/" + (routeSlug(job) === c ? "" : routeSlug(job) + "/");
+    name = data.skills[job].find(s => String(s.id) === id).n; plural = "skills";
+    list = () => Object.entries(data.skills).flatMap(([j, l]) => l.map(s => [s.n, ROUTE_CLASS[j] + "/" + (routeSlug(j) === ROUTE_CLASS[j] ? "" : routeSlug(j) + "/")]))
+  } else return null;
+  const key = kind + "|" + parent + "|" + routeSlug(name), cnt = ROUTE_CNT[kind] || (ROUTE_CNT[kind] = (() => { const o = {}; for (const [n, p] of list()){ const k = kind + "|" + p + "|" + routeSlug(n); o[k] = (o[k] || 0) + 1 } return o })());
+  return `/${plural}/${parent}${routeSlug(name)}${cnt[key] > 1 ? "-" + id : ""}/`;
+}
+// Copy-link address: the clean path on the live site (also from the claude.ai artifact); everywhere else (localhost, the
+// GitHub Pages copy, whose pages live under a sub-path) the old #key=... hash link keeps working.
+function shareClean(kind, id, k, obj){
+  let p = null; try { p = cleanPath(kind, id) } catch(e) {}
+  const live = location.hostname === "maplestory.scumlord.studio" || !/^https?:$/.test(location.protocol) || /claude|usercontent|anthropic/.test(location.hostname);
+  return p && live ? ROUTE_HOST + p : shareUrl(k, obj);
 }
 
 /* Same Reset filters + Copy link pair at the right end of every list page's filter row (audit 10-21: some pages had one,
@@ -5355,7 +5387,7 @@ function openQuest(src, i, scroll = true){
 }
 $("#qpage").addEventListener("click", e => {
   if (e.target.id === "qback"){ QOPEN = null; showQuests(); return }
-  if (e.target.id === "qdshare" && QOPEN) return copyShare(e.target, shareUrl("Q", QOPEN.src + ":" + QOPEN.i));
+  if (e.target.id === "qdshare" && QOPEN) return copyShare(e.target, QOPEN.src === "q" && D.quests[QOPEN.i] ? shareClean("quest", D.quests[QOPEN.i].id, "Q", QOPEN.src + ":" + QOPEN.i) : shareUrl("Q", QOPEN.src + ":" + QOPEN.i));
 });
 // a quest name anywhere on the site (the table, item and monster pages, the planner, the quest log, citizenship)
 // opens its page here
@@ -6030,7 +6062,7 @@ $("#mbrows").addEventListener("click", e => { const b = e.target.closest(".mbtn"
 $("#mbpage").addEventListener("click", e => {
   if (e.target.id === "mbback"){ S.open = null; save(); show(); return }
   if (e.target.id === "mfall"){ S.fall = !S.fall; renderFarm(M.find(x => x.id === S.open)); return }
-  if (e.target.id === "mbshare") return copyShare(e.target, shareUrl("m", S.open));
+  if (e.target.id === "mbshare") return copyShare(e.target, shareClean("mob", S.open, "m", S.open));
   const l = e.target.closest("[data-open]"); if (l) return openMob(l.dataset.open);
   const r = e.target.closest(".mfrow"); if (r && !e.target.closest(".mobname")){ S.fmap = r.dataset.map; renderFarm(M.find(x => x.id === S.open)) }
 });
@@ -6208,7 +6240,7 @@ document.querySelectorAll("#ithead th[data-k] button").forEach(b => b.addEventLi
 $("#itrows").addEventListener("click", e => { const b = e.target.closest(".ibtn"); if (b) openItem(b.closest("tr").dataset.id) });
 $("#itpage").addEventListener("click", e => {
   if (e.target.id === "itback"){ S.open = null; save(); show(); return }
-  if (e.target.id === "itshare") return copyShare(e.target, shareUrl("i", S.open));
+  if (e.target.id === "itshare") return copyShare(e.target, shareClean("item", S.open, "i", S.open));
   const l = e.target.closest("[data-iopen]"); if (l) openItem(l.dataset.iopen);
   const m = e.target.closest("[data-pxall]"); if (m){ m.previousElementSibling.classList.add("open"); m.remove() }
 });
@@ -7859,7 +7891,7 @@ document.querySelectorAll("#skhead th[data-k] button").forEach(b => b.addEventLi
 $("#skrows").addEventListener("click", e => { const b = e.target.closest(".skbtn"); if (b) openSkill(b.closest("tr").dataset.key) });
 $("#skpage").addEventListener("click", e => {
   if (e.target.id === "skback"){ S.open = null; save(); show(); return }
-  if (e.target.id === "skshare") return copyShare(e.target, shareUrl("s", S.open));
+  if (e.target.id === "skshare") return copyShare(e.target, shareClean("skill", String(S.open).split("|")[1], "s", S.open));
   const l = e.target.closest("[data-skopen]"); if (l) openSkill(l.dataset.skopen);
   const w = e.target.closest("[data-skrw],[data-skrv],[data-skra]");
   if (w){ if (w.dataset.skrw) Object.assign(SKR, {wk: w.dataset.skrw, ak: ""}); else if (w.dataset.skrv) SKR.wk = w.dataset.skrv; else SKR.ak = w.dataset.skra; redrawRange(true) }

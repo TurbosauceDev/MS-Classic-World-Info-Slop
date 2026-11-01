@@ -267,7 +267,7 @@ document.querySelectorAll("#skhead th[data-k] button").forEach(b => b.addEventLi
 $("#skrows").addEventListener("click", e => { const b = e.target.closest(".skbtn"); if (b) openSkill(b.closest("tr").dataset.key) });
 $("#skpage").addEventListener("click", e => {
   if (e.target.id === "skback"){ S.open = null; save(); show(); return }
-  if (e.target.id === "skshare") return copyShare(e.target, shareUrl("s", S.open));
+  if (e.target.id === "skshare") return copyShare(e.target, shareClean("skill", String(S.open).split("|")[1], "s", S.open));
   const l = e.target.closest("[data-skopen]"); if (l) openSkill(l.dataset.skopen);
   const w = e.target.closest("[data-skrw],[data-skrv],[data-skra]");
   if (w){ if (w.dataset.skrw) Object.assign(SKR, {wk: w.dataset.skrw, ak: ""}); else if (w.dataset.skrv) SKR.wk = w.dataset.skrv; else SKR.ak = w.dataset.skra; redrawRange(true) }

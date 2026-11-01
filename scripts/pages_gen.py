@@ -1,7 +1,8 @@
 """Static per-item / per-monster / per-map pages + sitemap for the Pages copy (python3 scripts/pages_site.py calls generate()).
 
 Why: the planner is one hash-routed page, so search engines and link previews see only the shell. This writes a small real
-HTML page per entry (/item/<id>/<slug>/, /mob/..., /map/...), three browse indexes, sitemap.xml, robots.txt and
+HTML page per entry at the canonical address scripts/routes.py decides (/items/axe-pole-arm/, /skills/warrior/fighter/axe-mastery/ ...),
+browse lists, "which one?" pages, 404.html + routes.json (the guess-the-address router), sitemap.xml, robots.txt and
 sitemap-state.json. Pages carry game data only (OSMS export; drop reports are meowdb net player votes). No market prices:
 those change every poll and would make every page "modified" on every deploy.
 
@@ -29,18 +30,12 @@ e = lambda s: html.escape(str(s), quote=True)
 fmt = lambda n: f"{n:,}" if isinstance(n, int) else str(n)
 
 
-def slug(name):
-    s = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode().lower().replace("'", "").replace("’", "")
-    return re.sub(r"[^a-z0-9]+", "-", s).strip("-") or "page"
+from routes import Routes, slug, KINDS, CLASS_OF
 
 
 def hashlink(key, val):
     """#i=<base64url(JSON)>: the planner's own share-link format (00-core.js HASH)."""
     return key + "=" + base64.urlsafe_b64encode(json.dumps(str(val)).encode()).decode().rstrip("=")
-
-
-def path(kind, id_, name):
-    return f"/{kind}/{id_}/{slug(name)}/"
 
 
 CSS = """
@@ -90,7 +85,7 @@ def shell(title, desc, canon, body, extra_head=""):
             f'<link rel="canonical" href="{e(SITE + canon)}"><meta property="og:title" content="{e(title)}">'
             f'<meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{e(SITE + canon)}">\n'
             f'<meta name="theme-color" content="#7d58d6">{FONTS}<style>{CSS}</style>{extra_head}</head><body><div class="wrap">\n'
-            f'<header class="top"><a class="brand" href="/">{NAME}</a><nav aria-label="Browse"><a href="/items/">Items</a><a href="/monsters/">Monsters</a><a href="/maps/">Maps</a></nav></header>\n'
+            f'<header class="top"><a class="brand" href="/">{NAME}</a><nav aria-label="Browse"><a href="/items/">Items</a><a href="/monsters/">Monsters</a><a href="/maps/">Maps</a><a href="/skills/">Skills</a><a href="/quests/">Quests</a><a href="/npcs/">NPCs</a></nav></header>\n'
             f'{body}\n<footer>Unofficial fan site for MapleStory Classic World, not affiliated with Nexon. '
             f'Game data from the OSMS export; drop reports from meowdb players.</footer></div>\n{{CANARY}}</body></html>\n')
 
@@ -143,11 +138,12 @@ def item_kind(it):
     return it.get("c") or "Other"
 
 
-def build(D):
-    """-> {url path: (title, description, body html)} for real pages."""
+def build(D, R):
+    """-> {url path: (title, description, body html)} for real pages. R = routes.Routes(D) decides every address."""
     items, mobdb, maps, mobs = D["items"], D["mobdb"], D["maps"], D["mobs"]
     icons, mobimg = D.get("iicons") or {}, D.get("mobimg") or {}
     pages = {}
+    P = R.canon
     # who drops what (meowdb net votes), and which maps hold which monster
     dropped_by = {}
     for mid, m in mobdb.items():
@@ -169,43 +165,80 @@ def build(D):
                 + (f'<section class="card"><p class="desc">{e(it["d"])}</p></section>' if it.get("d") else "")
                 + (f'<section class="card">{facts([("Job", e(job)), ("Required level", st.get("reqLevel")), ("Requires", e(reqs)), ("Stats", e(stats)), ("Upgrade slots", st.get("tuc")), ("Attack speed", e(it.get("spd") or "")), ("NPC buys for", (fmt(it["p"]) + " mesos") if it.get("p") else "")])}</section>'
                    if any((job, st.get("reqLevel"), reqs, stats, st.get("tuc"), it.get("spd"), it.get("p"))) else "")
-                + (card("Monsters that drop it", rows([(f'<a href="{path("mob", mid, n)}">{e(n)}</a>', f"{v} votes", sprite(mobimg.get(mid), 1)) for mid, n, v in drops]), VOTES) if drops else "")
+                + (card("Monsters that drop it", rows([(f'<a href="{P("mob", mid)}">{e(n)}</a>', f"{v} votes", sprite(mobimg.get(mid), 1)) for mid, n, v in drops]), VOTES) if drops else "")
                 + go("i", iid))
         bits = [kind, f"Lv {st['reqLevel']}" if st.get("reqLevel") else None, stats or None,
                 f"NPC price {fmt(it['p'])} mesos" if it.get("p") else None]
         desc = f"{it['n']} in MapleStory Classic World: " + ", ".join(b for b in bits if b) + "."
-        pages[path("item", iid, it["n"])] = (it["n"], desc, body)
+        pages[P("item", iid)] = (it["n"], desc, body)
 
     for mid, m in mobdb.items():
         dr = sorted((r for r in (m.get("dr") or []) if isinstance(r, list) and len(r) >= 3 and isinstance(r[0], str) and r[0] in items), key=lambda r: -r[2])
-        ml = [(f'<a href="{path("map", r[0], open_maps[str(r[0])][0])}">{e(open_maps[str(r[0])][0])}</a>' if str(r[0]) in open_maps else f'<span class="sub">{e(r[1])}</span>', "", "") for r in (m.get("maps") or [])]
+        ml = [(f'<a href="{P("map", r[0])}">{e(open_maps[str(r[0])][0])}</a>' if str(r[0]) in open_maps else f'<span class="sub">{e(r[1])}</span>', "", "") for r in (m.get("maps") or [])]
         body = (hero(m["name"], f"Monster · level {m['level']}", sprite(mobimg.get(mid), 2))
                 + f'<section class="card">{facts([("Level", m["level"]), ("HP", fmt(m["hp"])), ("MP", fmt(m.get("mp"))), ("EXP", fmt(m["exp"])), ("Weapon attack", m.get("PADamage")), ("Weapon defense", m.get("PDDamage")), ("Accuracy", m.get("acc")), ("Speed", m.get("speed"))])}</section>'
                 + (card("Found in", rows(ml)) if ml else "")
-                + (card("Drops", rows([(f'<a href="{path("item", r[0], items[r[0]]["n"])}">{e(items[r[0]]["n"])}</a>', f"{r[2]} votes", sprite(icons.get(r[0]), 1)) for r in dr]), VOTES) if dr else "")
+                + (card("Drops", rows([(f'<a href="{P("item", r[0])}">{e(items[r[0]]["n"])}</a>', f"{r[2]} votes", sprite(icons.get(r[0]), 1)) for r in dr]), VOTES) if dr else "")
                 + go("m", mid))
         desc = f"{m['name']} in MapleStory Classic World: level {m['level']}, {fmt(m['hp'])} HP, {fmt(m['exp'])} EXP."
-        pages[path("mob", mid, m["name"])] = (m["name"], desc, body)
+        pages[P("mob", mid)] = (m["name"], desc, body)
 
     for mid, (name, _o, spawns, *_r) in open_maps.items():
-        ms = [(f'<a href="{path("mob", s[0], mob_name(s[0]))}">{e(mob_name(s[0]))}</a>', f"× {s[1]}", sprite(mobimg.get(str(s[0])), 1))
+        ms = [(f'<a href="{P("mob", s[0])}">{e(mob_name(s[0]))}</a>', f"× {s[1]}", sprite(mobimg.get(str(s[0])), 1))
               for s in spawns if mob_name(s[0]) and str(s[0]) in mobdb]
         body = (hero(name, f"Map · id {mid}")
                 + (card("Monsters", rows(ms)) if ms else card("Monsters", '<p class="desc">No monsters spawn here.</p>'))
                 + go(None, "g=wmap", "Open the World Map"))
         desc = f"{name} in MapleStory Classic World" + (f": {len(spawns)} monster type{'s' if len(spawns) != 1 else ''}." if spawns else ".")
-        pages[path("map", mid, name)] = (name, desc, body)
+        pages[P("map", mid)] = (name, desc, body)
+
+    for job, lst in D["skills"].items():
+        for s in lst:
+            st = s.get("st") or []
+            req = ", ".join(f"{n} Lv {l}" for n, l in (s.get("req") or []))
+            jl = f'<a href="{R.job_index(job)}">{e(job)}</a>'
+            body = (hero(s["n"], f"{job} skill · max level {s['max']}")
+                    + (f'<section class="card"><p class="desc">{e(s["d"])}</p></section>' if s.get("d") else "")
+                    + f'<section class="card">{facts([("Job", jl), ("Max level", s["max"]), ("Needs first", e(req)), ("Level 1", e(st[0]) if st else ""), (f"Level {s['max']}", e(st[-1]) if len(st) > 1 else "")])}</section>'
+                    + go("s", f"{job}|{s['id']}"))
+            desc = f"{s['n']}, {job} skill in MapleStory Classic World: max level {s['max']}." + (f" {s['d']}" if s.get("d") else "")
+            pages[P("skill", s["id"])] = (s["n"], desc, body)
+
+    npc_quests = {}
+    for i, q in enumerate(D["quests"]): npc_quests.setdefault(q["npc"], []).append((i, q))
+    for i, q in enumerate(D["quests"]):
+        info = q.get("info") or {}
+        nid = D["npcid"].get(q["npc"])
+        npc = f'<a href="{P("npc", nid)}">{e(q["npc"])}</a>' if nid and ("npc", str(nid)) in R.by_id else e(q["npc"])
+        body = (hero(q["name"], f"Quest · level {q['lvl']}")
+                + (f'<section class="card"><p class="desc">{e(info["d"]).replace(chr(10), "<br>")}</p></section>' if info.get("d") else "")
+                + f'<section class="card">{facts([("Level", q["lvl"]), ("Starts with", npc), ("Region", e(q.get("region") or "")), ("EXP", fmt(q["exp"]) if q.get("exp") else ""), ("Mesos", fmt(q["mesos"]) if q.get("mesos") else ""), ("Requirement", e(q.get("req") or "")), ("Reward", e(q.get("reward") or "")), ("Next quest", e(info.get("next") or "")), ("Quest line", e(q.get("chain") or ""))])}</section>'
+                + go("Q", f"q:{i}"))
+        desc = f"{q['name']}, level {q['lvl']} quest from {q['npc']} in MapleStory Classic World" + (f", {fmt(q['exp'])} EXP." if q.get("exp") else ".")
+        pages[P("quest", q["id"])] = (q["name"], desc, body)
+
+    for e_ in R.ents:
+        if e_["kind"] != "npc": continue
+        nid, name = e_["id"], e_["name"]
+        locs = [(P("map", l[0]), maps[str(l[0])][0]) for l in (D["npcs"].get(nid) or [name, []])[1] if str(l[0]) in open_maps]
+        qs = npc_quests.get(name, [])
+        body = (hero(name, "NPC")
+                + (card("Found in", rows([(f'<a href="{u}">{e(n)}</a>', "", "") for u, n in dict(locs).items()])) if locs else "")
+                + (card("Quests", rows([(f'<a href="{P("quest", q["id"])}">{e(q["name"])}</a>', f"Lv {q['lvl']}", "") for _i, q in qs])) if qs else "")
+                + go(None, "g=wmap", "Open the World Map"))
+        desc = f"{name}, NPC in MapleStory Classic World" + (f": gives {len(qs)} quest{'s' if len(qs) != 1 else ''}." if qs else ".")
+        pages[e_["canon"]] = (name, desc, body)
     return pages
 
 
 def canary_pages():
-    """Real pages for the fake canary rows. Only sitemap.xml lists them."""
+    """Real pages for the fake canary rows (same address style as real ones). Only sitemap.xml lists them."""
     out = {}
     for grp, kind in (("items", "item"), ("maps", "map"), ("mobs", "mob"), ("npcs", "npc"), ("quests", "quest")):
         for cid, c in canary.CANARIES.get(grp, {}).items():
             fs = [(k, e(json.dumps(v) if isinstance(v, (dict, list)) else v)) for k, v in c.items() if k != "n"]
             body = hero(c["n"], f"{kind.title()} · pre-release extras, unverified") + f'<section class="card">{facts(fs)}</section>'
-            out[path(kind, cid, c["n"])] = (c["n"], f"{c['n']}: pre-release extras, unverified.", body)
+            out[f"/{KINDS[kind]}/{slug(c['n'])}/"] = (c["n"], f"{c['n']}: pre-release extras, unverified.", body)
     return out
 
 
@@ -224,12 +257,59 @@ def load_prev(src):
     return {}, "error"
 
 
+def link_list(ls):
+    return '<ul class="cols">' + "".join(f'<li><a href="{u}">{e(n)}</a></li>' for n, u in sorted(ls)) + "</ul>"
+
+
+def index_page(title, desc, url, chip, inner):
+    return (title, desc, f'<section class="card hero"><div><h1>{e(title)}</h1><span class="chip">{e(chip)}</span></div></section>{inner}')
+
+
+def indexes(D, R, real):
+    """browse pages (crawl paths + something to click): kind lists, skills by class / job, and 'which one?' pages"""
+    out = {}
+    byk = {}
+    for en in R.ents: byk.setdefault(en["kind"], []).append(en)
+    pg = lambda en: en["canon"] in real
+    groups = {}
+    for iid, it in D["items"].items(): groups.setdefault(item_kind(it), []).append((it["n"], R.canon("item", iid)))
+    for kind, label in (("item", "Items"), ("mob", "Monsters"), ("map", "Maps"), ("quest", "Quests"), ("npc", "NPCs")):
+        ls = [(en["name"], en["canon"]) for en in byk[kind] if pg(en)]
+        inner = "".join(card(g, link_list(l)) for g, l in sorted(groups.items())) if kind == "item" else card(label, link_list(ls))
+        out[f"/{KINDS[kind]}/"] = index_page(label, f"All {len(ls)} {label.lower()} in MapleStory Classic World.", f"/{KINDS[kind]}/", f"{fmt(len(ls))} in MapleStory Classic World", inner)
+    # skills: /skills/ -> class -> job
+    sk = {}
+    for en in byk["skill"]: sk.setdefault(en["parent"], []).append(en)
+    by_job = {j: [x for x in byk["skill"] if x["parent"].startswith(CLASS_OF[j] + "/") and (x["parent"] == CLASS_OF[j] + "/" + ("" if slug(j) == CLASS_OF[j] else slug(j) + "/"))] for j in D["skills"]}
+    classes = {}
+    for j in D["skills"]: classes.setdefault(CLASS_OF[j], []).append(j)
+    out["/skills/"] = index_page("Skills", "Every skill by class and job in MapleStory Classic World.", "/skills/", f"{len(byk['skill'])} skills",
+        "".join(card(c.title(), link_list([(j, R.job_index(j)) for j in js])) for c, js in classes.items()))
+    for c, js in classes.items():
+        out[f"/skills/{c}/"] = index_page(f"{c.title()} skills", f"All {c.title()} skills in MapleStory Classic World, by job.", f"/skills/{c}/", f"{sum(len(by_job[j]) for j in js)} skills",
+            "".join(card(j, link_list([(x["name"], x["canon"]) for x in by_job[j]])) for j in js))
+        for j in js:
+            if slug(j) != c:
+                out[R.job_index(j)] = index_page(f"{j} skills", f"All {j} skills in MapleStory Classic World.", R.job_index(j), f"{len(by_job[j])} skills",
+                    card(j, link_list([(x["name"], x["canon"]) for x in by_job[j]])))
+    # shared names: one page that lists every entry with that name
+    for url, es in R.disambig.items():
+        name = es[0]["name"]
+        lab = lambda en: en["name"] + (f" ({en['parent'].strip('/').replace('/', ' / ')})" if en["kind"] == "skill" else f" (id {en['id']})")
+        out[url] = index_page(name, f"{len(es)} entries share the name {name}.", url, f"{len(es)} entries share this name", card("Which one?", link_list([(lab(x), x["canon"]) for x in es])))
+    return out
+
+
 def generate(D, dst, prev_src=None, today=None):
     dst = pathlib.Path(dst)
     today = today or datetime.date.today().isoformat()
     prev, status = load_prev(prev_src or os.environ.get("SITEMAP_PREV") or SITE + "/sitemap-state.json")
     if status == "error": print("::warning::sitemap-state.json could not be fetched; sitemap carries no lastmod this build")
-    real, fake = build(D), canary_pages()
+    R = Routes(D)
+    real, fake = build(D, R), canary_pages()
+    idx = indexes(D, R, real)
+    clash = (set(real) & set(fake)) | (set(real) & set(idx)) | (set(fake) & set(idx))
+    assert not clash, f"two pages share an address: {sorted(clash)[:5]}"
     cblock = canary.block()
     state = {}
     for url, (title, desc, body) in {**real, **fake}.items():
@@ -241,25 +321,19 @@ def generate(D, dst, prev_src=None, today=None):
         f.parent.mkdir(parents=True, exist_ok=True)
         m = re.search(r'class="btn" href="(/#[^"]*)"', body) if url in real else None
         f.write_text(shell(title, desc, url, body, redirect_script(m.group(1)) if m else "").replace("{CANARY}", cblock))
-    # browse indexes: crawl paths + something for people to click
-    groups = {}
-    for iid, it in D["items"].items(): groups.setdefault(item_kind(it), []).append((it["n"], path("item", iid, it["n"])))
-    for kind, plural, label in (("item", "items", "Items"), ("mob", "monsters", "Monsters"), ("map", "maps", "Maps")):
-        links = sorted((v[0], u) for u, v in real.items() if u.startswith(f"/{kind}/"))
-        li = lambda ls: '<ul class="cols">' + "".join(f'<li><a href="{u}">{e(n)}</a></li>' for n, u in sorted(ls)) + "</ul>"
-        inner = "".join(card(g, li(ls)) for g, ls in sorted(groups.items())) if kind == "item" else card(label, li(links))
-        body = f'<section class="card hero"><div><h1>{label}</h1><span class="chip">{fmt(len(links))} in MapleStory Classic World</span></div></section>{inner}'
-        url = f"/{plural}/"
-        (dst / plural).mkdir(parents=True, exist_ok=True)
-        (dst / plural / "index.html").write_text(shell(label, f"All {len(links)} {label.lower()} in MapleStory Classic World.", url, body).replace("{CANARY}", cblock))
-    # /item/, /mob/ and /map/ alone would 404: send them to the browse index (meta refresh + canonical, no script)
-    for kind, plural in (("item", "items"), ("mob", "monsters"), ("map", "maps")):
-        (dst / kind).mkdir(parents=True, exist_ok=True)
-        (dst / kind / "index.html").write_text(
-            f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{NAME}</title><meta name="robots" content="noindex">'
-            f'<link rel="canonical" href="{SITE}/{plural}/"><meta http-equiv="refresh" content="0; url=/{plural}/"></head>'
-            f'<body><p><a href="/{plural}/">Browse all {plural}</a></p></body></html>\n')
-    urls = ["/", "/items/", "/monsters/", "/maps/"] + sorted(state)
+    for url, (title, desc, body) in idx.items():
+        f = dst / url.strip("/") / "index.html"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(shell(title, desc, url, body, '<meta name="robots" content="noindex,follow">' if url in R.disambig else "").replace("{CANARY}", cblock))
+    # 404.html: GitHub Pages serves it for every unknown address; the router sends guessed addresses to the canonical page
+    (dst / "routes.json").write_text(json.dumps(R.table(), separators=(",", ":"), ensure_ascii=False))
+    nf = ('<section class="card hero"><div><h1>No page at that address</h1><span class="chip">404</span></div></section>'
+          '<section class="card" id="nf"><p class="desc">Try one of the lists above, or search the planner.</p>'
+          '<p><a class="btn" href="/">Open the planner</a></p></section>')
+    (dst / "404.html").write_text(shell("Page not found", "No page at this address.", "/", nf,
+        '<meta name="robots" content="noindex"><script>' + (ROOT / "scripts/router404.js").read_text() + "</script>").replace("{CANARY}", cblock))
+    kind_idx = [f"/{p}/" for p in KINDS.values()]
+    urls = ["/"] + kind_idx + sorted(u for u in idx if u not in R.disambig and u not in kind_idx) + sorted(state)
     rows = []
     for u in urls:
         d = state.get(u, {}).get("d")
@@ -267,5 +341,5 @@ def generate(D, dst, prev_src=None, today=None):
     (dst / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "\n".join(rows) + "\n</urlset>\n")
     (dst / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE}/sitemap.xml\n")
     (dst / "sitemap-state.json").write_text(json.dumps(state, separators=(",", ":")))
-    print(f"static pages: {len(real)} real + {len(fake)} canary, sitemap {len(urls)} urls ({status})")
+    print(f"static pages: {len(real)} real + {len(fake)} canary + {len(idx)} lists, sitemap {len(urls)} urls ({status})")
     return state
