@@ -225,6 +225,8 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 
 - 2026-10-31 (Danny): approved the blind-spot report and asked to build everything fixable. Built: nightly encrypted D1 backup (`.github/workflows/d1-backup.yml`, needs repo secret BACKUP_PASSPHRASE), watchdog endpoint checks, shop-summary one-vote-per-install median, link-preview tags, first-load size limit, Dependabot, `docs/ai/runbook-recovery.md`. Built later the same day: axe accessibility ratchet (`tests/a11y.js`), tracker 0.3.28 "Delete what I shared" + server `/api/forget`, installer SHA-256 in release notes, privacy page update. Already existed (report was wrong): privacy page + Nexon disclaimer, Start self-check, Report a bug bundle. Still open: code signing (paid), LICENSE choice (Danny's call), fixing the 86 contrast hits.
 
+- 2026-11-01 (Danny): licence = something that makes sense and reduces the ability to steal from us. Chosen: PolyForm Noncommercial 1.0.0 for our code (`LICENSE`, `NOTICE.md`): source stays public, commercial reuse needs permission. Game data/art stay NEXON's; third-party code keeps its own licence. Not legal advice; a lawyer can confirm before any real money is involved.
+
 ## Open decisions (pending Danny)
 
 Each entry blocks something. When Danny calls it, transcribe above with the date and note the resolution here.
