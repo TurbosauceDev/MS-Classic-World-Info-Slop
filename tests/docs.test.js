@@ -14,6 +14,7 @@ const IGNORE = new Set([
   "scripts/fetch_classicmarket.py", "fetch_classicmarket.py", "data/sources/classicmarket_items.json",   // deleted 10-22 (cbc82b7); mailbox/digests still quote them
   "src/changelog.html",            // site.md split candidate, not made yet
   "installed-from.txt", "src/vision/tooltip.js", "src/vision/shop.js", "src/vision/minimap.js",   // mesolens-glorg-report.md: files inside MesoLens's app, not this repo
+  "src/core/installcode.js", "src/winrect.js", "src/data/npc-shops.json", "server/hub.js",   // mesolens-teardown.md third pass: files inside MesoLens's app, not this repo
   "latest.yml", "upload/",         // mesolens-teardown.md: files on mesolens.app's download host, not in this repo
   "robots.txt", "sitemap.xml", "sitemap-state.json", "routes.json", "404.html",   // written into the Pages copy by scripts/pages_gen.py, not repo files
   "meso_watch_items-*.csv",        // the dev's CSV export Danny drops in chat
