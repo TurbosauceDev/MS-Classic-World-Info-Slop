@@ -30,6 +30,16 @@ assert all(blob.values()), f"canary without a page: {[n for n, v in blob.items()
 assert not (set(cn) & {it["n"] for it in D["items"].values()}), "canary name collides with a real item"
 body = "".join(f.read_text().split('id="agent-notes"')[0] for f in list(a.glob("item/*/*/index.html"))[:300])
 assert not re.search(r"meso\.watch|median|asking", body), "market data leaked into static pages"
+for kind, plural in (("item", "items"), ("mob", "monsters"), ("map", "maps")):
+    r = (a / kind / "index.html").read_text()
+    assert f"url=/{plural}/" in r and "<script" not in r, f"/{kind}/ must redirect to /{plural}/"
+    assert f"/{kind}/</loc>" not in (a / "sitemap.xml").read_text(), "redirect page listed in the sitemap"
+# no dead internal links (a monster's map with no page must show as plain text, not a link)
+dead = set()
+for f in list(a.glob("*/*/*/index.html")) + list(a.glob("*/index.html")):
+    for h in re.findall(r'href="(/[^"#]*)"', f.read_text().split('id="agent-notes"')[0]):
+        if h != "/" and not (a / h.strip("/") / "index.html").exists(): dead.add(h)
+assert not dead, f"dead internal links: {sorted(dead)[:5]}"
 # lastmod: unchanged content keeps its date, changed content moves
 s2 = pages_gen.generate(D, b, prev_src=str(a / "sitemap-state.json"), today="2099-01-01")
 assert all(s2[k]["d"] == s1[k]["d"] for k in s1), "lastmod moved without a content change"
