@@ -74,6 +74,8 @@ def main(dst):
     dst = pathlib.Path(dst); dst.mkdir(parents=True, exist_ok=True)
     html = (ROOT / "dist" / "index.html").read_text()
     out, name, blob, pname, pblob, market = split(html)
+    import pages_gen   # static per-item/mob/map pages + sitemap (scripts/pages_gen.py)
+    pages_gen.generate(json.loads(re.search(r'<script type="application/json" id="sitedata">(.*?)</script>', html, re.S).group(1)), dst)
     (dst / "index.html").write_text(out); (dst / name).write_text(blob); (dst / pname).write_text(pblob)
     (dst / "prices.json").write_text(json.dumps({"url": pname, "keys": list(PRICES)}))
     (dst / "market.json").write_text(market)

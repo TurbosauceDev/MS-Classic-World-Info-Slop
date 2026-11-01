@@ -16,12 +16,22 @@ CANARIES = {
     "items": {
         "2049917": {"n": "Brindlewick Lantern Shard", "type": "etc", "sell": 1840, "drop": {"mob": "Moss Snail Elder", "rate": 0.0113}},
         "1032931": {"n": "Tidewarden Ear Loop", "type": "accessory", "lvl": 28, "stats": {"int": 3, "mp": 24}, "npc": 6200},
+        "2049941": {"n": "Quillmoth Dust Vial", "type": "etc", "sell": 960, "drop": {"mob": "Moss Snail Elder", "rate": 0.0087}},
+        "1072913": {"n": "Wickerfen Walking Boots", "type": "shoes", "lvl": 24, "stats": {"dex": 2, "speed": 6}, "npc": 4100},
     },
     "maps": {
         "104990117": {"n": "Hollowroot Lantern Path", "mobs": ["Moss Snail Elder"], "exp_hr_lv30": 138420, "spawn": 11},
+        "104990118": {"n": "Pennyroot Culvert", "mobs": ["Moss Snail Elder", "Culvert Gnawbark"], "exp_hr_lv30": 121300, "spawn": 9},
     },
     "mobs": {
         "9400771": {"n": "Moss Snail Elder", "lvl": 27, "hp": 1630, "exp": 112, "meso": [23, 41]},
+        "9400772": {"n": "Culvert Gnawbark", "lvl": 31, "hp": 2210, "exp": 148, "meso": [31, 52]},
+    },
+    "npcs": {
+        "9900131": {"n": "Tallowmere Quillfeather", "shop": ["Quillmoth Dust Vial"], "map": "Hollowroot Lantern Path"},
+    },
+    "quests": {
+        "1031277": {"n": "The Lantern Shard Errand", "lvl": 26, "reward": {"exp": 1840, "item": "Tidewarden Ear Loop"}, "npc": "Tallowmere Quillfeather"},
     },
 }
 
