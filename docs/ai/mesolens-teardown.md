@@ -38,7 +38,7 @@ Checked, and found NOTHING on any public surface linking them to us or our data:
 
 What public evidence CANNOT answer (the binary and our logs can):
 
-1. Whether their Electron app embeds our code (the repo is public with NO LICENSE file, so default all-rights-reserved applies; a copied tracker would still carry our strings: changelog text, card names, function names, `Clanker Chic`, preset codes).
+1. Whether their Electron app embeds our code. License context (updated 2026-11-01): Danny licensed the repo under PolyForm Noncommercial 1.0.0 in `9cacacf` (LICENSE, NOTICE.md, README, decision logged in PR #35). Before that the repo had no license at all (default all-rights-reserved), so a copy made before or since and shipped inside a monetized product ($5/$10/$20 tiers) would violate PolyForm Noncommercial 1.0.0 either way; copied code would still carry our strings (changelog text, card names, function names, `Clanker Chic`, preset codes) for REA to find.
 2. Whether their client or backend pulls from our endpoints (`/api/summary`, `/api/shop`, site price data in `index.html`, KPQ boards) to seed their "shared price database".
 3. Whether their price data is home-grown (they have ~2 ranked players, so a real FM price DB either took months of their own users or came from somewhere else).
 
@@ -50,5 +50,5 @@ What public evidence CANNOT answer (the binary and our logs can):
 
 ## Posture notes (while we're here)
 
-- Our repo deliberately has no LICENSE: that means nobody may legally copy the code. Keep it that way unless Danny decides otherwise; adding any open license would authorize the thing we are investigating.
+- License settled 2026-11-01: PolyForm Noncommercial 1.0.0 (`9cacacf`) means any commercial use of our code, including inside MesoLens's paid tiers, needs Danny's written permission. That turns "did they copy our code" from a moral question into a license check REA can settle.
 - Our server already rate-limits what matters and the blind-spot batch added watchdogs; if CF logs show scraping, a UA allowlist or turnstile on `/api/*` is the next step. Mirror of their own rule: they ban "copying the database" too.
