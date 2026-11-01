@@ -43,6 +43,8 @@ const IGNORE = new Set([
   "submit_to_classicrank.py",             // planned, not yet written (bare form)
   "mesowatch_poll_ci.sh",                 // bare form of scripts/mesowatch-sync/mesowatch_poll_ci.sh (referenced in multiple docs)
   "download/ms-classic-enhancements/",    // web instance's sandbox draft batch, quoted in decisions.md — not a repo path
+  "latest.yml",                           // MesoLens's own update-manifest filename, quoted in mesolens-teardown.md
+  "upload/",                              // Glorg sandbox upload dir, quoted in mesolens-teardown.md
 ]);
 const FIXTURE_DIRS = ["tests/fixtures", ...fs.readdirSync(path.join(root, "tracker/tests")).filter(d => d.startsWith("frames")).map(d => "tracker/tests/" + d)];
 let fail = 0;
