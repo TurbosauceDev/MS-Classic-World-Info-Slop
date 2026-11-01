@@ -68,3 +68,10 @@ No. No shared lines, names, data or links; it never mentions us. Overlap is conv
 
 ## 8. evidence index (paths in itechify/minerva @ 88f55b8)
 README.md, PRODUCT.md, AGENTS.md, LICENSE, docs/adr/0001, 0008, 0014, 0015, 0019, 0029, 0030, 0031, 0032, docs/research/item-card-sources.md, src-tauri/src/capture.rs, src-tauri/Cargo.toml, site/wrangler.jsonc, site/worker/market.ts, site/worker/portraits.ts.
+
+## 9. binary check, v0.17.0 installer (Danny's upload, 2026-11-01)
+installer_sha256: 787d416e6d374456744674f2d6438b3ce0cb0e886eab4bdac44eb62b6d6ebce3 (13.9 MB NSIS, Tauri bundler). Unpacked with 7z, never run.
+payload: one `minerva.exe` (23.4 MB; UI, fonts and the 9.7 MB ocrs ONNX model embedded) + stock NSIS plugins (nsis_tauri_utils, NSISdl for the WebView2 bootstrapper). No DLLs of its own, no drivers, no services.
+matches_source: version string 0.17.0 = repo HEAD 88f55b8 (tag v0.17.0); UA `Minerva/0.17.0 (personal-use map helper; +https://github.com/itechify/minerva)`. Hosts in strings: github.com, meowdb.com, owlofminerva.app, osmsdataexplorer.com, maplestory.market, developer.microsoft.com (WebView2). Nothing beyond what the source names.
+imports_of_note: SendInput, GetAsyncKeyState, PostMessageW are in the import table, pulled in by tao (Tauri's window crate). Their own crate enables no Win32 KeyboardAndMouse feature, and src-tauri/src/search.rs avoids tao's `set_focus` because that synthesises an Alt press with SendInput. BitBlt + RegisterHotKey are theirs. No ReadProcessMemory/OpenProcess/SetWindowsHookEx.
+comparison_with_our_tracker: docs/ai/minerva-vs-ours.md.
