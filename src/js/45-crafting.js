@@ -63,7 +63,7 @@ function questLine(id, what){
   const r = QBYID[id]; if (!r) return "";
   const parts = [...(r.pre || []).filter(p => QBYID[p] && QBYID[p].npc !== r.npc).map(p => `finish ${qn(["q", QBYID[p]])}`),
     ...(r.kl || []).map(([m, n]) => `kill ${n} ${mobLink(m)}`),
-    ...(r.il || []).map(([name, n]) => { const id = Object.keys(D.items).find(k => D.items[k].n === name);
+    ...(r.il || []).map(([name, n]) => { const id = Object.keys(D.items).find(k => D.items[k].n === name && D.items[k].c !== "Cash");
       return `${n} ${id ? itemIcon(id, 1, true) : ""}${esc(name)}${id && madeBy(id) ? ` <span class="sub">(${madeBy(id)})</span>` : ""}` })];
   const req = (r.info?.req || []).find(x => / Lv\. \d+ or higher$/.test(x));
   return `<li><b>Lv ${r.lvl}</b> ${qn(["q", r])}${r.rep ? ` <span class="pill p-warn">${r.rep}</span>` : ""}

@@ -254,6 +254,9 @@ ul.crq li{margin-bottom:6px}
 .sharebox{flex:1 1 260px;min-width:0;font:500 14px var(--f-mono, monospace);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
 .geargrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px 14px;margin-top:10px}
 .geargrid select{width:100%;font-size:14px}
+.decolist{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px}
+.decoit{display:inline-flex;align-items:center;gap:6px}
+.decoit img{image-rendering:pixelated;vertical-align:middle}
 table.qcompact th:nth-child(3),table.qcompact td:nth-child(3),table.qcompact th:nth-child(6),table.qcompact td:nth-child(6),
 table.qcompact th:nth-child(7),table.qcompact td:nth-child(7),table.qcompact th:nth-child(8),table.qcompact td:nth-child(8){display:none}
 
