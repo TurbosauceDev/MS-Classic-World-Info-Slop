@@ -224,8 +224,9 @@
   // edges trimmed one row (a neighbour line's edge pixel inside the band spoils the column it sits in). Counted so
   // the reading.jsonl telemetry shows whether it earns its keep.
   const LINE_STATS = {tries: 0, wins: 0};
-  function readLines(img){
-    const x0 = Math.max(0, img.w - 430), y0 = Math.floor(img.h / 3), M = mask(img, x0, y0, img.w, img.h - 60, msgInk), lines = [];
+  // crop: img is already just the pickup band ({x0, y0} = where it sits in the game's picture): same rows, same y values
+  function readLines(img, crop){
+    const x0 = crop ? 0 : Math.max(0, img.w - 430), y0 = crop ? crop.y0 : Math.floor(img.h / 3), M = mask(img, x0, crop ? 0 : y0, img.w, crop ? img.h : img.h - 60, msgInk), lines = [];
     let y = 0;
     const rowN = y => { let n = 0; for (let x = 0; x < M.W; x++) n += M.m[y * M.W + x]; return n };
     const rowInk = y => rowN(y) >= 2;
@@ -239,8 +240,16 @@
       let str = "", last = null;
       const chars = keep.map(g => match(g, MSG) || "?");
       keep.forEach((g, i) => { if (last !== null && g.x - last >= 4) str += " "; str += chars[i]; last = g.x + g.w });
-      return {y: s + y0, text: str.replace(/ (?=[0-9)])|(?<=[(+0-9]) /g, ""), glyphs: keep, chars};
+      return {y: s + y0, text: str.replace(/ (?=[0-9)])|(?<=[(+0-9]) /g, ""), glyphs: keep, chars, lum: lineLum(s, y, keep)};
     }
+    // how bright the line's ink is (messages fade as they age, and only ever dimmer): the mean of the ink pixels' max channel
+    const lineLum = (a, b, gl) => {
+      let n = 0, sum = 0; const x1 = gl[gl.length - 1].x + gl[gl.length - 1].w;
+      for (let yy = a; yy < b; yy++) for (let xx = gl[0].x; xx < x1; xx++) if (M.m[yy * M.W + xx]){
+        const i = ((yy + (crop ? 0 : y0)) * img.w + xx + x0) * 4; sum += Math.max(img.d[i], img.d[i + 1], img.d[i + 2]); n++;
+      }
+      return n ? sum / n : 0;
+    };
     const misses = ln => ln.chars.reduce((a, c) => a + (c === "?"), 0);
     while (y < M.H){
       if (!rowInk(y)){ y++; continue }
@@ -352,17 +361,114 @@
     }
     return null;
   }
-  function readPickups(img){
-    const lines = readLines(img), out = [];
+  /* Which pickup lines are new since the last look, and what each really says.
+     Stack shift by line SHAPE: a faded line that reads partly as "?" still counts as the same line when its glyphs look
+     alike, instead of saying nothing. Three things keep identical repeat lines ("You received EXP (+15)" twice running)
+     from being undercounted: the stack growing upward (its top line is higher than in the last two looks) is that many
+     new lines for certain; lines only ever get dimmer, so a shift that would make a line brighter loses to one that
+     doesn't; and both are checked on every look, which at ~10 a second is rarely more than one new line.
+     Each new line is then read again on the next looks (up to 5 reads / 500 ms) and the reading most looks agree on
+     wins, so one smeared frame can't put a wrong amount into the run. */
+  function makePickupTracker(){
+    let prev = [], prev2 = [], pitch = 14, pend = [];
+    const MAXMS = 500, MAXREADS = 5;
+    // part of the message stack: a recognised event, or a long line that is mostly readable (not scenery)
+    const msgLike = l => l.event || l.ln.glyphs.length >= 8 && l.ln.chars.filter(c => c === "?").length * 2 <= l.ln.chars.length;
+    // same line? true / false / undefined (can't tell): readable text decides; with unread letters, shapes decide
+    function sim(a, b){
+      if (!a.text.includes("?") && !b.text.includes("?")) return a.text === b.text;
+      const A = a.ln.chars, B = b.ln.chars;
+      if (A.length !== B.length) return undefined;
+      for (let i = 0; i < A.length; i++){
+        if (A[i] !== "?" && B[i] !== "?"){ if (A[i] !== B[i]) return undefined; continue }
+        const g = a.ln.glyphs[i], h = b.ln.glyphs[i];
+        if (g.w !== h.w || g.h !== h.h) return undefined;
+        let d = 0; for (let j = 0; j < g.bits.length; j++) if (g.bits[j] !== h.bits[j]) d++;
+        if (d > g.bits.length * 0.2) return undefined;
+      }
+      return true;
+    }
+    const near = (set, y) => set.find(l => Math.abs(l.y - y) <= 1);
+    function shiftOf(cur){
+      // the stack grew upward: its top sits higher than it did in either of the last two looks
+      let grow = 0;
+      if (prev.length && cur.length){
+        const top = prev2.length ? Math.min(prev[0].y, prev2[0].y) : prev[0].y;
+        grow = Math.min(cur.length, Math.max(0, Math.round((top - cur[0].y) / pitch)));
+      }
+      let first = -1, loose = -1;
+      for (let n = grow; n < cur.length; n++){
+        let bad = 0, seen = 0, dim = true, lastBad = false;
+        for (let i = 0; i < cur.length - n; i++){
+          const p = near(prev, cur[i].y + n * pitch);
+          if (!p) continue;
+          const s = sim(cur[i], p);
+          if (s === undefined) continue;
+          seen++; lastBad = !s; if (!s) bad++;
+          if (cur[i].ln.lum > p.ln.lum + 14) dim = false;
+        }
+        if (!bad && seen){ if (dim) return n; if (first < 0) first = n }
+        // one smeared look of the newest line must not make everything on screen count again: a single mismatch on the
+        // bottom line, with others agreeing, still places the shift
+        else if (loose < 0 && bad === 1 && seen >= 2 && lastBad) loose = n;
+      }
+      return first >= 0 ? first : loose >= 0 ? loose : cur.length;
+    }
+    const key = r => JSON.stringify(r.event);
+    // settle a waiting line: the reading most looks agree on (ties: fewer unread letters, then the later look)
+    function best(p){
+      const votes = new Map();
+      for (const r of p.reads) if (r.event){ const k = key(r), v = votes.get(k) || {n: 0, r}; v.n++; if (r.text.split("?").length <= v.r.text.split("?").length) v.r = r; votes.set(k, v) }
+      let top = null; for (const v of votes.values()) if (!top || v.n >= top.n) top = v;
+      return top;
+    }
+    function settle(t, force){
+      const out = [];
+      pend = pend.filter(p => {
+        const top = best(p), done = p.gone || force || p.reads.length >= MAXREADS || t - p.t0 >= MAXMS;
+        if (top && (top.n >= 2 || done)){ out.push({t: p.t0, event: top.r.event, y: top.r.y, text: top.r.text}); return false }
+        return !(done && (p.gone || p.reads.length >= MAXREADS || t - p.t0 >= 2 * MAXMS));   // nothing readable yet: a little longer
+      });
+      return out;
+    }
+    return {
+      // all: every message-like line of this look (readPickups(..., true)), top to bottom
+      step(all, t){
+        const cur = all.filter(msgLike);
+        for (let i = 1; i < cur.length; i++){ const g = cur[i].y - cur[i - 1].y; if (g >= 10 && g <= 20) pitch = g }
+        const n = prev.length ? shiftOf(cur) : cur.length;   // first look: everything on screen counts once
+        prev2 = prev; prev = cur;
+        for (const p of pend) p.k += n;
+        for (let j = 0; j < n; j++) pend.push({k: n - 1 - j, t0: t, reads: [], gone: false});
+        for (const p of pend){
+          const line = cur[cur.length - 1 - p.k];
+          if (!line || p.reads.length && Math.abs(line.ln.glyphs.length - p.reads[0].ln.glyphs.length) > 4){ p.gone = true; continue }
+          p.reads.push(line);
+        }
+        return settle(t, false);
+      },
+      // the band didn't change: nothing new to read, only waiting lines to give up on or settle
+      age(t){ return settle(t, false) }
+    };
+  }
+  // the pickup log's rows in the game's own picture (what readLines looks at), for cutting just that out of the capture:
+  // the right 430 px, from a third of the way down to 60 px above the bottom. null where the picture is too small
+  function bandRect(W, H){
+    const x0 = Math.max(0, W - 430), y0 = Math.floor(H / 3), h = H - 60 - y0;
+    return h >= 14 && W - x0 >= 40 ? {x0, y0, w: W - x0, h} : null;
+  }
+  function readPickups(img, crop, keepAll){
+    const lines = readLines(img, crop), out = [], rest = [];
     // amounts of 1,000+ may be written with a comma, which the font table hasn't seen yet ("?"): either counts as a thousands
     // mark. Every letter must still read exactly, so a faded line (letters turn "?" too) doesn't get through.
     const N = "(\\d{1,3}(?:[,?]\\d{3})+|\\d+)", num = v => +v.replace(/[,?]/g, "");
     const MESO = new RegExp(`^You have gained mesos \\(\\+${N}\\)$`), EXP = new RegExp(`^You received EXP \\(\\+${N}\\)$`), BONUS = new RegExp(`^Bonus EXP for PARTY \\(\\+${N}\\)$`);
     for (const l of lines){
       let m;
-      if ((m = l.text.match(MESO))) out.push({y: l.y, text: l.text, event: {type: "meso", amount: num(m[1])}});
-      else if ((m = l.text.match(EXP))) out.push({y: l.y, text: l.text, event: {type: "exp", gain: num(m[1])}});
-      else if ((m = l.text.match(BONUS))) out.push({y: l.y, text: l.text, event: {type: "bonus", gain: num(m[1])}});
+      const put = event => out.push({y: l.y, text: l.text, ln: l, event});
+      if ((m = l.text.match(MESO))) put({type: "meso", amount: num(m[1])});
+      else if ((m = l.text.match(EXP))) put({type: "exp", gain: num(m[1])});
+      else if ((m = l.text.match(BONUS))) put({type: "bonus", gain: num(m[1])});
       else if ((m = l.text.match(/^(.+?) ?x(\d+) ?earned\. ?\((.+)\)$/))){
         // several items fit (letters not learned yet, a cut name): the session picks the one this map's monsters drop
         const ids = itemByName(m[1], m[3], true);
@@ -376,10 +482,10 @@
             LEARNED.push(...addGlyphs(learn));
           }
         }
-        out.push({y: l.y, text: l.text, event: ids.length === 1 ? {type: "item", id: ids[0], qty: +m[2]} : {type: "itemraw", text: l.text, qty: +m[2], cands: ids.length <= 40 ? ids : []}});
-      }
+        put(ids.length === 1 ? {type: "item", id: ids[0], qty: +m[2]} : {type: "itemraw", text: l.text, qty: +m[2], cands: ids.length <= 40 ? ids : []});
+      } else if (keepAll) rest.push({y: l.y, text: l.text, ln: l, event: null});
     }
-    return out;
+    return keepAll ? [...out, ...rest].sort((a, b) => a.y - b.y) : out;
   }
 
   // ---- party window: a column of HP bars (same left edge, ~17 px apart) in the top-left area. Counted by the bar's frame
@@ -998,30 +1104,28 @@
       if (m && m.h === h && m.w === img.w && m.ht === img.h && ++m.n % 8){ memoStats.hits++; return m.v }
       const v = fn(); memos.set(name, {h, w: img.w, ht: img.h, v, n: 0}); memoStats.reads++; return v;
     }
-    let prev = [], lastBar = null, lastParty = null, bonusAt = -Infinity, partyNext = null, partySeen = 0, barNext = null;
-    // new pickup lines since the previous frame. Each new message pushes the stack up one line, so the smallest shift n
-    // (in lines) where every older line in this frame sits n lines above the same text in the last frame says how many
-    // at the bottom are new. Lines that faded too far to read are just skipped.
-    let pitch = 14;
-    function fresh(cur){
-      for (let i = 1; i < cur.length; i++){ const g = cur[i].y - cur[i - 1].y; if (g >= 10 && g <= 20) pitch = g }
-      const at = new Map(prev.map(l => [l.y, l.text])), find = y => at.get(y) ?? at.get(y - 1) ?? at.get(y + 1);
-      let n = 0;
-      for (; n < cur.length; n++){
-        let ok = true, seen = 0;
-        for (let i = 0; i < cur.length - n && ok; i++){
-          const p = find(cur[i].y + n * pitch);
-          // a line fading out reads partly as "?": it says nothing either way (comparing it would count old lines again)
-          if (p !== undefined && !p.includes("?") && !cur[i].text.includes("?")){ seen++; ok = p === cur[i].text }
-        }
-        if (ok && (seen || !prev.length)) break;
-      }
-      if (!prev.length) n = cur.length;   // first frame: everything on screen counts once
-      prev = cur;
-      return cur.slice(cur.length - n);
-    }
+    let lastBar = null, lastParty = null, bonusAt = -Infinity, partyNext = null, partySeen = 0, barNext = null;
+    const tracker = makePickupTracker();
     let lastLeft = null, lastLeftT = -Infinity, procSeen = 0, procGone = 0, procOn = false, procNum = null, procRead = null;
-    function readFrame(raw, t, nat = null){   // nat: the native frame, when the caller already made it
+    // events for the pickups the tracker settled on (+ glyphs learned while reading them); a settled line keeps the time it first showed
+    function pickupEvents(picked, t){
+      const ev = [];
+      if (LEARNED.length) ev.push(...LEARNED.splice(0).map(g => ({t, type: "glyph", ...g})));
+      for (const p of picked){
+        if (p.event.type === "bonus") bonusAt = Math.max(bonusAt, p.t);
+        ev.push({t: p.t, ...p.event});
+      }
+      return ev;
+    }
+    // the pickup band alone (game-size crop, see bandRect), ~10 times a second: an unchanged band only ages what is waiting for its votes
+    let bandHash = null;
+    function readBand(band, t){
+      const h = regionHash(band, 0, 0, band.w, band.h);
+      if (h === bandHash) return pickupEvents(tracker.age(t), t);
+      bandHash = h;
+      return pickupEvents(tracker.step(readPickups(band, band.crop, true), t), t);
+    }
+    function readFrame(raw, t, nat = null, opts = {}){   // nat: the native frame, when the caller already made it
       const img = nat || (raw.k ? raw : native(raw)), ev = [];
       const bar = memo("bar", img, 0, img.h - 40, img.w, img.h, () => readBar(img)) || barAny(raw, t);   // pixel-exact fast path (skipped while the bar strip is unchanged), else any scale
       // a new bar value counts when its EXP and % agree for the level (EXP / level total = %), or when it's read the same
@@ -1062,12 +1166,8 @@
         }
         if (procOn && procGone >= 3){ procOn = false; procNum = null; procRead = null }
       }
-      const picked = fresh(readPickups(img));
-      if (LEARNED.length) ev.push(...LEARNED.splice(0).map(g => ({t, type: "glyph", ...g})));
-      for (const p of picked){
-        if (p.event.type === "bonus") bonusAt = t;
-        ev.push({t, ...p.event});
-      }
+      // noPick: the pickup band is being read on its own, faster (readBand); this frame leaves it alone
+      ev.push(...pickupEvents(opts.noPick ? tracker.age(t) : tracker.step(readPickups(img, null, true), t), t));
       // party size only changes after the same new size is read 3 frames running (a window in the way, a bar mid-blink)
       // no party window: a party while bonus lines came in the last 3 minutes (left the party = back to solo after that)
       const partyRead = readParty(img), party = partyRead || (t - bonusAt < 180e3 ? 2 : 1);
@@ -1211,7 +1311,7 @@
     }
     let info = {bar: false, partyWindow: null, counts: 0};
     let feetT = null, feetMask = null, feetUses = 0;
-    return {readFrame, get info(){ return info }, memoStats, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,
+    return {readFrame, readBand, get info(){ return info }, memoStats, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,
       mapRect: null,   // the last good minimap-title rect (see work(): the fallback re-cuts it when the band hunt fails)
       // all item pictures (loadIcons on G.iicons), sorted by tab: matching only looks at the open tab's kind of items
       // a tab chip was clicked: look everywhere now and send the next steady read even when it didn't change
@@ -1251,8 +1351,9 @@
      back, so the window can grab the next frames at the game's own size (k set) with no un-doubling needed.
      Returns the events, what the frame showed (info), the OCR crops asked for, and whether the minimap is on screen
      (only looked for when the EXP bar isn't: auto-pause). */
-  function work(rd, {frame, t, want = {}}){
-    const img = frame.k ? frame : native(frame), ev = rd.readFrame(frame, t, img), info = {...rd.info}, crops = {};
+  function workBand(rd, {band, t}){ return {ev: rd.readBand(band, t)} }
+  function work(rd, {frame, t, want = {}, noPick}){
+    const img = frame.k ? frame : native(frame), ev = rd.readFrame(frame, t, img, {noPick}), info = {...rd.info}, crops = {};
     if (want.map){
       crops.map = mapTextCrop(img);
       if (crops.map) rd.mapRect = crops.map.rect;   // where the title was: re-cut from here when a later band hunt fails
@@ -1264,6 +1365,6 @@
     const chat = want.chatScan ? rd.chatScan(img, want.chatArea) : (rd.chatOff(), null);
     return {ev, info, crops, chat, feet, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads, line: {tries: LINE_STATS.tries, wins: LINE_STATS.wins}}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {nameMask, readProc, readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty, lineStats: () => LINE_STATS};
+  const api = {nameMask, readProc, readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, workBand, bandRect, makePickupTracker, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty, lineStats: () => LINE_STATS};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

@@ -30,6 +30,10 @@ async function main(){
   assert.strictEqual(f3.d[0], 7, "refilled with the newest frame");
   const sh = s.shrunk({k: 2, ox: 0, oy: 0});
   assert.strictEqual(sh.w, 4); assert.strictEqual(sh.h, 2); assert.strictEqual(sh.k, 2, "the 2x shrink reads game pixels");
+  // the pickup band: a rectangle of the same game-size picture, with its place in it
+  const bd = s.band({k: 2, ox: 0, oy: 0}, {x0: 1, y0: 0, w: 3, h: 2});
+  assert.strictEqual(bd.w, 3); assert.strictEqual(bd.h, 2); assert.strictEqual(bd.d.length, 24); assert.strictEqual(bd.d[0], 7);
+  assert.ok(bd.crop.x0 === 1 && bd.crop.y0 === 0, "the band says where it sits in the game's picture");
   // the worker replies with each buffer it was lent, one read at a time; sizes differ between the full and shrunk path
   assert.strictEqual(pool.give(sh.d.buffer), true, "the shrunk read's buffer returns too");
   const f4 = s.full();

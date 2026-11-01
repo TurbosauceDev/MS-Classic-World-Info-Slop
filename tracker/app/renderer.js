@@ -68,6 +68,22 @@ function grab(){
    drawn shrunk by that much with no smoothing, one pixel per game pixel. 4x fewer pixels to copy and read than the full
    frame (60 ms to 4 ms on Danny's 2560x1440). A full frame every 20 (10 s) checks the scale again. */
 let scale = null, fastLeft = 0;
+/* just the pickup log's band, for the ~10 a second pickup reader: needs the scale the whole-frame reads found (null until then).
+   The video-element path draws only that rectangle (nearest pixel, as grabFrame's shrunk draw does). */
+let bandCanvas = null, bandG = null;
+function grabBand(){
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!scale || scale.w !== vw || scale.h !== vh) return null;
+  const {k, ox, oy} = scale, r = GrindReaders.bandRect(Math.floor((vw - ox) / k), Math.floor((vh - oy) / k));
+  if (!r) return null;
+  if (video.pump) return video.band(scale, r);
+  if (!bandCanvas){ bandCanvas = document.createElement("canvas"); bandG = bandCanvas.getContext("2d", {willReadFrequently: true}) }
+  if (bandCanvas.width !== r.w || bandCanvas.height !== r.h){ bandCanvas.width = r.w; bandCanvas.height = r.h }
+  bandG.imageSmoothingEnabled = false;
+  bandG.drawImage(video, ox + r.x0 * k, oy + r.y0 * k, r.w * k, r.h * k, 0, 0, r.w, r.h);
+  const id = bandG.getImageData(0, 0, r.w, r.h);
+  return {w: r.w, h: r.h, d: id.data, k, crop: {x0: r.x0, y0: r.y0}};
+}
 function grabFrame(){
   const vw = video.videoWidth, vh = video.videoHeight;
   if (!scale || scale.w !== vw || scale.h !== vh || fastLeft <= 0) return grab();
@@ -88,15 +104,24 @@ function makeEngine(icons, area, invHint, glyphs, invLast){
     return {kind: "window", setArea: a => rd.setArea(area = a), invNow: () => rd.invNow(), setInvHint: a => rd.setInvHint(invHint = a), read: async m => GrindReaders.work(rd, m), close(){}} };
   let w = null;
   try { w = new Worker("reader-worker.js") } catch { return inline() }
-  let id = 0, waiting = null, eng;
+  let id = 0, waiting = null, eng, bid = 0, bwaiting = null;
   const fallBack = why => { log("engine", {kind: "window", why}); w.terminate(); waiting?.(null); waiting = null; Object.assign(eng, inline()) };
   w.onmessage = ({data}) => { if (data.back) FRBUF.give(data.back);   // the frame buffer is ours again: pool it even on a stale reply
+    if (data.bid){ if (data.bid === bid && bwaiting){ const r = bwaiting; bwaiting = null; r(data.error ? null : data) } return }   // a pickup band's reply
     if (data.id !== id || !waiting) return; const r = waiting; waiting = null; r(data.error ? null : data) };
   w.onerror = e => { e.preventDefault?.(); fallBack(e.message || "worker failed to load") };
   w.postMessage({type: "reset", icons, area, invHint, glyphs, invLast});
   return eng = {kind: "worker", close(){ w.terminate(); const r = waiting; waiting = null; r?.(null) },
     setArea(a){ area = a; w.postMessage({type: "area", area: a}) },
     invNow(){ w.postMessage({type: "invnow"}) }, setInvHint(a){ invHint = a; w.postMessage({type: "invhint", area: a}) },
+    // the pickup band alone: its own answer slot, so it never waits behind (or replaces) a whole-frame read
+    band(m){
+      return new Promise(res => {
+        bwaiting?.(null); bwaiting = res; const mine = ++bid;
+        w.postMessage({type: "band", bid: mine, band: m.band, t: m.t}, [m.band.d.buffer]);
+        setTimeout(() => { if (bwaiting === res && bid === mine){ bwaiting = null; res(null) } }, 3000);
+      });
+    },
     read(m){
       return new Promise(res => {
         waiting = res; id++;

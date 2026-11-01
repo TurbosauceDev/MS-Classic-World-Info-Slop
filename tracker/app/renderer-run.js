@@ -47,7 +47,7 @@ async function start(){
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   feed = GrindFeed.createFeed(G); feedSep("Started tracking");
   clearInterval(autoTimer); autoTimer = setInterval(autosaveNow, 60e3);
-  tick();
+  tick(); bandLoop();
   renderState(null);
   // the start reading is taken right away (not only once the bar is read): its picture is the proof of where you started
   if (!snaps.start) snap("start", null, false).catch(() => {});

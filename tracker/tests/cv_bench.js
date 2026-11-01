@@ -22,6 +22,14 @@ function bench(){
   add("chat crop (death/box checks only)", time(() => R.chatCrop(img)));
   let t = 0; const small = {...img};
   add("whole frame read (steady state)", time(() => R.work(rd, {frame: small, t: t += 500, want: {}})));
+  // the pickup band alone (what runs ~10 times a second): cutting it out of the game-size picture, then reading it
+  const r = R.bandRect(img.w, img.h), cutBand = () => { const d = new Uint8ClampedArray(r.w * r.h * 4);
+    for (let y = 0; y < r.h; y++) d.set(img.d.subarray(((r.y0 + y) * img.w + r.x0) * 4, ((r.y0 + y) * img.w + r.x0 + r.w) * 4), y * r.w * 4);
+    return {w: r.w, h: r.h, d, k: img.k, crop: {x0: r.x0, y0: r.y0}} };
+  add("band: cut from the picture", time(cutBand));
+  const rdb = R.createReaders(G, null), bd = cutBand(); let tb = 0;
+  add("band: read, band changed", time(() => { bd.d[3] = (bd.d[3] + 1) & 255; rdb.readBand(bd, tb += 100) }, 40));
+  add("band: read, band unchanged", time(() => rdb.readBand(bd, tb += 100), 40));
   const rd2 = R.createReaders(G, null); rd2.memoStats.off = true; let t2 = 0;
   add("  same, region memo off", time(() => rd2.readFrame(img, t2 += 500, img), 40));
   const rd3 = R.createReaders(G, null); let t3 = 0;
@@ -34,5 +42,7 @@ if (require.main === module){
   console.log(`frame ${full.w}x${full.h} -> game pixels ${img.w}x${img.h} (x${img.k})`);
   for (const [n, ms] of rows) console.log(n.padEnd(40), ms.toFixed(2).padStart(7), "ms");
   const per = rows.find(r => r[0].startsWith("whole frame"))[1];
-  console.log(`\nat 2 reads a second: ${(per * 2 / 10).toFixed(1)}% of one core (reading only; capture and OCR are extra)`);
+  const bandMs = rows.find(r => r[0].startsWith("band: read, band changed"))[1], cutMs = rows.find(r => r[0].startsWith("band: cut"))[1];
+  console.log(`\nband at 10 a second: ${((bandMs + cutMs) * 10 / 10).toFixed(1)}% of one core (worst case, band changing every look); whole-frame pickup reading at 2 a second: ${(rows.find(r => r[0] === "pickup lines")[1] * 2 / 10).toFixed(1)}%`);
+  console.log(`at 2 reads a second: ${(per * 2 / 10).toFixed(1)}% of one core (reading only; capture and OCR are extra)`);
 }

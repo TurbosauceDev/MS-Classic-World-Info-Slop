@@ -9,6 +9,11 @@ onmessage = ({data: m}) => {
   if (m.type === "area") return rd?.setArea(m.area);
   if (m.type === "invnow") return rd?.invNow();
   if (m.type === "invhint") return rd?.setInvHint(m.area);
+  if (m.type === "band"){   // the pickup band alone, ~10 a second: answered with the events and the buffer back
+    const back = m.band?.d?.buffer ?? null;
+    try { postMessage({bid: m.bid, ...GrindReaders.workBand(rd, m), back}, back ? [back] : []) } catch (err){ postMessage({bid: m.bid, error: err.message}) }
+    return;
+  }
   try {
     const out = GrindReaders.work(rd, m);
     // the frame buffer goes back to the window with the reply: it lent it out from a pool (core/bufpool.js), so the next
