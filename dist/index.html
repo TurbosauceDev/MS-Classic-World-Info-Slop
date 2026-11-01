@@ -3597,7 +3597,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-11-01T03:43:29Z" data-ver="0.20.1">Site version: v0.20.1 · built Nov 1, 2026 · 03:43 UTC</p>
+  <p class="sitever" data-built="2026-11-01T03:59:49Z" data-ver="0.20.1">Site version: v0.20.1 · built Nov 1, 2026 · 03:59 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -5232,7 +5232,7 @@ function questPage(r, src){
     ${i.d ? `<p class="idesc">${esc(i.d).replace(/\n/g, "<br>")}</p>` : ""}
     <h3 class="msec">At a glance</h3>
     <dl class="stats mgrid">${st("EXP", r.exp ? fmt(r.exp) + (r.pct_level != null ? ` (${r.pct_level}% of level ${r.lvl})` : "") : null)}
-      ${st("Mesos", mesos ? fmt(mesos) : null)}${st("Contribution", contrib ? fmt(contrib) : null, "Citizenship contribution for turning it in")}
+      ${st("Mesos", mesos ? fmt(mesos) : null)}${st("Contribution", !contrib ? null : typeof contrib === "number" ? fmt(contrib) : esc(contrib), "Citizenship contribution for turning it in")}
       ${st("Bonus", r.mult ? r.mult.toFixed(1) + "× the EXP of the kills it asks for" : null)}
       ${st("Equals", r.eq_kills ? `${fmt(r.eq_kills)} ${mobLink(r.eq_mob)} kills` : null, "The quest's EXP counted as kills of its target monster: fewer kills than this and the quest beats grinding")}
       ${st("Quest ID", String(r.id))}</dl>

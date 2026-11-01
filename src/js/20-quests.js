@@ -345,7 +345,7 @@ function questPage(r, src){
     ${i.d ? `<p class="idesc">${esc(i.d).replace(/\n/g, "<br>")}</p>` : ""}
     <h3 class="msec">At a glance</h3>
     <dl class="stats mgrid">${st("EXP", r.exp ? fmt(r.exp) + (r.pct_level != null ? ` (${r.pct_level}% of level ${r.lvl})` : "") : null)}
-      ${st("Mesos", mesos ? fmt(mesos) : null)}${st("Contribution", contrib ? fmt(contrib) : null, "Citizenship contribution for turning it in")}
+      ${st("Mesos", mesos ? fmt(mesos) : null)}${st("Contribution", !contrib ? null : typeof contrib === "number" ? fmt(contrib) : esc(contrib), "Citizenship contribution for turning it in")}
       ${st("Bonus", r.mult ? r.mult.toFixed(1) + "× the EXP of the kills it asks for" : null)}
       ${st("Equals", r.eq_kills ? `${fmt(r.eq_kills)} ${mobLink(r.eq_mob)} kills` : null, "The quest's EXP counted as kills of its target monster: fewer kills than this and the quest beats grinding")}
       ${st("Quest ID", String(r.id))}</dl>
