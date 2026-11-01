@@ -79,8 +79,7 @@ def step_skills(D):
                 if os.path.exists(p): icons[s["id"]] = b64(p)
             out[g["class_name"]] = L
     D["skills"], D["icons"] = out, icons
-    hv = json.load(open(ROOT / "data/sources/osms_hitviz.json"))   # weapon-action boxes (scripts/fetch_osms_hitviz.py)
-    hv["cls"] = {k: v for k, v in hv["cls"].items() if k in JOBS}; D["hitact"] = hv
+    import patch_skill_data; D["hitact"] = patch_skill_data.hitact(JOBS)   # swing boxes etc.: fetch_osms_hitviz.py + fetch_client_hitviz.py
     sa = ROOT / "data/sources/skill_anim.json"   # animated previews: Classic client frames (scripts/fetch_skill_anim.py)
     if sa.exists(): D["skanim"] = json.load(open(sa))
 

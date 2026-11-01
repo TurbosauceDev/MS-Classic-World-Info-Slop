@@ -9,7 +9,8 @@ inside the image (character: feet; skill effect/hit/projectile: the WZ origin), 
   look  item ids worn in every character frame (default face/hair, Grey T-Shirt, Brown Cotton Shorts)
   wid   weapon key (D.hitact.weap) -> the item id drawn
   act   "weaponKey|action" -> character frames (Character/00002000.img/<action>/<n>/delay for timing)
-  sk    skill id -> {w: weapon key, a: action or null (= the swing picked on the page), e/h/b: effect/hit/projectile frames}
+  sk    skill id -> {w: weapon key, a: action or null (= the swing picked on the page), e/h/b: effect/hit/projectile frames,
+        x: hit frames of the hidden explosion skill (Arrow Bomb -> 3101005) when it has them}
   ammo  weapon key -> projectile frames for skills without their own (arrow 2060000, bolt 2061000, Subi 2070000)
 A frame without a delay node uses 100 ms (assumed client default; most frames carry their own)."""
 import base64, io, json, pathlib, sys, time, urllib.request
@@ -19,8 +20,12 @@ API = "https://maplestory.io/api"
 REG = "MCW/CBT2"
 CACHE = ROOT / "vendor/skill_anim"; CACHE.mkdir(parents=True, exist_ok=True)
 LOOK = [20000, 30000, 1040002, 1060002]
-WID = {"1h-sword": 1302000, "1h-axe": 1312000, "1h-blunt": 1322000, "dagger": 1332000, "2h-sword": 1402002, "2h-axe": 1412000,
-       "2h-blunt": 1422000, "spear": 1432000, "polearm": 1442000, "bow": 1452000, "crossbow": 1462000, "claw": 1472000, "wand": 1372000}
+# One item per D.hitact.weap row, drawn with THAT row's swing family (items.json after_image): Sword swordOL, Long Sword swordOS,
+# Razor swordOS, Triangular Zamadar swordOL, Scimitar swordTL, Two-Handed Sword swordTS (11-01: 2h-sword drew a swordTS item
+# over swordTL boxes).
+WID = {"1h-sword": 1302000, "1h-sword:swordOS": 1302001, "1h-axe": 1312000, "1h-blunt": 1322000, "dagger": 1332000,
+       "dagger:swordOL": 1332002, "2h-sword": 1402005, "2h-sword:swordTS": 1402002, "2h-axe": 1412000, "2h-blunt": 1422000,
+       "spear": 1432000, "polearm": 1442000, "bow": 1452000, "crossbow": 1462000, "claw": 1472000, "wand": 1372000}
 CLASSW = {"Warrior": "1h-sword", "Fighter": "1h-sword", "Page": "1h-sword", "Spearman": "spear", "Magician": "wand", "F/P Wizard": "wand",
           "I/L Wizard": "wand", "Cleric": "wand", "Archer": "bow", "Hunter": "bow", "Crossbowman": "crossbow", "Rogue": "claw",
           "Assassin": "claw", "Bandit": "dagger"}
@@ -79,14 +84,13 @@ def wz_frames(path):
 
 
 def main():
-    D = json.load(open(ROOT / "data/data.json")); H = D["hitact"]
+    D = json.load(open(ROOT / "data/data.json")); H = D["hitact"]; CL = json.load(open(ROOT / "data/sources/client_hitviz.json"))
     out = {"src": f"maplestory.io {REG} (Classic World client)", "look": LOOK, "wid": WID, "act": {}, "sk": {}, "ammo": {}}
     need = set()
     def want(w, a): need.add((w, a))
-    for wkey, label, setk, pre in H["weap"]:
-        for a in H["sets"].get(setk, []):
-            if not pre or a[0].startswith(pre): want(wkey, a[0])
-    for w in WID: want(w, "stand2" if w in TWO_H else "stand1"); want(w, "walk2" if w in TWO_H else "walk1"); want(w, "jump")   # playable preview
+    for wkey, label, setk, acts, *_ in H["weap"]:
+        for a in acts: want(wkey, a)
+    for w in WID: two = w.split(":")[0] in TWO_H; want(w, "stand2" if two else "stand1"); want(w, "walk2" if two else "walk1"); want(w, "jump")   # playable preview
     for w, a in SHOOT.items(): want(w, a)
     if "--acts" in sys.argv:
         out = json.load(open(ROOT / "data/sources/skill_anim.json"))
@@ -100,21 +104,25 @@ def main():
             if job not in books: books[job] = {str(x["id"]): x for x in get(f"{API}/{REG}/job/{JOBID[job]}/skillbook")["skills"]}
             b = books[job].get(str(s["id"]))
             if not b: print("no client data for", s["id"], s["n"]); continue
-            fam, acts = s["rv"]["f"], [a for a in (b.get("actions") or []) if a != "alert2"]
+            ca = CL["act"].get(str(s["id"])); ca = [ca] if isinstance(ca, str) else ca or []   # WZ action node (Steal: swingO2)
+            fam, acts = s["rv"]["f"], [a for a in (b.get("actions") or ca) if a != "alert2"]
             w = (H["sk"].get(str(s["id"])) or [CLASSW[job]])[0]
             if s["n"] == "Rush" and job == "Spearman": w = "spear"
             a = None
-            if fam.startswith("action") and s["n"] != "Power Knockback": a = None          # page's weapon/swing picker drives it
+            if fam.startswith("action"): a = None          # page's weapon/swing picker drives it (Power Knockback swings the bow)
             elif acts: a = acts[0]
             elif w in SHOOT: a = SHOOT[w]
             elif fam == "effect_rectangle" or "alert2" in (b.get("actions") or []): a = "alert2"
             elif w == "claw": a = "stabO1"
             elif fam != "teleport_range": a = "stabO1" if w == "dagger" else "swingO1"
-            if s["n"] == "Power Knockback": a = SHOOT.get(w, "shoot1")
             if a: want(w, a)
             pick = lambda k: (b.get(k) or [{}])[0].get("frames") or []
             fr = lambda k: [x for x in (frame_from_b64(f["image"], f["origin"]["x"], f["origin"]["y"], f.get("delay")) for f in pick(k)) if x]
             out["sk"][str(s["id"])] = {"w": w, "a": a, "e": fr("effect"), "h": fr("hit"), "b": fr("ball")}
+            ex = CL["ex"].get(str(s["id"]))
+            if ex and books[job].get(ex["id"]):
+                xb = books[job][ex["id"]]; xf = [x for x in (frame_from_b64(f["image"], f["origin"]["x"], f["origin"]["y"], f.get("delay")) for f in ((xb.get("hit") or [{}])[0].get("frames") or [])) if x]
+                if xf: out["sk"][str(s["id"])]["x"] = xf
     for w, a in sorted(need):
         try: out["act"][f"{w}|{a}"] = char_frames(w, a)
         except RuntimeError as e: print("skip", w, a, e)

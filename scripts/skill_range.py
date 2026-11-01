@@ -72,3 +72,35 @@ def parse_viz(js):
            "anim": keymap("ACTION_ANIMATIONS_BY_SKILL")}
     if len(sets) < 5 or len(weap) < 10 or "Warrior" not in out["cls"]: raise SystemExit("skill-range-viz.js parse looks wrong")
     return out
+
+WCODE = {30: "1h-sword", 31: "1h-axe", 32: "1h-blunt", 33: "dagger", 40: "2h-sword", 41: "2h-axe", 42: "2h-blunt", 43: "spear",
+         44: "polearm", 45: "bow", 46: "crossbow", 47: "claw"}   # client skill weapon codes (Skill/<job>.img/skill/<id>/weapon)
+VARIANT = {"swordOL": "Long swing", "swordOS": "Short swing", "swordTL": "Long swing", "swordTS": "Short swing"}
+
+def merge_hitviz(hv, cl):
+    """OSMS hitviz (fetch_osms_hitviz.py) + client tables (fetch_client_hitviz.py) -> D.hitact. Keys:
+    weap [[key, label, set, actions, base, variant, item_ids], ...]: one row per weapon type AND swing family, because the
+         box belongs to the item (items.json after_image). The family OSMS's viewer uses keeps the plain key ("2h-sword");
+         the other gets "base:family" ("2h-sword:swordTS", variant "Short swing"). actions = the type's own swing/stab
+         sprites (claw: stabs only, as OSMS).
+    sets {family: [[action, left, right, top, bottom], ...]} facing right; every OSMS box must equal the client's.
+    cls/anim/char/src from OSMS; sk = client weapon codes per skill (OSMS's pins win); ex = explosion boxes (Arrow Bomb...)."""
+    for s, rows in hv["sets"].items():
+        for a, *box in rows:
+            if cl["ai"][s].get(a) != box: raise SystemExit(f"OSMS {s}/{a} {box} != client {cl['ai'][s].get(a)}")
+    weap, used = [], {}
+    for key, label, setk, pre in hv["weap"]:
+        fams = hv["items"].get(label) or {setk: []}
+        # OSMS's polearm row points at the identical 'spear' table while its items say poleArm: one family = default
+        default = setk if setk in fams or len(fams) > 1 else next(iter(fams))
+        acts = [a for a in cl["wacts"][key] if not pre or a.startswith(pre)]
+        for fam in sorted(fams, key=lambda f: (f != default, -len(fams[f]))):
+            box_fam = setk if fam == default and setk not in fams else fam
+            miss = [a for a in acts if a not in cl["ai"][box_fam]]
+            if miss: raise SystemExit(f"{key}/{fam}: no client box for {miss}")
+            used.setdefault(box_fam, set()).update(acts)
+            weap.append([key if fam == default else f"{key}:{fam}", label, box_fam, acts, key, VARIANT.get(fam, "") if len(fams) > 1 else "", fams[fam]])
+    sets = {f: [[a, *cl["ai"][f][a]] for a in sorted(acts)] for f, acts in used.items()}
+    sk = {sid: [WCODE[c] for c in codes if c in WCODE] for sid, codes in cl["skw"].items()}; sk.update(hv["sk"])
+    return {"sets": sets, "weap": weap, "cls": hv["cls"], "sk": sk, "anim": hv["anim"], "ex": cl["ex"], "char": hv["char"],
+            "src": f"{hv['src']} + items.json after_image; {cl['src']} (afterimage boxes, skill weapons, explosions)"}

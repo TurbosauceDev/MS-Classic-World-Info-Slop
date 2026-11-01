@@ -42,10 +42,13 @@ const tierTxt = o => o.tier === 1 ? "1st job" : o.tier === 2 ? "2nd job (Lv 30+)
 const atLv = (v, lv) => Array.isArray(v) ? v[Math.min(v.length, Math.max(1, lv)) - 1] : v;
 const FAM = {fixed_rectangle: "Stored attack rectangle", effect_rectangle: "Stored party-effect rectangle", ranged_corridor: "Widening ranged corridor",
   action_hitbox: "Weapon swing area", action_extended: "Weapon swing area + forward extension", piercing_line: "Piercing arrow path", teleport_range: "Teleport distance"};
+// One row per weapon type AND swing family: the box belongs to the item (items.json after_image), so a Gladius (short swing)
+// reaches less than a Sword (long swing). H.sk = the client's weapon codes per skill (Final Attack: Sword = swords only).
 const skWeapons = (job, id) => { const H = D.hitact; if (!H) return [];
   const keys = H.sk[String(id)] || H.cls[job] || [], only = H.anim[String(id)];
-  return H.weap.filter(w => keys.includes(w[0])).map(([key, label, set, pre]) => ({key, label,
-    acts: (H.sets[set] || []).filter(a => (!pre || a[0].startsWith(pre)) && (!only || only.includes(a[0])))})).filter(w => w.acts.length) };
+  return H.weap.filter(w => keys.includes(w[4])).map(([key, label, set, acts, base, v, items]) => {
+    const box = Object.fromEntries((H.sets[set] || []).map(a => [a[0], a]));
+    return {key, label, base, v, items, acts: acts.filter(a => box[a] && (!only || only.includes(a))).map(a => box[a])} }).filter(w => w.acts.length) };
 function skRange(job, s, lv, plv, wk, ak){
   const v = s.rv; if (!v) return null;
   lv = Math.min(s.max, Math.max(1, lv || s.max));
@@ -63,13 +66,21 @@ function skRange(job, s, lv, plv, wk, ak){
     out.facts.push(["Path", `${far} px in front`]);
   } else if (v.f === "action_hitbox" || v.f === "action_extended"){
     const W = skWeapons(job, s.id), w = W.find(x => x.key === wk) || W[0];
-    if (w){ const a = w.acts.find(x => x[0] === ak) || w.acts[0]; out.weapons = W; out.wk = w.key; out.ak = a[0];
+    if (w){ const a = w.acts.find(x => x[0] === ak) || w.acts[0]; out.weapons = W; out.wk = w.key; out.base = w.base; out.ak = a[0];
       out.boxes = [box(a[1], a[2], a[3], a[4])];
       out.facts.push(["Swing box", `${a[1]} to ${a[2]} px in front`], ["Height", vert(a[3], a[4])]);
+      if (w.v){ const n = w.items.map(i => D.items?.[i]?.n).filter(Boolean);
+        out.facts.push([`${w.v} weapons`, esc(n.slice(0, 4).join(", ")) + (n.length > 4 ? ` +${n.length - 4} more` : "")]) }
       if (v.f === "action_extended"){ const lim = Math.max(a[2], atLv(v.r, lv) || 0); out.ext = box(a[2], lim, a[3], a[4]);
         out.facts.push(["Forward limit", `${lim} px (${lim - a[2]} px past the swing)`]) }
       out.mob = (out.ext ? out.ext.r : a[2]) + 10 }
   } else if (v.f === "teleport_range"){ out.tp = atLv(v.d, lv); out.facts.push(["Distance", `up to ${out.tp} px`]) }
+  // Explosion around the first target (client: the hidden follow-up skill's lt/rb, e.g. Arrow Bomb 3101005; meowdb agrees).
+  // Anchored on the target's feet, like its position; which point the client centres it on is unconfirmed.
+  const X = D.hitact?.ex?.[String(s.id)];
+  if (X && out.mob != null){ const [l, r, t, b] = ([...X.L].reverse().find(x => x[0] <= lv) || X.L[0])[1][0];
+    out.blast = box(out.mob + l, out.mob + r, t, b);
+    out.facts.push(["Explosion", `${r - l} × ${b - t} px around the first target, up to ${atLv(s.mob, lv)} monsters`]) }
   if (out.boxes.length && !out.facts.length){ const b = out.boxes[0];
     out.facts.push(["In front", `${Math.max(0, b.r)} px`], ...(b.l ? [[b.l < 0 ? "Behind" : "Starts", `${Math.abs(b.l)} px${b.l < 0 ? "" : " in front"}`]] : []),
       ["Height", vert(b.t, b.b)]);
@@ -94,7 +105,7 @@ const durOf = fr => fr.reduce((a, f) => a + f[3], 0);
 // Sprite timeline for one preview: what the player draws, and when the area/hit CSS should fire. Pure (tests/golden.js).
 function skrSprites(r, id){
   const A = D.skanim, k = A?.sk?.[String(id)]; if (!k) return null;
-  const w = r.wk || k.w, two = ["2h-sword", "2h-axe", "2h-blunt", "spear", "polearm"].includes(w);
+  const w = r.wk || k.w, two = ["2h-sword", "2h-axe", "2h-blunt", "spear", "polearm"].includes(w.split(":")[0]);
   const act = A.act[`${w}|${k.a || r.ak || ""}`] || null, idle = (A.act[`${w}|${two ? "stand2" : "stand1"}`] || [])[0] || null;
   const rel = act && act.length > 1 ? durOf(act.slice(0, -1)) : act ? 0 : 120;
   const shot = r.poly || r.path, ball = shot ? (k.b.length ? k.b : A.ammo?.[w] || []) : [];
@@ -102,8 +113,8 @@ function skrSprites(r, id){
   const to = r.path ? r.path[2] : r.mob ?? from, travel = ball.length ? Math.round(Math.max(0, to - from) / SKR_SPEED) : 0;
   const mobX = r.path ? [.3, .6, .86].map(f => Math.round(65 + (r.far - 65) * f)) : r.mob != null && r.fam !== "effect_rectangle" ? [r.mob] : [];
   const hits = mobX.map(x => rel + (ball.length ? Math.round(Math.max(0, x - from) / SKR_SPEED) : 0));
-  const end = Math.max(act ? durOf(act) : 0, durOf(k.e), ball.length ? rel + travel : 0, ...hits.map(t => t + durOf(k.h))) + 450;
-  return {w, act, idle, eff: k.e, hit: k.h, ball, rel, travel, from, to, y, mobX, hits, end} }
+  const end = Math.max(act ? durOf(act) : 0, durOf(k.e), ball.length ? rel + travel : 0, ...hits.map(t => t + durOf(k.h.length ? k.h : k.x || []))) + 450;
+  return {w, act, idle, eff: k.e, hit: k.h.length ? k.h : k.x || [], ball, rel, travel, from, to, y, mobX, hits, end} }
 const skrAnim = r => { const a = {lunge: 0, area: 120, hits: []};
   if (r.poly || r.path){ const from = r.path ? r.path[0] : r.aim[0], to = r.path ? r.path[2] : r.mob, dur = Math.round(Math.min(560, Math.max(260, (to - from) * 1.1)));
     a.shot = {from, y: (r.path || r.aim)[1], dx: to - from, at: 300, dur};
@@ -131,7 +142,7 @@ const skImg = f => "data:image/webp;base64," + f[0];
 const skImgW = f => f[4], skImgH = f => f[5];
 function rangeSvg(r, play, id){
   const SP = skrSprites(r, id), xs = [-45, 90], ys = [-90, 30], P = [], A = SP ? {lunge: 0, area: SP.rel, tp: r.tp ? {at: 160} : null} : skrAnim(r), st = o => Object.entries(o).map(([k, v]) => `${k}:${v}`).join(";");
-  for (const b of [...r.boxes, r.ext].filter(Boolean)){ xs.push(b.l, b.r); ys.push(b.t, b.b) }
+  for (const b of [...r.boxes, r.ext, r.blast].filter(Boolean)){ xs.push(b.l, b.r); ys.push(b.t, b.b) }
   if (r.poly) for (const [x, y] of r.poly){ xs.push(x); ys.push(y) }
   if (r.tp) xs.push(r.tp + 20);
   if (r.mob != null) xs.push(r.mob + 34);
@@ -149,6 +160,8 @@ function rangeSvg(r, play, id){
       + `<rect x="${x - mw / 2}" y="${-mh}" width="${mw}" height="${mh}" class="skr-mob"/></g>` };
   if (r.path) for (const f of [.3, .6, .86]) P.push(mobAt(Math.round(65 + (r.far - 65) * f)));
   else if (r.mob != null && r.fam !== "effect_rectangle") P.push(mobAt(r.mob));
+  // Explosion: stays on the first target (outside the player group); only when the attack reaches it.
+  if (r.blast && A.hits[0] != null){ const b = r.blast; P.push(`<g class="skr-area skr-fade" style="--dl:${A.hits[0]}ms"><rect x="${b.l}" y="${b.t}" width="${b.r - b.l}" height="${b.b - b.t}" class="skr-hit skr-ext"/></g>`) }
   P.push(`<g class="skr-pl" transform="${skpXf()}">`);
   // Area: corridor widens out from where it starts, stored boxes grow from your feet, swing boxes fade in, the extension slides forward.
   const grow = (ox, sy) => `class="skr-area" style="${st({"--dl": A.area + "ms", "--ox": ox + "px", "--sy": sy})}"`;
@@ -203,18 +216,18 @@ function rangeHtml(o, play){
   if (SKR.key !== o.key){ Object.assign(SKR, {key: o.key, lv: s.max, plv: s.rv.p ? s.rv.p[2].length : 0, wk: "", ak: ""}); skpReset() }
   const r = skRange(o.job, s, SKR.lv, SKR.plv, SKR.wk, SKR.ak); if (!r) return "";
   const pas = s.rv.p, seg = (attr, list, cur) => `<div class="seg small" role="radiogroup">${list.map(([k, t]) => `<button role="radio" data-${attr}="${esc(k)}" aria-checked="${k === cur}">${esc(t)}</button>`).join("")}</div>`;
-  const W = r.weapons || [], acts = W.find(w => w.key === r.wk)?.acts || [];
-  const src = s.rv.f.startsWith("action") ? "OSMS export: the client's weapon swing boxes (Character Afterimage) for the weapon and swing picked above"
+  const W = r.weapons || [], acts = W.find(w => w.key === r.wk)?.acts || [], bases = W.filter((w, i) => W.findIndex(x => x.base === w.base) === i), vars = W.filter(w => w.base === r.base);
+  const src = s.rv.f.startsWith("action") ? "the client's swing boxes (Character Afterimage, OSMS export + maplestory.io MCW) for the weapon's swing family (each weapon item names its own) and the swing picked above"
     : s.rv.L ? "OSMS export: the box stored with the skill" : s.rv.b?.[1] === "client_default" ? `OSMS export: the client's ${s.rv.b[0]} px default for this kind of attack`
     : s.rv.b?.[1] === "weapon" ? "OSMS export: the weapon's base range" : "OSMS export: the skill's stored values";
   return `<h3 class="msec">Range and hitbox</h3><div class="card skr" id="skr">
     <div class="skr-ctl">${s.max > 1 ? `<label>Skill level <b>${r.lv}</b><input type="range" data-skrlv min="1" max="${s.max}" value="${r.lv}"></label>` : ""}
       ${pas ? `<label>${esc(pas[1])} <b>${r.plv || "not learned"}</b><input type="range" data-skrplv min="0" max="${pas[2].length}" value="${r.plv}"></label>` : ""}</div>
-    ${W.length > 1 ? seg("skrw", W.map(w => [w.key, w.label]), r.wk) : ""}${acts.length > 1 ? seg("skra", acts.map(a => [a[0], ACTNAME(a[0])]), r.ak) : ""}
+    ${bases.length > 1 ? seg("skrw", bases.map(w => [w.base, w.label]), r.base) : ""}${vars.length > 1 ? seg("skrv", vars.map(w => [w.key, w.v]), r.wk) : ""}${acts.length > 1 ? seg("skra", acts.map(a => [a[0], ACTNAME(a[0])]), r.ak) : ""}
     ${rangeSvg(r, play, s.id)}<button class="btn skr-replay" data-skrplay aria-label="Replay the range preview">▶ Replay</button>
     <dl class="stats mgrid"><div><dt>Shape</dt><dd>${esc(r.label)}</dd></div>${r.facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
     <p class="sub skr-keys">Click the preview to play: A/D or arrows walk, W, up or Space jumps, and Ctrl, 1, 4, 6 or a click uses the skill. A controller works too (stick or d-pad walks, the bottom face button jumps, the other face buttons use the skill). Walk speed and jump height are for show.</p>
-    <p class="sub">Game pixels from your feet, facing right; the Stump shows monster size.${D.skanim?.sk?.[s.id] ? " Character, skill effect, projectile and hit frames come from the Classic World client (maplestory.io MCW); when the hit lands and how fast the shot flies are drawn for show." : ""} Source: ${src}${r.from ? `, level ${r.from}+ box` : ""}.</p></div>`;
+    <p class="sub">Game pixels from your feet, facing right; the Stump shows monster size.${D.skanim?.sk?.[s.id] ? " Character, skill effect, projectile and hit frames come from the Classic World client (maplestory.io MCW); when the hit lands and how fast the shot flies are drawn for show." : ""} Source: ${src}${r.from ? `, level ${r.from}+ box` : ""}${r.blast ? "; explosion box from the client's hidden follow-up skill (maplestory.io MCW, same size on meowdb)" : ""}.</p></div>`;
 }
 
 function page(o){
@@ -287,12 +300,12 @@ $("#skpage").addEventListener("click", e => {
   if (e.target.id === "skback"){ S.open = null; save(); show(); return }
   if (e.target.id === "skshare") return copyShare(e.target, shareUrl("s", S.open));
   const l = e.target.closest("[data-skopen]"); if (l) openSkill(l.dataset.skopen);
-  const w = e.target.closest("[data-skrw],[data-skra]");
-  if (w){ if (w.dataset.skrw) Object.assign(SKR, {wk: w.dataset.skrw, ak: ""}); else SKR.ak = w.dataset.skra; redrawRange(true) }
+  const w = e.target.closest("[data-skrw],[data-skrv],[data-skra]");
+  if (w){ if (w.dataset.skrw) Object.assign(SKR, {wk: w.dataset.skrw, ak: ""}); else if (w.dataset.skrv) SKR.wk = w.dataset.skrv; else SKR.ak = w.dataset.skra; redrawRange(true) }
   if (e.target.closest("[data-skrplay]")) redrawRange(true);
 });
 function redrawRange(play){ const o = S.open && OPEN[S.open], el = $("#skr"); if (!o || !el) return;
-  const a = document.activeElement, f = el.contains(a) ? ["skrlv", "skrplv", "skrplay", "skrw", "skra", "skrstage"].map(k => k in a.dataset ? `[data-${k}${a.dataset[k] ? `="${a.dataset[k]}"` : ""}]` : "").find(Boolean) : null;
+  const a = document.activeElement, f = el.contains(a) ? ["skrlv", "skrplv", "skrplay", "skrw", "skrv", "skra", "skrstage"].map(k => k in a.dataset ? `[data-${k}${a.dataset[k] ? `="${a.dataset[k]}"` : ""}]` : "").find(Boolean) : null;
   const tmp = document.createElement("div"); tmp.innerHTML = rangeHtml(o, play); SKP.swap = true; el.replaceWith(tmp.querySelector("#skr"));
   const out = play ? skrStart(o) : skrLoop(SKR_PAUSE); if (f) $("#skr " + f)?.focus({preventScroll: true}); SKP.swap = false; return out }
 // Player controls. Keys only while the preview has focus (no page scroll, no typing hijack); a controller (Gamepad API, standard

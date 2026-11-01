@@ -298,6 +298,8 @@ Source: OSMS skills.json `range_visual` + OSMS lib/skill-range-viz.js (its own r
 - meowdb (NiaDB) draws the corridor differently: 20 px bands from 65 px (magic 50), half-height trunc(band start / 4) around a 28 px aim
   line, so Arrow Blow = 144 up / 88 down. Unconfirmed which matches the client; we follow OSMS (ohmi is law). Same 470 px reach.
 - Rush also stores a range value (130/150) that is not its hit box; the rectangle is. `rg` used it until 11-01.
+- Swing family is per weapon item (OSMS items.json `after_image`, client Character/Weapon info/afterImage): 2H swords split swordTL (Scimitar, Lion's Fang, Sparta, Doombringer) / swordTS (the other 7; swing 2 reaches 75 px not 86); 1H swords and daggers split swordOL / swordOS. Boxes: Character/Afterimage/<family>.img/0 (index 10 differs by 2-11 px, used from Lv 100?).
+- Explosions (client hidden skills, OSMS omits them; meowdb agrees): Arrow Bomb 3101005 260×200 → 300×200 at Lv 16, Poison Breath 2101005 260×100 → 300×100 at Lv 16, around the first target (anchor point unconfirmed).
 - Animated previews (D.skanim, scripts/fetch_skill_anim.py): OSMS ships no character action or skill effect frames (only icons and a
   standing body, data/current/images/hair/00030000.png), so frames come from maplestory.io MCW/CBT2 (Classic client WZ): Character
   actions with their own delays, skill effect/hit/ball frames with origin + delay (100 ms assumed where a frame has none). Release

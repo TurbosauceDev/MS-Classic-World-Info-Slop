@@ -108,14 +108,28 @@ const path = require("path");
       ds = R("Rogue", "Double Stab", 20), ia = R("Crossbowman", "Iron Arrow", 30, 15), tp = R("Cleric", "Teleport", 20);
     return [ab.far, ab0.far, ab.poly[1][1], ls.far, f("Bandit", "Steal").rg.join("/"), f("Bandit", "Savage Blow").rg.join("/"), f("Fighter", "Rush").rg.join("/"),
       [tb.l, tb.r, tb.t, tb.b].join("/"), tb1.r, sb.boxes[0].r, sb.ext.r, sb1.ext.r, ds.weapons.map(w => w.key).join("/"), ds.ak, ia.far, tp.tp] });
-  check(rg.join() === "470,350,-137,400,180/0,95/0,220/0,-170/170/-70/70,150,100,150,130,dagger,stabO1,420,150",
+  check(rg.join() === "470,350,-137,400,180/0,95/0,220/0,-170/170/-70/70,150,100,150,130,dagger/dagger:swordOL,stabO1,420,150",
     "skill reach: Arrow Blow 350+120 (corridor ±137 at 470), Lucky Seven 200+200, Steal 180 in front, Savage Blow 95, Rush 220, Thunder Bolt ±170×±70 (Lv1 150), Slash Blast swing → 150 (Lv1 130), Double Stab dagger stabs, Iron Arrow 420, Teleport 150", rg);
+  // 11-01 audit: swing boxes per item family (Two-Handed Sword = swordTS, shorter than Scimitar's swordTL), client weapon codes per
+  // skill (Final Attack: Axe offered swords), explosion boxes (Arrow Bomb / Poison Breath hidden follow-up skills, meowdb agrees).
+  const au = await p.evaluate(() => { const f = (j, n) => D.skills[j].find(s => s.n === n), R = (j, n, lv, plv, w, a) => skRange(j, f(j, n), lv, plv, w, a);
+    const ps = R("Warrior", "Power Strike", 20, 0, "2h-sword:swordTS", "swingT2"), pl = R("Warrior", "Power Strike", 20, 0, "2h-sword", "swingT2"),
+      ab = R("Hunter", "Arrow Bomb", 30, 15), ab1 = R("Hunter", "Arrow Bomb", 1, 0), pb = R("F/P Wizard", "Poison Breath", 30), ds = R("Rogue", "Double Stab", 20, 0, "dagger:swordOL", "stabO1");
+    return [ps.boxes[0].r, pl.boxes[0].r, ps.facts.some(([k, v]) => k === "Short swing weapons" && v.includes("Two-Handed Sword")),
+      R("Fighter", "Final Attack: Axe", 30).weapons.map(w => w.base).join("/"), R("Page", "Final Attack: Blunt Weapon", 30).weapons.map(w => w.base).join("/"),
+      R("Spearman", "Final Attack: Polearm", 30).weapons.map(w => w.key).join("/"), R("Archer", "Power Knockback", 15).weapons.map(w => w.key).join("/"),
+      ab.blast.r - ab.blast.l, ab.blast.b - ab.blast.t, ab1.blast.r - ab1.blast.l, (ab.blast.l + ab.blast.r) / 2 === ab.mob, pb.blast.b - pb.blast.t, ds.boxes[0].r] });
+  check(au.join() === "75,86,true,1h-axe/2h-axe,1h-blunt/2h-blunt,polearm,bow/crossbow,300,200,260,true,100,84",
+    "skill audit: 2H Sword short swing (swordTS) reaches 75 vs long 86, FA weapons match the client, Arrow Bomb blast 260→300 × 200 on the target, Poison Breath 100 tall, Zamadar daggers stab to 84", au);
   // animated previews (D.skanim, scripts/fetch_skill_anim.py: Classic client frames from maplestory.io MCW). Every skill with a
   // range card needs its client frames and a character action that exists; projectiles and hits must play in order.
   const an = await p.evaluate(() => { const f = (j, n) => D.skills[j].find(s => s.n === n), P = (j, n, w, a) => { const s = f(j, n); return skrSprites(skRange(j, s, s.max, 0, w, a), s.id) };
     const miss = []; for (const [j, l] of Object.entries(D.skills)) for (const s of l) if (s.rv){ const sp = skrSprites(skRange(j, s, s.max, 0), s.id);
       if (!sp || !sp.idle || (!sp.act && s.rv.f !== "teleport_range")) miss.push(s.n) }
     const ab = P("Archer", "Arrow Blow"), ia = P("Crossbowman", "Iron Arrow"), ps = P("Warrior", "Power Strike", "2h-sword", "swingT2"), mc = P("Magician", "Magic Claw");
+    const pk = P("Archer", "Power Knockback", "bow", "swingT3"), st = P("Bandit", "Steal"), bomb = P("Hunter", "Arrow Bomb"), ts = P("Warrior", "Power Strike", "2h-sword:swordTS", "swingT1");
+    if (pk.act !== D.skanim.act["bow|swingT3"]) miss.push("Power Knockback swings the bow"); if (st.act !== D.skanim.act["dagger|swingO2"]) miss.push("Steal swingO2");
+    if (!bomb.hit.length) miss.push("Arrow Bomb explosion frames"); if (!ts.act || !ts.idle || ts.act === D.skanim.act["2h-sword|swingT1"]) miss.push("2H short-swing sword frames");
     return [miss.join("/") || "none", ab.act === D.skanim.act["bow|shoot1"], ab.ball.length, ab.rel > 0 && ab.hits[0] > ab.rel, ia.hits.length, ia.hits.every((t, i) => !i || t > ia.hits[i - 1]),
       ps.act === D.skanim.act["2h-sword|swingT2"], ps.hits[0] === ps.rel, mc.ball.length, mc.eff.length > 0] });
   check(an.join() === "none,true,3,true,3,true,true,true,0,true",
