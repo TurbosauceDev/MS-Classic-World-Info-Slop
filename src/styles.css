@@ -137,7 +137,7 @@ input[type=range]{accent-color:var(--accent);width:100%;margin-inline:0}
 .seg.small button{padding:6px 13px;font-size:14.5px}
 table.mini{font-size:14.5px}
 table.mini td,table.mini th{padding:6px 8px}
-.p-bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.p-bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:color-mix(in srgb,var(--bad) 82%,#fff)}   /* 5.0:1 on the pill (was 4.04, axe color-contrast) */
 @media (min-width:1100px){.wrap{zoom:1}}
 @media (min-width:1350px){.wrap{zoom:1.06;max-width:1240px}}
 @media (min-width:1600px){.wrap{zoom:1.12;max-width:1280px}}
@@ -763,8 +763,9 @@ header .thbtn:hover svg,header .thbtn[aria-expanded="true"] svg{transform:rotate
 .sntbl tr.snw td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 .sntbl [data-s]{cursor:pointer;user-select:none}
 .sntbl [data-s]:hover{color:var(--ink)}
-.sntbl [aria-sort="ascending"]::after{content:" ▲"} .sntbl [aria-sort="descending"]::after{content:" ▼"}
-.sntbl [aria-sort]::after{color:var(--accent)}
+.sntbl [aria-sort="ascending"]::after,.sntbl [data-sort="ascending"]::after{content:" ▲"} .sntbl [aria-sort="descending"]::after,.sntbl [data-sort="descending"]::after{content:" ▼"}
+.sntbl [aria-sort]::after,.sntbl [data-sort]::after{color:var(--accent)}
+.sntbl th:has([data-s])[aria-sort]::after{content:none}
 .sntr{font-size:13.5px}
 /* subs wrap so the list fits its card at 1300 px (smoke.js) */
 #snp-list .sntbl td .sub{white-space:normal}
