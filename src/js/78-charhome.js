@@ -33,18 +33,22 @@ document.addEventListener("paste", e => { if ($("#char").hidden) return; const f
 
 /* preview */
 const img = $("#chav"), stage = $("#chstage"), POSE = {stand: "stand1", walk1: "walk1", jump: "jump", alert: "alert", prone: "prone"};
-let pose = "stand", frame = 0, count = {}, playing = true, flip = false, timer = 0, ids = "", two = false;
+let pose = "stand", frame = 0, playing = true, flip = false, timer = 0, ids = "", two = false;
 const idsNow = () => { const m = /character\/2000\/([\d,]+)\/(stand\d)/.exec($("#pavatar")?.dataset.src || ""); two = m?.[2] === "stand2"; return m ? m[1] : "20000,30000" };
 const anim = () => { const a = POSE[pose]; return two && (a === "stand1" || a === "walk1") ? a.replace("1", "2") : a };
+// maplestory.io wraps the frame number by the pose's frame count (checked 11-01: stand 3, walk 4, alert 3, jump 1, prone 1), so the
+// counts are fixed here; each frame is preloaded so the picture never blanks between frames
+const FRAMES = {stand1: 3, stand2: 3, walk1: 4, walk2: 4, alert: 3, jump: 1, prone: 1};
+let seq = 0;
 function draw(){
-  ids = idsNow(); const key = anim(), f = frame, src = `https://maplestory.io/api/MCW/CBT2/character/2000/${ids}/${key}/${f}`;
-  img.onload = () => { img.hidden = false; $("#chavnote").textContent = "Drawn live by maplestory.io from Classic World client data." };
-  img.onerror = () => { if (f > 0){ count[key] = f; frame = 0; draw() } else { img.hidden = true; $("#chavnote").textContent = "The preview couldn't load (maplestory.io is blocked or offline)." } };
-  img.src = src;
+  ids = idsNow(); const key = anim(), src = `https://maplestory.io/api/MCW/CBT2/character/2000/${ids}/${key}/${frame}`, mine = ++seq, t = new Image();
+  t.onload = () => { if (mine !== seq) return; img.src = src; img.hidden = false; $("#chavnote").textContent = "Drawn live by maplestory.io from Classic World client data." };
+  t.onerror = () => { if (mine !== seq) return; img.hidden = true; $("#chavnote").textContent = "The preview couldn't load (maplestory.io is blocked or offline)." };
+  t.src = src;
 }
 function tick(){
   clearInterval(timer); const key = anim();
-  timer = setInterval(() => { if ($("#char").hidden || !playing || count[key] === 1) return; frame = (frame + 1) % (count[key] || 99); draw() }, pose === "walk1" ? 180 : 320);
+  timer = setInterval(() => { if ($("#char").hidden || !playing || FRAMES[key] === 1) return; frame = (frame + 1) % FRAMES[key]; draw() }, pose === "walk1" ? 180 : 320);
 }
 function setPose(p){ pose = p; frame = 0; document.querySelectorAll("#chpose button").forEach(b => b.setAttribute("aria-checked", b.dataset.p === p)); draw(); tick() }
 $("#chpose").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setPose(b.dataset.p) });
