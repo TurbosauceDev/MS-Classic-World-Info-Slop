@@ -78,6 +78,8 @@ html = html.replace("__SITEVER__", vers[0])
 html = html.replace("<script>\n/*@JS*/", '<script type="application/json" id="sitedata">' + data.strip().replace("<", "\\u003c") + "</script>\n<script>\n/*@JS*/", 1)
 assert 'id="sitedata"' in html
 out = html.replace("/*@CSS*/", css).replace("/*@JS*/", js.replace("__DATA__", 'JSON.parse(document.getElementById("sitedata").textContent)', 1))
+import canary  # hidden copy-detection block, see scripts/canary.py
+out += canary.block()
 (ROOT / "dist").mkdir(exist_ok=True)
 (ROOT / "dist" / "index.html").write_text(out)
 print(f"dist/index.html  {len(out)/1024:.0f} KB  (data {len(data)/1024:.0f} KB)")
