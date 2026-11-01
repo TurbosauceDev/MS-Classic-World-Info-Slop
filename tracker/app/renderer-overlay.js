@@ -3,7 +3,7 @@
 // the view re-renders (throttled). The overlay (app/overlay.js) renders it as floating widgets; main.js relays and owns
 // the window. Dummy data flows through the same path, so layouts can be tried without tracking.
 let ovVit = null;   // last HP / MP read ({hp:[cur,max], mp:[cur,max], t}) for the Chat blocker bars (overlay.js RENDER.blocker)
-let ovOpen = false, ovSentT = 0, ovFeed = [];
+let ovOpen = false, ovSentT = 0, ovFeed = [], ovGeoSent = null;   // ovGeoSent: the map whose minimap the overlay already holds
 // the run log in plain text for the overlay (feedAdd's lines, HTML stripped there)
 function ovPlain(l){
   if (l.kind === "exp") return `${l.who} gained ${fmt(l.n)} EXP${l.detail ? ` (${l.detail})` : ""}`;
@@ -41,10 +41,17 @@ function ovSm(s){
     pots: pots.map(p => ({n: p.n, name: p.name, ic: ic(p.id)})), spent: s.usedCost, mesos: s.mesos, loot: s.lootValue,
     items: rows(s.items, i => ({name: i.name, n: i.n, ic: ic(i.id)})), itemsMore: more(s.items), mobs: rows(s.mobs, m => ({name: m.name, n: m.kills})), mobsMore: more(s.mobs)};
 }
+// minimap + exits + spawn dots (G.geo) ride along only when the map changes; the overlay caches them by map id
+function ovGeo(mid){
+  if (!mid || ovGeoSent === mid || !G.geo?.[mid]) return null;
+  ovGeoSent = mid;
+  const g = G.geo[mid];
+  return {mm: g.mm, t: G.mmType, d: g.d, sp: g.sp, p: g.p.map(([x, y, dest, hid]) => [x, y, dest, hid, G.mapnames[dest] || G.maps[dest]?.[0] || ""])};
+}
 function ovBuild(s){
   const mid = s.nowMap != null ? String(s.nowMap) : s.map != null ? String(s.map) : null;
   const list = mid && G.maps[mid] ? G.maps[mid][2] : [];   // [mob, count] per the game data
-  const spawns = list.filter(([id]) => G.mobs[id]).map(([id, n]) => ({name: G.mobs[id][0], lv: G.mobs[id][1], exp: G.mobs[id][3], n: n || 0}));
+  const spawns = list.filter(([id]) => G.mobs[id]).map(([id, n]) => ({id, name: G.mobs[id][0], lv: G.mobs[id][1], exp: G.mobs[id][3], n: n || 0}));
   const respawns = (typeof respawnsWithSpots === "function" ? respawnsWithSpots(Date.now()) : (session.respawns ? session.respawns(Date.now()) : []))
     .map(r => ({name: r.name, boss: r.boss, sec: r.sec, killed: r.killed, shared: r.shared || 0, ch: r.ch ?? null}));
   const bar = session.state.bar, r = TH.resolve(themeNow(), darkQ.matches);
@@ -53,7 +60,7 @@ function ovBuild(s){
     inv: Object.fromEntries(GrindBag.ALL.map(([k]) => [k, s.invTabs?.[k]?.last ?? null])), bagEvery: bagCfg().every, state: $("#stateText").textContent,
     st: {activeMin: s.activeMin, exp: s.exp, expHr: s.expHr, expHr5: s.expHr5, toLevelHrs: s.toLevelHrs, kills: s.kills, killsHr: s.killsHr,
       mesos: s.mesos, mesosHr: s.mesosHr, lootHr: s.lootHr, deaths: s.deaths, level: s.level, pct: bar?.pct ?? null, firstBar: s.firstBar, party: s.party},
-    map: {id: mid, name: s.nowMapName || s.mapName, spawns, respawns},
+    map: {id: mid, name: s.nowMapName || s.mapName, spawns, respawns, geo: ovGeo(mid)},
     kpq: kpq?.on ? {rounds: kpq.rounds, stage: kpq.stage ? KPQ_STAGE[kpq.stage.id] : null, stageT0: kpq.stage?.t0 ?? null,
       round: kpq.round ? {t0: kpq.round.t0} : null, clock: kpq.left !== null ? {left: kpq.left, leftT: kpq.leftT} : null, hold: !!kpq.hold} : null,
     party: partyLive,
@@ -67,7 +74,8 @@ function ovBuild(s){
     th: {c: r.c, mode: r.mode, sk: r.sk}};   // sk (0.2.92): the panel style rides with the colours, the overlay re-skins live
 }
 function ovSend(force){
-  if (!ovOpen || !session) return;
+  if (!ovOpen){ ovGeoSent = null; return }   // a reopened overlay has an empty cache
+  if (!session) return;
   const t = Date.now();
   if (!force && t - ovSentT < 500) return;
   ovSentT = t;

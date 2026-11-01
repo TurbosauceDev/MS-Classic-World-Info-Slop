@@ -17,6 +17,24 @@ const runClock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 // what can be tracked: the panel lists these, in this order. HOME is where each lands the first time (desktop pixels)
+const GEO = {};   // map id -> {mm, t, d, sp, p}: the minimap, sent once per map (renderer-overlay.js ovGeo)
+// the Map & spawns minimap: a dot per spawn point in its monster's colour, numbered exits (hidden ones dashed). Hovering a row
+// or a dot lights that monster's dots (mapHover below); the picture is cut to the card's width
+function mapGeo(g, list, col){
+  const P = g.p || [], num = {}, dests = [];
+  for (const p of P) if (!(p[2] in num)){ num[p[2]] = dests.length + 1; dests.push(p) }
+  const [w0, h0] = g.d || [0, 0], k = w0 ? Math.min(240 / w0, 200 / h0, 2) : 1, w = Math.round(w0 * k) || 240, h = Math.round(h0 * k) || 120;
+  const pos = (x, y) => `left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%`;
+  const dots = list.map((x, i) => (g.sp?.[x.id] || []).map(([px, py]) => `<span class="mdot" data-mob="${x.id}" title="${esc(x.name)}" style="${pos(px, py)};background:${col(i)}"></span>`).join("")).join("");
+  const ex = P.map(([x, y, d, hid]) => `<span class="mpt${hid ? " hid" : ""}" style="${pos(x, y)}">${num[d]}</span>`).join("");
+  const legend = dests.map(([, , d, , name]) => `<span><b class="mpn${P.filter(p => p[2] === d).every(p => p[3]) ? " hid" : ""}">${num[d]}</b>${esc(name || "map " + d)}</span>`).join("");
+  return `<div class="mgeo" data-geo><div class="mmw" style="width:${w}px;height:${h}px"><img src="data:image/${g.t || "webp"};base64,${g.mm}" width="${w}" height="${h}" alt="">${ex}${dots}</div>${legend ? `<div class="mleg">${legend}</div>` : ""}</div>`;
+}
+function mapHover(id){
+  for (const g of document.querySelectorAll(".mgeo")) g.classList.toggle("hl", !!id);
+  for (const e of document.querySelectorAll(".mdot, .ovw [data-mob]")) e.classList.toggle("on", !!id && e.dataset.mob === id);
+}
+addEventListener("mouseover", e => { const t = e.target.closest?.("[data-mob]"); mapHover(t ? t.dataset.mob : null) });
 const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar", bag: "Bag check", simple: "Simple view", focus: "Focus view", blocker: "Chat blocker", chat: "Chat window", shop: "Shop prices", range: "Skill range"};
 const HOME = {status: {on: true, x: 24, y: 24}, exp: {on: true, x: 24, y: 108}, map: {on: true, x: 24, y: 250},
   kills: {on: false, x: 24, y: 620}, mesos: {on: false, x: 24, y: 700}, loot: {on: false, x: 24, y: 780},
@@ -116,6 +134,7 @@ const PARAMS = [
   {k: "bt_deco", sec: "Tabs watched", lab: "Deco", t: "b", def: false, kinds: ["bag"]},
   {k: "bagl", sec: "Layout", lab: "Reminders", t: "s", opts: {row: "Side by side", col: "Stacked"}, def: "row", kinds: ["bag"]},
   {k: "bagm", sec: "Layout", lab: "Show", t: "s", opts: {icon: "Icon only", text: "Text only", both: "Icon and text"}, def: "icon", kinds: ["bag"]},
+  {k: "mmap", sec: "Layout", lab: "Minimap", t: "b", def: true, kinds: ["map"], tip: "The map with every monster's spawn points and the exits; hover a monster row to light its dots"},
   {k: "bgon", sec: "Layout", lab: "Background", t: "b", def: true, kinds: ["bag"], tip: "Off leaves just the reminder buttons, no card behind them"},
   // Event log (Danny 10-29: "highly, highly customizable")
   {k: "lgx", sec: "Lines to show", lab: "EXP gains", t: "b", def: true, kinds: ["log"]},
@@ -302,11 +321,13 @@ const RENDER = {
     return rows.length ? rows.join("") : `<div class="empty">Nothing yet.</div>`;
   },
   map(d, id){
-    const m = d.map || {}, list = m.spawns || [], nm = Math.min(list.length, Math.max(wv(id, "rows"), fitRows(id, 22)));
-    const mobs = list.slice(0, nm).map(x => `<div class="mrow"><b>${esc(x.name)}</b><span>${x.n ? "×" + x.n + " · " : ""}Lv ${x.lv} · ${fmt(x.exp)} EXP</span></div>`).join("");
+    const m = d.map || {}, list = m.spawns || [], geo = m.geo && (GEO[m.id] = m.geo) || GEO[m.id], nm = Math.min(list.length, Math.max(wv(id, "rows"), fitRows(id, 22)));
+    const col = i => `hsl(${(i * 67 + 10) % 360} 75% 60%)`;
+    const mobs = list.slice(0, nm).map((x, i) => `<div class="mrow" data-mob="${x.id}"><b>${geo?.sp?.[x.id] ? `<i class="msw" style="background:${col(i)}"></i>` : ""}${esc(x.name)}</b><span>${x.n ? "×" + x.n + " · " : ""}Lv ${x.lv} · ${fmt(x.exp)} EXP</span></div>`).join("");
     const resp = (m.respawns || []).map(r => { const due = r.killed ? r.killed + r.sec * 1000 - d.t : null;
       return `<div class="mrow"><b>${esc(r.name)}${r.boss ? " (boss)" : ""}</b><span class="${due != null && due <= 0 ? "pos" : due != null && due <= 120e3 ? "soon" : ""}">${r.killed ? due > 0 ? "back in ~" + respT(due) : "due now" : "every " + respT(r.sec * 1000)}${r.shared ? ` · ${r.shared} saw it${r.ch ? " · ch " + r.ch : ""}` : ""}</span></div>` }).join("");
     return `<div class="mapname">${esc(m.name || "No map yet")}</div>`
+      + (geo && wv(id, "mmap") ? mapGeo(geo, list, col) : "")
       + (list.length ? `<div class="sub">${list.reduce((a, x) => a + (x.n || 0), 0)} spawns</div>` + mobs + (list.length > nm ? `<div class="sub dim">and ${list.length - nm} more</div>` : "") : "")
       + (resp ? `<div class="sect">respawns</div>` + resp : "");
   },
@@ -1014,7 +1035,7 @@ function chipHide(){ clearTimeout(xyT); xyChip?.classList.add("hidden") }
 // hands them back the moment it leaves. A click asks the tracker window to scan that tab. Never while editing (edit
 // mode is for layout, and the whole window already takes the mouse).
 let bagHit = false;
-const bagCard = el => !!el?.closest?.(".ovw")?.querySelector("[data-bag]");   // any card showing bag icons (Bag check, or EXP with the switch on)
+const bagCard = el => !!el?.closest?.(".ovw")?.querySelector("[data-bag], [data-geo]");   // any card showing bag icons (Bag check, or EXP with the switch on)
 addEventListener("mousemove", e => {
   const on = !CFG.edit && bagCard(e.target);   // the whole Bag check card takes the mouse, not only the icons
   if (on !== bagHit){ bagHit = on; window.ovhost.hit(on) }

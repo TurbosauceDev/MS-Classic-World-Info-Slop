@@ -54,6 +54,21 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       fail("map card spawns", st[2]);
     if (!/Mano \(boss\).*back in ~23 min/.test(st[2]) || !/Stumpy \(boss\).*back in ~25 min/.test(st[2]) || !/King Slime \(boss\).*every 15 min/.test(st[2]))
       fail("map card respawns", st[2]);
+    // minimap (0.3.31): geo rides once per map; dots per spawn point, exits numbered (hidden dashed), hover lights one monster, card takes the mouse
+    const geo = {mm: "AAAA", t: "webp", d: [200, 100], sp: {"8": [[0.1, 0.5], [0.3, 0.5]], "9": [[0.7, 0.2]]}, p: [[0.9, 0.8, "40", 0, "Henesys"], [0.5, 0.5, "41", 1, "Secret"]]};
+    const mp = {...structuredClone(payload), map: {...structuredClone(payload).map, spawns: [{id: "8", name: "Pig", lv: 7, exp: 13, n: 2}, {id: "9", name: "Orange Mushroom", lv: 8, exp: 15, n: 1}], geo}};
+    await page.evaluate(d => window.ovData(d), mp);
+    delete mp.map.geo;   // later pushes carry no geo: the cache keeps the picture
+    await page.evaluate(d => window.ovData(d), mp);
+    st = await page.evaluate(() => { const c = document.querySelector("#ovw-map"); return [c.querySelectorAll(".mdot").length, c.querySelectorAll(".mpt").length, c.querySelectorAll(".mpt.hid").length, !!c.querySelector("[data-geo]")] });
+    if (st.join() !== "3,2,1,true") fail("map minimap dots/exits", st);
+    await page.evaluate(() => document.querySelector("#ovw-map .mrow[data-mob='9']").dispatchEvent(new MouseEvent("mouseover", {bubbles: true})));
+    st = await page.evaluate(() => [document.querySelectorAll("#ovw-map .mdot.on").length, document.querySelector("#ovw-map .mgeo").classList.contains("hl")]);
+    if (st.join() !== "1,true") fail("map hover lights one monster", st);
+    await page.evaluate(() => document.querySelector("#ovw-map .mgeo").dispatchEvent(new MouseEvent("mouseover", {bubbles: true})));
+    st = await page.evaluate(() => [document.querySelectorAll("#ovw-map .mdot.on").length, document.querySelector("#ovw-map .mgeo").classList.contains("hl")]);
+    if (st.join() !== "0,false") fail("map hover clears", st);
+    await page.evaluate(d => window.ovData(d), structuredClone(payload));   // restore the plain payload for later checks
     // due-soon (0.2.81): a respawn back within 2 min wears the warn colour so it reads at a glance
     st = await page.evaluate(() => [...document.querySelectorAll("#ovw-map .mrow")].map(r => r.querySelector("span").className + "|" + r.textContent).find(x => x.includes("Mushmom")));
     if (!st || !st.startsWith("soon|") || !st.includes("back in ~2 min")) fail("due-soon respawn", st);

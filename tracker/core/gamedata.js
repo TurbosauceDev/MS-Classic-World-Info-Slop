@@ -45,6 +45,15 @@
     G.buy = Object.fromEntries(used.map(id => [id, Math.min(...(D.ishop[id] || []).map(s => s[3]).filter(p => p > 0))]).filter(([, p]) => isFinite(p)));
     // plain arrows aren't in our shop data: Danny's price, 2 arrows = 1 meso (2026-10-17). Bronze arrows are 2 each (shop data, matches him)
     for (const id of ["2060000", "2061000"]) G.buy[id] ??= 0.5;
+    // Map & spawns card: per map the minimap picture, its size, exits ([x, y, dest, hidden] as minimap fractions) and each
+    // monster's spawn points ({mob: [[x, y]]}, D.mobdb[mob].sp[map]); only maps the tracker knows
+    G.mmType = D.mmapType || "webp"; G.geo = {};
+    for (const mid of Object.keys(G.maps)){
+      if (!D.mmaps?.[mid]) continue;
+      const sp = {};
+      for (const [id] of G.maps[mid][2]){ const pts = D.mobdb?.[id]?.sp?.[mid]; if (pts?.length) sp[id] = pts }
+      G.geo[mid] = {mm: D.mmaps[mid], d: D.mmdim?.[mid] || [0, 0], p: D.portals?.[mid] || [], sp};
+    }
     return G;
   }
   if (typeof module !== "undefined" && module.exports) module.exports = {toGamedata}; else root.GrindGamedata = {toGamedata};
