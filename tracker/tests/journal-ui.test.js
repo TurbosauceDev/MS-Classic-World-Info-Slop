@@ -8,7 +8,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.addInitScript(require("./ui-host"));
   await page.goto("file://" + path.join(__dirname, "../app/index.html"));
   await page.click("#guideNo");
-  await page.evaluate(() => { settings.autoRun = false; jr.wake() });   // the older checks below are about the journal alone; always-on is checked at the end
+  await page.evaluate(async () => { settings = await host.settings({autoRun: false}); jr.wake() }); await page.waitForTimeout(2500);   // let a watch that was opening at load finish; the older checks below are about the journal alone; always-on is checked at the end
   const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   const lines = () => page.evaluate(async () => { await jr.flush(); return window.journal || [] });
   const run = async () => { await page.click("#go"); await page.waitForFunction(() => timer != null && !starting);
@@ -51,9 +51,9 @@ const path = require("path"), {chromium} = require("playwright");
   await page.evaluate(() => { ovBlocker = false; jr.wake() });
   if (await page.evaluate(() => jr.stats().watching)) fail("watch should stop when the blocker goes and the journal is off", null);
   // always on (default): the watch runs with the journal and blocker off; turning it off stops the watch
-  await page.evaluate(() => { settings.autoRun = true; jr.wake() });
+  await page.evaluate(async () => { settings = await host.settings({autoRun: true}); jr.wake() });
   await page.waitForFunction(() => jr.stats().watching, null, {timeout: 15000}).catch(() => fail("always-on watch never started", null));
-  await page.evaluate(() => { settings.autoRun = false; jr.wake() });
+  await page.evaluate(async () => { settings = await host.settings({autoRun: false}); jr.wake() });
   if (await page.evaluate(() => jr.stats().watching)) fail("watch should stop when always-on is off", null);
   // an auto-started run ends itself after 2 min without EXP; a hand-started one doesn't
   await page.evaluate(() => { autoNext = true; autoBase = {exp: 500, level: 10, pct: 5}; return start() }); await page.waitForFunction(() => timer != null && !starting);
@@ -61,7 +61,7 @@ const path = require("path"), {chromium} = require("playwright");
   if (!await page.evaluate(() => autoRun?.auto)) fail("watch-started run not flagged auto", null);
   await page.evaluate(() => { autoRun.lastGain = Date.now() - 130e3; return autoBreak() }); await page.waitForTimeout(500);
   if (await page.evaluate(() => timer != null)) fail("auto run should have ended after 2 min idle", null);
-  await page.evaluate(() => { settings.autoRun = false; return start() }); await page.waitForFunction(() => timer != null && !starting);
+  await page.evaluate(async () => { settings = await host.settings({autoRun: false}); return start() }); await page.waitForFunction(() => timer != null && !starting);
   if (await page.evaluate(() => autoRun.auto)) fail("hand-started run flagged auto", null);
   await page.evaluate(() => stopNow());
   if (errors.length) fail("page errors", errors);
