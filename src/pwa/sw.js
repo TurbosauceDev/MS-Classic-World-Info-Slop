@@ -4,7 +4,7 @@
 // the next visit. The polls rebuild the shell several times an hour, and network-first made every returning visitor
 // re-download it whole; the volatile part (prices) is a separate file (scripts/pages_site.py) fetched fresh each visit,
 // so cached-shell + fresh-prices keeps the data current at a fraction of the bytes. Code changes show up one visit later.
-const CACHE = "mscw-2";
+const CACHE = "mscw-3";   // 3: navigations to deep links (/skills/..., /items/...) were answered with the cached home shell, so they never reached the redirect
 const HASHED = /^(assets|prices)-[0-9a-f]+\.json$/;   // file names carry a content hash: keep only the newest of each kind
 self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./", "manifest.webmanifest", "icon-192.png"]))) });
 self.addEventListener("activate", e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
@@ -12,6 +12,9 @@ self.addEventListener("fetch", e => {
   const req = e.request, u = new URL(req.url);
   if (req.method !== "GET" || u.origin !== location.origin) return;
   const nav = req.mode === "navigate", key = nav ? "./" : req;
+  // Only the planner's own address gets the cached shell. Static pages (/skills/warrior/fighter/axe-mastery/), 404.html and the
+  // rest go to the network, or the shell opens at that path with no #key and shows an empty list.
+  if (nav && u.pathname !== new URL("./", self.registration.scope).pathname) return;
   if (nav) {
     e.respondWith(caches.match(key).then(c => {
       const net = fetch(req).then(r => { if (r.ok && r.type === "basic") e.waitUntil(caches.open(CACHE).then(x => x.put(key, r.clone()))); return r })

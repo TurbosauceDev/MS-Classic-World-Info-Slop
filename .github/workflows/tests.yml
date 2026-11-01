@@ -33,6 +33,8 @@ jobs:
         run: python3 tests/pages_gen_test.py
       - name: guessable addresses (router + clean share paths)
         run: python3 tests/routes_test.py
+      - name: service worker leaves deep links to the network
+        run: node tests/sw_test.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/smoke.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
