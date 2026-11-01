@@ -298,6 +298,10 @@ Source: OSMS skills.json `range_visual` + OSMS lib/skill-range-viz.js (its own r
 - meowdb (NiaDB) draws the corridor differently: 20 px bands from 65 px (magic 50), half-height trunc(band start / 4) around a 28 px aim
   line, so Arrow Blow = 144 up / 88 down. Unconfirmed which matches the client; we follow OSMS (ohmi is law). Same 470 px reach.
 - Rush also stores a range value (130/150) that is not its hit box; the rectangle is. `rg` used it until 11-01.
+- Animated previews (D.skanim, scripts/fetch_skill_anim.py): OSMS ships no character action or skill effect frames (only icons and a
+  standing body, data/current/images/hair/00030000.png), so frames come from maplestory.io MCW/CBT2 (Classic client WZ): Character
+  actions with their own delays, skill effect/hit/ball frames with origin + delay (100 ms assumed where a frame has none). Release
+  moment (start of the action's last frame) and projectile speed (0.9 px/ms) are drawn for show; the page says so.
 
 ## data/data.json schema
 - `mobs` {id: [name, level, hp, exp, eva, PDD, MDD, elements{}, undead]}

@@ -84,33 +84,100 @@ function vert(top, bot){ const h = bot - top;
 const ACTNAME = a => { const m = /^(swing|stab)([OTP])(\d|F)$/.exec(a); return m ? `${{O: "1H", T: "2H", P: "Polearm"}[m[2]]} ${m[1]} ${m[3]}` : a };
 const SKR = {lv: 0, plv: 0, wk: "", ak: "", key: ""};
 const pngSize = b64 => { try { const s = atob(b64.slice(0, 32)); return [s.charCodeAt(18) * 256 + s.charCodeAt(19), s.charCodeAt(22) * 256 + s.charCodeAt(23)] } catch(e) { return [37, 26] } };
-function rangeSvg(r){
-  const xs = [-45, 90], ys = [-90, 30], P = [];
+// Preview animation (plays once on open, weapon/swing change and Replay; sliders redraw still). With D.skanim (Classic client
+// frames from maplestory.io MCW, scripts/fetch_skill_anim.py) the character really swings/shoots/casts and the skill's own
+// effect, projectile and hit frames play at their client delays; without it (Pages: until the lazy assets arrive) only the
+// area, a dot shot and the target flash move. Release = start of the action's last frame and the projectile speed are for
+// show, not game data. CSS: .skr-play rules in styles.css; reduced motion shows the still diagram.
+const SKR_SPEED = .9;   // projectile px per ms in the preview (for show; the client's speed isn't in our data)
+const durOf = fr => fr.reduce((a, f) => a + f[3], 0);
+// Sprite timeline for one preview: what the player draws, and when the area/hit CSS should fire. Pure (tests/golden.js).
+function skrSprites(r, id){
+  const A = D.skanim, k = A?.sk?.[String(id)]; if (!k) return null;
+  const w = r.wk || k.w, two = ["2h-sword", "2h-axe", "2h-blunt", "spear", "polearm"].includes(w);
+  const act = A.act[`${w}|${k.a || r.ak || ""}`] || null, idle = (A.act[`${w}|${two ? "stand2" : "stand1"}`] || [])[0] || null;
+  const rel = act && act.length > 1 ? durOf(act.slice(0, -1)) : act ? 0 : 120;
+  const shot = r.poly || r.path, ball = shot ? (k.b.length ? k.b : A.ammo?.[w] || []) : [];
+  const from = r.path ? r.path[0] : r.aim ? r.aim[0] : 0, y = (r.path || r.aim || [0, -30])[1];
+  const to = r.path ? r.path[2] : r.mob ?? from, travel = ball.length ? Math.round(Math.max(0, to - from) / SKR_SPEED) : 0;
+  const mobX = r.path ? [.3, .6, .86].map(f => Math.round(65 + (r.far - 65) * f)) : r.mob != null && r.fam !== "effect_rectangle" ? [r.mob] : [];
+  const hits = mobX.map(x => rel + (ball.length ? Math.round(Math.max(0, x - from) / SKR_SPEED) : 0));
+  const end = Math.max(act ? durOf(act) : 0, durOf(k.e), ball.length ? rel + travel : 0, ...hits.map(t => t + durOf(k.h))) + 450;
+  return {w, act, idle, eff: k.e, hit: k.h, ball, rel, travel, from, to, y, mobX, hits, end} }
+const skrAnim = r => { const a = {lunge: 0, area: 120, hits: []};
+  if (r.poly || r.path){ const from = r.path ? r.path[0] : r.aim[0], to = r.path ? r.path[2] : r.mob, dur = Math.round(Math.min(560, Math.max(260, (to - from) * 1.1)));
+    a.shot = {from, y: (r.path || r.aim)[1], dx: to - from, at: 300, dur};
+    a.hits = r.path ? [.3, .6, .86].map(f => Math.round(a.shot.at + dur * (Math.round(65 + (r.far - 65) * f) - from) / (to - from))) : [a.shot.at + dur] }
+  else if (r.tp) a.tp = {at: 160}; else if (r.mob != null && r.fam !== "effect_rectangle") a.hits = [r.ext ? 560 : 320];
+  return a };
+const skImg = f => "data:image/webp;base64," + f[0];
+const skImgW = f => f[4], skImgH = f => f[5];
+function rangeSvg(r, play, id){
+  const SP = skrSprites(r, id), xs = [-45, 90], ys = [-90, 30], P = [], A = SP ? {lunge: 0, area: SP.rel, hits: SP.hits, tp: r.tp ? {at: 160} : null} : skrAnim(r), st = o => Object.entries(o).map(([k, v]) => `${k}:${v}`).join(";");
   for (const b of [...r.boxes, r.ext].filter(Boolean)){ xs.push(b.l, b.r); ys.push(b.t, b.b) }
   if (r.poly) for (const [x, y] of r.poly){ xs.push(x); ys.push(y) }
   if (r.tp) xs.push(r.tp + 20);
   if (r.mob != null) xs.push(r.mob + 34);
+  if (SP) for (const f of SP.eff){ xs.push(-(skImgW(f) - f[1]), f[1]); ys.push(-f[2], skImgH(f) - f[2]) }
+  if (SP && SP.mobX.length) for (const f of SP.hit) ys.push(Math.max(-170, -23 - f[2]));   // tall hits (Thunder Bolt) capped
   const x0 = Math.min(...xs) - 30, x1 = Math.max(...xs) + 40, y0 = Math.min(...ys) - 26, y1 = Math.max(...ys) + 22, w = x1 - x0, h = y1 - y0;
   const fs = Math.max(10, Math.round(w / 48)), T = (x, y, t, c = "") => `<text x="${x}" y="${y}" class="skr-t ${c}" font-size="${fs}">${t}</text>`;
   P.push(`<defs><pattern id="skrgrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" class="skr-grid"/></pattern></defs>`,
     `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#skrgrid)"/>`, `<line x1="${x0}" y1="0" x2="${x1}" y2="0" class="skr-ground"/>`);
   const mob = D.mobimg?.["6"];   // Stump, as a size reference
-  const mobAt = x => { const [mw, mh] = mob ? pngSize(mob) : [46, 46];
-    return (mob ? `<image href="data:image/png;base64,${mob}" x="${x - mw / 2}" y="${-mh}" width="${mw}" height="${mh}" class="skr-spr"/>` : "") + `<rect x="${x - mw / 2}" y="${-mh}" width="${mw}" height="${mh}" class="skr-mob"/>` };
+  let hit = 0;
+  const mobAt = x => { const [mw, mh] = mob ? pngSize(mob) : [46, 46], at = A.hits[hit++];
+    return `<g class="skr-target"${at != null ? ` style="--dl:${at}ms"` : ""}>` + (mob ? `<image href="data:image/png;base64,${mob}" x="${x - mw / 2}" y="${-mh}" width="${mw}" height="${mh}" class="skr-spr"/>` : "")
+      + `<rect x="${x - mw / 2}" y="${-mh}" width="${mw}" height="${mh}" class="skr-mob"/></g>` };
   if (r.path) for (const f of [.3, .6, .86]) P.push(mobAt(Math.round(65 + (r.far - 65) * f)));
   else if (r.mob != null && r.fam !== "effect_rectangle") P.push(mobAt(r.mob));
-  if (r.poly) P.push(`<polygon points="${r.poly.map(p => p.join(",")).join(" ")}" class="skr-hit"/>`);
-  for (const b of r.boxes) P.push(`<rect x="${b.l}" y="${b.t}" width="${Math.max(1, b.r - b.l)}" height="${Math.max(1, b.b - b.t)}" class="skr-hit"/>`);
-  if (r.ext && r.ext.r > r.ext.l) P.push(`<rect x="${r.ext.l}" y="${r.ext.t}" width="${r.ext.r - r.ext.l}" height="${r.ext.b - r.ext.t}" class="skr-hit skr-ext"/>`);
+  // Area: corridor widens out from where it starts, stored boxes grow from your feet, swing boxes fade in, the extension slides forward.
+  const grow = (ox, sy) => `class="skr-area" style="${st({"--dl": A.area + "ms", "--ox": ox + "px", "--sy": sy})}"`;
+  if (r.poly) P.push(`<g ${grow(r.poly[0][0], 1)}><polygon points="${r.poly.map(p => p.join(",")).join(" ")}" class="skr-hit"/></g>`);
+  const swing = r.fam.startsWith("action"), boxes = r.boxes.map(b => `<rect x="${b.l}" y="${b.t}" width="${Math.max(1, b.r - b.l)}" height="${Math.max(1, b.b - b.t)}" class="skr-hit"/>`).join("");
+  if (boxes) P.push(r.path ? `<g ${grow(65, 1)}>${boxes}</g>` : swing ? `<g class="skr-area skr-fade" style="--dl:${A.area}ms">${boxes}</g>` : `<g ${grow(0, .15)}>${boxes}</g>`);
+  if (r.ext && r.ext.r > r.ext.l) P.push(`<g class="skr-area" style="${st({"--dl": "330ms", "--ox": r.ext.l + "px", "--sy": 1})}"><rect x="${r.ext.l}" y="${r.ext.t}" width="${r.ext.r - r.ext.l}" height="${r.ext.b - r.ext.t}" class="skr-hit skr-ext"/></g>`);
   if (r.aim) P.push(`<line x1="${r.aim[0]}" y1="${r.aim[1]}" x2="${r.aim[2]}" y2="${r.aim[1]}" class="skr-aim"/>`);
   if (r.path) P.push(`<line x1="${r.path[0]}" y1="${r.path[1]}" x2="${r.path[2]}" y2="${r.path[1]}" class="skr-aim"/>`);
-  if (r.tp) P.push(`<rect x="${r.tp - 20}" y="-66" width="39" height="66" rx="6" class="skr-you skr-ghost"/><line x1="24" y1="-80" x2="${r.tp - 4}" y2="-80" class="skr-aim"/>`);
-  P.push(`<rect x="-20" y="-66" width="39" height="66" rx="6" class="skr-you"/>`, T(0, -72, "you", "skr-mid"), `<circle cx="0" cy="0" r="3" class="skr-origin"/>`);
+  if (A.shot && !SP) P.push(`<g class="skr-shot" style="${st({"--dl": A.shot.at + "ms", "--du": A.shot.dur + "ms", "--dx": A.shot.dx + "px"})}"><line x1="${A.shot.from - 12}" y1="${A.shot.y}" x2="${A.shot.from + 4}" y2="${A.shot.y}"/><circle cx="${A.shot.from + 4}" cy="${A.shot.y}" r="2.5"/></g>`);
+  // You: OSMS's standing character (faces left in the file, mirrored like OSMS addCharacter), outline box as a fallback.
+  const ch = D.hitact?.char, you = (x, cls) => ch ? `<image href="data:image/png;base64,${ch}" x="${x - 23}" y="-66" width="39" height="66" transform="translate(${2 * x - 7} 0) scale(-1 1)" class="${cls}"/>`
+    : `<rect x="${x - 20}" y="-66" width="39" height="66" rx="6" class="skr-you ${cls}"/>`;
+  // Client frames face left; each layer is mirrored around its anchor so the scene faces right like the diagram.
+  const spr = (f, cls) => f ? `<g class="${cls}"><g transform="scale(-1 1)"><image href="${skImg(f)}" x="${-f[1]}" y="${-f[2]}" width="${skImgW(f)}" height="${skImgH(f)}" class="skr-spr"/></g></g>` : "";
+  const me = SP && (SP.idle || SP.act?.[0]) ? spr(SP.idle || SP.act[0], "skr-me-spr") : you(0, "skr-me");
+  if (r.tp) P.push(`<g class="skr-tpto" style="--dl:${A.tp.at}ms;--dx:${-r.tp}px">${SP && SP.idle ? `<g transform="translate(${r.tp} 0)" class="skr-ghost">${spr(SP.idle, "skr-ghost-spr")}</g>` : you(r.tp, "skr-ghost")}</g><line x1="24" y1="-80" x2="${r.tp - 4}" y2="-80" class="skr-aim"/>`);
+  P.push(`<g class="skr-actor${r.tp ? " skr-tpfrom" : ""}" style="--dl:${r.tp ? A.tp.at : A.lunge}ms">${me}</g>`);
+  if (SP) P.push(`<g class="skr-fx" data-l="e"></g><g class="skr-fx" data-l="b" transform="translate(${SP.from} ${SP.y})"></g>${SP.mobX.map((x, i) => `<g class="skr-fx" data-l="h" data-i="${i}"></g>`).join("")}`);
+  P.push(T(0, -72, "you", "skr-mid"), `<circle cx="0" cy="0" r="3" class="skr-origin"/>`);
   const right = r.ext?.r ?? r.poly?.[1][0] ?? r.boxes[0]?.r ?? r.tp;
   if (right != null) P.push(`<line x1="${right}" y1="${y1 - 14}" x2="${right}" y2="${y0 + 4}" class="skr-dim"/>`, T(right, y1 - 4, right + " px", "skr-mid"));
-  return `<svg class="skr-svg" viewBox="${x0} ${y0} ${w} ${h}" role="img" aria-label="${esc(r.label)}: measured from your feet, facing right">${P.join("")}</svg>`;
+  return `<svg class="skr-svg${play ? " skr-play" : ""}${SP ? " skr-sp" : ""}" viewBox="${x0} ${y0} ${w} ${h}" role="img" aria-label="${esc(r.label)}: measured from your feet, facing right">${P.join("")}</svg>`;
 }
-function rangeHtml(o){
+// Flipbook player for the sprite layers (one at a time; stops when its svg is replaced). Reduced motion: never starts.
+let skrRaf = 0;
+function skrPlay(svg, r, id){
+  cancelAnimationFrame(skrRaf); const SP = skrSprites(r, id);
+  if (!SP || !svg || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const L = (q, i) => svg.querySelector(`.skr-fx[data-l="${q}"]${i != null ? `[data-i="${i}"]` : ""}`), me = svg.querySelector(".skr-me-spr image");
+  const at = (fr, t, loop) => { const d = durOf(fr); if (!fr.length || t < 0 || (!loop && t >= d)) return null; t %= d || 1;
+    for (const f of fr){ if (t < f[3]) return f; t -= f[3] } return fr[fr.length - 1] };
+  const draw = (g, f) => { if (g.__f === f) return; g.__f = f;
+    g.innerHTML = f ? `<g transform="scale(-1 1)"><image href="${skImg(f)}" x="${-f[1]}" y="${-f[2]}" width="${f[4]}" height="${f[5]}" class="skr-spr"/></g>` : "" };
+  const pose = f => { if (!me || !f || me.__f === f) return; me.__f = f;
+    me.setAttribute("href", skImg(f)); me.setAttribute("x", -f[1]); me.setAttribute("y", -f[2]); me.setAttribute("width", f[4]); me.setAttribute("height", f[5]) };
+  const t0 = performance.now(), E = L("e"), B = L("b"), H = SP.mobX.map((x, i) => L("h", i));
+  H.forEach((g, i) => g && g.setAttribute("transform", `translate(${SP.mobX[i]} -23)`));   // hit frames on the Stump's middle
+  const tick = now => { if (!svg.isConnected) return; const t = now - t0;
+    pose(at(SP.act || [], t, false) || SP.idle);
+    if (E) draw(E, at(SP.eff, t, false));
+    if (B){ const u = t - SP.rel, on = SP.ball.length && u >= 0 && u < SP.travel; draw(B, on ? at(SP.ball, u, true) : null);
+      if (on) B.setAttribute("transform", `translate(${SP.from + u * SKR_SPEED} ${SP.y})`) }
+    H.forEach((g, i) => g && draw(g, at(SP.hit, t - SP.hits[i], false)));
+    if (t < SP.end) skrRaf = requestAnimationFrame(tick); else pose(SP.idle) };
+  skrRaf = requestAnimationFrame(tick);
+}
+function rangeHtml(o, play){
   const s = o.s; if (!s.rv) return "";
   if (SKR.key !== o.key) Object.assign(SKR, {key: o.key, lv: s.max, plv: s.rv.p ? s.rv.p[2].length : 0, wk: "", ak: ""});
   const r = skRange(o.job, s, SKR.lv, SKR.plv, SKR.wk, SKR.ak); if (!r) return "";
@@ -123,9 +190,9 @@ function rangeHtml(o){
     <div class="skr-ctl">${s.max > 1 ? `<label>Skill level <b>${r.lv}</b><input type="range" data-skrlv min="1" max="${s.max}" value="${r.lv}"></label>` : ""}
       ${pas ? `<label>${esc(pas[1])} <b>${r.plv || "not learned"}</b><input type="range" data-skrplv min="0" max="${pas[2].length}" value="${r.plv}"></label>` : ""}</div>
     ${W.length > 1 ? seg("skrw", W.map(w => [w.key, w.label]), r.wk) : ""}${acts.length > 1 ? seg("skra", acts.map(a => [a[0], ACTNAME(a[0])]), r.ak) : ""}
-    ${rangeSvg(r)}
+    ${rangeSvg(r, play, s.id)}<button class="btn skr-replay" data-skrplay aria-label="Replay the range preview">▶ Replay</button>
     <dl class="stats mgrid"><div><dt>Shape</dt><dd>${esc(r.label)}</dd></div>${r.facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
-    <p class="sub">Game pixels from your feet, facing right; the Stump shows monster size. Source: ${src}${r.from ? `, level ${r.from}+ box` : ""}.</p></div>`;
+    <p class="sub">Game pixels from your feet, facing right; the Stump shows monster size.${D.skanim?.sk?.[s.id] ? " Character, skill effect, projectile and hit frames come from the Classic World client (maplestory.io MCW); when the hit lands and how fast the shot flies are drawn for show." : ""} Source: ${src}${r.from ? `, level ${r.from}+ box` : ""}.</p></div>`;
 }
 
 function page(o){
@@ -141,7 +208,7 @@ function page(o){
       <p class="sub">${esc(o.job)} · ${esc(o.cls)} ${tierTxt(o)} · max level ${s.max} · skill ID ${esc(s.id)}</p><p class="mflags">${pill(o)}</p></div></div>
     ${desc ? `<p class="idesc">${esc(desc).replace(/\n/g, "<br>")}</p>` : ""}
     <dl class="stats mgrid">${st("Max level", s.max)}${o.type === "Attack" ? st("Monsters hit", s.mob) + st("Hits per use", s.att) : ""}${s.rg ? st("Reach", s.rg[0] + " px" + (s.rg[1] ? ` (+${s.rg[1]} behind)` : "")) : ""}</dl>
-    ${rangeHtml(o)}
+    ${rangeHtml(o, true)}
     <div class="mcols">
       ${card("Needs", req, "No other skill needed.")}
       ${card("Unlocks", unl, "No skill needs it.")}
@@ -172,8 +239,9 @@ function show(){
   const o = S.open && OPEN[S.open];
   $("#sklist").hidden = !!o; $("#skpage").hidden = !o;
   if (!o){ render(); return }
-  $("#skpage").innerHTML = page(o);
+  $("#skpage").innerHTML = page(o); skrStart(o);
 }
+function skrStart(o){ const r = o.s.rv && skRange(o.job, o.s, SKR.lv, SKR.plv, SKR.wk, SKR.ak); if (r) skrPlay($("#skr .skr-svg"), r, o.s.id) }
 function openSkill(key){ S.open = key; save(); show(); $("#skills").scrollIntoView({block: "start"}) }
 $("#sksearch").addEventListener("input", e => { S.q = e.target.value; render() });
 for (const [k, el] of FIELDS) $(el).addEventListener("change", e => { S[k] = e.target.value; save(); render() });
@@ -187,13 +255,15 @@ $("#skpage").addEventListener("click", e => {
   if (e.target.id === "skshare") return copyShare(e.target, shareUrl("s", S.open));
   const l = e.target.closest("[data-skopen]"); if (l) openSkill(l.dataset.skopen);
   const w = e.target.closest("[data-skrw],[data-skra]");
-  if (w){ if (w.dataset.skrw) Object.assign(SKR, {wk: w.dataset.skrw, ak: ""}); else SKR.ak = w.dataset.skra; redrawRange() }
+  if (w){ if (w.dataset.skrw) Object.assign(SKR, {wk: w.dataset.skrw, ak: ""}); else SKR.ak = w.dataset.skra; redrawRange(true) }
+  if (e.target.closest("[data-skrplay]")){ redrawRange(true); $("#skr [data-skrplay]")?.focus() }
 });
-function redrawRange(){ const o = S.open && OPEN[S.open], el = $("#skr"); if (!o || !el) return;
+function redrawRange(play){ const o = S.open && OPEN[S.open], el = $("#skr"); if (!o || !el) return;
   const f = document.activeElement?.matches?.("[data-skrlv],[data-skrplv]") ? (document.activeElement.hasAttribute("data-skrlv") ? "[data-skrlv]" : "[data-skrplv]") : null;
-  const tmp = document.createElement("div"); tmp.innerHTML = rangeHtml(o); el.replaceWith(tmp.querySelector("#skr")); if (f) $("#skr " + f)?.focus() }
+  const tmp = document.createElement("div"); tmp.innerHTML = rangeHtml(o, play); el.replaceWith(tmp.querySelector("#skr")); if (play) skrStart(o); if (f) $("#skr " + f)?.focus() }
 $("#skpage").addEventListener("input", e => { if (e.target.matches("[data-skrlv]")) SKR.lv = +e.target.value; else if (e.target.matches("[data-skrplv]")) SKR.plv = +e.target.value; else return; redrawRange() });
-window.skRange = skRange;
+window.skRange = skRange; window.skrAnim = skrAnim; window.skrSprites = skrSprites;
+ASSETS.then(() => { if (S.open && $("#skr") && !$("#skr .skr-sp")) redrawRange(true) }, () => {});   // Pages: frames arrive with the lazy assets
 openSkillPage = key => { if (!OPEN[key]) return; $("#t-skills").click(); openSkill(key) };
 if (HASH.s && OPEN[HASH.s]) S.open = String(HASH.s);
 show();

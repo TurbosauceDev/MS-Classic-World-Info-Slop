@@ -1212,3 +1212,24 @@ html[data-nav="rows"] nav button.sgh .sgo{display:inline}
 .skr-origin{fill:var(--accent)}
 .skr-dim{stroke:var(--muted);stroke-dasharray:2 3;vector-effect:non-scaling-stroke}
 .skr-t{fill:var(--muted);font-family:var(--f-mono);font-weight:600}.skr-mid{text-anchor:middle}
+/* Range preview animation (53-skills.js rangeSvg/skrAnim): plays once when .skr-play is set; base styles are the final frame,
+   so the global reduced-motion block (animation:none) shows the finished diagram. The shot is hidden unless animating. */
+.skr-replay{display:block;margin:-4px 0 12px auto;padding:4px 12px;font-size:14px}
+@media (prefers-reduced-motion:reduce){.skr-replay{display:none}}
+.skr-me{image-rendering:auto}
+.skr-area,.skr-actor,.skr-target,.skr-tpto{transform-box:view-box}
+.skr-shot{opacity:0;stroke:var(--accent);stroke-width:2.5;stroke-linecap:round;fill:var(--accent);vector-effect:non-scaling-stroke}
+.skr-play .skr-area{transform-origin:var(--ox,0) 0;animation:skrGrow .3s cubic-bezier(.2,.7,.3,1) var(--dl) both}
+.skr-play .skr-fade{animation-name:skrFade;animation-duration:.22s}
+.skr-play .skr-actor{animation:skrLunge .26s ease-out var(--dl) both}.skr-play.skr-sp .skr-actor:not(.skr-tpfrom){animation:none}
+.skr-play .skr-shot{animation:skrShot var(--du) linear var(--dl) both}
+.skr-play .skr-target[style]{transform-origin:0 0;animation:skrHit .24s ease-out var(--dl) both}
+.skr-play .skr-tpfrom{animation:skrTpFrom .26s ease-out var(--dl) both}
+.skr-play .skr-tpto{animation:skrTpTo .3s cubic-bezier(.2,.7,.3,1) var(--dl) both}
+@keyframes skrGrow{from{opacity:0;transform:scale(.15,var(--sy,1))}to{opacity:1;transform:none}}
+@keyframes skrFade{from{opacity:0}to{opacity:1}}
+@keyframes skrLunge{0%,100%{transform:none}45%{transform:translateX(4px)}}
+@keyframes skrShot{0%{opacity:1;transform:none}92%{opacity:1;transform:translateX(var(--dx))}100%{opacity:0;transform:translateX(var(--dx))}}
+@keyframes skrHit{0%,100%{opacity:1;transform:none}35%{opacity:.45;transform:translateX(3px)}}
+@keyframes skrTpFrom{from{opacity:1}to{opacity:.35}}
+@keyframes skrTpTo{from{opacity:0;transform:translateX(var(--dx))}to{opacity:1;transform:none}}

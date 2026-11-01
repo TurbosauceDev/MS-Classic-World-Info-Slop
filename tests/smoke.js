@@ -193,6 +193,9 @@ const boxGaps = require("./boxgaps");
   await tab("#t-skills"); check(/^90 /.test(await p.textContent("#skcount")), "skill database lists 90 skills");
   await p.fill("#sksearch", "magic claw"); await p.click("#skrows .skbtn");
   check(/Magic Claw/.test(await p.textContent("#skpage h2")) && await p.$$eval("#skpage tbody tr", r => r.length) === 20 && /Energy Bolt/.test(await p.textContent("#skpage .mcols")), "skill page: levels and requirements");
+  { await p.click("#skr [data-skrplay]"); const seen = new Set();
+    for (let i = 0; i < 10; i++){ seen.add(await p.$eval("#skr .skr-me-spr image", i => i.getAttribute("href"))); await p.waitForTimeout(70) }
+    check(await p.$("#skr .skr-sp.skr-play") && seen.size > 1, "skill page: Replay plays the client-frame preview (character pose changes)", seen.size) }
   await p.click("#skback"); await p.click("#skreset"); check(/^90 /.test(await p.textContent("#skcount")) && !/NaN|undefined/.test(await p.textContent("#skills")), "skill list: reset filters");
   check(/^https:\/\/maplestory\.io\/api\/MCW\/CBT2\/character\/2000\/\d+,\d+.*\/stand[12]\/0$/.test(await p.$eval("#pavatar", i => i.dataset.src || "")), "builder: avatar URL (maplestory.io MCW)");
   await tab("#t-items"); if (await p.isChecked("#itsrc")) await p.click("#itsrc"); if (await p.isChecked("#itnoq")) await p.click("#itnoq"); check(/^2,259 /.test(await p.textContent("#itcount")), "item database lists 2,259 items");

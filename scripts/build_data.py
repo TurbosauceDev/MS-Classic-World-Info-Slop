@@ -81,6 +81,8 @@ def step_skills(D):
     D["skills"], D["icons"] = out, icons
     hv = json.load(open(ROOT / "data/sources/osms_hitviz.json"))   # weapon-action boxes (scripts/fetch_osms_hitviz.py)
     hv["cls"] = {k: v for k, v in hv["cls"].items() if k in JOBS}; D["hitact"] = hv
+    sa = ROOT / "data/sources/skill_anim.json"   # animated previews: Classic client frames (scripts/fetch_skill_anim.py)
+    if sa.exists(): D["skanim"] = json.load(open(sa))
 
 def trim(s, n):
     s = (s or "").strip(); return s if len(s) <= n else s[:n].rsplit(" ", 1)[0] + "…"

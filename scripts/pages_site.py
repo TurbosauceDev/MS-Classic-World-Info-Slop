@@ -15,7 +15,7 @@ Prints first-load sizes (raw and gzip) before/after.
 """
 import os, gzip, hashlib, json, pathlib, re, shutil, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-LAZY = ("iicons", "mmaps")
+LAZY = ("iicons", "mmaps", "skanim")   # skanim: skill preview frames (~1 MB), only the Skills page uses them
 PRICES = ("pw", "cm", "cmp", "mdb", "ma", "mw", "mi", "crank", "shared", "ishop")
 
 def split(html):

@@ -110,6 +110,16 @@ const path = require("path");
       [tb.l, tb.r, tb.t, tb.b].join("/"), tb1.r, sb.boxes[0].r, sb.ext.r, sb1.ext.r, ds.weapons.map(w => w.key).join("/"), ds.ak, ia.far, tp.tp] });
   check(rg.join() === "470,350,-137,400,180/0,95/0,220/0,-170/170/-70/70,150,100,150,130,dagger,stabO1,420,150",
     "skill reach: Arrow Blow 350+120 (corridor ±137 at 470), Lucky Seven 200+200, Steal 180 in front, Savage Blow 95, Rush 220, Thunder Bolt ±170×±70 (Lv1 150), Slash Blast swing → 150 (Lv1 130), Double Stab dagger stabs, Iron Arrow 420, Teleport 150", rg);
+  // animated previews (D.skanim, scripts/fetch_skill_anim.py: Classic client frames from maplestory.io MCW). Every skill with a
+  // range card needs its client frames and a character action that exists; projectiles and hits must play in order.
+  const an = await p.evaluate(() => { const f = (j, n) => D.skills[j].find(s => s.n === n), P = (j, n, w, a) => { const s = f(j, n); return skrSprites(skRange(j, s, s.max, 0, w, a), s.id) };
+    const miss = []; for (const [j, l] of Object.entries(D.skills)) for (const s of l) if (s.rv){ const sp = skrSprites(skRange(j, s, s.max, 0), s.id);
+      if (!sp || !sp.idle || (!sp.act && s.rv.f !== "teleport_range")) miss.push(s.n) }
+    const ab = P("Archer", "Arrow Blow"), ia = P("Crossbowman", "Iron Arrow"), ps = P("Warrior", "Power Strike", "2h-sword", "swingT2"), mc = P("Magician", "Magic Claw");
+    return [miss.join("/") || "none", ab.act === D.skanim.act["bow|shoot1"], ab.ball.length, ab.rel > 0 && ab.hits[0] > ab.rel, ia.hits.length, ia.hits.every((t, i) => !i || t > ia.hits[i - 1]),
+      ps.act === D.skanim.act["2h-sword|swingT2"], ps.hits[0] === ps.rel, mc.ball.length, mc.eff.length > 0] });
+  check(an.join() === "none,true,3,true,3,true,true,true,0,true",
+    "skill previews: every range-card skill has client frames; Arrow Blow shoots (3-frame arrow) before it hits; Iron Arrow hits 3 Stumps in order; Power Strike follows the picked swing; Magic Claw has no projectile", an);
   console.log(errs.length ? "\n" + errs.join("\n") : "\nall reference numbers match");
   await b.close();
   process.exit(errs.length ? 1 : 0);
