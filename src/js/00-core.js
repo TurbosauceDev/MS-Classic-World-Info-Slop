@@ -109,7 +109,7 @@ const showCat = cat => {
   CATS.forEach(x => x.setAttribute("aria-selected", x.dataset.cat === cat));
   TABS.forEach(x => x.hidden = side ? x.dataset.cat === "more" : x.dataset.cat !== cat);
   $("nav .subs").hidden = !side && cat === "home";
-  $("#sbhome").setAttribute("aria-selected", cat === "home");
+  $("#sbhome").toggleAttribute("aria-current", cat === "home"); if (cat === "home") $("#sbhome").setAttribute("aria-current", "page");
   inRow(CATS.find(x => x.dataset.cat === cat));
 };
 TABS.forEach(b => b.addEventListener("click", () => {

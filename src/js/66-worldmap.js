@@ -215,7 +215,7 @@ function render(){
   $("#wmnote").textContent = uvOn() ? "Undervalued maps: green = a quieter pick from the guides (or the same monsters as a famous map), red ring = a map the guides call busy. Doesn't use your class or level; a vibes list, not counted in-game." : `Dot color and EXP/hr: estimate for a ${RL} with the Character Builder's default build, solo, single target (same model as Where to train). Numbers 1-3 = best EXP/hr on this island.`;
 }
 
-$("#wmisl").innerHTML = D.wmap.map((w, i) => `<button type="button" data-i="${i}" aria-checked="false">${esc(w[1])}</button>`).join("");
+$("#wmisl").innerHTML = D.wmap.map((w, i) => `<button type="button" role="radio" data-i="${i}" aria-checked="false">${esc(w[1])}</button>`).join("");
 $("#wmcls").value = S.cls; $("#wmlv").value = S.lv;
 $("#wmareas").addEventListener("click", e => { const b = e.target.closest("[data-drill]"); if (b) openArea(+b.dataset.drill) });
 $("#wmisl").addEventListener("click", e => { const b = e.target.closest("button"); if (b){ S.isl = +b.dataset.i; S.pin = null; S.sub = null; save(); render() } });
