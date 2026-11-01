@@ -794,6 +794,7 @@
       <div class="row"><label>Job <select id="job"><option value="">Auto (read from the status bar)</option><option>Beginner</option><option>Swordman</option><option>Fighter</option><option>Page</option><option>Spearman</option><option>Magician</option><option>Wizard (Fire,Poison)</option><option>Wizard (Ice,Lightning)</option><option>Cleric</option><option>Archer</option><option>Hunter</option><option>Crossbowman</option><option>Rogue</option><option>Assassin</option><option>Bandit</option></select></label></div>
       <label class="chk"><input type="checkbox" id="bagMain"> <span>Bag check reminder icons on the main card: sword, potion, crate turn yellow, orange, then red as a tab gets stale. Click one to read it.</span></label>
       <label class="chk" title="How long a bag tab stays green after it was read. Yellow after that, orange after 30 s, red and glowing at 2 min."><span>Bag tab stays fresh for</span> <input type="number" id="bagEvery" min="1" max="30" step="1" style="width:52px" aria-label="Bag check minutes"> <span>min</span></label>
+      <label class="chk" title="Starts a run by itself on the first EXP gain and saves it after 2 minutes with no EXP. Start and Stop still work, and a run you start by hand is never ended for you. Reads the game window slowly while no run is going (Windows shows its capture border)."><input type="checkbox" id="autoRun"> <span>Always on: start a run on the first EXP gain, end it after 2 minutes with no EXP</span></label>
       <label class="chk"><input type="checkbox" id="autoPause"> <span>Pause when the game screen is gone (Cash Shop, changing channel)</span></label>
     </div>
     <div class="card" data-nav="Journey log"><h3>Journey log</h3>
@@ -895,6 +896,7 @@
   <script src="../core/ocrcache.js"></script>
   <script src="../core/framegate.js"></script>
   <script src="../core/readpace.js"></script>
+  <script src="../core/autorun.js"></script>
   <script src="../core/readstats.js"></script>
   <script src="../core/bagstale.js"></script>
   <script src="../core/combatlog.js"></script>

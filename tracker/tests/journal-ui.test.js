@@ -8,6 +8,7 @@ const path = require("path"), {chromium} = require("playwright");
   await page.addInitScript(require("./ui-host"));
   await page.goto("file://" + path.join(__dirname, "../app/index.html"));
   await page.click("#guideNo");
+  await page.evaluate(() => { settings.autoRun = false; jr.wake() });   // the older checks below are about the journal alone; always-on is checked at the end
   const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
   const lines = () => page.evaluate(async () => { await jr.flush(); return window.journal || [] });
   const run = async () => { await page.click("#go"); await page.waitForFunction(() => timer != null && !starting);
@@ -44,11 +45,24 @@ const path = require("path"), {chromium} = require("playwright");
   seen = await lines(); if (await page.evaluate(() => jr.stats().watching) || !seen.some(l => /  WATCH_STOP,watch,run/.test(l)) || !seen.some(l => /  WATCH_START,run/.test(l))) fail("run did not take over from the watch", seen);
   await page.evaluate(() => stopNow());
   // a Chat blocker on the overlay keeps the watch reading with the journal OFF (Danny 10-29: HP/MP bars between runs), and pushes a bare snapshot
-  await page.evaluate(() => { settings.journal = false; jr.wake(); window.pushes = []; host.overlayPush = d => window.pushes.push(d); ovBlocker = true });
+  await page.evaluate(() => { settings.journal = false; settings.autoRun = false; jr.wake(); window.pushes = []; host.overlayPush = d => window.pushes.push(d); ovBlocker = true });
   await page.evaluate(() => jr.wake()); await page.waitForFunction(() => jr.stats().watching, null, {timeout: 15000}).catch(() => fail("blocker watch never started", null));
   await page.waitForFunction(() => window.pushes.some(d => d.watch && d.on === false), null, {timeout: 8000}).catch(() => fail("no idle snapshot for the blocker", null));
   await page.evaluate(() => { ovBlocker = false; jr.wake() });
   if (await page.evaluate(() => jr.stats().watching)) fail("watch should stop when the blocker goes and the journal is off", null);
+  // always on (default): the watch runs with the journal and blocker off; turning it off stops the watch
+  await page.evaluate(() => { settings.autoRun = true; jr.wake() });
+  await page.waitForFunction(() => jr.stats().watching, null, {timeout: 15000}).catch(() => fail("always-on watch never started", null));
+  await page.evaluate(() => { settings.autoRun = false; jr.wake() });
+  if (await page.evaluate(() => jr.stats().watching)) fail("watch should stop when always-on is off", null);
+  // an auto-started run ends itself after 2 min without EXP; a hand-started one doesn't
+  await page.evaluate(() => { autoNext = true; return start() }); await page.waitForFunction(() => timer != null && !starting);
+  if (!await page.evaluate(() => autoRun?.auto)) fail("watch-started run not flagged auto", null);
+  await page.evaluate(() => { autoRun.lastGain = Date.now() - 130e3; return autoBreak() }); await page.waitForTimeout(500);
+  if (await page.evaluate(() => timer != null)) fail("auto run should have ended after 2 min idle", null);
+  await page.evaluate(() => { settings.autoRun = false; return start() }); await page.waitForFunction(() => timer != null && !starting);
+  if (await page.evaluate(() => autoRun.auto)) fail("hand-started run flagged auto", null);
+  await page.evaluate(() => stopNow());
   if (errors.length) fail("page errors", errors);
   await browser.close(); console.log("journal ui ok");
 })().catch(e => { console.error(e); process.exit(1) });

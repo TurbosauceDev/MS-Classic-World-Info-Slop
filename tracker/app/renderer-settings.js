@@ -404,6 +404,7 @@ $("#updGo").onclick = async () => {
   if (settings.countArea) settings = await host.settings({countArea: null});
   await alertsBoot();   // conditions & alerts: migrate the pre-0.2.78 keys once, then render the rows
   $("#bagMain").checked = bagCfg().main; $("#bagEvery").value = bagCfg().every;
+  $("#autoRun").checked = settings.autoRun !== false;
   $("#autoPause").checked = settings.autoPause !== false;   // on unless turned off   // on unless turned off
   goalUi(); meatUi(); jrUi();
   $("#pcode").value = settings.partyCode || "";

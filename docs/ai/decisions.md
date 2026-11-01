@@ -283,3 +283,4 @@ Each entry blocks something. When Danny calls it, transcribe above with the date
 - 2026-11-01 (Danny/Turbozo): auto shop-watch approved with a master on/off switch (default on) — "enable a way to turn it on or off if a user dislikes it." Settings > Window and sharing > Shop watch.
 - 2026-11-01 (Danny/Turbozo): koffi (P1-8, overlay anchor mode) approved on the safety verdict (read-only user32/DWM window rects, no OpenProcess, pinned version). Not yet implemented — next wave.
 - 2026-11-01 (Danny/Turbozo): P1 wave fully approved (digit models, quest HUD reader, weekly grind ladder, community map rates) + all six P2s parked (megaphones, Discord bot, public API, Mac+ko, supporter tier, streamer kit).
+- 2026-11-01 (Danny): tracker is always on like Minerva: first EXP gain auto-starts a run, 2 min without EXP saves it. Manual Start/Stop kept; switch in Settings (autoRun).

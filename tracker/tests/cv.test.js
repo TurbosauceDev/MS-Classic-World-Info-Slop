@@ -107,6 +107,19 @@ const crop = (w, h, f) => { const d = new Uint8ClampedArray(w * h * 4); for (let
     assert.ok(p.floor(t + 105e3) < 4, "short hurry over");
     p.reset(); assert.strictEqual(p.floor(t + 106e3), 0, "reset clears everything");
     console.log("readpace ok") }
+  // always-on: the watch starts a run on the first EXP rise; an auto-started run ends after 2 min with no EXP, a manual one never
+  { const A = require("../core/autorun.js");
+    assert.ok(!A.gained(null, 0, {type: "bar", exp: 100}), "first reading is a baseline, not a gain");
+    assert.ok(A.gained(100, 5, {type: "bar", exp: 150, level: 5}), "bar rise");
+    assert.ok(!A.gained(150, 5, {type: "bar", exp: 20, level: 5}), "drop (death) is not a gain");
+    assert.ok(A.gained(150, 5, {type: "bar", exp: 3, level: 6}), "level-up is a gain");
+    assert.ok(!A.gained(100, 5, {type: "exp", exp: 150}), "only bar readings start a run");
+    const o = {auto: true, wrap: null, held: false, kpq: false, lastGain: 1e6, now: 1e6 + 119e3};
+    assert.ok(!A.shouldBreak(o), "under 2 min");
+    assert.ok(A.shouldBreak({...o, now: 1e6 + 120e3}), "2 min idle breaks");
+    assert.ok(!A.shouldBreak({...o, auto: false, now: 2e6}), "manual run never auto-ends");
+    assert.ok(!A.shouldBreak({...o, now: 2e6, held: true}) && !A.shouldBreak({...o, now: 2e6, kpq: true}) && !A.shouldBreak({...o, now: 2e6, wrap: {t: 1}}), "held, KPQ and wrapping runs are left alone");
+    console.log("autorun ok") }
 
   // per-minute telemetry (the customclassic-chat reading.jsonl): deltas only, counters that reset never go negative
   { const rs = require("../core/readstats.js");

@@ -408,6 +408,7 @@ async function tick(){
       // a box (Companion's Magic Box) gone from the Use tab: it was opened, its rewards are in the chat box
       if (e.type === "inv" && e.tab === "use"){ const n = +e.items[BOX] || 0; if (n < boxHad && !e.unknown) boxPending = {tries: 0, last: 0}; if (!e.partial?.[BOX]) boxHad = n }
       session.add(e); slicer.add(e); log("event", e);
+      if (autoRun){ if (/^(exp|bonus)$/.test(e.type) || GrindAutoRun.gained(autoRun.bar, autoRun.level, e)) autoRun.lastGain = t; if (e.type === "bar"){ autoRun.bar = e.exp; autoRun.level = e.level || autoRun.level } }
       if (/^(exp|meso|bonus|item|itemraw)$/.test(e.type)) evCount[e.type === "itemraw" ? "item" : e.type]++;   // telemetry
       if (e.type === "item") dropAlert(e.id);
       if (e.type === "bar"){
@@ -436,6 +437,7 @@ async function tick(){
     if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
   } catch (err){ if (err) $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
   if (timer == null || sess !== session) return;
+  if (autoRun && GrindAutoRun.shouldBreak({auto: autoRun.auto, wrap, held, kpq: kpq?.on, lastGain: autoRun.lastGain, now: Date.now()})){ autoRun = null; autoBreak().catch(() => {}) }
   try { renderSnaps(render()) } catch {}
   try { feedAdd(feed?.step(session.state, t, feedWho())) } catch {}
   // over 250 ms a frame, 10 times running: read once a second instead of twice; fast again for ~40 ticks: full speed back
