@@ -8,6 +8,7 @@
 // layout, lock (Done) and the theme following the tracker. Part 2 loads the tracker window like ui.test.js: the Overlay
 // button, the View-menu actions, the state coming back, and dummy data reaching the push. Needs playwright.
 const path = require("path"), {chromium} = require("playwright");
+const setBox = (page, sel, on) => page.evaluate(([sel, on]) => { const c = document.querySelector(sel); if (c.checked !== on){ c.checked = on; c.onchange({target: c}) } }, [sel, on]);   // panel toggles as setup steps (a hovered card can sit over the panel's foot: CI 11-01)
 const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
 (async () => {
   const browser = await chromium.launch({executablePath: process.env.CHROMIUM || undefined, args: ["--allow-file-access-from-files"]});
@@ -290,7 +291,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     // groups (Danny 10-29: "a way to group modules, so that they stay aligned and can be moved together"): two cards
     // share a letter, dragging one carries the other by the same delta (and saves both), the letter shows on the card,
     // in the panel row, and the inspector offers the Group select
-    await page.uncheck("#ovSnap");   // keep snapping out of the way: the move must be exactly the pointer's delta
+    await setBox(page, "#ovSnap", false);   // keep snapping out of the way: the move must be exactly the pointer's delta
     await page.evaluate(() => { const w = {...(window.ovSaved.overlay.widgets.status || {})}; delete w.w; delete w.h;   // the edge test left Status pinned fat
       window.ovSaved.overlay.widgets.status = w; delete CFG.widgets.status.w; delete CFG.widgets.status.h;
       styleCard(document.querySelector("#ovw-status"), "status");
@@ -315,7 +316,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     // clear pull (26 px) lets go; the drop clamps the card back inside
     await page.evaluate(() => { pick(null); for (const k of ["exp", "status"]){ const w = {...(CFG.widgets[k] || {})}; delete w.grp; CFG.widgets[k] = w; badge(k) }
       CFG.widgets.status = {...CFG.widgets.status, x: 300, y: 60}; syncPanel(); place() });
-    await page.check("#ovSnap");
+    await setBox(page, "#ovSnap", true);
     await page.evaluate(() => { CFG.widgets.exp = {...CFG.widgets.exp, x: 1000, y: 700}; place() });
     const lp = await page.evaluate(() => { const el = document.querySelector("#ovw-exp"), r = el.getBoundingClientRect();
       return {x: el.offsetLeft, y: el.offsetTop, w: r.width} });
@@ -373,11 +374,11 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.evaluate(k => { CFG.widgets = JSON.parse(k); profCards(); place() }, keepAll);   // hand the layout back
     await page.evaluate(() => { CFG.widgets.status = {...CFG.widgets.status, x: 900, y: 60}; place() });   // out of the grid scene's way
     // the alignment grid shows and hides, and while it's on (with snap off) drops round to the grid lines (WoW Edit Mode)
-    await page.check("#ovGrid");
+    await setBox(page, "#ovGrid", true);
     st = await page.evaluate(() => { const g = document.querySelector("#ovgrid");
       return [!g.classList.contains("hidden"), getComputedStyle(g).display !== "none"] });
     if (!st[0] || !st[1]) fail("grid shows (class + computed)", st);
-    await page.uncheck("#ovSnap");
+    await setBox(page, "#ovSnap", false);
     // park it through the saved layout, not inline styles: the page's 1 s tick re-applies saved spots, and an inline style set
     // between the tick and the mouse-down made the drag miss on slow CI machines (the flaky "grid rounding: [3,60,3]")
     await page.evaluate(() => { CFG.widgets.exp = {...CFG.widgets.exp, x: 70, y: 130}; place() });
@@ -397,7 +398,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     st = await page.evaluate(() => { const g = document.querySelector("#ovgrid");
       return [!g.classList.contains("hidden"), getComputedStyle(g).display !== "none"] });
     if (!st[0] || !st[1]) fail("grid returns with edit (class + computed)", st);
-    await page.uncheck("#ovGrid"); await page.check("#ovSnap");
+    await setBox(page, "#ovGrid", false); await setBox(page, "#ovSnap", true);
     // the clamp trusts the window's real viewport, not the reported desk: a desk bigger than the window leaves no dead
     // strip where cards vanish past the edge (the 10-28 cut-off fix)
     st = await page.evaluate(() => { const el = document.querySelector("#ovw-exp");
