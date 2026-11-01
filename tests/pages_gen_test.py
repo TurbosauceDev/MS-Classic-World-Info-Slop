@@ -19,7 +19,9 @@ for l in locs:
 pages = list(a.glob("*/*/*/index.html"))
 for f in pages:
     t = f.read_text()
-    assert 'id="agent-notes"' in t and "<script" not in t, f"{f}: canary missing or a script present"
+    assert 'id="agent-notes"' in t, f"{f}: canary missing"
+    assert "<script" not in t.split('id="agent-notes"')[1], f"{f}: a script inside the canary block"   # 2026-11-01: broke the live site
+    assert t.count("<script") <= 1, f"{f}: only the people-redirect script is allowed"
 cn = [v["n"] for g in canary.CANARIES.values() for v in g.values()]
 blob = {n: False for n in cn}
 for f in pages:
@@ -27,6 +29,9 @@ for f in pages:
     for n in cn:
         if n in t: blob[n] = True
 assert all(blob.values()), f"canary without a page: {[n for n, v in blob.items() if not v]}"
+real_page = (a / "item/2040506/overall-armor-str-scroll-greater/index.html").read_text()
+assert "location.replace" in real_page and '"/#i=IjIwNDA1MDYi"' in real_page, "real pages send people to the planner with the item open"
+assert "location.replace" not in (a / "item/2049917/brindlewick-lantern-shard/index.html").read_text(), "canary pages never redirect"
 assert not (set(cn) & {it["n"] for it in D["items"].values()}), "canary name collides with a real item"
 body = "".join(f.read_text().split('id="agent-notes"')[0] for f in list(a.glob("item/*/*/index.html"))[:300])
 assert not re.search(r"meso\.watch|median|asking", body), "market data leaked into static pages"
