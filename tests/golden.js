@@ -100,6 +100,16 @@ const path = require("path");
   const nr = await p.evaluate(() => { $("#atk").value = ""; $("#umag").value = ""; $("#uint").value = ""; FORM_FROM_BUILDER = null;
     return [trainRange(buildAt("Warrior", "Warrior", null, 8), false), trainRange(trainBuild("Magician", 20), true), !!trainRange(trainBuild("Magician", 20), false)?.form?.magic] });
   check(nr.join() === ",,true", "no kill badge without a damage range (Beginner, wand basic attacks); spells use Magic + INT", nr);
+  // skill range / hitbox (OSMS skills.json range_visual + lib/skill-range-viz.js; scripts/skill_range.py). Stored lt/rb boxes face
+  // LEFT in the client (x < 0 = in front): Steal reached "0 px, 180 behind" and Savage Blow "-18 px" before the 11-01 fix.
+  const rg = await p.evaluate(() => { const f = (j, n) => D.skills[j].find(s => s.n === n), R = (j, n, lv, plv, w, a) => skRange(j, f(j, n), lv, plv, w, a);
+    const ab = R("Archer", "Arrow Blow", 20, 15), ab0 = R("Archer", "Arrow Blow", 20, 0), ls = R("Rogue", "Lucky Seven", 20, 15), tb = R("I/L Wizard", "Thunder Bolt", 30).boxes[0],
+      tb1 = R("I/L Wizard", "Thunder Bolt", 1).boxes[0], sb = R("Warrior", "Slash Blast", 20, 0, "2h-sword", "swingT1"), sb1 = R("Warrior", "Slash Blast", 1, 0, "1h-sword", "swingO1"),
+      ds = R("Rogue", "Double Stab", 20), ia = R("Crossbowman", "Iron Arrow", 30, 15), tp = R("Cleric", "Teleport", 20);
+    return [ab.far, ab0.far, ab.poly[1][1], ls.far, f("Bandit", "Steal").rg.join("/"), f("Bandit", "Savage Blow").rg.join("/"), f("Fighter", "Rush").rg.join("/"),
+      [tb.l, tb.r, tb.t, tb.b].join("/"), tb1.r, sb.boxes[0].r, sb.ext.r, sb1.ext.r, ds.weapons.map(w => w.key).join("/"), ds.ak, ia.far, tp.tp] });
+  check(rg.join() === "470,350,-137,400,180/0,95/0,220/0,-170/170/-70/70,150,100,150,130,dagger,stabO1,420,150",
+    "skill reach: Arrow Blow 350+120 (corridor ±137 at 470), Lucky Seven 200+200, Steal 180 in front, Savage Blow 95, Rush 220, Thunder Bolt ±170×±70 (Lv1 150), Slash Blast swing → 150 (Lv1 130), Double Stab dagger stabs, Iron Arrow 420, Teleport 150", rg);
   console.log(errs.length ? "\n" + errs.join("\n") : "\nall reference numbers match");
   await b.close();
   process.exit(errs.length ? 1 : 0);

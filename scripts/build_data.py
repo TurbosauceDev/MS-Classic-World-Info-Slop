@@ -57,14 +57,7 @@ def step_weapons(D):
 
 JOBS = {"Warrior", "Fighter", "Page", "Spearman", "Magician", "F/P Wizard", "I/L Wizard", "Cleric",
         "Archer", "Hunter", "Crossbowman", "Rogue", "Assassin", "Bandit"}   # 1st + 2nd job only (no 3rd job at launch)
-def reach(s):
-    """[front, back] px an attack reaches at max level: hitbox range, a centred attack rectangle (Thunder Bolt), or the
-    300 px corridor/pierce of projectiles (client default / weapon base, before The Eye of Amazon)."""
-    rv = s.get("range_visual") or {}
-    if s.get("range"): r = s["range"]; return [r[-1] if isinstance(r, list) else r, 0]
-    if rv.get("family") == "fixed_rectangle" and rv.get("levels"): b = rv["levels"][-1]; return [b["rb"]["x"], -b["lt"]["x"]]
-    if (rv.get("attack_range") or {}).get("base"): return [rv["attack_range"]["base"], 0]
-    return None
+from skill_range import reach, compact as range_compact   # range/hitbox maths: scripts/skill_range.py
 
 def step_skills(D):
     src = json.load(open(C + "skills.json")); out, icons = {}, {}
@@ -80,12 +73,14 @@ def step_skills(D):
                     if m: req.append([m.group(1), int(m.group(2))])
                 L.append({"id": s["id"], "n": s["name"], "max": s["max_level"], "req": req,
                           "k": (s.get("mechanics") or {}).get("kind") or ("passive" if s.get("passive") else ""),
-                          "att": s.get("attack_count", 1), "mob": s.get("mob_count", 1), "rg": reach(s), "st": s["all_level_stats"],
+                          "att": s.get("attack_count", 1), "mob": s.get("mob_count", 1), "rg": reach(s), "rv": range_compact(s), "st": s["all_level_stats"],
                           "d": re.sub(r"^\[Master Level: \d+\]\s*", "", s.get("description", "")).strip()})
                 p = C + f"images/skills/{s['id']}.png"
                 if os.path.exists(p): icons[s["id"]] = b64(p)
             out[g["class_name"]] = L
     D["skills"], D["icons"] = out, icons
+    hv = json.load(open(ROOT / "data/sources/osms_hitviz.json"))   # weapon-action boxes (scripts/fetch_osms_hitviz.py)
+    hv["cls"] = {k: v for k, v in hv["cls"].items() if k in JOBS}; D["hitact"] = hv
 
 def trim(s, n):
     s = (s or "").strip(); return s if len(s) <= n else s[:n].rsplit(" ", 1)[0] + "…"

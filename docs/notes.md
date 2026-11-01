@@ -286,12 +286,26 @@ All CONFLICTS below were applied 2026-10-20 (Danny: "you can trust everything fr
   (map ids 10006xxx) → `latermobs`/`latermobnames`. Zombie Mushroom stays (also in Ant Tunnel).
 - Wide screens zoom the page: ≥1350px 1.06, ≥1600px 1.12, ≥1900px 1.2.
 
+## Skill range and hitboxes (Skills tab, src/js/53-skills.js)
+Source: OSMS skills.json `range_visual` + OSMS lib/skill-range-viz.js (its own range viewer; we copy its data tables, not its code).
+- Pixels from the caster's feet. Stored `lt`/`rb` boxes face LEFT (x < 0 = in front); we mirror to face right like OSMS `mirroredBoxes`.
+- Families: stored rectangle (Thunder Bolt ±170×±70 at Lv16+, Steal 180 in front, Savage Blow 18-95, Rush 220; party buffs 300 each side);
+  weapon swing box (Power Strike, Double Stab, Final Attack: Character Afterimage box per weapon + swing, e.g. 1H sword swing 1 = 18-88 px);
+  swing box + forward extension to the stored range (Slash Blast 130/150, Power Knockback 30-90); widening corridor (projectiles);
+  piercing path (Iron Arrow, 65 px to reach, 72 px tall); teleport distance.
+- Corridor (OSMS): starts `near` 65 px ahead, half-height = 20 + trunc(x / 4) around the feet line, reach = base (skill 350 / weapon bow-xbow
+  300, claw 200 / client default 300 for magic) + The Eye of Amazon or Keen Eyes. Arrow Blow at EoA 15: 470 px, ±137 px.
+- meowdb (NiaDB) draws the corridor differently: 20 px bands from 65 px (magic 50), half-height trunc(band start / 4) around a 28 px aim
+  line, so Arrow Blow = 144 up / 88 down. Unconfirmed which matches the client; we follow OSMS (ohmi is law). Same 470 px reach.
+- Rush also stores a range value (130/150) that is not its hit box; the rectangle is. `rg` used it until 11-01.
+
 ## data/data.json schema
 - `mobs` {id: [name, level, hp, exp, eva, PDD, MDD, elements{}, undead]}
 - `maps` {id: [name, openAtLaunch 1/0, [[mobId, count], ...]]}
 - `exp` {level: exp to next}
 - `weapons` [[name, type, reqLv, STR, DEX, INT, LUK, ATK, MATK, speed, jobLabel, price, itemId]] (every weapon is also in `items`/`iicons`)
 - `skills` {job: [{id, n, max, req:[[name,lv]], k kind, att, mob (number or per-level array), st per-level text[], d desc}]}; `icons` {skillId: base64 png}
+  Each skill also has `rg` [front, back] px at max level and `rv` (range/hitbox, `scripts/skill_range.py` `compact()` documents the keys); `hitact` = OSMS weapon-swing boxes (data/sources/osms_hitviz.json).
 - `quests` (non-Citizenship) / `citq` (Citizenship) rows: name, lvl, npc, region, exp, mesos, req, kills, mult (Bonus), eq_kills,
   eq_mob, pct_level, reward, rep (daily/weekly), id, grade, contrib, contrib_by_grade, town, pool, one_time,
   kl [[mobId, n]], il [[item, n, sourceMobId|null]], pre [questId],
