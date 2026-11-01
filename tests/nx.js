@@ -11,6 +11,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? "ok   " : "FAIL ") + m); 
   const txt = await p.evaluate(() => document.body.innerText);
   ok(/Slime T-Shirt/.test(txt) && !/No match/.test(txt), "search 'slime t' finds Slime T-Shirt");
   await p.keyboard.press("Escape");
+  ok(await p.evaluate(() => { const c = D.items["1047025"].crate; return c && c[0][0] === "Founder's Mystery Fashion Crate" && c[0][1] === 1 }), "Slime T-Shirt is 1% in the Founder's Mystery Fashion Crate (Danny's list)");
   ok(await p.evaluate(() => { const i = D.items["1047025"]; return i && i.n === "Slime T-Shirt" && i.c === "Cash" && i.s === "Top" }), "Slime T-Shirt is in D.items as NX Top");
   await p.click("#t-plan"); await p.waitForTimeout(300);
   const one = () => p.waitForFunction(() => !/Reading/.test(document.querySelector("#pimpst").textContent) && document.querySelectorAll("#pimpshots .pishot").length, null, {timeout: 120000});
