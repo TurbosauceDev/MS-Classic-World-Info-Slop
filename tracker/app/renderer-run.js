@@ -28,7 +28,7 @@ let starting = false, ICONS = null, autoRun = null;   // autoRun: {auto: started
 async function start(){
   if (starting) return;   // a double click starts one capture, not two
   jr.yield();   // the journey log's watch hands the capture over
-  const auto = autoNext; autoNext = false;
+  const auto = autoNext, base = auto ? autoBase : null; autoNext = false; autoBase = null;
   starting = true; $("#status").className = ""; $("#status").textContent = "Opening the MapleStory window...";
   FPS = 2; slowTicks = 0;   // before the capture opens: it runs at FPS frames a second
   try { await startCapture(); ICONS ||= await GrindReaders.loadIcons(G).catch(() => []) }   // once: potion/arrow pictures for the counts
@@ -45,6 +45,7 @@ async function start(){
   mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; kpqSent = 0; FPS = 2; slowTicks = 0; perfReset();
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
+  if (base && base.exp != null){ const t0 = Date.now() - 1; session.add({t: t0, type: "bar", exp: base.exp, level: base.level, pct: base.pct}); snaps.start = {t: t0, level: base.level, pct: base.pct, exp: base.exp, hand: false} }   // always-on: the reading before the first gain is the baseline (core/autorun.js)
   feed = GrindFeed.createFeed(G); feedSep("Started tracking");
   clearInterval(autoTimer); autoTimer = setInterval(autosaveNow, 60e3);
   tick(); bandLoop();

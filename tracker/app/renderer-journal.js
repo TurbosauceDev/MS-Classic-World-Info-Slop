@@ -5,7 +5,7 @@
 const BAR_FPS = 4;   // reads a second while a Chat blocker is on (0.3.5; was 2). Whole-frame read ~6 ms (tests/cv_bench.js), so ~2.4 % of one core
 let ovChatOn = false;   // a Chat window card is on (main.js ov-state): the game's chat box is scanned every read (renderer-chat.js). Here for the same load-order reason as ovBlocker
 let ovRangeOn = false, ovRangeOpt = null;   // a Skill range card is on (main.js ov-state range: {off, face}): your feet are looked for on every read (renderer-range.js)
-let autoNext = false, autoCool = 0;   // always-on (core/autorun.js): the watch saw EXP rise and calls start(); autoCool: no restart right after an auto-break. Here because this file loads first
+let autoNext = false, autoCool = 0, autoBase = null;   // autoBase: the last bar reading before the rise, so the first kill counts;   // always-on (core/autorun.js): the watch saw EXP rise and calls start(); autoCool: no restart right after an auto-break. Here because this file loads first
 let ovBlocker = false;   // a Chat blocker card is on (main.js ov-state, set in renderer-overlay.js): the idle watch keeps reading HP/MP/EXP. Here because this file loads first
 const jr = (() => {
   const J = GrindJournal;
@@ -71,7 +71,7 @@ const jr = (() => {
         for (const e of r.ev){
           if (/^(exp|bonus|meso|item|itemraw|bar|wallet|inv|use|party|vitals)$/.test(e.type)){
             jr.event(e);
-            if (settings.autoRun !== false && Date.now() >= autoCool && GrindAutoRun.gained(me.bar, me.level, e)){ autoNext = true; setTimeout(() => timer == null && !starting && start().catch(() => {}), 0) }
+            if (settings.autoRun !== false && Date.now() >= autoCool && GrindAutoRun.gained(me.bar, me.level, e)){ autoNext = true; autoBase = me.bar != null ? {exp: me.bar, level: me.level, pct: me.barPct?.pct} : null; setTimeout(() => timer == null && !starting && start().catch(() => {}), 0) }
             if (e.type === "vitals") ovVit = {hp: e.hp, mp: e.mp, t};
             if (e.type === "bar") me.barPct = {level: e.level, pct: e.pct};
             if (/^(exp|bonus|meso|item|itemraw|party)$/.test(e.type) || e.type === "bar" && me.bar != null && e.exp !== me.bar || e.type === "vitals" && me.hp != null && e.hp[0] !== me.hp) me.last = t;

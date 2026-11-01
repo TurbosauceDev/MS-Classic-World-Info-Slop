@@ -56,7 +56,8 @@ const path = require("path"), {chromium} = require("playwright");
   await page.evaluate(() => { settings.autoRun = false; jr.wake() });
   if (await page.evaluate(() => jr.stats().watching)) fail("watch should stop when always-on is off", null);
   // an auto-started run ends itself after 2 min without EXP; a hand-started one doesn't
-  await page.evaluate(() => { autoNext = true; return start() }); await page.waitForFunction(() => timer != null && !starting);
+  await page.evaluate(() => { autoNext = true; autoBase = {exp: 500, level: 10, pct: 5}; return start() }); await page.waitForFunction(() => timer != null && !starting);
+  if (await page.evaluate(() => snaps.start?.exp) !== 500) fail("auto run baseline is not the last idle reading", null);
   if (!await page.evaluate(() => autoRun?.auto)) fail("watch-started run not flagged auto", null);
   await page.evaluate(() => { autoRun.lastGain = Date.now() - 130e3; return autoBreak() }); await page.waitForTimeout(500);
   if (await page.evaluate(() => timer != null)) fail("auto run should have ended after 2 min idle", null);
