@@ -383,7 +383,7 @@ function openQuest(src, i, scroll = true){
 }
 $("#qpage").addEventListener("click", e => {
   if (e.target.id === "qback"){ QOPEN = null; showQuests(); return }
-  if (e.target.id === "qdshare" && QOPEN) return copyShare(e.target, shareUrl("Q", QOPEN.src + ":" + QOPEN.i));
+  if (e.target.id === "qdshare" && QOPEN) return copyShare(e.target, QOPEN.src === "q" && D.quests[QOPEN.i] ? shareClean("quest", D.quests[QOPEN.i].id, "Q", QOPEN.src + ":" + QOPEN.i) : shareUrl("Q", QOPEN.src + ":" + QOPEN.i));
 });
 // a quest name anywhere on the site (the table, item and monster pages, the planner, the quest log, citizenship)
 // opens its page here

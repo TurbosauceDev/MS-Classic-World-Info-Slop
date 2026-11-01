@@ -158,7 +158,7 @@ document.querySelectorAll("#ithead th[data-k] button").forEach(b => b.addEventLi
 $("#itrows").addEventListener("click", e => { const b = e.target.closest(".ibtn"); if (b) openItem(b.closest("tr").dataset.id) });
 $("#itpage").addEventListener("click", e => {
   if (e.target.id === "itback"){ S.open = null; save(); show(); return }
-  if (e.target.id === "itshare") return copyShare(e.target, shareUrl("i", S.open));
+  if (e.target.id === "itshare") return copyShare(e.target, shareClean("item", S.open, "i", S.open));
   const l = e.target.closest("[data-iopen]"); if (l) openItem(l.dataset.iopen);
   const m = e.target.closest("[data-pxall]"); if (m){ m.previousElementSibling.classList.add("open"); m.remove() }
 });
