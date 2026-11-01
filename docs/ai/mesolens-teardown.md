@@ -52,3 +52,16 @@ What public evidence CANNOT answer (the binary and our logs can):
 
 - License settled 2026-11-01: PolyForm Noncommercial 1.0.0 (`9cacacf`) means any commercial use of our code, including inside MesoLens's paid tiers, needs Danny's written permission. That turns "did they copy our code" from a moral question into a license check REA can settle.
 - Our server already rate-limits what matters and the blind-spot batch added watchdogs; if CF logs show scraping, a UA allowlist or turnstile on `/api/*` is the next step. Mirror of their own rule: they ban "copying the database" too.
+
+## Second pass: GitHub/GitLab hunt (2026-11-01 ~16:35Z)
+
+Question from Turbozo: "you found their github?" Answer: **no public MesoLens code exists to find.**
+
+- GitHub repo search `mesolens` / `meso-lens` / `maplestory mesolens`: 6 hits, all the UK microscopy company's lab software (JanSchniete, johndempster, 2015-2026) — unrelated.
+- No GitHub user/org for `mesolens`, `rloutfy`/`ramyloutfy`, or `spiritorix`. Handles `SpiritOx` (2021, profile-config repo only) and `spiritox000` (created 2026-01, zero repos) match the name style but have nothing published.
+- GitHub code search across all default branches: 0 hits for `mesolens.app`, their Convex host `dazzling-rhinoceros-791`, `clerk.mesolens.app`, or `info.mesolens@gmail.com` — nobody public is carrying their code.
+- Their site links no git host anywhere (only the Discord invite).
+- Their Convex-hosted public rankings (HTML + `/v1/rankings` JSON boards exp/mesos/rate) re-scanned against our identifiers: clean. Their data model is its own (branch/job/level/map/hours/value/week) and the whole ranked universe is 2 players (Spiritox Lv44 Bandit, "39" Lv39).
+- GitLab API sweep attempted from the sandbox; response not reachable as JSON — unresolved, low relevance.
+
+Conclusion: nothing public to diff, so the installer stays the decisive artifact (Danny's free account → `MesoLens-Setup-0.3.69.exe`, verify SHA-256 above, drop in `upload/`, REA tears it down). If anyone has actually been shown a MesoLens GitHub link, hand it over and it gets the same teardown.
