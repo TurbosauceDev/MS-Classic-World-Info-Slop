@@ -180,12 +180,31 @@ function minimap(id, star, hi){
   return [mm ? `<div class="mmwrap"${w ? ` style="width:${w}px;height:${h}px"` : ""}><img class="mm" src="data:image/${D.mmapType};base64,${mm}" alt="Minimap of ${esc(name)}"${w ? ` width="${w}" height="${h}"` : ""}>${marks}</div>` : `<p>No minimap in the game files.</p>`,
     exits ? `<h5>Exits</h5><ul class="mexits">${exits}</ul>` : ""];
 }
+// minimap with every monster's spawn points, one color per monster (export spawn data, D.mobdb[].sp) + a legend;
+// hovering a legend row or a dot lights that monster's dots and dims the rest (spotHover below). `me` = mob id to bold.
+function spawnMinimap(id, me){
+  const here = (D.maps[id]?.[2] || []).filter(([m]) => D.mobs[m]).sort((a, b) => D.mobs[a[0]][1] - D.mobs[b[0]][1]);
+  const dots = here.map(([m], k) => (D.mobdb[m]?.sp?.[id] || []).map(([x, y]) => `<span class="mspot c${k % 8}" data-mob="${m}" title="${esc(D.mobs[m][0])} (Lv ${D.mobs[m][1]})" style="left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%"></span>`).join("")).join("");
+  let [mm, exits] = minimap(id);
+  if (dots && mm.includes('class="mmwrap"')) mm = mm.replace(/<\/div>$/, dots + "</div>");
+  const legend = here.length ? `<ul class="wmleg">${here.map(([m, c], k) => `<li data-mob="${m}"${String(m) === String(me) ? ' class="me"' : ""}><i class="mspot c${k % 8}"></i>${mobLink(m)} <span>Lv ${D.mobs[m][1]} · ×${c}</span></li>`).join("")}</ul>` : "";
+  return [mm, legend, exits];
+}
+function spotHover(e){
+  const el = e.target.closest?.(".mspot[data-mob], .wmleg li[data-mob]"), box = e.target.closest?.(".mfmap");
+  if (!box) return;
+  const m = el ? el.dataset.mob : null;
+  box.classList.toggle("spot-on", !!m);
+  box.querySelectorAll("[data-mob]").forEach(x => x.classList.toggle("lit", x.dataset.mob === m));
+}
+document.addEventListener("mouseover", spotHover);
+document.addEventListener("focusin", spotHover);
 function mapTip(id){
   const m = D.maps[id] || [D.mapnames[id] || "", 1, []];
   const mobs = m[2].filter(([mid]) => D.mobs[mid]).sort((a, b) => b[1] - a[1])
     .map(([mid, n]) => `<li>${esc(D.mobs[mid][0])} <span>Lv ${D.mobs[mid][1]} · ×${n}</span></li>`).join("");
-  const [mm, exits] = minimap(id);
-  return `<div class="qt-h"><b>${esc(m[0])}</b></div>${mm}${exits}${mobs ? `<h5>Monsters (spawn points)</h5><ul class="mmobs">${mobs}</ul>` : ""}`;
+  const [mm, legend, exits] = spawnMinimap(id);
+  return `<div class="qt-h"><b>${esc(m[0])}</b></div><div class="mfmap">${mm}${legend}</div>${exits}${mobs ? `<h5>Monsters (spawn points)</h5><ul class="mmobs">${mobs}</ul>` : ""}`;
 }
 function npcTip(id){
   const [name, locs] = D.npcs[id] || ["", []], img = D.npcimg[id], here = locs[0];

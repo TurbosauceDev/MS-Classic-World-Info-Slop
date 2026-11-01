@@ -426,6 +426,19 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(hog.h2 === "Iron Hog" && !hog.has && hog.k < 100, `a mob under 100 shared kills stays quiet (${hog.h2}, ${hog.k} kills)`);
     await ctx.close() }
 
+  // spawn minimap (Minerva-style, Danny 11-01): every monster's dots on the map card; hovering a legend row lights only its dots
+  { const {p, errs, ctx} = await page(); await p.goto(URL);
+    const id = await p.evaluate(() => Object.keys(D.maps).find(id => D.mmaps[id] && D.maps[id][2].filter(([m]) => D.mobdb[m]?.sp?.[id]?.length).length >= 2));
+    await p.evaluate(id => { const s = document.createElement("span"); s.className = "name mname"; s.dataset.map = id; s.id = "tmname"; s.textContent = "x"; document.body.prepend(s) }, id);
+    await p.click("#tmname"); await p.waitForTimeout(200);
+    const r = await p.evaluate(() => { const box = document.querySelector("#wmcard .mfmap"), mobs = [...new Set([...box.querySelectorAll(".mspot[data-mob]")].map(x => x.dataset.mob))];
+      return {mobs: mobs.length, legend: box.querySelectorAll(".wmleg li[data-mob]").length, first: mobs[0], title: box.querySelector(".mspot[data-mob]").title} });
+    await p.hover(`#wmcard .wmleg li[data-mob="${r.first}"]`); await p.waitForTimeout(50);
+    const h = await p.evaluate(m => { const box = document.querySelector("#wmcard .mfmap"), d = [...box.querySelectorAll(".mspot[data-mob]")];
+      return {on: box.classList.contains("spot-on"), lit: d.filter(x => x.classList.contains("lit")).every(x => x.dataset.mob === m), some: d.some(x => x.classList.contains("lit")), others: d.some(x => x.dataset.mob !== m && !x.classList.contains("lit"))} }, r.first);
+    check(!errs.length && r.mobs >= 2 && r.legend >= 2 && /Lv \d+/.test(r.title) && h.on && h.lit && h.some && h.others, `map card: spawn dots per monster, legend hover lights one (${id} ${JSON.stringify(r)} ${JSON.stringify(h)})`);
+    await ctx.close() }
+
   await b.close();
   console.log(fails ? `\n${fails} failed` : "\nall good"); process.exit(fails ? 1 : 0);
 })();

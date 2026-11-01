@@ -148,12 +148,7 @@ function card(i, lone){
   const pots = open.filter(id => POT[id]), cab = open.some(id => D.cabs.includes(id));
   const mobBest = S.mob ? open.filter(mobAt).sort((a, b) => mobAt(b) - mobAt(a))[0] : null;
   const mmId = open.includes(S.mm) ? S.mm : (mobBest || fights[0] || main);
-  // minimap with each monster's spawn points (export spawn data, D.mobdb[].sp), one color per monster
-  const here = (D.maps[mmId]?.[2] || []).filter(([m]) => D.mobs[m]).sort((a, b) => D.mobs[a[0]][1] - D.mobs[b[0]][1]);
-  const dots = here.map(([m], k) => (D.mobdb[m]?.sp?.[mmId] || []).map(([x, y]) => `<span class="mspot c${k % 8}" style="left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%"></span>`).join("")).join("");
-  let [mm, exits] = minimap(mmId);
-  if (dots && mm.includes('class="mmwrap"')) mm = mm.replace(/<\/div>$/, dots + "</div>");
-  const legend = here.length ? `<ul class="wmleg">${here.map(([m, c], k) => `<li${String(m) === S.mob ? ' class="me"' : ""}><i class="mspot c${k % 8}"></i>${mobLink(m)} <span>Lv ${D.mobs[m][1]} · ×${c}</span></li>`).join("")}</ul>` : "";
+  const [mm, legend, exits] = spawnMinimap(mmId, S.mob);   // every monster's spawn points, hover-linked (20-quests.js)
   const rest = open.filter(id => !fights.includes(id));
   const rows = fights.map(id => { const r = R[id], mp = D.maps[id], dg = mp?.[2]?.length && DEF ? mapDanger(id, +S.lv || 10, DEF) : null;
     return `<tr class="wmrow${id === mmId ? " sel" : ""}" data-map="${id}"><td>${mapLink(id, mapName(id))}${mp && !mp[1] ? ' <span class="pill p-warn">not at launch</span>' : ""}${uvOn() && id in UV ? ' <span class="pill p-good">quieter pick</span>' : uvOn() && UV_PACKED[id] ? ' <span class="pill p-warn">busy</span>' : ""}<div class="sub">${mobRange([id])}</div></td>

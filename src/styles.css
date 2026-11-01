@@ -392,6 +392,8 @@ input.khave{width:64px;text-align:right}
 @keyframes wmpulse{50%{box-shadow:0 0 0 3px #fff,0 0 4px 1px #ff4d4d}}
 @media (prefers-reduced-motion:reduce){.wmdot.hit{animation:none}}
 .wmleg li.me{font-weight:700}
+.mfmap.spot-on .mspot[data-mob]:not(.lit){opacity:.18}.mfmap .mspot.lit{transform:translate(-50%,-50%) scale(1.5);z-index:2}.wmleg li[data-mob]{cursor:default;border-radius:4px;padding:0 4px}.wmleg li.lit{background:var(--hover,rgba(255,255,255,.08))}
+.mfmap .mspot{transition:opacity .15s,transform .15s}
 .wmdot.uv{background:var(--leaf);box-shadow:0 0 0 3px #fff,0 0 12px 4px var(--leaf);z-index:1}
 .wmdot.pk{box-shadow:0 0 0 3px var(--bad);opacity:.8}
 .wmuv{border:1px solid var(--line);border-radius:10px;padding:4px 10px;margin:8px 0;background:var(--accent-soft);font-size:14px;line-height:1.45}
