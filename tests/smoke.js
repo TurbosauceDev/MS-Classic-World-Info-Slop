@@ -8,7 +8,10 @@ const boxGaps = require("./boxgaps");
   const p = await b.newPage({ viewport: { width: 1300, height: 900 } });
   const errs = [];
   p.on("pageerror", e => errs.push(e.message));
-  await p.goto("file://" + path.resolve(__dirname, "../dist/index.html"));
+  // SMOKE_URL=https://maplestory.scumlord.studio/ runs the same test against the live site (Pages copy: the app starts after the prices fetch)
+  const SRC = process.env.SMOKE_URL || "file://" + path.resolve(__dirname, "../dist/index.html");
+  await p.goto(SRC);
+  await p.waitForFunction(() => document.documentElement.dataset.ready === "1", null, {timeout: 30000});
   const check = (ok, msg) => { if (!ok) errs.push("FAILED: " + msg); else console.log("ok  " + msg) };
 
   // Home page + section nav. Sidebar layout (default, wider than a phone): every page button shows; the two-row layout and
@@ -445,7 +448,7 @@ const boxGaps = require("./boxgaps");
   await p.setViewportSize({width: 390, height: 800});
   // site version stamp shows the viewer's local zone, UTC on hover (Danny 10-19: UTC was confusing)
   { const c = await b.newContext({ timezoneId: "America/Los_Angeles" }), q = await c.newPage();
-    await q.goto("file://" + path.resolve(__dirname, "../dist/index.html"));
+    await q.goto(SRC); await q.waitForFunction(() => document.documentElement.dataset.ready === "1", null, {timeout: 30000});
     const [t, h] = await q.$eval(".sitever", e => [e.textContent, e.title]);
     check(/^Site version: v0\.\d+\.\d+ · built \w{3} \d{1,2}, \d{4} · \d{1,2}:\d\d [AP]M P[DS]T$/.test(t) && / UTC$/.test(h), `site version in local time (${t} / ${h})`);
     // meso.watch data state under the version (Danny 10-20): price count, sale date, live listings with relative age
