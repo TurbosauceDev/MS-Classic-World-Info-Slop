@@ -1,0 +1,154 @@
+# Fashion Crate contents and pull rates, pasted by Danny (owner) 2026-11-01. Format: "== crate name" then "item<TAB>rate".
+== Halloween Mystery Fashion Crate
+Tiger Mask	2.00
+Prisoner Top	2.00
+Prisoner Pants	2.00
+Brown Bandage	2.00
+Scream Mask	3.00
+Skull T-Shirt	2.00
+Bone Buckled Slacks	3.00
+Skull Beanie	3.00
+Dark Suit	3.00
+Dark Enamel Suit	3.00
+Black Leather Boots	3.00
+Black Bandage	2.00
+Skull Patch	1.00
+Grey Skull Overall	2.50
+Red Skull Overall	2.50
+Skull Gloves	2.00
+Black Coat of Death	2.00
+Ghost Suit	2.00
+Black Shoes of Death	3.00
+Hat of Death	2.00
+Ragged Gomushin	2.00
+Witch Hat	2.00
+Ghost Costume	3.00
+Witch Clothes	2.00
+Witch's Broomstick	1.00
+Gargoyle Wings	1.00
+Battle Scar	1.00
+Mummy Hat	2.00
+Mummy Suit	2.00
+Mummy Mask	2.00
+White Bandage	2.00
+Devil Wings	1.00
+Blue Chinese Undead Hat	2.00
+Blue Chinese Undead Costume	2.00
+Maple-Stein Head	2.00
+Maple-Stein Face	2.00
+Demon Goblin	1.00
+Pumpkin Hat	2.00
+Pumpkin Headgear	2.00
+Pumpkin Suit	2.00
+Glowing Pumpkin Basket	2.00
+Evil Skull	1.00
+Cat Soul	1.00
+Devilish Horns	2.00
+Devil Horns	2.00
+Dark Devil Hat	2.00
+Coffin of Gloom	2.00
+Count Dracula Cape	1.00
+Iljimae Mask	2.00
+Stealth Suit	2.00
+== Mystery Fashion Crate
+Starred Hunting Hat	2.00
+Black Blazer	1.00
+Blue Frill Blouse	2.00
+Blue Bell Dress	2.00
+Black Suit Pants	1.00
+Frameless Glasses	1.00
+Gentleman's Mustache	1.00
+Black Dress Shoes	2.50
+Cute Mouse Ears	1.00
+Superstar Hoodie	1.00
+Black "Hit Me" Shirt	1.50
+Black Classic Sneakers	2.50
+Green Camping Hat	3.00
+Green Camping Shirt	3.00
+Green Camping Shorts	3.00
+Camping Boots	3.00
+Ragged Top	1.00
+Torn-up Jeans	1.00
+Crusader T-Shirt	2.50
+Black Cardigan Set	2.50
+Heart Balloon	1.00
+Puffy Brown Hat	2.50
+Orange Hooded Vest	2.50
+Plastic Slingshot	2.00
+White Beanie	2.50
+White Casual Suit	2.50
+Faded Bell-Bottom Jeans	2.50
+Washed Jeans	2.50
+Race Ace Cap	1.00
+Race Ace Suit	2.50
+Race Queen Uniform	2.50
+Race Queen Boots	2.50
+Detective Hat	2.50
+Premium Trenchcoat	2.50
+Wild Pants	2.50
+Brown Dress Shoes	2.50
+Beige Checkered Hat	2.50
+Kitty Camping Hat	2.50
+Brown Casual Look	2.50
+Orange Hard-Rimmed Glasses	1.00
+Michael Wings	1.00
+Silver Earrings	1.00
+Stylish Pink Cotton Cap	1.00
+Cherry Layered T	2.50
+Buddy Overall Jeans (Blue)	2.00
+Buddy Overall Jeans (Red)	2.00
+Denim Wrinkled Skirt	2.50
+Green Overall	2.00
+Velcro High Tops	2.50
+Toy Rifle	1.00
+== Founder's Mystery Fashion Crate
+Angel Halo	1.00
+Toga	1.00
+Baby Angel Wings	1.00
+Angel Wand	1.00
+Cherub's Bow	1.00
+Blue Cap	2.00
+Orange Baseball Jacket	2.50
+Rainbow Knit	2.50
+Ripped Jeans	2.50
+Orange Toy Hammer	1.00
+Blue Bucket Hat	2.50
+Tourist T	2.50
+White Jeans	2.50
+Black Sunglasses	1.00
+Cat Hat	2.50
+Cat Suit	2.50
+Gold Kitty Slippers	2.50
+Kitty Chat Ring	2.50
+Meshcap	2.50
+Pink Allstar	2.50
+Jean Shorts	2.50
+Beret	2.50
+Red Sailor Shirt	2.50
+Red Sailor Skirt	2.50
+Black Enamel Shoes	2.50
+Patissier Hat	3.00
+Patissier Uniform	3.00
+Yellow Spatula	1.00
+Bunny Ears	1.00
+Bunny Earmuffs	1.00
+Orange Mushroom Balloon	1.00
+Blue Watch	2.50
+Red Trainer Jacket	2.50
+Red Trainer Pants	2.50
+Yellow Rainbow Sneaks	2.50
+Dollish Pink	1.00
+Purple Dorothy Dress	2.50
+Sailor Hat	2.00
+Sailor Outfit	2.00
+White Ribboned Sailor Dress	2.00
+Slime T-Shirt	1.00
+Slime Slippers	1.00
+Slime Earrings	1.00
+Reggae Hat	2.50
+Orange Hooded Shirt	2.50
+White Hooded Vest	2.50
+Butterfly Skirt	2.50
+Beetle Long Sleeve	2.50
+Lined Hip-Hop Pants	2.50
+White Label Ring	1.00

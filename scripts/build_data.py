@@ -617,9 +617,10 @@ def step_cash(D):
     Classic World (Danny 11-01: the export lists every item in the client, most never shipped). Released = any of
       shop   cash_shop.json says it is on sale / has an NX price,
       market maplestory.watch or mesoarbitrage shop scans have seen it traded (mesoarbitrage by id, maplestory.watch by name),
-      box    named in the description of a box the export lists with its contents (event gift boxes).
+      box    named in the description of a box the export lists with its contents (event gift boxes),
+      crate  in a Fashion Crate list Danny pasted (data/sources/fashion_crates.txt, with pull rates).
     Each gets a D.items entry with c = "Cash", s = slot/kind, nx = NX price (None = not sold in the shop), rel = the reasons
-    and an icon. Fashion Crate contents are in no source we have, so a crate-only item shows up once a market scan sees it."""
+    and an icon (+ crate = [[crate, rate %]])."""
     import re
     kind = {101: "Face Accessory", 102: "Eye Decoration", 103: "Earring"}   # the export files all three under "Earring"; the Deco window has a slot for each
     for k in [k for k, v in D["items"].items() if v.get("c") == "Cash"]: D["items"].pop(k); D["iicons"].pop(k, None)   # rebuild from scratch
@@ -635,6 +636,13 @@ def step_cash(D):
     for iid, (i, _) in cash.items(): byname[i["name"].strip().lower()].append(iid)
     for name in json.load(open(src / "maplestorywatch_prices.json"))["items"]:
         for iid in byname.get(name.strip().lower(), []): rel[iid].add("market")
+    crate = collections.defaultdict(list)   # Fashion Crates: contents + pull rates pasted by Danny (data/sources/fashion_crates.txt)
+    cur = None
+    for ln in (src / "fashion_crates.txt").read_text().splitlines():
+        if ln.startswith("== "): cur = ln[3:].strip()
+        elif ln.strip() and not ln.startswith("#"):
+            nm, rate = ln.rsplit("\t", 1)
+            for iid in byname.get(nm.strip().lower(), []): rel[iid].add("crate"); crate[iid].append([cur, float(rate)])
     for i in ALL_ITEMS:   # event boxes list what they hold: "- Octopus Hat (Transferable within world) x1"
         if str(i["id"]).startswith("2430") and "Double-click" in (i.get("description") or ""):
             for ln in re.findall(r"^- (.+)$", i["description"], re.M):
@@ -647,7 +655,7 @@ def step_cash(D):
     for iid, why in sorted(rel.items()):
         i, cat = cash[iid]
         D["items"][iid] = {"n": i["name"], "c": "Cash", "s": kind.get(i["id"] // 10000) or i.get("sub_category") or cat, "st": {}, "job": None, "p": None,
-                           "d": (i.get("description") or "").strip(), "wt": None, "spd": None, "sp": None, "nx": i.get("price"), "k": cat, "rel": sorted(why)}
+                           "d": (i.get("description") or "").strip(), "wt": None, "spd": None, "sp": None, "nx": i.get("price"), "k": cat, "rel": sorted(why), **({"crate": crate[iid]} if crate.get(iid) else {})}
         p = C + f"images/items/{int(iid):08d}.png"
         if os.path.exists(p): D["iicons"][iid] = b64(p)
 
