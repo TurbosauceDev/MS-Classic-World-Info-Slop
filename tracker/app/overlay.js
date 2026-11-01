@@ -708,6 +708,11 @@ function toastsShow(list){
 // strip under the picked row (scale, opacity, x/y, reset), and snap/grid/reset in the footer -------------------------------
 const EYE = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 8C3 5 5.3 3.5 8 3.5S13 5 14.5 8C13 11 10.7 12.5 8 12.5S3 11 1.5 8Z"/><circle cx="8" cy="8" r="2.2"/></svg>`;
 const EYEOFF = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 8C3 5 5.3 3.5 8 3.5S13 5 14.5 8C13 11 10.7 12.5 8 12.5S3 11 1.5 8Z" opacity=".45"/><path d="M2.5 13.5 13.5 2.5"/></svg>`;
+// the panel may be dragged low and then grow (a new card row, the Share box): its height stops at the window's bottom edge
+// (it scrolls inside) so the lowest buttons stay on screen. CI 11-01: Apply sat below a 900 px window after the Skill range row.
+function panelFit(){ const p = $("#ovpanel"); if (!p || p.classList.contains("hidden")) return;
+  const mh = Math.max(160, Math.floor(innerHeight - Math.max(0, p.getBoundingClientRect().top) - 12)) + "px"; if (p.style.maxHeight !== mh) p.style.maxHeight = mh }
+addEventListener("resize", () => panelFit());
 function buildPanel(){
   const p = $("#ovpanel");
   p.innerHTML = `<header id="ovpHead"><span class="t">Overlay edit</span><button class="btn" id="ovDone">Done</button><button class="btn alt" id="ovClose" title="Close the overlay">×</button></header>
@@ -767,7 +772,7 @@ function buildPanel(){
     p.style.top = clamp(e.clientY - pd.dy, 0, Math.max(0, innerHeight - p.offsetHeight)) + "px";
     p.style.transform = "none"; p.style.right = "auto" });
   p.addEventListener("pointerup", () => { if (!pd) return; pd = null;
-    CFG.panel = {x: DESK.x + p.offsetLeft, y: DESK.y + p.offsetTop}; ovSave() });
+    CFG.panel = {x: DESK.x + p.offsetLeft, y: DESK.y + p.offsetTop}; ovSave(); panelFit() });
   syncPanel();
 }
 function syncPanel(){
@@ -1157,6 +1162,8 @@ addEventListener("keydown", e => {
     p.style.top = clamp(CFG.panel.y - DESK.y, 0, Math.max(0, innerHeight - p.offsetHeight || 0)) + "px";
   }
   place(); HIST.cur = histNow();   // undo baseline: the layout as booted
+  try { new ResizeObserver(() => panelFit()).observe($("#ovpanel")) } catch {}
+  panelFit();
   rngCards();
   window.ovhost.onData(apply);
   window.ovhost.onFeet?.(rngFeet);

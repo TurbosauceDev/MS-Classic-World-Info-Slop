@@ -640,6 +640,9 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     if (!code.startsWith("OVL1.")) fail("profile export code", code.slice(0, 8));
     await page.evaluate(() => { const el = document.querySelector("#ovw-exp"); el.style.left = "42px"; savePos("exp") });
     await page.waitForTimeout(350);
+    // a panel dragged low that then grows (the Share box) stops at the window's bottom and scrolls inside (CI 11-01: Apply was off screen)
+    st = await page.evaluate(() => [document.querySelector("#ovpanel").getBoundingClientRect().bottom, innerHeight]);
+    if (st[0] > st[1]) fail("edit panel stays inside the window", st);
     await page.fill("#ovShareIn", code); await page.click("#ovShareApply"); await page.waitForTimeout(350);
     st = await page.evaluate(() => document.querySelector("#ovw-exp").offsetLeft);
     if (st !== 500) fail("profile import restores the code's layout", st);
