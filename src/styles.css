@@ -1238,3 +1238,9 @@ html[data-nav="rows"] nav button.sgh .sgo{display:inline}
 @keyframes skrHit{0%,100%{opacity:1;transform:none}35%{opacity:.45;transform:translateX(3px)}}
 @keyframes skrTpFrom{from{opacity:1}to{opacity:.35}}
 @keyframes skrTpTo{from{opacity:0;transform:translateX(var(--dx))}to{opacity:1;transform:none}}
+/* Character Builder home (78-charhome.js) */
+.chstage{display:flex;align-items:flex-end;justify-content:center;min-height:150px;background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:10px;cursor:pointer}
+.chstage:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chstage img{image-rendering:pixelated;max-height:130px}
+#char .lpdemo .lab{display:flex;flex-direction:column;gap:4px}
+#char .lpdemo input[type=text]{width:100%;box-sizing:border-box}

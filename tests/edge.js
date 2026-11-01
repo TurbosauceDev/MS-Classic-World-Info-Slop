@@ -167,7 +167,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(/"search"/.test(dd.a) && dd.secs.startsWith("trk,town") && dd.prof === '"b:Danny\'s Default"', `profiles: Danny's Default moves the header and puts Mesos and Trade second (${dd.secs})`);
     await p.fill("#profName", "Big"); await p.click("#profSave"); await p.click('#pagesize [data-sz="5"]');   // an edit after saving goes into "Big" on switch
     await p.selectOption("#profSel", "b:Default"); await p.click("#profUse"); await p.waitForTimeout(300); const def = await st();
-    check(def.a === null && def.size === "3" && def.secs === "trk,train,world,db,town", `profiles: Default puts the site back as it comes (${JSON.stringify(def)})`);
+    check(def.a === null && def.size === "3" && def.secs === "trk,char,train,world,db,town", `profiles: Default puts the site back as it comes (${JSON.stringify(def)})`);
     await p.selectOption("#profSel", "Big"); await p.click("#profUse"); await p.waitForTimeout(300);
     check((await st()).size === "5" && /"search"/.test((await st()).a), "profiles: switching away saved the page size change into Big");
     await p.click("#setupCopy"); const code = await p.inputValue("#setupCode");
@@ -211,7 +211,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       `edit mode: title moves, sections + Home cards reorder, sidebar wider + on the right, all kept after reload (${JSON.stringify({st, after})})`);
     await p.keyboard.press("F1"); await p.click(".anchbar [data-reset]"); await p.keyboard.press("Escape");
     const back = await p.evaluate(() => [[...document.querySelectorAll("nav .sgh")].map(e => e.dataset.cat).join(), [...document.querySelectorAll(".homegrid>.homecat")].map(e => e.dataset.sec)[0], document.documentElement.dataset.sbside || "", localStorage.getItem("anchors")].join("|"));
-    check(back === "trk,train,world,db,town|trk||", `Reset all puts the page back (${back})`);
+    check(back === "trk,char,train,world,db,town|trk||", `Reset all puts the page back (${back})`);
     await p.goto(URL + "#"); await p.evaluate(() => localStorage.setItem("anchors", JSON.stringify({secs: ["db", "db"], home: "x", sb: {w: 9999, right: "yes"}, hcw: 5})));
     await p.reload(); await p.waitForTimeout(300);
     check(await p.evaluate(() => !document.documentElement.dataset.sbside && !document.documentElement.style.getPropertyValue("--sbw") && document.querySelector("nav .sgh").dataset.cat === "trk"), "edit mode: bad saved layout ignored");
@@ -222,11 +222,11 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.reload(); await p.waitForTimeout(300);
     const old = await p.evaluate(() => [[...document.querySelectorAll("nav .sgh")].map(e => e.dataset.cat).join(), [...document.querySelectorAll(".homegrid>.homecat")].map(e => e.dataset.sec).join(),
       document.querySelectorAll("nav .subs [data-tab]").length, document.querySelector("#t-plan").dataset.cat + document.querySelector("#t-skills").dataset.cat].join("|"));
-    check(old === `db,trk,train,world,town|town,trk,train,world,db,more|${tabsDefault}|traindb`, `edit mode: layout saved with My Character still loads (${old})`);
+    check(old === `db,char,trk,train,world,town|town,char,trk,train,world,db,more|${tabsDefault}|chardb`, `edit mode: layout saved with My Character still loads (${old})`);
     await p.evaluate(() => localStorage.setItem("tab", "plan")); await p.goto(URL + "#"); await p.reload(); await p.waitForTimeout(300);
-    const bt = await p.evaluate(() => !document.querySelector("#plan").hidden && document.querySelector("#c-train").getAttribute("aria-selected") === "true");
+    const bt = await p.evaluate(() => !document.querySelector("#plan").hidden && document.querySelector("#c-char").getAttribute("aria-selected") === "true");
     await p.goto(URL + "#s=" + Buffer.from("{}").toString("base64")); await p.reload(); await p.waitForTimeout(300);
-    check(bt && await p.evaluate(() => !document.querySelector("#skills").hidden && document.querySelector("#c-db").getAttribute("aria-selected") === "true"), "saved Builder tab opens under Training, old #s= skill link under Maple Database");
+    check(bt && await p.evaluate(() => !document.querySelector("#skills").hidden && document.querySelector("#c-db").getAttribute("aria-selected") === "true"), "saved Builder tab opens under Character Builder, old #s= skill link under Maple Database");
     check(!errs.length, "anchors round 3: no JS errors " + errs.join(" | ")); await ctx.close() }
 
   // Home card -> billboard view transition: the browser default stretched each card's snapshot to the moving box (giant

@@ -17,13 +17,13 @@ const boxGaps = require("./boxgaps");
   check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 28, "home page lists every page");
   { const miss = await p.evaluate(() => { const h = new Set([...document.querySelectorAll("#home [data-go]")].map(a => a.dataset.go)); return [...document.querySelectorAll('[id^="t-"]')].map(b => b.id.slice(2)).filter(x => !h.has(x)) });
     check(!miss.length, `every nav page has a Home link (missing: ${miss})`) }   // 10-21: KPQ timer shipped without one
-  check(await p.$$eval("#home img.hic", l => l.length === 34 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "home sprites all load (34)");
+  check(await p.$$eval("#home img.hic", l => l.length === 35 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "home sprites all load (35)");
   await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && await p.getAttribute("#t-mobs", "aria-selected") === "true", "home link opens its page");
   const side = await p.evaluate(() => ({pages: [...document.querySelectorAll("nav .subs [data-tab]")].filter(b => b.offsetParent).length,
     titles: [...document.querySelectorAll("nav .sgh")].filter(b => b.offsetParent).map(b => (b.querySelector(".sgt") || b).textContent.trim()).join("|"),
     sprites: [...document.querySelectorAll("nav img.nic")].filter(i => i.offsetParent).every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0),
     cats: !!document.querySelector("nav .cats").offsetParent}));
-  check(side.pages === 28 && side.titles === "Grind Tracker|Training|Victoria Island|Maple Database|Mesos and Trade" && side.sprites && !side.cats,
+  check(side.pages === 29 && side.titles === "Grind Tracker|Character Builder|Training|Victoria Island|Maple Database|Mesos and Trade" && side.sprites && !side.cats,
     `sidebar lists every page under its section, each with a sprite (${JSON.stringify(side)})`);
   { const [nb, ft] = await p.evaluate(() => { scrollTo(0, 1e6); return [document.querySelector("nav").getBoundingClientRect().bottom, document.querySelector(".sitefoot").getBoundingClientRect().top] }); await p.evaluate(() => scrollTo(0, 0));
     check(ft >= nb, `footer starts below the whole sidebar (nav bottom ${Math.round(nb)}, footer top ${Math.round(ft)})`) }   // Danny 10-20: it slid over the footer
@@ -34,10 +34,17 @@ const boxGaps = require("./boxgaps");
   await layout("basic"); check(await p.isVisible("#t-plan") && await p.isHidden("nav img.nic >> nth=0") && await p.evaluate(() => localStorage.getItem("navmode")) === "basic", "basic mode: plain sidebar, no sprites, remembered");
   await layout("side"); check(await p.isVisible("nav img.nic >> nth=1") && await p.evaluate(() => !document.documentElement.hasAttribute("data-nav")), "back to the sidebar");
   // section landing pages (77-landing.js, Danny 10-22): the sidebar section title opens its section's page with live examples
-  for (const [c, demo] of [["trk", "#lptruns"], ["train", "#lpexp .lpbig"], ["world", "#lpnav .lpbig"], ["db", "#lpmob .mobname"], ["town", "#lpprice .lpchips"]]){
+  for (const [c, demo] of [["trk", "#lptruns"], ["char", "#chsum"], ["train", "#lpexp .lpbig"], ["world", "#lpnav .lpbig"], ["db", "#lpmob .mobname"], ["town", "#lpprice .lpchips"]]){
     await p.click("#t-" + c); await p.waitForTimeout(80);
     check(!(await p.isHidden("#" + c)) && await p.getAttribute("#t-" + c, "aria-selected") === "true" && (await p.$$eval(demo, l => l.length)) > 0
       && (await p.title()).startsWith(await p.$eval(`#t-${c} .sgt`, e => e.textContent)), `landing page ${c}: opens from its section title, example drawn`) }
+  // Character Builder home (78-charhome.js): class/level drive the calculator, preview poses, section order
+  await p.click("#t-char"); await p.click('#chclass [data-v="Magician"]'); await p.fill("#chname", "Turbow");
+  check(await p.evaluate(() => BLD.S.cls) === "Magician" && (await p.textContent("#chsum")).startsWith("Turbow · Level 30 "), "Character Builder home: class button drives the calculator, summary shows the name");
+  await p.click('#chpose [data-p="jump"]'); check(await p.getAttribute('#chpose [data-p="jump"]', "aria-checked") === "true", "Character Builder home: pose button selects");
+  check(await p.evaluate(() => [...document.querySelectorAll("nav .sgh")].map(e => e.dataset.cat).slice(0, 3).join()) === "trk,char,train", "Character Builder sits between Grind Tracker and Training");
+  check(await p.$$eval("#char #pdeco", l => l.length) === 1 && await p.$$eval("#plan #pdeco", l => l.length) === 0, "Decoration (NX) card lives on the Character Builder home");
+  await p.click("#t-plan"); check(await p.getAttribute("#t-plan", "data-cat") === "char" && await p.getAttribute("#c-char", "aria-selected") === "true", "Build calculator lives under Character Builder");
   await p.click("#t-db"); await p.fill("#lpitq", "glove"); check(await p.$$eval("#lpitems .itname", l => l.length) > 0, "Maple Database landing: item search finds glove");
   await p.click("#lpitems .itname"); check(!(await p.isHidden("#items")) && await p.isVisible("#itback"), "landing item result opens its item page"); await p.click("#itback");
   await p.click("#t-db"); await p.click('#db .lpcard [data-go="skills"]'); check(!(await p.isHidden("#skills")), "landing Open button opens its page");

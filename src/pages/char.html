@@ -1,0 +1,53 @@
+<section id="char" class="lp" hidden>
+  <div class="lphero">
+    <img class="lpic" data-ic="s:1001001" alt="">
+    <div>
+      <h2>Character Builder</h2>
+      <p>Your character in one place: name and class, screenshots of your stat, equipment and skill windows to build from, a preview you can pose, and the calculator for AP, skills and damage.</p>
+    </div>
+  </div>
+  <div class="lppages" aria-label="Pages in Character Builder">
+    <button class="lplink" data-go="plan"><img class="lpic sm" data-ic="s:1001001" alt=""><b>Build calculator</b><span>AP, skills and damage for any class and level, with an auto-build.</span></button>
+  </div>
+  <div class="lpgrid">
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:1302000" alt=""><h3>Your character</h3><button class="btn sm" data-go="plan">Open calculator →</button></div>
+      <p class="sub">Saved in this browser. Class and level here are the calculator's.</p>
+      <div class="lpdemo">
+        <div class="lpctl"><label>Name <input type="text" id="chname" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Character name"></label></div>
+        <div class="seg small" id="chclass" role="group" aria-label="Class">
+          <button data-v="Warrior">Warrior</button><button data-v="Magician">Magician</button><button data-v="Bowman">Bowman</button><button data-v="Thief">Thief</button>
+        </div>
+        <label class="lab">Level <b id="chlvlout">30</b><input type="range" id="chlvl" min="10" max="100" value="30"></label>
+        <div class="lpbig" id="chsum"></div>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:2030000" alt=""><h3>Build from screenshots</h3></div>
+      <p class="sub">Your Character Stat, Equipment Inventory and Skill Inventory windows.</p>
+      <div class="lpdemo">
+        <label class="drop" id="chdrop"><input type="file" id="chfile" accept="image/*" multiple>
+          <span>Paste (Ctrl+V), drop or pick screenshots. One snip at a time, or one full-screen shot with all three windows open. Each is applied to the calculator right away. The Deco tab too.</span></label>
+        <p class="tiny" id="chst" role="status"></p>
+      </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:1040002" alt=""><h3>Decoration (NX)</h3><span id="pdecosum" class="pill p-hot"></span><button class="btn sm" id="pdecoclear">Clear</button></div>
+      <p class="sub">Cosmetics from the Deco tab. They draw over your armor in the picture and have no stats. Look them up in Maple Database &rarr; Items &rarr; NX / Decoration.</p>
+      <div class="lpdemo"><div class="decolist" id="pdeco"></div></div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:1002001" alt=""><h3>Preview</h3></div>
+      <p class="sub">Wears the gear picked in the calculator. Click the picture, then use the arrow keys and Space.</p>
+      <div class="lpdemo">
+        <div class="chstage" id="chstage" tabindex="0" aria-label="Character preview: left and right walk, up or Space jump, down crouch"><img id="chav" alt="" hidden></div>
+        <div class="seg small" id="chpose" role="group" aria-label="Pose">
+          <button data-p="stand">Stand</button><button data-p="walk1">Walk</button><button data-p="jump">Jump</button><button data-p="alert">Alert</button><button data-p="prone">Prone</button>
+        </div>
+        <div class="lpctl"><button class="btn sm" id="chplay" aria-pressed="true">Pause</button><button class="btn sm" id="chflip">Face right</button>
+          <label>Character <select id="chgender"><option value="">Male</option><option value="female">Female</option></select></label></div>
+        <p class="tiny" id="chavnote">Drawn live by maplestory.io from Classic World client data.</p>
+      </div>
+    </article>
+  </div>
+</section>

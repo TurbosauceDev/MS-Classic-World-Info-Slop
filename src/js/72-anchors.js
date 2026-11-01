@@ -10,7 +10,7 @@
   const hd = $("header"), wide = matchMedia("(min-width: 761px)");
   const IT = {title: {el: $("header h1"), name: "Title"}, tag: {el: $("header > p"), name: "Tagline"},
     search: {el: $("#srchopen"), name: "Search everything", rz: true}, cog: {el: $("#thopen"), name: "Settings"}};
-  const CATS = ["trk", "train", "world", "db", "town"], SECS = [...document.querySelectorAll(".homegrid > .homecat[data-sec]")].map(e => e.dataset.sec);
+  const CATS = ["trk", "char", "train", "world", "db", "town"], SECS = [...document.querySelectorAll(".homegrid > .homecat[data-sec]")].map(e => e.dataset.sec);
   const ls = (v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem("anchors") || "null"); if (v) localStorage.setItem("anchors", JSON.stringify(v)); else localStorage.removeItem("anchors") } catch { return null } };
   const num = v => typeof v === "number" && isFinite(v);
   const SMIN = 0.5, SMAX = 2.5, SNAPPX = 6;
