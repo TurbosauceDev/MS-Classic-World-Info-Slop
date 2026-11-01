@@ -1,0 +1,3 @@
+# External sites
+
+- 2026-11-01 mesolens.app (paid CV overlay, Windows/Mac, v0.3.69, Quebec sole proprietor; Convex+Clerk+Stripe). Reported as copying us. Static review of public pages only: installer is login-gated (401 on download.mesolens.app), so the app was NOT analyzed. Site code/design is original; no proof of copying either way. States screen-reading only (unverified). Credits OSMS + maplestory-classic.com only. Next: installer from Danny's own free account, static unpack, diff vs data.json; optional marked canary rows in generated data (needs Danny OK). No contact, no public accusation. Report: https://claude.ai/artifact/PfQ6JW2FPGpMtkDM9uBsH8
