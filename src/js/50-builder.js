@@ -112,6 +112,7 @@ const HITS_FIX = {"Lucky Seven": {hits: 2}, "Double Shot": {hits: 2, targets: 1}
 // attack time (ms) per speed tier 0-10: [swing, spear/polearm stab, crossbow] (meowdb attack speed guide, COT2 frames).
 // Every Magician spell is tier 6 (810 ms) whatever the weapon; Booster moves a matching weapon 2 tiers.
 const SPEED_MS = [[510,480,540],[570,540,570],[600,570,630],[660,630,690],[720,660,720],[750,720,780],[810,750,840],[870,810,870],[900,870,930],[960,900,990],[1020,960,1050]];
+window.SPEED_MS = SPEED_MS;   // skill preview attack times (53-skills.js)
 // upkeep prices (meowdb): MP 1 meso (Lemon 150 for 150 MP), HP 0.5 meso (Red Potion 50 for 100 HP); arrows 1 meso, Bronze 2
 // (Raymond); star recharge per star from the Assassin guide. Iron/Mithril/Adamantium arrows are crafted only: no price.
 const MESO_MP = 1, MESO_HP = 0.5;

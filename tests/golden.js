@@ -127,13 +127,21 @@ const path = require("path");
     const miss = []; for (const [j, l] of Object.entries(D.skills)) for (const s of l) if (s.rv){ const sp = skrSprites(skRange(j, s, s.max, 0), s.id);
       if (!sp || !sp.idle || (!sp.act && s.rv.f !== "teleport_range")) miss.push(s.n) }
     const ab = P("Archer", "Arrow Blow"), ia = P("Crossbowman", "Iron Arrow"), ps = P("Warrior", "Power Strike", "2h-sword", "swingT2"), mc = P("Magician", "Magic Claw");
+    const same = (a, k) => !!a && a.map(f => f[0]).join() === (D.skanim.act[k] || []).map(f => f[0]).join();   // frames are re-timed for weapon speed
     const pk = P("Archer", "Power Knockback", "bow", "swingT3"), st = P("Bandit", "Steal"), bomb = P("Hunter", "Arrow Bomb"), ts = P("Warrior", "Power Strike", "2h-sword:swordTS", "swingT1");
-    if (pk.act !== D.skanim.act["bow|swingT3"]) miss.push("Power Knockback swings the bow"); if (st.act !== D.skanim.act["dagger|swingO2"]) miss.push("Steal swingO2");
-    if (!bomb.hit.length) miss.push("Arrow Bomb explosion frames"); if (!ts.act || !ts.idle || ts.act === D.skanim.act["2h-sword|swingT1"]) miss.push("2H short-swing sword frames");
-    return [miss.join("/") || "none", ab.act === D.skanim.act["bow|shoot1"], ab.ball.length, ab.rel > 0 && ab.hits[0] > ab.rel, ia.hits.length, ia.hits.every((t, i) => !i || t > ia.hits[i - 1]),
-      ps.act === D.skanim.act["2h-sword|swingT2"], ps.hits[0] === ps.rel, mc.ball.length, mc.eff.length > 0] });
+    if (!same(pk.act, "bow|swingT3")) miss.push("Power Knockback swings the bow"); if (!same(st.act, "dagger|swingO2")) miss.push("Steal swingO2");
+    if (!bomb.hit.length) miss.push("Arrow Bomb explosion frames"); if (!ts.act || !ts.idle || same(ts.act, "2h-sword|swingT1")) miss.push("2H short-swing sword frames");
+    return [miss.join("/") || "none", same(ab.act, "bow|shoot1"), ab.ball.length, ab.rel > 0 && ab.hits[0] > ab.rel, ia.hits.length, ia.hits.every((t, i) => !i || t > ia.hits[i - 1]),
+      same(ps.act, "2h-sword|swingT2"), ps.hits[0] === ps.rel, mc.ball.length, mc.eff.length > 0] });
   check(an.join() === "none,true,3,true,3,true,true,true,0,true",
     "skill previews: every range-card skill has client frames; Arrow Blow shoots (3-frame arrow) before it hits; Iron Arrow hits 3 Stumps in order; Power Strike follows the picked swing; Magic Claw has no projectile", an);
+  // attack time = meowdb's ladder for the preview weapon's speed (War Bow 6: 810, Crossbow 7: 870, Garnier 5: 750 swing col, spells 810,
+  // Savage Blow Razor 4: 840, Rush Sword 4: 360, Heal 600); Double Shot fires its 2nd arrow 100 ms later (client ballDelay)
+  const at = await p.evaluate(() => { const f = (j, n, w, a) => { const s = D.skills[j].find(s => s.n === n), sp = skrSprites(skRange(j, s, s.max, 0, w, a), s.id);
+      return sp.cd === sp.act.reduce((a, x) => a + x[3], 0) ? sp.cd : "sum≠" + sp.cd };
+    const ds = (() => { const s = D.skills.Archer.find(s => s.n === "Double Shot"); return skrSprites(skRange("Archer", s, s.max, 0), s.id).balls.join("/") })();
+    return [f("Archer", "Arrow Blow"), f("Crossbowman", "Iron Arrow"), f("Rogue", "Lucky Seven"), f("Magician", "Magic Claw"), f("Bandit", "Savage Blow"), f("Fighter", "Rush"), f("Cleric", "Heal"), ds] });
+  check(at.join() === "810,870,750,810,840,360,600,0/100", "skill previews: attack time follows weapon speed (meowdb ladder) and Double Shot's 2nd arrow is 100 ms behind", at);
   // playable preview: from the start spot skrHits matches the plain preview for every skill; turned around or jumped away it misses.
   const pl = await p.evaluate(() => { const bad = [], o = {x: 0, y: 0, dir: 1};
     for (const [j, l] of Object.entries(D.skills)) for (const s of l) if (s.rv){ const r = skRange(j, s, s.max, 0), sp = skrSprites(r, s.id);

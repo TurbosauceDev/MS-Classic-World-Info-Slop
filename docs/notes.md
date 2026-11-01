@@ -304,6 +304,17 @@ Source: OSMS skills.json `range_visual` + OSMS lib/skill-range-viz.js (its own r
   standing body, data/current/images/hair/00030000.png), so frames come from maplestory.io MCW/CBT2 (Classic client WZ): Character
   actions with their own delays, skill effect/hit/ball frames with origin + delay (100 ms assumed where a frame has none). Release
   moment (start of the action's last frame) and projectile speed (0.9 px/ms) are drawn for show; the page says so.
+- Playable preview (11-01, Danny: "act just like in game"). Sourced: mid-jump use per skill (meowdb "Attacks You Can Use Mid-Jump":
+  Power Strike, Slash Blast, Threaten, Heal, Power Knockback, Lucky Seven, Double Stab, Disorder, Drain, Savage Blow, Steal; every
+  other COT2 active skill is ground-only); walking 150 px/s at Speed 100 (meowdb speed guide: 125 × (Speed + 20) / 100; client
+  Physics.img walkSpeed 125); jump 555 px/s up, gravity 2000 px/s², fall cap 670 px/s (client Physics.img = meowdb's 77 px, 0.555 s);
+  attack time = SPEED_MS for ordinary swings/stabs/shots at the preview weapon's tier, other actions (Rush, Savage Blow, alert2)
+  30 × ceil(frames × (10 + tier) / 16 / 30), spells tier 6 (matches meowdb's table); Double Shot 2nd arrow +100 ms (client
+  3001002 common/ballDelay). Projectiles fly on from where they were released.
+  IN-GAME TESTS (approximate until Danny's recordings check them): projectile speed (0.9 px/ms); Lucky Seven's 2nd star gap
+  (100 ms guess); no air steering (take-off speed kept) but facing can turn mid-jump; a ground attack roots you (no walk, turn
+  or jump) until its attack time ends; an air attack keeps momentum; hit moment = start of the action's last frame; Rush doesn't
+  move you in the preview.
 
 ## data/data.json schema
 - `mobs` {id: [name, level, hp, exp, eva, PDD, MDD, elements{}, undead]}

@@ -102,19 +102,36 @@ const pngSize = b64 => { try { const s = atob(b64.slice(0, 32)); return [s.charC
 // show, not game data. CSS: .skr-play rules in styles.css; reduced motion shows the still diagram.
 const SKR_SPEED = .9;   // projectile px per ms in the preview (for show; the client's speed isn't in our data)
 const durOf = fr => fr.reduce((a, f) => a + f[3], 0);
+// Attack time (meowdb attack speed guide, COT2 frames; SPEED_MS in 50-builder.js): ordinary swings/stabs/shots take the ladder
+// time for the weapon's speed tier (crossbow and spear/polearm stab have their own columns); other actions (Rush, Savage Blow,
+// alert2 buffs) scale their client frame delays by (10 + tier) / 16, rounded up to 30 ms (fits meowdb's Rush 360/450, Savage
+// 780/840, Heal 600). Spells always use tier 6. The preview's weapon is the item fetch_skill_anim.py draws (A.wid).
+let SKR_WT;
+const skrTier = w => { if (/^wand/.test(w)) return 6; SKR_WT = SKR_WT || Object.fromEntries(D.weapons.map(x => [x[12], x[9]]));
+  return +(SKR_WT[String(D.skanim.wid[w])] ?? 6) };
+const skrTime = (an, raw, t) => { const S = window.SPEED_MS; t = Math.max(0, Math.min(10, t));
+  if (S && /^(swing|stab|shoot)/.test(an)) return S[t][an === "shoot2" ? 2 : /^stabT/.test(an) ? 1 : 0];
+  return 30 * Math.ceil(durOf(raw) * (10 + t) / 16 / 30) };
+// Projectiles per use: Double Shot's 2nd arrow leaves 100 ms after the 1st (client Skill/300.img 3001002 common/ballDelay);
+// Lucky Seven's 2nd star gap isn't in the client data: 100 ms is a guess (in-game test list, docs/notes.md).
+const SKR_BALLS = {"3001002": [0, 100], "4001003": [0, 100]};
+// Mid-jump use (meowdb "Attacks You Can Use Mid-Jump", all COT2 active skills checked, 2026-10-23): only these start in the air.
+const SKR_AIR = new Set(["Power Strike", "Slash Blast", "Threaten", "Heal", "Power Knockback", "Lucky Seven", "Double Stab", "Disorder", "Drain", "Savage Blow", "Steal"]);
 // Sprite timeline for one preview: what the player draws, and when the area/hit CSS should fire. Pure (tests/golden.js).
 function skrSprites(r, id){
   const A = D.skanim, k = A?.sk?.[String(id)]; if (!k) return null;
   const w = r.wk || k.w, two = ["2h-sword", "2h-axe", "2h-blunt", "spear", "polearm"].includes(w.split(":")[0]);
-  const act = A.act[`${w}|${k.a || r.ak || ""}`] || null, idle = (A.act[`${w}|${two ? "stand2" : "stand1"}`] || [])[0] || null;
+  const an = k.a || r.ak || "", raw = A.act[`${w}|${an}`] || null, tier = skrTier(w), cd = raw ? skrTime(an, raw, tier) : 0;
+  const act = raw && raw.map(f => [f[0], f[1], f[2], Math.round(f[3] * cd / durOf(raw)), f[4], f[5]]), idle = (A.act[`${w}|${two ? "stand2" : "stand1"}`] || [])[0] || null;
   const rel = act && act.length > 1 ? durOf(act.slice(0, -1)) : act ? 0 : 120;
   const shot = r.poly || r.path, ball = shot ? (k.b.length ? k.b : A.ammo?.[w] || []) : [];
   const from = r.path ? r.path[0] : r.aim ? r.aim[0] : 0, y = (r.path || r.aim || [0, -30])[1];
   const to = r.path ? r.path[2] : r.mob ?? from, travel = ball.length ? Math.round(Math.max(0, to - from) / SKR_SPEED) : 0;
   const mobX = r.path ? [.3, .6, .86].map(f => Math.round(65 + (r.far - 65) * f)) : r.mob != null && r.fam !== "effect_rectangle" ? [r.mob] : [];
   const hits = mobX.map(x => rel + (ball.length ? Math.round(Math.max(0, x - from) / SKR_SPEED) : 0));
-  const end = Math.max(act ? durOf(act) : 0, durOf(k.e), ball.length ? rel + travel : 0, ...hits.map(t => t + durOf(k.h.length ? k.h : k.x || []))) + 450;
-  return {w, act, idle, eff: k.e, hit: k.h.length ? k.h : k.x || [], ball, rel, travel, from, to, y, mobX, hits, end} }
+  const balls = shot && ball.length ? SKR_BALLS[String(id)] || [0] : [0];
+  const end = Math.max(act ? durOf(act) : 0, durOf(k.e), ball.length ? rel + travel + balls[balls.length - 1] : 0, ...hits.map(t => t + durOf(k.h.length ? k.h : k.x || []))) + 450;
+  return {w, tier, cd, balls, act, idle, eff: k.e, hit: k.h.length ? k.h : k.x || [], ball, rel, travel, from, to, y, mobX, hits, end} }
 const skrAnim = r => { const a = {lunge: 0, area: 120, hits: []};
   if (r.poly || r.path){ const from = r.path ? r.path[0] : r.aim[0], to = r.path ? r.path[2] : r.mob, dur = Math.round(Math.min(560, Math.max(260, (to - from) * 1.1)));
     a.shot = {from, y: (r.path || r.aim)[1], dx: to - from, at: 300, dur};
@@ -135,8 +152,8 @@ function skrHits(r, SP, pl, mw = 46, mh = 46){
     if (!xs.length || c + mw / 2 < ax0 || c - mw / 2 > ax1 || pl.y - mh > ay1 || pl.y < ay0) return null;
     if (SP) return SP.rel + (SP.ball.length ? Math.round(Math.max(0, c - SP.from) / SKR_SPEED) : 0);
     return A.shot ? Math.round(A.shot.at + A.shot.dur * Math.max(0, c - A.shot.from) / A.shot.dx) : A.hits[i] ?? 320 }) }
-const SKP = {x: 0, y: 0, dir: 1, vy: 0, keys: new Set(), pad: null, ctl: 0, busy: 0, raf: 0, lt: 0, focus: false};
-const skpReset = () => Object.assign(SKP, {x: 0, y: 0, dir: 1, vy: 0, busy: 0});
+const SKP = {x: 0, y: 0, dir: 1, vy: 0, vx: 0, keys: new Set(), pad: null, ctl: 0, busy: 0, raf: 0, lt: 0, focus: false};
+const skpReset = () => Object.assign(SKP, {x: 0, y: 0, dir: 1, vy: 0, vx: 0, busy: 0});
 const skpXf = () => `translate(${SKP.x} ${-SKP.y})${SKP.dir < 0 ? " scale(-1 1)" : ""}`;
 const skImg = f => "data:image/webp;base64," + f[0];
 const skImgW = f => f[4], skImgH = f => f[5];
@@ -180,9 +197,9 @@ function rangeSvg(r, play, id){
   const me = SP && (SP.idle || SP.act?.[0]) ? spr(SP.idle || SP.act[0], "skr-me-spr") : you(0, "skr-me");
   if (r.tp) P.push(`<g class="skr-tpto" style="--dl:${A.tp.at}ms;--dx:${-r.tp}px">${SP && SP.idle ? `<g transform="translate(${r.tp} 0)" class="skr-ghost">${spr(SP.idle, "skr-ghost-spr")}</g>` : you(r.tp, "skr-ghost")}</g><line x1="24" y1="-80" x2="${r.tp - 4}" y2="-80" class="skr-aim"/>`);
   P.push(`<g class="skr-actor${r.tp ? " skr-tpfrom" : ""}" style="--dl:${r.tp ? A.tp.at : A.lunge}ms">${me}</g>`);
-  if (SP) P.push(`<g class="skr-fx" data-l="e"></g><g class="skr-fx" data-l="b" transform="translate(${SP.from} ${SP.y})"></g>`);
+  if (SP) P.push(`<g class="skr-fx" data-l="e"></g>`);
   P.push(`<circle cx="0" cy="0" r="3" class="skr-origin"/></g><g class="skr-plt" transform="translate(${SKP.x} ${-SKP.y})">${T(0, -72, "you", "skr-mid")}</g>`);
-  if (SP) P.push(SP.mobX.map((x, i) => `<g class="skr-fx" data-l="h" data-i="${i}"></g>`).join(""));
+  if (SP) P.push(SP.balls.map(() => `<g class="skr-fx" data-l="b"></g>`).join("") + SP.mobX.map((x, i) => `<g class="skr-fx" data-l="h" data-i="${i}"></g>`).join(""));
   const right = r.ext?.r ?? r.poly?.[1][0] ?? r.boxes[0]?.r ?? r.tp;
   if (right != null) P.push(`<line x1="${right}" y1="${y1 - 14}" x2="${right}" y2="${y0 + 4}" class="skr-dim"/>`, T(right, y1 - 4, right + " px", "skr-mid"));
   return `<svg class="skr-svg${play ? " skr-play" : ""}${SP ? " skr-sp" : ""}" viewBox="${x0} ${y0} ${w} ${h}" tabindex="0" data-skrstage role="application" aria-roledescription="playable preview" aria-label="${esc(r.label)}: measured from your feet, facing right. Focused: A/D or arrows walk, W, up or Space jumps, Ctrl, 1, 4, 6 or click uses the skill.">${P.join("")}</svg>`;
@@ -191,7 +208,7 @@ const skpPose = (me, f) => { if (!me || !f || me.__f === f) return; me.__f = f;
   me.setAttribute("href", skImg(f)); me.setAttribute("x", -f[1]); me.setAttribute("y", -f[2]); me.setAttribute("width", f[4]); me.setAttribute("height", f[5]) };
 // Flipbook player for the sprite layers (one at a time; stops when its svg is replaced). Reduced motion: never starts.
 let skrRaf = 0;
-function skrPlay(svg, r, id, hits){
+function skrPlay(svg, r, id, hits, pl = {x: 0, y: 0, dir: 1}){
   cancelAnimationFrame(skrRaf); const SP = skrSprites(r, id); hits = hits || SP?.hits;
   if (!SP || !svg || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const L = (q, i) => svg.querySelector(`.skr-fx[data-l="${q}"]${i != null ? `[data-i="${i}"]` : ""}`), me = svg.querySelector(".skr-me-spr image");
@@ -200,13 +217,14 @@ function skrPlay(svg, r, id, hits){
   const draw = (g, f) => { if (g.__f === f) return; g.__f = f;
     g.innerHTML = f ? `<g transform="scale(-1 1)"><image href="${skImg(f)}" x="${-f[1]}" y="${-f[2]}" width="${f[4]}" height="${f[5]}" class="skr-spr"/></g>` : "" };
   const pose = f => skpPose(me, f);
-  const t0 = performance.now(), E = L("e"), B = L("b"), H = SP.mobX.map((x, i) => L("h", i));
+  const t0 = performance.now(), E = L("e"), B = [...svg.querySelectorAll('.skr-fx[data-l="b"]')], H = SP.mobX.map((x, i) => L("h", i));
   H.forEach((g, i) => g && g.setAttribute("transform", `translate(${SP.mobX[i]} -23)`));   // hit frames on the Stump's middle
   const tick = now => { if (!svg.isConnected) return; const t = now - t0;
     const af = at(SP.act || [], t, false); if (af || !SKP.raf) pose(af || SP.idle);
     if (E) draw(E, at(SP.eff, t, false));
-    if (B){ const u = t - SP.rel, on = SP.ball.length && u >= 0 && u < SP.travel; draw(B, on ? at(SP.ball, u, true) : null);
-      if (on) B.setAttribute("transform", `translate(${SP.from + u * SKR_SPEED} ${SP.y})`) }
+    B.forEach((g, i) => { const u = t - SP.rel - SP.balls[i], on = SP.ball.length && u >= 0 && u < SP.travel; draw(g, on ? at(SP.ball, u, true) : null);
+      // once released, a projectile flies on its own from where it left: it doesn't follow the player
+      if (on) g.setAttribute("transform", `translate(${pl.x + pl.dir * (SP.from + u * SKR_SPEED)} ${SP.y - pl.y})${pl.dir < 0 ? " scale(-1 1)" : ""}`) });
     H.forEach((g, i) => g && hits[i] != null && draw(g, at(SP.hit, t - hits[i], false)));
     if (t < SP.end) skrRaf = requestAnimationFrame(tick); else if (!SKP.raf) pose(SP.idle) };
   skrRaf = requestAnimationFrame(tick);
@@ -226,7 +244,7 @@ function rangeHtml(o, play){
     ${bases.length > 1 ? seg("skrw", bases.map(w => [w.base, w.label]), r.base) : ""}${vars.length > 1 ? seg("skrv", vars.map(w => [w.key, w.v]), r.wk) : ""}${acts.length > 1 ? seg("skra", acts.map(a => [a[0], ACTNAME(a[0])]), r.ak) : ""}
     ${rangeSvg(r, play, s.id)}<button class="btn skr-replay" data-skrplay aria-label="Replay the range preview">▶ Replay</button>
     <dl class="stats mgrid"><div><dt>Shape</dt><dd>${esc(r.label)}</dd></div>${r.facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
-    <p class="sub skr-keys">Click the preview to play: A/D or arrows walk, W, up or Space jumps, and Ctrl, 1, 4, 6 or a click uses the skill. A controller works too (stick or d-pad walks, the bottom face button jumps, the other face buttons use the skill). Walk speed and jump height are for show.</p>
+    <p class="sub skr-keys">Click the preview to play: A/D or arrows walk, W, up or Space jumps, and Ctrl, 1, 4, 6 or a click uses the skill. A controller works too (stick or d-pad walks, the bottom face button jumps, the other face buttons use the skill). Walking (150 px/s), jumping (77 px high) and the attack time follow the game at base Speed and Jump; only the skills the game allows mid-jump work in the air. <span class="skr-msg" aria-live="polite"></span></p>
     <p class="sub">Game pixels from your feet, facing right; the Stump shows monster size.${D.skanim?.sk?.[s.id] ? " Character, skill effect, projectile and hit frames come from the Classic World client (maplestory.io MCW); when the hit lands and how fast the shot flies are drawn for show." : ""} Source: ${src}${r.from ? `, level ${r.from}+ box` : ""}${r.blast ? "; explosion box from the client's hidden follow-up skill (maplestory.io MCW, same size on meowdb)" : ""}.</p></div>`;
 }
 
@@ -287,7 +305,7 @@ function skrLoop(ms){ clearTimeout(skrT); if (skrCalm()) return; const key = S.o
     redrawRange(true) }, ms) }
 function skrStart(o){ const r = o.s.rv && skRange(o.job, o.s, SKR.lv, SKR.plv, SKR.wk, SKR.ak); if (!r) return;
   const SP = skrSprites(r, o.s.id), mob = D.mobimg?.["6"], [mw, mh] = mob ? pngSize(mob) : [46, 46];
-  skrPlay($("#skr .skr-svg"), r, o.s.id, skrHits(r, SP, SKP, mw, mh)); skrLoop((SP ? SP.end : 1300) + SKR_PAUSE); return {r, SP} }
+  skrPlay($("#skr .skr-svg"), r, o.s.id, skrHits(r, SP, SKP, mw, mh), {x: SKP.x, y: SKP.y, dir: SKP.dir}); skrLoop((SP ? SP.end : 1300) + SKR_PAUSE); return {r, SP} }
 function openSkill(key){ S.open = key; save(); show(); $("#skills").scrollIntoView({block: "start"}) }
 $("#sksearch").addEventListener("input", e => { S.q = e.target.value; render() });
 for (const [k, el] of FIELDS) $(el).addEventListener("change", e => { S[k] = e.target.value; save(); render() });
@@ -310,15 +328,22 @@ function redrawRange(play){ const o = S.open && OPEN[S.open], el = $("#skr"); if
   const out = play ? skrStart(o) : skrLoop(SKR_PAUSE); if (f) $("#skr " + f)?.focus({preventScroll: true}); SKP.swap = false; return out }
 // Player controls. Keys only while the preview has focus (no page scroll, no typing hijack); a controller (Gamepad API, standard
 // mapping: button 0 = bottom face = jump, 1-3 = other face buttons = skill, axis 0 / d-pad 14-15 = walk) works while the card is
-// on screen. Auto-replay waits while either is in use (skpLive). Speeds below are for show, not game data.
-const SKP_WALK = .125, SKP_JUMP = .5, SKP_G = .002;   // px/ms, px/ms, px/ms²
+// on screen. Auto-replay waits while either is in use (skpLive).
+// Physics (client Map/Physics.img via maplestory.io MCW: walkSpeed 125, jumpSpeed 555, gravityAcc 2000, fallSpeed 670, all per
+// second): Classic adds 20 Speed, so base walking is 125 × 1.2 = 150 px/s (meowdb speed guide, measured; jump 77 px, 0.555 s).
+// Approximate, on the in-game test list (docs/notes.md): no steering in the air (take-off speed kept, facing can turn); a ground
+// attack stops you and you can't jump or turn until it ends; an air attack keeps your momentum.
+const SKP_WALK = .15, SKP_JUMP = .555, SKP_G = .002, SKP_FALL = .67;   // px/ms, px/ms, px/ms², px/ms
 const SKP_KEYS = {ArrowLeft: "l", KeyA: "l", ArrowRight: "r", KeyD: "r", ArrowUp: "j", KeyW: "j", Space: "j", ArrowDown: "", KeyS: "",
   ControlLeft: "f", ControlRight: "f", Digit1: "f", Digit4: "f", Digit6: "f", Numpad1: "f", Numpad4: "f", Numpad6: "f"};
 const skpLive = () => SKP.focus || SKP.raf || performance.now() - SKP.ctl < 3000;
 const skpStage = () => $("#skr [data-skrstage]");
+const skpMsg = t => { const m = $("#skr .skr-msg"); if (m) m.textContent = t };
 function skpFire(){ const now = performance.now(); SKP.ctl = now; if (now < SKP.busy) return;
+  const o = OPEN[S.open]; if (!o) return;
+  if ((SKP.y > 0 || SKP.vy) && !SKR_AIR.has(o.s.n)){ if (!SKP.noair) skpMsg(`${o.s.n} can't be used mid-jump in Classic (meowdb's mid-jump list).`); SKP.noair = 1; return }
   const out = redrawRange(true); if (!out) return; const {r, SP} = out;
-  SKP.busy = now + Math.max(250, SP?.act ? durOf(SP.act) : 450);
+  SKP.busy = now + (SP?.cd || 450);
   if (r.tp){ const key = S.open; setTimeout(() => { if (S.open !== key) return; skpMoveTo(SKP.x + SKP.dir * r.tp); redrawRange() }, 480) } }
 function skpMoveTo(x){ const vb = skpStage()?.viewBox.baseVal; SKP.x = vb ? Math.max(vb.x + 22, Math.min(vb.x + vb.width - 22, x)) : x }
 function skpTick(now){
@@ -326,9 +351,10 @@ function skpTick(now){
   if (!svg || $("#skpage").hidden){ SKP.raf = 0; SKP.keys.clear(); return }
   const k = SKP.keys, pad = SKP.pad, dx = (k.has("r") || pad?.dx > 0 ? 1 : 0) - (k.has("l") || pad?.dx < 0 ? 1 : 0);
   const air = SKP.y > 0 || SKP.vy > 0, busy = now < SKP.busy;
-  if (dx && !(busy && !air)){ if (!busy) SKP.dir = dx; skpMoveTo(SKP.x + dx * SKP_WALK * dt) }
-  if ((k.has("j") || pad?.jump) && !air && !busy) SKP.vy = SKP_JUMP;
-  if (SKP.vy || SKP.y){ SKP.y = Math.max(0, SKP.y + SKP.vy * dt); SKP.vy -= SKP_G * dt; if (!SKP.y && SKP.vy < 0) SKP.vy = 0 }
+  if (air){ if (dx && !busy) SKP.dir = dx; skpMoveTo(SKP.x + SKP.vx * dt) }   // in the air: take-off speed kept, facing can turn
+  else if (dx && !busy){ SKP.dir = dx; skpMoveTo(SKP.x + dx * SKP_WALK * dt) }   // a ground attack roots you until it ends
+  if ((k.has("j") || pad?.jump) && !air && !busy) skpJump(dx);
+  if (SKP.vy || SKP.y){ SKP.y = Math.max(0, SKP.y + SKP.vy * dt); SKP.vy = Math.max(-SKP_FALL, SKP.vy - SKP_G * dt); if (!SKP.y && SKP.vy < 0){ SKP.vy = 0; SKP.vx = 0; SKP.noair = 0; skpMsg("") } }
   if (k.has("f") || pad?.fire) skpFire();
   svg.querySelector(".skr-pl")?.setAttribute("transform", skpXf());
   svg.querySelector(".skr-plt")?.setAttribute("transform", `translate(${SKP.x} ${-SKP.y})`);
@@ -339,11 +365,12 @@ function skpTick(now){
     skpPose(svg.querySelector(".skr-me-spr image"), f) }
   if (dx || SKP.y || SKP.vy || k.size || pad?.on) SKP.raf = requestAnimationFrame(skpTick);
   else { SKP.raf = 0; SKP.lt = 0; if (SP && now >= SKP.busy) skpPose(svg.querySelector(".skr-me-spr image"), SP.idle) } }
+const skpJump = dx => { SKP.vy = SKP_JUMP; SKP.vx = dx * SKP_WALK };
 const skpGo = () => { SKP.ctl = performance.now(); if (!SKP.raf){ SKP.lt = 0; SKP.raf = requestAnimationFrame(skpTick) } };
 $("#skpage").addEventListener("keydown", e => { if (!e.target.matches?.("[data-skrstage]") || e.altKey || e.metaKey || (e.ctrlKey && !/^Control/.test(e.code))) return;
   const a = SKP_KEYS[e.code]; if (a == null) return; e.preventDefault(); if (!a) return;
   if (a === "f"){ if (!e.repeat) skpFire(); SKP.keys.add("f") } else SKP.keys.add(a);
-  if (a === "j" && !SKP.y && !SKP.vy && performance.now() >= SKP.busy) SKP.vy = SKP_JUMP;   // a quick tap still jumps
+  if (a === "j" && !SKP.y && !SKP.vy && performance.now() >= SKP.busy) skpJump((SKP.keys.has("r") ? 1 : 0) - (SKP.keys.has("l") ? 1 : 0));   // a quick tap still jumps
   skpGo() });
 $("#skpage").addEventListener("keyup", e => { const a = SKP_KEYS[e.code]; if (a) SKP.keys.delete(a) });
 $("#skpage").addEventListener("focusin", e => { if (e.target.matches?.("[data-skrstage]")) SKP.focus = true });

@@ -210,6 +210,10 @@ const boxGaps = require("./boxgaps");
     await p.keyboard.down("KeyD"); await p.waitForTimeout(300); await p.keyboard.up("KeyD"); await p.waitForTimeout(900); await p.keyboard.press("Digit4"); await p.waitForTimeout(60);
     const r = [/translate\(-\d/.test(left) && /scale\(-1/.test(left), / -\d/.test(up.split(")")[0]), fired, miss, foc, held, await st(), await p.evaluate(() => scrollY) === y0];
     check(r.every(Boolean), "skill page: preview is playable (arrows walk + turn, Space jumps, Ctrl/4 fire, facing away misses, keeps focus, no scroll, auto-replay waits)", r) }
+  { await p.waitForTimeout(1200); await p.focus("#skr [data-skrstage]"); await p.evaluate(() => { const s = $("#skr [data-skrstage]"); s.classList.remove("skr-play"); s.__k = 2 });
+    await p.keyboard.press("Space"); await p.waitForTimeout(90); await p.keyboard.press("Control"); await p.waitForTimeout(40);   // Magic Claw isn't on the mid-jump list
+    const r = await p.evaluate(() => [$("#skr [data-skrstage]").__k === 2, /mid-jump/.test($("#skr .skr-msg").textContent)]); await p.waitForTimeout(700);
+    check(r.every(Boolean), "skill page: Magic Claw can't be used mid-jump (meowdb list) and the card says so", r) }
   { await p.waitForTimeout(1200); await p.evaluate(() => { const B = () => ({pressed: false, value: 0}); window.__pad = {axes: [0, 0, 0, 0], buttons: Array.from({length: 17}, B), connected: true, mapping: "standard"};
       navigator.getGamepads = () => [__pad, null]; document.activeElement?.blur(); dispatchEvent(new Event("gamepadconnected")); __pad.axes[0] = -1 });   // stub pad: stick left
     await p.waitForTimeout(400); await p.evaluate(() => { __pad.axes[0] = 0; __pad.buttons[0].pressed = true }); await p.waitForTimeout(100);
