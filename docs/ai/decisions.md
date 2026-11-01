@@ -29,7 +29,7 @@ above as a dated line and note the resolution date in its place.
 - 2026-10-18 Magician 1st job is Lv 10 in Classic ("its 10 now"), not the pre-BB 8.
 - 2026-10-18 meso.watch: never bypass its Cloudflare check; refresh only from the dev CSV he drops in chat.
 - 2026-10-18 Where to train uses OSMS per-map `mob_capacity`, not meowdb's 75%-of-spawns guess.
-- 2026-10-18 Builder screenshot import counts gear at base stats ("average drop").
+- 2026-10-18 Builder screenshot import counts gear at base stats ("average drop"). Superseded 2026-11-01 where the stat window shows a (base+gear) split.
 - 2026-10-18 Daily shared-data.yml job may commit shared tracker runs to the default branch.
 - 2026-10-18 beanguri's overlay: MIT reader ideas only; their shared data/API needs their permission.
 - 2026-10-20 "You can trust everything from OSMS": OSMS Data Explorer formulas (client-read and its capture-fitted mesos/party EXP) override meowdb/COT2 numbers.
@@ -260,3 +260,4 @@ Each entry blocks something. When Danny calls it, transcribe above with the date
 - 2026-10-31 (Danny): cpan1995/maplepricechecker has no license file, but Danny says it is meant to be open source (MIT) and we may copy from it. The author has not said so; if we copy real code, keep a credit comment and ask cpan1995 to add the MIT file. Nothing copied so far (teardown: https://claude.ai/artifact/TccpycesZB7wQ4JmhshUWm).
 - 2026-10-31 (Danny): approved Option A (shop price overlay) plus: prefix matching for cut names, cache rules, honest User-Agent on meowdb, junk-body Worker test, policy paragraph in the README. He wants OUR OWN crowd data of shop prices on our server ("so much fun to also be a source ourselves"); skipped for now: per-install keys with ban/purge, nginx-style rate zones. Shop rows upload only with sharing on, and carry no seller/character/map.
 - 2026-10-31 (Danny's screenshot): the shop window reads "Please be aware that a 3% fee will be deducted from sales." That is the in-game source for the FM sale fee (the open "3% FM tax on FM Sniper flips" question).
+- 2026-11-01 (Danny, decision card): builder screenshot import takes base AP from the stat window's own split, "44 (40+4)" = 40, replacing the 10-18 average-drop gear subtraction where the split is readable (base + bonus must equal the total). Shots without brackets (older UI) still subtract gear at base stats.

@@ -32,6 +32,16 @@ async function readShot(f){
   if (green.length >= 4){
     const v = green.slice(0, 4).map(val);
     if (v.every(x => x != null)){ r.shown = Object.fromEntries(STATS.map((k, i) => [k, v[i]]));
+      // the game's own split, "44 (40+4)" = 40 AP + 4 from gear (Danny 11-01: this beats subtracting average-drop gear
+      // stats, since most gear rolls off average). Trusted only when base + bonus = total. Older shots (Danny's 10-13..10-21
+      // fixtures) show totals with no split at all, so a plain "4" means "no bonus" only when another stat has a split
+      r.base = {};
+      const txt = green.slice(0, 4).map(b => shotText(img, b.x1 + (img.fuzzy ? 3 : 2), b.y0 - 2, b.x1 + 130, b.y1 + 3, ink)[0]?.s || "");
+      const split = txt.map(t => /^\??(\d+) ?\((\d+)[?+](\d+)\)/.exec(t));
+      if (split.some(Boolean)) txt.forEach((t, i) => {
+        if (split[i] && +split[i][2] + +split[i][3] === v[i]) r.base[STATS[i]] = +split[i][2];
+        else if (/^\??\d+$/.test(t)) r.base[STATS[i]] = v[i];
+      });
       green.slice(0, 4).forEach((b, i) => mark(b.x0, b.y0, b.x1 - b.x0 + 78, b.y1 - b.y0 + 1, `${STATS[i]} ${v[i]}`, "stat")) }
   }
   if (r.lvl || r.shown) r.what.push("Stats");
@@ -77,7 +87,7 @@ function merge(){
   const m = {lvl: null, shown: null, skills: {}, gear: {}, weapon: []};
   for (const r of READS){
     if (r.lvl) m.lvl = r.lvl;
-    if (r.shown) m.shown = {...r.shown};
+    if (r.shown){ m.shown = {...r.shown}; m.base = {...r.base} }
     for (const [id, v] of Object.entries(r.skills)) m.skills[id] = Math.max(m.skills[id] || 0, v);
     for (const [sl, ids] of Object.entries(r.gear)) m.gear[sl] = [...new Set((m.gear[sl] || []).concat(ids))];
     for (const id of r.weapon) if (!m.weapon.includes(id)) m.weapon.push(id);
@@ -97,7 +107,8 @@ function merge(){
   R = m;
 }
 
-// base AP = what the stat window shows minus the picked gear's stats (the game shows totals)
+// base AP: the stat window's own (base+gear) split where it was read; otherwise what it shows minus the picked gear's
+// stats at their average drop (the game shows totals)
 function baseAP(){
   const g = {STR: 0, DEX: 0, INT: 0, LUK: 0}, w = WBYID[R.pick.weapon];
   for (const [sl, id] of Object.entries(R.pick.gear)){
@@ -106,8 +117,9 @@ function baseAP(){
     if ((sl === "Top" || sl === "Bottom") && R.pick.gear.Overall) continue;
     for (const k of STATS) g[k] += a[7][k] || 0;
   }
-  const ap = Object.fromEntries(STATS.map(k => [k, Math.max(4, (R.shown?.[k] ?? 4) - g[k])]));
-  return {ap, g};
+  const fromWin = STATS.filter(k => R.base?.[k] != null);
+  const ap = Object.fromEntries(STATS.map(k => [k, Math.max(4, R.base?.[k] ?? (R.shown?.[k] ?? 4) - g[k])]));
+  return {ap, g, fromWin};
 }
 // the merged reads -> the builder. Only what was read changes: an equipment shot alone keeps your skills, and SP the
 // screenshots don't cover (a skill tab not pasted) keep whatever you set by hand
@@ -151,9 +163,9 @@ function note(){
   const fz = READS.find(r => r.fuzzy && r.what.length);
   if (fz) t += ` <span class="tiny">That screenshot is at ${fz.k.toFixed(2)}x game size, so it's smoothed; check the weapon and skills. 100% or 200% reads best.</span>`;
   if (!R.shown) return t + " No stat window yet, so AP is auto-filled.";
-  const {ap, g} = baseAP(), tot = STATS.reduce((a, k) => a + ap[k], 0), budget = BLD.apTotal(Math.max(10, S.lvl));
+  const {ap, g, fromWin} = baseAP(), tot = STATS.reduce((a, k) => a + ap[k], 0), budget = BLD.apTotal(Math.max(10, S.lvl));
   const gl = STATS.filter(k => g[k]).map(k => `${k} +${g[k]}`).join(", "), over = tot - budget, top = STATS.reduce((a, k) => ap[k] > ap[a] ? k : a, "STR");
-  t += ` ${gl ? `Gear's base stats (${gl}) taken off the stat window: ` : "AP from the stat window: "}${STATS.map(k => `${k} ${ap[k]}`).join(", ")} (${tot} of ${budget}).`;
+  t += ` ${fromWin.length === 4 ? "AP from the stat window (the part in brackets is gear): " : gl ? `Gear's base stats (${gl}) taken off the stat window: ` : "AP from the stat window: "}${STATS.map(k => `${k} ${ap[k]}`).join(", ")} (${tot} of ${budget}).`;
   if (over > 0) t += Object.keys(R.gear).length || R.weapon.length
     ? ` <span class="down">${over} over level ${S.lvl}'s ${budget}: scrolls or above-average gear, so ${over} came off ${top}. Fix it under Ability points if you know better.</span>`
     : ` <span class="down">${over} more than level ${S.lvl} gives: that's your gear. Add the <b>Equipment Inventory</b> and it's taken off properly (for now ${over} came off ${top}).</span>`;

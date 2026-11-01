@@ -15,7 +15,7 @@ const CASES = [[1, 0], [1.25, 1], [1.5, 1], [1.5, 0], [1.6, 1], [1.75, 1], [1.87
   const one = () => p.waitForFunction(() => document.querySelectorAll("#pimpshots .pishot").length === 1 && !/Reading/.test(document.querySelector("#pimpst").textContent), null, {timeout: 120000});
   await one();
   const want = await p.$$eval("#pSTR,#pDEX,#pINT,#pLUK", l => l.map(x => x.value).join(" "));
-  ok(want === "39 177 4 4" && (await p.textContent("#psummary")).startsWith("Level 41 Hunter"), `2x original (AP ${want})`);
+  ok(want === "40 177 4 4" && (await p.textContent("#psummary")).startsWith("Level 41 Hunter"), `2x original (AP ${want})`);
   for (const [s, smooth] of CASES){
     // the 2x shot's game pixels start at x = 1 (its labels sit on odd columns)
     const buf = Buffer.from(await p.evaluate(async ([s, smooth, b64]) => {
