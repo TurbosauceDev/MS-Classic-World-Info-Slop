@@ -1508,12 +1508,6 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
       </div>
 
       <div class="card">
-        <div class="cardhead"><h3>Decoration (NX)</h3><span id="pdecosum" class="pill p-hot"></span><button class="btn sm" id="pdecoclear">Clear</button></div>
-        <div class="decolist" id="pdeco"></div>
-        <p class="tiny">Cosmetics from the Deco tab. They draw over your armor in the picture and have no stats. Look them up in Maple Database &rarr; Items &rarr; NX / Decoration.</p>
-      </div>
-
-      <div class="card">
         <div class="cardhead"><h3>Skill build</h3><span id="pspleft" class="pill p-good"></span></div>
         <div class="btnrow" style="margin-top:0">
           <button class="btn" id="pspauto">Auto: most damage for this attack</button>
@@ -2296,9 +2290,14 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
       <p class="sub">Your Character Stat, Equipment Inventory and Skill Inventory windows.</p>
       <div class="lpdemo">
         <label class="drop" id="chdrop"><input type="file" id="chfile" accept="image/*" multiple>
-          <span>Paste (Ctrl+V), drop or pick screenshots. One snip at a time, or one full-screen shot with all three windows open. Each is applied to the calculator right away.</span></label>
+          <span>Paste (Ctrl+V), drop or pick screenshots. One snip at a time, or one full-screen shot with all three windows open. Each is applied to the calculator right away. The Deco tab too.</span></label>
         <p class="tiny" id="chst" role="status"></p>
       </div>
+    </article>
+    <article class="lpcard">
+      <div class="lphead"><img class="lpic sm" data-ic="i:1040002" alt=""><h3>Decoration (NX)</h3><span id="pdecosum" class="pill p-hot"></span><button class="btn sm" id="pdecoclear">Clear</button></div>
+      <p class="sub">Cosmetics from the Deco tab. They draw over your armor in the picture and have no stats. Look them up in Maple Database &rarr; Items &rarr; NX / Decoration.</p>
+      <div class="lpdemo"><div class="decolist" id="pdeco"></div></div>
     </article>
     <article class="lpcard">
       <div class="lphead"><img class="lpic sm" data-ic="i:1002001" alt=""><h3>Preview</h3></div>
@@ -3683,7 +3682,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-11-01T18:32:38Z" data-ver="0.20.8">Site version: v0.20.8 · built Nov 1, 2026 · 18:32 UTC</p>
+  <p class="sitever" data-built="2026-11-01T18:32:45Z" data-ver="0.20.8">Site version: v0.20.8 · built Nov 1, 2026 · 18:32 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>

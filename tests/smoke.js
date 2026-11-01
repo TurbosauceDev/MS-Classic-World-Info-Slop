@@ -43,6 +43,7 @@ const boxGaps = require("./boxgaps");
   check(await p.evaluate(() => BLD.S.cls) === "Magician" && (await p.textContent("#chsum")).startsWith("Turbow · Level 30 "), "Character Builder home: class button drives the calculator, summary shows the name");
   await p.click('#chpose [data-p="jump"]'); check(await p.getAttribute('#chpose [data-p="jump"]', "aria-checked") === "true", "Character Builder home: pose button selects");
   check(await p.evaluate(() => [...document.querySelectorAll("nav .sgh")].map(e => e.dataset.cat).slice(0, 3).join()) === "trk,char,train", "Character Builder sits between Grind Tracker and Training");
+  check(await p.$$eval("#char #pdeco", l => l.length) === 1 && await p.$$eval("#plan #pdeco", l => l.length) === 0, "Decoration (NX) card lives on the Character Builder home");
   await p.click("#t-plan"); check(await p.getAttribute("#t-plan", "data-cat") === "char" && await p.getAttribute("#c-char", "aria-selected") === "true", "Build calculator lives under Character Builder");
   await p.click("#t-db"); await p.fill("#lpitq", "glove"); check(await p.$$eval("#lpitems .itname", l => l.length) > 0, "Maple Database landing: item search finds glove");
   await p.click("#lpitems .itname"); check(!(await p.isHidden("#items")) && await p.isVisible("#itback"), "landing item result opens its item page"); await p.click("#itback");
