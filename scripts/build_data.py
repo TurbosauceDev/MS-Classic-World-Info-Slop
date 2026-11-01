@@ -24,6 +24,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import analyze as a  # runs the analysis and exposes its helpers
 
 C = a.D + "current/"
+from name_fix import ITEM_NAME_FIX   # OSMS drops Ü/ü from item names
 items_json = json.load(open(C + "items.json"))
 ALL_ITEMS = [x for v in items_json.values() if isinstance(v, list) for x in v if isinstance(x, dict)]
 ITEM = {str(i["id"]): i for i in ALL_ITEMS}
@@ -198,7 +199,7 @@ def add_items(D, ids):
     for iid in sorted(set(ids) - set(D["items"])):   # sorted so rebuilds are byte-identical
         i = ITEM[iid]
         st = {k: v for k, v in (i.get("stats") or {}).items() if k in KEEP}
-        D["items"][iid] = {"n": i["name"], "c": i.get("category") or ("Scroll" if i.get("stat_type") or "Scroll" in i["name"] else ""),
+        D["items"][iid] = {"n": ITEM_NAME_FIX.get(iid, i["name"]), "c": i.get("category") or ("Scroll" if i.get("stat_type") or "Scroll" in i["name"] else ""),
                      "s": i.get("sub_category") or i.get("equip_slot") or "", "st": st, "job": i.get("req_job_label"),
                      "p": i.get("price") or st.get("price"), "d": (i.get("description") or "").strip(),
                      "wt": i.get("weapon_type"), "spd": i.get("attack_speed_label"), "sp": i.get("spec")}
