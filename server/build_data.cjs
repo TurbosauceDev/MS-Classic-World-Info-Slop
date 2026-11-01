@@ -10,5 +10,11 @@ for (const [mob, , , , exp, map, mapName] of D.timed || []){   // bosses / timed
   if (!maps[map].includes(String(mob))){ maps[map].push(String(mob)); mobs[mob] = exp }
 }
 for (const ids of Object.values(maps)) for (const id of ids) mobs[id] = mobs[id] || D.mobs[id]?.[3] || D.mobdb?.[id]?.exp || 0;   // KPQ monsters are only in mobdb
-fs.writeFileSync(path.join(__dirname, "src/gamedata.json"), JSON.stringify({maps, mobs, mapnames, exp: D.exp, items: Object.fromEntries(Object.entries(D.items).map(([id, it]) => [id, it.p || 0]))}));
-console.log("gamedata.json", Object.keys(maps).length, "maps", Object.keys(mobs).length, "monsters");
+// timed spawns for the boss-spot checks (0.3.30): map -> [[mob id, respawn seconds, boss flag], ...], plus mob names
+const timed = {}, mobnames = {};
+for (const [mob, name, , , , map, , , sec, boss] of D.timed || []){
+  (timed[map] = timed[map] || []).push([String(mob), sec || 3600, boss ? 1 : 0]);
+  mobnames[String(mob)] = name;
+}
+fs.writeFileSync(path.join(__dirname, "src/gamedata.json"), JSON.stringify({maps, mobs, mapnames, exp: D.exp, items: Object.fromEntries(Object.entries(D.items).map(([id, it]) => [id, it.p || 0])), timed, mobnames}));
+console.log("gamedata.json", Object.keys(maps).length, "maps", Object.keys(mobs).length, "monsters", Object.keys(timed).length, "timed maps");

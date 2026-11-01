@@ -182,14 +182,15 @@ function runInfo(){
   const S = slicer?.current?.state, min = S && S.last !== null ? Math.floor((S.last - S.start) / 6e4) : 0;
   return `shared run ${min}/15 min` + (runsSent ? `, ${runsSent} sent` : "");
 }
-// respawn timers for bosses and slow spawns on this map (respawn times from the game data; players say Mushmom takes longer)
+// respawn timers for bosses and slow spawns on this map (respawn times from the game data; players say Mushmom takes longer).
+// 0.3.30: respawnsWithSpots() (renderer-spots.js) folds shared kills from other trackers into the rows
 function renderRespawns(){
-  const list = session.respawns(Date.now()), box = $("#respawn");
+  const list = (typeof respawnsWithSpots === "function" ? respawnsWithSpots(Date.now()) : session.respawns(Date.now())), box = $("#respawn");
   box.classList.toggle("hidden", !list.length);
   if (!list.length) return;
   const mm = ms => { const m = Math.ceil(ms / 6e4); return m > 60 ? Math.floor(m / 60) + " h " + (m % 60) + " min" : m + " min" };
-  box.innerHTML = `<div class="k">Respawns on this map (game data)</div><table>` + list.map(r => `<tr><td>${esc(r.name)}${r.boss ? " (boss)" : ""}</td>
-    <td class="n${r.killed && r.dueIn != null && r.dueIn > 0 && r.dueIn <= 120e3 ? " soon" : ""}">${r.killed ? r.dueIn > 0 ? "back in ~" + mm(r.dueIn) : "due now" : "every " + mm(r.sec * 1000)}</td>
+  box.innerHTML = `<div class="k">Respawns on this map (game data${list.some(r => r.shared) ? " + shared kills" : ""})</div><table>` + list.map(r => `<tr><td>${esc(r.name)}${r.boss ? " (boss)" : ""}</td>
+    <td class="n${r.killed && r.dueIn != null && r.dueIn > 0 && r.dueIn <= 120e3 ? " soon" : ""}">${r.killed ? r.dueIn > 0 ? "back in ~" + mm(r.dueIn) : "due now" : "every " + mm(r.sec * 1000)}${r.shared ? `<div class="note">${r.shared} saw it${r.ch ? " · ch " + r.ch : ""} (shared)</div>` : ""}</td>
     <td class="rk"><button class="markKill" data-id="${r.id}" title="It just died but the log line didn't read — restart the timer by hand">killed it</button></td></tr>`).join("") + "</table>";
   box.querySelectorAll(".markKill").forEach(b => b.onclick = () => { const r = list.find(x => String(x.id) === b.dataset.id);
     if (!session.markKill(b.dataset.id)) return;

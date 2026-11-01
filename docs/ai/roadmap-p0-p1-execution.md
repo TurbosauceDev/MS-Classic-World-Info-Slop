@@ -31,8 +31,8 @@ the build order, and the guardrails that do not move.
 One generated sentence under every Shop prices card read, from a shared advice helper:
 `median 30K · quick 27K · 6 listed today`, plus a trend word. Thin-data fallback
 ("thin data — 3 sales this week") so the line never overstates. The same helper serves
-item 2. Files: `tracker/app/renderer-shop.js`, sentence helper beside the price chain in
-`tracker/core/prices.js`; scenes in `tracker/tests/shop.test.js`.
+item 2. Files: `tracker/app/renderer-shop.js`, quote fields in `tracker/core/prices.js`;
+scenes in `tracker/tests/shop.test.js` + `tracker/tests/core.test.js`.
 
 ### 2. P0-1 · Price check upgrade (Mesos and Trade) — the redirect
 The existing Price check tab keeps its flow (drop inventory/bank screenshots → items and
@@ -47,14 +47,14 @@ Files: `src/js/54-invprice.js`, shared sentence engine from item 1 (site side),
 The 0.3.24 shop read goes continuous: a low-frequency watcher looks for the open shop
 window (existing band constants) and re-reads rows automatically while the player
 browses; the Shop prices card and its badges refresh live.
-Controls: **Settings master toggle** (respected forever once turned off) + a pause
-hotkey; the one-shot shortcut read stays. Sharing contract unchanged: item/qty/price/sold
-only, anonymous, 3-player quorum, existing opt-in governs uploads.
-Files: `tracker/core/shopread.js` (loop, debounce, change detection),
-`tracker/app/main.js` (settings keys), `renderer-shop.js`, `renderer-settings.js`
-(toggle), `tracker/tests/shop.test.js` + `ui.test.js`.
+Controls: **Settings master toggle** (respected forever once turned off); the one-shot
+shortcut read stays. — SHIPPED 0.3.30, with Turbozo's same-day privacy change: uploads are
+v2 and name the shop (seller + title from the window's title bar via
+`tracker/core/shopread.js` readTitle, FM room parsed off the map name, map id; channel
+rides on the wire as null until the tracker can read the game's channel display). Files:
+`tracker/app/renderer-shop.js` (loop, debounce, change detection), `tracker/app/main.js`, `tracker/app/renderer-settings.js`, `tracker/tests/shop.test.js`.
 
-### 4. P0-2 · Shared boss spots (the networked boss tracking)
+### 4. P0-2 · Shared boss spots (the networked boss tracking) — SHIPPED 0.3.30
 Additive D1 table `boss_spots(boss, ch, t, n)` + `POST /api/spots` (opt-in, **no IGN**,
 rate-limited like the rest of the Worker) + `GET /api/spots?boss=`. Tracker side: timed
 kills are already detected (kill-log path + `markKill` buttons) → share
@@ -70,11 +70,11 @@ Files: `server/src/index.js`, `server/schema.sql`, `server/tests/server.test.js`
 5. **P1-6 · Digit models from our fixtures.** Train logistic-regression digit templates
    on the existing labelled corpora (`tracker/tests/frames*`, frames-inv meso counts,
    frames-kpq timers), swap into the count/meso/timer readers, keep Tesseract for text.
-   `tests/cv_bench.js` becomes the accuracy regression gate. New: `tracker/core/digits.js`
-   + `scripts/train_digits.py`.
+   `tracker/tests/cv_bench.js` becomes the accuracy regression gate. The digits module and
+   training script are to be created when this lands.
 6. **P1-8 · Overlay anchor mode (koffi).** Overlay cards can pin to the game window's
    rect and track it on move/resize; the shop watcher anchors to the shop window itself.
-   Guardrails below. Files: new `tracker/app/winrect.js`, `main.js`, overlay placement.
+   Guardrails below. A new winrect module in the tracker app (to be created), `tracker/app/main.js`, overlay placement.
 7. **P1-7 · Quest HUD reader.** Read the on-screen quest-tracker progress lines (same
    reader class as our pickup-line reader), map to the 216-quest DB, auto-sync the site
    quest log, live helper card.

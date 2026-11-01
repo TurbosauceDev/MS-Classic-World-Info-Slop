@@ -45,7 +45,8 @@ function ovBuild(s){
   const mid = s.nowMap != null ? String(s.nowMap) : s.map != null ? String(s.map) : null;
   const list = mid && G.maps[mid] ? G.maps[mid][2] : [];   // [mob, count] per the game data
   const spawns = list.filter(([id]) => G.mobs[id]).map(([id, n]) => ({name: G.mobs[id][0], lv: G.mobs[id][1], exp: G.mobs[id][3], n: n || 0}));
-  const respawns = (session.respawns ? session.respawns(Date.now()) : []).map(r => ({name: r.name, boss: r.boss, sec: r.sec, killed: r.killed}));
+  const respawns = (typeof respawnsWithSpots === "function" ? respawnsWithSpots(Date.now()) : (session.respawns ? session.respawns(Date.now()) : []))
+    .map(r => ({name: r.name, boss: r.boss, sec: r.sec, killed: r.killed, shared: r.shared || 0, ch: r.ch ?? null}));
   const bar = session.state.bar, r = TH.resolve(themeNow(), darkQ.matches);
   return {t: Date.now(), on: timer != null, wrap: !!wrap, held: !!held, paused: s.paused, dummy: dummyOn,
     runT0, clockMs: runClockMs(),   // frozen while paused by you / wrapping up (Danny 10-29: it kept counting)

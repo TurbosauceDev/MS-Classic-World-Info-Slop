@@ -13,7 +13,7 @@
                      public summary. The page itself carries no data; the key is asked once and kept in the browser
                      (localStorage fbkey) */
 import G from "./gamedata.json" with {type: "json"};
-import {cleanRun, cleanKpq, cleanShop, median, KPQ_MIN} from "./check.js";
+import {cleanRun, cleanKpq, cleanShop, cleanSpot, median, KPQ_MIN} from "./check.js";
 import Kpq from "../../tracker/core/kpqscore.js";   // the same scoring the tracker previews with
 import {ADMIN_HTML} from "./admin.js";
 
@@ -365,8 +365,10 @@ async function postForget(req, env){
   await one("runs", "DELETE FROM runs WHERE install = ?"); await one("runs_archive", "DELETE FROM runs_archive WHERE install = ?");
   await one("kpq", "DELETE FROM kpq_rounds WHERE install = ?"); await one("kpq_archive", "DELETE FROM kpq_rounds_archive WHERE install = ?");
   await one("party", "DELETE FROM party_live WHERE install = ?"); await one("shop", "DELETE FROM shop_obs WHERE install = ?");
+  await one("shop_ext", "DELETE FROM shop_obs_ext WHERE obs_id IN (SELECT id FROM shop_obs WHERE install = ?1)");
+  await one("spots", "DELETE FROM boss_spots WHERE install = ?");
   await db.prepare("DELETE FROM meta WHERE k IN ('summary', 'shop_summary')").run();   // the cached public numbers rebuild without it
-  return json({ok: true, removed: n.runs + n.runs_archive + n.kpq + n.kpq_archive + n.shop + n.party});
+  return json({ok: true, removed: n.runs + n.runs_archive + n.kpq + n.kpq_archive + n.shop + n.shop_ext + n.spots + n.party});
 }
 const SHOP_PER_HOUR = 240, SHOP_PER_IP_DAY = 1500, SHOP_KEEP_DAYS = 14, SHOP_MIN_INSTALLS = 3;
 async function postShop(req, env){
@@ -378,7 +380,10 @@ async function postShop(req, env){
   const today = await env.DB.prepare("SELECT COUNT(*) n, COUNT(DISTINCT install) k, SUM(install = ?) mine FROM shop_obs WHERE ipday = ?").bind(body.install, ipday).first();
   if (recent.n + c.rows.length > SHOP_PER_HOUR || today.n + c.rows.length > SHOP_PER_IP_DAY || today.k >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rows"}, 429);
   const t = now.toISOString();
-  await env.DB.batch(c.rows.map(r => env.DB.prepare("INSERT INTO shop_obs (install, ipday, received, item, qty, price, sold) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(body.install, ipday, t, r.id, r.qty, r.price, r.sold)));
+  const ids = (await env.DB.batch(c.rows.map(r => env.DB.prepare("INSERT INTO shop_obs (install, ipday, received, item, qty, price, sold) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(body.install, ipday, t, r.id, r.qty, r.price, r.sold)))).map(x => x.meta?.last_row_id);
+  // 0.3.30: the upload names the shop (Turbozo): one ext row per obs row, same values for the whole read
+  if (c.seller || c.title || c.ch != null || c.room != null || c.map != null)
+    await env.DB.batch(ids.filter(Boolean).map(id => env.DB.prepare("INSERT INTO shop_obs_ext (obs_id, seller, title, ch, room, map) VALUES (?, ?, ?, ?, ?, ?)").bind(id, c.seller, c.title, c.ch, c.room, c.map)));
   return json({ok: true, stored: c.rows.length});
 }
 // per item over the last 7 days: median price each of open asks and of sold rows, with how many rows and how many different
@@ -409,6 +414,34 @@ async function getShopSummary(env){
   return new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=600", ...CORS}});
 }
 
+// Shared boss spots (0.3.30, Turbozo: the boss tracker becomes a network). POST = one timed-kill report (the Share
+// switch governs; the same boss from one install within 30 min is a no-op), GET ?map= = witnesses per boss + channel
+// over the last 24 h: t = the freshest kill report, n = how many different trackers saw it. No identity in, no identity out.
+const SPOT_PER_HOUR = 120, SPOT_PER_IP_DAY = 400, SPOT_KEEP_H = 24, SPOT_SAME_MIN = 30;
+async function postSpot(req, env){
+  let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
+  const c = cleanSpot(body, G);
+  if (c.error) return json({error: c.error}, 400);
+  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  const hour = await env.DB.prepare("SELECT COUNT(*) n FROM boss_spots WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
+  const today = await env.DB.prepare("SELECT COUNT(*) n FROM boss_spots WHERE ipday = ?").bind(ipday).first();
+  if (hour.n >= SPOT_PER_HOUR || today.n >= SPOT_PER_IP_DAY) return json({error: "too many spots"}, 429);
+  const dup = await env.DB.prepare("SELECT id FROM boss_spots WHERE install = ? AND map = ? AND mob = ? AND received > ?").bind(body.install, c.spot.map, c.spot.mob, new Date(now - SPOT_SAME_MIN * 60e3).toISOString()).first();
+  if (dup) return json({ok: true, dup: true});
+  await env.DB.prepare("INSERT INTO boss_spots (install, ipday, received, map, mob, ch, t) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(body.install, ipday, now.toISOString(), c.spot.map, c.spot.mob, c.spot.ch, c.spot.t).run();
+  return json({ok: true});
+}
+async function getSpots(env, url){
+  const map = url.searchParams.get("map") || "";
+  if (!/^\d{1,10}$/.test(map) || !G.timed || !G.timed[map]) return json({error: "map"}, 400);
+  const cut = new Date(Date.now() - SPOT_KEEP_H * 3600e3).toISOString();
+  await env.DB.prepare("DELETE FROM boss_spots WHERE received < ?").bind(cut).run();
+  const {results} = await env.DB.prepare("SELECT mob, ch, MAX(t) t, COUNT(DISTINCT install) n FROM boss_spots WHERE map = ? AND received > ? GROUP BY mob, ch").bind(map, cut).all();
+  const info = Object.fromEntries(G.timed[map].map(([id, sec, boss]) => [id, {sec, boss}]));
+  return json({updated: new Date().toISOString(), hours: SPOT_KEEP_H,
+    spots: results.map(r => ({mob: r.mob, name: G.mobnames?.[r.mob] || "Monster " + r.mob, sec: info[r.mob]?.sec ?? 3600, boss: !!(info[r.mob]?.boss), ch: r.ch, t: r.t, n: r.n}))});
+}
+
 async function route(req, env){
   const url = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
@@ -416,6 +449,8 @@ async function route(req, env){
   if (url.pathname === "/api/kpq" && req.method === "POST") return postKpq(req, env);
   if (url.pathname === "/api/shop" && req.method === "POST") return postShop(req, env);
   if (url.pathname === "/api/forget" && req.method === "POST") return postForget(req, env);
+  if (url.pathname === "/api/spots" && req.method === "POST") return postSpot(req, env);
+  if (url.pathname === "/api/spots" && req.method === "GET") return getSpots(env, url);
   if (url.pathname === "/api/shop/summary" && req.method === "GET") return getShopSummary(env);
   if (url.pathname === "/api/party" && req.method === "POST") return partyLive(req, env);
   if (url.pathname === "/api/feedback" && req.method === "POST") return postFeedback(req, env);

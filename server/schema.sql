@@ -115,3 +115,30 @@ CREATE TABLE IF NOT EXISTS shop_obs (
 CREATE INDEX IF NOT EXISTS shop_obs_item ON shop_obs (item, received);
 CREATE INDEX IF NOT EXISTS shop_obs_install ON shop_obs (install, received);
 CREATE INDEX IF NOT EXISTS shop_obs_ipday ON shop_obs (ipday);
+-- Shop uploads 0.3.30 name the shop (Turbozo 2026-11-01: "we want the seller, the fm room and which channel — us
+-- anonymizing that was a mistake on our part"): one ext row per shop_obs row, same values for the whole upload (one
+-- read = one shop window). Side table: schema.sql re-runs every deploy. The tracker's "Delete what I shared" clears it.
+CREATE TABLE IF NOT EXISTS shop_obs_ext (
+  obs_id   INTEGER PRIMARY KEY,      -- shop_obs.id
+  seller   TEXT,                     -- the owner IGN from the shop window's title bar ("<owner> : <title>"), null when unread
+  title    TEXT,                     -- the shop title, null when unread
+  ch       INTEGER,                  -- channel, when the tracker can read it (null for now)
+  room     INTEGER,                  -- FM room parsed off the map name ("Free Market <3>"), null elsewhere
+  map      TEXT                      -- the game map id the read happened on
+);
+CREATE INDEX IF NOT EXISTS shop_obs_ext_seller ON shop_obs_ext (seller);
+-- Shared boss spots (0.3.30, Turbozo: "make our boss tracker more automatic, more accurate, easier to use"): timed-kill
+-- reports shared through the tracker's Share switch. One row per report; GET /api/spots?map= aggregates witnesses per
+-- boss + channel over the last 24 h. No identity: the install ID only dedupes votes and powers "Delete what I shared".
+CREATE TABLE IF NOT EXISTS boss_spots (
+  id       INTEGER PRIMARY KEY,
+  install  TEXT NOT NULL,
+  ipday    TEXT NOT NULL,
+  received TEXT NOT NULL,
+  map      TEXT NOT NULL,            -- game map id, one of gamedata.json's timed maps
+  mob      TEXT NOT NULL,            -- timed monster id on that map
+  ch       INTEGER,                  -- channel when the tracker can read it (null for now)
+  t        INTEGER NOT NULL          -- the kill's ms epoch (client clock, bounded to now +/- 10 min)
+);
+CREATE INDEX IF NOT EXISTS boss_spots_map ON boss_spots (map, received);
+CREATE INDEX IF NOT EXISTS boss_spots_install ON boss_spots (install, received);

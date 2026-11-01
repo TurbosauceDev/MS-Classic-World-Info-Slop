@@ -89,8 +89,14 @@ export function cleanKpq(r){
   return {round, ok: !why, why};
 }
 
-/* A shop upload: {install, v: 1, rows: [{id, qty, price, sold}]}. Only known fields, whole numbers in range, item ids the game has;
-   a row that fails is dropped (junk from the network never reaches the table), a body with no good row is refused. */
+/* A shop upload: {install, v: 1|2, rows: [{id, qty, price, sold}], seller?, title?, ch?, room?, map?}. Only known fields, whole
+   numbers in range, item ids the game has; a row that fails is dropped (junk from the network never reaches the table), a body
+   with no good row is refused. v2 (Turbozo 2026-11-01) names the shop: seller = an IGN shape (4-12 letters/digits), title =
+   printable text to 60, ch/room small ints, map = a game map id. Everything is optional and stored as null when absent, so an
+   older tracker's v1 body still stores. */
+const IGN = /^[A-Za-z0-9]{4,12}$/;
+const printable = (v, n) => { const s = typeof v === "string" ? v.replace(/[\u0000-\u001f<>"&|]/g, "").trim().slice(0, n) : ""; return s || null };
+const smallInt = (v, hi) => typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= hi ? v : null;
 export function cleanShop(b, G){
   if (!b || typeof b !== "object" || Array.isArray(b)) return {error: "not a shop upload"};
   if (typeof b.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(b.install)) return {error: "install id"};
@@ -103,5 +109,20 @@ export function cleanShop(b, G){
     if (seen.has(k)) continue;
     seen.add(k); rows.push({id: r.id, qty: r.qty, price: r.price, sold});
   }
-  return rows.length ? {rows} : {error: "no usable rows"};
+  if (!rows.length) return {error: "no usable rows"};
+  return {rows, seller: IGN.test(b.seller || "") ? b.seller : null, title: printable(b.title, 60),
+    ch: smallInt(b.ch, 40), room: smallInt(b.room, 100), map: /^\d{1,10}$/.test(b.map || "") ? b.map : null};
+}
+
+/* A shared boss spot (0.3.30): {install, map, mob, ch?, t} — the map must be a timed map and the mob one of its timed
+   monsters (the game data decides, not the client); t is the kill's ms epoch, bounded to now +/- 10 min for clock skew. */
+export function cleanSpot(b, G){
+  if (!b || typeof b !== "object") return {error: "not a spot"};
+  if (typeof b.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(b.install)) return {error: "install id"};
+  if (typeof b.map !== "string" || !/^\d{1,10}$/.test(b.map) || !G.timed || !G.timed[b.map]) return {error: "map"};
+  const mob = String(b.mob ?? "");
+  if (!/^\d{1,10}$/.test(mob) || !G.timed[b.map].some(([id]) => id === mob)) return {error: "mob"};
+  if (b.ch != null && !smallInt(b.ch, 40)) return {error: "ch"};
+  if (typeof b.t !== "number" || !Number.isInteger(b.t) || Math.abs(b.t - Date.now()) > 10 * 60e3) return {error: "time"};
+  return {spot: {map: b.map, mob, ch: b.ch ?? null, t: b.t}};
 }

@@ -623,6 +623,20 @@ ipcMain.handle("shop-share", async (_, body) => {
     return r.ok;
   } catch { return false }
 });
+// shared boss spots (renderer-spots.js, 0.3.30, Turbozo): one timed-kill report up (Share switch governs), the map's
+// witnesses back. The GET is public: every tracker's respawn card gets richer, sharing or not.
+ipcMain.handle("spot-share", async (_, body) => {
+  const st = readSettings();
+  if (!SERVER || !st.share || !st.install) return false;
+  try {
+    const r = await fetch(SERVER + "/api/spots", {signal: AbortSignal.timeout(10e3), method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({...body, install: st.install})});
+    return r.ok;
+  } catch { return false }
+});
+ipcMain.handle("spots-get", async (_, map) => {
+  if (!SERVER || typeof map !== "string" || !/^\d{1,10}$/.test(map)) return null;
+  try { const r = await fetch(SERVER + "/api/spots?map=" + map, {signal: AbortSignal.timeout(10e3)}); return r.ok ? await r.json() : null } catch { return null }
+});
 // "Delete what I shared" (Settings > Window and sharing): the server drops every run, KPQ round, shop row and party row this copy ever sent,
 // then this copy gets a new random ID (nothing later links back) and its unsent queue is emptied. Works with sharing off too.
 ipcMain.handle("forget-shared", async () => {

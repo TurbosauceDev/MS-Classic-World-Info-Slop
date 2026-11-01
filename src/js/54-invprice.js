@@ -116,7 +116,14 @@ function advice(id){
   if (!p) return {each: npc, how: npc ? `No player sales seen. NPC pays ${fmt(npc)}.` : "No player sales seen, NPC buys it for nothing.", cls: "na"};
   const per = p[4] & 2 ? " per set" : "", low = p[4] & 1;
   if (npc >= p[0]) return {each: npc, how: `Sell to an NPC: it pays ${fmt(npc)}, players ~${fmt(p[0])}${per}.`, cls: ""};
-  return {each: p[0], how: `List at ~<b>${fmt(p[0])}</b>${per} (half sold for ${fmt(p[1])}-${fmt(p[2])}).${low ? ` <span class="pill p-warn" title="Fewer than 5 sales seen: rough">few sales</span>` : ""}`, cls: ""};
+  // the coaching sentence (0.3.30, Turbozo approved bringing the Shop-Pricer ideas here): quick / usual / patient asks
+  // off the same p25/median/p75 the Prices page shows, the 3-day usual when the price is moving, sell-through, trend,
+  // and the cheapest live listing. Numbers unchanged — meso.watch medians first, NPC fallback, never invented.
+  const u = pwUsual(id), band = pwBand(id), quick = band ? band[0] : p[1], patient = band ? band[1] : p[2];
+  const live = (typeof PWNOW !== "undefined" && PWNOW[id]) ? ` Cheapest listed now: ${fmt(PWNOW[id][0])}.` : "";
+  return {each: p[0], how: `List at ~<b>${fmt(p[0])}</b>${per} — quick ${fmt(quick)} · usual ${u ? fmt(u.v) : fmt(p[0])} · patient ${fmt(patient)}.` +
+    (u && u.moving ? ` <span class="sub" title="The daily medians moved 25%+ in a day: the usual is a 3-day weighted average">(price moving — usual is a 3-day average)</span>` : "") +
+    ` ${pwSellTag(id)}${low ? ` <span class="pill p-warn" title="Fewer than 5 sales seen: rough">few sales</span>` : ""}${live}${pwTrend(id)}`, cls: ""};
 }
 const TABNAME = {equip: "Equip", use: "Use", etc: "Etc", bank: "Bank"};
 // every item read, once ({id, n, g, tabs, noN}), slots not read and the meso totals; the Craft planner reads it too

@@ -669,7 +669,7 @@
   </section>
   <section id="shopPop" class="modal hidden" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
     <div class="pophead"><h2 id="shopTitle">Shop prices</h2><button id="shopClose" class="alt" title="Close (Esc)" aria-label="Close">✕</button></div>
-    <div class="card" id="shopCard"><div id="shopRows"></div><div class="note" id="shopNote"></div></div>
+    <div class="card" id="shopCard"><div id="shopRows"></div><div class="note" id="shopSum" style="font-weight:600"></div><div class="note" id="shopNote"></div></div>
   </section>
   <!-- Quick palette (Ctrl+K, v0.2.85): type to jump to any module, view, pop-up or run control -->
   <section id="palPop" class="modal short hidden" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="palTitle">
@@ -812,6 +812,7 @@
     <div class="card" data-nav="Window"><h3>Window and sharing</h3>
       <label class="chk"><input type="checkbox" id="ontop"> <span>Keep this window on top of everything</span></label>
       <label class="chk"><input type="checkbox" id="share"> <span>Share my sessions for the leaderboards (map, kills, drops, KPQ rounds)</span></label>
+      <label class="chk"><input type="checkbox" id="shopWatch"> <span>Shop watch: read merchant shops automatically while I browse (uploads follow the Share switch; shops are named — seller, title, room, channel when readable)</span></label>
       <label class="chk"><input type="checkbox" id="kpqName"> <span>Show my character name on the KPQ board (the Name above if typed, else the name read from the status bar). Off: a made-up name that stays yours, like Archer4821</span></label>
       <div class="row"><button id="shareForget" class="alt" title="Asks the server to delete every run, KPQ round and shop price this copy of the tracker ever sent">Delete what I shared</button> <span class="note" id="shareForgetNote" role="status"></span></div>
     </div>
@@ -919,6 +920,7 @@
   <script src="renderer-overlay.js"></script>
   <script src="renderer-chat.js"></script>
   <script src="renderer-shop.js"></script>
+  <script src="renderer-spots.js"></script>
   <script src="renderer-range.js"></script>
   <script src="renderer-dummy.js"></script>
   <script src="renderer-perf.js"></script>

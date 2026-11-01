@@ -116,6 +116,27 @@
     return {truncated: cut, items};
   }
 
+  /* The shop window's title bar: "<owner IGN> : <shop title>" (Danny's own-shop fixture, 2026-11-01:
+     "swagmart : i like channel 4 fm 10"). The text band sits 131..145 native px above the first row's top and spans
+     from 20 px left of the list text to 95 px right of it (measured on the fixture at 2x UI). Best effort: null when
+     the band is empty or off frame. The owner name is what the shop's seller field shares. */
+  function parseTitle(text){
+    const t = String(text || "").replace(/^[|:\s]+/, "").replace(/[|\s]+$/, "").trim();
+    if (!t) return null;
+    const c = /:\s*/.exec(t);
+    let seller = null, title = t;
+    // owner names are 4-12 letters/digits in Classic: anything shorter before the colon is title text ("Buy: 30k each")
+    if (c){ const o = t.slice(0, c.index).replace(/[^A-Za-z0-9]/g, ""); if (o.length >= 4 && o.length <= 12){ seller = o; title = t.slice(c.index + c[0].length).trim() } }
+    return {seller, title: title.slice(0, 60) || null};
+  }
+  async function readTitle(img, ocr, opt = {}){
+    const k = img.k ? 1 : opt.k || 2, rows = findRows(img, k);
+    if (!rows.length) return null;
+    const top = rows[0].top, box = [rows[0].x0 - 20 * k, top - 145 * k, rows[0].x1 + 95 * k, top - 131 * k];
+    if (box[1] < 0 || box[3] < 0 || box[2] > img.w) return null;
+    return parseTitle(await ocr(cut(img, ...box, 0.5, 2 * (2 / k))));
+  }
+
   async function readShop(img, ocr, opt = {}){
     const k = img.k ? 1 : opt.k || 2, out = [], m = 2 / k;   // m: a native-size frame (k 1) is upscaled twice as much so Tesseract sees the same size
     for (const r of findRows(img, k)){
@@ -132,6 +153,6 @@
     return out;
   }
 
-  const api = {separators, findRows, cut, parseOffer, matchName, readShop, MIN, EXACT, TIE, MIN_PREFIX};
+  const api = {separators, findRows, cut, parseOffer, matchName, readShop, parseTitle, readTitle, MIN, EXACT, TIE, MIN_PREFIX};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindShopRead = api;
 })(typeof self !== "undefined" ? self : this);

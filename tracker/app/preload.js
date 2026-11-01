@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld("host", {
   ocr: png => ipcRenderer.invoke("ocr", png),
   shareRun: run => ipcRenderer.invoke("share-run", run),
   shareShop: rows => ipcRenderer.invoke("shop-share", rows),
+  spotShare: s => ipcRenderer.invoke("spot-share", s),
+  spotsGet: map => ipcRenderer.invoke("spots-get", map),
   forgetShared: () => ipcRenderer.invoke("forget-shared"),
   summary: () => ipcRenderer.invoke("summary"),
   sessions: () => ipcRenderer.invoke("sessions"),

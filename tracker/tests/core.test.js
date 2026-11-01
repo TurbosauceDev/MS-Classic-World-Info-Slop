@@ -662,7 +662,7 @@ console.log("alerts ok");
 // site market data (0.2.83): core/prices.js parse/quote/movers/fmtM + the priceAbove/priceBelow alert kinds
 { const P = require("../core/prices.js");
   const j = {read: "2026-10-28", listed: "2026-10-28 17:00",
-    it: {"4010001": [300, 299, 330, 16866, 0, -0.06], "4010002": [500, 480, 520, 60, 0, 0.5], "4000000": [10, 9, 11, 5, 1, 0]},
+    it: {"4010001": [300, 299, 330, 16866, 0, -0.06, 0.42], "4010002": [500, 480, 520, 60, 0, 0.5], "4000000": [10, 9, 11, 5, 1, 0]},
     hist: {"4010001": [["2026-10-26", 350, 2014], ["2026-10-27", 310, 2326], ["2026-10-28", 300, 1662]],
            "4010002": [["2026-10-27", 400, 50], ["2026-10-28", 500, 60]],
            "4000000": [["2026-10-28", 10, 3]]},
@@ -672,6 +672,7 @@ console.log("alerts ok");
   assert.ok(p.ok, "parses");
   const q1 = P.quote(p, "4010001");
   assert.strictEqual(q1.median, 300); assert.strictEqual(q1.live, 299); assert.strictEqual(q1.listings, 2);
+  assert.strictEqual(q1.sell, 0.42, "sell-through rides on the it row's 7th field (0.3.30: the shop card's advice line)");
   assert.strictEqual(P.quote(p, "nope"), null);
   assert.strictEqual(P.parse({}).ok, false, "no items: bad");
   assert.strictEqual(P.parse({it: {"1": "x"}}).ok, false, "non-array row: bad");

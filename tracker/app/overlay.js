@@ -305,7 +305,7 @@ const RENDER = {
     const m = d.map || {}, list = m.spawns || [], nm = Math.min(list.length, Math.max(wv(id, "rows"), fitRows(id, 22)));
     const mobs = list.slice(0, nm).map(x => `<div class="mrow"><b>${esc(x.name)}</b><span>${x.n ? "×" + x.n + " · " : ""}Lv ${x.lv} · ${fmt(x.exp)} EXP</span></div>`).join("");
     const resp = (m.respawns || []).map(r => { const due = r.killed ? r.killed + r.sec * 1000 - d.t : null;
-      return `<div class="mrow"><b>${esc(r.name)}${r.boss ? " (boss)" : ""}</b><span class="${due != null && due <= 0 ? "pos" : due != null && due <= 120e3 ? "soon" : ""}">${r.killed ? due > 0 ? "back in ~" + respT(due) : "due now" : "every " + respT(r.sec * 1000)}</span></div>` }).join("");
+      return `<div class="mrow"><b>${esc(r.name)}${r.boss ? " (boss)" : ""}</b><span class="${due != null && due <= 0 ? "pos" : due != null && due <= 120e3 ? "soon" : ""}">${r.killed ? due > 0 ? "back in ~" + respT(due) : "due now" : "every " + respT(r.sec * 1000)}${r.shared ? ` · ${r.shared} saw it${r.ch ? " · ch " + r.ch : ""}` : ""}</span></div>` }).join("");
     return `<div class="mapname">${esc(m.name || "No map yet")}</div>`
       + (list.length ? `<div class="sub">${list.reduce((a, x) => a + (x.n || 0), 0)} spawns</div>` + mobs + (list.length > nm ? `<div class="sub dim">and ${list.length - nm} more</div>` : "") : "")
       + (resp ? `<div class="sect">respawns</div>` + resp : "");
@@ -350,7 +350,8 @@ const RENDER = {
   shop(d, id){
     const s = d.shop, n = Math.max(wv(id, "lines"), fitRows(id, 20));
     if (!s || !s.rows.length) return `<div class="empty">Open a shop and press the shop shortcut (Settings).</div>`;
-    return s.rows.slice(0, n).map(r => `<div class="cm"${r.s ? ` style="opacity:.55"` : ""}><b>${esc(r.n)}</b> ${r.a == null ? `<span class="dim">?</span>` : fmt(r.a)}${r.m ? ` <span class="dim">vs ${fmt(r.m)}</span>` : ""}` +
+    const sum = s.sum ? `<div class="dim" style="margin-bottom:2px">${esc(s.sum)}</div>` : "";
+    return sum + s.rows.slice(0, n).map(r => `<div class="cm"${r.s ? ` style="opacity:.55"` : ""}><b>${esc(r.n)}</b> ${r.a == null ? `<span class="dim">?</span>` : fmt(r.a)}${r.m ? ` <span class="dim">vs ${fmt(r.m)}</span>` : ""}` +
       `${r.p == null ? "" : ` <span class="${r.p <= -0.05 ? "pos" : r.p >= 0.25 ? "neg" : "dim"}">${r.p > 0 ? "+" : ""}${Math.round(r.p * 100)}%</span>`}${r.u ? ` <span class="dim">?</span>` : ""}</div>`).join("");
   },
   range: (d, id) => rngCard(id),

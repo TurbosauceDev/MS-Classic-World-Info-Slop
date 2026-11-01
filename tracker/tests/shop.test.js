@@ -57,5 +57,27 @@ const NAMES = Object.entries(G.items).map(([id, it]) => [id, it.n]);
   assert.deepStrictEqual(M("Hat Accuracy Scroll: Intermediate", T), ["Hat Accuracy Scroll: Intermediate"]);   // whole-name 95+ beats the prefix rule
   assert.strictEqual(S.matchName("Hat Accuracy Scr...", T).truncated, true);
 
+  // the shop window's title bar, "<owner IGN> : <shop title>" (0.3.30, Turbozo: shop uploads name the shop).
+  // parseTitle on what the fixture's band shows ("swagmart : i like channel 4 fm 10", seen on own-shop.png)
+  assert.deepStrictEqual(S.parseTitle("swagmart : i like channel 4 fm 10"), {seller: "swagmart", title: "i like channel 4 fm 10"});
+  assert.deepStrictEqual(S.parseTitle("|| Turbow : scrolls cheap"), {seller: "Turbow", title: "scrolls cheap"});
+  assert.deepStrictEqual(S.parseTitle("nice prices here"), {seller: null, title: "nice prices here"});   // no colon: the whole thing is the title
+  assert.deepStrictEqual(S.parseTitle("my:way:too:many:colons"), {seller: null, title: "my:way:too:many:colons"});   // owner part not a name shape
+  assert.deepStrictEqual(S.parseTitle("Ab : x"), {seller: null, title: "Ab : x"});   // under 4 letters: not a Classic name, all title text
+  assert.deepStrictEqual(S.parseTitle("Buy: 30k each"), {seller: null, title: "Buy: 30k each"});   // "Buy:" is title text, not a seller
+  assert.strictEqual(S.parseTitle("  || "), null);
+  assert.strictEqual(S.parseTitle(""), null);
+  // readTitle: the geometry lands on the title band (dark ink present) and the stubbed text parses. The band's expected
+  // box on the fixture at 2x UI: x 100..632, y 65..93 (first row top 355, measured 2026-11-01)
+  { let saw = null, ink = 0;
+    const ti = await S.readTitle(img, async c => { saw = c; for (let i = 0; i < c.d.length; i += 4) if (c.d[i] < 120) ink++; return "swagmart : i like channel 4 fm 10" }, {k: 2});
+    assert.deepStrictEqual(ti, {seller: "swagmart", title: "i like channel 4 fm 10"});
+    assert.ok(saw.w === 532 * 2 + 24 && saw.h === 28 * 2 + 24, "title cut is the band, upscaled 2x, plus its margin, got " + saw.w + "x" + saw.h);
+    assert.ok(ink > 200, "the title band holds dark text ink, got " + ink);
+    // a native-size frame (readers.native, .k set) reads the same title
+    ink = 0;
+    const ti2 = await S.readTitle(nat, async () => "swagmart : i like channel 4 fm 10");
+    assert.deepStrictEqual(ti2, ti, "native frame: same title"); }
+
   console.log("shop tests passed");
 })().catch(e => { console.error(e); process.exit(1) });

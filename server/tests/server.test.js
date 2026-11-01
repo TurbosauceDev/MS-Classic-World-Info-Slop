@@ -331,6 +331,41 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   sm = await sum(); assert.strictEqual(sm.items[id2].ask[0], 5000, "a flooding install gets one vote: " + JSON.stringify(sm.items[id2]));
 }
 
+// 0.3.30 (Turbozo): shop uploads name the shop (seller/title/ch/room/map) + shared boss spots
+{
+  const inst = c => c.repeat(16) + "9";
+  const row = (extra = {}) => ({id: 1002002, qty: 1, price: 1200, sold: 0, ...extra});
+  const post = (path, body, ip = "10.9.8.1") => worker.fetch(new Request("https://x" + path, {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
+  let [st, rb] = await post("/api/shop", {install: inst("A"), v: 2, seller: "swagmart", title: "i like channel 4 fm 10", ch: null, room: 10, map: "100000000", rows: [row()]});
+  assert.strictEqual(st, 200, JSON.stringify(rb));
+  assert.deepStrictEqual(sql.prepare("SELECT seller, title, ch, room, map FROM shop_obs_ext").all().map(o => ({...o})),
+    [{seller: "swagmart", title: "i like channel 4 fm 10", ch: null, room: 10, map: "100000000"}], "the named upload lands in the ext table");
+  await post("/api/shop", {install: inst("C"), v: 2, seller: "<script>x</script>", title: "hi there", rows: [row()]});
+  assert.deepStrictEqual(sql.prepare("SELECT seller, title FROM shop_obs_ext WHERE seller IS NOT NULL").all().length, 1, "junk names are nulled, never stored");
+  await post("/api/shop", {install: inst("B"), v: 1, rows: [row()]});
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM shop_obs_ext").get().n, 2, "a v1 body adds no ext row");
+
+  // boss spots: two witnesses on Mano (map 10000013), the same install reporting again inside 30 min is a no-op
+  const spot = (body, ip = "10.9.9.9") => post("/api/spots", body, ip);
+  [st, rb] = await spot({install: inst("P"), map: "10000013", mob: "700004", ch: 3, t: Date.now()});
+  assert.strictEqual(st, 200, JSON.stringify(rb));
+  [st, rb] = await spot({install: inst("P"), map: "10000013", mob: "700004", ch: 3, t: Date.now()});
+  assert.strictEqual(rb.dup, true, "same install + boss within 30 min: no-op");
+  [st] = await spot({install: inst("Q"), map: "10000013", mob: "700004", ch: 3, t: Date.now()}, "10.9.9.10"); assert.strictEqual(st, 200);
+  for (const b of [{install: inst("R"), map: "999999999", mob: "700004", t: Date.now()}, {install: inst("R"), map: "10000013", mob: "777777", t: Date.now()},
+    {install: inst("R"), map: "10000013", mob: "700004", t: Date.now() + 30 * 60e3}, {install: inst("R"), map: "10000013", mob: "700004", ch: 99, t: Date.now()}]){
+    [st] = await spot(b, "10.9.9.11"); assert.strictEqual(st, 400, "bad spot rejected: " + JSON.stringify(b).slice(0, 70));
+  }
+  const spots = await worker.fetch(new Request("https://x/api/spots?map=10000013"), env).then(r => r.json());
+  assert.strictEqual(spots.spots.length, 1, JSON.stringify(spots));
+  assert.strictEqual(spots.spots[0].name, "Mano"); assert.strictEqual(spots.spots[0].n, 2, "two witnesses");
+  assert.strictEqual(spots.spots[0].sec, 3600); assert.strictEqual(spots.spots[0].boss, true); assert.strictEqual(spots.spots[0].ch, 3);
+  [st] = await worker.fetch(new Request("https://x/api/spots?map=999"), env).then(r => [r.status]); assert.strictEqual(st, 400, "unknown map");
+  [st, rb] = await post("/api/forget", {install: inst("P")});
+  assert.strictEqual(st, 200);
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM boss_spots WHERE install = ?").get(inst("P")).n, 0, "forget clears spots");
+}
+
 // junk bodies (idea list from OkocimK/MaplePrices' clean_row, 2026-10-31): every POST endpoint answers 400, never 500, and stores nothing
 {
   const before = sql.prepare("SELECT (SELECT COUNT(*) FROM runs) + (SELECT COUNT(*) FROM kpq_rounds) n").get().n;
