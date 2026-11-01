@@ -613,19 +613,43 @@ def step_itemdb(D):
     D["ishop"] = out
 
 def step_cash(D):
-    """NX / Decoration: every Cash Shop item in the export's cash_shop.json (cosmetic equips like the Slime T-Shirt, pets,
-    coupons, megaphones, ...) gets a D.items entry with c = "Cash", s = its slot/kind, nx = NX price (None = not on sale
-    in the shop) and an icon. They have no stats, drops or shops, so the Items page lists them without a "known source"."""
-    for k in [k for k, v in D["items"].items() if v.get("c") == "Cash"]: D["items"].pop(k); D["iicons"].pop(k, None)   # rebuild from scratch
+    """NX / Decoration: the Cash Shop items (cosmetic equips like the Slime T-Shirt, pets, coupons, ...) that are RELEASED in
+    Classic World (Danny 11-01: the export lists every item in the client, most never shipped). Released = any of
+      shop   cash_shop.json says it is on sale / has an NX price,
+      market maplestory.watch or mesoarbitrage shop scans have seen it traded (mesoarbitrage by id, maplestory.watch by name),
+      box    named in the description of a box the export lists with its contents (event gift boxes).
+    Each gets a D.items entry with c = "Cash", s = slot/kind, nx = NX price (None = not sold in the shop), rel = the reasons
+    and an icon. Fashion Crate contents are in no source we have, so a crate-only item shows up once a market scan sees it."""
+    import re
     kind = {101: "Face Accessory", 102: "Eye Decoration", 103: "Earring"}   # the export files all three under "Earring"; the Deco window has a slot for each
-    for cat in json.load(open(C + "cash_shop.json"))["categories"]:
-        for i in cat["items"]:
-            iid = str(i["id"])
-            if not (i.get("name") or "").strip() or (iid in D["items"] and D["items"][iid].get("c") != "Cash"): continue   # 2 export rows have no name
-            D["items"][iid] = {"n": i["name"], "c": "Cash", "s": kind.get(i["id"] // 10000) or i.get("sub_category") or i["category"], "st": {}, "job": None, "p": None,
-                               "d": (i.get("description") or "").strip(), "wt": None, "spd": None, "sp": None, "nx": i.get("price"), "k": i["category"]}
-            p = C + f"images/items/{int(iid):08d}.png"
-            if os.path.exists(p): D["iicons"][iid] = b64(p)
+    for k in [k for k, v in D["items"].items() if v.get("c") == "Cash"]: D["items"].pop(k); D["iicons"].pop(k, None)   # rebuild from scratch
+    cash = {str(i["id"]): (i, cat["category"]) for cat in json.load(open(C + "cash_shop.json"))["categories"] for i in cat["items"]
+            if (i.get("name") or "").strip() and not (str(i["id"]) in D["items"])}   # 211 export rows have no name
+    src = ROOT / "data" / "sources"
+    rel = collections.defaultdict(set)
+    for iid, (i, _) in cash.items():
+        if i.get("on_sale") or i.get("price") is not None: rel[iid].add("shop")
+    for iid in json.load(open(src / "mesoarbitrage_prices.json"))["items"]:
+        if iid in cash: rel[iid].add("market")
+    byname = collections.defaultdict(list)
+    for iid, (i, _) in cash.items(): byname[i["name"].strip().lower()].append(iid)
+    for name in json.load(open(src / "maplestorywatch_prices.json"))["items"]:
+        for iid in byname.get(name.strip().lower(), []): rel[iid].add("market")
+    for i in ALL_ITEMS:   # event boxes list what they hold: "- Octopus Hat (Transferable within world) x1"
+        if str(i["id"]).startswith("2430") and "Double-click" in (i.get("description") or ""):
+            for ln in re.findall(r"^- (.+)$", i["description"], re.M):
+                ln = re.sub(r"\s*x\d+\s*$", "", ln.strip())
+                while True:   # trailing "(Transferable within world, Permanent)" / "(30 Days)", not the name's own "(Black)"
+                    t = re.sub(r"\s*\((?:Transferable|Untradable|Tradable|Permanent|Non-trade|\d+ Days?)[^)]*\)\s*$", "", ln)
+                    if t == ln: break
+                    ln = t
+                for iid in byname.get(ln.lower(), []): rel[iid].add("box")
+    for iid, why in sorted(rel.items()):
+        i, cat = cash[iid]
+        D["items"][iid] = {"n": i["name"], "c": "Cash", "s": kind.get(i["id"] // 10000) or i.get("sub_category") or cat, "st": {}, "job": None, "p": None,
+                           "d": (i.get("description") or "").strip(), "wt": None, "spd": None, "sp": None, "nx": i.get("price"), "k": cat, "rel": sorted(why)}
+        p = C + f"images/items/{int(iid):08d}.png"
+        if os.path.exists(p): D["iicons"][iid] = b64(p)
 
 def step_kpq(D):
     """kpq [{id, name, mm (webp base64), dim [w, h], rate (mob rate), npc [[npcId, x, y]], mob [[mobId, x, y]]}]: the KPQ maps
