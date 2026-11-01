@@ -3,3 +3,5 @@ dist/
 app/shot.js
 app/gamedata.js
 app/gamedata.json
+app/skilldata.js
+app/skilldata.json

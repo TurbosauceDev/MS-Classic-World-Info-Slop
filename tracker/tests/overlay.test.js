@@ -22,7 +22,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
         edit: async on => (window.ovEditCalls = (window.ovEditCalls || []).concat([on !== false]), true),
         done: async () => (window.ovEditCalls = (window.ovEditCalls || []).concat([false]), true),
         close: async () => (window.ovClosed = true, true),
-        hit: on => (window.ovHits = (window.ovHits || []).concat([!!on])), bag: t => (window.ovBags = (window.ovBags || []).concat([t])), onBorderless: cb => window.ovBd = cb, showMain: async () => (window.ovBack = true, true), onData: cb => window.ovData = cb, onMode: cb => window.ovMode = cb, onScreens: cb => window.ovScreens = cb,
+        hit: on => (window.ovHits = (window.ovHits || []).concat([!!on])), bag: t => (window.ovBags = (window.ovBags || []).concat([t])), onBorderless: cb => window.ovBd = cb, showMain: async () => (window.ovBack = true, true), onData: cb => window.ovData = cb, onFeet: cb => window.ovFeetCb = cb, onMode: cb => window.ovMode = cb, onScreens: cb => window.ovScreens = cb,
       };
     });
     await page.goto("file://" + path.join(__dirname, "../app/overlay.html"));
@@ -32,7 +32,7 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
       !document.querySelector("#ovw-kills"), !document.querySelector("#ovw-mesos"), !document.querySelector("#ovw-log"),
       !document.querySelector("#ovpanel").classList.contains("hidden"), document.body.classList.contains("edit"),
       document.querySelectorAll("#ovpRows .wrow").length, !!document.querySelector("#ovSnap"), !!document.querySelector("#ovGrid"), !!document.querySelector("#ovReset")]);
-    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || st[8] !== 17 || !st[9] || !st[10] || !st[11]) fail("overlay defaults", st);
+    if (!st[0] || !st[1] || !st[2] || !st[3] || !st[4] || !st[5] || !st[6] || !st[7] || st[8] !== 18 || !st[9] || !st[10] || !st[11]) fail("overlay defaults", st);
     // a push fills the cards; the map card shows the spawn table and the respawn countdowns
     const t = Date.now();
     const payload = {t, on: true, paused: false, dummy: false, runT0: t - 7530e3, state: "Tracking · 12 min farmed",
@@ -669,6 +669,21 @@ const fail = (what, v) => { throw new Error(what + ": " + JSON.stringify(v)) };
     await page.evaluate(() => pick(null));
     await page.click("#ovClose");
     if (!await page.evaluate(() => window.ovClosed)) fail("close", 0);
+    // Skill range card (11-01): feet from the tracker (frame px, Danny's 2560x1440 Turbow) -> the skill's area drawn at them
+    { const rg = await page.evaluate(() => {
+        setOn("range", true);
+        const out = {wait: $("#ovw-range .b").textContent};
+        window.ovFeetCb({ok: true, x: 1230, y: 977.5, s: 1.875, face: -1, fw: 2560, fh: 1440, job: "Hunter", game: {x: 0, y: 0, width: 1400, height: 787.5}});
+        out.card = $("#ovw-range .b").textContent; out.shown = !$("#ovrng").classList.contains("hidden");
+        out.tf = $("#ovrng .rg").style.transform; out.lab = $("#ovrng .rl")?.textContent || "";
+        const ab = SKILLDATA.skills.Hunter.find(s => s.n === "Arrow Bomb"); setP("range", "rsk", ab.id);
+        out.poly = !!$("#ovrng polygon"); out.card2 = $("#ovw-range .b").textContent;
+        window.ovFeetCb({ok: false, why: "noname", face: 0, job: "Hunter"});
+        out.gone = $("#ovrng").classList.contains("hidden"); out.card3 = $("#ovw-range .b").textContent;
+        setOn("range", false); return out });
+      if (!/Pick your job/.test(rg.wait) || !/facing left/.test(rg.card) || !rg.shown || !/translate\(672\.66px, ?534\.5\dpx\) scale\(-1\.03, ?1\.03\)/.test(rg.tf)
+        || !rg.poly || !/Arrow Bomb/.test(rg.card2) || !/Arrow Bomb/.test(rg.lab + rg.card2) || !rg.gone || !/name in the status bar/.test(rg.card3)) fail("skill range card", rg);
+    }
     if (errors.length) throw new Error("overlay page errors: " + errors.join(" | "));
     await page.close();
   }

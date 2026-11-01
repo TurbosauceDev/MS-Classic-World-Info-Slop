@@ -17,11 +17,11 @@ const runClock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 // what can be tracked: the panel lists these, in this order. HOME is where each lands the first time (desktop pixels)
-const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar", bag: "Bag check", simple: "Simple view", focus: "Focus view", blocker: "Chat blocker", chat: "Chat window", shop: "Shop prices"};
+const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar", bag: "Bag check", simple: "Simple view", focus: "Focus view", blocker: "Chat blocker", chat: "Chat window", shop: "Shop prices", range: "Skill range"};
 const HOME = {status: {on: true, x: 24, y: 24}, exp: {on: true, x: 24, y: 108}, map: {on: true, x: 24, y: 250},
   kills: {on: false, x: 24, y: 620}, mesos: {on: false, x: 24, y: 700}, loot: {on: false, x: 24, y: 780},
   party: {on: false, x: 24, y: 860}, kpq: {on: false, x: 24, y: 940}, log: {on: false, x: 24, y: 1020},
-  stat: {on: false, x: 300, y: 24}, bar: {on: false, x: 300, y: 110}, bag: {on: false, x: 300, y: 190}, simple: {on: false, x: 24, y: 24}, focus: {on: false, x: 24, y: 24}, blocker: {on: false, x: 24, y: 800}, chat: {on: false, x: 600, y: 800}, shop: {on: false, x: 900, y: 300}};
+  stat: {on: false, x: 300, y: 24}, bar: {on: false, x: 300, y: 110}, bag: {on: false, x: 300, y: 190}, simple: {on: false, x: 24, y: 24}, focus: {on: false, x: 24, y: 24}, blocker: {on: false, x: 24, y: 800}, chat: {on: false, x: 600, y: 800}, shop: {on: false, x: 900, y: 300}, range: {on: false, x: 900, y: 120}};
 let BD = null, DATA = null, CFG = {edit: true, widgets: {}, snap: true, grid: false, gsize: 64, panel: null, insp: null, opt: null, profile: "Default", profiles: null}, DESK = {x: 0, y: 0, width: 1920, height: 1080}, zTop = 1;
 const picked = {id: null};
 // Widget instances (0.2.87, WeakAuras' "make as many displays as you like"): a card id is a kind ("exp") or a kind plus an
@@ -143,6 +143,19 @@ const PARAMS = [
   {k: "lf_set", sec: "Item types", lab: "Set Up", t: "b", def: true, kinds: ["loot"]},
   {k: "lmin", sec: "Item types", lab: "Worth at least (mesos)", t: "n", min: 0, max: 1e9, def: null, ph: "any", kinds: ["loot"], when: id => wv(id, "lmode") === "inv", tip: "Hides items whose total is under this"},
   {k: "rows", sec: "This card", lab: "Monsters shown", t: "r", min: 2, max: 14, step: 1, def: 6, f: Math.round, kinds: ["map"]},
+  // Skill range card (Danny 11-01): the skill drawn at your feet. Job/skill/weapon lists come from the game data (rngJobs etc.)
+  {k: "rjob", sec: "Skill", lab: "Job", t: "s", opts: () => rngJobOpts(), def: "auto", kinds: ["range"]},
+  {k: "rsk", sec: "Skill", lab: "Skill", t: "s", opts: id => rngSkillOpts(id), def: "first", kinds: ["range"]},
+  {k: "rlv", sec: "Skill", lab: "Skill level (blank = max)", t: "n", min: 1, max: 30, def: null, ph: "max", kinds: ["range"]},
+  {k: "rwk", sec: "Skill", lab: "Weapon", t: "s", opts: id => rngWeapOpts(id), def: "first", kinds: ["range"], when: id => Object.keys(rngWeapOpts(id)).length > 2},
+  {k: "rface", sec: "Finding you", lab: "Facing", t: "s", opts: {auto: "Follow my movement", right: "Always right", left: "Always left"}, def: "auto", kinds: ["range"],
+    tip: "Auto turns the area when you walk the other way (a knockback doesn't count)"},
+  {k: "roff", sec: "Finding you", lab: "Feet above the name tag (game px)", t: "n", min: -40, max: 60, def: null, ph: "12", kinds: ["range"],
+    tip: "How far your feet are above the name text. 12 was measured on a 2560x1440 screenshot; change it if the area sits too high or low"},
+  {k: "rcol", sec: "Drawing", lab: "Area colour", t: "c", kinds: ["range"]},
+  {k: "rfill", sec: "Drawing", lab: "Fill", t: "r", min: 0, max: 60, step: 2, def: 18, f: pct, kinds: ["range"]},
+  {k: "rlab", sec: "Drawing", lab: "Skill name by the area", t: "b", def: true, kinds: ["range"]},
+  {k: "rdot", sec: "Drawing", lab: "Mark my feet", t: "b", def: true, kinds: ["range"]},
 ];
 // Parked (Danny 10-29): the Condition rule leaves the inspector until the "mapleAuras" function builds on conditions/triggers.
 // conds() below still knows these keys; put the rows back in PARAMS to switch it on again.
@@ -154,12 +167,13 @@ const PARKED_PARAMS = [
   {k: "ccol", sec: "Condition", lab: "Colour", t: "c"}
 ];
 const PMAP = Object.fromEntries(PARAMS.map(p => [p.k, p]));
+const optsOf = (p, id) => typeof p.opts === "function" ? p.opts(id) : p.opts;   // the Skill range card's lists follow the job / skill picked
 const defOf = (p, id) => p.def !== null && typeof p.def === "object" ? (p.def[baseOf(id)] ?? p.def._) : p.def;
 // a value is valid or it is the default: the page never trusts what a save or a pasted code carries
 function okParam(p, v, id){
   if (p.t === "r"){ const n = +v; return Number.isFinite(n) && v !== "" && v !== null ? clamp(+(Math.round(n / p.step) * p.step).toFixed(4), p.min, p.max) : defOf(p, id) }
   if (p.t === "n"){ const n = +v; return v !== "" && v !== null && Number.isFinite(n) ? clamp(Math.round(n * 100) / 100, p.min, p.max) : defOf(p, id) }
-  if (p.t === "s") return Object.prototype.hasOwnProperty.call(p.opts, v) ? v : defOf(p, id);
+  if (p.t === "s") return Object.prototype.hasOwnProperty.call(optsOf(p, id), v) ? v : defOf(p, id);
   if (p.t === "b") return typeof v === "boolean" ? v : defOf(p, id);
   return typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : "";
 }
@@ -339,6 +353,7 @@ const RENDER = {
     return s.rows.slice(0, n).map(r => `<div class="cm"${r.s ? ` style="opacity:.55"` : ""}><b>${esc(r.n)}</b> ${r.a == null ? `<span class="dim">?</span>` : fmt(r.a)}${r.m ? ` <span class="dim">vs ${fmt(r.m)}</span>` : ""}` +
       `${r.p == null ? "" : ` <span class="${r.p <= -0.05 ? "pos" : r.p >= 0.25 ? "neg" : "dim"}">${r.p > 0 ? "+" : ""}${Math.round(r.p * 100)}%</span>`}${r.u ? ` <span class="dim">?</span>` : ""}</div>`).join("");
   },
+  range: (d, id) => rngCard(id),
   bag(d, id){ const keys = window.GrindBag.ALL.map(t => t[0]).filter(k => wv(id, "bt_" + k));
     return keys.length ? bagRow(d, wv(id, "bagl"), wv(id, "bagm"), keys) : `<div class="empty">Pick a tab to watch.</div>` },
   log(d, id){
@@ -482,6 +497,7 @@ function setOn(id, on){
     styleCard(c, id); clampCard(c) }
   else if (!on && el?.isConnected) el.remove();
   syncPanel(); ovSave(); if (on && DATA) apply(DATA); else reflow();
+  if (baseOf(id) === "range"){ rngCards(); rngDraw() }
 }
 function addInst(kind){
   if (!KINDS[kind] || ids().filter(i => INST.test(i)).length >= MAX_INST) return null;
@@ -511,6 +527,7 @@ function setP(id, k, v){
   const el = $("#ovw-" + id);
   if (el){ styleCard(el, id); if (DATA) apply(DATA); clampCard(el); reflow() }
   const sv = document.querySelector(`.wrow[data-w="${id}"] .sv`); if (sv && k === "s") sv.textContent = Math.round(val * 100) + "%";
+  if (baseOf(id) === "range"){ rngDraw(); rngCards() }
   syncDetail(id); ovSave();
 }
 const setS = (id, s) => setP(id, "s", s), setO = (id, o) => setP(id, "o", o);
@@ -575,6 +592,62 @@ const ovSave = () => { clearTimeout(saveT); saveT = setTimeout(() => {
 // ---- data: re-render every card (a push, or the 1 s tick for the countdowns) -------------------------------
 // flow cards (lists) keep their lines at the top and scroll; the rest centre in a pinned-tall box, so growing a card
 // never leaves a strange void under the number (Danny 10-29: "never start looking like there's strange empty space")
+// ---- Skill range card (Danny 11-01: "find the player's foot and then overlay these range previews") ---------------------
+// The tracker window finds your feet (core/feetfind.js: the status bar's name matched to your name tag, screen pixels only)
+// and sends {ok, x, y (captured frame px), s (frame px per game px), face, fw, fh, job, game: the captured window's spot on
+// this desk (main.js)}. The picked skill's area (core/skillrange.js on app/skilldata.js: the same maths and OSMS data as the
+// site's skill pages) is drawn there in #ovrng, under the cards, click-through. Facing right: x > 0 in front, y < 0 up.
+const SKD = typeof SKILLDATA !== "undefined" ? SKILLDATA : {skills: {}, hitact: null};
+const SKR = typeof GrindSkr !== "undefined" ? GrindSkr : null;
+const RJOB = {Swordman: "Warrior"};   // the status bar's 1st-job name -> the game data's job
+let FEET = null;
+const rngJobOpts = () => ({auto: "My job (read from the screen)", ...Object.fromEntries(Object.keys(SKD.skills).map(j => [j, j]))});
+const rngJob = id => { const j = wv(id, "rjob"); if (j !== "auto") return j; const r = FEET?.job, k = RJOB[r] || r; return k && SKD.skills[k] ? k : null };
+const rngList = job => job ? [...(SKD.skills[SKR?.FIRST?.[job]] || []), ...(SKD.skills[job] || [])] : [];
+const rngSkillOpts = id => ({first: "First skill in the list", ...Object.fromEntries(rngList(rngJob(id)).map(s => [s.id, s.n]))});
+const rngSkill = id => { const l = rngList(rngJob(id)), k = wv(id, "rsk"); return l.find(s => s.id === k) || l[0] || null };
+const rngWeap = id => { const s = rngSkill(id); return s && SKR ? SKR.skWeapons(SKD, rngJob(id), s.id) : [] };
+const rngWeapOpts = id => ({first: "First listed", ...Object.fromEntries(rngWeap(id).map(w => [w.key, w.label]))});
+function rngRange(id){
+  const s = rngSkill(id); if (!s || !SKR) return null;
+  const wk = wv(id, "rwk"), lv = wv(id, "rlv");
+  try { return SKR.skRange(SKD, rngJob(id), s, lv || s.max, 0, wk === "first" ? undefined : wk) } catch { return null }
+}
+const rngOn = () => ids().filter(i => baseOf(i) === "range" && wPos(i).on);
+function rngCard(id){
+  if (!SKR || !Object.keys(SKD.skills).length) return `<div class="empty">No skill data in this build.</div>`;
+  const job = rngJob(id), s = rngSkill(id), r = s && rngRange(id);
+  if (!job) return `<div class="empty">Pick your job in this card's options (it hasn't been read from the screen yet).</div>`;
+  if (!s || !r) return `<div class="empty">No skill with a range for ${esc(job)}.</div>`;
+  const f = FEET, st = !f ? "Waiting for the tracker to read the game." : f.ok ? (f.face ? `On you, facing ${f.face > 0 ? "right" : "left"}.` : "On you. Walk once so it knows which way you face.")
+    : f.why === "noname" ? "Can't read your name in the status bar." : f.why === "stale" ? "Not reading the game right now." : "Looking for your name tag.";
+  return `<div class="rngt"><b>${esc(s.n)}</b> <span class="dim">Lv ${r.lv}</span></div><div class="sub">${st}</div>`;
+}
+function rngCards(){ for (const id of rngOn()){ const b = $("#ovw-" + id + " .b"), h = rngCard(id); if (b && b.innerHTML !== h) b.innerHTML = h } }
+function rngDraw(){
+  const svg = $("#ovrng"); if (!svg) return;
+  const id = rngOn()[0], f = FEET, r = id && f?.ok && f.fw > 0 && f.fh > 0 && f.s > 0 ? rngRange(id) : null;
+  if (!r){ svg.classList.add("hidden"); svg.innerHTML = ""; return }
+  // no window spot from Windows (another OS, PowerShell blocked): the captured picture is taken to fill the overlay
+  const g = f.game && f.game.width > 0 ? f.game : {x: 0, y: 0, width: innerWidth, height: innerHeight};
+  const kx = g.width / f.fw, ky = g.height / f.fh, X = g.x + f.x * kx, Y = g.y + f.y * ky, S = f.s * kx, face = f.face || 1;
+  const col = wv(id, "rcol") || "var(--accent)", fill = (wv(id, "rfill") / 100).toFixed(2), n = v => +(+v).toFixed(2);
+  const rect = (b, cls) => `<rect class="${cls}" x="${n(b.l)}" y="${n(b.t)}" width="${n(b.r - b.l)}" height="${n(b.b - b.t)}"/>`;
+  const shapes = [...r.boxes.map(b => rect(b, "a")), r.ext ? rect(r.ext, "x") : "", r.blast ? rect(r.blast, "x") : "",
+    r.poly ? `<polygon class="a" points="${r.poly.map(([x, y]) => n(x) + "," + n(y)).join(" ")}"/>` : "",
+    r.tp ? `<line class="t" x1="0" y1="-30" x2="${n(r.tp)}" y2="-30"/><line class="t" x1="${n(r.tp)}" y1="-44" x2="${n(r.tp)}" y2="-16"/>` : ""].join("");
+  svg.style.setProperty("--rc", col); svg.style.setProperty("--rf", fill);
+  svg.innerHTML = `<g class="rg${f.face ? "" : " unsure"}" style="transform:translate(${n(X)}px,${n(Y)}px) scale(${n(face * S)},${n(S)})">${shapes}` +
+    (wv(id, "rdot") ? `<line class="ft" x1="-12" y1="0" x2="12" y2="0"/><circle class="ft" cx="0" cy="0" r="2.5"/>` : "") + `</g>` +
+    (wv(id, "rlab") ? `<text class="rl" x="${n(X + face * 14 * S)}" y="${n(Y + 26 * S)}" text-anchor="${face > 0 ? "start" : "end"}">${esc(rngSkill(id).n)}${f.face ? "" : " (facing?)"}</text>` : "");
+  svg.classList.remove("hidden");
+}
+function rngFeet(f){
+  if (!f || typeof f !== "object") return;
+  FEET = {...f, at: Date.now()}; rngDraw(); rngCards();
+}
+// the tracker stopped reading (game closed, Stop with nothing else watching): the area goes away instead of hanging there
+setInterval(() => { if (FEET?.ok && Date.now() - FEET.at > 3000){ FEET = {...FEET, ok: false, why: "stale"}; rngDraw(); rngCards() } }, 1000);
 const FLOW = new Set(["log", "loot", "map", "chat", "shop"]);
 // how many text rows fit in a pinned-height card's body (log/loot/map render to fill it; fitRows says 0 when free)
 function fitRows(id, lineH){
@@ -727,7 +800,7 @@ function paramRow(p, id){
   const v = wv(id, p.k), id2 = "in-" + p.k, lab = p.tip ? `<b title="${esc(p.tip)}">${p.lab}</b>` : `<b>${p.lab}</b>`;
   const d = p.inv ? p.min + p.max - v : v;   // inv knobs read one way and store the other (Glass tint: max = most glass)
   if (p.t === "r") return `<label>${lab}<input type="range" id="${id2}" data-k="${p.k}" min="${p.min * (p.u || 1)}" max="${p.max * (p.u || 1)}" step="${p.step * (p.u || 1)}" value="${d * (p.u || 1)}"><span class="pv">${p.f(d * (p.u || 1))}</span></label>`;
-  if (p.t === "s") return `<label>${lab}<select data-k="${p.k}">${Object.entries(p.opts).map(([k, n]) => `<option value="${k}"${k === v ? " selected" : ""}>${n}</option>`).join("")}</select></label>`;
+  if (p.t === "s") return `<label>${lab}<select data-k="${p.k}">${Object.entries(optsOf(p, id)).map(([k, n]) => `<option value="${esc(k)}"${k === v ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`;
   if (p.t === "n") return `<label>${lab}<input type="number" data-k="${p.k}" min="${p.min}" max="${p.max}" step="any" placeholder="${p.ph || ""}" value="${v ?? ""}"></label>`;
   if (p.t === "b") return `<label>${lab}<input type="checkbox" data-k="${p.k}"${v ? " checked" : ""}></label>`;
   return `<label>${lab}<input type="color" data-k="${p.k}" value="${v || "#a78bfa"}"><button class="clr" data-clr="${p.k}" title="Follow the tracker's theme again">Theme</button></label>`;
@@ -1084,7 +1157,9 @@ addEventListener("keydown", e => {
     p.style.top = clamp(CFG.panel.y - DESK.y, 0, Math.max(0, innerHeight - p.offsetHeight || 0)) + "px";
   }
   place(); HIST.cur = histNow();   // undo baseline: the layout as booted
+  rngCards();
   window.ovhost.onData(apply);
+  window.ovhost.onFeet?.(rngFeet);
   window.ovhost.onMode(on => {
     CFG.edit = !!on;
     document.body.classList.toggle("edit", CFG.edit);

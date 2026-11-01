@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld("ovhost", {
   hit: on => ipcRenderer.send("ov-hit", !!on),   // the mouse is over a clickable bit: take clicks there, pass the rest through
   close: () => ipcRenderer.invoke("ov-close"),
   onData: cb => ipcRenderer.on("ov-data", (_, d) => cb(d)),
+  onFeet: cb => ipcRenderer.on("ov-feet", (_, f) => cb(f)),   // Skill range card: your feet in desktop px
   onMode: cb => ipcRenderer.on("ov-mode", (_, on) => cb(on)),
   showMain: () => ipcRenderer.invoke("bd-exit"),
   onBorderless: cb => ipcRenderer.on("ov-borderless", (_, b) => cb(b)),

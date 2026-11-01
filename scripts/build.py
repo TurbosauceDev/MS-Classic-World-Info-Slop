@@ -25,6 +25,8 @@ js = "\n".join(p.read_text() for p in sorted((src / "js").glob("*.js")))
 js = js.replace("/*@READERS*/", (ROOT / "tracker" / "app" / "readers.js").read_text(), 1)
 # the tracker's game data shaping (D -> G) and session maths, for the EXP/hr live reader (63-expclive.js); window.GrindGamedata, window.GrindSession
 js = js.replace("/*@GAMEDATA*/", (ROOT / "tracker" / "core" / "gamedata.js").read_text(), 1)
+# skill range/hitbox maths shared with the tracker's Skill range overlay; window.GrindSkr
+js = js.replace("/*@SKRANGE*/", (ROOT / "tracker" / "core" / "skillrange.js").read_text(), 1)
 js = js.replace("/*@SESSION*/", (ROOT / "tracker" / "core" / "session.js").read_text(), 1)
 # the tracker's themes (presets + MSCT1. share codes), so the site and the tracker can wear the same theme; window.TrackerThemes
 js = js.replace("/*@THEMES*/", (ROOT / "tracker" / "app" / "themes.js").read_text(), 1)

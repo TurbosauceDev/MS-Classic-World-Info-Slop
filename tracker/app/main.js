@@ -252,7 +252,10 @@ function ovDesk(){
 const ovWidgets = () => { const w = readSettings().overlay?.widgets; return w && typeof w === "object" && !Array.isArray(w) ? w : {} };
 const ovBlocker = () => Object.entries(ovWidgets()).some(([id, w]) => /^blocker(_\d+)?$/.test(id) && w && w.on);   // a Chat blocker card is on: the window reads HP/MP between runs
 const ovChat = () => Object.entries(ovWidgets()).some(([id, w]) => /^chat(_\d+)?$/.test(id) && w && w.on);   // a Chat window card is on: the window reads the game's chat box
-const ovSendState = () => { if (win && !win.isDestroyed()) win.webContents.send("ov-state", {open: !!(ovWin && !ovWin.isDestroyed()), edit: ovEditing, blocker: ovBlocker(), chat: ovChat()}) };
+// a Skill range card is on: the window looks for your feet on every read; its feet offset and facing ride along
+const ovRange = () => { const e = Object.entries(ovWidgets()).find(([id, w]) => /^range(_\d+)?$/.test(id) && w && w.on); if (!e) return null;
+  const w = e[1], off = Number.isFinite(+w.roff) && w.roff !== null && w.roff !== "" ? +w.roff : undefined; return {off, face: w.rface === "left" ? -1 : w.rface === "right" ? 1 : 0} };
+const ovSendState = () => { if (win && !win.isDestroyed()) win.webContents.send("ov-state", {open: !!(ovWin && !ovWin.isDestroyed()), edit: ovEditing, blocker: ovBlocker(), chat: ovChat(), range: ovRange()}) };
 function ovEditSet(on){
   ovEditing = !!on;
   if (ovWin && !ovWin.isDestroyed()){ ovWin.setIgnoreMouseEvents(!ovEditing, {forward: true}); ovWin.webContents.send("ov-mode", ovEditing) }
@@ -327,6 +330,34 @@ ipcMain.on("ov-bag", (_, tab) => { if (win && !win.isDestroyed() && typeof tab =
 // click-through stays on (forward: true still delivers mouse moves); over a clickable widget bit the page asks to catch clicks
 ipcMain.on("ov-hit", (_, on) => { if (ovWin && !ovWin.isDestroyed() && !ovEditing) ovWin.setIgnoreMouseEvents(!on, {forward: true}) });
 ipcMain.on("ov-push", (_, d) => { if (ovWin && !ovWin.isDestroyed()) ovWin.webContents.send("ov-data", d) });
+// Skill range card (core/feetfind.js found your feet in the frame): frame px -> desktop px with the game window's spot from
+// Windows (DWM frame bounds of the captured window: what Windows Graphics Capture records; GetWindowRect adds invisible
+// borders) or the captured screen. Only the window's position is asked of Windows, nothing of the game.
+let gameRectC = {r: null, t: 0, busy: false};
+function frameRect(hwnd){
+  return new Promise(resolve => {
+    const ps = `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public struct R{public int L,T,Rt,B;}public static class W{[DllImport("dwmapi.dll")]public static extern int DwmGetWindowAttribute(IntPtr h,int a,out R r,int s);[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out R r);}';`
+      + `$r=New-Object R; if([W]::DwmGetWindowAttribute([IntPtr][long]${hwnd},9,[ref]$r,16) -ne 0){[void][W]::GetWindowRect([IntPtr][long]${hwnd},[ref]$r)}; "$($r.L),$($r.T),$($r.Rt),$($r.B)"`;
+    require("child_process").execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ps], {timeout: 5000, windowsHide: true}, (err, out) => {
+      const n = String(out || "").trim().split(",").map(Number);
+      resolve(!err && n.length === 4 && n.every(Number.isFinite) && n[2] > n[0] && n[3] > n[1] ? {x: n[0], y: n[1], width: n[2] - n[0], height: n[3] - n[1]} : null);
+    });
+  });
+}
+async function gameRectNow(){
+  const {screen} = require("electron"), src = await captureSource();
+  if (src?.display_id){ const d = screen.getAllDisplays().find(d => String(d.id) === String(src.display_id)); if (d) return d.bounds }   // whole-screen capture
+  const hwnd = /^window:(\d+):/.exec(src?.id || "")?.[1];   // digits only: safe to put in the command
+  if (hwnd && process.platform === "win32"){ const r = await frameRect(hwnd); if (r) return screen.screenToDipRect(null, r) }
+  return null;
+}
+function gameRect(){   // cached, refreshed in the background every 3 s while feet are being sent (a moved window follows within 3 s)
+  if (!gameRectC.busy && Date.now() - gameRectC.t > 3000){ gameRectC.busy = true; gameRectNow().then(r => { gameRectC.r = r }).catch(() => {}).finally(() => { gameRectC.busy = false; gameRectC.t = Date.now() }) }
+  return gameRectC.r;
+}
+ipcMain.on("ov-feet", (_, f) => { if (!ovWin || ovWin.isDestroyed() || !f || typeof f !== "object") return;
+  const g = gameRect(), d = ovDesk();
+  ovWin.webContents.send("ov-feet", {...f, game: g ? {x: g.x - d.x, y: g.y - d.y, width: g.width, height: g.height} : null}) });
 
 // "Show me where": a full-screen window with the frozen game picture; the player drags a box (snipping-tool style)
 // It opens on the game's monitor (Danny: it opened on his second monitor, where the tracker and the mouse were): the game

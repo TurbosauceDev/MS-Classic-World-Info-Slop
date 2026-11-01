@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld("host", {
   borderless: kind => ipcRenderer.invoke("borderless", kind),
   overlayEdit: () => ipcRenderer.invoke("ov-edit-toggle"),
   overlayPush: d => ipcRenderer.send("ov-push", d),
+  feetPush: f => ipcRenderer.send("ov-feet", f),   // Skill range card: where your feet are in the captured frame (main.js adds the game window's spot)
   onOverlay: cb => ipcRenderer.on("ov-state", (_, s) => cb(s)),
   onBag: cb => ipcRenderer.on("ov-bag", (_, tab) => cb(tab)),
   menu: (label, x, y) => ipcRenderer.invoke("menu-popup", label, x, y),

@@ -3606,7 +3606,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-11-01T07:39:28Z" data-ver="0.20.5">Site version: v0.20.5 · built Nov 1, 2026 · 07:39 UTC</p>
+  <p class="sitever" data-built="2026-11-01T08:15:17Z" data-ver="0.20.5">Site version: v0.20.5 · built Nov 1, 2026 · 08:15 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -7377,6 +7377,74 @@ const warm = () => { if (warmed) return; warmed = true; setTimeout(() => (window
 $("#t-plan").addEventListener("click", warm); if (!$("#plan").hidden) warm();
 })();
 
+/* Skill range and hitbox maths (pure): D.skills[..].rv + D.hitact, both from the OSMS export (scripts/skill_range.py).
+   Shared by the site's skill pages (src/js/53-skills.js, inlined by scripts/build.py at the SKRANGE marker) and the tracker's
+   Skill range overlay (app/overlay.js, data from app/skilldata.js). D is passed in: the site hands its whole D, the tracker
+   the small SKILLDATA {skills, hitact} (no items, so weapon-name facts are left out there).
+   Game pixels, facing right: x > 0 in front of you, y < 0 above your feet. tests/golden.js checks skRange on the site. */
+(function (root){
+  const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
+  const atLv = (v, lv) => Array.isArray(v) ? v[Math.min(v.length, Math.max(1, lv)) - 1] : v;
+  const FAM = {fixed_rectangle: "Stored attack rectangle", effect_rectangle: "Stored party-effect rectangle", ranged_corridor: "Widening ranged corridor",
+    action_hitbox: "Weapon swing area", action_extended: "Weapon swing area + forward extension", piercing_line: "Piercing arrow path", teleport_range: "Teleport distance"};
+  // One row per weapon type AND swing family: the box belongs to the item (items.json after_image), so a Gladius (short swing)
+  // reaches less than a Sword (long swing). H.sk = the client's weapon codes per skill (Final Attack: Sword = swords only).
+  const skWeapons = (D, job, id) => { const H = D.hitact; if (!H) return [];
+    const keys = H.sk[String(id)] || H.cls[job] || [], only = H.anim[String(id)];
+    return H.weap.filter(w => keys.includes(w[4])).map(([key, label, set, acts, base, v, items]) => {
+      const box = Object.fromEntries((H.sets[set] || []).map(a => [a[0], a]));
+      return {key, label, base, v, items, acts: acts.filter(a => box[a] && (!only || only.includes(a))).map(a => box[a])} }).filter(w => w.acts.length) };
+  function skRange(D, job, s, lv, plv, wk, ak){
+    const v = s.rv; if (!v) return null;
+    lv = Math.min(s.max, Math.max(1, lv || s.max));
+    const out = {fam: v.f, label: FAM[v.f] || "Target area", boxes: [], ext: null, poly: null, path: null, tp: null, aim: null, mob: null, facts: []};
+    const box = (l, r, t, b) => ({l, r, t, b});
+    if (v.L){ const g = [...v.L].reverse().find(x => x[0] <= lv) || v.L[0]; out.from = g[0]; out.boxes = g[1].map(b => box(...b)) }
+    let far = null;
+    if (v.b){ far = atLv(v.b[0], lv) + (v.p && plv > 0 ? atLv(v.p[2], plv) : 0); out.far = far }
+    if (v.f === "ranged_corridor" && v.g){
+      const [near, refY, bh, div] = v.g, nh = bh + Math.trunc(near / div), fh = bh + Math.trunc(far / div);
+      out.poly = [[near, -nh], [far, -fh], [far, fh], [near, nh]]; out.aim = [near, refY, far]; out.mob = Math.round(far * .73);
+      out.facts.push(["Reach", `${far} px in front`], ["Starts", `${near} px ahead`], ["Height at the far end", `${fh} px above and below your feet`]);
+    } else if (v.f === "piercing_line"){
+      out.boxes = [box(65, far, -72, 0)]; out.path = [23, -30, far];
+      out.facts.push(["Path", `${far} px in front`]);
+    } else if (v.f === "action_hitbox" || v.f === "action_extended"){
+      const W = skWeapons(D, job, s.id), w = W.find(x => x.key === wk) || W[0];
+      if (w){ const a = w.acts.find(x => x[0] === ak) || w.acts[0]; out.weapons = W; out.wk = w.key; out.base = w.base; out.ak = a[0];
+        out.boxes = [box(a[1], a[2], a[3], a[4])];
+        out.facts.push(["Swing box", `${a[1]} to ${a[2]} px in front`], ["Height", vert(a[3], a[4])]);
+        if (w.v){ const n = w.items.map(i => D.items?.[i]?.n).filter(Boolean);
+          out.facts.push([`${w.v} weapons`, esc(n.slice(0, 4).join(", ")) + (n.length > 4 ? ` +${n.length - 4} more` : "")]) }
+        if (v.f === "action_extended"){ const lim = Math.max(a[2], atLv(v.r, lv) || 0); out.ext = box(a[2], lim, a[3], a[4]);
+          out.facts.push(["Forward limit", `${lim} px (${lim - a[2]} px past the swing)`]) }
+        out.mob = (out.ext ? out.ext.r : a[2]) + 10 }
+    } else if (v.f === "teleport_range"){ out.tp = atLv(v.d, lv); out.facts.push(["Distance", `up to ${out.tp} px`]) }
+    // Explosion around the first target (client: the hidden follow-up skill's lt/rb, e.g. Arrow Bomb 3101005; meowdb agrees).
+    // Anchored on the target's feet, like its position; which point the client centres it on is unconfirmed.
+    const X = D.hitact?.ex?.[String(s.id)];
+    if (X && out.mob != null){ const [l, r, t, b] = ([...X.L].reverse().find(x => x[0] <= lv) || X.L[0])[1][0];
+      out.blast = box(out.mob + l, out.mob + r, t, b);
+      out.facts.push(["Explosion", `${r - l} × ${b - t} px around the first target, up to ${atLv(s.mob, lv)} monsters`]) }
+    if (out.boxes.length && !out.facts.length){ const b = out.boxes[0];
+      out.facts.push(["In front", `${Math.max(0, b.r)} px`], ...(b.l ? [[b.l < 0 ? "Behind" : "Starts", `${Math.abs(b.l)} px${b.l < 0 ? "" : " in front"}`]] : []),
+        ["Height", vert(b.t, b.b)]);
+      if (out.mob == null) out.mob = b.l < 0 && b.r > 0 ? Math.max(60, b.r * .62) : (b.l + b.r) / 2 }
+    if (v.f === "fixed_rectangle" && v.r != null) out.facts.push(["Stored range value", `${atLv(v.r, lv)} px (not the hit box)`]);
+    if (v.t) out.facts.push(["Walls", "Needs a clear line to the target"]);
+    out.lv = lv; out.plv = plv; return out;
+  }
+  // "56 px (6 to 62 px above your feet)" / "140 px (70 above to 70 below your feet)"
+  function vert(top, bot){ const h = bot - top;
+    return bot <= 0 ? `${h} px (${-bot} to ${-top} px above your feet)` : top >= 0 ? `${h} px (${top} to ${bot} px below your feet)` : `${h} px (${-top} above to ${bot} below your feet)` }
+
+  // 1st-job skills a 2nd job also has (the overlay's skill list for a Hunter is Archer + Hunter)
+  const FIRST = {Fighter: "Warrior", Page: "Warrior", Spearman: "Warrior", "F/P Wizard": "Magician", "I/L Wizard": "Magician", Cleric: "Magician",
+    Hunter: "Archer", Crossbowman: "Archer", Assassin: "Rogue", Bandit: "Rogue"};
+  const api = {skRange, skWeapons, vert, atLv, FAM, FIRST};
+  if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindSkr = api;
+})(typeof window !== "undefined" ? window : globalThis);
+
 /* ---------------- skill database ---------------- */
 let openSkillPage;   // (key "job|id"): open that skill's page (used by Search everything)
 (() => {
@@ -7418,59 +7486,9 @@ const tierTxt = o => o.tier === 1 ? "1st job" : o.tier === 2 ? "2nd job (Lv 30+)
 
 // ---- range and hitbox (D.skills[..].rv + D.hitact, both from the OSMS export; see scripts/skill_range.py) ----
 // Game pixels, facing right: x > 0 in front of you, y < 0 above your feet. skRange() is pure (tests/golden.js checks it).
-const atLv = (v, lv) => Array.isArray(v) ? v[Math.min(v.length, Math.max(1, lv)) - 1] : v;
-const FAM = {fixed_rectangle: "Stored attack rectangle", effect_rectangle: "Stored party-effect rectangle", ranged_corridor: "Widening ranged corridor",
-  action_hitbox: "Weapon swing area", action_extended: "Weapon swing area + forward extension", piercing_line: "Piercing arrow path", teleport_range: "Teleport distance"};
-// One row per weapon type AND swing family: the box belongs to the item (items.json after_image), so a Gladius (short swing)
-// reaches less than a Sword (long swing). H.sk = the client's weapon codes per skill (Final Attack: Sword = swords only).
-const skWeapons = (job, id) => { const H = D.hitact; if (!H) return [];
-  const keys = H.sk[String(id)] || H.cls[job] || [], only = H.anim[String(id)];
-  return H.weap.filter(w => keys.includes(w[4])).map(([key, label, set, acts, base, v, items]) => {
-    const box = Object.fromEntries((H.sets[set] || []).map(a => [a[0], a]));
-    return {key, label, base, v, items, acts: acts.filter(a => box[a] && (!only || only.includes(a))).map(a => box[a])} }).filter(w => w.acts.length) };
-function skRange(job, s, lv, plv, wk, ak){
-  const v = s.rv; if (!v) return null;
-  lv = Math.min(s.max, Math.max(1, lv || s.max));
-  const out = {fam: v.f, label: FAM[v.f] || "Target area", boxes: [], ext: null, poly: null, path: null, tp: null, aim: null, mob: null, facts: []};
-  const box = (l, r, t, b) => ({l, r, t, b});
-  if (v.L){ const g = [...v.L].reverse().find(x => x[0] <= lv) || v.L[0]; out.from = g[0]; out.boxes = g[1].map(b => box(...b)) }
-  let far = null;
-  if (v.b){ far = atLv(v.b[0], lv) + (v.p && plv > 0 ? atLv(v.p[2], plv) : 0); out.far = far }
-  if (v.f === "ranged_corridor" && v.g){
-    const [near, refY, bh, div] = v.g, nh = bh + Math.trunc(near / div), fh = bh + Math.trunc(far / div);
-    out.poly = [[near, -nh], [far, -fh], [far, fh], [near, nh]]; out.aim = [near, refY, far]; out.mob = Math.round(far * .73);
-    out.facts.push(["Reach", `${far} px in front`], ["Starts", `${near} px ahead`], ["Height at the far end", `${fh} px above and below your feet`]);
-  } else if (v.f === "piercing_line"){
-    out.boxes = [box(65, far, -72, 0)]; out.path = [23, -30, far];
-    out.facts.push(["Path", `${far} px in front`]);
-  } else if (v.f === "action_hitbox" || v.f === "action_extended"){
-    const W = skWeapons(job, s.id), w = W.find(x => x.key === wk) || W[0];
-    if (w){ const a = w.acts.find(x => x[0] === ak) || w.acts[0]; out.weapons = W; out.wk = w.key; out.base = w.base; out.ak = a[0];
-      out.boxes = [box(a[1], a[2], a[3], a[4])];
-      out.facts.push(["Swing box", `${a[1]} to ${a[2]} px in front`], ["Height", vert(a[3], a[4])]);
-      if (w.v){ const n = w.items.map(i => D.items?.[i]?.n).filter(Boolean);
-        out.facts.push([`${w.v} weapons`, esc(n.slice(0, 4).join(", ")) + (n.length > 4 ? ` +${n.length - 4} more` : "")]) }
-      if (v.f === "action_extended"){ const lim = Math.max(a[2], atLv(v.r, lv) || 0); out.ext = box(a[2], lim, a[3], a[4]);
-        out.facts.push(["Forward limit", `${lim} px (${lim - a[2]} px past the swing)`]) }
-      out.mob = (out.ext ? out.ext.r : a[2]) + 10 }
-  } else if (v.f === "teleport_range"){ out.tp = atLv(v.d, lv); out.facts.push(["Distance", `up to ${out.tp} px`]) }
-  // Explosion around the first target (client: the hidden follow-up skill's lt/rb, e.g. Arrow Bomb 3101005; meowdb agrees).
-  // Anchored on the target's feet, like its position; which point the client centres it on is unconfirmed.
-  const X = D.hitact?.ex?.[String(s.id)];
-  if (X && out.mob != null){ const [l, r, t, b] = ([...X.L].reverse().find(x => x[0] <= lv) || X.L[0])[1][0];
-    out.blast = box(out.mob + l, out.mob + r, t, b);
-    out.facts.push(["Explosion", `${r - l} × ${b - t} px around the first target, up to ${atLv(s.mob, lv)} monsters`]) }
-  if (out.boxes.length && !out.facts.length){ const b = out.boxes[0];
-    out.facts.push(["In front", `${Math.max(0, b.r)} px`], ...(b.l ? [[b.l < 0 ? "Behind" : "Starts", `${Math.abs(b.l)} px${b.l < 0 ? "" : " in front"}`]] : []),
-      ["Height", vert(b.t, b.b)]);
-    if (out.mob == null) out.mob = b.l < 0 && b.r > 0 ? Math.max(60, b.r * .62) : (b.l + b.r) / 2 }
-  if (v.f === "fixed_rectangle" && v.r != null) out.facts.push(["Stored range value", `${atLv(v.r, lv)} px (not the hit box)`]);
-  if (v.t) out.facts.push(["Walls", "Needs a clear line to the target"]);
-  out.lv = lv; out.plv = plv; return out;
-}
-// "56 px (6 to 62 px above your feet)" / "140 px (70 above to 70 below your feet)"
-function vert(top, bot){ const h = bot - top;
-  return bot <= 0 ? `${h} px (${-bot} to ${-top} px above your feet)` : top >= 0 ? `${h} px (${top} to ${bot} px below your feet)` : `${h} px (${-top} above to ${bot} below your feet)` }
+const {atLv, FAM, vert} = GrindSkr;   // tracker/core/skillrange.js (inlined above), shared with the tracker's Skill range overlay
+const skWeapons = (job, id) => GrindSkr.skWeapons(D, job, id);
+const skRange = (job, s, lv, plv, wk, ak) => GrindSkr.skRange(D, job, s, lv, plv, wk, ak);
 const ACTNAME = a => { const m = /^(swing|stab)([OTP])(\d|F)$/.exec(a); return m ? `${{O: "1H", T: "2H", P: "Polearm"}[m[2]]} ${m[1]} ${m[3]}` : a };
 const SKR = {lv: 0, plv: 0, wk: "", ak: "", key: ""};
 const pngSize = b64 => { try { const s = atob(b64.slice(0, 32)); return [s.charCodeAt(18) * 256 + s.charCodeAt(19), s.charCodeAt(22) * 256 + s.charCodeAt(23)] } catch(e) { return [37, 26] } };
@@ -8288,7 +8306,7 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
   // ---- character name: the lower of the two lines in the job box ("Archer" over "Turbow"). Columns of the status bar's white
   // text split into blocks at gaps of 4+ px; the first block with two separate lines of text is the job box, made 4x bigger
   // for the OCR. Only kept on this PC (History); never sent with shared runs or the party view.
-  function nameTextCrop(img){
+  function nameBlock(img){
     const rows = Math.max(40, Math.round(img.h * 0.056)), y0 = img.h - rows, X = Math.floor(img.w * 0.55), d = img.d;
     // white pixels, minus long horizontal runs (the box's top edge, the bars' outlines)
     const M = new Uint8Array(rows * X);
@@ -8305,17 +8323,32 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
       const band = []; for (let y = y0; y < img.h; y++){ let c = 0; for (let x = x0; x <= x1; x++) if (on(x, y)) c++; band.push(c > 0) }
       const lines = []; let s = -1;
       for (let i = 0; i <= band.length; i++){ if (i < band.length && band[i]){ if (s < 0) s = i } else if (s >= 0){ if (i - s >= 4 && i - s <= 16) lines.push([s, i - 1]); s = -1 } }
-      if (lines.length !== 2) continue;
-      const ly0 = lines[0][0], ly1 = lines[1][1], S = 4, P = 24, cw = x1 - x0 + 1, ch = ly1 - ly0 + 1, w = cw * S + 2 * P, h = ch * S + 2 * P, out = new Uint8ClampedArray(w * h * 4).fill(255);
-      for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) if (on(x0 + x, y0 + ly0 + y))
-        for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++){ const o = ((P + y * S + dy) * w + P + x * S + dx) * 4; out[o] = out[o + 1] = out[o + 2] = 0 }
-      // softened (a 5x5 blur): the OCR reads the game's thin pixel letters better smooth than blocky ("w" got dropped)
-      const g = new Float32Array(w * h); for (let i = 0; i < w * h; i++) g[i] = out[i * 4];
-      for (let y = 2; y < h - 2; y++) for (let x = 2; x < w - 2; x++){ let t = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) t += g[(y + dy) * w + x + dx];
-        const o = (y * w + x) * 4; out[o] = out[o + 1] = out[o + 2] = t / 25 }
-      return {w, h, d: out};
+      if (lines.length === 2) return {x0, x1, y0, lines, on};
     }
     return null;
+  }
+  function nameTextCrop(img){
+    const B = nameBlock(img); if (!B) return null;
+    const {x0, x1, y0, lines, on} = B;
+    const ly0 = lines[0][0], ly1 = lines[1][1], S = 4, P = 24, cw = x1 - x0 + 1, ch = ly1 - ly0 + 1, w = cw * S + 2 * P, h = ch * S + 2 * P, out = new Uint8ClampedArray(w * h * 4).fill(255);
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) if (on(x0 + x, y0 + ly0 + y))
+      for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++){ const o = ((P + y * S + dy) * w + P + x * S + dx) * 4; out[o] = out[o + 1] = out[o + 2] = 0 }
+    // softened (a 5x5 blur): the OCR reads the game's thin pixel letters better smooth than blocky ("w" got dropped)
+    const g = new Float32Array(w * h); for (let i = 0; i < w * h; i++) g[i] = out[i * 4];
+    for (let y = 2; y < h - 2; y++) for (let x = 2; x < w - 2; x++){ let t = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) t += g[(y + dy) * w + x + dx];
+      const o = (y * w + x) * 4; out[o] = out[o + 1] = out[o + 2] = t / 25 }
+    return {w, h, d: out};
+  }
+  // the name line alone as a 0/1 ink mask in UI pixels, trimmed to its ink (core/feetfind.js: the Skill range overlay finds
+  // your name tag in the world with it). Never leaves the PC: the overlay gets only the feet's position.
+  function nameMask(img){
+    const B = nameBlock(img); if (!B) return null;
+    const {x0, x1, y0, lines: [, [a, b]], on} = B;
+    let l = x1, r = x0; for (let x = x0; x <= x1; x++) for (let y = a; y <= b; y++) if (on(x, y0 + y)){ l = Math.min(l, x); r = Math.max(r, x) }
+    if (r - l < 6) return null;
+    const W = r - l + 1, H = b - a + 1, m = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) m[y * W + x] = on(l + x, y0 + a + y) ? 1 : 0;
+    return {W, H, m, x: l, y: y0 + a};
   }
   // the name as read: letters, digits (MapleStory names are 4-12 of them), the longest such word
   // (the crop holds both lines, "Archer" over the name: the OCR reads the pair better than the name alone; the last line is the name)
@@ -8975,6 +9008,7 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
       return {t, type: "inv", tab: inv.tab, items, alike, stacks, partial, unknown: r.unknown, slots: r.slots.length + r.missed.length};
     }
     let info = {bar: false, partyWindow: null, counts: 0};
+    let feetT = null, feetMask = null, feetUses = 0;
     return {readFrame, get info(){ return info }, memoStats, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,
       mapRect: null,   // the last good minimap-title rect (see work(): the fallback re-cuts it when the band hunt fails)
       // all item pictures (loadIcons on G.iicons), sorted by tab: matching only looks at the open tab's kind of items
@@ -8984,6 +9018,16 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
       // Chat windows (core/chatlines.js): the new chat messages since the last scan, each as an OCR picture. Nothing is kept but
       // last frame's line fingerprints; a scan that finds no chat box hands back nothing and forgets them.
       chatOff(){ chatPrev = null },
+      // Skill range overlay (core/feetfind.js): your feet on the screen, found by matching the status bar's name to your name tag.
+      // The name mask is re-cut every 40 reads (or when the tag is lost), not every frame. o = {off, face} from the card.
+      feetStep(img, o, t){
+        const F = root.GrindFeet; if (!F) return null;
+        feetT ||= F.createTracker();
+        if (!feetMask || ++feetUses > 40){ feetMask = nameMask(img) || feetMask; feetUses = 0 }
+        const r = feetT.step(img, feetMask, t, typeof o === "object" ? o : {});
+        if (!r.ok && feetUses > 8) feetUses = 41;   // lost a while: the name may have changed (another character), re-cut it
+        return r;
+      },
       chatScan(img, a){   // a: where the chat box is ({x, y, w, h} fractions of the picture) or null for the default spot
         const C = root.GrindChat; if (!C) return null;
         const key = a && a.w > 0 && a.h > 0 ? [a.x, a.y, a.w, a.h].join() : "";
@@ -9014,10 +9058,11 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
     }
     if (want.job){ crops.job = jobTextCrop(img); crops.name = nameTextCrop(img) }
     if (want.chat) crops.chat = chatCrop(img);
+    const feet = want.feet ? rd.feetStep(img, want.feet, t) : null;
     const chat = want.chatScan ? rd.chatScan(img, want.chatArea) : (rd.chatOff(), null);
-    return {ev, info, crops, chat, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads, line: {tries: LINE_STATS.tries, wins: LINE_STATS.wins}}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
+    return {ev, info, crops, chat, feet, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads, line: {tries: LINE_STATS.tries, wins: LINE_STATS.wins}}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {readProc, readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty, lineStats: () => LINE_STATS};
+  const api = {nameMask, readProc, readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty, lineStats: () => LINE_STATS};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);
 
@@ -13205,6 +13250,7 @@ for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click",
 // Releasing? Add a line for the new version at the top: tests/core.test.js fails if the top entry isn't package.json's version.
 (function (root){
   const LOG = [
+    ["0.3.29", "2026-11-01", "New overlay card: Skill range. Add it in Edit overlay (Add widget > Skill range), pick your skill in its options, and the skill's area (the same range and hitbox data as the website's skill pages) is drawn at your character's feet while the tracker reads the game. How it finds you: it reads your name from the status bar and looks for the same name on your name tag, so the status bar has to be on screen. Your facing follows the way you walk (a knockback doesn't flip it), or set it to always left/right. Updates 4 times a second. If the area sits too high or low, change \"Feet above the name tag\" in the card's options. Like everything in the tracker it only looks at the screen."],
     ["0.3.28", "2026-10-31", "Delete what I shared. Settings > Window and sharing has a new button: it asks the server to erase every run, KPQ round, shop price and party row this copy of the tracker ever sent, empties anything still waiting to be sent, and gives this copy a new random ID so nothing later links back to the old one (two clicks, so a stray click does nothing). It works even with sharing switched off. The server side also changed so that shop prices count one vote per tracker: a single copy sending hundreds of rows can no longer pull an item's price toward its own numbers. Release notes on GitHub now list the installer's SHA-256 so you can check a download, and Help > Privacy and safety explains why Windows may say \"unknown publisher\" the first time (the installer is not code-signed yet): More info > Run anyway."],
     ["0.3.27", "2026-10-31", "Patch notes housekeeping: the website's changelog got its order set straight — a few older entries sat at their historical slot instead of their date, so the site re-sorted them strictly newest-first and the site version numbers of the moved entries (and their neighbours) shifted to match. The Site tab carries the corrected copy now; the sync test keeps it pinned, so it can't drift. Nothing else in the app changed."],
     ["0.3.26", "2026-10-31", "Patch notes, rebuilt like the site's. Help › Patch notes now shows every version as a card — version and date in the head, the changes under it — and two tabs above them, App and Site, switch between this app's notes and the website's changelog, so one window carries the whole story (Turbozo's idea: same page, another tab, like a class picker). The site's cards ride inside the app: a sync script copies them from the site's changelog page, and a new test fails the build when the copy drifts, so the Site tab can never quietly go stale. Links inside the site cards open the site in your browser; the app's windows still never navigate themselves."],

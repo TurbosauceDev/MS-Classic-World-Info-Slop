@@ -508,7 +508,7 @@
   // ---- character name: the lower of the two lines in the job box ("Archer" over "Turbow"). Columns of the status bar's white
   // text split into blocks at gaps of 4+ px; the first block with two separate lines of text is the job box, made 4x bigger
   // for the OCR. Only kept on this PC (History); never sent with shared runs or the party view.
-  function nameTextCrop(img){
+  function nameBlock(img){
     const rows = Math.max(40, Math.round(img.h * 0.056)), y0 = img.h - rows, X = Math.floor(img.w * 0.55), d = img.d;
     // white pixels, minus long horizontal runs (the box's top edge, the bars' outlines)
     const M = new Uint8Array(rows * X);
@@ -525,17 +525,32 @@
       const band = []; for (let y = y0; y < img.h; y++){ let c = 0; for (let x = x0; x <= x1; x++) if (on(x, y)) c++; band.push(c > 0) }
       const lines = []; let s = -1;
       for (let i = 0; i <= band.length; i++){ if (i < band.length && band[i]){ if (s < 0) s = i } else if (s >= 0){ if (i - s >= 4 && i - s <= 16) lines.push([s, i - 1]); s = -1 } }
-      if (lines.length !== 2) continue;
-      const ly0 = lines[0][0], ly1 = lines[1][1], S = 4, P = 24, cw = x1 - x0 + 1, ch = ly1 - ly0 + 1, w = cw * S + 2 * P, h = ch * S + 2 * P, out = new Uint8ClampedArray(w * h * 4).fill(255);
-      for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) if (on(x0 + x, y0 + ly0 + y))
-        for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++){ const o = ((P + y * S + dy) * w + P + x * S + dx) * 4; out[o] = out[o + 1] = out[o + 2] = 0 }
-      // softened (a 5x5 blur): the OCR reads the game's thin pixel letters better smooth than blocky ("w" got dropped)
-      const g = new Float32Array(w * h); for (let i = 0; i < w * h; i++) g[i] = out[i * 4];
-      for (let y = 2; y < h - 2; y++) for (let x = 2; x < w - 2; x++){ let t = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) t += g[(y + dy) * w + x + dx];
-        const o = (y * w + x) * 4; out[o] = out[o + 1] = out[o + 2] = t / 25 }
-      return {w, h, d: out};
+      if (lines.length === 2) return {x0, x1, y0, lines, on};
     }
     return null;
+  }
+  function nameTextCrop(img){
+    const B = nameBlock(img); if (!B) return null;
+    const {x0, x1, y0, lines, on} = B;
+    const ly0 = lines[0][0], ly1 = lines[1][1], S = 4, P = 24, cw = x1 - x0 + 1, ch = ly1 - ly0 + 1, w = cw * S + 2 * P, h = ch * S + 2 * P, out = new Uint8ClampedArray(w * h * 4).fill(255);
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) if (on(x0 + x, y0 + ly0 + y))
+      for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++){ const o = ((P + y * S + dy) * w + P + x * S + dx) * 4; out[o] = out[o + 1] = out[o + 2] = 0 }
+    // softened (a 5x5 blur): the OCR reads the game's thin pixel letters better smooth than blocky ("w" got dropped)
+    const g = new Float32Array(w * h); for (let i = 0; i < w * h; i++) g[i] = out[i * 4];
+    for (let y = 2; y < h - 2; y++) for (let x = 2; x < w - 2; x++){ let t = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) t += g[(y + dy) * w + x + dx];
+      const o = (y * w + x) * 4; out[o] = out[o + 1] = out[o + 2] = t / 25 }
+    return {w, h, d: out};
+  }
+  // the name line alone as a 0/1 ink mask in UI pixels, trimmed to its ink (core/feetfind.js: the Skill range overlay finds
+  // your name tag in the world with it). Never leaves the PC: the overlay gets only the feet's position.
+  function nameMask(img){
+    const B = nameBlock(img); if (!B) return null;
+    const {x0, x1, y0, lines: [, [a, b]], on} = B;
+    let l = x1, r = x0; for (let x = x0; x <= x1; x++) for (let y = a; y <= b; y++) if (on(x, y0 + y)){ l = Math.min(l, x); r = Math.max(r, x) }
+    if (r - l < 6) return null;
+    const W = r - l + 1, H = b - a + 1, m = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) m[y * W + x] = on(l + x, y0 + a + y) ? 1 : 0;
+    return {W, H, m, x: l, y: y0 + a};
   }
   // the name as read: letters, digits (MapleStory names are 4-12 of them), the longest such word
   // (the crop holds both lines, "Archer" over the name: the OCR reads the pair better than the name alone; the last line is the name)
@@ -1195,6 +1210,7 @@
       return {t, type: "inv", tab: inv.tab, items, alike, stacks, partial, unknown: r.unknown, slots: r.slots.length + r.missed.length};
     }
     let info = {bar: false, partyWindow: null, counts: 0};
+    let feetT = null, feetMask = null, feetUses = 0;
     return {readFrame, get info(){ return info }, memoStats, setArea(a){ area = a && a.w > 0 && a.h > 0 ? a : null }, areaPx,
       mapRect: null,   // the last good minimap-title rect (see work(): the fallback re-cuts it when the band hunt fails)
       // all item pictures (loadIcons on G.iicons), sorted by tab: matching only looks at the open tab's kind of items
@@ -1204,6 +1220,16 @@
       // Chat windows (core/chatlines.js): the new chat messages since the last scan, each as an OCR picture. Nothing is kept but
       // last frame's line fingerprints; a scan that finds no chat box hands back nothing and forgets them.
       chatOff(){ chatPrev = null },
+      // Skill range overlay (core/feetfind.js): your feet on the screen, found by matching the status bar's name to your name tag.
+      // The name mask is re-cut every 40 reads (or when the tag is lost), not every frame. o = {off, face} from the card.
+      feetStep(img, o, t){
+        const F = root.GrindFeet; if (!F) return null;
+        feetT ||= F.createTracker();
+        if (!feetMask || ++feetUses > 40){ feetMask = nameMask(img) || feetMask; feetUses = 0 }
+        const r = feetT.step(img, feetMask, t, typeof o === "object" ? o : {});
+        if (!r.ok && feetUses > 8) feetUses = 41;   // lost a while: the name may have changed (another character), re-cut it
+        return r;
+      },
       chatScan(img, a){   // a: where the chat box is ({x, y, w, h} fractions of the picture) or null for the default spot
         const C = root.GrindChat; if (!C) return null;
         const key = a && a.w > 0 && a.h > 0 ? [a.x, a.y, a.w, a.h].join() : "";
@@ -1234,9 +1260,10 @@
     }
     if (want.job){ crops.job = jobTextCrop(img); crops.name = nameTextCrop(img) }
     if (want.chat) crops.chat = chatCrop(img);
+    const feet = want.feet ? rd.feetStep(img, want.feet, t) : null;
     const chat = want.chatScan ? rd.chatScan(img, want.chatArea) : (rd.chatOff(), null);
-    return {ev, info, crops, chat, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads, line: {tries: LINE_STATS.tries, wins: LINE_STATS.wins}}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
+    return {ev, info, crops, chat, feet, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads, line: {tries: LINE_STATS.tries, wins: LINE_STATS.wins}}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {readProc, readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty, lineStats: () => LINE_STATS};
+  const api = {nameMask, readProc, readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty, lineStats: () => LINE_STATS};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

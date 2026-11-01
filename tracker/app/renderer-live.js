@@ -348,7 +348,7 @@ function pace(t, active){
   const idle = t - lastActive, base = idle > 180e3 ? 0.5 : idle > 45e3 ? 1 : 2;
   // a Chat blocker wants the HP/MP bars quicker, idle or not; a busy chat raises the floor (rate x1.5 x1.3 wraps /
   // lines shown, capped at the blocker's 4), a gap hurries it there for a while (core/readpace.js); slowCap still holds it to 1
-  const want = Math.max(base, ovBlocker ? BAR_FPS : 0, ovChatOn ? 2 : 0, chatPace.floor(t));
+  const want = Math.max(base, ovBlocker || ovRangeOn ? BAR_FPS : 0, ovChatOn ? 2 : 0, chatPace.floor(t));
   setFps(slowCap ? Math.min(want, 1) : want, want < 2 ? "quiet" : "active");
 }
 
@@ -375,7 +375,7 @@ async function tick(){
     if (!video.videoWidth){ $("#status").textContent = "No picture from the game (minimized?). Waiting..."; throw null }   // skip this tick
     const f = grabFrame(); perf("grab", Date.now() - t);
     keepFrame(t, f);
-    const t1 = Date.now(), sk = sameAsLast(f, !ovChatOn && !ovBlocker); perf("same", Date.now() - t1);
+    const t1 = Date.now(), sk = sameAsLast(f, !ovChatOn && !ovBlocker && !ovRangeOn); perf("same", Date.now() - t1);
     if (sk){ skipped++; if (sk === 2) skippedTol++; if (video?.pump) FRBUF.give(f.d.buffer); throw null }   // unchanged (or only encoder jitter moved): the buffer is free again
     // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between
     const want = {};
@@ -385,7 +385,7 @@ async function tick(){
       else if (t - lastOcr > 5000){ lastOcr = t; want.map = true }
       else if ((!settings.job || !charName) && t - lastJob > 30e3){ lastJob = t; want.job = true }
     }
-    chatWant(want);
+    chatWant(want); rangeWant(want);
     const t2 = Date.now(), r = await eng.read({frame: f, t, want}); perf("read", Date.now() - t2);
     if (eng.kind !== "worker" && video?.pump) FRBUF.give(f.d.buffer);   // inline readers ran in this window: the buffer never left, pool it again (the worker mode got it back with the reply)
     if (timer == null || sess !== session || !r) throw null;   // stopped (or restarted) while reading, or the frame was lost
@@ -397,7 +397,7 @@ async function tick(){
       chatLooksT++; chatNewT += n; if (gap) chatGapsT++;
       chatPace.note(t, n, shown, gap);
     }
-    if (r.scale){ scale = r.scale; fastLeft = 19 }   // also at 1x: finding the scale is the slow part, so it's checked every 20 frames only
+    if (r.scale){ scale = r.scale; fastLeft = 19 } rangeIngest(r.feet, t);   // feet after the scale (frame px need it). Scale: also at 1x: finding the scale is the slow part, so it's checked every 20 frames only
     for (const e of r.ev){
       if (wrap && e.type !== "inv" && e.type !== "wallet" && e.type !== "glyph") continue;   // after Stop: only the end inventory look counts
       if (held && /^(exp|bonus|meso|item|itemraw)$/.test(e.type)) continue;   // paused by hand: a break, nothing picked up counts
