@@ -77,3 +77,14 @@ several WebView2 windows. Cheapest real answer: Danny opens Task Manager with ea
   the WASM ourselves.
 - Verdict: keep Tesseract. It is already 100% on real frames after snapping, results are cached by crop hash, and the
   job look runs every 30 s, so OCR time is not our bottleneck. Revisit only if map reads fail at other UI scales.
+
+Reconciliation, 2026-11-02: the two benches agree and split the territory. This section's 44 map/job
+crops stay on Tesseract (untouched in the tracker); the ocrs model was adopted for the shop rows
+instead, where the neural reader ties Tesseract's recorded accuracy on the shop fixture (names 6/6
+via matchName, prices 6/6+6/6 via parseOffer, two-cut agreement 6/6) at a median 16.4 ms/line vs
+~90 — see docs/ai/roadmap-p0-p1-execution.md item 5 (P1-6, tracker 0.3.34) and tracker/tests/ocr_bench.js.
+The npm-package note above is also stale: no WASM build is needed — onnxruntime-node runs the
+recognition ONNX directly in the main process, and core/ocrmodel.js (a JS port of ocrs' line prep +
+CTC decode) does the preprocessing Minerva's prep.rs does for its titles. The title bar's "drops
+thin strokes" failure mode matches this section's finding, which is why the seller IGN stays on
+Tesseract.

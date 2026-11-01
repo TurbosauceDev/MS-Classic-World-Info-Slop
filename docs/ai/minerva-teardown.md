@@ -93,9 +93,15 @@ ranked, each mapped to an approved roadmap item in docs/ai/roadmap-p0-p1-executi
 3. **Measure-then-resample UI scaling** (`ui_size.rs`, ADR 0020: find one known-size element, derive scale, resample with
    Catmull-Rom clamped to source neighbours). Our shop geometry is 2x-tuned on Danny's setup; the pitch-chain in
    shopread.js already self-derives, but the resample trick is the general answer for other UI scales. → P1-6.
-4. **Recognition-only OCR with supplied line boxes** (ocrs ONNX model, no detection stage). A candidate successor to
-   Tesseract for digits. **Licence trap: their bundled model is CC BY-SA 4.0 — never bundle that file.** If we go this
-   way we train our own (our fixture corpus is exactly the labelled data), else stay on Tesseract + shape readers. → P1-6.
+4. **Recognition-only OCR with supplied line boxes** (ocrs ONNX model, no detection stage). ~~Licence
+   trap: their bundled model is CC BY-SA 4.0 — never bundle that file.~~ **SUPERSEDED 2026-11-01:**
+   Turbozo granted permission ("we have permission to use the ocr model"), and 0.3.34 adopted the
+   model — the real ONNX checkpoint from the author's HuggingFace (not Minerva's rten-converted
+   copy), bundled unmodified with full attribution in `tracker/models/NOTICE.md`, run by
+   onnxruntime-node behind our JS port of ocrs' line prep + CTC decode (`tracker/core/ocrmodel.js`),
+   bench-gated on the shop fixture (`tracker/tests/ocr_bench.js`: ties Tesseract's recorded accuracy
+   at ~16 ms/line vs ~90). The ShareAlike term still stands on its own: if the model is ever
+   fine-tuned, the tuned model ships under CC BY-SA 4.0. → P1-6, done.
 5. **Physics-capped leaderboards + automatic flagging** (`site/worker/leaderboards.ts` 22-31: uploads capped at 5x the
    map's OSMS-derived solo EXP/h ceiling or an absolute cap; `automatic-reports.ts`: >2x the busy map's #1 auto-flags a
    report — anti-cheat with no review queue). → Adopt verbatim in the weekly grind ladder (P1-5) before launch, not after.

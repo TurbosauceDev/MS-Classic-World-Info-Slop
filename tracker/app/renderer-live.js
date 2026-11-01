@@ -8,7 +8,7 @@ async function toPng(c){
 // job from the status bar every 30 s, when the player left the job on "Auto": taken once the same job is read twice running
 const ocrCache = GrindOcrCache.createOcrCache();   // core/ocrcache.js: same crop pixels, same text, no second Tesseract run
 const tolCache = GrindOcrCache.createTolCache(GrindFrameGate);   // near-identical crops (encoder jitter) answer from the last read: fixed UI text (map title, job box, name) only ever changes wholesale
-const rawOcr = async c => { const t = Date.now(); try { return await host.ocr(await toPng(c)) } finally { perf("ocr", Date.now() - t) } };
+const rawOcr = async c => { const t = Date.now(); try { return await host.ocr(await toPng(c), c.tag ? {tag: c.tag, up: c.up} : undefined) } finally { perf("ocr", Date.now() - t) } };   // tag+up: shopread crops say what they are and at what upscale, the main process routes the benched ones to the neural reader
 const ocrText = (c, slot) => slot ? tolCache.run(slot, c, rawOcr) : ocrCache.run(c, rawOcr);   // slot = the tolerant cache ("map", "job", "name"); no slot = the exact cache, same pixels same text (the wide status bar's fallback read). The chat-box death/box reads bypass ocrText and always read fresh
 let lastJob = 0, jobSeen = null, jobNow = null, charName = null, charSeen = null;   // charName: History, and KPQ rounds (Settings > KPQ board name)
 async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders.jobTextCrop), or null; nc: the name crop

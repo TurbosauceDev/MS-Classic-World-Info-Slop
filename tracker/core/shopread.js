@@ -9,7 +9,8 @@
      rows are 80 px apart, split by a 2 px (1 native px) (147,167,189) line; the name line sits 14..35 px below the line and the price line
      48..69 px below it; the text starts 144 px from the frame's left edge of the shop, the icon is left of that.
    Prices are read twice from two different black-and-white cuts of the pixels and only count when both reads agree
-   ("sure"): one cut read 9,001 as 8,001 on the fixture, the other read it right.
+   ("sure"): disagreement makes the row unsure, never wrong (one cut read 9,001 as 8,001 on the fixture, the other
+   read it right; 0.3.31 puts both cuts at 4x — the neural reader's best scale — and keeps the thresholds apart).
    Name matching (matchName) is our own: ideas from cpan1995/maplepricechecker (score floors, prefix match for "..." names). */
 (function (root){
   const SEP = [147, 167, 189], TOL = 10;
@@ -71,7 +72,7 @@
     }
     return {w: OW, h: OH, d: o};
   }
-  const CUTS = [{th: 0.5, up: 2}, {th: 0.6, up: 4}];
+  const CUTS = [{th: 0.5, up: 4}, {th: 0.6, up: 4}];   // two thresholds, one scale: the neural reader (0.3.31) reads best at 4x, and the threshold difference is what the two-cut verify needs
 
   // "1 for 14,067 mesos" (and OCR slips around it) -> {qty, price} or null. price is for the whole bundle.
   function parseOffer(text){
@@ -134,7 +135,8 @@
     if (!rows.length) return null;
     const top = rows[0].top, box = [rows[0].x0 - 20 * k, top - 145 * k, rows[0].x1 + 95 * k, top - 131 * k];
     if (box[1] < 0 || box[3] < 0 || box[2] > img.w) return null;
-    return parseTitle(await ocr(cut(img, ...box, 0.5, 2 * (2 / k))));
+    const tc = cut(img, ...box, 0.5, 2 * (2 / k)); tc.tag = "shopTitle"; tc.up = 2 * (2 / k);
+    return parseTitle(await ocr(tc));   // title stays on Tesseract: the seller IGN must not be wrong
   }
 
   async function readShop(img, ocr, opt = {}){
@@ -143,9 +145,10 @@
       const nameBox = [r.x0, r.top + 5 * k, r.x1, r.top + 20 * k], priceBox = [r.x0, r.top + 22 * k, r.x1, r.top + 37 * k];
       if (r.top + 37 * k > img.h) continue;
       const sold = darkest(img, ...nameBox) > 110;
-      const nameText = (await ocr(cut(img, ...nameBox, 0.5, 2 * m))).trim();
+      const nc = cut(img, ...nameBox, 0.5, 4 * m); nc.tag = "shopName"; nc.up = 4 * m;   // tag+up: the main process routes the crop to the neural reader, already at the model's preferred 4x (0.3.31)
+      const nameText = (await ocr(nc)).trim();
       const offers = [];
-      for (const c of CUTS) offers.push(parseOffer(await ocr(cut(img, ...priceBox, c.th, c.up * m))));
+      for (const c of CUTS){ const pc = cut(img, ...priceBox, c.th, c.up * m); pc.tag = "shopPrice"; pc.up = c.up * m; offers.push(parseOffer(await ocr(pc))) }
       const a = offers[0], same = a && offers.every(o => o && o.qty === a.qty && o.price === a.price);
       out.push({row: r.row, top: r.top, sold, text: nameText, name: nameText.replace(/[|\s]+$/, ""), qty: a ? a.qty : null, price: a ? a.price : null,
         unit: a ? a.price / a.qty : null, sure: !!same});

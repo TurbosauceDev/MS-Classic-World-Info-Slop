@@ -65,13 +65,26 @@ Files: `server/src/index.js`, `server/schema.sql`, `server/tests/server.test.js`
 `tracker/core/session.js`, boss card renderers, `overlay` push payload,
 `core.test.js` + `overlay.test.js` scenes.
 
-## Wave 2 (P1) — after P0 lands
+## Wave 2 (P1) — in flight
 
-5. **P1-6 · Digit models from our fixtures.** Train logistic-regression digit templates
-   on the existing labelled corpora (`tracker/tests/frames*`, frames-inv meso counts,
-   frames-kpq timers), swap into the count/meso/timer readers, keep Tesseract for text.
-   `tracker/tests/cv_bench.js` becomes the accuracy regression gate. The digits module and
-   training script are to be created when this lands.
+5. **P1-6 · Digit models from our fixtures → the neural text reader. SHIPPED 0.3.34, redirected by the
+   OCR permission.** Turbozo granted permission to use the ocrs recognition model (2026-11-01,
+   "we have permission to use the ocr model"), superseding the CC BY-SA caution that had this item
+   planned as home-trained templates. What shipped instead of, and ahead of, trained digit models:
+   `tracker/core/ocrmodel.js` — a JS port of ocrs' recognition half (BT.601 luma at −0.5 bias, resize
+   to the model's 64 px line height at half-pixel centres, 50 px width-bucket batching, greedy CTC
+   decode over the 96-char alphabet) — running the bundled `models/text-recognition.onnx` (real ONNX
+   from the author's HuggingFace, CC BY-SA 4.0, unmodified, attribution in `models/NOTICE.md`) via
+   onnxruntime-node, all in the main process behind the existing `ocr` IPC. The shop rows (names +
+   both price cuts) route to it; the shop title bar stays on Tesseract (a seller IGN must not come
+   back wrong) and every other OCR caller is untouched; an empty or low-confidence (< 0.35 mean
+   probability) neural read falls back to the Tesseract worker, so a read only ever gets slower,
+   never worse. `tests/ocr_bench.js` is the accuracy gate and passed on 2026-11-02: names 6/6 via
+   matchName (= Tesseract's recorded readings), prices 6/6 + 6/6 via parseOffer with 6/6 two-cut
+   agreement, median 16.4 ms/line vs ~90 ms. Shop crops now cut at 4x (both thresholds 0.5/0.6 kept
+   apart) — the model's measured-best scale. The bar-font digit readers (EXP bar, pickups, KPQ)
+   keep their exact templates, which still beat general OCR on the fixed bitmap font; a fixture-
+   trained digit model remains open as a later increment behind the same bench.
 6. **P1-8 · Overlay anchor mode (koffi).** Overlay cards can pin to the game window's
    rect and track it on move/resize; the shop watcher anchors to the shop window itself.
    Guardrails below. A new winrect module in the tracker app (to be created), `tracker/app/main.js`, overlay placement.

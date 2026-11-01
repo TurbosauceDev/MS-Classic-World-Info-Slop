@@ -18,7 +18,7 @@ contextBridge.exposeInMainWorld("host", {
   saveImage: (name, bytes, quiet) => ipcRenderer.invoke("save-image", name, bytes, quiet),
   saveReport: (frames, info) => ipcRenderer.invoke("save-report", frames, info),
   openFolder: dir => ipcRenderer.invoke("open-folder", dir),
-  ocr: png => ipcRenderer.invoke("ocr", png),
+  ocr: (png, opt) => ipcRenderer.invoke("ocr", png, opt),
   shareRun: run => ipcRenderer.invoke("share-run", run),
   shareShop: rows => ipcRenderer.invoke("shop-share", rows),
   spotShare: s => ipcRenderer.invoke("spot-share", s),

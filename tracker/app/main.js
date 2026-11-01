@@ -18,6 +18,8 @@ const SESSIONS = path.join(app.getPath("userData"), "sessions");   // finished s
 const AUTO = require("../core/autosave.js");
 const OVCFG = require("../core/overlaycfg.js");
 const HIST = require("../core/history.js");   // applyEdit: History > Edit run   // the running session, autosaved there (crash recovery)
+const OcrModel = require("../core/ocrmodel.js");   // neural text reader (0.3.31): port of ocrs' line prep + CTC decode
+const readPng = require("./png.js");
 
 // Windows Graphics Capture (what OBS uses) instead of the old GDI window grab, which gives black frames for DirectX games
 // NO process-per-site / single-process / in-process-gpu: 0.3.11 merged the overlay into the tracker's renderer with
@@ -688,6 +690,34 @@ ipcMain.handle("save-report", (_, frames, info) => {
 // only ever the frames folder, or a report folder inside it
 ipcMain.handle("open-folder", (_, sub) => shell.openPath(typeof sub === "string" && /^report-[\dT-]+$/.test(sub) ? path.join(FRAMES(), sub) : FRAMES()));
 
+// Neural text reader (0.3.31, P1-6): the ocrs recognition model (models/text-recognition.onnx, CC BY-SA 4.0,
+// attribution in models/NOTICE.md — the same recognition-only model Minerva bundles, Turbozo got us the OK) runs
+// locally with onnxruntime-node, behind core/ocrmodel.js. The shop rows read through it: on the shop fixture it
+// answers in ~15 ms a line where Tesseract took ~90, and every price parses (tests/ocr_bench.js is the gate).
+// The shop's title bar stays on Tesseract — the model drops thin strokes there and the seller IGN must not be
+// wrong — and every other OCR caller (map title, chat, journal) is untouched. An empty or low-confidence neural
+// read falls back to the Tesseract worker below, so a read only ever gets slower, never worse.
+let ortRun = null;
+function neuralRun(){
+  if (!ortRun) ortRun = (async () => {
+    const ort = require("onnxruntime-node");
+    const s = await ort.InferenceSession.create(unpacked(path.join(__dirname, "..", "models", "text-recognition.onnx")), {executionProviders: ["cpu"], graphOptimizationLevel: "all"});
+    return async (data, shape) => {
+      const r = await s.run({line_image: new ort.Tensor("float32", data, shape)}), o = r.chars;
+      return {data: o.data, seq: o.dims[0], classes: o.dims[2]};
+    };
+  })().catch(e => { ortRun = null; throw e });
+  return ortRun;
+}
+// the crops arrive hard-binarized at 2x (names, one price cut) — one nearest-neighbour doubling later the model's
+// own resize antialiases the blocky edges instead of squashing them (measured: names 3/6 -> 6/6, prices 6/6 parse)
+async function neuralOcr(pngBytes, up){
+  const img = readPng(pngBytes);
+  if (!img || !img.w || !img.h) return null;
+  const run = await neuralRun();
+  const f = Math.max(1, Math.round(4 / (up || 4)));   // land the line at the model's preferred 4x whatever the cutter chose
+  return (await OcrModel.readLines([f > 1 ? OcrModel.upscale(img, f) : img], run, {}))[0] || null;   // {text, conf} | null
+}
 // map name: OCR of the minimap title (a black-on-white PNG the renderer cuts out). Tesseract runs here, offline, with the
 // English model shipped in the installer; files are unpacked from the asar because its worker thread loads them from disk.
 let ocr = null;
@@ -707,7 +737,13 @@ function ocrWorker(){
 // cache (core/ocrcache.js) answering every repeat read, OCR sits unused most of a session. The next read just builds
 // a new worker (a second or two, local model).
 let ocrReads = 0, ocrIdleT = 0;
-ipcMain.handle("ocr", async (_, pngBytes) => {
+ipcMain.handle("ocr", async (_, pngBytes, opt) => {
+  if (opt && (opt.tag === "shopName" || opt.tag === "shopPrice")){   // the benched paths only; see neuralOcr above
+    try {
+      const m = await neuralOcr(Buffer.from(pngBytes), opt.up);
+      if (m && m.text && m.conf >= 0.35) return m.text;
+    } catch {}
+  }
   try {
     const w = await ocrWorker();
     ocrIdleT = Date.now();
