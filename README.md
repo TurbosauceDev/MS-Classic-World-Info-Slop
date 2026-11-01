@@ -6,3 +6,6 @@ quest database, citizenship. See CLAUDE.md for layout/workflow and docs/notes.md
 ./scripts/fetch_osms.sh && python3 scripts/build_data.py && python3 scripts/build.py
 open dist/index.html
 ```
+
+## Licence
+Source-available under the PolyForm Noncommercial License 1.0.0 (`LICENSE`): free for personal and other noncommercial use, no commercial use without permission. What the licence does and doesn't cover: `NOTICE.md`.
