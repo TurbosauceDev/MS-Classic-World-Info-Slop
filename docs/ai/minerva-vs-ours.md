@@ -61,3 +61,19 @@ several WebView2 windows. Cheapest real answer: Danny opens Task Manager with ea
 - Cheaper wins to copy first: crop-only capture for the bar and pickup band (higher pickup rate at lower cost),
   shape-based pickup matching + voting, always-on session start on first EXP change, previous-map disambiguation.
 - ocrs project AI policy: no AI-written issues/PR comments to its maintainers.
+
+## 4. ocrs bench, 2026-11-01 (Danny approved "do everything")
+- Data: 20 of Danny's real tracker snaps (Pictures\MS Classic Tracker frames, snap-start 10-18..10-28) + tests/frames,
+  cut with our own `mapTextCrop`/`jobTextCrop`: 44 crops (map titles: KPQ stages, Kerning City, Ant Tunnel Park,
+  Rocky Road I, The Pig Beach; job box: Archer/Hunter).
+- Tesseract.js (ours, as shipped) + `mapFromText`/`jobFromText` snapping: 44/44 resolve to the right map/job,
+  median 98 ms a crop. Raw text is messy ("Hidilen Street", "frcher") but snapping fixes it.
+- ocrs 0.13.1 native, Minerva's recognition model, recognition only (no detection model: its download host answers
+  403 here), lines split by a naive blank-row cut: 13-27 ms a map crop, ~45 ms a job crop, but garbage text, because
+  ocrs needs clean single-line boxes and our crops keep the minimap icon, the "|" divider and two lines that touch.
+  Minerva gets good reads only after its own preprocessing (prep.rs: title-pixel mask, line split, II/III count).
+  So this is NOT a verdict on ocrs quality, only that it is no drop-in.
+- No npm/WASM package is published (`ocrs` and `@robertknight/ocrs` 404 on npm); using it in Electron means building
+  the WASM ourselves.
+- Verdict: keep Tesseract. It is already 100% on real frames after snapping, results are cached by crop hash, and the
+  job look runs every 30 s, so OCR time is not our bottleneck. Revisit only if map reads fail at other UI scales.
