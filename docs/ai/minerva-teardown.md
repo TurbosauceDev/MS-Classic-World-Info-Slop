@@ -75,3 +75,41 @@ payload: one `minerva.exe` (23.4 MB; UI, fonts and the 9.7 MB ocrs ONNX model em
 matches_source: version string 0.17.0 = repo HEAD 88f55b8 (tag v0.17.0); UA `Minerva/0.17.0 (personal-use map helper; +https://github.com/itechify/minerva)`. Hosts in strings: github.com, meowdb.com, owlofminerva.app, osmsdataexplorer.com, maplestory.market, developer.microsoft.com (WebView2). Nothing beyond what the source names.
 imports_of_note: SendInput, GetAsyncKeyState, PostMessageW are in the import table, pulled in by tao (Tauri's window crate). Their own crate enables no Win32 KeyboardAndMouse feature, and src-tauri/src/search.rs avoids tao's `set_focus` because that synthesises an Alt press with SendInput. BitBlt + RegisterHotKey are theirs. No ReadProcessMemory/OpenProcess/SetWindowsHookEx.
 comparison_with_our_tracker: docs/ai/minerva-vs-ours.md.
+
+## 9. Adoption plan (Glorg, 2026-11-01 — Turbozo approved the P0/P1 waves; this maps Minerva's techniques onto them)
+
+Minerva is the provenance of MesoLens's shop-band constants (its own THIRD-PARTY-NOTICES credits this repo, MIT), and its
+engineering bar is high (1,177 Rust tests, replayable bug reports, ADR discipline). Facts below verified by a second
+independent read of the same clone (88f55b8); identity numbers in §1 of this doc are the ones to trust. What we adopt,
+ranked, each mapped to an approved roadmap item in docs/ai/roadmap-p0-p1-execution.md:
+
+1. **Brightness-relative colour matching** (`crates/minerva-core/src/ink.rs` ~20-35: infer a per-frame brightness scalar
+   from a reference channel, match colours at 0.8..=1.1). Live captures read ~0.935x darker than screenshots; this kills
+   the whole "works on the fixture, fails live" class without ML. → Fold into the readers during P1-6 (digit models) and
+   the shop watcher's band detection (P0-3, shipped, currently fixture-tuned).
+2. **Ink-keyed OCR memoization** (`recogniser.rs` 35-81: hash the binarized line's pixels; unchanged UI costs zero
+   inference). We already cache (`core/ocrcache.js`, ocrText slots) — audit ours against theirs during P1-6 so
+   continuous loops (shop watch, quest HUD P1-7) never re-OCR identical pixels.
+3. **Measure-then-resample UI scaling** (`ui_size.rs`, ADR 0020: find one known-size element, derive scale, resample with
+   Catmull-Rom clamped to source neighbours). Our shop geometry is 2x-tuned on Danny's setup; the pitch-chain in
+   shopread.js already self-derives, but the resample trick is the general answer for other UI scales. → P1-6.
+4. **Recognition-only OCR with supplied line boxes** (ocrs ONNX model, no detection stage). A candidate successor to
+   Tesseract for digits. **Licence trap: their bundled model is CC BY-SA 4.0 — never bundle that file.** If we go this
+   way we train our own (our fixture corpus is exactly the labelled data), else stay on Tesseract + shape readers. → P1-6.
+5. **Physics-capped leaderboards + automatic flagging** (`site/worker/leaderboards.ts` 22-31: uploads capped at 5x the
+   map's OSMS-derived solo EXP/h ceiling or an absolute cap; `automatic-reports.ts`: >2x the busy map's #1 auto-flags a
+   report — anti-cheat with no review queue). → Adopt verbatim in the weekly grind ladder (P1-5) before launch, not after.
+6. **Replayable field diagnostics** (`bug_report.rs`: every core input is recorded, a zip replays in CI) + near-miss
+   diagnostics on failed reads (`ShopNearMiss`). Our Report-a-bug already ships frames; extending it to replay reader
+   inputs makes the quest-HUD reader (P1-7) debuggable from day one. → P1-7.
+7. **"Unreadable, never misread"** (shape-validated grammars: price ink-width budgets, digit-width checks, foreign-ink
+   coverage). We already two-cut verify and fuzzy-match — the doctrine matches; adopt the explicit grammar checks for
+   the quest tracker lines (P1-7).
+8. **Z-order overlay tricks** (`gamewin.rs` NOTOPMOST→TOPMOST re-raise, HWND_BOTTOM hide, no-activate) — our overlay
+   already does the Electron equivalents (pinOnTop loop, focusable:false, click-through); nothing to port, the pattern is
+   validated. → P1-8 (koffi anchor mode) proceeds as approved.
+
+Not adopted: their D1-based rate limiter (a D1 write per request — the exact constraint their own migration 0009 hit;
+ours is per-request COUNT queries on the same D1, so watch ours too if /api/spots traffic grows), and maplestory.market
+as a price source (it is a bot-scanned site on our never-use list per Danny's 10-30/10-31 calls — their deal quality
+depends on it, ours comes from named upstreams + our own quorum scans).
