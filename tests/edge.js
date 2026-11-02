@@ -284,6 +284,14 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.fill("#uacc", "99999"); await p.dispatchEvent("#uacc", "input"); await p.waitForTimeout(150);
     check(!errs.length && !BADTEXT.test(await p.innerText("#maps")), `Where to train with accuracy 99999 at lvl 200 has no NaN ${errs.join("; ")}`); await ctx.close() }
 
+  // site monkey test (seed 3, 2026-11-02): a Builder skill tooltip at 360px was 24px too wide (width excluded its padding)
+  { const {p, errs, ctx} = await page({viewport: {width: 360, height: 800}}); await p.goto(URL); await open(p, "plan");
+    const br = await p.$$eval("#pbranch option", o => o.map(x => x.value)); let worst = 0, n = 0;
+    for (const v of br){ await p.selectOption("#pbranch", v); await p.waitForTimeout(50);
+      for (const ic of await p.$$("#pskills .sic")){ await ic.focus(); n++;
+        worst = Math.max(worst, await ic.evaluate(e => e.querySelector(".tip").getBoundingClientRect().right)) } }
+    check(!errs.length && n > 0 && worst <= 360, `Builder skill tooltips fit a 360px phone (${n} tips, rightmost edge ${Math.round(worst)})`); await ctx.close() }
+
   await b.close();
   console.log(fails ? `\n${fails} failed` : "\nall good"); process.exit(fails ? 1 : 0);
 })();

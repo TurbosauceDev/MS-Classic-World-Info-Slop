@@ -156,6 +156,8 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - tests/edge.js "tracker server reply hostileName" checks a markup player name shows as literal text on the KPQ board.
 - Unset path vars write to a literal folder named "undefined" (the 10-06 Credits screenshots landed at repo root). Gitignored now; save screenshots to the scratchpad.
 - Home billboard (homeBig) uses View Transitions: the browser default stretches each card snapshot to the moving box and cross-fades (10-21 "cards flash" report: giant ghost text). styles.css pins `::view-transition-old/new(*)` to `object-fit:none` top-left; root swaps without fading. tests/edge.js "Home billboard transition" checks it. Any new view transition inherits this.
+- Popups sized with `calc(100vw - Npx)` need `box-sizing:border-box`, or their padding pushes phones sideways (11-02 Builder skill tip, 377 px at 360; pinned in `tests/edge.js`). `tests/monkey.js` seeds are fixed but its walk follows the live DOM, so new price data can lead it somewhere new: a red monkey with no code change is usually a real old bug (Hermes).
+- `scripts/build.py` runs on Windows now (`%-d` was glibc-only). On Windows, `tests/smoke.js` fails 2 checks on clean `main` (MCI table 914/910 at 1300 px, skill preview repeat) from font metrics; CI on Linux is the judge (Hermes 11-02).
 
 ## Splits
 - 10-18: `src/index.html` split into `src/pages/<id>.html` (built dist identical). Edit a page's file, not the shell; build.py asserts every page file has a slot.
