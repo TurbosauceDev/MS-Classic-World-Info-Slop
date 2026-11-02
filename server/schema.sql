@@ -148,3 +148,18 @@ CREATE INDEX IF NOT EXISTS boss_spots_install ON boss_spots (install, received);
 -- nick, opt-in like the party view's; same IGN shape the KPQ board's names use). Side table: schema.sql
 -- re-runs on every deploy. The tracker's "Delete what I shared" clears it along with the runs.
 CREATE TABLE IF NOT EXISTS run_names (run_id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+
+-- Abuse-cap ledger (2026-11-02): the caps count live rows (COUNT(*) ... WHERE ipday = ?), so "Delete what I shared"
+-- used to hand the daily budget back — hit the cap, forget, refill, forever. This table keeps each network-day's
+-- high-water marks: posts (rows ever accepted today) and installs (distinct trackers ever seen today). Forget
+-- deliberately leaves it — it is the network-day's tally, not the install's data: the same day-scoped salted,
+-- non-reversible hash the rows themselves carry, kept at most until the day after tomorrow (archiveOld prunes it).
+-- party_live and feedback need no ledger: forget can't touch either (party rows self-expire within an hour; feedback
+-- has no install column to forget by), so their caps were never resettable this way.
+CREATE TABLE IF NOT EXISTS ipday_ledger (
+  ipday    TEXT PRIMARY KEY,         -- the same salted IP + UTC day hash the hot tables carry
+  day      TEXT NOT NULL,            -- the UTC day inside that hash: the row ages out with it
+  posts    INTEGER NOT NULL DEFAULT 0,    -- rows accepted today, ever (high-water mark, survives forget)
+  installs INTEGER NOT NULL DEFAULT 0,    -- distinct tracker IDs seen today, ever (high-water mark)
+  updated  TEXT NOT NULL
+);

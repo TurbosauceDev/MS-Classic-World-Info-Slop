@@ -172,3 +172,22 @@ bug-hunt pass then hardened all three areas; fixes are regression-tested:
   loads answer with a message instead of a stuck "Reading…"; the live EXP reader stops the
   screen share if start-up fails; the KPQ timer page survives a hand-edited saved round;
   junk SP values in shared links are dropped. site v0.20.15, tracker 0.3.37.
+
+## 2026-11-02 · Bug-hunt follow-up: the two honestly-logged leftovers
+
+- **Forget can no longer reset the abuse caps.** Every cap counted live rows
+  (`COUNT(*) ... WHERE ipday = ?`) — the same rows "Delete what I shared" deletes —
+  so hit-cap, forget, refill repeated forever (runs, KPQ rounds, shop rows, boss
+  spots, and the 6-trackers-per-network rule alike). A new `ipday_ledger` table keeps
+  each network-day's high-water marks (rows ever accepted, tracker IDs ever seen);
+  the caps read max(live rows, mark); forget deliberately leaves the ledger — it is
+  the network-day's tally, not the install's data: the same day-scoped salted hash
+  the rows themselves carry, pruned by the archive pass once the day is gone
+  (yesterday-and-older). party_live and feedback need no ledger (forget can't touch
+  either). The privacy page spells the tally out in plain words (Nov 2, 2026).
+- **The summary cache trims adaptively.** The 1.5 MB store guard used to step
+  1000-rounds-then-none; past that the copy was served fresh and never stored, so
+  every request re-read every run until the data shrank. `trimSummary` binary-searches
+  the most of the newest KPQ rounds that fit, so the cache stores whenever the round
+  list can save it; only a copy even an empty list can't shrink goes unstored (real
+  data sits far below the line).

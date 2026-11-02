@@ -34,12 +34,25 @@ async function salt(db){
   if (!row){ await db.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('salt', ?)").bind(crypto.randomUUID()).run(); row = await db.prepare("SELECT v FROM meta WHERE k = 'salt'").first() }
   return row.v;
 }
+// The abuse caps count live rows, so "Delete what I shared" used to hand the daily budget back (hit the cap, forget,
+// refill, forever). ipday_ledger keeps each network-day's high-water marks — rows ever accepted and distinct trackers
+// ever seen today — and the caps read max(live rows, ledger). Forget leaves the ledger alone on purpose: it is the
+// network-day's tally, not the install's data (the same day-scoped salted hash the rows themselves carry), and it ages
+// out with the day. The bump is a MAX() upsert, so two requests racing can only ever over-count, never under.
+async function ledgerPeak(db, ipday){
+  return await db.prepare("SELECT posts, installs FROM ipday_ledger WHERE ipday = ?").bind(ipday).first() || {posts: 0, installs: 0};
+}
+async function ledgerBump(db, ipday, day, posts, installs){
+  await db.prepare(`INSERT INTO ipday_ledger (ipday, day, posts, installs, updated) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(ipday) DO UPDATE SET posts = MAX(posts, excluded.posts), installs = MAX(installs, excluded.installs), updated = excluded.updated`)
+    .bind(ipday, day, posts, installs, new Date().toISOString()).run();
+}
 
 async function postRun(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const c = cleanRun(body, G);
   if (c.error) return json({error: c.error}, 400);
-  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + day + await salt(env.DB));
   // the same run sent twice (the tracker retries when the ack is lost on the wire): same install, same map and numbers.
   // The retry rides the 10-min flush, so a 12-min window catches it; a real next run is always 14.5+ min later (the
   // minutes floor), so the window can never swallow one. IS, not =: an unknown map's NULL must compare NULL-safe.
@@ -50,7 +63,8 @@ async function postRun(req, env){
   const today = await env.DB.prepare("SELECT COUNT(*) n FROM runs WHERE ipday = ?").bind(ipday).first();
   // one vote per player: a new install ID from an IP that already sent 6 others today is refused (ID rotation)
   const ids = await env.DB.prepare("SELECT COUNT(DISTINCT install) n, SUM(install = ?) mine FROM runs WHERE ipday = ?").bind(body.install, ipday).first();
-  if (recent.n >= MAX_PER_HOUR || today.n >= MAX_PER_IP_DAY || ids.n >= MAX_INSTALLS_PER_IP_DAY && !ids.mine) return json({error: "too many runs"}, 429);
+  const peak = await ledgerPeak(env.DB, ipday);
+  if (recent.n >= MAX_PER_HOUR || Math.max(today.n, peak.posts) >= MAX_PER_IP_DAY || Math.max(ids.n, peak.installs) >= MAX_INSTALLS_PER_IP_DAY && !ids.mine) return json({error: "too many runs"}, 429);
   const r = c.run;
   const ins = await env.DB.prepare(`INSERT INTO runs (install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp,
     kills, mesos, ok, why, mobs, items) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -64,6 +78,7 @@ async function postRun(req, env){
   if (code && r.party > 1){   // a code only groups party runs: friends soloing the same map with one code are separate players
     await env.DB.prepare("INSERT OR REPLACE INTO run_groups (run_id, grp) VALUES (?, ?)").bind(runId, await sha("party:" + code + await salt(env.DB))).run();
   }
+  await ledgerBump(env.DB, ipday, day, Math.max(today.n, peak.posts) + 1, Math.max(ids.n + (ids.mine ? 0 : 1), peak.installs));
   return json({ok: true, counted: c.ok, why: c.why});
 }
 
@@ -113,10 +128,11 @@ async function postKpq(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const c = cleanKpq(body);
   if (c.error) return json({error: c.error}, 400);
-  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + day + await salt(env.DB));
   const recent = await env.DB.prepare("SELECT COUNT(*) n FROM kpq_rounds WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n, COUNT(DISTINCT install) k, SUM(install = ?) mine FROM kpq_rounds WHERE ipday = ?").bind(body.install, ipday).first();
-  if (recent.n >= KPQ_PER_HOUR || today.n >= MAX_PER_IP_DAY || today.k >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rounds"}, 429);
+  const peak = await ledgerPeak(env.DB, ipday);
+  if (recent.n >= KPQ_PER_HOUR || Math.max(today.n, peak.posts) >= MAX_PER_IP_DAY || Math.max(today.k, peak.installs) >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rounds"}, 429);
   // the same round sent twice (a retry, or the site's Send pressed again): same install, same clear, in the last 30 min
   const dup = await env.DB.prepare("SELECT id FROM kpq_rounds WHERE install = ? AND clear = ? AND received > ?").bind(body.install, c.round.clear, new Date(now - 1800e3).toISOString()).first();
   if (dup) return json({ok: true, counted: false, why: "already sent"});
@@ -128,6 +144,7 @@ async function postKpq(req, env){
   if (r.name) await env.DB.prepare("INSERT OR REPLACE INTO kpq_names (kpq_id, name) VALUES (?, ?)").bind(ins.meta.last_row_id, r.name).run();
   if (r.raw) await env.DB.prepare("INSERT OR REPLACE INTO kpq_raw (kpq_id, raw) VALUES (?, ?)").bind(ins.meta.last_row_id, JSON.stringify(r.raw)).run();
   if (r.src !== "tracker") await env.DB.prepare("INSERT OR REPLACE INTO kpq_src (kpq_id, src) VALUES (?, ?)").bind(ins.meta.last_row_id, r.src).run();
+  await ledgerBump(env.DB, ipday, day, Math.max(today.n, peak.posts) + 1, Math.max(today.k + (today.mine ? 0 : 1), peak.installs));
   return json({ok: true, counted: c.ok, why: c.why});
 }
 
@@ -178,6 +195,9 @@ async function archiveOld(db){
   await db.prepare("DELETE FROM run_extra WHERE run_id NOT IN (SELECT id FROM runs)").run();
   await db.prepare("DELETE FROM run_groups WHERE run_id NOT IN (SELECT id FROM runs)").run();
   await db.prepare("DELETE FROM run_names WHERE run_id NOT IN (SELECT id FROM runs)").run();
+  // the abuse ledger ages out with its day: keep today and yesterday, drop anything older (the caps are per UTC day,
+  // so yesterday's tally can never bind again — 36 h back covers the whole of yesterday whichever side of midnight)
+  await db.prepare("DELETE FROM ipday_ledger WHERE day < ?").bind(new Date(Date.now() - 36 * 3600e3).toISOString().slice(0, 10)).run();
   await db.prepare(`INSERT OR IGNORE INTO kpq_rounds_archive (id, install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why, archived)
     SELECT id, install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why, ? FROM kpq_rounds WHERE received < ?`).bind(cut, cut).run();
   await db.prepare("DELETE FROM kpq_rounds WHERE received < ?").bind(cut).run();
@@ -392,15 +412,17 @@ async function postShop(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const c = cleanShop(body, G);
   if (c.error) return json({error: c.error}, 400);
-  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + day + await salt(env.DB));
   const recent = await env.DB.prepare("SELECT COUNT(*) n FROM shop_obs WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n, COUNT(DISTINCT install) k, SUM(install = ?) mine FROM shop_obs WHERE ipday = ?").bind(body.install, ipday).first();
-  if (recent.n + c.rows.length > SHOP_PER_HOUR || today.n + c.rows.length > SHOP_PER_IP_DAY || today.k >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rows"}, 429);
+  const peak = await ledgerPeak(env.DB, ipday);
+  if (recent.n + c.rows.length > SHOP_PER_HOUR || Math.max(today.n, peak.posts) + c.rows.length > SHOP_PER_IP_DAY || Math.max(today.k, peak.installs) >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rows"}, 429);
   const t = now.toISOString();
   const ids = (await env.DB.batch(c.rows.map(r => env.DB.prepare("INSERT INTO shop_obs (install, ipday, received, item, qty, price, sold) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(body.install, ipday, t, r.id, r.qty, r.price, r.sold)))).map(x => x.meta?.last_row_id);
   // 0.3.30: the upload names the shop (Turbozo): one ext row per obs row, same values for the whole read
   if (c.seller || c.title || c.ch != null || c.room != null || c.map != null)
     await env.DB.batch(ids.filter(Boolean).map(id => env.DB.prepare("INSERT INTO shop_obs_ext (obs_id, seller, title, ch, room, map) VALUES (?, ?, ?, ?, ?, ?)").bind(id, c.seller, c.title, c.ch, c.room, c.map)));
+  await ledgerBump(env.DB, ipday, day, Math.max(today.n, peak.posts) + c.rows.length, Math.max(today.k + (today.mine ? 0 : 1), peak.installs));
   return json({ok: true, stored: c.rows.length});
 }
 // per item over the last 7 days: median price each of open asks and of sold rows, with how many rows and how many different
@@ -439,13 +461,15 @@ async function postSpot(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const c = cleanSpot(body, G);
   if (c.error) return json({error: c.error}, 400);
-  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + day + await salt(env.DB));
   const hour = await env.DB.prepare("SELECT COUNT(*) n FROM boss_spots WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n FROM boss_spots WHERE ipday = ?").bind(ipday).first();
-  if (hour.n >= SPOT_PER_HOUR || today.n >= SPOT_PER_IP_DAY) return json({error: "too many spots"}, 429);
+  const peak = await ledgerPeak(env.DB, ipday);
+  if (hour.n >= SPOT_PER_HOUR || Math.max(today.n, peak.posts) >= SPOT_PER_IP_DAY) return json({error: "too many spots"}, 429);
   const dup = await env.DB.prepare("SELECT id FROM boss_spots WHERE install = ? AND map = ? AND mob = ? AND received > ?").bind(body.install, c.spot.map, c.spot.mob, new Date(now - SPOT_SAME_MIN * 60e3).toISOString()).first();
   if (dup) return json({ok: true, dup: true});
   await env.DB.prepare("INSERT INTO boss_spots (install, ipday, received, map, mob, ch, t) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(body.install, ipday, now.toISOString(), c.spot.map, c.spot.mob, c.spot.ch, c.spot.t).run();
+  await ledgerBump(env.DB, ipday, day, Math.max(today.n, peak.posts) + 1, 0);   // no install-rotation cap here: installs 0 keeps the stored mark
   return json({ok: true});
 }
 async function getSpots(env, url){
@@ -568,6 +592,28 @@ async function getLadder(env){
   return new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=300", ...CORS}});
 }
 
+// D1 rows max out at 2 MB: a summary copy at or past 1.5 MB has to shrink before it can be stored. The KPQ round list
+// is the one unbounded field, so it gives back its oldest rounds until the copy fits — a binary search keeps as many as
+// possible (the old fixed 1000-then-none steps either wasted rounds or kept none). If even an empty list doesn't fit,
+// nothing can shrink it safely: the full copy is served fresh and not stored (the next rebuild retries — real data sits
+// far below the line; bug-hunt follow-up 2026-11-02). Exported for the tests.
+export function trimSummary(s, limit = 1.5e6){
+  const full = JSON.stringify(s);
+  if (full.length < limit) return full;
+  const all = s.kpq && s.kpq.list;
+  if (!Array.isArray(all) || !all.length) return full;   // nothing left to give
+  s = {...s, kpq: {...s.kpq, list: []}};                 // the copy works on its own object; the caller's is untouched
+  if (JSON.stringify(s).length >= limit) return full;    // the list can't save it
+  let lo = 0, hi = all.length;                           // lo fits, hi doesn't
+  while (lo < hi){
+    const mid = (lo + hi + 1) >> 1;
+    s.kpq.list = all.slice(-mid);
+    if (JSON.stringify(s).length < limit) lo = mid; else hi = mid - 1;
+  }
+  s.kpq.list = lo ? all.slice(-lo) : [];                 // slice(-0) is the whole array: guard the empty fit
+  return JSON.stringify(s);
+}
+
 async function route(req, env){
   const url = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
@@ -607,9 +653,9 @@ async function route(req, env){
         const archived = await archiveOld(env.DB);
         const s = await summary(env.DB);
         s.archived = archived;
-        body = JSON.stringify(s);
-        // D1 rows max out at 2 MB: past 1.5 MB keep fewer KPQ rounds for the filters, so the copy can still be stored
-        for (const n of [1000, 0]) if (body.length >= 1.5e6 && s.kpq.list.length > n){ s.kpq.list = n ? s.kpq.list.slice(-n) : []; body = JSON.stringify(s) }
+        // D1 rows max out at 2 MB: trimSummary gives back KPQ rounds (newest kept) until the copy stores; past that it
+        // is served fresh and left unstored rather than half-emptied on every request
+        body = trimSummary(s);
         if (body.length < 1.5e6) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").bind(body).run();
       }
     }

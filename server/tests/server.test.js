@@ -478,4 +478,93 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   assert.strictEqual(mobs[0].mesos, 500, "clamped to the run's mesos: " + JSON.stringify(mobs));
 }
 
+// "Delete what I shared" can't hand the abuse caps back (bug-hunt follow-up 2026-11-02): the caps counted live rows,
+// so forget - refill - forget refilled the day forever. ipday_ledger keeps the network-day's high-water marks (rows
+// ever accepted, trackers ever seen), forget leaves it alone, and the caps read max(live rows, ledger).
+{
+  const crypto = await import("node:crypto");
+  const salt = sql.prepare("SELECT v FROM meta WHERE k = 'salt'").get().v;
+  const day = new Date().toISOString().slice(0, 10);
+  const ipdayOf = ip => crypto.createHash("sha256").update(ip + day + salt).digest("hex").slice(0, 32);   // the worker's own sha, same bytes
+  const ledger = ip => sql.prepare("SELECT posts, installs FROM ipday_ledger WHERE ipday = ?").get(ipdayOf(ip));
+  const fpost = (inst, ip) => worker.fetch(new Request("https://x/api/forget", {method: "POST", body: JSON.stringify({install: inst}), headers: {"cf-connecting-ip": ip}}), env);
+  const ppost = (path, body, ip) => worker.fetch(new Request("https://x" + path, {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
+
+  // the write path: every accepted post raises the mark, a deduped retry doesn't, forget deletes the rows and keeps the mark
+  const wip = "10.31.1.1", winst = "ledgerwritewrit01";
+  await post(run(winst, 1000), wip);
+  await post(run(winst, 1000), wip);   // a deduped retry: no row, no bump
+  await post(run(winst, 1010), wip);
+  assert.deepStrictEqual({...ledger(wip)}, {posts: 2, installs: 1}, "two accepted runs: the mark is 2");
+  await fpost(winst, wip);
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE install = ?").get(winst).n, 0, "forget still deletes the rows");
+  assert.deepStrictEqual({...ledger(wip)}, {posts: 2, installs: 1}, "the mark survives the forget");
+  let [st] = await post(run(winst, 1020), wip);
+  assert.strictEqual(st, 200, "2 rows is far under the cap: sending still works");
+  assert.strictEqual(ledger(wip).posts, 3, "and the mark climbs with it");
+  // the other endpoints bump the same ledger (kpq +1 a round, shop +1 a row, spots +1 a report)
+  const kip = "10.31.1.4";
+  [st] = await kpost(kr("ledgerkpqledger01", 400), kip);
+  assert.strictEqual(ledger(kip).posts, 1, "kpq bumps the ledger");
+  const sip = "10.31.1.5";
+  [st] = await ppost("/api/shop", {install: "ledgershopshops01", v: 1, rows: [{id: 1002000, qty: 1, price: 1000, sold: 0}, {id: 1002001, qty: 1, price: 900, sold: 0}]}, sip);
+  assert.strictEqual(st, 200); assert.strictEqual(ledger(sip).posts, 2, "shop bumps by rows");
+  const pip = "10.31.1.6";
+  [st] = await ppost("/api/spots", {install: "ledgerspotspot001", map: "10000013", mob: "700004", ch: 3, t: Date.now()}, pip);
+  assert.strictEqual(st, 200); assert.strictEqual(ledger(pip).posts, 1, "spots bump the ledger");
+
+  // the cap reads the mark: a network-day that already sent its 300 rows stays full even with zero live rows
+  const cip = "10.31.1.2";
+  sql.prepare("INSERT INTO ipday_ledger (ipday, day, posts, installs, updated) VALUES (?, ?, 300, 0, ?)").run(ipdayOf(cip), day, new Date().toISOString());
+  [st] = await post(run("ledgercapfulfill01", 1000), cip);
+  assert.strictEqual(st, 429, "the day is full: 429 with nothing left in the table (the pre-fix hole)");
+  await fpost("ledgercapfulfill01", cip);
+  [st] = await post(run("ledgercapfulfill01", 1000), cip);
+  assert.strictEqual(st, 429, "still full after a forget");
+  // install rotation: six trackers ever seen today is six, forget or not — unless the sender is one of them
+  sql.prepare("UPDATE ipday_ledger SET posts = 0, installs = 6 WHERE ipday = ?").run(ipdayOf(cip));
+  [st] = await post(run("ledgerrotatefill01", 1000), cip);
+  assert.strictEqual(st, 429, "the 7th tracker is refused on the mark alone");
+  const known = "ledgerknownknown01";
+  sql.prepare(`INSERT INTO runs (install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items)
+    VALUES (?, ?, ?, '2026-11-02', '42', NULL, 22, 'Magician', 1, 15, 1000, 1000, 1000, 100, 900, 1, NULL, '[]', '{}')`).run(known, ipdayOf(cip), new Date().toISOString());
+  [st] = await post(run(known, 1000, {kills: 101}), cip);
+  assert.strictEqual(st, 200, "a tracker the day already knows still sends");
+  await fpost(known, cip);
+  [st] = await post(run(known, 1000, {kills: 102}), cip);
+  assert.strictEqual(st, 429, "forgotten, its slot stays spent for the day");
+  // another network on the same day has its own ledger row
+  [st] = await post(run("ledgerothernet0001", 1000), "10.31.1.3");
+  assert.strictEqual(st, 200, "another network's day is untouched");
+
+  // the ledger ages out with its day: archiveOld (inside a summary rebuild) drops anything older than yesterday
+  sql.prepare("INSERT INTO ipday_ledger (ipday, day, posts, installs, updated) VALUES ('staleday', '2026-01-01', 300, 6, '2026-01-01T00:00:00Z')").run();
+  await fresh();
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM ipday_ledger WHERE ipday = 'staleday'").get().n, 0, "yesterday-and-older marks are pruned");
+  assert.ok(ledger(cip), "today's marks stay");
+}
+
+// the summary cache trims adaptively (bug-hunt follow-up 2026-11-02): the fixed 1000-then-none steps either wasted
+// rounds or stored nothing at all (every request rebuilding); now the copy keeps as many of the newest KPQ rounds as
+// fit under the 1.5 MB store guard
+{
+  const {trimSummary} = await import("../src/index.js");
+  const mk = k => ({runs: 1, kpq: {list: Array.from({length: 64}, (_, i) => ({d: "2026-11-02", at: i, x: i, pad: "p".repeat(40)})).slice(-k)}});
+  const len = k => JSON.stringify(mk(k)).length;
+  const want = [...Array(65).keys()].reverse().find(k => len(k) < 3000);   // the most rounds the toy limit allows
+  assert.ok(want > 0 && want < 64, "the toy limit cuts mid-list: " + want);
+  const input = mk(64);
+  const out = JSON.parse(trimSummary(input, 3000));
+  assert.strictEqual(input.kpq.list.length, 64, "the caller's object is untouched");
+  assert.strictEqual(out.kpq.list.length, want, `keeps ${want} of 64, not 1000-or-none`);
+  assert.strictEqual(out.kpq.list.at(-1).at, 63, "the newest rounds are the ones kept");
+  assert.ok(len(want) < 3000 && len(want + 1) >= 3000, "and it really is the most that fits");
+  const huge = {blob: "x".repeat(5000), kpq: {list: [{a: 1}]}};
+  assert.strictEqual(trimSummary(huge, 1000), JSON.stringify(huge), "a list that can't save the copy leaves it whole");
+  const small = {a: 1};
+  assert.strictEqual(trimSummary(small, 1000), JSON.stringify(small), "under the line: untouched");
+  const nolist = {kpq: {list: []}, blob: "x".repeat(2000)};
+  assert.strictEqual(trimSummary(nolist, 1000), JSON.stringify(nolist), "nothing left to give: untouched");
+}
+
 console.log("server tests passed");
