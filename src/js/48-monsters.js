@@ -185,7 +185,7 @@ $("#mbrows").addEventListener("click", e => { const b = e.target.closest(".mbtn"
 $("#mbpage").addEventListener("click", e => {
   if (e.target.id === "mbback"){ S.open = null; save(); show(); return }
   if (e.target.id === "mfall"){ S.fall = !S.fall; renderFarm(M.find(x => x.id === S.open)); return }
-  if (e.target.id === "mbshare") return copyShare(e.target, shareUrl("m", S.open));
+  if (e.target.id === "mbshare") return copyShare(e.target, shareClean("mob", S.open, "m", S.open));
   const l = e.target.closest("[data-open]"); if (l) return openMob(l.dataset.open);
   const r = e.target.closest(".mfrow"); if (r && !e.target.closest(".mobname")){ S.fmap = r.dataset.map; renderFarm(M.find(x => x.id === S.open)) }
 });

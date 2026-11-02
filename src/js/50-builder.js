@@ -58,6 +58,16 @@ if (HASH.b && HASH.b.cls) S = Object.assign(S, HASH.b);   // shared link
   S.cls = String(S.cls); if (!Object.hasOwn(BRANCHES, S.cls)) Object.assign(S, {cls:"Warrior", branch:null, fam:null});
   S.lvl = Math.min(MAX_LEVEL, Math.max(10, Math.round(+S.lvl) || 30));
   if (!obj(S.sp)) S.sp = {}; if (!obj(S.gear)) S.gear = {};
+  // clamp each SP value to its skill's real max: a shared #b= link or hand edit carrying sp:{"1000000":99} passed the
+  // finite check and renderSkills' stat(s, 99) read s.st[98] = undefined and threw, bricking the builder on every load
+  // of that save (round 3). The id->max map comes straight from the COT2 export (SK = D.skills).
+  const spMax = {}; for (const arr of Object.values(SK)) for (const s of arr) spMax[s.id] = s.max;
+  for (const k of Object.keys(S.sp)){
+    if (!Number.isFinite(S.sp[k]) || !/^\d{1,10}$/.test(k) || !(spMax[k] > 0)) { delete S.sp[k]; continue }   // spentIn adds sp values: a string "3" from a hand edit used to concat into the SP counters ("053 / 61")
+    S.sp[k] = Math.min(Math.floor(S.sp[k]), spMax[k]);
+    if (S.sp[k] <= 0) delete S.sp[k];
+  }
+  S.deco = Array.isArray(S.deco) ? [...new Set(S.deco.map(String))].filter(id => D.items[id]?.c === "Cash").slice(0, 24) : [];   // NX / Decoration ids worn over the gear
   if (S.ap != null && !(obj(S.ap) && ["STR","DEX","INT","LUK"].every(k => Number.isFinite(S.ap[k])))) S.ap = null;
   for (const k of ["weapon","skill","ammo","branch","fam"]) if (S[k] != null && typeof S[k] !== "string") S[k] = null }
 
@@ -96,7 +106,7 @@ function lv(s, sp, list){
   for (const [n, need] of s.req) { const p = byName(n, list); if (p && lv(p, sp, list) < need) return 0 }
   return v;
 }
-const stat = (s, l) => l > 0 ? s.st[l - 1] : "";
+const stat = (s, l) => l > 0 ? s.st[Math.min(l, s.st.length) - 1] ?? "" : "";   // clamped: a value above max reads the top entry, never undefined (round 3)
 
 const AI_CACHE = new Map();
 function attackInfo(s, l){
@@ -474,6 +484,15 @@ function fillGear(){
   }).join("");
   const n = Object.keys(gear).filter(k => gear[k]).length;
   $("#pgearsum").textContent = n ? `${n} piece${n === 1 ? "" : "s"}` : "none";
+  fillDeco();
+}
+// NX / Decoration worn (read from a Deco tab screenshot): icon, name, slot, remove
+function fillDeco(){
+  const el = $("#pdeco"); if (!el) return;
+  const list = S.deco || [];
+  $("#pdecosum").textContent = list.length ? `${list.length} item${list.length === 1 ? "" : "s"}` : "none";
+  el.innerHTML = list.map(id => `<span class="decoit">${D.iicons[id] ? `<img src="data:image/png;base64,${D.iicons[id]}" alt="" width="30">` : ""} <span class="itname" tabindex="0" data-item="${id}">${esc(D.items[id].n)}</span> <span class="sub">${esc(D.items[id].s)}</span> <button class="btn sm" data-decorm="${id}" title="Remove" aria-label="Remove ${esc(D.items[id].n)}">×</button></span>`).join("")
+    || `<p class="tiny">None. Paste your Deco tab (Equipment Inventory) with the screenshot importer and it is read here.</p>`;
 }
 function renderSkills(){
   const list = jobSkills();
@@ -513,6 +532,12 @@ function renderSkills(){
 // and polearms (140-144xxxx) only show in the two-handed pose (stand2).
 function avatar(w){
   const f = S.gender === "female", ids = [f ? 21000 : 20000, f ? 31000 : 30000, ...Object.values(S.gear), ...(w ? [w.id] : [])];
+  // Decoration (Deco tab) is drawn over the equipped piece in its slot; an NX overall replaces top + bottom, an NX top/bottom replaces an overall
+  for (const d of S.deco || []){
+    const g = Math.floor(d / 10000), clash = x => { const h = Math.floor(x / 10000); return h === g && g !== 111 || (g === 105 ? h === 104 || h === 106 : (g === 104 || g === 106) && h === 105) };
+    for (let i = ids.length - 1; i >= 2; i--) if (clash(ids[i])) ids.splice(i, 1);
+    ids.push(+d);
+  }
   const src = `https://maplestory.io/api/MCW/CBT2/character/2000/${ids.join(",")}/${w && w.id / 10000 >= 140 && w.id / 10000 < 145 ? "stand2" : "stand1"}/0`, img = $("#pavatar");
   if (img.dataset.src === src) return;
   img.dataset.src = src; img.onload = () => img.hidden = false; img.onerror = () => img.hidden = true;
@@ -590,6 +615,8 @@ $("#pgear").addEventListener("change", e => { const sl = e.target.dataset.slot; 
   if (sl === "Overall" && S.gear.Overall){ delete S.gear.Top; delete S.gear.Bottom } fillGear(); render() });
 $("#pgender").addEventListener("change", () => { S.gender = $("#pgender").value; for (const [k, id] of Object.entries(S.gear)) if (ARMOR[id]?.[5] && S.gender && ARMOR[id][5] !== S.gender) delete S.gear[k]; fillGear(); render() });
 $("#pgearclear").addEventListener("click", () => { S.gear = {}; fillGear(); render() });
+$("#pdeco").addEventListener("click", e => { const b = e.target.closest("[data-decorm]"); if (!b) return; S.deco = S.deco.filter(x => x !== b.dataset.decorm); fillDeco(); render() });
+$("#pdecoclear").addEventListener("click", () => { S.deco = []; fillDeco(); render() });
 $("#pbuffs").addEventListener("change", () => { S.buffs = $("#pbuffs").checked; render() });
 for (const k of ["STR","DEX","INT","LUK"]) $("#p" + k).addEventListener("input", () => { HIST.typing = true; S.ap[k] = Math.min(9999, Math.max(4, Math.floor(+$("#p" + k).value) || 4)); render() });   // 9999: input sanity cap (1e308 scrolled phones sideways), not a game limit
 $("#pauto").addEventListener("click", () => { S.ap = autoAP(W.find(x => x.name === S.weapon)); refresh() });

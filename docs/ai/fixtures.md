@@ -88,6 +88,8 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 - `C:\Users\danny\Pictures\MS Classic Tracker frames`: debug and bug-report frames. New fixtures come from here.
 - `C:\Users\danny\AppData\Roaming\MS Classic Grind Tracker`: saved sessions.
 | `tests/fixtures/questlog-completed.webm` | 510x816, 49 s, VP9 (from Danny's 10-21 mp4) | QUEST window, Completed tab, each category opened and scrolled: 59 lines (list in tests/questlog.js TRUTH) | tests/questlog.js |
+| `tracker/tests/frames-quest/questlog-progress.png` | 515x818 | copy of the site's In Progress shot: the tracker's shared quest core (app/questread.js) must read the same 8 quests the site does | tests/quest.test.js |
+| `tracker/tests/frames-quest/questlog-progress2.png` | 552x837 | copy of Danny's 10-22 In Progress shot (selected row, cut name): same deal, second fixture | tests/quest.test.js |
 | `tests/fixtures/questlog-progress.png` | 515x818 | QUEST window, In Progress tab: 8 quests in 5 categories (Citizenship 1, Crafting 2, Henesys 2, Kerning City 2, Sleepywood 1) | tests/questlog.js |
 | `tests/fixtures/questlog-progress2.png` | 552x837 | QUEST window, In Progress (Danny 10-22): 8 quests in 6 categories, "Icarus's Dream" selected (white on blue), cut "Asking After Maya, the Tow..." (was read as Nella/Rina) | tests/questlog.js |
 | `tracker/tests/sessions/negative-exp-kpq-rush-2026-10-23.json` | saved run JSON (no image) | Lv 32 81.93% -> 94.68% reported -84,346 EXP (start raw EXP misread) | tests/core.test.js expBetween case |
@@ -108,3 +110,6 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 - tracker/tests/frames-chat/local-blue.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): local megaphone, dark text on blue (no class ink). tests/chat.test.js.
 - tracker/tests/frames-chat/notice.png: Danny's 10-29 chat-box screenshot (a chat crop, not a game frame): yellow [Notice], wrapped without indent. tests/chat.test.js.
 - tracker/tests/frames-shop/own-shop.png: Danny's 10-31 screenshot of his own merchant shop window (a crop, 1199x1022, 2x UI): 6 rows, 3 sold (greyed). Rows 14,067 / 9,001 / 15,067 / 34,000 / 4,067, 'Please be aware that a 3% fee will be deducted from sales.' tests/shop.test.js (OCR recorded from real Tesseract). Visitor view and truncated names still need fixtures.
+
+- tests/fixtures/deco-turbow.png: Danny's 11-01 Turbow, Equipment Inventory on the Deco tab + Character Info (1028x622, ~2.05x, smoothed). Reads 10 NX items (Slime T-Shirt, Silent Sea of Clouds, Founder's Label/Chat Ring, Slime Earrings, Black Sunglasses, White Jeans, Slime Slippers, Mark of the Founder (Black), Blue Watch) and Level 42. tests/nx.js.
+- tests/fixtures/equip-turbow.png: same character, Equip tab (1070x635). Reads 0 NX items, Level 42. tests/nx.js.

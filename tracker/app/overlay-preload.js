@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld("ovhost", {
   close: () => ipcRenderer.invoke("ov-close"),
   onData: cb => ipcRenderer.on("ov-data", (_, d) => cb(d)),
   onFeet: cb => ipcRenderer.on("ov-feet", (_, f) => cb(f)),   // Skill range card: your feet in desktop px
+  onGameRect: cb => ipcRenderer.on("ov-gamerect", (_, r) => cb(r)),   // P1-8 anchor mode: the game window's rect in desktop px (null when unknown)
   onMode: cb => ipcRenderer.on("ov-mode", (_, on) => cb(on)),
   showMain: () => ipcRenderer.invoke("bd-exit"),
   onBorderless: cb => ipcRenderer.on("ov-borderless", (_, b) => cb(b)),

@@ -54,7 +54,10 @@ function alertsTick(){
   alertEvts = [];
   const ctx = {on: timer != null, paused: s.paused, runT0, st: s,
     respawns: session.respawns ? session.respawns(now) : [],
-    kpq: kpq?.on && kpq.left !== null ? {left: kpq.left, rounds: kpq.rounds} : null,
+    // left is ms here: the alerts engine (and its tests) measure the KPQ clock in ms — the seconds value the readers
+    // produce used to ride in raw, so the "under 60 s" gate compared 0.599 > 60 and fired on every round's start
+    // with a "1 s left" toast (round 3)
+    kpq: kpq?.on && kpq.left !== null ? {left: kpq.left * 1000, rounds: kpq.rounds} : null,
     events: evts,
     prices: window.sitePriceCtx ? window.sitePriceCtx() : []};   // site-price alerts (renderer-site.js)
   for (const f of A.evaluate(alertList(), ctx, alertStates, now)) alertFire(f);

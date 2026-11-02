@@ -20,7 +20,8 @@ async function shareScreen({ms = 500, fps = 5, onFrame, onEnd = () => {}, before
   let tick = null, busy = false, live = true;
   const stop = () => { if (!live) return; live = false; tick?.(); stream.getTracks().forEach(t => t.stop()) };
   track.addEventListener("ended", () => { if (live){ stop(); onEnd() } });
-  await before();
+  // before() can throw (game data failed to load): stop the tracks, or the sharing indicator stays on with no way off
+  try { await before() } catch(e){ stop(); throw e }
   const grab = async () => {
     if (!live || busy) return; busy = true;
     try {

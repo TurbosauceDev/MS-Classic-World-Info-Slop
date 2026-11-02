@@ -32,7 +32,7 @@ assert.strictEqual(r.why, "too much EXP for this level");
 assert.strictEqual(r.why, "mostly idle", JSON.stringify([s, r]));
 [s, r] = await post(run("dddddddddddddddd4", 2000, {minutes: 3}));
 assert.strictEqual(s, 400);
-for (let i = 0; i < 7; i++) [s] = await post(run("eeeeeeeeeeeeeeee5", 500));
+for (let i = 0; i < 7; i++) [s] = await post(run("eeeeeeeeeeeeeeee5", 500 + i));   // distinct runs: an identical resend is a retry now (deduped), not a new run
 assert.strictEqual(s, 429, "7th run in an hour is refused");
 
 [s, r] = await post(run("ffffffffffffffff6", 1000, {map: 80000500, mapName: "1st Accompaniment <Bonus>", party: 4, mobs: [{id: "19", kills: 10, items: {}}]}));
@@ -56,7 +56,7 @@ const a = sum.rows.find(x => x.expHr === 4400);   // player 1: median of 4000 an
 assert.ok(a && a.runs === 2 && a.map === "42");
 assert.strictEqual(sum.players, 12, "only counted runs: players 1, 5, 6, the six g IDs, the two h IDs and j");
 assert.ok(sum.rows.some(x => x.map === null && x.mapName === "Somewhere New"));
-assert.strictEqual(sum.mobs["2"].items["4000019"], 3 * 2 + 3 * 6 + 3 * 7 + 3 * 3, "players 1, 5, the g IDs (7 runs), the h IDs and j");
+assert.strictEqual(sum.mobs["2"].items["4000019"], 3 * 2 + 3 * 6 + 3 * 6 + 3 * 3, "players 1, 5, the six g IDs (the repeated g1 send is a deduped retry now), the h IDs and j");
 assert.ok(!JSON.stringify(sum).includes("aaaaaaaa"), "no install ids in the summary");
 assert.strictEqual(new Set(sum.rows.map(x => x.group)).size, sum.rows.length - 1 - 5, "the two party members share a group; the six g IDs on one network are one player");
 const gg = sum.rows.filter(x => x.map === "42" && x.party === 1).map(x => x.group);
@@ -70,7 +70,7 @@ const gm = new Set(nets.slice(-3).map(x => x.group));
 assert.strictEqual(gm.size, 2, "m01 + m02 (one network) and n01");
 // best time to farm: 3 players, each 3 runs at 02:00 UTC (1000) and 3 at 20:00 (2000): slower than their usual at night
 for (const who of ["t00000000000001a", "t00000000000002b", "t00000000000003c"]) for (let i = 0; i < 6; i++)
-  [s, r] = await post(run(who, i < 3 ? 1000 : 2000, {hour: i < 3 ? 2 : 20}), "5.5.5." + who.at(-1).charCodeAt(0));
+  [s, r] = await post(run(who, i < 3 ? 1000 + i * 3 : 2000 + i * 3, {hour: i < 3 ? 2 : 20}), "5.5.5." + who.at(-1).charCodeAt(0));   // distinct: a resend would be deduped
 assert.strictEqual(r.counted, true, JSON.stringify(r));
 const tsum = await fresh();
 assert.deepStrictEqual(tsum.times["42"], [[0, 0.67, 3], [18, 1.33, 3]], JSON.stringify(tsum.times));
@@ -78,11 +78,11 @@ assert.deepStrictEqual(tsum.times["42"], [[0, 0.67, 3], [18, 1.33, 3]], JSON.str
 assert.strictEqual(s, 200, "a junk hour is dropped, not refused");
 // deaths: kept per run, a median per player per hour in the summary
 [s] = await post(run("kkkkkkkkkkkkkkkk1", 1000, {deaths: 2}));
-[s] = await post(run("kkkkkkkkkkkkkkkk1", 1000, {deaths: 4}));
-assert.strictEqual((await fresh()).rows.find(x => x.deathsHr != null && x.runs === 2 && x.deathsHr === 12).expHr, 4000, "deaths/hr: median of 8 and 16");
+[s] = await post(run("kkkkkkkkkkkkkkkk1", 1010, {deaths: 4}));   // distinct runs: an identical resend is a retry now (deduped)
+assert.strictEqual((await fresh()).rows.find(x => x.deathsHr != null && x.runs === 2 && x.deathsHr === 12).expHr, 4020, "deaths/hr: median of 8 and 16");
 // potions/arrows spent: a median per player per hour; a tracker that saw no item counts sends null (left out, not 0)
 [s] = await post(run("uuuuuuuuuuuuuuu1", 1000, {usedCost: 300}), "4.4.4.1");
-[s] = await post(run("uuuuuuuuuuuuuuu1", 1000, {usedCost: 500}), "4.4.4.1");
+[s] = await post(run("uuuuuuuuuuuuuuu1", 1010, {usedCost: 500}), "4.4.4.1");   // distinct runs (see the deaths note)
 [s] = await post(run("uuuuuuuuuuuuuuu2", 1000, {usedCost: null}), "4.4.4.2");
 const us = (await fresh()).rows.filter(x => x.usedHr != null);
 assert.deepStrictEqual(us.map(x => x.usedHr), [1600], JSON.stringify(us));
@@ -243,7 +243,7 @@ assert.ok(adm2.includes("Shared runs") && adm2.includes("/api/runs/recent"), "pa
 
 // archive (2026-10-26, Danny: "add an archive table"): runs past the 180-day window leave the hot tables at the rebuild
 // (the site's medians see a rolling window); the KPQ boards read live + archive, so an all-time best never falls off
-[s] = await post(run("archrun0000000001", 1000));
+[s] = await post(run("archrun0000000001", 1000, {party: 2, partyCode: "archers", hour: 3}));   // party code + extra fields: their side rows must not outlive the archived run
 [s, r] = await kpost(kr("archkpq0000000001", 300), "40.0.0.1");
 assert.ok(r.counted, JSON.stringify(r));
 const old = new Date(Date.now() - (ARCHIVE_DAYS + 5) * 86400e3).toISOString();
@@ -251,6 +251,8 @@ sql.prepare("UPDATE runs SET received = ? WHERE install = 'archrun0000000001'").
 sql.prepare("UPDATE kpq_rounds SET received = ? WHERE install = 'archkpq0000000001'").run(old);
 const archived = await fresh();
 assert.deepStrictEqual(archived.archived, {runs: 1, rounds: 1}, "archive totals in the summary: " + JSON.stringify(archived.archived));
+assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM run_extra WHERE run_id NOT IN (SELECT id FROM runs)").get().n, 0, "the archived run's extras went with it");
+assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM run_groups WHERE run_id NOT IN (SELECT id FROM runs)").get().n, 0, "the archived run's party code went with it");
 assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE install = 'archrun0000000001'").get().n, 0, "old run left the hot table");
 assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs_archive WHERE install = 'archrun0000000001'").get().n, 1, "and sits in the archive");
 assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM kpq_rounds WHERE install = 'archkpq0000000001'").get().n, 0);
@@ -331,6 +333,41 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   sm = await sum(); assert.strictEqual(sm.items[id2].ask[0], 5000, "a flooding install gets one vote: " + JSON.stringify(sm.items[id2]));
 }
 
+// 0.3.30 (Turbozo): shop uploads name the shop (seller/title/ch/room/map) + shared boss spots
+{
+  const inst = c => c.repeat(16) + "9";
+  const row = (extra = {}) => ({id: 1002002, qty: 1, price: 1200, sold: 0, ...extra});
+  const post = (path, body, ip = "10.9.8.1") => worker.fetch(new Request("https://x" + path, {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
+  let [st, rb] = await post("/api/shop", {install: inst("A"), v: 2, seller: "swagmart", title: "i like channel 4 fm 10", ch: null, room: 10, map: "100000000", rows: [row()]});
+  assert.strictEqual(st, 200, JSON.stringify(rb));
+  assert.deepStrictEqual(sql.prepare("SELECT seller, title, ch, room, map FROM shop_obs_ext").all().map(o => ({...o})),
+    [{seller: "swagmart", title: "i like channel 4 fm 10", ch: null, room: 10, map: "100000000"}], "the named upload lands in the ext table");
+  await post("/api/shop", {install: inst("C"), v: 2, seller: "<script>x</script>", title: "hi there", rows: [row()]});
+  assert.deepStrictEqual(sql.prepare("SELECT seller, title FROM shop_obs_ext WHERE seller IS NOT NULL").all().length, 1, "junk names are nulled, never stored");
+  await post("/api/shop", {install: inst("B"), v: 1, rows: [row()]});
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM shop_obs_ext").get().n, 2, "a v1 body adds no ext row");
+
+  // boss spots: two witnesses on Mano (map 10000013), the same install reporting again inside 30 min is a no-op
+  const spot = (body, ip = "10.9.9.9") => post("/api/spots", body, ip);
+  [st, rb] = await spot({install: inst("P"), map: "10000013", mob: "700004", ch: 3, t: Date.now()});
+  assert.strictEqual(st, 200, JSON.stringify(rb));
+  [st, rb] = await spot({install: inst("P"), map: "10000013", mob: "700004", ch: 3, t: Date.now()});
+  assert.strictEqual(rb.dup, true, "same install + boss within 30 min: no-op");
+  [st] = await spot({install: inst("Q"), map: "10000013", mob: "700004", ch: 3, t: Date.now()}, "10.9.9.10"); assert.strictEqual(st, 200);
+  for (const b of [{install: inst("R"), map: "999999999", mob: "700004", t: Date.now()}, {install: inst("R"), map: "10000013", mob: "777777", t: Date.now()},
+    {install: inst("R"), map: "10000013", mob: "700004", t: Date.now() + 30 * 60e3}, {install: inst("R"), map: "10000013", mob: "700004", ch: 99, t: Date.now()}]){
+    [st] = await spot(b, "10.9.9.11"); assert.strictEqual(st, 400, "bad spot rejected: " + JSON.stringify(b).slice(0, 70));
+  }
+  const spots = await worker.fetch(new Request("https://x/api/spots?map=10000013"), env).then(r => r.json());
+  assert.strictEqual(spots.spots.length, 1, JSON.stringify(spots));
+  assert.strictEqual(spots.spots[0].name, "Mano"); assert.strictEqual(spots.spots[0].n, 2, "two witnesses");
+  assert.strictEqual(spots.spots[0].sec, 3600); assert.strictEqual(spots.spots[0].boss, true); assert.strictEqual(spots.spots[0].ch, 3);
+  [st] = await worker.fetch(new Request("https://x/api/spots?map=999"), env).then(r => [r.status]); assert.strictEqual(st, 400, "unknown map");
+  [st, rb] = await post("/api/forget", {install: inst("P")});
+  assert.strictEqual(st, 200);
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM boss_spots WHERE install = ?").get(inst("P")).n, 0, "forget clears spots");
+}
+
 // junk bodies (idea list from OkocimK/MaplePrices' clean_row, 2026-10-31): every POST endpoint answers 400, never 500, and stores nothing
 {
   const before = sql.prepare("SELECT (SELECT COUNT(*) FROM runs) + (SELECT COUNT(*) FROM kpq_rounds) n").get().n;
@@ -342,20 +379,283 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   }
   assert.strictEqual(sql.prepare("SELECT (SELECT COUNT(*) FROM runs) + (SELECT COUNT(*) FROM kpq_rounds) n").get().n, before, "junk stores nothing");
 }
-console.log("server tests passed");
 
 // "Delete what I shared" (blind-spot report A2): one install's rows vanish from every table, other installs stay, junk ids are refused
 {
   const post = (path, body, ip = "10.6.6.6") => worker.fetch(new Request("https://x" + path, {method: "POST", body: typeof body === "string" ? body : JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
   const mine = "forgetmeforgetme1", other = "keepmekeepmekeep1";
   for (const [inst, ip] of [[mine, "10.6.6.1"], [other, "10.6.6.2"]]) await post("/api/shop", {install: inst, v: 1, rows: [{id: 1002000, qty: 1, price: 1000, sold: 0}]}, ip);
+  await post("/api/shop", {install: mine, v: 2, seller: "swagmart", title: "fm 3", rows: [{id: 1002001, qty: 1, price: 900, sold: 0}]}, "10.6.6.1");   // a named upload: its seller name must go when the rows go
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM shop_obs_ext e JOIN shop_obs o ON o.id = e.obs_id WHERE o.install = ?").get(mine).n, 1, "the named upload's ext row is there");
   sql.exec("INSERT INTO party_live (grp, install, updated, ip, data) VALUES ('g', 'forgetmeforgetme1', '2026-10-31T00:00:00Z', 'h', '{}')");
   const count = (t, i) => sql.prepare(`SELECT COUNT(*) n FROM ${t} WHERE install = ?`).get(i).n;
-  assert.strictEqual(count("shop_obs", mine), 1);
+  assert.strictEqual(count("shop_obs", mine), 2, "one v1 row + the named upload's row");
   for (const b of ["not json", "{}", JSON.stringify({install: "short"}), JSON.stringify({install: "x".repeat(60)})]){ const [st] = await post("/api/forget", b); assert.strictEqual(st, 400, "forget junk " + b.slice(0, 20)) }
   const [st, rb] = await post("/api/forget", {install: mine});
   assert.strictEqual(st, 200); assert.ok(rb.removed >= 2, "counts what it removed: " + JSON.stringify(rb));
   assert.strictEqual(count("shop_obs", mine) + count("party_live", mine), 0, "my rows are gone");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM shop_obs_ext WHERE obs_id NOT IN (SELECT id FROM shop_obs)").get().n, 0, "the seller name/title went with the rows (delete order)");
   assert.strictEqual(count("shop_obs", other), 1, "another install is untouched");
 }
 
+
+// Weekly grind ladder (P1-5) + weekly community map rates (P1-9), 2026-11-02: names ride with runs, boards
+// join per network/party, the physics ceiling and the over-the-board rule hold lines back (never delete),
+// "Delete what I shared" takes the names with it.
+{
+  const get = async () => { const r = await worker.fetch(new Request("https://x/api/ladder"), env); return [r.status, await r.json()] };
+  const lv = Object.keys(G.exp).map(Number).sort((a, b) => a - b).find(l => G.exp[l] >= 1e5);   // a level the 2x cap lets a big run through at
+  assert.ok(lv, "a level with enough total EXP exists");
+  const week = (await import("../src/index.js")).weekBounds(new Date());
+  assert.strictEqual(new Date(week.start).getUTCDay(), 1, "the ladder week starts Monday");
+  assert.strictEqual(new Date(week.start).getUTCHours(), 0, "at 00:00 UTC");
+
+  // two honest players (one network each) + one party of two, all named
+  const ip = i => "10.7.7." + i;
+  const lvRun = (inst, exp, extra) => run(inst, exp, {level: lv, ...extra});   // big-enough runs need the level that allows them
+  const partyCode = {partyCode: "snails"};
+  for (let i = 0; i < 2; i++){   // a board line needs 30+ farmed minutes: two distinct 15-min runs each (an identical resend is a retry)
+    await post({...lvRun("ladderplayer00001", 3000 + i * 10, {name: "Turbow"})}, ip(1));
+    await post(lvRun("ladderplayer00002", 3000 + i * 10, {name: "Glorg"}));
+    await post(lvRun("partyoneparty0001", 3000 + i * 10, {party: 4, name: i ? "Bob" : "Alice"}));   // one install: the latest name wins
+    await post(lvRun("partytwoparty0002", 3000 + i * 10, {party: 4, name: "Cara", ...partyCode}));
+    await post(lvRun("partytwoparty0003", 3000 + i * 10, {party: 4, name: "Dan", ...partyCode}));
+  }
+  // a line over the map's physics ceiling (map 42's is ~31k/h): stored, ok, but held off the board
+  const over = 40000;   // 160k/h, past the ceiling, under the 2x-per-level cap at lv
+  for (let i = 0; i < 2; i++) await post(run("ceilingrider00001", over + i * 10, {level: lv, msgExp: over, barExp: over, kills: 100, name: "Flash"}));
+  let [s, l] = await get();
+  assert.strictEqual(s, 200);
+  const ov = l.this.boards.overall.rows;
+  assert.ok(ov.length >= 3, "board has the honest lines: " + JSON.stringify(ov.map(x => x.expHr)));
+  assert.ok(ov.every(x => x.expHr < 160000), "no impossible line on the board");
+  assert.ok(ov.some(x => x.names.includes("Turbow")) && ov.some(x => x.names.includes("Glorg")), "names ride with the runs");
+  assert.strictEqual(l.this.boards.overall.hidden, 1, "hidden counts the held-back lines, not the top-50 cut");
+  assert.ok(!ov.some(x => x.names.includes("Flash")), "the ceiling rider is not on the public board");
+  // party: two installs with one code and party 4 are ONE line with both names
+  const cara = ov.find(x => x.names.includes("Cara"));
+  assert.ok(cara && cara.names.includes("Dan"), "the coded party is one line with both names: " + JSON.stringify(cara && cara.names));
+  // mesos board ranks by mesos/h
+  assert.ok(l.this.boards.mesos.rows.every(x => x.mesosHr >= 0), "mesos board present");
+  // per-map boards (bug-hunt round 2): one network's runs on one map fold into ONE line — the old array-key fold
+  // never matched, every run sat alone under the 30-minute floor, and boards.maps shipped empty on every map
+  const m42 = l.this.boards.maps["42"];
+  assert.ok(m42 && m42.rows.length >= 3, "map 42's board has the lines: " + JSON.stringify(m42));
+  const tm = m42.rows.find(x => x.names.includes("Turbow"));
+  assert.ok(tm && tm.runs >= 2 && tm.minutes >= 30, "a network's runs fold into one per-map line: " + JSON.stringify(tm));
+  assert.strictEqual(m42.hidden, 1, "the ceiling rider is held off the per-map board too");
+  // rates: map 42 now has 3 networks
+  const rate = l.this.rates.find(x => x.map === "42");
+  assert.ok(rate && rate.players >= 3, "map 42 has a community rate: " + JSON.stringify(l.this.rates));
+  assert.ok(rate.mapName === "Snail Hunting Ground III" || rate.mapName, "the rate names the map");
+  // the ladder cache answers again from meta
+  [s, l] = await get();
+  assert.strictEqual(s, 200);
+  // "Delete what I shared" takes the names with the runs
+  await worker.fetch(new Request("https://x/api/forget", {method: "POST", body: JSON.stringify({install: "ladderplayer00001"}), headers: {"cf-connecting-ip": ip(1)}}), env);
+  [s, l] = await get();
+  assert.ok(!l.this.boards.overall.rows.some(x => x.names.includes("Turbow")), "forgotten names leave the board");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM run_names").get().n >= 1, true, "other names stay");
+}
+
+// runs retry dedupe (bug-hunt 2026-11-02): the tracker resends a run whose ack was lost — the same numbers must not
+// count twice. Same shape as the KPQ route's rule: same install, same numbers, within 30 min.
+{
+  const inst = "retryretryretry01";
+  let [s, r] = await post(run(inst, 4321, {mesos: 5555, kills: 77}));
+  assert.strictEqual(r.counted, true);
+  [s, r] = await post(run(inst, 4321, {mesos: 5555, kills: 77}));
+  assert.strictEqual(r.counted, false, JSON.stringify(r)); assert.strictEqual(r.why, "already sent", "the retry is answered, not stored");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE install = ?").get(inst).n, 1, "one row for the run");
+  [s, r] = await post(run(inst, 4400, {mesos: 5600, kills: 80}));
+  assert.strictEqual(r.counted, true, "a different run is not a retry");
+}
+// party view: rotating the party code can't skip the 20 s throttle (bug-hunt 2026-11-02) — it follows the install
+{
+  const inst = "rotaterotaterot01";
+  const party = code => worker.fetch(new Request("https://x/api/party", {method: "POST", body: JSON.stringify({install: inst, partyCode: code, expHr: 100}), headers: {"cf-connecting-ip": "10.11.11.1"}}), env).then(r => r.status);
+  assert.strictEqual(await party("rot1"), 200);
+  assert.strictEqual(await party("rot2"), 429, "a new code, same install: still too often");
+}
+// a mob's mesos can't exceed the run's own pickup total (bug-hunt 2026-11-02): fabricated per-mob mesos are clamped
+{
+  const inst = "mesoscapmesosca01";
+  await post(run(inst, 1000, {mesos: 500, kills: 10, mobs: [{id: "2", kills: 10, mesos: 1e9, mesoDrops: 5000}]}));
+  const mobs = JSON.parse(sql.prepare("SELECT mobs FROM runs WHERE install = ?").get(inst).mobs);
+  assert.strictEqual(mobs[0].mesos, 500, "clamped to the run's mesos: " + JSON.stringify(mobs));
+}
+
+// "Delete what I shared" can't hand the abuse caps back (bug-hunt follow-up 2026-11-02): the caps counted live rows,
+// so forget - refill - forget refilled the day forever. ipday_ledger keeps the network-day's high-water marks (rows
+// ever accepted, trackers ever seen), forget leaves it alone, and the caps read max(live rows, ledger).
+{
+  const crypto = await import("node:crypto");
+  const salt = sql.prepare("SELECT v FROM meta WHERE k = 'salt'").get().v;
+  const day = new Date().toISOString().slice(0, 10);
+  const ipdayOf = ip => crypto.createHash("sha256").update(ip + day + salt).digest("hex").slice(0, 32);   // the worker's own sha, same bytes
+  const ledger = ip => sql.prepare("SELECT posts, installs FROM ipday_ledger WHERE ipday = ?").get(ipdayOf(ip));
+  const fpost = (inst, ip) => worker.fetch(new Request("https://x/api/forget", {method: "POST", body: JSON.stringify({install: inst}), headers: {"cf-connecting-ip": ip}}), env);
+  const ppost = (path, body, ip) => worker.fetch(new Request("https://x" + path, {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
+
+  // the write path: every accepted post raises the mark, a deduped retry doesn't, forget deletes the rows and keeps the mark
+  const wip = "10.31.1.1", winst = "ledgerwritewrit01";
+  await post(run(winst, 1000), wip);
+  await post(run(winst, 1000), wip);   // a deduped retry: no row, no bump
+  await post(run(winst, 1010), wip);
+  assert.deepStrictEqual({...ledger(wip)}, {posts: 2, installs: 1}, "two accepted runs: the mark is 2");
+  await fpost(winst, wip);
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE install = ?").get(winst).n, 0, "forget still deletes the rows");
+  assert.deepStrictEqual({...ledger(wip)}, {posts: 2, installs: 1}, "the mark survives the forget");
+  let [st] = await post(run(winst, 1020), wip);
+  assert.strictEqual(st, 200, "2 rows is far under the cap: sending still works");
+  assert.strictEqual(ledger(wip).posts, 3, "and the mark climbs with it");
+  // the other endpoints bump the same ledger (kpq +1 a round, shop +1 a row, spots +1 a report)
+  const kip = "10.31.1.4";
+  [st] = await kpost(kr("ledgerkpqledger01", 400), kip);
+  assert.strictEqual(ledger(kip).posts, 1, "kpq bumps the ledger");
+  const sip = "10.31.1.5";
+  [st] = await ppost("/api/shop", {install: "ledgershopshops01", v: 1, rows: [{id: 1002000, qty: 1, price: 1000, sold: 0}, {id: 1002001, qty: 1, price: 900, sold: 0}]}, sip);
+  assert.strictEqual(st, 200); assert.strictEqual(ledger(sip).posts, 2, "shop bumps by rows");
+  const pip = "10.31.1.6";
+  [st] = await ppost("/api/spots", {install: "ledgerspotspot001", map: "10000013", mob: "700004", ch: 3, t: Date.now()}, pip);
+  assert.strictEqual(st, 200); assert.strictEqual(ledger(pip).posts, 1, "spots bump the ledger");
+
+  // the cap reads the mark: a network-day that already sent its 300 rows stays full even with zero live rows
+  const cip = "10.31.1.2";
+  sql.prepare("INSERT INTO ipday_ledger (ipday, day, posts, installs, updated) VALUES (?, ?, 300, 0, ?)").run(ipdayOf(cip), day, new Date().toISOString());
+  [st] = await post(run("ledgercapfulfill01", 1000), cip);
+  assert.strictEqual(st, 429, "the day is full: 429 with nothing left in the table (the pre-fix hole)");
+  await fpost("ledgercapfulfill01", cip);
+  [st] = await post(run("ledgercapfulfill01", 1000), cip);
+  assert.strictEqual(st, 429, "still full after a forget");
+  // install rotation: six trackers ever seen today is six, forget or not — unless the sender is one of them
+  sql.prepare("UPDATE ipday_ledger SET posts = 0, installs = 6 WHERE ipday = ?").run(ipdayOf(cip));
+  [st] = await post(run("ledgerrotatefill01", 1000), cip);
+  assert.strictEqual(st, 429, "the 7th tracker is refused on the mark alone");
+  const known = "ledgerknownknown01";
+  sql.prepare(`INSERT INTO runs (install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items)
+    VALUES (?, ?, ?, '2026-11-02', '42', NULL, 22, 'Magician', 1, 15, 1000, 1000, 1000, 100, 900, 1, NULL, '[]', '{}')`).run(known, ipdayOf(cip), new Date().toISOString());
+  [st] = await post(run(known, 1000, {kills: 101}), cip);
+  assert.strictEqual(st, 200, "a tracker the day already knows still sends");
+  await fpost(known, cip);
+  [st] = await post(run(known, 1000, {kills: 102}), cip);
+  assert.strictEqual(st, 429, "forgotten, its slot stays spent for the day");
+  // another network on the same day has its own ledger row
+  [st] = await post(run("ledgerothernet0001", 1000), "10.31.1.3");
+  assert.strictEqual(st, 200, "another network's day is untouched");
+
+  // round 2: the party view's 6-trackers cap reads the ledger too — forget deletes party rows, and without the
+  // mark it handed the slot back (rotate / post / forget refilled the party table at request rate)
+  const prip = "10.31.1.9";
+  const party = (pi, code) => ppost("/api/party", {install: pi, partyCode: code, expHr: 100, job: "<img src=x onerror=alert(1)>", mapName: "Henesys<script>"}, prip);
+  const pinst = i => "partyinst" + String(i).padStart(7, "0");
+  let [pst, pj] = await party(pinst(1), "cap1");
+  assert.strictEqual(pst, 200, "the first tracker posts");
+  const m0 = pj.members.find(x => x.you);
+  assert.ok(m0 && !/[<>=()"]/.test(m0.job || "") && !/[<>=()"]/.test(m0.mapName || ""), "party job/mapName arrive scrubbed like nick: " + JSON.stringify(m0));
+  for (let i = 2; i <= 6; i++) pst = (await party(pinst(i), "cap" + i))[0];
+  assert.strictEqual(pst, 200, "six trackers fill the party cap");
+  assert.strictEqual(ledger(prip).installs, 6, "the party posts raise the ledger's installs mark");
+  [pst] = await party(pinst(7), "cap7");
+  assert.strictEqual(pst, 429, "the 7th tracker is refused");
+  await fpost(pinst(1), prip);
+  [pst] = await party(pinst(7), "cap7");
+  assert.strictEqual(pst, 429, "still refused after a forget: the mark keeps the slot spent");
+
+  // round 2: "Delete what I shared" reaches into the 2026-10-30 reset's backup tables too (install ids + names
+  // used to survive a forget in there forever)
+  const bakInst = "bakroundsbakround1";
+  // the bak tables are CREATE TABLE AS SELECT copies: no rowid-alias PK, so a row needs an explicit id (real ones carry theirs)
+  sql.prepare("INSERT INTO kpq_bak_20261030_rounds (id, install, ipday, received, date, mode, party, clear, ok) VALUES (9001, ?, 'bakipday', ?, '2026-10-01', 'Bonus', 4, 300, 1)").run(bakInst, new Date().toISOString());
+  sql.prepare("INSERT INTO kpq_bak_20261030_names (kpq_id, name) VALUES (9001, 'BackUpName')").run();
+  assert.ok(sql.prepare("SELECT COUNT(*) n FROM kpq_bak_20261030_names").get().n >= 1, "the backup name row is there");
+  st = (await fpost(bakInst, "10.31.1.8")).status;
+  assert.strictEqual(st, 200);
+  for (const t of ["rounds", "archive", "names", "src", "raw"]) assert.strictEqual(sql.prepare(`SELECT COUNT(*) n FROM kpq_bak_20261030_${t}`).get().n, 0, "bak " + t + " forgets with the install");
+
+  // round 2: counts arrive as numbers only (the old +v coercion took "1000" as 1000) and dates are calendar-shaped
+  [st] = await post(run("strictcntstrict01", 1000, {msgExp: "1000"}));
+  assert.strictEqual(st, 200);
+  assert.strictEqual(sql.prepare("SELECT msg_exp FROM runs WHERE install = ?").get("strictcntstrict01").msg_exp, 0, "a string count stores as 0, never coerced");
+  [st] = await post(run("datedatedatedate1", 1000, {date: "2026-13-99"}));
+  assert.strictEqual(st, 400, "an impossible date is refused");
+
+  // the ledger ages out with its day: archiveOld (inside a summary rebuild) drops anything older than yesterday
+  sql.prepare("INSERT INTO ipday_ledger (ipday, day, posts, installs, updated) VALUES ('staleday', '2026-01-01', 300, 6, '2026-01-01T00:00:00Z')").run();
+  await fresh();
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM ipday_ledger WHERE ipday = 'staleday'").get().n, 0, "yesterday-and-older marks are pruned");
+  assert.ok(ledger(cip), "today's marks stay");
+}
+
+// the summary cache trims adaptively (bug-hunt follow-up 2026-11-02): the fixed 1000-then-none steps either wasted
+// rounds or stored nothing at all (every request rebuilding); now the copy keeps as many of the newest KPQ rounds as
+// fit under the 1.5 MB store guard
+{
+  const {trimSummary} = await import("../src/index.js");
+  const mk = k => ({runs: 1, kpq: {list: Array.from({length: 64}, (_, i) => ({d: "2026-11-02", at: i, x: i, pad: "p".repeat(40)})).slice(-k)}});
+  const len = k => JSON.stringify(mk(k)).length;
+  const want = [...Array(65).keys()].reverse().find(k => len(k) < 3000);   // the most rounds the toy limit allows
+  assert.ok(want > 0 && want < 64, "the toy limit cuts mid-list: " + want);
+  const input = mk(64);
+  const out = JSON.parse(trimSummary(input, 3000));
+  assert.strictEqual(input.kpq.list.length, 64, "the caller's object is untouched");
+  assert.strictEqual(out.kpq.list.length, want, `keeps ${want} of 64, not 1000-or-none`);
+  assert.strictEqual(out.kpq.list.at(-1).at, 63, "the newest rounds are the ones kept");
+  assert.ok(len(want) < 3000 && len(want + 1) >= 3000, "and it really is the most that fits");
+  const huge = {blob: "x".repeat(5000), kpq: {list: [{a: 1}]}};
+  assert.strictEqual(trimSummary(huge, 1000), JSON.stringify(huge), "a list that can't save the copy leaves it whole");
+  const small = {a: 1};
+  assert.strictEqual(trimSummary(small, 1000), JSON.stringify(small), "under the line: untouched");
+  const nolist = {kpq: {list: []}, blob: "x".repeat(2000)};
+  assert.strictEqual(trimSummary(nolist, 1000), JSON.stringify(nolist), "nothing left to give: untouched");
+}
+
+// ---- bug-hunt round three (2026-11-02): the read paths, archive safety, shop coercions ----
+{
+  // a corrupt stored mobs row (half-written D1 write, hand edit) used to 500 every /api/summary until the row aged out
+  sql.prepare(`INSERT INTO runs (id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, mobs)
+    VALUES (7001, 'corruptmobsrow0001', 'r3c1', ?, '2026-11-01', '42', 'Snail', 22, 'Magician', 1, 15, 1000, 1000, 1000, 100, 900, 1, '{oops')`).run(new Date().toISOString());
+  const bad = await worker.fetch(new Request("https://x/api/summary"), env);
+  assert.strictEqual(bad.status, 200, "a corrupt mobs row no longer takes the summary down");
+  assert.ok((await bad.json()).players >= 1, "and the summary still answers with data");
+  sql.prepare("DELETE FROM runs WHERE id = 7001").run();
+
+  // fractional ?limit reached SQLite's LIMIT as a REAL and 500'd the owner inbox
+  const rq3 = q => worker.fetch(new Request("https://x/api/runs/recent" + q, {headers: {authorization: "Bearer " + "k".repeat(32)}}), env).then(async x => [x.status, await x.json()]);
+  const kq3 = q => worker.fetch(new Request("https://x/api/kpq/recent" + q, {headers: {authorization: "Bearer " + "k".repeat(32)}}), env).then(async x => [x.status, await x.json()]);
+  const [ls, lj] = await rq3("?limit=2.5");
+  assert.strictEqual(ls, 200, "a fractional runs limit truncates, not 500s");
+  assert.strictEqual(lj.runs.length, 2, "?limit=2.5 gives 2 rows");
+  assert.strictEqual((await kq3("?limit=1.1"))[0], 200, "a fractional kpq limit truncates, not 500s");
+
+  // cleanShop's regex coercion: RegExp.test stringifies, so arrays rode into D1's bind (500 after the obs batch
+  // committed) and numbers stored into TEXT
+  const shop3 = (body, ip) => worker.fetch(new Request("https://x/api/shop", {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async x => [x.status, await x.json()]);
+  const coerced = "shopcoerce000000001";
+  const [cs, cj] = await shop3({install: coerced, v: 2, seller: ["swagmart"], title: "fm 9", room: 9, map: ["100000000"], rows: [{id: 1002000, qty: 1, price: 1000, sold: 0}]}, "10.31.3.1");
+  assert.strictEqual(cs, 200, "an array seller stores as null instead of blowing up the bind: " + JSON.stringify(cj));
+  const ext3 = sql.prepare("SELECT seller, title, room, map FROM shop_obs_ext WHERE obs_id IN (SELECT id FROM shop_obs WHERE install = ?)").get(coerced);
+  assert.ok(ext3 && ext3.seller === null && ext3.map === null && ext3.title === "fm 9" && ext3.room === 9, "the ext row stores nulls for junk fields: " + JSON.stringify(ext3));
+
+  // the 14-day prune takes the ext rows with the observations (orphaned seller names used to outlive their rows forever)
+  sql.prepare("UPDATE shop_obs SET received = ? WHERE install = ?").run(new Date(Date.now() - 20 * 864e5).toISOString(), coerced);
+  await worker.fetch(new Request("https://x/api/shop/summary"), env);
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM shop_obs WHERE install = ?").get(coerced).n, 0, "the aged observation is pruned");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM shop_obs_ext WHERE obs_id NOT IN (SELECT id FROM shop_obs)").get().n, 0, "its ext row (the seller name) goes with it");
+
+  // archive safety when rowids restart: a live run whose id the archive already holds (a different received) must
+  // survive the move — the old OR IGNORE + unconditional delete would have erased it from both tables
+  const old3 = new Date(Date.now() - (ARCHIVE_DAYS + 5) * 864e5).toISOString();
+  sql.prepare(`INSERT INTO runs (id, install, ipday, received, date, map, map_name, party, minutes, exp, kills, mesos, ok)
+    VALUES (7002, 'collidelive000001', 'r3c2', ?, '2026-01-01', '42', 'Snail', 1, 15, 1000, 100, 900, 1)`).run(old3);
+  sql.prepare(`INSERT INTO runs_archive (id, install, ipday, received, date, map, map_name, party, minutes, exp, kills, mesos, ok, why, mobs, items, archived)
+    VALUES (7002, 'archolderrow0001', 'r3c3', ?, '2026-01-01', '42', 'Snail', 1, 15, 900, 90, 800, 1, NULL, NULL, NULL, ?)`).run(new Date(Date.now() - (ARCHIVE_DAYS + 6) * 864e5).toISOString(), old3);
+  await fresh();
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE id = 7002").get().n, 1, "the live row survives: its (id, received) pair is not the archive's");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs_archive WHERE id = 7002").get().n, 1, "the older archive row is untouched");
+  assert.strictEqual(sql.prepare("SELECT exp FROM runs WHERE id = 7002").get().exp, 1000, "and it is the live row that survived");
+  await fresh();
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE id = 7002").get().n, 1, "a second rebuild is stable");
+}
+
+console.log("server tests passed");

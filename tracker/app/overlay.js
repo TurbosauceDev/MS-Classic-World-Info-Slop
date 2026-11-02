@@ -17,6 +17,24 @@ const runClock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 // what can be tracked: the panel lists these, in this order. HOME is where each lands the first time (desktop pixels)
+const GEO = {};   // map id -> {mm, t, d, sp, p}: the minimap, sent once per map (renderer-overlay.js ovGeo)
+// the Map & spawns minimap: a dot per spawn point in its monster's colour, numbered exits (hidden ones dashed). Hovering a row
+// or a dot lights that monster's dots (mapHover below); the picture is cut to the card's width
+function mapGeo(g, list, col){
+  const P = g.p || [], num = {}, dests = [];
+  for (const p of P) if (!(p[2] in num)){ num[p[2]] = dests.length + 1; dests.push(p) }
+  const [w0, h0] = g.d || [0, 0], k = w0 ? Math.min(240 / w0, 200 / h0, 2) : 1, w = Math.round(w0 * k) || 240, h = Math.round(h0 * k) || 120;
+  const pos = (x, y) => `left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%`;
+  const dots = list.map((x, i) => (g.sp?.[x.id] || []).map(([px, py]) => `<span class="mdot" data-mob="${x.id}" title="${esc(x.name)}" style="${pos(px, py)};background:${col(i)}"></span>`).join("")).join("");
+  const ex = P.map(([x, y, d, hid]) => `<span class="mpt${hid ? " hid" : ""}" style="${pos(x, y)}">${num[d]}</span>`).join("");
+  const legend = dests.map(([, , d, , name]) => `<span><b class="mpn${P.filter(p => p[2] === d).every(p => p[3]) ? " hid" : ""}">${num[d]}</b>${esc(name || "map " + d)}</span>`).join("");
+  return `<div class="mgeo" data-geo><div class="mmw" style="width:${w}px;height:${h}px"><img src="data:image/${g.t || "webp"};base64,${g.mm}" width="${w}" height="${h}" alt="">${ex}${dots}</div>${legend ? `<div class="mleg">${legend}</div>` : ""}</div>`;
+}
+function mapHover(id){
+  for (const g of document.querySelectorAll(".mgeo")) g.classList.toggle("hl", !!id);
+  for (const e of document.querySelectorAll(".mdot, .ovw [data-mob]")) e.classList.toggle("on", !!id && e.dataset.mob === id);
+}
+addEventListener("mouseover", e => { const t = e.target.closest?.("[data-mob]"); mapHover(t ? t.dataset.mob : null) });
 const KINDS = {status: "Status", exp: "EXP", kills: "Kills", mesos: "Mesos", loot: "Loot", map: "Map & spawns", party: "Party", kpq: "KPQ", log: "Run log", stat: "Stat number", bar: "Level bar", bag: "Bag check", simple: "Simple view", focus: "Focus view", blocker: "Chat blocker", chat: "Chat window", shop: "Shop prices", range: "Skill range"};
 const HOME = {status: {on: true, x: 24, y: 24}, exp: {on: true, x: 24, y: 108}, map: {on: true, x: 24, y: 250},
   kills: {on: false, x: 24, y: 620}, mesos: {on: false, x: 24, y: 700}, loot: {on: false, x: 24, y: 780},
@@ -116,6 +134,7 @@ const PARAMS = [
   {k: "bt_deco", sec: "Tabs watched", lab: "Deco", t: "b", def: false, kinds: ["bag"]},
   {k: "bagl", sec: "Layout", lab: "Reminders", t: "s", opts: {row: "Side by side", col: "Stacked"}, def: "row", kinds: ["bag"]},
   {k: "bagm", sec: "Layout", lab: "Show", t: "s", opts: {icon: "Icon only", text: "Text only", both: "Icon and text"}, def: "icon", kinds: ["bag"]},
+  {k: "mmap", sec: "Layout", lab: "Minimap", t: "b", def: true, kinds: ["map"], tip: "The map with every monster's spawn points and the exits; hover a monster row to light its dots"},
   {k: "bgon", sec: "Layout", lab: "Background", t: "b", def: true, kinds: ["bag"], tip: "Off leaves just the reminder buttons, no card behind them"},
   // Event log (Danny 10-29: "highly, highly customizable")
   {k: "lgx", sec: "Lines to show", lab: "EXP gains", t: "b", def: true, kinds: ["log"]},
@@ -156,6 +175,11 @@ const PARAMS = [
   {k: "rfill", sec: "Drawing", lab: "Fill", t: "r", min: 0, max: 60, step: 2, def: 18, f: pct, kinds: ["range"]},
   {k: "rlab", sec: "Drawing", lab: "Skill name by the area", t: "b", def: true, kinds: ["range"]},
   {k: "rdot", sec: "Drawing", lab: "Mark my feet", t: "b", def: true, kinds: ["range"]},
+  // P1-8 anchor mode (Turbozo approved the koffi verdict): a card can ride the game window's rect instead of the
+  // desk — move or resize the game and the card keeps its offset from the game's top-left. The offset (w.ag) is
+  // based where the card sits when the switch goes on and on every drag, so enabling it never jumps the card.
+  {k: "anchor", sec: "This card", lab: "Follow the game window", t: "b", def: false,
+    tip: "Pins the card to the game window and tracks it on move/resize (releases with the window closed). Without the game's rect the card sits where it was saved."},
 ];
 // Parked (Danny 10-29): the Condition rule leaves the inspector until the "mapleAuras" function builds on conditions/triggers.
 // conds() below still knows these keys; put the rows back in PARAMS to switch it on again.
@@ -302,11 +326,13 @@ const RENDER = {
     return rows.length ? rows.join("") : `<div class="empty">Nothing yet.</div>`;
   },
   map(d, id){
-    const m = d.map || {}, list = m.spawns || [], nm = Math.min(list.length, Math.max(wv(id, "rows"), fitRows(id, 22)));
-    const mobs = list.slice(0, nm).map(x => `<div class="mrow"><b>${esc(x.name)}</b><span>${x.n ? "×" + x.n + " · " : ""}Lv ${x.lv} · ${fmt(x.exp)} EXP</span></div>`).join("");
+    const m = d.map || {}, list = m.spawns || [], geo = m.geo && (GEO[m.id] = m.geo) || GEO[m.id], nm = Math.min(list.length, Math.max(wv(id, "rows"), fitRows(id, 22)));
+    const col = i => `hsl(${(i * 67 + 10) % 360} 75% 60%)`;
+    const mobs = list.slice(0, nm).map((x, i) => `<div class="mrow" data-mob="${x.id}"><b>${geo?.sp?.[x.id] ? `<i class="msw" style="background:${col(i)}"></i>` : ""}${esc(x.name)}</b><span>${x.n ? "×" + x.n + " · " : ""}Lv ${x.lv} · ${fmt(x.exp)} EXP</span></div>`).join("");
     const resp = (m.respawns || []).map(r => { const due = r.killed ? r.killed + r.sec * 1000 - d.t : null;
-      return `<div class="mrow"><b>${esc(r.name)}${r.boss ? " (boss)" : ""}</b><span class="${due != null && due <= 0 ? "pos" : due != null && due <= 120e3 ? "soon" : ""}">${r.killed ? due > 0 ? "back in ~" + respT(due) : "due now" : "every " + respT(r.sec * 1000)}</span></div>` }).join("");
+      return `<div class="mrow"><b>${esc(r.name)}${r.boss ? " (boss)" : ""}</b><span class="${due != null && due <= 0 ? "pos" : due != null && due <= 120e3 ? "soon" : ""}">${r.killed ? due > 0 ? "back in ~" + respT(due) : "due now" : "every " + respT(r.sec * 1000)}${r.shared ? ` · ${r.shared} saw it${r.ch ? " · ch " + r.ch : ""}` : ""}</span></div>` }).join("");
     return `<div class="mapname">${esc(m.name || "No map yet")}</div>`
+      + (geo && wv(id, "mmap") ? mapGeo(geo, list, col) : "")
       + (list.length ? `<div class="sub">${list.reduce((a, x) => a + (x.n || 0), 0)} spawns</div>` + mobs + (list.length > nm ? `<div class="sub dim">and ${list.length - nm} more</div>` : "") : "")
       + (resp ? `<div class="sect">respawns</div>` + resp : "");
   },
@@ -350,7 +376,8 @@ const RENDER = {
   shop(d, id){
     const s = d.shop, n = Math.max(wv(id, "lines"), fitRows(id, 20));
     if (!s || !s.rows.length) return `<div class="empty">Open a shop and press the shop shortcut (Settings).</div>`;
-    return s.rows.slice(0, n).map(r => `<div class="cm"${r.s ? ` style="opacity:.55"` : ""}><b>${esc(r.n)}</b> ${r.a == null ? `<span class="dim">?</span>` : fmt(r.a)}${r.m ? ` <span class="dim">vs ${fmt(r.m)}</span>` : ""}` +
+    const sum = s.sum ? `<div class="dim" style="margin-bottom:2px">${esc(s.sum)}</div>` : "";
+    return sum + s.rows.slice(0, n).map(r => `<div class="cm"${r.s ? ` style="opacity:.55"` : ""}><b>${esc(r.n)}</b> ${r.a == null ? `<span class="dim">?</span>` : fmt(r.a)}${r.m ? ` <span class="dim">vs ${fmt(r.m)}</span>` : ""}` +
       `${r.p == null ? "" : ` <span class="${r.p <= -0.05 ? "pos" : r.p >= 0.25 ? "neg" : "dim"}">${r.p > 0 ? "+" : ""}${Math.round(r.p * 100)}%</span>`}${r.u ? ` <span class="dim">?</span>` : ""}</div>`).join("");
   },
   range: (d, id) => rngCard(id),
@@ -382,10 +409,18 @@ function theme(th){
 
 // ---- cards: one element per kind, placed in desktop coordinates -------------------------------
 // per-widget settings: on, x/y (desktop px), s = scale .5-2, o = opacity .25-1 (WeakAuras' per-region surface, tamed)
+// GAME: the game window's rect in desk coordinates, pushed by main.js at the anchor cadence (P1-8); null when the
+// game's rect is unknown (game closed, native queries unavailable, capture is a whole screen). Cards with the
+// "Follow the game window" switch keep their offset (w.ag) from this rect's top-left.
+let GAME = null, GAMEJ = null;
 function wPos(id){
   const saved = CFG.widgets[id], home = HOME[baseOf(id)] || {on: false, x: 24, y: 24};
   const xy = k => saved && Number.isFinite(+saved[k]) ? +saved[k] : home[k];   // 0 is a real spot (the desk's edge)
-  return {on: saved ? saved.on !== false : home.on, x: xy("x"), y: xy("y"), s: wv(id, "s"), o: wv(id, "o")};
+  let x = xy("x"), y = xy("y");
+  if (saved?.anchor && GAME && saved.ag && Number.isFinite(+saved.ag.x) && Number.isFinite(+saved.ag.y)){
+    x += GAME.x - +saved.ag.x; y += GAME.y - +saved.ag.y;   // ride the game window: the saved offset from its top-left holds
+  }
+  return {on: saved ? saved.on !== false : home.on, x, y, s: wv(id, "s"), o: wv(id, "o")};
 }
 function mkCard(id){
   const el = document.createElement("section");
@@ -515,6 +550,9 @@ function delInst(id){
 function savePos(id){
   const el = $("#ovw-" + id); if (!el) return;
   CFG.widgets[id] = {...(CFG.widgets[id] || {}), x: DESK.x + el.offsetLeft, y: DESK.y + el.offsetTop};
+  // an anchored card re-bases its game offset on every save, so what you see is what stays (a drag while the game
+  // has moved since w.ag would otherwise jump back on the next place())
+  if (CFG.widgets[id].anchor && GAME) CFG.widgets[id].ag = {x: GAME.x, y: GAME.y};
   ovSave();
 }
 // one setter for every parameter: validate, store (a default is stored as absence, so codes stay small), restyle, re-render, save
@@ -523,6 +561,8 @@ function setP(id, k, v){
   if (tok ? !TOK_SETS[baseOf(id)]?.[v] : (!p || (p.kinds && !p.kinds.includes(baseOf(id))))) return;
   const val = tok ? v : okParam(p, v, id), w = {...(CFG.widgets[id] || {})};
   if (!tok && (val === defOf(p, id) || val === "")) delete w[k]; else w[k] = val;
+  // anchor (P1-8): switching on bases the game offset where the card sits right now (no jump); switching off drops it
+  if (k === "anchor"){ if (val) w.ag = GAME ? {x: GAME.x, y: GAME.y} : {x: 0, y: 0}; else delete w.ag }
   CFG.widgets[id] = w;
   const el = $("#ovw-" + id);
   if (el){ styleCard(el, id); if (DATA) apply(DATA); clampCard(el); reflow() }
@@ -645,6 +685,15 @@ function rngDraw(){
 function rngFeet(f){
   if (!f || typeof f !== "object") return;
   FEET = {...f, at: Date.now()}; rngDraw(); rngCards();
+}
+// P1-8 anchor mode: the tracker pushes the game window's rect (desk-relative) at the anchor cadence; anchored
+// cards re-place. Skipped mid-drag/resize — a move must never fight the hand that is dragging a card.
+function gameRectArrived(r){
+  const j = JSON.stringify(r || null);
+  if (j === GAMEJ) return;
+  GAMEJ = j;
+  GAME = r && Number.isFinite(+r.x) && Number.isFinite(+r.y) && +r.width > 0 && +r.height > 0 ? {x: +r.x, y: +r.y, width: +r.width, height: +r.height} : null;
+  if (!drag && !rz && ids().some(id => CFG.widgets[id]?.anchor)) place()
 }
 // the tracker stopped reading (game closed, Stop with nothing else watching): the area goes away instead of hanging there
 setInterval(() => { if (FEET?.ok && Date.now() - FEET.at > 3000){ FEET = {...FEET, ok: false, why: "stale"}; rngDraw(); rngCards() } }, 1000);
@@ -1013,7 +1062,7 @@ function chipHide(){ clearTimeout(xyT); xyChip?.classList.add("hidden") }
 // hands them back the moment it leaves. A click asks the tracker window to scan that tab. Never while editing (edit
 // mode is for layout, and the whole window already takes the mouse).
 let bagHit = false;
-const bagCard = el => !!el?.closest?.(".ovw")?.querySelector("[data-bag]");   // any card showing bag icons (Bag check, or EXP with the switch on)
+const bagCard = el => !!el?.closest?.(".ovw")?.querySelector("[data-bag], [data-geo]");   // any card showing bag icons (Bag check, or EXP with the switch on)
 addEventListener("mousemove", e => {
   const on = !CFG.edit && bagCard(e.target);   // the whole Bag check card takes the mouse, not only the icons
   if (on !== bagHit){ bagHit = on; window.ovhost.hit(on) }
@@ -1167,6 +1216,7 @@ addEventListener("keydown", e => {
   rngCards();
   window.ovhost.onData(apply);
   window.ovhost.onFeet?.(rngFeet);
+  window.ovhost.onGameRect?.(gameRectArrived);   // P1-8 anchor mode: cards set to follow the game window ride this
   window.ovhost.onMode(on => {
     CFG.edit = !!on;
     document.body.classList.toggle("edit", CFG.edit);

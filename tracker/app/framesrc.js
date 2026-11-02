@@ -44,6 +44,14 @@ const FrameSrc = (() => {
       for (let y = 0; y < H; y++) for (let x = 0, i = ((oy + y * k) * w + ox) * 4, o = y * W * 4; x < W; x++, i += k * 4, o += 4){ out[o] = d[i]; out[o + 1] = d[i + 1]; out[o + 2] = d[i + 2]; out[o + 3] = 255 }
       return {w: W, h: H, d: out, k};
     };
+    // just a rectangle of that same game-size picture (rect = {x0, y0, w, h} in game pixels): the pickup log's band, a
+    // few percent of the frame, so it can be taken ten times a second. crop says where the band sits in the picture.
+    s.band = ({k, ox, oy}, r) => {
+      if (!s.cur) gone();
+      const vw = s.videoWidth, d = s.cur, n = r.w * r.h * 4, b = take(n), out = b ? new Uint8ClampedArray(b) : new Uint8ClampedArray(n);
+      for (let y = 0; y < r.h; y++) for (let x = 0, i = ((oy + (r.y0 + y) * k) * vw + ox + r.x0 * k) * 4, o = y * r.w * 4; x < r.w; x++, i += k * 4, o += 4){ out[o] = d[i]; out[o + 1] = d[i + 1]; out[o + 2] = d[i + 2]; out[o + 3] = 255 }
+      return {w: r.w, h: r.h, d: out, k, crop: {x0: r.x0, y0: r.y0}};
+    };
     s.drop = () => { rd.cancel().catch(() => {}); s.cur = spare = null };   // stop reading, leave the capture running (for a <video> to take over)
     return s;
   }

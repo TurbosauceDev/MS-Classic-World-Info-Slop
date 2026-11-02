@@ -34,7 +34,7 @@
     if (!row) return null;
     const live = P.asks && P.asks[id];
     return {id, median: num(row[0]), p25: num(row[1]), p75: num(row[2]), sales: num(row[3]),
-      flags: num(row[4]), trend: typeof row[5] === "number" ? row[5] : 0,
+      flags: num(row[4]), trend: typeof row[5] === "number" ? row[5] : 0, sell: num(row[6]),
       live: Array.isArray(live) && live.length ? num(live[0][0]) : null,
       listings: Array.isArray(live) ? live.length : 0};
   }

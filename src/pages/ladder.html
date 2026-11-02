@@ -1,0 +1,31 @@
+<section id="ladder" class="narrowpage" hidden>
+  <details class="howto">
+    <summary>About the weekly ladder</summary>
+    <ul>
+      <li>EXP and mesos per hour from <a href="#" data-go="trk">Grind Tracker</a> players with sharing on, ranked over one week (Monday 00:00 UTC, reset every Monday). One line per player (home network) or party (same party code).</li>
+      <li>The name on a line is the display name that player chose in the tracker's Settings (opt-in — the field is empty by default). No name shows as an unnamed grinder.</li>
+      <li>A board line ranks the best run of the week and also shows the week's total farmed time; a line needs 30 farmed minutes to appear.</li>
+      <li><b>Watchdogs</b>: a run far above what a map's spawn points can physically give, or far above the rest of a busy board, is held back — the count under the board says how many. Held-back runs stay in the owner's inbox; nothing is deleted and no one is named.</li>
+      <li><b>Map rates</b>: what the community actually measures on a map this week — the median over players of each player's median EXP/h there. A map shows once 2+ players farmed it this week.</li>
+    </ul>
+  </details>
+  <p class="note" id="laddermeta"></p>
+  <div class="seg" id="ladderweek" role="group" aria-label="Which week">
+    <button type="button" data-w="this" class="on">This week</button><button type="button" data-w="last">Last week</button>
+  </div>
+  <div id="ladderdata"><div class="tblwrap"><table><thead><tr><th></th><th>Player</th><th>Best run on</th><th class="num">EXP / h</th><th class="num">Mesos / h</th><th class="num">Farmed</th><th class="num">Best</th></tr></thead>
+      <tbody><tr><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td></tr><tr><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td></tr><tr><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td></tr><tr><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td></tr><tr><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td><td><span class="sub">…</span></td></tr></tbody></table></div></div>
+<style>
+#ladder .lad-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+#ladder .lad-tabs button{font:13.5px var(--f-body);padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+#ladder .lad-tabs button.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+#ladder .lad-tabs select{font:13.5px var(--f-body);padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+#ladder table{width:100%;border-collapse:collapse;margin:6px 0 14px}
+#ladder th{font-size:12px;color:var(--muted);text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+#ladder td{font-size:13.5px;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+#ladder tr:first-child td{font-weight:600}
+#ladder .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#ladder .sub{color:var(--muted);font-size:12px}
+#ladder .party{font-size:11px;border:1px solid var(--line);border-radius:6px;padding:0 5px;margin-left:4px;color:var(--muted)}
+</style>
+</section>

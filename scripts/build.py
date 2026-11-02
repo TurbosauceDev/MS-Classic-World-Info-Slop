@@ -20,7 +20,13 @@ for _ln in _body.splitlines():
     if _depth == 0 and _ln.strip() and not _ln.lstrip().startswith(('<div class="card"', '</div>')): raise SystemExit(f"log.html: entry outside a card: {_ln.strip()[:80]}")
     _depth += len(re.findall(r"<div\b", _ln)) - _ln.count("</div>")
 css = (src / "styles.css").read_text()
-js = "\n".join(p.read_text() for p in sorted((src / "js").glob("*.js")))
+# module load order is the numbered prefixes: sort numerically, not lexicographically (a hypothetical 7a-foo.js
+# would sort after every 7x- file and silently break the shared top-level scope). The assert keeps the
+# two-digit-plus-optional-letter convention itself load-bearing and visible (round 2)
+_jsfiles = sorted((src / "js").glob("*.js"), key=lambda p: (int(m.group()) if (m := re.match(r"\d+", p.name)) else 10**9, p.name))
+for _p in _jsfiles:
+    if not re.match(r"\d{2}[a-z]?-", _p.name): raise SystemExit(f"module name breaks the NN[a-z]- prefix convention: {_p.name}")
+js = "\n".join(p.read_text() for p in _jsfiles)
 # the grind tracker's screen readers (inventory price check uses them); one IIFE, exports window.GrindReaders
 js = js.replace("/*@READERS*/", (ROOT / "tracker" / "app" / "readers.js").read_text(), 1)
 # the tracker's game data shaping (D -> G) and session maths, for the EXP/hr live reader (63-expclive.js); window.GrindGamedata, window.GrindSession
@@ -46,7 +52,7 @@ assert "/*@CSS*/" in html and "/*@JS*/" in html and "__DATA__" in js
 # site version on Home = when this file was built (UTC), so a landed update is easy to spot
 # the page shows it in the viewer's own time zone (70-theme.js); the HTML keeps the UTC text for curl/live checks
 now = datetime.datetime.now(datetime.timezone.utc)
-ver = now.strftime("%b %-d, %Y · %H:%M UTC")
+ver = f"{now:%b} {now.day}, {now:%Y · %H:%M} UTC"   # %-d is glibc-only; breaks on Windows
 assert "__BUILD__" in html and "__BUILDISO__" in html
 html = html.replace("__BUILDISO__", now.strftime("%Y-%m-%dT%H:%M:%SZ")).replace("__BUILD__", ver)
 # site version number (Danny 10-19) = changelog entries counted from the oldest (0.1.0): each card is one version, a card

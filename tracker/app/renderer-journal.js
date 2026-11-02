@@ -5,6 +5,7 @@
 const BAR_FPS = 4;   // reads a second while a Chat blocker is on (0.3.5; was 2). Whole-frame read ~6 ms (tests/cv_bench.js), so ~2.4 % of one core
 let ovChatOn = false;   // a Chat window card is on (main.js ov-state): the game's chat box is scanned every read (renderer-chat.js). Here for the same load-order reason as ovBlocker
 let ovRangeOn = false, ovRangeOpt = null;   // a Skill range card is on (main.js ov-state range: {off, face}): your feet are looked for on every read (renderer-range.js)
+let autoNext = false, autoCool = 0, autoBase = null;   // autoBase: the last bar reading before the rise, so the first kill counts;   // always-on (core/autorun.js): the watch saw EXP rise and calls start(); autoCool: no restart right after an auto-break. Here because this file loads first
 let ovBlocker = false;   // a Chat blocker card is on (main.js ov-state, set in renderer-overlay.js): the idle watch keeps reading HP/MP/EXP. Here because this file loads first
 const jr = (() => {
   const J = GrindJournal;
@@ -17,9 +18,9 @@ const jr = (() => {
   const PACE = [[30e3, 1000], [120e3, 2000], [600e3, 5000], [Infinity, 10000]];   // [quiet for under, ms between reads]
   let w = null, jwEng = null;   // w: {t0, timer, last, miss, mapSeen, mapT, jobT}
   // the watch runs for the journey log, and (0.3.4) for a Chat blocker on the overlay: HP / MP / EXP bars keep moving between runs
-  const idle = () => timer == null && !starting && !dummyOn;
+  const idle = () => timer == null && !starting && !(typeof dummyOn !== "undefined" && dummyOn);
   const logging = () => on() && settings.journalWatch !== false;
-  const wanted = () => (logging() || ovBlocker || ovChatOn || ovRangeOn) && idle();   // order matters: at load jrUi calls this before renderer-dummy.js defines dummyOn
+  const wanted = () => (logging() || settings.autoRun !== false || ovBlocker || ovChatOn || ovRangeOn) && idle();   // order matters: at load jrUi calls this before renderer-dummy.js defines dummyOn
   const pace = (t, last) => PACE.find(([q]) => t - last < q)[1];
   async function open(){
     if (!await host.gameFound()) return false;
@@ -70,6 +71,7 @@ const jr = (() => {
         for (const e of r.ev){
           if (/^(exp|bonus|meso|item|itemraw|bar|wallet|inv|use|party|vitals)$/.test(e.type)){
             jr.event(e);
+            if (settings.autoRun !== false && Date.now() >= autoCool && GrindAutoRun.gained(me.bar, me.level, e)){ autoNext = true; autoBase = me.bar != null ? {exp: me.bar, level: me.level, pct: me.barPct?.pct} : null; setTimeout(() => timer == null && !starting && start().catch(() => {}), 0) }
             if (e.type === "vitals") ovVit = {hp: e.hp, mp: e.mp, t};
             if (e.type === "bar") me.barPct = {level: e.level, pct: e.pct};
             if (/^(exp|bonus|meso|item|itemraw|party)$/.test(e.type) || e.type === "bar" && me.bar != null && e.exp !== me.bar || e.type === "vitals" && me.hp != null && e.hp[0] !== me.hp) me.last = t;

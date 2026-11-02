@@ -19,6 +19,7 @@ $("#navtowns").innerHTML = [SOUTHPERRY, ...D.cabs].map(id => `<button type="butt
 
 let S = {from: LITH, to: null, nocab: false};
 try { Object.assign(S, savedState("navi", S)) } catch(e) {}
+if (!D.nav[S.from]) S.from = LITH;   // a save older than a data refresh: a dropped map id would render a route from an invisible origin (round 2)
 const save = () => { try { localStorage.setItem("navi", JSON.stringify(S)) } catch(e) {} };
 
 // map-by-map hops of the planner's shortest trip: [[from, to, byCab], ...]; null when there's no walking/cab route
@@ -87,4 +88,5 @@ $("#navshare").addEventListener("click", () => copyShare($("#navshare"), shareUr
 if (HASH.n && D.nav[HASH.n.f]){ S.from = HASH.n.f; S.to = HASH.n.t || null; S.nocab = !!HASH.n.c; $("#navnocab").checked = S.nocab }   // shared link
 navTo = id => { hideQtip(); S.to = String(id); if (id && navTo.noCab){ S.nocab = true; $("#navnocab").checked = true } save(); $("#t-navi").click(); render(); $("#navi").scrollIntoView({block: "start"}) };
 render();
+if (D.lazy) ASSETS.then(() => { if (S.to) render() });   // a route drawn before the minimaps arrived says "No minimap in the game files": draw them in
 })();

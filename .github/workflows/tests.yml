@@ -27,6 +27,14 @@ jobs:
       - run: python3 scripts/build.py | tail -2
       - name: Copy-detection canary
         run: python3 tests/canary_test.py
+      - name: item name fixes (dropped Ü/ü)
+        run: python3 tests/name_fix_test.py
+      - name: static pages and sitemap
+        run: python3 tests/pages_gen_test.py
+      - name: guessable addresses (router + clean share paths)
+        run: python3 tests/routes_test.py
+      - name: service worker leaves deep links to the network
+        run: node tests/sw_test.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/smoke.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
@@ -47,6 +55,8 @@ jobs:
         run: node tests/expclive.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/shotscales.js
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node tests/nx.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node tests/questvalue.js
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}

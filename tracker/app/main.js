@@ -18,6 +18,9 @@ const SESSIONS = path.join(app.getPath("userData"), "sessions");   // finished s
 const AUTO = require("../core/autosave.js");
 const OVCFG = require("../core/overlaycfg.js");
 const HIST = require("../core/history.js");   // applyEdit: History > Edit run   // the running session, autosaved there (crash recovery)
+const OcrModel = require("../core/ocrmodel.js");   // neural text reader (0.3.31): port of ocrs' line prep + CTC decode
+const WinRect = require("./winrect.js");   // P1-8 anchor mode: koffi window-rect queries, read-only, capability-gated
+const readPng = require("./png.js");
 
 // Windows Graphics Capture (what OBS uses) instead of the old GDI window grab, which gives black frames for DirectX games
 // NO process-per-site / single-process / in-process-gpu: 0.3.11 merged the overlay into the tracker's renderer with
@@ -71,8 +74,9 @@ app.whenReady().then(() => {
   // getDisplayMedia() in the page gets the game window, chosen here (no picker)
   session.defaultSession.setDisplayMediaRequestHandler(async (req, cb) => {
     perfCount.captures++;
-    const src = await captureSource();
-    cb(src ? {video: src} : {});
+    // a rejected captureSource without cb left getDisplayMedia pending forever: Start stuck on "Opening..." until a
+    // restart (round 2). cb can itself throw if the request died meanwhile — swallowed, nothing left to answer.
+    try { const src = await captureSource(); cb(src ? {video: src} : {}) } catch { try { cb({}) } catch {} }
   });
   // the window only ever shows our own page: no new windows, no navigating away
   win.webContents.setWindowOpenHandler(() => ({action: "deny"}));
@@ -139,7 +143,7 @@ ipcMain.handle("perf-metrics", () => app.getAppMetrics().map(m => ({pid: m.pid, 
 // and nothing here could be measured off-Windows, so the next screenshot names the part): JS heap, native buffers, the OCR
 // engine up or not, how often the game window was looked for and the capture opened
 const perfCount = {games: 0, captures: 0};
-ipcMain.handle("perf-main", () => { const m = process.memoryUsage(), mb = v => Math.round(v / 1048576); return {rss: mb(m.rss), heap: mb(m.heapUsed), ext: mb(m.external), buf: mb(m.arrayBuffers), ocr: !!ocr, ocrReads, games: perfCount.games, captures: perfCount.captures, upd: upd.state, read: lastReadStats} });
+ipcMain.handle("perf-main", () => { const m = process.memoryUsage(), mb = v => Math.round(v / 1048576); return {rss: mb(m.rss), heap: mb(m.heapUsed), ext: mb(m.external), buf: mb(m.arrayBuffers), ocr: !!ocr, ocrReads, games: perfCount.games, captures: perfCount.captures, upd: upd.state, read: lastReadStats, winrect: WinRect.available()} });
 // reader telemetry (core/readstats.js): one jsonl line a minute from the renderer, appended here so settings can be
 // compared by real numbers later (customclassic-chat's reading.jsonl). Size-capped the same way: past 2 MB the
 // newest 6000 lines are kept, written atomically; the last line rides perf-main for the Performance monitor.
@@ -183,7 +187,8 @@ function registerKeys(){
 }
 function keyAction(a){
   if (!win || win.isDestroyed()) return;
-  if (a === "onTop"){ const on = readSettings().onTop === false; writeSettings({...readSettings(), onTop: on}); pinOnTop(); win.webContents.send("menu", "onTop:" + on); return }
+  // same event-callback rule as saveBounds: a globalShortcut callback that throws kills main (round 2)
+  if (a === "onTop"){ const on = readSettings().onTop === false; try { writeSettings({...readSettings(), onTop: on}) } catch {} pinOnTop(); win.webContents.send("menu", "onTop:" + on); return }
   // click-through: the mouse goes to the game under the window (an overlay); only its shortcut turns it back off, so it
   // starts off every launch and can't be turned on while that shortcut is off
   if (a === "clickThrough"){ clickThrough = !clickThrough; win.setIgnoreMouseEvents(clickThrough, {forward: true}); win.webContents.send("menu", "clickThrough:" + clickThrough); return }
@@ -334,13 +339,20 @@ ipcMain.on("ov-push", (_, d) => { if (ovWin && !ovWin.isDestroyed()) ovWin.webCo
 // Windows (DWM frame bounds of the captured window: what Windows Graphics Capture records; GetWindowRect adds invisible
 // borders) or the captured screen. Only the window's position is asked of Windows, nothing of the game.
 let gameRectC = {r: null, t: 0, busy: false};
+/* frameRect(hwnd) — the PowerShell path, kept as the fallback for machines where koffi won't load
+   (non-Windows, an odd Electron ABI, a stripped-down system). Same DWM-9-then-GetWindowRect order as
+   winrect.js; slower (a process spawn), which is exactly why the fast path exists. */
 function frameRect(hwnd){
   return new Promise(resolve => {
     const ps = `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public struct R{public int L,T,Rt,B;}public static class W{[DllImport("dwmapi.dll")]public static extern int DwmGetWindowAttribute(IntPtr h,int a,out R r,int s);[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out R r);}';`
       + `$r=New-Object R; if([W]::DwmGetWindowAttribute([IntPtr][long]${hwnd},9,[ref]$r,16) -ne 0){[void][W]::GetWindowRect([IntPtr][long]${hwnd},[ref]$r)}; "$($r.L),$($r.T),$($r.Rt),$($r.B)"`;
     require("child_process").execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ps], {timeout: 5000, windowsHide: true}, (err, out) => {
       const n = String(out || "").trim().split(",").map(Number);
-      resolve(!err && n.length === 4 && n.every(Number.isFinite) && n[2] > n[0] && n[3] > n[1] ? {x: n[0], y: n[1], width: n[2] - n[0], height: n[3] - n[1]} : null);
+      // the minimized "iconic" rect (-32000,-32000,160x28) passes a plain size check and slammed every anchored card
+      // to the screen's top-left (round 2) — the same signature winrect.js rejects
+      resolve(!err && n.length === 4 && n.every(Number.isFinite) && n[2] > n[0] && n[3] > n[1]
+        && !(n[0] <= -30000 && n[1] <= -30000 && n[2] - n[0] <= 200 && n[3] - n[1] <= 200)
+        ? {x: n[0], y: n[1], width: n[2] - n[0], height: n[3] - n[1]} : null);
     });
   });
 }
@@ -348,16 +360,35 @@ async function gameRectNow(){
   const {screen} = require("electron"), src = await captureSource();
   if (src?.display_id){ const d = screen.getAllDisplays().find(d => String(d.id) === String(src.display_id)); if (d) return d.bounds }   // whole-screen capture
   const hwnd = /^window:(\d+):/.exec(src?.id || "")?.[1];   // digits only: safe to put in the command
-  if (hwnd && process.platform === "win32"){ const r = await frameRect(hwnd); if (r) return screen.screenToDipRect(null, r) }
+  if (hwnd && process.platform === "win32"){
+    const r = WinRect.rectOf(+hwnd) || await frameRect(hwnd);   // koffi first (instant); PowerShell only when it can't
+    if (r) return screen.screenToDipRect(null, r);
+  }
   return null;
 }
-function gameRect(){   // cached, refreshed in the background every 3 s while feet are being sent (a moved window follows within 3 s)
-  if (!gameRectC.busy && Date.now() - gameRectC.t > 3000){ gameRectC.busy = true; gameRectNow().then(r => { gameRectC.r = r }).catch(() => {}).finally(() => { gameRectC.busy = false; gameRectC.t = Date.now() }) }
+// the rect's freshness cadence: koffi makes a query cost microseconds, so anchored overlay cards can
+// track a moved/resized game window within 600 ms; the PowerShell fallback stays at the old 3 s
+const RECT_MS = () => WinRect.available() ? 600 : 3000;
+function gameRect(){   // cached, refreshed in the background (P1-8 anchor mode and the feet reading both feed off this)
+  if (!gameRectC.busy && Date.now() - gameRectC.t > RECT_MS()){ gameRectC.busy = true; gameRectNow().then(r => { gameRectC.r = r }).catch(() => {}).finally(() => { gameRectC.busy = false; gameRectC.t = Date.now() }) }
   return gameRectC.r;
 }
 ipcMain.on("ov-feet", (_, f) => { if (!ovWin || ovWin.isDestroyed() || !f || typeof f !== "object") return;
   const g = gameRect(), d = ovDesk();
   ovWin.webContents.send("ov-feet", {...f, game: g ? {x: g.x - d.x, y: g.y - d.y, width: g.width, height: g.height} : null}) });
+/* P1-8 anchor mode: overlay cards whose "Follow the game window" switch is on track the game window's rect
+   (desk-relative, the same shape ov-feet carries). The loop only runs while the overlay is open AND at least
+   one card is anchored — nobody anchored means no native calls and no IPC at all. Sent on change only. */
+let ovGameLast = null;
+setInterval(() => {
+  if (!ovWin || ovWin.isDestroyed()){ ovGameLast = null; return }
+  const anch = Object.values(readSettings().overlay?.widgets || {}).some(w => w && w.anchor);
+  if (!anch) return;
+  const g = gameRect(), d = ovDesk();
+  const rel = g && d ? {x: g.x - d.x, y: g.y - d.y, width: g.width, height: g.height} : null;
+  const j = JSON.stringify(rel);
+  if (j !== ovGameLast){ ovGameLast = j; try { ovWin.webContents.send("ov-gamerect", rel) } catch {} }
+}, 600).unref?.();
 
 // "Show me where": a full-screen window with the frozen game picture; the player drags a box (snipping-tool style)
 // It opens on the game's monitor (Danny: it opened on his second monitor, where the tracker and the mouse were): the game
@@ -368,7 +399,11 @@ function winRect(hwnd){
       + `$r=New-Object R; if([W]::GetWindowRect([IntPtr][long]${hwnd},[ref]$r)){"$($r.L),$($r.T),$($r.Rt),$($r.B)"}`;
     require("child_process").execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ps], {timeout: 5000, windowsHide: true}, (err, out) => {
       const n = String(out || "").trim().split(",").map(Number);
-      resolve(!err && n.length === 4 && n.every(Number.isFinite) && n[2] > n[0] && n[3] > n[1] ? {x: n[0], y: n[1], width: n[2] - n[0], height: n[3] - n[1]} : null);
+      // the minimized "iconic" rect (-32000,-32000,160x28) passes a plain size check and slammed every anchored card
+      // to the screen's top-left (round 2) — the same signature winrect.js rejects
+      resolve(!err && n.length === 4 && n.every(Number.isFinite) && n[2] > n[0] && n[3] > n[1]
+        && !(n[0] <= -30000 && n[1] <= -30000 && n[2] - n[0] <= 200 && n[3] - n[1] <= 200)
+        ? {x: n[0], y: n[1], width: n[2] - n[0], height: n[3] - n[1]} : null);
     });
   });
 }
@@ -385,17 +420,20 @@ async function gameDisplay(){
 let snipWin = null;
 ipcMain.handle("snip", async (_, url) => { const d = await gameDisplay(); return new Promise(resolve => {
   if (snipWin && !snipWin.isDestroyed()) snipWin.close();
-  snipWin = new BrowserWindow({...d.bounds, frame: false, fullscreen: true, alwaysOnTop: true, skipTaskbar: true, show: false,
+  const sn = snipWin = new BrowserWindow({...d.bounds, frame: false, fullscreen: true, alwaysOnTop: true, skipTaskbar: true, show: false,
     webPreferences: {preload: path.join(__dirname, "snip-preload.js"), contextIsolation: true}});
-  snipWin.setAlwaysOnTop(true, "screen-saver");
+  sn.setAlwaysOnTop(true, "screen-saver");
   let done = false;
-  const finish = rect => { if (done) return; done = true; ipcMain.removeListener("snip-done", onDone); if (snipWin && !snipWin.isDestroyed()) snipWin.close(); snipWin = null; resolve(rect || null) };
-  const onDone = (e, rect) => { if (e.sender === snipWin?.webContents) finish(rect) };
+  // everything below touches `sn` (this invocation's window), never the module-level snipWin: a second snip request
+  // used to have request #1's cleanup close request #2's window (round 2)
+  const finish = rect => { if (done) return; done = true; ipcMain.removeListener("snip-done", onDone); if (!sn.isDestroyed()) sn.close(); if (snipWin === sn) snipWin = null; resolve(rect || null) };
+  const onDone = (e, rect) => { if (e.sender === sn.webContents) finish(rect) };
   ipcMain.on("snip-done", onDone);
-  snipWin.on("closed", () => finish(null));
-  snipWin.webContents.setWindowOpenHandler(() => ({action: "deny"}));
-  snipWin.webContents.on("will-navigate", e => e.preventDefault());
-  snipWin.loadFile(path.join(__dirname, "snip.html")).then(() => { snipWin.webContents.send("snip-image", url); snipWin.show(); snipWin.focus() });
+  sn.on("closed", () => finish(null));
+  sn.webContents.setWindowOpenHandler(() => ({action: "deny"}));
+  sn.webContents.on("will-navigate", e => e.preventDefault());
+  sn.loadFile(path.join(__dirname, "snip.html")).then(() => { if (!sn.isDestroyed()){ sn.webContents.send("snip-image", url); sn.show(); sn.focus() } })
+    .catch(() => finish(null));   // Alt-F4 while the page was still loading used to reject unhandled (round 2)
 }) });
 ipcMain.handle("whole-screen", (_, on) => { wholeScreen = !!on; return wholeScreen });
 // alert sounds the player adds (0.2.92): copied into userData/sounds (wav/mp3/ogg, 3 MB each, 60 files) and read back by name only
@@ -519,9 +557,9 @@ app.whenReady().then(() => siteMarket(false).catch(() => {}));   // warm the cac
 setInterval(() => siteMarket(true).catch(() => {}), 30 * 60e3);   // every 30 minutes
 ipcMain.on("site-market-ready", () => sendSiteMk());   // the page asks for the current copy after boot
 // session history: the saved session summaries, newest first, and a CSV of them in Documents
-function sessions(){
+function sessions(cap = 200){   // the History list caps at 200; the CSV export asks for everything
   try {
-    return fs.readdirSync(SESSIONS).filter(f => /^\d+\.json$/.test(f)).sort((a, b) => b.localeCompare(a, undefined, {numeric: true})).slice(0, 200)
+    return fs.readdirSync(SESSIONS).filter(f => /^\d+\.json$/.test(f)).sort((a, b) => b.localeCompare(a, undefined, {numeric: true})).slice(0, cap)
       .map(f => { try { return {saved: +f.slice(0, -5), ...JSON.parse(fs.readFileSync(path.join(SESSIONS, f), "utf8"))} } catch { return null } }).filter(Boolean);
   } catch { return [] }
 }
@@ -542,7 +580,7 @@ ipcMain.handle("export-csv", () => {
   // text starting with = + - @ would run as a formula in Excel (map names come from OCR): prefixed with '
   const q = v => { let t = String(v ?? ""); if (typeof v === "string" && /^[=+\-@]/.test(t)) t = "'" + t; return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t };
   const head = ["saved", "date", "name", "player", "start_level", "end_level", "clock_min", "exp_total", "exp_per_active_min", "best_drop", "best_drop_each", "map", "level", "job", "party", "active_min", "kills", "exp", "mesos", "exp_hr", "mesos_hr", "deaths", "used_cost", "note"];
-  const rows = sessions().map(x => { const h = (x.activeMin || 0) / 60;
+  const rows = sessions(Infinity).map(x => { const h = (x.activeMin || 0) / 60;
     return [new Date(x.saved).toISOString(), x.date, x.name || "", x.player || "", x.startLevel ?? "", x.endLevel ?? "", x.clockMin ?? "", x.expTotal ?? x.snap?.exp ?? x.exp ?? "", x.expPerActiveMin ?? "", x.bestDrop?.name || "", x.bestDrop?.each ?? "", x.mapName || x.map, x.level, x.job, x.party, x.activeMin, x.kills, x.exp, x.mesos,
       h ? Math.round(x.exp / h) : "", h ? Math.round(x.mesos / h) : "", x.deaths ?? "", x.usedCost ?? "", x.note || ""] });
   const file = path.join(app.getPath("documents"), "MS Classic Tracker sessions.csv");
@@ -567,7 +605,9 @@ function saveBounds(){
   if (!win || win.isDestroyed() || win.isMinimized() || win.isMaximized() || win.isFullScreen()) return;
   const b = win.getBounds();
   if (fullSize) b.height = fullSize[1];   // mini bar: keep the full height, it opens full size
-  writeSettings({...readSettings(), winBounds: b});
+  // fired from window events (moved/resized/close), not IPC handlers: a throw here — another process holding
+  // settings.json (AV scanner) — was an uncaughtException in main and killed the whole app mid-session (round 2)
+  try { writeSettings({...readSettings(), winBounds: b}) } catch {}
 }
 // the page's title bar buttons (File, View, Help) open the same menus the old menu bar had, under the button
 ipcMain.handle("menu-popup", (_, label, x, y) => {
@@ -596,7 +636,9 @@ ipcMain.handle("share-run", async (_, run) => {
 });
 ipcMain.handle("save-session", (_, summary) => {   // kept on this PC only (shared numbers go up as 15-minute runs)
   fs.mkdirSync(SESSIONS, {recursive: true});
-  fs.writeFileSync(path.join(SESSIONS, Date.now() + ".json"), JSON.stringify(summary));
+  // atomic like every other persisted write: a crash mid-write used to leave a torn file the History silently drops —
+  // the one file the autosave copy can't bring back (AUTO.clear ran) (bug-hunt 2026-11-02)
+  writeAtomic(path.join(SESSIONS, Date.now() + ".json"), JSON.stringify(summary));
   AUTO.clear(SESSIONS);   // saved for real: nothing left to recover
   return true;
 });
@@ -622,6 +664,20 @@ ipcMain.handle("shop-share", async (_, body) => {
     const r = await fetch(SERVER + "/api/shop", {signal: AbortSignal.timeout(10e3), method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({...body, install: st.install})});
     return r.ok;
   } catch { return false }
+});
+// shared boss spots (renderer-spots.js, 0.3.30, Turbozo): one timed-kill report up (Share switch governs), the map's
+// witnesses back. The GET is public: every tracker's respawn card gets richer, sharing or not.
+ipcMain.handle("spot-share", async (_, body) => {
+  const st = readSettings();
+  if (!SERVER || !st.share || !st.install) return false;
+  try {
+    const r = await fetch(SERVER + "/api/spots", {signal: AbortSignal.timeout(10e3), method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({...body, install: st.install})});
+    return r.ok;
+  } catch { return false }
+});
+ipcMain.handle("spots-get", async (_, map) => {
+  if (!SERVER || typeof map !== "string" || !/^\d{1,10}$/.test(map)) return null;
+  try { const r = await fetch(SERVER + "/api/spots?map=" + map, {signal: AbortSignal.timeout(10e3)}); return r.ok ? await r.json() : null } catch { return null }
 });
 // "Delete what I shared" (Settings > Window and sharing): the server drops every run, KPQ round, shop row and party row this copy ever sent,
 // then this copy gets a new random ID (nothing later links back) and its unsent queue is emptied. Works with sharing off too.
@@ -674,6 +730,34 @@ ipcMain.handle("save-report", (_, frames, info) => {
 // only ever the frames folder, or a report folder inside it
 ipcMain.handle("open-folder", (_, sub) => shell.openPath(typeof sub === "string" && /^report-[\dT-]+$/.test(sub) ? path.join(FRAMES(), sub) : FRAMES()));
 
+// Neural text reader (0.3.31, P1-6): the ocrs recognition model (models/text-recognition.onnx, CC BY-SA 4.0,
+// attribution in models/NOTICE.md — the same recognition-only model Minerva bundles, Turbozo got us the OK) runs
+// locally with onnxruntime-node, behind core/ocrmodel.js. The shop rows read through it: on the shop fixture it
+// answers in ~15 ms a line where Tesseract took ~90, and every price parses (tests/ocr_bench.js is the gate).
+// The shop's title bar stays on Tesseract — the model drops thin strokes there and the seller IGN must not be
+// wrong — and every other OCR caller (map title, chat, journal) is untouched. An empty or low-confidence neural
+// read falls back to the Tesseract worker below, so a read only ever gets slower, never worse.
+let ortRun = null;
+function neuralRun(){
+  if (!ortRun) ortRun = (async () => {
+    const ort = require("onnxruntime-node");
+    const s = await ort.InferenceSession.create(unpacked(path.join(__dirname, "..", "models", "text-recognition.onnx")), {executionProviders: ["cpu"], graphOptimizationLevel: "all"});
+    return async (data, shape) => {
+      const r = await s.run({line_image: new ort.Tensor("float32", data, shape)}), o = r.chars;
+      return {data: o.data, seq: o.dims[0], classes: o.dims[2]};
+    };
+  })().catch(e => { ortRun = null; throw e });
+  return ortRun;
+}
+// the crops arrive hard-binarized at 2x (names, one price cut) — one nearest-neighbour doubling later the model's
+// own resize antialiases the blocky edges instead of squashing them (measured: names 3/6 -> 6/6, prices 6/6 parse)
+async function neuralOcr(pngBytes, up){
+  const img = readPng(pngBytes);
+  if (!img || !img.w || !img.h) return null;
+  const run = await neuralRun();
+  const f = Math.max(1, Math.round(4 / (up || 4)));   // land the line at the model's preferred 4x whatever the cutter chose
+  return (await OcrModel.readLines([f > 1 ? OcrModel.upscale(img, f) : img], run, {}))[0] || null;   // {text, conf} | null
+}
 // map name: OCR of the minimap title (a black-on-white PNG the renderer cuts out). Tesseract runs here, offline, with the
 // English model shipped in the installer; files are unpacked from the asar because its worker thread loads them from disk.
 let ocr = null;
@@ -692,14 +776,26 @@ function ocrWorker(){
 // its peak for the worker's whole life (100-200 MB of the total the Performance monitor shows), and with the text
 // cache (core/ocrcache.js) answering every repeat read, OCR sits unused most of a session. The next read just builds
 // a new worker (a second or two, local model).
-let ocrReads = 0, ocrIdleT = 0;
-ipcMain.handle("ocr", async (_, pngBytes) => {
+let ocrReads = 0, ocrIdleT = 0, ocrFails = 0, ocrSkipT = 0;
+ipcMain.handle("ocr", async (_, pngBytes, opt) => {
+  if (opt && (opt.tag === "shopName" || opt.tag === "shopPrice")){   // the benched paths only; see neuralOcr above
+    try {
+      const m = await neuralOcr(Buffer.from(pngBytes), opt.up);
+      // conf: the kept steps' geometric mean — one bad character hides in it (nine near-certain steps plus one 0.4
+      // guess average ~0.9). low: the weakest step. Either under the floor falls back to Tesseract (2026-11-02)
+      if (m && m.text && m.conf >= 0.35 && m.low >= 0.35) return m.text;
+    } catch {}
+  }
+  // a persistently broken worker used to be rebuilt on EVERY read (a multi-second createWorker per crop, 24 queued
+  // crops = minutes of churn returning ""): after 3 straight failures, fail fast for a minute (round 2)
+  if (ocrFails >= 3 && Date.now() - ocrSkipT < 60000) return "";
   try {
     const w = await ocrWorker();
     ocrIdleT = Date.now();
     const text = (await w.recognize(Buffer.from(pngBytes))).data.text;
+    ocrFails = 0;
     if (++ocrReads >= 200){ ocrReads = 0; ocr = null; ocrIdleT = 0; w.terminate().catch(() => {}) }
     return text;
-  } catch { const o = ocr; ocr = null; ocrIdleT = 0; o?.then(w => w.terminate()).catch(() => {}); return "" }   // broken worker: a new one next time
+  } catch { const o = ocr; ocr = null; ocrIdleT = 0; ocrFails++; ocrSkipT = Date.now(); o?.then(w => w.terminate()).catch(() => {}); return "" }   // broken worker: a new one next time
 });
-setInterval(() => { if (ocr && ocrIdleT && Date.now() - ocrIdleT > 2 * 60e3){ const o = ocr; ocr = null; ocrReads = 0; ocrIdleT = 0; o.then(w => w.terminate()).catch(() => {}) } }, 60e3).unref?.();
+setInterval(() => { if (ocr && ocrIdleT && Date.now() - ocrIdleT > 2 * 60e3){ const o = ocr; ocr = null; ocrReads = 0; ocrIdleT = 0; ocrFails = 0; o.then(w => w.terminate()).catch(() => {}) } }, 60e3).unref?.();

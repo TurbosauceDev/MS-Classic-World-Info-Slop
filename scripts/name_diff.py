@@ -22,7 +22,8 @@ def osms_ref(ref):
 def names(D):
     """kind -> {id: name}"""
     sk = {s["id"]: f'{s["n"]} ({job})' for job, lst in D.get("skills", {}).items() for s in lst}
-    return {"skill": sk, "item": {i: o.get("n") for i, o in D.get("items", {}).items()},
+    return {"skill": sk, "item": {i: o.get("n") for i, o in D.get("items", {}).items() if o.get("c") != "Cash"},   # NX items come and go with the released list (11-01), not with OSMS renames
+           
             "monster": {i: m[0] for i, m in D.get("mobs", {}).items()}, "map": {i: m[0] for i, m in D.get("maps", {}).items() if m and m[0]}}
 
 def diff(a, b):

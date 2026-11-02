@@ -5,7 +5,7 @@ let KEEPNEED = null;   // () -> {itemId: [still needed, verdict]} with this tab'
 // every item a launch quest (incl. Citizenship) or a crafting recipe asks for: how many quests want, from which level, a
 // verdict, what an NPC pays, and where another comes from (quest data's monster, meowdb player drop reports, crafting
 // sources, shops, quest rewards, recipes that make it). "Have" counts are per viewer (localStorage keephave).
-const ID = {}; for (const [id, it] of Object.entries(D.items)) if (!(it.n in ID)) ID[it.n] = id;
+const ID = {}; for (const [id, it] of Object.entries(D.items)) if (it.c !== "Cash" && !(it.n in ID)) ID[it.n] = id;   // NX items share a few names (Leaf, Free Spirit): never the quest/craft item
 const K = new Map();
 // quest items are always kept (the game marks them): same test as the Items tab's "Hide quest items", i.e. the client's
 // quest-item ID block (403xxxx) plus anything a quest hands you at its start ("Maria's Letter x1")

@@ -1,8 +1,11 @@
 """GitHub Pages copy of the built page: python3 scripts/pages_site.py <out dir>   (pages.yml runs it; no vendor/, no PIL)
 
 dist/index.html stays the one self-contained file (claude.ai artifact, file://). For Pages this script:
-  - moves the item icons and minimaps (D.iicons, D.mmaps: about half the page) into assets-<hash>.json, which the page
-    fetches right after it starts (00-core.js, D.lazy) and patches into anything already drawn. Icons Home shows stay inline.
+  - moves the item icons, minimaps and skill frames (D.iicons, D.mmaps, D.skanim: about half the page) into
+    assets-<hash>.json behind a stable-named pointer assets.json — the same trick prices.json uses below — so a cached
+    shell always finds the current file, even after a deploy renamed the hashed one (2026-11-02: cached shells met a 404
+    there and every minimap read "No minimap in the game files"). The page fetches it right after it starts (00-core.js,
+    D.lazy) and patches into anything already drawn. Icons Home shows stay inline.
   - moves the per-poll market data (audit P9: pw/cm/cmp/mdb/ma/mw/mi + crank/shared/ishop, ~1.3 MB raw) into
     prices-<hash>.json behind a stable-named pointer prices.json = {url, keys}. A boot script parses the inline shell
     data, fetches pointer + file, merges the keys into D (and the Credits source dates into window.__SRCD), and the
@@ -27,7 +30,7 @@ def split(html):
     for k in LAZY: D[k] = {i: v for i, v in D[k].items() if i not in assets[k]}
     blob = json.dumps(assets, separators=(",", ":"))
     name = f"assets-{hashlib.sha1(blob.encode()).hexdigest()[:10]}.json"
-    D["lazy"] = {"url": name, "keys": list(LAZY)}
+    D["lazy"] = {"url": "assets.json", "keys": list(LAZY)}   # stable pointer: the shell's bytes survive asset churn
     market = json.dumps(D.get("pw") or {}, separators=(",", ":"))
     # audit P9: the market data moves out too. The pointer keeps its name, so a cached shell always finds the current
     # prices-<hash>.json even when a newer deploy replaced the old hashed file.
@@ -40,14 +43,20 @@ def split(html):
     D["lazy2"] = "prices.json"
     data = json.dumps(D, separators=(",", ":")).replace("<", "\\u003c")
     out = html[:m.start(2)] + data + html[m.end(2):]
-    # boot: parse the shell data, fetch pointer + prices, merge, and only then run the app (wrapped below)
+    # boot: parse the shell data, fetch pointer + prices, merge, and only then run the app (wrapped below).
+    # The chain ends .catch(() => null): only HTTP-error statuses became null before, so a transport-level
+    # reject (offline first visit, connection reset mid-boot, truncated json) rejected __PRICES itself and the
+    # whole app — living inside __PRICES.then — never ran (round 2: dead buttons, no error, no retry). The app
+    # tolerates missing market data (54-invprice guards D.pw), so degrade to a no-prices boot instead.
     boot = ('<script>\nwindow.__D = JSON.parse(document.getElementById("sitedata").textContent);\n'
             'window.D = window.__D;   // the app declares its own const D inside the wrapper; this one is for tests and the console\n'
+            # the app indexes several of these unguarded (D.ishop[id] in 49-items.js): a missing payload seeds
+            # empties, so a no-prices boot is a real boot (a prices 404 could hit this even before the round-2 fix)
+            'for (const k of ' + json.dumps(list(PRICES)) + ') window.__D[k] || (window.__D[k] = {});\n'
             'window.__PRICES = (window.__D.lazy2 ? fetch(window.__D.lazy2, {cache: "no-store"})\n'
             '  .then(r => r.ok ? r.json() : null).then(m => m ? fetch(m.url).then(r => r.ok ? r.json() : null).then(p => {\n'
             '    if (p) { for (const k of m.keys) if (p[k]) Object.assign(window.__D[k] || (window.__D[k] = {}), p[k]); if (p.srcd) window.__SRCD = p.srcd }\n'
-            '    return p }) : null) : Promise.resolve(null));\n'
-            'window.__PRICES.catch(() => {});\n</script>\n')
+            '    return p }) : null) : Promise.resolve(null)).catch(() => null);\n</script>\n')
     app = re.search(r'<script>\n(const D = JSON\.parse\(document\.getElementById\("sitedata"\)\.textContent\);)', out)
     assert app, "app script not found"
     out = out[:app.start()] + boot + '<script>\nwindow.__PRICES.then(() => {\nconst D = window.__D;\n' + out[app.end():]
@@ -64,7 +73,7 @@ def split(html):
             '<meta property="og:type" content="website">\n<meta property="og:site_name" content="MS Classic World Data Slop">\n'
             '<meta property="og:title" content="MS Classic World Data Slop">\n'
             '<meta property="og:description" content="Planner, prices and grind tracker for MapleStory Classic World, built from the game files.">\n'
-            '<meta property="og:image" content="https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/icon-512.png">\n'
+            '<meta property="og:image" content="https://maplestory.scumlord.studio/icon-512.png">\n'   # the canonical host (00-routes.js, sitemap): the legacy github.io project URL breaks silently on a rename (round 2)
             '<meta name="twitter:card" content="summary">\n<meta name="description" content="Planner, prices and grind tracker for MapleStory Classic World, built from the game files.">\n')
     assert "<title>" in out
     out = out.replace("<title>", head + "<title>", 1)
@@ -74,7 +83,10 @@ def main(dst):
     dst = pathlib.Path(dst); dst.mkdir(parents=True, exist_ok=True)
     html = (ROOT / "dist" / "index.html").read_text()
     out, name, blob, pname, pblob, market = split(html)
+    import pages_gen   # static per-item/mob/map pages + sitemap (scripts/pages_gen.py)
+    pages_gen.generate(json.loads(re.search(r'<script type="application/json" id="sitedata">(.*?)</script>', html, re.S).group(1)), dst)
     (dst / "index.html").write_text(out); (dst / name).write_text(blob); (dst / pname).write_text(pblob)
+    (dst / "assets.json").write_text(json.dumps({"url": name, "keys": list(LAZY)}))
     (dst / "prices.json").write_text(json.dumps({"url": pname, "keys": list(PRICES)}))
     (dst / "market.json").write_text(market)
     for f in ("manifest.webmanifest", "sw.js", "icon-32.png", "icon-192.png", "icon-512.png", "icon-maskable.png"): shutil.copy(ROOT / "src" / "pwa" / f, dst / f)
@@ -82,7 +94,7 @@ def main(dst):
     # page-weight limit (blind-spot report C1): fails the deploy if the first load grows past it. Now 1251 KB gzip; raise it on purpose.
     limit = int(os.environ.get("FIRST_LOAD_GZIP_KB", "1600")); got = len(gzip.compress(out.encode())) // 1024
     assert got <= limit, f"first load is {got} KB gzip, over the {limit} KB limit (scripts/pages_site.py)"
-    print(f"first load: {kb(html)} -> {kb(out)}; {name} {kb(blob)} + {pname} {kb(pblob)} fetched after start")
+    print(f"first load: {kb(html)} -> {kb(out)}; {name} {kb(blob)} + {pname} {kb(pblob)} fetched after start (assets.json / prices.json name them)")
 
 if __name__ == "__main__":
     main(sys.argv[1] if len(sys.argv) > 1 else "site")

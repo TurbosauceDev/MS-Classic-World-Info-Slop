@@ -14,6 +14,7 @@ Steps, in order (each adds keys to the data dict):
   mobdb     mobdb, mskill (+ mobimg)                     <- monsters.json + meowdb drops/mesos (`build_data.py mobdb`)
   worldmap  wmap                                          <- maplestory.io MCW CBT2 WorldMap000/001 (`build_data.py worldmap`)
   crafting  craft (+ items)                               <- crafting.json + Crafting quests (`build_data.py crafting` = this step only)
+  cash      NX/Decoration items (c = Cash) into items/iicons <- cash_shop.json (`build_data.py cash`)
   itemdb    items/iicons for every item, ishop             <- items.json + meowdb shops (`build_data.py itemdb`)
 Then squash_images.py re-saves every embedded PNG as a smaller, pixel-identical PNG.
 """
@@ -23,9 +24,15 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import analyze as a  # runs the analysis and exposes its helpers
 
 C = a.D + "current/"
+from name_fix import ITEM_NAME_FIX   # OSMS drops Ü/ü from item names
 items_json = json.load(open(C + "items.json"))
 ALL_ITEMS = [x for v in items_json.values() if isinstance(v, list) for x in v if isinstance(x, dict)]
 ITEM = {str(i["id"]): i for i in ALL_ITEMS}
+# an export bump with duplicated ids silently kept the last row (dict-comprehension last-wins): say so loudly
+# instead (round 2 — the poll logs are the only place anyone would notice rows disappearing)
+if len(ITEM) != len(ALL_ITEMS):
+    dupes = [i for i, n in collections.Counter(str(x["id"]) for x in ALL_ITEMS).items() if n > 1]
+    print(f"WARNING: items.json has {len(dupes)} duplicated id(s), last row wins: {dupes[:10]}", file=sys.stderr)
 QUESTS = json.load(open(C + "quests.json"))
 QUESTS = QUESTS if isinstance(QUESTS, list) else next(v for v in QUESTS.values() if isinstance(v, list))
 b64 = lambda p: base64.b64encode(open(p, "rb").read()).decode()
@@ -197,9 +204,14 @@ def add_items(D, ids):
     for iid in sorted(set(ids) - set(D["items"])):   # sorted so rebuilds are byte-identical
         i = ITEM[iid]
         st = {k: v for k, v in (i.get("stats") or {}).items() if k in KEEP}
-        D["items"][iid] = {"n": i["name"], "c": i.get("category") or ("Scroll" if i.get("stat_type") or "Scroll" in i["name"] else ""),
+        # the export occasionally ships the price as a string ("1800"): coerce numeric strings, drop junk
+        # (one item landed in data.json as "p": "1800" among ints — a latent schema break, round 2)
+        price = i.get("price") or st.get("price")
+        if isinstance(price, str) and price.isdigit(): price = int(price)
+        elif not isinstance(price, (int, float)): price = None
+        D["items"][iid] = {"n": ITEM_NAME_FIX.get(iid, i["name"]), "c": i.get("category") or ("Scroll" if i.get("stat_type") or "Scroll" in i["name"] else ""),
                      "s": i.get("sub_category") or i.get("equip_slot") or "", "st": st, "job": i.get("req_job_label"),
-                     "p": i.get("price") or st.get("price"), "d": (i.get("description") or "").strip(),
+                     "p": price, "d": (i.get("description") or "").strip(),
                      "wt": i.get("weapon_type"), "spd": i.get("attack_speed_label"), "sp": i.get("spec")}
         p = C + f"images/items/{int(iid):08d}.png"
         if os.path.exists(p): D["iicons"][iid] = b64(p)
@@ -610,6 +622,53 @@ def step_itemdb(D):
             for iid in ids: out.setdefault(iid, []).append([s["npc"], s.get("mapId") or mapid.get(s["map"], ""), s["map"], price, tag])
     D["ishop"] = out
 
+def step_cash(D):
+    """NX / Decoration: the Cash Shop items (cosmetic equips like the Slime T-Shirt, pets, coupons, ...) that are RELEASED in
+    Classic World (Danny 11-01: the export lists every item in the client, most never shipped). Released = any of
+      shop   cash_shop.json says it is on sale / has an NX price,
+      market maplestory.watch or mesoarbitrage shop scans have seen it traded (mesoarbitrage by id, maplestory.watch by name),
+      box    named in the description of a box the export lists with its contents (event gift boxes),
+      crate  in a Fashion Crate list Danny pasted (data/sources/fashion_crates.txt, with pull rates).
+    Each gets a D.items entry with c = "Cash", s = slot/kind, nx = NX price (None = not sold in the shop), rel = the reasons
+    and an icon (+ crate = [[crate, rate %]])."""
+    import re
+    kind = {101: "Face Accessory", 102: "Eye Decoration", 103: "Earring"}   # the export files all three under "Earring"; the Deco window has a slot for each
+    for k in [k for k, v in D["items"].items() if v.get("c") == "Cash"]: D["items"].pop(k); D["iicons"].pop(k, None)   # rebuild from scratch
+    cash = {str(i["id"]): (i, cat["category"]) for cat in json.load(open(C + "cash_shop.json"))["categories"] for i in cat["items"]
+            if (i.get("name") or "").strip() and not (str(i["id"]) in D["items"])}   # 211 export rows have no name
+    src = ROOT / "data" / "sources"
+    rel = collections.defaultdict(set)
+    for iid, (i, _) in cash.items():
+        if i.get("on_sale") or i.get("price") is not None: rel[iid].add("shop")
+    for iid in json.load(open(src / "mesoarbitrage_prices.json"))["items"]:
+        if iid in cash: rel[iid].add("market")
+    byname = collections.defaultdict(list)
+    for iid, (i, _) in cash.items(): byname[i["name"].strip().lower()].append(iid)
+    for name in json.load(open(src / "maplestorywatch_prices.json"))["items"]:
+        for iid in byname.get(name.strip().lower(), []): rel[iid].add("market")
+    crate = collections.defaultdict(list)   # Fashion Crates: contents + pull rates pasted by Danny (data/sources/fashion_crates.txt)
+    cur = None
+    for ln in (src / "fashion_crates.txt").read_text().splitlines():
+        if ln.startswith("== "): cur = ln[3:].strip()
+        elif ln.strip() and not ln.startswith("#"):
+            nm, rate = ln.rsplit("\t", 1)
+            for iid in byname.get(nm.strip().lower(), []): rel[iid].add("crate"); crate[iid].append([cur, float(rate)])
+    for i in ALL_ITEMS:   # event boxes list what they hold: "- Octopus Hat (Transferable within world) x1"
+        if str(i["id"]).startswith("2430") and "Double-click" in (i.get("description") or ""):
+            for ln in re.findall(r"^- (.+)$", i["description"], re.M):
+                ln = re.sub(r"\s*x\d+\s*$", "", ln.strip())
+                while True:   # trailing "(Transferable within world, Permanent)" / "(30 Days)", not the name's own "(Black)"
+                    t = re.sub(r"\s*\((?:Transferable|Untradable|Tradable|Permanent|Non-trade|\d+ Days?)[^)]*\)\s*$", "", ln)
+                    if t == ln: break
+                    ln = t
+                for iid in byname.get(ln.lower(), []): rel[iid].add("box")
+    for iid, why in sorted(rel.items()):
+        i, cat = cash[iid]
+        D["items"][iid] = {"n": i["name"], "c": "Cash", "s": kind.get(i["id"] // 10000) or i.get("sub_category") or cat, "st": {}, "job": None, "p": None,
+                           "d": (i.get("description") or "").strip(), "wt": None, "spd": None, "sp": None, "nx": i.get("price"), "k": cat, "rel": sorted(why), **({"crate": crate[iid]} if crate.get(iid) else {})}
+        p = C + f"images/items/{int(iid):08d}.png"
+        if os.path.exists(p): D["iicons"][iid] = b64(p)
+
 def step_kpq(D):
     """kpq [{id, name, mm (webp base64), dim [w, h], rate (mob rate), npc [[npcId, x, y]], mob [[mobId, x, y]]}]: the KPQ maps
     (1st Accompaniment, 80000000-80000600) for the KPQ tab, x/y as minimap fractions. Adds Cloto/Nella thumbnails to npcimg."""
@@ -655,7 +714,9 @@ def step_prices(D):
         if h[-1][2] < 5 and prev > 0 and (p[0] > prev * 3 or p[0] * 3 < prev):
             p[0] = prev; p[4] |= 4; held += 1
     if held: print(f"price breaker: held yesterday's median for {held} spike items (<5 sales today)")
-    D["pw"] = {"read": j["read"], "it": it, "hist": hist}
+    # generated (full ISO, fetch_mesowatch.py) rides along: the site's stale-source pill and Source-health panel
+    # read D.pw.generated — without it meso.watch could sit frozen for days while both showed "fresh" (round 3)
+    D["pw"] = {"read": j["read"], "generated": j.get("generated", ""), "it": it, "hist": hist}
     if "now" in j:   # cheapest live listing per non-equip item {itemId: [price each, qty, channel, map, seller]}, as of "listed"
         D["pw"].update(listed=j["listed"], srclisted=j.get("src_listed", ""), now={k: v for k, v in j["now"].items() if k in D["items"] and not is_bl(k)})
         # every live listing + when we first saw it {itemId: [[price each, qty, channel, map, seller, firstSeenUnixMin|None]]} (seen: parallel to asks)
@@ -721,7 +782,7 @@ def osms_info():
         return {"ref": h, "date": d}
     except Exception: return None
 
-PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "classicrank": ("crank", lambda D: step_classicrank(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: (D.pop("cmp", None), step_cmarket(D))), "shopscans": ("mw", lambda D: step_shopscans(D)), "mdbmarket": ("mdb", lambda D: step_mdbmarket(D)), "mesoindex": ("mi", lambda D: step_mesoindex(D)), "reqitems": ("_none", lambda D: step_reqitems(D)), "weapon_sources": ("wsrc", lambda D: step_weapon_sources(D))}   # (key it owns, step)
+PARTIAL = {"shared": ("shared", lambda D: step_shared(D)), "classicrank": ("crank", lambda D: step_classicrank(D)), "prices": ("pw", lambda D: step_prices(D)), "itemdb": ("ishop", lambda D: step_itemdb(D)), "crafting": ("craft", lambda D: step_crafting(D)), "extras": ("mobatk", lambda D: step_extras(D)), "mobdb": ("mobdb", lambda D: step_mobdb(D)), "worldmap": ("wmap", lambda D: step_worldmap(D)), "kpq": ("kpq", lambda D: step_kpq(D)), "cmarket": ("cm", lambda D: (D.pop("cmp", None), step_cmarket(D))), "shopscans": ("mw", lambda D: step_shopscans(D)), "mdbmarket": ("mdb", lambda D: step_mdbmarket(D)), "mesoindex": ("mi", lambda D: step_mesoindex(D)), "cash": ("_none", lambda D: step_cash(D)), "reqitems": ("_none", lambda D: step_reqitems(D)), "weapon_sources": ("wsrc", lambda D: step_weapon_sources(D))}   # (key it owns, step)
 if __name__ == "__main__" and sys.argv[1:] and all(x in PARTIAL for x in sys.argv[1:]):   # cheap partial rebuild of these steps only
     D = json.load(open(ROOT / "data" / "data.json"))
     for x in sys.argv[1:]: D.pop(PARTIAL[x][0], None); PARTIAL[x][1](D)
@@ -735,7 +796,7 @@ if __name__ == "__main__":
     D = step_base()
     step_weapons(D); step_skills(D); step_quests(D); step_rewards(D); step_launch(D); step_npcs(D); step_mobimg(D); step_minimaps(D); step_nav(D); step_weapon_sources(D)
     D = json.loads(json.dumps(D))  # str keys, as in the partial rebuild path (crafting/extras look mobs up by str id)
-    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D); step_itemdb(D); step_kpq(D); step_prices(D); step_shared(D); step_classicrank(D); step_cmarket(D); step_shopscans(D); step_mdbmarket(D); step_mesoindex(D)
+    step_crafting(D); step_extras(D); step_mobdb(D); step_worldmap(D); step_itemdb(D); step_cash(D); step_kpq(D); step_prices(D); step_shared(D); step_classicrank(D); step_cmarket(D); step_shopscans(D); step_mdbmarket(D); step_mesoindex(D)
     D["osms"] = osms_info()
     for k in ("mobdiff", "skilldiff", "latermobnames"): D.pop(k, None)   # only the removed "What changed since 2008" tab used these
     D = json.loads(json.dumps(D))  # normalise int keys -> strings, same as what the page sees

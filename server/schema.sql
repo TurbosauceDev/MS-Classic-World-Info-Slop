@@ -101,7 +101,8 @@ DELETE FROM meta WHERE k = 'summary' AND NOT EXISTS (SELECT 1 FROM meta WHERE k 
 INSERT OR IGNORE INTO meta (k, v) VALUES ('kpq_reset_20261030', '1');
 
 -- Shop prices read off merchant shops by trackers with sharing on (Danny, 2026-10-31: crowd data of our own). One row per
--- shop row: item, quantity, price for the bundle, sold out or not. No seller, no character, no map. Rows leave after 14 days.
+-- shop row: item, quantity, price for the bundle, sold out or not. Rows leave after 14 days. The seller name/title/ch/room
+-- a v2 upload shares lives in shop_obs_ext below (0.3.30, Turbozo 2026-11-01).
 CREATE TABLE IF NOT EXISTS shop_obs (
   id       INTEGER PRIMARY KEY,
   install  TEXT NOT NULL,
@@ -115,3 +116,56 @@ CREATE TABLE IF NOT EXISTS shop_obs (
 CREATE INDEX IF NOT EXISTS shop_obs_item ON shop_obs (item, received);
 CREATE INDEX IF NOT EXISTS shop_obs_install ON shop_obs (install, received);
 CREATE INDEX IF NOT EXISTS shop_obs_ipday ON shop_obs (ipday);
+-- the 14-day TTL delete (shopSummary) and the per-install cap counts scan received directly (2026-11-02, round 3)
+CREATE INDEX IF NOT EXISTS shop_obs_received ON shop_obs (received);
+-- Shop uploads 0.3.30 name the shop (Turbozo 2026-11-01: "we want the seller, the fm room and which channel — us
+-- anonymizing that was a mistake on our part"): one ext row per shop_obs row, same values for the whole upload (one
+-- read = one shop window). Side table: schema.sql re-runs every deploy. The tracker's "Delete what I shared" clears it.
+CREATE TABLE IF NOT EXISTS shop_obs_ext (
+  obs_id   INTEGER PRIMARY KEY,      -- shop_obs.id
+  seller   TEXT,                     -- the owner IGN from the shop window's title bar ("<owner> : <title>"), null when unread
+  title    TEXT,                     -- the shop title, null when unread
+  ch       INTEGER,                  -- channel, when the tracker can read it (null for now)
+  room     INTEGER,                  -- FM room parsed off the map name ("Free Market <3>"), null elsewhere
+  map      TEXT                      -- the game map id the read happened on
+);
+CREATE INDEX IF NOT EXISTS shop_obs_ext_seller ON shop_obs_ext (seller);
+-- Shared boss spots (0.3.30, Turbozo: "make our boss tracker more automatic, more accurate, easier to use"): timed-kill
+-- reports shared through the tracker's Share switch. One row per report; GET /api/spots?map= aggregates witnesses per
+-- boss + channel over the last 24 h. No identity: the install ID only dedupes votes and powers "Delete what I shared".
+CREATE TABLE IF NOT EXISTS boss_spots (
+  id       INTEGER PRIMARY KEY,
+  install  TEXT NOT NULL,
+  ipday    TEXT NOT NULL,
+  received TEXT NOT NULL,
+  map      TEXT NOT NULL,            -- game map id, one of gamedata.json's timed maps
+  mob      TEXT NOT NULL,            -- timed monster id on that map
+  ch       INTEGER,                  -- channel when the tracker can read it (null for now)
+  t        INTEGER NOT NULL          -- the kill's ms epoch (client clock, bounded to now +/- 10 min)
+);
+CREATE INDEX IF NOT EXISTS boss_spots_map ON boss_spots (map, received);
+CREATE INDEX IF NOT EXISTS boss_spots_install ON boss_spots (install, received);
+-- the 24 h TTL delete runs on every GET /api/spots: received needs its own index (2026-11-02, round 3)
+CREATE INDEX IF NOT EXISTS boss_spots_received ON boss_spots (received);
+
+-- Weekly grind ladder (P1-5, 2026-11-02): the display name a tracker chose to send with a run (the Settings
+-- nick, opt-in like the party view's; same IGN shape the KPQ board's names use). Side table: schema.sql
+-- re-runs on every deploy. The tracker's "Delete what I shared" clears it along with the runs.
+CREATE TABLE IF NOT EXISTS run_names (run_id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+
+-- Abuse-cap ledger (2026-11-02): the caps count live rows (COUNT(*) ... WHERE ipday = ?), so "Delete what I shared"
+-- used to hand the daily budget back — hit the cap, forget, refill, forever. This table keeps each network-day's
+-- high-water marks: posts (rows ever accepted today) and installs (distinct trackers ever seen today). Forget
+-- deliberately leaves it — it is the network-day's tally, not the install's data: the same day-scoped salted,
+-- non-reversible hash the rows themselves carry, kept at most until the day after tomorrow (archiveOld prunes it).
+-- party_live's install cap reads this ledger too (2026-11-02, round 2): forget DOES delete its rows (it is the
+-- install's data), so without the mark a forget handed the 6-trackers slot back; feedback alone needs no ledger (it
+-- has no install column to forget by). The 20-second party throttle still resets with a forget — bounded by the
+-- hourly self-expiry and the ledger-backed install cap.
+CREATE TABLE IF NOT EXISTS ipday_ledger (
+  ipday    TEXT PRIMARY KEY,         -- the same salted IP + UTC day hash the hot tables carry
+  day      TEXT NOT NULL,            -- the UTC day inside that hash: the row ages out with it
+  posts    INTEGER NOT NULL DEFAULT 0,    -- rows accepted today, ever (high-water mark, survives forget)
+  installs INTEGER NOT NULL DEFAULT 0,    -- distinct tracker IDs seen today, ever (high-water mark)
+  updated  TEXT NOT NULL
+);

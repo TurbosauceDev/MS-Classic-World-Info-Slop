@@ -72,7 +72,7 @@ h2{font:800 20px/1.25 var(--f-display);margin:28px 0 6px;text-wrap:balance}
 #psicon:empty{display:none}
 .sic{position:relative;flex-shrink:0;cursor:help;border-radius:8px}
 .sic:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.sic .tip{display:none;position:absolute;left:0;top:calc(100% + 8px);z-index:20;width:min(320px,calc(100vw - 48px));background:var(--ink);color:var(--bg);border-radius:8px;padding:10px 12px;font:400 14px/1.45 var(--f-body);box-shadow:0 6px 24px rgba(0,0,0,.25);cursor:default}
+.sic .tip{display:none;box-sizing:border-box;position:absolute;left:0;top:calc(100% + 8px);z-index:20;width:min(320px,calc(100vw - 48px));background:var(--ink);color:var(--bg);border-radius:8px;padding:10px 12px;font:400 14px/1.45 var(--f-body);box-shadow:0 6px 24px rgba(0,0,0,.25);cursor:default}
 .sic .tip .sub{color:inherit;opacity:.7}
 .sic .tip b{font-weight:700}
 .tipnext{display:block;margin-top:6px;padding-top:6px;border-top:1px solid color-mix(in srgb,var(--bg) 25%,transparent);opacity:.85}
@@ -137,7 +137,7 @@ input[type=range]{accent-color:var(--accent);width:100%;margin-inline:0}
 .seg.small button{padding:6px 13px;font-size:14.5px}
 table.mini{font-size:14.5px}
 table.mini td,table.mini th{padding:6px 8px}
-.p-bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.p-bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:color-mix(in srgb,var(--bad) 82%,#fff)}   /* 5.0:1 on the pill (was 4.04, axe color-contrast) */
 @media (min-width:1100px){.wrap{zoom:1}}
 @media (min-width:1350px){.wrap{zoom:1.06;max-width:1240px}}
 @media (min-width:1600px){.wrap{zoom:1.12;max-width:1280px}}
@@ -254,6 +254,9 @@ ul.crq li{margin-bottom:6px}
 .sharebox{flex:1 1 260px;min-width:0;font:500 14px var(--f-mono, monospace);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
 .geargrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px 14px;margin-top:10px}
 .geargrid select{width:100%;font-size:14px}
+.decolist{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px}
+.decoit{display:inline-flex;align-items:center;gap:6px}
+.decoit img{image-rendering:pixelated;vertical-align:middle}
 table.qcompact th:nth-child(3),table.qcompact td:nth-child(3),table.qcompact th:nth-child(6),table.qcompact td:nth-child(6),
 table.qcompact th:nth-child(7),table.qcompact td:nth-child(7),table.qcompact th:nth-child(8),table.qcompact td:nth-child(8){display:none}
 
@@ -389,6 +392,8 @@ input.khave{width:64px;text-align:right}
 @keyframes wmpulse{50%{box-shadow:0 0 0 3px #fff,0 0 4px 1px #ff4d4d}}
 @media (prefers-reduced-motion:reduce){.wmdot.hit{animation:none}}
 .wmleg li.me{font-weight:700}
+.mfmap.spot-on .mspot[data-mob]:not(.lit){opacity:.18}.mfmap .mspot.lit{transform:translate(-50%,-50%) scale(1.5);z-index:2}.wmleg li[data-mob]{cursor:default;border-radius:4px;padding:0 4px}.wmleg li.lit{background:var(--hover,rgba(255,255,255,.08))}
+.mfmap .mspot{transition:opacity .15s,transform .15s}
 .wmdot.uv{background:var(--leaf);box-shadow:0 0 0 3px #fff,0 0 12px 4px var(--leaf);z-index:1}
 .wmdot.pk{box-shadow:0 0 0 3px var(--bad);opacity:.8}
 .wmuv{border:1px solid var(--line);border-radius:10px;padding:4px 10px;margin:8px 0;background:var(--accent-soft);font-size:14px;line-height:1.45}
@@ -763,8 +768,9 @@ header .thbtn:hover svg,header .thbtn[aria-expanded="true"] svg{transform:rotate
 .sntbl tr.snw td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 .sntbl [data-s]{cursor:pointer;user-select:none}
 .sntbl [data-s]:hover{color:var(--ink)}
-.sntbl [aria-sort="ascending"]::after{content:" ▲"} .sntbl [aria-sort="descending"]::after{content:" ▼"}
-.sntbl [aria-sort]::after{color:var(--accent)}
+.sntbl [aria-sort="ascending"]::after,.sntbl [data-sort="ascending"]::after{content:" ▲"} .sntbl [aria-sort="descending"]::after,.sntbl [data-sort="descending"]::after{content:" ▼"}
+.sntbl [aria-sort]::after,.sntbl [data-sort]::after{color:var(--accent)}
+.sntbl th:has([data-s])[aria-sort]::after{content:none}
 .sntr{font-size:13.5px}
 /* subs wrap so the list fits its card at 1300 px (smoke.js) */
 #snp-list .sntbl td .sub{white-space:normal}
@@ -1234,3 +1240,9 @@ html[data-nav="rows"] nav button.sgh .sgo{display:inline}
 @keyframes skrHit{0%,100%{opacity:1;transform:none}35%{opacity:.45;transform:translateX(3px)}}
 @keyframes skrTpFrom{from{opacity:1}to{opacity:.35}}
 @keyframes skrTpTo{from{opacity:0;transform:translateX(var(--dx))}to{opacity:1;transform:none}}
+/* Character Builder home (78-charhome.js) */
+.chstage{display:flex;align-items:flex-end;justify-content:center;min-height:150px;background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:10px;cursor:pointer}
+.chstage:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chstage img{image-rendering:pixelated;max-height:130px}
+#char .lpdemo .lab{display:flex;flex-direction:column;gap:4px}
+#char .lpdemo input[type=text]{width:100%;box-sizing:border-box}

@@ -249,6 +249,7 @@ function recap(list){
 $("#csv").onclick = async () => { const r = await host.exportCsv(); $("#status").textContent = r?.error || "Saved to Documents: " + (r?.file || "").split(/[\\/]/).pop() };
 const bagSave = () => host.settings({bag: {main: $("#bagMain").checked, every: GrindBag.every($("#bagEvery").value)}}).then(s => { settings = s; if (session) render() });
 $("#bagMain").onchange = $("#bagEvery").onchange = bagSave;
+$("#autoRun").onchange = e => host.settings({autoRun: e.target.checked}).then(s => { settings = s; jr.wake() });
 $("#autoPause").onchange = e => host.settings({autoPause: e.target.checked}).then(s => settings = s);
 $("#ontop").onchange = e => host.settings({onTop: e.target.checked}).then(s => settings = s);
 $("#share").onchange = e => host.settings({share: e.target.checked}).then(s => settings = s);

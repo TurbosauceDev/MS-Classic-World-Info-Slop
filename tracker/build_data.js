@@ -6,6 +6,9 @@ fs.writeFileSync(path.join(__dirname, "app/gamedata.json"), JSON.stringify(G)); 
 fs.writeFileSync(path.join(__dirname, "app/gamedata.js"), "const GAMEDATA = " + JSON.stringify(G) + ";\n");   // the app (no fetch of file: URLs)
 // the site's screenshot reader (game digit font, un-doubling, icon matching) is shared, not forked
 fs.copyFileSync(path.join(__dirname, "../src/js/51-shot.js"), path.join(__dirname, "app/shot.js"));
+// the QUEST window's reading core (60b-questread.js), shared with the site's Quest log (P1-7) — same deal as shot.js
+fs.copyFileSync(path.join(__dirname, "../src/js/60b-questread.js"), path.join(__dirname, "app/questread.js"));
+
 // Skill range overlay (app/overlay.js + core/skillrange.js): every skill with a range (rv) and the weapon swing boxes
 const SK = {skills: Object.fromEntries(Object.entries(D.skills).map(([j, l]) => [j, l.filter(s => s.rv).map(s => ({id: s.id, n: s.n, max: s.max, k: s.k, mob: s.mob, rv: s.rv}))])), hitact: D.hitact};
 fs.writeFileSync(path.join(__dirname, "app/skilldata.json"), JSON.stringify(SK));   // tests

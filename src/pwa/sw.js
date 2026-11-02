@@ -4,14 +4,18 @@
 // the next visit. The polls rebuild the shell several times an hour, and network-first made every returning visitor
 // re-download it whole; the volatile part (prices) is a separate file (scripts/pages_site.py) fetched fresh each visit,
 // so cached-shell + fresh-prices keeps the data current at a fraction of the bytes. Code changes show up one visit later.
-const CACHE = "mscw-2";
+const CACHE = "mscw-4";   // 3: deep links answered with the cached home shell · 4: the hashed prune matched full URLs against a bare-filename regex and never fired (round 2) — the bump wipes the grown caches
 const HASHED = /^(assets|prices)-[0-9a-f]+\.json$/;   // file names carry a content hash: keep only the newest of each kind
+const fname = u => u.split("/").pop();   // hashed files are matched by basename: the regex is anchored, so testing a pathname or a full URL never matched (round 2)
 self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./", "manifest.webmanifest", "icon-192.png"]))) });
 self.addEventListener("activate", e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener("fetch", e => {
   const req = e.request, u = new URL(req.url);
   if (req.method !== "GET" || u.origin !== location.origin) return;
   const nav = req.mode === "navigate", key = nav ? "./" : req;
+  // Only the planner's own address gets the cached shell. Static pages (/skills/warrior/fighter/axe-mastery/), 404.html and the
+  // rest go to the network, or the shell opens at that path with no #key and shows an empty list.
+  if (nav && u.pathname !== new URL("./", self.registration.scope).pathname) return;
   if (nav) {
     e.respondWith(caches.match(key).then(c => {
       const net = fetch(req).then(r => { if (r.ok && r.type === "basic") e.waitUntil(caches.open(CACHE).then(x => x.put(key, r.clone()))); return r })
@@ -21,7 +25,7 @@ self.addEventListener("fetch", e => {
   e.respondWith(fetch(req).then(r => {
     if (r.ok && r.type === "basic") { const copy = r.clone();
       e.waitUntil(caches.open(CACHE).then(async c => {
-        if (HASHED.test(u.pathname)) for (const k of await c.keys()) if (HASHED.test(k.url) && k.url.split("/").pop().split("-")[0] === u.pathname.split("/").pop().split("-")[0] && k.url !== req.url) await c.delete(k);
+        if (HASHED.test(fname(u.pathname))) for (const k of await c.keys()) if (k.url !== req.url && HASHED.test(fname(k.url)) && fname(k.url).split("-")[0] === fname(u.pathname).split("-")[0]) await c.delete(k);
         await c.put(key, copy) })) }
     return r;
   }).catch(() => caches.match(key).then(r => r || Response.error())));

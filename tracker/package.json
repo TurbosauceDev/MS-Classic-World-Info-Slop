@@ -1,12 +1,12 @@
 {
   "name": "ms-classic-grind-tracker",
   "productName": "MS Classic Grind Tracker",
-  "version": "0.3.29",
+  "version": "0.3.39",
   "description": "MS Classic Grind Tracker",
   "main": "app/main.js",
   "scripts": {
     "data": "node build_data.js",
-    "test": "node tests/core.test.js && node tests/feet.test.js && node tests/fuzz.test.js && node tests/cv.test.js && node tests/journal.test.js && node tests/vitals.test.js && node tests/proc.test.js && node tests/overlaywin.test.js && node tests/bufcircle.test.js && node tests/chat.test.js && node tests/shop.test.js && node tests/sitesync.test.js && node tests/video.test.js && node tests/premiere.test.js",
+    "test": "node tests/core.test.js && node tests/ocrmodel.test.js && node tests/feet.test.js && node tests/fuzz.test.js && node tests/cv.test.js && node tests/journal.test.js && node tests/vitals.test.js && node tests/proc.test.js && node tests/overlaywin.test.js && node tests/winrect.test.js && node tests/bufcircle.test.js && node tests/chat.test.js && node tests/shop.test.js && node tests/sitesync.test.js && node tests/video.test.js && node tests/premiere.test.js",
     "start": "electron .",
     "dist": "node scripts/release-notes.js && electron-builder --win --publish never",
     "release": "node scripts/release-notes.js && electron-builder --win --publish always"
@@ -14,6 +14,8 @@
   "dependencies": {
     "@tesseract.js-data/eng": "1.0.0",
     "electron-updater": "6.3.9",
+    "koffi": "3.3.6",
+    "onnxruntime-node": "1.31.1",
     "tesseract.js": "6.0.1"
   },
   "devDependencies": {
@@ -25,6 +27,7 @@
     "files": [
       "app/**",
       "core/**",
+      "models/**",
       "package.json"
     ],
     "releaseInfo": {
@@ -47,7 +50,10 @@
       "node_modules/tesseract.js/**",
       "node_modules/tesseract.js-core/**",
       "node_modules/@tesseract.js-data/**",
-      "node_modules/{bmp-js,idb-keyval,is-url,node-fetch,opencollective-postinstall,regenerator-runtime,tr46,wasm-feature-detect,webidl-conversions,whatwg-url,zlibjs}/**"
+      "node_modules/{bmp-js,idb-keyval,is-url,node-fetch,opencollective-postinstall,regenerator-runtime,tr46,wasm-feature-detect,webidl-conversions,whatwg-url,zlibjs}/**",
+      "node_modules/onnxruntime-node/**",
+      "node_modules/onnxruntime-common/**",
+      "models/**"
     ]
   }
 }

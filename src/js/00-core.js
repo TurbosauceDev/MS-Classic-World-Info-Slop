@@ -7,10 +7,15 @@ for (let l = 71; l < MAX_LEVEL; l++) if (D.exp[l] == null) D.exp[l] = Math.trunc
 // crafting caps at Lv 8 in the launch client (OSMS formulas page); the export still lists Lv 9-10 recipes, so they're hidden
 const CRAFT_CAP = 8; D.craft.rec = D.craft.rec.filter(r => r[2] <= CRAFT_CAP);
 const fmt = n => n == null ? "–" : Math.round(n).toLocaleString();
-/* GitHub Pages copy only (scripts/pages_site.py sets D.lazy): item icons and minimaps come in a second file, fetched as the
-   page starts. ASSETS resolves when they're in D (at once in the artifact, where everything is inline); code that needs
-   every icon (screenshot readers) awaits it. Anything drawn before they arrive gets its icons patched in. */
-const ASSETS = !D.lazy ? Promise.resolve() : fetch(D.lazy.url).then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+/* GitHub Pages copy only (scripts/pages_site.py sets D.lazy): item icons, minimaps and skill frames come in a second
+   file, fetched as the page starts. D.lazy.url names the stable assets.json pointer (like prices.json), so a cached
+   shell survives a deploy that renamed the hashed file; if the hashed file vanishes mid-read anyway (a deploy landing
+   between the two fetches), the pointer is re-resolved once. ASSETS resolves when they're in D (at once in the
+   artifact, where everything is inline); code that needs every icon (screenshot readers) awaits it. Anything drawn
+   before they arrive gets its icons patched in. */
+const jfetch = (u, fresh) => fetch(u, fresh ? {cache: "no-store"} : {}).then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)));
+const ASSETS = !D.lazy ? Promise.resolve() : jfetch(D.lazy.url, 1)
+  .then(a => a && a.url ? jfetch(a.url).catch(() => jfetch(D.lazy.url, 1).then(p => jfetch(p.url))) : a)
   .then(a => { for (const k of D.lazy.keys) Object.assign(D[k] || (D[k] = {}), a[k]); assetsIn() })
   .catch(e => { console.warn("icons file didn't load:", e) });
 function fillIcons(root){
@@ -31,8 +36,8 @@ function assetsIn(){
   fillIcons(document);
   // rows drawn later from strings built before the icons came (lazyRows) get the same patch
   new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) fillIcons(n) }).observe(document.body, {childList: true, subtree: true});
-  // an open item or monster page redraws (its big sprite, the spawn minimap)
-  for (const t of ["items", "mobs"]) if (!document.getElementById(t)?.hidden && NAVREG[t]) { const g = NAVREG[t].get(); if (g) NAVREG[t].set(g) }
+  // an open item, monster, quest or skill page redraws (its big sprite, the spawn minimap, the skill frames)
+  for (const t of ["items", "mobs", "quests", "skills"]) if (!document.getElementById(t)?.hidden && NAVREG[t]) { const g = NAVREG[t].get(); if (g) NAVREG[t].set(g) }
 }
 // offline + "Add to Home Screen" (manifest and sw.js exist only in the Pages deploy, never in the artifact; any https host,
 // so the custom domain gets it too, not only *.github.io)
@@ -109,7 +114,7 @@ const showCat = cat => {
   CATS.forEach(x => x.setAttribute("aria-selected", x.dataset.cat === cat));
   TABS.forEach(x => x.hidden = side ? x.dataset.cat === "more" : x.dataset.cat !== cat);
   $("nav .subs").hidden = !side && cat === "home";
-  $("#sbhome").setAttribute("aria-selected", cat === "home");
+  $("#sbhome").toggleAttribute("aria-current", cat === "home"); if (cat === "home") $("#sbhome").setAttribute("aria-current", "page");
   inRow(CATS.find(x => x.dataset.cat === cat));
 };
 TABS.forEach(b => b.addEventListener("click", () => {

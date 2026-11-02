@@ -29,7 +29,7 @@ check(nid.get("iron ore") == "4010001", "unique name")
 check(nid.get("red potion") == "2000000", "Red Potion tie (2000000 / 2000007) -> mesoarbitrage's id")
 check(nid.get("dark shadow pants") == "1060059", "male/female tie -> mesoarbitrage's id")
 check("blue moon" not in nid, "Blue Moon (earring + top), no tie-break: dropped")
-check("selective 5-slot coupon" not in nid, "cash item we don't have: dropped")
+check(nid.get("selective 5-slot coupon") == "5680001" and D["items"]["5680001"]["c"] == "Cash", "NX item (Selective 5-slot Coupon) now maps to its Cash Shop id")
 # every mapped name really is that item's name
 check(all(D["items"][i]["n"].lower() == n for n, i in nid.items()), "mapping names match")
 

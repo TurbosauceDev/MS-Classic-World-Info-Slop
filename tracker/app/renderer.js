@@ -68,6 +68,22 @@ function grab(){
    drawn shrunk by that much with no smoothing, one pixel per game pixel. 4x fewer pixels to copy and read than the full
    frame (60 ms to 4 ms on Danny's 2560x1440). A full frame every 20 (10 s) checks the scale again. */
 let scale = null, fastLeft = 0;
+/* just the pickup log's band, for the ~10 a second pickup reader: needs the scale the whole-frame reads found (null until then).
+   The video-element path draws only that rectangle (nearest pixel, as grabFrame's shrunk draw does). */
+let bandCanvas = null, bandG = null;
+function grabBand(){
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!scale || scale.w !== vw || scale.h !== vh) return null;
+  const {k, ox, oy} = scale, r = GrindReaders.bandRect(Math.floor((vw - ox) / k), Math.floor((vh - oy) / k));
+  if (!r) return null;
+  if (video.pump) return video.band(scale, r);
+  if (!bandCanvas){ bandCanvas = document.createElement("canvas"); bandG = bandCanvas.getContext("2d", {willReadFrequently: true}) }
+  if (bandCanvas.width !== r.w || bandCanvas.height !== r.h){ bandCanvas.width = r.w; bandCanvas.height = r.h }
+  bandG.imageSmoothingEnabled = false;
+  bandG.drawImage(video, ox + r.x0 * k, oy + r.y0 * k, r.w * k, r.h * k, 0, 0, r.w, r.h);
+  const id = bandG.getImageData(0, 0, r.w, r.h);
+  return {w: r.w, h: r.h, d: id.data, k, crop: {x0: r.x0, y0: r.y0}};
+}
 function grabFrame(){
   const vw = video.videoWidth, vh = video.videoHeight;
   if (!scale || scale.w !== vw || scale.h !== vh || fastLeft <= 0) return grab();
@@ -85,18 +101,29 @@ function grabFrame(){
 function makeEngine(icons, area, invHint, glyphs, invLast){
   const inline = () => { GrindReaders.addGlyphs(glyphs); const rd = GrindReaders.createReaders(G, icons); rd.setArea(area); rd.setInvHint(invHint); rd.setInvLast(invLast);
     (ALL_ICONS ||= GrindReaders.loadIcons(G, G.iicons).catch(() => null)).then(l => l && rd.setInvIcons(l));
-    return {kind: "window", setArea: a => rd.setArea(area = a), invNow: () => rd.invNow(), setInvHint: a => rd.setInvHint(invHint = a), read: async m => GrindReaders.work(rd, m), close(){}} };
+    // band: null — the inline engine can't read the pickup band; without this key Object.assign would keep the dead
+    // worker's band(), whose next call transfers a pooled buffer into a terminated worker (bug-hunt 2026-11-02)
+    return {kind: "window", band: null, setArea: a => rd.setArea(area = a), invNow: () => rd.invNow(), setInvHint: a => rd.setInvHint(invHint = a), read: async m => GrindReaders.work(rd, m), close(){}} };
   let w = null;
   try { w = new Worker("reader-worker.js") } catch { return inline() }
-  let id = 0, waiting = null, eng;
+  let id = 0, waiting = null, eng, bid = 0, bwaiting = null;
   const fallBack = why => { log("engine", {kind: "window", why}); w.terminate(); waiting?.(null); waiting = null; Object.assign(eng, inline()) };
   w.onmessage = ({data}) => { if (data.back) FRBUF.give(data.back);   // the frame buffer is ours again: pool it even on a stale reply
+    if (data.bid){ if (data.bid === bid && bwaiting){ const r = bwaiting; bwaiting = null; r(data.error ? null : data) } return }   // a pickup band's reply
     if (data.id !== id || !waiting) return; const r = waiting; waiting = null; r(data.error ? null : data) };
   w.onerror = e => { e.preventDefault?.(); fallBack(e.message || "worker failed to load") };
   w.postMessage({type: "reset", icons, area, invHint, glyphs, invLast});
   return eng = {kind: "worker", close(){ w.terminate(); const r = waiting; waiting = null; r?.(null) },
     setArea(a){ area = a; w.postMessage({type: "area", area: a}) },
     invNow(){ w.postMessage({type: "invnow"}) }, setInvHint(a){ invHint = a; w.postMessage({type: "invhint", area: a}) },
+    // the pickup band alone: its own answer slot, so it never waits behind (or replaces) a whole-frame read
+    band(m){
+      return new Promise(res => {
+        bwaiting?.(null); bwaiting = res; const mine = ++bid;
+        w.postMessage({type: "band", bid: mine, band: m.band, t: m.t}, [m.band.d.buffer]);
+        setTimeout(() => { if (bwaiting === res && bid === mine){ bwaiting = null; res(null) } }, 3000);
+      });
+    },
     read(m){
       return new Promise(res => {
         waiting = res; id++;
@@ -182,14 +209,15 @@ function runInfo(){
   const S = slicer?.current?.state, min = S && S.last !== null ? Math.floor((S.last - S.start) / 6e4) : 0;
   return `shared run ${min}/15 min` + (runsSent ? `, ${runsSent} sent` : "");
 }
-// respawn timers for bosses and slow spawns on this map (respawn times from the game data; players say Mushmom takes longer)
+// respawn timers for bosses and slow spawns on this map (respawn times from the game data; players say Mushmom takes longer).
+// 0.3.30: respawnsWithSpots() (renderer-spots.js) folds shared kills from other trackers into the rows
 function renderRespawns(){
-  const list = session.respawns(Date.now()), box = $("#respawn");
+  const list = (typeof respawnsWithSpots === "function" ? respawnsWithSpots(Date.now()) : session.respawns(Date.now())), box = $("#respawn");
   box.classList.toggle("hidden", !list.length);
   if (!list.length) return;
   const mm = ms => { const m = Math.ceil(ms / 6e4); return m > 60 ? Math.floor(m / 60) + " h " + (m % 60) + " min" : m + " min" };
-  box.innerHTML = `<div class="k">Respawns on this map (game data)</div><table>` + list.map(r => `<tr><td>${esc(r.name)}${r.boss ? " (boss)" : ""}</td>
-    <td class="n${r.killed && r.dueIn != null && r.dueIn > 0 && r.dueIn <= 120e3 ? " soon" : ""}">${r.killed ? r.dueIn > 0 ? "back in ~" + mm(r.dueIn) : "due now" : "every " + mm(r.sec * 1000)}</td>
+  box.innerHTML = `<div class="k">Respawns on this map (game data${list.some(r => r.shared) ? " + shared kills" : ""})</div><table>` + list.map(r => `<tr><td>${esc(r.name)}${r.boss ? " (boss)" : ""}</td>
+    <td class="n${r.killed && r.dueIn != null && r.dueIn > 0 && r.dueIn <= 120e3 ? " soon" : ""}">${r.killed ? r.dueIn > 0 ? "back in ~" + mm(r.dueIn) : "due now" : "every " + mm(r.sec * 1000)}${r.shared ? `<div class="note">${r.shared} saw it${r.ch ? " · ch " + r.ch : ""} (shared)</div>` : ""}</td>
     <td class="rk"><button class="markKill" data-id="${r.id}" title="It just died but the log line didn't read — restart the timer by hand">killed it</button></td></tr>`).join("") + "</table>";
   box.querySelectorAll(".markKill").forEach(b => b.onclick = () => { const r = list.find(x => String(x.id) === b.dataset.id);
     if (!session.markKill(b.dataset.id)) return;

@@ -364,6 +364,8 @@ async function saveNumbers(){
 }
 const muteSet = on => host.settings({muted: !!on}).then(x => { settings = x; $("#muted").checked = !!on; $("#status").textContent = on ? "Sounds muted." : "Sounds on." });
 $("#muted").onchange = e => muteSet(e.target.checked);
+$("#shopWatch").onchange = e => host.settings({shopWatch: e.target.checked}).then(x => { settings = x; $("#status").textContent = x.shopWatch === false ? "Shop watch off: shops are only read when you press the shortcut." : "Shop watch on: shops are read automatically while you browse." });
+$("#questWatch").onchange = e => host.settings({questWatch: e.target.checked}).then(x => { settings = x; $("#status").textContent = x.questWatch === false ? "Quest watch off: the quest window is only read when you press the button." : "Quest watch on: the QUEST window is read automatically while you play." });
 // the update channel (0.2.82): beta = pre-release builds reach this copy (main.js applies allowPrerelease on save)
 const betaSet = on => host.settings({beta: !!on}).then(x => { settings = x; $("#beta").checked = !!on;
   $("#status").textContent = on ? "Beta channel on: test builds arrive as they're built." : "Back to the stable channel." });
@@ -389,6 +391,8 @@ $("#updGo").onclick = async () => {
     settings = await host.settings({theme: "p:Clanker Chic"});
   }
   $("#share").checked = !!settings.share;
+  $("#shopWatch").checked = settings.shopWatch !== false;   // shop watch reads shops automatically while you browse (Turbozo 2026-11-01)
+  $("#questWatch").checked = settings.questWatch !== false;   // quest watch reads the QUEST window while you play (P1-7)
   $("#kpqName").checked = settings.kpqName !== false;
   fitSet(settings.fit !== false); $("#fitBoxes").checked = settings.fit !== false; $("#fitWin").checked = !!settings.fitWin;
   document.body.classList.toggle("snap", settings.snap !== false); $("#snapBoxes").checked = settings.snap !== false;
@@ -402,6 +406,7 @@ $("#updGo").onclick = async () => {
   if (settings.countArea) settings = await host.settings({countArea: null});
   await alertsBoot();   // conditions & alerts: migrate the pre-0.2.78 keys once, then render the rows
   $("#bagMain").checked = bagCfg().main; $("#bagEvery").value = bagCfg().every;
+  $("#autoRun").checked = settings.autoRun !== false;
   $("#autoPause").checked = settings.autoPause !== false;   // on unless turned off   // on unless turned off
   goalUi(); meatUi(); jrUi();
   $("#pcode").value = settings.partyCode || "";
@@ -410,4 +415,10 @@ $("#updGo").onclick = async () => {
   recoverCheck().catch(() => {});   // a run left by a crash or power cut (its autosave)
   const found = await host.gameFound(true);
   $("#status").textContent = found ? "MapleStory window found." : "Start MapleStory, then press Start.";
-})();
+})().catch(e => {
+  // the boot IIFE used to die silently on a failed `host.settings()` (settings.json unwritable at launch — it always
+  // writes once, to mint the install ID): theme/layout/keys/alerts never initialized and the window sat half-dead
+  // with no message (round 2). Defaults keep the page alive; the first settings change re-persists everything.
+  console.error("settings boot failed:", e);
+  $("#status").textContent = "Settings couldn't load — defaults are in use. Restart the tracker to retry.";
+});

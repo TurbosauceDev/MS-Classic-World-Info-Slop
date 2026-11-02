@@ -1,5 +1,7 @@
 /* Checks on a run before it counts. A failed run is still stored (with the reason), just left out of the numbers.
    Limits are our own choices, not game data: they only catch broken readings and made-up runs. */
+// dates: calendar-shaped only (month 01-12, day 01-31) — 2026-13-99 passed the old shape check and became junk board keys
+const DATE_OK = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 export function cleanRun(r, G){
   const num = (v, lo, hi) => typeof v === "number" && isFinite(v) && v >= lo && v <= hi;
   if (!r || typeof r !== "object") return {error: "not a run"};
@@ -7,24 +9,29 @@ export function cleanRun(r, G){
   if (!num(r.minutes, 14.5, 20)) return {error: "minutes"};
   if (!num(r.party, 1, 6) || !num(r.exp, 0, 1e8) || !num(r.kills, 0, 1e5) || !num(r.mesos ?? 0, 0, 1e8)) return {error: "numbers"};
   if (r.level != null && !num(r.level, 1, 200)) return {error: "level"};
-  if (r.date && (typeof r.date !== "string" || !/^\d{4}-\d\d-\d\d$/.test(r.date))) return {error: "date"};
+  if (r.date && (typeof r.date !== "string" || !DATE_OK.test(r.date))) return {error: "date"};
   const text = (v, n) => typeof v === "string" ? v.slice(0, n) : null;   // text fields: strings only
   // a map id the server doesn't know (a newer tracker): keep the run under its name rather than lose it
   const map = r.map != null && G.maps[String(r.map)] ? String(r.map) : null;
-  // counts: whole numbers from 0 up, a monster's kills no more than the run's (they add up to the Confirmed Drops)
-  const cnt = (v, hi) => Math.min(hi, Math.max(0, Math.floor(+v) || 0)), kills = cnt(r.kills, 1e5);
+  // counts: whole numbers from 0 up, a monster's kills no more than the run's (they add up to the Confirmed Drops).
+  // Numbers only: the old +v coercion took "9000" and "1e999" — values the tracker never sends (round 2)
+  const cnt = (v, hi) => typeof v === "number" && isFinite(v) ? Math.min(hi, Math.max(0, Math.floor(v))) : 0, kills = cnt(r.kills, 1e5);
+  // a mob's mesos can't exceed the run's own pickup total (they add up to the Mesos counter); when the tracker saw no
+  // total at all the absolute cap still applies, so a broken HUD read never zeroes honest rows
+  const mesoCap = num(r.mesos, 1, 1e8) ? Math.round(r.mesos) : 1e8;
   // ids are game numbers only: anything else ("__proto__", "constructor") is dropped (it would corrupt the summary's tables)
   const ID = /^\d{1,10}$/;
   const itemsOf = (o, n) => Object.fromEntries(Object.entries(o && typeof o === "object" && !Array.isArray(o) ? o : {}).filter(([k]) => ID.test(k)).slice(0, n).map(([k, v]) => [k, cnt(v, 1e4)]).filter(([, v]) => v));
   const mobs = Array.isArray(r.mobs) ? r.mobs.filter(m => m && typeof m === "object" && ID.test(String(m.id))).slice(0, 20).map(m => ({id: String(m.id), kills: cnt(m.kills, kills),
-    mesos: cnt(m.mesos, 1e8), mesoDrops: cnt(m.mesoDrops, 1e5), items: itemsOf(m.items, 50)})) : [];
+    mesos: cnt(m.mesos, mesoCap), mesoDrops: cnt(m.mesoDrops, 1e5), items: itemsOf(m.items, 50)})) : [];
   const items = itemsOf(r.items, 100);
   const run = {date: r.date || new Date().toISOString().slice(0, 10), map, map_name: map ? G.mapnames[map] || null : text(r.mapName, 60) || null,
     level: r.level == null ? null : Math.round(r.level), job: text(r.job, 40) || null, party: r.party | 0, minutes: r.minutes, exp: Math.round(r.exp),
     msg_exp: cnt(r.msgExp, 1e8), bar_exp: cnt(r.barExp, 1e8), kills, mesos: Math.round(r.mesos || 0), mobs, items,
     deaths: r.deaths == null ? null : cnt(r.deaths, 100),
     hour: Number.isInteger(r.hour) && r.hour >= 0 && r.hour < 24 ? r.hour : null,
-    used_cost: r.usedCost == null ? null : cnt(r.usedCost, 1e7)};   // UTC hour the run started (best time to farm)
+    used_cost: r.usedCost == null ? null : cnt(r.usedCost, 1e7),   // UTC hour the run started (best time to farm)
+    name: kpqName(r.name)};   // the weekly ladder's display name (P1-5, 2026-11-02): the same IGN shape as KPQ's, opt-in (absent = no name)
   // honesty: no farming at all; monsters that don't live on this map; EXP bar and EXP messages that disagree a lot
   let why = null;
   if (run.kills < 1 || run.exp <= 0) why = "no kills";
@@ -43,6 +50,17 @@ export function cleanRun(r, G){
 
 // typical value of a list (half above, half below) and the middle half
 export function median(a){ const s = [...a].sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[n >> 1] : (s[n / 2 - 1] + s[n / 2]) / 2) : null }
+
+/* A map's physics ceiling (EXP/hour), for the weekly ladder's auto-flag pass (P1-5, 2026-11-02). Computed at
+   data build time (build_data.cjs): every spawn point on the map yielding a kill at most every 15 s times the
+   mob's base EXP, summed over the mobs with spawn data. Optimistic on purpose (respawn plus travel); a map
+   with no spawn data at all answers null and no ceiling applies. The ceiling only ever FLAGS a ladder line
+   (report, not reject — Minerva ADR 0032's pattern): counted-run honesty stays with the per-level cap above. */
+export const CEIL_KILLS_PER_SPAWN_HR = 240;
+export function mapCeiling(G, map){
+  const c = G.ceils && map != null ? G.ceils[String(map)] : null;
+  return typeof c === "number" && isFinite(c) && c > 0 ? c : null;
+}
 
 /* A KPQ round for the leaderboard. Same idea as cleanRun: a failed round is kept with the reason, not counted. The time
    limits are our own sanity bounds (no real round is under a minute), not game data. */
@@ -72,8 +90,9 @@ export function cleanKpq(r){
   if (!num(r.clear, 1, 7200) || !num(r.party, 1, 6)) return {error: "numbers"};
   if (r.src === "site") return {error: "tracker only"};   // the site's KPQ timer no longer submits (Danny 2026-10-30)
   if (r.level != null && !num(r.level, 1, 200)) return {error: "level"};
-  if (r.date && (typeof r.date !== "string" || !/^\d{4}-\d\d-\d\d$/.test(r.date))) return {error: "date"};
-  const cnt = (v, hi) => v == null ? null : Math.min(hi, Math.max(0, Math.round(+v) || 0));
+  if (r.date && (typeof r.date !== "string" || !DATE_OK.test(r.date))) return {error: "date"};
+  // counts on the totals: numbers only like cleanRun's (the old +v took "3600" as 3600)
+  const cnt = (v, hi) => typeof v === "number" && isFinite(v) ? Math.min(hi, Math.max(0, Math.round(v))) : null;
   const st = r.stages && typeof r.stages === "object" && !Array.isArray(r.stages) ? r.stages : {};
   const stages = Object.fromEntries(KPQ_IDS.filter(id => num(st[id], 0, 7200)).map(id => [id, Math.round(st[id])]));
   const round = {date: r.date || new Date().toISOString().slice(0, 10), hour: Number.isInteger(r.hour) && r.hour >= 0 && r.hour < 24 ? r.hour : null,
@@ -89,8 +108,14 @@ export function cleanKpq(r){
   return {round, ok: !why, why};
 }
 
-/* A shop upload: {install, v: 1, rows: [{id, qty, price, sold}]}. Only known fields, whole numbers in range, item ids the game has;
-   a row that fails is dropped (junk from the network never reaches the table), a body with no good row is refused. */
+/* A shop upload: {install, v: 1|2, rows: [{id, qty, price, sold}], seller?, title?, ch?, room?, map?}. Only known fields, whole
+   numbers in range, item ids the game has; a row that fails is dropped (junk from the network never reaches the table), a body
+   with no good row is refused. v2 (Turbozo 2026-11-01) names the shop: seller = an IGN shape (4-12 letters/digits), title =
+   printable text to 60, ch/room small ints, map = a game map id. Everything is optional and stored as null when absent, so an
+   older tracker's v1 body still stores. */
+const IGN = /^[A-Za-z0-9]{4,12}$/;
+const printable = (v, n) => { const s = typeof v === "string" ? v.replace(/[\u0000-\u001f<>"&|]/g, "").trim().slice(0, n) : ""; return s || null };
+const smallInt = (v, hi) => typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= hi ? v : null;
 export function cleanShop(b, G){
   if (!b || typeof b !== "object" || Array.isArray(b)) return {error: "not a shop upload"};
   if (typeof b.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(b.install)) return {error: "install id"};
@@ -103,5 +128,22 @@ export function cleanShop(b, G){
     if (seen.has(k)) continue;
     seen.add(k); rows.push({id: r.id, qty: r.qty, price: r.price, sold});
   }
-  return rows.length ? {rows} : {error: "no usable rows"};
+  if (!rows.length) return {error: "no usable rows"};
+  // typeof before the regex: RegExp.test stringifies its argument, so an array or number seller/map passed the test
+  // and the raw value reached D1's bind (a 500 after the obs batch had committed) or stored a number in TEXT (round 3)
+  return {rows, seller: typeof b.seller === "string" && IGN.test(b.seller) ? b.seller : null, title: printable(b.title, 60),
+    ch: smallInt(b.ch, 40), room: smallInt(b.room, 100), map: typeof b.map === "string" && /^\d{1,10}$/.test(b.map) ? b.map : null};
+}
+
+/* A shared boss spot (0.3.30): {install, map, mob, ch?, t} — the map must be a timed map and the mob one of its timed
+   monsters (the game data decides, not the client); t is the kill's ms epoch, bounded to now +/- 10 min for clock skew. */
+export function cleanSpot(b, G){
+  if (!b || typeof b !== "object") return {error: "not a spot"};
+  if (typeof b.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(b.install)) return {error: "install id"};
+  if (typeof b.map !== "string" || !/^\d{1,10}$/.test(b.map) || !G.timed || !G.timed[b.map]) return {error: "map"};
+  const mob = String(b.mob ?? "");
+  if (!/^\d{1,10}$/.test(mob) || !G.timed[b.map].some(([id]) => id === mob)) return {error: "mob"};
+  if (b.ch != null && !smallInt(b.ch, 40)) return {error: "ch"};
+  if (typeof b.t !== "number" || !Number.isInteger(b.t) || Math.abs(b.t - Date.now()) > 10 * 60e3) return {error: "time"};
+  return {spot: {map: b.map, mob, ch: b.ch ?? null, t: b.t}};
 }

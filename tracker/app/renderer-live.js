@@ -8,7 +8,7 @@ async function toPng(c){
 // job from the status bar every 30 s, when the player left the job on "Auto": taken once the same job is read twice running
 const ocrCache = GrindOcrCache.createOcrCache();   // core/ocrcache.js: same crop pixels, same text, no second Tesseract run
 const tolCache = GrindOcrCache.createTolCache(GrindFrameGate);   // near-identical crops (encoder jitter) answer from the last read: fixed UI text (map title, job box, name) only ever changes wholesale
-const rawOcr = async c => { const t = Date.now(); try { return await host.ocr(await toPng(c)) } finally { perf("ocr", Date.now() - t) } };
+const rawOcr = async c => { const t = Date.now(); try { return await host.ocr(await toPng(c), c.tag ? {tag: c.tag, up: c.up} : undefined) } finally { perf("ocr", Date.now() - t) } };   // tag+up: shopread crops say what they are and at what upscale, the main process routes the benched ones to the neural reader
 const ocrText = (c, slot) => slot ? tolCache.run(slot, c, rawOcr) : ocrCache.run(c, rawOcr);   // slot = the tolerant cache ("map", "job", "name"); no slot = the exact cache, same pixels same text (the wide status bar's fallback read). The chat-box death/box reads bypass ocrText and always read fresh
 let lastJob = 0, jobSeen = null, jobNow = null, charName = null, charSeen = null;   // charName: History, and KPQ rounds (Settings > KPQ board name)
 async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders.jobTextCrop), or null; nc: the name crop
@@ -242,7 +242,7 @@ function kpqShare(r, t, raw){
   const s = session.stats(), st = {};
   for (const [id, a] of Object.entries(kpq.stageTimes)) if (r.stages[id]) st[id] = Math.round(a.at(-1));
   kpqSent++; note("KPQ round sent to the KPQ leaderboard", "kpq");
-  host.shareRun({kpq: true, v: 1, date: new Date(r.t0).toLocaleDateString("sv"), hour: new Date(r.t0).getUTCHours(), mode: raw?.bonus ? "Bonus" : "Rush", v2: raw,
+  host.shareRun({kpq: true, v: 1, date: new Date(r.t0).toISOString().slice(0, 10), hour: new Date(r.t0).getUTCHours(), mode: raw?.bonus ? "Bonus" : "Rush", v2: raw,
     party: s.party, level: s.level, job: s.job, clear: Math.round(r.clear), total: Math.round(kpqSince(r, t)), clock: r.left0 !== null,
     exp: Math.max(0, s.exp - r.exp0), mesos: Math.max(0, s.mesos - r.mesos0), stages: st, partyCode: settings.partyCode || null,
     name: settings.kpqName !== false && [settings.nick, charName].find(n => /^[A-Za-z0-9]{2,12}$/.test(n || "")) || kpqAlias(s.job)});   // KPQ board only; runs never carry the name
@@ -305,7 +305,7 @@ const perf = (k, ms) => { const p = PERF[k] ||= {n: 0, sum: 0, max: 0}; p.n++; p
 function perfLine(){
   const el = Date.now() - perfT0, avg = k => PERF[k] ? (PERF[k].sum / PERF[k].n).toFixed(1) : "-", hit = ocrCache.stats;
   if (!PERF.tick || el < 5000) return "";
-  return `Reading cost: ${PERF.tick.n} frames read, ${skipped} skipped as unchanged${skippedTol ? ` (${skippedTol} of those only jittered)` : ""}; per frame: capture ${avg("grab")} ms, compare ${avg("same")} ms, read ${avg("read")} ms (slowest ${PERF.read ? Math.round(PERF.read.max) : "-"}), whole tick ${avg("tick")} ms = ${Math.round(PERF.tick.sum / el * 100)}% of one core's time; ${lastMemo && lastMemo.hits + lastMemo.reads ? Math.round(lastMemo.hits / (lastMemo.hits + lastMemo.reads) * 100) + "% of bar/clock reads skipped (strip unchanged); " : ""}text reader ${hit.misses} runs${PERF.ocr ? " (" + avg("ocr") + " ms each)" : ""}, ${hit.hits} answered from memory.`;
+  return `Reading cost: ${PERF.tick.n} frames read, ${skipped} skipped as unchanged${skippedTol ? ` (${skippedTol} of those only jittered)` : ""}; per frame: capture ${avg("grab")} ms, compare ${avg("same")} ms, read ${avg("read")} ms (slowest ${PERF.read ? Math.round(PERF.read.max) : "-"}), whole tick ${avg("tick")} ms = ${Math.round(PERF.tick.sum / el * 100)}% of one core's time; ${lastMemo && lastMemo.hits + lastMemo.reads ? Math.round(lastMemo.hits / (lastMemo.hits + lastMemo.reads) * 100) + "% of bar/clock reads skipped (strip unchanged); " : ""}pickup band ${PERF.band ? PERF.band.n + " looks, " + avg("band") + " ms each" : "not used"}; text reader ${hit.misses} runs${PERF.ocr ? " (" + avg("ocr") + " ms each)" : ""}, ${hit.hits} answered from memory.`;
 }
 function perfReset(){ PERF = {}; perfT0 = Date.now(); perfLogged = 0; paceReset(); statsPrev = null; statsT0 = Date.now() }
 // per-minute reader telemetry (core/readstats.js, customclassic-chat's reading.jsonl): the counters below are
@@ -365,6 +365,50 @@ function slowCheck(ms){
   slowCap = false; fastTicks = 0;
   if ($("#status").textContent === SLOW_NOTE) $("#status").textContent = "";
 }
+// one event from the readers into the run (whole-frame reads and the pickup band both come through here)
+function onEvent(e, t){
+    if (wrap && e.type !== "inv" && e.type !== "wallet" && e.type !== "glyph") return;   // after Stop: only the end inventory look counts
+    if (held && /^(exp|bonus|meso|item|itemraw|bar|wallet)$/.test(e.type)) return;   // paused by hand: a break, nothing counts (the bar and the wallet too — a party kill on a boss map used to inflate EXP/hr while paused; bug-hunt 2026-11-02). Stop clears held first, so the wrap-up wallet read still lands
+    if (e.type === "kpqtime"){ if (kpq) kpqTime(e.left, e.t); return }
+    if (e.type === "vitals"){ jr.event(e); ovVit = {hp: e.hp, mp: e.mp, t: Date.now()}; try { ovSend?.(true) } catch {}; return }   // HP / MP: journey log + Chat blocker bars; the session doesn't count them
+    // a pickup-line letter learned from an item name: kept for next time (at most 300)
+    if (e.type === "glyph"){ const g = [...(settings.glyphs || []), {ch: e.ch, w: e.w, h: e.h, bits: e.bits}].slice(-300); host.settings({glyphs: g}).then(x => settings = x); log("glyph", {ch: e.ch}); return }
+    // a box (Companion's Magic Box) gone from the Use tab: it was opened, its rewards are in the chat box
+    if (e.type === "inv" && e.tab === "use"){ const n = +e.items[BOX] || 0; if (n < boxHad && !e.unknown) boxPending = {tries: 0, last: 0}; if (!e.partial?.[BOX]) boxHad = n }
+    session.add(e); slicer.add(e); log("event", e);
+    if (autoRun){ if (/^(exp|bonus)$/.test(e.type) || GrindAutoRun.gained(autoRun.bar, autoRun.level, e)) autoRun.lastGain = t; if (e.type === "bar"){ autoRun.bar = e.exp; autoRun.level = e.level || autoRun.level } }
+    if (/^(exp|meso|bonus|item|itemraw)$/.test(e.type)) evCount[e.type === "itemraw" ? "item" : e.type]++;   // telemetry
+    if (e.type === "item") dropAlert(e.id);
+    if (e.type === "bar"){
+      // the start reading: taken at Start; when the bar didn't read then, the first good reading fills it in
+      if (!snaps.start || snaps.start.level == null && !snaps.start.hand) snaps.start = {...snaps.start, t: snaps.start?.t || t, level: e.level || session.state.level, pct: e.pct, exp: e.exp, hand: false};
+      else if (!snaps.end?.hand) snaps.end = {t, level: e.level || session.state.level, pct: e.pct, exp: e.exp, hand: false};
+    }
+    if (check && e.type === "bar" && !check.bar){ check.bar = e.level ? "Lv " + e.level + ", " + e.pct + "%" : e.pct + "%"; check.late = check.ended }
+    if (check && /^(exp|bonus|meso|item|itemraw)$/.test(e.type) && !check.lines){ check.lines = true; check.late = check.ended }
+}
+/* the pickup log on its own, ~10 times a second (Minerva's rate; Danny's tracker read it at 2): only the log's band is cut
+   out of the capture (a few percent of the frame) and read, so a burst of kills no longer slips between looks. While it
+   delivers, the whole-frame reads leave the pickups alone (noPick); if it stalls for 1.5 s they take over again. */
+let bandOkT = 0;
+const bandActive = () => Date.now() - bandOkT < 1500;
+async function bandLoop(){
+  const eng0 = engine, sess = session;
+  while (timer != null && sess === session && eng0 === engine){
+    const t0 = Date.now();
+    try {
+      if (eng0.band && video?.srcObject?.active && video.videoWidth){
+        const band = grabBand();
+        if (band){
+          const buf = band.d.buffer, r = await eng0.band({band, t: Date.now()});
+          if (eng0.kind !== "worker" && video?.pump) FRBUF.give(buf);
+          if (r && timer != null && sess === session){ bandOkT = Date.now(); perf("band", Date.now() - t0); for (const e of r.ev) onEvent(e, Date.now()) }
+        }
+      }
+    } catch {}
+    await new Promise(res => setTimeout(res, Math.max(30, 100 - (Date.now() - t0))));
+  }
+}
 async function tick(){
   if (timer == null) return;   // stopped
   const t = Date.now(), eng = engine, sess = session;
@@ -386,7 +430,7 @@ async function tick(){
       else if ((!settings.job || !charName) && t - lastJob > 30e3){ lastJob = t; want.job = true }
     }
     chatWant(want); rangeWant(want);
-    const t2 = Date.now(), r = await eng.read({frame: f, t, want}); perf("read", Date.now() - t2);
+    const t2 = Date.now(), r = await eng.read({frame: f, t, want, noPick: bandActive()}); perf("read", Date.now() - t2);
     if (eng.kind !== "worker" && video?.pump) FRBUF.give(f.d.buffer);   // inline readers ran in this window: the buffer never left, pool it again (the worker mode got it back with the reply)
     if (timer == null || sess !== session || !r) throw null;   // stopped (or restarted) while reading, or the frame was lost
     active = r.ev.some(e => e.type !== "glyph")
@@ -398,26 +442,7 @@ async function tick(){
       chatPace.note(t, n, shown, gap);
     }
     if (r.scale){ scale = r.scale; fastLeft = 19 } rangeIngest(r.feet, t);   // feet after the scale (frame px need it). Scale: also at 1x: finding the scale is the slow part, so it's checked every 20 frames only
-    for (const e of r.ev){
-      if (wrap && e.type !== "inv" && e.type !== "wallet" && e.type !== "glyph") continue;   // after Stop: only the end inventory look counts
-      if (held && /^(exp|bonus|meso|item|itemraw)$/.test(e.type)) continue;   // paused by hand: a break, nothing picked up counts
-      if (e.type === "kpqtime"){ if (kpq) kpqTime(e.left, e.t); continue }
-      if (e.type === "vitals"){ jr.event(e); ovVit = {hp: e.hp, mp: e.mp, t: Date.now()}; try { ovSend?.(true) } catch {}; continue }   // HP / MP: journey log + Chat blocker bars; the session doesn't count them
-      // a pickup-line letter learned from an item name: kept for next time (at most 300)
-      if (e.type === "glyph"){ const g = [...(settings.glyphs || []), {ch: e.ch, w: e.w, h: e.h, bits: e.bits}].slice(-300); host.settings({glyphs: g}).then(x => settings = x); log("glyph", {ch: e.ch}); continue }
-      // a box (Companion's Magic Box) gone from the Use tab: it was opened, its rewards are in the chat box
-      if (e.type === "inv" && e.tab === "use"){ const n = +e.items[BOX] || 0; if (n < boxHad && !e.unknown) boxPending = {tries: 0, last: 0}; if (!e.partial?.[BOX]) boxHad = n }
-      session.add(e); slicer.add(e); log("event", e);
-      if (/^(exp|meso|bonus|item|itemraw)$/.test(e.type)) evCount[e.type === "itemraw" ? "item" : e.type]++;   // telemetry
-      if (e.type === "item") dropAlert(e.id);
-      if (e.type === "bar"){
-        // the start reading: taken at Start; when the bar didn't read then, the first good reading fills it in
-        if (!snaps.start || snaps.start.level == null && !snaps.start.hand) snaps.start = {...snaps.start, t: snaps.start?.t || t, level: e.level || session.state.level, pct: e.pct, exp: e.exp, hand: false};
-        else if (!snaps.end?.hand) snaps.end = {t, level: e.level || session.state.level, pct: e.pct, exp: e.exp, hand: false};
-      }
-      if (check && e.type === "bar" && !check.bar){ check.bar = e.level ? "Lv " + e.level + ", " + e.pct + "%" : e.pct + "%"; check.late = check.ended }
-      if (check && /^(exp|bonus|meso|item|itemraw)$/.test(e.type) && !check.lines){ check.lines = true; check.late = check.ended }
-    }
+    for (const e of r.ev) onEvent(e, t);
     const info = r.info; lastInvTab = info.inv || null;
     jr.hud(t, !!info.bar); jr.tick(t);   // journey log (renderer-journal.js)
     // the inventory's spot, remembered for next time (saved when it moved, at most every 10 s)
@@ -436,6 +461,7 @@ async function tick(){
     if (t - lastParty > 60e3 && settings.partyCode && !partyBusy){ lastParty = t; partyBusy = true; sendParty().catch(() => {}).finally(() => partyBusy = false) }
   } catch (err){ if (err) $("#status").textContent = "Reading a frame failed (" + err.message + "); still going." }   // one bad frame never stops tracking
   if (timer == null || sess !== session) return;
+  if (autoRun && GrindAutoRun.shouldBreak({auto: autoRun.auto, wrap, held, kpq: kpq?.on, lastGain: autoRun.lastGain, now: Date.now()})){ autoRun = null; autoBreak().catch(() => {}) }
   try { renderSnaps(render()) } catch {}
   try { feedAdd(feed?.step(session.state, t, feedWho())) } catch {}
   // over 250 ms a frame, 10 times running: read once a second instead of twice; fast again for ~40 ticks: full speed back
@@ -531,20 +557,26 @@ function renderSnaps(live = session?.stats().exp){   // live: EXP the live count
 }
 // take a snapshot from the game picture now: the EXP bar's level and %, the time, and the frame saved as a picture
 async function snap(which, f = null, hand = true){
-  f ||= await oneFrame();
-  const img = GrindReaders.native(f), bar = GrindReaders.readBar(img) || GrindReaders.readBarAny(f);
-  const level = bar && (GrindSession.levelOf(G, bar.exp, bar.pct) || session?.state.level) || null;
-  // an automatic snapshot whose bar didn't read keeps the last good reading (only the picture is new)
-  const sn = !bar && !hand && snaps[which]?.level ? {...snaps[which]} : {t: Date.now(), level, pct: bar ? bar.pct : null, exp: bar && level && !(G.exp[level] && Math.abs(bar.exp - bar.pct / 100 * G.exp[level]) > 0.01 * G.exp[level]) ? bar.exp : undefined, hand};
-  snaps[which] = sn;
   try {
-    const c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
-    const blob = await new Promise(r => c.toBlob(r, "image/png"));
-    await host.saveFrame(`snap-${which}-${new Date(sn.t).toISOString().slice(0, 19).replace(/:/g, "-")}.png`, new Uint8Array(await blob.arrayBuffer()));
-    sn.file = true;
-  } catch {}
-  if (hand) $("#status").textContent = bar ? `Snapshot (${which}): Lv ${level ?? "?"}, ${bar.pct}%.` : `Snapshot (${which}) taken, but the EXP bar didn't read: type the level and % in by hand.`;
-  renderSnaps();
+    f ||= await oneFrame();
+    const img = GrindReaders.native(f), bar = GrindReaders.readBar(img) || GrindReaders.readBarAny(f);
+    const level = bar && (GrindSession.levelOf(G, bar.exp, bar.pct) || session?.state.level) || null;
+    // an automatic snapshot whose bar didn't read keeps the last good reading (only the picture is new)
+    const sn = !bar && !hand && snaps[which]?.level ? {...snaps[which]} : {t: Date.now(), level, pct: bar ? bar.pct : null, exp: bar && level && !(G.exp[level] && Math.abs(bar.exp - bar.pct / 100 * G.exp[level]) > 0.01 * G.exp[level]) ? bar.exp : undefined, hand};
+    snaps[which] = sn;
+    try {
+      const c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
+      const blob = await new Promise(r => c.toBlob(r, "image/png"));
+      await host.saveFrame(`snap-${which}-${new Date(sn.t).toISOString().slice(0, 19).replace(/:/g, "-")}.png`, new Uint8Array(await blob.arrayBuffer()));
+      sn.file = true;
+    } catch {}
+    if (hand) $("#status").textContent = bar ? `Snapshot (${which}): Lv ${level ?? "?"}, ${bar.pct}%.` : `Snapshot (${which}) taken, but the EXP bar didn't read: type the level and % in by hand.`;
+    renderSnaps();
+  } finally {
+    // the pump path's frame is a pool buffer: everything above copied it (putImageData), so it goes back — one used to
+    // leave circulation per snapshot, and the pool then dropped live buffers on bursts (bug-hunt 2026-11-02)
+    if (video?.pump && f?.d?.buffer) FRBUF.give(f.d.buffer);
+  }
 }
 for (const [i, k] of [[0, "start"], [1, "end"]]){
   $("#snap" + (i ? "End" : "Start")).onclick = () => snap(k).catch(e => { $("#status").textContent = "Couldn't take the snapshot: " + e.message });

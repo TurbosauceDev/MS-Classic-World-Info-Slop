@@ -357,7 +357,11 @@ function drawCtl(){
   $("#snq").value = S.q; $("#sncat").value = S.cat; $("#snsort").value = S.sort; $("#snbasis").value = S.basis;
   $("#snmax").value = S.max || ""; $("#snmin").value = S.min; $("#snsales").value = S.sales;
   for (const [id, k] of [["snrough", "rough"], ["snvol", "vol"], ["snnpc", "npc"], ["snneed", "need"], ["snmine", "mine"], ["snwatch", "watch"], ["snnew", "nw"]]) $("#" + id).setAttribute("aria-pressed", S[k]);
-  document.querySelectorAll("#snipe #snp-list thead [data-s]").forEach(th => th.setAttribute("aria-sort", th.dataset.s === S.sort ? (["pct", "price", "name", "since"].includes(S.sort) ? "ascending" : "descending") : "none"));
+  { const dirOf = k => k === S.sort ? (["pct", "price", "name", "since"].includes(S.sort) ? "ascending" : "descending") : "none";
+    document.querySelectorAll("#snipe #snp-list thead [data-s]").forEach(e => {
+      if (e.tagName === "TH") e.setAttribute("aria-sort", dirOf(e.dataset.s));
+      else { e.dataset.sort = dirOf(e.dataset.s); const th = e.closest("th"), on = [...th.querySelectorAll("[data-s]")].find(x => x.dataset.sort !== "none"); th.setAttribute("aria-sort", on ? on.dataset.sort : "none") }   // aria-sort is only valid on a header cell (axe aria-allowed-attr)
+    }) }
 }
 const set = (k, v) => { S[k] = v; save(); render() };
 $("#sncat").innerHTML += Object.entries(CATS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");

@@ -9,7 +9,8 @@
      rows are 80 px apart, split by a 2 px (1 native px) (147,167,189) line; the name line sits 14..35 px below the line and the price line
      48..69 px below it; the text starts 144 px from the frame's left edge of the shop, the icon is left of that.
    Prices are read twice from two different black-and-white cuts of the pixels and only count when both reads agree
-   ("sure"): one cut read 9,001 as 8,001 on the fixture, the other read it right.
+   ("sure"): disagreement makes the row unsure, never wrong (one cut read 9,001 as 8,001 on the fixture, the other
+   read it right; 0.3.31 puts both cuts at 4x — the neural reader's best scale — and keeps the thresholds apart).
    Name matching (matchName) is our own: ideas from cpan1995/maplepricechecker (score floors, prefix match for "..." names). */
 (function (root){
   const SEP = [147, 167, 189], TOL = 10;
@@ -71,7 +72,7 @@
     }
     return {w: OW, h: OH, d: o};
   }
-  const CUTS = [{th: 0.5, up: 2}, {th: 0.6, up: 4}];
+  const CUTS = [{th: 0.5, up: 4}, {th: 0.6, up: 4}];   // two thresholds, one scale: the neural reader (0.3.31) reads best at 4x, and the threshold difference is what the two-cut verify needs
 
   // "1 for 14,067 mesos" (and OCR slips around it) -> {qty, price} or null. price is for the whole bundle.
   function parseOffer(text){
@@ -116,15 +117,38 @@
     return {truncated: cut, items};
   }
 
+  /* The shop window's title bar: "<owner IGN> : <shop title>" (Danny's own-shop fixture, 2026-11-01:
+     "swagmart : i like channel 4 fm 10"). The text band sits 131..145 native px above the first row's top and spans
+     from 20 px left of the list text to 95 px right of it (measured on the fixture at 2x UI). Best effort: null when
+     the band is empty or off frame. The owner name is what the shop's seller field shares. */
+  function parseTitle(text){
+    const t = String(text || "").replace(/^[|:\s]+/, "").replace(/[|\s]+$/, "").trim();
+    if (!t) return null;
+    const c = /:\s*/.exec(t);
+    let seller = null, title = t;
+    // owner names are 4-12 letters/digits in Classic: anything shorter before the colon is title text ("Buy: 30k each")
+    if (c){ const o = t.slice(0, c.index).replace(/[^A-Za-z0-9]/g, ""); if (o.length >= 4 && o.length <= 12){ seller = o; title = t.slice(c.index + c[0].length).trim() } }
+    return {seller, title: title.slice(0, 60) || null};
+  }
+  async function readTitle(img, ocr, opt = {}){
+    const k = img.k ? 1 : opt.k || 2, rows = findRows(img, k);
+    if (!rows.length) return null;
+    const top = rows[0].top, box = [rows[0].x0 - 20 * k, top - 145 * k, rows[0].x1 + 95 * k, top - 131 * k];
+    if (box[1] < 0 || box[3] < 0 || box[2] > img.w) return null;
+    const tc = cut(img, ...box, 0.5, 2 * (2 / k)); tc.tag = "shopTitle"; tc.up = 2 * (2 / k);
+    return parseTitle(await ocr(tc));   // title stays on Tesseract: the seller IGN must not be wrong
+  }
+
   async function readShop(img, ocr, opt = {}){
     const k = img.k ? 1 : opt.k || 2, out = [], m = 2 / k;   // m: a native-size frame (k 1) is upscaled twice as much so Tesseract sees the same size
     for (const r of findRows(img, k)){
       const nameBox = [r.x0, r.top + 5 * k, r.x1, r.top + 20 * k], priceBox = [r.x0, r.top + 22 * k, r.x1, r.top + 37 * k];
       if (r.top + 37 * k > img.h) continue;
       const sold = darkest(img, ...nameBox) > 110;
-      const nameText = (await ocr(cut(img, ...nameBox, 0.5, 2 * m))).trim();
+      const nc = cut(img, ...nameBox, 0.5, 4 * m); nc.tag = "shopName"; nc.up = 4 * m;   // tag+up: the main process routes the crop to the neural reader, already at the model's preferred 4x (0.3.31)
+      const nameText = (await ocr(nc)).trim();
       const offers = [];
-      for (const c of CUTS) offers.push(parseOffer(await ocr(cut(img, ...priceBox, c.th, c.up * m))));
+      for (const c of CUTS){ const pc = cut(img, ...priceBox, c.th, c.up * m); pc.tag = "shopPrice"; pc.up = c.up * m; offers.push(parseOffer(await ocr(pc))) }
       const a = offers[0], same = a && offers.every(o => o && o.qty === a.qty && o.price === a.price);
       out.push({row: r.row, top: r.top, sold, text: nameText, name: nameText.replace(/[|\s]+$/, ""), qty: a ? a.qty : null, price: a ? a.price : null,
         unit: a ? a.price / a.qty : null, sure: !!same});
@@ -132,6 +156,6 @@
     return out;
   }
 
-  const api = {separators, findRows, cut, parseOffer, matchName, readShop, MIN, EXACT, TIE, MIN_PREFIX};
+  const api = {separators, findRows, cut, parseOffer, matchName, readShop, parseTitle, readTitle, MIN, EXACT, TIE, MIN_PREFIX};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindShopRead = api;
 })(typeof self !== "undefined" ? self : this);

@@ -24,19 +24,21 @@ async function bagRead(tab){
 }
 host.onBag?.(tab => { if (BAG_NAMES[tab]) bagRead(tab) });
 
-let starting = false, ICONS = null;
+let starting = false, ICONS = null, autoRun = null;   // autoRun: {auto: started by the watch, lastGain: last EXP rise} for the 2-minute break (core/autorun.js)
 async function start(){
   if (starting) return;   // a double click starts one capture, not two
   jr.yield();   // the journey log's watch hands the capture over
+  const auto = autoNext, base = auto ? autoBase : null; autoNext = false; autoBase = null;
   starting = true; $("#status").className = ""; $("#status").textContent = "Opening the MapleStory window...";
   FPS = 2; slowTicks = 0;   // before the capture opens: it runs at FPS frames a second
   try { await startCapture(); ICONS ||= await GrindReaders.loadIcons(G).catch(() => []) }   // once: potion/arrow pictures for the counts
   finally { starting = false }
   timer = 0;   // running (the first tick sets the real timeout)
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: goalOf(), freeIds: freeIds()}); stopWarned = false;
-  // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
-  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
-  jr.runStart(session);
+  // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on);
+  // the Settings nick rides along for the weekly ladder's display name (opt-in — absent when the box is empty)
+  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, name: (settings.nick || "").trim() || undefined, partyCode: settings.partyCode || null}) } showSpeed(run) }});
+  jr.runStart(session); autoRun = {auto, lastGain: Date.now(), bar: null, level: 0};
   wrap = null; runT0 = Date.now(); $("#summary").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   kpqReset(); held = false; barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; boxHad = 0; boxPending = null; boxSeen = new Map(); Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
@@ -44,9 +46,10 @@ async function start(){
   mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; kpqSent = 0; FPS = 2; slowTicks = 0; perfReset();
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
+  if (base && base.exp != null){ const t0 = Date.now() - 1; session.add({t: t0, type: "bar", exp: base.exp, level: base.level, pct: base.pct}); snaps.start = {t: t0, level: base.level, pct: base.pct, exp: base.exp, hand: false} }   // always-on: the reading before the first gain is the baseline (core/autorun.js)
   feed = GrindFeed.createFeed(G); feedSep("Started tracking");
   clearInterval(autoTimer); autoTimer = setInterval(autosaveNow, 60e3);
-  tick();
+  tick(); bandLoop();
   renderState(null);
   // the start reading is taken right away (not only once the bar is read): its picture is the proof of where you started
   if (!snaps.start) snap("start", null, false).catch(() => {});
@@ -88,7 +91,7 @@ async function discard(){
   if (stopping || timer == null) return;
   stopping = true; lockGo(3000);
   try {
-    jr.runStop("discard"); clearTimeout(timer); timer = null; engine?.close(); clearInterval(autoTimer); autoTimer = null;
+    autoRun = null; jr.runStop("discard"); clearTimeout(timer); timer = null; engine?.close(); clearInterval(autoTimer); autoTimer = null;
     video?.srcObject?.getTracks().forEach(tr => tr.stop());
     await host.autosave?.(null);
   } finally { stopping = false; wrap = null }
@@ -100,7 +103,17 @@ function armDiscard(btn){
   btn._t = setTimeout(() => { btn.classList.remove("armed"); btn.textContent = btn.dataset.label }, 5000);
 }
 for (const id of ["#wrapDrop", "#miniWrapDrop", "#fzWrapDrop"]) $(id).onclick = () => armDiscard($(id));
+// Always-on break: an auto-started run with no EXP for 2 minutes is wrapped up and saved like Stop + Finalize log
+async function autoBreak(){
+  if (stopping || wrap || timer == null) return;
+  autoCool = Date.now() + GrindAutoRun.COOLDOWN_MS + 2500;
+  await stop(); if (!wrap) return;
+  $("#status").textContent = "No EXP for 2 minutes: run saved. The next EXP gain starts a new one.";
+  await finish();
+  $("#status").textContent = "No EXP for 2 minutes: run saved. The next EXP gain starts a new one.";
+}
 async function stopNow(){
+  autoRun = null;
   log("stop", {engine: engine?.kind, skipped});
   if (!wrap && video?.srcObject?.active && video.videoWidth && !snaps.end?.hand) await snap("end", grab(), false).catch(() => {}); if (check && !check.ended){ check = null; renderCheck() }
   jr.runStop("stop"); clearTimeout(timer); timer = null; engine?.close(); $("#partyBox").classList.add("hidden"); $("#miniParty").textContent = ""; $("#fzParty").textContent = "";

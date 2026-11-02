@@ -13,7 +13,7 @@
                      public summary. The page itself carries no data; the key is asked once and kept in the browser
                      (localStorage fbkey) */
 import G from "./gamedata.json" with {type: "json"};
-import {cleanRun, cleanKpq, cleanShop, median, KPQ_MIN} from "./check.js";
+import {cleanRun, cleanKpq, cleanShop, cleanSpot, median, KPQ_MIN, mapCeiling} from "./check.js";
 import Kpq from "../../tracker/core/kpqscore.js";   // the same scoring the tracker previews with
 import {ADMIN_HTML} from "./admin.js";
 
@@ -34,17 +34,37 @@ async function salt(db){
   if (!row){ await db.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('salt', ?)").bind(crypto.randomUUID()).run(); row = await db.prepare("SELECT v FROM meta WHERE k = 'salt'").first() }
   return row.v;
 }
+// The abuse caps count live rows, so "Delete what I shared" used to hand the daily budget back (hit the cap, forget,
+// refill, forever). ipday_ledger keeps each network-day's high-water marks — rows ever accepted and distinct trackers
+// ever seen today — and the caps read max(live rows, ledger). Forget leaves the ledger alone on purpose: it is the
+// network-day's tally, not the install's data (the same day-scoped salted hash the rows themselves carry), and it ages
+// out with the day. The bump is a MAX() upsert, so two requests racing can only ever over-count, never under.
+async function ledgerPeak(db, ipday){
+  return await db.prepare("SELECT posts, installs FROM ipday_ledger WHERE ipday = ?").bind(ipday).first() || {posts: 0, installs: 0};
+}
+async function ledgerBump(db, ipday, day, posts, installs){
+  await db.prepare(`INSERT INTO ipday_ledger (ipday, day, posts, installs, updated) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(ipday) DO UPDATE SET posts = MAX(posts, excluded.posts), installs = MAX(installs, excluded.installs), updated = excluded.updated`)
+    .bind(ipday, day, posts, installs, new Date().toISOString()).run();
+}
 
 async function postRun(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const c = cleanRun(body, G);
   if (c.error) return json({error: c.error}, 400);
-  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + day + await salt(env.DB));
+  // the same run sent twice (the tracker retries when the ack is lost on the wire): same install, same map and numbers.
+  // The retry rides the 10-min flush, so a 12-min window catches it; a real next run is always 14.5+ min later (the
+  // minutes floor), so the window can never swallow one. IS, not =: an unknown map's NULL must compare NULL-safe.
+  const dup = await env.DB.prepare("SELECT id FROM runs WHERE install = ? AND minutes = ? AND exp = ? AND kills = ? AND mesos = ? AND map IS ? AND map_name IS ? AND received > ?")
+    .bind(body.install, c.run.minutes, c.run.exp, c.run.kills, c.run.mesos, c.run.map, c.run.map_name, new Date(now - 12 * 60e3).toISOString()).first();
+  if (dup) return json({ok: true, counted: false, why: "already sent"});
   const recent = await env.DB.prepare("SELECT COUNT(*) n FROM runs WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n FROM runs WHERE ipday = ?").bind(ipday).first();
   // one vote per player: a new install ID from an IP that already sent 6 others today is refused (ID rotation)
   const ids = await env.DB.prepare("SELECT COUNT(DISTINCT install) n, SUM(install = ?) mine FROM runs WHERE ipday = ?").bind(body.install, ipday).first();
-  if (recent.n >= MAX_PER_HOUR || today.n >= MAX_PER_IP_DAY || ids.n >= MAX_INSTALLS_PER_IP_DAY && !ids.mine) return json({error: "too many runs"}, 429);
+  const peak = await ledgerPeak(env.DB, ipday);
+  if (recent.n >= MAX_PER_HOUR || Math.max(today.n, peak.posts) >= MAX_PER_IP_DAY || Math.max(ids.n, peak.installs) >= MAX_INSTALLS_PER_IP_DAY && !ids.mine) return json({error: "too many runs"}, 429);
   const r = c.run;
   const ins = await env.DB.prepare(`INSERT INTO runs (install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp,
     kills, mesos, ok, why, mobs, items) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -53,10 +73,12 @@ async function postRun(req, env){
   const runId = ins.meta.last_row_id;
   if (r.hour != null || r.deaths != null || r.used_cost != null)
     await env.DB.prepare("INSERT OR REPLACE INTO run_extra (run_id, deaths, hour, used_cost) VALUES (?, ?, ?, ?)").bind(runId, r.deaths, r.hour, r.used_cost).run();
+  if (r.name) await env.DB.prepare("INSERT OR REPLACE INTO run_names (run_id, name) VALUES (?, ?)").bind(runId, r.name).run();   // the weekly ladder's display name (P1-5), opt-in
   const code = typeof body.partyCode === "string" ? body.partyCode.trim().toLowerCase().slice(0, 20) : "";
   if (code && r.party > 1){   // a code only groups party runs: friends soloing the same map with one code are separate players
     await env.DB.prepare("INSERT OR REPLACE INTO run_groups (run_id, grp) VALUES (?, ?)").bind(runId, await sha("party:" + code + await salt(env.DB))).run();
   }
+  await ledgerBump(env.DB, ipday, day, Math.max(today.n, peak.posts) + 1, Math.max(ids.n + (ids.mine ? 0 : 1), peak.installs));
   return json({ok: true, counted: c.ok, why: c.why});
 }
 
@@ -106,10 +128,11 @@ async function postKpq(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const c = cleanKpq(body);
   if (c.error) return json({error: c.error}, 400);
-  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + day + await salt(env.DB));
   const recent = await env.DB.prepare("SELECT COUNT(*) n FROM kpq_rounds WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n, COUNT(DISTINCT install) k, SUM(install = ?) mine FROM kpq_rounds WHERE ipday = ?").bind(body.install, ipday).first();
-  if (recent.n >= KPQ_PER_HOUR || today.n >= MAX_PER_IP_DAY || today.k >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rounds"}, 429);
+  const peak = await ledgerPeak(env.DB, ipday);
+  if (recent.n >= KPQ_PER_HOUR || Math.max(today.n, peak.posts) >= MAX_PER_IP_DAY || Math.max(today.k, peak.installs) >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rounds"}, 429);
   // the same round sent twice (a retry, or the site's Send pressed again): same install, same clear, in the last 30 min
   const dup = await env.DB.prepare("SELECT id FROM kpq_rounds WHERE install = ? AND clear = ? AND received > ?").bind(body.install, c.round.clear, new Date(now - 1800e3).toISOString()).first();
   if (dup) return json({ok: true, counted: false, why: "already sent"});
@@ -121,6 +144,7 @@ async function postKpq(req, env){
   if (r.name) await env.DB.prepare("INSERT OR REPLACE INTO kpq_names (kpq_id, name) VALUES (?, ?)").bind(ins.meta.last_row_id, r.name).run();
   if (r.raw) await env.DB.prepare("INSERT OR REPLACE INTO kpq_raw (kpq_id, raw) VALUES (?, ?)").bind(ins.meta.last_row_id, JSON.stringify(r.raw)).run();
   if (r.src !== "tracker") await env.DB.prepare("INSERT OR REPLACE INTO kpq_src (kpq_id, src) VALUES (?, ?)").bind(ins.meta.last_row_id, r.src).run();
+  await ledgerBump(env.DB, ipday, day, Math.max(today.n, peak.posts) + 1, Math.max(today.k + (today.mine ? 0 : 1), peak.installs));
   return json({ok: true, counted: c.ok, why: c.why});
 }
 
@@ -134,40 +158,68 @@ async function partyLive(req, env){
   const code = typeof b.partyCode === "string" ? b.partyCode.trim().toLowerCase().slice(0, 20) : "";
   if (!code) return json({error: "party code"}, 400);
   const grp = await sha("party:" + code + await salt(env.DB)), now = Date.now();
-  const text = (v, n) => typeof v === "string" ? v.slice(0, n) : null;
-  const me = {nick: typeof b.nick === "string" ? b.nick.replace(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 12) : "", job: text(b.job, 40),
-    level: num(b.level, 200), mapName: text(b.mapName, 60), expHr: num(b.expHr, 1e8), expHr5: num(b.expHr5, 1e8),
+  // job/mapName reach OTHER members' clients, so they get the nick scrub too (round 2): raw strings rode to every
+  // party member's UI while only nick was filtered
+  const scrub = (v, n) => typeof v === "string" ? v.replace(/[^\p{L}\p{N} _.'-]/gu, "").trim().slice(0, n) || null : null;
+  const me = {nick: typeof b.nick === "string" ? b.nick.replace(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 12) : "", job: scrub(b.job, 40),
+    level: num(b.level, 200), mapName: scrub(b.mapName, 60), expHr: num(b.expHr, 1e8), expHr5: num(b.expHr5, 1e8),
     killsHr: num(b.killsHr, 1e5), mesosHr: num(b.mesosHr, 1e8), active: num(b.active, 1e7)};
-  const old = await env.DB.prepare("SELECT updated FROM party_live WHERE grp = ? AND install = ?").bind(grp, b.install).first();
+  // the throttle follows the install, not (grp, install): rotating the party code would otherwise reset it on every post
+  const old = await env.DB.prepare("SELECT updated FROM party_live WHERE install = ? ORDER BY updated DESC LIMIT 1").bind(b.install).first();
   if (old && now - Date.parse(old.updated) < PARTY_EVERY) return json({error: "too often"}, 429);
-  // one machine can't fill the table: at most 6 tracker copies per IP (hashed) in the last hour
-  const ip = await sha("ip:" + (req.headers.get("cf-connecting-ip") || "") + await salt(env.DB));
+  // one machine can't fill the table: at most 6 tracker copies per network. Forget deletes this install's row, so the
+  // cap reads the same ipday_ledger high-water mark as every other route (round 2: forget used to hand the party slot
+  // back, and the schema comment claimed forget couldn't touch this table — it can).
+  const rawIp = req.headers.get("cf-connecting-ip") || "";
+  const ip = await sha("ip:" + rawIp + await salt(env.DB));
+  const day = new Date(now).toISOString().slice(0, 10), ipday = await sha(rawIp + day + await salt(env.DB));
+  const peak = await ledgerPeak(env.DB, ipday);
+  let inst = peak.installs;
   if (!old){
     const k = await env.DB.prepare("SELECT COUNT(DISTINCT install) n, SUM(install = ?) mine FROM party_live WHERE ip = ?").bind(b.install, ip).first();
-    if (k.n >= PARTY_MAX && !k.mine) return json({error: "too many trackers"}, 429);
+    if ((k.n >= PARTY_MAX || peak.installs >= PARTY_MAX) && !k.mine) return json({error: "too many trackers"}, 429);
+    inst = Math.max(k.n + (k.mine ? 0 : 1), peak.installs);
     const n = await env.DB.prepare("SELECT COUNT(*) n FROM party_live WHERE grp = ? AND updated > ?").bind(grp, new Date(now - PARTY_FRESH).toISOString()).first();
     if (n.n >= PARTY_MAX) return json({error: "party full"}, 429);
   }
   await env.DB.prepare("DELETE FROM party_live WHERE updated < ?").bind(new Date(now - 3600e3).toISOString()).run();
   await env.DB.prepare("INSERT OR REPLACE INTO party_live (grp, install, updated, ip, data) VALUES (?, ?, ?, ?, ?)").bind(grp, b.install, new Date(now).toISOString(), ip, JSON.stringify(me)).run();
+  await ledgerBump(env.DB, ipday, day, 0, inst);   // posts 0: the ledger's MAX() keeps the stored rows mark; only installs move here
   const {results} = await env.DB.prepare("SELECT install, updated, data FROM party_live WHERE grp = ? AND updated > ? ORDER BY install")
     .bind(grp, new Date(now - PARTY_FRESH).toISOString()).all();
   const members = results.map(r => ({...JSON.parse(r.data), you: r.install === b.install, ago: Math.round((now - Date.parse(r.updated)) / 1000)}));
   return json({members, expHr: members.reduce((a, m) => a + (m.expHr || 0), 0)});
 }
 
-// move rows past the window into the archive tables. INSERT OR IGNORE keyed on the id: a crash between the copy and the
-// delete can't double-move a row, the next rebuild just retries the delete. Called inside the summary rebuild, which the
-// summary lock already makes one-at-a-time; runs at most every 5 minutes, so the indexed received scan touches only the
-// handful of rows at the window's edge. Returns the archive totals for the panel
+// move rows past the window into the archive tables. The copy skips rows the archive already holds (keyed on the
+// (id, received) pair — see below), and the delete removes only rows whose pair is in the archive: a crash between
+// the copy and the delete can't double-move a row, the next rebuild just retries the delete. Called inside the
+// summary rebuild, which the summary lock already makes one-at-a-time; runs at most every 5 minutes, so the indexed
+// received scan touches only the handful of rows at the window's edge. Returns the archive totals for the panel
 async function archiveOld(db){
   const cut = new Date(Date.now() - ARCHIVE_DAYS * 86400e3).toISOString();
+  // copy only rows whose (id, received) the archive doesn't hold, then delete exactly the rows that are now in the
+  // archive. Rowids restart at 1 when a table is emptied, so a bare INSERT OR IGNORE + unconditional DELETE could
+  // lose a run outright if the hot table ever emptied while the archive kept rows (round 3): the id would collide,
+  // OR IGNORE would skip the copy, and the delete would still fire. Keying both sides on (id, received) keeps the
+  // crash safety too — a crash between copy and delete leaves the row in both tables, and the next rebuild's delete
+  // (EXISTS on the same pair) removes it without re-copying
   await db.prepare(`INSERT OR IGNORE INTO runs_archive (id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items, archived)
-    SELECT id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items, ? FROM runs WHERE received < ?`).bind(cut, cut).run();
-  await db.prepare("DELETE FROM runs WHERE received < ?").bind(cut).run();
+    SELECT id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items, ? FROM runs WHERE received < ?
+    AND NOT EXISTS (SELECT 1 FROM runs_archive a WHERE a.id = runs.id AND a.received = runs.received)`).bind(cut, cut).run();
+  await db.prepare("DELETE FROM runs WHERE received < ? AND EXISTS (SELECT 1 FROM runs_archive a WHERE a.id = runs.id AND a.received = runs.received)").bind(cut).run();
+  // the archive tables keep no extras/party-code/name columns: their rows would point at run ids the hot table no
+  // longer has, forever (the KPQ side tables stay — the archive rounds keep their ids and are read with them)
+  await db.prepare("DELETE FROM run_extra WHERE run_id NOT IN (SELECT id FROM runs)").run();
+  await db.prepare("DELETE FROM run_groups WHERE run_id NOT IN (SELECT id FROM runs)").run();
+  await db.prepare("DELETE FROM run_names WHERE run_id NOT IN (SELECT id FROM runs)").run();
+  // the abuse ledger ages out with its day: keep today and yesterday, drop anything older (the caps are per UTC day,
+  // so yesterday's tally can never bind again — 36 h back covers the whole of yesterday whichever side of midnight)
+  await db.prepare("DELETE FROM ipday_ledger WHERE day < ?").bind(new Date(Date.now() - 36 * 3600e3).toISOString().slice(0, 10)).run();
   await db.prepare(`INSERT OR IGNORE INTO kpq_rounds_archive (id, install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why, archived)
-    SELECT id, install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why, ? FROM kpq_rounds WHERE received < ?`).bind(cut, cut).run();
-  await db.prepare("DELETE FROM kpq_rounds WHERE received < ?").bind(cut).run();
+    SELECT id, install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why, ? FROM kpq_rounds WHERE received < ?
+    AND NOT EXISTS (SELECT 1 FROM kpq_rounds_archive a WHERE a.id = kpq_rounds.id AND a.received = kpq_rounds.received)`).bind(cut, cut).run();
+  await db.prepare("DELETE FROM kpq_rounds WHERE received < ? AND EXISTS (SELECT 1 FROM kpq_rounds_archive a WHERE a.id = kpq_rounds.id AND a.received = kpq_rounds.received)").bind(cut).run();
   const r = await db.prepare("SELECT COUNT(*) n FROM runs_archive").first();
   const k = await db.prepare("SELECT COUNT(*) n FROM kpq_rounds_archive").first();
   return {runs: r.n, rounds: k.n};
@@ -200,7 +252,10 @@ export async function summary(db){
     p.grp = r.party > 1 ? pfind(r.grp ? "p" + r.grp : net(r.install)) : net(r.install);
     if (r.hour != null && r.map) timed.push([k, r.exp / h, r.hour]);
     p.party.push(r.party); p.level.push(r.level); p.job.push(r.job); p.exp.push(r.exp / h); p.mesos.push(r.mesos / h); p.kills.push(r.kills / h); if (r.deaths != null) p.deaths.push(r.deaths / h); if (r.used_cost != null) p.used.push(r.used_cost / h);
-    for (const m of JSON.parse(r.mobs || "[]")){
+    // a stored row's mobs is JSON we wrote, but a half-written or hand-edited row must not take the public summary down
+    // for as long as the row lives (round 3 — every other stored-JSON parse here is guarded, this one wasn't)
+    let rmobs; try { rmobs = JSON.parse(r.mobs || "[]") } catch { rmobs = [] }
+    for (const m of Array.isArray(rmobs) ? rmobs : []){
       if (!/^\d{1,10}$/.test(m.id)) continue;   // runs stored before ids were checked
       const t = mobs[m.id] || (mobs[m.id] = {kills: 0, mesos: 0, mesoDrops: 0, items: Object.create(null), players: new Set()});
       t.kills += m.kills; t.mesos += m.mesos; t.mesoDrops += m.mesoDrops; t.players.add(net(r.install));
@@ -324,7 +379,8 @@ async function doneFeedback(req, env){
 // Backs the owner panel at GET /admin, which asks for the key once and lists these in a browser (no curl needed)
 async function getKpqRecent(req, env){
   const no = fbAdmin(req, env); if (no) return no;
-  const n = Math.min(500, Math.max(1, Number(new URL(req.url).searchParams.get("limit")) || 100));
+  // Math.trunc: a fractional limit ("?limit=2.5") reached SQLite's LIMIT as a REAL and 500'd (round 3)
+  const n = Math.min(500, Math.max(1, Math.trunc(Number(new URL(req.url).searchParams.get("limit"))) || 100));
   const {results} = await env.DB.prepare(`SELECT k.id, k.received, k.date, k.hour, k.mode, k.party, k.level, k.job, k.clear, k.total, k.clock, k.exp, k.mesos, k.ok, k.why, k.stages, n.name, x.src
     FROM kpq_rounds k LEFT JOIN kpq_names n ON n.kpq_id = k.id LEFT JOIN kpq_src x ON x.kpq_id = k.id ORDER BY k.id DESC LIMIT ?`).bind(n).all();
   const all = await env.DB.prepare("SELECT COUNT(*) n FROM kpq_rounds").first();
@@ -337,7 +393,7 @@ async function getKpqRecent(req, env){
 // to counts here so the inbox stays light — the public summary is what turns the counted ones into the site's tables.
 async function getRunsRecent(req, env){
   const no = fbAdmin(req, env); if (no) return no;
-  const n = Math.min(500, Math.max(1, Number(new URL(req.url).searchParams.get("limit")) || 100));
+  const n = Math.min(500, Math.max(1, Math.trunc(Number(new URL(req.url).searchParams.get("limit"))) || 100));
   const {results} = await env.DB.prepare(`SELECT r.id, r.received, r.date, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.kills, r.mesos, r.ok, r.why, r.mobs, x.deaths, x.hour, x.used_cost
     FROM runs r LEFT JOIN run_extra x ON x.run_id = r.id ORDER BY r.id DESC LIMIT ?`).bind(n).all();
   const all = await env.DB.prepare("SELECT COUNT(*) n FROM runs").first();
@@ -359,32 +415,52 @@ async function postForget(req, env){
   if (!b || typeof b.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(b.install)) return json({error: "install id"}, 400);
   const db = env.DB, i = b.install, n = {};
   const one = async (k, sql) => { n[k] = (await db.prepare(sql).bind(i).run()).meta?.changes ?? 0 };
-  await one("extra", "DELETE FROM run_extra WHERE run_id IN (SELECT id FROM runs WHERE install = ?)");
-  await one("groups", "DELETE FROM run_groups WHERE run_id IN (SELECT id FROM runs WHERE install = ?)");
+  // the archive keeps no extras/groups/names columns: a run that already moved there leaves its side rows behind, so the
+  // forget reads both tables (the runs themselves go further down, while the subqueries can still see them)
+  await one("extra", "DELETE FROM run_extra WHERE run_id IN (SELECT id FROM runs WHERE install = ?1 UNION SELECT id FROM runs_archive WHERE install = ?1)");
+  await one("groups", "DELETE FROM run_groups WHERE run_id IN (SELECT id FROM runs WHERE install = ?1 UNION SELECT id FROM runs_archive WHERE install = ?1)");
+  await one("run_names", "DELETE FROM run_names WHERE run_id IN (SELECT id FROM runs WHERE install = ?1 UNION SELECT id FROM runs_archive WHERE install = ?1)");   // the ladder's names go with the runs
   for (const t of ["names", "src", "raw"]) await one("kpq_" + t, `DELETE FROM kpq_${t} WHERE kpq_id IN (SELECT id FROM kpq_rounds WHERE install = ?1 UNION SELECT id FROM kpq_rounds_archive WHERE install = ?1)`);
+  // the 2026-10-30 reset's backup tables hold whole rounds (and the names/src/raw that hang off them) from before
+  // the reset: a forget reaches in there too (round 2 — children first, the rounds they point into after)
+  for (const t of ["names", "src", "raw"]) await one("kpq_bak_" + t, `DELETE FROM kpq_bak_20261030_${t} WHERE kpq_id IN (SELECT id FROM kpq_bak_20261030_rounds WHERE install = ?1 UNION SELECT id FROM kpq_bak_20261030_archive WHERE install = ?1)`);
+  await one("kpq_bak_rounds", "DELETE FROM kpq_bak_20261030_rounds WHERE install = ?"); await one("kpq_bak_archive", "DELETE FROM kpq_bak_20261030_archive WHERE install = ?");
   await one("runs", "DELETE FROM runs WHERE install = ?"); await one("runs_archive", "DELETE FROM runs_archive WHERE install = ?");
   await one("kpq", "DELETE FROM kpq_rounds WHERE install = ?"); await one("kpq_archive", "DELETE FROM kpq_rounds_archive WHERE install = ?");
-  await one("party", "DELETE FROM party_live WHERE install = ?"); await one("shop", "DELETE FROM shop_obs WHERE install = ?");
-  await db.prepare("DELETE FROM meta WHERE k IN ('summary', 'shop_summary')").run();   // the cached public numbers rebuild without it
-  return json({ok: true, removed: n.runs + n.runs_archive + n.kpq + n.kpq_archive + n.shop + n.party});
+  // shop_ext first: its rows are found through shop_obs, so deleting the observations first would orphan the seller
+  // name/title/ch/room forever (bug-hunt 2026-11-02 — "Delete what I shared" has to mean everything)
+  await one("party", "DELETE FROM party_live WHERE install = ?"); await one("shop_ext", "DELETE FROM shop_obs_ext WHERE obs_id IN (SELECT id FROM shop_obs WHERE install = ?1)"); await one("shop", "DELETE FROM shop_obs WHERE install = ?");
+  await one("spots", "DELETE FROM boss_spots WHERE install = ?");
+  await db.prepare("DELETE FROM meta WHERE k IN ('summary', 'shop_summary', 'ladder')").run();   // the cached public numbers rebuild without it
+  return json({ok: true, removed: n.runs + n.runs_archive + n.kpq + n.kpq_archive + n.kpq_bak_rounds + n.kpq_bak_archive
+    + n.kpq_names + n.kpq_src + n.kpq_raw + n.kpq_bak_names + n.kpq_bak_src + n.kpq_bak_raw
+    + n.shop + n.shop_ext + n.spots + n.party + n.run_names});
 }
 const SHOP_PER_HOUR = 240, SHOP_PER_IP_DAY = 1500, SHOP_KEEP_DAYS = 14, SHOP_MIN_INSTALLS = 3;
 async function postShop(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const c = cleanShop(body, G);
   if (c.error) return json({error: c.error}, 400);
-  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + day + await salt(env.DB));
   const recent = await env.DB.prepare("SELECT COUNT(*) n FROM shop_obs WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n, COUNT(DISTINCT install) k, SUM(install = ?) mine FROM shop_obs WHERE ipday = ?").bind(body.install, ipday).first();
-  if (recent.n + c.rows.length > SHOP_PER_HOUR || today.n + c.rows.length > SHOP_PER_IP_DAY || today.k >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rows"}, 429);
+  const peak = await ledgerPeak(env.DB, ipday);
+  if (recent.n + c.rows.length > SHOP_PER_HOUR || Math.max(today.n, peak.posts) + c.rows.length > SHOP_PER_IP_DAY || Math.max(today.k, peak.installs) >= MAX_INSTALLS_PER_IP_DAY && !today.mine) return json({error: "too many rows"}, 429);
   const t = now.toISOString();
-  await env.DB.batch(c.rows.map(r => env.DB.prepare("INSERT INTO shop_obs (install, ipday, received, item, qty, price, sold) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(body.install, ipday, t, r.id, r.qty, r.price, r.sold)));
+  const ids = (await env.DB.batch(c.rows.map(r => env.DB.prepare("INSERT INTO shop_obs (install, ipday, received, item, qty, price, sold) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(body.install, ipday, t, r.id, r.qty, r.price, r.sold)))).map(x => x.meta?.last_row_id);
+  // 0.3.30: the upload names the shop (Turbozo): one ext row per obs row, same values for the whole read
+  if (c.seller || c.title || c.ch != null || c.room != null || c.map != null)
+    await env.DB.batch(ids.filter(Boolean).map(id => env.DB.prepare("INSERT INTO shop_obs_ext (obs_id, seller, title, ch, room, map) VALUES (?, ?, ?, ?, ?, ?)").bind(id, c.seller, c.title, c.ch, c.room, c.map)));
+  await ledgerBump(env.DB, ipday, day, Math.max(today.n, peak.posts) + c.rows.length, Math.max(today.k + (today.mine ? 0 : 1), peak.installs));
   return json({ok: true, stored: c.rows.length});
 }
 // per item over the last 7 days: median price each of open asks and of sold rows, with how many rows and how many different
 // installs. An item shows only once SHOP_MIN_INSTALLS installs have seen it (one tracker alone can't set a price).
 async function shopSummary(db){
   await db.prepare("DELETE FROM shop_obs WHERE received < ?").bind(new Date(Date.now() - SHOP_KEEP_DAYS * 864e5).toISOString()).run();
+  // the observations age out after 14 days, so their ext rows (seller IGN/title/ch/room) must go with them: an orphaned
+  // ext row kept a seller identity past the rows' stated life and grew the table forever (round 3)
+  await db.prepare("DELETE FROM shop_obs_ext WHERE obs_id NOT IN (SELECT id FROM shop_obs)").run();
   const {results} = await db.prepare("SELECT item, install, qty, price, sold FROM shop_obs WHERE received > ? ORDER BY id DESC LIMIT 60000").bind(new Date(Date.now() - 7 * 864e5).toISOString()).all();
   // one vote per install: each install's own median first, then the median of those. A single install posting 240 rows an
   // hour at 1 meso can't drag the price just because it has the most rows (2026-10-31 blind-spot report B2).
@@ -409,6 +485,169 @@ async function getShopSummary(env){
   return new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=600", ...CORS}});
 }
 
+// Shared boss spots (0.3.30, Turbozo: the boss tracker becomes a network). POST = one timed-kill report (the Share
+// switch governs; the same boss from one install within 30 min is a no-op), GET ?map= = witnesses per boss + channel
+// over the last 24 h: t = the freshest kill report, n = how many different trackers saw it. No identity in, no identity out.
+const SPOT_PER_HOUR = 120, SPOT_PER_IP_DAY = 400, SPOT_KEEP_H = 24, SPOT_SAME_MIN = 30;
+async function postSpot(req, env){
+  let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
+  const c = cleanSpot(body, G);
+  if (c.error) return json({error: c.error}, 400);
+  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + day + await salt(env.DB));
+  const hour = await env.DB.prepare("SELECT COUNT(*) n FROM boss_spots WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
+  const today = await env.DB.prepare("SELECT COUNT(*) n FROM boss_spots WHERE ipday = ?").bind(ipday).first();
+  const peak = await ledgerPeak(env.DB, ipday);
+  if (hour.n >= SPOT_PER_HOUR || Math.max(today.n, peak.posts) >= SPOT_PER_IP_DAY) return json({error: "too many spots"}, 429);
+  const dup = await env.DB.prepare("SELECT id FROM boss_spots WHERE install = ? AND map = ? AND mob = ? AND received > ?").bind(body.install, c.spot.map, c.spot.mob, new Date(now - SPOT_SAME_MIN * 60e3).toISOString()).first();
+  if (dup) return json({ok: true, dup: true});
+  await env.DB.prepare("INSERT INTO boss_spots (install, ipday, received, map, mob, ch, t) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(body.install, ipday, now.toISOString(), c.spot.map, c.spot.mob, c.spot.ch, c.spot.t).run();
+  await ledgerBump(env.DB, ipday, day, Math.max(today.n, peak.posts) + 1, 0);   // no install-rotation cap here: installs 0 keeps the stored mark
+  return json({ok: true});
+}
+async function getSpots(env, url){
+  const map = url.searchParams.get("map") || "";
+  if (!/^\d{1,10}$/.test(map) || !G.timed || !G.timed[map]) return json({error: "map"}, 400);
+  const cut = new Date(Date.now() - SPOT_KEEP_H * 3600e3).toISOString();
+  await env.DB.prepare("DELETE FROM boss_spots WHERE received < ?").bind(cut).run();
+  const {results} = await env.DB.prepare("SELECT mob, ch, MAX(t) t, COUNT(DISTINCT install) n FROM boss_spots WHERE map = ? AND received > ? GROUP BY mob, ch").bind(map, cut).all();
+  const info = Object.fromEntries(G.timed[map].map(([id, sec, boss]) => [id, {sec, boss}]));
+  return json({updated: new Date().toISOString(), hours: SPOT_KEEP_H,
+    spots: results.map(r => ({mob: r.mob, name: G.mobnames?.[r.mob] || "Monster " + r.mob, sec: info[r.mob]?.sec ?? 3600, boss: !!(info[r.mob]?.boss), ch: r.ch, t: r.t, n: r.n}))});
+}
+
+/* Weekly grind ladder (P1-5) + weekly community map rates (P1-9), 2026-11-02.
+   Opt-in display names ride with runs (run_names, the KPQ-names pattern) and join per network the way the
+   KPQ boards join names. Anti-cheat adopts Minerva's two layers BEFORE launch (adoption plan item 5, ADR
+   0032): a physics ceiling per map flags impossible EXP/h (check.js mapCeiling, computed at data build
+   time), and a line over 2x the board's #1 with >= 8 other lines auto-flags — report, never reject, and a
+   flagged line is held back from the public board (the count says so) while every run stays in the owner's
+   inbox. One home network = one player, exactly as the summary joins them. */
+export const LADDER_MIN_MINUTES = 30;      // a board line needs this much farming in the week
+export const LADDER_OVER_TOP = 2;          // ...x the board's best ...
+export const LADDER_OVER_TOP_OTHERS = 8;   // ... with at least this many other lines on the board
+export const LADDER_RATE_MIN_PLAYERS = 2;  // a map's community rate shows once 2+ networks farmed it this week
+
+// the Monday 00:00 UTC a week covers: {key: "2026-11-02", start, end}
+export function weekBounds(now = new Date()){
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const mon = new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * 864e5);
+  return {key: mon.toISOString().slice(0, 10), start: mon.toISOString(), end: new Date(mon.getTime() + 7 * 864e5).toISOString()};
+}
+
+// rows = ok runs inside one week: {install, ipday, grp, map, map_name, party, level, job, minutes, exp, mesos, received, name}
+export function buildLadder(rows, G){
+  const uf = new Map(), find = k => { let r = k; while (uf.has(r) && uf.get(r) !== r) r = uf.get(r); uf.set(k, r); return r },
+    join = (a, b) => { const x = find(a), y = find(b); if (x !== y) uf.set(x, y) };
+  for (const r of rows) join("i" + r.install, "n" + r.ipday);
+  const net = install => find("i" + install);
+  const puf = new Map(), pfind = k => { let r = k; while (puf.has(r) && puf.get(r) !== r) r = puf.get(r); puf.set(k, r); return r };
+  for (const r of rows) if (r.grp && r.party > 1){ const x = pfind("p" + r.grp), y = pfind(net(r.install)); if (x !== y) puf.set(x, y) }
+  const gk = r => (r.party > 1 && r.grp ? "P" + pfind("p" + r.grp) : "S" + net(r.install));
+  // one fold serves every board: group lines (overall), group x map lines (per map), map x network (rates)
+  const fold = keyfn => {
+    const m = new Map();
+    for (const r of rows){
+      const k = keyfn(r);
+      if (k == null) continue;
+      const h = r.minutes / 60;
+      if (h <= 0) continue;
+      const e = m.get(k) || (m.set(k, {best: null, bestM: null, names: new Map(), minutes: 0, runs: 0}), m.get(k));
+      e.minutes += r.minutes; e.runs++;
+      if (r.name) e.names.set(r.install, r.name);
+      if (!e.best || r.exp / h > e.best.exp / (e.best.minutes / 60)) e.best = r;
+      if (!e.bestM || r.mesos / h > e.bestM.mesos / (e.bestM.minutes / 60)) e.bestM = r;
+    }
+    return m;
+  };
+  const toLine = (e, key) => { const b = e.best, h = b.minutes / 60;
+    return {key, names: [...new Set(e.names.values())].slice(0, 6), map: b.map, mapName: b.map_name, party: b.party, level: b.level, job: b.job,
+      expHr: Math.round(b.exp / h), mesosHr: Math.round(e.bestM.mesos / (e.bestM.minutes / 60)), minutes: Math.round(e.minutes), runs: e.runs, at: b.received} };
+  // the flag pass (see the block comment): (a) the map's physics ceiling, then (b) too far above the best
+  // surviving line once the board is busy enough to compare. Flagged lines leave the public list; `hidden` counts them.
+  const pub = (list, metric) => {
+    const all = [...list].filter(([, e]) => e.minutes >= LADDER_MIN_MINUTES).map(([k, e]) => toLine(e, k));
+    for (const l of all){ const c = mapCeiling(G, l.map); if (c != null && l.expHr > c) l.flag = "over the map's ceiling" }
+    const rank = all.filter(l => !l.flag).sort((a, b) => b[metric] - a[metric]);
+    if (rank.length > LADDER_OVER_TOP_OTHERS) for (const l of rank.slice(1)) if (l[metric] > LADDER_OVER_TOP * rank[0][metric]) l.flag = "too far above the board";
+    const rows = all.filter(l => !l.flag).sort((a, b) => b[metric] - a[metric]).slice(0, 50);
+    const lab = new Map(), g = l => { if (!lab.has(l.key)) lab.set(l.key, "l" + lab.size); return lab.get(l.key) };
+    // hidden = the lines the watchdogs hold back; a board longer than 50 just shows the top 50 (the site's copy says
+    // "held back by the watchdogs" — honest lines past the cut are not that)
+    return {rows: rows.map(l => ({group: g(l), ...l, key: undefined})), hidden: all.filter(l => l.flag).length};
+  };
+  const groups = fold(gk);
+  // key: "map\u0000group" — a string. An array key never matches itself in a Map (SameValueZero compares identity),
+  // so every run became its own per-map line, each under the 30-minute floor, and boards.maps shipped empty (round 2)
+  const perMap = fold(r => (r.map == null ? null : r.map + "\u0000" + gk(r)));
+  // community map rates (P1-9): the median over networks of each network's median EXP/h on the map this week
+  const byMapNet = new Map();
+  for (const r of rows){
+    if (r.map == null) continue;
+    const h = r.minutes / 60;
+    if (h <= 0) continue;
+    const m = byMapNet.get(r.map) || byMapNet.set(r.map, new Map()).get(r.map);
+    const e = m.get(net(r.install)) || m.set(net(r.install), {exp: [], mesos: []}).get(net(r.install));
+    e.exp.push(r.exp / h); e.mesos.push(r.mesos / h);
+  }
+  const rates = [...byMapNet].filter(([, nets]) => nets.size >= LADDER_RATE_MIN_PLAYERS).map(([map, nets]) =>
+    ({map, mapName: G.mapnames?.[String(map)] || null, expHr: Math.round(median([...nets.values()].map(v => median(v.exp)))),
+      mesosHr: Math.round(median([...nets.values()].map(v => median(v.mesos)))), players: nets.size}));
+  return {
+    players: new Set(rows.map(r => net(r.install))).size, runs: rows.length,
+    boards: {
+      overall: pub(groups, "expHr"),
+      mesos: pub(groups, "mesosHr"),
+      maps: Object.fromEntries([...new Set([...perMap.keys()].map(k => k.split("\u0000")[0]))].map(map =>
+        [map, pub(new Map([...perMap].filter(([k]) => k.split("\u0000")[0] === map).map(([k, e]) => [k.split("\u0000")[1], e])), "expHr")]))
+    },
+    rates
+  };
+}
+
+// GET /api/ladder: this week and last week, cached 5 minutes like the shop summary (a week of runs is a
+// small table; the cache only stops every visitor rebuilding it)
+async function ladderBody(db){
+  const wk = weekBounds();
+  const lastStart = new Date(Date.parse(wk.start) - 7 * 864e5).toISOString();
+  const {results} = await db.prepare(`SELECT r.install, r.ipday, r.map, r.map_name, r.party, r.level, r.job, r.minutes, r.exp, r.mesos, r.received, g.grp, n.name
+    FROM runs r LEFT JOIN run_groups g ON g.run_id = r.id LEFT JOIN run_names n ON n.run_id = r.id
+    WHERE r.ok = 1 AND r.received >= ?`).bind(lastStart).all();
+  const mk = rows => { const b = buildLadder(rows, G); return {players: b.players, runs: b.runs, boards: b.boards, rates: b.rates} };
+  return {updated: new Date().toISOString(), week: wk,
+    this: mk(results.filter(r => r.received >= wk.start)),
+    last: mk(results.filter(r => r.received < wk.start)),
+    note: "names are the display names players chose to send; flagged lines are held back, never deleted"};
+}
+async function getLadder(env){
+  const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'ladder'").first();
+  let body = row?.v;
+  try { if (!body || Date.now() - Date.parse(JSON.parse(body).updated) > 5 * 60e3) body = null } catch { body = null }
+  if (!body){ body = JSON.stringify(await ladderBody(env.DB)); await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('ladder', ?)").bind(body).run() }
+  return new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=300", ...CORS}});
+}
+
+// D1 rows max out at 2 MB: a summary copy at or past 1.5 MB has to shrink before it can be stored. The KPQ round list
+// is the one unbounded field, so it gives back its oldest rounds until the copy fits — a binary search keeps as many as
+// possible (the old fixed 1000-then-none steps either wasted rounds or kept none). If even an empty list doesn't fit,
+// nothing can shrink it safely: the full copy is served fresh and not stored (the next rebuild retries — real data sits
+// far below the line; bug-hunt follow-up 2026-11-02). Exported for the tests.
+export function trimSummary(s, limit = 1.5e6){
+  const full = JSON.stringify(s);
+  if (full.length < limit) return full;
+  const all = s.kpq && s.kpq.list;
+  if (!Array.isArray(all) || !all.length) return full;   // nothing left to give
+  s = {...s, kpq: {...s.kpq, list: []}};                 // the copy works on its own object; the caller's is untouched
+  if (JSON.stringify(s).length >= limit) return full;    // the list can't save it
+  let lo = 0, hi = all.length;                           // lo fits, hi doesn't
+  while (lo < hi){
+    const mid = (lo + hi + 1) >> 1;
+    s.kpq.list = all.slice(-mid);
+    if (JSON.stringify(s).length < limit) lo = mid; else hi = mid - 1;
+  }
+  s.kpq.list = lo ? all.slice(-lo) : [];                 // slice(-0) is the whole array: guard the empty fit
+  return JSON.stringify(s);
+}
+
 async function route(req, env){
   const url = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
@@ -416,7 +655,10 @@ async function route(req, env){
   if (url.pathname === "/api/kpq" && req.method === "POST") return postKpq(req, env);
   if (url.pathname === "/api/shop" && req.method === "POST") return postShop(req, env);
   if (url.pathname === "/api/forget" && req.method === "POST") return postForget(req, env);
+  if (url.pathname === "/api/spots" && req.method === "POST") return postSpot(req, env);
+  if (url.pathname === "/api/spots" && req.method === "GET") return getSpots(env, url);
   if (url.pathname === "/api/shop/summary" && req.method === "GET") return getShopSummary(env);
+  if (url.pathname === "/api/ladder" && req.method === "GET") return getLadder(env);
   if (url.pathname === "/api/party" && req.method === "POST") return partyLive(req, env);
   if (url.pathname === "/api/feedback" && req.method === "POST") return postFeedback(req, env);
   if (url.pathname === "/api/feedback" && req.method === "GET") return getFeedback(req, env);
@@ -445,9 +687,9 @@ async function route(req, env){
         const archived = await archiveOld(env.DB);
         const s = await summary(env.DB);
         s.archived = archived;
-        body = JSON.stringify(s);
-        // D1 rows max out at 2 MB: past 1.5 MB keep fewer KPQ rounds for the filters, so the copy can still be stored
-        for (const n of [1000, 0]) if (body.length >= 1.5e6 && s.kpq.list.length > n){ s.kpq.list = n ? s.kpq.list.slice(-n) : []; body = JSON.stringify(s) }
+        // D1 rows max out at 2 MB: trimSummary gives back KPQ rounds (newest kept) until the copy stores; past that it
+        // is served fresh and left unstored rather than half-emptied on every request
+        body = trimSummary(s);
         if (body.length < 1.5e6) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").bind(body).run();
       }
     }
