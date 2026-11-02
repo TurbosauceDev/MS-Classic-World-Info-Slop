@@ -65,7 +65,7 @@ Files: `server/src/index.js`, `server/schema.sql`, `server/tests/server.test.js`
 `tracker/core/session.js`, boss card renderers, `overlay` push payload,
 `core.test.js` + `overlay.test.js` scenes.
 
-## Wave 2 (P1) — in flight
+## Wave 2 (P1) — P1-5/6/8/9 shipped, P1-7 open
 
 5. **P1-6 · Digit models from our fixtures → the neural text reader. SHIPPED 0.3.34, redirected by the
    OCR permission.** Turbozo granted permission to use the ocrs recognition model (2026-11-01,
@@ -85,18 +85,34 @@ Files: `server/src/index.js`, `server/schema.sql`, `server/tests/server.test.js`
    apart) — the model's measured-best scale. The bar-font digit readers (EXP bar, pickups, KPQ)
    keep their exact templates, which still beat general OCR on the fixed bitmap font; a fixture-
    trained digit model remains open as a later increment behind the same bench.
-6. **P1-8 · Overlay anchor mode (koffi).** Overlay cards can pin to the game window's
-   rect and track it on move/resize; the shop watcher anchors to the shop window itself.
-   Guardrails below. A new winrect module in the tracker app (to be created), `tracker/app/main.js`, overlay placement.
+6. **P1-8 · Overlay anchor mode (koffi). SHIPPED 0.3.35.** `tracker/app/winrect.js` binds exactly two read-only
+   geometry calls — `DwmGetWindowAttribute` (DWM-9 extended frame bounds, what the capture records) with
+   `GetWindowRect` fallback — through koffi 3.3.6 pinned exact, probed once and gated to win32, so off-Windows
+   and CI never touch anything native; main.js's PowerShell Add-Type path stays as the automatic fallback. The
+   cached game rect now refreshes at 600 ms on the fast path (was 3 s), main.js pushes the desk-relative rect
+   to the overlay (ov-gamerect) only while a card is anchored, and every overlay card's inspector has
+   "Follow the game window": wPos rides the rect by an offset (w.ag) that is based where the card sits when
+   the switch goes on and re-based on every save, so enabling never jumps the card, and pushes never re-place
+   mid-drag. `tests/winrect.test.js` guards the binding surface (no OpenProcess/hooks/input/enumeration), the
+   win32 gate, the fallback's survival, the anchor maths and the exact pin — and proves the _Out_ struct
+   pattern against libc's gettimeofday wherever koffi can load.
 7. **P1-7 · Quest HUD reader.** Read the on-screen quest-tracker progress lines (same
    reader class as our pickup-line reader), map to the 216-quest DB, auto-sync the site
-   quest log, live helper card.
-8. **P1-5 · Weekly grind ladder.** Runs already flow to the Worker: opt-in weekly
-   EXP/mesos-per-hour boards (overall and per map) + a site page. Aggregation only — no
-   new collection.
-9. **P1-9 · Community map rates.** Aggregate byMap EXP/h from shared runs into the site's
-   map pages and a tracker lookup: what the community actually measures on a map this
-   week.
+   quest log, live helper card. — the one Wave 2 item still open; the Minerva adoption
+   plan's grammar checks (item 7) and replayable diagnostics (item 6) are its design notes.
+8. **P1-5 · Weekly grind ladder. SHIPPED 2026-11-02 (server + site), anti-cheat first per the adoption plan.**
+   build_data.cjs computes each map's physics ceiling into gamedata.json (Σ spawn points × base EXP × 240
+   kills/h/spawn — OSMS spawn data; 190 of 196 maps have one); cleanRun carries an opt-in IGN-shape display
+   name into the run_names side table (the KPQ-names pattern); buildLadder network-joins runs exactly like
+   the summary, groups party codes, needs 30 farmed minutes per line and ranks the week's best run. Minerva's
+   two watchdogs went in BEFORE launch (ADR 0032, report-never-reject): a line over its map's ceiling, or
+   over 2x a busy board's (8+ others) best, is held back — counted in the board's hidden count, never
+   deleted, nobody named. GET /api/ladder answers this week + last week (5-minute cache); the tracker sends
+   the Settings nick with shared runs (absent when empty); the site gained the Weekly ladder page (site
+   v0.20.12) with overall/mesos/per-map boards and a last-week switch.
+9. **P1-9 · Community map rates. SHIPPED 2026-11-02 with the ladder.** /api/ladder's rates fold per map ×
+   network — the median over players of each player's median EXP/h on that map this week, shown once 2+
+   players farmed it — rendered on the ladder page's Map rates tab.
 
 ## koffi verdict (P1-8): safe, scoped
 
