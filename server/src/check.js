@@ -24,7 +24,8 @@ export function cleanRun(r, G){
     msg_exp: cnt(r.msgExp, 1e8), bar_exp: cnt(r.barExp, 1e8), kills, mesos: Math.round(r.mesos || 0), mobs, items,
     deaths: r.deaths == null ? null : cnt(r.deaths, 100),
     hour: Number.isInteger(r.hour) && r.hour >= 0 && r.hour < 24 ? r.hour : null,
-    used_cost: r.usedCost == null ? null : cnt(r.usedCost, 1e7)};   // UTC hour the run started (best time to farm)
+    used_cost: r.usedCost == null ? null : cnt(r.usedCost, 1e7),   // UTC hour the run started (best time to farm)
+    name: kpqName(r.name)};   // the weekly ladder's display name (P1-5, 2026-11-02): the same IGN shape as KPQ's, opt-in (absent = no name)
   // honesty: no farming at all; monsters that don't live on this map; EXP bar and EXP messages that disagree a lot
   let why = null;
   if (run.kills < 1 || run.exp <= 0) why = "no kills";
@@ -43,6 +44,17 @@ export function cleanRun(r, G){
 
 // typical value of a list (half above, half below) and the middle half
 export function median(a){ const s = [...a].sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[n >> 1] : (s[n / 2 - 1] + s[n / 2]) / 2) : null }
+
+/* A map's physics ceiling (EXP/hour), for the weekly ladder's auto-flag pass (P1-5, 2026-11-02). Computed at
+   data build time (build_data.cjs): every spawn point on the map yielding a kill at most every 15 s times the
+   mob's base EXP, summed over the mobs with spawn data. Optimistic on purpose (respawn plus travel); a map
+   with no spawn data at all answers null and no ceiling applies. The ceiling only ever FLAGS a ladder line
+   (report, not reject — Minerva ADR 0032's pattern): counted-run honesty stays with the per-level cap above. */
+export const CEIL_KILLS_PER_SPAWN_HR = 240;
+export function mapCeiling(G, map){
+  const c = G.ceils && map != null ? G.ceils[String(map)] : null;
+  return typeof c === "number" && isFinite(c) && c > 0 ? c : null;
+}
 
 /* A KPQ round for the leaderboard. Same idea as cleanRun: a failed round is kept with the reason, not counted. The time
    limits are our own sanity bounds (no real round is under a minute), not game data. */

@@ -13,7 +13,7 @@
                      public summary. The page itself carries no data; the key is asked once and kept in the browser
                      (localStorage fbkey) */
 import G from "./gamedata.json" with {type: "json"};
-import {cleanRun, cleanKpq, cleanShop, cleanSpot, median, KPQ_MIN} from "./check.js";
+import {cleanRun, cleanKpq, cleanShop, cleanSpot, median, KPQ_MIN, mapCeiling} from "./check.js";
 import Kpq from "../../tracker/core/kpqscore.js";   // the same scoring the tracker previews with
 import {ADMIN_HTML} from "./admin.js";
 
@@ -53,6 +53,7 @@ async function postRun(req, env){
   const runId = ins.meta.last_row_id;
   if (r.hour != null || r.deaths != null || r.used_cost != null)
     await env.DB.prepare("INSERT OR REPLACE INTO run_extra (run_id, deaths, hour, used_cost) VALUES (?, ?, ?, ?)").bind(runId, r.deaths, r.hour, r.used_cost).run();
+  if (r.name) await env.DB.prepare("INSERT OR REPLACE INTO run_names (run_id, name) VALUES (?, ?)").bind(runId, r.name).run();   // the weekly ladder's display name (P1-5), opt-in
   const code = typeof body.partyCode === "string" ? body.partyCode.trim().toLowerCase().slice(0, 20) : "";
   if (code && r.party > 1){   // a code only groups party runs: friends soloing the same map with one code are separate players
     await env.DB.prepare("INSERT OR REPLACE INTO run_groups (run_id, grp) VALUES (?, ?)").bind(runId, await sha("party:" + code + await salt(env.DB))).run();
@@ -361,14 +362,14 @@ async function postForget(req, env){
   const one = async (k, sql) => { n[k] = (await db.prepare(sql).bind(i).run()).meta?.changes ?? 0 };
   await one("extra", "DELETE FROM run_extra WHERE run_id IN (SELECT id FROM runs WHERE install = ?)");
   await one("groups", "DELETE FROM run_groups WHERE run_id IN (SELECT id FROM runs WHERE install = ?)");
+  await one("run_names", "DELETE FROM run_names WHERE run_id IN (SELECT id FROM runs WHERE install = ?1 UNION SELECT id FROM runs_archive WHERE install = ?1)");   // the ladder's names go with the runs
   for (const t of ["names", "src", "raw"]) await one("kpq_" + t, `DELETE FROM kpq_${t} WHERE kpq_id IN (SELECT id FROM kpq_rounds WHERE install = ?1 UNION SELECT id FROM kpq_rounds_archive WHERE install = ?1)`);
   await one("runs", "DELETE FROM runs WHERE install = ?"); await one("runs_archive", "DELETE FROM runs_archive WHERE install = ?");
   await one("kpq", "DELETE FROM kpq_rounds WHERE install = ?"); await one("kpq_archive", "DELETE FROM kpq_rounds_archive WHERE install = ?");
-  await one("party", "DELETE FROM party_live WHERE install = ?"); await one("shop", "DELETE FROM shop_obs WHERE install = ?");
-  await one("shop_ext", "DELETE FROM shop_obs_ext WHERE obs_id IN (SELECT id FROM shop_obs WHERE install = ?1)");
+  await one("party", "DELETE FROM party_live WHERE install = ?"); await one("shop", "DELETE FROM shop_obs WHERE install = ?");  await one("shop_ext", "DELETE FROM shop_obs_ext WHERE obs_id IN (SELECT id FROM shop_obs WHERE install = ?1)");
   await one("spots", "DELETE FROM boss_spots WHERE install = ?");
-  await db.prepare("DELETE FROM meta WHERE k IN ('summary', 'shop_summary')").run();   // the cached public numbers rebuild without it
-  return json({ok: true, removed: n.runs + n.runs_archive + n.kpq + n.kpq_archive + n.shop + n.shop_ext + n.spots + n.party});
+  await db.prepare("DELETE FROM meta WHERE k IN ('summary', 'shop_summary', 'ladder')").run();   // the cached public numbers rebuild without it
+  return json({ok: true, removed: n.runs + n.runs_archive + n.kpq + n.kpq_archive + n.shop + n.shop_ext + n.spots + n.party + n.run_names});
 }
 const SHOP_PER_HOUR = 240, SHOP_PER_IP_DAY = 1500, SHOP_KEEP_DAYS = 14, SHOP_MIN_INSTALLS = 3;
 async function postShop(req, env){
@@ -442,6 +443,113 @@ async function getSpots(env, url){
     spots: results.map(r => ({mob: r.mob, name: G.mobnames?.[r.mob] || "Monster " + r.mob, sec: info[r.mob]?.sec ?? 3600, boss: !!(info[r.mob]?.boss), ch: r.ch, t: r.t, n: r.n}))});
 }
 
+/* Weekly grind ladder (P1-5) + weekly community map rates (P1-9), 2026-11-02.
+   Opt-in display names ride with runs (run_names, the KPQ-names pattern) and join per network the way the
+   KPQ boards join names. Anti-cheat adopts Minerva's two layers BEFORE launch (adoption plan item 5, ADR
+   0032): a physics ceiling per map flags impossible EXP/h (check.js mapCeiling, computed at data build
+   time), and a line over 2x the board's #1 with >= 8 other lines auto-flags — report, never reject, and a
+   flagged line is held back from the public board (the count says so) while every run stays in the owner's
+   inbox. One home network = one player, exactly as the summary joins them. */
+export const LADDER_MIN_MINUTES = 30;      // a board line needs this much farming in the week
+export const LADDER_OVER_TOP = 2;          // ...x the board's best ...
+export const LADDER_OVER_TOP_OTHERS = 8;   // ... with at least this many other lines on the board
+export const LADDER_RATE_MIN_PLAYERS = 2;  // a map's community rate shows once 2+ networks farmed it this week
+
+// the Monday 00:00 UTC a week covers: {key: "2026-11-02", start, end}
+export function weekBounds(now = new Date()){
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const mon = new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * 864e5);
+  return {key: mon.toISOString().slice(0, 10), start: mon.toISOString(), end: new Date(mon.getTime() + 7 * 864e5).toISOString()};
+}
+
+// rows = ok runs inside one week: {install, ipday, grp, map, map_name, party, level, job, minutes, exp, mesos, received, name}
+export function buildLadder(rows, G){
+  const uf = new Map(), find = k => { let r = k; while (uf.has(r) && uf.get(r) !== r) r = uf.get(r); uf.set(k, r); return r },
+    join = (a, b) => { const x = find(a), y = find(b); if (x !== y) uf.set(x, y) };
+  for (const r of rows) join("i" + r.install, "n" + r.ipday);
+  const net = install => find("i" + install);
+  const puf = new Map(), pfind = k => { let r = k; while (puf.has(r) && puf.get(r) !== r) r = puf.get(r); puf.set(k, r); return r };
+  for (const r of rows) if (r.grp && r.party > 1){ const x = pfind("p" + r.grp), y = pfind(net(r.install)); if (x !== y) puf.set(x, y) }
+  const gk = r => (r.party > 1 && r.grp ? "P" + pfind("p" + r.grp) : "S" + net(r.install));
+  // one fold serves every board: group lines (overall), group x map lines (per map), map x network (rates)
+  const fold = keyfn => {
+    const m = new Map();
+    for (const r of rows){
+      const k = keyfn(r);
+      if (k == null) continue;
+      const h = r.minutes / 60;
+      if (h <= 0) continue;
+      const e = m.get(k) || (m.set(k, {best: null, bestM: null, names: new Map(), minutes: 0, runs: 0}), m.get(k));
+      e.minutes += r.minutes; e.runs++;
+      if (r.name) e.names.set(r.install, r.name);
+      if (!e.best || r.exp / h > e.best.exp / (e.best.minutes / 60)) e.best = r;
+      if (!e.bestM || r.mesos / h > e.bestM.mesos / (e.bestM.minutes / 60)) e.bestM = r;
+    }
+    return m;
+  };
+  const toLine = (e, key) => { const b = e.best, h = b.minutes / 60;
+    return {key, names: [...new Set(e.names.values())].slice(0, 6), map: b.map, mapName: b.map_name, party: b.party, level: b.level, job: b.job,
+      expHr: Math.round(b.exp / h), mesosHr: Math.round(e.bestM.mesos / (e.bestM.minutes / 60)), minutes: Math.round(e.minutes), runs: e.runs, at: b.received} };
+  // the flag pass (see the block comment): (a) the map's physics ceiling, then (b) too far above the best
+  // surviving line once the board is busy enough to compare. Flagged lines leave the public list; `hidden` counts them.
+  const pub = (list, metric) => {
+    const all = [...list].filter(([, e]) => e.minutes >= LADDER_MIN_MINUTES).map(([k, e]) => toLine(e, Array.isArray(k) ? k[1] : k));
+    for (const l of all){ const c = mapCeiling(G, l.map); if (c != null && l.expHr > c) l.flag = "over the map's ceiling" }
+    const rank = all.filter(l => !l.flag).sort((a, b) => b[metric] - a[metric]);
+    if (rank.length > LADDER_OVER_TOP_OTHERS) for (const l of rank.slice(1)) if (l[metric] > LADDER_OVER_TOP * rank[0][metric]) l.flag = "too far above the board";
+    const rows = all.filter(l => !l.flag).sort((a, b) => b[metric] - a[metric]).slice(0, 50);
+    const lab = new Map(), g = l => { if (!lab.has(l.key)) lab.set(l.key, "l" + lab.size); return lab.get(l.key) };
+    return {rows: rows.map(l => ({group: g(l), ...l, key: undefined})), hidden: all.length - rows.length};
+  };
+  const groups = fold(gk);
+  const perMap = fold(r => (r.map == null ? null : [r.map, gk(r)]));   // key: [map, group] arrays
+  // community map rates (P1-9): the median over networks of each network's median EXP/h on the map this week
+  const byMapNet = new Map();
+  for (const r of rows){
+    if (r.map == null) continue;
+    const h = r.minutes / 60;
+    if (h <= 0) continue;
+    const m = byMapNet.get(r.map) || byMapNet.set(r.map, new Map()).get(r.map);
+    const e = m.get(net(r.install)) || m.set(net(r.install), {exp: [], mesos: []}).get(net(r.install));
+    e.exp.push(r.exp / h); e.mesos.push(r.mesos / h);
+  }
+  const rates = [...byMapNet].filter(([, nets]) => nets.size >= LADDER_RATE_MIN_PLAYERS).map(([map, nets]) =>
+    ({map, mapName: G.mapnames?.[String(map)] || null, expHr: Math.round(median([...nets.values()].map(v => median(v.exp)))),
+      mesosHr: Math.round(median([...nets.values()].map(v => median(v.mesos)))), players: nets.size}));
+  return {
+    players: new Set(rows.map(r => net(r.install))).size, runs: rows.length,
+    boards: {
+      overall: pub(groups, "expHr"),
+      mesos: pub(groups, "mesosHr"),
+      maps: Object.fromEntries([...new Set([...perMap.keys()].map(k => k[0]))].map(map =>
+        [map, pub(new Map([...perMap].filter(([k]) => k[0] === map).map(([k, e]) => [k[1], e])), "expHr")]))
+    },
+    rates
+  };
+}
+
+// GET /api/ladder: this week and last week, cached 5 minutes like the shop summary (a week of runs is a
+// small table; the cache only stops every visitor rebuilding it)
+async function ladderBody(db){
+  const wk = weekBounds();
+  const lastStart = new Date(Date.parse(wk.start) - 7 * 864e5).toISOString();
+  const {results} = await db.prepare(`SELECT r.install, r.ipday, r.map, r.map_name, r.party, r.level, r.job, r.minutes, r.exp, r.mesos, r.received, g.grp, n.name
+    FROM runs r LEFT JOIN run_groups g ON g.run_id = r.id LEFT JOIN run_names n ON n.run_id = r.id
+    WHERE r.ok = 1 AND r.received >= ?`).bind(lastStart).all();
+  const mk = rows => { const b = buildLadder(rows, G); return {players: b.players, runs: b.runs, boards: b.boards, rates: b.rates} };
+  return {updated: new Date().toISOString(), week: wk,
+    this: mk(results.filter(r => r.received >= wk.start)),
+    last: mk(results.filter(r => r.received < wk.start)),
+    note: "names are the display names players chose to send; flagged lines are held back, never deleted"};
+}
+async function getLadder(env){
+  const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'ladder'").first();
+  let body = row?.v;
+  try { if (!body || Date.now() - Date.parse(JSON.parse(body).updated) > 5 * 60e3) body = null } catch { body = null }
+  if (!body){ body = JSON.stringify(await ladderBody(env.DB)); await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('ladder', ?)").bind(body).run() }
+  return new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=300", ...CORS}});
+}
+
 async function route(req, env){
   const url = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
@@ -452,6 +560,7 @@ async function route(req, env){
   if (url.pathname === "/api/spots" && req.method === "POST") return postSpot(req, env);
   if (url.pathname === "/api/spots" && req.method === "GET") return getSpots(env, url);
   if (url.pathname === "/api/shop/summary" && req.method === "GET") return getShopSummary(env);
+  if (url.pathname === "/api/ladder" && req.method === "GET") return getLadder(env);
   if (url.pathname === "/api/party" && req.method === "POST") return partyLive(req, env);
   if (url.pathname === "/api/feedback" && req.method === "POST") return postFeedback(req, env);
   if (url.pathname === "/api/feedback" && req.method === "GET") return getFeedback(req, env);

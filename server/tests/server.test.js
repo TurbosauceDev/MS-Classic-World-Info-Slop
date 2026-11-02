@@ -394,3 +394,55 @@ console.log("server tests passed");
   assert.strictEqual(count("shop_obs", other), 1, "another install is untouched");
 }
 
+
+// Weekly grind ladder (P1-5) + weekly community map rates (P1-9), 2026-11-02: names ride with runs, boards
+// join per network/party, the physics ceiling and the over-the-board rule hold lines back (never delete),
+// "Delete what I shared" takes the names with it.
+{
+  const get = async () => { const r = await worker.fetch(new Request("https://x/api/ladder"), env); return [r.status, await r.json()] };
+  const lv = Object.keys(G.exp).map(Number).sort((a, b) => a - b).find(l => G.exp[l] >= 1e5);   // a level the 2x cap lets a big run through at
+  assert.ok(lv, "a level with enough total EXP exists");
+  const week = (await import("../src/index.js")).weekBounds(new Date());
+  assert.strictEqual(new Date(week.start).getUTCDay(), 1, "the ladder week starts Monday");
+  assert.strictEqual(new Date(week.start).getUTCHours(), 0, "at 00:00 UTC");
+
+  // two honest players (one network each) + one party of two, all named
+  const ip = i => "10.7.7." + i;
+  const lvRun = (inst, exp, extra) => run(inst, exp, {level: lv, ...extra});   // big-enough runs need the level that allows them
+  const partyCode = {partyCode: "snails"};
+  for (let i = 0; i < 2; i++){   // a board line needs 30+ farmed minutes: two 15-min runs each
+    await post({...lvRun("ladderplayer00001", 3000, {name: "Turbow"})}, ip(1));
+    await post(lvRun("ladderplayer00002", 3000, {name: "Glorg"}));
+    await post(lvRun("partyoneparty0001", 3000, {party: 4, name: i ? "Bob" : "Alice"}));   // one install: the latest name wins
+    await post(lvRun("partytwoparty0002", 3000, {party: 4, name: "Cara", ...partyCode}));
+    await post(lvRun("partytwoparty0003", 3000, {party: 4, name: "Dan", ...partyCode}));
+  }
+  // a line over the map's physics ceiling (map 42's is ~31k/h): stored, ok, but held off the board
+  const over = 40000;   // 160k/h, past the ceiling, under the 2x-per-level cap at lv
+  for (let i = 0; i < 2; i++) await post(run("ceilingrider00001", over, {level: lv, msgExp: over, barExp: over, kills: 100, name: "Flash"}));
+  let [s, l] = await get();
+  assert.strictEqual(s, 200);
+  const ov = l.this.boards.overall.rows;
+  assert.ok(ov.length >= 3, "board has the honest lines: " + JSON.stringify(ov.map(x => x.expHr)));
+  assert.ok(ov.every(x => x.expHr < 160000), "no impossible line on the board");
+  assert.ok(ov.some(x => x.names.includes("Turbow")) && ov.some(x => x.names.includes("Glorg")), "names ride with the runs");
+  assert.ok(l.this.boards.overall.hidden >= 1, "the ceiling line is held back, not deleted");
+  assert.ok(!ov.some(x => x.names.includes("Flash")), "the ceiling rider is not on the public board");
+  // party: two installs with one code and party 4 are ONE line with both names
+  const cara = ov.find(x => x.names.includes("Cara"));
+  assert.ok(cara && cara.names.includes("Dan"), "the coded party is one line with both names: " + JSON.stringify(cara && cara.names));
+  // mesos board ranks by mesos/h
+  assert.ok(l.this.boards.mesos.rows.every(x => x.mesosHr >= 0), "mesos board present");
+  // rates: map 42 now has 3 networks
+  const rate = l.this.rates.find(x => x.map === "42");
+  assert.ok(rate && rate.players >= 3, "map 42 has a community rate: " + JSON.stringify(l.this.rates));
+  assert.ok(rate.mapName === "Snail Hunting Ground III" || rate.mapName, "the rate names the map");
+  // the ladder cache answers again from meta
+  [s, l] = await get();
+  assert.strictEqual(s, 200);
+  // "Delete what I shared" takes the names with the runs
+  await worker.fetch(new Request("https://x/api/forget", {method: "POST", body: JSON.stringify({install: "ladderplayer00001"}), headers: {"cf-connecting-ip": ip(1)}}), env);
+  [s, l] = await get();
+  assert.ok(!l.this.boards.overall.rows.some(x => x.names.includes("Turbow")), "forgotten names leave the board");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM run_names").get().n >= 1, true, "other names stay");
+}

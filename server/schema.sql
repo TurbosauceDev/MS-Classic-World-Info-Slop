@@ -142,3 +142,8 @@ CREATE TABLE IF NOT EXISTS boss_spots (
 );
 CREATE INDEX IF NOT EXISTS boss_spots_map ON boss_spots (map, received);
 CREATE INDEX IF NOT EXISTS boss_spots_install ON boss_spots (install, received);
+
+-- Weekly grind ladder (P1-5, 2026-11-02): the display name a tracker chose to send with a run (the Settings
+-- nick, opt-in like the party view's; same IGN shape the KPQ board's names use). Side table: schema.sql
+-- re-runs on every deploy. The tracker's "Delete what I shared" clears it along with the runs.
+CREATE TABLE IF NOT EXISTS run_names (run_id INTEGER PRIMARY KEY, name TEXT NOT NULL);

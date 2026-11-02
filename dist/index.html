@@ -1314,6 +1314,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
     <button role="tab" id="t-trkruns" aria-selected="false" data-tab="trkruns" data-cat="trk" hidden><img class="nic" data-pool="trkruns" alt="">Shared runs</button>
     <button role="tab" id="t-kpqt" aria-selected="false" data-tab="kpqt" data-cat="trk" hidden><img class="nic" data-pool="kpqt" alt="">KPQ timer</button>
     <button role="tab" id="t-trkkpq" aria-selected="false" data-tab="trkkpq" data-cat="trk" hidden><img class="nic" data-pool="trkkpq" alt="">KPQ leaderboard</button>
+    <button role="tab" id="t-ladder" aria-selected="false" data-tab="ladder" data-cat="trk" hidden><img class="nic" data-pool="ladder" alt="">Weekly ladder</button>
     <button role="tab" class="sgh" id="t-char" aria-selected="false" data-tab="char" data-cat="char" hidden><img class="nic" data-pool="g_char" alt=""><span class="sgt">Character Builder</span><span class="sgo">Overview</span></button>
     <button role="tab" id="t-plan" aria-selected="false" data-tab="plan" data-cat="char" hidden><img class="nic" data-pool="plan" alt="">Build calculator</button>
     <button role="tab" class="sgh" id="t-train" aria-selected="false" data-tab="train" data-cat="train" hidden><img class="nic" data-pool="g_train" alt=""><span class="sgt">Training</span><span class="sgo">Overview</span></button>
@@ -2129,6 +2130,36 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 .kb-fast .kb-who{font:500 13px var(--f-body);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @keyframes kbin{from{opacity:0;transform:translateY(-3px)}}
 @media (max-width:600px){.kb-split{min-width:0;flex-wrap:wrap}.kb-split span{flex:1 1 28%!important}}
+</style>
+</section>
+<section id="ladder" hidden>
+  <details class="howto">
+    <summary>About the weekly ladder</summary>
+    <ul>
+      <li>EXP and mesos per hour from <a href="#" data-go="trk">Grind Tracker</a> players with sharing on, ranked over one week (Monday 00:00 UTC, reset every Monday). One line per player (home network) or party (same party code).</li>
+      <li>The name on a line is the display name that player chose in the tracker's Settings (opt-in — the field is empty by default). No name shows as an unnamed grinder.</li>
+      <li>A board line ranks the best run of the week and also shows the week's total farmed time; a line needs 30 farmed minutes to appear.</li>
+      <li><b>Watchdogs</b>: a run far above what a map's spawn points can physically give, or far above the rest of a busy board, is held back — the count under the board says how many. Held-back runs stay in the owner's inbox; nothing is deleted and no one is named.</li>
+      <li><b>Map rates</b>: what the community actually measures on a map this week — the median over players of each player's median EXP/h there. A map shows once 2+ players farmed it this week.</li>
+    </ul>
+  </details>
+  <p class="note" id="laddermeta"></p>
+  <div class="seg" id="ladderweek" role="group" aria-label="Which week">
+    <button type="button" data-w="this" class="on">This week</button><button type="button" data-w="last">Last week</button>
+  </div>
+  <div id="ladderdata"><p class="note">Opening the ladder…</p></div>
+<style>
+#ladder .lad-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+#ladder .lad-tabs button{font:13.5px var(--f-body);padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+#ladder .lad-tabs button.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+#ladder .lad-tabs select{font:13.5px var(--f-body);padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+#ladder table{width:100%;border-collapse:collapse;margin:6px 0 14px}
+#ladder th{font-size:12px;color:var(--muted);text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+#ladder td{font-size:13.5px;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+#ladder tr:first-child td{font-weight:600}
+#ladder .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#ladder .sub{color:var(--muted);font-size:12px}
+#ladder .party{font-size:11px;border:1px solid var(--line);border-radius:6px;padding:0 5px;margin-left:4px;color:var(--muted)}
 </style>
 </section>
 <section id="quests" hidden>
@@ -2966,6 +2997,8 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   </details>
 
   <div class="changelog">
+    <div class="card" data-t="2026-11-02T01:45:00Z"><div class="cardhead"><h3><span class="ver">v0.20.12</span> Nov 2, 2026 · Weekly grind ladder + community map rates</h3></div>
+      <p>New <b>Weekly ladder</b> page (Grind Tracker section): EXP and mesos per hour from shared runs, ranked over one week (resets Monday 00:00 UTC), one line per player or party — overall and per map. The name on a line is the display name you choose in the tracker's Settings (opt-in, empty by default). Two watchdogs hold lines back that no map's spawn points could physically give or that sit far above a busy board; nothing is deleted and nobody is named. The same page lists <b>community map rates</b> — what players actually measure on a map this week, shown once 2+ players farmed it. Tracker 0.3.35+ sends the optional name with runs.</p></div>
     <div class="card" data-t="2026-11-01T23:30:00Z"><div class="cardhead"><h3><span class="ver">v0.20.11</span> Nov 1, 2026 · Minimaps light up each monster's spawns</h3></div>
       <p>Every map's minimap (World Map cards and map name previews) now dots where each monster spawns, one color per monster, next to the numbered exits. Point at a monster in the legend, or at a dot, and only that monster's spawn points stay lit; each dot names its monster. Spawn points are from the game files.</p></div>
     <div class="card" data-t="2026-11-01T22:40:00Z"><div class="cardhead"><h3><span class="ver">v0.20.10</span> Nov 1, 2026 · Price check now tells you what to do</h3></div>
@@ -3690,7 +3723,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-11-01T23:19:26Z" data-ver="0.20.11">Site version: v0.20.11 · built Nov 1, 2026 · 23:19 UTC</p>
+  <p class="sitever" data-built="2026-11-02T00:42:27Z" data-ver="0.20.12">Site version: v0.20.12 · built Nov 2, 2026 · 00:42 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -13427,6 +13460,86 @@ function render(){
 render();
 })();
 
+/* ---------------- Weekly grind ladder (#ladder, P1-5) + community map rates (P1-9), 2026-11-02 ----------------
+   Reads GET /api/ladder (the Worker; server/src/index.js ladderBody): this week and last week, boards ranked by
+   the week's best run (overall EXP, overall mesos, per map), community map rates, and how many lines the two
+   watchdogs (the map's physics ceiling, too-far-above-a-busy-board) are holding back. Names are the display
+   names players chose to send — the same opt-in nick the party view uses. The KPQ leaderboard page
+   (68-trkkpq.js) is the shape this page follows. */
+const LADDER_API = "https://ms-classic-tracker.maplestoryclassic.workers.dev/api/ladder";
+const LAD = (() => {
+const $l = id => document.getElementById(id);
+const fmt = n => n == null ? "–" : Number(n).toLocaleString("en-US");
+const hm = min => { const h = Math.floor(min / 60), m = Math.round(min % 60); return h ? h + " h " + (m ? m + " min" : "") : m + " min" };
+const when = iso => { try { return new Date(iso).toLocaleDateString(undefined, {month: "short", day: "numeric"}) } catch { return "" } };
+let data = null, week = "this", view = "overall", map = "", busy = false;
+
+function meta(w){
+  const wk = w === "last" ? "Last week" : "This week";
+  const upd = data?.updated ? new Date(data.updated).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}) : "";
+  const d = data?.[w] || {};
+  return `${wk} · ${d.players || 0} player${d.players === 1 ? "" : "s"} · ${fmt(d.runs)} run${d.runs === 1 ? "" : "s"} shared` + (upd ? ` · updated ${upd}` : "");
+}
+function board(tbl){
+  const rows = tbl?.rows || [], hid = tbl?.hidden || 0;
+  if (!rows.length) return `<p class="note">Nothing on this board yet — it fills as players share runs this week.</p>`;
+  const body = rows.map((r, i) => `<tr>
+    <td class="num">${i + 1}</td>
+    <td>${r.names.length ? r.names.map(esc).join(", ") : `<span class="sub">unnamed grinder</span>`}${r.party > 1 ? `<span class="party">party</span>` : ""}</td>
+    <td>${esc(r.mapName || (r.map ? "Map " + r.map : "Unknown map"))}${r.level ? ` <span class="sub">Lv ${r.level}${r.job ? " " + esc(r.job) : ""}</span>` : ""}</td>
+    <td class="num">${fmt(r.expHr)}</td>
+    <td class="num">${fmt(r.mesosHr)}</td>
+    <td class="num">${hm(r.minutes)}</td>
+    <td class="num sub">${when(r.at)}</td>
+  </tr>`).join("");
+  return `<table><thead><tr><th></th><th>Player${rows.some(r => r.party > 1) ? " / party" : ""}</th><th>Best run on</th><th class="num">EXP / h</th><th class="num">Mesos / h</th><th class="num">Farmed</th><th class="num">Best</th></tr></thead><tbody>${body}</tbody></table>`
+    + (hid ? `<p class="note">${hid} line${hid === 1 ? " is" : "s are"} held back by the watchdogs (never deleted).</p>` : "");
+}
+function rates(){
+  const list = (data?.[week]?.rates || []).slice().sort((a, b) => b.expHr - a.expHr);
+  if (!list.length) return `<p class="note">No map has 2+ players this week yet — rates appear as friends farm the same maps.</p>`;
+  return `<table><thead><tr><th>Map</th><th class="num">Players</th><th class="num">EXP / h (community)</th><th class="num">Mesos / h</th></tr></thead><tbody>`
+    + list.map(r => `<tr><td>${esc(r.mapName || "Map " + r.map)}</td><td class="num">${r.players}</td><td class="num">${fmt(r.expHr)}</td><td class="num">${fmt(r.mesosHr)}</td></tr>`).join("")
+    + `</tbody></table>`;
+}
+function render(){
+  const d = data?.[week];
+  if (!d){ $l("ladderdata").innerHTML = `<p class="note">The ladder didn't answer (offline?). Try again in a minute.</p>`; $l("laddermeta").textContent = ""; return }
+  $l("laddermeta").textContent = meta(week);
+  const maps = Object.keys(d.boards?.maps || {});
+  const tabs = [["overall", "Overall EXP"], ["mesos", "Mesos"], ["rates", "Map rates"],
+    ...(maps.length ? ["|"] : [])].flat();
+  let html = `<div class="lad-tabs">${tabs.map(t => t === "|" ? `<select id="laddmap" aria-label="Which map's board"><option value="">A single map…</option>${maps.map(m => `<option value="${esc(m)}"${map === m ? " selected" : ""}>${esc(d.boards.maps[m].rows[0]?.mapName || "Map " + m)}</option>`).join("")}</select>`
+    : `<button type="button" data-v="${t}" class="${view === t ? "on" : ""}">${{overall: "Overall EXP", mesos: "Mesos", rates: "Map rates"}[t]}</button>`).join("")}</div>`;
+  html += view === "rates" ? rates() : view === "mesos" ? board(d.boards?.mesos)
+    : map && d.boards?.maps?.[map] ? board(d.boards.maps[map]) : board(d.boards?.overall);
+  if (view !== "rates" && !map) html += `<p class="note sub">Ranked by the week's best run per player or party. Pick "A single map" for per-map boards.</p>`;
+  $l("ladderdata").innerHTML = html;
+}
+async function open(){
+  if (data || busy) return render();
+  busy = true;
+  try { const r = await fetch(LADDER_API, {signal: AbortSignal.timeout(15e3)}); data = r.ok ? await r.json() : null } catch {}
+  busy = false;
+  render();
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("#ladderdata .lad-tabs button");
+  if (b){ view = b.dataset.v; if (view !== "overall" && view !== "mesos") map = ""; else map = ""; render() }
+});
+$l("ladderdata").addEventListener("change", e => { if (e.target.id === "laddmap"){ map = e.target.value; if (map) view = "map"; else view = "overall"; render() } });
+for (const b of $l("ladderweek").querySelectorAll("button")) b.addEventListener("click", () => {
+  week = b.dataset.w;
+  for (const x of $l("ladderweek").querySelectorAll("button")) x.classList.toggle("on", x === b);
+  if (view === "map" && !(data?.[week]?.boards?.maps || {})[map]) view = "overall";
+  render();
+});
+const t = document.getElementById("t-ladder");
+t?.addEventListener("click", open);
+if (t && !t.hidden) queueMicrotask(open);   // opened by a deep link: the tab is already visible
+return {open, render};
+})();
+
 /* ---------------- Grind Tracker page: the Windows app + what its players shared ---------------- */
 // Data: the tracker server's /api/summary. The copy embedded at build (D.shared, scripts/fetch_shared.py) shows first; on
 // opening the page we also ask the server for the latest (it allows any site; blocked in some previews, then the copy stays).
@@ -13571,6 +13684,7 @@ for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click",
 // Releasing? Add a line for the new version at the top: tests/core.test.js fails if the top entry isn't package.json's version.
 (function (root){
   const LOG = [
+    ["0.3.34", "2026-11-02", "The shop reader got a neural text engine. A small recognition model (9.7 MB, the ocrs project's, used with permission and credited in the app) now reads the shop rows locally: on our test shop it reads every name and every price as well as the old engine, in about a sixth of the time, so the Shop prices card — and the automatic shop watch — answers noticeably faster while you browse. The shop's title bar still reads with the old engine (a seller's name must not come back wrong), anything the model reads empty or badly falls back to the old engine automatically, and the two-read price check is untouched. Like everything here, the model runs on your PC only: nothing new leaves it."],
     ["0.3.33", "2026-11-02", "Pickup lines are read ten times a second instead of twice. Only the pickup log's corner of the game picture is cut out and read (a few percent of the frame), on its own, so a burst of kills no longer slips between looks. Lines are matched by their <b>shape</b> (a faded line that reads partly as \"?\" is still the same line), and two identical lines in a row (<b>You received EXP (+15)</b> twice) are both counted: the stack growing is new lines for certain, and a brand-new line is brighter than the older ones above it. Each new line is read on the next looks too and the reading most of them agree on wins, so one smeared frame can't put a wrong amount into your run. If the fast reader stalls for 1.5 s the whole-frame reads take over again. The Performance monitor shows the band's looks and cost. Still screen-reading only: pixels in, numbers out."],
     ["0.3.32", "2026-11-01", "Always on. You no longer have to press Start: the tracker watches the game and starts a run on your first EXP gain, then saves it after 2 minutes with no EXP. The next gain starts a fresh run. <b>Start and Stop still work</b>, and a run you start by hand is never ended for you. Settings > Window and sharing has a switch to turn it off (it reads the game window slowly while no run is going, so Windows shows its capture border)."],
     ["0.3.31", "2026-11-01", "Map &amp; spawns card gets a minimap. The card now draws the current map with a dot for every spawn point, coloured per monster, and numbered exits (hidden ones dashed). Hover a monster row to light up its dots, or hover a dot to see which monster it is. Turn it off in the card's options (Minimap). Shown for the monsters the game files have spawn points for; the rest stay in the list only."],
@@ -14535,7 +14649,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
   const skills = Object.values(D.skills).flat(), skill = n => skills.filter(s => s.n === n && D.icons[s.id]).slice(0, 1).map(s => "s:" + s.id);
   const kpq = ["m:800000", "m:800001", "m:800002", "m:800003", "i:4001001", "i:4001002"];   // Ligator, Jr. Necki, Curse Eye, King Slime, Coupon, Pass
   const P = {
-    home: ["m:2"], trk: mobs, trkhow: ["i:4031032"], trkruns: mobs, trkkpq: kpq, kpqt: kpq,
+    home: ["m:2"], trk: mobs, trkhow: ["i:4031032"], trkruns: mobs, trkkpq: kpq, kpqt: kpq, ladder: kpq,
     plan: I(known.filter(i => D.items[i].c === "Equipment")), skills: Object.keys(D.icons).map(i => "s:" + i),
     maps: mobs, path: I(Object.keys(D.potval)), qlog: ["i:4031000", "i:4031001", "i:4031002", "i:4031009", "i:4031011"], expc: ["s:4101001"], kpq,
     wmap: I(["2030000", "2030001", "2030002", "2030003", "2030004", "2030005", "2030006"]),   // launch towns only

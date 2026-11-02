@@ -35,8 +35,9 @@ async function start(){
   finally { starting = false }
   timer = 0;   // running (the first tick sets the real timeout)
   session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: goalOf(), freeIds: freeIds()}); stopWarned = false;
-  // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on)
-  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, partyCode: settings.partyCode || null}) } showSpeed(run) }});
+  // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on);
+  // the Settings nick rides along for the weekly ladder's display name (opt-in — absent when the box is empty)
+  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, name: (settings.nick || "").trim() || undefined, partyCode: settings.partyCode || null}) } showSpeed(run) }});
   jr.runStart(session); autoRun = {auto, lastGain: Date.now(), bar: null, level: 0};
   wrap = null; runT0 = Date.now(); $("#summary").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   kpqReset(); held = false; barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; boxHad = 0; boxPending = null; boxSeen = new Map(); Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
