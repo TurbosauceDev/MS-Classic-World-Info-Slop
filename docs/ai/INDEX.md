@@ -12,6 +12,7 @@ onboarding; this INDEX is the topic → file map for working. Keep both honest w
 | Onboarding / reading order / agent norms | `docs/ai/START-HERE.md` |
 | What changed recently, site + tracker + pipeline | `docs/ai/daily-briefing.md` (refreshed daily) |
 | The whole week's narrative (day by day) | the newest `docs/ai/handoff-to-claude-2026-10-28.md` style file |
+| New Claude / Hermes agent onboarding | `docs/ai/handoff-new-claude-2026-11-02.md` |
 | A decision Danny or an agent made | `docs/ai/decisions.md` (grep it before proposing anything) |
 | Where every open thread / request lives | `docs/ai/agent-mailbox.md` § Open (claim with a lease line) |
 | Old mailbox threads (monthly archive) | `docs/ai/archive/agent-mailbox-2026-10.md` (October) |
