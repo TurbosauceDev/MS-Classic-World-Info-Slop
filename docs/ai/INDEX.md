@@ -14,6 +14,7 @@ onboarding; this INDEX is the topic → file map for working. Keep both honest w
 | The whole week's narrative (day by day) | the newest `docs/ai/handoff-to-claude-2026-10-28.md` style file |
 | A decision Danny or an agent made | `docs/ai/decisions.md` (grep it before proposing anything) |
 | Where every open thread / request lives | `docs/ai/agent-mailbox.md` § Open (claim with a lease line) |
+| Old mailbox threads (monthly archive) | `docs/ai/archive/agent-mailbox-2026-10.md` (October) |
 | Site: pages, cards, internals, history | `docs/ai/site.md`, `docs/ai/site-history.md`, `docs/ai/design.md` (visual law), `tests/features.js` + `tests/pages.js` (executable spec) |
 | Outside sites investigated (MesoLens etc.) | `docs/ai/external-sites.md` |
 | Roll back a bad push, restore the database | `docs/ai/runbook-recovery.md` |

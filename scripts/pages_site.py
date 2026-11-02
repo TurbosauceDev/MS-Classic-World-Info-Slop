@@ -43,14 +43,20 @@ def split(html):
     D["lazy2"] = "prices.json"
     data = json.dumps(D, separators=(",", ":")).replace("<", "\\u003c")
     out = html[:m.start(2)] + data + html[m.end(2):]
-    # boot: parse the shell data, fetch pointer + prices, merge, and only then run the app (wrapped below)
+    # boot: parse the shell data, fetch pointer + prices, merge, and only then run the app (wrapped below).
+    # The chain ends .catch(() => null): only HTTP-error statuses became null before, so a transport-level
+    # reject (offline first visit, connection reset mid-boot, truncated json) rejected __PRICES itself and the
+    # whole app — living inside __PRICES.then — never ran (round 2: dead buttons, no error, no retry). The app
+    # tolerates missing market data (54-invprice guards D.pw), so degrade to a no-prices boot instead.
     boot = ('<script>\nwindow.__D = JSON.parse(document.getElementById("sitedata").textContent);\n'
             'window.D = window.__D;   // the app declares its own const D inside the wrapper; this one is for tests and the console\n'
+            # the app indexes several of these unguarded (D.ishop[id] in 49-items.js): a missing payload seeds
+            # empties, so a no-prices boot is a real boot (a prices 404 could hit this even before the round-2 fix)
+            'for (const k of ' + json.dumps(list(PRICES)) + ') window.__D[k] || (window.__D[k] = {});\n'
             'window.__PRICES = (window.__D.lazy2 ? fetch(window.__D.lazy2, {cache: "no-store"})\n'
             '  .then(r => r.ok ? r.json() : null).then(m => m ? fetch(m.url).then(r => r.ok ? r.json() : null).then(p => {\n'
             '    if (p) { for (const k of m.keys) if (p[k]) Object.assign(window.__D[k] || (window.__D[k] = {}), p[k]); if (p.srcd) window.__SRCD = p.srcd }\n'
-            '    return p }) : null) : Promise.resolve(null));\n'
-            'window.__PRICES.catch(() => {});\n</script>\n')
+            '    return p }) : null) : Promise.resolve(null)).catch(() => null);\n</script>\n')
     app = re.search(r'<script>\n(const D = JSON\.parse\(document\.getElementById\("sitedata"\)\.textContent\);)', out)
     assert app, "app script not found"
     out = out[:app.start()] + boot + '<script>\nwindow.__PRICES.then(() => {\nconst D = window.__D;\n' + out[app.end():]
@@ -67,7 +73,7 @@ def split(html):
             '<meta property="og:type" content="website">\n<meta property="og:site_name" content="MS Classic World Data Slop">\n'
             '<meta property="og:title" content="MS Classic World Data Slop">\n'
             '<meta property="og:description" content="Planner, prices and grind tracker for MapleStory Classic World, built from the game files.">\n'
-            '<meta property="og:image" content="https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/icon-512.png">\n'
+            '<meta property="og:image" content="https://maplestory.scumlord.studio/icon-512.png">\n'   # the canonical host (00-routes.js, sitemap): the legacy github.io project URL breaks silently on a rename (round 2)
             '<meta name="twitter:card" content="summary">\n<meta name="description" content="Planner, prices and grind tracker for MapleStory Classic World, built from the game files.">\n')
     assert "<title>" in out
     out = out.replace("<title>", head + "<title>", 1)

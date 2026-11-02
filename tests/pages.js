@@ -22,6 +22,8 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
   check(pfile && pointer.url === pfile && ["pw", "mw", "cmp", "mdb"].every(k => pointer.keys.includes(k)), `prices pointer names the hashed file and covers the market keys (${pointer.url})`);
   const shellData = JSON.parse(fs.readFileSync(path.join(OUT, "index.html"), "utf8").match(/<script type="application\/json" id="sitedata">([\s\S]*?)<\/script>/)[1]);
   check(!shellData.pw && shellData.lazy2 === "prices.json" && shellData.lazy?.url === "assets.json", "the pages shell carries no market data, only the pointers");
+  const shellHtml = fs.readFileSync(path.join(OUT, "index.html"), "utf8");
+  check(/__PRICES = \([\s\S]*Promise\.resolve\(null\)\)\.catch\(\(\) => null\);/.test(shellHtml), "the boot chain ends .catch(() => null): a rejected prices fetch can't leave the app unbooted");
   const art = fs.readFileSync(path.join(ROOT, "dist/index.html"), "utf8");
   check(!/rel="manifest"/.test(art) && !/"lazy":/.test(art) && !/lazy2|__PRICES/.test(art), "the artifact build has no manifest and no split");
   const man = JSON.parse(fs.readFileSync(path.join(OUT, "manifest.webmanifest"), "utf8"));
@@ -78,6 +80,15 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
     await p.goto(URL); await booted(p); await p.evaluate(() => window.ASSETS); await p.waitForTimeout(100);
     const mm = await p.evaluate(() => Object.keys(D.mmaps || {}).length);
     check(!errs.length && killed >= 2 && mm > 100, `a vanished assets file is retried through the pointer (${killed} fetches, ${mm} minimaps)`);
+    await ctx.close() }
+
+  // 3c. a prices fetch that rejects at the transport level (offline first visit, connection reset mid-boot) used to
+  // reject __PRICES itself — and the whole app lives inside __PRICES.then, so nothing ever booted (round 2)
+  { const {p, errs, ctx} = await page();
+    await p.route(/prices(-[0-9a-f]+)?\.json$/, route => route.abort());
+    await p.goto(URL); await booted(p);
+    const items = await p.$$eval("#home img[data-ic]", l => l.length);
+    check(!errs.length && items > 0, `the app boots without prices when the fetch rejects (${items} home sprites, no page errors)`);
     await ctx.close() }
 
   // 4. offline: once the service worker has the page, it opens with no network, icons and prices included

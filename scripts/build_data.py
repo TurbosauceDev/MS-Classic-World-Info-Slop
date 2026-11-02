@@ -28,6 +28,11 @@ from name_fix import ITEM_NAME_FIX   # OSMS drops Ü/ü from item names
 items_json = json.load(open(C + "items.json"))
 ALL_ITEMS = [x for v in items_json.values() if isinstance(v, list) for x in v if isinstance(x, dict)]
 ITEM = {str(i["id"]): i for i in ALL_ITEMS}
+# an export bump with duplicated ids silently kept the last row (dict-comprehension last-wins): say so loudly
+# instead (round 2 — the poll logs are the only place anyone would notice rows disappearing)
+if len(ITEM) != len(ALL_ITEMS):
+    dupes = [i for i, n in collections.Counter(str(x["id"]) for x in ALL_ITEMS).items() if n > 1]
+    print(f"WARNING: items.json has {len(dupes)} duplicated id(s), last row wins: {dupes[:10]}", file=sys.stderr)
 QUESTS = json.load(open(C + "quests.json"))
 QUESTS = QUESTS if isinstance(QUESTS, list) else next(v for v in QUESTS.values() if isinstance(v, list))
 b64 = lambda p: base64.b64encode(open(p, "rb").read()).decode()
@@ -199,9 +204,14 @@ def add_items(D, ids):
     for iid in sorted(set(ids) - set(D["items"])):   # sorted so rebuilds are byte-identical
         i = ITEM[iid]
         st = {k: v for k, v in (i.get("stats") or {}).items() if k in KEEP}
+        # the export occasionally ships the price as a string ("1800"): coerce numeric strings, drop junk
+        # (one item landed in data.json as "p": "1800" among ints — a latent schema break, round 2)
+        price = i.get("price") or st.get("price")
+        if isinstance(price, str) and price.isdigit(): price = int(price)
+        elif not isinstance(price, (int, float)): price = None
         D["items"][iid] = {"n": ITEM_NAME_FIX.get(iid, i["name"]), "c": i.get("category") or ("Scroll" if i.get("stat_type") or "Scroll" in i["name"] else ""),
                      "s": i.get("sub_category") or i.get("equip_slot") or "", "st": st, "job": i.get("req_job_label"),
-                     "p": i.get("price") or st.get("price"), "d": (i.get("description") or "").strip(),
+                     "p": price, "d": (i.get("description") or "").strip(),
                      "wt": i.get("weapon_type"), "spd": i.get("attack_speed_label"), "sp": i.get("spec")}
         p = C + f"images/items/{int(iid):08d}.png"
         if os.path.exists(p): D["iicons"][iid] = b64(p)
@@ -704,7 +714,9 @@ def step_prices(D):
         if h[-1][2] < 5 and prev > 0 and (p[0] > prev * 3 or p[0] * 3 < prev):
             p[0] = prev; p[4] |= 4; held += 1
     if held: print(f"price breaker: held yesterday's median for {held} spike items (<5 sales today)")
-    D["pw"] = {"read": j["read"], "it": it, "hist": hist}
+    # generated (full ISO, fetch_mesowatch.py) rides along: the site's stale-source pill and Source-health panel
+    # read D.pw.generated — without it meso.watch could sit frozen for days while both showed "fresh" (round 3)
+    D["pw"] = {"read": j["read"], "generated": j.get("generated", ""), "it": it, "hist": hist}
     if "now" in j:   # cheapest live listing per non-equip item {itemId: [price each, qty, channel, map, seller]}, as of "listed"
         D["pw"].update(listed=j["listed"], srclisted=j.get("src_listed", ""), now={k: v for k, v in j["now"].items() if k in D["items"] and not is_bl(k)})
         # every live listing + when we first saw it {itemId: [[price each, qty, channel, map, seller, firstSeenUnixMin|None]]} (seen: parallel to asks)

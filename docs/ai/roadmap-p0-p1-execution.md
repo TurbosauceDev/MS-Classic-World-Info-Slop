@@ -146,7 +146,9 @@ unattributed source, never put secrets in filenames.
   Turbozo 2026-11-01) behind the 3-player quorum; boss spots add `{boss, ch, t}` with
   witness counts only — location without identity, the one place anonymity is the feature.
 - "Delete what I shared" erases every row an install sent, side tables included — the
-  2026-11-02 bug hunt found and fixed the shop-name rows surviving it (delete order).
+  2026-11-02 bug hunt found and fixed the shop-name rows surviving it (delete order);
+  round two extended it into the 2026-10-30 KPQ reset's backup tables, which kept a
+  forgotten install's rounds and board names forever.
 - Updates stay on GitHub Releases with a public hash history; no filename tokens ever.
 - Data licensing unchanged: OSMS CC BY 4.0 + named, permitted sources with attribution.
 - Watchlist continues: re-run the installer sweep + overlap check on the next MesoLens
@@ -172,3 +174,118 @@ bug-hunt pass then hardened all three areas; fixes are regression-tested:
   loads answer with a message instead of a stuck "Reading…"; the live EXP reader stops the
   screen share if start-up fails; the KPQ timer page survives a hand-edited saved round;
   junk SP values in shared links are dropped. site v0.20.15, tracker 0.3.37.
+
+## 2026-11-02 · Bug hunt, round three: the quiet corners (site v0.20.18, tracker 0.3.39)
+
+Four parallel sweeps of the areas rounds one and two never reached (site modules
+00–39 and 40–79 for logic rather than error paths, all 25 tracker/core files, the
+server's read/aggregate paths); 11 verified findings, all fixed with tests:
+
+- **Server:** a single stored run with corrupt `mobs` JSON 500'd the public
+  summary (and the admin panel) until the row aged out — guarded like every other
+  stored-JSON parse. A fractional `?limit` reached SQLite's LIMIT as a REAL and
+  500'd the owner inboxes — truncated. `cleanShop`'s regex coercion let arrays and
+  numbers ride into D1's bind (a 500 after the obs batch had committed, ledger
+  skipped) — typeof-gated. The 14-day shop prune orphaned `shop_obs_ext` rows, so
+  seller identities outlived their rows' stated life and the table grew forever —
+  pruned with the observations. `archiveOld`'s OR IGNORE + unconditional delete
+  could lose a run outright if the hot table ever emptied while the archive kept
+  rows (rowids restart at 1) — both sides now keyed on the (id, received) pair,
+  crash safety preserved. `received` indexes added for the two TTL deletes
+  (additive-only).
+- **Site:** the Character Builder could be bricked by a `#b=` share link or old
+  save with SP over a skill's max (`stat(s, 99)` → `undefined` → render threw on
+  every load) — clamped to the export's real maxima, `stat` hardened. The Recipes
+  tab could go permanently blank from a saved sort key the current table doesn't
+  have — falls back to level. Where to train printed not-a-number mesos/hr for the
+  four zero-EXP "Super" event maps once a huge typed Accuracy (clamp 99999) cleared
+  their avoid-999 hit gate — skipped. The meso.watch staleness signal was dead
+  twice over: `build_data.py` never copied `generated` into `D.pw`, and both
+  parsers appended Z to an offset-bearing ISO string (`…+00:00Z` → NaN) — the
+  stale pill and Source-health panel work now, and they immediately surfaced real
+  freezes (meso.watch since Oct 31, maplestory.watch since Oct 29). The screenshot
+  importer's failed reads rendered an empty but clickable thumbnail whose view()
+  threw — button only when there is something to show.
+- **Tracker (0.3.39):** the KPQ clock alert fired at the start of every round with
+  a "1 s left" toast — the readers produce seconds, the engine reads milliseconds
+  (`599/1000 > 60` is false, so the held gate never tripped); the producer scales
+  now. A 0-second KPQ stage (two identical clock reads one scan apart) scored as a
+  new stage record — clamped to the z ceiling, +STAGE_W, and it satisfied PERFECT —
+  and the server re-scores history with this file; a zero-second stage counts as
+  not-read (round provisional).
+- **Tests:** server.test.js round-three block (corrupt mobs row, fractional limits,
+  shop coercion, ext-row prune, archive id-collision survival), edge.js 9a–9c
+  (builder SP clamp via link and save, crafting junk sort, maps accuracy 99999),
+  features.js fakes `pw.generated` fresh (its honest stale pill would now fail the
+  pill-free assert), core.test.js 0-stage scenes + the producer-unit assert,
+  data_quality_test.py 2b (data.json must carry a parseable `pw.generated`).
+
+## 2026-11-02 · Bug hunt, round two (site v0.20.17, tracker 0.3.38)
+
+The second sweep went at the newest machinery — anchor mode, the pages boot chain,
+the forget route's long tail:
+
+- **Server:** `forget` reaches the `kpq_bak_20261030_*` backup tables (children
+  first, then the rounds) — a forgotten install's rounds and KPQ board names used to
+  survive in there forever; the removed count reports all eleven tables now. The
+  Weekly ladder's per-map boards were always empty: the fold keyed its lookup Map by
+  array, which never matches under SameValueZero, so every run sat alone under the
+  30-minute floor — keys are `map\u0000group` strings now (regression-tested). Party
+  posts scrub `job`/`mapName` like `nick` (raw strings rode to every member's UI),
+  and the 6-trackers-per-network cap reads the ledger: forget deletes party rows, so
+  without the mark it handed the slot back. `server/src/check.js` takes numbers only for counts
+  (the old `+v` coercion took `"1000"` as 1000) and calendar-shaped dates only
+  (`2026-13-99` became a junk board key).
+- **Site:** a prices fetch that rejects at the transport level (offline first visit,
+  reset mid-boot) rejected `__PRICES` itself — and the whole app lives inside
+  `__PRICES.then`, so nothing ever booted; the chain ends `.catch(() => null)` and
+  the shell seeds empty market objects, so a no-prices boot is a real boot. The
+  service worker's hashed-file prune tested a bare-filename regex against pathnames
+  and full URLs, never matched, and never deleted — one ~1.3 MB prices blob cached
+  per market poll, forever, until Chrome's origin-wide eviction took the offline
+  cache AND localStorage; matches are by basename now and the cache version bumped
+  to wipe the grown copies. The navigator falls back to Lith Harbor when a saved
+  starting map has since left the game data (a route from an invisible origin);
+  `og:image` points at the canonical host; the build asserts the `NN[a-z]-` module
+  prefix convention and sorts modules numerically; build_data flags duplicate item
+  ids and coerces string prices.
+- **Tracker (0.3.38):** minimizing the game no longer throws anchored cards across
+  the screen — Windows reports the minimized window as the iconic rect
+  (−32000,−32000, 160×28), which passed the plain size checks and slammed every
+  Follow-the-game-window card to the virtual desktop's top-left; all three rect
+  paths (koffi's `tracker/app/winrect.js` and both PowerShell fallbacks) reject the signature
+  now. A settings save from a window event (moved/resized/closed) that throws —
+  another process holding settings.json — was an uncaughtException that killed the
+  app mid-session; failed saves are logged and skipped. A failed screen-capture
+  setup answers the Start button instead of leaving it on "Opening…" forever; the
+  region-snip tool can no longer close a newer snip window when one is cancelled
+  mid-load; an OCR worker that keeps failing stands down for a minute instead of
+  rebuilding itself (multi-second churn) on every read; the errored band's buffer
+  still returns to the pool; and the settings page reports when it fell back to
+  defaults.
+- **Workflows:** pages.yml skips a deploy when the triggering poll failed (a failed
+  poll used to burn a full checkout + Playwright + build of unchanged data);
+  server.yml gains deploy concurrency (two racing deploys could finish out of order
+  and serve the older Worker); tracker CI moves to node 22.
+
+## 2026-11-02 · Bug-hunt follow-up: the two honestly-logged leftovers
+
+- **Forget can no longer reset the abuse caps.** Every cap counted live rows
+  (`COUNT(*) ... WHERE ipday = ?`) — the same rows "Delete what I shared" deletes —
+  so hit-cap, forget, refill repeated forever (runs, KPQ rounds, shop rows, boss
+  spots, and the 6-trackers-per-network rule alike; round two closed the last gap —
+  forget also deletes party rows, so the party cap reads the mark as well). A new
+  `ipday_ledger` table keeps
+  each network-day's high-water marks (rows ever accepted, tracker IDs ever seen);
+  the caps read max(live rows, mark); forget deliberately leaves the ledger — it is
+  the network-day's tally, not the install's data: the same day-scoped salted hash
+  the rows themselves carry, pruned by the archive pass once the day is gone
+  (yesterday-and-older). feedback alone needs no ledger (it has no install column to
+  forget by); round two moved party_live's cap onto the ledger too (see below). The
+  privacy page spells the tally out in plain words (Nov 2, 2026).
+- **The summary cache trims adaptively.** The 1.5 MB store guard used to step
+  1000-rounds-then-none; past that the copy was served fresh and never stored, so
+  every request re-read every run until the data shrank. `trimSummary` binary-searches
+  the most of the newest KPQ rounds that fit, so the cache stores whenever the round
+  list can save it; only a copy even an empty list can't shrink goes unstored (real
+  data sits far below the line).

@@ -58,7 +58,15 @@ if (HASH.b && HASH.b.cls) S = Object.assign(S, HASH.b);   // shared link
   S.cls = String(S.cls); if (!Object.hasOwn(BRANCHES, S.cls)) Object.assign(S, {cls:"Warrior", branch:null, fam:null});
   S.lvl = Math.min(MAX_LEVEL, Math.max(10, Math.round(+S.lvl) || 30));
   if (!obj(S.sp)) S.sp = {}; if (!obj(S.gear)) S.gear = {};
-  for (const k of Object.keys(S.sp)) if (!Number.isFinite(S.sp[k]) || !/^\d{1,10}$/.test(k)) delete S.sp[k];   // spentIn adds sp values: a string "3" from a hand edit used to concat into the SP counters ("053 / 61")
+  // clamp each SP value to its skill's real max: a shared #b= link or hand edit carrying sp:{"1000000":99} passed the
+  // finite check and renderSkills' stat(s, 99) read s.st[98] = undefined and threw, bricking the builder on every load
+  // of that save (round 3). The id->max map comes straight from the COT2 export (SK = D.skills).
+  const spMax = {}; for (const arr of Object.values(SK)) for (const s of arr) spMax[s.id] = s.max;
+  for (const k of Object.keys(S.sp)){
+    if (!Number.isFinite(S.sp[k]) || !/^\d{1,10}$/.test(k) || !(spMax[k] > 0)) { delete S.sp[k]; continue }   // spentIn adds sp values: a string "3" from a hand edit used to concat into the SP counters ("053 / 61")
+    S.sp[k] = Math.min(Math.floor(S.sp[k]), spMax[k]);
+    if (S.sp[k] <= 0) delete S.sp[k];
+  }
   S.deco = Array.isArray(S.deco) ? [...new Set(S.deco.map(String))].filter(id => D.items[id]?.c === "Cash").slice(0, 24) : [];   // NX / Decoration ids worn over the gear
   if (S.ap != null && !(obj(S.ap) && ["STR","DEX","INT","LUK"].every(k => Number.isFinite(S.ap[k])))) S.ap = null;
   for (const k of ["weapon","skill","ammo","branch","fam"]) if (S[k] != null && typeof S[k] !== "string") S[k] = null }
@@ -98,7 +106,7 @@ function lv(s, sp, list){
   for (const [n, need] of s.req) { const p = byName(n, list); if (p && lv(p, sp, list) < need) return 0 }
   return v;
 }
-const stat = (s, l) => l > 0 ? s.st[l - 1] : "";
+const stat = (s, l) => l > 0 ? s.st[Math.min(l, s.st.length) - 1] ?? "" : "";   // clamped: a value above max reads the top entry, never undefined (round 3)
 
 const AI_CACHE = new Map();
 function attackInfo(s, l){

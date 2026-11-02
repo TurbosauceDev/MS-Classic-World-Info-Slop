@@ -26,11 +26,22 @@ assert.strictEqual(WinRect.rectOf(-5), null, "rectOf(-5) is not a window");
 assert.strictEqual(WinRect.rectOf("abc"), null, "rectOf(non-numeric) is not a window");
 assert.strictEqual(WinRect.rectOf(1.5), null, "rectOf(fractional) is not a window");
 
+// 2b. the rect sanity gate: ok() is what stands between a native read and the overlay maths. The minimized
+// "iconic" rect (-32000,-32000, 160x28) used to pass and slammed every anchored card to the top-left (round 2)
+assert.strictEqual(typeof WinRect.ok, "function", "ok() must be exported for these checks");
+assert.strictEqual(WinRect.ok({l: -32000, t: -32000, r: -31840, b: -31972}), false, "the iconic minimized rect is rejected");
+assert.strictEqual(WinRect.ok({l: -31000, t: -31000, r: -30900, b: -30800}), false, "a small rect parked in the iconic corner is rejected");
+assert.strictEqual(WinRect.ok({l: 100, t: 80, r: 1060, b: 760}), true, "an ordinary window rect passes");
+assert.strictEqual(WinRect.ok({l: -1920, t: 0, r: 0, b: 1080}), true, "a left-of-primary monitor rect passes");
+assert.strictEqual(WinRect.ok({l: 0, t: 0, r: 0, b: 0}), false, "zero area is rejected");
+assert.strictEqual(WinRect.ok({l: 0, t: 0, r: 40000, b: 100}), false, "beyond the 32767 px axis bound is rejected");
+
 // 3. main.js: the fast path is first, the PowerShell fallback survives, and the anchor loop only runs for anchored cards
 const main = read("../app/main.js");
 assert.ok(/WinRect\.rectOf\(\+hwnd\) \|\| await frameRect\(hwnd\)/.test(main), "gameRectNow must try koffi first, PowerShell second");
 assert.ok(/function frameRect\(hwnd\)/.test(main) && /powershell\.exe/.test(main), "the PowerShell fallback must stay");
 assert.ok(/WinRect\.available\(\) \? 600 : 3000/.test(main), "the rect cadence must be 600 ms on koffi, 3 s on PowerShell");
+assert.ok((main.match(/-30000/g) || []).length >= 2, "both PowerShell rect paths must reject the iconic minimized rect (winrect.js does for koffi)");
 assert.ok(/some\(w => w && w\.anchor\)/.test(main), "the anchor push loop must skip when no card is anchored");
 assert.ok(/ov-gamerect/.test(main) && /ov-gamerect/.test(fs.readFileSync(path.join(__dirname, "../app/overlay-preload.js"), "utf8")),
   "the gamerect push must be bridged to the overlay page");

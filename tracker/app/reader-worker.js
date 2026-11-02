@@ -11,7 +11,8 @@ onmessage = ({data: m}) => {
   if (m.type === "invhint") return rd?.setInvHint(m.area);
   if (m.type === "band"){   // the pickup band alone, ~10 a second: answered with the events and the buffer back
     const back = m.band?.d?.buffer ?? null;
-    try { postMessage({bid: m.bid, ...GrindReaders.workBand(rd, m), back}, back ? [back] : []) } catch (err){ postMessage({bid: m.bid, error: err.message}) }
+    try { postMessage({bid: m.bid, ...GrindReaders.workBand(rd, m), back}, back ? [back] : []) }
+    catch (err){ postMessage(back ? {bid: m.bid, error: err.message, back} : {bid: m.bid, error: err.message}, back ? [back] : []) }   // the errored band's buffer still goes back to the pool (round 2: it used to leak one per failed read)
     return;
   }
   try {

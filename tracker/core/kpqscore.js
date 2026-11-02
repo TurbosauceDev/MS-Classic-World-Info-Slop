@@ -41,7 +41,10 @@
   const lootBonus = l => (l.etc || 0) * ETC_PTS + (l.use || 0) * USE_PTS + (l.scroll || 0) * SCROLL_PTS + (l.equip || 0) * EQUIP_PTS + (l.pan || 0) * PAN_PTS;
   const zOf = (ref, id, sec) => {
     const m = ref?.med?.[id], b = ref?.best?.[id];
-    if (!(m > 0) || !(sec >= 0)) return null;
+    // sec > 0, not >= 0: a 0-second stage is a misread glitch (two identical clock reads one apart), not a new
+    // record — it used to clamp to the z ceiling, score +STAGE_W, and satisfy the PERFECT gate, and the server
+    // re-scores history with this exact file (round 3). buildRef already filters 0 out of the references.
+    if (!(m > 0) || !(sec > 0)) return null;
     if (!(b > 0) || b >= m) return 0;
     return Math.max(Z_MIN, Math.min(Z_MAX, (m - sec) / (m - b)));
   };

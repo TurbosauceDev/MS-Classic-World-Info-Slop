@@ -415,4 +415,10 @@ $("#updGo").onclick = async () => {
   recoverCheck().catch(() => {});   // a run left by a crash or power cut (its autosave)
   const found = await host.gameFound(true);
   $("#status").textContent = found ? "MapleStory window found." : "Start MapleStory, then press Start.";
-})();
+})().catch(e => {
+  // the boot IIFE used to die silently on a failed `host.settings()` (settings.json unwritable at launch — it always
+  // writes once, to mint the install ID): theme/layout/keys/alerts never initialized and the window sat half-dead
+  // with no message (round 2). Defaults keep the page alive; the first settings change re-persists everything.
+  console.error("settings boot failed:", e);
+  $("#status").textContent = "Settings couldn't load — defaults are in use. Restart the tracker to retry.";
+});

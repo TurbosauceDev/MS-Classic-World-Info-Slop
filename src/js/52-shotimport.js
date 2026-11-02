@@ -213,7 +213,7 @@ function renderShots(){
   if (key === shownKey) return; shownKey = key;
   const old = new Set([...document.querySelectorAll("#pimpshots [data-rid]")].map(e => +e.dataset.rid));
   $("#pimpshots").innerHTML = READS.map((r, k) => `<figure class="pishot${old.has(r.id) ? "" : " new"}${r.what.length ? "" : " bad"}" data-rid="${r.id}">
-    <button class="pithumb" data-piopen="${k}" title="See what was read">${r.thumb ? `<img src="${r.thumb.src}" alt="" width="${r.thumb.w}" height="${r.thumb.h}">${markBoxes(r)}` : ""}</button>
+    ${r.thumb ? `<button class="pithumb" data-piopen="${k}" title="See what was read"><img src="${r.thumb.src}" alt="" width="${r.thumb.w}" height="${r.thumb.h}">${markBoxes(r)}</button>` : ""}
     <figcaption>${esc(KIND(r))}<button class="pix" data-pidel="${k}" title="Remove this screenshot" aria-label="Remove this screenshot">×</button></figcaption></figure>`).join("");
 }
 function renderStatus(){
@@ -266,6 +266,7 @@ $("#pimpsp").addEventListener("click", e => {
 
 // big view: the read part of the screenshot at a whole-number zoom, every box labelled in the list beside it
 function view(r){
+  if (!r || !r.thumb) return;   // a failed read has no thumbnail to show (Undo can restore one): the old unguarded r.thumb.w threw (round 3)
   const pop = $("#pishotpop"), z = Math.max(1, Math.min(3, Math.floor(720 / r.thumb.w))) || 1;
   const groups = [["stat", "Stats"], ["item", "Worn"], ["skill", "Skills"]].map(([k, t]) => [t, r.marks.map((m, i) => [m, i]).filter(([m]) => m.kind === k)]).filter(([, l]) => l.length);
   $("#pishotbody").innerHTML = `<div class="piview"><div class="pibig" style="width:${r.thumb.w * z}px"><img src="${r.thumb.src}" alt="The screenshot" width="${r.thumb.w * z}" height="${r.thumb.h * z}">${markBoxes(r)}</div></div>

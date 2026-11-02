@@ -437,6 +437,13 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   assert.ok(cara && cara.names.includes("Dan"), "the coded party is one line with both names: " + JSON.stringify(cara && cara.names));
   // mesos board ranks by mesos/h
   assert.ok(l.this.boards.mesos.rows.every(x => x.mesosHr >= 0), "mesos board present");
+  // per-map boards (bug-hunt round 2): one network's runs on one map fold into ONE line — the old array-key fold
+  // never matched, every run sat alone under the 30-minute floor, and boards.maps shipped empty on every map
+  const m42 = l.this.boards.maps["42"];
+  assert.ok(m42 && m42.rows.length >= 3, "map 42's board has the lines: " + JSON.stringify(m42));
+  const tm = m42.rows.find(x => x.names.includes("Turbow"));
+  assert.ok(tm && tm.runs >= 2 && tm.minutes >= 30, "a network's runs fold into one per-map line: " + JSON.stringify(tm));
+  assert.strictEqual(m42.hidden, 1, "the ceiling rider is held off the per-map board too");
   // rates: map 42 now has 3 networks
   const rate = l.this.rates.find(x => x.map === "42");
   assert.ok(rate && rate.players >= 3, "map 42 has a community rate: " + JSON.stringify(l.this.rates));
@@ -476,6 +483,179 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   await post(run(inst, 1000, {mesos: 500, kills: 10, mobs: [{id: "2", kills: 10, mesos: 1e9, mesoDrops: 5000}]}));
   const mobs = JSON.parse(sql.prepare("SELECT mobs FROM runs WHERE install = ?").get(inst).mobs);
   assert.strictEqual(mobs[0].mesos, 500, "clamped to the run's mesos: " + JSON.stringify(mobs));
+}
+
+// "Delete what I shared" can't hand the abuse caps back (bug-hunt follow-up 2026-11-02): the caps counted live rows,
+// so forget - refill - forget refilled the day forever. ipday_ledger keeps the network-day's high-water marks (rows
+// ever accepted, trackers ever seen), forget leaves it alone, and the caps read max(live rows, ledger).
+{
+  const crypto = await import("node:crypto");
+  const salt = sql.prepare("SELECT v FROM meta WHERE k = 'salt'").get().v;
+  const day = new Date().toISOString().slice(0, 10);
+  const ipdayOf = ip => crypto.createHash("sha256").update(ip + day + salt).digest("hex").slice(0, 32);   // the worker's own sha, same bytes
+  const ledger = ip => sql.prepare("SELECT posts, installs FROM ipday_ledger WHERE ipday = ?").get(ipdayOf(ip));
+  const fpost = (inst, ip) => worker.fetch(new Request("https://x/api/forget", {method: "POST", body: JSON.stringify({install: inst}), headers: {"cf-connecting-ip": ip}}), env);
+  const ppost = (path, body, ip) => worker.fetch(new Request("https://x" + path, {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
+
+  // the write path: every accepted post raises the mark, a deduped retry doesn't, forget deletes the rows and keeps the mark
+  const wip = "10.31.1.1", winst = "ledgerwritewrit01";
+  await post(run(winst, 1000), wip);
+  await post(run(winst, 1000), wip);   // a deduped retry: no row, no bump
+  await post(run(winst, 1010), wip);
+  assert.deepStrictEqual({...ledger(wip)}, {posts: 2, installs: 1}, "two accepted runs: the mark is 2");
+  await fpost(winst, wip);
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE install = ?").get(winst).n, 0, "forget still deletes the rows");
+  assert.deepStrictEqual({...ledger(wip)}, {posts: 2, installs: 1}, "the mark survives the forget");
+  let [st] = await post(run(winst, 1020), wip);
+  assert.strictEqual(st, 200, "2 rows is far under the cap: sending still works");
+  assert.strictEqual(ledger(wip).posts, 3, "and the mark climbs with it");
+  // the other endpoints bump the same ledger (kpq +1 a round, shop +1 a row, spots +1 a report)
+  const kip = "10.31.1.4";
+  [st] = await kpost(kr("ledgerkpqledger01", 400), kip);
+  assert.strictEqual(ledger(kip).posts, 1, "kpq bumps the ledger");
+  const sip = "10.31.1.5";
+  [st] = await ppost("/api/shop", {install: "ledgershopshops01", v: 1, rows: [{id: 1002000, qty: 1, price: 1000, sold: 0}, {id: 1002001, qty: 1, price: 900, sold: 0}]}, sip);
+  assert.strictEqual(st, 200); assert.strictEqual(ledger(sip).posts, 2, "shop bumps by rows");
+  const pip = "10.31.1.6";
+  [st] = await ppost("/api/spots", {install: "ledgerspotspot001", map: "10000013", mob: "700004", ch: 3, t: Date.now()}, pip);
+  assert.strictEqual(st, 200); assert.strictEqual(ledger(pip).posts, 1, "spots bump the ledger");
+
+  // the cap reads the mark: a network-day that already sent its 300 rows stays full even with zero live rows
+  const cip = "10.31.1.2";
+  sql.prepare("INSERT INTO ipday_ledger (ipday, day, posts, installs, updated) VALUES (?, ?, 300, 0, ?)").run(ipdayOf(cip), day, new Date().toISOString());
+  [st] = await post(run("ledgercapfulfill01", 1000), cip);
+  assert.strictEqual(st, 429, "the day is full: 429 with nothing left in the table (the pre-fix hole)");
+  await fpost("ledgercapfulfill01", cip);
+  [st] = await post(run("ledgercapfulfill01", 1000), cip);
+  assert.strictEqual(st, 429, "still full after a forget");
+  // install rotation: six trackers ever seen today is six, forget or not — unless the sender is one of them
+  sql.prepare("UPDATE ipday_ledger SET posts = 0, installs = 6 WHERE ipday = ?").run(ipdayOf(cip));
+  [st] = await post(run("ledgerrotatefill01", 1000), cip);
+  assert.strictEqual(st, 429, "the 7th tracker is refused on the mark alone");
+  const known = "ledgerknownknown01";
+  sql.prepare(`INSERT INTO runs (install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items)
+    VALUES (?, ?, ?, '2026-11-02', '42', NULL, 22, 'Magician', 1, 15, 1000, 1000, 1000, 100, 900, 1, NULL, '[]', '{}')`).run(known, ipdayOf(cip), new Date().toISOString());
+  [st] = await post(run(known, 1000, {kills: 101}), cip);
+  assert.strictEqual(st, 200, "a tracker the day already knows still sends");
+  await fpost(known, cip);
+  [st] = await post(run(known, 1000, {kills: 102}), cip);
+  assert.strictEqual(st, 429, "forgotten, its slot stays spent for the day");
+  // another network on the same day has its own ledger row
+  [st] = await post(run("ledgerothernet0001", 1000), "10.31.1.3");
+  assert.strictEqual(st, 200, "another network's day is untouched");
+
+  // round 2: the party view's 6-trackers cap reads the ledger too — forget deletes party rows, and without the
+  // mark it handed the slot back (rotate / post / forget refilled the party table at request rate)
+  const prip = "10.31.1.9";
+  const party = (pi, code) => ppost("/api/party", {install: pi, partyCode: code, expHr: 100, job: "<img src=x onerror=alert(1)>", mapName: "Henesys<script>"}, prip);
+  const pinst = i => "partyinst" + String(i).padStart(7, "0");
+  let [pst, pj] = await party(pinst(1), "cap1");
+  assert.strictEqual(pst, 200, "the first tracker posts");
+  const m0 = pj.members.find(x => x.you);
+  assert.ok(m0 && !/[<>=()"]/.test(m0.job || "") && !/[<>=()"]/.test(m0.mapName || ""), "party job/mapName arrive scrubbed like nick: " + JSON.stringify(m0));
+  for (let i = 2; i <= 6; i++) pst = (await party(pinst(i), "cap" + i))[0];
+  assert.strictEqual(pst, 200, "six trackers fill the party cap");
+  assert.strictEqual(ledger(prip).installs, 6, "the party posts raise the ledger's installs mark");
+  [pst] = await party(pinst(7), "cap7");
+  assert.strictEqual(pst, 429, "the 7th tracker is refused");
+  await fpost(pinst(1), prip);
+  [pst] = await party(pinst(7), "cap7");
+  assert.strictEqual(pst, 429, "still refused after a forget: the mark keeps the slot spent");
+
+  // round 2: "Delete what I shared" reaches into the 2026-10-30 reset's backup tables too (install ids + names
+  // used to survive a forget in there forever)
+  const bakInst = "bakroundsbakround1";
+  // the bak tables are CREATE TABLE AS SELECT copies: no rowid-alias PK, so a row needs an explicit id (real ones carry theirs)
+  sql.prepare("INSERT INTO kpq_bak_20261030_rounds (id, install, ipday, received, date, mode, party, clear, ok) VALUES (9001, ?, 'bakipday', ?, '2026-10-01', 'Bonus', 4, 300, 1)").run(bakInst, new Date().toISOString());
+  sql.prepare("INSERT INTO kpq_bak_20261030_names (kpq_id, name) VALUES (9001, 'BackUpName')").run();
+  assert.ok(sql.prepare("SELECT COUNT(*) n FROM kpq_bak_20261030_names").get().n >= 1, "the backup name row is there");
+  st = (await fpost(bakInst, "10.31.1.8")).status;
+  assert.strictEqual(st, 200);
+  for (const t of ["rounds", "archive", "names", "src", "raw"]) assert.strictEqual(sql.prepare(`SELECT COUNT(*) n FROM kpq_bak_20261030_${t}`).get().n, 0, "bak " + t + " forgets with the install");
+
+  // round 2: counts arrive as numbers only (the old +v coercion took "1000" as 1000) and dates are calendar-shaped
+  [st] = await post(run("strictcntstrict01", 1000, {msgExp: "1000"}));
+  assert.strictEqual(st, 200);
+  assert.strictEqual(sql.prepare("SELECT msg_exp FROM runs WHERE install = ?").get("strictcntstrict01").msg_exp, 0, "a string count stores as 0, never coerced");
+  [st] = await post(run("datedatedatedate1", 1000, {date: "2026-13-99"}));
+  assert.strictEqual(st, 400, "an impossible date is refused");
+
+  // the ledger ages out with its day: archiveOld (inside a summary rebuild) drops anything older than yesterday
+  sql.prepare("INSERT INTO ipday_ledger (ipday, day, posts, installs, updated) VALUES ('staleday', '2026-01-01', 300, 6, '2026-01-01T00:00:00Z')").run();
+  await fresh();
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM ipday_ledger WHERE ipday = 'staleday'").get().n, 0, "yesterday-and-older marks are pruned");
+  assert.ok(ledger(cip), "today's marks stay");
+}
+
+// the summary cache trims adaptively (bug-hunt follow-up 2026-11-02): the fixed 1000-then-none steps either wasted
+// rounds or stored nothing at all (every request rebuilding); now the copy keeps as many of the newest KPQ rounds as
+// fit under the 1.5 MB store guard
+{
+  const {trimSummary} = await import("../src/index.js");
+  const mk = k => ({runs: 1, kpq: {list: Array.from({length: 64}, (_, i) => ({d: "2026-11-02", at: i, x: i, pad: "p".repeat(40)})).slice(-k)}});
+  const len = k => JSON.stringify(mk(k)).length;
+  const want = [...Array(65).keys()].reverse().find(k => len(k) < 3000);   // the most rounds the toy limit allows
+  assert.ok(want > 0 && want < 64, "the toy limit cuts mid-list: " + want);
+  const input = mk(64);
+  const out = JSON.parse(trimSummary(input, 3000));
+  assert.strictEqual(input.kpq.list.length, 64, "the caller's object is untouched");
+  assert.strictEqual(out.kpq.list.length, want, `keeps ${want} of 64, not 1000-or-none`);
+  assert.strictEqual(out.kpq.list.at(-1).at, 63, "the newest rounds are the ones kept");
+  assert.ok(len(want) < 3000 && len(want + 1) >= 3000, "and it really is the most that fits");
+  const huge = {blob: "x".repeat(5000), kpq: {list: [{a: 1}]}};
+  assert.strictEqual(trimSummary(huge, 1000), JSON.stringify(huge), "a list that can't save the copy leaves it whole");
+  const small = {a: 1};
+  assert.strictEqual(trimSummary(small, 1000), JSON.stringify(small), "under the line: untouched");
+  const nolist = {kpq: {list: []}, blob: "x".repeat(2000)};
+  assert.strictEqual(trimSummary(nolist, 1000), JSON.stringify(nolist), "nothing left to give: untouched");
+}
+
+// ---- bug-hunt round three (2026-11-02): the read paths, archive safety, shop coercions ----
+{
+  // a corrupt stored mobs row (half-written D1 write, hand edit) used to 500 every /api/summary until the row aged out
+  sql.prepare(`INSERT INTO runs (id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, mobs)
+    VALUES (7001, 'corruptmobsrow0001', 'r3c1', ?, '2026-11-01', '42', 'Snail', 22, 'Magician', 1, 15, 1000, 1000, 1000, 100, 900, 1, '{oops')`).run(new Date().toISOString());
+  const bad = await worker.fetch(new Request("https://x/api/summary"), env);
+  assert.strictEqual(bad.status, 200, "a corrupt mobs row no longer takes the summary down");
+  assert.ok((await bad.json()).players >= 1, "and the summary still answers with data");
+  sql.prepare("DELETE FROM runs WHERE id = 7001").run();
+
+  // fractional ?limit reached SQLite's LIMIT as a REAL and 500'd the owner inbox
+  const rq3 = q => worker.fetch(new Request("https://x/api/runs/recent" + q, {headers: {authorization: "Bearer " + "k".repeat(32)}}), env).then(async x => [x.status, await x.json()]);
+  const kq3 = q => worker.fetch(new Request("https://x/api/kpq/recent" + q, {headers: {authorization: "Bearer " + "k".repeat(32)}}), env).then(async x => [x.status, await x.json()]);
+  const [ls, lj] = await rq3("?limit=2.5");
+  assert.strictEqual(ls, 200, "a fractional runs limit truncates, not 500s");
+  assert.strictEqual(lj.runs.length, 2, "?limit=2.5 gives 2 rows");
+  assert.strictEqual((await kq3("?limit=1.1"))[0], 200, "a fractional kpq limit truncates, not 500s");
+
+  // cleanShop's regex coercion: RegExp.test stringifies, so arrays rode into D1's bind (500 after the obs batch
+  // committed) and numbers stored into TEXT
+  const shop3 = (body, ip) => worker.fetch(new Request("https://x/api/shop", {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async x => [x.status, await x.json()]);
+  const coerced = "shopcoerce000000001";
+  const [cs, cj] = await shop3({install: coerced, v: 2, seller: ["swagmart"], title: "fm 9", room: 9, map: ["100000000"], rows: [{id: 1002000, qty: 1, price: 1000, sold: 0}]}, "10.31.3.1");
+  assert.strictEqual(cs, 200, "an array seller stores as null instead of blowing up the bind: " + JSON.stringify(cj));
+  const ext3 = sql.prepare("SELECT seller, title, room, map FROM shop_obs_ext WHERE obs_id IN (SELECT id FROM shop_obs WHERE install = ?)").get(coerced);
+  assert.ok(ext3 && ext3.seller === null && ext3.map === null && ext3.title === "fm 9" && ext3.room === 9, "the ext row stores nulls for junk fields: " + JSON.stringify(ext3));
+
+  // the 14-day prune takes the ext rows with the observations (orphaned seller names used to outlive their rows forever)
+  sql.prepare("UPDATE shop_obs SET received = ? WHERE install = ?").run(new Date(Date.now() - 20 * 864e5).toISOString(), coerced);
+  await worker.fetch(new Request("https://x/api/shop/summary"), env);
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM shop_obs WHERE install = ?").get(coerced).n, 0, "the aged observation is pruned");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM shop_obs_ext WHERE obs_id NOT IN (SELECT id FROM shop_obs)").get().n, 0, "its ext row (the seller name) goes with it");
+
+  // archive safety when rowids restart: a live run whose id the archive already holds (a different received) must
+  // survive the move — the old OR IGNORE + unconditional delete would have erased it from both tables
+  const old3 = new Date(Date.now() - (ARCHIVE_DAYS + 5) * 864e5).toISOString();
+  sql.prepare(`INSERT INTO runs (id, install, ipday, received, date, map, map_name, party, minutes, exp, kills, mesos, ok)
+    VALUES (7002, 'collidelive000001', 'r3c2', ?, '2026-01-01', '42', 'Snail', 1, 15, 1000, 100, 900, 1)`).run(old3);
+  sql.prepare(`INSERT INTO runs_archive (id, install, ipday, received, date, map, map_name, party, minutes, exp, kills, mesos, ok, why, mobs, items, archived)
+    VALUES (7002, 'archolderrow0001', 'r3c3', ?, '2026-01-01', '42', 'Snail', 1, 15, 900, 90, 800, 1, NULL, NULL, NULL, ?)`).run(new Date(Date.now() - (ARCHIVE_DAYS + 6) * 864e5).toISOString(), old3);
+  await fresh();
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE id = 7002").get().n, 1, "the live row survives: its (id, received) pair is not the archive's");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs_archive WHERE id = 7002").get().n, 1, "the older archive row is untouched");
+  assert.strictEqual(sql.prepare("SELECT exp FROM runs WHERE id = 7002").get().exp, 1000, "and it is the live row that survived");
+  await fresh();
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE id = 7002").get().n, 1, "a second rebuild is stable");
 }
 
 console.log("server tests passed");

@@ -32,8 +32,11 @@ const FRESH = [
   ['maplestory.watch',  () => D.mw?.read,      2880],
 ];
 
-const ago = s => {   // "YYYY-MM-DD HH:MM" or ISO -> minutes ago, or null if unreadable
-  const t = Date.parse(String(s || '').replace(' ', 'T') + 'Z');
+const ago = s => {   // "YYYY-MM-DD HH:MM", date-only, or full ISO with an offset -> minutes ago, or null if unreadable
+  s = String(s || '');
+  // a full-ISO generated ("2026-10-31T05:15:56+00:00") parses as-is; appending Z to it used to yield NaN and the
+  // panel printed "All sources fresh" over a frozen source (round 3)
+  const t = /[zZ]$|[+-]\d{2}:\d{2}$/.test(s) ? Date.parse(s) : Date.parse(s.replace(' ', 'T') + 'Z');
   return isNaN(t) ? null : Math.max(0, Math.round((Date.now() - t) / 60000));
 };
 const agoTxt = m => m == null ? '?' : m < 60 ? m + ' min ago' : m < 2880 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago';
