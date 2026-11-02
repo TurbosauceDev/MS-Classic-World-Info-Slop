@@ -87,4 +87,5 @@ $("#navshare").addEventListener("click", () => copyShare($("#navshare"), shareUr
 if (HASH.n && D.nav[HASH.n.f]){ S.from = HASH.n.f; S.to = HASH.n.t || null; S.nocab = !!HASH.n.c; $("#navnocab").checked = S.nocab }   // shared link
 navTo = id => { hideQtip(); S.to = String(id); if (id && navTo.noCab){ S.nocab = true; $("#navnocab").checked = true } save(); $("#t-navi").click(); render(); $("#navi").scrollIntoView({block: "start"}) };
 render();
+if (D.lazy) ASSETS.then(() => { if (S.to) render() });   // a route drawn before the minimaps arrived says "No minimap in the game files": draw them in
 })();

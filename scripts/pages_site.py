@@ -1,8 +1,11 @@
 """GitHub Pages copy of the built page: python3 scripts/pages_site.py <out dir>   (pages.yml runs it; no vendor/, no PIL)
 
 dist/index.html stays the one self-contained file (claude.ai artifact, file://). For Pages this script:
-  - moves the item icons and minimaps (D.iicons, D.mmaps: about half the page) into assets-<hash>.json, which the page
-    fetches right after it starts (00-core.js, D.lazy) and patches into anything already drawn. Icons Home shows stay inline.
+  - moves the item icons, minimaps and skill frames (D.iicons, D.mmaps, D.skanim: about half the page) into
+    assets-<hash>.json behind a stable-named pointer assets.json — the same trick prices.json uses below — so a cached
+    shell always finds the current file, even after a deploy renamed the hashed one (2026-11-02: cached shells met a 404
+    there and every minimap read "No minimap in the game files"). The page fetches it right after it starts (00-core.js,
+    D.lazy) and patches into anything already drawn. Icons Home shows stay inline.
   - moves the per-poll market data (audit P9: pw/cm/cmp/mdb/ma/mw/mi + crank/shared/ishop, ~1.3 MB raw) into
     prices-<hash>.json behind a stable-named pointer prices.json = {url, keys}. A boot script parses the inline shell
     data, fetches pointer + file, merges the keys into D (and the Credits source dates into window.__SRCD), and the
@@ -27,7 +30,7 @@ def split(html):
     for k in LAZY: D[k] = {i: v for i, v in D[k].items() if i not in assets[k]}
     blob = json.dumps(assets, separators=(",", ":"))
     name = f"assets-{hashlib.sha1(blob.encode()).hexdigest()[:10]}.json"
-    D["lazy"] = {"url": name, "keys": list(LAZY)}
+    D["lazy"] = {"url": "assets.json", "keys": list(LAZY)}   # stable pointer: the shell's bytes survive asset churn
     market = json.dumps(D.get("pw") or {}, separators=(",", ":"))
     # audit P9: the market data moves out too. The pointer keeps its name, so a cached shell always finds the current
     # prices-<hash>.json even when a newer deploy replaced the old hashed file.
@@ -77,6 +80,7 @@ def main(dst):
     import pages_gen   # static per-item/mob/map pages + sitemap (scripts/pages_gen.py)
     pages_gen.generate(json.loads(re.search(r'<script type="application/json" id="sitedata">(.*?)</script>', html, re.S).group(1)), dst)
     (dst / "index.html").write_text(out); (dst / name).write_text(blob); (dst / pname).write_text(pblob)
+    (dst / "assets.json").write_text(json.dumps({"url": name, "keys": list(LAZY)}))
     (dst / "prices.json").write_text(json.dumps({"url": pname, "keys": list(PRICES)}))
     (dst / "market.json").write_text(market)
     for f in ("manifest.webmanifest", "sw.js", "icon-32.png", "icon-192.png", "icon-512.png", "icon-maskable.png"): shutil.copy(ROOT / "src" / "pwa" / f, dst / f)
@@ -84,7 +88,7 @@ def main(dst):
     # page-weight limit (blind-spot report C1): fails the deploy if the first load grows past it. Now 1251 KB gzip; raise it on purpose.
     limit = int(os.environ.get("FIRST_LOAD_GZIP_KB", "1600")); got = len(gzip.compress(out.encode())) // 1024
     assert got <= limit, f"first load is {got} KB gzip, over the {limit} KB limit (scripts/pages_site.py)"
-    print(f"first load: {kb(html)} -> {kb(out)}; {name} {kb(blob)} + {pname} {kb(pblob)} fetched after start")
+    print(f"first load: {kb(html)} -> {kb(out)}; {name} {kb(blob)} + {pname} {kb(pblob)} fetched after start (assets.json / prices.json name them)")
 
 if __name__ == "__main__":
     main(sys.argv[1] if len(sys.argv) > 1 else "site")
