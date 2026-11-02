@@ -40,6 +40,12 @@ async function postRun(req, env){
   const c = cleanRun(body, G);
   if (c.error) return json({error: c.error}, 400);
   const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  // the same run sent twice (the tracker retries when the ack is lost on the wire): same install, same map and numbers.
+  // The retry rides the 10-min flush, so a 12-min window catches it; a real next run is always 14.5+ min later (the
+  // minutes floor), so the window can never swallow one. IS, not =: an unknown map's NULL must compare NULL-safe.
+  const dup = await env.DB.prepare("SELECT id FROM runs WHERE install = ? AND minutes = ? AND exp = ? AND kills = ? AND mesos = ? AND map IS ? AND map_name IS ? AND received > ?")
+    .bind(body.install, c.run.minutes, c.run.exp, c.run.kills, c.run.mesos, c.run.map, c.run.map_name, new Date(now - 12 * 60e3).toISOString()).first();
+  if (dup) return json({ok: true, counted: false, why: "already sent"});
   const recent = await env.DB.prepare("SELECT COUNT(*) n FROM runs WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n FROM runs WHERE ipday = ?").bind(ipday).first();
   // one vote per player: a new install ID from an IP that already sent 6 others today is refused (ID rotation)
@@ -139,7 +145,8 @@ async function partyLive(req, env){
   const me = {nick: typeof b.nick === "string" ? b.nick.replace(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 12) : "", job: text(b.job, 40),
     level: num(b.level, 200), mapName: text(b.mapName, 60), expHr: num(b.expHr, 1e8), expHr5: num(b.expHr5, 1e8),
     killsHr: num(b.killsHr, 1e5), mesosHr: num(b.mesosHr, 1e8), active: num(b.active, 1e7)};
-  const old = await env.DB.prepare("SELECT updated FROM party_live WHERE grp = ? AND install = ?").bind(grp, b.install).first();
+  // the throttle follows the install, not (grp, install): rotating the party code would otherwise reset it on every post
+  const old = await env.DB.prepare("SELECT updated FROM party_live WHERE install = ? ORDER BY updated DESC LIMIT 1").bind(b.install).first();
   if (old && now - Date.parse(old.updated) < PARTY_EVERY) return json({error: "too often"}, 429);
   // one machine can't fill the table: at most 6 tracker copies per IP (hashed) in the last hour
   const ip = await sha("ip:" + (req.headers.get("cf-connecting-ip") || "") + await salt(env.DB));
@@ -166,6 +173,11 @@ async function archiveOld(db){
   await db.prepare(`INSERT OR IGNORE INTO runs_archive (id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items, archived)
     SELECT id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items, ? FROM runs WHERE received < ?`).bind(cut, cut).run();
   await db.prepare("DELETE FROM runs WHERE received < ?").bind(cut).run();
+  // the archive tables keep no extras/party-code/name columns: their rows would point at run ids the hot table no
+  // longer has, forever (the KPQ side tables stay — the archive rounds keep their ids and are read with them)
+  await db.prepare("DELETE FROM run_extra WHERE run_id NOT IN (SELECT id FROM runs)").run();
+  await db.prepare("DELETE FROM run_groups WHERE run_id NOT IN (SELECT id FROM runs)").run();
+  await db.prepare("DELETE FROM run_names WHERE run_id NOT IN (SELECT id FROM runs)").run();
   await db.prepare(`INSERT OR IGNORE INTO kpq_rounds_archive (id, install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why, archived)
     SELECT id, install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why, ? FROM kpq_rounds WHERE received < ?`).bind(cut, cut).run();
   await db.prepare("DELETE FROM kpq_rounds WHERE received < ?").bind(cut).run();
@@ -360,13 +372,17 @@ async function postForget(req, env){
   if (!b || typeof b.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(b.install)) return json({error: "install id"}, 400);
   const db = env.DB, i = b.install, n = {};
   const one = async (k, sql) => { n[k] = (await db.prepare(sql).bind(i).run()).meta?.changes ?? 0 };
-  await one("extra", "DELETE FROM run_extra WHERE run_id IN (SELECT id FROM runs WHERE install = ?)");
-  await one("groups", "DELETE FROM run_groups WHERE run_id IN (SELECT id FROM runs WHERE install = ?)");
+  // the archive keeps no extras/groups/names columns: a run that already moved there leaves its side rows behind, so the
+  // forget reads both tables (the runs themselves go further down, while the subqueries can still see them)
+  await one("extra", "DELETE FROM run_extra WHERE run_id IN (SELECT id FROM runs WHERE install = ?1 UNION SELECT id FROM runs_archive WHERE install = ?1)");
+  await one("groups", "DELETE FROM run_groups WHERE run_id IN (SELECT id FROM runs WHERE install = ?1 UNION SELECT id FROM runs_archive WHERE install = ?1)");
   await one("run_names", "DELETE FROM run_names WHERE run_id IN (SELECT id FROM runs WHERE install = ?1 UNION SELECT id FROM runs_archive WHERE install = ?1)");   // the ladder's names go with the runs
   for (const t of ["names", "src", "raw"]) await one("kpq_" + t, `DELETE FROM kpq_${t} WHERE kpq_id IN (SELECT id FROM kpq_rounds WHERE install = ?1 UNION SELECT id FROM kpq_rounds_archive WHERE install = ?1)`);
   await one("runs", "DELETE FROM runs WHERE install = ?"); await one("runs_archive", "DELETE FROM runs_archive WHERE install = ?");
   await one("kpq", "DELETE FROM kpq_rounds WHERE install = ?"); await one("kpq_archive", "DELETE FROM kpq_rounds_archive WHERE install = ?");
-  await one("party", "DELETE FROM party_live WHERE install = ?"); await one("shop", "DELETE FROM shop_obs WHERE install = ?");  await one("shop_ext", "DELETE FROM shop_obs_ext WHERE obs_id IN (SELECT id FROM shop_obs WHERE install = ?1)");
+  // shop_ext first: its rows are found through shop_obs, so deleting the observations first would orphan the seller
+  // name/title/ch/room forever (bug-hunt 2026-11-02 — "Delete what I shared" has to mean everything)
+  await one("party", "DELETE FROM party_live WHERE install = ?"); await one("shop_ext", "DELETE FROM shop_obs_ext WHERE obs_id IN (SELECT id FROM shop_obs WHERE install = ?1)"); await one("shop", "DELETE FROM shop_obs WHERE install = ?");
   await one("spots", "DELETE FROM boss_spots WHERE install = ?");
   await db.prepare("DELETE FROM meta WHERE k IN ('summary', 'shop_summary', 'ladder')").run();   // the cached public numbers rebuild without it
   return json({ok: true, removed: n.runs + n.runs_archive + n.kpq + n.kpq_archive + n.shop + n.shop_ext + n.spots + n.party + n.run_names});
@@ -499,7 +515,9 @@ export function buildLadder(rows, G){
     if (rank.length > LADDER_OVER_TOP_OTHERS) for (const l of rank.slice(1)) if (l[metric] > LADDER_OVER_TOP * rank[0][metric]) l.flag = "too far above the board";
     const rows = all.filter(l => !l.flag).sort((a, b) => b[metric] - a[metric]).slice(0, 50);
     const lab = new Map(), g = l => { if (!lab.has(l.key)) lab.set(l.key, "l" + lab.size); return lab.get(l.key) };
-    return {rows: rows.map(l => ({group: g(l), ...l, key: undefined})), hidden: all.length - rows.length};
+    // hidden = the lines the watchdogs hold back; a board longer than 50 just shows the top 50 (the site's copy says
+    // "held back by the watchdogs" — honest lines past the cut are not that)
+    return {rows: rows.map(l => ({group: g(l), ...l, key: undefined})), hidden: all.filter(l => l.flag).length};
   };
   const groups = fold(gk);
   const perMap = fold(r => (r.map == null ? null : [r.map, gk(r)]));   // key: [map, group] arrays

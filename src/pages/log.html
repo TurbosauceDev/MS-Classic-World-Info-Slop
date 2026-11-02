@@ -9,6 +9,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card" data-t="2026-11-02T05:40:00Z"><div class="cardhead"><h3>Nov 2, 2026 · Bug-hunt pass: the corners get smoother</h3></div>
+      <p>A deep sweep over the site's error paths. A screenshot that won't open no longer jams the Character Builder's importer (it used to stick on "Reading…" and ignore every later drop); Price check and Scroll check now say so and recover when the item pictures fail to load instead of hanging; the EXP/hr live reader stops your screen share cleanly if the page fails to start reading; the KPQ timer page survives a hand-edited saved round; and a shared-builder link with junk skill-point values can't garble the SP counters any more. Found by a full code audit; each fix has its own automated test.</p></div>
     <div class="card" data-t="2026-11-02T04:10:00Z"><div class="cardhead"><h3>Nov 2, 2026 · Weekly ladder: the tab row renders once, every page on Home</h3></div>
       <p>Fixes to the week-old Weekly ladder page: the Overall EXP / Mesos / Map rates tabs each rendered a second, dead copy of themselves (a tab list built as pairs was flattened before the labels were read — phones showed three dead, unnamed tab buttons); the page now has its Home card and sits at the site's narrow page width; and an empty board — the norm early in the week, since the ladder resets Monday 00:00 UTC — gets the same centred "nothing yet" card the other data pages use, with what puts the first line there. Found by the site's own page audits (smoke test).</p></div>
     <div class="card" data-t="2026-11-02T03:30:00Z"><div class="cardhead"><h3>Nov 2, 2026 · The tracker's quest log joins the site</h3></div>

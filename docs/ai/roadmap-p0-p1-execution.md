@@ -55,8 +55,10 @@ rides on the wire as null until the tracker can read the game's channel display)
 `tracker/app/renderer-shop.js` (loop, debounce, change detection), `tracker/app/main.js`, `tracker/app/renderer-settings.js`, `tracker/tests/shop.test.js`.
 
 ### 4. P0-2 · Shared boss spots (the networked boss tracking) — SHIPPED 0.3.30
-Additive D1 table `boss_spots(boss, ch, t, n)` + `POST /api/spots` (opt-in, **no IGN**,
-rate-limited like the rest of the Worker) + `GET /api/spots?boss=`. Tracker side: timed
+Additive D1 table `boss_spots(boss, ch, t, n)` + `POST /api/spots` (opt-in, witness
+counts only — no IGN by design; Turbozo's de-anonymization reversal (2026-11-01,
+"us anonymizing that was a mistake") applied to the shop name plates, not to kill
+witnesses, whose value is the count) + `GET /api/spots?boss=`. Tracker side: timed
 kills are already detected (kill-log path + `markKill` buttons) → share
 `{boss, ch, t}` when "share boss spots" is on. Respawn cards and the overlay map card
 render shared rows: "Mushmom ch 3 — down 12 min ago · 3 saw it", current channel first,
@@ -140,9 +142,33 @@ unattributed source, never put secrets in filenames.
 ## Guardrails that do not move
 
 - Schema stays additive (repo rule).
-- First-party collection stays item/qty/price/sold with the 3-player quorum; boss spots
-  add `{boss, ch, t}` with no IGN — location without identity.
+- First-party shop collection carries the name plate (seller IGN + title + FM room + map,
+  Turbozo 2026-11-01) behind the 3-player quorum; boss spots add `{boss, ch, t}` with
+  witness counts only — location without identity, the one place anonymity is the feature.
+- "Delete what I shared" erases every row an install sent, side tables included — the
+  2026-11-02 bug hunt found and fixed the shop-name rows surviving it (delete order).
 - Updates stay on GitHub Releases with a public hash history; no filename tokens ever.
 - Data licensing unchanged: OSMS CC BY 4.0 + named, permitted sources with attribution.
 - Watchlist continues: re-run the installer sweep + overlap check on the next MesoLens
   release (0.3.69 predates our canary — every verdict is per-build).
+
+## 2026-11-02 · Bug-hunt and polish pass (all 9 approved items now shipped)
+
+Every Wave 1 + Wave 2 item is live (0.3.30–0.3.36, ladder + rates site-side). A deep
+bug-hunt pass then hardened all three areas; fixes are regression-tested:
+
+- **Server:** shared runs dedupe retry sends (same install/map/numbers inside the 12-min
+  window — a legit next run is always 14.5+ min later); `forget` now deletes `shop_obs_ext`
+  (the seller name rows survived it) and archived runs' side tables; the archive move no
+  longer orphans `run_extra`/`run_groups`/`run_names`; the party-view throttle follows the
+  install, not the code (rotating codes can't skip it); ladder `hidden` counts only
+  watchdog-flagged lines; a mob's mesos can't exceed the run's own pickup total.
+- **Tracker:** the inline fallback engine answers `band: null` (the dead worker's band
+  reader used to leak a pooled frame a second); pause by hand freezes EXP-bar and wallet
+  events too; session saves are atomic; Export CSV reads every session; snapshots return
+  their frame buffer to the pool; the neural shop reader also demands the weakest decoded
+  digit clear the confidence floor (bench still 6/6 across the board).
+- **Site:** a broken screenshot can't brick the Character Builder importer; failed icon
+  loads answer with a message instead of a stuck "Reading…"; the live EXP reader stops the
+  screen share if start-up fails; the KPQ timer page survives a hand-edited saved round;
+  junk SP values in shared links are dropped. site v0.20.15, tracker 0.3.37.

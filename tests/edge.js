@@ -34,7 +34,9 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     const {p, errs, ctx} = await page(); await p.goto(URL);
     await p.evaluate(([K, g]) => K.forEach(k => localStorage.setItem(k, g)), [KEYS, g]); await p.goto(URL); await p.waitForTimeout(200);
     const bad = await allTabs(p); check(!errs.length && !bad.length, `every saved key = ${g}: all pages open (${[...errs, ...bad].join("; ")})`); await ctx.close() }
-  for (const [k, v] of [["ctown", "Ellinia"], ["craft", '{"q":5}'], ["wmap", '{"isl":9,"cls":"Pirate","lv":"x"}'], ["mobs", '{"fc":"Pirate"}'], ["planner", '{"cls":"Warrior","lvl":-5}'], ["expc", '{"l0":"25","rec":"x"}']]){
+  for (const [k, v] of [["ctown", "Ellinia"], ["craft", '{"q":5}'], ["wmap", '{"isl":9,"cls":"Pirate","lv":"x"}'], ["mobs", '{"fc":"Pirate"}'], ["planner", '{"cls":"Warrior","lvl":-5}'], ["expc", '{"l0":"25","rec":"x"}'],
+    // a well-shaped but hand-edited KPQ round (only st was checked once): render() walks date/at/id too (2026-11-02)
+    ["kpqt", '[{"st":[1,2,3,4,5,6]}]']]){
     const {p, errs, ctx} = await page(); await p.goto(URL); await p.evaluate(([k, v]) => localStorage.setItem(k, v), [k, v]); await p.goto(URL);
     const bad = await allTabs(p); check(!errs.length && !bad.length, `saved ${k} = ${v} (${[...errs, ...bad].join("; ")})`); await ctx.close() }
 
@@ -85,6 +87,16 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.setInputFiles("#inv input[type=file]", {name: "shot.png", mimeType: "image/png", buffer: Buffer.from("not an image")});
     await p.waitForFunction(() => !/Reading/.test(document.querySelector("#ivst").textContent), null, {timeout: 30000});
     check(!errs.length && /couldn't be opened/.test(await p.textContent("#ivst")), `price check: broken file reported (${await p.textContent("#ivst")})`); await ctx.close() }
+
+  // 6b. Character Builder import: the same broken file must not brick the importer — the error stub used to miss a
+  //     field merge() walks, so merge threw, the pill stuck on "Reading…" and every later drop threw too (2026-11-02)
+  { const {p, errs, ctx} = await page(); await p.goto(URL); await open(p, "plan");
+    await p.setInputFiles("#pimpfile", {name: "shot.png", mimeType: "image/png", buffer: Buffer.from("not an image")});
+    await p.waitForFunction(() => !/Reading/.test(document.querySelector("#pimpst").textContent), null, {timeout: 30000});
+    await p.setInputFiles("#pimpfile", {name: "shot2.png", mimeType: "image/png", buffer: Buffer.from("still not an image")});
+    await p.waitForTimeout(300);
+    const alive = await p.evaluate(() => !document.querySelector("#pimpdrop").classList.contains("busy") && !/Reading/.test(document.querySelector("#pimpst").textContent));
+    check(!errs.length && alive, `builder import: broken file survives, importer still works (${errs.join("; ")})`); await ctx.close() }
 
   // 7. search: Setup items (letter chairs 'Red "A"') no longer bury Red Snail / Red Potion; same-name items show their ID
   { const {p, ctx} = await page(); await p.goto(URL); await p.keyboard.press("Control+k"); await p.fill("#srchq", "red"); await p.waitForTimeout(100);

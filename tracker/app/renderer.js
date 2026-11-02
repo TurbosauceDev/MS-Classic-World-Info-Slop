@@ -101,7 +101,9 @@ function grabFrame(){
 function makeEngine(icons, area, invHint, glyphs, invLast){
   const inline = () => { GrindReaders.addGlyphs(glyphs); const rd = GrindReaders.createReaders(G, icons); rd.setArea(area); rd.setInvHint(invHint); rd.setInvLast(invLast);
     (ALL_ICONS ||= GrindReaders.loadIcons(G, G.iicons).catch(() => null)).then(l => l && rd.setInvIcons(l));
-    return {kind: "window", setArea: a => rd.setArea(area = a), invNow: () => rd.invNow(), setInvHint: a => rd.setInvHint(invHint = a), read: async m => GrindReaders.work(rd, m), close(){}} };
+    // band: null — the inline engine can't read the pickup band; without this key Object.assign would keep the dead
+    // worker's band(), whose next call transfers a pooled buffer into a terminated worker (bug-hunt 2026-11-02)
+    return {kind: "window", band: null, setArea: a => rd.setArea(area = a), invNow: () => rd.invNow(), setInvHint: a => rd.setInvHint(invHint = a), read: async m => GrindReaders.work(rd, m), close(){}} };
   let w = null;
   try { w = new Worker("reader-worker.js") } catch { return inline() }
   let id = 0, waiting = null, eng, bid = 0, bwaiting = null;

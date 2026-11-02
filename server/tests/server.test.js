@@ -32,7 +32,7 @@ assert.strictEqual(r.why, "too much EXP for this level");
 assert.strictEqual(r.why, "mostly idle", JSON.stringify([s, r]));
 [s, r] = await post(run("dddddddddddddddd4", 2000, {minutes: 3}));
 assert.strictEqual(s, 400);
-for (let i = 0; i < 7; i++) [s] = await post(run("eeeeeeeeeeeeeeee5", 500));
+for (let i = 0; i < 7; i++) [s] = await post(run("eeeeeeeeeeeeeeee5", 500 + i));   // distinct runs: an identical resend is a retry now (deduped), not a new run
 assert.strictEqual(s, 429, "7th run in an hour is refused");
 
 [s, r] = await post(run("ffffffffffffffff6", 1000, {map: 80000500, mapName: "1st Accompaniment <Bonus>", party: 4, mobs: [{id: "19", kills: 10, items: {}}]}));
@@ -56,7 +56,7 @@ const a = sum.rows.find(x => x.expHr === 4400);   // player 1: median of 4000 an
 assert.ok(a && a.runs === 2 && a.map === "42");
 assert.strictEqual(sum.players, 12, "only counted runs: players 1, 5, 6, the six g IDs, the two h IDs and j");
 assert.ok(sum.rows.some(x => x.map === null && x.mapName === "Somewhere New"));
-assert.strictEqual(sum.mobs["2"].items["4000019"], 3 * 2 + 3 * 6 + 3 * 7 + 3 * 3, "players 1, 5, the g IDs (7 runs), the h IDs and j");
+assert.strictEqual(sum.mobs["2"].items["4000019"], 3 * 2 + 3 * 6 + 3 * 6 + 3 * 3, "players 1, 5, the six g IDs (the repeated g1 send is a deduped retry now), the h IDs and j");
 assert.ok(!JSON.stringify(sum).includes("aaaaaaaa"), "no install ids in the summary");
 assert.strictEqual(new Set(sum.rows.map(x => x.group)).size, sum.rows.length - 1 - 5, "the two party members share a group; the six g IDs on one network are one player");
 const gg = sum.rows.filter(x => x.map === "42" && x.party === 1).map(x => x.group);
@@ -70,7 +70,7 @@ const gm = new Set(nets.slice(-3).map(x => x.group));
 assert.strictEqual(gm.size, 2, "m01 + m02 (one network) and n01");
 // best time to farm: 3 players, each 3 runs at 02:00 UTC (1000) and 3 at 20:00 (2000): slower than their usual at night
 for (const who of ["t00000000000001a", "t00000000000002b", "t00000000000003c"]) for (let i = 0; i < 6; i++)
-  [s, r] = await post(run(who, i < 3 ? 1000 : 2000, {hour: i < 3 ? 2 : 20}), "5.5.5." + who.at(-1).charCodeAt(0));
+  [s, r] = await post(run(who, i < 3 ? 1000 + i * 3 : 2000 + i * 3, {hour: i < 3 ? 2 : 20}), "5.5.5." + who.at(-1).charCodeAt(0));   // distinct: a resend would be deduped
 assert.strictEqual(r.counted, true, JSON.stringify(r));
 const tsum = await fresh();
 assert.deepStrictEqual(tsum.times["42"], [[0, 0.67, 3], [18, 1.33, 3]], JSON.stringify(tsum.times));
@@ -78,11 +78,11 @@ assert.deepStrictEqual(tsum.times["42"], [[0, 0.67, 3], [18, 1.33, 3]], JSON.str
 assert.strictEqual(s, 200, "a junk hour is dropped, not refused");
 // deaths: kept per run, a median per player per hour in the summary
 [s] = await post(run("kkkkkkkkkkkkkkkk1", 1000, {deaths: 2}));
-[s] = await post(run("kkkkkkkkkkkkkkkk1", 1000, {deaths: 4}));
-assert.strictEqual((await fresh()).rows.find(x => x.deathsHr != null && x.runs === 2 && x.deathsHr === 12).expHr, 4000, "deaths/hr: median of 8 and 16");
+[s] = await post(run("kkkkkkkkkkkkkkkk1", 1010, {deaths: 4}));   // distinct runs: an identical resend is a retry now (deduped)
+assert.strictEqual((await fresh()).rows.find(x => x.deathsHr != null && x.runs === 2 && x.deathsHr === 12).expHr, 4020, "deaths/hr: median of 8 and 16");
 // potions/arrows spent: a median per player per hour; a tracker that saw no item counts sends null (left out, not 0)
 [s] = await post(run("uuuuuuuuuuuuuuu1", 1000, {usedCost: 300}), "4.4.4.1");
-[s] = await post(run("uuuuuuuuuuuuuuu1", 1000, {usedCost: 500}), "4.4.4.1");
+[s] = await post(run("uuuuuuuuuuuuuuu1", 1010, {usedCost: 500}), "4.4.4.1");   // distinct runs (see the deaths note)
 [s] = await post(run("uuuuuuuuuuuuuuu2", 1000, {usedCost: null}), "4.4.4.2");
 const us = (await fresh()).rows.filter(x => x.usedHr != null);
 assert.deepStrictEqual(us.map(x => x.usedHr), [1600], JSON.stringify(us));
@@ -243,7 +243,7 @@ assert.ok(adm2.includes("Shared runs") && adm2.includes("/api/runs/recent"), "pa
 
 // archive (2026-10-26, Danny: "add an archive table"): runs past the 180-day window leave the hot tables at the rebuild
 // (the site's medians see a rolling window); the KPQ boards read live + archive, so an all-time best never falls off
-[s] = await post(run("archrun0000000001", 1000));
+[s] = await post(run("archrun0000000001", 1000, {party: 2, partyCode: "archers", hour: 3}));   // party code + extra fields: their side rows must not outlive the archived run
 [s, r] = await kpost(kr("archkpq0000000001", 300), "40.0.0.1");
 assert.ok(r.counted, JSON.stringify(r));
 const old = new Date(Date.now() - (ARCHIVE_DAYS + 5) * 86400e3).toISOString();
@@ -251,6 +251,8 @@ sql.prepare("UPDATE runs SET received = ? WHERE install = 'archrun0000000001'").
 sql.prepare("UPDATE kpq_rounds SET received = ? WHERE install = 'archkpq0000000001'").run(old);
 const archived = await fresh();
 assert.deepStrictEqual(archived.archived, {runs: 1, rounds: 1}, "archive totals in the summary: " + JSON.stringify(archived.archived));
+assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM run_extra WHERE run_id NOT IN (SELECT id FROM runs)").get().n, 0, "the archived run's extras went with it");
+assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM run_groups WHERE run_id NOT IN (SELECT id FROM runs)").get().n, 0, "the archived run's party code went with it");
 assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE install = 'archrun0000000001'").get().n, 0, "old run left the hot table");
 assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs_archive WHERE install = 'archrun0000000001'").get().n, 1, "and sits in the archive");
 assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM kpq_rounds WHERE install = 'archkpq0000000001'").get().n, 0);
@@ -377,20 +379,22 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   }
   assert.strictEqual(sql.prepare("SELECT (SELECT COUNT(*) FROM runs) + (SELECT COUNT(*) FROM kpq_rounds) n").get().n, before, "junk stores nothing");
 }
-console.log("server tests passed");
 
 // "Delete what I shared" (blind-spot report A2): one install's rows vanish from every table, other installs stay, junk ids are refused
 {
   const post = (path, body, ip = "10.6.6.6") => worker.fetch(new Request("https://x" + path, {method: "POST", body: typeof body === "string" ? body : JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async r => [r.status, await r.json()]);
   const mine = "forgetmeforgetme1", other = "keepmekeepmekeep1";
   for (const [inst, ip] of [[mine, "10.6.6.1"], [other, "10.6.6.2"]]) await post("/api/shop", {install: inst, v: 1, rows: [{id: 1002000, qty: 1, price: 1000, sold: 0}]}, ip);
+  await post("/api/shop", {install: mine, v: 2, seller: "swagmart", title: "fm 3", rows: [{id: 1002001, qty: 1, price: 900, sold: 0}]}, "10.6.6.1");   // a named upload: its seller name must go when the rows go
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM shop_obs_ext e JOIN shop_obs o ON o.id = e.obs_id WHERE o.install = ?").get(mine).n, 1, "the named upload's ext row is there");
   sql.exec("INSERT INTO party_live (grp, install, updated, ip, data) VALUES ('g', 'forgetmeforgetme1', '2026-10-31T00:00:00Z', 'h', '{}')");
   const count = (t, i) => sql.prepare(`SELECT COUNT(*) n FROM ${t} WHERE install = ?`).get(i).n;
-  assert.strictEqual(count("shop_obs", mine), 1);
+  assert.strictEqual(count("shop_obs", mine), 2, "one v1 row + the named upload's row");
   for (const b of ["not json", "{}", JSON.stringify({install: "short"}), JSON.stringify({install: "x".repeat(60)})]){ const [st] = await post("/api/forget", b); assert.strictEqual(st, 400, "forget junk " + b.slice(0, 20)) }
   const [st, rb] = await post("/api/forget", {install: mine});
   assert.strictEqual(st, 200); assert.ok(rb.removed >= 2, "counts what it removed: " + JSON.stringify(rb));
   assert.strictEqual(count("shop_obs", mine) + count("party_live", mine), 0, "my rows are gone");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM shop_obs_ext WHERE obs_id NOT IN (SELECT id FROM shop_obs)").get().n, 0, "the seller name/title went with the rows (delete order)");
   assert.strictEqual(count("shop_obs", other), 1, "another install is untouched");
 }
 
@@ -410,23 +414,23 @@ console.log("server tests passed");
   const ip = i => "10.7.7." + i;
   const lvRun = (inst, exp, extra) => run(inst, exp, {level: lv, ...extra});   // big-enough runs need the level that allows them
   const partyCode = {partyCode: "snails"};
-  for (let i = 0; i < 2; i++){   // a board line needs 30+ farmed minutes: two 15-min runs each
-    await post({...lvRun("ladderplayer00001", 3000, {name: "Turbow"})}, ip(1));
-    await post(lvRun("ladderplayer00002", 3000, {name: "Glorg"}));
-    await post(lvRun("partyoneparty0001", 3000, {party: 4, name: i ? "Bob" : "Alice"}));   // one install: the latest name wins
-    await post(lvRun("partytwoparty0002", 3000, {party: 4, name: "Cara", ...partyCode}));
-    await post(lvRun("partytwoparty0003", 3000, {party: 4, name: "Dan", ...partyCode}));
+  for (let i = 0; i < 2; i++){   // a board line needs 30+ farmed minutes: two distinct 15-min runs each (an identical resend is a retry)
+    await post({...lvRun("ladderplayer00001", 3000 + i * 10, {name: "Turbow"})}, ip(1));
+    await post(lvRun("ladderplayer00002", 3000 + i * 10, {name: "Glorg"}));
+    await post(lvRun("partyoneparty0001", 3000 + i * 10, {party: 4, name: i ? "Bob" : "Alice"}));   // one install: the latest name wins
+    await post(lvRun("partytwoparty0002", 3000 + i * 10, {party: 4, name: "Cara", ...partyCode}));
+    await post(lvRun("partytwoparty0003", 3000 + i * 10, {party: 4, name: "Dan", ...partyCode}));
   }
   // a line over the map's physics ceiling (map 42's is ~31k/h): stored, ok, but held off the board
   const over = 40000;   // 160k/h, past the ceiling, under the 2x-per-level cap at lv
-  for (let i = 0; i < 2; i++) await post(run("ceilingrider00001", over, {level: lv, msgExp: over, barExp: over, kills: 100, name: "Flash"}));
+  for (let i = 0; i < 2; i++) await post(run("ceilingrider00001", over + i * 10, {level: lv, msgExp: over, barExp: over, kills: 100, name: "Flash"}));
   let [s, l] = await get();
   assert.strictEqual(s, 200);
   const ov = l.this.boards.overall.rows;
   assert.ok(ov.length >= 3, "board has the honest lines: " + JSON.stringify(ov.map(x => x.expHr)));
   assert.ok(ov.every(x => x.expHr < 160000), "no impossible line on the board");
   assert.ok(ov.some(x => x.names.includes("Turbow")) && ov.some(x => x.names.includes("Glorg")), "names ride with the runs");
-  assert.ok(l.this.boards.overall.hidden >= 1, "the ceiling line is held back, not deleted");
+  assert.strictEqual(l.this.boards.overall.hidden, 1, "hidden counts the held-back lines, not the top-50 cut");
   assert.ok(!ov.some(x => x.names.includes("Flash")), "the ceiling rider is not on the public board");
   // party: two installs with one code and party 4 are ONE line with both names
   const cara = ov.find(x => x.names.includes("Cara"));
@@ -446,3 +450,32 @@ console.log("server tests passed");
   assert.ok(!l.this.boards.overall.rows.some(x => x.names.includes("Turbow")), "forgotten names leave the board");
   assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM run_names").get().n >= 1, true, "other names stay");
 }
+
+// runs retry dedupe (bug-hunt 2026-11-02): the tracker resends a run whose ack was lost — the same numbers must not
+// count twice. Same shape as the KPQ route's rule: same install, same numbers, within 30 min.
+{
+  const inst = "retryretryretry01";
+  let [s, r] = await post(run(inst, 4321, {mesos: 5555, kills: 77}));
+  assert.strictEqual(r.counted, true);
+  [s, r] = await post(run(inst, 4321, {mesos: 5555, kills: 77}));
+  assert.strictEqual(r.counted, false, JSON.stringify(r)); assert.strictEqual(r.why, "already sent", "the retry is answered, not stored");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE install = ?").get(inst).n, 1, "one row for the run");
+  [s, r] = await post(run(inst, 4400, {mesos: 5600, kills: 80}));
+  assert.strictEqual(r.counted, true, "a different run is not a retry");
+}
+// party view: rotating the party code can't skip the 20 s throttle (bug-hunt 2026-11-02) — it follows the install
+{
+  const inst = "rotaterotaterot01";
+  const party = code => worker.fetch(new Request("https://x/api/party", {method: "POST", body: JSON.stringify({install: inst, partyCode: code, expHr: 100}), headers: {"cf-connecting-ip": "10.11.11.1"}}), env).then(r => r.status);
+  assert.strictEqual(await party("rot1"), 200);
+  assert.strictEqual(await party("rot2"), 429, "a new code, same install: still too often");
+}
+// a mob's mesos can't exceed the run's own pickup total (bug-hunt 2026-11-02): fabricated per-mob mesos are clamped
+{
+  const inst = "mesoscapmesosca01";
+  await post(run(inst, 1000, {mesos: 500, kills: 10, mobs: [{id: "2", kills: 10, mesos: 1e9, mesoDrops: 5000}]}));
+  const mobs = JSON.parse(sql.prepare("SELECT mobs FROM runs WHERE install = ?").get(inst).mobs);
+  assert.strictEqual(mobs[0].mesos, 500, "clamped to the run's mesos: " + JSON.stringify(mobs));
+}
+
+console.log("server tests passed");

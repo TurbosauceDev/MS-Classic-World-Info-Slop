@@ -544,9 +544,9 @@ app.whenReady().then(() => siteMarket(false).catch(() => {}));   // warm the cac
 setInterval(() => siteMarket(true).catch(() => {}), 30 * 60e3);   // every 30 minutes
 ipcMain.on("site-market-ready", () => sendSiteMk());   // the page asks for the current copy after boot
 // session history: the saved session summaries, newest first, and a CSV of them in Documents
-function sessions(){
+function sessions(cap = 200){   // the History list caps at 200; the CSV export asks for everything
   try {
-    return fs.readdirSync(SESSIONS).filter(f => /^\d+\.json$/.test(f)).sort((a, b) => b.localeCompare(a, undefined, {numeric: true})).slice(0, 200)
+    return fs.readdirSync(SESSIONS).filter(f => /^\d+\.json$/.test(f)).sort((a, b) => b.localeCompare(a, undefined, {numeric: true})).slice(0, cap)
       .map(f => { try { return {saved: +f.slice(0, -5), ...JSON.parse(fs.readFileSync(path.join(SESSIONS, f), "utf8"))} } catch { return null } }).filter(Boolean);
   } catch { return [] }
 }
@@ -567,7 +567,7 @@ ipcMain.handle("export-csv", () => {
   // text starting with = + - @ would run as a formula in Excel (map names come from OCR): prefixed with '
   const q = v => { let t = String(v ?? ""); if (typeof v === "string" && /^[=+\-@]/.test(t)) t = "'" + t; return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t };
   const head = ["saved", "date", "name", "player", "start_level", "end_level", "clock_min", "exp_total", "exp_per_active_min", "best_drop", "best_drop_each", "map", "level", "job", "party", "active_min", "kills", "exp", "mesos", "exp_hr", "mesos_hr", "deaths", "used_cost", "note"];
-  const rows = sessions().map(x => { const h = (x.activeMin || 0) / 60;
+  const rows = sessions(Infinity).map(x => { const h = (x.activeMin || 0) / 60;
     return [new Date(x.saved).toISOString(), x.date, x.name || "", x.player || "", x.startLevel ?? "", x.endLevel ?? "", x.clockMin ?? "", x.expTotal ?? x.snap?.exp ?? x.exp ?? "", x.expPerActiveMin ?? "", x.bestDrop?.name || "", x.bestDrop?.each ?? "", x.mapName || x.map, x.level, x.job, x.party, x.activeMin, x.kills, x.exp, x.mesos,
       h ? Math.round(x.exp / h) : "", h ? Math.round(x.mesos / h) : "", x.deaths ?? "", x.usedCost ?? "", x.note || ""] });
   const file = path.join(app.getPath("documents"), "MS Classic Tracker sessions.csv");
@@ -621,7 +621,9 @@ ipcMain.handle("share-run", async (_, run) => {
 });
 ipcMain.handle("save-session", (_, summary) => {   // kept on this PC only (shared numbers go up as 15-minute runs)
   fs.mkdirSync(SESSIONS, {recursive: true});
-  fs.writeFileSync(path.join(SESSIONS, Date.now() + ".json"), JSON.stringify(summary));
+  // atomic like every other persisted write: a crash mid-write used to leave a torn file the History silently drops —
+  // the one file the autosave copy can't bring back (AUTO.clear ran) (bug-hunt 2026-11-02)
+  writeAtomic(path.join(SESSIONS, Date.now() + ".json"), JSON.stringify(summary));
   AUTO.clear(SESSIONS);   // saved for real: nothing left to recover
   return true;
 });
@@ -764,7 +766,9 @@ ipcMain.handle("ocr", async (_, pngBytes, opt) => {
   if (opt && (opt.tag === "shopName" || opt.tag === "shopPrice")){   // the benched paths only; see neuralOcr above
     try {
       const m = await neuralOcr(Buffer.from(pngBytes), opt.up);
-      if (m && m.text && m.conf >= 0.35) return m.text;
+      // conf: the kept steps' geometric mean — one bad character hides in it (nine near-certain steps plus one 0.4
+      // guess average ~0.9). low: the weakest step. Either under the floor falls back to Tesseract (2026-11-02)
+      if (m && m.text && m.conf >= 0.35 && m.low >= 0.35) return m.text;
     } catch {}
   }
   try {

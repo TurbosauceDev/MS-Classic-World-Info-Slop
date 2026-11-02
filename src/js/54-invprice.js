@@ -53,7 +53,9 @@ async function handle(files){
   const imgs = [...files].filter(f => f.type.startsWith("image/"));
   if (!imgs.length) return;
   st.textContent = "Reading…"; st.className = "pill";
-  const C = await cands(); let bad = 0, broken = 0;
+  // the icon set decodes every picture once: one broken icon must not leave the pill stuck on "Reading…" forever
+  let C; try { C = await cands() } catch(e){ console.error(e); st.textContent = "The item pictures failed to load — reload the page and try again."; st.className = "pill p-warn"; return }
+  let bad = 0, broken = 0;
   for (const f of imgs){
     // a file that won't decode (renamed, cut-off download) or is too small to hold a window: count it, keep going
     let img, bank, inv; try { img = R.native(await shotLoad(f)); bank = findBank(img); inv = bank || R.findInventory(img) } catch(e) { broken++; continue }
@@ -184,7 +186,7 @@ $("#ivreads").addEventListener("click", e => {
 });
 $("#ivsum").addEventListener("click", e => { if (e.target.id !== "ivkeep") return; e.preventDefault(); $("#t-keep").click() });
 $("#ivbody").addEventListener("change", e => { const g = e.target.dataset.ivg; if (g){ PICK[g] = e.target.value; render() } });
-$("#ivdate").textContent = D.pw.read;
+$("#ivdate").textContent = D.pw?.read || "";   // ?. : a build without price data must not kill the bundle's later modules
 // for the scroll check (57-scrollscan.js): the icon set, the empty-slot test, and its live Use tab read in the table
 // counts(): item id -> how many (a slot with no count read is 1); handle(files): read screenshots dropped on another page
 window.INVP = {cands, filled, advice, handle, reads: () => READS.length,

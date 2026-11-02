@@ -33,7 +33,7 @@ function render(){
   const bestWeekly = g => Math.max(0, ...weekly.filter(r => r.grade <= g).map(r => r.contrib || 0));
   const earring = town === "Henesys" ? "Henesys Earrings" : "Kerning City Earrings";
   const eid = town === "Henesys" ? "1032021" : "1032022", ei = D.items[eid], es = ei.st;
-  const eicon = `<span class="ri" tabindex="0" data-item="${eid}" data-n="1" style="float:right;margin-left:8px">${D.iicons[eid] ? `<img src="data:image/png;base64,${D.iicons[eid]}" alt="${esc(ei.n)}">` : ""}</span>`;
+  const eicon = `<span class="ri" tabindex="0" data-item="${eid}" data-n="1" style="float:right;margin-left:8px">${D.iicons[eid] ? `<img src="data:image/png;base64,${D.iicons[eid]}" alt="${esc(ei.n)}">` : "<i></i>"}</span>`;   // <i>: fillIcons' placeholder, so the icon lands when the icons file arrives after boot (like itemIcon)
 
   $("#cfacts").innerHTML = [
     ["How to join", `At level 12, sign up with ${JOIN[town]}. The intro quest gives ${esc(intro ? intro.reward.replace(/;/g, ",") : "potions")}.`],

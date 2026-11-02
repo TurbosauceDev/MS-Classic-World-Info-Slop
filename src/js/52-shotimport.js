@@ -104,8 +104,8 @@ function merge(){
     if (r.shown){ m.shown = {...r.shown}; m.base = {...r.base} }
     for (const [id, v] of Object.entries(r.skills)) m.skills[id] = Math.max(m.skills[id] || 0, v);
     for (const [sl, ids] of Object.entries(r.gear)) m.gear[sl] = [...new Set((m.gear[sl] || []).concat(ids))];
-    for (const id of r.weapon) if (!m.weapon.includes(id)) m.weapon.push(id);
-    for (const id of r.deco) if (!m.deco.includes(id)) m.deco.push(id);
+    for (const id of r.weapon || []) if (!m.weapon.includes(id)) m.weapon.push(id);
+    for (const id of r.deco || []) if (!m.deco.includes(id)) m.deco.push(id);   // || : reads saved by older versions or the error stub may miss a field
   }
   // class: from skills, else the weapon, else the highest stat; nothing read keeps the builder's
   const jobs = Object.keys(m.skills).map(id => SKJOB[id].job), w = WBYID[m.weapon[0]];
@@ -237,7 +237,9 @@ async function handle(files){
   const add = [];
   for (const f of files){
     try { add.push(await readShot(f)) }
-    catch(e){ console.error(e); add.push({id: ++SEQ, name: f.name, what: [], skills: {}, gear: {}, weapon: [], marks: []}) }
+    // a shot that won't decode becomes a stub like a real read: merge() walks every read's fields, so the stub needs
+    // the same shape (one broken PNG used to brick the importer — every later drop threw in merge) (bug-hunt 2026-11-02)
+    catch(e){ console.error(e); add.push({id: ++SEQ, name: f.name, what: [], skills: {}, gear: {}, weapon: [], marks: [], deco: [], lvl: null, shown: null}) }
   }
   $("#pimpdrop").classList.remove("busy");
   READS = READS.concat(add); merge();

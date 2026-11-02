@@ -19,7 +19,7 @@ const dlt = d => (d < 0 ? "−" : "+") + (Math.abs(d) >= 60 ? mss(Math.abs(d)) :
 const SET = Object.assign({name: "", job: "", level: "", party: 4, id: ""}, savedState("kpqtset", {name: "", job: "", level: "", party: 4, id: ""}));
 if (!/^site-[0-9a-f]{24}$/.test(SET.id)) SET.id = "site-" + [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(16).padStart(2, "0")).join("");
 let ROUNDS = [];
-try { const v = JSON.parse(localStorage.getItem("kpqt") || "[]"); if (Array.isArray(v)) ROUNDS = v.filter(r => r && Array.isArray(r.st) && r.st.length === 6) } catch(e) {}
+try { const v = JSON.parse(localStorage.getItem("kpqt") || "[]"); if (Array.isArray(v)) ROUNDS = v.filter(r => r && Array.isArray(r.st) && r.st.length === 6 && typeof r.date === "string" && typeof r.at === "string" && r.id != null) } catch(e) {}   // the fields render() walks: a well-shaped but hand-edited round used to crash the whole page
 const save = () => { try { localStorage.setItem("kpqt", JSON.stringify(ROUNDS.slice(-300))); localStorage.setItem("kpqtset", JSON.stringify(SET)) } catch(e) {} };
 
 /* ---- the round being timed ----

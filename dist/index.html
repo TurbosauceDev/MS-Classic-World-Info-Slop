@@ -3000,6 +3000,8 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
   </details>
 
   <div class="changelog">
+    <div class="card" data-t="2026-11-02T05:40:00Z"><div class="cardhead"><h3><span class="ver">v0.20.15</span> Nov 2, 2026 · Bug-hunt pass: the corners get smoother</h3></div>
+      <p>A deep sweep over the site's error paths. A screenshot that won't open no longer jams the Character Builder's importer (it used to stick on "Reading…" and ignore every later drop); Price check and Scroll check now say so and recover when the item pictures fail to load instead of hanging; the EXP/hr live reader stops your screen share cleanly if the page fails to start reading; the KPQ timer page survives a hand-edited saved round; and a shared-builder link with junk skill-point values can't garble the SP counters any more. Found by a full code audit; each fix has its own automated test.</p></div>
     <div class="card" data-t="2026-11-02T04:10:00Z"><div class="cardhead"><h3><span class="ver">v0.20.14</span> Nov 2, 2026 · Weekly ladder: the tab row renders once, every page on Home</h3></div>
       <p>Fixes to the week-old Weekly ladder page: the Overall EXP / Mesos / Map rates tabs each rendered a second, dead copy of themselves (a tab list built as pairs was flattened before the labels were read — phones showed three dead, unnamed tab buttons); the page now has its Home card and sits at the site's narrow page width; and an empty board — the norm early in the week, since the ladder resets Monday 00:00 UTC — gets the same centred "nothing yet" card the other data pages use, with what puts the first line there. Found by the site's own page audits (smoke test).</p></div>
     <div class="card" data-t="2026-11-02T03:30:00Z"><div class="cardhead"><h3><span class="ver">v0.20.13</span> Nov 2, 2026 · The tracker's quest log joins the site</h3></div>
@@ -3730,7 +3732,7 @@ tr.kb-sp td{padding-top:2px;animation:kbin .25s ease-out}
 </section>
 
 <footer class="sitefoot">
-  <p class="sitever" data-built="2026-11-02T03:23:33Z" data-ver="0.20.14">Site version: v0.20.14 · built Nov 2, 2026 · 03:23 UTC</p>
+  <p class="sitever" data-built="2026-11-02T05:03:46Z" data-ver="0.20.15">Site version: v0.20.15 · built Nov 2, 2026 · 05:03 UTC</p>
   <p class="sitever pwstate" id="pwstate" hidden></p>
   <div class="footlinks"><button class="linkbtn" type="button" data-foot="log">Changelog</button><button class="linkbtn" type="button" data-foot="credits">Credits</button><button class="linkbtn" type="button" data-foot="feedback">Feedback</button><button class="linkbtn" type="button" data-foot="privacy">Privacy</button></div>
 </footer>
@@ -4051,7 +4053,8 @@ async function shareScreen({ms = 500, fps = 5, onFrame, onEnd = () => {}, before
   let tick = null, busy = false, live = true;
   const stop = () => { if (!live) return; live = false; tick?.(); stream.getTracks().forEach(t => t.stop()) };
   track.addEventListener("ended", () => { if (live){ stop(); onEnd() } });
-  await before();
+  // before() can throw (game data failed to load): stop the tracks, or the sharing indicator stays on with no way off
+  try { await before() } catch(e){ stop(); throw e }
   const grab = async () => {
     if (!live || busy) return; busy = true;
     try {
@@ -5503,7 +5506,7 @@ function render(){
   const bestWeekly = g => Math.max(0, ...weekly.filter(r => r.grade <= g).map(r => r.contrib || 0));
   const earring = town === "Henesys" ? "Henesys Earrings" : "Kerning City Earrings";
   const eid = town === "Henesys" ? "1032021" : "1032022", ei = D.items[eid], es = ei.st;
-  const eicon = `<span class="ri" tabindex="0" data-item="${eid}" data-n="1" style="float:right;margin-left:8px">${D.iicons[eid] ? `<img src="data:image/png;base64,${D.iicons[eid]}" alt="${esc(ei.n)}">` : ""}</span>`;
+  const eicon = `<span class="ri" tabindex="0" data-item="${eid}" data-n="1" style="float:right;margin-left:8px">${D.iicons[eid] ? `<img src="data:image/png;base64,${D.iicons[eid]}" alt="${esc(ei.n)}">` : "<i></i>"}</span>`;   // <i>: fillIcons' placeholder, so the icon lands when the icons file arrives after boot (like itemIcon)
 
   $("#cfacts").innerHTML = [
     ["How to join", `At level 12, sign up with ${JOIN[town]}. The intro quest gives ${esc(intro ? intro.reward.replace(/;/g, ",") : "potions")}.`],
@@ -6382,6 +6385,7 @@ if (HASH.b && HASH.b.cls) S = Object.assign(S, HASH.b);   // shared link
   S.cls = String(S.cls); if (!Object.hasOwn(BRANCHES, S.cls)) Object.assign(S, {cls:"Warrior", branch:null, fam:null});
   S.lvl = Math.min(MAX_LEVEL, Math.max(10, Math.round(+S.lvl) || 30));
   if (!obj(S.sp)) S.sp = {}; if (!obj(S.gear)) S.gear = {};
+  for (const k of Object.keys(S.sp)) if (!Number.isFinite(S.sp[k]) || !/^\d{1,10}$/.test(k)) delete S.sp[k];   // spentIn adds sp values: a string "3" from a hand edit used to concat into the SP counters ("053 / 61")
   S.deco = Array.isArray(S.deco) ? [...new Set(S.deco.map(String))].filter(id => D.items[id]?.c === "Cash").slice(0, 24) : [];   // NX / Decoration ids worn over the gear
   if (S.ap != null && !(obj(S.ap) && ["STR","DEX","INT","LUK"].every(k => Number.isFinite(S.ap[k])))) S.ap = null;
   for (const k of ["weapon","skill","ammo","branch","fam"]) if (S[k] != null && typeof S[k] !== "string") S[k] = null }
@@ -7435,8 +7439,8 @@ function merge(){
     if (r.shown){ m.shown = {...r.shown}; m.base = {...r.base} }
     for (const [id, v] of Object.entries(r.skills)) m.skills[id] = Math.max(m.skills[id] || 0, v);
     for (const [sl, ids] of Object.entries(r.gear)) m.gear[sl] = [...new Set((m.gear[sl] || []).concat(ids))];
-    for (const id of r.weapon) if (!m.weapon.includes(id)) m.weapon.push(id);
-    for (const id of r.deco) if (!m.deco.includes(id)) m.deco.push(id);
+    for (const id of r.weapon || []) if (!m.weapon.includes(id)) m.weapon.push(id);
+    for (const id of r.deco || []) if (!m.deco.includes(id)) m.deco.push(id);   // || : reads saved by older versions or the error stub may miss a field
   }
   // class: from skills, else the weapon, else the highest stat; nothing read keeps the builder's
   const jobs = Object.keys(m.skills).map(id => SKJOB[id].job), w = WBYID[m.weapon[0]];
@@ -7568,7 +7572,9 @@ async function handle(files){
   const add = [];
   for (const f of files){
     try { add.push(await readShot(f)) }
-    catch(e){ console.error(e); add.push({id: ++SEQ, name: f.name, what: [], skills: {}, gear: {}, weapon: [], marks: []}) }
+    // a shot that won't decode becomes a stub like a real read: merge() walks every read's fields, so the stub needs
+    // the same shape (one broken PNG used to brick the importer — every later drop threw in merge) (bug-hunt 2026-11-02)
+    catch(e){ console.error(e); add.push({id: ++SEQ, name: f.name, what: [], skills: {}, gear: {}, weapon: [], marks: [], deco: [], lvl: null, shown: null}) }
   }
   $("#pimpdrop").classList.remove("busy");
   READS = READS.concat(add); merge();
@@ -8953,7 +8959,9 @@ navReg("skills", () => S.open, v => { S.open = v; save(); show() });
     const seen = new Map(), out = [];
     for (const [id, b64] of Object.entries(map || {})){
       if (seen.has(b64)){ seen.get(b64).ids.push(id); continue }
-      const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], {type: "image/png"}));
+      // one broken icon (a corrupt base64 in the data): skipped, the rest still load — an unguarded reject here used to
+      // kill the whole set, and every caller waiting on it (Price check, Scroll check, the builder's importer) with it
+      let bmp; try { bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], {type: "image/png"})) } catch(e){ continue }
       const c = typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(bmp.width, bmp.height) : Object.assign(document.createElement("canvas"), {width: bmp.width, height: bmp.height});
       const g = c.getContext("2d"); g.drawImage(bmp, 0, 0);
       const ic = {id, ids: [id], w: bmp.width, h: bmp.height, d: g.getImageData(0, 0, bmp.width, bmp.height).data};
@@ -9462,7 +9470,9 @@ async function handle(files){
   const imgs = [...files].filter(f => f.type.startsWith("image/"));
   if (!imgs.length) return;
   st.textContent = "Reading…"; st.className = "pill";
-  const C = await cands(); let bad = 0, broken = 0;
+  // the icon set decodes every picture once: one broken icon must not leave the pill stuck on "Reading…" forever
+  let C; try { C = await cands() } catch(e){ console.error(e); st.textContent = "The item pictures failed to load — reload the page and try again."; st.className = "pill p-warn"; return }
+  let bad = 0, broken = 0;
   for (const f of imgs){
     // a file that won't decode (renamed, cut-off download) or is too small to hold a window: count it, keep going
     let img, bank, inv; try { img = R.native(await shotLoad(f)); bank = findBank(img); inv = bank || R.findInventory(img) } catch(e) { broken++; continue }
@@ -9593,7 +9603,7 @@ $("#ivreads").addEventListener("click", e => {
 });
 $("#ivsum").addEventListener("click", e => { if (e.target.id !== "ivkeep") return; e.preventDefault(); $("#t-keep").click() });
 $("#ivbody").addEventListener("change", e => { const g = e.target.dataset.ivg; if (g){ PICK[g] = e.target.value; render() } });
-$("#ivdate").textContent = D.pw.read;
+$("#ivdate").textContent = D.pw?.read || "";   // ?. : a build without price data must not kill the bundle's later modules
 // for the scroll check (57-scrollscan.js): the icon set, the empty-slot test, and its live Use tab read in the table
 // counts(): item id -> how many (a slot with no count read is 1); handle(files): read screenshots dropped on another page
 window.INVP = {cands, filled, advice, handle, reads: () => READS.length,
@@ -10519,8 +10529,8 @@ async function start(){
   stream.getVideoTracks()[0].addEventListener("ended", stop);
   $s("ssgo").hidden = true; $s("ssstop").hidden = false; $s("ssreset").hidden = false; $s("sslive").hidden = false;
   st.textContent = "Loading item pictures…"; st.className = "pill";
-  S.C = await INVP.cands();
-  if (!S) return;
+  // one broken icon used to leave the pill stuck and the stream live: stop and say so instead
+  try { S.C = await INVP.cands() } catch(e){ console.error(e); stop(); st.textContent = "The item pictures failed to load — reload the page and try again."; st.className = "pill p-warn"; return }
   S.timer = setInterval(tick, 250); tick();
 }
 function stop(){
@@ -13756,6 +13766,7 @@ for (const id of ["trkruns", "trkkpq"]){ $("#t-" + id).addEventListener("click",
 // Releasing? Add a line for the new version at the top: tests/core.test.js fails if the top entry isn't package.json's version.
 (function (root){
   const LOG = [
+    ["0.3.37", "2026-11-02", "A bug-hunt pass, mostly under the hood. <b>Shared runs can't double-count any more:</b> when a send's reply got lost on the way back, the tracker resent the run and the site counted it twice — the server now recognizes the same run (same map, same numbers, minutes apart) and answers \"already sent\". <b>\"Delete what I shared\" now really deletes everything:</b> the shop's seller name and title rows survived the erase because they were cleaned in the wrong order — fixed and covered by a test. <b>Pausing is a real pause:</b> EXP bar and wallet readings that landed while you were paused (a party killing a boss while you took a break) no longer climbed your EXP/hr; the saved run shows what you actually farmed. <b>Saving a session is crash-safe:</b> the finished run's file is written the same atomic way as every other file the tracker keeps, so a power cut mid-save can't leave a torn file behind. <b>Export CSV includes every session</b> again, not just the newest 200 the History list shows. Two reading-engine fixes: if the reading worker dies mid-run the fast pickup-line reader now stands down cleanly instead of quietly feeding frames into the dead worker (a few MB of memory leaked a second until Stop), and the shop price reader now distrusts a line where any single digit was a guess, falling back to the older engine for that row. Also: a snapshot gives its frame buffer back to the pool (long sessions keep a steady memory), and KPQ rounds sent to the site use one calendar for their date and hour. All suites, the OCR bench and the site audits run green."],
     ["0.3.36", "2026-11-02", "Quests (P1-7, Danny: \"lets implement that quest hud helper\"): open QUEST in the game and the tracker reads it with the site's Quest log engine — a new Quests card lists what's in progress, marks the rows it wasn't sure of with one-click picks, and hands you a code the site's Quest log pastes in (Training › Quest log → Import). Quest watch (Settings > Window and sharing) reads the window automatically while you play; the Read now button does it on demand. Nothing uploads — quest progress stays on this PC until you copy the code yourself. The reading core moved into one shared file (app/questread.js), so the site's Quest log and the tracker run the exact same reader, tested against the same fixtures on both sides."],
     ["0.3.35", "2026-11-02", "Anchor mode: overlay cards can follow the game window. Any card's options now have <b>Follow the game window</b> — pin the card next to the game and it rides along when the window moves or resizes, keeping its spot relative to the game (turn the switch on while the card sits where you want it; enabling never jumps it). Under the hood the tracker now asks Windows for the game window's rectangle with two tiny read-only native calls instead of spawning PowerShell every few seconds, so tracking is near-instant, and the old PowerShell way remains as an automatic fallback. The native surface is two geometry reads only — it never opens the game's process, touches its memory, or sends it input, and the Performance monitor shows whether the fast path loaded. Also: if you set a name in Settings (the party view's nick), the weekly ladder on the site can show it next to your shared runs — optional, empty by default."],
     ["0.3.34", "2026-11-02", "The shop reader got a neural text engine. A small recognition model (9.7 MB, the ocrs project's, used with permission and credited in the app) now reads the shop rows locally: on our test shop it reads every name and every price as well as the old engine, in about a sixth of the time, so the Shop prices card — and the automatic shop watch — answers noticeably faster while you browse. The shop's title bar still reads with the old engine (a seller's name must not come back wrong), anything the model reads empty or badly falls back to the old engine automatically, and the two-read price check is untouched. Like everything here, the model runs on your PC only: nothing new leaves it."],
@@ -13959,7 +13970,7 @@ const dlt = d => (d < 0 ? "−" : "+") + (Math.abs(d) >= 60 ? mss(Math.abs(d)) :
 const SET = Object.assign({name: "", job: "", level: "", party: 4, id: ""}, savedState("kpqtset", {name: "", job: "", level: "", party: 4, id: ""}));
 if (!/^site-[0-9a-f]{24}$/.test(SET.id)) SET.id = "site-" + [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(16).padStart(2, "0")).join("");
 let ROUNDS = [];
-try { const v = JSON.parse(localStorage.getItem("kpqt") || "[]"); if (Array.isArray(v)) ROUNDS = v.filter(r => r && Array.isArray(r.st) && r.st.length === 6) } catch(e) {}
+try { const v = JSON.parse(localStorage.getItem("kpqt") || "[]"); if (Array.isArray(v)) ROUNDS = v.filter(r => r && Array.isArray(r.st) && r.st.length === 6 && typeof r.date === "string" && typeof r.at === "string" && r.id != null) } catch(e) {}   // the fields render() walks: a well-shaped but hand-edited round used to crash the whole page
 const save = () => { try { localStorage.setItem("kpqt", JSON.stringify(ROUNDS.slice(-300))); localStorage.setItem("kpqtset", JSON.stringify(SET)) } catch(e) {} };
 
 /* ---- the round being timed ----

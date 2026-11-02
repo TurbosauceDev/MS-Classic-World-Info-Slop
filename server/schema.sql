@@ -101,7 +101,8 @@ DELETE FROM meta WHERE k = 'summary' AND NOT EXISTS (SELECT 1 FROM meta WHERE k 
 INSERT OR IGNORE INTO meta (k, v) VALUES ('kpq_reset_20261030', '1');
 
 -- Shop prices read off merchant shops by trackers with sharing on (Danny, 2026-10-31: crowd data of our own). One row per
--- shop row: item, quantity, price for the bundle, sold out or not. No seller, no character, no map. Rows leave after 14 days.
+-- shop row: item, quantity, price for the bundle, sold out or not. Rows leave after 14 days. The seller name/title/ch/room
+-- a v2 upload shares lives in shop_obs_ext below (0.3.30, Turbozo 2026-11-01).
 CREATE TABLE IF NOT EXISTS shop_obs (
   id       INTEGER PRIMARY KEY,
   install  TEXT NOT NULL,

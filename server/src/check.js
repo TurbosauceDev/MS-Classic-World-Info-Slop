@@ -13,11 +13,14 @@ export function cleanRun(r, G){
   const map = r.map != null && G.maps[String(r.map)] ? String(r.map) : null;
   // counts: whole numbers from 0 up, a monster's kills no more than the run's (they add up to the Confirmed Drops)
   const cnt = (v, hi) => Math.min(hi, Math.max(0, Math.floor(+v) || 0)), kills = cnt(r.kills, 1e5);
+  // a mob's mesos can't exceed the run's own pickup total (they add up to the Mesos counter); when the tracker saw no
+  // total at all the absolute cap still applies, so a broken HUD read never zeroes honest rows
+  const mesoCap = num(r.mesos, 1, 1e8) ? Math.round(r.mesos) : 1e8;
   // ids are game numbers only: anything else ("__proto__", "constructor") is dropped (it would corrupt the summary's tables)
   const ID = /^\d{1,10}$/;
   const itemsOf = (o, n) => Object.fromEntries(Object.entries(o && typeof o === "object" && !Array.isArray(o) ? o : {}).filter(([k]) => ID.test(k)).slice(0, n).map(([k, v]) => [k, cnt(v, 1e4)]).filter(([, v]) => v));
   const mobs = Array.isArray(r.mobs) ? r.mobs.filter(m => m && typeof m === "object" && ID.test(String(m.id))).slice(0, 20).map(m => ({id: String(m.id), kills: cnt(m.kills, kills),
-    mesos: cnt(m.mesos, 1e8), mesoDrops: cnt(m.mesoDrops, 1e5), items: itemsOf(m.items, 50)})) : [];
+    mesos: cnt(m.mesos, mesoCap), mesoDrops: cnt(m.mesoDrops, 1e5), items: itemsOf(m.items, 50)})) : [];
   const items = itemsOf(r.items, 100);
   const run = {date: r.date || new Date().toISOString().slice(0, 10), map, map_name: map ? G.mapnames[map] || null : text(r.mapName, 60) || null,
     level: r.level == null ? null : Math.round(r.level), job: text(r.job, 40) || null, party: r.party | 0, minutes: r.minutes, exp: Math.round(r.exp),

@@ -165,8 +165,8 @@ async function start(){
   stream.getVideoTracks()[0].addEventListener("ended", stop);
   $s("ssgo").hidden = true; $s("ssstop").hidden = false; $s("ssreset").hidden = false; $s("sslive").hidden = false;
   st.textContent = "Loading item pictures…"; st.className = "pill";
-  S.C = await INVP.cands();
-  if (!S) return;
+  // one broken icon used to leave the pill stuck and the stream live: stop and say so instead
+  try { S.C = await INVP.cands() } catch(e){ console.error(e); stop(); st.textContent = "The item pictures failed to load — reload the page and try again."; st.className = "pill p-warn"; return }
   S.timer = setInterval(tick, 250); tick();
 }
 function stop(){

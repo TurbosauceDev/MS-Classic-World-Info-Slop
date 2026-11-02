@@ -84,9 +84,11 @@
   }
 
   /* CTC greedy decode of one batch row of [seq, batch, classes] log-softmax. conf: the geometric
-     mean of the kept steps' probabilities (exp of the log-prob), 0 when nothing was read. */
+     mean of the kept steps' probabilities (exp of the log-prob), low: the weakest kept step's
+     probability — one near-certain price with one guessed digit hides in the mean, not in low.
+     Both 0 when nothing was read. */
   function decode(seq, data, bi, batch, classes, excluded){
-    let text = "", sum = 0, n = 0, prev = -1;
+    let text = "", sum = 0, n = 0, prev = -1, low = 1;
     for (let s = 0; s < seq; s++){
       let best = 0, bv = -Infinity;
       const base = (s * batch + bi) * classes;
@@ -99,9 +101,9 @@
       prev = best;
       if (!best) continue;           // 0 = CTC blank
       text += ALPHABET[best - 1] || "?";
-      sum += bv; n++;
+      sum += bv; n++; if (bv < low) low = bv;
     }
-    return {text, conf: n ? Math.exp(sum / n) : 0};
+    return {text, conf: n ? Math.exp(sum / n) : 0, low: n ? Math.exp(low) : 0};
   }
 
   /* Read every crop: group by padded width bucket (ocrs' next_multiple_of(50) grouping, so one run

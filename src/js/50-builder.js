@@ -58,6 +58,7 @@ if (HASH.b && HASH.b.cls) S = Object.assign(S, HASH.b);   // shared link
   S.cls = String(S.cls); if (!Object.hasOwn(BRANCHES, S.cls)) Object.assign(S, {cls:"Warrior", branch:null, fam:null});
   S.lvl = Math.min(MAX_LEVEL, Math.max(10, Math.round(+S.lvl) || 30));
   if (!obj(S.sp)) S.sp = {}; if (!obj(S.gear)) S.gear = {};
+  for (const k of Object.keys(S.sp)) if (!Number.isFinite(S.sp[k]) || !/^\d{1,10}$/.test(k)) delete S.sp[k];   // spentIn adds sp values: a string "3" from a hand edit used to concat into the SP counters ("053 / 61")
   S.deco = Array.isArray(S.deco) ? [...new Set(S.deco.map(String))].filter(id => D.items[id]?.c === "Cash").slice(0, 24) : [];   // NX / Decoration ids worn over the gear
   if (S.ap != null && !(obj(S.ap) && ["STR","DEX","INT","LUK"].every(k => Number.isFinite(S.ap[k])))) S.ap = null;
   for (const k of ["weapon","skill","ammo","branch","fam"]) if (S[k] != null && typeof S[k] !== "string") S[k] = null }

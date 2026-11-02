@@ -910,7 +910,9 @@
     const seen = new Map(), out = [];
     for (const [id, b64] of Object.entries(map || {})){
       if (seen.has(b64)){ seen.get(b64).ids.push(id); continue }
-      const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], {type: "image/png"}));
+      // one broken icon (a corrupt base64 in the data): skipped, the rest still load — an unguarded reject here used to
+      // kill the whole set, and every caller waiting on it (Price check, Scroll check, the builder's importer) with it
+      let bmp; try { bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], {type: "image/png"})) } catch(e){ continue }
       const c = typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(bmp.width, bmp.height) : Object.assign(document.createElement("canvas"), {width: bmp.width, height: bmp.height});
       const g = c.getContext("2d"); g.drawImage(bmp, 0, 0);
       const ic = {id, ids: [id], w: bmp.width, h: bmp.height, d: g.getImageData(0, 0, bmp.width, bmp.height).data};

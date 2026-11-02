@@ -242,7 +242,7 @@ function kpqShare(r, t, raw){
   const s = session.stats(), st = {};
   for (const [id, a] of Object.entries(kpq.stageTimes)) if (r.stages[id]) st[id] = Math.round(a.at(-1));
   kpqSent++; note("KPQ round sent to the KPQ leaderboard", "kpq");
-  host.shareRun({kpq: true, v: 1, date: new Date(r.t0).toLocaleDateString("sv"), hour: new Date(r.t0).getUTCHours(), mode: raw?.bonus ? "Bonus" : "Rush", v2: raw,
+  host.shareRun({kpq: true, v: 1, date: new Date(r.t0).toISOString().slice(0, 10), hour: new Date(r.t0).getUTCHours(), mode: raw?.bonus ? "Bonus" : "Rush", v2: raw,
     party: s.party, level: s.level, job: s.job, clear: Math.round(r.clear), total: Math.round(kpqSince(r, t)), clock: r.left0 !== null,
     exp: Math.max(0, s.exp - r.exp0), mesos: Math.max(0, s.mesos - r.mesos0), stages: st, partyCode: settings.partyCode || null,
     name: settings.kpqName !== false && [settings.nick, charName].find(n => /^[A-Za-z0-9]{2,12}$/.test(n || "")) || kpqAlias(s.job)});   // KPQ board only; runs never carry the name
@@ -368,7 +368,7 @@ function slowCheck(ms){
 // one event from the readers into the run (whole-frame reads and the pickup band both come through here)
 function onEvent(e, t){
     if (wrap && e.type !== "inv" && e.type !== "wallet" && e.type !== "glyph") return;   // after Stop: only the end inventory look counts
-    if (held && /^(exp|bonus|meso|item|itemraw)$/.test(e.type)) return;   // paused by hand: a break, nothing picked up counts
+    if (held && /^(exp|bonus|meso|item|itemraw|bar|wallet)$/.test(e.type)) return;   // paused by hand: a break, nothing counts (the bar and the wallet too — a party kill on a boss map used to inflate EXP/hr while paused; bug-hunt 2026-11-02). Stop clears held first, so the wrap-up wallet read still lands
     if (e.type === "kpqtime"){ if (kpq) kpqTime(e.left, e.t); return }
     if (e.type === "vitals"){ jr.event(e); ovVit = {hp: e.hp, mp: e.mp, t: Date.now()}; try { ovSend?.(true) } catch {}; return }   // HP / MP: journey log + Chat blocker bars; the session doesn't count them
     // a pickup-line letter learned from an item name: kept for next time (at most 300)
@@ -557,20 +557,26 @@ function renderSnaps(live = session?.stats().exp){   // live: EXP the live count
 }
 // take a snapshot from the game picture now: the EXP bar's level and %, the time, and the frame saved as a picture
 async function snap(which, f = null, hand = true){
-  f ||= await oneFrame();
-  const img = GrindReaders.native(f), bar = GrindReaders.readBar(img) || GrindReaders.readBarAny(f);
-  const level = bar && (GrindSession.levelOf(G, bar.exp, bar.pct) || session?.state.level) || null;
-  // an automatic snapshot whose bar didn't read keeps the last good reading (only the picture is new)
-  const sn = !bar && !hand && snaps[which]?.level ? {...snaps[which]} : {t: Date.now(), level, pct: bar ? bar.pct : null, exp: bar && level && !(G.exp[level] && Math.abs(bar.exp - bar.pct / 100 * G.exp[level]) > 0.01 * G.exp[level]) ? bar.exp : undefined, hand};
-  snaps[which] = sn;
   try {
-    const c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
-    const blob = await new Promise(r => c.toBlob(r, "image/png"));
-    await host.saveFrame(`snap-${which}-${new Date(sn.t).toISOString().slice(0, 19).replace(/:/g, "-")}.png`, new Uint8Array(await blob.arrayBuffer()));
-    sn.file = true;
-  } catch {}
-  if (hand) $("#status").textContent = bar ? `Snapshot (${which}): Lv ${level ?? "?"}, ${bar.pct}%.` : `Snapshot (${which}) taken, but the EXP bar didn't read: type the level and % in by hand.`;
-  renderSnaps();
+    f ||= await oneFrame();
+    const img = GrindReaders.native(f), bar = GrindReaders.readBar(img) || GrindReaders.readBarAny(f);
+    const level = bar && (GrindSession.levelOf(G, bar.exp, bar.pct) || session?.state.level) || null;
+    // an automatic snapshot whose bar didn't read keeps the last good reading (only the picture is new)
+    const sn = !bar && !hand && snaps[which]?.level ? {...snaps[which]} : {t: Date.now(), level, pct: bar ? bar.pct : null, exp: bar && level && !(G.exp[level] && Math.abs(bar.exp - bar.pct / 100 * G.exp[level]) > 0.01 * G.exp[level]) ? bar.exp : undefined, hand};
+    snaps[which] = sn;
+    try {
+      const c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
+      const blob = await new Promise(r => c.toBlob(r, "image/png"));
+      await host.saveFrame(`snap-${which}-${new Date(sn.t).toISOString().slice(0, 19).replace(/:/g, "-")}.png`, new Uint8Array(await blob.arrayBuffer()));
+      sn.file = true;
+    } catch {}
+    if (hand) $("#status").textContent = bar ? `Snapshot (${which}): Lv ${level ?? "?"}, ${bar.pct}%.` : `Snapshot (${which}) taken, but the EXP bar didn't read: type the level and % in by hand.`;
+    renderSnaps();
+  } finally {
+    // the pump path's frame is a pool buffer: everything above copied it (putImageData), so it goes back — one used to
+    // leave circulation per snapshot, and the pool then dropped live buffers on bursts (bug-hunt 2026-11-02)
+    if (video?.pump && f?.d?.buffer) FRBUF.give(f.d.buffer);
+  }
 }
 for (const [i, k] of [[0, "start"], [1, "end"]]){
   $("#snap" + (i ? "End" : "Start")).onclick = () => snap(k).catch(e => { $("#status").textContent = "Couldn't take the snapshot: " + e.message });
