@@ -54,17 +54,29 @@ assert.ok(pkg.scripts.test.includes("tests/winrect.test.js"), "winrect.test.js m
 // koffi isn't installed, so this test never depends on the optional path.
 try {
   const koffi = require("koffi");
-  const libc = koffi.load("libc.so.6");
-  koffi.struct("WinrectTestTV", {sec: "long", usec: "long"});
-  const gtod = libc.func("int __stdcall gettimeofday(_Out_ WinrectTestTV *tv, void *tz)");
-  const tv = {};
-  const rc = gtod(tv, null);
-  assert.strictEqual(rc, 0, "gettimeofday should answer 0");
-  const now = tv.sec * 1000 + Math.floor(tv.usec / 1000);
-  assert.ok(Math.abs(Date.now() - now) < 5000, "an _Out_ struct param must be filled by the callee (got sec=" + tv.sec + ")");
+  // each platform probes the system library it actually has: the same _Out_ struct shape winrect.js binds with,
+  // filled by the callee. (The libc.so.6 probe on a Windows runner is what took the 0.3.36 build job down —
+  // Windows has kernel32, not libc.)
+  if (process.platform === "win32"){
+    koffi.struct("WinrectTestST", {wYear: "short", wMonth: "short", wDayOfWeek: "short", wDay: "short", wHour: "short", wMinute: "short", wSecond: "short", wMilliseconds: "short"});
+    const kernel32 = koffi.load("kernel32.dll");
+    const gst = kernel32.func("void __stdcall GetSystemTime(_Out_ WinrectTestST *st)");
+    const st = {}; gst(st);
+    const now = Date.UTC(st.wYear, st.wMonth - 1, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+    assert.ok(Math.abs(Date.now() - now) < 5000, "an _Out_ struct param must be filled by the callee (got " + st.wYear + "-" + st.wMonth + "-" + st.wDay + ")");
+  } else {
+    const libc = koffi.load("libc.so.6");
+    koffi.struct("WinrectTestTV", {sec: "long", usec: "long"});
+    const gtod = libc.func("int __stdcall gettimeofday(_Out_ WinrectTestTV *tv, void *tz)");
+    const tv = {};
+    const rc = gtod(tv, null);
+    assert.strictEqual(rc, 0, "gettimeofday should answer 0");
+    const now = tv.sec * 1000 + Math.floor(tv.usec / 1000);
+    assert.ok(Math.abs(Date.now() - now) < 5000, "an _Out_ struct param must be filled by the callee (got sec=" + tv.sec + ")");
+  }
   console.log("winrect.test: ok (koffi patterns verified on this platform)");
 } catch (e){
   if (/Cannot find module 'koffi'/.test(e.message)) console.log("winrect.test: ok (koffi not installed here; static + gate checks passed)");
-  else if (process.platform === "win32") throw e;   // on Windows everything must work
+  else if (process.platform === "win32") throw e;   // on Windows everything must work (kernel32 always exists)
   else console.log("winrect.test: ok (libc probe unavailable on this platform: " + e.message.split("\n")[0] + ")");
 }
