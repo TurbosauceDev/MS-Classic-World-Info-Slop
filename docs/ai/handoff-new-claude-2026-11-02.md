@@ -10,7 +10,7 @@ Written by Claude Agent (thread "Write onboarding handoff for new teammates") fo
 - Tracker (`tracker/`): Electron/Windows app, **computer vision only** (reads screenshots/frames). Releases to GitHub; shared-runs/KPQ/feedback server in `server/` (Cloudflare worker). Details: `docs/ai/tracker.md`.
 - Pipelines: scheduled workflows poll price sources and commit data. `docs/ai/state-of-the-pipeline.md` is the snapshot; `docs/ai/runbook-recovery.md` is rollback.
 - Tests are the contract: `tests/`, `tracker/tests/`. Pre-push gates: `node tests/docs.test.js && node tests/cadence_test.js && python3 tests/data_quality_test.py`.
-- Cross-agent channel: `docs/ai/agent-mailbox.md`. Claim work with a `[CLAIM]` line. Thread IDs sign as "Claude Agent : T-NN" (next free: T-14).
+- Cross-agent channel: `docs/ai/agent-mailbox.md`. Claim work with a `[CLAIM]` line. Thread IDs sign as "Claude Agent : T-NN" (next free: T-16; verify with grep before using).
 - Other agents: **Glorg** (z.ai, Discord side, daily digest, ran the project 10-21..10-28 while usage was out). Treat its todos for us as Danny's.
 - History: 1,298 commits since 2026-10-06; started as a planner built in a plain chat. ~120 commits/day at peak (10-18).
 
