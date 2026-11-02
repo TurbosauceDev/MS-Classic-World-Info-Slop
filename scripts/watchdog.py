@@ -3,6 +3,10 @@
 keeps ONE GitHub issue ("[watchdog] ...") open while something is wrong, closed after 2 clean checks in a row.
 
 Checks (problems() + source_problems(), pure, tested by tests/watchdog_test.py):
+  - aging:    once the same problem set has held for 48 h (DECISION_MIN) it stops being a blip: the issue body gains a
+              "decision needed" note (2026-11-02: meso.watch + maplestory.watch both put up harder bot walls and died for
+              days while every fetcher, poll and site label behaved right - the only open question left is Danny's:
+              keep waiting, pause the poller, or cut the source). The note emails once, then the body just refreshes.
   - poll:     last successful "meso.watch poll" run over 2 h ago (cron entries skipped, or every run failing)
   - prices:   meso.watch's price list (mesowatch_prices.json "generated") over 3 h old
   - listings: no live listing newer than 6 h ("listed"), with the listing file's own time ("src_listed") so the issue
@@ -21,6 +25,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 TITLE = "[watchdog] market data needs a look"
 OLD_TITLES = ["[watchdog] meso.watch data needs a look"]   # pre-2026-10-26 title; migrated in place when touched
 POLL_MAX, PRICES_MAX, LISTED_MAX = 120, 180, 360   # minutes
+DECISION_MIN = 48 * 60   # minutes: a problem set alive this long gets the decision note (see docstring "aging")
 # every other price source: file, json path to its read time ([] = top level), max age (minutes), name for the issue
 SOURCES = [
     ("shopscans.json", ["ma", "read"], 24 * 60, "mesoarbitrage.com (shop scans)"),
@@ -102,10 +107,17 @@ def probe(url):
     except urllib.error.HTTPError as e: return e.code, None
     except Exception: return None, None
 
-def body(now, probs, clean=0):
+def body(now, probs, clean=0, since=None):
     lines = [f"Checked {now:%Y-%m-%d %H:%M} UTC by `scripts/watchdog.py`.", ""]
     lines += [f"- **{k}**: {v}" for k, v in probs] if probs else ["All checks pass."]
-    lines += ["", f"<!-- watchdog keys={','.join(k for k, _ in probs)} clean={clean} -->",
+    if probs and since and ago(now, since) >= DECISION_MIN:
+        days = ago(now, since) // 1440
+        lines += ["", f"**{days} day{'s' if days != 1 else ''} now** - this looks like a lasting upstream outage, not a blip. "
+                       "The fetchers are healthy (a failed fetch keeps the old file and logs why), the site labels the frozen "
+                       "sources, and this issue closes itself if they recover. What to do - keep waiting, pause the poller, or "
+                       "cut the source's rows from the site - is a Danny call; nothing here acts on its own."]
+    lines += ["", f"<!-- watchdog keys={','.join(k for k, _ in probs)} clean={clean}"
+                  + (f" since={since:%Y-%m-%dT%H:%M}Z" if since else "") + " -->",
               "Closes itself after 2 clean checks in a row. Thresholds and checks: `scripts/watchdog.py`."]
     return "\n".join(lines)
 
@@ -115,15 +127,23 @@ def marker(text, name, default):
     return m.group(1) if m else default
 
 def plan(issue, probs, now):
-    """what to do with the open issue (or None): ("none"|"create"|"update"|"comment"|"close", body)"""
+    """what to do with the open issue (or None): ("none"|"create"|"update"|"comment"|"close", body, comment or None).
+    since (body marker, falling back to the issue's created_at) tracks when the current problem set began: when it
+    crosses DECISION_MIN the decision note fires once as a comment (so it emails), then the body just refreshes."""
     keys = ",".join(k for k, _ in probs)
     if probs:
-        if not issue: return "create", body(now, probs)
-        # a comment (emails Danny) only when the set of problems changes; otherwise just refresh the body
-        return ("comment" if marker(issue["body"], "keys", "") != keys else "update"), body(now, probs)
-    if not issue: return "none", ""
+        if not issue: return "create", body(now, probs, 0, now), None
+        if marker(issue["body"], "keys", "") != keys:   # a comment (emails Danny) only when the set of problems changes
+            return ("comment", body(now, probs, 0, now),
+                    "Problems changed:\n" + "\n".join(f"- **{k}**: {v}" for k, v in probs))
+        since = t(marker(issue["body"], "since", "")) or t((issue.get("created_at") or "").strip()) or now
+        text = body(now, probs, 0, since)
+        if ago(now, since) >= DECISION_MIN and "Danny call" not in (issue["body"] or ""):
+            return "comment", text, text   # one-time email when the decision note first appears (same problems, so not "changed")
+        return "update", text, None
+    if not issue: return "none", "", None
     clean = int(marker(issue["body"], "clean", "0") or 0) + 1
-    return ("close" if clean >= 2 else "update"), body(now, [], clean)
+    return ("close" if clean >= 2 else "update"), body(now, [], clean), None
 
 def api(method, path, data=None):
     req = urllib.request.Request("https://api.github.com" + path, method=method, data=json.dumps(data).encode() if data else None,
@@ -141,13 +161,13 @@ def main():
     runs = api("GET", f"/repos/{repo}/actions/workflows/mesowatch-poll.yml/runs?status=success&per_page=1")["workflow_runs"]
     probs = problems(now, runs[0]["updated_at"] if runs else None, pw) + source_problems(now, files) + endpoint_problems({n: probe(u) for n, u, _ in ENDPOINTS})
     issue = next((i for i in api("GET", f"/repos/{repo}/issues?state=open&per_page=50") if i["title"] in [TITLE] + OLD_TITLES and "pull_request" not in i), None)
-    act, text = plan(issue, probs, now)
+    act, text, comment = plan(issue, probs, now)
     print(act, *(f"{k}: {v}" for k, v in probs), sep="\n  ")
     if dry or act == "none": return
     if act == "create": api("POST", f"/repos/{repo}/issues", {"title": TITLE, "body": text})
     else:
         api("PATCH", f"/repos/{repo}/issues/{issue['number']}", {"body": text, **({"state": "closed"} if act == "close" else {}),
             **({"title": TITLE} if issue["title"] != TITLE else {})})   # migrate the pre-2026-10-26 title in place
-        if act == "comment": api("POST", f"/repos/{repo}/issues/{issue['number']}/comments", {"body": "Problems changed:\n" + "\n".join(f"- **{k}**: {v}" for k, v in probs)})
+        if comment: api("POST", f"/repos/{repo}/issues/{issue['number']}/comments", {"body": comment})
 
 if __name__ == "__main__": main()

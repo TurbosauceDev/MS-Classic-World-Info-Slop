@@ -155,5 +155,18 @@ yourself to this list — don't reuse `claude (chat-CLI)` or `claude
 ## FYI
 
 ---
+**2026-11-02 23:5xZ — Glorg [z.ai] → all**
+**Re:** PR sweep + issue #25 diagnosis + watchdog escalation
+**Status:** FYI, no reply needed
+
+Turbozo asked me to work the open PRs and the watchdog issue. Done/decided:
+
+- **Merged #29/#30/#32** (configure-pages v6, upload-artifact v7 across d1-backup/meowdb/tracker, electron-updater 6.8.11). All green, low risk; download-artifact@v4 reads v7 uploads (same artifact service).
+- **#37 (wrangler) + #33 (electron-builder 26)**: their red docs checks were stale-branch artifacts (docs.test on an Oct-31 tree); pushed a merge of main into both branches, CI re-running. Heads-up on #33: `tracker.yml` has no pull_request trigger, so electron-builder 26 has NOT been exercised by CI yet — the first post-merge push to main that touches `tracker/**` runs the real Windows build. Watch that run before the next tagged release.
+- **#45 (handoff doc)**: content reviewed (no secrets, consistent with the rules), branch updated with main for the tooltip-flake red; merging when green.
+- **Issue #25 is upstream, not us**: meso.watch serves an HTML page where JSON should be (even through the headless browser) and maplestory.watch's Cloudflare wall holds against the Playwright fallback ("challenge not cleared"). Every fetcher/poll/site label behaved right — no code path to fix there, and the meso.watch fetch path stays untouched per the standing rule. Prices keep flowing (mesoindex fresh, mesoarbitrage fresh, meowdb fresh).
+- **Shipped a watchdog escalation** (`scripts/watchdog.py` + tests): a problem set that holds 48 h+ (tracked by a `since=` marker, falling back to the issue's created_at) gains a one-time "decision needed" note in the issue — wait / pause the poller / cut the source, explicitly a Danny call. Issue #25 is 66 h old, so Danny gets exactly one email on the next watchdog run, then silence unless the problem set changes. The issue still self-closes if the sources recover.
+
+---
 
 ## Closed

@@ -48,4 +48,20 @@ check(w.source_problems(NOW, {**SHOP_FRESH, "mesoindex.json": {"read": "garbage"
 all_old = w.source_problems(NOW, {f: None for f in SHOP_FRESH})
 check(len(all_old) == 6, f"every source file covered ({len(all_old)}: {[k for k, _ in all_old]})")
 
+# 2026-11-02: a problem set alive 48 h+ (meso.watch + maplestory.watch walls) stops being a blip -> decision note for Danny
+from datetime import timedelta as TD
+b_early = w.body(NOW, bad, 0, NOW - TD(minutes=w.DECISION_MIN - 1))
+b_late = w.body(NOW, bad, 0, NOW - TD(minutes=w.DECISION_MIN))
+check("Danny call" not in b_early and "Danny call" in b_late and "since=" in b_late, "decision note only after 48 h, with a since marker")
+check(w.plan(None, bad, NOW)[1].count("since=") == 1, "create stamps since=now in the marker")
+iss = {"body": w.body(NOW - TD(minutes=3000), bad, 0, NOW - TD(minutes=3000)), "created_at": (NOW - TD(minutes=3000)).isoformat()}
+act, text, comment = w.plan(iss, bad, NOW)
+check(act == "comment" and comment is text and "Danny call" in text, f"48 h old, note not yet in body: one-time escalation email ({act})")
+act2 = w.plan({"body": text, "created_at": iss["created_at"]}, bad, NOW)[0]
+check(act2 == "update", f"note already in body: refresh only, no repeat email ({act2})")
+iss_young = {"body": w.body(NOW - TD(minutes=100), bad, 0, NOW - TD(minutes=100))}
+check(w.plan(iss_young, bad, NOW)[0] == "update", "same problems under 48 h: body refresh only")
+act3, _, comment3 = w.plan({"body": w.body(NOW, [], 0), "created_at": "2026-10-30T22:59:10Z"}, bad, NOW)
+check(act3 == "comment" and comment3.startswith("Problems changed:"), "changed problems still email 'Problems changed' and reset since")
+
 print("all good" if not fails else f"{fails} failed"); sys.exit(1 if fails else 0)
