@@ -65,7 +65,7 @@ Files: `server/src/index.js`, `server/schema.sql`, `server/tests/server.test.js`
 `tracker/core/session.js`, boss card renderers, `overlay` push payload,
 `core.test.js` + `overlay.test.js` scenes.
 
-## Wave 2 (P1) — P1-5/6/8/9 shipped, P1-7 open
+## Wave 2 (P1) — all five shipped
 
 5. **P1-6 · Digit models from our fixtures → the neural text reader. SHIPPED 0.3.34, redirected by the
    OCR permission.** Turbozo granted permission to use the ocrs recognition model (2026-11-01,
@@ -96,10 +96,15 @@ Files: `server/src/index.js`, `server/schema.sql`, `server/tests/server.test.js`
    mid-drag. `tests/winrect.test.js` guards the binding surface (no OpenProcess/hooks/input/enumeration), the
    win32 gate, the fallback's survival, the anchor maths and the exact pin — and proves the _Out_ struct
    pattern against libc's gettimeofday wherever koffi can load.
-7. **P1-7 · Quest HUD reader.** Read the on-screen quest-tracker progress lines (same
-   reader class as our pickup-line reader), map to the 216-quest DB, auto-sync the site
-   quest log, live helper card. — the one Wave 2 item still open; the Minerva adoption
-   plan's grammar checks (item 7) and replayable diagnostics (item 6) are its design notes.
+7. **P1-7 · Quest HUD reader. SHIPPED 0.3.36.** The QUEST window reads live with the site's Quest log engine —
+   its reading core moved into one shared file (`src/js/60b-questread.js`, copied to `app/questread.js` at tracker
+   build) so site and tracker run the exact same reader against the same fixtures (site suite green untouched; new
+   `tracker/tests/quest.test.js` asserts both fixtures read the same 8 quests the site reads). Tracker: a Quests
+   module card (in-progress list, unsure rows with one-click picks), Quest watch (Settings > Window and sharing,
+   shop-watch cadence) plus a Read-now button, and a QSL1.<base64> sync code the site's Quest log imports through a
+   new paste box (undoable like any read). Nothing uploads — quest progress stays on the PC. One lesson for the
+   record: the shared core must create its reference-text canvas at page load like the original did — a lazily
+   created context rasterizes Arial differently and every match degrades (caught by the site suite, fixed same day).
 8. **P1-5 · Weekly grind ladder. SHIPPED 2026-11-02 (server + site), anti-cheat first per the adoption plan.**
    build_data.cjs computes each map's physics ceiling into gamedata.json (Σ spawn points × base EXP × 240
    kills/h/spawn — OSMS spawn data; 190 of 196 maps have one); cleanRun carries an opt-in IGN-shape display

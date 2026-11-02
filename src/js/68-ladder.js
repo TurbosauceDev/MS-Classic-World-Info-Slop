@@ -20,7 +20,7 @@ function meta(w){
 }
 function board(tbl){
   const rows = tbl?.rows || [], hid = tbl?.hidden || 0;
-  if (!rows.length) return `<p class="note">Nothing on this board yet — it fills as players share runs this week.</p>`;
+  if (!rows.length) return `<div class="card trkempty"><h3>Nothing on this board yet</h3><p>The week just reset (Monday 00:00 UTC) or nobody has shared a qualifying run yet — 30 farmed minutes on one map with sharing on puts a line here. It fills as players grind through the week.</p></div>`;
   const body = rows.map((r, i) => `<tr>
     <td class="num">${i + 1}</td>
     <td>${r.names.length ? r.names.map(esc).join(", ") : `<span class="sub">unnamed grinder</span>`}${r.party > 1 ? `<span class="party">party</span>` : ""}</td>
@@ -35,20 +35,19 @@ function board(tbl){
 }
 function rates(){
   const list = (data?.[week]?.rates || []).slice().sort((a, b) => b.expHr - a.expHr);
-  if (!list.length) return `<p class="note">No map has 2+ players this week yet — rates appear as friends farm the same maps.</p>`;
+  if (!list.length) return `<div class="card trkempty"><h3>No map rates yet</h3><p>A map's community rate appears once 2+ players farmed it this week with sharing on. Pick a popular map early in the week and yours may be the first line.</p></div>`;
   return `<table><thead><tr><th>Map</th><th class="num">Players</th><th class="num">EXP / h (community)</th><th class="num">Mesos / h</th></tr></thead><tbody>`
     + list.map(r => `<tr><td>${esc(r.mapName || "Map " + r.map)}</td><td class="num">${r.players}</td><td class="num">${fmt(r.expHr)}</td><td class="num">${fmt(r.mesosHr)}</td></tr>`).join("")
     + `</tbody></table>`;
 }
 function render(){
   const d = data?.[week];
-  if (!d){ $l("ladderdata").innerHTML = `<p class="note">The ladder didn't answer (offline?). Try again in a minute.</p>`; $l("laddermeta").textContent = ""; return }
+  if (!d){ $l("ladderdata").innerHTML = `<div class="card trkempty"><h3>The ladder didn't answer</h3><p>The weekly boards come from our Worker; it didn't reply just now (offline, or it's restarting). Try again in a minute — nothing on this page depends on your own playing.</p></div>`; $l("laddermeta").textContent = ""; return }
   $l("laddermeta").textContent = meta(week);
   const maps = Object.keys(d.boards?.maps || {});
-  const tabs = [["overall", "Overall EXP"], ["mesos", "Mesos"], ["rates", "Map rates"],
-    ...(maps.length ? ["|"] : [])].flat();
+  const tabs = [["overall", "Overall EXP"], ["mesos", "Mesos"], ["rates", "Map rates"], ...(maps.length ? ["|"] : [])];
   let html = `<div class="lad-tabs">${tabs.map(t => t === "|" ? `<select id="laddmap" aria-label="Which map's board"><option value="">A single map…</option>${maps.map(m => `<option value="${esc(m)}"${map === m ? " selected" : ""}>${esc(d.boards.maps[m].rows[0]?.mapName || "Map " + m)}</option>`).join("")}</select>`
-    : `<button type="button" data-v="${t}" class="${view === t ? "on" : ""}">${{overall: "Overall EXP", mesos: "Mesos", rates: "Map rates"}[t]}</button>`).join("")}</div>`;
+    : `<button type="button" data-v="${t[0]}" class="${view === t[0] ? "on" : ""}">${t[1]}</button>`).join("")}</div>`;
   html += view === "rates" ? rates() : view === "mesos" ? board(d.boards?.mesos)
     : map && d.boards?.maps?.[map] ? board(d.boards.maps[map]) : board(d.boards?.overall);
   if (view !== "rates" && !map) html += `<p class="note sub">Ranked by the week's best run per player or party. Pick "A single map" for per-map boards.</p>`;

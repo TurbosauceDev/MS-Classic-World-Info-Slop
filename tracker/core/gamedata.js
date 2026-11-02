@@ -25,6 +25,11 @@
     G.drops = {};
     for (const [item, list] of Object.entries(D.drops || {})) for (const [mob] of list) (G.drops[mob] = G.drops[mob] || []).push(item);
     G.kpqItems = ["4001001", "4001002"];
+    // quests for the shared quest-window reader (60b-questread.js / P1-7): the same rows the site's Quest log matches
+    // against, trimmed to what matching needs. The three regions the site's Quest log leaves out are left out here too
+    const OUT_REGIONS = ["El Nath", "Orbis", "Forgotten Hollow"], qrow = r => ({id: r.id, name: r.name, ln: r.ln, chain: r.chain, region: r.region, lvl: r.lvl, cpos: r.cpos});
+    G.quests = (D.quests || []).filter(r => !OUT_REGIONS.includes(r.region)).map(qrow);
+    G.citq = (D.citq || []).filter(r => !OUT_REGIONS.includes(r.region)).map(qrow);
     // timed spawns (bosses and slow respawns; D.timed rows [mob, name, level, hp, exp, map, mapName, count, respawn s, boss]):
     // map -> [[mob, respawn s, boss]]; those monsters join their map's list so their kills are recognised
     G.timed = {};

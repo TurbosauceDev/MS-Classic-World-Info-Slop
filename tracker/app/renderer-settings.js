@@ -365,6 +365,7 @@ async function saveNumbers(){
 const muteSet = on => host.settings({muted: !!on}).then(x => { settings = x; $("#muted").checked = !!on; $("#status").textContent = on ? "Sounds muted." : "Sounds on." });
 $("#muted").onchange = e => muteSet(e.target.checked);
 $("#shopWatch").onchange = e => host.settings({shopWatch: e.target.checked}).then(x => { settings = x; $("#status").textContent = x.shopWatch === false ? "Shop watch off: shops are only read when you press the shortcut." : "Shop watch on: shops are read automatically while you browse." });
+$("#questWatch").onchange = e => host.settings({questWatch: e.target.checked}).then(x => { settings = x; $("#status").textContent = x.questWatch === false ? "Quest watch off: the quest window is only read when you press the button." : "Quest watch on: the QUEST window is read automatically while you play." });
 // the update channel (0.2.82): beta = pre-release builds reach this copy (main.js applies allowPrerelease on save)
 const betaSet = on => host.settings({beta: !!on}).then(x => { settings = x; $("#beta").checked = !!on;
   $("#status").textContent = on ? "Beta channel on: test builds arrive as they're built." : "Back to the stable channel." });
@@ -391,6 +392,7 @@ $("#updGo").onclick = async () => {
   }
   $("#share").checked = !!settings.share;
   $("#shopWatch").checked = settings.shopWatch !== false;   // shop watch reads shops automatically while you browse (Turbozo 2026-11-01)
+  $("#questWatch").checked = settings.questWatch !== false;   // quest watch reads the QUEST window while you play (P1-7)
   $("#kpqName").checked = settings.kpqName !== false;
   fitSet(settings.fit !== false); $("#fitBoxes").checked = settings.fit !== false; $("#fitWin").checked = !!settings.fitWin;
   document.body.classList.toggle("snap", settings.snap !== false); $("#snapBoxes").checked = settings.snap !== false;

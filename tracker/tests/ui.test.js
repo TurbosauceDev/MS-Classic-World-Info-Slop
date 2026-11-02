@@ -335,7 +335,8 @@ const path = require("path"), {chromium} = require("playwright");
     layoutLoad(saved); const re = document.querySelector("#mesoBox").parentElement.className + "/" + Math.round(document.querySelector("#usedBox").getBoundingClientRect().width);
     return [flat, re, document.querySelector("#usedBox").parentElement.className] });
   if (unw[0] !== 0 || !unw[1].startsWith("boxcol/") || unw[2] !== "boxrow") throw new Error("unwrap/load: " + unw);
-  await page.evaluate(() => window.menu("settings")); await page.click("#layoutReset"); await page.click("#prefsClose"); if ((await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join())) !== "kpq,alerts,watch,pulse") throw new Error("reset folds");
+  await page.evaluate(() => window.menu("settings")); await page.click("#layoutReset"); await page.click("#prefsClose"); { const got = await page.evaluate(() => [...document.querySelectorAll(".box.folded")].map(b => b.dataset.box).join());
+  if (got !== "kpq,alerts,watch,pulse,quests") throw new Error("reset folds: " + got); }
   await page.evaluate(() => document.querySelectorAll(".box.folded .fold").forEach(b => b.click())); await page.setViewportSize({width: 1280, height: 720});
   // Report a bug: frames kept every 3 s, log with events and status lines, the report folder opened
   await page.waitForTimeout(3200);

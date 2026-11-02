@@ -53,3 +53,4 @@ jobs:
       - run: node tests/overlay.test.js
       - run: node tests/overlaywin.test.js
       - run: node tests/monkey.test.js
+      - run: node tests/quest.test.js
