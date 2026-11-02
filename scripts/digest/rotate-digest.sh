@@ -12,7 +12,9 @@
 #   $1  new issue .md file (contract shape, lint-passed)
 #   $2  TL;DR caption line (optional)
 #
-# Order matters: archive-guard, delete stale, post new, update state.
+# Order matters: archive-guard, post new, delete stale, update state.
+# The new post comes BEFORE the stale delete: a failed post must leave yesterday's
+# digest standing, not an empty channel (round 2 — the runbook says the same).
 # Rotation steps are best-effort (a failure never stops the new post); only
 # the post itself is fatal. Run scripts/lint_digest.js on $1 BEFORE calling this.
 set -uo pipefail
@@ -31,6 +33,24 @@ AUTHOR="${DIGEST_AUTHOR:-Glorg [z.ai] Daily Digest}"
 [ -n "${DIGEST_WEBHOOK_FILE:-}" ] && [ -f "$DIGEST_WEBHOOK_FILE" ] || { echo "DIGEST_WEBHOOK_FILE not set or missing" >&2; exit 2; }
 WH="$(tr -d '[:space:]' < "$DIGEST_WEBHOOK_FILE")"
 
+# a corrupt state used to poison every later step quietly (empty reads, a DELETE with no message id):
+# fail loudly instead (round 2)
+node -e 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"))' "$STATE" \
+  || { echo "state file is corrupt JSON: $STATE (repair it before rotating)" >&2; exit 2; }
+
+# state mutations go through one helper: written tmp + rename (a crash mid-write used to leave truncated
+# JSON that silently killed archive/dedupe until hand-repaired) and paths ride argv, never interpolated
+# into the script text (a quote in a path used to break the node -e lines) (round 2)
+save_state() {  # save_state key value [key value ...]; a value prefixed "N:" is stored as a number
+  node -e '
+    const fs = require("fs"), f = process.argv[1], a = process.argv.slice(2);
+    const s = JSON.parse(fs.readFileSync(f, "utf8"));
+    for (let i = 0; i < a.length; i += 2){ const v = a[i + 1]; s[a[i]] = typeof v === "string" && v.startsWith("N:") ? Number(v.slice(2)) : v }
+    fs.writeFileSync(f + ".tmp", JSON.stringify(s));
+    fs.renameSync(f + ".tmp", f);
+  ' "$STATE" "$@"
+}
+
 # routing + new-issue front matter, via node (no jq dependency)
 read -r ARCHIVE_THREAD ISSUE_DATE ISSUE_NUM ATTACH_NAME <<< "$(node - "$CONFIG" "$NEW_FILE" << 'JS'
 const cfg = require(process.argv[2]);
@@ -43,10 +63,10 @@ JS
 )"
 [ -n "$ARCHIVE_THREAD" ] && [ "$ARCHIVE_THREAD" != "null" ] || { echo "archive_thread_id not set in config" >&2; exit 2; }
 
-LAST_MSG=$(node -pe "require('$STATE').last_message_id")
-LAST_ISSUE=$(node -pe "require('$STATE').last_issue")
-LAST_FILE=$(node -pe "require('$STATE').last_file")
-ARCH_THROUGH=$(node -pe "require('$STATE').archived_through")
+LAST_MSG=$(node -pe "require(process.argv[1]).last_message_id" "$STATE")
+LAST_ISSUE=$(node -pe "require(process.argv[1]).last_issue" "$STATE")
+LAST_FILE=$(node -pe "require(process.argv[1]).last_file" "$STATE")
+ARCH_THROUGH=$(node -pe "require(process.argv[1]).archived_through" "$STATE")
 echo "[1] state: last_issue=$LAST_ISSUE msg=$LAST_MSG archived_through=$ARCH_THROUGH"
 
 # [2] archive upload, guarded against double-archiving
@@ -61,19 +81,15 @@ else
   rm -f /tmp/wh_arch.json
   echo "    archive POST -> HTTP $CODE"
   if [ "$CODE" = "200" ]; then
-    node -e "const f='$STATE';const s=require(f);s.archived_through=$LAST_ISSUE;require('fs').writeFileSync(f,JSON.stringify(s))"
+    save_state archived_through "N:$LAST_ISSUE"
   else
     echo "    archive failed; continuing (never blocks the new post)" >&2
   fi
 fi
 
-# [3] delete the stale #daily-updates post (best effort)
-echo "[3] deleting stale post $LAST_MSG"
-CODE=$(curl -s -o /dev/null -w '%{http_code}' -X DELETE "${WH}/messages/${LAST_MSG}") || CODE=000
-echo "    DELETE -> HTTP $CODE"
-
-# [4] post the new digest as an .md attachment, capture the message id
-echo "[4] posting Issue $ISSUE_NUM as $ATTACH_NAME (wait=true)"
+# [3] post the new digest as an .md attachment, capture the message id — BEFORE the stale delete:
+# a failed post used to leave #daily-updates empty until the next daily run (round 2)
+echo "[3] posting Issue $ISSUE_NUM as $ATTACH_NAME (wait=true)"
 printf '{"username":"%s","content":"**Daily digest - Issue %s** (%s)"}' \
   "$AUTHOR" "$ISSUE_NUM" "$ISSUE_DATE" > /tmp/wh_new.json
 [ -z "$CAPTION" ] || printf '%s' "$CAPTION" > /tmp/wh_cap.txt
@@ -81,9 +97,14 @@ RESP=$(curl -s -X POST "${WH}?wait=true" \
   -F 'payload_json=</tmp/wh_new.json' -F "files[0]=@${NEW_FILE};type=text/markdown")
 rm -f /tmp/wh_new.json
 NEW_ID=$(printf '%s' "$RESP" | node -e 'try{const j=JSON.parse(require("fs").readFileSync(0,"utf8"));console.log(j.id||"")}catch(e){console.log("")}')
-[ -n "$NEW_ID" ] || { echo "post failed; response: $RESP" >&2; exit 1; }
+[ -n "$NEW_ID" ] || { echo "post failed; yesterday's digest stays up; response: $RESP" >&2; exit 1; }
 echo "    posted -> message $NEW_ID"
 
+# [4] delete the stale #daily-updates post (best effort — the new one is already up)
+echo "[4] deleting stale post $LAST_MSG"
+CODE=$(curl -s -o /dev/null -w '%{http_code}' -X DELETE "${WH}/messages/${LAST_MSG}") || CODE=000
+echo "    DELETE -> HTTP $CODE"
+
 # [5] update state
-node -e "const f='$STATE';const s=require(f);s.last_message_id='$NEW_ID';s.last_issue=$ISSUE_NUM;s.last_file='$NEW_FILE';require('fs').writeFileSync(f,JSON.stringify(s))"
+save_state last_message_id "$NEW_ID" last_issue "N:$ISSUE_NUM" last_file "$NEW_FILE"
 echo "[5] state updated: $(cat "$STATE")"

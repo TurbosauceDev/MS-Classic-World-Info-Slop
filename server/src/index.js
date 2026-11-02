@@ -158,23 +158,33 @@ async function partyLive(req, env){
   const code = typeof b.partyCode === "string" ? b.partyCode.trim().toLowerCase().slice(0, 20) : "";
   if (!code) return json({error: "party code"}, 400);
   const grp = await sha("party:" + code + await salt(env.DB)), now = Date.now();
-  const text = (v, n) => typeof v === "string" ? v.slice(0, n) : null;
-  const me = {nick: typeof b.nick === "string" ? b.nick.replace(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 12) : "", job: text(b.job, 40),
-    level: num(b.level, 200), mapName: text(b.mapName, 60), expHr: num(b.expHr, 1e8), expHr5: num(b.expHr5, 1e8),
+  // job/mapName reach OTHER members' clients, so they get the nick scrub too (round 2): raw strings rode to every
+  // party member's UI while only nick was filtered
+  const scrub = (v, n) => typeof v === "string" ? v.replace(/[^\p{L}\p{N} _.'-]/gu, "").trim().slice(0, n) || null : null;
+  const me = {nick: typeof b.nick === "string" ? b.nick.replace(/[^\p{L}\p{N} _.-]/gu, "").trim().slice(0, 12) : "", job: scrub(b.job, 40),
+    level: num(b.level, 200), mapName: scrub(b.mapName, 60), expHr: num(b.expHr, 1e8), expHr5: num(b.expHr5, 1e8),
     killsHr: num(b.killsHr, 1e5), mesosHr: num(b.mesosHr, 1e8), active: num(b.active, 1e7)};
   // the throttle follows the install, not (grp, install): rotating the party code would otherwise reset it on every post
   const old = await env.DB.prepare("SELECT updated FROM party_live WHERE install = ? ORDER BY updated DESC LIMIT 1").bind(b.install).first();
   if (old && now - Date.parse(old.updated) < PARTY_EVERY) return json({error: "too often"}, 429);
-  // one machine can't fill the table: at most 6 tracker copies per IP (hashed) in the last hour
-  const ip = await sha("ip:" + (req.headers.get("cf-connecting-ip") || "") + await salt(env.DB));
+  // one machine can't fill the table: at most 6 tracker copies per network. Forget deletes this install's row, so the
+  // cap reads the same ipday_ledger high-water mark as every other route (round 2: forget used to hand the party slot
+  // back, and the schema comment claimed forget couldn't touch this table — it can).
+  const rawIp = req.headers.get("cf-connecting-ip") || "";
+  const ip = await sha("ip:" + rawIp + await salt(env.DB));
+  const day = new Date(now).toISOString().slice(0, 10), ipday = await sha(rawIp + day + await salt(env.DB));
+  const peak = await ledgerPeak(env.DB, ipday);
+  let inst = peak.installs;
   if (!old){
     const k = await env.DB.prepare("SELECT COUNT(DISTINCT install) n, SUM(install = ?) mine FROM party_live WHERE ip = ?").bind(b.install, ip).first();
-    if (k.n >= PARTY_MAX && !k.mine) return json({error: "too many trackers"}, 429);
+    if ((k.n >= PARTY_MAX || peak.installs >= PARTY_MAX) && !k.mine) return json({error: "too many trackers"}, 429);
+    inst = Math.max(k.n + (k.mine ? 0 : 1), peak.installs);
     const n = await env.DB.prepare("SELECT COUNT(*) n FROM party_live WHERE grp = ? AND updated > ?").bind(grp, new Date(now - PARTY_FRESH).toISOString()).first();
     if (n.n >= PARTY_MAX) return json({error: "party full"}, 429);
   }
   await env.DB.prepare("DELETE FROM party_live WHERE updated < ?").bind(new Date(now - 3600e3).toISOString()).run();
   await env.DB.prepare("INSERT OR REPLACE INTO party_live (grp, install, updated, ip, data) VALUES (?, ?, ?, ?, ?)").bind(grp, b.install, new Date(now).toISOString(), ip, JSON.stringify(me)).run();
+  await ledgerBump(env.DB, ipday, day, 0, inst);   // posts 0: the ledger's MAX() keeps the stored rows mark; only installs move here
   const {results} = await env.DB.prepare("SELECT install, updated, data FROM party_live WHERE grp = ? AND updated > ? ORDER BY install")
     .bind(grp, new Date(now - PARTY_FRESH).toISOString()).all();
   const members = results.map(r => ({...JSON.parse(r.data), you: r.install === b.install, ago: Math.round((now - Date.parse(r.updated)) / 1000)}));
@@ -398,6 +408,10 @@ async function postForget(req, env){
   await one("groups", "DELETE FROM run_groups WHERE run_id IN (SELECT id FROM runs WHERE install = ?1 UNION SELECT id FROM runs_archive WHERE install = ?1)");
   await one("run_names", "DELETE FROM run_names WHERE run_id IN (SELECT id FROM runs WHERE install = ?1 UNION SELECT id FROM runs_archive WHERE install = ?1)");   // the ladder's names go with the runs
   for (const t of ["names", "src", "raw"]) await one("kpq_" + t, `DELETE FROM kpq_${t} WHERE kpq_id IN (SELECT id FROM kpq_rounds WHERE install = ?1 UNION SELECT id FROM kpq_rounds_archive WHERE install = ?1)`);
+  // the 2026-10-30 reset's backup tables hold whole rounds (and the names/src/raw that hang off them) from before
+  // the reset: a forget reaches in there too (round 2 — children first, the rounds they point into after)
+  for (const t of ["names", "src", "raw"]) await one("kpq_bak_" + t, `DELETE FROM kpq_bak_20261030_${t} WHERE kpq_id IN (SELECT id FROM kpq_bak_20261030_rounds WHERE install = ?1 UNION SELECT id FROM kpq_bak_20261030_archive WHERE install = ?1)`);
+  await one("kpq_bak_rounds", "DELETE FROM kpq_bak_20261030_rounds WHERE install = ?"); await one("kpq_bak_archive", "DELETE FROM kpq_bak_20261030_archive WHERE install = ?");
   await one("runs", "DELETE FROM runs WHERE install = ?"); await one("runs_archive", "DELETE FROM runs_archive WHERE install = ?");
   await one("kpq", "DELETE FROM kpq_rounds WHERE install = ?"); await one("kpq_archive", "DELETE FROM kpq_rounds_archive WHERE install = ?");
   // shop_ext first: its rows are found through shop_obs, so deleting the observations first would orphan the seller
@@ -405,7 +419,9 @@ async function postForget(req, env){
   await one("party", "DELETE FROM party_live WHERE install = ?"); await one("shop_ext", "DELETE FROM shop_obs_ext WHERE obs_id IN (SELECT id FROM shop_obs WHERE install = ?1)"); await one("shop", "DELETE FROM shop_obs WHERE install = ?");
   await one("spots", "DELETE FROM boss_spots WHERE install = ?");
   await db.prepare("DELETE FROM meta WHERE k IN ('summary', 'shop_summary', 'ladder')").run();   // the cached public numbers rebuild without it
-  return json({ok: true, removed: n.runs + n.runs_archive + n.kpq + n.kpq_archive + n.shop + n.shop_ext + n.spots + n.party + n.run_names});
+  return json({ok: true, removed: n.runs + n.runs_archive + n.kpq + n.kpq_archive + n.kpq_bak_rounds + n.kpq_bak_archive
+    + n.kpq_names + n.kpq_src + n.kpq_raw + n.kpq_bak_names + n.kpq_bak_src + n.kpq_bak_raw
+    + n.shop + n.shop_ext + n.spots + n.party + n.run_names});
 }
 const SHOP_PER_HOUR = 240, SHOP_PER_IP_DAY = 1500, SHOP_KEEP_DAYS = 14, SHOP_MIN_INSTALLS = 3;
 async function postShop(req, env){
@@ -533,7 +549,7 @@ export function buildLadder(rows, G){
   // the flag pass (see the block comment): (a) the map's physics ceiling, then (b) too far above the best
   // surviving line once the board is busy enough to compare. Flagged lines leave the public list; `hidden` counts them.
   const pub = (list, metric) => {
-    const all = [...list].filter(([, e]) => e.minutes >= LADDER_MIN_MINUTES).map(([k, e]) => toLine(e, Array.isArray(k) ? k[1] : k));
+    const all = [...list].filter(([, e]) => e.minutes >= LADDER_MIN_MINUTES).map(([k, e]) => toLine(e, k));
     for (const l of all){ const c = mapCeiling(G, l.map); if (c != null && l.expHr > c) l.flag = "over the map's ceiling" }
     const rank = all.filter(l => !l.flag).sort((a, b) => b[metric] - a[metric]);
     if (rank.length > LADDER_OVER_TOP_OTHERS) for (const l of rank.slice(1)) if (l[metric] > LADDER_OVER_TOP * rank[0][metric]) l.flag = "too far above the board";
@@ -544,7 +560,9 @@ export function buildLadder(rows, G){
     return {rows: rows.map(l => ({group: g(l), ...l, key: undefined})), hidden: all.filter(l => l.flag).length};
   };
   const groups = fold(gk);
-  const perMap = fold(r => (r.map == null ? null : [r.map, gk(r)]));   // key: [map, group] arrays
+  // key: "map\u0000group" — a string. An array key never matches itself in a Map (SameValueZero compares identity),
+  // so every run became its own per-map line, each under the 30-minute floor, and boards.maps shipped empty (round 2)
+  const perMap = fold(r => (r.map == null ? null : r.map + "\u0000" + gk(r)));
   // community map rates (P1-9): the median over networks of each network's median EXP/h on the map this week
   const byMapNet = new Map();
   for (const r of rows){
@@ -563,8 +581,8 @@ export function buildLadder(rows, G){
     boards: {
       overall: pub(groups, "expHr"),
       mesos: pub(groups, "mesosHr"),
-      maps: Object.fromEntries([...new Set([...perMap.keys()].map(k => k[0]))].map(map =>
-        [map, pub(new Map([...perMap].filter(([k]) => k[0] === map).map(([k, e]) => [k[1], e])), "expHr")]))
+      maps: Object.fromEntries([...new Set([...perMap.keys()].map(k => k.split("\u0000")[0]))].map(map =>
+        [map, pub(new Map([...perMap].filter(([k]) => k.split("\u0000")[0] === map).map(([k, e]) => [k.split("\u0000")[1], e])), "expHr")]))
     },
     rates
   };

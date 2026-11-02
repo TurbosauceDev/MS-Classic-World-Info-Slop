@@ -437,6 +437,13 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   assert.ok(cara && cara.names.includes("Dan"), "the coded party is one line with both names: " + JSON.stringify(cara && cara.names));
   // mesos board ranks by mesos/h
   assert.ok(l.this.boards.mesos.rows.every(x => x.mesosHr >= 0), "mesos board present");
+  // per-map boards (bug-hunt round 2): one network's runs on one map fold into ONE line — the old array-key fold
+  // never matched, every run sat alone under the 30-minute floor, and boards.maps shipped empty on every map
+  const m42 = l.this.boards.maps["42"];
+  assert.ok(m42 && m42.rows.length >= 3, "map 42's board has the lines: " + JSON.stringify(m42));
+  const tm = m42.rows.find(x => x.names.includes("Turbow"));
+  assert.ok(tm && tm.runs >= 2 && tm.minutes >= 30, "a network's runs fold into one per-map line: " + JSON.stringify(tm));
+  assert.strictEqual(m42.hidden, 1, "the ceiling rider is held off the per-map board too");
   // rates: map 42 now has 3 networks
   const rate = l.this.rates.find(x => x.map === "42");
   assert.ok(rate && rate.players >= 3, "map 42 has a community rate: " + JSON.stringify(l.this.rates));
@@ -536,6 +543,42 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   // another network on the same day has its own ledger row
   [st] = await post(run("ledgerothernet0001", 1000), "10.31.1.3");
   assert.strictEqual(st, 200, "another network's day is untouched");
+
+  // round 2: the party view's 6-trackers cap reads the ledger too — forget deletes party rows, and without the
+  // mark it handed the slot back (rotate / post / forget refilled the party table at request rate)
+  const prip = "10.31.1.9";
+  const party = (pi, code) => ppost("/api/party", {install: pi, partyCode: code, expHr: 100, job: "<img src=x onerror=alert(1)>", mapName: "Henesys<script>"}, prip);
+  const pinst = i => "partyinst" + String(i).padStart(7, "0");
+  let [pst, pj] = await party(pinst(1), "cap1");
+  assert.strictEqual(pst, 200, "the first tracker posts");
+  const m0 = pj.members.find(x => x.you);
+  assert.ok(m0 && !/[<>=()"]/.test(m0.job || "") && !/[<>=()"]/.test(m0.mapName || ""), "party job/mapName arrive scrubbed like nick: " + JSON.stringify(m0));
+  for (let i = 2; i <= 6; i++) pst = (await party(pinst(i), "cap" + i))[0];
+  assert.strictEqual(pst, 200, "six trackers fill the party cap");
+  assert.strictEqual(ledger(prip).installs, 6, "the party posts raise the ledger's installs mark");
+  [pst] = await party(pinst(7), "cap7");
+  assert.strictEqual(pst, 429, "the 7th tracker is refused");
+  await fpost(pinst(1), prip);
+  [pst] = await party(pinst(7), "cap7");
+  assert.strictEqual(pst, 429, "still refused after a forget: the mark keeps the slot spent");
+
+  // round 2: "Delete what I shared" reaches into the 2026-10-30 reset's backup tables too (install ids + names
+  // used to survive a forget in there forever)
+  const bakInst = "bakroundsbakround1";
+  // the bak tables are CREATE TABLE AS SELECT copies: no rowid-alias PK, so a row needs an explicit id (real ones carry theirs)
+  sql.prepare("INSERT INTO kpq_bak_20261030_rounds (id, install, ipday, received, date, mode, party, clear, ok) VALUES (9001, ?, 'bakipday', ?, '2026-10-01', 'Bonus', 4, 300, 1)").run(bakInst, new Date().toISOString());
+  sql.prepare("INSERT INTO kpq_bak_20261030_names (kpq_id, name) VALUES (9001, 'BackUpName')").run();
+  assert.ok(sql.prepare("SELECT COUNT(*) n FROM kpq_bak_20261030_names").get().n >= 1, "the backup name row is there");
+  st = (await fpost(bakInst, "10.31.1.8")).status;
+  assert.strictEqual(st, 200);
+  for (const t of ["rounds", "archive", "names", "src", "raw"]) assert.strictEqual(sql.prepare(`SELECT COUNT(*) n FROM kpq_bak_20261030_${t}`).get().n, 0, "bak " + t + " forgets with the install");
+
+  // round 2: counts arrive as numbers only (the old +v coercion took "1000" as 1000) and dates are calendar-shaped
+  [st] = await post(run("strictcntstrict01", 1000, {msgExp: "1000"}));
+  assert.strictEqual(st, 200);
+  assert.strictEqual(sql.prepare("SELECT msg_exp FROM runs WHERE install = ?").get("strictcntstrict01").msg_exp, 0, "a string count stores as 0, never coerced");
+  [st] = await post(run("datedatedatedate1", 1000, {date: "2026-13-99"}));
+  assert.strictEqual(st, 400, "an impossible date is refused");
 
   // the ledger ages out with its day: archiveOld (inside a summary rebuild) drops anything older than yesterday
   sql.prepare("INSERT INTO ipday_ledger (ipday, day, posts, installs, updated) VALUES ('staleday', '2026-01-01', 300, 6, '2026-01-01T00:00:00Z')").run();

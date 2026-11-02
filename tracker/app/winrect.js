@@ -16,8 +16,11 @@
   const DWMWA_EXTENDED_FRAME_BOUNDS = 9;   // DwmGetWindowAttribute: the visible frame, no invisible borders —
                                            // exactly the region Windows Graphics Capture records
   // a rect that could be a real window: positive area, inside any plausible desktop (Windows allows up to
-  // 32767 px per axis; the bound exists so garbage from a bad read can never reach the overlay maths)
-  const ok = r => r.r > r.l && r.b > r.t && r.r - r.l <= 32767 && r.b - r.t <= 32767 && Math.abs(r.l) <= 32768 && Math.abs(r.t) <= 32768;
+  // 32767 px per axis; the bound exists so garbage from a bad read can never reach the overlay maths).
+  // The minimized "iconic" rect (-32000,-32000, 160x28) passes a plain size check but slammed every anchored
+  // card to the virtual desktop's top-left until the game was restored (round 2) — its signature is rejected.
+  const ok = r => r.r > r.l && r.b > r.t && r.r - r.l <= 32767 && r.b - r.t <= 32767 && Math.abs(r.l) <= 32768 && Math.abs(r.t) <= 32768
+    && !(r.l <= -30000 && r.t <= -30000 && r.r - r.l <= 200 && r.b - r.t <= 200);
 
   let st;   // undefined = not probed yet · null = unavailable (probed, failed) · object = the bound functions
   function probe(){
@@ -55,6 +58,6 @@
   }
 
   const available = () => !!probe();
-  const api = {available, rectOf};
+  const api = {available, rectOf, ok};   // ok exported for the rect sanity tests (it is the overlay maths' only gate)
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindWinRect = api;
 })(typeof self !== "undefined" ? self : globalThis);

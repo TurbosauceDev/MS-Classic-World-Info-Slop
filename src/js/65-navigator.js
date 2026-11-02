@@ -19,6 +19,7 @@ $("#navtowns").innerHTML = [SOUTHPERRY, ...D.cabs].map(id => `<button type="butt
 
 let S = {from: LITH, to: null, nocab: false};
 try { Object.assign(S, savedState("navi", S)) } catch(e) {}
+if (!D.nav[S.from]) S.from = LITH;   // a save older than a data refresh: a dropped map id would render a route from an invisible origin (round 2)
 const save = () => { try { localStorage.setItem("navi", JSON.stringify(S)) } catch(e) {} };
 
 // map-by-map hops of the planner's shortest trip: [[from, to, byCab], ...]; null when there's no walking/cab route

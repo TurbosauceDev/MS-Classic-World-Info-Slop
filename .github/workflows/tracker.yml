@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with: { node-version: 22 }
       - run: npm install
       - run: npm run data
       - run: npm test
@@ -42,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with: { node-version: 22 }
       - run: npm install --no-save --ignore-scripts playwright@1.56.1 && npx playwright install --with-deps chromium
       - run: npm run data
       - run: node tests/ui.test.js

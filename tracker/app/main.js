@@ -74,8 +74,9 @@ app.whenReady().then(() => {
   // getDisplayMedia() in the page gets the game window, chosen here (no picker)
   session.defaultSession.setDisplayMediaRequestHandler(async (req, cb) => {
     perfCount.captures++;
-    const src = await captureSource();
-    cb(src ? {video: src} : {});
+    // a rejected captureSource without cb left getDisplayMedia pending forever: Start stuck on "Opening..." until a
+    // restart (round 2). cb can itself throw if the request died meanwhile — swallowed, nothing left to answer.
+    try { const src = await captureSource(); cb(src ? {video: src} : {}) } catch { try { cb({}) } catch {} }
   });
   // the window only ever shows our own page: no new windows, no navigating away
   win.webContents.setWindowOpenHandler(() => ({action: "deny"}));
@@ -186,7 +187,8 @@ function registerKeys(){
 }
 function keyAction(a){
   if (!win || win.isDestroyed()) return;
-  if (a === "onTop"){ const on = readSettings().onTop === false; writeSettings({...readSettings(), onTop: on}); pinOnTop(); win.webContents.send("menu", "onTop:" + on); return }
+  // same event-callback rule as saveBounds: a globalShortcut callback that throws kills main (round 2)
+  if (a === "onTop"){ const on = readSettings().onTop === false; try { writeSettings({...readSettings(), onTop: on}) } catch {} pinOnTop(); win.webContents.send("menu", "onTop:" + on); return }
   // click-through: the mouse goes to the game under the window (an overlay); only its shortcut turns it back off, so it
   // starts off every launch and can't be turned on while that shortcut is off
   if (a === "clickThrough"){ clickThrough = !clickThrough; win.setIgnoreMouseEvents(clickThrough, {forward: true}); win.webContents.send("menu", "clickThrough:" + clickThrough); return }
@@ -346,7 +348,11 @@ function frameRect(hwnd){
       + `$r=New-Object R; if([W]::DwmGetWindowAttribute([IntPtr][long]${hwnd},9,[ref]$r,16) -ne 0){[void][W]::GetWindowRect([IntPtr][long]${hwnd},[ref]$r)}; "$($r.L),$($r.T),$($r.Rt),$($r.B)"`;
     require("child_process").execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ps], {timeout: 5000, windowsHide: true}, (err, out) => {
       const n = String(out || "").trim().split(",").map(Number);
-      resolve(!err && n.length === 4 && n.every(Number.isFinite) && n[2] > n[0] && n[3] > n[1] ? {x: n[0], y: n[1], width: n[2] - n[0], height: n[3] - n[1]} : null);
+      // the minimized "iconic" rect (-32000,-32000,160x28) passes a plain size check and slammed every anchored card
+      // to the screen's top-left (round 2) — the same signature winrect.js rejects
+      resolve(!err && n.length === 4 && n.every(Number.isFinite) && n[2] > n[0] && n[3] > n[1]
+        && !(n[0] <= -30000 && n[1] <= -30000 && n[2] - n[0] <= 200 && n[3] - n[1] <= 200)
+        ? {x: n[0], y: n[1], width: n[2] - n[0], height: n[3] - n[1]} : null);
     });
   });
 }
@@ -393,7 +399,11 @@ function winRect(hwnd){
       + `$r=New-Object R; if([W]::GetWindowRect([IntPtr][long]${hwnd},[ref]$r)){"$($r.L),$($r.T),$($r.Rt),$($r.B)"}`;
     require("child_process").execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ps], {timeout: 5000, windowsHide: true}, (err, out) => {
       const n = String(out || "").trim().split(",").map(Number);
-      resolve(!err && n.length === 4 && n.every(Number.isFinite) && n[2] > n[0] && n[3] > n[1] ? {x: n[0], y: n[1], width: n[2] - n[0], height: n[3] - n[1]} : null);
+      // the minimized "iconic" rect (-32000,-32000,160x28) passes a plain size check and slammed every anchored card
+      // to the screen's top-left (round 2) — the same signature winrect.js rejects
+      resolve(!err && n.length === 4 && n.every(Number.isFinite) && n[2] > n[0] && n[3] > n[1]
+        && !(n[0] <= -30000 && n[1] <= -30000 && n[2] - n[0] <= 200 && n[3] - n[1] <= 200)
+        ? {x: n[0], y: n[1], width: n[2] - n[0], height: n[3] - n[1]} : null);
     });
   });
 }
@@ -410,17 +420,20 @@ async function gameDisplay(){
 let snipWin = null;
 ipcMain.handle("snip", async (_, url) => { const d = await gameDisplay(); return new Promise(resolve => {
   if (snipWin && !snipWin.isDestroyed()) snipWin.close();
-  snipWin = new BrowserWindow({...d.bounds, frame: false, fullscreen: true, alwaysOnTop: true, skipTaskbar: true, show: false,
+  const sn = snipWin = new BrowserWindow({...d.bounds, frame: false, fullscreen: true, alwaysOnTop: true, skipTaskbar: true, show: false,
     webPreferences: {preload: path.join(__dirname, "snip-preload.js"), contextIsolation: true}});
-  snipWin.setAlwaysOnTop(true, "screen-saver");
+  sn.setAlwaysOnTop(true, "screen-saver");
   let done = false;
-  const finish = rect => { if (done) return; done = true; ipcMain.removeListener("snip-done", onDone); if (snipWin && !snipWin.isDestroyed()) snipWin.close(); snipWin = null; resolve(rect || null) };
-  const onDone = (e, rect) => { if (e.sender === snipWin?.webContents) finish(rect) };
+  // everything below touches `sn` (this invocation's window), never the module-level snipWin: a second snip request
+  // used to have request #1's cleanup close request #2's window (round 2)
+  const finish = rect => { if (done) return; done = true; ipcMain.removeListener("snip-done", onDone); if (!sn.isDestroyed()) sn.close(); if (snipWin === sn) snipWin = null; resolve(rect || null) };
+  const onDone = (e, rect) => { if (e.sender === sn.webContents) finish(rect) };
   ipcMain.on("snip-done", onDone);
-  snipWin.on("closed", () => finish(null));
-  snipWin.webContents.setWindowOpenHandler(() => ({action: "deny"}));
-  snipWin.webContents.on("will-navigate", e => e.preventDefault());
-  snipWin.loadFile(path.join(__dirname, "snip.html")).then(() => { snipWin.webContents.send("snip-image", url); snipWin.show(); snipWin.focus() });
+  sn.on("closed", () => finish(null));
+  sn.webContents.setWindowOpenHandler(() => ({action: "deny"}));
+  sn.webContents.on("will-navigate", e => e.preventDefault());
+  sn.loadFile(path.join(__dirname, "snip.html")).then(() => { if (!sn.isDestroyed()){ sn.webContents.send("snip-image", url); sn.show(); sn.focus() } })
+    .catch(() => finish(null));   // Alt-F4 while the page was still loading used to reject unhandled (round 2)
 }) });
 ipcMain.handle("whole-screen", (_, on) => { wholeScreen = !!on; return wholeScreen });
 // alert sounds the player adds (0.2.92): copied into userData/sounds (wav/mp3/ogg, 3 MB each, 60 files) and read back by name only
@@ -592,7 +605,9 @@ function saveBounds(){
   if (!win || win.isDestroyed() || win.isMinimized() || win.isMaximized() || win.isFullScreen()) return;
   const b = win.getBounds();
   if (fullSize) b.height = fullSize[1];   // mini bar: keep the full height, it opens full size
-  writeSettings({...readSettings(), winBounds: b});
+  // fired from window events (moved/resized/close), not IPC handlers: a throw here — another process holding
+  // settings.json (AV scanner) — was an uncaughtException in main and killed the whole app mid-session (round 2)
+  try { writeSettings({...readSettings(), winBounds: b}) } catch {}
 }
 // the page's title bar buttons (File, View, Help) open the same menus the old menu bar had, under the button
 ipcMain.handle("menu-popup", (_, label, x, y) => {
@@ -761,7 +776,7 @@ function ocrWorker(){
 // its peak for the worker's whole life (100-200 MB of the total the Performance monitor shows), and with the text
 // cache (core/ocrcache.js) answering every repeat read, OCR sits unused most of a session. The next read just builds
 // a new worker (a second or two, local model).
-let ocrReads = 0, ocrIdleT = 0;
+let ocrReads = 0, ocrIdleT = 0, ocrFails = 0, ocrSkipT = 0;
 ipcMain.handle("ocr", async (_, pngBytes, opt) => {
   if (opt && (opt.tag === "shopName" || opt.tag === "shopPrice")){   // the benched paths only; see neuralOcr above
     try {
@@ -771,12 +786,16 @@ ipcMain.handle("ocr", async (_, pngBytes, opt) => {
       if (m && m.text && m.conf >= 0.35 && m.low >= 0.35) return m.text;
     } catch {}
   }
+  // a persistently broken worker used to be rebuilt on EVERY read (a multi-second createWorker per crop, 24 queued
+  // crops = minutes of churn returning ""): after 3 straight failures, fail fast for a minute (round 2)
+  if (ocrFails >= 3 && Date.now() - ocrSkipT < 60000) return "";
   try {
     const w = await ocrWorker();
     ocrIdleT = Date.now();
     const text = (await w.recognize(Buffer.from(pngBytes))).data.text;
+    ocrFails = 0;
     if (++ocrReads >= 200){ ocrReads = 0; ocr = null; ocrIdleT = 0; w.terminate().catch(() => {}) }
     return text;
-  } catch { const o = ocr; ocr = null; ocrIdleT = 0; o?.then(w => w.terminate()).catch(() => {}); return "" }   // broken worker: a new one next time
+  } catch { const o = ocr; ocr = null; ocrIdleT = 0; ocrFails++; ocrSkipT = Date.now(); o?.then(w => w.terminate()).catch(() => {}); return "" }   // broken worker: a new one next time
 });
-setInterval(() => { if (ocr && ocrIdleT && Date.now() - ocrIdleT > 2 * 60e3){ const o = ocr; ocr = null; ocrReads = 0; ocrIdleT = 0; o.then(w => w.terminate()).catch(() => {}) } }, 60e3).unref?.();
+setInterval(() => { if (ocr && ocrIdleT && Date.now() - ocrIdleT > 2 * 60e3){ const o = ocr; ocr = null; ocrReads = 0; ocrIdleT = 0; ocrFails = 0; o.then(w => w.terminate()).catch(() => {}) } }, 60e3).unref?.();

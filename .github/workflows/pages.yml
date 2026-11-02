@@ -17,6 +17,9 @@ permissions:
 concurrency: { group: pages, cancel-in-progress: true }
 jobs:
   deploy:
+    # workflow_run fires on completed regardless of result: a failed poll (watchdog history says they happen)
+    # used to burn a full checkout + Playwright install + build + deploy of unchanged data (round 2)
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04   # not -latest: it became 26.04, which Playwright 1.56.1 refuses (2026-10-31)
     timeout-minutes: 15
     environment: { name: github-pages, url: "${{ steps.dep.outputs.page_url }}" }

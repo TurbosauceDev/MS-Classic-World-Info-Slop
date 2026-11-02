@@ -28,6 +28,11 @@ from name_fix import ITEM_NAME_FIX   # OSMS drops Ü/ü from item names
 items_json = json.load(open(C + "items.json"))
 ALL_ITEMS = [x for v in items_json.values() if isinstance(v, list) for x in v if isinstance(x, dict)]
 ITEM = {str(i["id"]): i for i in ALL_ITEMS}
+# an export bump with duplicated ids silently kept the last row (dict-comprehension last-wins): say so loudly
+# instead (round 2 — the poll logs are the only place anyone would notice rows disappearing)
+if len(ITEM) != len(ALL_ITEMS):
+    dupes = [i for i, n in collections.Counter(str(x["id"]) for x in ALL_ITEMS).items() if n > 1]
+    print(f"WARNING: items.json has {len(dupes)} duplicated id(s), last row wins: {dupes[:10]}", file=sys.stderr)
 QUESTS = json.load(open(C + "quests.json"))
 QUESTS = QUESTS if isinstance(QUESTS, list) else next(v for v in QUESTS.values() if isinstance(v, list))
 b64 = lambda p: base64.b64encode(open(p, "rb").read()).decode()
@@ -199,9 +204,14 @@ def add_items(D, ids):
     for iid in sorted(set(ids) - set(D["items"])):   # sorted so rebuilds are byte-identical
         i = ITEM[iid]
         st = {k: v for k, v in (i.get("stats") or {}).items() if k in KEEP}
+        # the export occasionally ships the price as a string ("1800"): coerce numeric strings, drop junk
+        # (one item landed in data.json as "p": "1800" among ints — a latent schema break, round 2)
+        price = i.get("price") or st.get("price")
+        if isinstance(price, str) and price.isdigit(): price = int(price)
+        elif not isinstance(price, (int, float)): price = None
         D["items"][iid] = {"n": ITEM_NAME_FIX.get(iid, i["name"]), "c": i.get("category") or ("Scroll" if i.get("stat_type") or "Scroll" in i["name"] else ""),
                      "s": i.get("sub_category") or i.get("equip_slot") or "", "st": st, "job": i.get("req_job_label"),
-                     "p": i.get("price") or st.get("price"), "d": (i.get("description") or "").strip(),
+                     "p": price, "d": (i.get("description") or "").strip(),
                      "wt": i.get("weapon_type"), "spd": i.get("attack_speed_label"), "sp": i.get("spec")}
         p = C + f"images/items/{int(iid):08d}.png"
         if os.path.exists(p): D["iicons"][iid] = b64(p)

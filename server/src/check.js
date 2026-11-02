@@ -1,5 +1,7 @@
 /* Checks on a run before it counts. A failed run is still stored (with the reason), just left out of the numbers.
    Limits are our own choices, not game data: they only catch broken readings and made-up runs. */
+// dates: calendar-shaped only (month 01-12, day 01-31) — 2026-13-99 passed the old shape check and became junk board keys
+const DATE_OK = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 export function cleanRun(r, G){
   const num = (v, lo, hi) => typeof v === "number" && isFinite(v) && v >= lo && v <= hi;
   if (!r || typeof r !== "object") return {error: "not a run"};
@@ -7,12 +9,13 @@ export function cleanRun(r, G){
   if (!num(r.minutes, 14.5, 20)) return {error: "minutes"};
   if (!num(r.party, 1, 6) || !num(r.exp, 0, 1e8) || !num(r.kills, 0, 1e5) || !num(r.mesos ?? 0, 0, 1e8)) return {error: "numbers"};
   if (r.level != null && !num(r.level, 1, 200)) return {error: "level"};
-  if (r.date && (typeof r.date !== "string" || !/^\d{4}-\d\d-\d\d$/.test(r.date))) return {error: "date"};
+  if (r.date && (typeof r.date !== "string" || !DATE_OK.test(r.date))) return {error: "date"};
   const text = (v, n) => typeof v === "string" ? v.slice(0, n) : null;   // text fields: strings only
   // a map id the server doesn't know (a newer tracker): keep the run under its name rather than lose it
   const map = r.map != null && G.maps[String(r.map)] ? String(r.map) : null;
-  // counts: whole numbers from 0 up, a monster's kills no more than the run's (they add up to the Confirmed Drops)
-  const cnt = (v, hi) => Math.min(hi, Math.max(0, Math.floor(+v) || 0)), kills = cnt(r.kills, 1e5);
+  // counts: whole numbers from 0 up, a monster's kills no more than the run's (they add up to the Confirmed Drops).
+  // Numbers only: the old +v coercion took "9000" and "1e999" — values the tracker never sends (round 2)
+  const cnt = (v, hi) => typeof v === "number" && isFinite(v) ? Math.min(hi, Math.max(0, Math.floor(v))) : 0, kills = cnt(r.kills, 1e5);
   // a mob's mesos can't exceed the run's own pickup total (they add up to the Mesos counter); when the tracker saw no
   // total at all the absolute cap still applies, so a broken HUD read never zeroes honest rows
   const mesoCap = num(r.mesos, 1, 1e8) ? Math.round(r.mesos) : 1e8;
@@ -87,8 +90,9 @@ export function cleanKpq(r){
   if (!num(r.clear, 1, 7200) || !num(r.party, 1, 6)) return {error: "numbers"};
   if (r.src === "site") return {error: "tracker only"};   // the site's KPQ timer no longer submits (Danny 2026-10-30)
   if (r.level != null && !num(r.level, 1, 200)) return {error: "level"};
-  if (r.date && (typeof r.date !== "string" || !/^\d{4}-\d\d-\d\d$/.test(r.date))) return {error: "date"};
-  const cnt = (v, hi) => v == null ? null : Math.min(hi, Math.max(0, Math.round(+v) || 0));
+  if (r.date && (typeof r.date !== "string" || !DATE_OK.test(r.date))) return {error: "date"};
+  // counts on the totals: numbers only like cleanRun's (the old +v took "3600" as 3600)
+  const cnt = (v, hi) => typeof v === "number" && isFinite(v) ? Math.min(hi, Math.max(0, Math.round(v))) : null;
   const st = r.stages && typeof r.stages === "object" && !Array.isArray(r.stages) ? r.stages : {};
   const stages = Object.fromEntries(KPQ_IDS.filter(id => num(st[id], 0, 7200)).map(id => [id, Math.round(st[id])]));
   const round = {date: r.date || new Date().toISOString().slice(0, 10), hour: Number.isInteger(r.hour) && r.hour >= 0 && r.hour < 24 ? r.hour : null,

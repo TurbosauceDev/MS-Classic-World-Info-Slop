@@ -7,6 +7,7 @@ on:
     branches: ["main"]
     paths: ["server/**", "tracker/core/kpqscore.js", ".github/workflows/server.yml"]
   workflow_dispatch:
+concurrency: { group: server-deploy, cancel-in-progress: true }   # latest push wins: two racing deploys could otherwise finish out of order and serve the older Worker (round 2)
 jobs:
   deploy:
     runs-on: ubuntu-latest

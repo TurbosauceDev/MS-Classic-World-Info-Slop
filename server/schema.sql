@@ -154,8 +154,10 @@ CREATE TABLE IF NOT EXISTS run_names (run_id INTEGER PRIMARY KEY, name TEXT NOT 
 -- high-water marks: posts (rows ever accepted today) and installs (distinct trackers ever seen today). Forget
 -- deliberately leaves it — it is the network-day's tally, not the install's data: the same day-scoped salted,
 -- non-reversible hash the rows themselves carry, kept at most until the day after tomorrow (archiveOld prunes it).
--- party_live and feedback need no ledger: forget can't touch either (party rows self-expire within an hour; feedback
--- has no install column to forget by), so their caps were never resettable this way.
+-- party_live's install cap reads this ledger too (2026-11-02, round 2): forget DOES delete its rows (it is the
+-- install's data), so without the mark a forget handed the 6-trackers slot back; feedback alone needs no ledger (it
+-- has no install column to forget by). The 20-second party throttle still resets with a forget — bounded by the
+-- hourly self-expiry and the ledger-backed install cap.
 CREATE TABLE IF NOT EXISTS ipday_ledger (
   ipday    TEXT PRIMARY KEY,         -- the same salted IP + UTC day hash the hot tables carry
   day      TEXT NOT NULL,            -- the UTC day inside that hash: the row ages out with it
