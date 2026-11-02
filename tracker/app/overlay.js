@@ -175,6 +175,11 @@ const PARAMS = [
   {k: "rfill", sec: "Drawing", lab: "Fill", t: "r", min: 0, max: 60, step: 2, def: 18, f: pct, kinds: ["range"]},
   {k: "rlab", sec: "Drawing", lab: "Skill name by the area", t: "b", def: true, kinds: ["range"]},
   {k: "rdot", sec: "Drawing", lab: "Mark my feet", t: "b", def: true, kinds: ["range"]},
+  // P1-8 anchor mode (Turbozo approved the koffi verdict): a card can ride the game window's rect instead of the
+  // desk — move or resize the game and the card keeps its offset from the game's top-left. The offset (w.ag) is
+  // based where the card sits when the switch goes on and on every drag, so enabling it never jumps the card.
+  {k: "anchor", sec: "This card", lab: "Follow the game window", t: "b", def: false,
+    tip: "Pins the card to the game window and tracks it on move/resize (releases with the window closed). Without the game's rect the card sits where it was saved."},
 ];
 // Parked (Danny 10-29): the Condition rule leaves the inspector until the "mapleAuras" function builds on conditions/triggers.
 // conds() below still knows these keys; put the rows back in PARAMS to switch it on again.
@@ -404,10 +409,18 @@ function theme(th){
 
 // ---- cards: one element per kind, placed in desktop coordinates -------------------------------
 // per-widget settings: on, x/y (desktop px), s = scale .5-2, o = opacity .25-1 (WeakAuras' per-region surface, tamed)
+// GAME: the game window's rect in desk coordinates, pushed by main.js at the anchor cadence (P1-8); null when the
+// game's rect is unknown (game closed, native queries unavailable, capture is a whole screen). Cards with the
+// "Follow the game window" switch keep their offset (w.ag) from this rect's top-left.
+let GAME = null, GAMEJ = null;
 function wPos(id){
   const saved = CFG.widgets[id], home = HOME[baseOf(id)] || {on: false, x: 24, y: 24};
   const xy = k => saved && Number.isFinite(+saved[k]) ? +saved[k] : home[k];   // 0 is a real spot (the desk's edge)
-  return {on: saved ? saved.on !== false : home.on, x: xy("x"), y: xy("y"), s: wv(id, "s"), o: wv(id, "o")};
+  let x = xy("x"), y = xy("y");
+  if (saved?.anchor && GAME && saved.ag && Number.isFinite(+saved.ag.x) && Number.isFinite(+saved.ag.y)){
+    x += GAME.x - +saved.ag.x; y += GAME.y - +saved.ag.y;   // ride the game window: the saved offset from its top-left holds
+  }
+  return {on: saved ? saved.on !== false : home.on, x, y, s: wv(id, "s"), o: wv(id, "o")};
 }
 function mkCard(id){
   const el = document.createElement("section");
@@ -537,6 +550,9 @@ function delInst(id){
 function savePos(id){
   const el = $("#ovw-" + id); if (!el) return;
   CFG.widgets[id] = {...(CFG.widgets[id] || {}), x: DESK.x + el.offsetLeft, y: DESK.y + el.offsetTop};
+  // an anchored card re-bases its game offset on every save, so what you see is what stays (a drag while the game
+  // has moved since w.ag would otherwise jump back on the next place())
+  if (CFG.widgets[id].anchor && GAME) CFG.widgets[id].ag = {x: GAME.x, y: GAME.y};
   ovSave();
 }
 // one setter for every parameter: validate, store (a default is stored as absence, so codes stay small), restyle, re-render, save
@@ -545,6 +561,8 @@ function setP(id, k, v){
   if (tok ? !TOK_SETS[baseOf(id)]?.[v] : (!p || (p.kinds && !p.kinds.includes(baseOf(id))))) return;
   const val = tok ? v : okParam(p, v, id), w = {...(CFG.widgets[id] || {})};
   if (!tok && (val === defOf(p, id) || val === "")) delete w[k]; else w[k] = val;
+  // anchor (P1-8): switching on bases the game offset where the card sits right now (no jump); switching off drops it
+  if (k === "anchor"){ if (val) w.ag = GAME ? {x: GAME.x, y: GAME.y} : {x: 0, y: 0}; else delete w.ag }
   CFG.widgets[id] = w;
   const el = $("#ovw-" + id);
   if (el){ styleCard(el, id); if (DATA) apply(DATA); clampCard(el); reflow() }
@@ -667,6 +685,15 @@ function rngDraw(){
 function rngFeet(f){
   if (!f || typeof f !== "object") return;
   FEET = {...f, at: Date.now()}; rngDraw(); rngCards();
+}
+// P1-8 anchor mode: the tracker pushes the game window's rect (desk-relative) at the anchor cadence; anchored
+// cards re-place. Skipped mid-drag/resize — a move must never fight the hand that is dragging a card.
+function gameRectArrived(r){
+  const j = JSON.stringify(r || null);
+  if (j === GAMEJ) return;
+  GAMEJ = j;
+  GAME = r && Number.isFinite(+r.x) && Number.isFinite(+r.y) && +r.width > 0 && +r.height > 0 ? {x: +r.x, y: +r.y, width: +r.width, height: +r.height} : null;
+  if (!drag && !rz && ids().some(id => CFG.widgets[id]?.anchor)) place()
 }
 // the tracker stopped reading (game closed, Stop with nothing else watching): the area goes away instead of hanging there
 setInterval(() => { if (FEET?.ok && Date.now() - FEET.at > 3000){ FEET = {...FEET, ok: false, why: "stale"}; rngDraw(); rngCards() } }, 1000);
@@ -1189,6 +1216,7 @@ addEventListener("keydown", e => {
   rngCards();
   window.ovhost.onData(apply);
   window.ovhost.onFeet?.(rngFeet);
+  window.ovhost.onGameRect?.(gameRectArrived);   // P1-8 anchor mode: cards set to follow the game window ride this
   window.ovhost.onMode(on => {
     CFG.edit = !!on;
     document.body.classList.toggle("edit", CFG.edit);

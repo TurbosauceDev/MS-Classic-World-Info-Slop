@@ -19,6 +19,7 @@ const AUTO = require("../core/autosave.js");
 const OVCFG = require("../core/overlaycfg.js");
 const HIST = require("../core/history.js");   // applyEdit: History > Edit run   // the running session, autosaved there (crash recovery)
 const OcrModel = require("../core/ocrmodel.js");   // neural text reader (0.3.31): port of ocrs' line prep + CTC decode
+const WinRect = require("./winrect.js");   // P1-8 anchor mode: koffi window-rect queries, read-only, capability-gated
 const readPng = require("./png.js");
 
 // Windows Graphics Capture (what OBS uses) instead of the old GDI window grab, which gives black frames for DirectX games
@@ -141,7 +142,7 @@ ipcMain.handle("perf-metrics", () => app.getAppMetrics().map(m => ({pid: m.pid, 
 // and nothing here could be measured off-Windows, so the next screenshot names the part): JS heap, native buffers, the OCR
 // engine up or not, how often the game window was looked for and the capture opened
 const perfCount = {games: 0, captures: 0};
-ipcMain.handle("perf-main", () => { const m = process.memoryUsage(), mb = v => Math.round(v / 1048576); return {rss: mb(m.rss), heap: mb(m.heapUsed), ext: mb(m.external), buf: mb(m.arrayBuffers), ocr: !!ocr, ocrReads, games: perfCount.games, captures: perfCount.captures, upd: upd.state, read: lastReadStats} });
+ipcMain.handle("perf-main", () => { const m = process.memoryUsage(), mb = v => Math.round(v / 1048576); return {rss: mb(m.rss), heap: mb(m.heapUsed), ext: mb(m.external), buf: mb(m.arrayBuffers), ocr: !!ocr, ocrReads, games: perfCount.games, captures: perfCount.captures, upd: upd.state, read: lastReadStats, winrect: WinRect.available()} });
 // reader telemetry (core/readstats.js): one jsonl line a minute from the renderer, appended here so settings can be
 // compared by real numbers later (customclassic-chat's reading.jsonl). Size-capped the same way: past 2 MB the
 // newest 6000 lines are kept, written atomically; the last line rides perf-main for the Performance monitor.
@@ -336,6 +337,9 @@ ipcMain.on("ov-push", (_, d) => { if (ovWin && !ovWin.isDestroyed()) ovWin.webCo
 // Windows (DWM frame bounds of the captured window: what Windows Graphics Capture records; GetWindowRect adds invisible
 // borders) or the captured screen. Only the window's position is asked of Windows, nothing of the game.
 let gameRectC = {r: null, t: 0, busy: false};
+/* frameRect(hwnd) — the PowerShell path, kept as the fallback for machines where koffi won't load
+   (non-Windows, an odd Electron ABI, a stripped-down system). Same DWM-9-then-GetWindowRect order as
+   winrect.js; slower (a process spawn), which is exactly why the fast path exists. */
 function frameRect(hwnd){
   return new Promise(resolve => {
     const ps = `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public struct R{public int L,T,Rt,B;}public static class W{[DllImport("dwmapi.dll")]public static extern int DwmGetWindowAttribute(IntPtr h,int a,out R r,int s);[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out R r);}';`
@@ -350,16 +354,35 @@ async function gameRectNow(){
   const {screen} = require("electron"), src = await captureSource();
   if (src?.display_id){ const d = screen.getAllDisplays().find(d => String(d.id) === String(src.display_id)); if (d) return d.bounds }   // whole-screen capture
   const hwnd = /^window:(\d+):/.exec(src?.id || "")?.[1];   // digits only: safe to put in the command
-  if (hwnd && process.platform === "win32"){ const r = await frameRect(hwnd); if (r) return screen.screenToDipRect(null, r) }
+  if (hwnd && process.platform === "win32"){
+    const r = WinRect.rectOf(+hwnd) || await frameRect(hwnd);   // koffi first (instant); PowerShell only when it can't
+    if (r) return screen.screenToDipRect(null, r);
+  }
   return null;
 }
-function gameRect(){   // cached, refreshed in the background every 3 s while feet are being sent (a moved window follows within 3 s)
-  if (!gameRectC.busy && Date.now() - gameRectC.t > 3000){ gameRectC.busy = true; gameRectNow().then(r => { gameRectC.r = r }).catch(() => {}).finally(() => { gameRectC.busy = false; gameRectC.t = Date.now() }) }
+// the rect's freshness cadence: koffi makes a query cost microseconds, so anchored overlay cards can
+// track a moved/resized game window within 600 ms; the PowerShell fallback stays at the old 3 s
+const RECT_MS = () => WinRect.available() ? 600 : 3000;
+function gameRect(){   // cached, refreshed in the background (P1-8 anchor mode and the feet reading both feed off this)
+  if (!gameRectC.busy && Date.now() - gameRectC.t > RECT_MS()){ gameRectC.busy = true; gameRectNow().then(r => { gameRectC.r = r }).catch(() => {}).finally(() => { gameRectC.busy = false; gameRectC.t = Date.now() }) }
   return gameRectC.r;
 }
 ipcMain.on("ov-feet", (_, f) => { if (!ovWin || ovWin.isDestroyed() || !f || typeof f !== "object") return;
   const g = gameRect(), d = ovDesk();
   ovWin.webContents.send("ov-feet", {...f, game: g ? {x: g.x - d.x, y: g.y - d.y, width: g.width, height: g.height} : null}) });
+/* P1-8 anchor mode: overlay cards whose "Follow the game window" switch is on track the game window's rect
+   (desk-relative, the same shape ov-feet carries). The loop only runs while the overlay is open AND at least
+   one card is anchored — nobody anchored means no native calls and no IPC at all. Sent on change only. */
+let ovGameLast = null;
+setInterval(() => {
+  if (!ovWin || ovWin.isDestroyed()){ ovGameLast = null; return }
+  const anch = Object.values(readSettings().overlay?.widgets || {}).some(w => w && w.anchor);
+  if (!anch) return;
+  const g = gameRect(), d = ovDesk();
+  const rel = g && d ? {x: g.x - d.x, y: g.y - d.y, width: g.width, height: g.height} : null;
+  const j = JSON.stringify(rel);
+  if (j !== ovGameLast){ ovGameLast = j; try { ovWin.webContents.send("ov-gamerect", rel) } catch {} }
+}, 600).unref?.();
 
 // "Show me where": a full-screen window with the frozen game picture; the player drags a box (snipping-tool style)
 // It opens on the game's monitor (Danny: it opened on his second monitor, where the tracker and the mouse were): the game
