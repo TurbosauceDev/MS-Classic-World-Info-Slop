@@ -96,7 +96,10 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     await p.setInputFiles("#pimpfile", {name: "shot2.png", mimeType: "image/png", buffer: Buffer.from("still not an image")});
     await p.waitForTimeout(300);
     const alive = await p.evaluate(() => !document.querySelector("#pimpdrop").classList.contains("busy") && !/Reading/.test(document.querySelector("#pimpst").textContent));
-    check(!errs.length && alive, `builder import: broken file survives, importer still works (${errs.join("; ")})`); await ctx.close() }
+    check(!errs.length && alive, `builder import: broken file survives, importer still works (${errs.join("; ")})`);
+    // round 3: the failed read's figure has no thumbnail — the (empty, but full-width and clickable) button used to
+    // throw in view() when clicked
+    check(await p.$$eval("#pimpshots .pithumb", b => b.length) === 0, "a failed read renders no thumbnail button"); await ctx.close() }
 
   // 7. search: Setup items (letter chairs 'Red "A"') no longer bury Red Snail / Red Potion; same-name items show their ID
   { const {p, ctx} = await page(); await p.goto(URL); await p.keyboard.press("Control+k"); await p.fill("#srchq", "red"); await p.waitForTimeout(100);
@@ -256,6 +259,30 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     for (let i = 0; i < 12; i++){ await p.evaluate(() => document.querySelector("#crrows").lastElementChild.scrollIntoView()); await p.waitForTimeout(80) }
     const all = await p.$$eval("#crrows tr", r => r.length);
     check(first <= 60 && all === 308, `crafting recipes: ${first} rows at first, ${all} after scrolling`); await ctx.close() }
+
+  // 9. bug-hunt round three (2026-11-02): the older, quieter corners
+  // 9a. Builder: SP beyond a skill's max from a #b= share link used to read s.st[98] and brick render() on every load
+  { const {p, errs, ctx} = await page(); await p.goto(URL + "#b=" + enc({cls: "Warrior", lvl: 30, sp: {"1000000": 99}})); await p.waitForTimeout(200);
+    const rows = await p.$$eval("#pskills .srow", r => r.length),
+      v = await p.evaluate(() => document.querySelector('#pskills .stepper[data-id="1000000"] .sv')?.textContent.trim());
+    check(!errs.length && rows > 0 && v === "15/15", `builder share link with sp over a skill's max clamps to it (rows ${rows}, value "${v}") ${errs.join("; ")}`); await ctx.close() }
+  { const {p, errs, ctx} = await page(); await p.goto(URL);
+    await p.evaluate(() => localStorage.setItem("planner", JSON.stringify({cls: "Warrior", lvl: 30, sp: {"1000000": 40, "1000001": 1.7, "junk": 3}})));
+    await p.goto(URL); await open(p, "plan"); await p.waitForTimeout(200);
+    const rows = await p.$$eval("#pskills .srow", r => r.length);
+    check(!errs.length && rows > 0 && !BADTEXT.test(await p.innerText("#plan")), `builder saved sp over max/float clamps on load (rows ${rows}) ${errs.join("; ")}`); await ctx.close() }
+  // 9b. Crafting: a saved sort key the KEY table doesn't have used to throw mid-render and leave the tab stuck empty
+  { const {p, errs, ctx} = await page(); await p.goto(URL);
+    await p.evaluate(() => localStorage.setItem("craft", JSON.stringify({sort: "junk", dir: "x"})));
+    await p.goto(URL); await open(p, "craft"); await p.waitForTimeout(200);
+    const n = await p.$$eval("#crrows tr", r => r.length), cnt = await p.textContent("#crcount");
+    check(!errs.length && n > 0 && /recipe/.test(cnt), `crafting junk saved sort falls back to lvl (rows ${n}, "${cnt.trim()}") ${errs.join("; ")}`); await ctx.close() }
+  // 9c. Where to train: the four 0-EXP Super maps used to print "NaN" mesos/hr once a huge typed Accuracy cleared
+  //     their hit gate (statNum clamps to 99999, enough for avoid-999 mobs)
+  { const {p, errs, ctx} = await page(); await p.goto(URL); await open(p, "maps");
+    await p.fill("#lvl", "200"); await p.dispatchEvent("#lvl", "change");
+    await p.fill("#uacc", "99999"); await p.dispatchEvent("#uacc", "input"); await p.waitForTimeout(150);
+    check(!errs.length && !BADTEXT.test(await p.innerText("#maps")), `Where to train with accuracy 99999 at lvl 200 has no NaN ${errs.join("; ")}`); await ctx.close() }
 
   await b.close();
   console.log(fails ? `\n${fails} failed` : "\nall good"); process.exit(fails ? 1 : 0);

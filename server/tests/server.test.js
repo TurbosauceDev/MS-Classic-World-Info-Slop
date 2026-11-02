@@ -610,4 +610,52 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   assert.strictEqual(trimSummary(nolist, 1000), JSON.stringify(nolist), "nothing left to give: untouched");
 }
 
+// ---- bug-hunt round three (2026-11-02): the read paths, archive safety, shop coercions ----
+{
+  // a corrupt stored mobs row (half-written D1 write, hand edit) used to 500 every /api/summary until the row aged out
+  sql.prepare(`INSERT INTO runs (id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, mobs)
+    VALUES (7001, 'corruptmobsrow0001', 'r3c1', ?, '2026-11-01', '42', 'Snail', 22, 'Magician', 1, 15, 1000, 1000, 1000, 100, 900, 1, '{oops')`).run(new Date().toISOString());
+  const bad = await worker.fetch(new Request("https://x/api/summary"), env);
+  assert.strictEqual(bad.status, 200, "a corrupt mobs row no longer takes the summary down");
+  assert.ok((await bad.json()).players >= 1, "and the summary still answers with data");
+  sql.prepare("DELETE FROM runs WHERE id = 7001").run();
+
+  // fractional ?limit reached SQLite's LIMIT as a REAL and 500'd the owner inbox
+  const rq3 = q => worker.fetch(new Request("https://x/api/runs/recent" + q, {headers: {authorization: "Bearer " + "k".repeat(32)}}), env).then(async x => [x.status, await x.json()]);
+  const kq3 = q => worker.fetch(new Request("https://x/api/kpq/recent" + q, {headers: {authorization: "Bearer " + "k".repeat(32)}}), env).then(async x => [x.status, await x.json()]);
+  const [ls, lj] = await rq3("?limit=2.5");
+  assert.strictEqual(ls, 200, "a fractional runs limit truncates, not 500s");
+  assert.strictEqual(lj.runs.length, 2, "?limit=2.5 gives 2 rows");
+  assert.strictEqual((await kq3("?limit=1.1"))[0], 200, "a fractional kpq limit truncates, not 500s");
+
+  // cleanShop's regex coercion: RegExp.test stringifies, so arrays rode into D1's bind (500 after the obs batch
+  // committed) and numbers stored into TEXT
+  const shop3 = (body, ip) => worker.fetch(new Request("https://x/api/shop", {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(async x => [x.status, await x.json()]);
+  const coerced = "shopcoerce000000001";
+  const [cs, cj] = await shop3({install: coerced, v: 2, seller: ["swagmart"], title: "fm 9", room: 9, map: ["100000000"], rows: [{id: 1002000, qty: 1, price: 1000, sold: 0}]}, "10.31.3.1");
+  assert.strictEqual(cs, 200, "an array seller stores as null instead of blowing up the bind: " + JSON.stringify(cj));
+  const ext3 = sql.prepare("SELECT seller, title, room, map FROM shop_obs_ext WHERE obs_id IN (SELECT id FROM shop_obs WHERE install = ?)").get(coerced);
+  assert.ok(ext3 && ext3.seller === null && ext3.map === null && ext3.title === "fm 9" && ext3.room === 9, "the ext row stores nulls for junk fields: " + JSON.stringify(ext3));
+
+  // the 14-day prune takes the ext rows with the observations (orphaned seller names used to outlive their rows forever)
+  sql.prepare("UPDATE shop_obs SET received = ? WHERE install = ?").run(new Date(Date.now() - 20 * 864e5).toISOString(), coerced);
+  await worker.fetch(new Request("https://x/api/shop/summary"), env);
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM shop_obs WHERE install = ?").get(coerced).n, 0, "the aged observation is pruned");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM shop_obs_ext WHERE obs_id NOT IN (SELECT id FROM shop_obs)").get().n, 0, "its ext row (the seller name) goes with it");
+
+  // archive safety when rowids restart: a live run whose id the archive already holds (a different received) must
+  // survive the move — the old OR IGNORE + unconditional delete would have erased it from both tables
+  const old3 = new Date(Date.now() - (ARCHIVE_DAYS + 5) * 864e5).toISOString();
+  sql.prepare(`INSERT INTO runs (id, install, ipday, received, date, map, map_name, party, minutes, exp, kills, mesos, ok)
+    VALUES (7002, 'collidelive000001', 'r3c2', ?, '2026-01-01', '42', 'Snail', 1, 15, 1000, 100, 900, 1)`).run(old3);
+  sql.prepare(`INSERT INTO runs_archive (id, install, ipday, received, date, map, map_name, party, minutes, exp, kills, mesos, ok, why, mobs, items, archived)
+    VALUES (7002, 'archolderrow0001', 'r3c3', ?, '2026-01-01', '42', 'Snail', 1, 15, 900, 90, 800, 1, NULL, NULL, NULL, ?)`).run(new Date(Date.now() - (ARCHIVE_DAYS + 6) * 864e5).toISOString(), old3);
+  await fresh();
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE id = 7002").get().n, 1, "the live row survives: its (id, received) pair is not the archive's");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs_archive WHERE id = 7002").get().n, 1, "the older archive row is untouched");
+  assert.strictEqual(sql.prepare("SELECT exp FROM runs WHERE id = 7002").get().exp, 1000, "and it is the live row that survived");
+  await fresh();
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE id = 7002").get().n, 1, "a second rebuild is stable");
+}
+
 console.log("server tests passed");

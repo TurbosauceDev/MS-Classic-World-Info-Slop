@@ -132,15 +132,18 @@ function renderRecipes(){
   ICOST = {}; ECON = {};
   document.querySelectorAll("#crdisc button").forEach(b => b.setAttribute("aria-checked", +b.dataset.d === S.d));
   $("#crtype").value = S.type; $("#crcls").value = S.cls; $("#crmax").value = S.max; $("#crsearch").value = S.q; $("#crmine").checked = !!S.mine; $("#crprof").checked = !!S.prof;
+  // a hand-edited or older save can carry a sort key the current KEY table doesn't have (or a junk dir): that used to
+  // throw "KEY[S.sort] is not a function" mid-render and leave the tab stuck empty (round 3)
+  const kf = KEY[S.sort] || KEY.lvl, dir = S.dir === -1 ? -1 : 1;
   const q = S.q.trim().toLowerCase(), inv = CP().inventory(), have = [...inv.values()].some(n => n > 0);
   const rows = R.filter(r => (S.d < 0 || r.d === S.d) && (!S.type || r.type === S.type) && r.lvl <= S.max && (!S.mine || lvOf(r.d) >= r.lvl) &&
       (!S.cls || (r.it.c === "Equipment" && forCls(r.it, S.cls))) && (!S.prof || econ(r).profit > 0) &&
       (!q || r.it.n.toLowerCase().includes(q) || r.ing.some(([x]) => (D.items[x]?.n || "").toLowerCase().includes(q))))
-    .sort((a, b) => { const x = KEY[S.sort](a), y = KEY[S.sort](b);
-      return (x < y ? -1 : x > y ? 1 : 0) * S.dir || a.lvl - b.lvl || a.d - b.d || a.i - b.i });
+    .sort((a, b) => { const x = kf(a), y = kf(b);
+      return (x < y ? -1 : x > y ? 1 : 0) * dir || a.lvl - b.lvl || a.d - b.d || a.i - b.i });
   document.querySelectorAll("#crhead th[data-k]").forEach(th => { const on = th.dataset.k === S.sort;
-    th.setAttribute("aria-sort", on ? (S.dir > 0 ? "ascending" : "descending") : "none");
-    th.querySelector("button").dataset.arrow = on ? (S.dir > 0 ? "▲" : "▼") : "" });
+    th.setAttribute("aria-sort", on ? (dir > 0 ? "ascending" : "descending") : "none");
+    th.querySelector("button").dataset.arrow = on ? (dir > 0 ? "▲" : "▼") : "" });
   $("#crcount").textContent = `${rows.length} recipe${rows.length === 1 ? "" : "s"}`;
   lazyRows($("#crrows"), rows.map(r => {
     const e = econ(r), T = have && lvOf(r.d) >= r.lvl ? CP().maxTimes(CP().RECS[r.i], inv) : 0;

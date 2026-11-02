@@ -191,15 +191,23 @@ async function partyLive(req, env){
   return json({members, expHr: members.reduce((a, m) => a + (m.expHr || 0), 0)});
 }
 
-// move rows past the window into the archive tables. INSERT OR IGNORE keyed on the id: a crash between the copy and the
-// delete can't double-move a row, the next rebuild just retries the delete. Called inside the summary rebuild, which the
-// summary lock already makes one-at-a-time; runs at most every 5 minutes, so the indexed received scan touches only the
-// handful of rows at the window's edge. Returns the archive totals for the panel
+// move rows past the window into the archive tables. The copy skips rows the archive already holds (keyed on the
+// (id, received) pair — see below), and the delete removes only rows whose pair is in the archive: a crash between
+// the copy and the delete can't double-move a row, the next rebuild just retries the delete. Called inside the
+// summary rebuild, which the summary lock already makes one-at-a-time; runs at most every 5 minutes, so the indexed
+// received scan touches only the handful of rows at the window's edge. Returns the archive totals for the panel
 async function archiveOld(db){
   const cut = new Date(Date.now() - ARCHIVE_DAYS * 86400e3).toISOString();
+  // copy only rows whose (id, received) the archive doesn't hold, then delete exactly the rows that are now in the
+  // archive. Rowids restart at 1 when a table is emptied, so a bare INSERT OR IGNORE + unconditional DELETE could
+  // lose a run outright if the hot table ever emptied while the archive kept rows (round 3): the id would collide,
+  // OR IGNORE would skip the copy, and the delete would still fire. Keying both sides on (id, received) keeps the
+  // crash safety too — a crash between copy and delete leaves the row in both tables, and the next rebuild's delete
+  // (EXISTS on the same pair) removes it without re-copying
   await db.prepare(`INSERT OR IGNORE INTO runs_archive (id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items, archived)
-    SELECT id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items, ? FROM runs WHERE received < ?`).bind(cut, cut).run();
-  await db.prepare("DELETE FROM runs WHERE received < ?").bind(cut).run();
+    SELECT id, install, ipday, received, date, map, map_name, level, job, party, minutes, exp, msg_exp, bar_exp, kills, mesos, ok, why, mobs, items, ? FROM runs WHERE received < ?
+    AND NOT EXISTS (SELECT 1 FROM runs_archive a WHERE a.id = runs.id AND a.received = runs.received)`).bind(cut, cut).run();
+  await db.prepare("DELETE FROM runs WHERE received < ? AND EXISTS (SELECT 1 FROM runs_archive a WHERE a.id = runs.id AND a.received = runs.received)").bind(cut).run();
   // the archive tables keep no extras/party-code/name columns: their rows would point at run ids the hot table no
   // longer has, forever (the KPQ side tables stay — the archive rounds keep their ids and are read with them)
   await db.prepare("DELETE FROM run_extra WHERE run_id NOT IN (SELECT id FROM runs)").run();
@@ -209,8 +217,9 @@ async function archiveOld(db){
   // so yesterday's tally can never bind again — 36 h back covers the whole of yesterday whichever side of midnight)
   await db.prepare("DELETE FROM ipday_ledger WHERE day < ?").bind(new Date(Date.now() - 36 * 3600e3).toISOString().slice(0, 10)).run();
   await db.prepare(`INSERT OR IGNORE INTO kpq_rounds_archive (id, install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why, archived)
-    SELECT id, install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why, ? FROM kpq_rounds WHERE received < ?`).bind(cut, cut).run();
-  await db.prepare("DELETE FROM kpq_rounds WHERE received < ?").bind(cut).run();
+    SELECT id, install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why, ? FROM kpq_rounds WHERE received < ?
+    AND NOT EXISTS (SELECT 1 FROM kpq_rounds_archive a WHERE a.id = kpq_rounds.id AND a.received = kpq_rounds.received)`).bind(cut, cut).run();
+  await db.prepare("DELETE FROM kpq_rounds WHERE received < ? AND EXISTS (SELECT 1 FROM kpq_rounds_archive a WHERE a.id = kpq_rounds.id AND a.received = kpq_rounds.received)").bind(cut).run();
   const r = await db.prepare("SELECT COUNT(*) n FROM runs_archive").first();
   const k = await db.prepare("SELECT COUNT(*) n FROM kpq_rounds_archive").first();
   return {runs: r.n, rounds: k.n};
@@ -243,7 +252,10 @@ export async function summary(db){
     p.grp = r.party > 1 ? pfind(r.grp ? "p" + r.grp : net(r.install)) : net(r.install);
     if (r.hour != null && r.map) timed.push([k, r.exp / h, r.hour]);
     p.party.push(r.party); p.level.push(r.level); p.job.push(r.job); p.exp.push(r.exp / h); p.mesos.push(r.mesos / h); p.kills.push(r.kills / h); if (r.deaths != null) p.deaths.push(r.deaths / h); if (r.used_cost != null) p.used.push(r.used_cost / h);
-    for (const m of JSON.parse(r.mobs || "[]")){
+    // a stored row's mobs is JSON we wrote, but a half-written or hand-edited row must not take the public summary down
+    // for as long as the row lives (round 3 — every other stored-JSON parse here is guarded, this one wasn't)
+    let rmobs; try { rmobs = JSON.parse(r.mobs || "[]") } catch { rmobs = [] }
+    for (const m of Array.isArray(rmobs) ? rmobs : []){
       if (!/^\d{1,10}$/.test(m.id)) continue;   // runs stored before ids were checked
       const t = mobs[m.id] || (mobs[m.id] = {kills: 0, mesos: 0, mesoDrops: 0, items: Object.create(null), players: new Set()});
       t.kills += m.kills; t.mesos += m.mesos; t.mesoDrops += m.mesoDrops; t.players.add(net(r.install));
@@ -367,7 +379,8 @@ async function doneFeedback(req, env){
 // Backs the owner panel at GET /admin, which asks for the key once and lists these in a browser (no curl needed)
 async function getKpqRecent(req, env){
   const no = fbAdmin(req, env); if (no) return no;
-  const n = Math.min(500, Math.max(1, Number(new URL(req.url).searchParams.get("limit")) || 100));
+  // Math.trunc: a fractional limit ("?limit=2.5") reached SQLite's LIMIT as a REAL and 500'd (round 3)
+  const n = Math.min(500, Math.max(1, Math.trunc(Number(new URL(req.url).searchParams.get("limit"))) || 100));
   const {results} = await env.DB.prepare(`SELECT k.id, k.received, k.date, k.hour, k.mode, k.party, k.level, k.job, k.clear, k.total, k.clock, k.exp, k.mesos, k.ok, k.why, k.stages, n.name, x.src
     FROM kpq_rounds k LEFT JOIN kpq_names n ON n.kpq_id = k.id LEFT JOIN kpq_src x ON x.kpq_id = k.id ORDER BY k.id DESC LIMIT ?`).bind(n).all();
   const all = await env.DB.prepare("SELECT COUNT(*) n FROM kpq_rounds").first();
@@ -380,7 +393,7 @@ async function getKpqRecent(req, env){
 // to counts here so the inbox stays light — the public summary is what turns the counted ones into the site's tables.
 async function getRunsRecent(req, env){
   const no = fbAdmin(req, env); if (no) return no;
-  const n = Math.min(500, Math.max(1, Number(new URL(req.url).searchParams.get("limit")) || 100));
+  const n = Math.min(500, Math.max(1, Math.trunc(Number(new URL(req.url).searchParams.get("limit"))) || 100));
   const {results} = await env.DB.prepare(`SELECT r.id, r.received, r.date, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.kills, r.mesos, r.ok, r.why, r.mobs, x.deaths, x.hour, x.used_cost
     FROM runs r LEFT JOIN run_extra x ON x.run_id = r.id ORDER BY r.id DESC LIMIT ?`).bind(n).all();
   const all = await env.DB.prepare("SELECT COUNT(*) n FROM runs").first();
@@ -445,6 +458,9 @@ async function postShop(req, env){
 // installs. An item shows only once SHOP_MIN_INSTALLS installs have seen it (one tracker alone can't set a price).
 async function shopSummary(db){
   await db.prepare("DELETE FROM shop_obs WHERE received < ?").bind(new Date(Date.now() - SHOP_KEEP_DAYS * 864e5).toISOString()).run();
+  // the observations age out after 14 days, so their ext rows (seller IGN/title/ch/room) must go with them: an orphaned
+  // ext row kept a seller identity past the rows' stated life and grew the table forever (round 3)
+  await db.prepare("DELETE FROM shop_obs_ext WHERE obs_id NOT IN (SELECT id FROM shop_obs)").run();
   const {results} = await db.prepare("SELECT item, install, qty, price, sold FROM shop_obs WHERE received > ? ORDER BY id DESC LIMIT 60000").bind(new Date(Date.now() - 7 * 864e5).toISOString()).all();
   // one vote per install: each install's own median first, then the median of those. A single install posting 240 rows an
   // hour at 1 meso can't drag the price just because it has the most rows (2026-10-31 blind-spot report B2).

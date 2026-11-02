@@ -147,6 +147,18 @@ for name, fname, path, pidx, sidx in SOURCES:
     else:
         ok(f'{name}: {len(d)} items, all values well-formed')
 
+# 2b. the build must carry meso.watch's full-ISO `generated` into data.json's pw: the site's stale-source pill and
+#     Source-health panel read D.pw.generated — without it a frozen source showed as fresh (bug-hunt round 3)
+_dj = os.path.join(ROOT, 'data', 'data.json')
+if os.path.exists(_dj):
+    _gen = (load(_dj).get('pw') or {}).get('generated')
+    if not _gen:
+        fail('data.json: pw.generated missing (build_data.py step_prices must copy it)')
+    elif parse_date(_gen) is None:
+        fail(f'data.json: pw.generated={_gen!r} does not parse (the page must Date.parse it)')
+    else:
+        ok(f'data.json: pw.generated parses ({_gen})')
+
 # 3. meso.watch contract: now subset of asks (cheapest live listing is one of the asks)
 pw = load(os.path.join(SRC, 'mesowatch_prices.json'))
 asks = pw.get('asks', {})

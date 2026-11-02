@@ -714,7 +714,9 @@ def step_prices(D):
         if h[-1][2] < 5 and prev > 0 and (p[0] > prev * 3 or p[0] * 3 < prev):
             p[0] = prev; p[4] |= 4; held += 1
     if held: print(f"price breaker: held yesterday's median for {held} spike items (<5 sales today)")
-    D["pw"] = {"read": j["read"], "it": it, "hist": hist}
+    # generated (full ISO, fetch_mesowatch.py) rides along: the site's stale-source pill and Source-health panel
+    # read D.pw.generated — without it meso.watch could sit frozen for days while both showed "fresh" (round 3)
+    D["pw"] = {"read": j["read"], "generated": j.get("generated", ""), "it": it, "hist": hist}
     if "now" in j:   # cheapest live listing per non-equip item {itemId: [price each, qty, channel, map, seller]}, as of "listed"
         D["pw"].update(listed=j["listed"], srclisted=j.get("src_listed", ""), now={k: v for k, v in j["now"].items() if k in D["items"] and not is_bl(k)})
         # every live listing + when we first saw it {itemId: [[price each, qty, channel, map, seller, firstSeenUnixMin|None]]} (seen: parallel to asks)

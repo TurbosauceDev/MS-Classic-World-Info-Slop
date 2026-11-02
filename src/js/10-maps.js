@@ -133,6 +133,10 @@ function mapRates(cls, L, dps, acc, floor = 12, aoe = null, party = 1){
       exp += m[3] * c; mes += mesoKill(id) * c; time += k.sec * c / hits; walk += c / hits; n += c; lvSum += m[1] * c; hitSum += k.hit * c; names.add(m[0]);
     }
     if (!ok || !n) continue;
+    // the four "Super" event maps spawn only 0-EXP mobs (level 200, avoid 999): exp stays 0 and meso/att below divide
+    // by it — NaN ranked on the comparator and printed "NaN mesos/hr" once a huge typed Accuracy cleared their gate
+    // (round 3). Nothing to farm there, so the table just skips them.
+    if (!exp) continue;
     const avg = lvSum / n; if (avg < L - floor) continue;
     const raw = Math.min(party * exp / time, exp * mapShare(mid, party) / 7.56) / party, rate = raw * (1 + partyBonus(party));
     // att = share of the time you're attacking (not walking, not waiting for respawns): for potion/ammo upkeep

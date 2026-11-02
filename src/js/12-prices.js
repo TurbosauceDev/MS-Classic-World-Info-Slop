@@ -40,7 +40,11 @@ const pxEach = v => v < 10 && v % 1 ? v : fmt(v);
 const pxSrcTs = r => r.src === "meso.watch" ? D.pw?.generated
   : r.src === "classicmarket.kr" ? (r.kind === "market (combined)" ? D.cmp?.read : D.cm?.read)
   : {meowdb: D.mdb?.read, "mesoarbitrage.com": D.ma?.read, "maplestory.watch": D.mw?.read, "mesoindex.com": D.mi?.read}[r.src];
-const pxSrcStale = r => { const t = Date.parse(String(pxSrcTs(r) || "").replace(" ", "T") + "Z"); if (isNaN(t)) return "";
+// meso.watch's generated is a full ISO string with an offset ("2026-10-31T05:15:56+00:00"): parse it as-is — the old
+// `replace(" ", "T") + "Z"` turned it into "...+00:00Z" and Date.parse said NaN, so the stale pill could never fire
+// (round 3). The other sources' "YYYY-MM-DD HH:MM" / date-only reads still get the UTC suffix.
+const pxTsMs = s => { s = String(s || ""); return /[zZ]$|[+-]\d{2}:\d{2}$/.test(s) ? Date.parse(s) : Date.parse(s.replace(" ", "T") + "Z") };
+const pxSrcStale = r => { const t = pxTsMs(pxSrcTs(r)); if (isNaN(t)) return "";
   const min = Math.max(0, (Date.now() - t) / 6e4), max = r.src === "meso.watch" ? 180 : 2880;
   if (min <= max) return "";
   const txt = min < 2880 ? Math.round(min / 60) + " h" : Math.round(min / 1440) + " d";

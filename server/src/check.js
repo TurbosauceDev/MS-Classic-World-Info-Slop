@@ -129,8 +129,10 @@ export function cleanShop(b, G){
     seen.add(k); rows.push({id: r.id, qty: r.qty, price: r.price, sold});
   }
   if (!rows.length) return {error: "no usable rows"};
-  return {rows, seller: IGN.test(b.seller || "") ? b.seller : null, title: printable(b.title, 60),
-    ch: smallInt(b.ch, 40), room: smallInt(b.room, 100), map: /^\d{1,10}$/.test(b.map || "") ? b.map : null};
+  // typeof before the regex: RegExp.test stringifies its argument, so an array or number seller/map passed the test
+  // and the raw value reached D1's bind (a 500 after the obs batch had committed) or stored a number in TEXT (round 3)
+  return {rows, seller: typeof b.seller === "string" && IGN.test(b.seller) ? b.seller : null, title: printable(b.title, 60),
+    ch: smallInt(b.ch, 40), room: smallInt(b.room, 100), map: typeof b.map === "string" && /^\d{1,10}$/.test(b.map) ? b.map : null};
 }
 
 /* A shared boss spot (0.3.30): {install, map, mob, ch?, t} — the map must be a timed map and the mob one of its timed

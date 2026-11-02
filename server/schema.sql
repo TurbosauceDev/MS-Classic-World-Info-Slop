@@ -116,6 +116,8 @@ CREATE TABLE IF NOT EXISTS shop_obs (
 CREATE INDEX IF NOT EXISTS shop_obs_item ON shop_obs (item, received);
 CREATE INDEX IF NOT EXISTS shop_obs_install ON shop_obs (install, received);
 CREATE INDEX IF NOT EXISTS shop_obs_ipday ON shop_obs (ipday);
+-- the 14-day TTL delete (shopSummary) and the per-install cap counts scan received directly (2026-11-02, round 3)
+CREATE INDEX IF NOT EXISTS shop_obs_received ON shop_obs (received);
 -- Shop uploads 0.3.30 name the shop (Turbozo 2026-11-01: "we want the seller, the fm room and which channel — us
 -- anonymizing that was a mistake on our part"): one ext row per shop_obs row, same values for the whole upload (one
 -- read = one shop window). Side table: schema.sql re-runs every deploy. The tracker's "Delete what I shared" clears it.
@@ -143,6 +145,8 @@ CREATE TABLE IF NOT EXISTS boss_spots (
 );
 CREATE INDEX IF NOT EXISTS boss_spots_map ON boss_spots (map, received);
 CREATE INDEX IF NOT EXISTS boss_spots_install ON boss_spots (install, received);
+-- the 24 h TTL delete runs on every GET /api/spots: received needs its own index (2026-11-02, round 3)
+CREATE INDEX IF NOT EXISTS boss_spots_received ON boss_spots (received);
 
 -- Weekly grind ladder (P1-5, 2026-11-02): the display name a tracker chose to send with a run (the Settings
 -- nick, opt-in like the party view's; same IGN shape the KPQ board's names use). Side table: schema.sql

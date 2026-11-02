@@ -788,5 +788,16 @@ console.log("patch notes ok");
   assert.strictEqual(at(200).pts, W.CLEAR_BASE - 5 * W.STAGE_W, "far slower than average loses points, floored per stage"); assert.ok(at(200).provisional === false);
   const b = K.bonus({bonus: {sec: 60, exp: 1000, mesos: 99, kills: 5, loot: {...K.emptyLoot(), pan: 1, npc: 2000}}}, ref); assert.strictEqual(b.pts, Math.round((1000 + 99 + 2000) * ref.perPoint + W.PAN_PTS), "EXP + mesos + NPC drop value, plus Pan Lid");
   assert.strictEqual(K.bonus(base, ref), null, "no Bonus kills: no Bonus section");
+  // round 3: a 0-second stage is a misread glitch, not a new record — it used to clamp to the z ceiling (+STAGE_W)
+  // and satisfy the PERFECT gate, and the server re-scores history with this file
+  const glitch = K.score({...base, stages: {"80000000": 0, "80000100": 69, "80000200": 69, "80000300": 69, "80000400": 69}}, ref).rush;
+  assert.strictEqual(glitch.provisional, true, "a 0-second stage counts as missing: the round is provisional");
+  assert.strictEqual(glitch.perfect, 0, "a 0-second stage can't earn PERFECT");
+  assert.strictEqual(glitch.z["80000000"], undefined, "the glitched stage gets no z");
+  assert.ok(glitch.pts < W.CLEAR_BASE + 4 * W.STAGE_W + W.PERFECT, "and no record points for it");
+  // the producer must speak ms: renderer-alerts passes kpq.left (seconds from the readers) scaled x1000 — the raw
+  // seconds value made the "under 60 s" gate fire on every round's start with a "1 s left" toast (round 3)
+  const ra = require("fs").readFileSync(require("path").join(__dirname, "../app/renderer-alerts.js"), "utf8");
+  assert.ok(/left: kpq\.left \* 1000/.test(ra), "renderer-alerts must scale the KPQ clock to ms for the engine");
 }
 console.log("kpq score ok");

@@ -175,6 +175,51 @@ bug-hunt pass then hardened all three areas; fixes are regression-tested:
   screen share if start-up fails; the KPQ timer page survives a hand-edited saved round;
   junk SP values in shared links are dropped. site v0.20.15, tracker 0.3.37.
 
+## 2026-11-02 · Bug hunt, round three: the quiet corners (site v0.20.18, tracker 0.3.39)
+
+Four parallel sweeps of the areas rounds one and two never reached (site modules
+00–39 and 40–79 for logic rather than error paths, all 25 tracker/core files, the
+server's read/aggregate paths); 11 verified findings, all fixed with tests:
+
+- **Server:** a single stored run with corrupt `mobs` JSON 500'd the public
+  summary (and the admin panel) until the row aged out — guarded like every other
+  stored-JSON parse. A fractional `?limit` reached SQLite's LIMIT as a REAL and
+  500'd the owner inboxes — truncated. `cleanShop`'s regex coercion let arrays and
+  numbers ride into D1's bind (a 500 after the obs batch had committed, ledger
+  skipped) — typeof-gated. The 14-day shop prune orphaned `shop_obs_ext` rows, so
+  seller identities outlived their rows' stated life and the table grew forever —
+  pruned with the observations. `archiveOld`'s OR IGNORE + unconditional delete
+  could lose a run outright if the hot table ever emptied while the archive kept
+  rows (rowids restart at 1) — both sides now keyed on the (id, received) pair,
+  crash safety preserved. `received` indexes added for the two TTL deletes
+  (additive-only).
+- **Site:** the Character Builder could be bricked by a `#b=` share link or old
+  save with SP over a skill's max (`stat(s, 99)` → `undefined` → render threw on
+  every load) — clamped to the export's real maxima, `stat` hardened. The Recipes
+  tab could go permanently blank from a saved sort key the current table doesn't
+  have — falls back to level. Where to train printed not-a-number mesos/hr for the
+  four zero-EXP "Super" event maps once a huge typed Accuracy (clamp 99999) cleared
+  their avoid-999 hit gate — skipped. The meso.watch staleness signal was dead
+  twice over: `build_data.py` never copied `generated` into `D.pw`, and both
+  parsers appended Z to an offset-bearing ISO string (`…+00:00Z` → NaN) — the
+  stale pill and Source-health panel work now, and they immediately surfaced real
+  freezes (meso.watch since Oct 31, maplestory.watch since Oct 29). The screenshot
+  importer's failed reads rendered an empty but clickable thumbnail whose view()
+  threw — button only when there is something to show.
+- **Tracker (0.3.39):** the KPQ clock alert fired at the start of every round with
+  a "1 s left" toast — the readers produce seconds, the engine reads milliseconds
+  (`599/1000 > 60` is false, so the held gate never tripped); the producer scales
+  now. A 0-second KPQ stage (two identical clock reads one scan apart) scored as a
+  new stage record — clamped to the z ceiling, +STAGE_W, and it satisfied PERFECT —
+  and the server re-scores history with this file; a zero-second stage counts as
+  not-read (round provisional).
+- **Tests:** server.test.js round-three block (corrupt mobs row, fractional limits,
+  shop coercion, ext-row prune, archive id-collision survival), edge.js 9a–9c
+  (builder SP clamp via link and save, crafting junk sort, maps accuracy 99999),
+  features.js fakes `pw.generated` fresh (its honest stale pill would now fail the
+  pill-free assert), core.test.js 0-stage scenes + the producer-unit assert,
+  data_quality_test.py 2b (data.json must carry a parseable `pw.generated`).
+
 ## 2026-11-02 · Bug hunt, round two (site v0.20.17, tracker 0.3.38)
 
 The second sweep went at the newest machinery — anchor mode, the pages boot chain,
