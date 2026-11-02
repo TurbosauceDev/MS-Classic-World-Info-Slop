@@ -9,6 +9,8 @@
   </details>
 
   <div class="changelog">
+    <div class="card" data-minor data-t="2026-11-02T22:04:00Z"><div class="cardhead"><h3>Nov 2, 2026 · Skill tooltips fit on phones</h3></div>
+      <p>On a narrow phone screen, opening a skill's description in the Character Builder pushed the page sideways by a few pixels: the tooltip forgot to count its own padding in its width. It now fits inside the screen at every phone width we test.</p></div>
     <div class="card" data-t="2026-11-02T18:20:00Z"><div class="cardhead"><h3>Nov 2, 2026 · Bug hunt, round three: the quiet corners</h3></div>
       <p>This sweep went at the parts the earlier passes never reached. The Character Builder could be bricked by a shared link or an old save that set more skill points than a skill allows — it stopped drawing from then on; extra points are trimmed to the skill's real maximum now. The Recipes tab could go permanently blank from a saved sort order it no longer knows (it falls back to the default). Where to train printed not-a-number mesos/hr for the four zero-EXP event maps once a large typed Accuracy cleared their hit gate — they are skipped now. And the Prices table's stale-source warning plus the Source-health panel could never fire for meso.watch: its timestamp was dropped on the way into the data file and mis-parsed even when present, so a frozen source read as fresh — both work now. Each fix ships with its own automated test.</p></div>
     <div class="card" data-t="2026-11-02T16:10:00Z"><div class="cardhead"><h3>Nov 2, 2026 · Round two of the bug hunt</h3></div>
