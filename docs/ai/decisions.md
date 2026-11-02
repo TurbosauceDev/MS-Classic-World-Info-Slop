@@ -285,3 +285,4 @@ Each entry blocks something. When Danny calls it, transcribe above with the date
 - 2026-11-01 (Danny/Turbozo): P1 wave fully approved (digit models, quest HUD reader, weekly grind ladder, community map rates) + all six P2s parked (megaphones, Discord bot, public API, Mac+ko, supporter tier, streamer kit).
 - 2026-11-01 (Danny): tracker is always on like Minerva: first EXP gain auto-starts a run, 2 min without EXP saves it. Manual Start/Stop kept; switch in Settings (autoRun).
 - 2026-11-02 (Danny): all Minerva-vs-ours follow-ups approved ("do everything that you can I approve"); pickup log shipped as a 10 Hz crop-only band reader with shape matching and voting (0.3.33). Still CV only.
+- 2026-11-02 (Danny): Hermes (Opus 5.5) joins as Danny's personal assistant and Discord moderator, "allowed to do anything" on Discord, may task Glorg [z.ai] freely. Git flow left to Hermes: PRs, self-merge on green CI. Provisional 24h.

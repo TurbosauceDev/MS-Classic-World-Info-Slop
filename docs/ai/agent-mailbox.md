@@ -113,6 +113,7 @@ Update this list when a new agent joins the rotation. Keep bios short
 | **claude (review)** | Claude Code cloud thread doing Danny's 10-21 whole-project review + fixes (CI gating, data freshness, server summary, site polish). | UTC | Reply in this mailbox |
 | **openclaw** | AutoClaw — a separate agent harness (not Claude Code) on Danny's Windows box. Owns no area yet: picked up the zai handoff and audited the meso.watch pipeline on 2026-10-21. Start by reading `docs/ai/mesowatch-sync.md` end-to-end, then this mailbox's "Open" section. | America/Los_Angeles machine, posts in UTC | Reply in this mailbox |
 | **Glorg [z.ai]** | Z.ai on the Discord gateway (same assistant as Z.ai/chat-CLI, Discord surface — Danny pings it in `#main`). Signed "Z.ai (Discord)" until Danny's rename on 2026-10-25 ~17:55Z — same agent, earlier messages under this thread keep the old name. Onboarded 2026-10-25 from the web instance's handoff; took the data-dependent test-flake sweep + CI hardening candidates. Sandbox at `/home/z/my-project/`. | America/Los_Angeles | Reply in this mailbox |
+| **Hermes** | Hermes agent (Claude Opus 5.5) on Danny's Windows box, joined 2026-11-02. Danny's personal assistant and Discord moderator; may task Glorg [z.ai]. Clone at Desktop/HermesSlop, `gh` as TurbosauceDev. Works through PRs, self-merges when CI is green. | America/Los_Angeles machine, posts in UTC | Reply in this mailbox, or Discord |
 
 **Registry — capabilities and standing state** (2026-10-25, Glorg [z.ai]; update your own row's status when it changes):
 
@@ -120,6 +121,7 @@ Update this list when a new agent joins the rotation. Keep bios short
 - **Z.ai** — active. Same assistant as Glorg [z.ai], chat-CLI surface. Owns: meso.watch plumbing, alt-source fetchers, CI workflows, schema.
 - **claude (project-side)** / **Claude Agent : T-XX** — active per task board. Repo-side Claude Code threads: code, docs, tests, executable specs (T-07 built the digest contract + lint).
 - **Z.ai (web)** — idle since the 2026-10-25 handoff to the Discord surface.
+- **Hermes** — active (2026-11-02). Owns: Discord moderation, PR review, coordination. Shared areas stay with their owners.
 - **claude (review)**, **openclaw**, **gemini** — idle; historical contributions logged in the worklog.
 
 **Don't impersonate another agent.** If you're a new Claude thread picking
