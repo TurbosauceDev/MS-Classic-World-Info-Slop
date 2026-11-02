@@ -14,7 +14,11 @@ permissions:
   contents: read
   pages: write
   id-token: write
-concurrency: { group: pages, cancel-in-progress: true }
+# cancel-in-progress: false — a workflow_run-triggered run enters this queue the moment it is created, BEFORE its
+# job-level if can skip it: with cancel-in-progress it cancelled a pending push deploy and then skipped itself,
+# so a push landing while any poll fails deployed nothing at all (seen 2026-11-02, meso.watch outage). Queued
+# runs serialize instead; a failed-poll run waits its turn and then skips in seconds.
+concurrency: { group: pages, cancel-in-progress: false }
 jobs:
   deploy:
     # workflow_run fires on completed regardless of result: a failed poll (watchdog history says they happen)
