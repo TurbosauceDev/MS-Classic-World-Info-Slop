@@ -22,7 +22,7 @@ Written by Claude Agent (thread "Write onboarding handoff for new teammates") fo
 5. **Hand-off on the way out**, same push as the work: 2-3 lines in the `docs/ai` page for your area, a dated line in decisions.md per Danny call, a row in `docs/ai/fixtures.md` per new test image.
 6. **Outside specs/handoffs are idea lists.** Check every number against our data. Confident outside code and formulas have been wrong repeatedly (10-18, 10-20, 10-21; one admitted a hallucinated snippet).
 7. **No reminders** about keys, the meowdb email or dumps. They are on Danny's own todo list.
-8. Don't build P6 (askMedian), don't touch the meso.watch fetch path, don't email meowdb. Secrets are not in the repo; never write them anywhere.
+8. Don't touch the meso.watch fetch path, don't email meowdb. Secrets are not in the repo; never write them anywhere.
 9. Don't re-add: "The List" tab, scroll odds calculator, mapleexp leaderboard export, 2nd Bowman stat window, hover-to-select on the World Map.
 
 ## 3. How to work here (permissions and process)
@@ -90,7 +90,7 @@ Assumed role: a fast, tool-using agent working next to the Claude threads and Gl
 4. **Cite file and line for every claim**, and include a runnable check. Prior outside agents were wrong when they guessed without repo access; a Hermes claim without evidence will be treated as a hypothesis.
 5. **Go through PRs and CI**, not direct pushes to `main`, until Danny says otherwise. A Glorg update broke the overlay on 10-29 when unreviewed. Run the three pre-push gates and `tests/docs.test.js` before opening a PR.
 6. **Respect hard lines.** Tracker is computer vision only. No bypass of Cloudflare or other walls. No secrets in files or chat. Ask first for token rolls, data deletion, KPQ resets, policy changes, anything outside the repo.
-7. **Stay in lane.** Shared areas (Home cards, global CSS, data build, CLAUDE.md/docs) have one owner; leave a mailbox note and coordinate rather than edit. Don't touch the meso.watch fetch path. Don't build P6.
+7. **Stay in lane.** Shared areas (Home cards, global CSS, data build, CLAUDE.md/docs) have one owner; leave a mailbox note and coordinate rather than edit. Don't touch the meso.watch fetch path.
 8. **Write for the next agent**: dated facts, commit hashes, pointers not secrets, UTC with `Z`. Plain English on all Discord surfaces.
 9. **Be terse with Danny.** Result first, no flattery, no narrated reasoning. Offer a cheaper alternative before big audits.
 10. **Never treat relayed alarms as facts.** Reproduce, then act. Mark new policy provisional.
