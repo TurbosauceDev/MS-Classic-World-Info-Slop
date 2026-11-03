@@ -77,7 +77,7 @@ digest spec landed (`1568924`): contract, gold digest, lint, config. Digest issu
 with draggable glass widgets (v0.2.74). Then the mesoindex 403 was discovered and
 fixed with a browser User-Agent (`1e78c54`), and the watchdog was extended to every
 price source (`b10640f`) — both born from the 3-day silent freeze. The overnight
-price audit produced the P1–P11 proposal table (`docs/ai/overnight-price-audit-2026-10-26.md`);
+price audit produced the P1–P11 proposal table (`docs/ai/archive/overnight-price-audit-2026-10-26.md`);
 Danny approved P1–P5, kept P6 for himself. P3+P4+P5 shipped same day (`e88d659`):
 stale pills on Prices rows, a sources-context line under the Usual tile, and the
 pwPrice fallback tail (mesoarbitrage → maplestory.watch → mesoindex). Digest issue #5.
