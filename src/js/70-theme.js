@@ -21,7 +21,6 @@
       return `<button type="button" role="radio" data-th="${esc(id)}" aria-checked="${id === cur}" style="background:${c.panel};color:${c.ink}">
         <span class="chips">${[c.bg, c.accent, c.soft, c.leaf, c.bad].map(x => `<i style="background:${x}"></i>`).join("")}</span>${esc(t.name)}</button>` }).join("");
   }
-  const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[ch]);
   const msg = s => $("#thmsg").textContent = s;
   $("#thsw").addEventListener("click", e => { const b = e.target.closest("[data-th]"); if (b) use(b.dataset.th) });
   // Settings (header cog, Danny 10-20): an inset modal over a blurred backdrop like Search. Esc, × or a click on the backdrop closes it

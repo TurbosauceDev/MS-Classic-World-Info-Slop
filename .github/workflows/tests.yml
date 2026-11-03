@@ -31,7 +31,7 @@ jobs:
               node:tests/monkey.js node:tests/a11y.js
           - shard: pages
             tests: >-
-              node:tests/smoke.js node:tests/golden.js node:tests/features.js node:tests/pages.js node:tests/snipe.js
+              node:tests/smoke.js node:tests/golden.js node:tests/features.js node:tests/pages.js node:tests/snipe.js node:tests/inject.js
               node:tests/craftplan.js node:tests/kpq.js node:tests/expclive.js
           - shard: edge
             tests: >-
