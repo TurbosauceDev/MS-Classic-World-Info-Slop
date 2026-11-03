@@ -36,7 +36,7 @@ jobs:
           - shard: edge
             tests: >-
               node:tests/edge.js node:tests/shotscales.js node:tests/nx.js node:tests/questvalue.js
-              node:tests/polish.js node:tests/questlog.js
+              node:tests/polish.js node:tests/questlog.js node:tests/lint_test.js
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

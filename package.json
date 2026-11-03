@@ -4,6 +4,8 @@
   "description": "Pinned test/CI tools for the site and pollers. One place for the version: workflows run `npm ci`. Bumped by Dependabot; tests/pins.test.js keeps workflows from hardcoding their own.",
   "devDependencies": {
     "axe-core": "4.10.2",
+    "eslint": "9.39.5",
+    "globals": "17.14.0",
     "playwright": "1.56.1"
   }
 }

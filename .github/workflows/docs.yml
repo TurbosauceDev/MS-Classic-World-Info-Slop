@@ -20,3 +20,4 @@ jobs:
       - run: node tests/digest.test.js
       - run: python3 tests/decisions_test.py
       - run: node tests/pins.test.js
+      - run: node tests/empty_catch_test.js
