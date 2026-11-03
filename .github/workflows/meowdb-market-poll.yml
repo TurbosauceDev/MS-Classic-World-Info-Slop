@@ -49,6 +49,5 @@ jobs:
         run: |
           [ -f /tmp/mdb/meowdb_market.json ] || { echo "no new fetch"; exit 0; }
           cp /tmp/mdb/meowdb_market.json data/sources/meowdb_market.json
-          python3 scripts/meowdb_market.py
           bash scripts/ci/commit_push.sh -n "meowdb market bot" -m "meowdb market prices $(date -u '+%F %H:%M')" \
-            -s data/sources/meowdb_market.json -a data/data.json -r "python3 scripts/meowdb_market.py"
+            -s data/sources/meowdb_market.json

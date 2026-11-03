@@ -733,16 +733,7 @@ def step_prices(D):
         print("deal_life skipped:", e)
 
 def step_shared(D):
-    """shared {read, runs, players, hours, mobs: {mobId: {kills, mesos, mesoDrops, players, items: {itemId: n}}}}: what grind
-    tracker players picked up per monster, and rows [map, party 0/1, level, EXP/hr, group] for "Players' EXP/hr" (scripts/fetch_shared.py; our server). Only monsters and items the page knows."""
-    f = ROOT / "data" / "sources" / "shared_runs.json"
-    if not f.exists(): return
-    j = json.load(open(f))
-    mobs = {k: {**v, "items": {i: n for i, n in v["items"].items() if i in D["items"]}} for k, v in j["mobs"].items() if k in D["mobdb"] and v["kills"] > 0}
-    D["shared"] = {"read": j["read"], "runs": j["runs"], "players": j["players"], "hours": j["hours"], "mobs": mobs,
-                   "rows": [r for r in j.get("rows", []) if r[0] in D["maps"]],   # [map, party 0/1, level, EXP/hr, group, deaths/hr, used-up mesos/hr]
-                   "times": {m: t for m, t in j.get("times", {}).items() if m in D["maps"]},   # map -> [[UTC start hour, speed vs usual, players]]
-                   "kpq": j.get("kpq", {})}   # KPQ leaderboard {rounds, groups, board: {Bonus|Rush: [{best, median, rounds, party, level, job, date, ...}]}}
+    import fetch_shared; fetch_shared.step(D)   # one copy of the shared-runs shaping (also applied by build.py via live_data.py)
 
 def step_cmarket(D):
     """cm {read, posts, it: {itemId: [askMin, askMedian, askN, bidMax, bidMedian, bidN]}}: classicmarket.kr trade posts

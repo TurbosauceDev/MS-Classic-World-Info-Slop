@@ -38,7 +38,9 @@ js = js.replace("/*@SESSION*/", (ROOT / "tracker" / "core" / "session.js").read_
 js = js.replace("/*@THEMES*/", (ROOT / "tracker" / "app" / "themes.js").read_text(), 1)
 # the tracker's patch notes for the Grind Tracker page (window.TrackerChangelog)
 js = js.replace("/*@TRKLOG*/", (ROOT / "tracker" / "app" / "changelog.js").read_text(), 1)
-data = (ROOT / "data" / "data.json").read_text()
+# data.json + today's polled prices/shared runs (scripts/live_data.py): pollers commit only data/sources/*, the build applies them
+sys.path.insert(0, str(ROOT / "scripts")); import live_data
+data = json.dumps(live_data.load(), separators=(",", ":"))
 # "Data last updated" (Credits): the pinned OSMS export (fetch_osms.sh; its date comes from data.json "osms" once build_data.py
 # has run with it) + each data/sources file's "read" date
 ref = re.search(r'OSMS_REF:-([0-9a-f]{7,40})', (ROOT / "scripts" / "fetch_osms.sh").read_text()).group(1)

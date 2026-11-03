@@ -30,5 +30,4 @@ jobs:
           python3 scripts/fetch_classicmarket_market.py   # Layer B: needs the cookie; warns and skips without it
           [ -f data/sources/classicmarket_prices.json ] || exit 0   # first fetch failed
           bash scripts/ci/commit_push.sh -n "classicmarket bot" -m "classicmarket.kr prices $(date -u '+%F %H:%M')" \
-            -s data/sources/classicmarket_prices.json -s data/sources/classicmarket_market.json -a data/data.json \
-            -r "python3 scripts/ci/apply_step.py fetch_classicmarket_listings fetch_classicmarket_market"
+            -s data/sources/classicmarket_prices.json -s data/sources/classicmarket_market.json
