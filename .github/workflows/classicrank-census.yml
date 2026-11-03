@@ -24,7 +24,7 @@ jobs:
         run: |
           if ! python3 scripts/fetch_classicrank.py; then
             echo "::warning::walled: installing headless chromium for the browser fallback"
-            npm install --no-save --ignore-scripts playwright@1.56.1
+            npm ci --ignore-scripts --no-audit --no-fund   # versions: root package.json
             npx playwright install --with-deps chromium
             python3 scripts/fetch_classicrank.py
           fi

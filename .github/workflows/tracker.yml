@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: npm install --no-save --ignore-scripts playwright@1.56.1 && npx playwright install --with-deps chromium
+      - run: npm install --no-save --ignore-scripts playwright@$(node -p "require('../package.json').devDependencies.playwright") && npx playwright install --with-deps chromium
       - run: npm run data
       - run: node tests/ui.test.js
       - run: node tests/layout.test.js

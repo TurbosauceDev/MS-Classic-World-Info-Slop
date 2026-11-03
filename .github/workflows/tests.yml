@@ -1,85 +1,56 @@
 # Site tests on every push/PR: smoke (every tab, 390px, no page errors) + golden (meowdb reference numbers) + edge
 # (bad saved state / share links / server replies, phone layout, keyboard: the 2026-10-19 bug hunt).
 # Builds dist/index.html from src + data.json first (the price polls no longer commit it), like pages.yml does.
+# Three parallel shards (Hermes 2026-11-02: one serial job took 8-11 min; shards balanced on that run's step times).
+# A shard runs every test in its list even after a failure, then fails if any did (as the old !cancelled() steps did).
 name: Site tests
 on:
   push:
     branches: ["main"]
-    paths: ["dist/**", "src/**", "data/**", "tests/**", "tracker/app/readers.js", "tracker/core/**", "scripts/pages_site.py", ".github/workflows/tests.yml"]
+    paths: ["dist/**", "src/**", "data/**", "tests/**", "tracker/app/readers.js", "tracker/core/**", "scripts/pages_site.py", ".github/workflows/tests.yml", "package.json", "package-lock.json"]
   pull_request:
   workflow_dispatch:
 
 jobs:
   test:
+    name: test (${{ matrix.shard }})
     runs-on: ubuntu-24.04   # not -latest: it became 26.04, which Playwright 1.56.1 refuses (2026-10-31)
-    timeout-minutes: 30   # the whole suite takes ~12 min; a hung browser would otherwise hold the runner 6 h
+    timeout-minutes: 30     # a hung browser would otherwise hold the runner 6 h
+    permissions: { contents: read }
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: core
+            tests: >-
+              node:tests/cron.test.js node:tests/cadence_test.js python3:tests/canary_test.py python3:tests/name_fix_test.py
+              python3:tests/pages_gen_test.py python3:tests/routes_test.py node:tests/sw_test.js
+              python3:tests/deal_life_test.py python3:tests/watchdog_test.py python3:tests/classicmarket_test.py
+              python3:tests/shopscans_test.py python3:tests/mesoindex_test.py python3:tests/meowdb_test.py
+              python3:tests/skill_range_test.py python3:tests/mesowatch_fresh_test.py python3:tests/data_quality_test.py
+              node:tests/monkey.js node:tests/a11y.js
+          - shard: pages
+            tests: >-
+              node:tests/smoke.js node:tests/golden.js node:tests/features.js node:tests/pages.js node:tests/snipe.js
+              node:tests/craftplan.js node:tests/kpq.js node:tests/expclive.js
+          - shard: edge
+            tests: >-
+              node:tests/edge.js node:tests/shotscales.js node:tests/nx.js node:tests/questvalue.js
+              node:tests/polish.js node:tests/questlog.js
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      # pinned like tracker.yml: an unpinned install picks up each new Playwright release the day it ships
-      - id: install
-        run: npm i --no-save playwright@1.56.1 axe-core@4.10.2 && npx playwright install --with-deps chromium
-      - name: Cron minutes
-        run: node tests/cron.test.js
-      - name: Poll cadence
-        run: node tests/cadence_test.js
+      # versions live in the root package.json (tests/pins.test.js): an unpinned install picks up each release the day it ships
+      - run: npm ci --ignore-scripts --no-audit --no-fund && npx playwright install --with-deps chromium
       - run: python3 scripts/build.py | tail -2
-      - name: Copy-detection canary
-        run: python3 tests/canary_test.py
-      - name: item name fixes (dropped Ü/ü)
-        run: python3 tests/name_fix_test.py
-      - name: static pages and sitemap
-        run: python3 tests/pages_gen_test.py
-      - name: guessable addresses (router + clean share paths)
-        run: python3 tests/routes_test.py
-      - name: service worker leaves deep links to the network
-        run: node tests/sw_test.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/smoke.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/golden.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/edge.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/features.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/pages.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/snipe.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/craftplan.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/kpq.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/expclive.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/shotscales.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/nx.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/questvalue.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/polish.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/questlog.js
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: python3 tests/deal_life_test.py
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: python3 tests/watchdog_test.py
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: python3 tests/classicmarket_test.py
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: python3 tests/shopscans_test.py
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: python3 tests/mesoindex_test.py
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: python3 tests/meowdb_test.py
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: python3 tests/skill_range_test.py
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: python3 tests/mesowatch_fresh_test.py
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: python3 tests/data_quality_test.py
-      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node tests/monkey.js
+      - name: run shard
+        env: { TESTS: "${{ matrix.tests }}" }
+        run: |
+          fail=0
+          for t in $TESTS; do
+            echo "::group::${t#*:}"
+            ${t%%:*} "${t#*:}" || { fail=1; echo "::error::${t#*:} failed"; }
+            echo "::endgroup::"
+          done
+          exit $fail
