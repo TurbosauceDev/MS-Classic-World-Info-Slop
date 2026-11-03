@@ -15,11 +15,11 @@ onboarding; this INDEX is the topic → file map for working. Keep both honest w
 | New Claude / Hermes agent onboarding | `docs/ai/handoff-new-claude-2026-11-02.md` |
 | A decision Danny or an agent made | `docs/ai/decisions.md` (grep it before proposing anything) |
 | Where every open thread / request lives | `docs/ai/agent-mailbox.md` § Open (claim with a lease line) |
-| Old mailbox threads (monthly archive) | `docs/ai/archive/agent-mailbox-2026-10.md` (October) |
+| Old mailbox threads, worklogs, one-off reports (teardowns, audits, old handoffs) | `docs/ai/archive/` (not scanned by the docs test; grep it) |
 | Site: pages, cards, internals, history | `docs/ai/site.md`, `docs/ai/site-history.md`, `docs/ai/design.md` (visual law), `tests/features.js` + `tests/pages.js` (executable spec) |
 | Outside sites investigated (MesoLens etc.) | `docs/ai/external-sites.md` |
 | Roll back a bad push, restore the database | `docs/ai/runbook-recovery.md` |
-| Tracker: modules, readers, releases | `docs/ai/tracker.md`, `tracker/app/changelog.js`, `tracker/tests/core.test.js` |
+| Tracker: modules, readers, releases | `docs/ai/tracker.md`, `docs/ai/tracker-history.md` (dated feature notes), `tracker/app/changelog.js`, `tracker/tests/core.test.js` |
 | Digest: shape, routing, runbook | `docs/ai/digest-contract.md`, `docs/ai/discord-digest-runbook.md`, `config/digest.json` |
 | Data: sources, pollers, cadence, watchdog | `docs/ai/state-of-the-pipeline.md`, `data/sources/` read stamps, `tests/data_quality_test.py`, `scripts/price_blacklist.py` |
 | meso.watch: pipeline schema, sync | `docs/ai/mesowatch-sync.md`, `docs/ai/tracker.md` |

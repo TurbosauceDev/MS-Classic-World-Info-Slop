@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cross-source price audit (docs/ai/overnight-price-audit-2026-10-26.md): how closely do the prices the site shows
+"""Cross-source price audit (docs/ai/archive/overnight-price-audit-2026-10-26.md): how closely do the prices the site shows
 match the sources we ingest? Reads data/data.json + data/sources/* only (no network), replicates the site's headline
 price choice (pwPrice in src/js/11-cmarket.js) and reports coverage, cross-source divergence, headline-vs-live-ask
 gaps, per-set handling, NPC-price reconciliation against mesoarbitrage's game-file column, meowdb-vs-shared-runs mob

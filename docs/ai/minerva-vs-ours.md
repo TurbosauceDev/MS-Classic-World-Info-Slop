@@ -1,6 +1,6 @@
 # Minerva vs our tracker and site (2026-11-01)
 
-Source: static read of itechify/minerva @ 88f55b8 (= v0.17.0 binary, see docs/ai/minerva-teardown.md section 9) against
+Source: static read of itechify/minerva @ 88f55b8 (= v0.17.0 binary, see docs/ai/archive/minerva-teardown.md section 9) against
 our tracker/ and src/js. Nothing of theirs was run. Numbers marked (theirs) are from their code/ADRs; (ours) from
 docs/ai/tracker.md. RAM was NOT measured for either app: no Windows box here.
 
