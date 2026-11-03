@@ -53,9 +53,9 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
     check(!errs.length && navEarly.none && !navEarly.mm && navLate.steps >= 2 && navLate.mm === navLate.steps && navLate.none === 0, `a route drawn before the minimaps came redraws with them (early: ${JSON.stringify(navEarly)}; after: ${JSON.stringify(navLate)})`);
     await ctx.close(); delay = 0 }
 
-  // 2. icons arrive late (slow phone): what's drawn first gets them patched in; rows drawn later have them; Home sprites never wait
+  // 2. icons arrive late (slow phone): what's drawn first gets them patched in; rows drawn later have them; Overview sprites never wait
   { delay = 4000; const {p, errs, ctx} = await page(); await p.goto(URL); await booted(p);
-    const home = await p.$$eval("#home img[data-ic]", l => l.length);
+    const home = await p.$$eval("#overview img[data-ic]", l => l.length);
     await open(p, "items"); const early = await icons(p);
     await p.evaluate(() => window.ASSETS); await p.waitForTimeout(50); const late = await icons(p);
     check(!errs.length && home === 37 && early.img < early.rows && late.img === late.rows, `items list gets its icons when the file lands (Home sprites ${home}; before ${JSON.stringify(early)}, after ${JSON.stringify(late)})`);
@@ -87,8 +87,8 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
   { const {p, errs, ctx} = await page();
     await p.route(/prices(-[0-9a-f]+)?\.json$/, route => route.abort());
     await p.goto(URL); await booted(p);
-    const items = await p.$$eval("#home img[data-ic]", l => l.length);
-    check(!errs.length && items > 0, `the app boots without prices when the fetch rejects (${items} home sprites, no page errors)`);
+    const items = await p.$$eval("#overview img[data-ic]", l => l.length);
+    check(!errs.length && items > 0, `the app boots without prices when the fetch rejects (${items} overview sprites, no page errors)`);
     await ctx.close() }
 
   // 4. offline: once the service worker has the page, it opens with no network, icons and prices included

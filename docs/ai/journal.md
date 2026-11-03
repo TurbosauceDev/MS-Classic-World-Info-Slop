@@ -4,6 +4,13 @@ Danny 2026-11-03: the home page has an Updates strip (the three newest changelog
 Posts are plain text files in the repo; the site build does everything else. **Hermes's Discord bridge writes these
 files** - a post typed in Discord becomes one commit to `src/posts/`, and the next build ships it.
 
+Turbozo, later the same day: Home became a full newsfeed in the serebii.net shape - one column grouped by day,
+newest posts rendered in full with the newest changelog cards between them as rows (`77-journal.js`, caps: 8 posts
+and 6 updates). The old home grid of section links moved to the **Overview** page (`src/pages/overview.html`,
+`#overview`). Drafts can start anywhere comfortable - a Google Doc, a Discord message - and any agent converts the
+draft into the same `src/posts/` file, contract unchanged. A watcher cron that posts when official Nexon news drops
+would file through this exact same path.
+
 ## File contract
 
 One post = `src/posts/<YYYY-MM-DD>-<slug>.md` (lower case, dashes; the file name date must match the front matter date):
@@ -40,9 +47,11 @@ Names of monsters, items, quests and skills from the game data link themselves t
 
 ## Plumbing
 
-- `scripts/build.py` renders posts into `POSTS` (`src/js/77-journal.js`); home shows the latest post and the
-  Journal page (`#journal`, footer link "Journal") lists every post, newest first.
+- `scripts/build.py` renders posts into `POSTS` (`src/js/77-journal.js`); Home shows the merged newsfeed
+  (newest posts + newest changelog cards, day-grouped) and the Journal page (`#journal`, footer link "Journal")
+  lists every post, newest first.
 - Smoke tests (`tests/smoke.js`) pin the machinery, never post content, so a good post can't fail CI.
 - A new post needs no other change: commit the file (any order of posts in one commit is fine), push to `main`.
   The pages deploy picks it up like any other push.
-- To retire the sample post, delete `src/posts/2026-11-03-welcome-to-the-journal.md`.
+- To retire a sample post, delete its file: `src/posts/2026-11-03-welcome-to-the-journal.md` or
+  `src/posts/2026-11-03-what-a-post-can-carry.md`.

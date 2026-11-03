@@ -208,6 +208,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     const sr = await r("#srchopen"), nv = await r(".navcol"), cg = await r("#thopen"), hd = await r("header");
     check(Math.abs(sr.x - nv.x) < 2 && Math.abs(sr.w - nv.w) < 3 && Math.abs(cg.r - hd.r) < 2 && Math.abs((cg.y + cg.h / 2) - (sr.y + sr.h / 2)) < 4 && cg.w < 40,
       `default header: Search over the sidebar, small cog right in the same row (${JSON.stringify({sr, nv, cg})})`);
+    await p.evaluate(() => document.getElementById("t-overview").click()); await p.waitForTimeout(100);   // the Home cards live on Overview since the newsfeed moved in (edit mode blocks nav clicks, so open it first)
     await p.keyboard.press("F1");
     const drag = async (from, to, steps = 14) => { await p.mouse.move(from[0], from[1]); await p.mouse.down();   // a hand's pace: ~60 moves a second
       for (let i = 1; i <= steps; i++){ await p.mouse.move(from[0] + (to[0] - from[0]) * i / steps, from[1] + (to[1] - from[1]) * i / steps); await p.waitForTimeout(16) }
@@ -244,14 +245,15 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     check(bt && await p.evaluate(() => !document.querySelector("#skills").hidden && document.querySelector("#c-db").getAttribute("aria-selected") === "true"), "saved Builder tab opens under Character Builder, old #s= skill link under Maple Database");
     check(!errs.length, "anchors round 3: no JS errors " + errs.join(" | ")); await ctx.close() }
 
-  // Home card -> billboard view transition: the browser default stretched each card's snapshot to the moving box (giant
+  // Overview card -> billboard view transition: the browser default stretched each card's snapshot to the moving box (giant
   // ghost text, flashing; Danny's recording 10-21). Snapshots must stay at real size, and the card still becomes the billboard.
   { const {p, errs, ctx} = await page(); await p.goto(URL); await p.waitForTimeout(200);
+    await p.evaluate(() => document.getElementById("t-overview").click()); await p.waitForTimeout(100);   // the cards live on Overview since the newsfeed moved into Home
     await p.click(".homecat[data-sec=world] .hcat"); await p.waitForTimeout(60);
     const fit = await p.evaluate(() => ["old", "new"].map(k => getComputedStyle(document.documentElement, `::view-transition-${k}(hc0)`).objectFit).join());
     await p.waitForTimeout(500);
     const bill = await p.evaluate(() => document.querySelector(".homecat.bill")?.dataset.sec);
-    check(fit === "none,none" && bill === "world" && !errs.length, `Home billboard transition: snapshots not stretched (${fit}), ${bill} is the billboard ${errs.join(" | ")}`); await ctx.close() }
+    check(fit === "none,none" && bill === "world" && !errs.length, `Overview billboard transition: snapshots not stretched (${fit}), ${bill} is the billboard ${errs.join(" | ")}`); await ctx.close() }
 
   // 8. big tables draw in chunks (tab switches were 150-400 ms): first rows now, every row after scrolling
   { const {p, ctx} = await page(); await p.goto(URL); await open(p, "craft"); await p.waitForTimeout(100);

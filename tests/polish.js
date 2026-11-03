@@ -41,20 +41,21 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
   const tops = await p.$$eval("#snstats > .sntile", l => [...new Set(l.map(e => Math.round(e.getBoundingClientRect().top)))]);
   check(tops.length === 1, `snipe: stat tiles in one row (${tops.length} rows)`);
 
-  // 5. Home: masonry spans (cards keep their own height), More lists Feedback + Privacy
-  await p.click("header h1"); await p.waitForTimeout(300);
+  // 5. Overview (the old home grid): masonry spans (cards keep their own height), More lists Feedback + Privacy
+  await open("overview"); await p.waitForTimeout(300);
   const h = await p.evaluate(() => { const g = $(".homegrid"), c = [...g.children];
     return {mas: g.classList.contains("masonry") && c.every(x => /^span \d+$/.test(x.style.gridRowEnd)),
       stretch: c.filter(x => x.getBoundingClientRect().height - x.scrollHeight > 4).length,
       more: [...document.querySelectorAll('.homecat[data-sec="more"] .hlink')].map(x => x.dataset.go).join()} });
-  check(h.mas && !h.stretch && h.more === "log,journal,credits,feedback,privacy", `home: masonry, no stretched cards, More links (${JSON.stringify(h)})`);
+  check(h.mas && !h.stretch && h.more === "log,journal,credits,feedback,privacy", `overview: masonry, no stretched cards, More links (${JSON.stringify(h)})`);
   // stacked cards sit one gap apart at every width, incl. 1700px+ where .wrap is CSS-zoomed (10-21: zoomed heights left 55-95px holes)
   for (const [w, size] of [[1300, null], [2000, null], [2000, "5"]]){
     const q = await b.newPage({viewport: {width: w, height: 1200}}); if (size) await q.addInitScript(v => localStorage.setItem("pagesize", v), size);
     await q.goto(URL); await q.waitForTimeout(600);
+    await q.evaluate(() => document.getElementById("t-overview").click()); await q.waitForTimeout(400);
     const gaps = await q.evaluate(() => { const cols = {}; for (const c of document.querySelectorAll(".homegrid > .homecat")){ const r = c.getBoundingClientRect(); (cols[Math.round(r.left)] ||= []).push(r) }
       return Object.values(cols).flatMap(l => l.sort((a, b) => a.top - b.top).slice(1).map((r, i) => Math.round(r.top - l[i].bottom))) });
-    check(gaps.length && gaps.every(g => g >= 8 && g <= 30), `home: stacked cards one gap apart at ${w}px${size ? " size " + size : ""} (${gaps})`); await q.close() }
+    check(gaps.length && gaps.every(g => g >= 8 && g <= 30), `overview: stacked cards one gap apart at ${w}px${size ? " size " + size : ""} (${gaps})`); await q.close() }
 
   // 6. Changelog: every version has its ship time (data-t, backfilled from git), days folded, newest day open
   await open("log"); await p.waitForTimeout(100);

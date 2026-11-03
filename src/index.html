@@ -61,6 +61,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
   <!-- sidebar layout (default, 71-navside.js): every page listed under its section title; the two-row layout shows one section at a time -->
   <div class="subs" role="tablist" aria-label="Pages">
     <button class="sbhome" id="sbhome" type="button" data-go-cat="home"><img class="nic" data-pool="home" alt="">Home</button>
+    <button role="tab" id="t-overview" aria-selected="false" data-tab="overview" data-cat="home" hidden><img class="nic" data-pool="overview" alt="">Overview</button>
     <button role="tab" class="sgh" id="t-trk" aria-selected="false" data-tab="trk" data-cat="trk" hidden><img class="nic" data-pool="g_trk" alt=""><span class="sgt">Grind Tracker</span><span class="sgo">Overview</span></button>
     <button role="tab" id="t-trkhow" aria-selected="false" data-tab="trkhow" data-cat="trk" hidden><img class="nic" data-pool="trkhow" alt="">How to use</button>
     <button role="tab" id="t-trkruns" aria-selected="false" data-tab="trkruns" data-cat="trk" hidden><img class="nic" data-pool="trkruns" alt="">Shared runs</button>
@@ -100,6 +101,7 @@ try { var t0 = JSON.parse(localStorage.getItem("themec") || "null"); if (t0) sit
 </nav></div>
 
 <!--@page home-->
+<!--@page overview-->
 
 <!--@page plan-->
 

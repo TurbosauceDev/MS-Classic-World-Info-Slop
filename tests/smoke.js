@@ -17,21 +17,25 @@ const boxGaps = require("./boxgaps");
   // Home page + section nav. Sidebar layout (default, wider than a phone): every page button shows; the two-row layout and
   // phones show one section's pages at a time, so open the section first when its button is showing
   const tab = async sel => { const c = "#c-" + await p.$eval(sel, b => b.dataset.cat); if (await p.isVisible(c)) await p.click(c); await p.click(sel) };
-  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 30, "home page lists every page");
-  { const miss = await p.evaluate(() => { const h = new Set([...document.querySelectorAll("#home [data-go]")].map(a => a.dataset.go)); return [...document.querySelectorAll('[id^="t-"]')].map(b => b.id.slice(2)).filter(x => !h.has(x)) });
-    check(!miss.length, `every nav page has a Home link (missing: ${miss})`) }   // 10-21: KPQ timer shipped without one
-  check(await p.$$eval("#home img.hic", l => l.length === 37 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "home sprites all load (37)");
-  // Home news strip (77-journal.js): Updates reads the three newest changelog cards, Journal shows the latest post.
+  // Home is the newsfeed (77-journal.js): newest posts in full + the six newest changelog cards, day-grouped.
   // Post CONTENT is never pinned here: posts land through the Discord bridge, and a content check would fail CI on a good post.
-  check(await p.$$eval("#hupdates .hnrow", l => l.length) === 3 && await p.$eval("#hupdates .hnrow .ver", v => /^v\d+\.\d+\.\d+$/.test(v.textContent)),
-    "home Updates strip shows the three newest changelog cards with version pills");
-  check(await p.evaluate(() => !POSTS.length || ($("#hjournal .jntitle")?.textContent || "").length > 3), "home Journal teaser shows the latest post");
-  await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && await p.getAttribute("#t-mobs", "aria-selected") === "true", "home link opens its page");
+  check(!(await p.isHidden("#home")) && await p.evaluate(() => document.querySelectorAll("#feed .jpost").length === Math.min(POSTS.length, 8)),
+    "home newsfeed opens first, newest posts rendered in full");
+  check(await p.$$eval("#feed .fupd", l => l.length) === 6 && await p.$eval("#feed .fupd .ver", v => /^v\d+\.\d+\.\d+$/.test(v.textContent)),
+    "feed interleaves the six newest changelog cards with version pills");
+  check(await p.$$eval("#feed .fday", l => l.length) >= 1 && await p.$eval("#feed .jpost .jbody", b => b.innerHTML.length) > 40,
+    "feed groups by day, post bodies render (post content never pinned)");
+  // Overview = the old home grid (the page directory), now its own page under Home
+  check(await p.$$eval("#overview .hlink", l => l.length) === 30, "overview page lists every page");
+  { const miss = await p.evaluate(() => { const h = new Set([...document.querySelectorAll("#overview [data-go]")].map(a => a.dataset.go)); return [...document.querySelectorAll('[id^="t-"]')].map(b => b.id.slice(2)).filter(x => x !== "overview" && !h.has(x)) });
+    check(!miss.length, `every nav page has an Overview link (missing: ${miss})`) }   // 10-21: KPQ timer shipped without one
+  check(await p.$$eval("#overview img.hic", l => l.length === 37 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "overview sprites all load (37)");
+  await p.click("#t-overview"); await p.click('#overview .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && await p.getAttribute("#t-mobs", "aria-selected") === "true", "overview link opens its page");
   const side = await p.evaluate(() => ({pages: [...document.querySelectorAll("nav .subs [data-tab]")].filter(b => b.offsetParent).length,
     titles: [...document.querySelectorAll("nav .sgh")].filter(b => b.offsetParent).map(b => (b.querySelector(".sgt") || b).textContent.trim()).join("|"),
     sprites: [...document.querySelectorAll("nav img.nic")].filter(i => i.offsetParent).every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0),
     cats: !!document.querySelector("nav .cats").offsetParent}));
-  check(side.pages === 30 && side.titles === "Grind Tracker|Character Builder|Training|Victoria Island|Maple Database|Mesos and Trade" && side.sprites && !side.cats,
+  check(side.pages === 31 && side.titles === "Grind Tracker|Character Builder|Training|Victoria Island|Maple Database|Mesos and Trade" && side.sprites && !side.cats,
     `sidebar lists every page under its section, each with a sprite (${JSON.stringify(side)})`);
   { const [nb, ft] = await p.evaluate(() => { scrollTo(0, 1e6); return [document.querySelector("nav").getBoundingClientRect().bottom, document.querySelector(".sitefoot").getBoundingClientRect().top] }); await p.evaluate(() => scrollTo(0, 0));
     check(ft >= nb, `footer starts below the whole sidebar (nav bottom ${Math.round(nb)}, footer top ${Math.round(ft)})`) }   // Danny 10-20: it slid over the footer
@@ -65,7 +69,9 @@ const boxGaps = require("./boxgaps");
       && document.querySelectorAll("#journal .jmeta").length === POSTS.length
       && document.querySelectorAll("#journal .jbody a").length === POSTS.reduce((n, x) => n + (x.html.match(/<a /g) || []).length, 0)),
     "footer: Journal opens, every post renders as a card with its byline and auto links");
-  await p.click("#sbhome"); check(!(await p.isHidden("#home")) && await p.isVisible("#hupdates"), "back home: the news strip is there");
+  await p.click("#sbhome"); check(!(await p.isHidden("#home")) && await p.isVisible("#feed"), "sidebar Home returns to the newsfeed");
+  await p.click('#home .feedlinks [data-go="overview"]'); check(!(await p.isHidden("#overview")) && await p.getAttribute("#t-overview", "aria-selected") === "true", "feed header opens the Overview page");
+  await p.click("#sbhome");
   // Back / Forward (75-history.js): pages and places inside them are browser history entries
   await tab("#t-mobs"); await p.click("#mbrows .mbtn"); const mob1 = await p.textContent("#mbpage h2");
   await tab("#t-items"); await tab("#t-wmap"); await p.waitForTimeout(50);
@@ -421,6 +427,12 @@ const boxGaps = require("./boxgaps");
     const gaps = await p.evaluate(boxGaps, [6, id.slice(2)]);
     check(!gaps.length, `${id} at 390px: boxes padded from their card, cards don't touch${gaps.length ? " (" + gaps.slice(0, 3).join(" | ") + ")" : ""}`);   // Danny 10-21, Craft planner
   }
+  // the newsfeed itself at phone width: it has no nav tab (it is the front page), so it is checked by hand
+  await p.click("#c-home"); await p.waitForTimeout(200);
+  { const bad = await p.evaluate(boxGaps, [6, "home"]);
+    const [sw, cw] = await p.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+    check(sw <= cw + 1 && !bad.length, `home newsfeed at 390px: fits, boxes clean (${sw}/${cw}${bad.length ? ", " + bad.slice(0, 2).join(" | ") : ""})`) }
+
   // builder AP boxes overlapped each other at desktop width (Danny 10-19: width:100% + padding, no border-box)
   await p.click("#c-" + await p.$eval("#t-plan", b => b.dataset.cat)); await p.click("#t-plan");
   // page size (Theme popup) only applies on wide windows: default 3 = 82% of the window, 15% bigger
