@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { ref: main }
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with: { name: meowdb-market, path: /tmp/mdb }
         continue-on-error: true
       - name: Build, commit
