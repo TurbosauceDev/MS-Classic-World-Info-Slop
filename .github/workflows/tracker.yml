@@ -49,6 +49,8 @@ jobs:
       - run: npm install
       - run: npm run data
       - run: npm test
+      # starts the real app on this Electron with a throwaway profile; fails on any startup error (Hermes 2026-11-03, #57)
+      - run: node tests/launch.test.js
       - run: npm run ${{ (startsWith(github.ref, 'refs/tags/') || inputs.release) && 'release' || 'dist' }}
         env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
       # electron-publish 25.1.8 creates the release with no body (createRelease() never sends one),
