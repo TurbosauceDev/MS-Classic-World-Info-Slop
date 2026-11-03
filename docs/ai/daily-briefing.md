@@ -1,29 +1,33 @@
 # Daily briefing
 
-last-verified: 2026-11-02 by Hermes
+last-verified: 2026-11-03 by Hermes
 
-Agent-facing, overwritten daily by Hermes (took over from Glorg [z.ai] on Danny's 11-02 call). Danny's own digest is no longer in the repo: it posts to Discord #daily-updates and stays on his machine.
+Agent-facing, overwritten daily by Hermes (took over from Glorg [z.ai] on Danny's 11-02 call). Danny's own digest is not in the repo: it posts to Discord #daily-updates and stays on his machine.
 
 TL;DR:
-- Site `0.20.19` live, tracker `v0.3.39` latest release (11-02 18:46 UTC). Head is `7b358da` (read 01:50 UTC 11-03; other agents are merging tonight, so re-check with `git log`).
-- Repo review batches landed tonight (Danny 11-02): CI hygiene with one Playwright pin (#51), injection test for outside names (#52), docs diet with history split into `docs/ai/site-history.md` and `docs/ai/tracker-history.md` plus a size guard in `tests/docs.test.js` (#60), one shared poll push-retry script (#61), ESLint bug-rule ratchet `tests/lint_test.js` (#62), and **`dist/` is no longer committed** (#63): Pages and every test job build it, so never commit it. Still open: START-HERE trim (#59, draft, needs Danny), six dependabot bumps (#53 to #58, incl. electron 33 to 45 in #57).
-- The window 10-31 to 11-02 was huge (100 work commits): tracker Skill range card (`0.3.29`), P0 wave shop watch + named shop uploads + boss spots (`0.3.30`), always-on runs (`0.3.32`), ocrs shop reader (`0.3.34`), koffi anchor mode (P1-8), quest window reader (`0.3.36`), three bug-hunt rounds (`0.3.38`). Site: skill range/hitbox + playable previews, weekly grind ladder + map rates (`0.20.12`), guessable URLs (#44), Builder section (#38), NX/Deco (#40, #42), static pages (#36, #41).
-- electron-builder 26 (#33) passed its first real Windows build on `a62c579`.
-- **meso.watch poller disabled** (Danny 11-02, `gh workflow disable`): upstream serves HTML where JSON should be, bot wall held 3 days (#25). A new approach comes later. PR #64 makes `scripts/watchdog.py` skip the meso.watch checks while the workflow is off. Do not re-enable without Danny.
-- decisions.md got the contradiction check (#49, `tests/decisions_test.py`): date every line, tag `[superseded ...]`/`[supersedes ...]` in pairs, never file calls under Open decisions.
+- Site `0.20.20` live, tracker `v0.3.39` latest release (11-02 18:46 UTC). Head is `b71a87a` (classicmarket price commit, read 12:50 UTC 11-03); last work commit `d26307e`, all checks green on it. Re-check with `git log` before naming head.
+- **Polls no longer rewrite `data/data.json`** (#68): the five price polls commit only their `data/sources` file and `scripts/live_data.py` applies the prices at build time (`scripts/build.py`). Do not make a fetcher write `data/data.json` again; `tests/live_data_test.py` fails if a poll re-adds it. meso.watch and classicrank fetchers are unchanged (paused / parked).
+- **`dist/` is not committed** (#63): Pages and every test job build it; `tests/docs.test.js` fails if it comes back. Build locally only to test.
+- New gates from the review (Danny 11-02): `tests/inject.js` (outside strings must never run as markup, #52), `tests/lint_test.js` (ESLint bug rules, baseline 0, #62), `tests/empty_catch_test.js` (silent catch cap per file, #62), `tests/pins.test.js` (one Playwright/axe pin in the root package.json, #51). Site tests run as 3 parallel shards.
+- Docs diet (#60, #67): dated history lives in `docs/ai/site-history.md` and `docs/ai/tracker-history.md`; area docs have a 35 KB size guard in `tests/docs.test.js`. Add traps to the area doc, history to the history file.
+- Open PRs: #69 (Hermes, pages deploys price updates at most every 30 min), #59 (draft START-HERE trim, needs Danny), dependabot #53 to #58. All checks green.
 
 Waiting on Danny:
-- maplestory.watch shop scans are 100 h stale (watchdog #25, still alarming): wait, pause or cut.
-- Old GitHub PAT and Glorg's two webhook URLs were pasted in #glorg-chat 10-25/10-26. Hermes deleted the messages 11-02; revoking and regenerating is Danny's.
+- Electron 33 to 45 (#57) and tesseract.js 6 to 7 (#58) are major tracker bumps: do not merge them without Danny's OK.
+- START-HERE trim (#59): instruction file, waits on Danny's read of the diff.
+- Old GitHub PAT and Glorg's two webhook URLs from #glorg-chat 10-25/10-26: revoking and regenerating is Danny's (Hermes reported deleting the messages 11-02; not re-checked 11-03).
+- Watchdog #25 stays open: meso.watch is paused by Danny's call, and maplestory.watch shop scans were 100 h stale on 11-02.
 
 Watch out:
-- Danny's digest left the repo 2026-11-02: `docs/ai/danny-digest.md` is deleted and `tests/digest.test.js` fails if it comes back. Hermes owns the digest on Discord.
+- meso.watch poller is disabled on purpose (Danny 11-02). `scripts/watchdog.py` skips its checks while the workflow is off. Do not re-enable without Danny.
+- `docs/ai/danny-digest.md` is retired; `tests/digest.test.js` fails if it comes back. Hermes owns the digest on Discord.
 - `main` is not branch-protected: `gh pr merge --auto` merges at once without waiting for checks. Merge only after `gh pr checks` is all green.
 - `tests/monkey.js` reads live price data with fixed seeds, so a price commit can turn it red with no code change. Check other PRs before blaming your diff.
 - Do not re-add `process-per-site`, `single-process` or `in-process-gpu` (pinned by `tracker/tests/overlaywin.test.js`).
-- Changelog cards: a plain card is a patch; `data-minor` starts the next 0.x.0 and is for big additions only (#50 fixed a misuse).
+- decisions.md: date every line, tag `[superseded ...]`/`[supersedes ...]` in pairs, never file calls under Open decisions (`tests/decisions_test.py`).
+- Changelog cards: a plain card is a patch; `data-minor` starts the next 0.x.0 and is for big additions only.
 - KPQ weights are placeholders until 10 real rounds exist (carried from 10-31, not re-checked).
 
 Who does what:
-- Hermes (Danny's Windows box): Danny's digest, this briefing, [Archive] rotation, Discord moderation, #agent-pings on request, PR review. Ask in the mailbox addressed to Hermes; for a ping, say who and why.
-- Glorg [z.ai]: Danny will brief it on the handover himself. Do not task Glorg with the digest.
+- Hermes (Danny's Windows box): Danny's digest, this briefing, [Archive] rotation, Discord moderation, #agent-pings on request, PR review, dependabot merges. Ask in the mailbox addressed to Hermes; for a ping, say who and why.
+- Glorg [z.ai]: Danny briefs it on the handover himself. Do not task Glorg with the digest.
