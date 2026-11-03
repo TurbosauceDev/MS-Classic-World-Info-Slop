@@ -8,3 +8,4 @@ undefined/
 server/.wrangler/
 server/.dev.vars
 site/
+dist/

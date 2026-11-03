@@ -33,7 +33,7 @@ it from [docs/ai/fixtures.md](docs/ai/fixtures.md) instead of opening images.
 - Never `git clone` in full or download >200 MB without asking. OSMS repo is 8.6 GB; `fetch_osms.sh` is shallow+sparse+
   blob-filtered. In `vendor/`, `git ls-tree -l` / `git log -p` / `git show` silently fetch blobs; use `--name-only`.
 - Don't re-run `fetch_osms.sh` / `build_data.py` unless data logic or the export changed.
-- Don't read the live artifact back; publish dist straight to it.
+- Don't read the live artifact back; publish dist straight to it. `dist/` is not committed (2026-11-02): run `python3 scripts/build.py` first.
 
 ## Branches, deploy
 - Default branch: `main` (renamed from `claude/trusting-bell-fqgar6` 2026-10-20). Site, tracker, server, CI all run from it.
@@ -43,5 +43,5 @@ it from [docs/ai/fixtures.md](docs/ai/fixtures.md) instead of opening images.
   Build/publish the artifact only from that latest base, so another thread's newer version isn't overwritten.
 - After pushing: wait for pages.yml, check the Home "Site version: built ..." stamp on
   https://maplestory.scumlord.studio (the github.io address only redirects), smoke test green, then report once.
-- Artifact (republish `dist/index.html` after every site change): https://claude.ai/artifact/Facfj1DVkTNyQyrbHHFQcH
+- Artifact (build, then republish `dist/index.html` after every site change; never commit dist): https://claude.ai/artifact/Facfj1DVkTNyQyrbHHFQcH
 - One owner per shared area (Home cards, global CSS, the data build, CLAUDE.md/docs): check with the coordinator first.
