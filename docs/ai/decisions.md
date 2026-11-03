@@ -285,6 +285,7 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 
 - 2026-11-02 (Danny): repo review batches approved: Batch 1 (CI hygiene, injection test), Batch 2 (archive what Hermes judges stale, shared poll retry script, ratchet tests, stop committing dist/; Glorg fixes its own git author name; START-HERE trim waits for his read), then Batch 3 (data.json built in CI, deploy batching, big-file splits). Provisional 24h.
 - 2026-11-02 (Danny): meso.watch poller disabled ("disable the poller, we will make a new approach") after 3 days of upstream bot walls (#25): `gh workflow disable` on the meso.watch poll workflow, the YAML stays so a re-enable is one command (`gh workflow enable`). `scripts/watchdog.py` skips its meso.watch checks while the workflow is not active; other sources still alarm. The site keeps the last meso.watch prices with their stale label until the new approach lands. Provisional 24h. (Hermes)
+- 2026-11-02 (Danny): Hermes takes over Glorg [z.ai]'s automatic duties (daily digest, [Archive] rotation, daily-briefing refresh, #agent-pings relay). The digest is Discord + Danny's machine only, not the repo ("I don't want it in the cloud anymore"); posted by a "Hermes Daily Digest" webhook whose URL lives in Hermes's local secrets; schedule 04:45 PT with catch-up on wake. Danny tells Glorg himself. Provisional 24h. (Hermes)
 
 ## Open decisions (pending Danny)
 
