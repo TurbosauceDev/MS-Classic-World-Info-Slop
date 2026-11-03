@@ -53,6 +53,13 @@ check(w.source_problems(NOW, {**SHOP_FRESH, "mesoindex.json": {"read": "garbage"
 all_old = w.source_problems(NOW, {f: None for f in SHOP_FRESH})
 check(len(all_old) == 6, f"every source file covered ({len(all_old)}: {[k for k, _ in all_old]})")
 
+# 2026-11-03: Danny paused all price polls ("freeze market info where it is", temporary): a disabled workflow's files age on purpose
+check(w.source_problems(NOW, {f: None for f in SHOP_FRESH}, frozenset(w.WORKFLOW.values())) == [], "all polls paused: no source problems")
+part = w.source_problems(NOW, {f: None for f in SHOP_FRESH}, frozenset({"shopscans-poll.yml"}))
+check(len(part) == 4 and not any(k.startswith("shopscans.json") for k, _ in part), "one poll paused: only its sources skipped, the rest still checked")
+check(all(w.WORKFLOW.get(f) for f, *_ in w.SOURCES), "every SOURCES file maps to its poll workflow")
+check(all((w.ROOT / ".github" / "workflows" / wf).exists() for wf in w.WORKFLOW.values()), "every mapped workflow file exists")
+
 # 2026-11-02: a problem set alive 48 h+ (meso.watch + maplestory.watch walls) stops being a blip -> decision note for Danny
 from datetime import timedelta as TD
 b_early = w.body(NOW, bad, 0, NOW - TD(minutes=w.DECISION_MIN - 1))
