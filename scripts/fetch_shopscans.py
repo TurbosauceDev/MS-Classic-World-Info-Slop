@@ -147,6 +147,4 @@ if __name__ == "__main__":
     if not (j.get("ma") or j.get("mw")): print("both fetches failed"); sys.exit(0)
     DST.write_text(json.dumps(j, separators=(",", ":")))
     print(f"mesoarbitrage: {len((j.get('ma') or {}).get('it', {}))} items -> {DST}")
-    D = json.load(open(ROOT / "data" / "data.json"))
-    step(D)
-    (ROOT / "data" / "data.json").write_text(json.dumps(D, separators=(",", ":")))
+    # data.json is not touched: scripts/build.py applies step() at build time (scripts/live_data.py)

@@ -4,10 +4,10 @@ match the sources we ingest? Reads data/data.json + data/sources/* only (no netw
 price choice (pwPrice in src/js/11-cmarket.js) and reports coverage, cross-source divergence, headline-vs-live-ask
 gaps, per-set handling, NPC-price reconciliation against mesoarbitrage's game-file column, meowdb-vs-shared-runs mob
 meso, and every source's freshness. Run: python3 scripts/price_audit.py  (prints one JSON report)."""
-import json, pathlib, time
+import json, pathlib, sys, time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-D = json.load(open(ROOT / "data" / "data.json"))
+sys.path.insert(0, str(ROOT / "scripts")); import live_data; D = live_data.load()   # data.json + polled sections, as the site sees them
 J = lambda p: json.load(open(ROOT / "data" / "sources" / p))
 
 def age_h(iso):

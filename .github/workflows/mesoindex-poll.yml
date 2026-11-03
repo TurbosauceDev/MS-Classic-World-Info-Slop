@@ -27,4 +27,4 @@ jobs:
           python3 -u scripts/fetch_mesoindex.py
           [ -f data/sources/mesoindex.json ] || exit 0   # first fetch failed
           bash scripts/ci/commit_push.sh -n "mesoindex poll" -m "mesoindex.com prices $(date -u '+%F %H:%M')" \
-            -s data/sources/mesoindex.json -a data/data.json -r "python3 scripts/ci/apply_step.py fetch_mesoindex"
+            -s data/sources/mesoindex.json

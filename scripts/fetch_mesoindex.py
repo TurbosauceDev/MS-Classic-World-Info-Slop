@@ -99,6 +99,4 @@ if __name__ == "__main__":
     D = json.load(open(ROOT / "data" / "data.json"))
     try: j = fetch(old, D["items"])
     except Exception as e: print(f"::warning::mesoindex fetch failed, keeping the old file: {type(e).__name__} {e}"); sys.exit(0)
-    DST.write_text(json.dumps(j, separators=(",", ":")))
-    step(D)
-    (ROOT / "data" / "data.json").write_text(json.dumps(D, separators=(",", ":")))
+    DST.write_text(json.dumps(j, separators=(",", ":")))   # build.py applies step() (scripts/live_data.py); data.json untouched

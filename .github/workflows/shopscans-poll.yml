@@ -38,5 +38,4 @@ jobs:
           python3 scripts/fetch_shopscans.py > /tmp/ss.log; cat /tmp/ss.log
           [ -f data/sources/shopscans.json ] || exit 0   # first fetch failed
           bash scripts/ci/commit_push.sh -n "shopscans bot" -m "shop-scan prices (mesoarbitrage, maplestory.watch) $(date -u '+%F %H:%M')" \
-            -s data/sources/shopscans.json -s data/sources/maplestorywatch_prices.json -s data/sources/mesoarbitrage_prices.json \
-            -a data/data.json -r "python3 scripts/ci/apply_step.py fetch_shopscans"
+            -s data/sources/shopscans.json -s data/sources/maplestorywatch_prices.json -s data/sources/mesoarbitrage_prices.json

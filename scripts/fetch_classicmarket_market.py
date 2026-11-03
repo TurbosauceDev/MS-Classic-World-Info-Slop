@@ -54,7 +54,4 @@ if __name__ == "__main__":
     except (OSError, ValueError): pass
     DST.write_text(json.dumps(j, separators=(",", ":")))
     print(f"{len(items)} prices, {len(j['it'])} items -> {DST}")
-    D = json.load(open(ROOT / "data" / "data.json"))
-    step(D)
-    (ROOT / "data" / "data.json").write_text(json.dumps(D, separators=(",", ":")))
-    print(f"data/data.json: cmp prices for {len(D.get('cmp', {}).get('it', {}))} items")
+    # data.json is not touched: scripts/build.py applies step() at build time (scripts/live_data.py)

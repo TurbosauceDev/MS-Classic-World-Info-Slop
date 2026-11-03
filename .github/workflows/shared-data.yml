@@ -24,4 +24,4 @@ jobs:
         run: |
           python3 scripts/fetch_shared.py
           bash scripts/ci/commit_push.sh -n "shared-data bot" -m "Shared runs refresh $(date -u +%F)" \
-            -s data/sources/shared_runs.json -a data/data.json -r "python3 scripts/fetch_shared.py"
+            -s data/sources/shared_runs.json
