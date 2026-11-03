@@ -5,25 +5,40 @@ name: pages
 on:
   push:
     branches: ["main"]
-    paths: ["data/data.json", "src/**", "scripts/build.py", "scripts/canary.py", "tracker/app/**", "tracker/core/**", "src/pwa/**", "scripts/pages_site.py", "scripts/pages_gen.py", ".github/workflows/pages.yml"]
-  workflow_run:   # the daily shared-data + per-update meso.watch commits are pushed with GITHUB_TOKEN, which doesn't trigger push workflows
-    workflows: ["shared-data", "meso.watch poll", "classicmarket poll", "meowdb market poll", "shopscans poll", "mesoindex poll"]
-    types: [completed]
+    paths: ["data/**", "scripts/live_data.py", "src/**", "scripts/build.py", "scripts/canary.py", "tracker/app/**", "tracker/core/**", "src/pwa/**", "scripts/pages_site.py", "scripts/pages_gen.py", ".github/workflows/pages.yml"]
+  # price polls push with GITHUB_TOKEN (no push event): instead of one deploy per poll (47/day), a half-hourly run deploys
+  # only if data/ changed since the last successful deploy (Danny 2026-11-02: up to 30 min for new prices is fine)
+  schedule: [{cron: "14,44 * * * *"}]
   workflow_dispatch:
 permissions:
   contents: read
   pages: write
   id-token: write
-# cancel-in-progress: false — a workflow_run-triggered run enters this queue the moment it is created, BEFORE its
-# job-level if can skip it: with cancel-in-progress it cancelled a pending push deploy and then skipped itself,
-# so a push landing while any poll fails deployed nothing at all (seen 2026-11-02, meso.watch outage). Queued
-# runs serialize instead; a failed-poll run waits its turn and then skips in seconds.
+# cancel-in-progress: false — a run enters this queue before its gate can skip it: with cancel-in-progress a skipping run
+# cancelled a pending push deploy (seen 2026-11-02, meso.watch outage). Queued runs serialize; a no-change run skips in seconds.
 concurrency: { group: pages, cancel-in-progress: false }
 jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    permissions: { contents: read, actions: read }
+    outputs: { go: "${{ steps.g.outputs.go }}" }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 300 }
+      - id: g
+        env: { GH_TOKEN: "${{ github.token }}", EVENT: "${{ github.event_name }}", REPO: "${{ github.repository }}" }
+        run: |
+          # pushes and manual runs always deploy; the half-hourly run deploys only when data/ moved since the last good deploy
+          go=true
+          if [ "$EVENT" = schedule ]; then
+            last=$(gh api "repos/$REPO/actions/workflows/pages.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].head_sha // ""')
+            if [ -n "$last" ] && git cat-file -e "$last^{commit}" 2>/dev/null && git diff --quiet "$last" HEAD -- data/; then go=false; fi
+            echo "last good deploy ${last:-none}, data changed since: $go"
+          fi
+          echo "go=$go" >> "$GITHUB_OUTPUT"
   deploy:
-    # workflow_run fires on completed regardless of result: a failed poll (watchdog history says they happen)
-    # used to burn a full checkout + Playwright install + build + deploy of unchanged data (round 2)
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    needs: gate
+    if: needs.gate.outputs.go == 'true'
     runs-on: ubuntu-24.04   # not -latest: it became 26.04, which Playwright 1.56.1 refuses (2026-10-31)
     timeout-minutes: 15
     environment: { name: github-pages, url: "${{ steps.dep.outputs.page_url }}" }

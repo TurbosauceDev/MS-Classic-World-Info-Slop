@@ -189,7 +189,7 @@ Last 8 workflow runs as of 2026-10-22 18:00Z (all green except one noted):
 | watchdog | hourly at :13/:43 | success | (no recent failures) |
 | Docs check | on every push | success | (passed on `cc7eade`) |
 | Site tests | on every push | mixed | see notes below |
-| pages | on workflow_run | success | (latest deploy OK) |
+| pages | on push + every 30 min (:14/:44, deploys only if data/ changed; Hermes 2026-11-02) | success | (latest deploy OK) |
 
 **Site tests:** was failing 9m ago on commit `d7eb1ce3` (Crafting overhaul
 by project-side Claude) — that was project-side's bug, not mine. Likely
