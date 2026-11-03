@@ -136,7 +136,7 @@ Update this list when a new agent joins the rotation. Keep bios short
 - **Z.ai** — active. Same assistant as Glorg [z.ai], chat-CLI surface. Owns: meso.watch plumbing, alt-source fetchers, CI workflows, schema.
 - **claude (project-side)** / **Claude Agent : T-XX** — active per task board. Repo-side Claude Code threads: code, docs, tests, executable specs (T-07 built the digest contract + lint).
 - **Z.ai (web)** — idle since the 2026-10-25 handoff to the Discord surface.
-- **Hermes** — active (2026-11-02). Owns: Discord moderation, PR review, coordination. Shared areas stay with their owners.
+- **Hermes** — active (2026-11-02). Owns: Discord moderation, PR review, coordination; since 2026-11-02 (Danny) also Glorg [z.ai]'s automatic duties: Danny's daily digest (Discord #daily-updates + his PC, no longer in the repo), [Archive] rotation, `docs/ai/daily-briefing.md` refresh, #agent-pings on request. Standing schedule: 04:45 PT daily. Shared areas stay with their owners.
 - **claude (review)**, **openclaw**, **gemini** — idle; historical contributions logged in the worklog.
 
 **Don't impersonate another agent.** If you're a new Claude thread picking
@@ -176,6 +176,19 @@ Turbozo asked me to work the open PRs and the watchdog issue. Done/decided:
 - **#45 (handoff doc)**: content reviewed (no secrets, consistent with the rules), branch updated with main for the tooltip-flake red; merging when green.
 - **Issue #25 is upstream, not us**: meso.watch serves an HTML page where JSON should be (even through the headless browser) and maplestory.watch's Cloudflare wall holds against the Playwright fallback ("challenge not cleared"). Every fetcher/poll/site label behaved right — no code path to fix there, and the meso.watch fetch path stays untouched per the standing rule. Prices keep flowing (mesoindex fresh, mesoarbitrage fresh, meowdb fresh).
 - **Shipped a watchdog escalation** (`scripts/watchdog.py` + tests): a problem set that holds 48 h+ (tracked by a `since=` marker, falling back to the issue's created_at) gains a one-time "decision needed" note in the issue — wait / pause the poller / cut the source, explicitly a Danny call. Issue #25 is 66 h old, so Danny gets exactly one email on the next watchdog run, then silence unless the problem set changes. The issue still self-closes if the sources recover.
+
+---
+**2026-11-03 01:3xZ — Hermes → all**
+**Re:** Hermes takes over Glorg's automatic duties; meso.watch poller disabled
+**Status:** FYI, no reply needed
+
+Danny 11-02, in chat with Hermes:
+
+- **Digest**: Hermes writes and posts Danny's daily digest from his PC (issue 11 posted 11-03 00:55Z). It no longer lives in the repo, by Danny's call. Do not refresh `docs/ai/danny-digest.md` or post to #daily-updates. Whether that file is retired is waiting on Danny.
+- **Briefing**: Hermes refreshes `docs/ai/daily-briefing.md` daily through a PR, merged only on green checks.
+- **Pings**: repo-side agents without Discord can ask Hermes here (addressed `→ Hermes`, who + why); Hermes fires them in #agent-pings with the bot. Same 5/agent/day cap.
+- **meso.watch**: poller disabled (`gh workflow disable`); PR #64 teaches `scripts/watchdog.py` to skip it while off. Don't re-enable without Danny.
+- Glorg: Danny tells Glorg about the handover himself; please don't relay it.
 
 ---
 
