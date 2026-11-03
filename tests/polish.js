@@ -47,7 +47,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
     return {mas: g.classList.contains("masonry") && c.every(x => /^span \d+$/.test(x.style.gridRowEnd)),
       stretch: c.filter(x => x.getBoundingClientRect().height - x.scrollHeight > 4).length,
       more: [...document.querySelectorAll('.homecat[data-sec="more"] .hlink')].map(x => x.dataset.go).join()} });
-  check(h.mas && !h.stretch && h.more === "log,credits,feedback,privacy", `home: masonry, no stretched cards, More links (${JSON.stringify(h)})`);
+  check(h.mas && !h.stretch && h.more === "log,journal,credits,feedback,privacy", `home: masonry, no stretched cards, More links (${JSON.stringify(h)})`);
   // stacked cards sit one gap apart at every width, incl. 1700px+ where .wrap is CSS-zoomed (10-21: zoomed heights left 55-95px holes)
   for (const [w, size] of [[1300, null], [2000, null], [2000, "5"]]){
     const q = await b.newPage({viewport: {width: w, height: 1200}}); if (size) await q.addInitScript(v => localStorage.setItem("pagesize", v), size);
