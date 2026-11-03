@@ -42,6 +42,6 @@ it from [docs/ai/fixtures.md](docs/ai/fixtures.md) instead of opening images.
 - Before pushing: `git fetch origin main && git rebase origin/main`.
   Build/publish the artifact only from that latest base, so another thread's newer version isn't overwritten.
 - After pushing: wait for pages.yml, check the Home "Site version: built ..." stamp on
-  https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/, smoke test green, then report once.
+  https://maplestory.scumlord.studio (the github.io address only redirects), smoke test green, then report once.
 - Artifact (republish `dist/index.html` after every site change): https://claude.ai/artifact/Facfj1DVkTNyQyrbHHFQcH
 - One owner per shared area (Home cards, global CSS, the data build, CLAUDE.md/docs): check with the coordinator first.

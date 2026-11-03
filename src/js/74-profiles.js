@@ -7,7 +7,6 @@
 (() => {
   const TH = window.TrackerThemes, ST = window.SITETHEME, A = window.ANCH, root = document.documentElement, dq = matchMedia("(prefers-color-scheme: dark)");
   const ls = (k, v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)) } catch { return null } };
-  const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[ch]);
   const CATS = ["trk", "char", "train", "world", "db", "town"], NAV = {side: "Sidebar", basic: "Basic mode", rows: "Two rows"};
   // built in: Default = the site as a new visitor sees it; Danny's Default = his 10-21 screenshot (Title, Tagline and a 1.35x
   // Search centered over the page column, cog top right, Mesos and Trade second, sidebar 285 px), measured on a 1961 px header
