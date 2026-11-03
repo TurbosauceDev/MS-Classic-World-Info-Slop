@@ -21,6 +21,11 @@ p = w.problems(NOW, "2026-10-21T17:41:36Z", {**GOOD, "listed": "", "src_listed":
 check(keys(p) == ["listings"] and "stopped publishing" in p[0][1], f"stale listing file = upstream ({p})")
 p = w.problems(NOW, "2026-10-21T17:41:36Z", {**GOOD, "listed": ""})
 check("check scripts/fetch_mesowatch.py" in p[0][1], "fresh listing file but nothing kept = our side")
+# 2026-11-02: Danny disabled the poller (upstream bot wall, #25): a paused workflow is not an outage
+DEAD = {"generated": "2026-10-31T05:15:56+00:00", "listed": "", "src_listed": "2026-10-31 05:25"}
+LIVE = datetime(2026, 11, 2, 20, 53, tzinfo=timezone.utc)   # the issue #25 body's check time
+check(keys(w.problems(LIVE, None, DEAD)) == ["poll", "prices", "listings"], "dead upstream, poller on: all three flag")
+check(w.problems(LIVE, None, DEAD, paused=True) == [], "poller disabled: meso.watch checks skipped")
 
 okr = {"site": (200, None), "server": (200, {"runs": 12})}
 check(w.endpoint_problems(okr) == [], "endpoints up: no problems")

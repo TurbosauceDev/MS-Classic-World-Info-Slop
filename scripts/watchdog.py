@@ -7,6 +7,8 @@ Checks (problems() + source_problems(), pure, tested by tests/watchdog_test.py):
               "decision needed" note (2026-11-02: meso.watch + maplestory.watch both put up harder bot walls and died for
               days while every fetcher, poll and site label behaved right - the only open question left is Danny's:
               keep waiting, pause the poller, or cut the source). The note emails once, then the body just refreshes.
+  - paused:   while the "meso.watch poll" workflow is not active (Danny disabled it 2026-11-02: "disable the poller, we
+              will make a new approach"), the three meso.watch checks below are skipped; the other sources still run
   - poll:     last successful "meso.watch poll" run over 2 h ago (cron entries skipped, or every run failing)
   - prices:   meso.watch's price list (mesowatch_prices.json "generated") over 3 h old
   - listings: no live listing newer than 6 h ("listed"), with the listing file's own time ("src_listed") so the issue
@@ -45,8 +47,10 @@ def t(s):
 
 def ago(now, d): return int((now - d).total_seconds() // 60)
 
-def problems(now, last_poll_ok, pw):
-    """[(key, text)]: last_poll_ok = ISO time of the newest successful poll run (or None), pw = mesowatch_prices.json"""
+def problems(now, last_poll_ok, pw, paused=False):
+    """[(key, text)]: last_poll_ok = ISO time of the newest successful poll run (or None), pw = mesowatch_prices.json.
+    paused = the poll workflow is disabled on purpose, so a stale meso.watch is expected, not a problem."""
+    if paused: return []
     out = []
     p = t(last_poll_ok)
     if p is None or ago(now, p) > POLL_MAX:
@@ -159,7 +163,9 @@ def main():
         try: files[f] = json.loads(p.read_text())
         except Exception: files[f] = None
     runs = api("GET", f"/repos/{repo}/actions/workflows/mesowatch-poll.yml/runs?status=success&per_page=1")["workflow_runs"]
-    probs = problems(now, runs[0]["updated_at"] if runs else None, pw) + source_problems(now, files) + endpoint_problems({n: probe(u) for n, u, _ in ENDPOINTS})
+    paused = api("GET", f"/repos/{repo}/actions/workflows/mesowatch-poll.yml").get("state") != "active"
+    if paused: print("meso.watch poll workflow is not active: meso.watch checks skipped")
+    probs = problems(now, runs[0]["updated_at"] if runs else None, pw, paused) + source_problems(now, files) + endpoint_problems({n: probe(u) for n, u, _ in ENDPOINTS})
     issue = next((i for i in api("GET", f"/repos/{repo}/issues?state=open&per_page=50") if i["title"] in [TITLE] + OLD_TITLES and "pull_request" not in i), None)
     act, text, comment = plan(issue, probs, now)
     print(act, *(f"{k}: {v}" for k, v in probs), sep="\n  ")
