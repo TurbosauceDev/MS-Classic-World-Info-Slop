@@ -1,19 +1,21 @@
 # Digest contract
 
-The repo is the source of truth for digests. If chat and this file disagree, this file wins. Checks run in CI
+The repo is the source of truth for the digest **format**. If chat and this file disagree, this file wins. Checks run in CI
 (`node tests/digest.test.js`, workflow docs.yml) and before every post (`node scripts/lint_digest.js <file>`).
+Since 2026-11-02 (Danny) the issues themselves are **not in the repo**: Hermes writes them on Danny's PC and posts them to
+Discord #daily-updates, with older issues in the [Archive] thread. Agents: don't write a digest into the repo.
 Routing lives in `config/digest.json`. It names secrets and never holds them.
 
 ## Where things live
 
 | What | Path | Rule |
 |---|---|---|
-| Live digest for Danny | `docs/ai/danny-digest.md` | Overwrite daily, one issue only. History is `git log` plus the Discord [Archive] thread. |
+| Live digest for Danny | Discord #daily-updates + Danny's PC | Not in the repo since 2026-11-02 (Danny). One issue in the channel, older ones in the [Archive] thread. |
 | Agent briefing | `docs/ai/daily-briefing.md` | Overwrite daily. Free-form, not linted. |
 | Gold standard | `docs/ai/examples/danny-digest.gold.md` | Audited and stamped. Change only with a Danny-approved format change. |
 | Routing config | `config/digest.json` | Schedule, file paths, attachment name, secret name, archive thread id. |
 | Linter | `scripts/lint_digest.js` | Pass/fail, no dependencies. |
-| Discord attachment | `danny-digest-{date}-issue-{issue}.md` | Same bytes as the live file. `{date}` is the front matter `date`. |
+| Discord attachment | `danny-digest-{date}-issue-{issue}.md` | The linted issue file itself. `{date}` is the front matter `date`. |
 
 ## Required front matter
 

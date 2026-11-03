@@ -14,11 +14,10 @@ TL;DR:
 
 Waiting on Danny:
 - maplestory.watch shop scans are 100 h stale (watchdog #25, still alarming): wait, pause or cut.
-- Whether the repo copy `docs/ai/danny-digest.md` is retired now that the digest lives on Discord + his PC (contract and `tests/digest.test.js` still read it). Until he calls it, leave that file alone.
 - Old GitHub PAT and Glorg's two webhook URLs were pasted in #glorg-chat 10-25/10-26. Hermes deleted the messages 11-02; revoking and regenerating is Danny's.
 
 Watch out:
-- Do not refresh `docs/ai/danny-digest.md` or post digests: Hermes owns the digest, outside the repo. START-HERE's "refresh the digest" step is stale for that file.
+- Danny's digest left the repo 2026-11-02: `docs/ai/danny-digest.md` is deleted and `tests/digest.test.js` fails if it comes back. Hermes owns the digest on Discord.
 - `main` is not branch-protected: `gh pr merge --auto` merges at once without waiting for checks. Merge only after `gh pr checks` is all green.
 - `tests/monkey.js` reads live price data with fixed seeds, so a price commit can turn it red with no code change. Check other PRs before blaming your diff.
 - Do not re-add `process-per-site`, `single-process` or `in-process-gpu` (pinned by `tracker/tests/overlaywin.test.js`).
