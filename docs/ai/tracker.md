@@ -199,6 +199,24 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Loot value (session.js `worth`): meso.watch median, else NPC price. stats() also returns lootLo/lootHi (p25-p75) and lootRough
   (value from low-data prices); the Loot table marks rough prices "?" and shows the range under Total (2026-10-19).
 
+### Still-true traps promoted from tracker-history.md (Hermes 2026-11-02)
+- Pop-ups are inset over a blurred backdrop and never call host.mini/winSize or change the page height.
+- Esc handlers that consume the key must `preventDefault()` (drag cancel and toolbox close do), or Settings opens behind them.
+- Overlay card ids are `kind` or `kind_N` (`_` because the id lands in a CSS selector). Keep-apart is display only: saved widget x/y are never rewritten.
+- Shadows and tints use black rgba, never a colour mixed from --ink (it is the LIGHT colour in dark themes, so it glows).
+- Changelog lines are short sentences: `TrackerChangelog.parts()` splits lead + bullets on sentence ends.
+- The overlay is click-through: icons work via `mousemove` -> `ovhost.hit()` -> `setIgnoreMouseEvents` in main.js. Don't add plain click handlers expecting them to fire.
+- Tracker tests need `npm run data` first (gamedata.js is generated).
+- Don't change the `tick()` event shape: the perf line and the combat log both hook it. When adding a reader event field, check the pause filter's regex and the band contract (`band: null` is load-bearing); don't keep `f.d` past the snapshot's finally.
+- The overlay is NOT excluded from capture (Danny 10-29; setContentProtection was tried and removed).
+- Map OCR only counts a line 75%+ like a known map name; maps missing from the game data can't be tracked.
+- New code reading the picture uses `grab()`/`grabFrame()`, never `drawImage(video)` without the `video.pump` branch.
+- Never merge the overlay into another renderer process (process-per-site turned the transparent overlay solid black; `tracker/tests/overlaywin.test.js`).
+- A CSS selector-list line can hide a rule: keep the Elv radius:0 list on its own lines, and new overlay components join it.
+- `readers.native()` returns an image whose `.k` is the shrink factor; a raw frame has none (pass `{k: 2}`). Never trust a single binarisation cut (one read 9,001 as 8,001).
+- overlay.test.js flips Snap/Grid through `setBox`, not clicks: a hovered card is raised and can cover the edit panel.
+- Version numbers: take the next free one; `tracker/tests/core.test.js` gates the changelog top entry against package.json.
+
 ## Splits
 - 10-18: `app/renderer.js` cut into 6 files at top-level boundaries, loaded in order by app/index.html (one shared global
   scope, so no imports). A new file goes in index.html's script list; top-level code may only call functions from its
