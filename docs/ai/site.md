@@ -162,7 +162,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Other people's words (sellers, shop titles, FM rooms, trade posts, shared-run names) must go through `esc()` from `src/js/00-core.js` before any innerHTML; never write a local copy. `tests/inject.js` poisons every such string in a copy of the page and opens every tab + 38 item pages; it fails if any of it runs. Game data (OSMS) is trusted and not poisoned. Server replies: `tests/edge.js` (Hermes 11-02).
 - Two ratchets (Hermes 11-02): `tests/lint_test.js` lints the site as ONE script (and each tracker page as its script list) for bug-shaped code only (undefined names, duplicate keys, unreachable code); baseline is 0, so a typo'd name fails CI. `tests/empty_catch_test.js` caps silent `catch {}` per file at today's count; a new one needs its reason in a same-line comment. Both: lower the baseline with `--write` when you fix some.
 - Price/shared data at build time (Hermes 11-02): `scripts/build.py` applies `scripts/live_data.py` (classicmarket, shopscans, mesoindex, meowdb market, shared runs) on top of `data/data.json`. To see what the page shows, query `live_data.load()`, not the raw data.json; those keys in the committed file can be days old.
-- Deploys (Hermes 11-02, Danny OK): a push to `main` deploys at once; price-poll commits do NOT trigger a deploy. `pages.yml` runs at :14/:44 and deploys only if `data/` changed since the last good deploy, so new prices reach the site within ~30 min (was one deploy per poll, 47/day). Need it now? `gh workflow run pages`.
+- Deploys (Hermes 11-02/03): a push deploys at once. A finished price poll triggers `pages.yml`, whose gate job deploys only if `data/` changed since the last good deploy (no-change polls skip in ~15 s). The :14/:44 cron is a backup only: GitHub runs this repo's crons a few times a day, never trust a schedule for freshness. Need it now? `gh workflow run pages`.
 
 ### Still-true traps promoted from site-history.md (Hermes 2026-11-02; history line numbers there for context)
 - Tests counting table rows must scroll first: big tables render 60 rows, then 150 per scroll (`lazyRows`, `src/js/00-core.js`).
@@ -188,6 +188,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Name look-alikes (Leaf, Free Spirit, Pepe Beak): first-wins lookups by name must skip Cash items.
 - Screenshot paste: reuse `SHOTS.handle` (`src/js/52-shotimport.js`), don't fork it.
 - The service worker must leave deep links to the network (`tests/sw_test.js`); answering them with the cached shell broke every shared link once.
+- A new changelog card in `src/pages/log.html` also needs `node tracker/scripts/sync-site-changelog.js` (the tracker shows site patch notes); `tracker/tests/sitesync.test.js` now runs in docs.yml on every PR (it went unnoticed after #52 because tracker CI ignored log.html).
 
 ## Splits
 - 10-18: `src/index.html` split into `src/pages/<id>.html` (built dist identical). Edit a page's file, not the shell; build.py asserts every page file has a slot.
