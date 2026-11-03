@@ -7,7 +7,7 @@ name: Site tests
 on:
   push:
     branches: ["main"]
-    paths: ["dist/**", "src/**", "data/**", "tests/**", "tracker/app/readers.js", "tracker/core/**", "scripts/pages_site.py", ".github/workflows/tests.yml", "package.json", "package-lock.json"]
+    paths: ["dist/**", "src/**", "data/**", "tests/**", "tracker/app/readers.js", "tracker/core/**", "scripts/pages_site.py", "scripts/ci/**", ".github/workflows/tests.yml", "package.json", "package-lock.json"]
   pull_request:
   workflow_dispatch:
 
@@ -28,7 +28,7 @@ jobs:
               python3:tests/deal_life_test.py python3:tests/watchdog_test.py python3:tests/classicmarket_test.py
               python3:tests/shopscans_test.py python3:tests/mesoindex_test.py python3:tests/meowdb_test.py
               python3:tests/skill_range_test.py python3:tests/mesowatch_fresh_test.py python3:tests/data_quality_test.py
-              node:tests/monkey.js node:tests/a11y.js
+              python3:tests/commit_push_test.py node:tests/monkey.js node:tests/a11y.js
           - shard: pages
             tests: >-
               node:tests/smoke.js node:tests/golden.js node:tests/features.js node:tests/pages.js node:tests/snipe.js node:tests/inject.js
