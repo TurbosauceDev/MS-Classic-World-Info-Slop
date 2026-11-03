@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 50
     permissions: { contents: read }   # scrapes an outside site for 30 min: no write token here, only the commit job has one
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: main }
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
@@ -38,7 +38,7 @@ jobs:
       group: main-pipeline
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: main }
       - uses: actions/download-artifact@v8
         with: { name: meowdb-market, path: /tmp/mdb }

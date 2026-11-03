@@ -51,7 +51,7 @@ jobs:
     env:
       OSMS_REF: c661434d86c0fe2c9baae974d509d3498f97df62
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # need full history for `git show HEAD:<path>` in mesowatch_claude_review.py
 

@@ -24,7 +24,7 @@ jobs:
     runs-on: windows-latest
     defaults: { run: { working-directory: tracker } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm install
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-24.04   # not -latest: it became 26.04, which Playwright 1.56.1 refuses (2026-10-31)
     defaults: { run: { working-directory: tracker } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm install --no-save --ignore-scripts playwright@$(node -p "require('../package.json').devDependencies.playwright") && npx playwright install --with-deps chromium

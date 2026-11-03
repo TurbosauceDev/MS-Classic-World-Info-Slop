@@ -24,7 +24,7 @@ jobs:
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
             echo "::warning::d1-backup skipped: CLOUDFLARE_API_TOKEN and BACKUP_PASSPHRASE repo secrets are both needed"; echo skip=1 >> "$GITHUB_ENV"
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: env.skip != '1'
       - uses: actions/setup-node@v4
         if: env.skip != '1'
