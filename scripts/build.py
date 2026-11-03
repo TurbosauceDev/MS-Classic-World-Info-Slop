@@ -40,7 +40,8 @@ js = js.replace("/*@THEMES*/", (ROOT / "tracker" / "app" / "themes.js").read_tex
 js = js.replace("/*@TRKLOG*/", (ROOT / "tracker" / "app" / "changelog.js").read_text(), 1)
 # data.json + today's polled prices/shared runs (scripts/live_data.py): pollers commit only data/sources/*, the build applies them
 sys.path.insert(0, str(ROOT / "scripts")); import live_data
-data = json.dumps(live_data.load(), separators=(",", ":"))
+D = live_data.load()
+data = json.dumps(D, separators=(",", ":"))
 # "Data last updated" (Credits): the pinned OSMS export (fetch_osms.sh; its date comes from data.json "osms" once build_data.py
 # has run with it) + each data/sources file's "read" date
 ref = re.search(r'OSMS_REF:-([0-9a-f]{7,40})', (ROOT / "scripts" / "fetch_osms.sh").read_text()).group(1)
@@ -50,6 +51,12 @@ for f in sorted((ROOT / "data" / "sources").glob("*.json")):
     except Exception: pass
 assert "__SRCDATES__" in js
 js = js.replace("__SRCDATES__", json.dumps(srcd).replace("<", "\\u003c"), 1)
+# journal posts (docs/ai/journal.md): src/posts/*.md -> the __POSTS__ literal in 77-journal.js; scripts/posts.py
+# renders the markdown dialect and links game names to their clean pages (auto links, Danny 2026-11-03)
+import posts
+assert "__POSTS__" in js
+js = js.replace("__POSTS__", posts.inject(D).replace("<", "\\u003c"), 1)
+assert "__POSTS__" not in js
 assert "/*@CSS*/" in html and "/*@JS*/" in html and "__DATA__" in js
 # site version on Home = when this file was built (UTC), so a landed update is easy to spot
 # the page shows it in the viewer's own time zone (70-theme.js); the HTML keeps the UTC text for curl/live checks

@@ -480,6 +480,29 @@ header h1{cursor:pointer}
 .hlink:hover b{text-decoration:underline}
 .hlink:focus-visible,.hcat:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (max-width:420px){.homegrid{grid-template-columns:1fr}}
+/* Home news strip (Updates + Journal, Danny 2026-11-03) and the Journal page; posts render from POSTS (77-journal.js) */
+.homenews{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:14px}
+@media (max-width:760px){.homenews{grid-template-columns:1fr}}
+.hnbox h2{margin:0;font-size:19px}
+.hnrow{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line);font-size:15px}
+.hnrow:first-child{border-top:0;padding-top:2px}
+.hnrow .ver{white-space:nowrap}
+.hnlink{flex:1;text-align:left;background:none;border:0;padding:0;cursor:pointer;color:var(--ink);font:15px/1.4 var(--f-body)}
+.hnlink:hover{color:var(--accent);text-decoration:underline}
+.jnbody{margin:6px 0 10px;font-size:15px}
+.jntitle{font-weight:600;font-size:17px;margin:2px 0 0;color:var(--accent)}
+#journal .jintro{margin:0 0 14px}
+.jlist{display:grid;gap:14px;max-width:900px}
+.jbody{font-size:15px;line-height:1.55}
+.jbody p{margin:0 0 10px}
+.jbody p:last-child{margin-bottom:0}
+.jbody h2{font-size:19px;margin:16px 0 6px}
+.jbody h3{font-size:16px;margin:14px 0 6px}
+.jbody ul{margin:0 0 10px;padding-left:20px}
+.jbody li{margin:3px 0}
+.jbody blockquote{margin:0 0 10px;padding:2px 12px;border-left:3px solid var(--line);color:var(--muted)}
+.jbody a{color:var(--accent)}
+.jmeta{white-space:nowrap}
 /* screenshot drop zones (Price check, Craft planner, Builder): the browser's file button is hidden behind an icon + "Browse" chip (second audit #5) */
 .drop{position:relative;display:flex;align-items:center;gap:12px;border:1.5px dashed var(--line);border-radius:10px;padding:12px;font-size:14px;color:var(--muted);cursor:pointer;background:var(--bg)}
 .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}

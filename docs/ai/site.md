@@ -98,9 +98,13 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 ## Recipes
 - **New page/tab:** markup `<section id="x" hidden>` in src/pages/x.html + a `<!--@page x-->` slot in index.html; button `#t-x` with `data-cat` in `.subs`
   (under its section's `.sgh` title, with `<img class="nic" data-pool="x">` and a pool `P.x` in 71-navside.js); `.hlink`
-  on the Home card; bump the home-link count in tests/smoke.js (26 now) and the sidebar page count (22), Home sprites in tests/pages.js + smoke.js (32), the nav page count in tests/edge.js "My Character still loads" (23), add a click-through check.
+  on the Home card; bump the home-link count in tests/smoke.js (30 now) and the sidebar page count (30), Home sprites in tests/pages.js + smoke.js (37), add a click-through check.
   Give the `.hlink` an `<img class="hic" data-ic="i:<item>|m:<mob>|s:<skill>">` sprite (filled from D in 00-core.js,
-  shown only when the card is a billboard) and bump the sprite count in smoke.js (29 = 7 headers + 22 links).
+  shown only when the card is a billboard) and bump the sprite count in smoke.js (37 = 7 headers + 30 links).
+- **Journal (posts):** one file per post in `src/posts/<YYYY-MM-DD>-<slug>.md` (front matter title/date/author, small markdown
+  dialect, auto links) - the contract for people and bots is `docs/ai/journal.md`. `scripts/posts.py` renders them into
+  `POSTS` at build time; 77-journal.js draws the Journal page and the Home Updates/Journal strip. Never pin post content
+  in tests (posts land through the Discord bridge); smoke pins the machinery only.
 - **Changelog:** every user-visible change gets a dated entry at the top of `#log` (grep `id="log"`, read ~20 lines there).
   10-20 audit: 5 small ships (footer move, favicon, offline on custom domain, builder avatar, "listings updated ago") had no card; caught up as v0.8.1. Add only at the top: a card inserted lower renumbers every newer version.
   10-31 (owner mandate, Turbozo: "make things correct and accurate"): one-time full sort — 5 retro-carded entries sat at their historical slot (date inversions the sitesync parser warned about); the whole list is strictly newest-first now and mid-history versions renumbered (v0.19.14 carded it). The add-at-top rule stands; `tracker/scripts/sync-site-changelog.js` still warns if a future card inverts.

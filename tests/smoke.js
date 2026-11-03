@@ -17,10 +17,15 @@ const boxGaps = require("./boxgaps");
   // Home page + section nav. Sidebar layout (default, wider than a phone): every page button shows; the two-row layout and
   // phones show one section's pages at a time, so open the section first when its button is showing
   const tab = async sel => { const c = "#c-" + await p.$eval(sel, b => b.dataset.cat); if (await p.isVisible(c)) await p.click(c); await p.click(sel) };
-  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 29, "home page lists every page");
+  check(!(await p.isHidden("#home")) && await p.$$eval("#home .hlink", l => l.length) === 30, "home page lists every page");
   { const miss = await p.evaluate(() => { const h = new Set([...document.querySelectorAll("#home [data-go]")].map(a => a.dataset.go)); return [...document.querySelectorAll('[id^="t-"]')].map(b => b.id.slice(2)).filter(x => !h.has(x)) });
     check(!miss.length, `every nav page has a Home link (missing: ${miss})`) }   // 10-21: KPQ timer shipped without one
-  check(await p.$$eval("#home img.hic", l => l.length === 36 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "home sprites all load (36)");
+  check(await p.$$eval("#home img.hic", l => l.length === 37 && l.every(i => i.src.startsWith("data:image/png") && i.naturalWidth > 0)), "home sprites all load (37)");
+  // Home news strip (77-journal.js): Updates reads the three newest changelog cards, Journal shows the latest post.
+  // Post CONTENT is never pinned here: posts land through the Discord bridge, and a content check would fail CI on a good post.
+  check(await p.$$eval("#hupdates .hnrow", l => l.length) === 3 && await p.$eval("#hupdates .hnrow .ver", v => /^v\d+\.\d+\.\d+$/.test(v.textContent)),
+    "home Updates strip shows the three newest changelog cards with version pills");
+  check(await p.evaluate(() => !POSTS.length || ($("#hjournal .jntitle")?.textContent || "").length > 3), "home Journal teaser shows the latest post");
   await p.click('#home .hlink[data-go="mobs"]'); check(!(await p.isHidden("#mobs")) && await p.getAttribute("#t-mobs", "aria-selected") === "true", "home link opens its page");
   const side = await p.evaluate(() => ({pages: [...document.querySelectorAll("nav .subs [data-tab]")].filter(b => b.offsetParent).length,
     titles: [...document.querySelectorAll("nav .sgh")].filter(b => b.offsetParent).map(b => (b.querySelector(".sgt") || b).textContent.trim()).join("|"),
@@ -55,6 +60,12 @@ const boxGaps = require("./boxgaps");
   await layout("rows"); await p.click("#c-train"); check(!(await p.isHidden("#train")) && (await p.textContent("#t-train")).trim().endsWith("Overview") && await p.isVisible("#t-train .sgo"),
     "two rows: a section opens on its landing page, shown as an Overview pill"); await layout("side");
   await p.click('.sitefoot [data-foot="log"]'); check(!(await p.isHidden("#log")), "footer: Changelog");
+  await p.click('.sitefoot [data-foot="journal"]'); check(!(await p.isHidden("#journal")) && await p.evaluate(() =>
+      document.querySelectorAll("#journal .jpost").length === POSTS.length && POSTS.length >= 1
+      && document.querySelectorAll("#journal .jmeta").length === POSTS.length
+      && document.querySelectorAll("#journal .jbody a").length === POSTS.reduce((n, x) => n + (x.html.match(/<a /g) || []).length, 0)),
+    "footer: Journal opens, every post renders as a card with its byline and auto links");
+  await p.click("#sbhome"); check(!(await p.isHidden("#home")) && await p.isVisible("#hupdates"), "back home: the news strip is there");
   // Back / Forward (75-history.js): pages and places inside them are browser history entries
   await tab("#t-mobs"); await p.click("#mbrows .mbtn"); const mob1 = await p.textContent("#mbpage h2");
   await tab("#t-items"); await tab("#t-wmap"); await p.waitForTimeout(50);
