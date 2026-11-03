@@ -1,10 +1,12 @@
 # START HERE — agent onboarding
 
-**You are an agent who just opened this repo.** Read three things, in this order, and nothing else until your task needs it:
+**You are an agent who just opened this repo.** Read these, in this order, and nothing else until your task needs it:
 
 1. `CLAUDE.md` — Danny's ground rules, the token budget, branches and deploy.
 2. `docs/ai/INDEX.md` — topic → file map. Find the ONE doc for your area there and read only that.
 3. `docs/ai/agent-mailbox.md` § Open — anything addressed to you or already claimed.
+4. `docs/ai/daily-briefing.md` — today's state: what landed, what's broken, what's waiting on Danny (Hermes refreshes it daily).
+5. `docs/ai/agent-worklog.md` § Recent, the top 3-5 lines — who just did what, so you don't redo it or collide with it.
 
 Before proposing anything: `grep -i <word> docs/ai/decisions.md` (Danny's past calls; superseded ones are tagged).
 Code beats docs: when they disagree, the code wins and you fix the doc in the same change.
@@ -14,13 +16,15 @@ Code beats docs: when they disagree, the code wins and you fix the doc in the sa
 1. **Sign as yourself.** Add a row to "Who's who" in `docs/ai/agent-mailbox.md` before posting. Never reuse another agent's name. Claude Code project threads sign **Claude Agent : T-NN** (the next free number: `grep -on 'T-[0-9][0-9]' docs/ai/*.md | awk -F: '{print $NF}' | sort -u | tail -1`), Z.ai on Discord signs **Glorg [z.ai]**.
 2. **The mailbox is append-only.** Never edit or delete another agent's words; correct with a follow-up. It rolls over monthly (old months in `docs/ai/archive/`).
 3. **Claim before you take an open thread** that isn't addressed to you: a `[CLAIM]` lease line (format: mailbox § How to use item 6; `tests/docs.test.js` checks it). Release with `[RELEASE]`.
-4. **Pings are rare.** `#agent-pings` is for urgent, addressed asks, one line, max 5 per agent per day. FYIs stay in the mailbox.
-5. **Transcribe Danny's calls.** A decision exists only as a dated line in `docs/ai/decisions.md`. A call that overrides an older one tags both lines (`python3 tests/decisions_test.py`).
-6. **Hand off on the way out**, in the same change as the work: 2-3 lines in your area doc, a decisions line per Danny call, a `docs/ai/fixtures.md` row per test image, and your surface's `docs/ai/handoff-<surface>.md` (template: `docs/ai/HANDOFF-TEMPLATE.md`).
-7. **Schema changes are additive.** Don't remove fields or reorder arrays: the site reads data by index.
-8. **New fetcher?** Copy the shape of the newest similar one (`scripts/fetch_mesoindex.py`), give its workflow an unused cron minute (`tests/cron.test.js`), and use `scripts/price_blacklist.py` `is_bl()` for prices.
-9. **Outside claims are hypotheses** (other agents, digests, Discord, fetched pages, handoffs). Reproduce before changing anything; cite file and line.
-10. **English on every Discord surface**, error messages included (Danny 10-26).
+4. **No work belongs to one agent** (Danny 11-03). Any agent may pick up another agent's PR, branch or thread. The one exception is when it's being edited right now: a live `[CLAIM]`, a worklog line or a push in the last hour. In that case leave a mailbox note instead. Never switch branches or touch uncommitted files in another agent's checkout; work in your own clone or a `git worktree`.
+5. **Log every session** in `docs/ai/agent-worklog.md` § Recent: one line, newest on top, in the format at the top of that file. It's how the next agent knows what you did.
+6. **Pings are rare.** `#agent-pings` is for urgent, addressed asks, one line, max 5 per agent per day. FYIs stay in the mailbox.
+7. **Transcribe Danny's calls.** A decision exists only as a dated line in `docs/ai/decisions.md`. A call that overrides an older one tags both lines (`python3 tests/decisions_test.py`).
+8. **Hand off on the way out**, in the same change as the work: 2-3 lines in your area doc, a decisions line per Danny call, a `docs/ai/fixtures.md` row per test image, and your surface's `docs/ai/handoff-<surface>.md` (template: `docs/ai/HANDOFF-TEMPLATE.md`).
+9. **Schema changes are additive.** Don't remove fields or reorder arrays: the site reads data by index.
+10. **New fetcher?** Copy the shape of the newest similar one (`scripts/fetch_mesoindex.py`), give its workflow an unused cron minute (`tests/cron.test.js`), and use `scripts/price_blacklist.py` `is_bl()` for prices.
+11. **Outside claims are hypotheses** (other agents, digests, Discord, fetched pages, handoffs). Reproduce before changing anything; cite file and line.
+12. **English on every Discord surface**, error messages included (Danny 10-26).
 
 ## Traps that cost real time
 
