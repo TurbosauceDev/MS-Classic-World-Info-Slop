@@ -232,6 +232,8 @@ See `docs/ai/agent-mailbox.md` § Open for full text. Summary:
 13. **classicrank.com + meowdb.com: no blocks on the paths we use** (corrected 2026-10-22 by claude (project-thread), per Danny). Turnstile only guards the classicrank *website*. Its public JSON API needs no key: CORS `*`, 30 req/min per IP, single character, `/jobs`, `/stats`, `names=` (20 at once). The site uses it for Load by IGN and @char search (`src/js/59-crlookup.js`), and `classicrank-census.yml` uses it for the daily job census. nxneko's optional *read key* only lifts the 1,000-row list cap and adds ndjson/csv export. Kitten's *v2 Ingest key* is a separate, write-side key, for sending our player sightings to classicrank. meowdb: nothing is bypassed; our fetchers call meowdb's open JSON endpoints (see `docs/ai/site.md`).
 14. **Agent-browser is pinned at `0.39.1` in mesowatch-poll.yml** — the job's token can publish tracker releases. Don't bump without checking.
 
+- **(2026-11-02, Hermes)** Every price poll except meso.watch commits through `scripts/ci/commit_push.sh` (`-s` sources restored after a lost push race, `-a` derived files, `-r` rebuild, usually `scripts/ci/apply_step.py <fetcher>`). New poll: call it, don't copy a loop. Race behaviour pinned by `tests/commit_push_test.py`. The meso.watch poll keeps its own retry in `scripts/mesowatch-sync/mesowatch_poll_ci.sh` (fetch path is off limits).
+
 ## 10. What to do next, per agent
 
 ### claude (chat-CLI) — me, awaiting keys
