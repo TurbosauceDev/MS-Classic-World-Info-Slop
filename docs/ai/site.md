@@ -188,6 +188,7 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Name look-alikes (Leaf, Free Spirit, Pepe Beak): first-wins lookups by name must skip Cash items.
 - Screenshot paste: reuse `SHOTS.handle` (`src/js/52-shotimport.js`), don't fork it.
 - The service worker must leave deep links to the network (`tests/sw_test.js`); answering them with the cached shell broke every shared link once.
+- A new changelog card in `src/pages/log.html` also needs `node tracker/scripts/sync-site-changelog.js` (the tracker shows site patch notes); `tracker/tests/sitesync.test.js` now runs in docs.yml on every PR (it went unnoticed after #52 because tracker CI ignored log.html).
 
 ## Splits
 - 10-18: `src/index.html` split into `src/pages/<id>.html` (built dist identical). Edit a page's file, not the shell; build.py asserts every page file has a slot.

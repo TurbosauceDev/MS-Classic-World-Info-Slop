@@ -6,11 +6,11 @@ on:
   push:
     tags: ["tracker-v*"]
     branches: ["main"]   # test builds while the tracker is in progress
-    paths: ["tracker/**", ".github/workflows/tracker.yml"]
+    paths: ["tracker/**", ".github/workflows/tracker.yml", "src/pages/log.html"]   # log.html: tracker/tests/sitesync.test.js
   # PRs too (Hermes 2026-11-03): three Dependabot tracker bumps merged on green SITE checks on 11-02 and each broke this
   # build on main. A PR run builds and tests only; publishing needs a tag or the manual "release" box.
   pull_request:
-    paths: ["tracker/**", ".github/workflows/tracker.yml", "package.json"]
+    paths: ["tracker/**", ".github/workflows/tracker.yml", "package.json", "src/pages/log.html"]
   workflow_dispatch:
     inputs:
       release:
