@@ -3,7 +3,7 @@
   "version": 1,
   "schedule": { "local_time": "04:45", "timezone": "America/Los_Angeles" },
   "files": {
-    "live_digest": "docs/ai/danny-digest.md",
+    "live_digest_retired": "2026-11-02 (Danny): issues live on Discord #daily-updates + [Archive] and on Danny's PC, not in the repo. Hermes posts them.",
     "live_briefing": "docs/ai/daily-briefing.md",
     "gold_digest": "docs/ai/examples/danny-digest.gold.md",
     "attachment_name": "danny-digest-{date}-issue-{issue}.md"

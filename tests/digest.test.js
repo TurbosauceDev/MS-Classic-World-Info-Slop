@@ -1,6 +1,7 @@
 // node tests/digest.test.js — executable spec for digests and the design guide (no deps, ~0.1 s; CI: docs.yml).
 // 1. config/digest.json names secrets but holds none; archive thread id is digits or null.
-// 2. The gold digest passes scripts/lint_digest.js, the live digest passes it, and each rule fails on a broken copy.
+// 2. The gold digest passes scripts/lint_digest.js and each rule fails on a broken copy. The live digest left the repo 2026-11-02
+//    (Danny: Discord + his PC only); this test fails if docs/ai/danny-digest.md comes back.
 // 3. Every command in docs/ai/design.md does what it claims (a "run this" script is standalone; a "helper" is loaded by others).
 // 4. design.md section 10 copy rules hold in UI text (src pages + tracker): no exclamation marks, emoji, simply/easily/just.
 const fs = require("fs"), path = require("path");
@@ -15,12 +16,14 @@ for (const [k, v] of Object.entries({ "discord.webhook_secret": cfg.discord.webh
 const tid = cfg.discord.archive_thread_id;
 if (tid !== null && !/^\d{6,}$/.test(String(tid))) bad("config/digest.json", "archive_thread_id must be null or a digits string");
 if (/discord(app)?\.com\/api\/webhooks|https?:\/\/[^"]*token/i.test(JSON.stringify(cfg))) bad("config/digest.json", "contains a webhook URL or token; keep it in secrets");
-for (const k of ["live_digest", "live_briefing", "gold_digest"]) if (!fs.existsSync(path.join(root, cfg.files[k]))) bad("config/digest.json", `files.${k} points at a missing file: ${cfg.files[k]}`);
+for (const k of ["live_briefing", "gold_digest"]) if (!fs.existsSync(path.join(root, cfg.files[k]))) bad("config/digest.json", `files.${k} points at a missing file: ${cfg.files[k]}`);
 if (!/\{date\}/.test(cfg.files.attachment_name) || !/\{issue\}/.test(cfg.files.attachment_name)) bad("config/digest.json", "attachment_name needs {date} and {issue}");
 
 // 2. digest lint: gold + live pass; each rule trips on a mutated gold copy
 const gold = rd(cfg.files.gold_digest);
-for (const f of [cfg.files.gold_digest, cfg.files.live_digest]) for (const e of lint(rd(f), f)) bad(f, e.replace(/^[^:]*: /, ""));
+for (const e of lint(gold, cfg.files.gold_digest)) bad(cfg.files.gold_digest, e.replace(/^[^:]*: /, ""));
+// retired 2026-11-02: an agent following an old "refresh the digest" note must not recreate the repo copy
+if (fs.existsSync(path.join(root, "docs/ai/danny-digest.md")) || cfg.files.live_digest) bad("docs/ai/danny-digest.md", "retired 2026-11-02 (Danny): the digest lives on Discord + Danny's PC; do not re-add it");
 const cases = [
   ["front-matter", gold.replace(/^---\n[\s\S]*?\n---\n/, "")],
   ["front-matter", gold.replace(/^date: .*$/m, "date: 25/10/2026")],

@@ -10,6 +10,7 @@ const root = path.join(__dirname, "..");
 const DOCS = ["CLAUDE.md", ...fs.readdirSync(path.join(root, "docs/ai")).filter(f => f.endsWith(".md")).map(f => "docs/ai/" + f)];
 const BASES = ["", "src", "src/js", "tracker", "tracker/tests", "server", "data", "scripts", "docs", ".github/workflows"];
 const IGNORE = new Set([
+  "docs/ai/danny-digest.md",   // retired 2026-11-02 (Danny: digest is Discord + his PC only); handoffs and history still quote it
   "themes.js",   // quoted in agent-mailbox.md as ElvUI's repo file, not ours
   "fetch_classicmarket.py",   // deleted 10-22 (cbc82b7); mailbox/digests still quote them
   "latest.yml", "upload/",         // mesolens-teardown.md: files on mesolens.app's download host, not in this repo

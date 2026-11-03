@@ -18,7 +18,6 @@ avoid that. Read them. Not optional.
 | `docs/ai/agent-mailbox.md` | Direct messages between agents | You'll miss an Open thread addressed to you + the sender will assume you're ghosting them |
 | `docs/ai/agent-worklog.md` | One-line per session activity feed | You'll redo work someone else just finished; or you'll step on a concurrent edit because you didn't see the latest commit |
 | `docs/ai/daily-briefing.md` | Today's digest — what landed, what's broken, today's priorities | You'll work on yesterday's problem instead of today's |
-| `docs/ai/danny-digest.md` | Plain-English briefing for Danny (less technical) | If Danny asks "what's up?" you'll dump 500 lines of jargon on him instead of pointing him at one short doc |
 | `docs/ai/digest-contract.md` | Where digests live, required fields, tone rules; linted in CI | You'll post a digest the pipeline rejects, or hardcode the archive thread id |
 | `docs/ai/discord-digest-runbook.md` | Transport, state and rotation mechanics of the digest pipeline (webhooks, state file, recovery) | You'll break the pipeline or be unable to rebuild it after a sandbox loss |
 | `docs/ai/HANDOFF-TEMPLATE.md` + `docs/ai/handoff-<surface>.md` | Standing per-surface state snapshots, kept fresh at session end | You'll guess another surface's state and duplicate or collide with its in-flight work |
@@ -49,7 +48,7 @@ avoid that. Read them. Not optional.
 3. **Don't impersonate.** If you're a fresh Claude thread, use a new name (e.g. `claude (session-XYZ)`) — don't reuse `claude (project-side)`. Z.ai (Danny's assistant, formerly signed `claude (chat-CLI)`) signs as **Z.ai**; Claude Code project threads sign as **Claude Agent : [ID]** (coordinator-assigned T-01, T-02, ...; else last 6 chars of the session id) (Danny 2026-10-22).
 4. **Push to `main` directly for docs.** Docs pushes are pre-approved by Danny — no PR needed. Run `node tests/docs.test.js` first to verify paths.
 5. **Don't relay through Danny.** That's why the mailbox exists. Post directly.
-6. **Refresh the daily-briefing + danny-digest at the start of your work session** if they're stale (>24h old). It's a 5-minute task. Overwrite the file, don't append.
+6. **Refresh the daily-briefing at the start of your work session** if it's stale (>24h old). Overwrite the file, don't append. Hermes refreshes it daily. Danny's digest is no longer in the repo (2026-11-02): it lives on Discord #daily-updates, written by Hermes. Don't write one here.
 7. **Refresh `docs/ai/state-of-the-pipeline.md` when:** the schema grows, a new source is added, an external API is integrated, or a critical bug is found. Append an "Updated YYYY-MM-DD: ..." note at the top.
 8. **Append a worklog entry after every session** — one line, format: `YYYY-MM-DD HH:MMZ | agent-name | one-line summary | commit hash or files touched`.
 9. **For code changes** (not docs): follow the existing patterns. Look at how the latest similar fetcher is structured (`scripts/fetch_mesoindex.py` is the most recent example), copy the shape, don't invent new conventions.
@@ -162,7 +161,6 @@ Then post a worklog entry when you start work + another when you finish.
 | `docs/ai/agent-mailbox.md` | Direct messages between agents | append-only |
 | `docs/ai/agent-worklog.md` | One-line per session activity feed | append after every session |
 | `docs/ai/daily-briefing.md` | Daily newspaper for agents | overwrite daily |
-| `docs/ai/danny-digest.md` | Plain-English briefing for Danny | overwrite daily |
 | `docs/ai/mesowatch-sync.md` | Canonical meso.watch pipeline handoff | when pipeline plumbing changes |
 | `docs/ai/decisions.md` | Dated decision log | append on every non-trivial call |
 | `docs/ai/discord-digest-runbook.md` | Digest pipeline transport/state/rotation mechanics | when pipeline mechanics change |
