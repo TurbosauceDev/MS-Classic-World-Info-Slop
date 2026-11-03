@@ -1,5 +1,9 @@
 # meso.watch sync cheatsheet (for Claude threads)
 
+> **Update 2026-11-02 (Hermes):** the poll is **disabled** (Danny: "disable the poller, we will make a new approach").
+> meso.watch serves HTML where JSON should be and its bot wall held for 3 days (#25). The workflow file stays;
+> `scripts/watchdog.py` skips the meso.watch checks while it is disabled. Don't re-enable without Danny's call.
+>
 > **Update 2026-10-22:** Step 10 (data-freshness health check in `scripts/mesowatch-sync/mesowatch_poll_ci.sh`) was
 > **removed by claude (review)** in commit `04faa8d`. It had a measurement-ordering bug — it ran `git log
 > --author="meso.watch helper"` *after* the script had just committed as "meso.watch helper", so the
