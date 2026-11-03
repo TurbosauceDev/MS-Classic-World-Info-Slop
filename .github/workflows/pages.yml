@@ -6,8 +6,12 @@ on:
   push:
     branches: ["main"]
     paths: ["data/**", "scripts/live_data.py", "src/**", "scripts/build.py", "scripts/canary.py", "tracker/app/**", "tracker/core/**", "src/pwa/**", "scripts/pages_site.py", "scripts/pages_gen.py", ".github/workflows/pages.yml"]
-  # price polls push with GITHUB_TOKEN (no push event): instead of one deploy per poll (47/day), a half-hourly run deploys
-  # only if data/ changed since the last successful deploy (Danny 2026-11-02: up to 30 min for new prices is fine)
+  # price polls push with GITHUB_TOKEN (no push event), so a finished poll triggers this run; the gate deploys only if data/
+  # changed since the last successful deploy (a no-change poll costs ~15 s, not a Playwright install + smoke). The schedule
+  # is a backup only: GitHub fires this repo's crons a few times a DAY (watchdog, set to 2/h, ran in pairs ~8 h apart, 11-03).
+  workflow_run:
+    workflows: ["shared-data", "meso.watch poll", "classicmarket poll", "meowdb market poll", "shopscans poll", "mesoindex poll"]
+    types: [completed]
   schedule: [{cron: "14,44 * * * *"}]
   workflow_dispatch:
 permissions:
@@ -26,11 +30,12 @@ jobs:
       - uses: actions/checkout@v4
         with: { ref: main, fetch-depth: 300 }
       - id: g
-        env: { GH_TOKEN: "${{ github.token }}", EVENT: "${{ github.event_name }}", REPO: "${{ github.repository }}" }
+        env: { GH_TOKEN: "${{ github.token }}", EVENT: "${{ github.event_name }}", POLL: "${{ github.event.workflow_run.conclusion }}", REPO: "${{ github.repository }}" }
         run: |
-          # pushes and manual runs always deploy; the half-hourly run deploys only when data/ moved since the last good deploy
+          # pushes and manual runs always deploy; poll-triggered and scheduled runs only when data/ moved since the last good deploy
           go=true
-          if [ "$EVENT" = schedule ]; then
+          if [ "$EVENT" = workflow_run ] && [ "$POLL" != success ]; then go=false; echo "poll did not succeed: skip"; fi
+          if [ "$go" = true ] && { [ "$EVENT" = schedule ] || [ "$EVENT" = workflow_run ]; }; then
             last=$(gh api "repos/$REPO/actions/workflows/pages.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].head_sha // ""')
             if [ -n "$last" ] && git cat-file -e "$last^{commit}" 2>/dev/null && git diff --quiet "$last" HEAD -- data/; then go=false; fi
             echo "last good deploy ${last:-none}, data changed since: $go"
