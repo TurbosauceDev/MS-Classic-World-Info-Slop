@@ -160,6 +160,8 @@ Kitten's note in Discord (2026-10-22 14:38Z): "Da key supports exporting the bas
 
 ## 5. Active data sources (full inventory)
 
+**2026-11-03: every price poll is paused** (Danny: "pause all shop scans and freeze market info where it is. this is temporary"). The five poll workflows are disabled, the last `data/sources/` files stay on the site, `config/prices.json` `paused_since` makes the site say "paused", and `scripts/watchdog.py` skips disabled polls. Resume: `gh workflow enable` each poll, then set `paused_since` to null. Tracker shop uploads (`/api/shop`) stay live.
+
 | Source | Owner | Type | Workflow | Cadence | Auth | Notes |
 |---|---|---|---|---|---|---|
 | meso.watch | meso.watch team (Danny's friends) | player-shop prices + live FM listings | mesowatch-poll.yml | hourly (6 crons at minute 7,17,27,37,47,57) | Cloudflare bot challenge (passed via agent-browser headless Chrome) | primary; 982 items + 800 live listings as of 2026-10-22 |

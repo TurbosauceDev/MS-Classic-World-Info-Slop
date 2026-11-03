@@ -227,6 +227,8 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       // line the same way, and its row's honest stale pill would fail assert 4.
       const fresh = new Date(Date.now() - 36e5).toISOString().slice(0, 16).replace("T", " "), old = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 16).replace("T", " ");
       delete PWH[id]; delete MA[id]; delete MW[id]; delete MI[id]; delete CM[id];   // PWH: real history must not outvote the fakes
+      // asserts 1-4 are the live mode: the shipped config/prices.json pause switch (Danny 11-03) would turn every row "paused"
+      const pause = D.pxpause; delete D.pxpause;
       D.mdb.read = fresh;
       if (D.pw) D.pw.generated = new Date(Date.now() - 36e5).toISOString();
       PW[id] = [100, 90, 110, 30, 0]; CMP[id] = [105, 95, 115, 20, 30, 5, fresh]; MDB[id] = [110, 50, 8, 100, null, 4, null, 0, null, 0];
@@ -238,10 +240,14 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       out.push(/stale \d+ d/.test(priceBox(id)));
       D.cmp.read = fresh;
       out.push(!/stale \d/.test(priceBox(id)));
+      // assert 5 (Danny 11-03 "changing stale > paused"): while the polls are paused an old source says paused, never stale
+      D.cmp.read = old; D.pxpause = "2026-11-03";
+      out.push(/>paused</.test(priceBox(id)) && !/stale \d/.test(priceBox(id)));
+      if (pause) D.pxpause = pause; else delete D.pxpause;
       [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id]] = keep; D.cmp.read = keep[7]; D.mdb.read = keep[8];
       D.pw.generated = keep[10];
       if (keep[9]) PWH[id] = keep[9]; else delete PWH[id]; return out });
-    check(JSON.stringify(q) === "[true,true,true,true]", `prices: stale pill + sources context (${q})`);
+    check(JSON.stringify(q) === "[true,true,true,true,true]", `prices: stale pill + sources context, paused while polls are paused (${q})`);
     // P13-P16 accuracy (audit 2026-10-28): the weighted headline weights TODAY heaviest (the old code applied
     // 0.5/0.3/0.2 oldest-first, under-reacting to the move it reported); the consensus tile counts the sales behind
     // the pooled markets, not the market count; the p25-p75 band hides when the spike breaker held yesterday's median

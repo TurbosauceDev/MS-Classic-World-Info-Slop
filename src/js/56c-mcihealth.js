@@ -63,7 +63,10 @@ function html(){
   }
   const c = contract();
   const parts = [];
-  if (stale.length) {
+  if (D.pxpause) {   // Danny 2026-11-03: polls paused on purpose; show each source's last read, not a "stale" alarm
+    parts.push(`<span class="pill p-warn">Price updates paused since ${esc(D.pxpause)}</span>`);
+    for (const [name, read] of FRESH) { const m = ago(read()); if (m != null) parts.push(`<span class="sub"><b>${esc(name)}</b> last read ${agoTxt(m)}</span>`); }
+  } else if (stale.length) {
     parts.push(`<span class="pill p-warn">${stale.length} stale source${stale.length > 1 ? 's' : ''}</span>`);
     for (const s of stale) parts.push(`<span class="sub"><b>${esc(s.name)}</b> ${agoTxt(s.m)}</span>`);
   } else {

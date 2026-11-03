@@ -12,6 +12,8 @@ Each step is a pure function: (data.json's game data + one source file) -> one k
   D.shared fetch_shared                 data/sources/shared_runs.json
 Not here: D.pw (meso.watch: its step needs the OSMS export, scripts/build_data.py prices) and D.crank (parked).
 A missing source file leaves the committed key as it is. Tested by tests/live_data_test.py.
+  D.pxpause  config/prices.json paused_since (Danny 2026-11-03 paused the price polls): set = the site says "paused"
+             on price sources instead of "stale"; null = the key is dropped.
 """
 import importlib, json, pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -20,6 +22,10 @@ STEPS = ["fetch_classicmarket_listings", "fetch_classicmarket_market", "fetch_sh
 
 def apply(D):
     for m in STEPS: importlib.import_module(m).step(D)
+    D.pop("pxpause", None)
+    cfg = ROOT / "config" / "prices.json"
+    since = json.loads(cfg.read_text(encoding="utf-8")).get("paused_since") if cfg.exists() else None
+    if since: D["pxpause"] = str(since)
     return D
 
 def load():

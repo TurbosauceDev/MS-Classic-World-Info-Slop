@@ -44,10 +44,13 @@ const pxSrcTs = r => r.src === "meso.watch" ? D.pw?.generated
 // `replace(" ", "T") + "Z"` turned it into "...+00:00Z" and Date.parse said NaN, so the stale pill could never fire
 // (round 3). The other sources' "YYYY-MM-DD HH:MM" / date-only reads still get the UTC suffix.
 const pxTsMs = s => { s = String(s || ""); return /[zZ]$|[+-]\d{2}:\d{2}$/.test(s) ? Date.parse(s) : Date.parse(s.replace(" ", "T") + "Z") };
+// Danny 2026-11-03 paused every price poll on purpose (D.pxpause = config/prices.json paused_since): each source row says
+// "paused" with its last read, instead of a stale pill that blames a failing poll
 const pxSrcStale = r => { const t = pxTsMs(pxSrcTs(r)); if (isNaN(t)) return "";
   const min = Math.max(0, (Date.now() - t) / 6e4), max = r.src === "meso.watch" ? 180 : 2880;
-  if (min <= max) return "";
   const txt = min < 2880 ? Math.round(min / 60) + " h" : Math.round(min / 1440) + " d";
+  if (D.pxpause) return ` <span class="pill p-warn" title="Price updates are paused for now (since ${esc(D.pxpause)}). This is the last price we read, ${txt} old. Updates will resume later.">paused</span>`;
+  if (min <= max) return "";
   return ` <span class="pill p-warn" title="This source's data is ${txt} old, past its update cadence: the poll may be failing silently. The watchdog files an issue when a source freezes; compare with the other rows before trusting this one.">stale ${txt}</span>`; };
 function priceBox(id){
   const it = D.items[id], best = pwPrice(id), rows = PRICE_SRC.map(f => f(id)).filter(Boolean), all = listingsOf(id);

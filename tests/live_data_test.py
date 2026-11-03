@@ -26,6 +26,10 @@ for wf in (ROOT / ".github" / "workflows").glob("*.yml"):
     # classicrank: parked since 10-31, its step lives in fetch_classicrank.py
     if wf.name not in ("mesowatch-poll.yml", "classicrank-census.yml") and re.search(r"(git add|-a)\s[^\n]*data/data\.json", t):
         fails.append(f"{wf.name} commits data/data.json again; polls commit only data/sources/* (build.py applies them)")
+# 2026-11-03: the price-poll pause switch reaches the site data, and only while it is set
+cfg = json.loads((ROOT / "config" / "prices.json").read_text(encoding="utf-8"))
+if D.get("pxpause") != (cfg.get("paused_since") or None): fails.append(f"D.pxpause {D.get('pxpause')!r} != config/prices.json paused_since {cfg.get('paused_since')!r}")
+# (the workflows' on/off state lives in GitHub, not the repo: scripts/watchdog.py reads it; this switch is the site's copy)
 for f in fails: print("FAILED:", f)
 if fails: sys.exit(1)
 print(f"live data test passed ({len(live_data.STEPS)} steps, {len(SRC)} keys rebuilt from data/sources)")

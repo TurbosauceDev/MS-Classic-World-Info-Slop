@@ -1,0 +1,4 @@
+{
+ "_doc": "Price-poll pause switch (Danny 2026-11-03: 'pause all shop scans and freeze market info where it is. this is temporary'). paused_since = PT date the polls were disabled, or null when they run. scripts/live_data.py copies it to D.pxpause; the site then shows 'paused' instead of 'stale' on price sources. Resume: gh workflow enable each '<name> poll', then set paused_since to null.",
+ "paused_since": "2026-11-03"
+}
