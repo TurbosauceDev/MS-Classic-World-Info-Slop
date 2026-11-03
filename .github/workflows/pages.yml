@@ -33,7 +33,7 @@ jobs:
       # smoke test before every deploy: bot price commits never trigger Site tests, and 10-21 a red main deployed 4 times
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: npm i --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
+      - run: npm ci --ignore-scripts --no-audit --no-fund && npx playwright install --with-deps chromium   # versions: root package.json
       # the price polls commit only data (2026-10-21: a 7 MB page per poll was most of the repo's growth): build it here
       - run: python3 scripts/build.py | tail -2
       # golden refs gate the deploy too (Z.ai 10-25: tests.yml catches golden regressions on the NEXT push —
