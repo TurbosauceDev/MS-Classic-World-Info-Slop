@@ -162,6 +162,31 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Other people's words (sellers, shop titles, FM rooms, trade posts, shared-run names) must go through `esc()` from `src/js/00-core.js` before any innerHTML; never write a local copy. `tests/inject.js` poisons every such string in a copy of the page and opens every tab + 38 item pages; it fails if any of it runs. Game data (OSMS) is trusted and not poisoned. Server replies: `tests/edge.js` (Hermes 11-02).
 - Two ratchets (Hermes 11-02): `tests/lint_test.js` lints the site as ONE script (and each tracker page as its script list) for bug-shaped code only (undefined names, duplicate keys, unreachable code); baseline is 0, so a typo'd name fails CI. `tests/empty_catch_test.js` caps silent `catch {}` per file at today's count; a new one needs its reason in a same-line comment. Both: lower the baseline with `--write` when you fix some.
 
+### Still-true traps promoted from site-history.md (Hermes 2026-11-02; history line numbers there for context)
+- Tests counting table rows must scroll first: big tables render 60 rows, then 150 per scroll (`lazyRows`, `src/js/00-core.js`).
+- Never render tracker-server fields raw: they go through `trkClean()` / `trkKpqClean` (`src/js/68-tracker.js`).
+- Pages copy: `const D` is wrapper-scoped (window.D is only a test handle) and nothing may run before the merge. Code that needs every icon must `await ASSETS`.
+- A full `scripts/build_data.py` run has dropped KPQ spawn points (mobdb `sp`) and `pw.life` price history twice (OSMS re-pins 10-22, 10-29). Rebuild, then copy only the changed keys onto the old data.json.
+- With vendor/ missing, even `build_data.py prices` fails (it imports analyze.py); inject the step's output in Python instead.
+- There is no `<main>`: select the visible page with `section:not([hidden])`. New `width:100%` inputs need `box-sizing:border-box` (smoke.js `spillingInputs`).
+- `src/js/72-anchors.js` `order()` migrates saved section/Home order; adding or removing a section must keep that migration working (edge.js checks a pre-10-20 layout).
+- Test fixture sellers must not match real sellers (FM Sniper's "new" check compares item|price|seller).
+- `scripts/deal_life.py` replays git history: it needs a full-depth checkout (fetch-depth 0) or it finds too few snapshots.
+- Don't put a `<nav>` inside the Settings modal: global `nav` CSS hits it.
+- Anything that changes the Builder state in several `BLD.apply` calls must go through `BLD.group`, or Undo needs two presses.
+- If a feature starts sending or storing anything new (server field, outside fetch, analytics), update `src/pages/privacy.html` in the same change.
+- The citizenship shop list is a hand copy of meowdb prices; `tests/meowdb_test.py` fails when a launch-priced shop differs.
+- classicmarket: re-logging replaces the session, so the old cookie dies (the poll warns and keeps the old file). Never pull Minerva's Owl or work around classicmarket's token.
+- New cron minutes: main-pipeline crons must not share a minute or sit on :00/:30 (`tests/cron.test.js`).
+- A new column on wide tables can push them past 910 px; the smoke check names the page.
+- `.pill` is nowrap: a pill holding a sentence needs `white-space:normal` or it scrolls a 360 px phone sideways.
+- meso.watch market.json's item key is `it`, not `items`. `totals.sales` is a rolling window: say "sales tracked", never "sold today".
+- Every changelog entry must be a `.card` (build.py aborts on a loose `<p>`); `data-minor` is for big additions only.
+- Skill boxes: stored lt/rb boxes face left (reading them the other way gave Steal "0 px"). maplestory.io is CBT2: take geometry only, never mob counts.
+- Name look-alikes (Leaf, Free Spirit, Pepe Beak): first-wins lookups by name must skip Cash items.
+- Screenshot paste: reuse `SHOTS.handle` (`src/js/52-shotimport.js`), don't fork it.
+- The service worker must leave deep links to the network (`tests/sw_test.js`); answering them with the cached shell broke every shared link once.
+
 ## Splits
 - 10-18: `src/index.html` split into `src/pages/<id>.html` (built dist identical). Edit a page's file, not the shell; build.py asserts every page file has a slot.
 - `50-builder.js` 43 KB and `60-planner.js` 42 KB are big but cohesive; grep + ranged reads are enough for now.
