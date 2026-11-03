@@ -27,7 +27,7 @@ jobs:
     permissions: { contents: read, actions: read }
     outputs: { go: "${{ steps.g.outputs.go }}" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: main, fetch-depth: 300 }
       - id: g
         env: { GH_TOKEN: "${{ github.token }}", EVENT: "${{ github.event_name }}", POLL: "${{ github.event.workflow_run.conclusion }}", REPO: "${{ github.repository }}" }
@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 15
     environment: { name: github-pages, url: "${{ steps.dep.outputs.page_url }}" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: main }
       # smoke test before every deploy: bot price commits never trigger Site tests, and 10-21 a red main deployed 4 times
       - uses: actions/setup-node@v4

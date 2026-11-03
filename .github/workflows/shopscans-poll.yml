@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-24.04   # not -latest: it became 26.04, which Playwright 1.56.1 refuses (2026-10-31)
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: main }
       - run: python3 tests/shopscans_test.py
         timeout-minutes: 2

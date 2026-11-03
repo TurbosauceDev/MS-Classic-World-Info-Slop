@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04   # not -latest: it became 26.04, which Playwright 1.56.1 refuses (2026-10-31)
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: main }
       - name: Fetch, commit if changed
         timeout-minutes: 12   # step-level (audit P11): a hung fetch releases the shared lock before the job ceiling

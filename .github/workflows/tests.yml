@@ -38,7 +38,7 @@ jobs:
               node:tests/edge.js node:tests/shotscales.js node:tests/nx.js node:tests/questvalue.js
               node:tests/polish.js node:tests/questlog.js node:tests/lint_test.js
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       # versions live in the root package.json (tests/pins.test.js): an unpinned install picks up each release the day it ships
