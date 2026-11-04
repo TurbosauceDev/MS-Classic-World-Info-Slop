@@ -552,7 +552,9 @@
       bands.splice(i, 1, ...parts);
     }
     for (let i = bands.length - 1; i >= 0; i--) if (!bands[i] || bands[i][1] - bands[i][0] < 5 || bands[i][1] - bands[i][0] > 30) bands.splice(i, 1);
-    const two = bands.findIndex((b, i) => bands[i + 1] && bands[i + 1][0] - b[1] < (b[1] - b[0]) && Math.abs((bands[i + 1][1] - bands[i + 1][0]) - (b[1] - b[0])) <= 4);
+    // a gap as tall as the line still pairs: Danny's KPQ 1st stage title is 7 px lines 7 px apart, and a strict "<" lost
+    // it on 15 of 16 frames (bug reports 2026-11-04: paused 2:20 into a round)
+    const two = bands.findIndex((b, i) => bands[i + 1] && bands[i + 1][0] - b[1] <= (b[1] - b[0]) && Math.abs((bands[i + 1][1] - bands[i + 1][0]) - (b[1] - b[0])) <= 4);
     // the minimap folded to its title bar: one line, "Hidden Street : 1st Accompaniment <Exit>", white on a light bar from
     // the left edge at the very top (Danny's KPQ run, 2026-10-18): the bar's rows run light from x < 8 for 150+ px, except
     // where the text cuts through them; the text is the rows between the bar's top and bottom edges
@@ -576,16 +578,23 @@
       }
     }
     if (two < 0 && !one) return null;
-    const y0 = Math.max(0, (one || bands[two])[0] - 2), y1 = (one || bands[two + 1])[1] + 2;
-    // left to right: from the first column with ink to the end of the inkiest stretch of columns (gaps under 24 px): the
-    // game scene or the minimap's right border further right isn't text
+    const y0 = Math.max(0, (one || bands[two])[0] - 2), y1 = (one || bands[two + 1])[1] + 2, xs = mapCols(img, y0, y1);
+    return xs && {x0: xs.x0, y0, x1: xs.x1, y1};
+  }
+  // left to right: from the first column with ink to the end of the inkiest stretch of columns (gaps under 24 px): the
+  // game scene or the minimap's right border further right isn't text
+  function mapCols(img, y0, y1){
+    const X = Math.floor(img.w * 0.4), d = img.d, ink = i => Math.min(d[i], d[i + 1], d[i + 2]) > 190;
     const colN = x => { let n = 0; for (let y = y0; y < y1; y++) if (ink((y * img.w + x) * 4)) n++; return n };
     const runs = []; for (let x = 0, gap = 99; x < X; x++){ const n = colN(x); if (!n){ gap++; continue } if (gap >= 24) runs.push({a: x, b: x, n: 0}); const r = runs[runs.length - 1]; r.b = x; r.n += n; gap = 0 }
     if (!runs.length) return null;
     const x0 = runs[0].a, x1 = runs.reduce((p, q) => q.n > p.n ? q : p).b;
     if (x1 <= x0) return null;
-    return {x0, y0, x1, y1};
+    return {x0, x1};
   }
+  // the last good title rect, re-measured left to right on this frame: the rows stay put while the minimap does, but the
+  // name's length changes with the map (a Kerning City rect cut "1st Accompaniment <1st Stage>" to "1st Accompa", 11-04)
+  function mapRefit(img, r){ const xs = mapCols(img, r.y0, r.y1); return xs ? {...r, ...xs} : r }
   // the OCR crop for a title rect: white text made black on white (flipped when the folded bar's light rows dominate)
   function mapCropAt(img, r){
     const {x0, y0, x1, y1} = r, d = img.d, ink = i => Math.min(d[i], d[i + 1], d[i + 2]) > 190;
@@ -1359,7 +1368,7 @@
     if (want.map){
       crops.map = mapTextCrop(img);
       if (crops.map) rd.mapRect = crops.map.rect;   // where the title was: re-cut from here when a later band hunt fails
-      else if (rd.mapRect){ crops.mapFb = mapCropAt(img, rd.mapRect); crops.mapFb.fb = true }
+      else if (rd.mapRect){ crops.mapFb = mapCropAt(img, mapRefit(img, rd.mapRect)); crops.mapFb.fb = true }
     }
     if (want.job){ crops.job = jobTextCrop(img); crops.name = nameTextCrop(img) }
     if (want.chat) crops.chat = chatCrop(img);
@@ -1367,6 +1376,6 @@
     const chat = want.chatScan ? rd.chatScan(img, want.chatArea) : (rd.chatOff(), null);
     return {ev, info, crops, chat, feet, memo: {hits: rd.memoStats.hits, reads: rd.memoStats.reads, line: {tries: LINE_STATS.tries, wins: LINE_STATS.wins}}, minimap: info.bar ? null : !!(crops.map || mapTextCrop(img)), scale: frame.k ? null : {k: img.k, ox: img.ox, oy: img.oy, w: frame.w, h: frame.h}};
   }
-  const api = {nameMask, readProc, readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, workBand, bandRect, makePickupTracker, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty, lineStats: () => LINE_STATS};
+  const api = {nameMask, readProc, readVitalsAny, regionHash, barJump, barVerdict, itemByName, readTextLines, msgGlyphs: () => MSG, nameTextCrop, nameFromText, work, workBand, bandRect, makePickupTracker, addGlyphs, readKpqTimer, createReaders, findInventory, readInventory, chatCrop, deathFromText, boxFromText, readCounts, readMesoTotal, iconAt, loadIcons, mapTextCrop, mapRefit, mapFromText, jobTextCrop, jobFromText, similar, native, readBar, readBarAny, readLines, readPickups, readParty, lineStats: () => LINE_STATS};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindReaders = api;
 })(typeof window !== "undefined" ? window : globalThis);

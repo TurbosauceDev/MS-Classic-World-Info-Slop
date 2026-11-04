@@ -83,6 +83,7 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 | timer-1848.png, timer-1852.png, timer-2037.png, timer-2041.png | 460x200 | "Time Left" clock = mm:ss in the file name |
 | timer-2219.png (2x), timer-2216.png, timer-2546.png (1x frames, upscaled 2x nearest) | 460x200 | same; the real 6 and 9 shapes (the old guesses read null) |
 | bar-1601.png | 700x80 | EXP bar "1,601 [2.51%]" (a 1 before a comma used to read 601) |
+| minimap-1st-stage.png | 600x160 | top-left of a 1280x720 frame (bug report 2026-11-04), used by tracker/tests/cv.test.js | title rect pairs both lines, x1 > 230; a stale narrow rect re-fits to it |
 
 ## On Danny's device (folder tools, already approved; not in the repo)
 - `C:\Users\danny\Pictures\MS Classic Tracker frames`: debug and bug-report frames. New fixtures come from here.

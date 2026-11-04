@@ -75,6 +75,10 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Danny plays native 1440, UI "Ideal Ratio" (UI 2x, world not). Captured video shifts colors: match color ranges.
 - Share runs: 15 min straight on one map, same party, no break > 60 s. KPQ rounds sent separately (since v0.2.40).
 - KPQ maps 80000000 (1st stage) … 80000400 (Last), 80000500 Bonus, 80000600 Exit; Kerning City 10003000.
+- KPQ round signals (0.3.40): minimap stage reads set stages; the "Time Left" clock (starts 30:00 each round) read twice in step
+  (kpqTime) lifts the between-rounds pause and dates the round's start (kpq.pend); a steady jump up = new round. One read alone
+  only feeds stage times. Minimap title pairing allows gap == line height (KPQ titles: 7 px lines, 7 px gap); the fallback
+  re-cut re-measures width (mapRefit). Old reader missed the 1st stage on 15/16 frames.
 - KPQ boards (server summary.kpq.board): Rush = all rounds by clear; Bonus = rounds with 80000500 stage time, by EXP +
   mesos. The tracker's Bonus/Rush pick is stored (mode) but no longer picks the board. Names: kpq_names table (schema.sql
   re-runs every deploy, so new columns go in side tables); tracker sends Name (Party card) else the OCR'd charName.

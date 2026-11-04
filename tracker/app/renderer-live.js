@@ -161,7 +161,7 @@ $("#pauseBtn").onclick = () => {
   pauseUi(); render();
 };
 function pauseAt(t){ const e = {t: Math.max(t, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); log("event", e) }
-function kpqReset(){ kpq = {on: false, phase: "idle", hold: false, inside: false, rounds: 0, left: null, leftT: 0, stage: null, round: null, times: [], stageTimes: {}, stageExp: {}, history: [], last: null}; kpqRefresh() }
+function kpqReset(){ kpq = {on: false, phase: "idle", hold: false, inside: false, rounds: 0, left: null, leftT: 0, clk: null, pend: null, stage: null, round: null, times: [], stageTimes: {}, stageExp: {}, history: [], last: null}; kpqRefresh() }
 // stage and round times: from the KPQ clock ("Time Left", top middle) when it reads, else the PC clock
 const KPQ_STAGE = {"80000000": "1st", "80000100": "2nd", "80000200": "3rd", "80000300": "4th", "80000400": "Last", "80000500": "Bonus"};
 const kpqLeftAt = t => kpq.left === null ? null : kpq.left - (t - kpq.leftT) / 1000;
@@ -191,9 +191,25 @@ function kpqWatch(s){
   const k = (s.maps || []).find(m => m.map === BONUS_MAP)?.kills || 0;
   if (k > kpq.round.bonus.snap.kills){ kpq.phase = "bonus"; kpq.round.bonus.fought = true; note("KPQ round " + kpq.rounds + ": killing in the Bonus map, recording the Bonus section", "kpq") }
 }
+// The KPQ clock only shows inside KPQ, so it is a round signal too (Danny 11-04: the minimap name alone left a round paused
+// 2:20 into its 1st stage). Two reads in step (the second = the first minus the seconds between, within 15 s) mean "in a
+// round": KPQ turns on (Auto), the between-rounds pause lifts, and the round's start is taken from the first of the two when
+// the minimap names the stage later. The clock starts over each round, so a steady read 30+ s above where the last round's
+// clock should be is a new round, even when the minimap missed Kerning City in between. Stage borders still come from the
+// minimap. A single read only feeds the stage times (as before), so one misread can't un-pause anything.
 function kpqTime(left, t){
-  kpq.left = left; kpq.leftT = t;
-  for (const p of [kpq.stage, kpq.round]) if (p && p.left0 === null) p.left0 = left + (t - p.t0) / 1000;   // clock first seen mid-stage
+  const c = kpq.clk, steady = !!c && t - c.t <= 15e3 && Math.abs(c.left - (t - c.t) / 1000 - left) <= 3, was = kpqLeftAt(t);
+  kpq.clk = {left, t};
+  if (steady && was !== null && left > was + 30){ if (kpq.inside) kpqEnd(t, true, "left"); kpq.inside = false; kpq.left = null; note("KPQ clock started over: a new round", "kpq") }
+  if (kpq.left === null || steady || Math.abs(left - kpqLeftAt(t)) <= 3){
+    kpq.left = left; kpq.leftT = t;
+    for (const p of [kpq.stage, kpq.round]) if (p && p.left0 === null) p.left0 = left + (t - p.t0) / 1000;   // clock first seen mid-stage
+  }
+  if (!steady || wrap) return;
+  if (!kpq.on && settings.kpqAct !== "grind"){ kpq.on = true; kpq.phase = "rush"; kpqRefresh(); $("#status").textContent = "KPQ clock on screen: KPQ run spotted." }
+  if (!kpq.on) return;
+  if (!kpq.inside && !kpq.pend){ const st = session?.stats(); kpq.pend = {t: c.t, left: c.left, exp: st?.exp || 0, mesos: st?.mesos || 0, snap: kpqSnap()} }
+  if (kpq.hold && !held){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ clock on screen: tracking again." }
 }
 function kpqEnd(t, round, end){
   if (kpq.stage){ const id = kpq.stage.id, sec = kpqSince(kpq.stage, t); (kpq.stageTimes[id] ||= []).push(sec); kpq.round?.list.push([KPQ_STAGE[id], clockAt(kpq.stage.t0), Math.round(sec)]); kpq.stageExp[id] = (kpq.stageExp[id] || 0) + Math.max(0, (session?.stats().exp || 0) - kpq.stage.exp0); kpq.stage = null }
@@ -217,17 +233,20 @@ function kpqMap(id, t){
       // cleared: from the Last stage on to Bonus or Exit. Clear time = 1st stage to then (Bonus left out, so Bonus and Rush compare)
       if (kpq.stage?.id === "80000400" && kpq.round) kpq.round.clear = kpqSince(kpq.round, t);
       kpqEnd(t, String(id) === "80000600", "Exit");
-      if (KPQ_STAGE[id]){ const p = {id: String(id), t0: t, left0: kpqLeftAt(t), exp0: session?.stats().exp || 0}; kpq.stage = p; if (!kpq.round){ const st = session?.stats(); kpq.round = {n: kpq.rounds, t0: t, left0: p.left0, exp0: st?.exp || 0, mesos0: st?.mesos || 0, startStage: String(id), stages: {}, list: [], snap0: kpqSnap(), bonus: null} }
+      // pd: the KPQ clock showed the round before the minimap named a stage (kpqTime): the round and its first stage start there
+      const pd = !kpq.round && kpq.pend; kpq.pend = null;
+      if (KPQ_STAGE[id]){ const p = {id: String(id), t0: pd ? pd.t : t, left0: pd ? pd.left : kpqLeftAt(t), exp0: pd ? pd.exp : session?.stats().exp || 0}; kpq.stage = p; if (!kpq.round){ const st = session?.stats(); kpq.round = {n: kpq.rounds, t0: p.t0, left0: p.left0, exp0: pd ? pd.exp : st?.exp || 0, mesos0: pd ? pd.mesos : st?.mesos || 0, startStage: String(id), stages: {}, list: [], snap0: pd ? pd.snap : kpqSnap(), bonus: null} }
         if (String(id) === BONUS_MAP && kpq.round && !kpq.round.bonus){ kpq.round.bonus = {t0: t, left0: p.left0, snap: kpqSnap(), fought: false}; kpq.phase = "bonusWait" }
         else if (String(id) !== BONUS_MAP) kpq.phase = "rush" }
       if (KPQ_STAGE[id] && kpq.round) kpq.round.stages[String(id)] = 1;
       if (KPQ_STAGE[id]) note(`KPQ round ${kpq.rounds}: ${KPQ_STAGE[id]} stage` + (kpq.round && kpq.round.clear != null && String(id) === "80000500" ? ` (cleared in ${mss(kpq.round.clear)})` : ""), "kpq");
     }
     kpq.inside = true;
-    if (kpq.hold && !held){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ round " + kpq.rounds + ": tracking again." }
+    // "round" = one KPQ attempt, 1st stage to Exit; the stage is named so "round 2" isn't read as the 2nd stage (Danny 11-04)
+    if (kpq.hold && !held){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ round " + kpq.rounds + (KPQ_STAGE[id] ? ", " + KPQ_STAGE[id] + " stage" : "") + ": tracking again." }
   } else {
     kpqEnd(t, true, "left");
-    kpq.inside = false; kpq.phase = String(id) === KERNING ? "primed" : "idle";
+    kpq.inside = false; kpq.pend = null; kpq.phase = String(id) === KERNING ? "primed" : "idle";
     if (!kpq.hold){ kpq.hold = true; if (session.state.pausedAt === null) pauseAt(t); $("#status").textContent = "KPQ: paused between rounds. Picks back up on the next stage." }
   }
 }
@@ -369,7 +388,7 @@ function slowCheck(ms){
 function onEvent(e, t){
     if (wrap && e.type !== "inv" && e.type !== "wallet" && e.type !== "glyph") return;   // after Stop: only the end inventory look counts
     if (held && /^(exp|bonus|meso|item|itemraw|bar|wallet)$/.test(e.type)) return;   // paused by hand: a break, nothing counts (the bar and the wallet too — a party kill on a boss map used to inflate EXP/hr while paused; bug-hunt 2026-11-02). Stop clears held first, so the wrap-up wallet read still lands
-    if (e.type === "kpqtime"){ if (kpq) kpqTime(e.left, e.t); return }
+    if (e.type === "kpqtime"){ log("kpq", {left: e.left}); if (kpq) kpqTime(e.left, e.t); return }   // logged: bug reports show what the clock read
     if (e.type === "vitals"){ jr.event(e); ovVit = {hp: e.hp, mp: e.mp, t: Date.now()}; try { ovSend?.(true) } catch {}; return }   // HP / MP: journey log + Chat blocker bars; the session doesn't count them
     // a pickup-line letter learned from an item name: kept for next time (at most 300)
     if (e.type === "glyph"){ const g = [...(settings.glyphs || []), {ch: e.ch, w: e.w, h: e.h, bits: e.bits}].slice(-300); host.settings({glyphs: g}).then(x => settings = x); log("glyph", {ch: e.ch}); return }

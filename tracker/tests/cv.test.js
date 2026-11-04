@@ -26,6 +26,20 @@ const crop = (w, h, f) => { const d = new Uint8ClampedArray(w * h * 4); for (let
     for (const f of ["frame-046.png", "frame-042.png"]) assert.strictEqual(k("frame-000.png", "nameTextCrop"), k(f, "nameTextCrop"), "name crop stable") }
   console.log("ocrcache ok");
 
+  // KPQ 1st stage minimap title (Danny's bug reports 2026-11-04, tests/frames-kpq/minimap-1st-stage.png: 600x160 top-left of a
+  // 1280x720 frame): two 7 px lines 7 px apart must pair (a strict "<" lost them, the round sat paused 2:20), and the last good
+  // rect re-cut on a later frame is re-measured to this name's width (a short Kerning City rect cut it to "1st Accompa")
+  { const R = require("../app/readers.js"), readPng = require("./cv_util.js"), src = readPng(path.join(__dirname, "frames-kpq", "minimap-1st-stage.png"));
+    const img = {w: 1280, h: 720, d: new Uint8ClampedArray(1280 * 720 * 4)};
+    for (let y = 0; y < src.h; y++) img.d.set(src.d.subarray(y * src.w * 4, (y + 1) * src.w * 4), y * 1280 * 4);
+    const mc = R.mapTextCrop(img);
+    assert.ok(mc, "KPQ 1st stage title found");
+    assert.ok(mc.rect.y1 - mc.rect.y0 > 20 && mc.rect.y1 - mc.rect.y0 < 40 && mc.rect.x1 > 230, "both title lines, full width: " + JSON.stringify(mc.rect));
+    const fit = R.mapRefit(img, {...mc.rect, x1: 120});
+    assert.strictEqual(fit.x1, mc.rect.x1, "a stale narrow rect is re-measured to the whole name");
+    assert.strictEqual(fit.y0, mc.rect.y0, "re-measuring keeps the rows") }
+  console.log("minimap title ok");
+
   // EXP bar verdicts: a jump is a red herring until the same reading comes twice (Danny 10-29)
   { const {barVerdict, barJump} = require("../app/readers.js"), last = {exp: 18572, pct: 64.09, level: 22};
     const v = (bar, o = {}) => barVerdict({bar, last, level: 22, steady: false, agrees: true, fits: true, ...o});
