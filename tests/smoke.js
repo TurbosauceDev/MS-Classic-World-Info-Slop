@@ -82,9 +82,20 @@ const boxGaps = require("./boxgaps");
     check(await p.$eval('.jfpill[data-jfilter="All"]', b => b.classList.contains("on")), "All is highlighted again");
     const want = await p.evaluate(() => Math.min(window.POSTS.length, 8)) + ups;
     check((await p.$$eval("#feed .jpost", l => l.length)) === want, "All restores the whole timeline"); }
-  // a click on the card body minimizes it, the fold chevron reopens it, the title opens the article
+  // a click on the card body minimizes it, the fold chevron reopens it, the title opens the article. The click
+  // must land on a link-free run of the body: links never toggle the card (by design), so a click that lands on
+  // an auto-linked name follows the link instead - on file:// that is a chrome-error page (this scene used to
+  // click the wrapper's center and only survived because the then-first card's center had no link in it).
   { const slug = await p.$eval("#feed .jpost", c => c.dataset.slug);
-    await p.click("#feed .jpost .jfoldw");
+    await p.$eval("#feed .jpost", c => c.scrollIntoView({ block: "center" })); await p.waitForTimeout(80);
+    const spot = await p.$eval("#feed .jpost .jfoldw", w => {
+      const walk = document.createTreeWalker(w, NodeFilter.SHOW_TEXT); let n;
+      while ((n = walk.nextNode())){
+        if (n.parentElement.closest("a") || n.textContent.trim().length < 12) continue;
+        const r = document.createRange(); r.selectNodeContents(n); const b = r.getBoundingClientRect();
+        if (b.width > 40) return { x: b.left + 24, y: b.top + b.height / 2 } }
+      return null });
+    if (spot) await p.mouse.click(spot.x, spot.y); else await p.click("#feed .jpost .jfold");
     check(await p.$eval("#feed .jpost", c => c.dataset.jstate) === "min", "clicking a card minimizes it to the header");
     check(await p.evaluate(s => sessionStorage.getItem("jx:" + s) === "min", slug), "a card's minimized view is remembered for the trip back");
     await p.click("#feed .jpost .jfold");
