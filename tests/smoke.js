@@ -105,6 +105,21 @@ const boxGaps = require("./boxgaps");
   await p.mouse.move(4, 300); await p.waitForTimeout(80);   // the open tooltip would sit over the Back button
   await p.click("#jart .jback"); await p.waitForTimeout(150);
   check(!(await p.isHidden("#home")), "the article's own Back button returns to the feed");
+  // the changelog-derived update posts auto-link their names too (Turbozo 11-04: tooltips "broke" in the articles -
+  // the update-post twin of a post carried its names as plain text: nothing to hover, no tooltip, no route). The
+  // build links each changelog card like a post body; deep-link the v0.22.1 entry (it names Mushmom/Work Gloves)
+  // and hover the first mention. The slug is history, not a pin: that entry is on the changelog for good.
+  await p.goto("about:blank"); await p.goto(SRC + "#a=log-v0-22-1");   // a share link opens a fresh load, not a hash hop
+  await p.waitForFunction(() => document.documentElement.dataset.ready === "1", null, {timeout: 30000});
+  check(await p.$eval("#jart .jart", a => a.dataset.slug) === "log-v0-22-1", "a share link deep-opens a changelog-derived article");
+  if (await p.$("#jart .jbody a[data-ent]")){
+    await p.evaluate(() => document.querySelector("#jart .jbody a[data-ent]").scrollIntoView({block: "center"}));
+    await p.waitForTimeout(450);   // any scroll hides #qtip site-wide; let the settle land before hovering
+    await p.hover("#jart .jbody a[data-ent]"); await p.waitForTimeout(120);
+    check(await p.$eval("#qtip", e => !e.hidden && e.textContent.length > 10), "an update post's linked names carry the game-data tooltip too");
+  }
+  await p.mouse.move(4, 300); await p.waitForTimeout(80);
+  await p.goto("about:blank"); await p.goto(SRC); await p.waitForFunction(() => document.documentElement.dataset.ready === "1", null, {timeout: 30000});   // reboot clean: the later scenes count journal links and walk every tab
   // Overview = the old home grid (the page directory), now its own page under Home
   check(await p.$$eval("#overview .hlink", l => l.length) === 30, "overview page lists every page");
   { const miss = await p.evaluate(() => { const h = new Set([...document.querySelectorAll("#overview [data-go]")].map(a => a.dataset.go)); return [...document.querySelectorAll('[id^="t-"]')].map(b => b.id.slice(2)).filter(x => x !== "overview" && !h.has(x)) });
