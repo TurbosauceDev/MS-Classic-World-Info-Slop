@@ -151,9 +151,9 @@ const goHome = () => { showCat("home"); TABS.forEach(x => { x.setAttribute("aria
 // other time they behave as before (and close an open article, whose Back state would otherwise survive).
 const homeJump = () => {
   if (PATH_SYNC && Object.keys(HASH).length > 0){
-    try { localStorage.setItem("tab", "home") } catch(e) {}
+    try { localStorage.setItem("tab", "home") } catch(e) {}   // storage off (private mode): the reload just boots to the last saved page
     location.assign(BASE); return }
-  try { if (NAVREG.journal) NAVREG.journal.set(null) } catch(e) {}
+  try { if (NAVREG.journal) NAVREG.journal.set(null) } catch(e) {}   // the article's closer: absent pre-boot or on a file copy where the journal never registered
   goHome();
 };
 const goCat = cat => cat === "home" ? homeJump() : $("#t-" + (LASTTAB[cat] || TABS.find(x => x.dataset.cat === cat).dataset.tab)).click();
