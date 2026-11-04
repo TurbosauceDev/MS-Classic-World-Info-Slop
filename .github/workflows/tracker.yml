@@ -9,8 +9,9 @@ on:
     paths: ["tracker/**", ".github/workflows/tracker.yml", "src/pages/log.html"]   # log.html: tracker/tests/sitesync.test.js
   # PRs too (Hermes 2026-11-03): three Dependabot tracker bumps merged on green SITE checks on 11-02 and each broke this
   # build on main. A PR run builds and tests only; publishing needs a tag or the manual "release" box.
+  # Every PR runs this workflow (no paths filter) so the "tracker ok" check always reports: main's ruleset requires it
+  # (Hermes 2026-11-04). The `changes` job skips build + ui on PRs that touch none of TRACKER_PATHS.
   pull_request:
-    paths: ["tracker/**", ".github/workflows/tracker.yml", "package.json", "src/pages/log.html"]
   workflow_dispatch:
     inputs:
       release:
@@ -20,7 +21,25 @@ on:
 permissions:
   contents: write
 jobs:
+  # PRs only: did this PR touch the tracker? Every other event always builds.
+  changes:
+    runs-on: ubuntu-latest
+    permissions: { pull-requests: read }
+    outputs:
+      tracker: ${{ steps.f.outputs.tracker }}
+    steps:
+      - id: f
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TRACKER_PATHS: '^(tracker/|\.github/workflows/tracker\.yml$|package\.json$|src/pages/log\.html$)'
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then echo "tracker=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          files=$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" --jq '.[].filename')
+          echo "$files"
+          if echo "$files" | grep -Eq "$TRACKER_PATHS"; then echo "tracker=true" >> "$GITHUB_OUTPUT"; else echo "tracker=false" >> "$GITHUB_OUTPUT"; fi
   build:
+    needs: changes
+    if: needs.changes.outputs.tracker == 'true'
     runs-on: windows-latest
     defaults: { run: { working-directory: tracker } }
     steps:
@@ -41,6 +60,8 @@ jobs:
         with: { name: installer, path: tracker/dist/*.exe }
   # the window's own tests in Chromium (Electron's host stubbed): every tab, the box layout and window resizing
   ui:
+    needs: changes
+    if: needs.changes.outputs.tracker == 'true'
     runs-on: ubuntu-24.04   # not -latest: it became 26.04, which Playwright 1.56.1 refuses (2026-10-31)
     defaults: { run: { working-directory: tracker } }
     steps:
@@ -58,3 +79,15 @@ jobs:
       - run: node tests/overlaywin.test.js
       - run: node tests/monkey.test.js
       - run: node tests/quest.test.js
+  # The one check main's ruleset requires from this workflow: green when build and ui passed, or were skipped because the
+  # PR doesn't touch the tracker; red when anything failed or was cancelled (a skipped job alone would count as passing).
+  tracker-ok:
+    name: tracker ok
+    needs: [changes, build, ui]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "changes=${{ needs.changes.result }} build=${{ needs.build.result }} ui=${{ needs.ui.result }}"
+          [ "${{ needs.changes.result }}" = "success" ] || exit 1
+          for r in "${{ needs.build.result }}" "${{ needs.ui.result }}"; do case "$r" in success|skipped) ;; *) exit 1;; esac; done
