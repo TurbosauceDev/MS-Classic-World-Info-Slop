@@ -89,6 +89,13 @@ for c in reversed(cards):
 vers.reverse()
 it = iter(vers)
 log = re.sub(card, lambda m: m.group(1) + f'<span class="ver">v{next(it)}</span> ', log)
+# changelog names auto-link exactly like the posts' names do (Turbozo 11-04: the update posts promised the hover
+# tooltip, but a changelog-derived article carried its names as plain text - nothing to hover or click). Each
+# card is linked on its own so the per-body cap holds; titles sit in <h3> and are skipped by auto_link, and the
+# anchors carry data-ent="kind:id" so 77-journal.js shows the same game-data card the database pages show.
+_paths = posts.name_paths(D)
+log = "".join(chunk if not chunk.startswith('<div class="card"') else posts.auto_link(chunk, _paths)
+              for chunk in re.split(r'(?=<div class="card")', log))
 html = head + '<section id="log"' + log + "</section>" + tail
 assert "__SITEVER__" in html
 html = html.replace("__SITEVER__", vers[0])
