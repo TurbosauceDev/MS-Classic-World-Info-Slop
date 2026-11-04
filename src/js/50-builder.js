@@ -684,6 +684,7 @@ BLD = {get S(){ return S }, weightsAt: (cls, branch, fam, lvl) => { const keep =
     try { applyDefaults(); guideBuild(); return Object.fromEntries(statWeights(calc(S.sp))) } finally { S = keep } }, W, ARMOR, BRANCHES, JOBLABEL, PRIMARY, SLOTS, apTotal, kindOf, faStats, TWO_HANDED,
   apply(fn){ fn(S); refresh() }, skills: jobSkills, tierOf, spPool, spentIn, addSP, canSP, autoSP, onRender: f => onRender.push(f), extra: null,
   group(fn){ HIST.hold = true; try { fn() } finally { HIST.hold = false; track() } }};   // several changes, one Undo step
+window.BLD = BLD;   // tests + the console (the Pages copy runs the app inside a promise callback, so a bare let is not a global there)
 if (!Object.keys(S.sp).length) rebuild();
 refresh();
 })();

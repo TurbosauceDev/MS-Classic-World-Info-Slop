@@ -21,7 +21,7 @@ const boxGaps = require("./boxgaps");
   // cards (Turbozo 11-04), day-grouped. Post CONTENT is never pinned here: posts land through the Discord bridge,
   // and a content check would fail CI on a good post.
   check(!(await p.isHidden("#home")) && await p.evaluate(() =>
-      document.querySelectorAll("#feed .jpost").length === Math.min(POSTS.length, 8) + Math.min(document.querySelectorAll("#log .changelog .card").length, 6)),
+      document.querySelectorAll("#feed .jpost").length === Math.min(window.POSTS.length, 8) + Math.min(document.querySelectorAll("#log .changelog .card").length, 6)),
     "home newsfeed opens first: newest posts + changelog entries as full post cards");
   check(await p.$$eval("#feed .jupd", l => l.length) === 6 && await p.$eval("#feed .jupd .ver", v => /^v\d+\.\d+\.\d+$/.test(v.textContent))
     && await p.$eval("#feed .jupd .jauthor", a => a.textContent) === "Glorg",
@@ -30,7 +30,7 @@ const boxGaps = require("./boxgaps");
       l => l.length === 6 && l.every(i => i.src.startsWith("data:image/") && i.naturalWidth > 0)),
     "every feed card wears its poster's avatar, the updates wear the Orange Mushroom sprite");
   check(await p.$$eval("#feed .jimg img", l => l.every(i => i.src.startsWith("data:image/") && i.naturalWidth > 0))
-    && (!await p.evaluate(() => POSTS.some(x => x.img)) || await p.$$eval("#feed .jimg img", l => l.length) >= 1),
+    && (!await p.evaluate(() => window.POSTS.some(x => x.img)) || await p.$$eval("#feed .jimg img", l => l.length) >= 1),
     "a post's main image renders when the post carries one");
   check(await p.$$eval("#feed .fday", l => l.length) >= 1 && await p.$eval("#feed .jpost .jbody", b => b.innerHTML.length) > 40,
     "feed groups by day, post bodies render (post content never pinned)");
@@ -112,9 +112,9 @@ const boxGaps = require("./boxgaps");
     "two rows: a section opens on its landing page, shown as an Overview pill"); await layout("side");
   await p.click('.sitefoot [data-foot="log"]'); check(!(await p.isHidden("#log")), "footer: Changelog");
   await p.click('.sitefoot [data-foot="journal"]'); check(!(await p.isHidden("#journal")) && await p.evaluate(() =>
-      document.querySelectorAll("#journal .jpost").length === POSTS.length && POSTS.length >= 1
-      && document.querySelectorAll("#journal .jmeta").length === POSTS.length
-      && document.querySelectorAll("#journal .jbody a").length === POSTS.reduce((n, x) => n + (x.html.match(/<a /g) || []).length, 0)),
+      document.querySelectorAll("#journal .jpost").length === window.POSTS.length && window.POSTS.length >= 1
+      && document.querySelectorAll("#journal .jmeta").length === window.POSTS.length
+      && document.querySelectorAll("#journal .jbody a").length === window.POSTS.reduce((n, x) => n + (x.html.match(/<a /g) || []).length, 0)),
     "footer: Journal opens, every post renders as a card with its byline and auto links");
   await p.click("#sbhome"); check(!(await p.isHidden("#home")) && await p.isVisible("#feed"), "sidebar Home returns to the newsfeed");
   await p.click('#home .feedlinks [data-go="overview"]'); check(!(await p.isHidden("#overview")) && await p.getAttribute("#t-overview", "aria-selected") === "true", "feed header opens the Overview page");
