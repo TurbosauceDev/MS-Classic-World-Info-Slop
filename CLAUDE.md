@@ -17,7 +17,7 @@ it from [docs/ai/fixtures.md](docs/ai/fixtures.md) instead of opening images.
   rewrites, broad research) offer a cheaper alternative first (a test, a targeted check).
 - Every real bug becomes a test/fixture. Prefer automated tests (CI runs them) over Claude audit passes.
 - One feature per thread; close it when shipped.
-- **Hand-off on the way out:** in the same push as the work, add 2-3 lines to the docs/ai page for your area (what
+- **Hand-off on the way out:** in the same PR as the work, add 2-3 lines to the docs/ai page for your area (what
   changed, new traps), a dated line to decisions.md for each call Danny made, and a row in fixtures.md per new test
   image. `node tests/docs.test.js` (CI: docs.yml) fails if a path or command named in these docs no longer exists.
 
@@ -35,13 +35,18 @@ it from [docs/ai/fixtures.md](docs/ai/fixtures.md) instead of opening images.
 - Don't re-run `fetch_osms.sh` / `build_data.py` unless data logic or the export changed.
 - Don't read the live artifact back; publish dist straight to it. `dist/` is not committed (2026-11-02): run `python3 scripts/build.py` first.
 
-## Branches, deploy
-- Default branch: `main` (renamed from `claude/trusting-bell-fqgar6` 2026-10-20). Site, tracker, server, CI all run from it.
-- Pushing to it = production (Pages redeploys). Standing permission (Danny 10-19, widened 10-22): push, publish the
-  artifact and release the tracker whenever the work is ready and tested; no per-push "push" needed.
-- Before pushing: `git fetch origin main && git rebase origin/main`.
-  Build/publish the artifact only from that latest base, so another thread's newer version isn't overwritten.
-- After pushing: wait for pages.yml, check the Home "Site version: built ..." stamp on
+## Branches, PRs, deploy
+- Default branch: `main`. Site, tracker, server, CI all run from it. Merging to it = production (Pages redeploys).
+- **Nobody pushes to `main`** (Danny 11-03; a GitHub ruleset enforces it). Only the poll workflows commit there.
+- Flow: branch `<agent>/<topic>` off fresh `origin/main`, one change per branch -> push -> open a PR ->
+  `gh pr merge --auto --squash` (merges itself once the required checks pass; the branch then deletes itself).
+  Required: `docs`, `test (core)`, `test (pages)`, `test (edge)`, `tracker ok`. The PR title becomes the main commit.
+- Red check: fix it, or re-run once if flaky (`gh run rerun <id> --failed`). Never bypass or `--admin` merge.
+- Standing permission (Danny 10-19/10-22) still covers merging your own green PR, publishing the artifact and
+  releasing the tracker. Still wait for Danny: tracker dependency majors (his in-game test), instruction files
+  (CLAUDE.md, START-HERE) as a draft PR he reads.
+- No orphan branches: a branch you stop working on gets a PR or gets deleted.
+- After merge: wait for pages.yml, check the Home "Site version: built ..." stamp on
   https://maplestory.scumlord.studio (the github.io address only redirects), smoke test green, then report once.
 - Artifact (build, then republish `dist/index.html` after every site change; never commit dist): https://claude.ai/artifact/Facfj1DVkTNyQyrbHHFQcH
 - One owner per shared area (Home cards, global CSS, the data build, CLAUDE.md/docs): check with the coordinator first.
