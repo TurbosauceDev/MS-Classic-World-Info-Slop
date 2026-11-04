@@ -12,6 +12,7 @@
 // the old home grid) links every page; the Journal page lists every post, newest first.
 const POSTS = __POSTS__;
 const POST_AVATARS = __AVATARS__;
+window.POSTS = POSTS;   // tests + the console (the Pages copy runs the app inside a promise callback, so a bare const is not a global there)
 (() => {
 const day = t => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t || ""); return m ? new Date(Date.UTC(+m[1], m[2] - 1, +m[3]))
   .toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) : "" };

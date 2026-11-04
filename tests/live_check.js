@@ -1,5 +1,5 @@
-// Post-deploy check against the live site (the full smoke.js can't run there: it reads app globals like BLD, and the Pages copy
-// wraps the app script in a promise callback). Run: node tests/live_check.js [url]. Waits for data-ready, opens Settings,
+// Post-deploy check against the live site (a lighter pass than smoke.js's SMOKE_URL run: no dist build needed, and it
+// visits every tab fast). Run: node tests/live_check.js [url]. Waits for data-ready, opens Settings,
 // visits every tab, checks Copy link gives a clean address and that no page error fired.
 const { chromium } = require("playwright");
 (async () => {

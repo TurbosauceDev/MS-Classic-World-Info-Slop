@@ -1,5 +1,6 @@
 const D = __DATA__;
 const $ = s => document.querySelector(s);
+window.$ = $;   // tests + the console (the Pages copy runs the app inside a promise callback, so a bare const is not a global there)
 // level cap is 100 at launch. The EXP table we embed stops at 70; the launch client builds the rest (OSMS formulas page):
 // levels 51-89 cost ×1.0548 the level before, 90-99 ×2.1.
 const EXP_SURE = 100, MAX_LEVEL = 100;   // whole 1-99 table read from the launch client (OSMS formulas page)

@@ -286,6 +286,7 @@ const mapPots = mid => { const out = new Set(); for (const [id] of D.maps[mid]?.
 // "recent". PWNOW: cheapest live Free Market listing per non-equip item {itemId: [price each, qty, channel, map, seller]}, as of
 // D.pw.listed (UTC), from meso.watch's live listings. Equips left out: rolls and scrolls make them incomparable (Danny, 2026-10-19).
 const PW = D.pw?.it || {}, PWNOW = D.pw?.now || {}, MDB = D.mdb?.it || {}, MDBL = D.mdb?.ls || {};
+window.PW = PW; window.PWNOW = PWNOW;   // tests + the console (the Pages copy runs the app inside a promise callback, so a bare const is not a global there)
 const pwSolid = id => PW[id] && !(PW[id][4] & 1) ? PW[id][0] : 0;
 const pwTrend = id => { const p = PW[id], t = p?.[5]; if (t == null || p[4] & 1 || Math.abs(t) < 0.005) return "";
   return `<span class="${t > 0 ? "up" : "down"}" title="Recent price trend (meso.watch)">${t > 0 ? "▲" : "▼"}${Math.round(Math.abs(t) * 100)}%</span>` };
