@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-        with: { ref: main }
+        with: { ref: main, ssh-key: "${{ secrets.POLL_DEPLOY_KEY }}" }   # deploy key: the one actor main's ruleset lets push
       - name: Fetch, commit if changed
         timeout-minutes: 12   # step-level (audit P11): a hung fetch releases the shared lock before the job ceiling
         # push races: scripts/ci/commit_push.sh (resets onto the new main, never merges data.json)

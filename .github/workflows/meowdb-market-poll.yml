@@ -18,7 +18,7 @@ jobs:
     permissions: { contents: read }   # scrapes an outside site for 30 min: no write token here, only the commit job has one
     steps:
       - uses: actions/checkout@v7
-        with: { ref: main }
+        with: { ref: main, ssh-key: "${{ secrets.POLL_DEPLOY_KEY }}" }   # deploy key: the one actor main's ruleset lets push
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm i --no-save playwright@1.64.1 && npx playwright install --with-deps chromium   # pinned (was latest)
@@ -39,7 +39,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v7
-        with: { ref: main }
+        with: { ref: main, ssh-key: "${{ secrets.POLL_DEPLOY_KEY }}" }   # deploy key: the one actor main's ruleset lets push
       - uses: actions/download-artifact@v8
         with: { name: meowdb-market, path: /tmp/mdb }
         continue-on-error: true

@@ -18,6 +18,10 @@ NAME="" MSG="" REBUILD="" TRIES=3 BRANCH=main SRC=() ADD=()
 while getopts "n:m:s:a:r:t:b:" o; do case $o in
   n) NAME=$OPTARG;; m) MSG=$OPTARG;; s) SRC+=("$OPTARG");; a) ADD+=("$OPTARG");; r) REBUILD=$OPTARG;; t) TRIES=$OPTARG;; b) BRANCH=$OPTARG;;
   *) echo "commit_push.sh: bad option" >&2; exit 2;; esac; done
+# [skip ci]: polls push with the POLL_DEPLOY_KEY deploy key (main is PR-only; deploy keys are the ruleset's only
+# bypass, Hermes 2026-11-03). Unlike GITHUB_TOKEN those pushes fire push events; the poll's workflow_run already
+# triggers pages.yml, so skip the duplicate push-triggered pages/tests runs.
+case "$MSG" in *"[skip ci]"*) ;; *) MSG="$MSG [skip ci]";; esac
 [ -n "$NAME" ] && [ -n "$MSG" ] && [ ${#SRC[@]} -gt 0 ] || { echo "commit_push.sh: -n, -m and at least one -s are required" >&2; exit 2; }
 SNAP=$(mktemp -d)
 for f in "${SRC[@]}"; do [ -f "$f" ] && mkdir -p "$SNAP/$(dirname "$f")" && cp "$f" "$SNAP/$f"; done

@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
-        with: { ref: main }
+        with: { ref: main, ssh-key: "${{ secrets.POLL_DEPLOY_KEY }}" }   # deploy key: the one actor main's ruleset lets push
       - run: python3 tests/shopscans_test.py
         timeout-minutes: 2
       - name: Install headless chromium (browser fallback for challenge walls)

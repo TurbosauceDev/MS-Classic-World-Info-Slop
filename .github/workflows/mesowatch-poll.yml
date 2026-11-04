@@ -53,6 +53,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ssh-key: "${{ secrets.POLL_DEPLOY_KEY }}"   # deploy key: the one actor main's ruleset lets push
           fetch-depth: 0   # need full history for `git show HEAD:<path>` in mesowatch_claude_review.py
 
       - uses: actions/setup-node@v4
