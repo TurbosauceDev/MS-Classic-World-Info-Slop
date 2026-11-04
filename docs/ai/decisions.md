@@ -29,7 +29,6 @@ above as a dated line and note the resolution date in its place.
 - 2026-10-08 Loot income assumption 5% per kill (he called 15% too optimistic); 10%/15%/off selectable; always labelled an assumption.
 - 2026-10-13 mapleexp.com drops are CMS v79 (China), not Classic: never use them. Its EXP table to Lv 100 is fine.
 - 2026-10-18 Magician 1st job is Lv 10 in Classic ("its 10 now"), not the pre-BB 8.
-- 2026-10-18 meso.watch: never bypass its Cloudflare check; refresh only from the dev CSV he drops in chat.
 - 2026-10-18 Where to train uses OSMS per-map `mob_capacity`, not meowdb's 75%-of-spawns guess.
 - 2026-10-18 Builder screenshot import counts gear at base stats ("average drop"). Superseded 2026-11-01 where the stat window shows a (base+gear) split. [superseded 2026-11-01: base AP from the stat window split where readable]
 - 2026-10-18 Daily shared-data.yml job may commit shared tracker runs to the default branch.
@@ -91,11 +90,6 @@ above as a dated line and note the resolution date in its place.
 
 ## Data sync (meso.watch → GitHub)
 
-- 2026-10-19 CSV ingest of meso.watch into `data/sources/mesowatch_csv/` (on branch `data/mesowatch-sync`) is sanctioned; Danny is friends with the meso.watch team and has verbal OK. Don't extend to per-item sales ledger or model training without checking. [superseded 2026-10-20: one scheduled CI poll]
-- 2026-10-19 Use side branch `data/mesowatch-sync` for the CSV push, NOT `claude/trusting-bell-fqgar6`. Avoids wasteful Pages/CI rebuilds and racing Danny's active pushes to the default branch. [superseded 2026-10-20: side branch removed]
-- 2026-10-19 Push via Git Data API only (no clone). force=false, retry on 422 race. Token in `/home/z/my-project/.secrets/gh-token` (fine-grained, scoped to this repo, Contents:write). Rotate via GitHub UI + overwrite the file; don't paste in chat. [superseded 2026-10-20: CI uses GITHUB_TOKEN]
-- 2026-10-19 Standing push/publish approval for CSV refreshes only — "i trust what we're doing here. i want our mesowatch item pricing to always be fairly accurate." (Danny). Still honor the in-thread `push` rule for anything else.
-- 2026-10-19 Poller is on-demand ("refresh" in chat), not scheduled. No cron/systemd in Danny's CLI sandbox. If Danny wants persistence, he copies the scripts to his own box and runs them on cron. [superseded 2026-10-20: scheduled CI poll]
 - 2026-10-19 Two endpoints tracked: `https://meso.watch/data/market.json` (~daily, full pricing snapshot) and `https://meso.watch/data/fresh/Classic%20World.json` (~15 min, live FM listings). Each only triggers a CSV rewrite when its own `generated_at` advances — they update on different cadences.
 - 2026-10-19 localStorage is the transport between agent-browser's JS eval and the bash script. Blob-URL downloads dropped silently on the second invocation (Chrome bug, see handoff doc).
 - 2026-10-19 Cloud threads consume the poller's CSVs (scripts/refresh_mesowatch.sh); the poller itself (headless browser) stays in Danny's sandbox. Danny: "please just interact with this tool". [superseded 2026-10-20: CI poll replaced the sandbox poller]
@@ -114,7 +108,7 @@ above as a dated line and note the resolution date in its place.
 
 ## Architecture consolidation (chat-CLI poller → scheduled CI workflow)
 
-- 2026-10-20 Consolidated meso.watch pipeline into one scheduled GitHub Actions workflow (.github/workflows/mesowatch-poll.yml). Cron `0,30 * * * *` fires every 30 min; fetches meso.watch via agent-browser in CI; runs fetch_mesowatch.py + build_data.py prices + build.py; commits to main as 'meso.watch helper' if anything changed; Pages redeploys via workflow_run hook. Old chat-CLI poller + side branch + mesowatch-sync.yml workflow removed as redundant. [supersedes 2026-10-19]
+- 2026-10-20 Consolidated meso.watch pipeline into one scheduled GitHub Actions workflow (.github/workflows/mesowatch-poll.yml). Cron `0,30 * * * *` fires every 30 min; fetches meso.watch via agent-browser in CI; runs fetch_mesowatch.py + build_data.py prices + build.py; commits to main as 'meso.watch helper' if anything changed; Pages redeploys via workflow_run hook. Old chat-CLI poller + side branch + mesowatch-sync.yml workflow removed as redundant.
 - 2026-10-20 CI workflow uses GITHUB_TOKEN (auto-injected, no PAT in CI). OSMS data cached via actions/cache keyed on OSMS_REF — first run ~60s (cache miss + Chrome install), subsequent runs ~30s (cache hit).
 - 2026-10-20 Commit author renamed from 'meso.watch bot' to 'meso.watch helper' (Danny: "the word bot is a bad look"). Historical commits force-rewritten via Git Data API to scrub 'bot' from author metadata.
 - 2026-10-20 Dropped the Anthropic API dependency for commit messages. The commit-message script (scripts/mesowatch_claude_review.py) now templates from the diff locally — top movers + anomalies + live listing changes. Old Claude-API version is in git history (commit 2da935f0a955) if we want to revive it.
@@ -290,6 +284,7 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-11-03 (Danny): "pause all shop scans and freeze market info where it is. this is temporary, we will come back online soon." All five price poll workflows are disabled (classicmarket, meowdb market, mesoindex, shopscans; meso.watch since 11-02), so the committed `data/sources/` files stay as they are and the site keeps showing them. `scripts/watchdog.py` skips every source whose poll workflow is not active. Resume: `gh workflow enable "<name> poll"`, no code change. Provisional 24h. (Hermes)
 - 2026-11-03 (Danny): "There is no 'belonging to the other hermes session' you can work on it too as long as its not literally being edited as we speak. This is why I'm trying to build these agent2agent communications like the agent mailbox and the worklog." Any agent may pick up another agent's PR, branch or thread unless it is live (a current `[CLAIM]`, a worklog line or a push in the last hour); never switch branches or touch uncommitted files in another agent's checkout. START-HERE (trimmed in #59) gets the briefing and worklog back in the reading list, plus norms 4 (this) and 5 (log every session). Provisional 24h. (Hermes)
 - 2026-11-03 (Danny): "changing stale > paused is a good idea." While the price polls are paused, `config/prices.json` `paused_since` is set; `scripts/live_data.py` copies it to `D.pxpause`, and the site's price-source pill (`src/js/12-prices.js`) and Source-health panel (`src/js/56c-mcihealth.js`) say "paused" with the last read time instead of "stale ... the poll may be failing silently". Resume = re-enable the poll workflows and set `paused_since` to null. Tracker shop uploads (`POST /api/shop`) stay live (Danny 11-03: "Tracker users uploading shop info is ok"). Provisional 24h. (Hermes)
+- 2026-11-03 (Danny): removed the 10-18 "never bypass meso.watch's Cloudflare check, refresh only from the dev CSV" rule and the 10-19 CSV-era lines (CSV ingest, side branch, Git Data API token, CSV-only push approval, on-demand poller); they contradicted the 10-20 CI poller and the 10-28 anti-bot call. Danny: "we don't need that cloudflare thing, we dont need that message about the csv". If the meso.watch poller returns, fetching through a real (headless) browser is OK. Deleted outright (not tagged) on his call.
 
 ## Open decisions (pending Danny)
 
