@@ -1313,3 +1313,24 @@ html[data-nav="rows"] nav button.sgh .sgo{display:inline}
 .chstage img{image-rendering:pixelated;max-height:130px}
 #char .lpdemo .lab{display:flex;flex-direction:column;gap:4px}
 #char .lpdemo input[type=text]{width:100%;box-sizing:border-box}
+
+/* Newsfeed: featured hero, tag filter, article page (Turbozo 2026-11-04) */
+.jtag{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;cursor:pointer}
+.jtag:hover{border-color:var(--accent);color:var(--accent)}
+.jfeat{color:var(--accent);font-weight:700}
+.jfilter{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 2px}
+.jfpill{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;padding:3px 13px;font-size:12.5px;font-weight:600;cursor:pointer}
+.jfpill:hover{border-color:var(--accent);color:var(--accent)}
+.jfpill.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent,var(--panel))}
+.jhero{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:14px;align-items:center;cursor:pointer;margin:12px 0 0;padding:14px}
+.jhero .jheroimg{width:100%;height:100%;max-height:230px;object-fit:cover;border-radius:10px;border:1px solid var(--line);image-rendering:auto}
+.jhero h3{font-size:21px;margin:4px 0 6px;cursor:pointer}
+.jhero h3:hover{color:var(--accent)}
+.jhero:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:600px){.jhero{grid-template-columns:1fr}.jhero .jheroimg{max-height:170px}}
+.jarttop{display:flex;justify-content:space-between;gap:10px;margin:2px 0 8px}
+.jartchips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 6px}
+.jarttitle{font-size:24px;margin:2px 0 8px;text-wrap:balance}
+.jart .jimg.big img{max-height:520px}
+.jart .jbody{font-size:15px}
+.jartnav{margin-top:12px}

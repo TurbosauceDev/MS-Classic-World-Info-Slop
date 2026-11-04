@@ -34,44 +34,77 @@ const boxGaps = require("./boxgaps");
     "a post's main image renders when the post carries one");
   check(await p.$$eval("#feed .fday", l => l.length) >= 1 && await p.$eval("#feed .jpost .jbody", b => b.innerHTML.length) > 40,
     "feed groups by day, post bodies render (post content never pinned)");
-  // the fold (Turbozo 11-04): a body past the cap hides behind the frosted cutoff until "… continue reading"
+  // the fold (Turbozo 11-04): a body past the cap hides behind the frosted cutoff; "… continue reading" opens THE ARTICLE
   if (await p.$('#feed .jfoldw[data-cut="1"]')){
     check(await p.isVisible('#feed .jfoldw[data-cut="1"] .jfade') && await p.isVisible('#feed .jfoldw[data-cut="1"] .jmore'),
       "a long post folds behind the frosted cutoff with its continue-reading button");
     const slug = await p.$eval('#feed .jfoldw[data-cut="1"]', w => w.closest(".jpost").dataset.slug);
-    await p.click('#feed .jfoldw[data-cut="1"] .jmore');
-    check(await p.$eval(`#feed .jpost[data-slug="${slug}"]`, c => c.dataset.jstate) === "full", "continue reading unfolds the post");
+    await p.click('#feed .jfoldw[data-cut="1"] .jmore'); await p.waitForTimeout(120);
+    check(!(await p.isHidden("#journal")) && await p.$eval("#jart .jart", a => a.dataset.slug) === slug,
+      "continue reading opens the article page (Turbozo 11-04: every article is its own page)");
+    check(await p.$("#jart .jcomments") !== null && (await p.$eval("#jart .jbody", b => b.textContent.length)) > 0,
+      "the article page carries the full body and the comment box");
+    await p.evaluate(() => history.back()); await p.waitForTimeout(150);
+    check(!(await p.isHidden("#home")), "Back from the article returns to the feed");
   }
-  // a click on the card minimizes it to the header, the next click reopens; the view is remembered for Back
+  // featured hero, tag filter, comments-on-the-article-only, eager main images (Turbozo 11-04)
+  check(await p.$("#feed .jhero") !== null, "the newest featured post sits in the feed's hero slot");
+  check(await p.$$eval("#feed .jcomments", l => l.length) === 0, "the feed carries no comment boxes (comments live on the article page)");
+  check(await p.$$eval("#feed .jimg img", l => l.every(i => i.loading !== "lazy" && i.naturalWidth > 0)),
+    "a post's main image loads eagerly (a lazy data URI paints as a 2px sideways line until scrolled to)");
+  { const ups = await p.$$eval("#feed .jpost", l => l.filter(c => c.classList.contains("jupd")).length);
+    await p.click('.jfpill[data-jfilter="Site Updates"]'); await p.waitForTimeout(80);
+    check((await p.$$eval("#feed .jpost", l => l.length)) === ups && await p.$$eval("#feed .jpost", l => l.every(c => c.classList.contains("jupd"))) && !(await p.$("#feed .jhero")),
+      `the tag filter narrows the feed to one tag's cards (Site Updates: ${ups}, hero hidden)`);
+    check(await p.$eval('.jfpill[data-jfilter="Site Updates"]', b => b.classList.contains("on") && b.getAttribute("aria-pressed") === "true")
+      && !(await p.$eval('.jfpill[data-jfilter="All"]', b => b.classList.contains("on"))),
+      "the active filter pill is the highlighted one (the highlight follows every click)");
+    await p.click('.jfpill[data-jfilter="All"]'); await p.waitForTimeout(120);
+    check(await p.$eval('.jfpill[data-jfilter="All"]', b => b.classList.contains("on")), "All is highlighted again");
+    const want = await p.evaluate(() => Math.min(window.POSTS.length, 8)) + ups;
+    check((await p.$$eval("#feed .jpost", l => l.length)) === want, "All restores the whole timeline"); }
+  // a click on the card body minimizes it, the fold chevron reopens it, the title opens the article
   { const slug = await p.$eval("#feed .jpost", c => c.dataset.slug);
-    await p.click("#feed .jpost .cardhead h3");
+    await p.click("#feed .jpost .jfoldw");
     check(await p.$eval("#feed .jpost", c => c.dataset.jstate) === "min", "clicking a card minimizes it to the header");
     check(await p.evaluate(s => sessionStorage.getItem("jx:" + s) === "min", slug), "a card's minimized view is remembered for the trip back");
-    await p.click("#feed .jpost .cardhead h3");
-    check(await p.$eval("#feed .jpost", c => c.dataset.jstate) !== "min", "clicking a minimized card reopens it"); }
-  // comments (Turbozo 11-04): post, reply, like - the thread lives in this browser, markup stays text
-  { await p.fill("#feed .jpost .jcname", "Smoke");
-    await p.fill("#feed .jpost .jctext", "first! <img src=x onerror=alert(1)>");
-    await p.click("#feed .jpost .jcpost");
-    check(await p.$eval("#feed .jpost .jclist", l => l.querySelectorAll(".jc").length === 1 && !l.querySelector(".jcb img, .jcb script"))
-      && await p.evaluate(s => !!localStorage.getItem("jc:" + s), await p.$eval("#feed .jpost", c => c.dataset.slug)),
-      "posting a comment stores the thread locally, markup renders as text");
-    await p.click("#feed .jpost .jcre");
-    await p.fill("#feed .jpost .jcrform .jctext", "a reply");
-    await p.click("#feed .jpost .jcrepost");
-    check(await p.$eval("#feed .jpost .jclist", l => l.querySelectorAll(".jcrep").length) === 1, "a reply nests under its comment");
-    await p.click("#feed .jpost .jclike");
-    check(await p.$eval("#feed .jpost .jclike", b => b.textContent.includes("♥")), "a like sticks"); }
-  // a linked mention in a post carries the game-data tooltip on hover (Turbozo 11-04); the click keeps its clean route.
-  // Content never pinned: the scene only runs when the shipped posts actually mention something.
-  if (await p.$(".jbody a[data-ent]")){
-    await p.evaluate(() => { const a = document.querySelector(".jbody a[data-ent]"), c = a.closest(".jpost");
-      if (c && c.dataset.jstate !== "full") c.querySelector(".jmore")?.click() });   // a folded body clips its links
-    await p.evaluate(() => document.querySelector(".jbody a[data-ent]").scrollIntoView({block: "center"}));
+    await p.click("#feed .jpost .jfold");
+    check(await p.$eval("#feed .jpost", c => c.dataset.jstate) !== "min", "the fold chevron reopens a minimized card");
+    await p.click("#feed .jpost .jtitle"); await p.waitForTimeout(120);
+    check(await p.$eval("#jart .jart", a => a.dataset.slug) === slug, "clicking a card's title opens its article page"); }
+  // comments (Turbozo 11-04): post, reply, like - on the article page; the thread lives in this browser
+  { const slug = await p.$eval("#jart .jart", a => a.dataset.slug);
+    await p.fill("#jart .jcname", "Smoke");
+    await p.fill("#jart .jctext", "first! <img src=x onerror=alert(1)>");
+    await p.click("#jart .jcpost");
+    check(await p.$eval("#jart .jclist", l => l.querySelectorAll(".jc").length === 1 && !l.querySelector(".jcb img, .jcb script"))
+      && await p.evaluate(s => !!localStorage.getItem("jc:" + s), slug),
+      "posting a comment on the article stores the thread locally, markup renders as text");
+    await p.click("#jart .jcre");
+    await p.fill("#jart .jcrform .jctext", "a reply");
+    await p.click("#jart .jcrepost");
+    check(await p.$eval("#jart .jclist", l => l.querySelectorAll(".jcrep").length) === 1, "a reply nests under its comment");
+    await p.click("#jart .jclike");
+    check(await p.$eval("#jart .jclike", b => b.textContent.includes("♥")), "a like sticks");
+    await p.click("#jart .jshare"); await p.waitForTimeout(120);
+    check(await p.evaluate(() => { const b = document.querySelector("#jart .jshare"), x = b.nextElementSibling;
+      return b.textContent === "Link copied" || (x && x.classList.contains("sharebox") && /^https:\/\/maplestory\.scumlord\.studio\/news\/[a-z0-9-]+\/$/.test(x.value)) }),
+      "copy link offers the article's shareable /news/ address");
+    await p.evaluate(() => history.back()); await p.waitForTimeout(150);
+    check(!(await p.isHidden("#home")), "Back (browser or in-page) returns to the feed"); }
+  // a linked mention carries the game-data tooltip on hover (Turbozo 11-04), now read in the article where bodies
+  // never fold; the hero opens that article. Content never pinned: the scene only runs when the post mentions something.
+  await p.click("#feed .jhero"); await p.waitForTimeout(120);
+  check(!(await p.isHidden("#journal")) && await p.$("#jart .jart") !== null, "the featured hero opens its article");
+  if (await p.$("#jart .jbody a[data-ent]")){
+    await p.evaluate(() => document.querySelector("#jart .jbody a[data-ent]").scrollIntoView({block: "center"}));
     await p.waitForTimeout(450);   // any scroll hides #qtip site-wide; let the settle land before hovering
-    await p.hover(".jbody a[data-ent]"); await p.waitForTimeout(120);
+    await p.hover("#jart .jbody a[data-ent]"); await p.waitForTimeout(120);
     check(await p.$eval("#qtip", e => !e.hidden && e.textContent.length > 10), "a linked mention shows its game-data tooltip on hover");
   }
+  await p.mouse.move(4, 300); await p.waitForTimeout(80);   // the open tooltip would sit over the Back button
+  await p.click("#jart .jback"); await p.waitForTimeout(150);
+  check(!(await p.isHidden("#home")), "the article's own Back button returns to the feed");
   // Overview = the old home grid (the page directory), now its own page under Home
   check(await p.$$eval("#overview .hlink", l => l.length) === 30, "overview page lists every page");
   { const miss = await p.evaluate(() => { const h = new Set([...document.querySelectorAll("#overview [data-go]")].map(a => a.dataset.go)); return [...document.querySelectorAll('[id^="t-"]')].map(b => b.id.slice(2)).filter(x => x !== "overview" && !h.has(x)) });

@@ -59,6 +59,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
 const SHARE_BASE = "https://turbosaucedev.github.io/MS-Classic-World-Info-Slop/";
 const HASH = (() => { const o = {}; for (const part of location.hash.slice(1).split("&")){ const [k, v] = part.split("=");
   if (k === "g"){ if (/^[a-z]{2,12}$/.test(v || "")) o.g = v; continue }   // #g=<page id>: a plain link to one page (10-21)
+  if (k === "a"){ if (/^[a-z0-9-]{1,80}$/.test(v || "")) o.a = v; continue }   // #a=<post slug>: a newsfeed article (77-journal.js; the /news/ pages redirect here)
   try { if (v) o[k] = JSON.parse(decodeURIComponent(escape(atob(v.replace(/-/g, "+").replace(/_/g, "/"))))) } catch(e) {} } return o })();
 // saved page state from localStorage, keeping only keys the defaults have, with a usable type (numbers and strings
 // convert to the default's type; null default = any string or number): old versions or hand edits must not crash a page

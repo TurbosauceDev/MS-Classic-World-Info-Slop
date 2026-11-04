@@ -57,4 +57,31 @@ moved = [k for k in s3 if s3[k]["d"] == "2099-01-01"]
 assert R2.canon("item", iid) in moved, "changed item kept its old lastmod"
 assert not [k for k in moved if k.startswith("/items/") and k != R2.canon("item", iid)], "unrelated pages moved"
 assert pages_gen.load_prev("http://127.0.0.1:9/none.json")[1] == "error", "a failed fetch must report 'error'"
+# ---- news pages (Turbozo 2026-11-04): every article gets its own shareable /news/<slug>/ page
+upd = [{"slug": "log-v9-9-9", "ver": "v9.9.9", "title": "A test update", "date": "2026-11-04",
+        "desc": "Something changed on the site."}]
+news, imgs = pages_gen.news_pages(D, upd)
+assert "/news/log-v9-9-9/" in news and any(u == "/news/what-a-post-can-carry/" for u in news), "news_pages: update + journal post pages"
+d2 = pathlib.Path(tempfile.mkdtemp())
+heads = {"/news/what-a-post-can-carry/": '<meta property="og:type" content="article">\n'
+        '<meta property="og:image" content="https://maplestory.scumlord.studio/news/img/what-a-post-can-carry.jpg">'}
+s4 = pages_gen.generate(D, d2, prev_src=str(a / "sitemap-state.json"), today="2099-01-01", news=news, heads=heads)
+for u in news:
+    assert (d2 / u.strip("/") / "index.html").exists(), f"news page not written: {u}"
+    assert u in s4, f"news page missing from the sitemap state: {u}"
+np = (d2 / "news/what-a-post-can-carry/index.html").read_text()
+assert "location.replace" in np and '"/#a=what-a-post-can-carry"' in np, "a news page sends people to the app's article view"
+assert '<meta property="og:image"' in np and "/news/img/what-a-post-can-carry.jpg" in np, "a post with an image gets its og:image head"
+assert np.count("<script") <= 1, "a news page carries only the redirect script"
+up = (d2 / "news/log-v9-9-9/index.html").read_text()
+assert '"/#a=log-v9-9-9"' in up and "A test update" in up, "an update's news page redirects and names the update"
+try:
+    pages_gen.generate(D, d2, news={"/items/work-gloves/": ("x", "y", "z")})
+    assert False, "a news page colliding with a real page must fail"
+except AssertionError as e:
+    assert "share an address" in str(e), str(e)
+# the update slugs must mirror 77-journal.js exactly: log- + version with non-word runs dashed
+import pages_site
+ups = pages_site.update_posts((pathlib.Path(__file__).resolve().parent.parent / "dist/index.html").read_text())
+assert ups and ups[0]["ver"].startswith("v") and ups[0]["slug"] == "log-" + re.sub(r"[^\w]+", "-", ups[0]["ver"]).strip("-"), f"update_posts slugs mirror the app's: {ups[:1]}"
 print("pages_gen test passed:", len(s1), "pages")

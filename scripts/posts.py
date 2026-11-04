@@ -13,7 +13,13 @@ resolves to that kind's "which one?" page.
 
 Front matter may also carry `image:` (Turbozo 2026-11-04, the wowhead-style post format): a path under src/posts/
 (e.g. `image: img/welcome-to-the-journal.jpg`), baked into the post as a data URI so the page stays self-contained.
-build.py also replaces __AVATARS__ with avatars(): one sprite per poster (src/posts/avatars/<author>.png, lower-case
+`tags:` is a comma-separated list shown as filter pills on the feed (Turbozo 2026-11-04: "Maple News, Maple Patch
+Notes, Maple Misc, Site Updates, Blog Post, Guide" are the canonical ones; free-form extras are fine) and defaults
+to Blog Post. `featured: true` puts the newest featured post in the feed's hero slot. `image:` also copies the file
+to /news/img/ on the Pages copy so an article's link preview (og:image) can point at a real URL; load() keeps the
+repo-relative path in imgfile for scripts/pages_gen.py, and inject() strips it from the baked page.
+
+build.py replaces __AVATARS__ with avatars(): one sprite per poster (src/posts/avatars/<author>.png, lower-case
 file name), so a card can wear its poster's avatar and a changelog entry can be a post by the site's own poster.
 
 build.py replaces __POSTS__ with json([...]) (newest first). tests/posts_test.py checks the contract end to end.
@@ -34,6 +40,9 @@ MIN_NAME = 4          # shorter names never link ("Heal" does, "HP" does not)
 AUTO_LINK_CAP = 40    # a pathological body cannot turn into one giant link farm
 KIND_ORDER = {"mob": 0, "item": 1, "quest": 2, "skill": 3}  # cross-kind name clash: monsters win, then items
 FILE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}-[a-z0-9-]+\.md$")
+TAGS = ["Maple News", "Maple Patch Notes", "Maple Misc", "Site Updates", "Blog Post", "Guide", "Event", "Market"]
+DEFAULT_TAG = "Blog Post"   # a post without tags: reads as a journal note
+BOOL = {"true": True, "yes": True, "false": False, "no": False}
 
 
 def _esc(s):
@@ -51,8 +60,8 @@ def parse_post(text, fname):
         if not line.strip():
             continue
         k, _, v = line.partition(":")
-        if not _ or not k.strip() or k.strip() != k.lower() or k.strip() not in ("title", "date", "author", "image"):
-            raise bad(f"front matter line is not one of title/date/author/image: {line.strip()[:60]}")
+        if not _ or not k.strip() or k.strip() != k.lower() or k.strip() not in ("title", "date", "author", "image", "tags", "featured"):
+            raise bad(f"front matter line is not one of title/date/author/image/tags/featured: {line.strip()[:60]}")
         meta[k.strip()] = v.strip()
     if not meta.get("title"):
         raise bad("front matter needs a title:")
@@ -60,6 +69,11 @@ def parse_post(text, fname):
         raise bad('front matter needs a date: as YYYY-MM-DD')
     if not fname.startswith(meta["date"]):
         raise bad("file name must start with the front matter date (YYYY-MM-DD-slug.md)")
+    tags = [t.strip() for t in re.split(r"[,;]", meta.get("tags", "")) if t.strip()]
+    if meta.get("featured", "").lower() not in ("", "true", "yes", "false", "no"):
+        raise bad("featured: must be true or false")
+    meta["tags"] = tags or [DEFAULT_TAG]
+    meta["featured"] = BOOL[meta.get("featured", "").lower() or "false"]
     body = m.group(2).strip()
     if not body:
         raise bad("the post body is empty")
@@ -224,12 +238,14 @@ def load(D, pdir=None):
         seen.add(slug)
         html = auto_link(md_html(body), paths)
         posts.append({"slug": slug, "title": meta["title"], "date": meta["date"], "author": meta["author"],
-                      "html": html, "excerpt": _excerpt(html),
+                      "html": html, "excerpt": _excerpt(html), "tags": meta["tags"], "featured": meta["featured"],
+                      "imgfile": meta["image"] if meta.get("image") else "",
                       "img": _data_uri(meta["image"], f.name, pdir) if meta.get("image") else ""})
     posts.sort(key=lambda p: (p["date"], p["slug"]), reverse=True)
     return posts
 
 
 def inject(D):
-    """The __POSTS__ literal for build.py."""
-    return json.dumps(load(D), separators=(",", ":"), ensure_ascii=False)
+    """The __POSTS__ literal for build.py (imgfile stays out: only pages_gen needs the repo path)."""
+    return json.dumps([{k: v for k, v in p.items() if k != "imgfile"} for p in load(D)],
+                      separators=(",", ":"), ensure_ascii=False)
