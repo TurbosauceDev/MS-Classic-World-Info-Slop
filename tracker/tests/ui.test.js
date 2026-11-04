@@ -208,6 +208,21 @@ const path = require("path"), {chromium} = require("playwright");
   const kg = await page.evaluate(async () => { const keep = kpq; settings = await host.settings({kpqAct: "grind"}); kpqReset(); kpqMap("80000000", Date.now() + 3e4); const on = kpq.on;
     settings = await host.settings({kpqAct: "auto"}); kpq = keep; return on });
   if (kg) throw new Error("kpq grind: still turned on");
+  // KPQ clock as a round signal (Danny's bug reports 2026-11-04: the minimap missed the 1st stage and the round sat paused 2:20):
+  // one clock read changes nothing, two in step lift the between-rounds pause, and the round + its 1st stage start at the first
+  // read when the minimap names the stage later; the clock starting over mid-round is a new round; the status names the stage
+  const kc = await page.evaluate(() => { const keep = {kpq, session, slicer}, t = Date.now() + 4e5, out = {};
+    session = GrindSession.createSession(G); slicer = {add(){}}; kpqReset();
+    kpqMap("80000400", t); kpqMap("10003000", t + 1e4); out.held = session.state.pausedAt !== null;
+    kpqTime(1800, t + 2e4); out.oneRead = session.state.pausedAt !== null;
+    kpqTime(1795, t + 2.5e4); out.twoReads = session.state.pausedAt === null; out.st1 = document.querySelector("#status").textContent;
+    kpqMap("80000000", t + 15e4); kpqMap("80000100", t + 18e4); out.rounds = kpq.rounds; out.stage1 = kpq.stageTimes["80000000"]?.at(-1);
+    kpqMap("10003000", t + 20e4); kpqMap("80000000", t + 21e4); out.st2 = document.querySelector("#status").textContent;
+    const h0 = kpq.history.length; kpqTime(1700, t + 22e4); kpqTime(1695, t + 22.5e4); kpqTime(1800, t + 23e4); kpqTime(1795, t + 23.5e4);
+    out.jumped = kpq.history.length === h0 + 1 && !kpq.inside && kpq.history.at(-1).end === "left";
+    ({kpq, session, slicer} = keep); return out });
+  if (!kc.held || !kc.oneRead || !kc.twoReads || kc.st1 !== "KPQ clock on screen: tracking again." || kc.rounds !== 2 || kc.stage1 !== 160
+    || kc.st2 !== "KPQ round 3, 1st stage: tracking again." || !kc.jumped) throw new Error("kpq clock: " + JSON.stringify(kc));
   // KPQ leaderboard: with sharing on, a full round (1st stage .. Last, Bonus, Exit) is sent with its clear time (to leaving
   // the Last stage) and the character name; a round left at the 2nd stage isn't
   const kl = await page.evaluate(async () => { const keep = settings, t = Date.now() + 4e5; settings = {...settings, share: true, nick: "two words"}; window.shared = []; charName = "Turbow";
