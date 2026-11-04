@@ -44,6 +44,10 @@ Names of monsters, items, quests and skills from the game data link themselves t
 - Never inside `code`, a heading or an existing link; at most 40 links per post.
 - Names under 4 letters never link. A name two entries share opens the "which one?" page.
 - Spelling must match the game exactly - "Blue Snails" (plural) stays text, "Blue Snail" links.
+- Every auto link carries `data-ent="kind:id"` (77-journal.js): hovering a mention shows the same game-data
+  tooltip as the database pages (Turbozo 2026-11-04); the click keeps its clean route.
+- Back from an entity page lands the reader back in the article at the same spot (Turbozo 2026-11-04): the site
+  owns scroll restoration (`75-history.js`, `navx:` sessionStorage mirror; deep-link documents never restore).
 
 ## Plumbing
 

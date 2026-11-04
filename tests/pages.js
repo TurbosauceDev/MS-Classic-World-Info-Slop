@@ -29,14 +29,17 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
   const man = JSON.parse(fs.readFileSync(path.join(OUT, "manifest.webmanifest"), "utf8"));
   check(man.display === "standalone" && man.icons.every(i => files.includes(i.src)), "manifest: standalone, its icons are deployed");
 
-  let delay = 0;
-  const srv = http.createServer((q, r) => { const f = path.join(OUT, decodeURIComponent(q.url.split("?")[0]).replace(/^\/$/, "/index.html"));
-    if (!f.startsWith(OUT) || !fs.existsSync(f)) { r.writeHead(404); return r.end() }
+  let delay = 0, hits = [];
+  const srv = http.createServer((q, r) => { let f = path.join(OUT, decodeURIComponent(q.url.split("?")[0]).replace(/^\/$/, "/index.html"));
+    hits.push(decodeURIComponent(q.url.split("?")[0]));
+    const st = fs.existsSync(f) && fs.statSync(f);
+    if (st && st.isDirectory()) f = path.join(f, "index.html");   // clean routes (pages_gen.py): /items/work-gloves/ is a directory index
+    if (!f.startsWith(OUT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end() }
     setTimeout(() => { r.writeHead(200, {"content-type": TYPES[path.extname(f)] || "application/octet-stream"}); r.end(fs.readFileSync(f)) }, /assets-/.test(f) ? delay : 0) });
   await new Promise(res => srv.listen(0, "127.0.0.1", res));
   const URL = `http://localhost:${srv.address().port}/`;
   const b = await chromium.launch();
-  const page = async () => { const ctx = await b.newContext({viewport: {width: 1300, height: 900}}), p = await ctx.newPage(), errs = [];
+  const page = async (ua) => { const ctx = await b.newContext({viewport: {width: 1300, height: 900}, ...(ua ? {userAgent: ua} : {})}), p = await ctx.newPage(), errs = [];
     p.on("pageerror", e => errs.push(e.message.slice(0, 160))); return {p, errs, ctx} };
   const open = (p, t) => p.evaluate(t => { const b = document.querySelector("#t-" + t); document.querySelector("#c-" + b.dataset.cat).click(); b.click() }, t);
   const icons = p => p.$$eval("#itrows tr", r => ({rows: r.length, img: r.filter(x => x.querySelector(".ibtn img")).length}));
@@ -100,6 +103,26 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
     await ctx.setOffline(true); await p.reload(); await booted(p); await p.evaluate(() => window.ASSETS); await open(p, "items"); await p.waitForTimeout(100);
     const r = await icons(p);
     check(!errs.length && r.rows > 0 && r.img === r.rows && pwCount > 500, `offline reload works, icons and prices included (${JSON.stringify(r)}, pw ${pwCount}; ${errs.join("; ")})`);
+    await ctx.close() }
+
+  // 5. a linked mention in a post (Turbozo 11-04): the click opens the entity's clean page, whose redirect hops into the
+  //    planner; the browser's Back lands the reader back in the article at the same spot (75-history.js navx mirror)
+  { const {p, errs, ctx} = await page("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
+    await p.goto(URL); await booted(p);
+    if (await p.$(".jbody a[data-ent]")){
+      await p.evaluate(() => document.querySelector(".jbody a[data-ent]").scrollIntoView({block: "center"}));
+      await p.waitForTimeout(500);   // the debounced {tab, y} mirror must land before the click
+      const y = await p.evaluate(() => scrollY);
+      await p.click(".jbody a[data-ent]"); await p.waitForLoadState("load"); await p.waitForTimeout(200);
+      await p.waitForTimeout(1300);   // the entity page's redirect into the planner + boot
+      const planner = await p.evaluate(() => ({hash: location.hash.slice(0, 3), app: !!document.querySelector("nav"), path: location.pathname}));
+      const went = hits.find(h => /^\/(items|monsters|maps|skills|quests|npcs)\//.test(h));   // read at the server: the redirect can beat the probe
+      await p.goBack(); await p.waitForTimeout(900);
+      const back = await p.evaluate(() => ({home: !document.getElementById("home")?.hidden, y: scrollY}));
+      check(!errs.length && went && planner.app && planner.path === "/" &&
+        back.home && Math.abs(back.y - y) < 3,
+        `a mention opens its clean page (${went}) and hops into the planner; Back returns to the article at the same spot (${back.y} vs ${y})`);
+    } else check(!errs.length, "no linked mentions in the shipped posts: back-to-article scene skipped");
     await ctx.close() }
 
   await b.close(); srv.close(); fs.rmSync(OUT, {recursive: true, force: true});
