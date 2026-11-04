@@ -50,15 +50,15 @@ check('<a href="https://maplestory.scumlord.studio/" target="_blank" rel="noopen
 
 # ---- auto links over real game data
 paths = posts.name_paths(D)
-check(paths.get("blue snail") == ("Blue Snail", "/monsters/blue-snail/"), "monster name -> clean page")
-check(paths.get("work gloves") == ("Work Gloves", "/items/work-gloves/"), "item name -> clean page")
+check(paths.get("blue snail") == ("Blue Snail", "/monsters/blue-snail/", "mob", "3"), "monster name -> clean page + kind:id for the tooltip")
+check(paths.get("work gloves") == ("Work Gloves", "/items/work-gloves/", "item", "1082000"), "item name -> clean page + kind:id")
 check(paths.get("heal") is None or len(paths["heal"][0]) >= 4, "short names never enter the map")
 out = posts.auto_link("<p>Blue Snail then blue SNAIL then Blue Snails</p>", paths)
 check(out.count("<a ") == 1 and "blue SNAIL</a>" not in out and "Blue Snails</a>" not in out, "first mention only, any casing; plurals stay text")
 out = posts.auto_link("<h2>Blue Snail</h2><p>run <code>Blue Snail</code> at <a href=\"/x\">Blue Snail</a> home. Blue Snail!</p>", paths)
-check(out.count("<a href=\"/monsters/blue-snail/\">") == 1 and "<h2>Blue Snail</h2>" in out and "<code>Blue Snail</code>" in out,
-      "headings, code and existing links are skipped")
-cap = {f"mobname{i:02d}": (f"mobname{i:02d}", f"/monsters/mobname{i:02d}/") for i in range(50)}
+check(out.count('<a href="/monsters/blue-snail/" data-ent="mob:3">') == 1 and "<h2>Blue Snail</h2>" in out and "<code>Blue Snail</code>" in out,
+      "headings, code and existing links are skipped; the anchor carries data-ent for the hover tooltip")
+cap = {f"mobname{i:02d}": (f"mobname{i:02d}", f"/monsters/mobname{i:02d}/", "mob", str(i)) for i in range(50)}
 check(posts.auto_link("<p>" + " ".join(f"mobname{i:02d}" for i in range(50)) + "</p>", cap).count("<a ") == posts.AUTO_LINK_CAP,
       f"link count is capped at {posts.AUTO_LINK_CAP}")
 Rt = __import__("routes").Routes(D)

@@ -107,7 +107,8 @@ def md_html(body):
 
 
 def name_paths(D):
-    """lower-case name -> (display name, clean path). Names two entries share resolve to the "which one?" page."""
+    """lower-case name -> (display name, clean path, kind, id). Names two entries share resolve to the
+    "which one?" page. kind+id ride along so the anchor can carry data-ent="kind:id" for the hover tooltip."""
     R = _routes.Routes(D)
     by_name = {}
     for e in R.ents:
@@ -125,7 +126,7 @@ def name_paths(D):
             path = f"/skills/{top['slug']}/"
         else:
             path = top["canon"]
-        out[low] = (top["name"], path)
+        out[low] = (top["name"], path, top["kind"], top["id"])
     return out
 
 
@@ -136,7 +137,7 @@ def auto_link(html, paths, cap=AUTO_LINK_CAP):
     """Link the first mention of each known name, outside a/code/h2-h4 elements."""
     if not paths:
         return html
-    pat = re.compile(r"(?<!\w)(" + "|".join(re.escape(name) for name, _ in sorted(paths.values(), key=lambda x: -len(x[0]))) + r")(?!\w)", re.I)
+    pat = re.compile(r"(?<!\w)(" + "|".join(re.escape(name) for name, _, _, _ in sorted(paths.values(), key=lambda x: -len(x[0]))) + r")(?!\w)", re.I)
     state, out, pos = {"skip": 0, "count": 0, "used": set()}, [], 0
 
     def seg(s):
@@ -146,7 +147,7 @@ def auto_link(html, paths, cap=AUTO_LINK_CAP):
             low = m.group(0).lower()
             if low in state["used"]: return m.group(0)
             state["used"].add(low); state["count"] += 1
-            return f'<a href="{paths[low][1]}">{m.group(0)}</a>'
+            return f'<a href="{paths[low][1]}" data-ent="{paths[low][2]}:{paths[low][3]}">{m.group(0)}</a>'
         return pat.sub(rep, s)
 
     for m in _TAG.finditer(html):

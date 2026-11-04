@@ -25,6 +25,14 @@ const boxGaps = require("./boxgaps");
     "feed interleaves the six newest changelog cards with version pills");
   check(await p.$$eval("#feed .fday", l => l.length) >= 1 && await p.$eval("#feed .jpost .jbody", b => b.innerHTML.length) > 40,
     "feed groups by day, post bodies render (post content never pinned)");
+  // a linked mention in a post carries the game-data tooltip on hover (Turbozo 11-04); the click keeps its clean route.
+  // Content never pinned: the scene only runs when the shipped posts actually mention something.
+  if (await p.$(".jbody a[data-ent]")){
+    await p.evaluate(() => document.querySelector(".jbody a[data-ent]").scrollIntoView({block: "center"}));
+    await p.waitForTimeout(450);   // any scroll hides #qtip site-wide; let the settle land before hovering
+    await p.hover(".jbody a[data-ent]"); await p.waitForTimeout(120);
+    check(await p.$eval("#qtip", e => !e.hidden && e.textContent.length > 10), "a linked mention shows its game-data tooltip on hover");
+  }
   // Overview = the old home grid (the page directory), now its own page under Home
   check(await p.$$eval("#overview .hlink", l => l.length) === 30, "overview page lists every page");
   { const miss = await p.evaluate(() => { const h = new Set([...document.querySelectorAll("#overview [data-go]")].map(a => a.dataset.go)); return [...document.querySelectorAll('[id^="t-"]')].map(b => b.id.slice(2)).filter(x => x !== "overview" && !h.has(x)) });

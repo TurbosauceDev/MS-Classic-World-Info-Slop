@@ -42,3 +42,26 @@ if (feed){
   feed.innerHTML = html || `<p class="sub">Nothing here yet. The first post is being written.</p>`;
 }
 })();
+
+/* ---------------- tooltips on linked mentions (Turbozo 2026-11-04) ---------------- */
+// A name the build auto-linked (scripts/posts.py emits data-ent="kind:id") carries the same hover tooltip as the
+// database pages: hover shows the game data, the click still follows the clean route to the entity's own page.
+(() => {
+const QIDX = {};   // quest id -> index in D.quests (questTip reads D.quests[i])
+D.quests.forEach((q, i) => { if (!(q.id in QIDX)) QIDX[q.id] = i });
+const entTip = el => { const [k, id] = (el.dataset.ent || ":").split(":");
+  if (k === "item" && D.items[id]) return itemTip({dataset: {item: id, n: 1}});
+  if (k === "mob" && (D.mobs[id] || D.mobdb[id])) return mobTip(id);
+  if (k === "map" && D.maps[id]) return mapTip(id);
+  if (k === "npc" && D.npcs[id]) return npcTip(id);
+  if (k === "quest" && QIDX[id] != null) return questTip(D.quests[QIDX[id]]);
+  return ""; };
+const showEnt = el => { const t = entTip(el); if (!t) return;
+  qtip.innerHTML = t; qtip.className = "itemtip"; qtip.hidden = false; placeQtip(el);
+  const img = qtip.querySelector("img.mm");   // a map tooltip's minimap sizes only once decoded
+  if (img && !img.complete) img.addEventListener("load", () => { if (!qtip.hidden) placeQtip(el) }, {once: true}) };
+document.addEventListener("mouseover", e => { const el = e.target.closest?.(".jbody a[data-ent]"); if (el) showEnt(el) });
+document.addEventListener("mouseout", e => { if (e.target.closest?.(".jbody a[data-ent]")) hideQtip() });
+document.addEventListener("focusin", e => { const el = e.target.closest?.(".jbody a[data-ent]"); if (el) showEnt(el) });
+document.addEventListener("focusout", hideQtip);
+})();

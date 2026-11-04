@@ -90,7 +90,7 @@ CI: `.github/workflows/tests.yml` runs smoke + golden + edge + features + pages 
 | 68-tracker.js | 11 | Grind Tracker pages (live /api/summary, D.shared fallback); trkKpq = Rush/Bonus KPQ boards |
 | 69-search.js | | Ctrl K / `/` search, `#key=value&` share links |
 | 71-navside.js | | sidebar nav: random sprite pools per page (MESO_ICONS inlined), footer links, Settings Layout + Page size |
-| 75-history.js | | Back/Forward: history entry per page/place change, nav ← → buttons |
+| 75-history.js | | Back/Forward: history entry per page/place change, nav ← → buttons; owns scroll restoration (`scrollRestoration=manual`, `navx:<path>` sessionStorage mirror restores {tab, y} on a cross-document Back/reload; deep-link docs (#i=...) never mirror or restore) |
 | 76-stack.js | | phone tables: labels body cells with their header (`data-l`), marks 4+ column tables `stk` (styles.css "Phone tables", ≤600px) |
 
 Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `python3 -c "import json;d=json.load(open('data/data.json'));print(list(d))"`.
@@ -155,6 +155,11 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
 - Back/Forward (75-history.js): after any click/change/Enter it compares {tab, place} with history.state and pushes if
   different (no URL change). A page with in-page places registers `navReg(tab, get, set)` (mobs, items, skills, wmap, quests);
   `get` must return JSON-comparable data or every click pushes. Smoke checks "browser Back ...", "a new step clears Forward".
+- Cross-document Back (Turbozo 2026-11-04: a post mention opens the entity's clean page, whose redirect hops into
+  the planner): Back must land in the article at the same spot. The site sets `history.scrollRestoration = "manual"`
+  (Chrome's own restore fired late and clobbered it) and each non-deep-link document mirrors {tab, y} to
+  `sessionStorage["navx:" + pathname]`; boot restores it for `back_forward`/`reload` (tab only on `back_forward`:
+  a reload keeps the saved-tab restore). tests/pages.js scene 5 pins the whole click-through; smoke pins the hover tooltip.
 - Home `#pwstate` (70-theme.js, under `.sitever`): meso.watch state from `D.pw` (`it` count, `read` date, `now` count + `pwListedAgo()`),
   redrawn each minute. Smoke "meso.watch state on Home" pins the text; keep `.sitever` the first match (smoke reads the version from it).
 - tests/edge.js "tracker server reply hostileName" checks a markup player name shows as literal text on the KPQ board.

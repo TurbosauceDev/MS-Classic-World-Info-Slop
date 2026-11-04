@@ -17,6 +17,7 @@ When an official announcement drops, a scheduled job can turn it into a post her
 - Highlights go in a list, one line each
 - A [link to the source](https://maplestory.nexon.net/) rides along with the summary
 - Game names link themselves, no markup needed: the road to **Mushmom** or a pair of **Work Gloves** is one click away
+- Hover a linked name for its game-data tooltip, click through to its page, and the browser's back button - or the site's - drops you back in the post exactly where you left it
 
 ---
 
