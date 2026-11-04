@@ -194,6 +194,7 @@ else
   }
   cat /tmp/claude_err.txt || true
   echo "--- commit message ---"
+  { echo; echo "[skip ci]"; } >> /tmp/commit_msg.txt   # deploy-key push: see scripts/ci/commit_push.sh
   cat /tmp/commit_msg.txt
 
   # --- Step 9: Commit + push to main ---
