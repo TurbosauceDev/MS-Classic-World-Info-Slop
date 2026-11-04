@@ -17,17 +17,56 @@ const boxGaps = require("./boxgaps");
   // Home page + section nav. Sidebar layout (default, wider than a phone): every page button shows; the two-row layout and
   // phones show one section's pages at a time, so open the section first when its button is showing
   const tab = async sel => { const c = "#c-" + await p.$eval(sel, b => b.dataset.cat); if (await p.isVisible(c)) await p.click(c); await p.click(sel) };
-  // Home is the newsfeed (77-journal.js): newest posts in full + the six newest changelog cards, day-grouped.
-  // Post CONTENT is never pinned here: posts land through the Discord bridge, and a content check would fail CI on a good post.
-  check(!(await p.isHidden("#home")) && await p.evaluate(() => document.querySelectorAll("#feed .jpost").length === Math.min(POSTS.length, 8)),
-    "home newsfeed opens first, newest posts rendered in full");
-  check(await p.$$eval("#feed .fupd", l => l.length) === 6 && await p.$eval("#feed .fupd .ver", v => /^v\d+\.\d+\.\d+$/.test(v.textContent)),
-    "feed interleaves the six newest changelog cards with version pills");
+  // Home is the newsfeed (77-journal.js): the newest posts and the newest changelog entries as wowhead-shaped post
+  // cards (Turbozo 11-04), day-grouped. Post CONTENT is never pinned here: posts land through the Discord bridge,
+  // and a content check would fail CI on a good post.
+  check(!(await p.isHidden("#home")) && await p.evaluate(() =>
+      document.querySelectorAll("#feed .jpost").length === Math.min(POSTS.length, 8) + Math.min(document.querySelectorAll("#log .changelog .card").length, 6)),
+    "home newsfeed opens first: newest posts + changelog entries as full post cards");
+  check(await p.$$eval("#feed .jupd", l => l.length) === 6 && await p.$eval("#feed .jupd .ver", v => /^v\d+\.\d+\.\d+$/.test(v.textContent))
+    && await p.$eval("#feed .jupd .jauthor", a => a.textContent) === "Glorg",
+    "feed renders the six newest changelog entries as update posts by Glorg, version pill on the byline");
+  check(await p.$eval("#feed .jpost", c => !!c.querySelector(".javatar")) && await p.$$eval("#feed .jupd img.javatar",
+      l => l.length === 6 && l.every(i => i.src.startsWith("data:image/") && i.naturalWidth > 0)),
+    "every feed card wears its poster's avatar, the updates wear the Orange Mushroom sprite");
+  check(await p.$$eval("#feed .jimg img", l => l.every(i => i.src.startsWith("data:image/") && i.naturalWidth > 0))
+    && (!await p.evaluate(() => POSTS.some(x => x.img)) || await p.$$eval("#feed .jimg img", l => l.length) >= 1),
+    "a post's main image renders when the post carries one");
   check(await p.$$eval("#feed .fday", l => l.length) >= 1 && await p.$eval("#feed .jpost .jbody", b => b.innerHTML.length) > 40,
     "feed groups by day, post bodies render (post content never pinned)");
+  // the fold (Turbozo 11-04): a body past the cap hides behind the frosted cutoff until "… continue reading"
+  if (await p.$('#feed .jfoldw[data-cut="1"]')){
+    check(await p.isVisible('#feed .jfoldw[data-cut="1"] .jfade') && await p.isVisible('#feed .jfoldw[data-cut="1"] .jmore'),
+      "a long post folds behind the frosted cutoff with its continue-reading button");
+    const slug = await p.$eval('#feed .jfoldw[data-cut="1"]', w => w.closest(".jpost").dataset.slug);
+    await p.click('#feed .jfoldw[data-cut="1"] .jmore');
+    check(await p.$eval(`#feed .jpost[data-slug="${slug}"]`, c => c.dataset.jstate) === "full", "continue reading unfolds the post");
+  }
+  // a click on the card minimizes it to the header, the next click reopens; the view is remembered for Back
+  { const slug = await p.$eval("#feed .jpost", c => c.dataset.slug);
+    await p.click("#feed .jpost .cardhead h3");
+    check(await p.$eval("#feed .jpost", c => c.dataset.jstate) === "min", "clicking a card minimizes it to the header");
+    check(await p.evaluate(s => sessionStorage.getItem("jx:" + s) === "min", slug), "a card's minimized view is remembered for the trip back");
+    await p.click("#feed .jpost .cardhead h3");
+    check(await p.$eval("#feed .jpost", c => c.dataset.jstate) !== "min", "clicking a minimized card reopens it"); }
+  // comments (Turbozo 11-04): post, reply, like - the thread lives in this browser, markup stays text
+  { await p.fill("#feed .jpost .jcname", "Smoke");
+    await p.fill("#feed .jpost .jctext", "first! <img src=x onerror=alert(1)>");
+    await p.click("#feed .jpost .jcpost");
+    check(await p.$eval("#feed .jpost .jclist", l => l.querySelectorAll(".jc").length === 1 && !l.querySelector(".jcb img, .jcb script"))
+      && await p.evaluate(s => !!localStorage.getItem("jc:" + s), await p.$eval("#feed .jpost", c => c.dataset.slug)),
+      "posting a comment stores the thread locally, markup renders as text");
+    await p.click("#feed .jpost .jcre");
+    await p.fill("#feed .jpost .jcrform .jctext", "a reply");
+    await p.click("#feed .jpost .jcrepost");
+    check(await p.$eval("#feed .jpost .jclist", l => l.querySelectorAll(".jcrep").length) === 1, "a reply nests under its comment");
+    await p.click("#feed .jpost .jclike");
+    check(await p.$eval("#feed .jpost .jclike", b => b.textContent.includes("♥")), "a like sticks"); }
   // a linked mention in a post carries the game-data tooltip on hover (Turbozo 11-04); the click keeps its clean route.
   // Content never pinned: the scene only runs when the shipped posts actually mention something.
   if (await p.$(".jbody a[data-ent]")){
+    await p.evaluate(() => { const a = document.querySelector(".jbody a[data-ent]"), c = a.closest(".jpost");
+      if (c && c.dataset.jstate !== "full") c.querySelector(".jmore")?.click() });   // a folded body clips its links
     await p.evaluate(() => document.querySelector(".jbody a[data-ent]").scrollIntoView({block: "center"}));
     await p.waitForTimeout(450);   // any scroll hides #qtip site-wide; let the settle land before hovering
     await p.hover(".jbody a[data-ent]"); await p.waitForTimeout(120);

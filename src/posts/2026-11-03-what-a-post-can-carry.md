@@ -2,6 +2,7 @@
 title: What a post can carry
 date: 2026-11-03
 author: Turbozo
+image: img/what-a-post-can-carry.jpg
 ---
 
 The second sample post: a tour of what a news post on this feed can include, written the way a real one will arrive. The pipeline behind it is the simple one - write the draft somewhere comfortable, a Google Doc or a Discord message, and an agent files it here as a post exactly like this one. No formatting work, no code, and the next build ships it.

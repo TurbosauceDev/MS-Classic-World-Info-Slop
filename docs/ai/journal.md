@@ -11,6 +11,14 @@ and 6 updates). The old home grid of section links moved to the **Overview** pag
 draft into the same `src/posts/` file, contract unchanged. A watcher cron that posts when official Nexon news drops
 would file through this exact same path.
 
+Turbozo, 2026-11-04 (the wowhead-shaped format): site updates are posts on the feed now, not changelog-link rows -
+the newest changelog entries render as full cards authored by **Glorg** (still read live from `#log`, so they can
+never drift from the changelog). Every card wears its poster's avatar, can carry a main image, folds past a max
+body length behind a frosted cutoff with a "… continue reading" button, minimizes to its header on a click (again
+to reopen; the view is remembered per post in sessionStorage `jx:<slug>`, so Back from an entity page restores it),
+and ends in a wowhead-style comment box. Comments live in the reader's browser (localStorage `jc:<slug>`,
+`jcl:<slug>` likes, `jcwho` name) - a shared/backend box replaces `cLoad`/`cSave` in `77-journal.js` alone.
+
 ## File contract
 
 One post = `src/posts/<YYYY-MM-DD>-<slug>.md` (lower case, dashes; the file name date must match the front matter date):
@@ -20,13 +28,23 @@ One post = `src/posts/<YYYY-MM-DD>-<slug>.md` (lower case, dashes; the file name
 title: The title of the post
 date: 2026-11-03
 author: Turbozo
+image: img/welcome-to-the-journal.jpg
 ---
 The body, in the dialect below.
 ```
 
-- `title` and `date` are required; `author` is optional and defaults to `Turbozo`.
+- `title` and `date` are required; `author` is optional and defaults to `Turbozo`; `image` is optional (the post's
+  main image) and must be a PNG/JPEG file under `src/posts/` (usually the `src/posts/img/` folder), under 200 KB - it is baked into the
+  page as a data URI, so remote URLs and `..` paths fail the build.
 - Any other front matter key, a missing block or an empty body fails the build on purpose (the bridge sees the
   error immediately). `tests/posts_test.py` checks all of this in CI.
+
+## Avatars
+
+`src/posts/avatars/<author>.png` (file name lower-cased) is the sprite a poster's cards wear: `turbozo.png` is the
+green Slime, `glorg.png` (the site-update posts) the Orange Mushroom - both pulled from the game files by
+`scripts/make_post_art.py`, which also bakes the sample posts' banners into `src/posts/img/`. A poster without a
+file gets a colored letter chip; an avatar over 20 KB fails the build (it rides the whole page).
 
 ## Body dialect
 
@@ -57,5 +75,7 @@ Names of monsters, items, quests and skills from the game data link themselves t
 - Smoke tests (`tests/smoke.js`) pin the machinery, never post content, so a good post can't fail CI.
 - A new post needs no other change: commit the file (any order of posts in one commit is fine), push to `main`.
   The pages deploy picks it up like any other push.
+- Smoke pins the card machinery, never the content: fold + continue reading, click-to-minimize (remembered in
+  `jx:<slug>`), avatar images, comment post/reply/like, and that a post's main image loads when it has one.
 - To retire a sample post, delete its file: `src/posts/2026-11-03-welcome-to-the-journal.md` or
-  `src/posts/2026-11-03-what-a-post-can-carry.md`.
+  `src/posts/2026-11-03-what-a-post-can-carry.md` (and its image in `src/posts/img/`).

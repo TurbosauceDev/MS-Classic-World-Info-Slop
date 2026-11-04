@@ -101,9 +101,13 @@ Symbol index: `grep -n "^function\|^const\|^let" src/js/*.js`. Data peek: `pytho
   on the Home card; bump the home-link count in tests/smoke.js (30 now) and the sidebar page count (30), Home sprites in tests/pages.js + smoke.js (37), add a click-through check.
   Give the `.hlink` an `<img class="hic" data-ic="i:<item>|m:<mob>|s:<skill>">` sprite (filled from D in 00-core.js,
   shown only when the card is a billboard) and bump the sprite count in smoke.js (37 = 7 headers + 30 links).
-- **Journal (posts):** one file per post in `src/posts/<YYYY-MM-DD>-<slug>.md` (front matter title/date/author, small markdown
+- **Journal (posts):** one file per post in `src/posts/<YYYY-MM-DD>-<slug>.md` (front matter title/date/author/image, small markdown
   dialect, auto links) - the contract for people and bots is `docs/ai/journal.md`. `scripts/posts.py` renders them into
-  `POSTS` at build time; 77-journal.js draws the Journal page and the Home Updates/Journal strip. Never pin post content
+  `POSTS` at build time; 77-journal.js draws the Journal page and the Home newsfeed in the wowhead-shaped card format
+  (Turbozo 2026-11-04): poster avatars (`src/posts/avatars/`, POST_AVATARS), optional main image, a body that folds
+  behind a frosted cutoff with "… continue reading", click-to-minimize (sessionStorage `jx:<slug>`), a localStorage
+  comment box, and the six newest `#log` changelog entries as full posts by Glorg. The feed grid is
+  `minmax(0,1fr)` on purpose - a long nowrap byline must not widen the 390px track. Never pin post content
   in tests (posts land through the Discord bridge); smoke pins the machinery only.
 - **Changelog:** every user-visible change gets a dated entry at the top of `#log` (grep `id="log"`, read ~20 lines there).
   10-20 audit: 5 small ships (footer move, favicon, offline on custom domain, builder avatar, "listings updated ago") had no card; caught up as v0.8.1. Add only at the top: a card inserted lower renumbers every newer version.
