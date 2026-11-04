@@ -119,9 +119,10 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
       const went = hits.find(h => /^\/(items|monsters|maps|skills|quests|npcs)\//.test(h));   // read at the server: the redirect can beat the probe
       await p.goBack(); await p.waitForTimeout(900);
       const back = await p.evaluate(() => ({home: !document.getElementById("home")?.hidden, y: scrollY}));
-      check(!errs.length && went && planner.app && planner.path === "/" &&
+      // the bar keeps the entity's clean path now (Turbozo 11-04): the hop lands at /#m=... and the boot heals it back to the page's address
+      check(!errs.length && went && planner.app && planner.path === went &&
         back.home && Math.abs(back.y - y) < 3,
-        `a mention opens its clean page (${went}) and hops into the planner; Back returns to the article at the same spot (${back.y} vs ${y})`);
+        `a mention opens its clean page (${went}), the bar keeps it, and Back returns to the article at the same spot (${back.y} vs ${y})`);
     } else check(!errs.length, "no linked mentions in the shipped posts: back-to-article scene skipped");
     await ctx.close() }
 

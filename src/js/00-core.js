@@ -13,8 +13,11 @@ const fmt = n => n == null ? "–" : Math.round(n).toLocaleString();
    shell survives a deploy that renamed the hashed file; if the hashed file vanishes mid-read anyway (a deploy landing
    between the two fetches), the pointer is re-resolved once. ASSETS resolves when they're in D (at once in the
    artifact, where everything is inline); code that needs every icon (screenshot readers) awaits it. Anything drawn
-   before they arrive gets its icons patched in. */
-const jfetch = (u, fresh) => fetch(u, fresh ? {cache: "no-store"} : {}).then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)));
+   before they arrive gets its icons patched in. The fetches resolve against the copy's directory as captured at boot:
+   the address bar now follows the open page (00-routes.js path healing), and a relative "assets.json" resolved mid-run
+   would otherwise hang off whatever entity path the bar shows. */
+const APPDIR = (() => { try { return new URL("./", location.href).href } catch(e) { return "" } })();
+const jfetch = (u, fresh) => fetch(new URL(u, APPDIR || undefined), fresh ? {cache: "no-store"} : {}).then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)));
 const ASSETS = !D.lazy ? Promise.resolve() : jfetch(D.lazy.url, 1)
   .then(a => a && a.url ? jfetch(a.url).catch(() => jfetch(D.lazy.url, 1).then(p => jfetch(p.url))) : a)
   .then(a => { for (const k of D.lazy.keys) Object.assign(D[k] || (D[k] = {}), a[k]); assetsIn() })
@@ -42,7 +45,7 @@ function assetsIn(){
 }
 // offline + "Add to Home Screen" (manifest and sw.js exist only in the Pages deploy, never in the artifact; any https host,
 // so the custom domain gets it too, not only *.github.io)
-if (D.lazy && "serviceWorker" in navigator && location.protocol === "https:") addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+if (D.lazy && "serviceWorker" in navigator && location.protocol === "https:") addEventListener("load", () => navigator.serviceWorker.register(new URL("sw.js", APPDIR)).catch(() => {}));   // APPDIR: the bar follows the open page now, and "sw.js" alone would hang off it
 // map name with the minimap hover card (card itself is built in 20-quests.js)
 const mapLink = (id, name) => `<span class="name mname" tabindex="0" data-map="${id}">${esc(name)}</span>`;
 // NPC and monster names with their hover cards (cards in 20-quests.js)
@@ -85,7 +88,9 @@ function lazyRows(tb, rows, empty, first = 60){
 const shareUrl = (k, obj) => {
   const enc = btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const own = /^https?:$/.test(location.protocol) && !/claude|usercontent|anthropic/.test(location.hostname);
-  return `${own ? location.origin + location.pathname : SHARE_BASE}#${k}=${enc}`;
+  // the copy's root, not the current page's path: the bar now follows the open page (00-routes.js), and a #key link is
+  // rooted at the site so the boot opens that place wherever the reader copied it from
+  return `${own ? location.origin + BASE : SHARE_BASE}#${k}=${enc}`;
 };
 // copy to the clipboard; where that's blocked (sandboxed frames), show the link in a box to copy by hand
 async function copyShare(btn, url){
@@ -139,7 +144,19 @@ document.addEventListener("change", e => { if (e.target.matches?.(".controls sel
 PHONEMQ.addEventListener("change", () => fitSelects(document.querySelector("main section:not([hidden])")));
 const goHome = () => { showCat("home"); TABS.forEach(x => { x.setAttribute("aria-selected", false); $("#" + x.dataset.tab).hidden = true });
   $("#home").hidden = false; try { localStorage.setItem("tab", "home") } catch(e) {} setTitle("") };
-const goCat = cat => cat === "home" ? goHome() : $("#t-" + (LASTTAB[cat] || TABS.find(x => x.dataset.cat === cat).dataset.tab)).click();
+// Home and the title card are the way out of a deep-linked document (Turbozo 2026-11-04: "clicking home should act as a
+// hard refresh of sorts - right now players are stuck on the link that they follow", and "clicking the title card should
+// act as if the user clicked home"). A document that arrived from a share link, an entity page or a page's own address
+// carries the landing hash, so those clicks reload the site at its root - once, and the document is clean again. Every
+// other time they behave as before (and close an open article, whose Back state would otherwise survive).
+const homeJump = () => {
+  if (PATH_SYNC && Object.keys(HASH).length > 0){
+    try { localStorage.setItem("tab", "home") } catch(e) {}   // storage off (private mode): the reload just boots to the last saved page
+    location.assign(BASE); return }
+  try { if (NAVREG.journal) NAVREG.journal.set(null) } catch(e) {}   // the article's closer: absent pre-boot or on a file copy where the journal never registered
+  goHome();
+};
+const goCat = cat => cat === "home" ? homeJump() : $("#t-" + (LASTTAB[cat] || TABS.find(x => x.dataset.cat === cat).dataset.tab)).click();
 CATS.forEach(b => b.addEventListener("click", () => goCat(b.dataset.cat)));
 // Home (the newsfeed) and Overview (the page directory) share one click handler: a [data-go] / [data-go-cat] button
 // opens that page; a click on a section card (not one of its links) grows it into a "billboard" at the top (wider,
@@ -160,7 +177,11 @@ for (const sec of ["#home", "#overview"]) $(sec).addEventListener("click", e => 
 // Home sprites: data-ic="i:<item>|m:<mob>|s:<skill>" -> the icon already in D (no new requests)
 document.querySelectorAll("img[data-ic]").forEach(im => { const [k, id] = im.dataset.ic.split(":"), b = {i: D.iicons, m: D.mobimg, s: D.icons}[k]?.[id];
   if (b) im.src = "data:image/png;base64," + b; else im.remove() });
-$("header h1").addEventListener("click", goHome);
+// the whole title card acts as Home (Turbozo 2026-11-04); its buttons keep their own click, and the anchor editor's
+// drags (72-anchors.js, "anchoring") are not navigation
+$("header").addEventListener("click", e => {
+  if (document.documentElement.classList.contains("anchoring") || e.target.closest("button,a,input,select,textarea")) return;
+  homeJump() });
 // read the last page before goHome() overwrites it with "home" (that made every visit land on Home)
 let SAVEDTAB = null; try { SAVEDTAB = localStorage.getItem("tab") } catch(e) {}
 goHome();

@@ -487,7 +487,7 @@ function apply(j){
 }
 async function poll(){
   if (!LIVE || (document.hidden && !alertsOn())) return; lastPoll = Date.now();
-  try { const r = await fetch("market.json", {cache: "no-store"}); if (!r.ok) return; const j = await r.json();
+  try { const r = await fetch(new URL("market.json", APPDIR), {cache: "no-store"}); if (!r.ok) return; const j = await r.json();
     if (j && typeof j.listed === "string" && j.listed > (D.pw.listed || "") && j.now && typeof j.now === "object") apply(j) } catch(e) {}
 }
 const onShow = () => { markSeen(); render(); if (Date.now() - lastPoll > 6e4) poll() };

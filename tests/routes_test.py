@@ -4,7 +4,7 @@ import json, pathlib, re, subprocess, sys, tempfile
 R_ = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(R_ / "scripts"))
 import pages_gen
-from routes import Routes, KINDS, SYNONYMS, slug, CLASS_OF
+from routes import Routes, KINDS, SYNONYMS, slug, CLASS_OF, PAGE_PATHS
 D = json.loads(re.search(r'<script type="application/json" id="sitedata">(.*?)</script>', (R_ / "dist/index.html").read_text(), re.S).group(1))
 out = pathlib.Path(tempfile.mkdtemp())
 pages_gen.generate(D, out, prev_src=str(out / "none.json"), today="2026-01-01")
@@ -38,13 +38,20 @@ for a, w in examples.items():
     assert (w == a.rstrip("/") + "/" and exists(w)) or any(c[0] == a and c[1] == w for c in cases), f"example not covered: {a}"
 for a, w in {"/skills/warrior": "/skills/warrior/", "/skills/fighter": "/skills/warrior/fighter/", "/skills/rogue": "/skills/thief/rogue/", "/items": "/items/", "/item": "/items/"}.items():
     if not exists(a): cases.append([a, w]); assert exists(w)
+# the planner's own pages (Turbozo 2026-11-04): every tab address is a real page, and sloppy guesses route to it
+for tab, path in PAGE_PATHS.items():
+    assert exists(path), f"page address has no page: {path} ({tab})"
+for addr, want in {"/worldmap": "/world-map/", "/worldmap/": "/world-map/", "/grind-tracker/kpqtimer": "/grind-tracker/kpq-timer/",
+                   "/changelog": "/changelog/", "/journal": "/journal/"}.items():
+    if not exists(addr): cases.append([addr, want]); assert exists(want), want
 cj = out / "cases.json"; cj.write_text(json.dumps(cases))
 r = subprocess.run(["node", str(R_ / "tests/router_harness.js"), str(out / "routes.json"), str(cj)], capture_output=True, text=True)
 assert r.returncode == 0, r.stderr[-500:]
 res = json.loads(r.stdout.strip().splitlines()[-1])
 assert not res["nbad"], f"{res['nbad']} of {res['n']} addresses misrouted, e.g. {res['bad'][:5]}"
-# JS "Copy link" paths match the Python ones
+# JS "Copy link" paths match the Python ones, and the JS page table (the address bar's source) matches PAGE_PATHS
 (out / "want.json").write_text(json.dumps({f"{e['kind']}:{e['id']}": e["canon"] for e in R.ents if e["kind"] in ("item", "mob", "skill", "quest")}))
-cp = subprocess.run(["node", str(R_ / "tests/routes_js_check.js"), str(R_ / "dist/index.html"), str(out / "want.json")], capture_output=True, text=True)
+(out / "pages.json").write_text(json.dumps(PAGE_PATHS))
+cp = subprocess.run(["node", str(R_ / "tests/routes_js_check.js"), str(R_ / "dist/index.html"), str(out / "want.json"), str(out / "pages.json")], capture_output=True, text=True)
 assert cp.returncode == 0, cp.stderr[-500:] + cp.stdout[-500:]
 print("routes test passed:", res["n"], "aliases;", cp.stdout.strip())
