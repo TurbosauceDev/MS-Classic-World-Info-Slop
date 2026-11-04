@@ -25,18 +25,18 @@ const hue = n => { let h = 0; for (const c of String(n)) h = (h * 31 + c.charCod
 // Back from an entity page lands on the article the way the reader left it (sessionStorage "jx:<slug>")
 const FOLD_H = 420, UPS = {author: "Glorg", cat: "Site update"};
 const sget = k => { try { return sessionStorage.getItem(k) } catch (e) { return null } };
-const sset = (k, v) => { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v) } catch (e) {} };
+const sset = (k, v) => { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v) } catch (e) {} };   // storage off (private mode): the view just is not remembered
 // ---- comments (wowhead-style, Turbozo 2026-11-04). No server for them yet, so a thread lives in this browser
 // (localStorage "jc:<slug>"): name + text, one reply level, likes. The feed and the Journal page share a slug,
 // so both views show the same thread. The block is built so a backend can replace cLoad/cSave alone.
 const cLoad = slug => { try { const a = JSON.parse(localStorage.getItem("jc:" + slug) || "[]");
   return Array.isArray(a) ? a.filter(c => c && c.id && typeof c.b === "string" && typeof c.t === "string") : [] } catch (e) { return [] } };
-const cSave = (slug, a) => { try { localStorage.setItem("jc:" + slug, JSON.stringify(a.slice(-100))) } catch (e) {} };
+const cSave = (slug, a) => { try { localStorage.setItem("jc:" + slug, JSON.stringify(a.slice(-100))) } catch (e) {} };   // storage off (private mode): the thread lives for the session only
 const cWho = () => { try { return String(localStorage.getItem("jcwho") || "").slice(0, 24) } catch (e) { return "" } };
 const cLiked = (slug, id) => { try { return (JSON.parse(localStorage.getItem("jcl:" + slug) || "[]") || []).includes(id) } catch (e) { return false } };
 const cLikeToggle = (slug, id) => { try { const a = JSON.parse(localStorage.getItem("jcl:" + slug) || "[]") || [];
   const i = a.indexOf(id); i < 0 ? a.push(id) : a.splice(i, 1);
-  localStorage.setItem("jcl:" + slug, JSON.stringify(a.slice(-500))) } catch (e) {} };
+  localStorage.setItem("jcl:" + slug, JSON.stringify(a.slice(-500))) } catch (e) {} };   // storage off: likes just do not persist
 const cRow = (slug, c, rep) => `<div class="jc${rep ? " jcrep" : ""}" data-cid="${esc(c.id)}">
   <span class="jca" aria-hidden="true" style="background:hsl(${hue(c.t)},42%,44%)">${esc((c.t[0] || "?").toUpperCase())}</span>
   <div class="jcm"><div class="jcline"><b class="jcwho">${esc(c.t)}</b><span class="jctime">${ago(c.at)}</span></div>
@@ -119,7 +119,7 @@ document.addEventListener("click", e => {
     const slug = card.dataset.slug;
     if (el.closest(".jcpost")){ const f = cm.querySelector(".jcform"), name = f.querySelector(".jcname"), body = f.querySelector(".jctext");
       if (!body.value.trim()) return body.focus();
-      try { localStorage.setItem("jcwho", name.value.trim().slice(0, 24)) } catch (err) {}
+      try { localStorage.setItem("jcwho", name.value.trim().slice(0, 24)) } catch (err) {}   // storage off: the name is simply not remembered
       const list = cLoad(slug); list.unshift(newComment(name.value, body.value)); cSave(slug, list);
       body.value = ""; cm.innerHTML = commentsHtml(slug, cLoad(slug)); return }
     const like = el.closest(".jclike");
@@ -135,7 +135,7 @@ document.addEventListener("click", e => {
     const rp = el.closest(".jcrepost");
     if (rp){ const root = rp.closest(".jcrform"), name = root.querySelector(".jcname"), body = root.querySelector(".jctext");
       if (!body.value.trim()) return body.focus();
-      try { localStorage.setItem("jcwho", name.value.trim().slice(0, 24)) } catch (err) {}
+      try { localStorage.setItem("jcwho", name.value.trim().slice(0, 24)) } catch (err) {}   // storage off: the name is simply not remembered
       const list = cLoad(slug), top = list.find(c => c.id === rp.dataset.parent);
       if (top){ (top.r = top.r || []).push(newComment(name.value, body.value)); cSave(slug, list) }
       cm.innerHTML = commentsHtml(slug, cLoad(slug)); return }
