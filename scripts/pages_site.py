@@ -50,11 +50,12 @@ def split(html):
     # tolerates missing market data (54-invprice guards D.pw), so degrade to a no-prices boot instead.
     boot = ('<script>\nwindow.__D = JSON.parse(document.getElementById("sitedata").textContent);\n'
             'window.D = window.__D;   // the app declares its own const D inside the wrapper; this one is for tests and the console\n'
+            'window.__DIR = new URL("./", location.href).href;   // the copy directory at boot: the address bar follows the open page later (00-routes.js), and these relative fetches must not chase it\n'
             # the app indexes several of these unguarded (D.ishop[id] in 49-items.js): a missing payload seeds
             # empties, so a no-prices boot is a real boot (a prices 404 could hit this even before the round-2 fix)
             'for (const k of ' + json.dumps(list(PRICES)) + ') window.__D[k] || (window.__D[k] = {});\n'
-            'window.__PRICES = (window.__D.lazy2 ? fetch(window.__D.lazy2, {cache: "no-store"})\n'
-            '  .then(r => r.ok ? r.json() : null).then(m => m ? fetch(m.url).then(r => r.ok ? r.json() : null).then(p => {\n'
+            'window.__PRICES = (window.__D.lazy2 ? fetch(new URL(window.__D.lazy2, window.__DIR), {cache: "no-store"})\n'
+            '  .then(r => r.ok ? r.json() : null).then(m => m ? fetch(new URL(m.url, window.__DIR)).then(r => r.ok ? r.json() : null).then(p => {\n'
             '    if (p) { for (const k of m.keys) if (p[k]) Object.assign(window.__D[k] || (window.__D[k] = {}), p[k]); if (p.srcd) window.__SRCD = p.srcd }\n'
             '    return p }) : null) : Promise.resolve(null)).catch(() => null);\n</script>\n')
     app = re.search(r'<script>\n(const D = JSON\.parse\(document\.getElementById\("sitedata"\)\.textContent\);)', out)
@@ -65,10 +66,12 @@ def split(html):
     assert 'const SRCDATES = window.__SRCD || {};' in out, "SRCDATES not relocated"
     i = out.rfind('</script>')
     out = out[:i] + '\nwindow.ASSETS = ASSETS;window.__BOOTED = true;});' + out[i:]
-    head = ('<link rel="manifest" href="manifest.webmanifest">\n<meta name="theme-color" content="#7d58d6">\n'
-            '<link rel="icon" href="icon-32.png" sizes="32x32">\n<link rel="icon" href="icon-192.png" sizes="192x192">\n<link rel="apple-touch-icon" href="icon-maskable.png">\n'
+    head = ('<link rel="manifest" href="/manifest.webmanifest">\n<meta name="theme-color" content="#7d58d6">\n'
+            '<link rel="icon" href="/icon-32.png" sizes="32x32">\n<link rel="icon" href="/icon-192.png" sizes="192x192">\n<link rel="apple-touch-icon" href="/icon-maskable.png">\n'
             '<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n'
             '<meta name="apple-mobile-web-app-title" content="MS Classic">\n'
+            # root-absolute: the address bar follows the open page now (00-routes.js path healing), so relative links here
+            # would resolve against whatever page's path the reader is on. The copy serves from its domain root.
             # link previews in Discord etc. (blind-spot report B6, 2026-10-31): one site-wide card, hash pages share it
             '<meta property="og:type" content="website">\n<meta property="og:site_name" content="MS Classic World Data Slop">\n'
             '<meta property="og:title" content="MS Classic World Data Slop">\n'

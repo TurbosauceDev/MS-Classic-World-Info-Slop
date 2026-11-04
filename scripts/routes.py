@@ -21,6 +21,27 @@ CLASS_OF = {"Warrior": "warrior", "Fighter": "warrior", "Page": "warrior", "Spea
             "Archer": "archer", "Hunter": "archer", "Crossbowman": "archer",
             "Rogue": "thief", "Assassin": "thief", "Bandit": "thief"}
 
+# every planner page's own address (Turbozo 2026-11-04: "every page has a link and clicking places gets you to the proper
+# page in your browser address bar... users can kind of vibe out our links"). The app shows the open place's path in the
+# bar (src/js/00-routes.js TAB_PATH - tests check the two tables agree); pages_gen.py writes a real page for each address
+# (tab -> /#g=<tab> redirect for people, the body for crawlers and no-JS readers), so a guessed, shared or reloaded URL
+# lands on the page with the path still in the bar. Grouped under their section so the scheme reads like the site does.
+PAGE_PATHS = {
+    "overview": "/overview/",
+    "trk": "/grind-tracker/", "trkhow": "/grind-tracker/how-to-use/", "trkruns": "/grind-tracker/shared-runs/",
+    "kpqt": "/grind-tracker/kpq-timer/", "trkkpq": "/grind-tracker/kpq-leaderboard/", "ladder": "/grind-tracker/weekly-ladder/",
+    "char": "/character-builder/", "plan": "/character-builder/build-calculator/",
+    "train": "/training/", "maps": "/training/where-to-train/", "path": "/training/path-planner/", "qlog": "/training/quest-log/",
+    "expc": "/training/exp-calculator/", "kpq": "/training/kerning-pq/",
+    "world": "/victoria-island/", "wmap": "/world-map/", "navi": "/map-navigator/",
+    "db": "/database/", "items": "/items/", "mobs": "/monsters/", "quests": "/quests/", "skills": "/skills/", "cit": "/citizenship/",
+    "town": "/mesos-and-trade/", "snipe": "/fm-sniper/", "mci": "/market-index/", "movers": "/movers/", "inv": "/price-check/",
+    "keep": "/keep-or-sell/", "craft": "/crafting/", "log": "/changelog/", "journal": "/journal/",
+    "credits": "/credits/", "feedback": "/feedback/", "privacy": "/privacy/",
+}
+# browse indexes whose address doubles as a page's own address: readers land in the app with that page open
+TAB_OF_INDEX = {"items": "items", "monsters": "mobs", "quests": "quests", "skills": "skills"}
+
 
 def slug(name):
     s = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode().lower().replace("'", "").replace("’", "")
@@ -68,8 +89,9 @@ class Routes:
         return f"/skills/{c}/" if slug(job) == c else f"/skills/{c}/{slug(job)}/"
 
     def table(self):
-        """compact form for the 404 router: kind -> [[id, slug, parent, dup]]; the router rebuilds canonical paths from it."""
+        """compact form for the 404 router: kind -> [[id, slug, parent, dup]]; the router rebuilds canonical paths from it.
+        pages = the planner's own page addresses (PAGE_PATHS): the router also resolves sloppy page guesses."""
         out = {k: [] for k in KINDS}
         for e in self.ents: out[e["kind"]].append([e["id"], e["slug"], e["parent"], 1 if e["dup"] else 0])
         return {"kinds": KINDS, "synonyms": SYNONYMS, "classes": sorted(set(CLASS_OF.values())),
-                "jobs": {slug(j): c for j, c in CLASS_OF.items()}, "e": out}
+                "jobs": {slug(j): c for j, c in CLASS_OF.items()}, "pages": {p: p for p in PAGE_PATHS.values()}, "e": out}

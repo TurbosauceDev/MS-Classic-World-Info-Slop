@@ -64,11 +64,14 @@ const javatar = a => { const u = POST_AVATARS[(a || "").toLowerCase()];
   return u ? `<img class="javatar" src="${u}" alt="" aria-hidden="true">`
     : `<span class="javatar jnoav" aria-hidden="true" style="background:hsl(${hue(a || "?")},42%,44%)">${esc((a || "?")[0].toUpperCase())}</span>` };
 const jtags = (p, tags) => (tags || []).map(t => `<button class="jtag linkbtn" type="button" data-jtag="${esc(t)}" title="Filter the feed to ${esc(t)}">${esc(t)}</button>`).join(" ");
+// the byline reads like a forum post (Turbozo 2026-11-04): the author, then the version, then the date, then the tags -
+// stacked, not "v0.22.1 · Site Updates · Nov 4, 2026" on one line; the date-side changelog link is gone (the tag filters
+// the feed to Site Updates, and the changelog button on Home and in the article nav already go there)
+const jmeta = (p, tags) => `<span class="sub jmeta">${p.ver ? `<span class="ver">${esc(p.ver)}</span>` : ""}<span class="jdate">${day(p.date)}</span>${jtags(p, tags) ? `<span class="jtagrow">${jtags(p, tags)}</span>` : ""}</span>`;
 const jcard = (p, tags) => { const min = sget("jx:" + p.slug) === "min";
   return `<article class="card jpost${(tags || []).includes(UPS.tag) ? " jupd" : ""}" data-slug="${esc(p.slug)}" data-jstate="${min ? "min" : "peek"}">
   <div class="cardhead jhead"><h3 class="jtitle" title="Open the article">${p.featured ? `<span class="jfeat" title="Featured post">★</span> ` : ""}${esc(p.title)}</h3>
-    <div class="jby">${javatar(p.author)}<span class="jwho"><span class="jauthor">${esc(p.author)}</span>
-      <span class="sub jmeta">${p.ver ? `<span class="ver">${esc(p.ver)}</span> · ` : ""}${jtags(p, tags)} · ${day(p.date)}${p.loglink ? ` · <a href="#" data-go="log">changelog</a>` : ""}</span></span>
+    <div class="jby">${javatar(p.author)}<span class="jwho"><span class="jauthor">${esc(p.author)}</span>${jmeta(p, tags)}</span>
       <button class="jfold" type="button" aria-expanded="${!min}" aria-label="${min ? "Expand" : "Collapse"}"><span class="jchev" aria-hidden="true">▾</span></button></div></div>
   ${p.img ? `<figure class="jimg"><img src="${p.img}" alt="" title="Open the article"></figure>` : ""}
   <div class="jfoldw" data-cut="0"><div class="jbody">${p.html}</div>
@@ -108,8 +111,7 @@ if (jlist){ jlist.innerHTML = POSTS.length ? POSTS.map(p => jcard(p, p.tags)).jo
   : `<p class="sub">No posts yet. The first one is being written.</p>`; initCards(jlist) }
 // ---- the article page (Turbozo 11-04: every article opens into its own page, shareable like wowhead's)
 let openSlug = "";
-const artByline = p => `<div class="jby jartby">${javatar(p.author)}<span class="jwho"><span class="jauthor">${esc(p.author)}</span>
-  <span class="sub jmeta">${p.ver ? `<span class="ver">${esc(p.ver)}</span> · ` : ""}${jtags(p, p.tags)} · ${day(p.date)}${p.loglink ? ` · <a href="#" data-go="log">changelog</a>` : ""}</span></span></div>`;
+const artByline = p => `<div class="jby jartby">${javatar(p.author)}<span class="jwho"><span class="jauthor">${esc(p.author)}</span>${jmeta(p, p.tags)}</span></div>`;
 const artHtml = p => `<div class="jarttop">
     <button class="linkbtn jback" type="button">← Back</button>
     <button class="linkbtn jshare" type="button">Copy link</button></div>

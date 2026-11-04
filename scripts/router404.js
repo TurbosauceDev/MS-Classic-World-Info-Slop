@@ -38,6 +38,10 @@
     var ps = {}; exact.forEach(function(h){ ps[h[1][2]] = 1 });
     var h0 = exact[0][1];
     return go(Object.keys(ps).length > 1 ? "/skills/" + h0[1] + "/" : "/" + T.kinds[kind] + "/" + h0[2] + h0[1] + "/") }
+  // the planner's own pages too (Turbozo 2026-11-04 "vibe out our links"): /worldmap/ or
+  // /grind-tracker/kpqtimer/ land on the page they mean, hyphens optional
+  var pg = T.pages || {}, want = "/" + toks.join("/") + "/", bare = want.replace(/-/g, "");
+  for (var p in pg){ if (p === want || p.replace(/-/g, "") === bare) return go(p) }
   var list = exact.length ? exact : near.sort(function(a, b){ return (b[1][1].indexOf(last) === 0) - (a[1][1].indexOf(last) === 0) || a[1][1].localeCompare(b[1][1]) });
   if (!box) return;
   var head = box.querySelector("p");

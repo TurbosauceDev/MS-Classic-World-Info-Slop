@@ -19,7 +19,14 @@ const DEEP = Object.keys(HASH).length > 0;   // a share-link document: no mirror
 const st = () => history.state && history.state.nav ? history.state : null;
 const setMax = m => { MAX = m; try { sessionStorage.setItem("navmax", m) } catch(e) {} };
 const btns = () => { const i = st()?.i || 0; $("#navback").disabled = i <= 0; $("#navfwd").disabled = i >= MAX };
-const put = (o, push) => { try { push ? history.pushState(o, "") : history.replaceState(o, "") } catch(e) {}
+// the entry carries the open place's address (Turbozo 2026-11-04: the bar must name the page - /world-map/, an entity's
+// clean page, a post's /news/<slug>/): a push writes the new path, a replace heals the boot's deep-link hash to the clean
+// path. popstate brings the URL home with the entry, so Back/Forward keep the bar true across the site. file:// copies
+// (smoke, the artifact) have no paths to push; they keep the whole URL as-is.
+const entryUrl = o => { if (!PATH_SYNC || o.tab == null) return null;
+  try { const p = placePath(o.tab, o.v); return p ? pathUrl(p) : null } catch(e) { return null } };
+const put = (o, push) => { const url = entryUrl(o);
+  try { push ? history.pushState(o, "", url || location.href) : history.replaceState(o, "", url || location.href) } catch(e) {}
   if (!DEEP && o.tab){ try { sessionStorage.setItem("navx:" + location.pathname, JSON.stringify({tab: o.tab, y: Math.round(o.y || 0)})) } catch(e) {} }   // storage can be off (private mode): Back then lands at the top, the old behavior
   btns() };
 // after any click / Enter / change has run its handlers: if the place changed, that's a new entry

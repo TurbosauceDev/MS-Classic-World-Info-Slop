@@ -29,6 +29,13 @@ const boxGaps = require("./boxgaps");
   check(await p.$eval("#feed .jpost", c => !!c.querySelector(".javatar")) && await p.$$eval("#feed .jupd img.javatar",
       l => l.length === 6 && l.every(i => i.src.startsWith("data:image/") && i.naturalWidth > 0)),
     "every feed card wears its poster's avatar, the updates wear the Orange Mushroom sprite");
+  // the forum-post byline (Turbozo 11-04): version, then date, then tags stacked in a column - and no date-side changelog
+  // link (the tag chip filters to Site Updates, the changelog button lives in the feed header and the article nav)
+  { const m = await p.$eval("#feed .jupd .jmeta", e => ({ dir: getComputedStyle(e).flexDirection, link: !!e.querySelector("a"),
+      ver: (e.querySelector(".ver") || {}).textContent || "", date: (e.querySelector(".jdate") || {}).textContent || "",
+      tags: e.querySelectorAll(".jtagrow .jtag").length }));
+    check(m.dir === "column" && !m.link && /^v\d/.test(m.ver) && /\d{4}/.test(m.date) && m.tags >= 1,
+      `update-post byline stacks version / date / tags, no changelog link (${JSON.stringify(m)})`) }
   check(await p.$$eval("#feed .jimg img", l => l.every(i => i.src.startsWith("data:image/") && i.naturalWidth > 0))
     && (!await p.evaluate(() => window.POSTS.some(x => x.img)) || await p.$$eval("#feed .jimg img", l => l.length) >= 1),
     "a post's main image renders when the post carries one");
@@ -120,6 +127,39 @@ const boxGaps = require("./boxgaps");
   }
   await p.mouse.move(4, 300); await p.waitForTimeout(80);
   await p.goto("about:blank"); await p.goto(SRC); await p.waitForFunction(() => document.documentElement.dataset.ready === "1", null, {timeout: 30000});   // reboot clean: the later scenes count journal links and walk every tab
+  // the address bar names the open page (Turbozo 11-04: "clicking places gets you to the proper page in your browser
+  // address bar"). Paths exist only on http(s) copies - file:// keeps its single-file bar - so this scene is URL-mode only.
+  if (/^https?:/.test(SRC)){
+    await p.goto("about:blank"); await p.goto(SRC + "#g=wmap");   // a page's own deep link
+    await p.waitForFunction(() => document.documentElement.dataset.ready === "1", null, {timeout: 30000});
+    await p.waitForTimeout(200);   // the boot entry heals the landing hash into the page's clean path
+    check(await p.evaluate(() => location.pathname) === "/world-map/" && await p.evaluate(() => document.querySelector("#t-wmap").getAttribute("aria-selected")) === "true",
+      "a page's own address boots that page with the path in the bar (guessability)");
+    await p.evaluate(() => { window.__smokeboot = 1 });
+    await Promise.all([p.waitForNavigation({waitUntil: "load"}).catch(() => {}), p.click("#sbhome")]);
+    await p.waitForFunction(() => document.documentElement.dataset.ready === "1", null, {timeout: 30000});
+    await p.waitForTimeout(200);
+    check(await p.evaluate(() => window.__smokeboot === undefined) && await p.evaluate(() => location.pathname) === "/" && !(await p.isHidden("#home")),
+      "Home leaves a deep-linked document by reloading at the root (the sticky-link escape)");
+    await p.click("#t-mobs"); await p.waitForTimeout(150);
+    check(await p.evaluate(() => location.pathname) === "/monsters/", "opening a page shows its own path in the bar");
+    await p.click("#t-wmap"); await p.waitForTimeout(150);
+    check(await p.evaluate(() => location.pathname) === "/world-map/", "Turbozo's example: World Map click lands at /world-map/ in the bar");
+    await p.evaluate(() => { window.__smokeboot = 1 });
+    await p.click("header h1"); await p.waitForTimeout(200);
+    check(await p.evaluate(() => window.__smokeboot === 1) && !(await p.isHidden("#home")) && await p.evaluate(() => location.pathname) === "/",
+      "the title card acts as Home (a clean document goes home in place)");
+    await p.goto("about:blank"); await p.goto(SRC + "#g=wmap");   // a deep-linked document: the title card is the same escape hatch
+    await p.waitForFunction(() => document.documentElement.dataset.ready === "1", null, {timeout: 30000});
+    await p.waitForTimeout(200);
+    await p.evaluate(() => { window.__smokeboot = 1 });
+    await Promise.all([p.waitForNavigation({waitUntil: "load"}).catch(() => {}), p.click("header h1")]);
+    await p.waitForFunction(() => document.documentElement.dataset.ready === "1", null, {timeout: 30000});
+    await p.waitForTimeout(200);
+    check(await p.evaluate(() => window.__smokeboot === undefined) && await p.evaluate(() => location.pathname) === "/",
+      "from a deep link the title card reloads at the root, like Home");
+    await p.goto("about:blank"); await p.goto(SRC); await p.waitForFunction(() => document.documentElement.dataset.ready === "1", null, {timeout: 30000});   // reboot clean for the tab walk
+  }
   // Overview = the old home grid (the page directory), now its own page under Home
   check(await p.$$eval("#overview .hlink", l => l.length) === 30, "overview page lists every page");
   { const miss = await p.evaluate(() => { const h = new Set([...document.querySelectorAll("#overview [data-go]")].map(a => a.dataset.go)); return [...document.querySelectorAll('[id^="t-"]')].map(b => b.id.slice(2)).filter(x => x !== "overview" && !h.has(x)) });

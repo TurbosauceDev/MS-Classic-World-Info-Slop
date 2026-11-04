@@ -30,7 +30,7 @@ e = lambda s: html.escape(str(s), quote=True)
 fmt = lambda n: f"{n:,}" if isinstance(n, int) else str(n)
 
 
-from routes import Routes, slug, KINDS, CLASS_OF
+from routes import Routes, slug, KINDS, CLASS_OF, PAGE_PATHS, TAB_OF_INDEX
 
 
 def hashlink(key, val):
@@ -91,7 +91,10 @@ def shell(title, desc, canon, body, extra_head=""):
 
 
 BOTS = ("bot|crawl|spider|slurp|bing|yandex|baidu|duckduck|facebookexternalhit|embedly|preview|whatsapp|telegram|discord|slack|twitter|"
-        "linkedin|pinterest|quora|gpt|claude|anthropic|perplexity|ccbot|bytespider|petalbot|ahrefs|semrush|lighthouse|headless")
+        "linkedin|pinterest|quora|gpt|claude|anthropic|perplexity|ccbot|bytespider|petalbot|ahrefs|semrush|lighthouse")
+# (plain "headless" used to be here too, from the first cut: the smoke's headless Chrome stayed on static pages. The app
+# shows real paths in the address bar now, so a reload mid-session lands on a page's own address and must follow its
+# redirect to get the app back - headless browsers included. Lighthouse still matches by name; crawlers by their own.)
 
 
 def redirect_script(target):
@@ -265,6 +268,26 @@ def index_page(title, desc, url, chip, inner):
     return (title, desc, f'<section class="card hero"><div><h1>{e(title)}</h1><span class="chip">{e(chip)}</span></div></section>{inner}')
 
 
+def page_stubs():
+    """one real address per planner page (Turbozo 2026-11-04: 'every page has a link... users can kind of vibe out our
+    links'). People are redirected into the app with that page open (#g=<tab>, like the entity pages' redirect) - the app
+    then shows the same path in the address bar (00-routes.js placePath), so a guessed, shared or reloaded URL lands on
+    the page and keeps it in the bar. The static body is for crawlers, link previews and no-JS readers. The four kinds
+    whose address is a browse index (/items/ ...) are skipped here - indexes() writes those, generate() adds the redirect."""
+    raw = re.findall(r'<button role="tab" id="t-([a-z]+)"[^>]*>([\s\S]*?)</button>', (ROOT / "src" / "index.html").read_text())
+    labels = {t: re.sub(r"<[^>]+>", "", body).strip() for t, body in raw}   # the sidebar buttons carry a sprite <img> before the label
+    idx_seg = {v: k for k, v in TAB_OF_INDEX.items()}   # tab id -> the browse index that carries its address (/items/ ...)
+    out = {}
+    for tab, path in PAGE_PATHS.items():
+        if idx_seg.get(tab) and path == f"/{idx_seg[tab]}/": continue   # the browse index carries this address; generate() adds its redirect
+        name = labels.get(tab) or tab
+        body = (f'<section class="card hero"><div><h1>{e(name)}</h1><span class="chip">Planner page</span></div></section>'
+                f'<section class="card"><p class="desc">{e(name)} is one of the planner\'s interactive pages - the full page opens in the app, with every link, filter and tool in place.</p>'
+                f'<p><a class="btn" href="/#g={tab}">Open {e(name)} in the planner</a></p></section>')
+        out[path] = (name, f"{name} - an interactive page of the MS Classic World planner.", body)
+    return out
+
+
 def indexes(D, R, real):
     """browse pages (crawl paths + something to click): kind lists, skills by class / job, and 'which one?' pages"""
     out = {}
@@ -336,12 +359,14 @@ def generate(D, dst, prev_src=None, today=None, news=None, heads=None):
     R = Routes(D)
     real, fake = build(D, R), canary_pages()
     idx = indexes(D, R, real)
+    stubs = page_stubs()
     news = news or {}
     heads = heads or {}
     clash = (set(real) & set(fake)) | (set(real) & set(idx)) | (set(fake) & set(idx)) \
-        | ((set(news) & set(real)) | (set(news) & set(fake)) | (set(news) & set(idx)))
+        | ((set(news) | set(stubs)) & (set(real) | set(fake) | set(idx))) \
+        | (set(news) & set(stubs))
     assert not clash, f"two pages share an address: {sorted(clash)[:5]}"
-    real = {**real, **news}
+    real = {**real, **stubs, **news}
     cblock = canary.block()
     state = {}
     for url, (title, desc, body) in {**real, **fake}.items():
@@ -356,7 +381,11 @@ def generate(D, dst, prev_src=None, today=None, news=None, heads=None):
     for url, (title, desc, body) in idx.items():
         f = dst / url.strip("/") / "index.html"
         f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_text(shell(title, desc, url, body, '<meta name="robots" content="noindex,follow">' if url in R.disambig else "").replace("{CANARY}", cblock))
+        # the four kind indexes double as a page's own address (/items/ = the Items page): readers land in the app,
+        # crawlers and no-JS readers keep the list (redirect_script returns early for bots)
+        tab = TAB_OF_INDEX.get(url.strip("/"))
+        red = redirect_script(f"/#g={tab}") if tab else ""
+        f.write_text(shell(title, desc, url, body, red + ('<meta name="robots" content="noindex,follow">' if url in R.disambig else "")).replace("{CANARY}", cblock))
     # 404.html: GitHub Pages serves it for every unknown address; the router sends guessed addresses to the canonical page
     (dst / "routes.json").write_text(json.dumps(R.table(), separators=(",", ":"), ensure_ascii=False))
     nf = ('<section class="card hero"><div><h1>No page at that address</h1><span class="chip">404</span></div></section>'

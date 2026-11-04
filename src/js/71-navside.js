@@ -49,7 +49,7 @@ const MESO_ICONS = ["iVBORw0KGgoAAAANSUhEUgAAABcAAAAYCAYAAAARfGZ1AAAACXBIWXMAAA7
 
   // footer links (Changelog, Credits) and the sidebar's Home row
   document.querySelector(".sitefoot").addEventListener("click", e => { const b = e.target.closest("[data-foot]"); if (b){ $("#t-" + b.dataset.foot).click(); window.scrollTo({top: 0}) } });
-  $("#sbhome").addEventListener("click", () => goHome());
+  $("#sbhome").addEventListener("click", () => homeJump());   // Home is also the way out of a deep-linked document (00-core.js)
 
   // Theme popup: layout and page size
   const el = document.documentElement, ls = (k, v) => { try { localStorage.setItem(k, v) } catch(e) {} };
