@@ -79,12 +79,51 @@ def split(html):
     out = out.replace("<title>", head + "<title>", 1)
     return out, name, blob, pname, pblob, market
 
+def update_posts(html):
+    """The built changelog's entries as the update-post list for news_pages, mirroring 77-journal.js's runtime
+    slugs ("log-" + version-or-date, same character classes): [slug, ver, title, date, desc]."""
+    i = html.find('<div class="changelog">')
+    if i < 0:
+        return []
+    div = re.compile(r'<div\b|</div>')
+    out, pos = [], html.find('<div class="card"', i)
+    while pos >= 0:
+        depth, m, end = 0, div.search(html, pos), pos
+        while m:
+            depth += 1 if m.group(0) == "<div" else -1
+            if depth == 0:
+                end = m.end(); break
+            m = div.search(html, m.end())
+        card = html[pos:end]
+        t, h3 = re.search(r'data-t="([^"]+)"', card), re.search(r'<h3>(.*?)</h3>', card, re.S)
+        ver = re.search(r'<span class="ver">(v[\d.]+)</span>', card)
+        if t and h3:
+            key = ver.group(1) if ver else t.group(1)
+            txt = re.sub(r"<[^>]+>", "", h3.group(1))   # the built h3 carries the version span; the app reads textContent
+            title = re.sub(r"^[A-Z][a-z]{2} \d{1,2}, \d{4} · ", "", re.sub(r"^v[\d.]+\s*", "", txt))
+            body = re.sub(r"<[^>]+>", " ", card[card.find("</div>", card.find("cardhead") + 20):])
+            out.append({"slug": "log-" + re.sub(r"[^\w]+", "-", key, flags=re.A).strip("-"),
+                        "ver": ver.group(1) if ver else "", "title": title, "date": t.group(1)[:10],
+                        "desc": re.sub(r"\s+", " ", body).strip()[:200]})
+        pos = html.find('<div class="card"', end)
+    return out
+
+
 def main(dst):
     dst = pathlib.Path(dst); dst.mkdir(parents=True, exist_ok=True)
     html = (ROOT / "dist" / "index.html").read_text()
     out, name, blob, pname, pblob, market = split(html)
     import pages_gen   # static per-item/mob/map pages + sitemap (scripts/pages_gen.py)
-    pages_gen.generate(json.loads(re.search(r'<script type="application/json" id="sitedata">(.*?)</script>', html, re.S).group(1)), dst)
+    D = json.loads(re.search(r'<script type="application/json" id="sitedata">(.*?)</script>', html, re.S).group(1))
+    news, imgs = pages_gen.news_pages(D, update_posts(html))
+    # an article's og:image points at a real URL (link previews skip data URIs), so the post image is copied out
+    heads = {f"/news/{pathlib.Path(rel).stem}/": '<meta property="og:type" content="article">\n'
+             f'<meta property="og:image" content="https://maplestory.scumlord.studio/{rel}">\n' for _src, rel in imgs}
+    pages_gen.generate(D, dst, news=news, heads=heads)
+    for src, rel in imgs:
+        f = dst / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(src, f)
     (dst / "index.html").write_text(out); (dst / name).write_text(blob); (dst / pname).write_text(pblob)
     (dst / "assets.json").write_text(json.dumps({"url": name, "keys": list(LAZY)}))
     (dst / "prices.json").write_text(json.dumps({"url": pname, "keys": list(PRICES)}))

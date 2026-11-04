@@ -300,7 +300,35 @@ def indexes(D, R, real):
     return out
 
 
-def generate(D, dst, prev_src=None, today=None):
+def news_pages(D, updates=None):
+    """-> ({url: (title, desc, body)}, [(src image path, dst rel path)]) for the newsfeed's article pages
+    (Turbozo 2026-11-04: every article is its own shareable page, /news/<slug>/, wowhead-style). Journal posts
+    bake the full body (posts.py's safe HTML, auto links included); changelog entries get a shorter card. People
+    are redirected into the app's article view (/#a=<slug>) either way - the static page is for crawlers, link
+    previews and no-JS readers. updates = the built changelog's entries from scripts/pages_site.py, mirroring the
+    slugs 77-journal.js derives at runtime (log-<version-or-date>)."""
+    import posts as _posts
+    out, imgs = {}, []
+    for p in _posts.load(D):
+        ext = pathlib.Path(p["imgfile"]).suffix if p["imgfile"] else ""
+        img = f'<img class="artimg" src="/news/img/{p["slug"]}{ext}" alt="">' if p["imgfile"] else ""
+        body = (f'<section class="card hero"><div class="art"><span class="chip">{e(" \u00b7 ".join(p["tags"]))}</span>'
+                f'<h1>{e(p["title"])}</h1><p class="note">by {e(p["author"])} \u00b7 {e(p["date"])}'
+                f'{" \u00b7 \u2605 featured" if p["featured"] else ""}</p>{img}{p["html"]}'
+                f'<p><a class="btn" href="/#a={p["slug"]}">Read this post in the app - comments included</a></p></div></section>')
+        out[f"/news/{p['slug']}/"] = (p["title"], p["excerpt"], body)
+        if p["imgfile"]:
+            imgs.append((_posts.POSTS_DIR / p["imgfile"], f"news/img/{p['slug']}{ext}"))
+    for u in (updates or []):
+        body = (f'<section class="card hero"><div class="art"><span class="chip">Site Updates{e(" \u00b7 " + u["ver"]) if u.get("ver") else ""}</span>'
+                f'<h1>{e(u["title"])}</h1><p class="note">by Glorg \u00b7 {e(u["date"])}</p>'
+                f'<p class="desc">{e(u["desc"])}</p>'
+                f'<p><a class="btn" href="/#a={u["slug"]}">Read this update in the app - comments included</a></p></div></section>')
+        out[f"/news/{u['slug']}/"] = (u["title"], u["desc"], body)
+    return out, imgs
+
+
+def generate(D, dst, prev_src=None, today=None, news=None, heads=None):
     dst = pathlib.Path(dst)
     today = today or datetime.date.today().isoformat()
     prev, status = load_prev(prev_src or os.environ.get("SITEMAP_PREV") or SITE + "/sitemap-state.json")
@@ -308,8 +336,12 @@ def generate(D, dst, prev_src=None, today=None):
     R = Routes(D)
     real, fake = build(D, R), canary_pages()
     idx = indexes(D, R, real)
-    clash = (set(real) & set(fake)) | (set(real) & set(idx)) | (set(fake) & set(idx))
+    news = news or {}
+    heads = heads or {}
+    clash = (set(real) & set(fake)) | (set(real) & set(idx)) | (set(fake) & set(idx)) \
+        | ((set(news) & set(real)) | (set(news) & set(fake)) | (set(news) & set(idx)))
     assert not clash, f"two pages share an address: {sorted(clash)[:5]}"
+    real = {**real, **news}
     cblock = canary.block()
     state = {}
     for url, (title, desc, body) in {**real, **fake}.items():
@@ -320,7 +352,7 @@ def generate(D, dst, prev_src=None, today=None):
         f = dst / url.strip("/") / "index.html"
         f.parent.mkdir(parents=True, exist_ok=True)
         m = re.search(r'class="btn" href="(/#[^"]*)"', body) if url in real else None
-        f.write_text(shell(title, desc, url, body, redirect_script(m.group(1)) if m else "").replace("{CANARY}", cblock))
+        f.write_text(shell(title, desc, url, body, heads.get(url, "") + (redirect_script(m.group(1)) if m else "")).replace("{CANARY}", cblock))
     for url, (title, desc, body) in idx.items():
         f = dst / url.strip("/") / "index.html"
         f.parent.mkdir(parents=True, exist_ok=True)

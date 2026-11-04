@@ -3,6 +3,7 @@ title: Welcome to the journal
 date: 2026-11-03
 author: Turbozo
 image: img/welcome-to-the-journal.jpg
+tags: Blog Post
 ---
 
 This is a sample post. It exists so the journal has something to show on day one, and so the format below has a live example to point at. It stays until the first real note replaces it.

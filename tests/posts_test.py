@@ -34,6 +34,22 @@ for text, why in [
         check(str(e).startswith("src/posts/2026-11-03-test-post.md: "), why + " (message names the file)")
 meta, body = posts.parse_post("---\ntitle: Hi there\ndate: 2026-11-03\n---\nhello", "2026-11-03-x.md")
 check(meta["author"] == posts.DEFAULT_AUTHOR and meta["title"] == "Hi there", "author defaults, title kept")
+meta, _ = posts.parse_post("---\ntitle: T\ndate: 2026-11-03\ntags: Maple News, Guide\nfeatured: true\n---\nbody", "2026-11-03-x.md")
+check(meta["tags"] == ["Maple News", "Guide"] and meta["featured"] is True, "tags parse into a list, featured: true reads as true")
+meta, _ = posts.parse_post("---\ntitle: T\ndate: 2026-11-03\n---\nbody", "2026-11-03-x.md")
+check(meta["tags"] == [posts.DEFAULT_TAG] and meta["featured"] is False, "a post without tags defaults to Blog Post, featured off")
+for text, why in [
+    ("---\ntitle: T\ndate: 2026-11-03\nfeatured: maybe\n---\nbody", "non-boolean featured rejected"),
+    ("---\ntitle: T\ndate: 2026-11-03\ntags: ,,\n---\nbody", "an empty tags list falls through to the default"),
+]:
+    if why.startswith("non-boolean"):
+        try:
+            posts.parse_post(text, "2026-11-03-test-post.md"); check(False, why)
+        except SystemExit as e:
+            check(str(e).startswith("src/posts/2026-11-03-test-post.md: "), why + " (message names the file)")
+    else:
+        meta, _ = posts.parse_post(text, "2026-11-03-test-post.md")
+        check(meta["tags"] == [posts.DEFAULT_TAG], why)
 
 # ---- markdown dialect + escaping
 h = posts.md_html("<script>alert(1)</script> & **bold** *it* `a*b`")
@@ -92,9 +108,10 @@ meta, _ = posts.parse_post(wimgpost("img/pic.png").read_text(), "2026-11-03-x.md
 check(meta.get("image") == "img/pic.png", "image: is an accepted front matter key")
 one = posts.load(D, tmp2)
 check(one and one[0]["img"].startswith("data:image/png;base64,"), "load() bakes the post image as a data URI")
+check(one[0]["imgfile"] == "img/pic.png", "load() keeps the image's repo path for the Pages copy (og:image)")
 (tmp2 / "img" / "pic.png").unlink()
 (tmp2 / "2026-11-03-x.md").write_text("---\ntitle: T\ndate: 2026-11-03\n---\nbody")
-check(posts.load(D, tmp2)[0]["img"] == "", "a post without image: carries an empty img")
+check(posts.load(D, tmp2)[0]["img"] == "" and posts.load(D, tmp2)[0]["imgfile"] == "", "a post without image: carries an empty img and imgfile")
 
 # ---- poster avatars (Turbozo's green Slime, the site updates' Orange Mushroom)
 avs = tmp2 / "avatars"; avs.mkdir()
@@ -112,7 +129,12 @@ except SystemExit as e:
 # ---- load() over the real posts directory
 got = posts.load(D)
 check(len(got) >= 1, f"the real src/posts parses ({len(got)} post(s))")
-check(all(set(p) == {"slug", "title", "date", "author", "html", "excerpt", "img"} for p in got), "post shape")
+check(all(set(p) == {"slug", "title", "date", "author", "html", "excerpt", "img", "imgfile", "tags", "featured"} for p in got), "post shape")
+check(all(isinstance(p["tags"], list) and p["tags"] and all(isinstance(t, str) and t for t in p["tags"]) for p in got), "every post carries a non-empty tag list")
+check(sum(1 for p in got if p["featured"]) == 1, "one sample post ships featured (the feed's hero has content)")
+j = json.loads(posts.inject(D))
+check(isinstance(j, list) and len(j) == len(got), "inject() is the JSON list build.py bakes")
+check(all("imgfile" not in x for x in j), "inject() strips imgfile (the baked page needs no repo paths)")
 check([p["date"] for p in got] == sorted((p["date"] for p in got), reverse=True), "newest first")
 check(len({p["slug"] for p in got}) == len(got), "slugs unique")
 check(all(len(p["excerpt"]) <= 210 and "<" not in p["excerpt"] for p in got), "excerpts are short plain text")
@@ -120,8 +142,7 @@ check(sum(1 for p in got if p["img"].startswith("data:image/")) == 2, "the two s
 Rt2 = __import__("routes").Routes(D)
 bad = [a for p in got for a in re.findall(r'href="([^"]+)"', p["html"]) if a.startswith("/") and a not in Rt2.by_canon and a not in Rt2.disambig]
 check(not bad, f"every auto link in the shipped posts resolves ({bad[:2]})")
-j = json.loads(posts.inject(D))
-check(isinstance(j, list) and len(j) == len(got), "inject() is the JSON list build.py bakes")
+check(all(set(p) == {"slug", "title", "date", "author", "html", "excerpt", "img", "tags", "featured"} for p in j), "the baked post shape matches what 77-journal.js reads")
 
 shutil.rmtree(tmp)
 print(f"posts test passed ({ok} checks)")

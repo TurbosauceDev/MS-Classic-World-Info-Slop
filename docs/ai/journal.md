@@ -13,11 +13,18 @@ would file through this exact same path.
 
 Turbozo, 2026-11-04 (the wowhead-shaped format): site updates are posts on the feed now, not changelog-link rows -
 the newest changelog entries render as full cards authored by **Glorg** (still read live from `#log`, so they can
-never drift from the changelog). Every card wears its poster's avatar, can carry a main image, folds past a max
-body length behind a frosted cutoff with a "… continue reading" button, minimizes to its header on a click (again
-to reopen; the view is remembered per post in sessionStorage `jx:<slug>`, so Back from an entity page restores it),
-and ends in a wowhead-style comment box. Comments live in the reader's browser (localStorage `jc:<slug>`,
+never drift from the changelog). Every card wears its poster's avatar and can carry a main image, folds past a max
+body length behind a frosted cutoff, and minimizes to its header on a click (again to reopen; remembered per post
+in sessionStorage `jx:<slug>`). Comments live in the reader's browser (localStorage `jc:<slug>`,
 `jcl:<slug>` likes, `jcwho` name) - a shared/backend box replaces `cLoad`/`cSave` in `77-journal.js` alone.
+
+Turbozo, 2026-11-04 (a feed of pages): a card's title, image or continue-reading opens **the article** - its own
+page (the Journal page's article view, deep link `#a=<slug>`) with the full body and the comment box; comments are
+no longer on the feed cards. Every article also gets a real static page `scripts/pages_gen.py` writes at
+`/news/<slug>/` (update posts included, slugs mirroring `77-journal.js`): link previews get title, description and
+`og:image` (the post image copied to `/news/img/`), and people are redirected into the app's article view. The
+feed gained a tag filter (`tags:` front matter; canonical list in `scripts/posts.py` TAGS, default Blog Post) and
+a featured hero (`featured: true` puts the newest featured post up top).
 
 ## File contract
 
@@ -29,6 +36,8 @@ title: The title of the post
 date: 2026-11-03
 author: Turbozo
 image: img/welcome-to-the-journal.jpg
+tags: Guide, Maple News
+featured: true
 ---
 The body, in the dialect below.
 ```
@@ -36,6 +45,11 @@ The body, in the dialect below.
 - `title` and `date` are required; `author` is optional and defaults to `Turbozo`; `image` is optional (the post's
   main image) and must be a PNG/JPEG file under `src/posts/` (usually the `src/posts/img/` folder), under 200 KB - it is baked into the
   page as a data URI, so remote URLs and `..` paths fail the build.
+- `tags` is optional: a comma-separated list shown as filter pills on the feed and on the article. The canonical
+  tags (scripts/posts.py TAGS) are Maple News, Maple Patch Notes, Maple Misc, Site Updates, Blog Post, Guide,
+  Event, Market - Site Updates is reserved for the changelog entries; a post without tags reads as Blog Post.
+  Free-form extra tags are fine; the feed's filter row lists the tags posts actually carry.
+- `featured` is optional (`true`/`false`): the newest featured post leads the feed in the hero slot.
 - Any other front matter key, a missing block or an empty body fails the build on purpose (the bridge sees the
   error immediately). `tests/posts_test.py` checks all of this in CI.
 
