@@ -114,12 +114,13 @@ def main(dst):
     html = (ROOT / "dist" / "index.html").read_text()
     out, name, blob, pname, pblob, market = split(html)
     import pages_gen   # static per-item/mob/map pages + sitemap (scripts/pages_gen.py)
+    import routes
     D = json.loads(re.search(r'<script type="application/json" id="sitedata">(.*?)</script>', html, re.S).group(1))
     news, imgs = pages_gen.news_pages(D, update_posts(html))
     # an article's og:image points at a real URL (link previews skip data URIs), so the post image is copied out
     heads = {f"/news/{pathlib.Path(rel).stem}/": '<meta property="og:type" content="article">\n'
              f'<meta property="og:image" content="https://maplestory.scumlord.studio/{rel}">\n' for _src, rel in imgs}
-    pages_gen.generate(D, dst, news=news, heads=heads)
+    pages_gen.generate(D, dst, news=news, heads=heads, app_paths=sorted(set(routes.page_paths(html).values())))
     for src, rel in imgs:
         f = dst / rel
         f.parent.mkdir(parents=True, exist_ok=True)

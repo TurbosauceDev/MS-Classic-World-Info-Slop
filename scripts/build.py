@@ -54,6 +54,14 @@ js = js.replace("__SRCDATES__", json.dumps(srcd).replace("<", "\\u003c"), 1)
 # journal posts (docs/ai/journal.md): src/posts/*.md -> the __POSTS__ literal in 77-journal.js; scripts/posts.py
 # renders the markdown dialect and links game names to their clean pages (auto links, Danny 2026-11-03)
 import posts
+# every app page owns a clean address-bar path derived from its nav label (Turbozo 2026-11-04: /world-map is a
+# link you can guess, share and type); routes.page_paths is the one source of truth (75-history.js writes the
+# address in-app, pages_gen.py teaches the 404 router the same list so a typed path lands on its page)
+import routes as _routes
+_PAGE_PATHS = _routes.page_paths(html)
+assert "__PAGE_PATHS__" in js
+js = js.replace("__PAGE_PATHS__", json.dumps(_PAGE_PATHS).replace("<", "\\u003c"), 1)
+assert "__PAGE_PATHS__" not in js
 assert "__POSTS__" in js
 js = js.replace("__POSTS__", posts.inject(D).replace("<", "\\u003c"), 1)
 assert "__POSTS__" not in js

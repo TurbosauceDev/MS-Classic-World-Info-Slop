@@ -27,6 +27,26 @@ def slug(name):
     return re.sub(r"[^a-z0-9]+", "-", s).strip("-") or "page"
 
 
+def page_paths(html):
+    """tab id -> clean address-bar path for every app page (Turbozo 2026-11-04: every page owns its link, guessable
+    from the nav label the user can see - World Map -> /world-map, Kerning PQ -> /kerning-pq). One source of truth:
+    the nav buttons in index.html; build.py injects the map into 75-history.js (in-app address-bar writes) and
+    pages_site.py hands it to the 404 router (GitHub Pages is static, so a typed /world-map 404s and the router hops
+    the app back onto that path). journal is /news so the list and its /news/<slug>/ article pages share one prefix."""
+    out, owner = {}, {}
+    for m in re.finditer(r'<button[^>]*data-tab="([\w-]+)"[^>]*>(.*?)</button>', html, re.S):
+        tab, label = m.group(1), re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", m.group(2))).strip()
+        s = slug(label)
+        if s in owner and owner[s] != tab:
+            raise SystemExit(f"page_paths: {owner[s]} and {tab} both want /{s} - rename a nav label or special-case it")
+        owner[s] = tab
+        out[tab] = "/news" if tab == "journal" else "/" + s
+    if "home" in out:
+        raise SystemExit("page_paths: no tab may be named home (the front page owns /)")
+    out["home"] = "/"
+    return out
+
+
 class Routes:
     """entities of a built data.json: list of {kind, id, name, slug, parent, dup, canon}; plus the slug -> members map."""
 

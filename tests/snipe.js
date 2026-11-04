@@ -30,7 +30,7 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
   const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split("?")[0]);
     if (u === "/market.json"){ hits++; r.writeHead(200, {"content-type": "application/json"}); return r.end(market) }
     const f = path.join(OUT, u.replace(/^\/$/, "/index.html"));
-    if (!f.startsWith(OUT) || !fs.existsSync(f)){ r.writeHead(404); return r.end() }
+    if (!f.startsWith(OUT) || !fs.existsSync(f)){ r.writeHead(404, {"content-type": "text/html"}); return r.end(fs.readFileSync(path.join(OUT, "404.html"))) }   // GitHub Pages fidelity: unknown paths render 404.html (the router hops clean app paths back into the app)
     r.writeHead(200, {"content-type": TYPES[path.extname(f)] || "application/octet-stream"}); r.end(fs.readFileSync(f)) });
   await new Promise(res => srv.listen(0, "127.0.0.1", res));
   const URL = `http://localhost:${srv.address().port}/`;

@@ -328,7 +328,7 @@ def news_pages(D, updates=None):
     return out, imgs
 
 
-def generate(D, dst, prev_src=None, today=None, news=None, heads=None):
+def generate(D, dst, prev_src=None, today=None, news=None, heads=None, app_paths=None):
     dst = pathlib.Path(dst)
     today = today or datetime.date.today().isoformat()
     prev, status = load_prev(prev_src or os.environ.get("SITEMAP_PREV") or SITE + "/sitemap-state.json")
@@ -363,7 +363,15 @@ def generate(D, dst, prev_src=None, today=None, news=None, heads=None):
           '<section class="card" id="nf"><p class="desc">Try one of the lists above, or search the planner.</p>'
           '<p><a class="btn" href="/">Open the planner</a></p></section>')
     (dst / "404.html").write_text(shell("Page not found", "No page at this address.", "/", nf,
-        '<meta name="robots" content="noindex"><script>' + (ROOT / "scripts/router404.js").read_text() + "</script>").replace("{CANARY}", cblock))
+        '<meta name="robots" content="noindex"><script>'
+        # the app's own pages (Turbozo 2026-11-04: every page owns a clean address like /world-map): GitHub Pages has
+        # no rewrites, so a typed path 404s into here - stash it for the app (75-history reads "navspa" at boot,
+        # reopens the page and writes the path back into the address bar) and hop to /. Sub-paths hop too, which is
+        # how a typed /news/<slug> reaches the article view. Unknown addresses still get the routes.json guess below.
+        + '(function(){var APP=' + json.dumps(sorted(set(app_paths or [])))
+        + ';var sp=decodeURIComponent(location.pathname).replace(/\\/+$/,"").toLowerCase();'
+        'if(sp&&APP.some(function(a){return sp===a||sp.indexOf(a+"/")===0})){try{sessionStorage.setItem("navspa",sp)}catch(e){}location.replace("/")}})();'
+        + (ROOT / "scripts/router404.js").read_text() + "</script>").replace("{CANARY}", cblock))
     kind_idx = [f"/{p}/" for p in KINDS.values()]
     urls = ["/"] + kind_idx + sorted(u for u in idx if u not in R.disambig and u not in kind_idx) + sorted(state)
     rows = []

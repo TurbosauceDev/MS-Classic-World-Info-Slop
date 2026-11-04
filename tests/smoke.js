@@ -63,6 +63,14 @@ const boxGaps = require("./boxgaps");
     check(await p.$eval('.jfpill[data-jfilter="All"]', b => b.classList.contains("on")), "All is highlighted again");
     const want = await p.evaluate(() => Math.min(window.POSTS.length, 8)) + ups;
     check((await p.$$eval("#feed .jpost", l => l.length)) === want, "All restores the whole timeline"); }
+  // every page owns a clean address (Turbozo 11-04): the injected map covers every nav tab, paths are unique,
+  // journal is /news so the list shares its /news/<slug>/ article prefix. file:// cannot pushState a path - the
+  // address-bar behavior itself is asserted on the generated Pages copy (tests/pages.js scene 6).
+  check(await p.evaluate(() => { const m = window.PAGE_PATHS,
+    tabs = [...document.querySelectorAll("[data-tab]")].map(b => b.dataset.tab), v = Object.values(m);
+    return !!m && tabs.every(t => m[t] && m[t][0] === "/") && v.every((x, i) => v.indexOf(x) === i)
+      && m.journal === "/news" && m.home === "/" }),
+    "every page owns a unique clean path (journal shares the /news prefix)");
   // a click on the card body minimizes it, the fold chevron reopens it, the title opens the article
   { const slug = await p.$eval("#feed .jpost", c => c.dataset.slug);
     await p.click("#feed .jpost .jfoldw");

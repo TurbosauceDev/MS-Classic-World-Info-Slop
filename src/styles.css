@@ -274,7 +274,7 @@ input.khave{width:64px;text-align:right}
 .changelog p{margin:0 0 8px;font-size:15px}
 .changelog ul{margin:0;padding-left:18px;font-size:15px;line-height:1.5}
 .changelog li{margin:3px 0}
-.changelog .ver,.trkpatch b{font:600 .85em var(--f-mono);color:var(--muted)}
+.changelog .ver,.jwho .ver,.trkpatch b{font:600 .85em var(--f-mono);color:var(--muted)}
 .trkpatch p{margin:0 0 6px;font-size:15px}
 
 /* monsters tab */
@@ -482,10 +482,11 @@ header h1{cursor:pointer}
 @media (max-width:420px){.homegrid{grid-template-columns:1fr}}
 /* Home newsfeed (Danny 2026-11-03: the serebii.net shape - opens straight onto the feed) and the Journal page;
    posts render from POSTS, changelog rows read #log (77-journal.js) */
-.feedtop{display:flex;justify-content:space-between;align-items:flex-end;gap:10px 14px;flex-wrap:wrap;margin-bottom:12px}
+.feedtop{margin-bottom:12px}
 .feedtop h2{margin:0;font-size:21px}
 .feedtop .sub{margin:2px 0 0}
-.feedlinks{display:flex;gap:8px;flex-wrap:wrap}
+.feedlinks{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px}   /* centered under the title (Turbozo 2026-11-04) */
+#home{max-width:900px;margin-inline:auto}   /* the newsfeed reads centered, like the narrow Journal page (Turbozo 2026-11-04) */
 .feed{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;max-width:900px}   /* minmax(0,..): a long byline must not widen the track (390px) */
 .fday{font-size:14px;font-weight:600;color:var(--muted);margin:10px 0 0;padding-bottom:5px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.03em}
 .feedmore{margin:2px 0 0}
@@ -509,7 +510,8 @@ header h1{cursor:pointer}
 .jby{display:flex;align-items:center;gap:9px;margin-left:auto;min-width:0;cursor:pointer}
 .javatar{width:38px;height:38px;object-fit:contain;border-radius:9px;padding:2px;box-sizing:border-box;background:color-mix(in srgb,var(--line) 45%,transparent);filter:drop-shadow(0 2px 3px rgb(0 0 0 / .22))}
 span.javatar.jnoav{display:flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font:700 17px var(--f-body)}
-.jwho{display:flex;flex-direction:column;gap:1px;line-height:1.3;min-width:0}
+.jwho{display:flex;flex-direction:column;gap:2px;line-height:1.35;min-width:0}
+.jtagrow{display:flex;flex-wrap:wrap;gap:4px;margin-top:1px}   /* the byline's tag chips sit on their own line (Turbozo 2026-11-04) */
 .jpost .jmeta{overflow:hidden;text-overflow:ellipsis}   /* the byline never pushes the card wider (390px phones) */
 .jauthor{font:600 14.5px var(--f-body);color:var(--accent)}
 .jcat{font:700 11px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}

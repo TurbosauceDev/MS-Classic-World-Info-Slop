@@ -34,7 +34,7 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
     hits.push(decodeURIComponent(q.url.split("?")[0]));
     const st = fs.existsSync(f) && fs.statSync(f);
     if (st && st.isDirectory()) f = path.join(f, "index.html");   // clean routes (pages_gen.py): /items/work-gloves/ is a directory index
-    if (!f.startsWith(OUT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end() }
+    if (!f.startsWith(OUT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404, {"content-type": "text/html"}); return r.end(fs.readFileSync(path.join(OUT, "404.html"))) }   // GitHub Pages fidelity: unknown paths render 404.html (the router hops clean app paths back into the app)
     setTimeout(() => { r.writeHead(200, {"content-type": TYPES[path.extname(f)] || "application/octet-stream"}); r.end(fs.readFileSync(f)) }, /assets-/.test(f) ? delay : 0) });
   await new Promise(res => srv.listen(0, "127.0.0.1", res));
   const URL = `http://localhost:${srv.address().port}/`;
@@ -123,6 +123,23 @@ const TYPES = {".html": "text/html", ".json": "application/json", ".js": "text/j
         back.home && Math.abs(back.y - y) < 3,
         `a mention opens its clean page (${went}) and hops into the planner; Back returns to the article at the same spot (${back.y} vs ${y})`);
     } else check(!errs.length, "no linked mentions in the shipped posts: back-to-article scene skipped");
+    await ctx.close() }
+
+  // 6. every page owns its address (Turbozo 11-04): tab clicks rewrite the address bar to the page's clean path,
+  //    an open article takes its /news/<slug> address, and Home resets to "/"
+  { const {p, errs, ctx} = await page();
+    await p.goto(URL); await booted(p);
+    await open(p, "wmap"); await p.waitForTimeout(200);
+    check(!errs.length && await p.evaluate(() => location.pathname) === "/world-map",
+      `opening the World Map puts /world-map in the address bar (${await p.evaluate(() => location.pathname)})`);
+    await open(p, "journal"); await p.waitForTimeout(120);
+    await p.click("#jlist .jtitle"); await p.waitForTimeout(200);
+    const art = await p.evaluate(() => location.pathname);
+    check(!errs.length && /^\/news\/[a-z0-9-]+$/.test(art), `an open article takes its /news/<slug> address (${art})`);
+    await p.click("#sbhome"); await p.waitForTimeout(200);
+    check(await p.evaluate(() => location.pathname) === "/" && !(await p.isHidden("#home")), "Home resets the address bar to / (no more sticky deep links)");
+    await p.goBack(); await p.waitForTimeout(250);
+    check(await p.evaluate(() => location.pathname) === art, "Back from Home returns to the article's address");
     await ctx.close() }
 
   await b.close(); srv.close(); fs.rmSync(OUT, {recursive: true, force: true});

@@ -64,11 +64,14 @@ const javatar = a => { const u = POST_AVATARS[(a || "").toLowerCase()];
   return u ? `<img class="javatar" src="${u}" alt="" aria-hidden="true">`
     : `<span class="javatar jnoav" aria-hidden="true" style="background:hsl(${hue(a || "?")},42%,44%)">${esc((a || "?")[0].toUpperCase())}</span>` };
 const jtags = (p, tags) => (tags || []).map(t => `<button class="jtag linkbtn" type="button" data-jtag="${esc(t)}" title="Filter the feed to ${esc(t)}">${esc(t)}</button>`).join(" ");
+// the byline stacks like a forum post (Turbozo 2026-11-04): author, version under it, date under that, then the tag
+// chips - no changelog link in the byline any more (the Site Updates chip filters to these posts, the feed header's
+// Full changelog button reaches #log). Exactly one .jmeta per card - the date line (smoke counts them).
+const jbyline = (p, tags) => `<span class="jwho"><span class="jauthor">${esc(p.author)}</span>\n  ${p.ver ? `<span class="ver">${esc(p.ver)}</span>` : ""}\n  <span class="sub jmeta">${day(p.date)}</span>\n  <span class="jtagrow">${jtags(p, tags)}</span></span>`;
 const jcard = (p, tags) => { const min = sget("jx:" + p.slug) === "min";
   return `<article class="card jpost${(tags || []).includes(UPS.tag) ? " jupd" : ""}" data-slug="${esc(p.slug)}" data-jstate="${min ? "min" : "peek"}">
   <div class="cardhead jhead"><h3 class="jtitle" title="Open the article">${p.featured ? `<span class="jfeat" title="Featured post">★</span> ` : ""}${esc(p.title)}</h3>
-    <div class="jby">${javatar(p.author)}<span class="jwho"><span class="jauthor">${esc(p.author)}</span>
-      <span class="sub jmeta">${p.ver ? `<span class="ver">${esc(p.ver)}</span> · ` : ""}${jtags(p, tags)} · ${day(p.date)}${p.loglink ? ` · <a href="#" data-go="log">changelog</a>` : ""}</span></span>
+    <div class="jby">${javatar(p.author)}${jbyline(p, tags)}
       <button class="jfold" type="button" aria-expanded="${!min}" aria-label="${min ? "Expand" : "Collapse"}"><span class="jchev" aria-hidden="true">▾</span></button></div></div>
   ${p.img ? `<figure class="jimg"><img src="${p.img}" alt="" title="Open the article"></figure>` : ""}
   <div class="jfoldw" data-cut="0"><div class="jbody">${p.html}</div>
@@ -96,7 +99,7 @@ const ups = logCards.flatMap(c => {
   const ver = (c.querySelector(".cardhead .ver") || {}).textContent || "";
   return [{slug: "log-" + (ver || c.dataset.t).replace(/[^\w]+/g, "-").replace(/^-+|-+$/g, ""),
     title: (h.textContent || "").replace(/^v[\d.]+\s*/, "").replace(/^[A-Z][a-z]{2} \d{1,2}, \d{4} · /, ""),
-    ver, date: c.dataset.t.slice(0, 10), author: UPS.author, img: "", loglink: true, tags: [UPS.tag], featured: false,
+    ver, date: c.dataset.t.slice(0, 10), author: UPS.author, img: "", tags: [UPS.tag], featured: false,
     html: [...c.children].filter(x => !x.classList.contains("cardhead")).map(x => x.outerHTML).join("")}];
 });
 const ALL = [...POSTS.map(p => ({...p, tags: p.tags && p.tags.length ? p.tags : ["Blog Post"]})), ...ups];
@@ -108,8 +111,7 @@ if (jlist){ jlist.innerHTML = POSTS.length ? POSTS.map(p => jcard(p, p.tags)).jo
   : `<p class="sub">No posts yet. The first one is being written.</p>`; initCards(jlist) }
 // ---- the article page (Turbozo 11-04: every article opens into its own page, shareable like wowhead's)
 let openSlug = "";
-const artByline = p => `<div class="jby jartby">${javatar(p.author)}<span class="jwho"><span class="jauthor">${esc(p.author)}</span>
-  <span class="sub jmeta">${p.ver ? `<span class="ver">${esc(p.ver)}</span> · ` : ""}${jtags(p, p.tags)} · ${day(p.date)}${p.loglink ? ` · <a href="#" data-go="log">changelog</a>` : ""}</span></span></div>`;
+const artByline = p => `<div class="jby jartby">${javatar(p.author)}${jbyline(p, p.tags)}</div>`;
 const artHtml = p => `<div class="jarttop">
     <button class="linkbtn jback" type="button">← Back</button>
     <button class="linkbtn jshare" type="button">Copy link</button></div>
@@ -121,7 +123,7 @@ const artHtml = p => `<div class="jarttop">
     ${p.img ? `<figure class="jimg big"><img src="${p.img}" alt=""></figure>` : ""}
     <div class="jbody">${p.html}</div>
     ${commentsHtml(p.slug, cLoad(p.slug))}</article>
-  <p class="sub jartnav"><button class="linkbtn" data-go="journal">All posts in the Journal →</button>${p.loglink ? ` · <button class="linkbtn" data-go="log">Everything in the changelog →</button>` : ""}</p>`;
+  <p class="sub jartnav"><button class="linkbtn" data-go="journal">All posts in the Journal →</button></p>`;
 const openArt = (slug, fromTab) => {
   const p = findPost(slug); if (!p) return false;
   openSlug = slug;
@@ -140,7 +142,13 @@ navReg("journal", () => openSlug, v => { if (v){ openArt(v, $("#t-journal").getA
 // destination tab's place): an open article inside the hidden journal section would leak its links into
 // "#journal .jbody a" counts and reopen on the next visit. popstate fires on the window (75-history's target).
 addEventListener("popstate", () => { if (openSlug && $("#journal").hidden) closeArt() });
-if (HASH.a) openArt(String(HASH.a), $("#t-journal").getAttribute("aria-selected") === "true");   // share link: /news/<slug>/ lands here via its redirect, the artifact takes #a=
+// share link: /news/<slug>/ lands here via its static page's redirect, the artifact takes #a=; a typed /news/<slug>
+// (Turbozo 2026-11-04: the article view pushes that address, so it is its own link) 404s on GitHub Pages, whose router
+// hops the app with the path in sessionStorage "navspa" - same open either way
+const pathArt = (() => { const p = window.NAVSPA || (location.protocol.indexOf("http") === 0 ? location.pathname : "");
+  return /^\/news\/([a-z0-9-]+)\/?$/.exec(p) })();
+if (HASH.a) openArt(String(HASH.a), $("#t-journal").getAttribute("aria-selected") === "true");
+else if (pathArt) openArt(pathArt[1], $("#t-journal").getAttribute("aria-selected") === "true");
 // ---- Home newsfeed: featured hero, tag-filter row, then the newest posts and changelog entries as one timeline
 // grouped by day. The filter and the fold states are this session's preferences (sessionStorage).
 const FEED_POSTS = 8, FEED_UPDATES = 6;
