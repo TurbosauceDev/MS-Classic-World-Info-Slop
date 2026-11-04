@@ -177,8 +177,11 @@ for (const sec of ["#home", "#overview"]) $(sec).addEventListener("click", e => 
 // Home sprites: data-ic="i:<item>|m:<mob>|s:<skill>" -> the icon already in D (no new requests)
 document.querySelectorAll("img[data-ic]").forEach(im => { const [k, id] = im.dataset.ic.split(":"), b = {i: D.iicons, m: D.mobimg, s: D.icons}[k]?.[id];
   if (b) im.src = "data:image/png;base64," + b; else im.remove() });
-// the whole title card acts as Home (Turbozo 2026-11-04); its buttons keep their own click
-$("header").addEventListener("click", e => { if (e.target.closest("button,a,input,select,textarea")) return; homeJump() });
+// the whole title card acts as Home (Turbozo 2026-11-04); its buttons keep their own click, and the anchor editor's
+// drags (72-anchors.js, "anchoring") are not navigation
+$("header").addEventListener("click", e => {
+  if (document.documentElement.classList.contains("anchoring") || e.target.closest("button,a,input,select,textarea")) return;
+  homeJump() });
 // read the last page before goHome() overwrites it with "home" (that made every visit land on Home)
 let SAVEDTAB = null; try { SAVEDTAB = localStorage.getItem("tab") } catch(e) {}
 goHome();
