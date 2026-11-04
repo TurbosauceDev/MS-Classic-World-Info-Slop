@@ -11,8 +11,14 @@ links to their clean pages (scripts/routes.py) on their FIRST mention in a post,
 an existing link, at most AUTO_LINK_CAP per post, and never for names under 4 letters. A name two entries share
 resolves to that kind's "which one?" page.
 
+Front matter may also carry `image:` (Turbozo 2026-11-04, the wowhead-style post format): a path under src/posts/
+(e.g. `image: img/welcome-to-the-journal.jpg`), baked into the post as a data URI so the page stays self-contained.
+build.py also replaces __AVATARS__ with avatars(): one sprite per poster (src/posts/avatars/<author>.png, lower-case
+file name), so a card can wear its poster's avatar and a changelog entry can be a post by the site's own poster.
+
 build.py replaces __POSTS__ with json([...]) (newest first). tests/posts_test.py checks the contract end to end.
 """
+import base64 as _b64
 import html as _html
 import json, pathlib, re, sys
 
@@ -22,6 +28,8 @@ import routes as _routes
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 POSTS_DIR = ROOT / "src" / "posts"
 DEFAULT_AUTHOR = "Turbozo"
+IMG_CAP = 200 * 1024  # a post's main image (baked in as a data URI) may not weigh more than this
+IMG_MIME = {b"\x89PNG": "image/png", b"\xff\xd8\xff": "image/jpeg"}
 MIN_NAME = 4          # shorter names never link ("Heal" does, "HP" does not)
 AUTO_LINK_CAP = 40    # a pathological body cannot turn into one giant link farm
 KIND_ORDER = {"mob": 0, "item": 1, "quest": 2, "skill": 3}  # cross-kind name clash: monsters win, then items
@@ -43,8 +51,8 @@ def parse_post(text, fname):
         if not line.strip():
             continue
         k, _, v = line.partition(":")
-        if not _ or not k.strip() or k.strip() != k.lower() or k.strip() not in ("title", "date", "author"):
-            raise bad(f"front matter line is not one of title/date/author: {line.strip()[:60]}")
+        if not _ or not k.strip() or k.strip() != k.lower() or k.strip() not in ("title", "date", "author", "image"):
+            raise bad(f"front matter line is not one of title/date/author/image: {line.strip()[:60]}")
         meta[k.strip()] = v.strip()
     if not meta.get("title"):
         raise bad("front matter needs a title:")
@@ -161,6 +169,39 @@ def auto_link(html, paths, cap=AUTO_LINK_CAP):
     return "".join(out)
 
 
+def _data_uri(p, fname, base=None):
+    """An image file under the posts dir as a data URI (the page is one self-contained file)."""
+    bad = lambda msg: SystemExit(f"src/posts/{fname}: {msg}")
+    rel = pathlib.PurePosixPath(p)
+    if rel.is_absolute() or ".." in rel.parts:
+        raise bad(f"image: must be a repo-relative path under src/posts/ (got {p!r})")
+    if re.search(r"^[a-z-]+:", p):
+        raise bad("image: must be a file under src/posts/ (remote URLs would break the self-contained page)")
+    f = (base or POSTS_DIR) / p
+    if not f.is_file():
+        raise bad(f"image: file not found: {p} (put it in src/posts/img/ and commit it)")
+    data = f.read_bytes()
+    if len(data) > IMG_CAP:
+        raise bad(f"image: {p} is {len(data) // 1024} KB, over the {IMG_CAP // 1024} KB cap (resize/compress it)")
+    mime = next((m for magic, m in IMG_MIME.items() if data.startswith(magic)), None)
+    if not mime:
+        raise bad(f"image: {p} is not a PNG or JPEG file")
+    return f"data:{mime};base64," + _b64.b64encode(data).decode()
+
+
+def avatars(pdir=None):
+    """poster avatars: src/posts/avatars/<author>.png (lower-case file name) -> {author: data URI}.
+    A post whose author has no file renders a letter chip instead (77-journal.js)."""
+    d = pathlib.Path(pdir) if pdir else POSTS_DIR / "avatars"
+    out = {}
+    for f in sorted(d.glob("*.png")) if d.is_dir() else []:
+        data = f.read_bytes()
+        if len(data) > 20 * 1024:
+            raise SystemExit(f"src/posts/avatars/{f.name}: {len(data) // 1024} KB - an avatar rides the whole page, keep it under 20 KB")
+        out[f.stem.lower()] = "data:image/png;base64," + _b64.b64encode(data).decode()
+    return out
+
+
 def _excerpt(html, n=200):
     text = re.sub(r"\s+", " ", _html.unescape(re.sub(r"<[^>]+>", " ", html))).strip()
     if len(text) <= n: return text
@@ -183,7 +224,8 @@ def load(D, pdir=None):
         seen.add(slug)
         html = auto_link(md_html(body), paths)
         posts.append({"slug": slug, "title": meta["title"], "date": meta["date"], "author": meta["author"],
-                      "html": html, "excerpt": _excerpt(html)})
+                      "html": html, "excerpt": _excerpt(html),
+                      "img": _data_uri(meta["image"], f.name, pdir) if meta.get("image") else ""})
     posts.sort(key=lambda p: (p["date"], p["slug"]), reverse=True)
     return posts
 

@@ -57,6 +57,8 @@ above as a dated line and note the resolution date in its place.
 - 2026-10-20 FM Sniper round 2: Danny approved every idea in reports/fm-sniper-ideas-2026-10-20.md (NPC flag, flip, shopping trip, crafting flips, targets + alerts, sell helper, movers, mood, volatility, presets, keys, needed by me) and deal lifetime stats (from the poll's git history). Discord pings deferred ("later"); phone push: remind him later. Pipeline asks (all listings, seen time, askMedian, history) approved, routed via Danny.
 - 2026-10-21 Craft planner (Mesos and Trade): inventory screenshots + craft levels -> craft now for profit, almost (farm maps with estimated time at 5%/kill, or buy), total from inventory. Layout A (three stacked groups) picked from an A/B/C mockup.
 
+- 2026-11-04 (Turbozo, discord) the newsfeed goes wowhead-shaped: site updates are full posts by the site's own poster (Glorg, Orange Mushroom avatar; Turbozo's posts wear the green Slime; `src/posts/avatars/<author>.png` per poster), cards carry an optional main image (`image:` front matter, baked as a data URI), fold past a max length behind a frosted "… continue reading" cutoff, minimize on a card click (remembered across Back), and end in a comment box - local to the reader's browser for now, a shared box is the planned next step.
+
 ## Tracker and server
 - 2026-10-17 Build the screen reader anyway (no official Nexon rule found); it reads pixels only, no memory, files or input.
 - 2026-10-18 Release only on his "release", push only on his "push"; bundle small fixes into one release. He updates in-app. [superseded 2026-10-19: standing push/release permission]

@@ -57,6 +57,10 @@ import posts
 assert "__POSTS__" in js
 js = js.replace("__POSTS__", posts.inject(D).replace("<", "\\u003c"), 1)
 assert "__POSTS__" not in js
+# poster avatars (Turbozo 2026-11-04): src/posts/avatars/<author>.png -> the __AVATARS__ literal in 77-journal.js
+assert "__AVATARS__" in js
+js = js.replace("__AVATARS__", json.dumps(posts.avatars(), separators=(",", ":")).replace("<", "\\u003c"), 1)
+assert "__AVATARS__" not in js
 assert "/*@CSS*/" in html and "/*@JS*/" in html and "__DATA__" in js
 # site version on Home = when this file was built (UTC), so a landed update is easy to spot
 # the page shows it in the viewer's own time zone (70-theme.js); the HTML keeps the UTC text for curl/live checks
