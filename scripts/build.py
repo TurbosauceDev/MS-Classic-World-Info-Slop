@@ -61,6 +61,10 @@ assert "__POSTS__" not in js
 assert "__AVATARS__" in js
 js = js.replace("__AVATARS__", json.dumps(posts.avatars(), separators=(",", ":")).replace("<", "\\u003c"), 1)
 assert "__AVATARS__" not in js
+# the changelog posts' shared banner (Turbozo 11-04): one reusable site-update image every update card wears
+assert "__UPSIMG__" in js
+js = js.replace("__UPSIMG__", json.dumps(posts.updates_img()).replace("<", "\\u003c"), 1)
+assert "__UPSIMG__" not in js
 assert "/*@CSS*/" in html and "/*@JS*/" in html and "__DATA__" in js
 # site version on Home = when this file was built (UTC), so a landed update is easy to spot
 # the page shows it in the viewer's own time zone (70-theme.js); the HTML keeps the UTC text for curl/live checks

@@ -15,6 +15,7 @@
 // Journal page lists every post, newest first.
 const POSTS = __POSTS__;
 const POST_AVATARS = __AVATARS__;
+const UPS_IMG = __UPSIMG__;   // the changelog posts' shared banner (src/posts/img/site-updates.jpg, baked by scripts/make_post_art.py)
 window.POSTS = POSTS;   // tests + the console (the Pages copy runs the app inside a promise callback, so a bare const is not a global there)
 (() => {
 const day = t => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t || ""); return m ? new Date(Date.UTC(+m[1], m[2] - 1, +m[3]))
@@ -92,14 +93,15 @@ const setState = (card, s) => { card.dataset.jstate = s; sset("jx:" + card.datas
 const initCards = root => root.querySelectorAll(".jpost").forEach(card => { applyState(card);
   card.querySelectorAll(".jimg img").forEach(im => { if (!im.complete) im.addEventListener("load", () => applyState(card), {once: true}) }) });
 // ---- the update posts: every changelog entry as a post by Glorg (the feed shows the newest few; the article
-// page can open any of them). Read live from #log so the feed can never drift from the real changelog.
+// page can open any of them). Read live from #log so the feed can never drift from the real changelog; every
+// card wears the shared site-update banner (Turbozo 11-04: a reusable image the changelog posts can use).
 const logCards = [...document.querySelectorAll("#log .changelog .card")];
 const ups = logCards.flatMap(c => {
   const h = c.querySelector(".cardhead h3"); if (!h || !c.dataset.t) return [];
   const ver = (c.querySelector(".cardhead .ver") || {}).textContent || "";
   return [{slug: "log-" + (ver || c.dataset.t).replace(/[^\w]+/g, "-").replace(/^-+|-+$/g, ""),
     title: (h.textContent || "").replace(/^v[\d.]+\s*/, "").replace(/^[A-Z][a-z]{2} \d{1,2}, \d{4} · /, ""),
-    ver, date: c.dataset.t.slice(0, 10), author: UPS.author, img: "", loglink: true, tags: [UPS.tag], featured: false,
+    ver, date: c.dataset.t.slice(0, 10), author: UPS.author, img: UPS_IMG || "", loglink: true, tags: [UPS.tag], featured: false,
     html: [...c.children].filter(x => !x.classList.contains("cardhead")).map(x => x.outerHTML).join("")}];
 });
 const ALL = [...POSTS.map(p => ({...p, tags: p.tags && p.tags.length ? p.tags : ["Blog Post"]})), ...ups];

@@ -342,9 +342,15 @@ def news_pages(D, updates=None):
         out[f"/news/{p['slug']}/"] = (p["title"], p["excerpt"], body)
         if p["imgfile"]:
             imgs.append((_posts.POSTS_DIR / p["imgfile"], f"news/img/{p['slug']}{ext}"))
+    upimg = _posts.POSTS_DIR / _posts.UPDATES_IMG   # the changelog posts' shared banner (posts.updates_img bakes it into the app)
+    upimg_rel = "news/img/" + upimg.name
+    have_upimg = bool(updates) and upimg.is_file()
+    if have_upimg:
+        imgs.append((upimg, upimg_rel))
     for u in (updates or []):
+        img = f'<img class="artimg" src="/{upimg_rel}" alt="">' if have_upimg else ""
         body = (f'<section class="card hero"><div class="art"><span class="chip">Site Updates{e(" \u00b7 " + u["ver"]) if u.get("ver") else ""}</span>'
-                f'<h1>{e(u["title"])}</h1><p class="note">by Glorg \u00b7 {e(u["date"])}</p>'
+                f'<h1>{e(u["title"])}</h1><p class="note">by Glorg \u00b7 {e(u["date"])}</p>{img}'
                 f'<p class="desc">{e(u["desc"])}</p>'
                 f'<p><a class="btn" href="/#a={u["slug"]}">Read this update in the app - comments included</a></p></div></section>')
         out[f"/news/{u['slug']}/"] = (u["title"], u["desc"], body)

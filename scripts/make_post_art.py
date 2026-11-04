@@ -9,7 +9,7 @@ Outputs (all committed, so the build never needs this script or PIL):
 Avatars must stay tiny (they ride the shell twice: POST_AVATARS + the feed); banners must stay under the
 200 KB cap scripts/posts.py enforces. NEAREST scaling keeps the sprites crisp.
 """
-import base64, io, json, pathlib, sys
+import base64, io, json, math, pathlib, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 D = json.loads((ROOT / "data" / "data.json").read_text())
@@ -77,12 +77,32 @@ def banner_gloves():
     im.alpha_composite(g, (W // 2 - g.width // 2, H // 2 - g.height // 2 - 10))
     return im
 
+def banner_updates():
+    """site-updates: the changelog posts' shared banner - a real game scroll (Cape STR Scroll icon) on the
+    workshop-dark card, the same composition as the Work Gloves banner (Turbozo approved that family)."""
+    W, H = 880, 340
+    im = vgrad((W, H), (44, 47, 60), (58, 62, 78)).convert("RGBA")
+    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(glow).ellipse((W // 2 - 240, H // 2 - 190, W // 2 + 240, H // 2 + 190), fill=(247, 191, 84, 70))
+    im.alpha_composite(glow.filter(ImageFilter.GaussianBlur(60)))
+    dr = ImageDraw.Draw(im)
+    for r in (118, 146):                                           # dotted workbench rings around the icon
+        for a in range(0, 360, 14):
+            x = W // 2 + r * math.cos(a * math.pi / 180)
+            y = H // 2 + r * math.sin(a * math.pi / 180)
+            dr.ellipse((x - 2, y - 2, x + 2, y + 2), fill=(255, 255, 255, 40))
+    s = up(sprite("item", "2041010"), 8)
+    shadow(im, W // 2, H // 2 + s.height // 2 - 6, int(s.width * 0.7))
+    im.alpha_composite(s, (W // 2 - s.width // 2, H // 2 - s.height // 2 - 10))
+    return im
+
 def main():
     AV.mkdir(parents=True, exist_ok=True); IM.mkdir(parents=True, exist_ok=True)
     for who, (kind, i) in AVATARS.items():
         s = sprite(kind, i)
         p = AV / f"{who}.png"; s.save(p); print(f"{p.relative_to(ROOT)}  {s.size}  {p.stat().st_size} B")
-    for name, im in [("welcome-to-the-journal", banner_party()), ("what-a-post-can-carry", banner_gloves())]:
+    for name, im in [("welcome-to-the-journal", banner_party()), ("what-a-post-can-carry", banner_gloves()),
+                     ("site-updates", banner_updates())]:
         p = IM / f"{name}.jpg"; im.convert("RGB").save(p, quality=85, optimize=True)
         print(f"{p.relative_to(ROOT)}  {im.size}  {p.stat().st_size} B")
 

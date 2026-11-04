@@ -486,12 +486,12 @@ header h1{cursor:pointer}
 @media (max-width:420px){.homegrid{grid-template-columns:1fr}}
 /* Home newsfeed (Danny 2026-11-03: the serebii.net shape - opens straight onto the feed) and the Journal page;
    posts render from POSTS, changelog rows read #log (77-journal.js) */
-.feedtop{display:flex;justify-content:space-between;align-items:flex-end;gap:10px 14px;flex-wrap:wrap;margin-bottom:12px}
+.feedtop{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;margin-bottom:12px}   /* the newsfeed head centers (Turbozo 11-04) */
 .feedtop h2{margin:0;font-size:21px}
 .feedtop .sub{margin:2px 0 0}
-.feedlinks{display:flex;gap:8px;flex-wrap:wrap}
+.feedlinks{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
 .feed{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;max-width:900px}   /* minmax(0,..): a long byline must not widen the track (390px) */
-.fday{font-size:14px;font-weight:600;color:var(--muted);margin:10px 0 0;padding-bottom:5px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.03em}
+.fday{font-size:14px;font-weight:600;color:var(--muted);margin:10px 0 0;padding-bottom:5px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.03em;text-align:center}
 .feedmore{margin:2px 0 0}
 #journal .jintro{margin:0 0 14px}
 .jlist{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;max-width:900px}
@@ -508,14 +508,15 @@ header h1{cursor:pointer}
 .jmeta{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
 .jmeta:empty{display:none}
 .jtagrow{display:flex;gap:4px;flex-wrap:wrap}
+.jmeta .jtag{margin-left:-10px}   /* the chip's text lines up with the author/version/date text above it (Turbozo 11-04) */
 /* ---- newsfeed post cards (wowhead-shaped format, Turbozo 2026-11-04): poster avatar + byline, main image,
    a body that folds past the cap behind a frosted cutoff, comments at the bottom, click-to-minimize ---- */
 .jpost .cardhead{align-items:center;gap:12px;flex-wrap:wrap}
 .jpost .cardhead h3{font-size:19px;flex:1 1 220px;cursor:pointer}
 .jpost .cardhead h3:hover{color:var(--accent)}
 .jby{display:flex;align-items:center;gap:9px;margin-left:auto;min-width:0;cursor:pointer}
-.javatar{width:38px;height:38px;object-fit:contain;border-radius:9px;padding:2px;box-sizing:border-box;background:color-mix(in srgb,var(--line) 45%,transparent);filter:drop-shadow(0 2px 3px rgb(0 0 0 / .22))}
-span.javatar.jnoav{display:flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font:700 17px var(--f-body)}
+.javatar{width:48px;height:48px;object-fit:contain;border-radius:9px;padding:2px;box-sizing:border-box;background:color-mix(in srgb,var(--line) 45%,transparent);filter:drop-shadow(0 2px 3px rgb(0 0 0 / .22))}
+span.javatar.jnoav{display:flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font:700 21px var(--f-body)}
 .jwho{display:flex;flex-direction:column;gap:1px;line-height:1.3;min-width:0}
 .jpost .jmeta{overflow:hidden;max-width:100%}   /* the byline never pushes the card wider (390px phones) */
 .jdate{color:var(--muted);font-size:13px}
@@ -774,10 +775,10 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
   html:not([data-nav="rows"]) nav .navrow{margin-bottom:6px}
   html:not([data-nav="rows"]) nav .subs,html:not([data-nav="rows"]) nav .subs[hidden]{display:flex;flex-direction:column;flex-wrap:nowrap;gap:2px;margin:0;border:0}
   html:not([data-nav="rows"]) nav .subs button[data-cat="more"][data-tab]{display:none}
-  html:not([data-nav="rows"]) nav .subs button[data-tab],html:not([data-nav="rows"]) nav .sbhome{display:flex;align-items:center;gap:9px;text-align:left;width:100%;
+  html:not([data-nav="rows"]) nav .subs button[data-tab]{display:flex;align-items:center;gap:9px;text-align:left;width:100%;
     border:0;border-radius:8px;padding:4px 10px 4px 6px;background:none;cursor:pointer}
-  html:not([data-nav="rows"]) nav .sgh{display:flex;align-items:center;gap:8px;margin:16px 0 5px;padding-left:2px}
-  html:not([data-nav="rows"]) nav .subs button[aria-selected="true"]{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+  html:not([data-nav="rows"]) nav .sgh,html:not([data-nav="rows"]) nav .sbhome{display:flex;align-items:center;gap:8px;margin:16px 0 5px;padding-left:2px}   /* Home is a section title like the others now (Turbozo 11-04) */
+  html:not([data-nav="rows"]) nav .subs button[aria-selected="true"],html:not([data-nav="rows"]) nav .subs button[aria-current="page"]{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
   html:not([data-nav="rows"]) nav .subs button:not([aria-selected="true"]):hover{background:var(--panel)}
   /* sidebar with sprites: white game-style lettering, big accent section titles */
   html:not([data-nav]) nav .nic{display:block;flex:none;width:22px;height:22px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(23,17,42,.35));transition:transform .15s}
@@ -787,19 +788,19 @@ nav .cats [data-cat="more"],nav .sgh,nav .sbhome,nav .nic{display:none}
   html:not([data-nav]) nav button:hover .nic{transform:translateY(-1px) scale(1.08)}
   /* hanging indent (Danny 10-20, option B): page links step in, the bigger section icon hangs left of them */
   html:not([data-nav]) nav .subs button[data-tab]{margin-left:20px;width:calc(100% - 20px)}
-  html:not([data-nav]) nav .sgh .nic{width:36px;height:36px;margin:-5px 0 -5px -8px}
-  html:not([data-nav]) nav .sgh{font:800 21.5px/1.1 var(--f-display);letter-spacing:-.01em;color:var(--accent);margin-top:22px}   /* a bit more air between sections (Danny 10-20) */
-  html:not([data-nav]) nav .subs button[data-tab],html:not([data-nav]) nav .sbhome{font:700 14.5px var(--f-display);letter-spacing:.01em;color:#fff;
+  html:not([data-nav]) nav .sgh .nic,html:not([data-nav]) nav .sbhome .nic{width:36px;height:36px;margin:-5px 0 -5px -8px}
+  html:not([data-nav]) nav .sgh,html:not([data-nav]) nav .sbhome{font:800 21.5px/1.1 var(--f-display);letter-spacing:-.01em;color:var(--accent);margin-top:22px}   /* a bit more air between sections (Danny 10-20) */
+  html:not([data-nav]) nav .subs button[data-tab]{font:700 14.5px var(--f-display);letter-spacing:.01em;color:#fff;
     text-shadow:-1.3px -1.3px 0 #2a2142,0 -1.3px 0 #2a2142,1.3px -1.3px 0 #2a2142,-1.3px 0 0 #2a2142,1.3px 0 0 #2a2142,-1.3px 1.3px 0 #2a2142,0 1.3px 0 #2a2142,1.3px 1.3px 0 #2a2142,0 2px 6px rgba(23,17,42,.4),0 0 1px #2a2142}
   html:not([data-nav]) nav .subs button[aria-selected="true"]{color:#fff}
   /* basic mode: plain list, no sprites */
-  html[data-nav="basic"] nav .sgh{font:600 11.5px var(--f-body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding-left:10px;margin:14px 0 3px}
-  html[data-nav="basic"] nav .subs button[data-tab],html[data-nav="basic"] nav .sbhome{font:500 14.5px var(--f-body);color:var(--ink);padding:4px 10px}
+  html[data-nav="basic"] nav .sgh,html[data-nav="basic"] nav .sbhome{font:600 11.5px var(--f-body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding-left:10px;margin:14px 0 3px}
+  html[data-nav="basic"] nav .subs button[data-tab]{font:500 14.5px var(--f-body);color:var(--ink);padding:4px 10px}
   html[data-nav="basic"] nav .subs button[aria-selected="true"]{font-weight:600}
 }
 /* dark themes: the dark outline melts into the background, so a hairline outline plus a faint glow instead —
    unconditional now (the stylesheet's default IS dark); picked light themes (Clanker Chic's light side) opt out */
-@media (min-width:761px){:root:not([data-nav]):not([data-theme="light"]) nav .subs button[data-tab],:root:not([data-nav]):not([data-theme="light"]) nav .sbhome{
+@media (min-width:761px){:root:not([data-nav]):not([data-theme="light"]) nav .subs button[data-tab]{
   font-size:15px;text-shadow:-.6px -.6px 0 #0a0a0a,.6px -.6px 0 #0a0a0a,-.6px .6px 0 #0a0a0a,.6px .6px 0 #0a0a0a,0 0 7px rgba(180,155,255,.3),0 1px 3px rgba(0,0,0,.45)}}
 @media (prefers-reduced-motion:reduce){nav .nic{transition:none}}
 /* page size on wide screens (Theme popup): wider page and everything scaled up; 1 = the old fixed width */
@@ -1328,7 +1329,7 @@ html[data-nav="rows"] nav button.sgh .sgo{display:inline}
 .jtag{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;cursor:pointer}
 .jtag:hover{border-color:var(--accent);color:var(--accent)}
 .jfeat{color:var(--accent);font-weight:700}
-.jfilter{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 2px}
+.jfilter{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:12px 0 2px}
 .jfpill{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;padding:3px 13px;font-size:12.5px;font-weight:600;cursor:pointer}
 .jfpill:hover{border-color:var(--accent);color:var(--accent)}
 .jfpill.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent,var(--panel))}
@@ -1341,6 +1342,7 @@ html[data-nav="rows"] nav button.sgh .sgo{display:inline}
 .jarttop{display:flex;justify-content:space-between;gap:10px;margin:2px 0 8px}
 .jartchips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 6px}
 .jarttitle{font-size:24px;margin:2px 0 8px;text-wrap:balance}
+.jart .jartby{justify-content:flex-end}   /* the byline keeps its spot on the right when the article opens (Turbozo 11-04) */
 .jart .jimg.big img{max-height:520px}
 .jart .jbody{font-size:15px}
 .jartnav{margin-top:12px}
