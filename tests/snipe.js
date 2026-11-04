@@ -29,8 +29,10 @@ const FIX = {read: "2099-01-01", listed: "2099-01-01 00:00",
   let market = JSON.stringify(FIX), hits = 0;
   const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split("?")[0]);
     if (u === "/market.json"){ hits++; r.writeHead(200, {"content-type": "application/json"}); return r.end(market) }
-    const f = path.join(OUT, u.replace(/^\/$/, "/index.html"));
-    if (!f.startsWith(OUT) || !fs.existsSync(f)){ r.writeHead(404); return r.end() }
+    // GitHub Pages serves /x/ from /x/index.html: the app shows real paths now (00-routes.js), so a reload mid-test
+    // asks for /fm-sniper/ and the like, not only for /
+    const f = path.join(OUT, u.replace(/^\/$/, "/index.html").replace(/\/$/, "/index.html"));
+    if (!f.startsWith(OUT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()){ r.writeHead(404); return r.end() }
     r.writeHead(200, {"content-type": TYPES[path.extname(f)] || "application/octet-stream"}); r.end(fs.readFileSync(f)) });
   await new Promise(res => srv.listen(0, "127.0.0.1", res));
   const URL = `http://localhost:${srv.address().port}/`;
