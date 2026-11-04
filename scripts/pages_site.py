@@ -117,11 +117,19 @@ def main(dst):
     html = (ROOT / "dist" / "index.html").read_text()
     out, name, blob, pname, pblob, market = split(html)
     import pages_gen   # static per-item/mob/map pages + sitemap (scripts/pages_gen.py)
+    import posts       # src/posts parsing (the update pages' shared banner name lives in posts.UPDATES_IMG)
     D = json.loads(re.search(r'<script type="application/json" id="sitedata">(.*?)</script>', html, re.S).group(1))
-    news, imgs = pages_gen.news_pages(D, update_posts(html))
+    upd = update_posts(html)
+    news, imgs = pages_gen.news_pages(D, upd)
     # an article's og:image points at a real URL (link previews skip data URIs), so the post image is copied out
     heads = {f"/news/{pathlib.Path(rel).stem}/": '<meta property="og:type" content="article">\n'
              f'<meta property="og:image" content="https://maplestory.scumlord.studio/{rel}">\n' for _src, rel in imgs}
+    # the changelog posts share one banner: every update page's og:image points at it
+    banner = next((rel for _src, rel in imgs if _src.name == posts.UPDATES_IMG.name), "")
+    if upd and banner:
+        heads.update({f"/news/{u['slug']}/": '<meta property="og:type" content="article">\n'
+                      f'<meta property="og:image" content="https://maplestory.scumlord.studio/{banner}">\n' for u in upd})
+        heads.pop("/news/" + posts.UPDATES_IMG.stem + "/", None)   # the shared banner's stem is not a page
     pages_gen.generate(D, dst, news=news, heads=heads)
     for src, rel in imgs:
         f = dst / rel

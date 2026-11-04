@@ -126,6 +126,19 @@ try:
 except SystemExit as e:
     check("src/posts/avatars/big.png" in str(e), "an avatar over 20 KB fails the build (it rides the whole page)")
 
+# ---- the changelog posts' shared banner (Turbozo 2026-11-04: one reusable site-update image)
+upimg = tmp2 / "img" / "site-updates.jpg"
+check(posts.updates_img(tmp2) == "", "updates_img(): a tree without the baked art still builds (empty string)")
+upimg.write_bytes(PNG)
+check(posts.updates_img(tmp2).startswith("data:image/png;base64,"), "updates_img(): the banner bakes as a data URI")
+upimg.write_bytes(PNG + b"0" * (201 * 1024))
+try:
+    posts.updates_img(tmp2); check(False, "oversized site-update banner rejected")
+except SystemExit as e:
+    check("site-updates.jpg" in str(e), "a banner over the 200 KB cap fails the build")
+upimg.unlink()
+check(posts.updates_img().startswith("data:image/") and len(posts.updates_img()) > 1000, "the shipped site-updates banner bakes for the app")
+
 # ---- load() over the real posts directory
 got = posts.load(D)
 check(len(got) >= 1, f"the real src/posts parses ({len(got)} post(s))")

@@ -75,6 +75,8 @@ assert '<meta property="og:image"' in np and "/news/img/what-a-post-can-carry.jp
 assert np.count("<script") <= 1, "a news page carries only the redirect script"
 up = (d2 / "news/log-v9-9-9/index.html").read_text()
 assert '"/#a=log-v9-9-9"' in up and "A test update" in up, "an update's news page redirects and names the update"
+assert '<img class="artimg" src="/news/img/site-updates.jpg"' in up, "an update's news page wears the shared site-update banner"
+assert any(rel == "news/img/site-updates.jpg" for _s, rel in imgs), "the shared banner ships in the copy list (og:image source)"
 try:
     pages_gen.generate(D, d2, news={"/items/work-gloves/": ("x", "y", "z")})
     assert False, "a news page colliding with a real page must fail"

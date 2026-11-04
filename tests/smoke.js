@@ -36,6 +36,18 @@ const boxGaps = require("./boxgaps");
       tags: e.querySelectorAll(".jtagrow .jtag").length }));
     check(m.dir === "column" && !m.link && /^v\d/.test(m.ver) && /\d{4}/.test(m.date) && m.tags >= 1,
       `update-post byline stacks version / date / tags, no changelog link (${JSON.stringify(m)})`) }
+  // Turbozo 11-04 layout round: the update cards wear the shared site-update banner, the avatar grew, the byline
+  // chip's text lines up with the text above it, and the feed head / filter pills / day divider center.
+  check(await p.$$eval("#feed .jupd .jimg img", l => l.length === 6 && l.every(i => i.src.startsWith("data:image/") && i.naturalWidth > 0)),
+    "every changelog card wears the shared site-update banner (src/posts/img/site-updates.jpg)");
+  { const by = await p.$eval("#feed .jupd .jby", e => ({ av: getComputedStyle(e.querySelector(".javatar")).width,
+      chip: getComputedStyle(e.querySelector(".jmeta .jtag")).marginLeft }));
+    check(by.av === "48px" && by.chip === "-10px", `avatar at 48px, byline chip text flush with the stack (${JSON.stringify(by)})`) }
+  { const head = await p.$eval("#home .feedtop", e => ({ dir: getComputedStyle(e).flexDirection, text: getComputedStyle(e).textAlign }));
+    const pill = await p.$eval("#feed .jfilter", e => getComputedStyle(e).justifyContent);
+    const day = await p.$eval("#feed .fday", e => getComputedStyle(e).textAlign);
+    check(head.dir === "column" && head.text === "center" && pill === "center" && day === "center",
+      `newsfeed head, filter pills and day divider center (${JSON.stringify({ ...head, pill, day })})`) }
   check(await p.$$eval("#feed .jimg img", l => l.every(i => i.src.startsWith("data:image/") && i.naturalWidth > 0))
     && (!await p.evaluate(() => window.POSTS.some(x => x.img)) || await p.$$eval("#feed .jimg img", l => l.length) >= 1),
     "a post's main image renders when the post carries one");
@@ -70,9 +82,20 @@ const boxGaps = require("./boxgaps");
     check(await p.$eval('.jfpill[data-jfilter="All"]', b => b.classList.contains("on")), "All is highlighted again");
     const want = await p.evaluate(() => Math.min(window.POSTS.length, 8)) + ups;
     check((await p.$$eval("#feed .jpost", l => l.length)) === want, "All restores the whole timeline"); }
-  // a click on the card body minimizes it, the fold chevron reopens it, the title opens the article
+  // a click on the card body minimizes it, the fold chevron reopens it, the title opens the article. The click
+  // must land on a link-free run of the body: links never toggle the card (by design), so a click that lands on
+  // an auto-linked name follows the link instead - on file:// that is a chrome-error page (this scene used to
+  // click the wrapper's center and only survived because the then-first card's center had no link in it).
   { const slug = await p.$eval("#feed .jpost", c => c.dataset.slug);
-    await p.click("#feed .jpost .jfoldw");
+    await p.$eval("#feed .jpost", c => c.scrollIntoView({ block: "center" })); await p.waitForTimeout(80);
+    const spot = await p.$eval("#feed .jpost .jfoldw", w => {
+      const walk = document.createTreeWalker(w, NodeFilter.SHOW_TEXT); let n;
+      while ((n = walk.nextNode())){
+        if (n.parentElement.closest("a") || n.textContent.trim().length < 12) continue;
+        const r = document.createRange(); r.selectNodeContents(n); const b = r.getBoundingClientRect();
+        if (b.width > 40) return { x: b.left + 24, y: b.top + b.height / 2 } }
+      return null });
+    if (spot) await p.mouse.click(spot.x, spot.y); else await p.click("#feed .jpost .jfold");
     check(await p.$eval("#feed .jpost", c => c.dataset.jstate) === "min", "clicking a card minimizes it to the header");
     check(await p.evaluate(s => sessionStorage.getItem("jx:" + s) === "min", slug), "a card's minimized view is remembered for the trip back");
     await p.click("#feed .jpost .jfold");
@@ -119,6 +142,8 @@ const boxGaps = require("./boxgaps");
   await p.goto("about:blank"); await p.goto(SRC + "#a=log-v0-22-1");   // a share link opens a fresh load, not a hash hop
   await p.waitForFunction(() => document.documentElement.dataset.ready === "1", null, {timeout: 30000});
   check(await p.$eval("#jart .jart", a => a.dataset.slug) === "log-v0-22-1", "a share link deep-opens a changelog-derived article");
+  check(await p.$eval("#jart .jartby", e => getComputedStyle(e).justifyContent) === "flex-end",
+    "the opened article's byline keeps its spot on the right like the cards (the avatar spot does not move left)");
   if (await p.$("#jart .jbody a[data-ent]")){
     await p.evaluate(() => document.querySelector("#jart .jbody a[data-ent]").scrollIntoView({block: "center"}));
     await p.waitForTimeout(450);   // any scroll hides #qtip site-wide; let the settle land before hovering
@@ -172,6 +197,8 @@ const boxGaps = require("./boxgaps");
     cats: !!document.querySelector("nav .cats").offsetParent}));
   check(side.pages === 31 && side.titles === "Grind Tracker|Character Builder|Training|Victoria Island|Maple Database|Mesos and Trade" && side.sprites && !side.cats,
     `sidebar lists every page under its section, each with a sprite (${JSON.stringify(side)})`);
+  { const [home, trk] = await p.$$eval("#sbhome, #t-trk", l => l.map(e => getComputedStyle(e).color + "/" + getComputedStyle(e).fontSize));
+    check(home === trk && parseFloat(home.split("/")[1]) >= 20, "sidebar Home wears the section-title style like Grind Tracker (the snail stays)") }
   { const [nb, ft] = await p.evaluate(() => { scrollTo(0, 1e6); return [document.querySelector("nav").getBoundingClientRect().bottom, document.querySelector(".sitefoot").getBoundingClientRect().top] }); await p.evaluate(() => scrollTo(0, 0));
     check(ft >= nb, `footer starts below the whole sidebar (nav bottom ${Math.round(nb)}, footer top ${Math.round(ft)})`) }   // Danny 10-20: it slid over the footer
   await p.click("#sbhome"); check(!(await p.isHidden("#home")) && await p.isHidden("#mobs"), "sidebar Home returns home");

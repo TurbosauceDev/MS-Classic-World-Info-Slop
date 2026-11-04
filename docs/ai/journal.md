@@ -26,6 +26,17 @@ no longer on the feed cards. Every article also gets a real static page `scripts
 feed gained a tag filter (`tags:` front matter; canonical list in `scripts/posts.py` TAGS, default Blog Post) and
 a featured hero (`featured: true` puts the newest featured post up top).
 
+Turbozo, 2026-11-04 (the layout round, off his screenshots): the byline's text lines up flush - the tag chip's
+words sit under the author/version/date text (`.jmeta .jtag` pulls the chip left by its own padding) - the avatar
+grew to 48px, and opening an article no longer moves the avatar spot: the article's byline keeps its place on the
+right like the cards' (`.jart .jartby`). In the sidebar **Home** reads as a section title like "Grind Tracker"
+(`.sbhome` wears the `.sgh` style; the snail stays; `aria-current` highlights it while Home is open). The
+newsfeed's head, filter pills and day dividers center. And the changelog posts share one main image:
+`src/posts/img/site-updates.jpg` (a real game scroll sprite on the workshop-dark card, the Work Gloves banner's
+family) is baked by `make_post_art.py`, injected as `UPS_IMG` by `posts.updates_img()`/`build.py` (`__UPSIMG__`),
+and rides every `log-*` card and article; the static `/news/<slug>/` pages show it and point `og:image` at the
+copied file.
+
 ## File contract
 
 One post = `src/posts/<YYYY-MM-DD>-<slug>.md` (lower case, dashes; the file name date must match the front matter date):
@@ -57,8 +68,13 @@ The body, in the dialect below.
 
 `src/posts/avatars/<author>.png` (file name lower-cased) is the sprite a poster's cards wear: `turbozo.png` is the
 green Slime, `glorg.png` (the site-update posts) the Orange Mushroom - both pulled from the game files by
-`scripts/make_post_art.py`, which also bakes the sample posts' banners into `src/posts/img/`. A poster without a
-file gets a colored letter chip; an avatar over 20 KB fails the build (it rides the whole page).
+`scripts/make_post_art.py`, which also bakes the sample posts' banners and the changelog posts' shared
+`src/posts/img/site-updates.jpg` banner into `src/posts/img/`. A poster without a file gets a colored letter chip;
+an avatar over 20 KB fails the build (it rides the whole page).
+
+Art style (Turbozo, standing rule): main elements are real MapleStory sprites from the game files, placed on a
+simple generated background or highlighted - no invented sprites, no new art styles, nothing that reads as
+generated art. The Work Gloves and site-update scroll banners are the approved family.
 
 ## Body dialect
 

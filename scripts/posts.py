@@ -21,6 +21,8 @@ repo-relative path in imgfile for scripts/pages_gen.py, and inject() strips it f
 
 build.py replaces __AVATARS__ with avatars(): one sprite per poster (src/posts/avatars/<author>.png, lower-case
 file name), so a card can wear its poster's avatar and a changelog entry can be a post by the site's own poster.
+build.py replaces __UPSIMG__ with updates_img(): the changelog posts' shared banner (src/posts/img/site-updates.jpg,
+baked by scripts/make_post_art.py) as a data URI - every changelog-derived post wears it as its main image.
 
 build.py replaces __POSTS__ with json([...]) (newest first). tests/posts_test.py checks the contract end to end.
 """
@@ -214,6 +216,24 @@ def avatars(pdir=None):
             raise SystemExit(f"src/posts/avatars/{f.name}: {len(data) // 1024} KB - an avatar rides the whole page, keep it under 20 KB")
         out[f.stem.lower()] = "data:image/png;base64," + _b64.b64encode(data).decode()
     return out
+
+
+UPDATES_IMG = pathlib.PurePosixPath("img/site-updates.jpg")   # the changelog posts' shared banner (make_post_art.py)
+
+
+def updates_img(pdir=None):
+    """The changelog posts' shared banner as a data URI, under the same cap as a post image. Empty string when
+    the file is missing, so a tree without the baked art still builds (the cards just carry no image)."""
+    f = (pathlib.Path(pdir) if pdir else POSTS_DIR) / UPDATES_IMG
+    if not f.is_file():
+        return ""
+    data = f.read_bytes()
+    if len(data) > IMG_CAP:
+        raise SystemExit(f"src/posts/{UPDATES_IMG}: {len(data) // 1024} KB, over the {IMG_CAP // 1024} KB cap (resize/compress it)")
+    mime = next((m for magic, m in IMG_MIME.items() if data.startswith(magic)), None)
+    if not mime:
+        raise SystemExit(f"src/posts/{UPDATES_IMG}: not a PNG or JPEG file")
+    return f"data:{mime};base64," + _b64.b64encode(data).decode()
 
 
 def _excerpt(html, n=200):
