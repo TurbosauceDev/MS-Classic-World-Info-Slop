@@ -151,7 +151,7 @@ ipcMain.handle("perf-metrics", () => app.getAppMetrics().map(m => ({pid: m.pid, 
 // and nothing here could be measured off-Windows, so the next screenshot names the part): JS heap, native buffers, the OCR
 // engine up or not, how often the game window was looked for and the capture opened
 const perfCount = {games: 0, captures: 0};
-ipcMain.handle("perf-main", () => { const m = process.memoryUsage(), mb = v => Math.round(v / 1048576); return {rss: mb(m.rss), heap: mb(m.heapUsed), ext: mb(m.external), buf: mb(m.arrayBuffers), ocr: !!ocr, ocrReads, games: perfCount.games, captures: perfCount.captures, upd: upd.state, read: lastReadStats, winrect: WinRect.available()} });
+ipcMain.handle("perf-main", () => { const m = process.memoryUsage(), mb = v => Math.round(v / 1048576); return {rss: mb(m.rss), heap: mb(m.heapUsed), ext: mb(m.external), buf: mb(m.arrayBuffers), cpu: Math.round((process.getCPUUsage().percentCPUUsage || 0) * 10) / 10, ocr: !!ocr, ocrReads, games: perfCount.games, captures: perfCount.captures, upd: upd.state, read: lastReadStats, winrect: WinRect.available()} });   // Performance monitor; cpu = % since the last ask (the renderer's PERF line asks every minute, 0.3.46); privateBytes (win) = the process's own memory, Task Manager style
 // reader telemetry (core/readstats.js): one jsonl line a minute from the renderer, appended here so settings can be
 // compared by real numbers later (customclassic-chat's reading.jsonl). Size-capped the same way: past 2 MB the
 // newest 6000 lines are kept, written atomically; the last line rides perf-main for the Performance monitor.

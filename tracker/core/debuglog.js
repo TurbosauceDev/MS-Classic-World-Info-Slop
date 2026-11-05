@@ -6,13 +6,13 @@
 (function (root){
   const MAX_VAL = 160, MAX_LINE = 600;
   const ts = t => new Date(Number.isFinite(+t) ? +t : Date.now()).toISOString();
-  const val = v => {
+  const val = (v, whole) => {
     if (typeof v === "number") return Number.isFinite(v) ? String(Number.isInteger(v) ? v : Math.round(v * 1e4) / 1e4) : null;
     if (typeof v === "boolean") return v ? "1" : "0";
     let s = typeof v === "string" ? v : JSON.stringify(v);
     if (s == null) return null;
-    s = s.replace(/[\r\n\t]+/g, " ");
-    if (s.length > MAX_VAL) s = s.slice(0, MAX_VAL) + "...";
+    s = s.replace(/\s+/g, " ");
+    if (!whole && s.length > MAX_VAL) s = s.slice(0, MAX_VAL) + "...";
     return /^[\w.:\/+-]+$/.test(s) ? s : '"' + s.replace(/"/g, '""') + '"';
   };
   /* hide: strings that must not appear (case-insensitive, 2+ chars). A hit becomes <hidden>. */
@@ -24,17 +24,20 @@
     }
     return s;
   }
-  /* data: a plain object ({text: "...", n: 3}); t and kind keys are skipped (they are the line's own). */
+  /* data: a plain object ({text: "...", n: 3}); t and kind keys are skipped (they are the line's own).
+     kind "perf" (0.3.46) is never truncated: the per-minute performance line is the lag diagnostic, cutting it hid
+     the numbers at the end (ring encode, heap, main process, loop lag) — exactly the ones "it lags" needs. */
   function format(t, kind, data, hide){
+    const whole = String(kind || "").toLowerCase() === "perf";
     const parts = [];
     for (const [k, v] of Object.entries(data && typeof data === "object" ? data : {})){
       if (k === "t" || k === "kind" || v == null || typeof v === "function") continue;
-      const s = val(v); if (s == null) continue;
+      const s = val(v, whole); if (s == null) continue;
       parts.push(k.replace(/\W+/g, "_") + "=" + s);
     }
     let line = ts(t) + "  " + String(kind || "LOG").toUpperCase().replace(/\W+/g, "_") + (parts.length ? "  " + parts.join(" ") : "");
     line = scrub(line.replace(/[\r\n]+/g, " "), hide);
-    return line.length > MAX_LINE ? line.slice(0, MAX_LINE) + "..." : line;
+    return !whole && line.length > MAX_LINE ? line.slice(0, MAX_LINE) + "..." : line;
   }
   // the time at the front of a line, in ms; NaN for anything else
   const parseTime = s => { const m = /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z)  /.exec(String(s)); return m ? Date.parse(m[1]) : NaN };

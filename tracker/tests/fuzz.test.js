@@ -32,7 +32,7 @@ for (let trial = 0; trial < 300; trial++){
   if (S.last !== null && st.activeMin * 6e4 > Math.max(0, S.last - S.start) + 1) bad.push("active time longer than the session " + st.activeMin);
   for (let i = 1; i < st.levelUps.length; i++) if (st.levelUps[i].level <= st.levelUps[i - 1].level) bad.push("level-up log not rising");
   check(st, "stats"); check(s.shareable(), "share"); check(s.respawns(t), "respawns");
-  for (const r of runs){ check(r, "run"); if (!(r.minutes >= 15)) bad.push("short run " + r.minutes); speedCheck(r, {rows: [{map: r.map, level: r.level, party: 1, expHr: 5, group: "a"}]}, G) }
+  for (const r of runs){ check(r, "run"); if (!(r.minutes >= 14)) bad.push("short run " + r.minutes); speedCheck(r, {rows: [{map: r.map, level: r.level, party: 1, expHr: 5, group: "a"}]}, G) }   // 0.3.46: minutes are ACTIVE minutes (town/idle looks credit nothing), so the floor is under the 15-minute wall cut
   if (bad.length) { console.log("trial", trial, bad.slice(0, 8)); break }
 }
 // misreads: a steady climb with 1 in 10 readings garbled the way the KPQ run showed (EXP number wrong, a digit dropped or

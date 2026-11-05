@@ -34,10 +34,10 @@ async function start(){
   try { await startCapture(); ICONS ||= await GrindReaders.loadIcons(G).catch(() => []) }   // once: potion/arrow pictures for the counts
   finally { starting = false }
   timer = 0;   // running (the first tick sets the real timeout)
-  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: goalOf(), freeIds: freeIds()}); stopWarned = false;
+  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: goalOf(), freeIds: freeIds(), arm: armOpts()}); stopWarned = false;
   // every 15 minutes of non-stop farming on one map with the same party is one shared run (when sharing is on);
   // the Settings nick rides along for the weekly ladder's display name (opt-in — absent when the box is empty)
-  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, name: (settings.nick || "").trim() || undefined, partyCode: settings.partyCode || null}) } showSpeed(run) }});
+  slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, arm: armOpts(), onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, name: (settings.nick || "").trim() || undefined, partyCode: settings.partyCode || null}) } showSpeed(run) }});
   jr.runStart(session); autoRun = {auto, lastGain: Date.now(), bar: null, level: 0};
   wrap = null; runT0 = Date.now(); $("#summary").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; conf.reset(); confBar = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   kpqReset(); held = false; barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; boxHad = 0; boxPending = null; boxSeen = new Map(); Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
@@ -128,12 +128,15 @@ async function stopNow(){
   clearInterval(autoTimer); autoTimer = null;
   renderState(session?.stats());
 }
+// arming (0.3.46, Danny): on by default — the tracker waits for a KPQ round or real farming before it counts; towns and
+// the walk to the farm map stay out. Numbers live in settings.json (armKills, armWindowSec) and the diff-able defaults in core/flight.js
+const armOpts = () => settings.armRule === false ? false : {kills: settings.armKills || 5, windowSec: settings.armWindowSec || 60};
 // Reset (Danny 2026-10-23: "cleaner in between use sessions"): only while not tracking. Clears the numbers, both logs, the
 // start/end readings and the last summary back to a just-opened window; saved runs stay in Past sessions
 function resetTracker(){
   if (timer != null || starting){ $("#status").textContent = "Stop and finalize the run first, then Reset."; return false }
   if (dummyOn) dummyClear();
-  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: goalOf(), freeIds: freeIds()});
+  session = GrindSession.createSession(G, {idleMs: (settings.idleSec || 60) * 1000, goalLevel: goalOf(), freeIds: freeIds(), arm: armOpts()});
   snaps.start = snaps.end = null; wrap = null; runT0 = 0; feed = null;
   for (const id of ["#summary", "#lastRun", "#partyBox", "#respawn"]) $(id).classList.add("hidden");
   $("#feed").innerHTML = $("#miniFeed").innerHTML = $("#fzFeed").innerHTML = $("#events").innerHTML = "";

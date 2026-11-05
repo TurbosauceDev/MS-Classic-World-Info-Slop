@@ -89,6 +89,20 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - KPQ ends when you leave it (0.3.40): only Kerning City (10003000) holds between rounds; any other known map read ends kpq.on,
   lifts the hold with a resume, phase idle; a KPQ stage or steady clock turns it back on. A clock jump on an unchanged map starts the
   new round on that stage (kpqTime jumpTo). Never gate a hold on "not a KPQ map" alone: the pause then outlives KPQ.
+  0.3.46: a clock restart ALWAYS opens the new round on the 1st stage (jumpTo is fixed "80000000") — the minimap can still
+  say Bonus for a few seconds, and opening on it gave the round .bonus from birth ("joined at the Bonus stage", 11-05 report).
+- Towns (0.3.46, core/session.js isTown): no monsters in the game data = town (shops, houses, pharmacy); KPQ maps never are.
+  credit() never counts a gap that began on a town map or the Exit (80000600), even if the current map is a KPQ stage —
+  S.lastMap tracks the map at S.last for this. Time in KPQ stages still uses the 30-minute allowance.
+- Arming (0.3.46): createSession takes opts.arm {kills, windowSec} (renderer: settings.armRule/armKills/armWindowSec, on by
+  default; bare createSession never arms). While S.armed is false nothing counts or dates (S.start stays null): it arms on an
+  "arm" event (kpqMap sends one when a round opens), a "resume" (Go on / "Start counting now"), a KPQ stage map, or kills
+  EXP gains in windowSec seconds — back-dated to the first gain, earlier gains re-counted. Shared-run minutes are ACTIVE
+  minutes now (S.activeMs), not wall-since-start. Pill labels: GrindPauses "town" and "waiting"; pauseBtn says
+  "Start counting now" while waiting.
+- Perf line (0.3.46, core/perfline.js): one whole line per minute (kind "perf" is never truncated by core/debuglog.js),
+  per-minute avg/max for tick + ring encode (keepFrame times the WebP), renderer heap, main rss/heap/cpu (perf-main), worst
+  event-loop lag, fps. Built for "it lags" reports — don't guess, read the line. note() lines also reach the debug log now.
 - Map title match (mapFromText): OCR-confusable letters cost half an edit (Y/V, C/E/O, cl/d); a different name less than half an
   edit behind the best = null (keep the old map); the street line alone is never a map; leading words drop only if 1-2 letters
   or street-like. Real strings: `tests/map_ocr_real.json` (core.test.js). KEYS in main.js must stay unique (core.test.js checks).
@@ -254,36 +268,12 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Version numbers: take the next free one; `tracker/tests/core.test.js` gates the changelog top entry against package.json.
 
 ## Splits
-- 10-18: `app/renderer.js` cut into 6 files at top-level boundaries, loaded in order by app/index.html (one shared global
-  scope, so no imports). A new file goes in index.html's script list; top-level code may only call functions from its
-  own or earlier files at load time (ui.test.js catches a load-time ReferenceError).
-- `app/readers.js` 68 KB left whole: one IIFE closure loaded 5 ways (worker importScripts, require in tests, script tags,
-  site `/*@READERS*/`); splitting needs a namespace rewrite. Grep + ranged reads instead.
-- History (10-19): maths in core/history.js (window.GrindHistory), UI in renderer-history.js. Compare state is `cmpSel` (saved
-  ids, any order; drawn oldest first as A-F, max 6) + `cmpBase`; rows/compare redraw from histList, so keep ids as strings
-  (`String(+x.saved)`). Rename/note = IPC `update-session` (main.js: name ≤60, note ≤1000, nothing else changes). The ui-host
-  stub's sessions() makes new `saved` ids every call, so open details/selection don't survive a loadHist in tests.
-  The compare table scrolls inside its box (head row in the table, sticky label column); ui.test.js checks a 400 px window.
-- Bug hunt 0.2.59 (10-19): #wrap/#summary now sit ABOVE #dock (under a dozen modules they were off screen); ui.test closes the summary
-  before measuring boxes. openStream gives up after 5 s with no frame (play() never resolved: Start dead). Slicer counts a break from
-  the run's start when nothing counted yet; server check.js "mostly idle" (activeMin < minutes/2). #go's capture listener only
-  drops Dummy data on a starting click; dummyFill refuses while `starting`. Settings chips scroll by prefsGo (sticky header aware).
-- 0.2.60 (bug-hunt ideas 1,2,4,5,7): Mini shows #miniWrap (one line + Finalize log) while `wrap` is set (renderWrap). Crash
-  recovery: renderer autosaveNow() every 60 s while tracking → IPC `autosave` → core/autosave.js writes sessions/autosave.json
-  (tmp + rename; not <digits>.json so History never lists it); save-session clears it; recoverCheck() at launch shows #recover.
-  sessionRecord() is the one History record (Finalize and autosave). History #today/#eta from core/history.js today()/goalEta()
-  (EXP table = G.exp; maps 15+ min, KPQ left out). Setup codes MSCS1 (themes.js encodeSetup/decodeSetup/cleanLayout: known box
-  ids only) in Settings > Layout. Browser checks in tests/extras.test.js, maths in core.test.js.
-- Profiles 0.2.61 (renderer-settings.js profUi/profSwitch/setupApply/spTake): settings.profiles (cleaned setups with a name, max 30),
-  settings.profile = in use; switching away first saves the screen into it (profKeep). Codes stay MSCS1, now with optional
-  name/prefs {fit, fitWin, snap, opacity}/win {w, h} (themes.js cleanSetup; old apps ignore them); decodeSetup also takes MSCT1
-  (theme only). Paste = preview (#setupPrev) only; IPC `win-size` sets content size (skipped in Mini). Tests: extras.test.js 4-5.
-  Built-in profiles (0.2.67): codes in themes.js BUILTIN, TH.builtins(ids); select value "b:<name>", never saved into or
-  deleted. Window size goes through TH.winFit (zoom, clamp to work area, pull on screen), used by main.js `win-size`; core.test.
-  flipTo sets body.gliding for 220 ms (#dock overflow-x:clip) so a box gliding in from the right never flashes a sideways scrollbar.
-- Traps: box h3/rows need 72 px right padding (⠿ – × = 63 px); `#hist > .row:first-child` never matched (.boxctl is first child).
-  .feedlist height = calc(7.5em + 10px) = 5 whole lines; feedIn slides lines, so wait 400 ms before measuring them. Mini's zoom
-  search is cached by content height + window size (miniKey).
+- Dated split/profile/crash-recovery notes moved to tracker-history.md (2026-11-05, size cap); only still-live traps stay:
+- A new renderer file goes in index.html's script list; top-level code may only call functions from its own or earlier files at load time (ui.test.js catches a load-time ReferenceError).
+- `app/readers.js` 68 KB left whole: one IIFE closure loaded 5 ways; grep + ranged reads instead.
+- Adding a shortcut: KEYS (main.js), KEY_NAMES, and the ui test's shortcut row count.
+- Dummy data (renderer-dummy.js) never reaches History or the slicer; Clear wipes it in place.
+- Traps: box h3/rows need 72 px right padding; `.feedlist` = 5 whole lines, wait 400 ms after a feed slide; Mini's zoom search is cached (miniKey); ui.test closes the summary before measuring boxes.
 
 ## History
 

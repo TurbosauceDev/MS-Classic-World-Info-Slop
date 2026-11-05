@@ -276,7 +276,7 @@ assert.strictEqual(s.state.pausedMs, 150e3);
 const pr = []; const ps = require("../core/session.js").createRunSlicer(G, {onRun: r => pr.push(r)});
 ps.add({t: 0, type: "map", id: 42});
 for (let i = 1; i <= 16 * 6; i++){ ps.add({t: i * 10e3, type: "exp", gain: 2}); if (i === 30) ps.add({t: i * 10e3 + 1, type: "pause"}) }
-assert.strictEqual(pr.length, 1); assert.ok(pr[0].minutes >= 15 && pr[0].minutes < 15.2, "run minutes leave the pause out: " + pr[0].minutes);
+assert.strictEqual(pr.length, 1); assert.ok(pr[0].minutes >= 14.5 && pr[0].minutes < 15.2, "run minutes are active time (0.3.46: the pause and dead air stay out): " + pr[0].minutes);
 // level-up log: time each level took (active minutes), only for levels this session saw start
 s = createSession(G); const bar = (t, lv, exp) => s.add({t: sec(t), type: "bar", exp, pct: Math.round(exp / G.exp[lv] * 1e4) / 100, level: lv});
 bar(0, 20, 100); bar(30, 20, G.exp[20] - 10); bar(40, 21, 5); bar(50, 21, G.exp[21] - 5); bar(60, 22, 3); bar(61, 21, 900); bar(62, 22, 5);
@@ -1092,3 +1092,107 @@ console.log("flight recorder ok");
   assert.deepStrictEqual(R.planFrames(["frame-0-100000.webp", "frame-1-100003.png", "frame-2-100006.webp"], null, NaN).map(f => f.name), ["frame-0-100000.webp", "frame-1-100003.png", "frame-2-100006.webp"], "the replay plan takes .webp and .png pictures, in order");
 }
 console.log("replay planning ok");
+
+// towns + arming (0.3.46, Danny 2026-11-05: "the time spent in towns, like kerning, shouldn't count")
+{ const {isTown} = require("../core/session.js");
+  assert.strictEqual(isTown(G, "10003002"), true, "Kerning City Pharmacy: no monsters = town");
+  assert.strictEqual(isTown(G, "10003000"), true, "Kerning City = town");
+  assert.strictEqual(isTown(G, "42"), false, "Snail Hunting Ground III has monsters: not a town");
+  assert.strictEqual(isTown(G, "80000000"), false, "KPQ stages are never towns");
+  assert.strictEqual(isTown(G, null), false, "unread map: not a town");
+  assert.strictEqual(isTown(G, "999999"), false, "map our data doesn't have: not a town");
+}
+console.log("towns ok");
+
+// BUG A (2026-11-05 report): one bar read in Kerning City Pharmacy, then the KPQ 1st stage 7.8 minutes later — the
+// first EXP there credited the whole town stay (activeMin 45.7 for a 46-minute session with 8 idle minutes in town)
+{ const t0 = Date.parse("2026-11-05T21:44:50Z");
+  const s = createSession(G, {idleMs: 60e3});
+  s.add({t: t0, type: "map", id: "10003002", name: "Kerning City Pharmacy"});
+  s.add({t: t0 + 8e3, type: "bar", exp: 61000, pct: 13.13, level: 44});   // the report's one town bar read
+  s.add({t: t0 + 469e3, type: "map", id: "80000000", name: "1st Accompaniment <1st Stage>"});   // 21:52:39
+  s.add({t: t0 + 475e3, type: "exp", gain: 68});
+  assert.ok(s.stats().activeMin < 0.5, "a gap that began in town never credits, even into a KPQ stage: " + s.stats().activeMin);
+  // the same shape entirely inside KPQ still uses the long allowance (the middle stages have no monsters)
+  const k = createSession(G, {idleMs: 60e3});
+  k.add({t: t0, type: "map", id: "80000000"});
+  k.add({t: t0, type: "exp", gain: 22}); k.add({t: t0 + 600e3, type: "exp", gain: 22});   // 10 min of stage waiting, no EXP
+  assert.ok(k.stats().activeMin >= 9, "a gap that began in a KPQ stage is play time: " + k.stats().activeMin);
+  // the Exit map (80000600) and Kerning between rounds credit nothing either
+  const x = createSession(G, {idleMs: 60e3});
+  x.add({t: t0, type: "map", id: "80000500"}); x.add({t: t0, type: "exp", gain: 12});
+  x.add({t: t0 + 60e3, type: "map", id: "80000600", name: "1st Accompaniment <Exit>"});
+  x.add({t: t0 + 120e3, type: "bar", exp: 61000, pct: 13.13, level: 44});   // 60 s standing in Exit with a bar read
+  x.add({t: t0 + 300e3, type: "map", id: "10003000", name: "Kerning City"});
+  x.add({t: t0 + 360e3, type: "bar", exp: 61000, pct: 13.13, level: 44});   // 60 s in Kerning, bars keep reading
+  x.add({t: t0 + 420e3, type: "map", id: "80000000", name: "1st Accompaniment <1st Stage>"});
+  x.add({t: t0 + 426e3, type: "exp", gain: 22});
+  assert.ok(x.stats().activeMin < 2, "Exit and Kerning between rounds never credit: " + x.stats().activeMin);
+}
+console.log("active-time bug ok");
+
+// arming: Start in a town waits; counting begins at a KPQ round or at 5 monster-EXP gains in 60 s (back-dated)
+{ const t0 = Date.parse("2026-11-05T21:44:50Z");
+  const arm = () => createSession(G, {idleMs: 60e3, arm: {kills: 5, windowSec: 60}});
+  // two snails on the walk: never arms
+  const w = arm();
+  w.add({t: t0, type: "map", id: 42});
+  w.add({t: t0 + 10e3, type: "exp", gain: 2}); w.add({t: t0 + 30e3, type: "exp", gain: 2});
+  w.add({t: t0 + 90e3, type: "exp", gain: 2});
+  assert.strictEqual(w.stats().waiting, true, "2 gains, and the window slid past the first: still waiting");
+  assert.strictEqual(w.stats().activeMin, 0, "waiting credits nothing");
+  assert.strictEqual(w.state.start, null, "waiting dates nothing");
+  // five gains inside 60 s: armed, back-dated to the first gain (no farming lost)
+  const f = arm();
+  f.add({t: t0, type: "map", id: 42});
+  for (let i = 0; i < 5; i++) f.add({t: t0 + 5e3 + i * 10e3, type: "exp", gain: 2});
+  assert.strictEqual(f.stats().waiting, false, "5 gains in 60 s: armed");
+  assert.strictEqual(f.state.start, t0 + 5e3, "back-dated to the first gain");
+  assert.ok(Math.abs(f.stats().activeMin - 40e3 / 6e4) < 1e-9, "the farming window itself is counted");
+  assert.strictEqual(f.stats().kills, 5, "the waiting-time gains still matched their monster");
+  // five gains spread over two minutes: not farming yet (rate too low)
+  const g = arm(); g.add({t: t0, type: "map", id: 42});
+  for (let i = 0; i < 4; i++) g.add({t: t0 + i * 30e3, type: "exp", gain: 2});
+  g.add({t: t0 + 100e3, type: "exp", gain: 2});
+  assert.strictEqual(g.stats().waiting, true, "4 old gains slid out of the 60 s window: still waiting");
+  // a KPQ round beginning arms at once, on the stage map
+  const k = arm();
+  k.add({t: t0, type: "map", id: "10003002", name: "Kerning City Pharmacy"});
+  k.add({t: t0 + 60e3, type: "bar", exp: 61000, pct: 13.13, level: 44});
+  k.add({t: t0 + 460e3, type: "map", id: "80000000", name: "1st Accompaniment <1st Stage>"});
+  assert.strictEqual(k.stats().waiting, false, "KPQ 1st stage: armed");
+  assert.strictEqual(k.state.start, t0 + 460e3, "the town minutes are not in the run");
+  assert.ok(k.stats().activeMin < 0.1, "8 idle town minutes: not counted");
+  // "Start counting now" (the resume the Go on / Start counting now click sends) overrides
+  const r = arm();
+  r.add({t: t0, type: "map", id: "10003002"});
+  r.add({t: t0 + 30e3, type: "resume"});
+  assert.strictEqual(r.stats().waiting, false, "Start counting now overrides");
+  assert.strictEqual(r.state.start, t0 + 30e3);
+  // the run slicer: town minutes never reach the shared minutes, and an unarmed slicer emits no run
+  const pr = []; const ps = require("../core/session.js").createRunSlicer(G, {idleMs: 60e3, arm: {kills: 5, windowSec: 60}, onRun: r2 => pr.push(r2)});
+  ps.add({t: t0, type: "map", id: "10003002"});
+  for (let i = 0; i < 20; i++) ps.add({t: t0 + 30e3 + i * 60e3, type: "bar", exp: 61000, pct: 13.13, level: 44});   // 20 min of town bar reads
+  assert.strictEqual(pr.length, 0, "no shared run from town time");
+  ps.add({t: t0 + 1260e3, type: "map", id: "80000000"});
+  for (let i = 0; i < 30; i++) ps.add({t: t0 + 1270e3 + i * 10e3, type: "exp", gain: 22});   // 5 min of stage farming
+  assert.strictEqual(pr.length, 0, "still no 15-minute run: the arm reset the clock");
+  for (let i = 0; i < 70; i++) ps.add({t: t0 + 1570e3 + i * 10e3, type: "exp", gain: 22});
+  assert.strictEqual(pr.length, 1, "the run completes on real farming");
+  assert.ok(pr[0].minutes <= 15.2 && pr[0].minutes > 10, "shared minutes are active minutes: " + pr[0].minutes);
+}
+console.log("arming ok");
+
+// the per-minute PERF line (0.3.46, core/perfline.js) and the debug log writing it whole
+{ const P = require("../core/perfline.js"), D = require("../core/debuglog.js");
+  const l = P.line({frames: 120, fps: 2, skipped: 40, skippedTol: 12, tick: {n: 120, avg: 17.2, max: 210},
+    grab: {n: 120, avg: 4.1}, read: {n: 120, avg: 9.9, max: 80}, ring: {n: 40, avg: 6.5, max: 95},
+    busyPct: 5.1, heapMb: 210, main: {rss: 300, heap: 41, cpu: 1.4}, lagMs: 33, memoHits: 700});
+  assert.ok(/tick 17.2\/210 ms/.test(l), "per-minute avg/max: " + l);
+  assert.ok(/ring-encode 6.5\/95 ms/.test(l) && /main 300\/41 MB cpu 1.4%/.test(l) && /loop-lag max 33 ms/.test(l), l);
+  const lg = D.format(Date.now(), "perf", {text: l});
+  assert.ok(!lg.endsWith("...") && lg.includes("loop-lag"), "the PERF line is never truncated in the debug log");
+  const cut = D.format(Date.now(), "map", {text: "y".repeat(700)});
+  assert.ok(cut.length <= D.MAX_LINE + 3, "other lines still are");
+}
+console.log("perf line ok");

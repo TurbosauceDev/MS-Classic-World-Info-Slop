@@ -89,13 +89,16 @@ const path = require("path"), {chromium} = require("playwright");
   await page.click("#prefsClose");
   // the top card: tracking state and Stop; tabs switch sections
   const top = await page.evaluate(() => [document.querySelector("#stateText").textContent, document.querySelector("#go").textContent, document.querySelector("#go").classList.contains("on")]);
-  if (!/^Tracking/.test(top[0]) || top[1] !== "Stop" || !top[2]) throw new Error("top card: " + top);
-  // Pause (button or shortcut): stays paused through frames until pressed again
-  await page.evaluate(() => window.menu("pause")); await page.waitForTimeout(700);
-  const ps = await page.evaluate(() => [document.querySelector("#stateText").textContent, document.querySelector("#pauseBtn").textContent, session.state.pausedAt !== null]);
-  await page.click("#pauseBtn"); await page.waitForTimeout(100);
-  const ps2 = await page.evaluate(() => [document.querySelector("#pauseBtn").textContent, session.state.pausedAt === null]);
-  if (ps.join() !== "Paused: by you,Go on,true" || ps2.join() !== "Pause,true") throw new Error("pause: " + JSON.stringify({ps, ps2}));
+  if (!/^(Tracking|Waiting: starts when you start farming)/.test(top[0]) || top[1] !== "Stop" || !top[2]) throw new Error("top card: " + top);
+  // Pause (button or shortcut): stays paused through frames until pressed again. 0.3.46: while the tracker is still
+  // waiting to arm, the first press is "Start counting now" (it starts the counting); the next one pauses.
+    await page.evaluate(() => window.menu("pause")); await page.waitForTimeout(700);
+    const ps = await page.evaluate(() => [document.querySelector("#stateText").textContent, document.querySelector("#pauseBtn").textContent, session.state.pausedAt !== null, session.state.armed]);
+    await page.click("#pauseBtn"); await page.waitForTimeout(100);
+    const ps2 = await page.evaluate(() => [document.querySelector("#pauseBtn").textContent, session.state.pausedAt !== null]);
+    await page.click("#pauseBtn"); await page.waitForTimeout(100);
+    const ps3 = await page.evaluate(() => [document.querySelector("#pauseBtn").textContent, session.state.pausedAt === null]);
+    if (ps.join() !== "Tracking · 0 min farmed,Pause,false,true" || ps2.join() !== "Go on,true" || ps3.join() !== "Pause,true") throw new Error("pause: " + JSON.stringify({ps, ps2, ps3}));
   
   if (!await page.isVisible("#mobsEmpty") || !await page.isVisible("#itemsEmpty")) throw new Error("session and loot boxes in one layout");
   // Help: the ? button opens it as a pop-up over the layout, ✕ closes it; F1 opens it too
@@ -819,6 +822,78 @@ const path = require("path"), {chromium} = require("playwright");
     out.score = h.score; out.raw = h.raw; out.sent = window.shared.at(-1); settings = keep; return out });
   if (ph.primed !== "primed/false" || ph.rush !== "rush" || ph.wait !== "bonusWait" || ph.bonus !== "bonus" || ph.idle !== "idle" || !/recording Bonus.*Bonus so far/.test(ph.note)) throw new Error("kpq phases: " + JSON.stringify(ph));
   if (!ph.raw.bonus || ph.raw.bonus.kills !== 1 || ph.raw.bonus.mesos !== 120 || ph.raw.bonus.loot.pan !== 1 || !ph.score.bonus || ph.score.total !== ph.score.rush + ph.score.bonus || ph.sent?.v2?.bonus?.loot?.pan !== 1 || ph.sent.mode !== "Bonus") throw new Error("kpq round score: " + JSON.stringify(ph));
+  // 0.3.46: a right-button pointerdown on a box title used to throw ("h?.closest is not a function") — 15 in Danny's log
+  if (!await page.evaluate(() => { document.querySelector(".box h3").dispatchEvent(new PointerEvent("pointerdown", {bubbles: true, button: 2, clientX: 10, clientY: 10})); return drag === null })) throw new Error("right click started a box drag");
+  await page.waitForTimeout(80);
+  // 0.3.46: the self-check's map why clears on the next good read (it stuck and showed on a fine map in the report)
+  const mw = await page.evaluate(async () => {
+    check = {t0: Date.now()};
+    const crop = {w: 4, h: 5, d: new Uint8ClampedArray(4 * 5 * 4).fill(255)};
+    const realOcr = host.ocr; host.ocr = async () => "";
+    await readMap(crop, null, Date.now());
+    const why = check.mapWhy;   // set: the name didn't read
+    host.ocr = realOcr;
+    await readMap(crop, null, Date.now());   // the same title reads: map 42
+    return [why, check.mapWhy, check.map];
+  });
+  if (!/didn't read/.test(mw[0] || "") || mw[1] !== null || mw[2] !== "Snail Hunting Ground III") throw new Error("map why clear: " + JSON.stringify(mw));
+  // 0.3.46 arming, in the window: Start in a town waits; a KPQ round starts the counting; the town minutes stay out
+  const aw = await page.evaluate(() => {
+    session = GrindSession.createSession(G, {idleMs: 60e3, arm: {kills: 5, windowSec: 60}, goalLevel: goalOf(), freeIds: freeIds()}); kpqReset();
+    const t = Date.now(), keepTimer = timer; timer = 1;   // renderState only shows the pill while the timer runs; this scene has no capture
+    session.add({t, type: "map", id: "10003002", name: "Kerning City Pharmacy"});
+    for (let i = 0; i < 8; i++) session.add({t: t + i * 60e3, type: "bar", exp: 61000, pct: 13.13, level: 44});   // 8 idle minutes of bar reads in town
+    renderState(session.stats());
+    const waiting = [document.querySelector("#stateText").textContent, document.querySelector("#pauseBtn").textContent];
+    const townMin = session.stats().activeMin;
+    session.add({t: t + 480e3, type: "map", id: "80000000", name: "1st Accompaniment <1st Stage>"});   // the round begins
+    session.add({t: t + 486e3, type: "exp", gain: 22});
+    renderState(session.stats());
+    const after = [document.querySelector("#stateText").textContent, session.state.armed, session.state.start, session.stats().activeMin];
+    timer = keepTimer; return {waiting, townMin, after};
+  });
+  if (!/Waiting: starts when you start farming|In town: time not counted/.test(aw.waiting[0]) || aw.waiting[1] !== "Start counting now") throw new Error("arm ui: " + JSON.stringify(aw.waiting));
+  if (aw.townMin !== 0 || aw.after[1] !== true || Math.abs(aw.after[3] - 0.1) > 1e-9) throw new Error("arm ui active: " + JSON.stringify(aw));
+  if (!/Tracking/.test(aw.after[0])) throw new Error("arm ui state after: " + aw.after[0]);
+  // 0.3.46 BUG B (2026-11-05 report): the clock restarted at 22:00:37 while the minimap still read the Bonus map for
+  // 4 more seconds — round 2 opened ON the Bonus stage, so it carried .bonus from the start, its real Bonus never
+  // recorded and the leaderboard refused it ("joined at the Bonus stage"). A fresh round always opens on the 1st stage.
+  const bb = await page.evaluate(() => {
+    const keep = settings; settings = {...settings, share: true}; window.shared = [];
+    session = GrindSession.createSession(G, {idleMs: 60e3, arm: {kills: 5, windowSec: 60}, goalLevel: goalOf(), freeIds: freeIds()}); slicer = {add(){}}; kpqReset();
+    const t = Date.now() + 9e5, out = {}, mob = G.maps["80000500"][2][0][0];
+    // round 1: 1st stage (clock spotted) → … → Last → Bonus, a kill in it, the clock winding down
+    kpqTime(1799, t); kpqTime(1794, t + 5e3);
+    kpqMap("80000000", t + 6e3);
+    for (const [i, id] of ["80000100", "80000200", "80000300", "80000400"].entries()) kpqMap(id, t + 60e3 + i * 30e3);
+    kpqMap("80000500", t + 200e3);
+    session.add({t: t + 210e3, type: "map", id: 80000500});
+    session.add({t: t + 220e3, type: "exp", gain: G.mobs[mob][3]}); kpqWatch(session.stats());
+    kpqTime(245, t + 300e3);   // round 1 nearly over, on the Bonus map
+    // round 2: the clock starts over while the minimap STILL says Bonus (the map read lags 4 s)
+    mapNow = "80000500";
+    kpqTime(1799, t + 360e3);   // not steady: 60 s since the last read
+    kpqTime(1794, t + 365e3);   // steady: round 2 — opened on the 1st stage, not the stale Bonus
+    out.r2 = [kpq.rounds, kpq.round?.startStage, kpq.round?.bonus === null, kpq.phase, kpq.stage?.id];
+    // the round plays out: stages → the REAL Bonus → a kill → Exit ends it; the next Kerning City holds the pause
+    for (const [i, id] of ["80000100", "80000200", "80000300", "80000400"].entries()) kpqMap(id, t + 420e3 + i * 20e3);
+    session.add({t: t + 560e3, type: "map", id: 80000500}); kpqMap("80000500", t + 560e3);
+    out.bw = kpq.phase;
+    session.add({t: t + 570e3, type: "exp", gain: G.mobs[mob][3]}); kpqWatch(session.stats());
+    out.b = kpq.phase;
+    session.add({t: t + 660e3, type: "map", id: 80000600}); kpqMap("80000600", t + 660e3);
+    out.hist = kpq.history.map(h => [h.n, h.end, h.sent, h.stages.map(s => s[0]).join(">")]);
+    out.modes = window.shared.map(s => s.mode);
+    kpqMap("10003000", t + 670e3);
+    out.kerning = [kpq.phase, kpq.hold, session.state.pausedAt !== null];
+    settings = keep; return out;
+  });
+  if (bb.r2.join() !== "2,80000000,true,rush,80000000") throw new Error("bug B: round 2 on the stale Bonus: " + JSON.stringify(bb.r2));
+  if (bb.bw !== "bonusWait" || bb.b !== "bonus") throw new Error("bug B: real Bonus not recorded: " + JSON.stringify(bb));
+  if (bb.hist[0][1] !== "left" || bb.hist[1][1] !== "Exit") throw new Error("bug B ends: " + JSON.stringify(bb.hist));
+  if (bb.hist[1][2] !== "sent" || bb.hist[1][3] !== "1st>2nd>3rd>4th>Last>Bonus") throw new Error("bug B share: " + JSON.stringify(bb.hist[1]));
+  if (bb.modes.length !== 2 || bb.modes[1] !== "Bonus") throw new Error("bug B modes: " + JSON.stringify(bb.modes));
+  if (bb.kerning.join() !== "primed,true,true") throw new Error("bug B kerning hold: " + JSON.stringify(bb.kerning));
   await browser.close();
   if (errors.length) throw new Error("page errors: " + errors.join("; "));
   if (!/Red Snail/.test(mobs) || !/Blue Snail/.test(mobs)) throw new Error("mobs table: " + mobs);

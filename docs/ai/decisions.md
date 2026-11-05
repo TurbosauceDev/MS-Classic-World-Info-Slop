@@ -322,6 +322,8 @@ through WebP q90 and JPEG q85 (PIL, tracker/scripts/lossy_roundtrip.py): invento
 on BOTH, quest and proc fail on WebP q90 but pass on JPEG85, readers.test.js worsens (7 wrong on the original -> 9
 WebP / 8 JPEG). Measured sizes on Danny's real frames: PNG 10.5 MB, lossless WebP 6.2 MB, WebP q90 1.24 MB, JPEG85
 1.30 MB. If report size ever matters again, the fix is tolerance-based readers, not a lossy format. (Hermes)
+- 2026-11-05 (Danny): time on no-monster maps (towns, shops, houses — there is no town flag in the game data, so "no monsters" is the whole definition) never counts, and the tracker ARMS after Start: it waits (pill "Waiting: starts when you start farming") until a KPQ round begins or 5 monster-EXP gains land within 60 s (tunable: settings.armRule/armKills/armWindowSec), back-dated to the first gain so no farming is lost. A snail or two on the walk must not wake it. Kerning between KPQ rounds and the Exit map count nothing either. Shared-run "minutes" are active minutes from now on.
+- 2026-11-05 (Danny): the KPQ Exit map (80000600) marks the end of a round, cleared or not — the tracker already ends the round there with end "Exit"; keep that. (Hermes)
 ## Open decisions (pending Danny)
 
 Each entry blocks something. When Danny calls it, transcribe above with the date and note the resolution here.
