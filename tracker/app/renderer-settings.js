@@ -364,6 +364,7 @@ async function saveNumbers(){
 }
 const muteSet = on => host.settings({muted: !!on}).then(x => { settings = x; $("#muted").checked = !!on; $("#status").textContent = on ? "Sounds muted." : "Sounds on." });
 $("#muted").onchange = e => muteSet(e.target.checked);
+$("#autoReport").onchange = e => host.settings({autoReport: e.target.checked}).then(x => settings = x);
 $("#pruneFrames").onchange = e => host.settings({pruneFrames: e.target.checked}).then(x => settings = x);
 $("#pruneFramesDays").onchange = e => host.settings({pruneFramesDays: Math.max(1, Math.round(+e.target.value) || 30)}).then(x => { settings = x; $("#pruneFramesDays").value = x.pruneFramesDays });
 $("#shopWatch").onchange = e => host.settings({shopWatch: e.target.checked}).then(x => { settings = x; $("#status").textContent = x.shopWatch === false ? "Shop watch off: shops are only read when you press the shortcut." : "Shop watch on: shops are read automatically while you browse." });
@@ -410,6 +411,7 @@ $("#updGo").onclick = async () => {
   $("#bagMain").checked = bagCfg().main; $("#bagEvery").value = bagCfg().every;
   $("#autoRun").checked = settings.autoRun !== false;
   $("#autoPause").checked = settings.autoPause !== false;   // on unless turned off   // on unless turned off
+  $("#autoReport").checked = settings.autoReport !== false;   // on unless turned off (0.3.42)
   $("#pruneFrames").checked = settings.pruneFrames !== false;   // on unless turned off: old sample frames go at start
   $("#pruneFramesDays").value = settings.pruneFramesDays > 0 ? settings.pruneFramesDays : 30;
   goalUi(); meatUi(); jrUi();

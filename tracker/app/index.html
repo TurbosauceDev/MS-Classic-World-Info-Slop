@@ -773,8 +773,9 @@
         <li>Settings → Shortcuts and window → See-through window makes the tracker partly transparent over the game.</li>
       </ul></details>
       <details><summary>Something reads wrong</summary><ul>
-        <li><b>Ctrl+Shift+B</b> (even with the game in front; changeable in Settings → Shortcuts and window), the Bug button or Settings → <b>Report a bug</b> saves the last ~25 seconds of game pictures and a log to a folder. Your character
-          name shows in those pictures. Send the folder to Danny.</li>
+        <li><b>Ctrl+Shift+B</b> (even with the game in front; changeable in Settings → Shortcuts and window), the Bug button or Settings → <b>Report a bug</b> saves the last ~3 minutes of game pictures (one every 3 s) and a log to a folder, with a short block of what state the tracker was in. Your character
+          name shows in those pictures. Send the folder to Danny. When the tracker itself notices it is confused (EXP counting while paused, the map name lost for a minute, the KPQ clock on screen while the between-rounds pause is up) it saves the same kind of folder by itself, at most one every 10 minutes. Those folders stay on this PC like the others; nothing is ever sent anywhere. Switch it off in Settings → Something read wrong?.</li>
+        <li>For whoever fixes a report: start the app with <code>--replay &lt;report folder&gt;</code> (or Help → Replay a bug report…) to run the real readers over its pictures in a throwaway window. Nothing is saved, shared or sent from there.</li>
         <li>File → Open frames and bug reports folder shows where they are.</li>
       </ul></details>
       <details><summary>Updates</summary><ul>
@@ -879,8 +880,9 @@
     </div>
     <div class="card" data-nav="Bug report"><h3>Something read wrong?</h3>
       <div class="row"><input id="reportNote" aria-label="What read wrong" maxlength="2000" style="flex:1;min-width:0" placeholder="What read wrong? (optional)">
-        <button id="report" class="alt" title="Ctrl+Shift+B from anywhere (the game too). Saves the last ~25 s of game frames (your screen, character name included) and a log to a folder you can send">Report a bug</button></div>
-      <div class="note">Saves the last ~25 s of game pictures (your character name shows in them) and a log to a folder you can send.</div>
+        <button id="report" class="alt" title="Ctrl+Shift+B from anywhere (the game too). Saves the last ~3 minutes of game frames (your screen, character name included) and a log to a folder you can send">Report a bug</button></div>
+      <div class="note">Saves the last ~3 minutes of game pictures (your character name shows in them) and a log to a folder you can send.</div>
+      <label class="chk" title="When EXP keeps counting while the tracker is paused, the map name is lost for a minute, or the KPQ clock is on screen but the between-rounds pause stays up, the tracker saves a bug-report folder by itself (at most one every 10 minutes). The folder stays on this PC like any other report; nothing is sent."><input type="checkbox" id="autoReport"> <span>Save a report by itself when the tracker gets confused (files stay on this PC, never sent)</span></label>
       <div class="row"><button id="frames" class="alt" title="One full game picture every 3 s for 3 minutes">Save sample frames</button></div>
     </div>
   </section>
@@ -899,6 +901,7 @@
   <script src="shot.js"></script>
   <script src="../core/session.js"></script>
   <script src="../core/pauses.js"></script>
+  <script src="../core/flight.js"></script>
   <script src="../core/feed.js"></script>
   <script src="../core/history.js"></script>
   <script src="../core/alerts.js"></script>
@@ -942,5 +945,6 @@
   <script src="renderer-range.js"></script>
   <script src="renderer-dummy.js"></script>
   <script src="renderer-perf.js"></script>
+  <script src="renderer-replay.js"></script>
 </body>
 </html>

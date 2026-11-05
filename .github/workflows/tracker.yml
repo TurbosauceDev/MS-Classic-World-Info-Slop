@@ -81,6 +81,7 @@ jobs:
       - run: node tests/overlaywin.test.js
       - run: node tests/monkey.test.js
       - run: node tests/quest.test.js
+      - run: node tests/replay-ui.test.js
   # The one check main's ruleset requires from this workflow: green when build and ui passed, or were skipped because the
   # PR doesn't touch the tracker; red when anything failed or was cancelled (a skipped job alone would count as passing).
   tracker-ok:

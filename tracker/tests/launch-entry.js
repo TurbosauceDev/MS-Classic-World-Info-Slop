@@ -24,8 +24,16 @@ app.whenReady().then(() => setTimeout(async () => {
     for (const t of ["screen", "window"]) R.sources[t] = (await desktopCapturer.getSources({types: [t], thumbnailSize: {width: 0, height: 0}})).length;
   } catch (e) { R.errors.push("desktopCapturer: " + String(e).slice(0, 300)) }
 }, 3000));
-setTimeout(() => {
+// MSCT_LAUNCH_REPLAY (set by launch.test.js, which also passes --replay <folder>): the replay window opened on the real Electron;
+// at 6 s it is sped up, and at the end its state is read back (did it finish, which EXP bars did the real readers see)
+const replayWin = () => BrowserWindow.getAllWindows().find(w => !w.isDestroyed() && /[?]replay=1/.test(w.webContents.getURL()));
+if (process.env.MSCT_LAUNCH_REPLAY) setTimeout(() => replayWin()?.webContents.executeJavaScript("window.__replaySpeed && window.__replaySpeed(16)").catch(() => {}), 6000);
+setTimeout(async () => {
   R.open = BrowserWindow.getAllWindows().filter(w => !w.isDestroyed()).length;
+  if (process.env.MSCT_LAUNCH_REPLAY){
+    const w = replayWin();
+    R.replay = w ? await w.webContents.executeJavaScript(`({st: window.__replay, bars: LOG.filter(l => l.kind === "event" && l.type === "bar").map(l => l.exp), panel: !!document.querySelector("#replayPanel"), keys: Object.keys(window.host).length})`).catch(e => ({error: String(e)})) : null;
+  }
   require("fs").writeFileSync(out, JSON.stringify(R, null, 1));
   app.exit(0);
 }, Number(process.env.MSCT_LAUNCH_MS || 12000));

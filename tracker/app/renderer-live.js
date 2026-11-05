@@ -57,7 +57,7 @@ async function readMap(c, fb, t){   // c: the minimap title crop (GrindReaders.m
   const same = (a, b) => a === b || a && b && !G.maps[a] && !G.maps[b] && GrindReaders.similar(a, b) >= 0.75;
   // the name holds through flaky band hunts (Danny 10-29: it dropped while the minimap sat untouched): the fallback
   // crop re-reads the last good rect, and only 30 s of nothing reading at all clears the map — never one missed band
-  if (key) mapMiss = 0;
+  if (key){ mapMiss = 0; conf.mapOk(t) }
   // the same map as the previous read: this title's fingerprint is proven, remember it (new maps only - a hit has nothing to add)
   if (!fpHit && key && mapSeen === key && mapFps.offer(mfp, m)) host.settings({mapfps: {v: 1, fps: mapFps.entries()}}).then(x => settings = x).catch(() => {});
   else if (++mapMiss === 6 && mapNow && sess){ mapNow = mapSeen = mapNowInfo = null; note("Map name not read for 30 s (minimap closed, covered or unreadable): map unknown until it reads again.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) }
@@ -432,8 +432,24 @@ function slowCheck(ms){
   slowCap = false; fastTicks = 0;
   if ($("#status").textContent === SLOW_NOTE) $("#status").textContent = "";
 }
+// The confusion detector (core/flight.js, 0.3.42): fed from onEvent / readMap / tick, asked once a second by confTick. When it
+// fires, the tracker saves a report folder by itself (settings.autoReport, default on): the same saveReport path as the Bug
+// button, note "auto: <why>", the ring frames that cover the confused window. Local files only: nothing here is ever sent.
+const conf = GrindFlight.createConfusion();
+let confBar = 0, confT = 0;
+// the pause reason live now (core/pauses.js, same inputs as renderState)
+const pauseNow = () => GrindPauses.current({held, kpqHold: !!kpq?.hold, paused: timer != null && session?.state.pausedAt != null, idleMs: (settings.idleSec || 60) * 1000, lastExpT: session?.state.lastExpT, now: Date.now()});
+function confTick(t){
+  if (settings.autoReport === false) return;
+  const hit = conf.check(t, {on: !wrap && timer != null, held, reason: pauseNow()});
+  if (!hit) return;
+  log("confused", {kind: hit.kind, why: hit.reason});
+  saveReport(GrindFlight.pickFrames(RECENT, hit.since - 30e3), "auto: " + hit.reason, {auto: {kind: hit.kind, reason: hit.reason, since: new Date(hit.since).toISOString()}});
+}
 // one event from the readers into the run (whole-frame reads and the pickup band both come through here)
 function onEvent(e, t){
+    if (!wrap){ if (GrindFlight.GAIN.test(e.type) || (e.type === "bar" && e.exp > confBar)) conf.gain(t, pauseNow()); if (e.type === "kpqtime") conf.clock(t, !!kpq?.hold && !held) }
+    if (e.type === "bar" && e.exp != null) confBar = e.exp;
     if (wrap && e.type !== "inv" && e.type !== "wallet" && e.type !== "glyph") return;   // after Stop: only the end inventory look counts
     if (held && /^(exp|bonus|meso|item|itemraw|bar|wallet)$/.test(e.type)) return;   // paused by hand: a break, nothing counts (the bar and the wallet too — a party kill on a boss map used to inflate EXP/hr while paused; bug-hunt 2026-11-02). Stop clears held first, so the wrap-up wallet read still lands
     if (e.type === "kpqtime"){ log("kpq", {left: e.left}); if (kpq) kpqTime(e.left, e.t); return }   // logged: bug reports show what the clock read
@@ -518,6 +534,7 @@ async function tick(){
     if (check && info.useSpots && !check.use){ check.use = info.useSpots + " item count" + (info.useSpots > 1 ? "s" : ""); check.late = check.ended }
     if (check && info.partyWindow > 1 && !check.party){ check.party = info.partyWindow; check.late = check.ended }
     if (!wrap) autoPause(r.minimap, info, t);
+    if (r.minimap) conf.minimap(t);
     if (check && (!check.ended || check.late)){ check.late = false; renderCheck() }   // a ✗ turns ✓ when it starts working
     if (session.state.deaths > deathSeen){ deathSeen = session.state.deaths; deathPending = {t, tries: 0, last: 0} }
     const ocr = fn => { ocrBusy = true; fn.catch(() => {}).finally(() => ocrBusy = false) };
@@ -531,6 +548,7 @@ async function tick(){
   if (autoRun && GrindAutoRun.shouldBreak({auto: autoRun.auto, wrap, held, kpq: kpq?.on, lastGain: autoRun.lastGain, now: Date.now()})){ autoRun = null; autoBreak().catch(() => {}) }
   try { renderSnaps(render()) } catch {}
   try { feedAdd(feed?.step(session.state, t, feedWho())) } catch {}
+  if (t - confT >= 1000){ confT = t; try { confTick(t) } catch {} }   // the existing tick: no extra frame read
   // over 250 ms a frame, 10 times running: read once a second instead of twice; fast again for ~40 ticks: full speed back
   const ms = Date.now() - t; perf("tick", ms);
   slowCheck(ms);

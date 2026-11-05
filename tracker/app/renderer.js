@@ -153,8 +153,10 @@ function sameAsLast(f, tolerant){
   return ++sameRun <= 4 || (sameRun = 0, 0);
 }
 
-// bug reports: the last 500 log lines and the last 8 frames (one every 3 s, so about 25 s back), saved by "Report a bug"
-const LOG = [], RECENT = [];
+// bug reports, the flight recorder (0.3.42): the last LOG_MAX log lines and a ring of the last RING_MAX frames (one every 3 s,
+// so about 3 minutes back) saved by "Report a bug" and by the tracker itself when it gets confused (confTick, renderer-live.js).
+// Frames only enter the ring from tick(), so nothing is captured or encoded while tracking is off.
+const LOG = [], RECENT = [], LOG_MAX = 1500;
 let wrap = null, runT0 = 0, held = false;   // held: paused by hand (Pause); wrap: {t} after Stop, until End run (the end inventory look); runT0: when Start was pressed
 // "On the clock" (Danny 10-29: it kept counting while paused and while wrapping up, hanging on "wrapping up"): wall time
 // since Start, frozen at the pause's first moment while paused by you, and frozen at the Stop while wrapping up.
@@ -165,14 +167,14 @@ function runClockMs(){
   const end = wrap ? wrap.t : held && session?.state?.pausedAt != null ? session.state.pausedAt : Date.now();
   return Math.max(0, end - runT0);
 }
-function log(kind, data){ LOG.push({t: Date.now(), kind, ...data}); if (LOG.length > 500) LOG.shift() }
+function log(kind, data){ LOG.push({t: Date.now(), kind, ...data}); if (LOG.length > LOG_MAX) LOG.shift() }
 new MutationObserver(() => { const text = $("#status").textContent; if (LOG.findLast(l => l.kind === "status")?.text !== text) log("status", {text}) }).observe($("#status"), {childList: true, characterData: true, subtree: true});
 let lastKeep = 0;
 function keepFrame(t, f){
   if (t - lastKeep < 3000) return;
   lastKeep = t;
   if (video.pump){ canvas.width = f.w; canvas.height = f.h; g.putImageData(new ImageData(f.d, f.w, f.h), 0, 0) }   // f is the frame just grabbed, copied in before it goes to the reader
-  canvas.toBlob(async b => { if (!b) return; RECENT.push({t, bytes: new Uint8Array(await b.arrayBuffer())}); if (RECENT.length > 8) RECENT.shift() }, "image/png");
+  canvas.toBlob(async b => { if (!b) return; RECENT.push({t, bytes: new Uint8Array(await b.arrayBuffer())}); while (RECENT.length > GrindFlight.RING_MAX) RECENT.shift() }, "image/png");
 }
 
 // self-check: for the first 8 s after Start, which readers work right now (8, not 5: the first map read loads the OCR)

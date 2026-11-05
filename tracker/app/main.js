@@ -3,6 +3,7 @@
 const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu, globalShortcut, nativeTheme, dialog} = require("electron");
 const fs = require("fs"), path = require("path");
 const {autoUpdater} = require("electron-updater");
+const GrindFlight = require("../core/flight.js"), GrindReplay = require("../core/replay.js");   // bug-report state block + replay folder planning (0.3.42)
 
 const SETTINGS = path.join(app.getPath("userData"), "settings.json");
 const readSettings = () => { try { const s = JSON.parse(fs.readFileSync(SETTINGS, "utf8")); if (s && typeof s === "object" && !Array.isArray(s)) return s } catch {} return {share: false, idleSec: 60} };   // sharing: the first-run guide asks
@@ -58,7 +59,12 @@ async function captureSource(){
 // one copy at a time: a second one would read the same screen and send every run twice. Starting it again shows the first.
 const firstCopy = app.requestSingleInstanceLock();
 if (!firstCopy) app.quit();
-app.on("second-instance", () => { if (win){ if (win.isMinimized()) win.restore(); win.focus() } });
+// a second launch with --replay <report folder> (Danny's dev entry point) opens the replay window in the running copy
+app.on("second-instance", (_, argv) => {
+  const rp = GrindReplay.argFolder(argv);
+  if (rp) return openReplay(rp);
+  if (win){ if (win.isMinimized()) win.restore(); win.focus() }
+});
 
 app.whenReady().then(() => {
   if (!firstCopy) return;   // quitting: no window
@@ -85,6 +91,7 @@ app.whenReady().then(() => {
   // no editable-document spellcheck anywhere: each renderer otherwise loads a spelling dictionary it never uses
   try { session.defaultSession.setSpellCheckerEnabled(false) } catch {}
   win.loadFile(path.join(__dirname, "index.html"));
+  { const rp = GrindReplay.argFolder(process.argv); if (rp) openReplay(rp) }   // `MS Classic Grind Tracker.exe --replay <report folder>`
   nativeTheme.on("updated", () => setBar());
   // with the title bar hidden, the menu's zoom keys are handled here (F1 is the page's own)
   win.webContents.on("before-input-event", (e, i) => {
@@ -109,7 +116,7 @@ app.whenReady().then(() => {
     {label: "File", submenu: [{label: "Settings", accelerator: "CmdOrCtrl+,", click: show("settings")}, {label: "Past sessions", accelerator: "F2", registerAccelerator: false, click: show("history")}, {label: "Reset tracker (clear the screen)", click: show("reset")}, {type: "separator"}, {label: "Open frames and bug reports folder", click: () => shell.openPath(FRAMES())}, {type: "separator"}, {role: "quit"}]},
     {label: "View", submenu: [{label: "Modules toolbox", click: show("toolbox")}, {label: "Simple Mode", click: show("mini")}, {label: "Focus mode", click: show("focus")}, {label: "Overlay mode", click: show("overlay")}, {label: "Edit overlay layout", click: show("overlayEdit")}, {label: "Dummy data on/off (try layouts)", click: show("dummy")}, {label: "Fit every box to its content", click: show("fit")}, {label: "Line up every box", accelerator: "CmdOrCtrl+Shift+L", click: show("align")}, {type: "separator"}, {role: "zoomIn"}, {role: "zoomOut"}, {role: "resetZoom"}]},
     {label: "Help", submenu: [{label: "How to use the tracker", accelerator: "F1", click: show("help")}, {label: "Patch notes", click: show("patchnotes")}, {label: "Performance monitor", click: show("perf")}, {label: "Check for updates", click: show("update")},
-      {label: "Report a bug", click: show("report")}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
+      {label: "Report a bug", click: show("report")}, {label: "Replay a bug report…", click: () => pickReplay()}, {type: "separator"}, {label: "About (version " + app.getVersion() + ")", click: show("help")}]},
   ]));
   pinOnTop(); applyOpacity();
   // keyboard shortcuts that work while the game has focus (Settings > Keyboard shortcuts)
@@ -720,16 +727,47 @@ ipcMain.handle("save-frame", (_, name, pngBytes) => {
   return dir;
 });
 // bug report: frames + log.json in a new folder under the frames folder; returns the folder's name
+// 0.3.42: the ring's frames (GrindFlight.RING_MAX, ~3 min), a "-auto" folder name when the tracker saved it by itself, and log.json
+// opens with the "now" state block (the settings that differ from the defaults, never the identifying ones). Written to disk only.
 ipcMain.handle("save-report", (_, frames, info) => {
-  const name = "report-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19), dir = path.join(FRAMES(), name);
+  const auto = !!(info && info.auto), name = "report-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + (auto ? "-auto" : ""), dir = path.join(FRAMES(), name);
   fs.mkdirSync(dir, {recursive: true});
-  for (const f of (Array.isArray(frames) ? frames : []).slice(0, 20)) fs.writeFileSync(path.join(dir, path.basename(String(f.name))), Buffer.from(f.bytes));
+  for (const f of (Array.isArray(frames) ? frames : []).slice(0, GrindFlight.RING_MAX)) fs.writeFileSync(path.join(dir, path.basename(String(f.name))), Buffer.from(f.bytes));
   const {install, partyCode, nick, ...shown} = readSettings();   // nothing that identifies the player
-  fs.writeFileSync(path.join(dir, "log.json"), JSON.stringify({version: app.getVersion(), os: process.platform + " " + require("os").release(), saved: new Date().toString(), settings: shown, ...info}, null, 1));
+  const {now: n0, ...rest} = info || {}, now = n0 && typeof n0 === "object" ? {...n0, version: app.getVersion(), settings: GrindFlight.settingsDiff(shown)} : undefined;
+  fs.writeFileSync(path.join(dir, "log.json"), JSON.stringify({version: app.getVersion(), now, os: process.platform + " " + require("os").release(), saved: new Date().toString(), settings: shown, ...rest}, null, 1));
   return name;
 });
+// Replay mode (0.3.42): a dev window that runs the real readers and the real tracker over a report folder's pictures. The folder
+// is read-only here; the window gets a preload (replay-preload.js) whose host can write nothing and send nothing. The folder it
+// may read is the one this window was opened for, never one the page names.
+const replayDirs = new Map();   // webContents id -> report folder
+function openReplay(dir){
+  try {
+    dir = path.resolve(String(dir));
+    if (!fs.statSync(dir).isDirectory() || !fs.readdirSync(dir).some(n => /^frame-\d+-\d{6}\.png$/.test(n))) throw new Error("no frame-*.png pictures in that folder");
+  } catch (e){ dialog.showErrorBox("Replay", "Can't replay " + dir + ": " + e.message); return null }
+  const w = new BrowserWindow({width: 1280, height: 900, title: "Replay: " + path.basename(dir), icon: path.join(__dirname, "icon.ico"), backgroundColor: "#0f0f0f",
+    webPreferences: {preload: path.join(__dirname, "replay-preload.js"), contextIsolation: true, backgroundThrottling: false}});
+  const id = w.webContents.id; replayDirs.set(id, dir); w.on("closed", () => replayDirs.delete(id));
+  w.webContents.setWindowOpenHandler(() => ({action: "deny"})); w.webContents.on("will-navigate", e => e.preventDefault());
+  w.loadFile(path.join(__dirname, "index.html"), {query: {replay: "1"}});
+  return w;
+}
+async function pickReplay(){
+  const r = await dialog.showOpenDialog(win && !win.isDestroyed() ? win : undefined, {title: "Pick a bug-report folder to replay", defaultPath: FRAMES(), properties: ["openDirectory"]});
+  if (!r.canceled && r.filePaths[0]) openReplay(r.filePaths[0]);
+}
+ipcMain.handle("replay-load", e => {
+  const dir = replayDirs.get(e.sender.id); if (!dir) return null;
+  let log = {}; try { log = JSON.parse(fs.readFileSync(path.join(dir, "log.json"), "utf8")) } catch {}
+  const plan = GrindReplay.planFrames(fs.readdirSync(dir), log.frames, Date.parse(log.saved)).slice(0, GrindFlight.RING_MAX * 2);
+  const {install, partyCode, nick, ...settings} = log.settings && typeof log.settings === "object" ? log.settings : {};
+  return {dir: path.basename(dir), log: {version: log.version, saved: log.saved, note: log.note, now: log.now, auto: log.auto, settings, lines: Array.isArray(log.log) ? log.log : []},
+    frames: plan.map(f => ({...f, bytes: fs.readFileSync(path.join(dir, f.name))}))};
+});
 // only ever the frames folder, or a report folder inside it
-ipcMain.handle("open-folder", (_, sub) => shell.openPath(typeof sub === "string" && /^report-[\dT-]+$/.test(sub) ? path.join(FRAMES(), sub) : FRAMES()));
+ipcMain.handle("open-folder", (_, sub) => shell.openPath(typeof sub === "string" && /^report-[\dT-]+(-auto)?$/.test(sub) ? path.join(FRAMES(), sub) : FRAMES()));
 // frames-folder pruning (0.3.41, Danny): the #frames button's bulk captures pile up in the frames folder (2.4 GB
 // after a week of reader work). At tracker start the renderer asks once; frame-* entries older than
 // settings.pruneFramesDays (default 30, settings.pruneFrames off to stop) are deleted. Bug reports (report-*)
