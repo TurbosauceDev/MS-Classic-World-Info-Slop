@@ -16,6 +16,7 @@ const writeAtomic = (file, text) => { fs.writeFileSync(file + ".tmp", text); fs.
 const writeSettings = s => writeAtomic(SETTINGS, JSON.stringify(s, null, 1));
 const SESSIONS = path.join(app.getPath("userData"), "sessions");   // finished sessions, kept locally either way
 const AUTO = require("../core/autosave.js");
+const Prune = require("../core/prune.js");
 const OVCFG = require("../core/overlaycfg.js");
 const HIST = require("../core/history.js");   // applyEdit: History > Edit run   // the running session, autosaved there (crash recovery)
 const OcrModel = require("../core/ocrmodel.js");   // neural text reader (0.3.31): port of ocrs' line prep + CTC decode
@@ -729,6 +730,15 @@ ipcMain.handle("save-report", (_, frames, info) => {
 });
 // only ever the frames folder, or a report folder inside it
 ipcMain.handle("open-folder", (_, sub) => shell.openPath(typeof sub === "string" && /^report-[\dT-]+$/.test(sub) ? path.join(FRAMES(), sub) : FRAMES()));
+// frames-folder pruning (0.3.41, Danny): the #frames button's bulk captures pile up in the frames folder (2.4 GB
+// after a week of reader work). At tracker start the renderer asks once; frame-* entries older than
+// settings.pruneFramesDays (default 30, settings.pruneFrames off to stop) are deleted. Bug reports (report-*)
+// are NEVER deleted — core/prune.js planFrames only ever names frame-* entries.
+ipcMain.handle("prune-frames", () => {
+  const st = readSettings(), days = st.pruneFramesDays > 0 ? Math.round(st.pruneFramesDays) : 30;
+  if (st.pruneFrames === false) return {removed: 0, bytes: 0, days};
+  return {...Prune.pruneFrames(FRAMES(), days), days};
+});
 
 // Neural text reader (0.3.31, P1-6): the ocrs recognition model (models/text-recognition.onnx, CC BY-SA 4.0,
 // attribution in models/NOTICE.md — the same recognition-only model Minerva bundles, Turbozo got us the OK) runs

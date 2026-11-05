@@ -860,3 +860,45 @@ console.log("patch notes ok");
   assert.ok(/left: kpq\.left \* 1000/.test(ra), "renderer-alerts must scale the KPQ clock to ms for the engine");
 }
 console.log("kpq score ok");
+
+// one pause model (0.3.41, core/pauses.js): labels and precedence — hand > KPQ hold > screen-gone > idle break
+{ const P = require("../core/pauses.js");
+  assert.strictEqual(P.label("hand"), "Paused: by you");
+  assert.strictEqual(P.label("gone"), "Paused: the game screen is gone");
+  assert.strictEqual(P.label("kpq"), "Paused: between KPQ rounds");
+  assert.strictEqual(P.label("idle"), "Idle break: no EXP counted");
+  assert.strictEqual(P.label("nonsense"), "Paused");
+  const now = 1e12;
+  assert.strictEqual(P.current({held: true, kpqHold: true, paused: true}), "hand", "a hand pause wins: only Go on lifts it");
+  assert.strictEqual(P.current({held: false, kpqHold: true, paused: true}), "kpq", "KPQ hold next: only the next stage lifts it");
+  assert.strictEqual(P.current({held: false, kpqHold: false, paused: true}), "gone", "paused with neither = the screen-gone auto-pause");
+  assert.strictEqual(P.current({held: false, kpqHold: false, paused: false, idleMs: 60000, lastExpT: now - 61000, now}), "idle", "quiet past idleMs = an idle break");
+  assert.strictEqual(P.current({held: false, kpqHold: false, paused: false, idleMs: 60000, lastExpT: now - 59000, now}), null, "still farming: no reason");
+  assert.strictEqual(P.current({held: false, kpqHold: false, paused: false}), null, "no idle inputs: no reason");
+}
+
+// frames-folder pruning (0.3.41, core/prune.js): frame-* entries older than N days go at start; report-* bug reports
+// and anything else in the folder are never touched
+{ const fs = require("fs"), os = require("os"), path = require("path"), {planFrames, pruneFrames} = require("../core/prune.js");
+  const now = 1e12, day = 86400e3, old = now - 40 * day, fresh = now - 10 * day;
+  // the pure planner, on a fake directory listing
+  const ents = [{name: "frame-000.png", mtimeMs: old}, {name: "frame-001.png", mtimeMs: fresh}, {name: "frame-old", mtimeMs: old},
+    {name: "report-2026-10-01T10-00-00", mtimeMs: old}, {name: "report-2026-10-02T10-00-00", mtimeMs: old}, {name: "log.json", mtimeMs: old}];
+  assert.deepStrictEqual(planFrames(ents, now, 30), ["frame-000.png", "frame-old"], "only old frame-* entries are named");
+  assert.deepStrictEqual(planFrames(ents, now, 5), ["frame-000.png", "frame-001.png", "frame-old"], "a 5-day cutoff takes the 10-day-old frame too");
+  assert.deepStrictEqual(planFrames(ents, now, 0), ["frame-000.png", "frame-old"], "a bad days value (0) falls back to the 30-day default");
+  assert.deepStrictEqual(planFrames(ents, now, NaN), ["frame-000.png", "frame-old"], "NaN days falls back to the 30-day default too");
+  // the real thing, on a temp dir
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "prune-"));
+  const mk = (n, m, isDir) => { const p2 = path.join(dir, n); if (isDir) fs.mkdirSync(p2); else fs.writeFileSync(p2, "x".repeat(100)); fs.utimesSync(p2, new Date(m), new Date(m)) };
+  mk("frame-000.png", old); mk("frame-001.png", fresh); mk("frame-dir", old, true);
+  mk("report-2026-10-01T10-00-00", old, true); fs.writeFileSync(path.join(dir, "report-2026-10-01T10-00-00", "log.json"), "{}"); mk("log.json", old);
+  const r = pruneFrames(dir, 30, now);
+  assert.strictEqual(r.removed, 2, "two old frame entries go"); assert.strictEqual(r.bytes, 100, "the file's bytes are counted (folders are not)");
+  assert.ok(fs.existsSync(path.join(dir, "frame-001.png")), "a fresh frame stays");
+  assert.ok(!fs.existsSync(path.join(dir, "frame-000.png")) && !fs.existsSync(path.join(dir, "frame-dir")), "old frame file and folder are gone");
+  assert.ok(fs.existsSync(path.join(dir, "report-2026-10-01T10-00-00", "log.json")), "bug reports are never deleted");
+  assert.ok(fs.existsSync(path.join(dir, "log.json")), "unknown files are never deleted");
+  assert.deepStrictEqual(pruneFrames(path.join(dir, "nope"), 30, now), {removed: 0, bytes: 0}, "a missing folder is nothing to do");
+  fs.rmSync(dir, {recursive: true, force: true});
+}

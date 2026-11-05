@@ -181,13 +181,17 @@ function renderWrap(s){
   // all 3 tabs read: on to the name and note (once, and not while typing somewhere)
   if (n === 3 && !wrap.noted){ wrap.noted = true; if (!document.activeElement?.matches("input, textarea")) $("#runNote").focus() }
 }
-// the line next to Start/Stop: tracking or not, paused, for how long
+// the line next to Start/Stop: tracking or not, paused (and why — one pause model, core/pauses.js), for how long
 function renderState(s){
   const on = timer != null, paused = on && s?.paused;
+  const why = typeof GrindPauses !== "undefined" ? GrindPauses.current({held, kpqHold: !!kpq?.hold, paused, idleMs: (settings.idleSec || 60) * 1000, lastExpT: s?.lastExpT, now: Date.now()}) : null;
   $("#state").className = wrap ? "paused" : paused ? "paused" : on ? "on" : "";
-  $("#stateText").textContent = wrap ? "Stopped at " + clock(wrap.t) + " · wrapping up" : paused ? "Paused" : on ? "Tracking" + (s ? " · " + hm(s.activeMin / 60) + " farmed" : "") : s && s.activeMin ? "Stopped · " + hm(s.activeMin / 60) + " farmed" : "Not tracking";
+  $("#state").dataset.pause = why || "";
+  $("#stateText").textContent = wrap ? "Stopped at " + clock(wrap.t) + " · wrapping up"
+    : paused ? GrindPauses.label(why)
+    : on ? (why === "idle" ? GrindPauses.label("idle") + " · " + hm(s.activeMin / 60) + " farmed" : "Tracking" + (s ? " · " + hm(s.activeMin / 60) + " farmed" : ""))
+    : s && s.activeMin ? "Stopped · " + hm(s.activeMin / 60) + " farmed" : "Not tracking";
   $("#go").textContent = wrap ? "Resume" : on ? "Stop" : "Start"; $("#go").classList.toggle("on", on && !wrap);
-  if (held && paused && !wrap) $("#stateText").textContent = "Paused by you";
   pauseUi();
 }
 // boxes, like OBS sources: dragged by the ⠿ grip or the title onto another box (above or below it); – folds one to its title, ×

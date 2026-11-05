@@ -76,9 +76,11 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Danny plays native 1440, UI "Ideal Ratio" (UI 2x, world not). Captured video shifts colors: match color ranges.
 - Share runs: 15 min straight on one map, same party, no break > 60 s. KPQ rounds sent separately (since v0.2.40).
 - KPQ maps 80000000 (1st stage) … 80000400 (Last), 80000500 Bonus, 80000600 Exit; Kerning City 10003000.
-- KPQ round signals (0.3.40): minimap stage reads set stages; the "Time Left" clock (starts 30:00 each round) read twice in step
-  (kpqTime) lifts the between-rounds pause and dates the round's start (kpq.pend); a steady jump up = new round. One read alone
-  only feeds stage times. Minimap title pairing allows gap == line height (KPQ titles: 7 px lines, 7 px gap); the fallback
+- KPQ round signals (0.3.40) + clock epochs (0.3.41): minimap stage reads set stages; the "Time Left" clock (starts 30:00 each round)
+  read twice in step (kpqTime) lifts the between-rounds pause, anchors the round's epoch (t + left - 1800) and dates the round's start
+  (kpq.pend, now with e0 = clock-elapsed); a steady jump up = new round (epoch re-anchored). kpqSince measures from the epoch (p.e0,
+  clamped to 1800 s) so the slow minimap OCR can't stretch times; minimap naming and the no-clock PC-time fallback stay. One read alone
+  only feeds stage times. A round ending warped to Kerning City (Bonus timeout, NPC talk) ends "left": clear only if Last was beaten. Minimap title pairing allows gap == line height (KPQ titles: 7 px lines, 7 px gap); the fallback
   re-cut re-measures width (mapRefit). Old reader missed the 1st stage on 15/16 frames.
 - KPQ ends when you leave it (0.3.40): only Kerning City (10003000) holds between rounds; any other known map read ends kpq.on,
   lifts the hold with a resume, phase idle; a KPQ stage or steady clock turns it back on. A clock jump on an unchanged map starts the
@@ -88,6 +90,11 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   or street-like. Real strings: `tests/map_ocr_real.json` (core.test.js). KEYS in main.js must stay unique (core.test.js checks).
 - S.last in core/session.js only moves forward (events arrive out of order); the bug-report log (renderer.js LOG) keeps 500 lines
   and pauseAt(t, true) re-asserts the hold silently.
+- One pause model (0.3.41, core/pauses.js): the state pill (renderState, renderer-layout.js) derives the reason from state -
+  held > kpq.hold > pausedAt > idle (lastExpT vs settings.idleSec) - never store it twice; the status line still carries the words (the
+  event log reads it).
+- Frames pruning (0.3.41, core/prune.js): planFrames only ever names frame-* entries (mtime older than settings.pruneFramesDays, default
+  30); report-* and anything else are never touched. IPC prune-frames, asked once at renderer boot; the freed line goes through note().
 - KPQ boards (server summary.kpq.board): Rush = all rounds by clear; Bonus = rounds with 80000500 stage time, by EXP +
   mesos. The tracker's Bonus/Rush pick is stored (mode) but no longer picks the board. Names: kpq_names table (schema.sql
   re-runs every deploy, so new columns go in side tables); tracker sends Name (Party card) else the OCR'd charName.

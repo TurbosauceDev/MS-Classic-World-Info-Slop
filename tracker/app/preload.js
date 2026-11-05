@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("host", {
   saveFrame: (name, bytes) => ipcRenderer.invoke("save-frame", name, bytes),
   saveImage: (name, bytes, quiet) => ipcRenderer.invoke("save-image", name, bytes, quiet),
   saveReport: (frames, info) => ipcRenderer.invoke("save-report", frames, info),
+  pruneFrames: () => ipcRenderer.invoke("prune-frames"),
   openFolder: dir => ipcRenderer.invoke("open-folder", dir),
   ocr: (png, opt) => ipcRenderer.invoke("ocr", png, opt),
   shareRun: run => ipcRenderer.invoke("share-run", run),
