@@ -39,15 +39,21 @@ async function sha(s){ return [...new Uint8Array(await crypto.subtle.digest("SHA
 // only (same secret in, same hash out). The caps are per-day buckets, so a secret roll simply gives every network
 // a fresh day — no data is lost, the ledger ages out with its day anyway. Falls back to the salt row in D1's meta
 // only while the secret is unset, loudly, so a deploy without the secret keeps working instead of breaking.
-let SALT_CACHE;
+// Party-code groups are NOT IP data: they hash with the D1 salt always (groupSalt), because grouping needs the same
+// hash forever — switching them to IP_SALT would split every past party run from new ones and break live parties
+// once (0.3.42 review, Hermes 2026-11-05).
+let SALT_CACHE, DB_SALT;
+async function groupSalt(env){
+  if (DB_SALT) return DB_SALT;
+  let row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'salt'").first();
+  if (!row){ await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('salt', ?)").bind(crypto.randomUUID()).run(); row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'salt'").first() }
+  return DB_SALT = row.v;
+}
 async function salt(env){
   if (typeof env.IP_SALT === "string" && env.IP_SALT) return env.IP_SALT;
   if (SALT_CACHE) return SALT_CACHE;
   console.error("IP_SALT is not set: falling back to the salt row in the D1 meta table, which a database dump can read — set the Worker secret (`wrangler secret put IP_SALT`) and redeploy (schema.sql's ipday note has the details)");
-  let row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'salt'").first();
-  if (!row){ await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('salt', ?)").bind(crypto.randomUUID()).run(); row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'salt'").first() }
-  SALT_CACHE = row.v;
-  return SALT_CACHE;
+  return SALT_CACHE = await groupSalt(env);
 }
 // the per-network caps must bind a whole household, and an IPv6 home connection holds a /64 — 2^64 addresses.
 // Hashing the full address let one person rotate addresses inside its /64 past every per-IP cap (audit
@@ -56,7 +62,10 @@ async function salt(env){
 export function netKey(ip){
   if (typeof ip !== "string" || !ip) return "";
   if (!ip.includes(":")) return ip;                        // IPv4 (or an opaque id): unchanged
-  const s = ip.split("%")[0];                              // drop a zone id (fe80::1%eth0)
+  const s = ip.split("%")[0].toLowerCase();                // drop a zone id (fe80::1%eth0); hex is case-free
+  // IPv4 written as IPv6 (::ffff:1.2.3.4 mapped, 64:ff9b::1.2.3.4 NAT64) is one IPv4 host: key it as that IPv4, or
+  // every such client would land in one shared 0000:0000:0000:0000 bucket (0.3.42 review)
+  if (s.includes(".")) return s.slice(s.lastIndexOf(":") + 1);
   const half = s.split("::");
   if (half.length > 2) return s;                           // malformed: left whole, the caps merely over-count
   const head = half[0] ? half[0].split(":") : [], tail = half.length > 1 && half[1] ? half[1].split(":") : [];
@@ -105,7 +114,7 @@ async function postRun(req, env){
   if (r.name) await env.DB.prepare("INSERT OR REPLACE INTO run_names (run_id, name) VALUES (?, ?)").bind(runId, r.name).run();   // the weekly ladder's display name (P1-5), opt-in
   const code = typeof body.partyCode === "string" ? body.partyCode.trim().toLowerCase().slice(0, 20) : "";
   if (code && r.party > 1){   // a code only groups party runs: friends soloing the same map with one code are separate players
-    await env.DB.prepare("INSERT OR REPLACE INTO run_groups (run_id, grp) VALUES (?, ?)").bind(runId, await sha("party:" + code + await salt(env))).run();
+    await env.DB.prepare("INSERT OR REPLACE INTO run_groups (run_id, grp) VALUES (?, ?)").bind(runId, await sha("party:" + code + await groupSalt(env))).run();
   }
   await ledgerBump(env.DB, ipday, day, Math.max(today.n, peak.posts) + 1, Math.max(ids.n + (ids.mine ? 0 : 1), peak.installs));
   return json({ok: true, counted: c.ok, why: c.why});
@@ -166,7 +175,7 @@ async function postKpq(req, env){
   const dup = await env.DB.prepare("SELECT id FROM kpq_rounds WHERE install = ? AND clear = ? AND received > ?").bind(body.install, c.round.clear, new Date(now - 1800e3).toISOString()).first();
   if (dup) return json({ok: true, counted: false, why: "already sent"});
   const r = c.round, code = typeof body.partyCode === "string" ? body.partyCode.trim().toLowerCase().slice(0, 20) : "";
-  const grp = code && r.party > 1 ? await sha("party:" + code + await salt(env)) : null;
+  const grp = code && r.party > 1 ? await sha("party:" + code + await groupSalt(env)) : null;
   const ins = await env.DB.prepare(`INSERT INTO kpq_rounds (install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(body.install, ipday, now.toISOString(), r.date, r.hour, r.mode, r.party, r.level, r.job,
     r.clear, r.total, r.clock, r.exp, r.mesos, JSON.stringify(r.stages), grp, c.ok ? 1 : 0, c.why).run();
@@ -186,7 +195,7 @@ async function partyLive(req, env){
   if (!b || typeof b.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(b.install)) return json({error: "install id"}, 400);
   const code = typeof b.partyCode === "string" ? b.partyCode.trim().toLowerCase().slice(0, 20) : "";
   if (!code) return json({error: "party code"}, 400);
-  const grp = await sha("party:" + code + await salt(env)), now = Date.now();
+  const grp = await sha("party:" + code + await groupSalt(env)), now = Date.now();
   // job/mapName reach OTHER members' clients, so they get the nick scrub too (round 2): raw strings rode to every
   // party member's UI while only nick was filtered
   const scrub = (v, n) => typeof v === "string" ? v.replace(/[^\p{L}\p{N} _.'-]/gu, "").trim().slice(0, n) || null : null;
@@ -696,11 +705,16 @@ export function trimSummary(s, limit = 1.5e6){
 
 // a fresh claim with no copy to serve: poll briefly for the winner's copy instead of rebuilding alongside it.
 // A worker that died mid-rebuild never publishes; the caller steals its expired-or-live claim after this returns null
+// Waits while the winner's claim is live (up to 15 s: a rebuild is ~45 queries), returns null once the claim is gone or
+// expired. 0.3.42 review: the first cut gave up after 1 s and stole the live claim, so a >1 s rebuild with N waiting
+// GETs became N rebuilds again. Waiting is wall time, not Worker CPU time.
 async function waitOrServe(env){
-  for (let i = 0; i < 4; i++){
+  for (let i = 0; i < 60; i++){
     await new Promise(r => setTimeout(r, 250));
     const again = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary'").first();
-    if (again?.v) try { if (JSON.parse(again.v).updated) return again.v } catch {}
+    if (again?.v) try { if (JSON.parse(again.v).updated) return again.v } catch {}   // unparseable copy: keep waiting for the winner's
+    const lock = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary_lock'").first();
+    if (!lock || !(Date.now() - Number(lock.v) <= 60e3)) return null;
   }
   return null;
 }
@@ -735,10 +749,12 @@ async function route(req, env){
     // lock when the row was missing or unparseable, so a fake-ID forget (which used to clear the row) followed by
     // three concurrent GETs ran three full rebuilds, 45 queries (audit 2026-11-05).
     const build = async force => {
-      await env.DB.prepare("DELETE FROM meta WHERE k = 'summary_lock'").run();   // an expired claim is cleared; force=true steals a live one
-      // INSERT OR IGNORE inside a batch (one transaction on D1) makes the claim race-safe: exactly one concurrent
-      // GET wins the rebuild; a loser serves the stale copy or waits for the winner's
-      const claim = (await env.DB.batch([env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('summary_lock', ?)").bind(String(Date.now()))]))[0];
+      // only an EXPIRED claim is cleared (force=true steals a live one). 0.3.42 review: an unconditional DELETE here let
+      // a second request delete the first one's fresh claim between its own check and insert, so both rebuilt
+      if (force) await env.DB.prepare("DELETE FROM meta WHERE k = 'summary_lock'").run();
+      else await env.DB.prepare("DELETE FROM meta WHERE k = 'summary_lock' AND CAST(v AS INTEGER) < ?").bind(Date.now() - 60e3).run();
+      // INSERT OR IGNORE is atomic on its own: exactly one concurrent GET wins the rebuild
+      const claim = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('summary_lock', ?)").bind(String(Date.now())).run();
       if (!claim?.meta?.changes && !force) return null;
       // rows past the window leave the hot tables first, so this rebuild already reads the shrunken ones
       const archived = await archiveOld(env.DB);
@@ -755,9 +771,12 @@ async function route(req, env){
     else {
       const lockRow = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary_lock'").first();
       const held = lockRow && Date.now() - Number(lockRow.v) <= 60e3;
+      // no usable copy: wait for the winner; once its claim is gone, try a normal claim (one winner again), and steal only
+      // after a second full wait (a winner that died or whose copy was too big to store)
+      const afterWait = async () => (await waitOrServe(env)) ?? (await build(false)) ?? (await waitOrServe(env)) ?? await build(true);
       if (held && okCopy) body = row.v;   // a usable (if stale) copy: serve it while another request rebuilds
-      else if (held) body = (await waitOrServe(env)) ?? await build(true);   // wait for the winner's copy; steal only if it never published
-      else if (!(body = await build(false))) body = okCopy ? row.v : (await waitOrServe(env)) ?? await build(true);
+      else if (held) body = await afterWait();
+      else if (!(body = await build(false))) body = okCopy ? row.v : await afterWait();
     }
     return new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=300", ...CORS}});
   }
