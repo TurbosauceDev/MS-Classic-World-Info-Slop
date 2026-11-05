@@ -301,6 +301,19 @@ const path = require("path"), {chromium} = require("playwright");
     } finally { tolCache.run = run; session = keep.session; mapNow = keep.mapNow; mapSeen = keep.mapSeen; settings.share = keep.share }
     return out });
   if (!sh.shared || sh.body?.map !== "42" || sh.body?.room !== null || !sh.shared2 || sh.body2?.room !== 3 || sh.body2?.map !== null) throw new Error("shop upload map: " + JSON.stringify(sh));
+  // map-title fingerprint wiring (core/mapfp.js): a title read twice running is remembered, then readMap answers it
+  // with no OCR run at all, and the table lands in settings (mapfps) for the next boot
+  const fp = await page.evaluate(async () => { const keep = {session, mapNow, mapSeen, share: settings.share};
+    const run = tolCache.run; let runs = 0; tolCache.run = async () => (runs++, "Victoria Road\nSnail Hunting Ground III\n");
+    const mk = () => { const w = 120, h = 20, d = new Uint8ClampedArray(w * h * 4).fill(255);
+      for (let y = 4; y < 12; y++) for (let x = 6; x < 80; x += 7) for (let dx = 0; dx < 4; dx++){ const o = (y * w + x + dx) * 4; d[o] = d[o + 1] = d[o + 2] = 0 } return {w, h, d} };
+    try {
+      session = GrindSession.createSession(G); mapNow = mapSeen = null;
+      await readMap(mk(), null, Date.now()); await readMap(mk(), null, Date.now());   // accepted twice running -> stored
+      const n0 = runs; await readMap(mk(), null, Date.now());
+      return {hits: mapFps.stats.hits, extraRuns: runs - n0, size: mapFps.size(), saved: window.st?.mapfps};
+    } finally { tolCache.run = run; session = keep.session; mapNow = keep.mapNow; mapSeen = keep.mapSeen; settings.share = keep.share } });
+  if (fp.hits < 1 || fp.extraRuns !== 0 || fp.size < 1 || !fp.saved || !fp.saved.fps?.length) throw new Error("map fingerprint wiring: " + JSON.stringify(fp));
   // KPQ leaderboard: with sharing on, a full round (1st stage .. Last, Bonus, Exit) is sent with its clear time (to leaving
   // the Last stage) and the character name; a round left at the 2nd stage isn't
   const kl = await page.evaluate(async () => { const keep = settings, t = Date.now() + 4e5; settings = {...settings, share: true, nick: "two words"}; window.shared = []; charName = "Turbow";

@@ -273,3 +273,4 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 
 Dated feature notes (28 sections: what shipped, why, traps found then) moved verbatim to `docs/ai/tracker-history.md` on 2026-11-02.
 Grep it for the feature you touch (`grep -n "^## " docs/ai/tracker-history.md`); anything still true belongs in Known traps above.
+- Map-title fingerprint (0.3.41): readMap answers a remembered title from core/mapfp.js (settings.mapfps, same shape as settings.glyphs) with no Tesseract run; a hit counts in readstats' fpHits. The signature trims the crop to its ink bounding box then quantizes a 24x5 density grid, so rect origin jitter is free; the Hamming cap (4) is what keeps a cut rect out - never widen it without re-measuring same-title vs different-title distances (tests/cv.test.js). The table stores per signature, so one map can hold two entries at different capture resolutions; that's fine, the cap is 200.

@@ -7,6 +7,8 @@ async function toPng(c){
 }
 // job from the status bar every 30 s, when the player left the job on "Auto": taken once the same job is read twice running
 const ocrCache = GrindOcrCache.createOcrCache();   // core/ocrcache.js: same crop pixels, same text, no second Tesseract run
+const mapFps = GrindMapFp.createStore();   // core/mapfp.js: known minimap titles by ink-shape fingerprint (settings.mapfps); a hit answers the map with no Tesseract run
+let mapFpsLoaded = false;   // the persisted table loads on the first map read, once settings are in
 const tolCache = GrindOcrCache.createTolCache(GrindFrameGate);   // near-identical crops (encoder jitter) answer from the last read: fixed UI text (map title, job box, name) only ever changes wholesale
 const rawOcr = async c => { const t = Date.now(); try { return await host.ocr(await toPng(c), c.tag ? {tag: c.tag, up: c.up} : undefined) } finally { perf("ocr", Date.now() - t) } };   // tag+up: shopread crops say what they are and at what upscale, the main process routes the benched ones to the neural reader
 const ocrText = (c, slot) => slot ? tolCache.run(slot, c, rawOcr) : ocrCache.run(c, rawOcr);   // slot = the tolerant cache ("map", "job", "name"); no slot = the exact cache, same pixels same text (the wide status bar's fallback read). The chat-box death/box reads bypass ocrText and always read fresh
@@ -38,14 +40,26 @@ async function readMap(c, fb, t){   // c: the minimap title crop (GrindReaders.m
   // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
   if (!c && !fb){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = mapNowInfo = null; note("Map name not seen for 30 s (minimap closed or covered): map unknown until it's back.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
   mapMissing = 0;
-  const text = await ocrText(fb || c, "map"), m = GrindReaders.mapFromText(text, G), key = m && (m.id || m.name);
-  log("map", {text, id: m?.id ?? null, name: m?.name ?? null, fb: !!fb});
+  if (!mapFpsLoaded){ mapFpsLoaded = true; GrindMapFp.load(mapFps, settings.mapfps) }   // the remembered titles arrive with settings, once
+  // a title whose ink-shape fingerprint is already in the table answers at once; anything else is OCR'd as before and,
+  // once the read is accepted twice running (mapSeen already holds it), remembered. The fingerprint is coarse on
+  // purpose: a 1-2 px rect jitter stays under its Hamming cap, but a cut rect loses ink cells wholesale (the
+  // 2026-11-04 "1st Accompa" class), so a cut crop is re-OCRed instead of served from the table - a wrong title can't stick.
+  const mfp = GrindMapFp.sig(fb || c);
+  let text = null, m = null, fpHit = false;
+  const fe = mfp && mapFps.find(mfp);
+  if (fe){ m = {id: fe.id, name: fe.name}; fpHit = true }   // no crop PNG, no IPC, no Tesseract
+  else { text = await ocrText(fb || c, "map"); m = GrindReaders.mapFromText(text, G) }
+  const key = m && (m.id || m.name);
+  log("map", {text, id: m?.id ?? null, name: m?.name ?? null, fb: !!fb, fp: fpHit});
   if (check && sess === session){ if (!m) check.mapWhy = "Minimap found, but its name didn't read. Is something over the minimap title?"; else if (!check.map){ check.map = m.name || "map " + m.id; check.late = check.ended } }
   // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
   const same = (a, b) => a === b || a && b && !G.maps[a] && !G.maps[b] && GrindReaders.similar(a, b) >= 0.75;
   // the name holds through flaky band hunts (Danny 10-29: it dropped while the minimap sat untouched): the fallback
   // crop re-reads the last good rect, and only 30 s of nothing reading at all clears the map — never one missed band
   if (key) mapMiss = 0;
+  // the same map as the previous read: this title's fingerprint is proven, remember it (new maps only - a hit has nothing to add)
+  if (!fpHit && key && mapSeen === key && mapFps.offer(mfp, m)) host.settings({mapfps: {v: 1, fps: mapFps.entries()}}).then(x => settings = x).catch(() => {});
   else if (++mapMiss === 6 && mapNow && sess){ mapNow = mapSeen = mapNowInfo = null; note("Map name not read for 30 s (minimap closed, covered or unreadable): map unknown until it reads again.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) }
   if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session && !wrap){ mapNow = key; mapNowInfo = {id: m.id ?? null, name: m.name ?? null}; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e); kpqMap(m.id, t) }
   mapSeen = key;
@@ -370,7 +384,7 @@ let chatLooksT = 0, chatNewT = 0, chatGapsT = 0;
 function sendReadStats(t){
   const cur = {fps: FPS, looks: PERF.tick?.n || 0, reads: PERF.read?.n || 0, skipExact: skipped, skipTol: skippedTol,
     readMs: PERF.read?.sum || 0, tickMs: PERF.tick?.sum || 0, ocrRuns: PERF.ocr?.n || 0, ocrMs: PERF.ocr?.sum || 0,
-    cacheHits: ocrCache.stats.hits, tolHits: tolCache.stats.tolHits, memoHits: lastMemo?.hits || 0,
+    cacheHits: ocrCache.stats.hits, tolHits: tolCache.stats.tolHits, fpHits: mapFps.stats.hits, memoHits: lastMemo?.hits || 0,
     chatLooks: chatLooksT, chatNew: chatNewT, chatGaps: chatGapsT, chatOcrMs: PERF.chat?.sum || 0,
     evExp: evCount.exp, evMeso: evCount.meso, evBonus: evCount.bonus, evItems: evCount.item,
     reTries: lastMemo?.line?.tries || 0, reWins: lastMemo?.line?.wins || 0};
