@@ -285,9 +285,9 @@ const path = require("path"), {chromium} = require("playwright");
     kpqMap("80000000", t); const n0 = n(); kpqMap("10003000", t + 1e3);
     for (let i = 0; i < 40; i++){ const ti = t + 2e3 + i * 500; session.add({t: ti, type: "bar", exp: 100 + i, level: 30, pct: 5}); autoPause(true, {bar: true}, ti) }
     const out = {pauses: n() - n0, paused: session.state.pausedAt !== null};
-    for (let i = 0; i < 700; i++) log("x", {i}); out.cap = LOG.length;
+    for (let i = 0; i < 1700; i++) log("x", {i}); out.cap = LOG.length;
     ({kpq, session, slicer} = keep); return out });
-  if (lg.pauses !== 1 || !lg.paused || lg.cap !== 500) throw new Error("log flood: " + JSON.stringify(lg));
+  if (lg.pauses !== 1 || !lg.paused || lg.cap !== 1500) throw new Error("log flood: " + JSON.stringify(lg));
   // shop uploads carry the map (mapNow is the key string; the shop code wants id + name)
   const sh = await page.evaluate(async () => { const keep = {session, mapNow, mapSeen, mapNowInfo: typeof mapNowInfo === "undefined" ? undefined : mapNowInfo, share: settings.share}, out = {};
     const run = tolCache.run; tolCache.run = async () => "Victoria Road\nSnail Hunting Ground III\n"; window.shopShared = [];

@@ -39,7 +39,7 @@ async function start(){
   // the Settings nick rides along for the weekly ladder's display name (opt-in — absent when the box is empty)
   slicer = GrindSession.createRunSlicer(G, {idleMs: 60e3, onRun: run => { if (settings.share && !kpq?.on){ runsSent++; host.shareRun({...run, name: (settings.nick || "").trim() || undefined, partyCode: settings.partyCode || null}) } showSpeed(run) }});
   jr.runStart(session); autoRun = {auto, lastGain: Date.now(), bar: null, level: 0};
-  wrap = null; runT0 = Date.now(); $("#summary").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
+  wrap = null; runT0 = Date.now(); $("#summary").classList.add("hidden"); check = {t0: Date.now()}; lastKeep = 0; RECENT.length = 0; conf.reset(); confBar = 0; log("start", {fps: FPS, w: video.videoWidth, h: video.videoHeight});
   kpqReset(); held = false; barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; boxHad = 0; boxPending = null; boxSeen = new Map(); Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
   engine = makeEngine(ICONS, null, settings.invArea || null, settings.glyphs || [], settings.invLast || null); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
@@ -264,11 +264,22 @@ $("#frames").onclick = async () => {
 
 // "Report a bug": the last frames and log lines into one folder, opened for sending. The popup (Ctrl+Shift+B from the game,
 // the Bug button, the menu) grabs the frames the moment it opens, so typing the note doesn't push the problem out of them
-async function saveReport(frames, note){
+const frameName = (f, i) => `frame-${i}-${new Date(f.t).toISOString().slice(11, 19).replace(/:/g, "")}.png`;
+// the compact "what state was it in" block at the top of every report's log.json (core/flight.js stateBlock; main.js adds the
+// version and the settings that differ from the defaults, minus anything that identifies the player)
+function reportNow(auto){
+  const why = timer != null ? pauseNow() : null;
+  return GrindFlight.stateBlock({t: Date.now(), running: timer != null, wrap: !!wrap, reason: why, pauseLabel: why ? GrindPauses.label(why) : null, kpq, mapNow, mapSeen, mapWhy: check?.mapWhy || null,
+    perf: (timer != null && perfLine()) || LOG.findLast(l => l.kind === "perf")?.text || null, video: video?.videoWidth ? {w: video.videoWidth, h: video.videoHeight} : null, auto: auto || null});
+}
+// opt.auto: the tracker saved this by itself (confTick). Same folder, same files, kept on this PC: nothing uploads a report.
+async function saveReport(frames, text, opt = {}){
   const s = session?.stats();
   try {
-    const dir = await host.saveReport(frames.map((f, i) => ({name: `frame-${i}-${new Date(f.t).toISOString().slice(11, 19).replace(/:/g, "")}.png`, bytes: f.bytes})),
-      {note: note.trim().slice(0, 2000), running: timer != null, fps: FPS, check, stats: s && {...s, mobs: s.mobs.length, items: s.items.length}, log: LOG.slice()});
+    const dir = await host.saveReport(frames.map((f, i) => ({name: frameName(f, i), bytes: f.bytes})),
+      {note: text.trim().slice(0, 2000), running: timer != null, fps: FPS, check, stats: s && {...s, mobs: s.mobs.length, items: s.items.length}, now: reportNow(opt.auto), auto: opt.auto || undefined,
+        frames: frames.map((f, i) => ({name: frameName(f, i), t: f.t})), log: LOG.slice()});
+    if (opt.auto){ note(`Something looked off, so the tracker saved a report by itself (${frames.length} pictures + log) in your frames folder. It stays on this PC; nothing is sent. Turn this off in Settings.`, "bad"); return }
     $("#status").textContent = `Bug report saved (${frames.length} frames + log). Send that folder to Danny.`;
     host.openFolder(dir);
   } catch (e){ $("#status").textContent = "Couldn't save the bug report: " + e.message }
@@ -277,7 +288,7 @@ $("#report").onclick = () => { saveReport(RECENT.slice(), $("#reportNote").value
 let bugFrames = null;
 function openBugPop(){
   bugFrames = RECENT.slice();
-  $("#bugPopInfo").textContent = bugFrames.length ? `The last ${bugFrames.length} game pictures (~${bugFrames.length * 3} s) were grabbed just now.` : "No game pictures yet (press Start first); the log is still saved.";
+  $("#bugPopInfo").textContent = bugFrames.length ? `The last ${bugFrames.length} game pictures (~${bugFrames.length * 3 >= 120 ? Math.round(bugFrames.length * 3 / 60) + " min" : bugFrames.length * 3 + " s"}) were grabbed just now.` : "No game pictures yet (press Start first); the log is still saved.";
   modalOpen($("#bugPop"), $("#bugPopNote"));
 }
 const closeBugPop = () => { modalClose($("#bugPop"), $("#bugBtn")); $("#bugPopNote").value = ""; bugFrames = null };

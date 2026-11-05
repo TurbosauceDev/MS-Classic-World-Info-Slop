@@ -33,6 +33,8 @@ game window ─(Windows Graphics Capture)─► app/main.js ─frames─► app/
 | app/index.html | 34 | window markup + CSS |
 | app/main.js | 23 | Electron main: capture, OCR, updater, files, IPC |
 | core/session.js | 29 | pure: events → rates; `createRunSlicer` (15-min share runs) |
+| core/flight.js, core/replay.js | 6 | bug-report flight recorder (state block, settings diff, confusion detector, ring picks) and replay planning (`--replay` argv, frame order/times); pure, tested in core.test.js |
+| app/renderer-replay.js, app/replay-preload.js | 11 | replay window (0.3.42): fake FrameSrc video over a report's pictures, virtual `Date.now`, panel with replay/KPQ/original columns; its preload can write and send nothing |
 | core/history.js | 10 | pure History maths (GrindHistory): metrics, compareRuns, perHour, byMap, bests, filterRuns, today, goalEta; tested in core.test.js |
 | core/autosave.js | 1 | crash-recovery file (Node, main.js): write/read/clear sessions/autosave.json |
 | core/gamedata.js | | pure D → G (`GrindGamedata.toGamedata`), shared by build_data.js and the site's live EXP/hr reader |
@@ -50,9 +52,10 @@ node tests/ui.test.js | tail -5       # window in Chromium, fake game stream (CH
 node tests/layout.test.js | tail -3   # box fitting and window resizing (CI: tracker.yml job ui)
 node tests/monkey.test.js | tail -3   # random clicks/menus/typing/window sizes; no errors, sideways scroll or NaN (CI job ui; SEEDS=1,2 N=400)
 node tests/extras.test.js | tail -3   # Mini Finalize log, crash-recovery card, History Today/goal ETA, setup codes (CI job ui)
+node tests/replay.test.js | tail -3   # replay window guardrails (npm test); node tests/replay-ui.test.js | tail -3 = real frames replayed in Chromium + the auto-report wiring (CI job ui)
 node tests/readers.test.js | tail -5  # readers on real frames (tests/frames)
 node tests/inventory.test.js | tail -3; node tests/kpq.test.js | tail -3; node tests/snip.test.js | tail -3
-node tests/launch.test.js            # the real app on the installed Electron, throwaway profile, ~15 s, opens windows (CI job build). Run on every Electron bump
+node tests/launch.test.js            # the real app on the installed Electron, throwaway profile, ~60 s, opens windows (CI job build). Run on every Electron bump; since 0.3.42 it also opens a `--replay` window on four real frames and checks the EXP bars it reads
 cd ../server && npm install && npm run data && npm test   # Node 22 (node:sqlite stands in for D1)
 ```
 
@@ -88,7 +91,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Map title match (mapFromText): OCR-confusable letters cost half an edit (Y/V, C/E/O, cl/d); a different name less than half an
   edit behind the best = null (keep the old map); the street line alone is never a map; leading words drop only if 1-2 letters
   or street-like. Real strings: `tests/map_ocr_real.json` (core.test.js). KEYS in main.js must stay unique (core.test.js checks).
-- S.last in core/session.js only moves forward (events arrive out of order); the bug-report log (renderer.js LOG) keeps 500 lines
+- S.last in core/session.js only moves forward (events arrive out of order); the bug-report log (renderer.js LOG) keeps 1500 lines (0.3.42; was 500)
   and pauseAt(t, true) re-asserts the hold silently.
 - One pause model (0.3.41, core/pauses.js): the state pill (renderState, renderer-layout.js) derives the reason from state -
   held > kpq.hold > pausedAt > idle (lastExpT vs settings.idleSec) - never store it twice; the status line still carries the words (the
@@ -273,4 +276,6 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 
 Dated feature notes (28 sections: what shipped, why, traps found then) moved verbatim to `docs/ai/tracker-history.md` on 2026-11-02.
 Grep it for the feature you touch (`grep -n "^## " docs/ai/tracker-history.md`); anything still true belongs in Known traps above.
+- Flight recorder (0.3.42, Danny): RECENT is now a ring of RING_MAX (60) PNGs, one per 3 s from tick() via keepFrame (so tracking off = no capture or encode); they are the game-size picture when the scale is known (about a quarter of the pixels), so ~40 MB at most. A report saves the whole ring (manual) or the frames from 30 s before the confused window (auto); log.json opens with `now` (core/flight.js stateBlock, main.js adds version + settingsDiff) and lists `frames: [{name, t}]`. Auto-reports (`report-*-auto`, settings.autoReport default on, confTick in renderer-live.js once a second, no extra frame read): (a) gains while paused "gone"/"kpq" for > 30 s, (b) map name unread > 60 s with the minimap found (not while the screen is gone), (c) KPQ clock read for > 10 s while kpq.hold. 1 per 10 min and 6 per launch because report-* is never pruned (decisions 2026-11-05) - each is up to ~40 MB. They are local files like the manual ones: nothing uploads a report, and a test greps saveReport for it.
+- Replay (0.3.42): `--replay <folder>` (main.js argv, first or second launch) or Help > Replay a bug report… opens index.html in a window with replay-preload.js; renderer-replay.js swaps FrameSrc.open + getDisplayMedia for a fake capture over the PNGs, replaces Date.now with a virtual clock and calls the real start(). The clock never passes a picture the tick has not read (700 ms settle, waits for ocrBusy), so speed 16 does not skip pictures. Ring pictures smaller than the capture are blown back up pixel for pixel. Traps: a new host call in preload.js needs a safe stub in replay-preload.js (replay.test.js compares the keys and records every IPC channel); pictures are 3 s apart so replay checks the readers and decisions, not kill totals; a manual report from before 0.3.42 replays too (times come from the file names + `saved`).
 - Map-title fingerprint (0.3.41): readMap answers a remembered title from core/mapfp.js (settings.mapfps, same shape as settings.glyphs) with no Tesseract run; a hit counts in readstats' fpHits. The signature trims the crop to its ink bounding box then quantizes a 24x5 density grid, so rect origin jitter is free; the Hamming cap (4) is what keeps a cut rect out - never widen it without re-measuring same-title vs different-title distances (tests/cv.test.js). The table stores per signature, so one map can hold two entries at different capture resolutions; that's fine, the cap is 200.

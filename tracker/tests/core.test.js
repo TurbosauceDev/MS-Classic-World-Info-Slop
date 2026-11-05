@@ -902,3 +902,92 @@ console.log("kpq score ok");
   assert.deepStrictEqual(pruneFrames(path.join(dir, "nope"), 30, now), {removed: 0, bytes: 0}, "a missing folder is nothing to do");
   fs.rmSync(dir, {recursive: true, force: true});
 }
+
+// flight recorder (0.3.42, core/flight.js): the report's "now" block, the confusion detector, the ring picks
+{ const F = require("../core/flight.js");
+  // settings diff: defaults drop out, identity never shows, big blobs are summarised
+  const d = F.settingsDiff({share: false, idleSec: 90, pruneFrames: true, install: "uuid", partyCode: "snails", nick: "Turbow", job: "Hunter", mapfps: {fps: "x".repeat(500)}, autoReport: true, opacity: 0.8});
+  assert.deepStrictEqual(Object.keys(d).sort(), ["idleSec", "job", "mapfps", "opacity"], "only non-default keys, never install/partyCode/nick");
+  assert.strictEqual(d.mapfps, "(" + JSON.stringify({fps: "x".repeat(500)}).length + " chars)", "a big saved blob is summarised");
+  assert.ok(!JSON.stringify(d).includes("snails") && !JSON.stringify(d).includes("Turbow"), "no party code or nick in the diff");
+  // state block
+  const t = Date.UTC(2026, 10, 5, 12);
+  const kpq = {on: true, hold: true, rounds: 2, phase: "primed", stage: null, epoch: t - 600e3, left: 1200, leftT: t - 10e3};
+  const n = F.stateBlock({version: "0.3.42", t, running: true, wrap: false, reason: "kpq", pauseLabel: "Paused: between KPQ rounds", kpq, mapNow: "10003000", mapSeen: "10003000", mapWhy: null, perf: "Reading cost: 5 frames", video: {w: 2560, h: 1440}, settings: {idleSec: 60, job: "Hunter", nick: "X"}});
+  assert.strictEqual(n.state, "paused"); assert.deepStrictEqual(n.pause, {reason: "kpq", label: "Paused: between KPQ rounds"});
+  assert.deepStrictEqual(n.kpq, {on: true, hold: true, rounds: 2, phase: "primed", stage: null, epoch: t - 600e3, left: 1190}, "KPQ left is the clock reading minus the time since it was read");
+  assert.deepStrictEqual(n.map, {now: "10003000", seen: "10003000", why: null}); assert.strictEqual(n.perf, "Reading cost: 5 frames");
+  assert.deepStrictEqual(n.video, {w: 2560, h: 1440}); assert.deepStrictEqual(n.settings, {job: "Hunter"}, "settings in the block are the diff");
+  assert.strictEqual(n.at, "2026-11-05T12:00:00.000Z");
+  assert.strictEqual(F.stateBlock({t, running: false}).state, "stopped"); assert.strictEqual(F.stateBlock({t, running: true, wrap: true}).state, "wrapping");
+  assert.strictEqual(F.stateBlock({t, running: true, reason: "idle"}).state, "tracking", "an idle break is not a pause");
+  assert.deepStrictEqual(F.stateBlock({t, running: true}).kpq, {on: false}); assert.strictEqual(F.stateBlock({t, running: true, auto: {kind: "gain"}}).auto.kind, "gain");
+  assert.ok(!("settings" in F.stateBlock({t, running: true})), "no settings given: no settings key");
+
+  // confusion (a): EXP/pickups while paused (screen gone / between KPQ rounds) for > 30 s
+  const ctx = (o = {}) => ({on: true, held: false, reason: "gone", ...o});
+  { const c = F.createConfusion();
+    for (let s = 0; s <= 25; s += 5) c.gain(s * 1000, "gone");
+    assert.strictEqual(c.check(26e3, ctx()), null, "26 s of gains is not yet 30");
+    for (let s = 30; s <= 40; s += 5) c.gain(s * 1000, "gone");
+    const hit = c.check(41e3, ctx()); assert.ok(hit && hit.kind === "gain" && hit.since === 0 && /paused \(game screen gone\)/.test(hit.reason), JSON.stringify(hit));
+    assert.strictEqual(c.check(42e3, ctx()), null, "one report per 10 minutes");
+    // a hand pause never arms it; neither does a pause that lifted
+    const h = F.createConfusion(); for (let s = 0; s <= 60; s += 5) h.gain(s * 1000, "hand"); assert.strictEqual(h.check(61e3, ctx({reason: "hand", held: true})), null, "paused by hand is the player's call");
+    const k = F.createConfusion(); for (let s = 0; s <= 40; s += 5) k.gain(s * 1000, "kpq");
+    assert.strictEqual(k.check(41e3, ctx({reason: null})), null, "the pause lifted: nothing to report"); }
+  { const c = F.createConfusion(); for (let s = 0; s <= 20; s += 5) c.gain(s * 1000, "gone"); c.gain(60e3, "gone"); for (let s = 65; s <= 80; s += 5) c.gain(s * 1000, "gone");
+    assert.strictEqual(c.check(81e3, ctx()), null, "a gap over 15 s starts the streak over: 20 s + 20 s is not 30 s"); }
+  { const c = F.createConfusion(); for (let s = 0; s <= 40; s += 5) c.gain(s * 1000, "gone");
+    assert.strictEqual(c.check(41e3, ctx({on: false})), null, "no run up (stopped or wrapping): nothing fires"); }
+  // (b) map name unread > 60 s while the minimap was found
+  { const c = F.createConfusion(); c.minimap(1); c.mapOk(5e3);
+    assert.strictEqual(c.check(60e3, ctx({reason: null})), null, "55 s unread is fine");
+    const hit = c.check(66e3, ctx({reason: null})); assert.ok(hit && hit.kind === "map" && hit.since === 5e3, JSON.stringify(hit));
+    const n2 = F.createConfusion(); n2.mapOk(0); assert.strictEqual(n2.check(200e3, ctx({reason: null})), null, "the minimap never found: not this trigger");
+    const g = F.createConfusion(); g.minimap(1); assert.strictEqual(g.check(120e3, ctx()), null, "screen gone: the minimap is gone too, not a map-read failure");
+    const m = F.createConfusion(); m.minimap(1); m.mapOk(50e3); assert.strictEqual(m.check(100e3, ctx({reason: null})), null, "a successful read starts the clock over"); }
+  // (c) the KPQ clock visible while the between-rounds hold is up
+  { const c = F.createConfusion(); for (let s = 0; s <= 8; s += 2) c.clock(s * 1000, true);
+    assert.strictEqual(c.check(9e3, ctx({reason: "kpq"})), null, "8 s of clock is a normal handover (kpqTime lifts the hold on two steady reads)");
+    for (let s = 10; s <= 14; s += 2) c.clock(s * 1000, true);
+    const hit = c.check(15e3, ctx({reason: "kpq"})); assert.ok(hit && hit.kind === "clock", JSON.stringify(hit));
+    const u = F.createConfusion(); for (let s = 0; s <= 20; s += 2) u.clock(s * 1000, s === 10 ? false : true); assert.strictEqual(u.check(21e3, ctx({reason: "kpq"})), null, "the hold lifting in between resets it"); }
+  // rate limit: 10 min between fires, 6 a launch
+  { const c = F.createConfusion(), fire = at => { for (let s = 0; s <= 40; s += 5) c.gain(at + s * 1000, "gone"); return c.check(at + 41e3, ctx()) };
+    assert.ok(fire(0)); assert.strictEqual(fire(300e3), null, "5 min later: too soon"); assert.ok(fire(700e3), "after 10 min it can fire again");
+    c.reset(); assert.strictEqual(c.fires(), 2, "a new Start keeps the launch's count");
+    let n3 = 2; for (let i = 2; i < 12; i++) if (fire(i * 700e3)) n3++; assert.strictEqual(n3, 6, "six a launch at most"); }
+  // ring picks
+  { const fr = Array.from({length: 60}, (_, i) => ({t: i * 3000}));
+    assert.strictEqual(F.pickFrames(fr, 90e3).length, 30, "frames from the window start on");
+    assert.strictEqual(F.pickFrames(fr, 1e9).length, 10, "never fewer than the last 10");
+    assert.strictEqual(F.pickFrames(fr, 0, 20).length, 20, "capped at max, newest kept"); assert.strictEqual(F.pickFrames(fr, 0, 20)[0].t, 40 * 3000);
+    assert.deepStrictEqual(F.pickFrames([], 0), []); assert.strictEqual(F.RING_MAX, 60); }
+  // the renderer feeds it from the existing tick: no extra frame read, and nothing can upload a report
+  const live = require("fs").readFileSync(require("path").join(__dirname, "../app/renderer-live.js"), "utf8"), run = require("fs").readFileSync(require("path").join(__dirname, "../app/renderer-run.js"), "utf8");
+  assert.ok(/confT >= 1000[^\n]*confTick\(t\)/.test(live), "confTick runs from tick(), once a second");
+  assert.ok(!/confTick[\s\S]{0,400}(grabFrame|grab\(|eng\.read)/.test(live.slice(live.indexOf("function confTick"), live.indexOf("function confTick") + 700)), "confTick reads no frames");
+  assert.ok(/settings\.autoReport === false\) return/.test(live), "settings.autoReport turns it off");
+  assert.ok(!/shareRun|spotShare|openExternal|fetch\(/.test(run.slice(run.indexOf("async function saveReport"), run.indexOf("$(\"#report\").onclick"))), "saving a report never calls an upload");
+}
+console.log("flight recorder ok");
+
+// replay (0.3.42, core/replay.js): the --replay argument, and the order and recorded times of a report's pictures
+{ const R = require("../core/replay.js");
+  assert.strictEqual(R.argFolder(["C:\\app\\Tracker.exe", "--replay", "C:\\Users\\d\\report-2026-11-04T10-00-00"]), "C:\\Users\\d\\report-2026-11-04T10-00-00");
+  assert.strictEqual(R.argFolder(["x", "--replay=D:\\r"]), "D:\\r"); assert.strictEqual(R.argFolder(["x"]), null);
+  assert.strictEqual(R.argFolder(["x", "--replay"]), null, "no folder after the flag"); assert.strictEqual(R.argFolder(["x", "--replay", "--inspect"]), null, "the next flag is not a folder");
+  assert.strictEqual(R.argFolder(["x", "--replay="]), null); assert.strictEqual(R.argFolder(undefined), null);
+  // meta wins; names sort by their index, not alphabetically; strangers in the folder are ignored
+  const meta = [{name: "frame-0-100000.png", t: 1000}, {name: "frame-10-100030.png", t: 31000}, {name: "frame-2-100006.png", t: 7000}];
+  assert.deepStrictEqual(R.planFrames(["log.json", "frame-10-100030.png", "frame-2-100006.png", "frame-0-100000.png", "notes.txt", "frame-bad.png"], meta, 0).map(f => f.name), ["frame-0-100000.png", "frame-2-100006.png", "frame-10-100030.png"]);
+  assert.deepStrictEqual(R.planFrames(["frame-2-100006.png"], meta, 0), [{name: "frame-2-100006.png", t: 7000}]);
+  // an older report: the UTC HH:MM:SS in the name plus the saved day; a name after the saved time belongs to the day before
+  const saved = Date.UTC(2026, 10, 4, 0, 0, 20);
+  const old = R.planFrames(["frame-0-235950.png", "frame-1-235953.png", "frame-2-000010.png"], null, saved);
+  assert.deepStrictEqual(old.map(f => f.t), [Date.UTC(2026, 10, 3, 23, 59, 50), Date.UTC(2026, 10, 3, 23, 59, 53), Date.UTC(2026, 10, 4, 0, 0, 10)], "across midnight");
+  assert.deepStrictEqual(R.planFrames(["frame-0-x.png", "frame-0-101010.png", "frame-1-101013.png"], null, NaN).map(f => f.t), [0, 3000], "no saved time: 3 s apart from 0");
+  assert.deepStrictEqual(R.planFrames(null, null, 0), []);
+}
+console.log("replay planning ok");
