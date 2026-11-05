@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld("host", {
   autosaveGet: () => ipcRenderer.invoke("autosave-get"),
   debugWrite: lines => ipcRenderer.invoke("debug-write", lines),
   debugOpen: () => ipcRenderer.invoke("debug-open"),
-  saveFrame: (name, bytes) => ipcRenderer.invoke("save-frame", name, bytes),
+  saveFrame: (name, bytes, sub) => ipcRenderer.invoke("save-frame", name, bytes, sub),
   saveImage: (name, bytes, quiet) => ipcRenderer.invoke("save-image", name, bytes, quiet),
   saveReport: (frames, info) => ipcRenderer.invoke("save-report", frames, info),
   pruneFrames: () => ipcRenderer.invoke("prune-frames"),

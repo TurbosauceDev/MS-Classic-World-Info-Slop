@@ -311,6 +311,17 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-11-05 (Danny): a bug-report folder renamed with the suffix `-checked` (also `-auto-checked`) means it is diagnosed and its evidence is in the repo; Hermes renames by hand, no UI. At tracker start every `-checked` report folder is deleted whatever its age, unchecked automatic reports (`-auto`) keep to 1 GB in total (`autoReportCapMb`, default 1024) with the oldest deleted first, and unchecked manual reports are never deleted (core/prune.js planReports/pruneReports). [supersedes 2026-11-05] (Hermes)
 - 2026-11-05 (Danny): the tracker keeps an always-on rolling debug log on the PC (userData/debug, one text line per entry, `debugLogMb` default 50, files of ~5 MB, oldest dropped), like WoW's combat log. It stays local: bug reports (manual and auto) copy its last 30 minutes (or the whole set while small) into the report folder as `debug.log`, nothing uploads it. Kept out of it: character names, nick, party code, alias (blanked wherever they appear), the Windows account name in stack traces, chat and name-box OCR text, and the identity settings keys. Budget: under ~5 MB per hour of active play. (Hermes)
 
+- 2026-11-05 (Danny): the snap-* snapshot pictures (start/end of a run) are saved into
+`Pictures/MS Classic Tracker runs` (where `saveFrame` puts them with sub `"runs"`, app/main.js save-frame), not the
+sample-frames folder, and are never auto-deleted - the user pressed save, so they wanted them. The frames folder
+keeps only frame-* samples and report-* folders. (Hermes)
+- 2026-11-05 (Danny, spike answer): report pictures stay LOSSLESS. The lossy spike round-tripped every reader-test
+PNG fixture (tests/frames, frames-inv, frames-kpq, frames-chat, frames-quest, frames-proc, readers.test.js frames)
+through WebP q90 and JPEG q85 (PIL, tracker/scripts/lossy_roundtrip.py): inventory.test.js fails 18 frames on BOTH
+(all slot counts miss), cv.test.js's same-map crop-hash assertion fails on BOTH (lossy noise, inherent), chat fails
+on BOTH, quest and proc fail on WebP q90 but pass on JPEG85, readers.test.js worsens (7 wrong on the original -> 9
+WebP / 8 JPEG). Measured sizes on Danny's real frames: PNG 10.5 MB, lossless WebP 6.2 MB, WebP q90 1.24 MB, JPEG85
+1.30 MB. If report size ever matters again, the fix is tolerance-based readers, not a lossy format. (Hermes)
 ## Open decisions (pending Danny)
 
 Each entry blocks something. When Danny calls it, transcribe above with the date and note the resolution here.

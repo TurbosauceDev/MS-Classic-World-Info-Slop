@@ -756,8 +756,10 @@ ipcMain.handle("save-image", (_, name, pngBytes, quiet) => {   // quiet: from a 
   fs.writeFileSync(file, buf); clipboard.writeImage(nativeImage.createFromBuffer(buf)); if (!quiet) shell.showItemInFolder(file);
   return file;
 });
-ipcMain.handle("save-frame", (_, name, pngBytes) => {
-  const dir = FRAMES();
+// 0.3.45: sub === "runs" saves into the runs folder instead - end-of-run snapshot pictures go there (next to the run
+// summary picture); the user pressed save, so they are never pruned. The frames folder keeps frame-* and report-* only.
+ipcMain.handle("save-frame", (_, name, pngBytes, sub) => {
+  const dir = sub === "runs" ? path.join(app.getPath("pictures"), "MS Classic Tracker runs") : FRAMES();
   fs.mkdirSync(dir, {recursive: true});
   fs.writeFileSync(path.join(dir, path.basename(String(name))), Buffer.from(pngBytes));   // a file name only, never a path
   return dir;
