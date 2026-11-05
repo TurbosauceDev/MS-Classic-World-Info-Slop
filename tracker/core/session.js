@@ -29,12 +29,24 @@
   const IDLE_MS = 60000, RECENT_MS = 5 * 60e3, RATE_MIN_MS = 60e3;
   // the player's own calendar day (toISOString alone is UTC: an evening in America would land on tomorrow)
   const localDate = t => { const d = new Date(t); return new Date(t - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
+  /* town (0.3.46, Danny 2026-11-05): a map with no monsters in the game data — towns, shops, houses, the pharmacy. There
+     is no town flag in the game files; "no monster map" is the whole definition. KPQ maps are never towns (the middle
+     stages have no monsters either, but waiting there is play time). Unknown or unread map: not a town. */
+  const isTown = (G, id) => { if (id == null) return false; id = String(id);
+    return !!G.mapnames?.[id] && !G.maps?.[id] && !(G.kpq || []).includes(id) };
   function createSession(G, opts = {}){
     const idleMs = opts.idleMs || IDLE_MS;
-    const S = {start: null, last: null, activeMs: 0, map: null, party: 1, procs: 0, procAt: null, job: null, level: null,
+    /* arming (0.3.46, Danny 2026-11-05): while waiting, the session counts nothing — towns and the walk to the farm
+       aren't play time. It starts when a KPQ round begins (any stage map) or an intentional EXP rate shows on a
+       non-town map (arm.kills monster-EXP gains within arm.win seconds — a snail or two on the walk never fires).
+       Arming is back-dated to the first of those gains, so no farming is lost. The renderer passes
+       {kills, windowSec} from settings (armRule on by default); a bare createSession (tests, dummy data) never arms. */
+    const arm = opts.arm && typeof opts.arm === "object" ? {kills: Math.max(1, opts.arm.kills | 0 || 5), win: Math.max(5, (opts.arm.windowSec | 0 || 60)) * 1000} : null;
+    const S = {start: null, last: null, lastMap: null, activeMs: 0, armed: true, armWins: null, map: null, party: 1, procs: 0, procAt: null, job: null, level: null,
       msgExp: 0, barExp: 0, recent: [], kills: 0, unknownKills: 0, timedKills: {}, mesos: 0, byMob: {}, items: {}, itemT: {}, unreadItems: 0, otherExp: 0, bar: null, lastKillMob: null, events: 0, deaths: 0, deathMaps: {}, lastExpT: null,
       pausedAt: null, held: false, pausedMs: 0, byMap: {}, pmBar: {}, pmMsg: {}, firstBar: null, levelUps: [], levelAt: null, used: {}, have: {}, walletFirst: null, walletLast: null, bigKilled: new Set(), inv: {}};
 
+    if (arm) S.armed = false;
     /* which monster on this map gives this much EXP? Solo: its base EXP (within 15%). In a party the kill message is only
        your part: in Danny's KPQ bonus frames (party of 4, Horny/Green Mushroom, 41/26 base) it read +7 and +15, so the split
        isn't even (the party bonus comes as its own line). There a kill is the monster only when just one monster on the
@@ -71,7 +83,16 @@
     }
     // KPQ's middle stages have no monsters, so minutes with no EXP there are still play time (Danny, 2026-10-18): no idle cut-off in a stage
     const kpqStage = () => (G.kpq || []).includes(S.map) && S.map !== "80000600";
-    function credit(t){ const gap = t - S.last, ms = gap > (kpqStage() ? 30 * 60e3 : idleMs) || gap < 0 ? 0 : gap; S.activeMs += ms; if (ms) here().ms += ms }   // < 0: the PC clock went back
+    // the same, for the map the last counted event happened on (the gap may have begun somewhere else)
+    const kpqStageAtLast = () => (G.kpq || []).includes(S.lastMap) && S.lastMap !== "80000600";
+    // credit(): a gap is only play time when it can't have been a town/break. The long KPQ allowance (a stage's no-EXP
+    // minutes are play) applies only when the gap BEGAN on a KPQ stage too: S.last may have been set in town (the
+    // 2026-11-05 report: a bar read in Kerning City Pharmacy, then the 1st stage 7.8 minutes later — the first EXP
+    // there credited the whole town stay). A gap that began on a no-monster map never credits.
+    function credit(t){ const gap = t - S.last, ms = gap > (kpqStage() && kpqStageAtLast() ? 30 * 60e3 : idleMs) || gap < 0 || isTown(G, S.lastMap) || S.lastMap === "80000600" ? 0 : gap; S.activeMs += ms; if (ms) here().ms += ms }   // < 0: the PC clock went back
+    // arm: start counting. start = the moment the counting begins from (back-dated for the EXP-rate rule); last = the
+    // newest event already in (the arm check's own, so the first credit doesn't reach back into the waiting time)
+    function armAt(start, last){ S.armed = true; S.start = start; if (last != null){ S.last = last; S.lastMap = S.map } }
     // per map: EXP (bar and lines), farming time and kills credited to the map they happened on, so the run's map is where the
     // EXP came from, not where the player stood at Stop (Danny 2026-10-23: deaths, town scrolls and walking home made Lith
     // Harbor's department store or the player's house a "training map")
@@ -112,16 +133,41 @@
 
     function add(e){
       S.events++;
+      /* waiting (not armed yet): the world is still tracked (map/party/job, so the first farming EXP matches its
+         monster), but nothing counts and nothing is dated — S.start stays null until the arm. Arming: an "arm" event
+         (the KPQ round opened, renderer-live kpqMap), a "resume" (Go on / Start counting now), a KPQ stage map, or
+         arm.kills monster-EXP gains within arm.win seconds — then, back-dated to the first gain. */
+      if (!S.armed){
+        if (e.type === "map"){ S.map = e.id == null ? null : String(e.id); S.mapName = e.name || null; S.bigKilled.clear();
+          if ((G.kpq || []).includes(S.map) && S.map !== "80000600") armAt(e.t, e.t);   // every KPQ round starts in a stage
+          return S }
+        if (e.type === "party"){ S.party = Math.max(1, e.size | 0); return S }
+        if (e.type === "job"){ S.job = e.name; return S }
+        if (e.type === "pause"){ if (S.pausedAt === null) S.pausedAt = e.t; if (e.hold) S.held = true; return S }   // paused while waiting: still nothing counts, but the state says so
+        if (e.type === "arm" || e.type === "resume"){ armAt(e.t, e.t); return S }
+        if (e.type === "exp"){
+          S.armWins = (S.armWins || []).filter(w => e.t - w.t <= arm.win);
+          S.armWins.push({t: e.t, gain: e.gain});
+          if (S.armWins.length < arm.kills) return S;   // one or two snails on the walk: not farming yet
+          const wins = S.armWins; S.armWins = null;
+          armAt(wins[0].t, e.t);   // back-dated to the first gain, so no farming is lost
+          const back = e.t - wins[0].t;
+          if (back > 0){ S.activeMs += back; here().ms += back }
+          // the earlier gains were read all along — count them (at their own times, adding no time)
+          for (let i = 0; i < wins.length - 1; i++) add({t: wins[i].t, type: "exp", gain: wins[i].gain});
+          // falls through: this gain is processed like any other (its own credit gap is 0 — the window was just added)
+        } else return S;   // meso/item/bar reads while waiting are not farming evidence
+      }
       if (S.start === null) S.start = e.t;
       const counts = ["exp", "bonus", "meso", "item", "itemraw", "bar"].includes(e.type);
       // paused: farming time up to the pause counts, the pause itself doesn't; anything counted (or "resume") ends it
       // a pause by hand (hold) only ends with "resume": nothing read meanwhile (a party member's EXP) restarts the clock
       // S.last only moves forward: a slow tick delivers events stamped before ones already in, and a clock that went back would count the same span twice
       const fwd = t => S.last === null ? t : Math.max(S.last, t);
-      if (e.type === "pause"){ if (S.pausedAt === null){ const t = fwd(e.t); if (S.last !== null){ credit(t); S.last = t } S.pausedAt = t } if (e.hold) S.held = true; return S }
-      if (S.pausedAt !== null && (e.type === "resume" || counts && !S.held)){ S.pausedMs += Math.max(0, e.t - S.pausedAt); S.pausedAt = null; S.held = false; if (S.last !== null || counts) S.last = fwd(e.t) }
+      if (e.type === "pause"){ if (S.pausedAt === null){ const t = fwd(e.t); if (S.last !== null){ credit(t); S.last = t; S.lastMap = S.map } S.pausedAt = t } if (e.hold) S.held = true; return S }
+      if (S.pausedAt !== null && (e.type === "resume" || counts && !S.held)){ S.pausedMs += Math.max(0, e.t - S.pausedAt); S.pausedAt = null; S.held = false; if (S.last !== null || counts){ S.last = fwd(e.t); S.lastMap = S.map } }
       if (e.type === "resume") return S;
-      if (counts && S.pausedAt === null){ if (S.last !== null) credit(e.t); S.last = fwd(e.t) }
+      if (counts && S.pausedAt === null){ if (S.last !== null) credit(e.t); S.last = fwd(e.t); S.lastMap = S.map }
       switch (e.type){
         case "map": S.map = e.id == null ? null : String(e.id); S.mapName = e.name || null; S.bigKilled.clear(); break;
         case "party": S.party = Math.max(1, e.size | 0); break;
@@ -276,8 +322,8 @@
         .filter(m => m.exp > 0 || m.min > 0 || m.kills > 0).sort((a, b) => b.exp - a.exp || b.min - a.min);
       const top = maps.find(m => m.map && m.exp > 0) || maps.find(m => m.map) || null, nowName = mapNameOf(S.map) || S.mapName || null;
       const pmSrc = useBar ? S.pmBar : S.pmMsg, pmKeys = Object.keys(pmSrc).map(Number), perMin = [];
-      if (pmKeys.length){ const k0 = Math.floor(S.start / 6e4), k1 = Math.max(...pmKeys, Math.floor((S.last ?? S.start) / 6e4)); for (let k = Math.max(k0, k1 - 1439); k <= k1; k++) perMin.push([k * 6e4, pmSrc[k] || 0]) }   // last 24 h at most
-      return {activeMin: S.activeMs / 6e4, perMin, bestMin: perMin.length ? Math.max(...perMin.map(p => p[1])) : 0, firstBar: S.firstBar, bar: S.bar && S.bar.level ? {level: S.bar.level, pct: S.bar.pct, t: S.bar.t} : null,
+      if (pmKeys.length && S.start != null){ const k0 = Math.floor(S.start / 6e4), k1 = Math.max(...pmKeys, Math.floor((S.last ?? S.start) / 6e4)); for (let k = Math.max(k0, k1 - 1439); k <= k1; k++) perMin.push([k * 6e4, pmSrc[k] || 0]) }   // last 24 h at most
+      return {activeMin: S.activeMs / 6e4, waiting: !S.armed, town: isTown(G, S.map) || S.map === "80000600", perMin, bestMin: perMin.length ? Math.max(...perMin.map(p => p[1])) : 0, firstBar: S.firstBar, bar: S.bar && S.bar.level ? {level: S.bar.level, pct: S.bar.pct, t: S.bar.t} : null,
         map: top ? top.map : S.map, mapName: top ? top.name : nowName, nowMap: S.map, nowMapName: nowName, maps, party: S.party, procs: S.procs, procAt: S.procAt,
         job: S.job, level: S.level, kills: S.kills, unknownKills: S.unknownKills, killsHr: per(S.kills), exp, expHr, rateWait, toLevelHrs, otherExp: S.otherExp,
         // share of the bar's EXP that showed up as readable messages: below ~70%, kills/mesos/drops are undercounted
@@ -317,7 +363,7 @@
     const ctx = {};   // latest map / party / job, carried into each new run
     // a new run at time t; after a finished run the last bar reading is its EXP baseline (not after a break)
     function fresh(t, keepBar){
-      cur = createSession(G, {idleMs});
+      cur = createSession(G, {idleMs, arm: opts.arm});
       for (const e of Object.values(ctx)) cur.add({...e, t});
       if (keepBar && bar) cur.add({...bar, t});
     }
@@ -337,9 +383,11 @@
       if (counts) last = e.t;
       if (e.type === "bar") bar = e;
       const S = cur.state;
-      // run length is wall time minus pauses (a channel change inside a run doesn't count as farming)
+      // run length is the ACTIVE time (0.3.46, Danny: town minutes are not farming): wall time since the arm minus
+      // pauses. The trigger above stays wall-based so the run still cuts on the clock.
       if (S.last !== null && S.last - S.start - S.pausedMs >= runMs){
-        onRun({...cur.shareable(), minutes: Math.round((S.last - S.start - S.pausedMs) / 6e3) / 10, hour: new Date(S.start).getUTCHours()});   // UTC hour: "best time to farm"
+        if (S.activeMs >= 60e3)   // a run made of idle/town looks (15 wall minutes, no farming) is junk: cut it, don't share it
+          onRun({...cur.shareable(), minutes: Math.round(S.activeMs / 6e3) / 10, hour: new Date(S.start).getUTCHours()});   // UTC hour: "best time to farm"
         fresh(e.t, true);
       }
     }
@@ -406,6 +454,6 @@
     return {each: pw[0] ?? npc, lo: pw[1] ?? pw[0] ?? npc, hi: pw[2] ?? pw[0] ?? npc, npc: false, rough: !!(pw[4] & 1)};
   }
 
-  const api = {createSession, createRunSlicer, speedCheck, levelOf, expBetween, lootPrice, IDLE_MS, RUN_MS};
+  const api = {createSession, createRunSlicer, speedCheck, levelOf, expBetween, lootPrice, isTown, IDLE_MS, RUN_MS};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.GrindSession = api;
 })(typeof window !== "undefined" ? window : globalThis);

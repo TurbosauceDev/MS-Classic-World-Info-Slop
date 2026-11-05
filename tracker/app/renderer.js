@@ -190,7 +190,9 @@ function keepFrame(t, f){
   if (video.pump){ canvas.width = f.w; canvas.height = f.h; g.putImageData(new ImageData(f.d, f.w, f.h), 0, 0) }   // f is the frame just grabbed, copied in before it goes to the reader
   // 0.3.43: lossless WebP (quality 1 = lossless in Chromium 156/Electron 45; measured pixel-identical to the PNG on 24 of Danny's real frames, ~37% smaller);
   // an engine that can't encode WebP hands back a PNG and the picture is named .png
-  canvas.toBlob(async b => { if (!b) return; RECENT.push({t, ext: b.type === "image/webp" ? "webp" : "png", bytes: new Uint8Array(await b.arrayBuffer())}); while (RECENT.length > GrindFlight.RING_MAX) RECENT.shift() }, "image/webp", 1);
+  // 0.3.46: the encode's cost is timed (perf "ring") — a 1440p bonus farm was lagging and the PERF line couldn't see this stage
+  const tEnc = Date.now();
+  canvas.toBlob(async b => { perf("ring", Date.now() - tEnc); if (!b) return; RECENT.push({t, ext: b.type === "image/webp" ? "webp" : "png", bytes: new Uint8Array(await b.arrayBuffer())}); while (RECENT.length > GrindFlight.RING_MAX) RECENT.shift() }, "image/webp", 1);
 }
 
 // self-check: for the first 8 s after Start, which readers work right now (8, not 5: the first map read loads the OCR)

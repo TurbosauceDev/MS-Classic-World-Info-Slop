@@ -17,10 +17,11 @@ const path = require("path"), {chromium} = require("playwright");
   await page.click("#go"); await page.waitForFunction(() => timer != null && !starting);
   const auto = await page.evaluate(() => { const t = Date.now();
     session.add({t: t - 120e3, type: "map", id: "104040000", name: "Henesys Hunting Ground I"});
-    session.add({t: t - 60e3, type: "exp", gain: 20}); session.add({t: t - 30e3, type: "exp", gain: 20}); render();
+    // 0.3.46: the session arms on 5 EXP gains in 60 s (the stub Start's session waits in a town-less void otherwise)
+    for (let i = 0; i < 5; i++) session.add({t: t - 60e3 + i * 5e3, type: "exp", gain: 20}); render();
     return [autoTimer != null, autosaveNow(), window.autosaved && typeof window.autosaved.autosaved, window.autosaved?.kills, window.autosaved?.name] });
   // the autosave: on a timer while tracking, the same record History keeps plus when it was written
-  if (!auto[0] || !auto[1] || auto[2] !== "number" || auto[3] !== 2) fail("autosave while tracking", auto);
+  if (!auto[0] || !auto[1] || auto[2] !== "number" || auto[3] !== 5) fail("autosave while tracking", auto);
   await page.evaluate(() => $("#miniBtn").click());
   await page.evaluate(() => window.menu("startStop")); await page.waitForFunction(() => wrap && !stopping);
   const mw = await page.evaluate(() => [document.body.classList.contains("mini"), !$("#miniWrap").classList.contains("hidden"), $("#miniWrap").offsetParent != null,
@@ -31,7 +32,7 @@ const path = require("path"), {chromium} = require("playwright");
     if (over) fail("mini wrap-up line runs off a 340 px window", over) }
   await page.evaluate(() => { window.saved = null; $("#miniWrapEnd").click() }); await page.waitForFunction(() => window.saved && !stopping);
   const done = await page.evaluate(() => [window.saved.kills, $("#miniWrap").classList.contains("hidden"), timer, autoTimer, document.body.classList.contains("mini"), autosaveNow()]);
-  if (done[0] !== 2 || !done[1] || done[2] !== null || done[3] !== null || !done[4] || done[5] !== false) fail("mini Finalize log", done);
+  if (done[0] !== 5 || !done[1] || done[2] !== null || done[3] !== null || !done[4] || done[5] !== false) fail("mini Finalize log", done);
   await page.evaluate(() => $("#miniFull").click());
   if (!await page.isVisible("#summary")) fail("summary waits in the full view", false);
   await page.click("#sumClose");

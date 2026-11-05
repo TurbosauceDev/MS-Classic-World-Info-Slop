@@ -184,11 +184,12 @@ function renderWrap(s){
 // the line next to Start/Stop: tracking or not, paused (and why — one pause model, core/pauses.js), for how long
 function renderState(s){
   const on = timer != null, paused = on && s?.paused;
-  const why = typeof GrindPauses !== "undefined" ? GrindPauses.current({held, kpqHold: !!kpq?.hold, paused, idleMs: (settings.idleSec || 60) * 1000, lastExpT: s?.lastExpT, now: Date.now()}) : null;
-  $("#state").className = wrap ? "paused" : paused ? "paused" : on ? "on" : "";
+  const why = typeof GrindPauses !== "undefined" ? GrindPauses.current({held, kpqHold: !!kpq?.hold, paused, town: on && !!s?.town, waiting: on && !!s?.waiting, idleMs: (settings.idleSec || 60) * 1000, lastExpT: s?.lastExpT, now: Date.now()}) : null;
+  $("#state").className = wrap ? "paused" : paused ? "paused" : on && (why === "waiting") ? "paused" : on ? "on" : "";
   $("#state").dataset.pause = why || "";
   $("#stateText").textContent = wrap ? "Stopped at " + clock(wrap.t) + " · wrapping up"
     : paused ? GrindPauses.label(why)
+    : why === "town" || why === "waiting" ? GrindPauses.label(why) + (on && s ? " · " + hm(s.activeMin / 60) + " farmed" : "")
     : on ? (why === "idle" ? GrindPauses.label("idle") + " · " + hm(s.activeMin / 60) + " farmed" : "Tracking" + (s ? " · " + hm(s.activeMin / 60) + " farmed" : ""))
     : s && s.activeMin ? "Stopped · " + hm(s.activeMin / 60) + " farmed" : "Not tracking";
   $("#go").textContent = wrap ? "Resume" : on ? "Stop" : "Start"; $("#go").classList.toggle("on", on && !wrap);
@@ -297,7 +298,9 @@ let drag = null;
 document.addEventListener("pointerdown", e => {
   const it = e.button === 0 && !e.target.closest("button") && e.target.closest(".tbItem");
   if (it){ e.preventDefault(); drag = {b: BOXES.find(x => x.dataset.box === it.dataset.mod), item: it, x: e.clientX, y: e.clientY, on: false, el: null}; return }
-  const h = e.button === 0 && e.target.closest(".grip, .box h3"), b = h?.closest("[data-box]");
+  // 0.3.46: a non-left click must not throw — `false?.closest` still throws (optional chaining skips only null/undefined),
+  // and 15 "Uncaught TypeError: h?.closest is not a function" landed in Danny's report from right-clicks on box titles
+  const h = e.button === 0 ? e.target.closest(".grip, .box h3") : null, b = h?.closest("[data-box]");
   if (!b) return;
   e.preventDefault(); drag = {b, x: e.clientX, y: e.clientY, on: false, el: null};
 });

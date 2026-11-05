@@ -61,7 +61,7 @@ async function readMap(c, fb, t){   // c: the minimap title crop (GrindReaders.m
   else { text = await ocrText(fb || c, "map"); m = GrindReaders.mapFromText(text, G) }
   const key = m && (m.id || m.name);
   log("map", {text, id: m?.id ?? null, name: m?.name ?? null, fb: !!fb, fp: fpHit, why: fpHit ? "fingerprint" : !mfp ? "no fingerprint, ocr" : m ? "fingerprint miss, ocr matched" : "fingerprint miss, ocr no match", seen: mapSeen, now: mapNow});
-  if (check && sess === session){ if (!m) check.mapWhy = "Minimap found, but its name didn't read. Is something over the minimap title?"; else if (!check.map){ check.map = m.name || "map " + m.id; check.late = check.ended } }
+  if (check && sess === session){ if (!m) check.mapWhy = "Minimap found, but its name didn't read. Is something over the minimap title?"; else { check.mapWhy = null; if (!check.map){ check.map = m.name || "map " + m.id; check.late = check.ended } } }   // mapWhy cleared on a good read (0.3.46: it stuck after one failed OCR and showed on a fine map)
   // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
   const same = (a, b) => a === b || a && b && !G.maps[a] && !G.maps[b] && GrindReaders.similar(a, b) >= 0.75;
   // the name holds through flaky band hunts (Danny 10-29: it dropped while the minimap sat untouched): the fallback
@@ -175,9 +175,11 @@ function autoPause(minimap, info, t){   // minimap: the minimap is on screen (lo
 const KPQ_MAPS = new Set((G.kpq || []).map(String));
 let kpq = null;
 // Pause (button or its shortcut): the timer stops until pressed again (held); the game screen coming back doesn't resume it
-function pauseUi(){ $("#resetBtn").classList.toggle("hidden", timer != null || starting || !session?.state.events); const b = $("#pauseBtn"); b.classList.toggle("hidden", timer == null || !!wrap); b.textContent = held ? "Go on" : "Pause"; b.setAttribute("aria-pressed", String(held)) }
+function pauseUi(){ $("#resetBtn").classList.toggle("hidden", timer != null || starting || !session?.state.events); const b = $("#pauseBtn"); b.classList.toggle("hidden", timer == null || !!wrap); b.textContent = session?.state?.armed === false ? "Start counting now" : held ? "Go on" : "Pause"; b.setAttribute("aria-pressed", String(held)) }
 $("#pauseBtn").onclick = () => {
   if (timer == null || wrap || !session) return;
+  // waiting to arm (0.3.46): this button is "Start counting now" — a click overrides the arm rule, counting from now
+  if (session.state.armed === false){ const e = {t: Date.now(), type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Counting from now on."; pauseUi(); render(); return }
   held = !held; const t = Date.now();
   if (held){ const e = {t: Math.max(t, session.state.last || 0), type: "pause", hold: true}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Paused by you. Press Go on (or the Pause shortcut) to carry on." }
   else { const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Tracking again." }
@@ -237,7 +239,12 @@ function kpqTime(left, t){
   log("kpqclk", {left, steady, was: was === null ? null : Math.round(was), epoch: kpq.epoch === null ? null : Math.round((kpq.epoch - t) / 1000), inside: !!kpq.inside});   // the debug log keeps what each clock read decided
   let jumpTo = null;   // the stage the new round starts on when the minimap map didn't change (no map event will open it)
   if (steady && was !== null && left > was + 30){
-    if (kpq.inside){ jumpTo = kpq.stage?.id || (KPQ_STAGE[mapNow] ? mapNow : null); kpqEnd(t, true, "left") }
+    // 0.3.46 (Danny's 2026-11-05 report): a clock restart is always a FRESH ROUND, and every KPQ round starts in the
+    // 1st stage — even when the minimap still shows the last round's Bonus map for a few more seconds. Opening the
+    // round on that stale name made round 2 carry .bonus from the start, so its real Bonus never recorded and the
+    // round was refused by the leaderboard ("joined at the Bonus stage").
+    jumpTo = "80000000";
+    if (kpq.inside){ kpqEnd(t, true, "left") }
     kpq.inside = false; kpq.left = null;
     if (left >= 0 && left <= 1800) kpq.epoch = t + left * 1000 - 18e5;   // the new round's epoch: it started left-seconds before this read
     note("KPQ clock started over: a new round", "kpq");
@@ -272,7 +279,12 @@ function kpqMap(id, t){
   if (inside && !kpq.on && settings.kpqAct !== "grind"){ kpq.on = true; kpq.phase = "rush"; kpqRefresh(); $("#status").textContent = "KPQ run spotted: rounds are counted, and Kerning City between rounds is paused." }
   if (!kpq.on){ if (String(id) === KERNING && kpq.phase !== "primed"){ kpq.phase = "primed"; note("Kerning City: KPQ likely, waiting for the 1st stage", "kpq") } else if (String(id) !== KERNING && kpq.phase === "primed") kpq.phase = "idle"; return }
   if (inside){
-    if (!kpq.inside) kpq.rounds++;
+    if (!kpq.inside){
+      kpq.rounds++;
+      // arming (0.3.46): a KPQ round beginning always starts the counting (both this map-read path and the clock path
+      // through kpqMap land here) — towns and the walk never reach the EXP/hr while a round is waiting
+      if (session?.state?.armed === false){ const e = {t, type: "arm"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ round " + kpq.rounds + ": counting starts now." }
+    }
     // a new stage: the last one's time is kept; the Exit map ends the round
     if (kpq.stage?.id !== String(id)){
       // cleared: from the Last stage on to Bonus or Exit. Clear time = 1st stage to then (Bonus left out, so Bonus and Rush compare)
@@ -375,16 +387,27 @@ function levelNote(s){
 }
 const hm = h => h < 1 ? Math.round(h * 60) + " min" : h.toFixed(1) + " h";
 
-/* what reading costs on this PC, per stage (ms): shown at Stop in the event log and kept in the bug report. busy = share of
-   the time between Start and Stop that the window spent reading. */
-let PERF = {}, perfT0 = 0, perfLogged = 0, lastMemo = null;
-const perf = (k, ms) => { const p = PERF[k] ||= {n: 0, sum: 0, max: 0}; p.n++; p.sum += ms; if (ms > p.max) p.max = ms };
+/* what reading costs on this PC (0.3.46: one whole, per-minute PERF line in the debug log so a "it lags" report can
+   answer it: per-minute averages AND maxima for the tick and the WebP ring encode, the renderer heap, the main
+   process's memory + CPU, the worst event-loop lag and the fps — the old line was cumulative and got truncated). */
+let PERF = {}, PMIN = {}, perfT0 = 0, perfLogged = 0, lastMemo = null;
+const perf = (k, ms) => { for (const P of [PERF, PMIN]){ const p = P[k] ||= {n: 0, sum: 0, max: 0}; p.n++; p.sum += ms; if (ms > p.max) p.max = ms } };
+// event-loop lag: how late a 1 s timer fired, worst case this minute (a blocked renderer shows here, not in the read ms)
+let lagMax = 0, lagNext = Date.now() + 1000;
+setInterval(() => { const now = Date.now(); if (now - lagNext > lagMax) lagMax = now - lagNext; lagNext = Math.max(lagNext + 1000, now) }, 1000);
 function perfLine(){
-  const el = Date.now() - perfT0, avg = k => PERF[k] ? (PERF[k].sum / PERF[k].n).toFixed(1) : "-", hit = ocrCache.stats;
-  if (!PERF.tick || el < 5000) return "";
-  return `Reading cost: ${PERF.tick.n} frames read, ${skipped} skipped as unchanged${skippedTol ? ` (${skippedTol} of those only jittered)` : ""}; per frame: capture ${avg("grab")} ms, compare ${avg("same")} ms, read ${avg("read")} ms (slowest ${PERF.read ? Math.round(PERF.read.max) : "-"}), whole tick ${avg("tick")} ms = ${Math.round(PERF.tick.sum / el * 100)}% of one core's time; ${lastMemo && lastMemo.hits + lastMemo.reads ? Math.round(lastMemo.hits / (lastMemo.hits + lastMemo.reads) * 100) + "% of bar/clock reads skipped (strip unchanged); " : ""}pickup band ${PERF.band ? PERF.band.n + " looks, " + avg("band") + " ms each" : "not used"}; text reader ${hit.misses} runs${PERF.ocr ? " (" + avg("ocr") + " ms each)" : ""}, ${hit.hits} answered from memory.`;
+  if (!PERF.tick || Date.now() - perfT0 < 5000) return "";
+  // one main-process reading (memory always; CPU = the process.getCPUUsage delta since the last ask)
+  return GrindPerfLine.line({
+    frames: PMIN.tick?.n || 0, fps: FPS, skipped, skippedTol,
+    tick: PMIN.tick, grab: PMIN.grab, same: PMIN.same, read: PMIN.read, ring: PMIN.ring, band: PMIN.band, ocr: PMIN.ocr,
+    busyPct: PERF.tick ? Math.round(PERF.tick.sum / (Date.now() - perfT0) * 100) : null,
+    heapMb: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null,
+    main: mainPerf, memoHits: lastMemo?.hits || 0, lagMs: lagMax});
 }
-function perfReset(){ PERF = {}; perfT0 = Date.now(); perfLogged = 0; paceReset(); statsPrev = null; statsT0 = Date.now() }
+let mainPerf = null;   // the last perf-main answer (rss/heap MB, cpu %), fetched once a minute alongside the PERF line
+async function perfMainNow(){ try { const m = await host.perfMain?.(); if (m) mainPerf = {rss: m.rss, heap: m.heap, cpu: m.cpu} } catch { /* perf-main is optional: the test stub and the replay window answer nothing */ } }
+function perfReset(){ PERF = {}; PMIN = {}; lagMax = 0; perfT0 = Date.now(); perfLogged = 0; paceReset(); statsPrev = null; statsT0 = Date.now() }
 // per-minute reader telemetry (core/readstats.js, customclassic-chat's reading.jsonl): the counters below are
 // cumulative; each minute their deltas go to the main process as one jsonl line (size-capped there) and the last
 // line shows in the Performance monitor. Set up to compare settings by numbers, not feel.
@@ -563,7 +586,7 @@ async function tick(){
   const ms = Date.now() - t; perf("tick", ms);
   slowCheck(ms);
   pace(t, active);
-  if (t - perfLogged > 60e3){ perfLogged = t; const l = perfLine(); if (l) log("perf", {text: l}); try { sendReadStats(t) } catch {} }
+  if (t - perfLogged > 60e3){ perfLogged = t; perfMainNow(); const l = perfLine(); if (l) log("perf", {text: l}); PMIN = {}; lagMax = 0; try { sendReadStats(t) } catch {} }
   timer = setTimeout(tick, Math.max(50, 1000 / FPS - ms));
 }
 
@@ -597,7 +620,7 @@ function logAppend(el, html){
 // the event log (Danny 2026-10-19: "describing things that happen like map changes, level ups, status changes ... that's also
 // where messages for the user should go"): every #status message lands here too, so the one line under Start is just the newest
 const EV_KINDS = new Set(["map", "level", "death", "party", "job"]);
-const note = (text, kind = "info") => eventAdd({t: Date.now(), kind, text});   // a line in the event log only (the status line stays)
+const note = (text, kind = "info") => { log("note", {kind, text}); eventAdd({t: Date.now(), kind, text}) };   // a line in the event log (the status line stays); 0.3.46: also one debug-log line, so KPQ round/score notes reach the bug report
 // the server's answer to a shared run or KPQ round, pushed from the main process (preload onShare): the "sent" note only
 // ever meant queued, so the outcome follows it — kept but not counted shows with the server's own reason (2026-10-26)
 host.onShare(s => note(s.counted === false ? `The server kept but didn't count that ${s.what}: ${s.why}`

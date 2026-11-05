@@ -6,7 +6,7 @@
 (function (root){
   const RING_MAX = 60;   // pictures kept: one per 3 s, so about 3 minutes back
   // what a fresh install has for the keys that have a stated default; any other key that is present counts as changed
-  const DEFAULTS = {share: false, idleSec: 60, pruneFrames: true, pruneFramesDays: 30, autoReport: true, onTop: true, fit: true, snap: true, opacity: 1};
+  const DEFAULTS = {share: false, idleSec: 60, pruneFrames: true, pruneFramesDays: 30, autoReport: true, onTop: true, fit: true, snap: true, opacity: 1, armRule: true, armKills: 5, armWindowSec: 60};
   // nothing that identifies the player (main.js save-report strips the same three); big saved blobs are summarised, not copied
   const PRIVATE = new Set(["install", "partyCode", "nick"]);
   const BIG = 300;

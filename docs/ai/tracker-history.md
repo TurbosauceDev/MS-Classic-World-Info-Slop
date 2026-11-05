@@ -224,3 +224,38 @@ Dated notes per tracker feature, moved out of `docs/ai/tracker.md` so the area d
 ### Bug reports and replay 2026-11-05 (0.3.42; moved from tracker.md for its size cap. Sizes and "never pruned" were true for 0.3.42: 0.3.43 made pictures WebP and added the -checked / 1 GB auto clean-up)
 - Flight recorder (0.3.42, Danny): RECENT is now a ring of RING_MAX (60) PNGs, one per 3 s from tick() via keepFrame (so tracking off = no capture or encode); they are the game-size picture when the scale is known (about a quarter of the pixels), so ~40 MB at most. A report saves the whole ring (manual) or the frames from 30 s before the confused window (auto); log.json opens with `now` (core/flight.js stateBlock, main.js adds version + settingsDiff) and lists `frames: [{name, t}]`. Auto-reports (`report-*-auto`, settings.autoReport default on, confTick in renderer-live.js once a second, no extra frame read): (a) gains while paused "gone"/"kpq" for > 30 s, (b) map name unread > 60 s with the minimap found (not while the screen is gone), (c) KPQ clock read for > 10 s while kpq.hold. 1 per 10 min and 6 per launch because report-* is never pruned (decisions 2026-11-05) - each is up to ~40 MB. They are local files like the manual ones: nothing uploads a report, and a test greps saveReport for it.
 - Replay (0.3.42): `--replay <folder>` (main.js argv, first or second launch) or Help > Replay a bug report… opens index.html in a window with replay-preload.js; renderer-replay.js swaps FrameSrc.open + getDisplayMedia for a fake capture over the PNGs, replaces Date.now with a virtual clock and calls the real start(). The clock never passes a picture the tick has not read (700 ms settle, waits for ocrBusy), so speed 16 does not skip pictures. Ring pictures smaller than the capture are blown back up pixel for pixel. Traps: a new host call in preload.js needs a safe stub in replay-preload.js (replay.test.js compares the keys and records every IPC channel); pictures are 3 s apart so replay checks the readers and decisions, not kill totals; a manual report from before 0.3.42 replays too (times come from the file names + `saved`).
+
+## Splits and early-module notes (promoted verbatim from tracker.md 2026-11-05 for its 35 KB cap)
+
+## Splits
+- 10-18: `app/renderer.js` cut into 6 files at top-level boundaries, loaded in order by app/index.html (one shared global
+  scope, so no imports). A new file goes in index.html's script list; top-level code may only call functions from its
+  own or earlier files at load time (ui.test.js catches a load-time ReferenceError).
+- `app/readers.js` 68 KB left whole: one IIFE closure loaded 5 ways (worker importScripts, require in tests, script tags,
+  site `/*@READERS*/`); splitting needs a namespace rewrite. Grep + ranged reads instead.
+- History (10-19): maths in core/history.js (window.GrindHistory), UI in renderer-history.js. Compare state is `cmpSel` (saved
+  ids, any order; drawn oldest first as A-F, max 6) + `cmpBase`; rows/compare redraw from histList, so keep ids as strings
+  (`String(+x.saved)`). Rename/note = IPC `update-session` (main.js: name ≤60, note ≤1000, nothing else changes). The ui-host
+  stub's sessions() makes new `saved` ids every call, so open details/selection don't survive a loadHist in tests.
+  The compare table scrolls inside its box (head row in the table, sticky label column); ui.test.js checks a 400 px window.
+- Bug hunt 0.2.59 (10-19): #wrap/#summary now sit ABOVE #dock (under a dozen modules they were off screen); ui.test closes the summary
+  before measuring boxes. openStream gives up after 5 s with no frame (play() never resolved: Start dead). Slicer counts a break from
+  the run's start when nothing counted yet; server check.js "mostly idle" (activeMin < minutes/2). #go's capture listener only
+  drops Dummy data on a starting click; dummyFill refuses while `starting`. Settings chips scroll by prefsGo (sticky header aware).
+- 0.2.60 (bug-hunt ideas 1,2,4,5,7): Mini shows #miniWrap (one line + Finalize log) while `wrap` is set (renderWrap). Crash
+  recovery: renderer autosaveNow() every 60 s while tracking → IPC `autosave` → core/autosave.js writes sessions/autosave.json
+  (tmp + rename; not <digits>.json so History never lists it); save-session clears it; recoverCheck() at launch shows #recover.
+  sessionRecord() is the one History record (Finalize and autosave). History #today/#eta from core/history.js today()/goalEta()
+  (EXP table = G.exp; maps 15+ min, KPQ left out). Setup codes MSCS1 (themes.js encodeSetup/decodeSetup/cleanLayout: known box
+  ids only) in Settings > Layout. Browser checks in tests/extras.test.js, maths in core.test.js.
+- Profiles 0.2.61 (renderer-settings.js profUi/profSwitch/setupApply/spTake): settings.profiles (cleaned setups with a name, max 30),
+  settings.profile = in use; switching away first saves the screen into it (profKeep). Codes stay MSCS1, now with optional
+  name/prefs {fit, fitWin, snap, opacity}/win {w, h} (themes.js cleanSetup; old apps ignore them); decodeSetup also takes MSCT1
+  (theme only). Paste = preview (#setupPrev) only; IPC `win-size` sets content size (skipped in Mini). Tests: extras.test.js 4-5.
+  Built-in profiles (0.2.67): codes in themes.js BUILTIN, TH.builtins(ids); select value "b:<name>", never saved into or
+  deleted. Window size goes through TH.winFit (zoom, clamp to work area, pull on screen), used by main.js `win-size`; core.test.
+  flipTo sets body.gliding for 220 ms (#dock overflow-x:clip) so a box gliding in from the right never flashes a sideways scrollbar.
+- Traps: box h3/rows need 72 px right padding (⠿ – × = 63 px); `#hist > .row:first-child` never matched (.boxctl is first child).
+  .feedlist height = calc(7.5em + 10px) = 5 whole lines; feedIn slides lines, so wait 400 ms before measuring them. Mini's zoom
+  search is cached by content height + window size (miniKey).
+
