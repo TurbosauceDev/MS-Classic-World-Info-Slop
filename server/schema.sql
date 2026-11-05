@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS runs (
   id        INTEGER PRIMARY KEY,
   install   TEXT NOT NULL,          -- random ID of the tracker copy (not the character)
-  ipday     TEXT NOT NULL,          -- hash of IP + day + salt: rate limit only, can't be turned back into an IP
+  ipday     TEXT NOT NULL,          -- hash of IP + day + salt: rate limit only, equality-only — never an IP, and the salt is the Worker secret IP_SALT, NOT this database (a static salt stored here could be brute-forced back to IPs from a dump; audit 2026-11-05). Old hashes made with the retired meta 'salt' row stay valid for equality until the secret rolls; the caps are per-day buckets, so a roll just gives every network a fresh day
   received  TEXT NOT NULL,          -- ISO time the server got it
   date      TEXT NOT NULL,          -- day farmed (from the tracker)
   map       TEXT,                   -- our map id, or NULL for a map our data doesn't have
@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS boss_spots (
 );
 CREATE INDEX IF NOT EXISTS boss_spots_map ON boss_spots (map, received);
 CREATE INDEX IF NOT EXISTS boss_spots_install ON boss_spots (install, received);
--- the 24 h TTL delete runs on every GET /api/spots: received needs its own index (2026-11-02, round 3)
+-- the 24 h TTL delete runs on POST /api/spots (moved off the public GET, 2026-11-05): received needs its own index
 CREATE INDEX IF NOT EXISTS boss_spots_received ON boss_spots (received);
 
 -- Weekly grind ladder (P1-5, 2026-11-02): the display name a tracker chose to send with a run (the Settings

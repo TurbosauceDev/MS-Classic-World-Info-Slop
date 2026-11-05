@@ -27,12 +27,41 @@ const MAX_PER_HOUR = 6, MAX_PER_IP_DAY = 300, MAX_INSTALLS_PER_IP_DAY = 6;
 // of farmed runs is the window the site's medians and drop tables see; the KPQ boards read live + archive, so their
 // all-time bests never age out (exported for the tests)
 export const ARCHIVE_DAYS = 180;
+// distinct mob ids the stored summary's drop table keeps (see summary() below). Honest data sits in the dozens:
+// gamedata has 71 monsters, and check.js only lets counted runs carry mobs that live on their map
+export const SUMMARY_MOB_CAP = 500;
 
 async function sha(s){ return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 32) }
-async function salt(db){
-  let row = await db.prepare("SELECT v FROM meta WHERE k = 'salt'").first();
-  if (!row){ await db.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('salt', ?)").bind(crypto.randomUUID()).run(); row = await db.prepare("SELECT v FROM meta WHERE k = 'salt'").first() }
-  return row.v;
+// the pepper that makes the IP hashes one-way lives OUTSIDE the database, as the Worker secret IP_SALT (audit
+// 2026-11-05, Danny approved): the old static salt sat in the same D1 the hashes live in, so anyone with a dump
+// (or the decrypted nightly backup) could brute-force every hash back to an IP — 2^32 IPv4s is minutes on a laptop.
+// Re-hashing stored rows on read is impossible by design: hashes made with an older salt stay valid for EQUALITY
+// only (same secret in, same hash out). The caps are per-day buckets, so a secret roll simply gives every network
+// a fresh day — no data is lost, the ledger ages out with its day anyway. Falls back to the salt row in D1's meta
+// only while the secret is unset, loudly, so a deploy without the secret keeps working instead of breaking.
+let SALT_CACHE;
+async function salt(env){
+  if (typeof env.IP_SALT === "string" && env.IP_SALT) return env.IP_SALT;
+  if (SALT_CACHE) return SALT_CACHE;
+  console.error("IP_SALT is not set: falling back to the salt row in the D1 meta table, which a database dump can read — set the Worker secret (`wrangler secret put IP_SALT`) and redeploy (schema.sql's ipday note has the details)");
+  let row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'salt'").first();
+  if (!row){ await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('salt', ?)").bind(crypto.randomUUID()).run(); row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'salt'").first() }
+  SALT_CACHE = row.v;
+  return SALT_CACHE;
+}
+// the per-network caps must bind a whole household, and an IPv6 home connection holds a /64 — 2^64 addresses.
+// Hashing the full address let one person rotate addresses inside its /64 past every per-IP cap (audit
+// 2026-11-05: 20 installs accepted from one /64 vs 6 for IPv4). IPv6 collapses to its /64 (first 4 hextets, ::
+// expanded); IPv4 stays whole (/32). Exported for the tests.
+export function netKey(ip){
+  if (typeof ip !== "string" || !ip) return "";
+  if (!ip.includes(":")) return ip;                        // IPv4 (or an opaque id): unchanged
+  const s = ip.split("%")[0];                              // drop a zone id (fe80::1%eth0)
+  const half = s.split("::");
+  if (half.length > 2) return s;                           // malformed: left whole, the caps merely over-count
+  const head = half[0] ? half[0].split(":") : [], tail = half.length > 1 && half[1] ? half[1].split(":") : [];
+  const pad = Math.max(0, 8 - head.length - tail.length);
+  return head.concat(Array(pad).fill("0"), tail).slice(0, 4).map(g => (g || "0").padStart(4, "0")).join(":");   // /64
 }
 // The abuse caps count live rows, so "Delete what I shared" used to hand the daily budget back (hit the cap, forget,
 // refill, forever). ipday_ledger keeps each network-day's high-water marks — rows ever accepted and distinct trackers
@@ -52,7 +81,7 @@ async function postRun(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const c = cleanRun(body, G);
   if (c.error) return json({error: c.error}, 400);
-  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + day + await salt(env.DB));
+  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(netKey(ip) + day + await salt(env));
   // the same run sent twice (the tracker retries when the ack is lost on the wire): same install, same map and numbers.
   // The retry rides the 10-min flush, so a 12-min window catches it; a real next run is always 14.5+ min later (the
   // minutes floor), so the window can never swallow one. IS, not =: an unknown map's NULL must compare NULL-safe.
@@ -76,7 +105,7 @@ async function postRun(req, env){
   if (r.name) await env.DB.prepare("INSERT OR REPLACE INTO run_names (run_id, name) VALUES (?, ?)").bind(runId, r.name).run();   // the weekly ladder's display name (P1-5), opt-in
   const code = typeof body.partyCode === "string" ? body.partyCode.trim().toLowerCase().slice(0, 20) : "";
   if (code && r.party > 1){   // a code only groups party runs: friends soloing the same map with one code are separate players
-    await env.DB.prepare("INSERT OR REPLACE INTO run_groups (run_id, grp) VALUES (?, ?)").bind(runId, await sha("party:" + code + await salt(env.DB))).run();
+    await env.DB.prepare("INSERT OR REPLACE INTO run_groups (run_id, grp) VALUES (?, ?)").bind(runId, await sha("party:" + code + await salt(env))).run();
   }
   await ledgerBump(env.DB, ipday, day, Math.max(today.n, peak.posts) + 1, Math.max(ids.n + (ids.mine ? 0 : 1), peak.installs));
   return json({ok: true, counted: c.ok, why: c.why});
@@ -128,7 +157,7 @@ async function postKpq(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const c = cleanKpq(body);
   if (c.error) return json({error: c.error}, 400);
-  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + day + await salt(env.DB));
+  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(netKey(ip) + day + await salt(env));
   const recent = await env.DB.prepare("SELECT COUNT(*) n FROM kpq_rounds WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n, COUNT(DISTINCT install) k, SUM(install = ?) mine FROM kpq_rounds WHERE ipday = ?").bind(body.install, ipday).first();
   const peak = await ledgerPeak(env.DB, ipday);
@@ -137,7 +166,7 @@ async function postKpq(req, env){
   const dup = await env.DB.prepare("SELECT id FROM kpq_rounds WHERE install = ? AND clear = ? AND received > ?").bind(body.install, c.round.clear, new Date(now - 1800e3).toISOString()).first();
   if (dup) return json({ok: true, counted: false, why: "already sent"});
   const r = c.round, code = typeof body.partyCode === "string" ? body.partyCode.trim().toLowerCase().slice(0, 20) : "";
-  const grp = code && r.party > 1 ? await sha("party:" + code + await salt(env.DB)) : null;
+  const grp = code && r.party > 1 ? await sha("party:" + code + await salt(env)) : null;
   const ins = await env.DB.prepare(`INSERT INTO kpq_rounds (install, ipday, received, date, hour, mode, party, level, job, clear, total, clock, exp, mesos, stages, grp, ok, why)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(body.install, ipday, now.toISOString(), r.date, r.hour, r.mode, r.party, r.level, r.job,
     r.clear, r.total, r.clock, r.exp, r.mesos, JSON.stringify(r.stages), grp, c.ok ? 1 : 0, c.why).run();
@@ -157,7 +186,7 @@ async function partyLive(req, env){
   if (!b || typeof b.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(b.install)) return json({error: "install id"}, 400);
   const code = typeof b.partyCode === "string" ? b.partyCode.trim().toLowerCase().slice(0, 20) : "";
   if (!code) return json({error: "party code"}, 400);
-  const grp = await sha("party:" + code + await salt(env.DB)), now = Date.now();
+  const grp = await sha("party:" + code + await salt(env)), now = Date.now();
   // job/mapName reach OTHER members' clients, so they get the nick scrub too (round 2): raw strings rode to every
   // party member's UI while only nick was filtered
   const scrub = (v, n) => typeof v === "string" ? v.replace(/[^\p{L}\p{N} _.'-]/gu, "").trim().slice(0, n) || null : null;
@@ -171,8 +200,8 @@ async function partyLive(req, env){
   // cap reads the same ipday_ledger high-water mark as every other route (round 2: forget used to hand the party slot
   // back, and the schema comment claimed forget couldn't touch this table — it can).
   const rawIp = req.headers.get("cf-connecting-ip") || "";
-  const ip = await sha("ip:" + rawIp + await salt(env.DB));
-  const day = new Date(now).toISOString().slice(0, 10), ipday = await sha(rawIp + day + await salt(env.DB));
+  const ip = await sha("ip:" + netKey(rawIp) + await salt(env));
+  const day = new Date(now).toISOString().slice(0, 10), ipday = await sha(netKey(rawIp) + day + await salt(env));
   const peak = await ledgerPeak(env.DB, ipday);
   let inst = peak.installs;
   if (!old){
@@ -270,6 +299,14 @@ export async function summary(db){
     runs: p.exp.length, expHr: Math.round(median(p.exp)), mesosHr: Math.round(median(p.mesos)), killsHr: Math.round(median(p.kills)),
     deathsHr: p.deaths.length ? Math.round(median(p.deaths) * 10) / 10 : null, usedHr: p.used.length ? Math.round(median(p.used)) : null}));
   for (const t of Object.values(mobs)){ t.players = t.players.size }
+  // hard ceiling on the aggregate: the validation caps (check.js) bound what comes in, but the stored copy must stay
+  // far under D1's 2 MB row limit whatever the data looks like — past the cap the extra mob entries are dropped with
+  // a log line (audit 2026-11-05: 40 junk runs once made a 623 KB summary; the caps keep honest data near zero)
+  const mobIds = Object.keys(mobs);
+  if (mobIds.length > SUMMARY_MOB_CAP){
+    console.error(`summary: ${mobIds.length} distinct mob ids over the ${SUMMARY_MOB_CAP} cap — dropping the extras from the stored copy`);
+    for (const id of mobIds.slice(SUMMARY_MOB_CAP)) delete mobs[id];
+  }
   // best time to farm: each run against the same player's typical run on that map (so a time of day isn't "fast" just
   // because stronger players play then), by 3-hour UTC block; a block shows once 3+ players (networks/parties) ran it then
   const tb = Object.create(null);
@@ -344,7 +381,7 @@ async function postFeedback(req, env){
   if (body.website) return json({ok: true});   // honeypot
   const msg = fbText(body.msg, 2000), kind = FB_KINDS.includes(body.kind) ? body.kind : "Other";
   if (msg.length < 5) return json({error: "too short"}, 400);
-  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + now.toISOString().slice(0, 10) + await salt(env.DB));
+  const now = new Date(), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(netKey(ip) + now.toISOString().slice(0, 10) + await salt(env));
   const mine = await env.DB.prepare("SELECT COUNT(*) n, SUM(received > ?) hr FROM feedback WHERE ipday = ?").bind(new Date(now - 3600e3).toISOString(), ipday).first();
   const all = await env.DB.prepare("SELECT COUNT(*) n FROM feedback WHERE received > ?").bind(new Date(now - 86400e3).toISOString()).first();
   if ((mine.hr || 0) >= FB_PER_HOUR || mine.n >= FB_PER_IP_DAY || all.n >= FB_PER_DAY) return json({error: "too many"}, 429);
@@ -431,17 +468,22 @@ async function postForget(req, env){
   // name/title/ch/room forever (bug-hunt 2026-11-02 — "Delete what I shared" has to mean everything)
   await one("party", "DELETE FROM party_live WHERE install = ?"); await one("shop_ext", "DELETE FROM shop_obs_ext WHERE obs_id IN (SELECT id FROM shop_obs WHERE install = ?1)"); await one("shop", "DELETE FROM shop_obs WHERE install = ?");
   await one("spots", "DELETE FROM boss_spots WHERE install = ?");
-  await db.prepare("DELETE FROM meta WHERE k IN ('summary', 'shop_summary', 'ladder')").run();   // the cached public numbers rebuild without it
-  return json({ok: true, removed: n.runs + n.runs_archive + n.kpq + n.kpq_archive + n.kpq_bak_rounds + n.kpq_bak_archive
+  const removed = n.runs + n.runs_archive + n.kpq + n.kpq_archive + n.kpq_bak_rounds + n.kpq_bak_archive
     + n.kpq_names + n.kpq_src + n.kpq_raw + n.kpq_bak_names + n.kpq_bak_src + n.kpq_bak_raw
-    + n.shop + n.shop_ext + n.spots + n.party + n.run_names});
+    + n.shop + n.shop_ext + n.spots + n.party + n.run_names;
+  // only a KNOWN install busts the caches (audit 2026-11-05: a made-up ID deleted the cached summary without
+  // removing anything, and the cache-less rebuild path then ran with no lock — a cheap unauthenticated way to
+  // force full table scans). Nothing to remove: the caches stay, the rebuild keeps serving its copy.
+  if (removed > 0) await db.prepare("DELETE FROM meta WHERE k IN ('summary', 'shop_summary', 'ladder')").run();   // the cached public numbers rebuild without it
+  else console.log("forget: unknown install, nothing removed, caches left alone");
+  return json({ok: true, removed});
 }
 const SHOP_PER_HOUR = 240, SHOP_PER_IP_DAY = 1500, SHOP_KEEP_DAYS = 14, SHOP_MIN_INSTALLS = 3;
 async function postShop(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const c = cleanShop(body, G);
   if (c.error) return json({error: c.error}, 400);
-  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + day + await salt(env.DB));
+  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(netKey(ip) + day + await salt(env));
   const recent = await env.DB.prepare("SELECT COUNT(*) n FROM shop_obs WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n, COUNT(DISTINCT install) k, SUM(install = ?) mine FROM shop_obs WHERE ipday = ?").bind(body.install, ipday).first();
   const peak = await ledgerPeak(env.DB, ipday);
@@ -493,13 +535,15 @@ async function postSpot(req, env){
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const c = cleanSpot(body, G);
   if (c.error) return json({error: c.error}, 400);
-  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(ip + day + await salt(env.DB));
+  const now = new Date(), day = now.toISOString().slice(0, 10), ip = req.headers.get("cf-connecting-ip") || "", ipday = await sha(netKey(ip) + day + await salt(env));
   const hour = await env.DB.prepare("SELECT COUNT(*) n FROM boss_spots WHERE install = ? AND received > ?").bind(body.install, new Date(now - 3600e3).toISOString()).first();
   const today = await env.DB.prepare("SELECT COUNT(*) n FROM boss_spots WHERE ipday = ?").bind(ipday).first();
   const peak = await ledgerPeak(env.DB, ipday);
   if (hour.n >= SPOT_PER_HOUR || Math.max(today.n, peak.posts) >= SPOT_PER_IP_DAY) return json({error: "too many spots"}, 429);
   const dup = await env.DB.prepare("SELECT id FROM boss_spots WHERE install = ? AND map = ? AND mob = ? AND received > ?").bind(body.install, c.spot.map, c.spot.mob, new Date(now - SPOT_SAME_MIN * 60e3).toISOString()).first();
   if (dup) return json({ok: true, dup: true});
+  // the 24 h TTL sweep lives here, on the write path: a public GET /api/spots must stay read-only (audit 2026-11-05)
+  await env.DB.prepare("DELETE FROM boss_spots WHERE received < ?").bind(new Date(now - SPOT_KEEP_H * 3600e3).toISOString()).run();
   await env.DB.prepare("INSERT INTO boss_spots (install, ipday, received, map, mob, ch, t) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(body.install, ipday, now.toISOString(), c.spot.map, c.spot.mob, c.spot.ch, c.spot.t).run();
   await ledgerBump(env.DB, ipday, day, Math.max(today.n, peak.posts) + 1, 0);   // no install-rotation cap here: installs 0 keeps the stored mark
   return json({ok: true});
@@ -508,11 +552,13 @@ async function getSpots(env, url){
   const map = url.searchParams.get("map") || "";
   if (!/^\d{1,10}$/.test(map) || !G.timed || !G.timed[map]) return json({error: "map"}, 400);
   const cut = new Date(Date.now() - SPOT_KEEP_H * 3600e3).toISOString();
-  await env.DB.prepare("DELETE FROM boss_spots WHERE received < ?").bind(cut).run();
+  // read-only GET (audit 2026-11-05): the 24 h TTL sweep used to run here, so a public GET wrote to D1 on every
+  // call; it moved to postSpot, where the writes already happen. Rows past the window answer nothing either way.
   const {results} = await env.DB.prepare("SELECT mob, ch, MAX(t) t, COUNT(DISTINCT install) n FROM boss_spots WHERE map = ? AND received > ? GROUP BY mob, ch").bind(map, cut).all();
   const info = Object.fromEntries(G.timed[map].map(([id, sec, boss]) => [id, {sec, boss}]));
-  return json({updated: new Date().toISOString(), hours: SPOT_KEEP_H,
-    spots: results.map(r => ({mob: r.mob, name: G.mobnames?.[r.mob] || "Monster " + r.mob, sec: info[r.mob]?.sec ?? 3600, boss: !!(info[r.mob]?.boss), ch: r.ch, t: r.t, n: r.n}))});
+  return new Response(JSON.stringify({updated: new Date().toISOString(), hours: SPOT_KEEP_H,
+    spots: results.map(r => ({mob: r.mob, name: G.mobnames?.[r.mob] || "Monster " + r.mob, sec: info[r.mob]?.sec ?? 3600, boss: !!(info[r.mob]?.boss), ch: r.ch, t: r.t, n: r.n}))}),
+    {headers: {"content-type": "application/json", "cache-control": "public, max-age=30", ...CORS}});
 }
 
 /* Weekly grind ladder (P1-5) + weekly community map rates (P1-9), 2026-11-02.
@@ -648,6 +694,17 @@ export function trimSummary(s, limit = 1.5e6){
   return JSON.stringify(s);
 }
 
+// a fresh claim with no copy to serve: poll briefly for the winner's copy instead of rebuilding alongside it.
+// A worker that died mid-rebuild never publishes; the caller steals its expired-or-live claim after this returns null
+async function waitOrServe(env){
+  for (let i = 0; i < 4; i++){
+    await new Promise(r => setTimeout(r, 250));
+    const again = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary'").first();
+    if (again?.v) try { if (JSON.parse(again.v).updated) return again.v } catch {}
+  }
+  return null;
+}
+
 async function route(req, env){
   const url = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
@@ -672,26 +729,35 @@ async function route(req, env){
     // worked out at most every 5 minutes and kept in the meta table (each request would otherwise read every run; the
     // Cache API does nothing on workers.dev)
     const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary'").first();
-    let body = row?.v, fresh = false;
-    // a copy that doesn't parse, or whose updated isn't a date (a half-written row), counts as no copy at all:
-    // the endpoint rebuilds instead of serving broken JSON or 500-ing forever
-    if (body) try { fresh = Date.now() - Date.parse(JSON.parse(body).updated) <= 5 * 60e3 } catch {}
-    if (!fresh){
-      // one rebuild at a time: while another request is working it out (claimed in the last minute), the old copy is served.
-      // A copy that doesn't parse can't be served as is, so no lock for it: rebuild now
-      let ok = null; try { ok = JSON.parse(body) } catch {}
-      const lock = ok ? await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary_lock'").first() : null;
-      if (!lock || Date.now() - Number(lock.v) > 60e3){
-        await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary_lock', ?)").bind(String(Date.now())).run();
-        // rows past the window leave the hot tables first, so this rebuild already reads the shrunken ones
-        const archived = await archiveOld(env.DB);
-        const s = await summary(env.DB);
-        s.archived = archived;
-        // D1 rows max out at 2 MB: trimSummary gives back KPQ rounds (newest kept) until the copy stores; past that it
-        // is served fresh and left unstored rather than half-emptied on every request
-        body = trimSummary(s);
-        if (body.length < 1.5e6) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").bind(body).run();
-      }
+    let body = null, okCopy = null; try { okCopy = row?.v ? JSON.parse(row.v) : null } catch {}
+    const fresh = okCopy && Date.now() - Date.parse(okCopy.updated) <= 5 * 60e3;
+    // one rebuild at a time, whatever shape the cache is in — including no copy at all. The old code skipped the
+    // lock when the row was missing or unparseable, so a fake-ID forget (which used to clear the row) followed by
+    // three concurrent GETs ran three full rebuilds, 45 queries (audit 2026-11-05).
+    const build = async force => {
+      await env.DB.prepare("DELETE FROM meta WHERE k = 'summary_lock'").run();   // an expired claim is cleared; force=true steals a live one
+      // INSERT OR IGNORE inside a batch (one transaction on D1) makes the claim race-safe: exactly one concurrent
+      // GET wins the rebuild; a loser serves the stale copy or waits for the winner's
+      const claim = (await env.DB.batch([env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('summary_lock', ?)").bind(String(Date.now()))]))[0];
+      if (!claim?.meta?.changes && !force) return null;
+      // rows past the window leave the hot tables first, so this rebuild already reads the shrunken ones
+      const archived = await archiveOld(env.DB);
+      const s = await summary(env.DB);
+      s.archived = archived;
+      // D1 rows max out at 2 MB: trimSummary gives back KPQ rounds (newest kept) until the copy stores; past that it
+      // is served fresh and left unstored rather than half-emptied on every request
+      const out = trimSummary(s);
+      if (out.length < 1.5e6) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").bind(out).run();
+      await env.DB.prepare("DELETE FROM meta WHERE k = 'summary_lock'").run();   // released: the next stale GET may rebuild
+      return out;
+    };
+    if (fresh) body = row.v;
+    else {
+      const lockRow = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary_lock'").first();
+      const held = lockRow && Date.now() - Number(lockRow.v) <= 60e3;
+      if (held && okCopy) body = row.v;   // a usable (if stale) copy: serve it while another request rebuilds
+      else if (held) body = (await waitOrServe(env)) ?? await build(true);   // wait for the winner's copy; steal only if it never published
+      else if (!(body = await build(false))) body = okCopy ? row.v : (await waitOrServe(env)) ?? await build(true);
     }
     return new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=300", ...CORS}});
   }

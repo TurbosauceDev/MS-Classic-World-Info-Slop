@@ -658,4 +658,85 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM runs WHERE id = 7002").get().n, 1, "a second rebuild is stable");
 }
 
+// ---- server hardening (audit 2026-11-05, Danny approved): forget no-op, one rebuild at a time, size caps, /64 buckets, the salt secret, read-only spots GET ----
+{
+  const {netKey} = await import("../src/index.js");
+  const crypto = await import("node:crypto");
+  const spotPost = (body, ip) => worker.fetch(new Request("https://x/api/spots", {method: "POST", body: JSON.stringify(body), headers: {"cf-connecting-ip": ip}}), env).then(r => r.status);
+  const fpost = (inst, ip) => worker.fetch(new Request("https://x/api/forget", {method: "POST", body: JSON.stringify({install: inst}), headers: {"cf-connecting-ip": ip}}), env).then(r => r.json());
+
+  // GET /api/spots is read-only: the 24 h TTL sweep used to run a DELETE on every public GET
+  const old = new Date(Date.now() - 48 * 3600e3).toISOString();
+  sql.prepare("INSERT INTO boss_spots (install, ipday, received, map, mob, ch, t) VALUES ('oldspotsoldspots1', 'old', ?, '10000013', '700004', 1, ?)").run(old, Date.now() - 48 * 3600e3);
+  await worker.fetch(new Request("https://x/api/spots?map=10000013"), env);
+  await worker.fetch(new Request("https://x/api/spots?map=10000013"), env);
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM boss_spots WHERE install = 'oldspotsoldspots1'").get().n, 1, "repeated GETs delete nothing");
+  assert.strictEqual((await worker.fetch(new Request("https://x/api/spots?map=10000013"), env)).headers.get("cache-control"), "public, max-age=30", "the GET is cacheable");
+  assert.strictEqual(await spotPost({install: "spotsweepspots001", map: "10000013", mob: "700004", t: Date.now()}, "10.41.0.1"), 200);
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM boss_spots WHERE install = 'oldspotsoldspots1'").get().n, 0, "the TTL sweep runs on the POST path");
+
+  // forget of an unknown install is a no-op: the caches are untouched, so the summary copy keeps serving
+  sql.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").run(JSON.stringify({updated: new Date().toISOString(), note: "cached"}));
+  assert.strictEqual((await fpost("nosuchinstall00001", "10.42.0.1")).removed, 0, "unknown install removes nothing");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM meta WHERE k = 'summary'").get().n, 1, "an unknown install does not clear the caches");
+  await spotPost({install: "forgetknownknown1", map: "10000013", mob: "700004", t: Date.now()}, "10.45.0.1");
+  assert.strictEqual((await fpost("forgetknownknown1", "10.45.0.1")).removed >= 1, true, "a known install still removes its rows");
+  assert.strictEqual(sql.prepare("SELECT COUNT(*) n FROM meta WHERE k = 'summary'").get().n, 0, "and its forget still clears the caches");
+
+  // the summary rebuild is serialized even with no copy at all: concurrent GETs share one rebuild
+  const count = t => { sql._n = (sql._n || 0) + t; };
+  const origPrepare = DB.prepare.bind(DB);
+  DB.prepare = q => { count(1); return origPrepare(q) };
+  const measure = async fn => { sql._n = 0; await fn(); return sql._n };
+  sql.exec("DELETE FROM meta WHERE k IN ('summary', 'summary_lock')");
+  const one = await measure(() => worker.fetch(new Request("https://x/api/summary"), env).then(r => r.json()));
+  sql.exec("DELETE FROM meta WHERE k IN ('summary', 'summary_lock')");
+  let threeBodies;
+  const three = await measure(async () => { threeBodies = await Promise.all([0, 1, 2].map(() => worker.fetch(new Request("https://x/api/summary"), env).then(r => r.json()))) });
+  DB.prepare = origPrepare;
+  assert.ok(threeBodies.every(x => x.updated), "all three concurrent GETs answered with a summary");
+  assert.ok(threeBodies.every(x => JSON.stringify(x) === JSON.stringify(threeBodies[0])), "the waiters share the winner's copy");
+  assert.ok(three < one * 2, `three concurrent no-copy GETs cost less than two rebuilds (${three} statements vs ${one} for one)`);
+  sql.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary_lock', ?)").run(String(Date.now() - 120e3));
+  sql.exec("DELETE FROM meta WHERE k = 'summary'");
+  assert.ok((await (await worker.fetch(new Request("https://x/api/summary"), env)).json()).updated, "an expired claim doesn't block a rebuild");
+
+  // junk ids can't bloat the summary: unknown maps carry no mob/item rows, known maps cap the distinct ids
+  const junk = i => {
+    const items = n => Object.fromEntries(Array.from({length: n}, (_, k) => [String(n === 50 ? 800000000 + k : 700000000 + k), 1]));
+    return {install: "junkjunkjunkjunk0" + i, date: "2026-11-05", map: 99999999, mapName: "Junk " + i, party: 1, minutes: 15, exp: 1000, msgExp: 1000, barExp: 1000, kills: 100, mesos: 900,
+      mobs: Array.from({length: 20}, (_, m) => ({id: String(900000000 + m), kills: 5, mesos: 10, mesoDrops: 1, items: items(50)})),
+      items: items(100)};
+  };
+  for (let i = 0; i < 5; i++){ const [st] = await post(junk(i), "10.43.0." + (i + 1)); assert.strictEqual(st, 200); }
+  const jrow = sql.prepare("SELECT mobs, items FROM runs WHERE install = ?").get("junkjunkjunkjunk00");
+  assert.strictEqual(JSON.parse(jrow.mobs).length, 0, "an unknown map stores no mob rows");
+  assert.deepStrictEqual(JSON.parse(jrow.items), {}, "an unknown map stores no item ids");
+  const [cs] = await post(run("cappeditemscapped1", 1000, {items: Object.fromEntries(Array.from({length: 100}, (_, k) => [String(600000000 + k), 1]))}));
+  assert.strictEqual(cs, 200);
+  const ci = sql.prepare("SELECT mobs, items FROM runs WHERE install = 'cappeditemscapped1'").get();
+  assert.strictEqual(Object.keys(JSON.parse(ci.items)).length, 39, "40 distinct item ids per run, mob items included (100 offered)");
+  const sum2 = await fresh();
+  assert.ok(JSON.stringify(sum2).length < 200000, `the summary stays bounded with junk runs in the table (${JSON.stringify(sum2).length} bytes)`);
+  assert.strictEqual(sum2.mobs["900000000"], undefined, "made-up mob ids never reach the drop table");
+
+  // the /64 bucket: two IPv6 addresses from one home prefix share a cap; distinct IPv4s don't
+  assert.strictEqual(netKey("2001:db8:1:2:3:4:5:6"), netKey("2001:0db8:0001:0002:abcd:ef01::1"), "two addresses in one /64 share a bucket");
+  assert.notStrictEqual(netKey("2001:db8:1:2::1"), netKey("2001:db8:1:3::1"), "different /64s differ");
+  assert.strictEqual(netKey("1.2.3.4"), "1.2.3.4", "IPv4 unchanged");
+  assert.strictEqual(netKey("::1"), "0000:0000:0000:0000", "all-:: expands");
+  assert.strictEqual(netKey(""), "", "no header: empty key");
+  let last6;
+  for (let i = 1; i <= 7; i++) last6 = (await post(run("v6bucket0000000" + i, 1000), "2001:db8:aaaa:bbbb::" + i))[0];
+  assert.strictEqual(last6, 429, "the 7th install from one /64 is refused like IPv4");
+
+  // the salt comes from the IP_SALT Worker secret, not the database
+  env.IP_SALT = "unit-test-salt";
+  await post(run("saltsecretsalt0001", 1000), "10.44.0.1");
+  const stored = sql.prepare("SELECT ipday FROM runs WHERE install = 'saltsecretsalt0001'").get().ipday;
+  const want = crypto.createHash("sha256").update(netKey("10.44.0.1") + new Date().toISOString().slice(0, 10) + "unit-test-salt").digest("hex").slice(0, 32);
+  assert.strictEqual(stored, want, "ipday is hashed with the Worker secret, not the DB salt row");
+  delete env.IP_SALT;
+}
+
 console.log("server tests passed");
