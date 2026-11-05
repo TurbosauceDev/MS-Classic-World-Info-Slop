@@ -29,20 +29,31 @@ const boxGaps = require("./boxgaps");
   check(await p.$eval("#feed .jpost", c => !!c.querySelector(".javatar")) && await p.$$eval("#feed .jupd img.javatar",
       l => l.length === 6 && l.every(i => i.src.startsWith("data:image/") && i.naturalWidth > 0)),
     "every feed card wears its poster's avatar, the updates wear the Orange Mushroom sprite");
-  // the forum-post byline (Turbozo 11-04): version, then date, then tags stacked in a column - and no date-side changelog
-  // link (the tag chip filters to Site Updates, the changelog button lives in the feed header and the article nav)
+  // the byline (mockup v2, Danny 11-05): author / version / date stacked, tags moved above the title (jcatrow)
   { const m = await p.$eval("#feed .jupd .jmeta", e => ({ dir: getComputedStyle(e).flexDirection, link: !!e.querySelector("a"),
       ver: (e.querySelector(".ver") || {}).textContent || "", date: (e.querySelector(".jdate") || {}).textContent || "",
       tags: e.querySelectorAll(".jtagrow .jtag").length }));
-    check(m.dir === "column" && !m.link && /^v\d/.test(m.ver) && /\d{4}/.test(m.date) && m.tags >= 1,
-      `update-post byline stacks version / date / tags, no changelog link (${JSON.stringify(m)})`) }
+    check(m.dir === "column" && !m.link && /^v\d/.test(m.ver) && /\d{4}/.test(m.date) && m.tags === 0,
+      `update-post byline stacks version / date, no changelog link and no tags in the stack (${JSON.stringify(m)})`);
+    const cat = await p.$eval("#feed .jupd .cardhead .jcatrow", e => { const t = e.querySelector(".jtag"), cs = getComputedStyle(t);
+      return { n: e.querySelectorAll(".jtag").length, r: cs.borderRadius, over: !!e.querySelector("a"),
+        inside: Math.round(t.getBoundingClientRect().left - e.getBoundingClientRect().left) } });
+    check(cat.n === 1 && cat.r === "4px" && cat.inside >= 0,
+      `the category tag sits above the title, square-ish, never clipped by its box (${JSON.stringify(cat)})`);
+    const stack = await p.$eval("#feed .jupd .cardhead", e => { const a = e.querySelector(".javatar").getBoundingClientRect(),
+      w = e.querySelector(".jwho").getBoundingClientRect(), f = e.querySelector(".jfold").getBoundingClientRect(),
+      m = e.querySelector(".jmeta");
+      return { stack: getComputedStyle(m).flexDirection, airtl: Math.round(w.left - a.right), airfr: Math.round(f.left - w.right),
+        vmid: Math.round((a.top + a.bottom) / 2 - (w.top + w.bottom) / 2) } });
+    check(stack.stack === "column" && stack.vmid === 0 && stack.airtl >= 8 && stack.airfr >= 8,
+      `the byline stack centres on the avatar with air on both sides (${JSON.stringify(stack)})`) }
   // Turbozo 11-04 layout round: the update cards wear the shared site-update banner, the avatar grew, the byline
   // chip's text lines up with the text above it, and the feed head / filter pills / day divider center.
   check(await p.$$eval("#feed .jupd .jimg img", l => l.length === 6 && l.every(i => i.src.startsWith("data:image/") && i.naturalWidth > 0)),
     "every changelog card wears the shared site-update banner (src/posts/img/site-updates.jpg)");
   { const by = await p.$eval("#feed .jupd .jby", e => ({ av: getComputedStyle(e.querySelector(".javatar")).width,
-      chip: getComputedStyle(e.querySelector(".jmeta .jtag")).marginLeft }));
-    check(by.av === "48px" && by.chip === "-10px", `avatar at 48px, byline chip text flush with the stack (${JSON.stringify(by)})`) }
+      gap: getComputedStyle(e).gap }));
+    check(by.av === "48px" && by.gap === "9px", `avatar at 48px, air between the avatar and the byline (${JSON.stringify(by)})`) }
   { const head = await p.$eval("#home .feedtop", e => ({ dir: getComputedStyle(e).flexDirection, text: getComputedStyle(e).textAlign }));
     const pill = await p.$eval("#feed .jfilter", e => getComputedStyle(e).justifyContent);
     const day = await p.$eval("#feed .fday", e => getComputedStyle(e).textAlign);
@@ -597,10 +608,16 @@ const boxGaps = require("./boxgaps");
 
   // builder AP boxes overlapped each other at desktop width (Danny 10-19: width:100% + padding, no border-box)
   await p.click("#c-" + await p.$eval("#t-plan", b => b.dataset.cat)); await p.click("#t-plan");
-  // page size (Theme popup) only applies on wide windows: default 3 = 82% of the window, 15% bigger
+  // page size (Theme popup) only applies on wide windows: default 3 = 82% of the window, 15% bigger.
+  // 1900px is past the 1600px wide-screen block (mockup v2, Danny 11-05): the sidebar keeps its margin, so the
+  // content column is narrower than 82% of the window - the width check moves to the content column itself.
   await p.setViewportSize({width: 1900, height: 900}); await p.waitForTimeout(100);
-  const wide = await p.evaluate(() => { const w = document.querySelector(".wrap"); return [getComputedStyle(w).zoom, Math.round(w.getBoundingClientRect().width)] });
-  check(wide[0] === "1.15" && Math.abs(wide[1] - 1595) < 8, `page size 3 at 1900px: zoom 1.15, 82% wide (${wide})`);
+  await p.evaluate(() => { try { if (NAVREG.journal) NAVREG.journal.set(null) } catch(e) {}; history.replaceState(null, "", location.pathname); goHome() }); await p.waitForTimeout(200);   // #home is the front page (a #c-home click can home-jump/reload): reopen it in place before measuring
+  const wide = await p.evaluate(() => { const w = document.querySelector(".wrap"), col = document.getElementById("home");
+    const cw = col ? col.getBoundingClientRect().width / getComputedStyle(w).zoom : 0;   // unzoomed: the column's own CSS width
+    return [getComputedStyle(w).zoom, Math.round(cw), Math.round(window.innerWidth * 0.82 / 1.15)] });
+  // .narrowpage caps #home at 760px (unchanged by the wide-screen block); page size 3 still zooms and applies to the wrap
+  check(wide[0] === "1.15" && wide[1] === 760, `page size 3 at 1900px: zoom 1.15, the feed column keeps its 760px width past the sidebar (${wide})`);
   // no long empty tail (Danny 10-21 Feedback, 10-22 Changelog): if a page's content is a narrow column but its About box
   // stretches far past it, the page needs .narrowpage on its <section>
   for (const id of await p.$$eval(".subs button[id^=t-]", bs => bs.map(b => b.id))){

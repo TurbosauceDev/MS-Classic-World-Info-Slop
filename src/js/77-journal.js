@@ -68,10 +68,11 @@ const jtags = (p, tags) => (tags || []).map(t => `<button class="jtag linkbtn" t
 // the byline reads like a forum post (Turbozo 2026-11-04): the author, then the version, then the date, then the tags -
 // stacked, not "v0.22.1 · Site Updates · Nov 4, 2026" on one line; the date-side changelog link is gone (the tag filters
 // the feed to Site Updates, and the changelog button on Home and in the article nav already go there)
-const jmeta = (p, tags) => `<span class="sub jmeta">${p.ver ? `<span class="ver">${esc(p.ver)}</span>` : ""}<span class="jdate">${day(p.date)}</span>${jtags(p, tags) ? `<span class="jtagrow">${jtags(p, tags)}</span>` : ""}</span>`;
+const jmeta = (p, tags) => `<span class="sub jmeta">${p.ver ? `<span class="ver">${esc(p.ver)}</span>` : ""}<span class="jdate">${day(p.date)}</span></span>`;   // the stack is author / version / date (mockup v2, Danny 11-05); the tags render above the title
+const jcatrow = (p, tags) => { const t = jtags(p, tags); return t ? `<div class="jcatrow">${t}</div>` : "" };
 const jcard = (p, tags) => { const min = sget("jx:" + p.slug) === "min";
   return `<article class="card jpost${(tags || []).includes(UPS.tag) ? " jupd" : ""}" data-slug="${esc(p.slug)}" data-jstate="${min ? "min" : "peek"}">
-  <div class="cardhead jhead"><h3 class="jtitle" title="Open the article">${p.featured ? `<span class="jfeat" title="Featured post">★</span> ` : ""}${esc(p.title)}</h3>
+  <div class="cardhead jhead">${jcatrow(p, tags)}<h3 class="jtitle" title="Open the article">${p.featured ? `<span class="jfeat" title="Featured post">★</span> ` : ""}${esc(p.title)}</h3>
     <div class="jby">${javatar(p.author)}<span class="jwho"><span class="jauthor">${esc(p.author)}</span>${jmeta(p, tags)}</span>
       <button class="jfold" type="button" aria-expanded="${!min}" aria-label="${min ? "Expand" : "Collapse"}"><span class="jchev" aria-hidden="true">▾</span></button></div></div>
   ${p.img ? `<figure class="jimg"><img src="${p.img}" alt="" title="Open the article"></figure>` : ""}
@@ -101,7 +102,7 @@ const ups = logCards.flatMap(c => {
   const ver = (c.querySelector(".cardhead .ver") || {}).textContent || "";
   return [{slug: "log-" + (ver || c.dataset.t).replace(/[^\w]+/g, "-").replace(/^-+|-+$/g, ""),
     title: (h.textContent || "").replace(/^v[\d.]+\s*/, "").replace(/^[A-Z][a-z]{2} \d{1,2}, \d{4} · /, ""),
-    ver, date: c.dataset.t.slice(0, 10), author: UPS.author, img: UPS_IMG || "", loglink: true, tags: [UPS.tag], featured: false,
+    ver, date: c.dataset.t.slice(0, 10), author: UPS.author, img: UPS_IMG || "", tags: [UPS.tag], featured: false,
     html: [...c.children].filter(x => !x.classList.contains("cardhead")).map(x => x.outerHTML).join("")}];
 });
 const ALL = [...POSTS.map(p => ({...p, tags: p.tags && p.tags.length ? p.tags : ["Blog Post"]})), ...ups];
@@ -125,7 +126,7 @@ const artHtml = p => `<div class="jarttop">
     ${p.img ? `<figure class="jimg big"><img src="${p.img}" alt=""></figure>` : ""}
     <div class="jbody">${p.html}</div>
     ${commentsHtml(p.slug, cLoad(p.slug))}</article>
-  <p class="sub jartnav"><button class="linkbtn" data-go="journal">All posts in the Journal →</button>${p.loglink ? ` · <button class="linkbtn" data-go="log">Everything in the changelog →</button>` : ""}</p>`;
+  <p class="sub jartnav"><button class="linkbtn" data-go="journal">All posts in the Journal →</button></p>`;
 const openArt = (slug, fromTab) => {
   const p = findPost(slug); if (!p) return false;
   openSlug = slug;
@@ -157,7 +158,7 @@ if (feed){
   const hero = POSTS.find(p => p.featured);
   const heroHtml = p => `<div class="jhero card" data-slug="${esc(p.slug)}" role="link" tabindex="0" title="Open the article">
     ${p.img ? `<img class="jheroimg" src="${p.img}" alt="">` : ""}
-    <div class="jheromain"><span class="jfeat">★ Featured</span><h3>${esc(p.title)}</h3>
+    <div class="jheromain">${jcatrow(p, p.tags)}<span class="jfeat">★ Featured</span><h3>${esc(p.title)}</h3>
       <p class="sub">${esc(p.excerpt)}</p>${artByline(p)}</div></div>`;
   const pillsHtml = () => `<div class="jfilter" role="group" aria-label="Filter posts by tag">` +
     ["All", ...inUse].map(t => `<button class="jfpill${t === filter ? " on" : ""}" data-jfilter="${esc(t)}" aria-pressed="${t === filter}">${esc(t)}</button>`).join("") + `</div>`;   // a function of filter: the highlight must follow every click
