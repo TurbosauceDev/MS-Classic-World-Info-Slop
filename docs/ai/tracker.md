@@ -80,6 +80,14 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   (kpqTime) lifts the between-rounds pause and dates the round's start (kpq.pend); a steady jump up = new round. One read alone
   only feeds stage times. Minimap title pairing allows gap == line height (KPQ titles: 7 px lines, 7 px gap); the fallback
   re-cut re-measures width (mapRefit). Old reader missed the 1st stage on 15/16 frames.
+- KPQ ends when you leave it (0.3.40): only Kerning City (10003000) holds between rounds; any other known map read ends kpq.on,
+  lifts the hold with a resume, phase idle; a KPQ stage or steady clock turns it back on. A clock jump on an unchanged map starts the
+  new round on that stage (kpqTime jumpTo). Never gate a hold on "not a KPQ map" alone: the pause then outlives KPQ.
+- Map title match (mapFromText): OCR-confusable letters cost half an edit (Y/V, C/E/O, cl/d); a different name less than half an
+  edit behind the best = null (keep the old map); the street line alone is never a map; leading words drop only if 1-2 letters
+  or street-like. Real strings: `tests/map_ocr_real.json` (core.test.js). KEYS in main.js must stay unique (core.test.js checks).
+- S.last in core/session.js only moves forward (events arrive out of order); the bug-report log (renderer.js LOG) keeps 500 lines
+  and pauseAt(t, true) re-asserts the hold silently.
 - KPQ boards (server summary.kpq.board): Rush = all rounds by clear; Bonus = rounds with 80000500 stage time, by EXP +
   mesos. The tracker's Bonus/Rush pick is stored (mode) but no longer picks the board. Names: kpq_names table (schema.sql
   re-runs every deploy, so new columns go in side tables); tracker sends Name (Party card) else the OCR'd charName.

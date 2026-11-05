@@ -110,8 +110,8 @@ async function shopShare(rows, ctx){
     out.push({id: +r.item.id, qty: r.qty, price: r.price, sold: r.sold ? 1 : 0}); shopSent.set(k, now);
   }
   if (!out.length) return 0;
-  const room = /free\s*market\s*<\s*(\d+)\s*>/i.exec(mapNow?.name || "") ? +RegExp.$1 : null;
-  const body = {v: 2, seller: ctx?.seller || null, title: ctx?.title || null, ch: null, room, map: mapNow?.id != null ? String(mapNow.id) : null, rows: out.slice(0, 40)};
+  const room = /free\s*market\s*<\s*(\d+)\s*>/i.exec(mapNowInfo?.name || "") ? +RegExp.$1 : null;
+  const body = {v: 2, seller: ctx?.seller || null, title: ctx?.title || null, ch: null, room, map: mapNowInfo?.id != null ? String(mapNowInfo.id) : null, rows: out.slice(0, 40)};
   try { const ok = await host.shareShop(body); if (!ok) throw 0; return out.length } catch { for (const o of out) shopSent.delete([o.id, o.qty, o.price, o.sold].join("|")); return 0 }
 }
 $("#shopClose").onclick = () => modalClose($("#shopPop"));

@@ -736,24 +736,71 @@
     return p[b.length];
   }
   const similar = (a, b) => { a = norm(a); b = norm(b); return 1 - lev(a, b) / Math.max(a.length, b.length, 1) };
-  // OCR text -> {id, name}: the closest map name to the last line (75%+ alike), else null (junk is dropped, Danny 10-29)
-  function mapFromText(text, G){
-    // one line "Street : Map" when the minimap is folded to its title bar: the map is after the colon
-    const lines = text.split("\n").filter(l => !/mini\s*map/i.test(l)).map(l => l.replace(/^.*:/, "").replace(/(<[^<>=]*)[>=].*$/, "$1>").replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9>)]+$/g, "").trim()).filter(l => l.length >= 3);
-    if (!lines.length) return null;
-    let best = null;
-    const l = lines[lines.length - 1];   // line 1 is the street/region ("Victoria Road", "Hidden Street"), line 2 the map
-    // the folded minimap's one line can lose its colon: "Hidden Street 1st Accompaniment <Exit>" is also tried without its
-    // first 1-3 words (the street)
-    const words = l.split(/\s+/);
-    for (const a of [0, 1, 2, 3].filter(k => k < words.length).map(k => norm(words.slice(k).join(" ")))){
-      for (const [id, n] of Object.entries(G.mapnames)){
-        const b = norm(n), sim = 1 - lev(a, b) / Math.max(a.length, b.length, 1);
-        if (!best || sim > best.sim || sim === best.sim && G.maps[id] && !G.maps[best.id]) best = {id, name: n, sim};
+  // OCR text -> {id, name}: the closest map name to the last line (75%+ alike), else null (junk is dropped, Danny 10-29).
+  // Guards (audit 2026-11-04, checked against the real OCR strings of Danny's bug reports):
+  //  - a sibling name one letter away is not a win: "East Rocky Mountain IY" is 1 edit from both ...I and ...IV, and the old
+  //    first-in-table-order pick filed 31 reads under I while the frames said IV. Letters OCR mixes up (Y/V, C/E/O...) count
+  //    half an edit, and a different name must be at least half an edit behind the best one, else nothing is read (the map stays)
+  //  - leading words are dropped (the icon's junk like "wd ", or the lost street) only when they are 1-2 letters, or street-like
+  //    and the whole line doesn't match: a one-letter error can't shrink "Right Around Lith Harbor" to "Lith Harbor"
+  //  - the street line alone ("Victoria Road", read when a chat bubble covers the map line) is not a map
+  //  - a colon inside <...> ("<Bonus:>") is not the street/map separator
+  const STREETS = ["Victoria Road", "Hidden Street"].map(norm);
+  const isStreet = s => STREETS.some(st => 1 - lev(s, st) / Math.max(s.length, st.length, 1) >= 0.7);
+  const CONFUSED = new Set(["yv", "uv", "ce", "co", "eo", "ao", "ac", "hb", "hn", "mn", "gq", "ij"]);   // pairs OCR swaps: half an edit
+  function wlev(a, b){
+    let p = Array.from({length: b.length + 1}, (_, j) => j), pp = null;
+    for (let i = 1; i <= a.length; i++){
+      const c = [i];
+      for (let j = 1; j <= b.length; j++){
+        const x = a[i - 1], y = b[j - 1], sub = x === y ? 0 : CONFUSED.has(x + y) || CONFUSED.has(y + x) ? 0.5 : 1;
+        c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + sub);
+        if (pp && y === "d" && x === "i" && a[i - 2] === "c") c[j] = Math.min(c[j], pp[j - 1] + 0.5);   // a d drawn as "cl" (norm turns l into i)
       }
+      pp = p; p = c;
     }
-    if (best && best.sim >= 0.75) return {id: best.id, name: best.name};
-    return null;   // not a map we know: OCR noise ("I i it Cr", "1 CY Ara you looking"), never an event
+    return p[b.length];
+  }
+    function mapFromText(text, G){
+    // one line "Street : Map" when the minimap is folded to its title bar: the map is after the colon
+    const lines = [];
+    for (const raw of text.split("\n")){
+      if (/mini\s*map/i.test(raw)) continue;
+      const cut = raw.replace(/^[^<]*:/, ""), colon = cut.length < raw.length && /[A-Za-z0-9]/.test(raw.slice(0, raw.length - cut.length));
+      const l = cut.replace(/(<[^<>=]*)[>=](?!\s*[IVXYivxyl1|]{1,4}\s*$).*$/, "$1>").replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9>)]+$/g, "").trim();   // junk after the > goes, a numeral ("<Tomb> II") stays
+      if (l.length >= 3) lines.push({l, colon});
+    }
+    if (!lines.length) return null;
+    const last = lines[lines.length - 1], l = last.l;   // line 1 is the street/region ("Victoria Road", "Hidden Street"), line 2 the map
+    const names = Object.entries(G.mapnames).map(([id, n]) => ({id, name: n, b: norm(n)}));
+    const scan = cands => {
+      let best = null; const all = [];
+      for (const [v, a] of cands.entries()) for (const m of names){
+        const d = wlev(a, m.b), c = {id: m.id, name: m.name, d, v, sim: 1 - d / Math.max(a.length, m.b.length, 1)};
+        all.push(c);
+        if (!best || c.sim > best.sim || c.sim === best.sim && G.maps[c.id] && !G.maps[best.id]) best = c;
+      }
+      return {best, all};
+    };
+    // a stray 1-2 letter word in front is the minimap icon ("wd East Rocky Mountain IY"): read with and without it
+    const tiny = l.replace(/^(?:[^A-Za-z0-9\s]*[A-Za-z0-9]{1,2}[^A-Za-z0-9\s]*\s+)+/, "");
+    let {best, all} = scan(tiny !== l && tiny.length >= 3 ? [norm(l), norm(tiny)] : [norm(l)]);
+    if (!best || best.sim < 0.75){
+      // the folded minimap's one line can lose its colon ("Hidden Street 1st Accompaniment <Exit>"), and the minimap icon
+      // reads as a stray word ("wil Kerning City"): try again without the first 1-3 words
+      const words = l.split(/\s+/), cands = [];
+      for (let k = 1; k <= 3 && k < words.length; k++){
+        const pre = words.slice(0, k);
+        if (isStreet(norm(pre.slice(-2).join(" "))) || pre.every(w => w.replace(/[^A-Za-z0-9]/g, "").length <= 3)) cands.push(norm(words.slice(k).join(" ")));
+      }
+      if (cands.length) ({best, all} = scan(cands));
+    }
+    if (!best || best.sim < 0.75) return null;   // not a map we know: OCR noise ("I i it Cr", "1 CY Ara you looking"), never an event
+    // a different name this close behind the best one is a coin flip: say nothing and read again
+    if (best.d > 0 && all.some(c => c.v === best.v && c.name !== best.name && c.sim >= 0.75 && c.d - best.d < 0.5)) return null;
+    // the street line alone is not a map; "Victoria Road" the map has the street line above it too
+    if (isStreet(norm(best.name)) && !last.colon && !(lines.length > 1 && isStreet(norm(lines[lines.length - 2].l)))) return null;
+    return {id: best.id, name: best.name};
   }
 
   // item pickup: names are cut to ~13 letters ("Horny Mushroo...") and letters the font table doesn't know yet read as "?",

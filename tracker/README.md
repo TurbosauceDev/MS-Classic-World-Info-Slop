@@ -17,7 +17,7 @@ glass widgets over the game itself, on any monitor, click-through when locked).
 
 ## Shop prices (0.3.24)
 
-Ctrl+Shift+K (Settings > Keyboard shortcuts) reads the open merchant shop's item list: `core/shopread.js` finds the rows by their
+Ctrl+Shift+L (Settings > Keyboard shortcuts; K was the toolbox's too until 0.3.40) reads the open merchant shop's item list: `core/shopread.js` finds the rows by their
 separator lines, reads each name and "N for M mesos" line with Tesseract (two cuts of the price, a row only counts when both agree),
 fuzzy-matches names to the game's item list (`matchName`, prefix match for names cut with "...") and sets each ask against the
 site's market median. `renderer-shop.js` shows the pop-up, shares sure rows to `/api/shop`, and feeds the Shop prices overlay card.
@@ -60,7 +60,7 @@ npm start           # run it (Windows, Electron)
   Letters the font table hasn't seen read as "?" (item names still match as patterns). More frames: "Save sample frames"
   (60 frames, one every 3 s, to Pictures/MS Classic Tracker frames).
 - Self-check: for 8 s after Start a card shows which readers work (EXP bar, pickup lines, map name, job) with a hint
-  for each that doesn't. "Report a bug" saves the last 8 frames (one every 3 s) and the last 300 log lines (reader
+  for each that doesn't. "Report a bug" saves the last 8 frames (one every 3 s) and the last 500 log lines (reader
   events, map/job reads, status messages; no install ID, party code or name) to Pictures/MS Classic Tracker
   frames/report-<time>/.
 - Items used: every 2 s the item counts on the quick slots and an open Use tab are read (their digit font is exact

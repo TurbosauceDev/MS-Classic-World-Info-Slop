@@ -114,9 +114,68 @@ assert.deepStrictEqual(mapFromText("| Hidden Street\n1st Accompaniment <Bonus=\n
 assert.strictEqual(mapFromText("Hidden Street\nSecret Garden of Nowhere=\n", G), null, "a map we don't have is dropped, not logged as read");
 // Danny's event log 10-29: Kerning City's minimap title misread as junk, logged as "entered" between real Kerning City events
 for (const junk of ["I i it Cr", "I i LI", "1 CY Ara you looking", "Victoria Road\nI i it Cr\n"]) assert.strictEqual(mapFromText(junk, G), null, "junk: " + junk);
+// Map-title reads (audit 2026-11-04): every OCR string the minimap reader logged in Danny's bug reports (tests/map_ocr_real.json:
+// text, the map the frames show or null, times logged). The expected ids come from the frames and the names, not from what the old
+// matcher answered: it filed 34 reads of "East Rocky Mountain IY" (the frames say IV) under I, and a street line alone (a chat
+// bubble over the map line) under Victoria Road while the player stood in Kerning City
+{
+  const real = require("./map_ocr_real.json"), bad = [];
+  for (const [text, id] of real){ const m = mapFromText(text, G); if ((m ? m.id : null) !== id) bad.push(JSON.stringify(text) + " -> " + (m && m.id) + ", expected " + id) }
+  assert.deepStrictEqual(bad, [], "real map-title reads");
+  assert.strictEqual(real.length, 107);
+  const id = t => { const m = mapFromText(t, G); return m && m.id };
+  // (a) a sibling one letter away is a tie: the letter OCR swaps wins, a coin flip reads nothing (the map stays as it was)
+  assert.strictEqual(id("Victoria Road\nEast Rocky Mountain IY\n"), "10004053", "IY is IV (Y/V swap), not I");
+  assert.strictEqual(id("Victoria Road\nEast Rocky Mountain IV\n"), "10004053");
+  assert.strictEqual(id("Victoria Road\nEast Rocky Mountain I\n"), "10004050", "exact stays exact");
+  assert.strictEqual(id("Victoria Road\nEast Rocky Mountain X\n"), null, "equally far from several siblings: nothing read");
+  // (b) a one-letter error can't shorten a name to a shorter map
+  assert.strictEqual(id("Victoria Road\nRjght Around Lith Harbor\n"), "10000010", "Right Around Lith Harbor, not Lith Harbor");
+  assert.strictEqual(id("Victoria Road\nFcrest West of Henesys\n"), "10001030", "Forest West of Henesys, not Henesys");
+  assert.strictEqual(id("Hidden Street 1st Accompaniment <Exit>"), "80000600", "the folded bar's lost colon still works");
+  assert.strictEqual(id("wil Kernina City"), "10003000", "the icon's stray word");
+  // (c) the street line alone is not a map
+  assert.strictEqual(id("(5) victoria Road |\n"), null, "street line alone");
+  assert.strictEqual(id("Hey, can [1a\n| (5) victoria Road |\n"), null, "chat bubble over the map line");
+  assert.strictEqual(id("Victoria Road\nVictoria Road\n"), "10001008", "the map called Victoria Road has the street line above it too");
+  assert.strictEqual(id("Victoria Road : Kerning City"), "10003000");
+  // (d) a colon inside <...> is not the separator
+  assert.strictEqual(id("x\n1st Accompaniment <Bonus:>"), "80000500", "<Bonus:>");
+  assert.strictEqual(id("Hidden Street : 1st Accompaniment <Bonus:>"), "80000500");
+  // every tracked map with one letter OCR gets wrong (Y/V, O/C, E/C, rn/m, d/cl ...): the right map or nothing, never another one
+  const SUBS = [["v", "y"], ["o", "c"], ["e", "c"], ["d", "cl"], ["a", "o"], ["n", "h"], ["u", "v"], ["g", "q"], ["h", "b"], ["i", "l"]], wrong = [];
+  for (const v of Object.values(G.maps)) for (const [f, t] of SUBS) for (let i = v[0].toLowerCase().indexOf(f); i >= 0; i = v[0].toLowerCase().indexOf(f, i + 1)){
+    const r = mapFromText("Victoria Road\n" + v[0].slice(0, i) + t + v[0].slice(i + f.length) + "\n", G);
+    if (r && r.name !== v[0]) wrong.push(v[0].slice(0, i) + t + v[0].slice(i + f.length) + " -> " + r.name);
+  }
+  assert.deepStrictEqual(wrong, [], "a one-letter OCR error never turns into another map");
+}
 s = createSession(G);
 s.add({t: sec(0), type: "map", id: null, name: "1st Accompaniment <Bonus"});
 assert.strictEqual(s.stats().mapName, "1st Accompaniment <Bonus");
+
+// out-of-order stamps (a slow tick delivers events stamped before ones already in): the clock never goes back, so the same
+// span isn't counted twice (audit 2026-11-04: +50% active time on a shuffled stream)
+{ const a = createSession(G), b = createSession(G);
+  for (const [t, gain] of [[0, 1], [10, 1], [5, 1], [12, 1], [11, 1], [20, 1]]){ a.add({t: sec(t), type: "exp", gain}) }
+  for (const [t, gain] of [[0, 1], [5, 1], [10, 1], [11, 1], [12, 1], [20, 1]]){ b.add({t: sec(t), type: "exp", gain}) }
+  assert.strictEqual(a.state.activeMs, b.state.activeMs, "shuffled stamps give the sorted run's active time");
+  assert.strictEqual(a.state.activeMs, 20e3);
+  assert.strictEqual(a.state.last, sec(20));
+  // a pause stamped before the last event doesn't start before it either
+  const p = createSession(G); p.add({t: sec(0), type: "exp", gain: 1}); p.add({t: sec(10), type: "exp", gain: 1}); p.add({t: sec(6), type: "pause"});
+  assert.strictEqual(p.state.pausedAt, sec(10)); assert.strictEqual(p.state.last, sec(10));
+  p.add({t: sec(40), type: "resume"}); assert.strictEqual(p.state.pausedMs, 30e3); assert.strictEqual(p.state.activeMs, 10e3);
+}
+
+// keyboard shortcuts (main.js KEYS): each default is its own key. Toolbox and the shop reader both shipped on Ctrl+Shift+K, so
+// the second one to register never worked (audit 2026-11-04)
+{ const src = require("fs").readFileSync(require("path").join(__dirname, "../app/main.js"), "utf8"), m = /const KEYS = (\{[^}]*\});/.exec(src);
+  assert.ok(m, "KEYS found in main.js");
+  const KEYS = new Function("return " + m[1])(), seen = {};
+  for (const [a, k] of Object.entries(KEYS)){ assert.ok(!seen[k], a + " and " + seen[k] + " share " + k); seen[k] = a }
+  assert.ok(Object.keys(KEYS).length >= 16 && KEYS.toolbox && KEYS.shopScan);
+}
 
 // level-up read at 0.2% (too small to work out the level): still carried over, level goes up by one
 s = createSession(G);
