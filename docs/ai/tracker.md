@@ -52,6 +52,7 @@ node tests/monkey.test.js | tail -3   # random clicks/menus/typing/window sizes;
 node tests/extras.test.js | tail -3   # Mini Finalize log, crash-recovery card, History Today/goal ETA, setup codes (CI job ui)
 node tests/readers.test.js | tail -5  # readers on real frames (tests/frames)
 node tests/inventory.test.js | tail -3; node tests/kpq.test.js | tail -3; node tests/snip.test.js | tail -3
+node tests/launch.test.js            # the real app on the installed Electron, throwaway profile, ~15 s, opens windows (CI job build). Run on every Electron bump
 cd ../server && npm install && npm run data && npm test   # Node 22 (node:sqlite stands in for D1)
 ```
 
