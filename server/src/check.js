@@ -21,24 +21,28 @@ export function cleanRun(r, G){
   const mesoCap = num(r.mesos, 1, 1e8) ? Math.round(r.mesos) : 1e8;
   // ids are game numbers only: anything else ("__proto__", "constructor") is dropped (it would corrupt the summary's tables).
   // The unknown-map skip below plus these caps are the summary's size guard (audit 2026-11-05, Danny approved): 40 junk
-  // runs with made-up ids once made a 623 KB summary. 40 distinct item ids per run — the tracker's real runs carry a
-  // handful; anything wider is junk by volume even when each id looks shaped right.
-  const ID = /^\d{1,10}$/, ITEM_CAP = 40, seenIds = new Set();
+  // runs with made-up ids once made a 623 KB summary. The budget is DISTINCT ids per run (60): an id already counted
+  // (the same drop from a second mob, or the run total repeating a mob's drop — the tracker always sends both) is
+  // kept and costs nothing. 0.3.42 review (Hermes 2026-11-05): the first cut skipped repeated ids outright, which
+  // dropped a shared item from every mob but the first and from the run totals — 52 of Danny's 81 saved sessions
+  // have an item on 2+ mobs. Measured on those 81: at most 29 distinct items in a run, 19 on one mob; the caps
+  // (60 per run, 30 per mob) leave 2x headroom.
+  const ID = /^\d{1,10}$/, ITEM_IDS = 60, ids = new Set();
   const itemsOf = (o, n) => {
     const out = {};
     for (const [k, v] of Object.entries(o && typeof o === "object" && !Array.isArray(o) ? o : {})){
-      if (Object.keys(out).length >= n || seenIds.size >= ITEM_CAP) break;
-      if (!ID.test(k) || seenIds.has(k)) continue;
+      if (Object.keys(out).length >= n) break;
+      if (!ID.test(k) || (!ids.has(k) && ids.size >= ITEM_IDS)) continue;   // a new id past the run's budget
       const c = cnt(v, 1e4); if (!c) continue;
-      seenIds.add(k); out[k] = c;
+      ids.add(k); out[k] = c;
     }
     return out;
   };
   // a run on a map the server doesn't know cannot have its mobs checked against anything, so it carries no mob or
   // item rows at all: kept under its name for the player's own view, but the public aggregates only take verifiable ids
   const mobs = map && Array.isArray(r.mobs) ? r.mobs.filter(m => m && typeof m === "object" && ID.test(String(m.id))).slice(0, 20).map(m => ({id: String(m.id), kills: cnt(m.kills, kills),
-    mesos: cnt(m.mesos, mesoCap), mesoDrops: cnt(m.mesoDrops, 1e5), items: itemsOf(m.items, 10)})) : [];
-  const items = map ? itemsOf(r.items, 40) : {};
+    mesos: cnt(m.mesos, mesoCap), mesoDrops: cnt(m.mesoDrops, 1e5), items: itemsOf(m.items, 30)})) : [];
+  const items = map ? itemsOf(r.items, 60) : {};
   const run = {date: r.date || new Date().toISOString().slice(0, 10), map, map_name: map ? G.mapnames[map] || null : text(r.mapName, 60) || null,
     level: r.level == null ? null : Math.round(r.level), job: text(r.job, 40) || null, party: r.party | 0, minutes: r.minutes, exp: Math.round(r.exp),
     msg_exp: cnt(r.msgExp, 1e8), bar_exp: cnt(r.barExp, 1e8), kills, mesos: Math.round(r.mesos || 0), mobs, items,

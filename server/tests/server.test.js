@@ -715,7 +715,18 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   const [cs] = await post(run("cappeditemscapped1", 1000, {items: Object.fromEntries(Array.from({length: 100}, (_, k) => [String(600000000 + k), 1]))}));
   assert.strictEqual(cs, 200);
   const ci = sql.prepare("SELECT mobs, items FROM runs WHERE install = 'cappeditemscapped1'").get();
-  assert.strictEqual(Object.keys(JSON.parse(ci.items)).length, 39, "40 distinct item ids per run, mob items included (100 offered)");
+  assert.strictEqual(Object.keys(JSON.parse(ci.items)).length, 59, "60 distinct item ids per run: the mob's 4000019 plus 59 new (100 offered)");
+  // 0.3.42 review: a shared drop is counted for EVERY mob and in the run totals (the first cut skipped repeated ids)
+  const [ss] = await post(run("shareditemshared1", 1000, {mobs: [{id: "2", kills: 60, items: {"4000019": 3, "4000000": 2}}, {id: "3", kills: 40, items: {"4000019": 5, "4000000": 1}}],
+    items: {"4000019": 8, "4000000": 3}}));
+  assert.strictEqual(ss, 200);
+  const sh = sql.prepare("SELECT mobs, items FROM runs WHERE install = 'shareditemshared1'").get();
+  assert.deepStrictEqual(JSON.parse(sh.mobs).map(m => m.items), [{"4000019": 3, "4000000": 2}, {"4000019": 5, "4000000": 1}], "both mobs keep a drop they share");
+  assert.deepStrictEqual(JSON.parse(sh.items), {"4000019": 8, "4000000": 3}, "the run totals keep ids its mobs also dropped");
+  // a real mob carried 19 distinct items in Danny's saved sessions (11-05): kept whole
+  const many = Object.fromEntries(Array.from({length: 19}, (_, k) => [String(4000100 + k), 1]));
+  await post(run("manyitemsonemob01", 1000, {mobs: [{id: "2", kills: 100, items: many}], items: many}));
+  assert.strictEqual(Object.keys(JSON.parse(sql.prepare("SELECT mobs FROM runs WHERE install = 'manyitemsonemob01'").get().mobs)[0].items).length, 19, "19 items on one mob are all kept");
   const sum2 = await fresh();
   assert.ok(JSON.stringify(sum2).length < 200000, `the summary stays bounded with junk runs in the table (${JSON.stringify(sum2).length} bytes)`);
   assert.strictEqual(sum2.mobs["900000000"], undefined, "made-up mob ids never reach the drop table");
@@ -726,6 +737,9 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   assert.strictEqual(netKey("1.2.3.4"), "1.2.3.4", "IPv4 unchanged");
   assert.strictEqual(netKey("::1"), "0000:0000:0000:0000", "all-:: expands");
   assert.strictEqual(netKey(""), "", "no header: empty key");
+  assert.strictEqual(netKey("::ffff:1.2.3.4"), "1.2.3.4", "an IPv4-mapped address keys as its IPv4");
+  assert.notStrictEqual(netKey("::ffff:1.2.3.4"), netKey("::ffff:5.6.7.8"), "two mapped IPv4 clients don't share a bucket");
+  assert.strictEqual(netKey("2001:DB8:1:2::1"), netKey("2001:db8:1:2::9"), "hex case doesn't split a /64");
   let last6;
   for (let i = 1; i <= 7; i++) last6 = (await post(run("v6bucket0000000" + i, 1000), "2001:db8:aaaa:bbbb::" + i))[0];
   assert.strictEqual(last6, 429, "the 7th install from one /64 is refused like IPv4");
@@ -736,7 +750,29 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
   const stored = sql.prepare("SELECT ipday FROM runs WHERE install = 'saltsecretsalt0001'").get().ipday;
   const want = crypto.createHash("sha256").update(netKey("10.44.0.1") + new Date().toISOString().slice(0, 10) + "unit-test-salt").digest("hex").slice(0, 32);
   assert.strictEqual(stored, want, "ipday is hashed with the Worker secret, not the DB salt row");
+  // party groups keep the DB salt, so setting the secret doesn't split a party's old runs from its new ones
+  await post(run("partysaltafter001", 1000, {partyCode: "Shroomies", party: 2}));
   delete env.IP_SALT;
+  const g = q => sql.prepare("SELECT grp FROM run_groups g JOIN runs r ON r.id = g.run_id WHERE r.install = ?").get(q)?.grp;
+  assert.ok(g("hhhhhhhhhhhhhhh01") && g("partysaltafter001") === g("hhhhhhhhhhhhhhh01"), "a party code groups the same before and after IP_SALT is set");
+
+  // 0.3.42 review: slow rebuilds and interleaved claims still make ONE rebuild. The rebuild's queries are slowed, so a
+  // rebuild runs well past the first cut's 1 s wait (which then stole the live claim), and two GETs interleave between
+  // their lock check and their claim (where the first cut's unconditional DELETE removed the other's fresh claim).
+  {
+    // meta-table calls (the lock and the copy) answer in 5 ms; every other call (the rebuild's reads) takes 150 ms
+    const wait = q => new Promise(r => setTimeout(r, /\bmeta\b/.test(q) ? 5 : 150));
+    const slow = {batch: DB.batch, prepare(q){ const st = DB.prepare(q), wrap = o => ({bind(...a){ o.bind(...a); return wrap(o) },
+      async first(){ await wait(q); return o.first() }, async run(){ await wait(q); if (/VALUES \('summary', \?\)/.test(q)) slow.stores++; return o.run() },
+      async all(){ await wait(q); return o.all() }}); return wrap(st) }, stores: 0};
+    sql.exec("DELETE FROM meta WHERE k IN ('summary', 'summary_lock')");
+    const t0 = Date.now();
+    // staggered 7 ms apart, so a later GET reads "no lock" before an earlier one's claim lands and deletes after it
+    const bodies = await Promise.all([0, 1, 2, 3].map(i => new Promise(r => setTimeout(r, 7 * i)).then(() => worker.fetch(new Request("https://x/api/summary"), {DB: slow})).then(r => r.json())));
+    assert.ok(Date.now() - t0 > 1200, `the slow rebuild outlasts the old 1 s wait (${Date.now() - t0} ms)`);
+    assert.ok(bodies.every(b => b.updated), "every slow GET got a summary");
+    assert.strictEqual(slow.stores, 1, `four concurrent GETs during a slow rebuild store ONE summary (${slow.stores})`);
+  }
 }
 
 console.log("server tests passed");
