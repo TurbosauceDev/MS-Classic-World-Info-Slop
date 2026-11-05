@@ -32,11 +32,11 @@ async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders
 }
 
 // map name every 5 s: cut the minimap title out, OCR it in the main process, take it once the same map is read twice in a row
-let ocrBusy = false, lastOcr = 0, mapSeen = null, mapNow = null, mapMissing = 0, mapMiss = 0;
+let ocrBusy = false, lastOcr = 0, mapSeen = null, mapNow = null, mapNowInfo = null, mapMissing = 0, mapMiss = 0;   // mapNow: the map's key (id, or the name of a map we don't have); mapNowInfo: {id, name} for the shop upload
 async function readMap(c, fb, t){   // c: the minimap title crop (GrindReaders.mapTextCrop); fb: the last good title rect re-cut from this frame (the band hunt failed but the minimap may be fine)
   const sess = session, sl = slicer;   // an OCR that finishes after Stop/Start belongs to the old session
   // no map name for 30 s (minimap closed, moved, covered): the map is unknown from here, not the last one seen
-  if (!c && !fb){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = null; note("Map name not seen for 30 s (minimap closed or covered): map unknown until it's back.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
+  if (!c && !fb){ if (check && !check.map) check.mapWhy = "Minimap not found: it's closed, minimized or covered."; if (++mapMissing === 6 && mapNow && sess){ mapNow = mapSeen = mapNowInfo = null; note("Map name not seen for 30 s (minimap closed or covered): map unknown until it's back.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) } return }
   mapMissing = 0;
   const text = await ocrText(fb || c, "map"), m = GrindReaders.mapFromText(text, G), key = m && (m.id || m.name);
   log("map", {text, id: m?.id ?? null, name: m?.name ?? null, fb: !!fb});
@@ -46,8 +46,8 @@ async function readMap(c, fb, t){   // c: the minimap title crop (GrindReaders.m
   // the name holds through flaky band hunts (Danny 10-29: it dropped while the minimap sat untouched): the fallback
   // crop re-reads the last good rect, and only 30 s of nothing reading at all clears the map — never one missed band
   if (key) mapMiss = 0;
-  else if (++mapMiss === 6 && mapNow && sess){ mapNow = mapSeen = null; note("Map name not read for 30 s (minimap closed, covered or unreadable): map unknown until it reads again.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) }
-  if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session && !wrap){ mapNow = key; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e); kpqMap(m.id, t) }
+  else if (++mapMiss === 6 && mapNow && sess){ mapNow = mapSeen = mapNowInfo = null; note("Map name not read for 30 s (minimap closed, covered or unreadable): map unknown until it reads again.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) }
+  if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session && !wrap){ mapNow = key; mapNowInfo = {id: m.id ?? null, name: m.name ?? null}; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e); kpqMap(m.id, t) }
   mapSeen = key;
 }
 
@@ -133,7 +133,7 @@ let barSeen = false, goneSince = null, lastGoneCheck = 0;
 function autoPause(minimap, info, t){   // minimap: the minimap is on screen (looked for when the bar isn't)
   if (info.bar) barSeen = true;
   if (held) return;   // paused by hand: stays paused until Go on
-  if (kpq?.hold){ if (session.state.pausedAt === null) pauseAt(t); return }   // between KPQ rounds: stays paused until the next stage
+  if (kpq?.hold){ if (session.state.pausedAt === null) pauseAt(t, true); return }   // between KPQ rounds: stays paused until the next stage
   if (settings.autoPause === false || !barSeen) return;
   const paused = session.state.pausedAt !== null;
   if (info.bar){ goneSince = null; if (paused && !kpq?.hold){ const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Back in the game: tracking again." } return }
@@ -160,7 +160,8 @@ $("#pauseBtn").onclick = () => {
   else { const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "Tracking again." }
   pauseUi(); render();
 };
-function pauseAt(t){ const e = {t: Math.max(t, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); log("event", e) }
+// quiet: the hold re-pausing after a counted read lifted it (every bar read in Kerning City) isn't logged again, or it fills the bug report's log
+function pauseAt(t, quiet){ const e = {t: Math.max(t, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); if (!quiet) log("event", e) }
 function kpqReset(){ kpq = {on: false, phase: "idle", hold: false, inside: false, rounds: 0, left: null, leftT: 0, clk: null, pend: null, stage: null, round: null, times: [], stageTimes: {}, stageExp: {}, history: [], last: null}; kpqRefresh() }
 // stage and round times: from the KPQ clock ("Time Left", top middle) when it reads, else the PC clock
 const KPQ_STAGE = {"80000000": "1st", "80000100": "2nd", "80000200": "3rd", "80000300": "4th", "80000400": "Last", "80000500": "Bonus"};
@@ -200,7 +201,8 @@ function kpqWatch(s){
 function kpqTime(left, t){
   const c = kpq.clk, steady = !!c && t - c.t <= 15e3 && Math.abs(c.left - (t - c.t) / 1000 - left) <= 3, was = kpqLeftAt(t);
   kpq.clk = {left, t};
-  if (steady && was !== null && left > was + 30){ if (kpq.inside) kpqEnd(t, true, "left"); kpq.inside = false; kpq.left = null; note("KPQ clock started over: a new round", "kpq") }
+  let jumpTo = null;   // the stage the new round starts on when the minimap map didn't change (no map event will open it)
+  if (steady && was !== null && left > was + 30){ if (kpq.inside){ jumpTo = kpq.stage?.id || (KPQ_STAGE[mapNow] ? mapNow : null); kpqEnd(t, true, "left") } kpq.inside = false; kpq.left = null; note("KPQ clock started over: a new round", "kpq") }
   if (kpq.left === null || steady || Math.abs(left - kpqLeftAt(t)) <= 3){
     kpq.left = left; kpq.leftT = t;
     for (const p of [kpq.stage, kpq.round]) if (p && p.left0 === null) p.left0 = left + (t - p.t0) / 1000;   // clock first seen mid-stage
@@ -209,6 +211,7 @@ function kpqTime(left, t){
   if (!kpq.on && settings.kpqAct !== "grind"){ kpq.on = true; kpq.phase = "rush"; kpqRefresh(); $("#status").textContent = "KPQ clock on screen: KPQ run spotted." }
   if (!kpq.on) return;
   if (!kpq.inside && !kpq.pend){ const st = session?.stats(); kpq.pend = {t: c.t, left: c.left, exp: st?.exp || 0, mesos: st?.mesos || 0, snap: kpqSnap()} }
+  if (jumpTo && !kpq.inside) kpqMap(jumpTo, t);   // the new round's 1st stage starts at the clock's first read of it
   if (kpq.hold && !held){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ clock on screen: tracking again." }
 }
 function kpqEnd(t, round, end){
@@ -246,8 +249,17 @@ function kpqMap(id, t){
     if (kpq.hold && !held){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ round " + kpq.rounds + (KPQ_STAGE[id] ? ", " + KPQ_STAGE[id] + " stage" : "") + ": tracking again." }
   } else {
     kpqEnd(t, true, "left");
-    kpq.inside = false; kpq.pend = null; kpq.phase = String(id) === KERNING ? "primed" : "idle";
-    if (!kpq.hold){ kpq.hold = true; if (session.state.pausedAt === null) pauseAt(t); $("#status").textContent = "KPQ: paused between rounds. Picks back up on the next stage." }
+    kpq.inside = false; kpq.pend = null;
+    if (String(id) === KERNING){
+      kpq.phase = "primed";
+      if (!kpq.hold){ kpq.hold = true; if (session.state.pausedAt === null) pauseAt(t); $("#status").textContent = "KPQ: paused between rounds. Picks back up on the next stage." }
+    } else {
+      // any other known map: the player left KPQ (a shop, a grind map). Only Kerning City holds between rounds; a later KPQ stage
+      // or steady clock turns KPQ mode back on (Auto). Otherwise the hold would pause the session for good (audit 2026-11-04)
+      kpq.phase = "idle"; kpq.on = false;
+      if (kpq.hold){ kpq.hold = false; if (!held){ const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e) } }
+      $("#status").textContent = "Left KPQ: tracking as normal. KPQ turns back on by itself at the next KPQ stage.";
+    }
   }
 }
 // KPQ leaderboard: a finished round (1st stage to past the Last stage) goes to the server's /api/kpq when sharing is on.

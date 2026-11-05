@@ -114,10 +114,12 @@
       const counts = ["exp", "bonus", "meso", "item", "itemraw", "bar"].includes(e.type);
       // paused: farming time up to the pause counts, the pause itself doesn't; anything counted (or "resume") ends it
       // a pause by hand (hold) only ends with "resume": nothing read meanwhile (a party member's EXP) restarts the clock
-      if (e.type === "pause"){ if (S.pausedAt === null){ if (S.last !== null){ credit(e.t); S.last = e.t } S.pausedAt = e.t } if (e.hold) S.held = true; return S }
-      if (S.pausedAt !== null && (e.type === "resume" || counts && !S.held)){ S.pausedMs += Math.max(0, e.t - S.pausedAt); S.pausedAt = null; S.held = false; if (S.last !== null || counts) S.last = e.t }
+      // S.last only moves forward: a slow tick delivers events stamped before ones already in, and a clock that went back would count the same span twice
+      const fwd = t => S.last === null ? t : Math.max(S.last, t);
+      if (e.type === "pause"){ if (S.pausedAt === null){ const t = fwd(e.t); if (S.last !== null){ credit(t); S.last = t } S.pausedAt = t } if (e.hold) S.held = true; return S }
+      if (S.pausedAt !== null && (e.type === "resume" || counts && !S.held)){ S.pausedMs += Math.max(0, e.t - S.pausedAt); S.pausedAt = null; S.held = false; if (S.last !== null || counts) S.last = fwd(e.t) }
       if (e.type === "resume") return S;
-      if (counts && S.pausedAt === null){ if (S.last !== null) credit(e.t); S.last = e.t }
+      if (counts && S.pausedAt === null){ if (S.last !== null) credit(e.t); S.last = fwd(e.t) }
       switch (e.type){
         case "map": S.map = e.id == null ? null : String(e.id); S.mapName = e.name || null; S.bigKilled.clear(); break;
         case "party": S.party = Math.max(1, e.size | 0); break;

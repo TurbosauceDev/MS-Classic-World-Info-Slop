@@ -43,7 +43,7 @@ async function start(){
   kpqReset(); held = false; barSeen = false; goneSince = null; levelsShown = 0; deathSeen = 0; deathPending = null; boxHad = 0; boxPending = null; boxSeen = new Map(); Object.assign(deaths, {confirmed: 0, lost: 0, unseen: 0});
   snaps.start = snaps.start?.hand && Date.now() - snaps.start.t < 60e3 ? snaps.start : null; snaps.end = null;   // a start snapped just before Start is kept
   engine = makeEngine(ICONS, null, settings.invArea || null, settings.glyphs || [], settings.invLast || null); scale = null; fastLeft = 0; lastPix = null; skipped = 0; log("engine", {kind: engine.kind});
-  mapNow = mapSeen = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; kpqSent = 0; FPS = 2; slowTicks = 0; perfReset();
+  mapNow = mapSeen = mapNowInfo = null; mapMissing = 0; jobNow = jobSeen = null; lastJob = 0; lastParty = 0; runsSent = 0; kpqSent = 0; FPS = 2; slowTicks = 0; perfReset();
   // a job picked by hand wins; "Auto" reads it from the status bar
   if (settings.job){ const e = {t: Date.now(), type: "job", name: settings.job}; session.add(e); slicer.add(e) }
   if (base && base.exp != null){ const t0 = Date.now() - 1; session.add({t: t0, type: "bar", exp: base.exp, level: base.level, pct: base.pct}); snaps.start = {t: t0, level: base.level, pct: base.pct, exp: base.exp, hand: false} }   // always-on: the reading before the first gain is the baseline (core/autorun.js)

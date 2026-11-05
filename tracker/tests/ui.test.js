@@ -219,10 +219,57 @@ const path = require("path"), {chromium} = require("playwright");
     kpqMap("80000000", t + 15e4); kpqMap("80000100", t + 18e4); out.rounds = kpq.rounds; out.stage1 = kpq.stageTimes["80000000"]?.at(-1);
     kpqMap("10003000", t + 20e4); kpqMap("80000000", t + 21e4); out.st2 = document.querySelector("#status").textContent;
     const h0 = kpq.history.length; kpqTime(1700, t + 22e4); kpqTime(1695, t + 22.5e4); kpqTime(1800, t + 23e4); kpqTime(1795, t + 23.5e4);
-    out.jumped = kpq.history.length === h0 + 1 && !kpq.inside && kpq.history.at(-1).end === "left";
+    out.jumped = kpq.history.length === h0 + 1 && kpq.history.at(-1).end === "left";
+    // the new round starts on the stage the minimap still shows, from the clock's first read of the new round (audit 2026-11-04:
+    // it lost its 1st stage and joined "at the 2nd stage" later)
+    out.jr = [kpq.rounds, kpq.round?.startStage, kpq.stage?.id, kpq.round?.left0, kpq.inside, kpq.round?.t0 === t + 23e4];
     ({kpq, session, slicer} = keep); return out });
   if (!kc.held || !kc.oneRead || !kc.twoReads || kc.st1 !== "KPQ clock on screen: tracking again." || kc.rounds !== 2 || kc.stage1 !== 160
     || kc.st2 !== "KPQ round 3, 1st stage: tracking again." || !kc.jumped) throw new Error("kpq clock: " + JSON.stringify(kc));
+  if (JSON.stringify(kc.jr) !== '[4,"80000000","80000000",1800,true,true]') throw new Error("kpq clock new round on the same map: " + JSON.stringify(kc.jr));
+  // leaving KPQ for good (audit 2026-11-04): Kerning City between rounds holds, any other known map ends KPQ mode for now (the
+  // hold lifts with a resume, the round is finished as "left"), and the next KPQ stage or steady clock turns it back on
+  const kh = await page.evaluate(() => { const keep = {kpq, session, slicer}, t = Date.now() + 8e5, out = {};
+    session = GrindSession.createSession(G); slicer = {add(){}}; kpqReset();
+    session.add({t, type: "bar", exp: 100, level: 30, pct: 5});
+    kpqMap("10003000", t); kpqMap("80000000", t + 1e3); kpqMap("10003000", t + 60e3);
+    out.heldInKerning = kpq.hold && session.state.pausedAt !== null && kpq.on;
+    kpqMap("10003000", t + 70e3); out.stillHeld = kpq.hold && kpq.on;
+    kpqMap("42", t + 90e3);   // Snail Hunting Ground III: grinding elsewhere
+    out.off = [kpq.on, kpq.hold, session.state.pausedAt === null, kpq.phase, kpq.inside];
+    out.st = document.querySelector("#status").textContent;
+    for (let i = 0; i < 5; i++){ session.add({t: t + 95e3 + i * 1e3, type: "bar", exp: 200 + i, level: 30, pct: 6}); autoPause(false, {bar: true}, t + 95e3 + i * 1e3) }
+    out.stillRunning = session.state.pausedAt === null; out.active = session.state.activeMs > 3000;
+    out.hist = kpq.history.map(r => r.end).join();
+    kpqMap("80000000", t + 2e5); out.again = [kpq.on, kpq.inside, kpq.rounds, session.state.pausedAt === null];
+    kpqMap("42", t + 3e5); kpqTime(1800, t + 31e4); kpqTime(1795, t + 315e3); out.clockAgain = [kpq.on, !!kpq.pend];
+    // straight from a stage to a grind map (no Kerning City in between): nothing to hold, mode ends
+    kpqReset(); kpqMap("80000000", t + 4e5); kpqMap("42", t + 41e4); out.direct = [kpq.on, kpq.hold, session.state.pausedAt === null, kpq.history.at(-1)?.end];
+    ({kpq, session, slicer} = keep); return out });
+  if (!kh.heldInKerning || !kh.stillHeld || kh.off.join() !== "false,false,true,idle,false" || !/Left KPQ/.test(kh.st) || !kh.stillRunning || !kh.active || kh.hist !== "left"
+    || kh.again.join() !== "true,true,2,true" || kh.clockAgain.join() !== "true,true" || kh.direct.join() !== "false,false,true,left") throw new Error("kpq leave: " + JSON.stringify(kh));
+  // the bug-report log (audit 2026-11-04): a hold re-pausing every tick logs its pause once, not once per bar read, and the log keeps 500 lines
+  const lg = await page.evaluate(() => { const keep = {kpq, session, slicer}, t = Date.now() + 9e5, n = () => LOG.filter(l => l.kind === "event" && l.type === "pause").length;
+    session = GrindSession.createSession(G); slicer = {add(){}}; kpqReset(); session.add({t, type: "bar", exp: 100, level: 30, pct: 5});
+    kpqMap("80000000", t); const n0 = n(); kpqMap("10003000", t + 1e3);
+    for (let i = 0; i < 40; i++){ const ti = t + 2e3 + i * 500; session.add({t: ti, type: "bar", exp: 100 + i, level: 30, pct: 5}); autoPause(true, {bar: true}, ti) }
+    const out = {pauses: n() - n0, paused: session.state.pausedAt !== null};
+    for (let i = 0; i < 700; i++) log("x", {i}); out.cap = LOG.length;
+    ({kpq, session, slicer} = keep); return out });
+  if (lg.pauses !== 1 || !lg.paused || lg.cap !== 500) throw new Error("log flood: " + JSON.stringify(lg));
+  // shop uploads carry the map (mapNow is the key string; the shop code wants id + name)
+  const sh = await page.evaluate(async () => { const keep = {session, mapNow, mapSeen, mapNowInfo: typeof mapNowInfo === "undefined" ? undefined : mapNowInfo, share: settings.share}, out = {};
+    const run = tolCache.run; tolCache.run = async () => "Victoria Road\nSnail Hunting Ground III\n"; window.shopShared = [];
+    try {
+      session = GrindSession.createSession(G); mapNow = mapSeen = null; settings.share = true;
+      await readMap({}, null, Date.now()); await readMap({}, null, Date.now());
+      const rows = [{sure: true, item: {id: "4000019"}, qty: 1, price: 5000 + Math.floor(Math.random() * 1e3), sold: false}];
+      out.shared = await shopShare(rows, {seller: "x", title: "y"}); out.body = window.shopShared.at(-1);
+      mapNow = "Free Market <3>"; mapNowInfo = {id: null, name: "Free Market <3>"};
+      out.shared2 = await shopShare([{...rows[0], price: 7000 + Math.floor(Math.random() * 1e3)}], {}); out.body2 = window.shopShared.at(-1);
+    } finally { tolCache.run = run; session = keep.session; mapNow = keep.mapNow; mapSeen = keep.mapSeen; settings.share = keep.share }
+    return out });
+  if (!sh.shared || sh.body?.map !== "42" || sh.body?.room !== null || !sh.shared2 || sh.body2?.room !== 3 || sh.body2?.map !== null) throw new Error("shop upload map: " + JSON.stringify(sh));
   // KPQ leaderboard: with sharing on, a full round (1st stage .. Last, Bonus, Exit) is sent with its clear time (to leaving
   // the Last stage) and the character name; a round left at the 2nd stage isn't
   const kl = await page.evaluate(async () => { const keep = settings, t = Date.now() + 4e5; settings = {...settings, share: true, nick: "two words"}; window.shared = []; charName = "Turbow";
