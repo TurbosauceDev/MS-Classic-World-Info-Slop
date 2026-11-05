@@ -760,7 +760,7 @@ async function pickReplay(){
 }
 ipcMain.handle("replay-load", e => {
   const dir = replayDirs.get(e.sender.id); if (!dir) return null;
-  let log = {}; try { log = JSON.parse(fs.readFileSync(path.join(dir, "log.json"), "utf8")) } catch {}
+  let log = {}; try { log = JSON.parse(fs.readFileSync(path.join(dir, "log.json"), "utf8")) } catch {}   // no or broken log.json: older/hand-made folders replay from frame names alone
   const plan = GrindReplay.planFrames(fs.readdirSync(dir), log.frames, Date.parse(log.saved)).slice(0, GrindFlight.RING_MAX * 2);
   const {install, partyCode, nick, ...settings} = log.settings && typeof log.settings === "object" ? log.settings : {};
   return {dir: path.basename(dir), log: {version: log.version, saved: log.saved, note: log.note, now: log.now, auto: log.auto, settings, lines: Array.isArray(log.log) ? log.log : []},
