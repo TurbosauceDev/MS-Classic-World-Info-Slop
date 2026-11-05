@@ -16,7 +16,8 @@ function planFrames(entries, now, days){
 function pruneFrames(dir, days, now){
   let list = [];
   try { list = fs.readdirSync(dir, {withFileTypes: true}) } catch { return {removed: 0, bytes: 0} }
-  const ents = list.map(e => { let m = NaN; try { m = fs.statSync(path.join(dir, e.name)).mtimeMs } catch {} return {name: e.name, mtimeMs: m} });
+  const ents = list.map(e => { let m = NaN; try { m = fs.statSync(path.join(dir, e.name)).mtimeMs } catch {}   // entry vanished mid-listing: no mtime, the planner skips it
+  return {name: e.name, mtimeMs: m} });
   const names = planFrames(ents, Number.isFinite(now) ? now : Date.now(), days);
   let bytes = 0;
   for (const n of names){
