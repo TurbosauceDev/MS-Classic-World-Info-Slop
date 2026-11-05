@@ -4,7 +4,11 @@
 const {app, BrowserWindow} = require("electron");
 const out = process.env.MSCT_LAUNCH_OUT;
 app.setPath("userData", process.env.MSCT_LAUNCH_USERDATA);
-const R = {electron: process.versions.electron, windows: [], errors: []};
+// Pictures too (Hermes 2026-11-05): the frames folder (bug reports, sample frames) lives under Pictures, and the app's boot-time
+// clean-up deletes in it. A 0.3.43 build test run on Danny's PC once deleted four of his real "-checked" report folders this way.
+app.setPath("pictures", require("path").join(process.env.MSCT_LAUNCH_USERDATA, "..", "pictures"));
+require("fs").mkdirSync(app.getPath("pictures"), {recursive: true});
+const R = {electron: process.versions.electron, windows: [], errors: [], pictures: app.getPath("pictures")};
 process.on("uncaughtException", e => R.errors.push("main: " + (e && e.stack || e)));
 app.on("web-contents-created", (_, wc) => {
   wc.on("console-message", (...a) => {   // Electron 45: (event) with fields; older: (event, level, message)

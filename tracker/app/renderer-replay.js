@@ -31,14 +31,14 @@
   document.title = "Replay: " + R.dir;
   $r("#rpName").textContent = R.dir + " (" + F.length + " pictures" + (R.log.version ? ", tracker " + R.log.version : "") + ")";
 
-  // PNG sizes straight from the headers, so the capture size is known before any picture is decoded
-  const dims = F.map(f => { const b = f.bytes; return {w: ((b[16] << 24) | (b[17] << 16) | (b[18] << 8) | b[19]) >>> 0, h: ((b[20] << 24) | (b[21] << 16) | (b[22] << 8) | b[23]) >>> 0} });
+  // PNG and WebP sizes straight from the headers (core/replay.js imageSize), so the capture size is known before any picture is decoded
+  const dims = F.map(f => GrindReplay.imageSize(f.bytes) || {w: 0, h: 0});
   const big = dims.reduce((a, d) => d.w > a.w ? d : a, dims[0]), VW = R.log.now?.video?.w || big.w, VH = R.log.now?.video?.h || big.h;
   const imgs = new Map();   // index -> {w, h, d}, filled as pictures decode; only the current and the next one are kept
   const decode = async i => {
     if (i >= F.length || imgs.has(i)) return imgs.get(i);
     imgs.set(i, null);
-    const bm = await createImageBitmap(new Blob([F[i].bytes], {type: "image/png"}));
+    const bm = await createImageBitmap(new Blob([F[i].bytes], {type: /\.webp$/i.test(F[i].name) ? "image/webp" : "image/png"}));
     const c = new OffscreenCanvas(bm.width, bm.height), x = c.getContext("2d", {willReadFrequently: true}); x.drawImage(bm, 0, 0); bm.close?.();
     const id = x.getImageData(0, 0, c.width, c.height), img = {w: id.width, h: id.height, d: id.data};
     imgs.set(i, img); return img;

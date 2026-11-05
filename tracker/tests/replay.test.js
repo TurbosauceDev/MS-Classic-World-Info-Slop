@@ -53,7 +53,8 @@ assert.ok(!/fetch\(|XMLHttpRequest|localStorage|indexedDB|host\.(save|share|spot
 // 5. save-report: the state block, the auto folder name, and still nothing identifying
 const sr = main.slice(main.indexOf('ipcMain.handle("save-report"'), main.indexOf("// Replay mode"));
 assert.ok(/GrindFlight\.settingsDiff\(shown\)/.test(sr) && /const \{install, partyCode, nick, \.\.\.shown\} = readSettings\(\)/.test(sr), "now.settings is the diff of settings minus install/partyCode/nick");
-assert.ok(/\(auto \? "-auto" : ""\)/.test(sr) && /report-\[\\dT-\]\+\(-auto\)\?\$/.test(main), "auto reports get a -auto folder name the Open-folder IPC accepts");
+assert.ok(/\(auto \? "-auto" : ""\)/.test(sr) && main.includes("/^report-[\\dT-]+(-auto)?(-checked)?$/.test(sub)"), "auto reports get a -auto folder name, and a hand-renamed -checked folder opens too: the Open-folder IPC accepts both");
+assert.ok(main.includes("/^frame-\\d+-\\d{6}\\.(png|webp)$/.test(n)"), "the replay window accepts frame-*.png and frame-*.webp pictures");
 assert.ok(!/fetch\(|https?:\/\/|net\.request|queue/i.test(sr), "save-report never uploads or queues anything");
 
 // 6. the argument parser, with the shapes Electron really passes

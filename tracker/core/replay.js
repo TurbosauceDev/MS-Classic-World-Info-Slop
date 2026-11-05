@@ -12,7 +12,7 @@
     }
     return null;
   }
-  const NAME = /^frame-(\d+)-(\d{2})(\d{2})(\d{2})\.png$/;
+  const NAME = /^frame-(\d+)-(\d{2})(\d{2})(\d{2})\.(?:png|webp)$/;
   /* Frames in the order they were taken, each with the time it was taken. A report saved by 0.3.42+ lists them in log.json
      (frames: [{name, t}]); older reports only have the UTC HH:MM:SS in the file name, so the day comes from the `saved` time
      (a name that lands after it belongs to the day before). Pure: names are the folder's listing. */
@@ -34,7 +34,21 @@
     rows.forEach((r, k) => { if (r.t == null) r.t = k * 3000 });
     return rows.map(({name, t}) => ({name, t}));
   }
-  const Replay = {argFolder, planFrames};
+  /* Picture size straight from the file header, so the capture size is known before any picture is decoded: PNG (IHDR) or WebP
+     (lossless VP8L, extended VP8X, lossy VP8). {w, h}, or null for anything else. */
+  function imageSize(b){
+    if (!b || b.length < 30) return null;
+    const u32 = i => ((b[i] << 24) | (b[i + 1] << 16) | (b[i + 2] << 8) | b[i + 3]) >>> 0;
+    if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return {w: u32(16), h: u32(20)};
+    if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50){
+      const tag = String.fromCharCode(b[12], b[13], b[14], b[15]);
+      if (tag === "VP8L" && b[20] === 0x2f){ const v = (b[21] | (b[22] << 8) | (b[23] << 16) | (b[24] << 24)) >>> 0; return {w: (v & 0x3fff) + 1, h: ((v >>> 14) & 0x3fff) + 1} }
+      if (tag === "VP8X") return {w: (b[24] | (b[25] << 8) | (b[26] << 16)) + 1, h: (b[27] | (b[28] << 8) | (b[29] << 16)) + 1};
+      if (tag === "VP8 " && b[23] === 0x9d && b[24] === 0x01 && b[25] === 0x2a) return {w: (b[26] | (b[27] << 8)) & 0x3fff, h: (b[28] | (b[29] << 8)) & 0x3fff};
+    }
+    return null;
+  }
+  const Replay = {argFolder, planFrames, imageSize};
   root.GrindReplay = Replay;
   if (typeof module !== "undefined") module.exports = Replay;
 })(typeof window !== "undefined" ? window : globalThis);

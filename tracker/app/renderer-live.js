@@ -33,6 +33,15 @@ async function readJob(c, t, nc){   // c: the status bar text crop (GrindReaders
   jobSeen = job;
 }
 
+// debug log (0.3.43): one line when the pause reason, the KPQ phase or the capture size/scale changes (nothing while they stay the same)
+const dbgSeen = {};
+function dbgWatch(){
+  const why = pauseNow() || "none", ph = kpq ? kpq.phase + (kpq.hold ? "+hold" : "") + (kpq.on ? "" : "/off") : "none", k = scale?.k ? Math.round(scale.k * 1000) / 1000 : null, cap = video.videoWidth + "x" + video.videoHeight;
+  if (why !== dbgSeen.why){ log("pause", {reason: why, was: dbgSeen.why ?? null, label: why === "none" ? null : GrindPauses.label(why)}); dbgSeen.why = why }
+  if (ph !== dbgSeen.ph){ log("kpqphase", {phase: ph, was: dbgSeen.ph ?? null, stage: kpq?.stage?.id ?? null, map: mapNow ?? null}); dbgSeen.ph = ph }
+  if (cap !== dbgSeen.cap || k !== dbgSeen.k){ log("capture", {size: cap, scale: k, was: dbgSeen.cap ?? null, wasScale: dbgSeen.k ?? null}); dbgSeen.cap = cap; dbgSeen.k = k }
+}
+
 // map name every 5 s: cut the minimap title out, OCR it in the main process, take it once the same map is read twice in a row
 let ocrBusy = false, lastOcr = 0, mapSeen = null, mapNow = null, mapNowInfo = null, mapMissing = 0, mapMiss = 0;   // mapNow: the map's key (id, or the name of a map we don't have); mapNowInfo: {id, name} for the shop upload
 async function readMap(c, fb, t){   // c: the minimap title crop (GrindReaders.mapTextCrop); fb: the last good title rect re-cut from this frame (the band hunt failed but the minimap may be fine)
@@ -51,7 +60,7 @@ async function readMap(c, fb, t){   // c: the minimap title crop (GrindReaders.m
   if (fe){ m = {id: fe.id, name: fe.name}; fpHit = true }   // no crop PNG, no IPC, no Tesseract
   else { text = await ocrText(fb || c, "map"); m = GrindReaders.mapFromText(text, G) }
   const key = m && (m.id || m.name);
-  log("map", {text, id: m?.id ?? null, name: m?.name ?? null, fb: !!fb, fp: fpHit});
+  log("map", {text, id: m?.id ?? null, name: m?.name ?? null, fb: !!fb, fp: fpHit, why: fpHit ? "fingerprint" : !mfp ? "no fingerprint, ocr" : m ? "fingerprint miss, ocr matched" : "fingerprint miss, ocr no match", seen: mapSeen, now: mapNow});
   if (check && sess === session){ if (!m) check.mapWhy = "Minimap found, but its name didn't read. Is something over the minimap title?"; else if (!check.map){ check.map = m.name || "map " + m.id; check.late = check.ended } }
   // a map we don't have keeps its name as read, which can differ by a letter between reads: that's still the same map
   const same = (a, b) => a === b || a && b && !G.maps[a] && !G.maps[b] && GrindReaders.similar(a, b) >= 0.75;
@@ -61,7 +70,7 @@ async function readMap(c, fb, t){   // c: the minimap title crop (GrindReaders.m
   // the same map as the previous read: this title's fingerprint is proven, remember it (new maps only - a hit has nothing to add)
   if (!fpHit && key && mapSeen === key && mapFps.offer(mfp, m)) host.settings({mapfps: {v: 1, fps: mapFps.entries()}}).then(x => settings = x).catch(() => {});
   else if (++mapMiss === 6 && mapNow && sess){ mapNow = mapSeen = mapNowInfo = null; note("Map name not read for 30 s (minimap closed, covered or unreadable): map unknown until it reads again.", "bad"); const e = {t, type: "map", id: null, name: null}; sess.add(e); sl.add(e) }
-  if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session && !wrap){ mapNow = key; mapNowInfo = {id: m.id ?? null, name: m.name ?? null}; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e); kpqMap(m.id, t) }
+  if (key && same(key, mapSeen) && !same(key, mapNow) && sess === session && !wrap){ log("mapchange", {from: mapNow, to: key, id: m.id ?? null, name: m.name ?? null}); mapNow = key; mapNowInfo = {id: m.id ?? null, name: m.name ?? null}; const e = {t, type: "map", id: m.id, name: m.name}; sess.add(e); sl.add(e); kpqMap(m.id, t) }
   mapSeen = key;
 }
 
@@ -225,6 +234,7 @@ function kpqWatch(s){
 function kpqTime(left, t){
   const c = kpq.clk, steady = !!c && t - c.t <= 15e3 && Math.abs(c.left - (t - c.t) / 1000 - left) <= 3, was = kpqLeftAt(t);
   kpq.clk = {left, t};
+  log("kpqclk", {left, steady, was: was === null ? null : Math.round(was), epoch: kpq.epoch === null ? null : Math.round((kpq.epoch - t) / 1000), inside: !!kpq.inside});   // the debug log keeps what each clock read decided
   let jumpTo = null;   // the stage the new round starts on when the minimap map didn't change (no map event will open it)
   if (steady && was !== null && left > was + 30){
     if (kpq.inside){ jumpTo = kpq.stage?.id || (KPQ_STAGE[mapNow] ? mapNow : null); kpqEnd(t, true, "left") }
@@ -501,7 +511,7 @@ async function tick(){
     if (!video.srcObject?.active){ $("#status").textContent = "The game window closed. Press Stop, then Start once it's back."; throw null }
     if (!video.videoWidth){ $("#status").textContent = "No picture from the game (minimized?). Waiting..."; throw null }   // skip this tick
     const f = grabFrame(); perf("grab", Date.now() - t);
-    keepFrame(t, f);
+    keepFrame(t, f); dbgWatch(t);
     const t1 = Date.now(), sk = sameAsLast(f, !ovChatOn && !ovBlocker && !ovRangeOn); perf("same", Date.now() - t1);
     if (sk){ skipped++; if (sk === 2) skippedTol++; if (video?.pump) FRBUF.give(f.d.buffer); throw null }   // unchanged (or only encoder jitter moved): the buffer is free again
     // one OCR at a time (the first can take seconds): a death check first, the map every 5 s, the job every 30 s in between

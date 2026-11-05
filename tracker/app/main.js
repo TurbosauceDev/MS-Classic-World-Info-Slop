@@ -473,6 +473,7 @@ ipcMain.handle("settings", (_, s) => {
   const cur = readSettings();
   if (!cur.install) cur.install = require("crypto").randomUUID();   // random ID of this copy: one vote per player
   writeSettings({...cur, ...(s || {})});
+  dbgSettings(s);
   if (s && s.overlay) ovSendState();   // the overlay page saved its cards: tell the window whether a Chat blocker / Chat window is on
   if (s && "onTop" in s) pinOnTop();
   if (s && "opacity" in s) applyOpacity();
@@ -661,6 +662,41 @@ const journal = () => { const mb = Math.min(500, Math.max(5, Math.round(+readSet
 ipcMain.handle("journal-write", (_, lines) => readSettings().journal ? journal().append(lines) : 0);
 ipcMain.handle("journal-info", () => journal().info());
 ipcMain.handle("journal-open", () => shell.openPath(JOURNAL));
+// debug log (0.3.43, Danny 11-05): always on, lightweight text lines (core/debuglog.js) in userData/debug, files of ~5 MB, the oldest
+// dropped past settings.debugLogMb (default 50, 5-500). The window sends batches (ipc debug-write, every 2 s); main's own entries are
+// batched the same way. Stays on this PC: a bug report copies the last 30 minutes into its folder (save-report), nothing uploads it.
+const DEBUG = path.join(app.getPath("userData"), "debug"), DBG = require("../core/debuglog.js");
+let debugW = null, debugMb = 0, debugChecked = 0, dbgPending = [];
+const debugLog = () => {
+  if (!debugW || Date.now() - debugChecked > 30e3){
+    debugChecked = Date.now(); const mb = Math.min(500, Math.max(5, Math.round(+readSettings().debugLogMb) || 50));
+    if (!debugW || mb !== debugMb){ debugMb = mb; debugW = require("../core/debugfile.js").createWriter(DEBUG, {maxBytes: mb * 1e6, maxFile: 5e6}) }
+  }
+  return debugW;
+};
+function dbgFlush(){ if (!dbgPending.length) return; const l = dbgPending; dbgPending = []; debugLog().append(l) }
+function dbg(kind, data){ dbgPending.push(DBG.format(Date.now(), kind, data)); if (dbgPending.length >= 100) dbgFlush() }
+setInterval(dbgFlush, 2000).unref();
+ipcMain.handle("debug-write", (_, lines) => { dbgFlush(); return debugLog().append(lines) });
+ipcMain.handle("debug-open", () => shell.openPath(DEBUG));
+// settings changes: key names + values, except who you are (install, partyCode, nick, alias); big or noisy values are only sized
+const DBG_SKIP = new Set(["install", "partyCode", "nick", "alias", "invLast", "winBounds"]);
+function dbgSettings(s){
+  for (const [k, v] of Object.entries(s || {})){
+    if (DBG_SKIP.has(k)) continue;
+    dbg("settings", {key: k, value: typeof v === "boolean" || typeof v === "number" || (typeof v === "string" && v.length <= 40) ? v : v == null ? "null" : "<" + typeof v + " " + JSON.stringify(v).length + " B>"});
+  }
+}
+app.whenReady().then(() => {
+  const {screen} = require("electron"), os = require("os");
+  dbg("app_start", {version: app.getVersion(), electron: process.versions.electron, chrome: process.versions.chrome, os: process.platform + " " + os.release() + " " + process.arch, packaged: app.isPackaged,
+    displays: screen.getAllDisplays().map(d => d.size.width + "x" + d.size.height + "@" + d.scaleFactor).join(",")});
+});
+app.on("will-quit", () => { dbg("app_stop", {version: app.getVersion()}); dbgFlush() });
+// crashes: the monitor variants only observe, so Electron's own error dialog and exit behave as before
+process.on("uncaughtExceptionMonitor", (e, origin) => { dbg("error", {where: "main", origin, msg: String(e && e.message || e), stack: String(e && e.stack || "").split("\n").slice(0, 6).join(" | ")}); dbgFlush() });
+app.on("render-process-gone", (_, __, d) => { dbg("error", {where: "renderer gone", reason: d.reason, code: d.exitCode}); dbgFlush() });
+app.on("child-process-gone", (_, d) => { dbg("error", {where: "child gone", type: d.type, reason: d.reason, code: d.exitCode}); dbgFlush() });
 // the patch notes' Site tab shows the website's changelog cards, whose links open in the real browser
 // (the windows themselves never navigate — setWindowOpenHandler/will-navigate deny everything); https only
 ipcMain.handle("open-external", (_, url) => { if (typeof url === "string" && /^https:\/\//i.test(url)) shell.openExternal(url) });
@@ -736,6 +772,9 @@ ipcMain.handle("save-report", (_, frames, info) => {
   const {install, partyCode, nick, ...shown} = readSettings();   // nothing that identifies the player
   const {now: n0, ...rest} = info || {}, now = n0 && typeof n0 === "object" ? {...n0, version: app.getVersion(), settings: GrindFlight.settingsDiff(shown)} : undefined;
   fs.writeFileSync(path.join(dir, "log.json"), JSON.stringify({version: app.getVersion(), now, os: process.platform + " " + require("os").release(), saved: new Date().toString(), settings: shown, ...rest}, null, 1));
+  // 0.3.43: the debug log's last 30 minutes (or the whole set while it is small) as plain text next to the pictures
+  dbg("report", {name, auto, frames: Array.isArray(frames) ? frames.length : 0}); dbgFlush();
+  try { debugLog().saveTail(dir, 30) } catch (e){ dbg("error", {where: "report debug.log", msg: String(e && e.message || e)}) }
   return name;
 });
 // Replay mode (0.3.42): a dev window that runs the real readers and the real tracker over a report folder's pictures. The folder
@@ -745,7 +784,7 @@ const replayDirs = new Map();   // webContents id -> report folder
 function openReplay(dir){
   try {
     dir = path.resolve(String(dir));
-    if (!fs.statSync(dir).isDirectory() || !fs.readdirSync(dir).some(n => /^frame-\d+-\d{6}\.png$/.test(n))) throw new Error("no frame-*.png pictures in that folder");
+    if (!fs.statSync(dir).isDirectory() || !fs.readdirSync(dir).some(n => /^frame-\d+-\d{6}\.(png|webp)$/.test(n))) throw new Error("no frame-*.png or frame-*.webp pictures in that folder");
   } catch (e){ dialog.showErrorBox("Replay", "Can't replay " + dir + ": " + e.message); return null }
   const w = new BrowserWindow({width: 1280, height: 900, title: "Replay: " + path.basename(dir), icon: path.join(__dirname, "icon.ico"), backgroundColor: "#0f0f0f",
     webPreferences: {preload: path.join(__dirname, "replay-preload.js"), contextIsolation: true, backgroundThrottling: false}});
@@ -767,15 +806,18 @@ ipcMain.handle("replay-load", e => {
     frames: plan.map(f => ({...f, bytes: fs.readFileSync(path.join(dir, f.name))}))};
 });
 // only ever the frames folder, or a report folder inside it
-ipcMain.handle("open-folder", (_, sub) => shell.openPath(typeof sub === "string" && /^report-[\dT-]+(-auto)?$/.test(sub) ? path.join(FRAMES(), sub) : FRAMES()));
+ipcMain.handle("open-folder", (_, sub) => shell.openPath(typeof sub === "string" && /^report-[\dT-]+(-auto)?(-checked)?$/.test(sub) ? path.join(FRAMES(), sub) : FRAMES()));
 // frames-folder pruning (0.3.41, Danny): the #frames button's bulk captures pile up in the frames folder (2.4 GB
 // after a week of reader work). At tracker start the renderer asks once; frame-* entries older than
-// settings.pruneFramesDays (default 30, settings.pruneFrames off to stop) are deleted. Bug reports (report-*)
-// are NEVER deleted — core/prune.js planFrames only ever names frame-* entries.
+// settings.pruneFramesDays (default 30, settings.pruneFrames off to stop) are deleted; planFrames only ever names frame-*
+// entries. Report folders (0.3.43): "-checked" ones are deleted, unchecked "-auto" ones past the cap too, manual ones never.
 ipcMain.handle("prune-frames", () => {
   const st = readSettings(), days = st.pruneFramesDays > 0 ? Math.round(st.pruneFramesDays) : 30;
-  if (st.pruneFrames === false) return {removed: 0, bytes: 0, days};
-  return {...Prune.pruneFrames(FRAMES(), days), days};
+  // 0.3.43: report folders first - "-checked" ones go, unchecked "-auto" ones keep to settings.autoReportCapMb (default 1024); manual ones stay
+  const rep = Prune.pruneReports(FRAMES(), st.autoReportCapMb);
+  const fr = st.pruneFrames === false ? {removed: 0, bytes: 0} : Prune.pruneFrames(FRAMES(), days);
+  dbg("prune", {frames: fr.removed, frameBytes: fr.bytes, checked: rep.checked, auto: rep.auto, reportBytes: rep.bytes});
+  return {...fr, days, reports: rep};
 });
 
 // Neural text reader (0.3.31, P1-6): the ocrs recognition model (models/text-recognition.onnx, CC BY-SA 4.0,

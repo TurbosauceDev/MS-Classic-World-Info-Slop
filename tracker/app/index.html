@@ -764,7 +764,7 @@
         <li><b>Loot value</b>: Etc monster drops (caps, teeth, shells) count at the NPC sell price, since players don't buy them; ores, jewels, crafting materials, equipment and scrolls at the player-shop price from meso.watch.</li>
         <li>The window stays on top of the game. Turn that off in Settings → Window and sharing.</li>
         <li>Ctrl + and Ctrl - make the text bigger or smaller.</li>
-        <li><b>Pause</b> (next to Start while tracking) stops the clock for a break; nothing picked up counts until you press <b>Go on</b>. All the ways the tracker stops counting share one state line: the pill above the status message names the reason — "Paused: by you", "Paused: the game screen is gone", "Paused: between KPQ rounds", or "Idle break: no EXP counted" (a long quiet stretch; nothing is counted, and it ends by itself).</li>
+        <li><b>Pause</b> (next to Start while tracking) stops the clock for a break; nothing picked up counts until you press <b>Go on</b>. All the ways the tracker stops counting share one state line: the pill above the status message names the reason — "Paused: by you", "Paused: the game screen is gone", "Paused: between KPQ rounds", or "Idle: time not counted" (a long quiet stretch: the quiet time is left out of your rates, EXP that does arrive still counts, and it ends by itself).</li>
       </ul></details>
       <details><summary>Shortcuts and themes</summary><ul>
         <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, Ctrl+Shift+S Start/Stop, P Pause, M Simple Mode, F Focus Mode, O Overlay Mode, E edit the overlay's layout, K Modules toolbox (also in View), H hide/show, I read the open inventory tab, B report a bug,
@@ -776,7 +776,8 @@
         <li><b>Ctrl+Shift+B</b> (even with the game in front; changeable in Settings → Shortcuts and window), the Bug button or Settings → <b>Report a bug</b> saves the last ~3 minutes of game pictures (one every 3 s) and a log to a folder, with a short block of what state the tracker was in. Your character
           name shows in those pictures. Send the folder to Danny. When the tracker itself notices it is confused (EXP counting while paused, the map name lost for a minute, the KPQ clock on screen while the between-rounds pause is up) it saves the same kind of folder by itself, at most one every 10 minutes. Those folders stay on this PC like the others; nothing is ever sent anywhere. Switch it off in Settings → Something read wrong?.</li>
         <li>For whoever fixes a report: start the app with <code>--replay &lt;report folder&gt;</code> (or Help → Replay a bug report…) to run the real readers over its pictures in a throwaway window. Nothing is saved, shared or sent from there.</li>
-        <li>File → Open frames and bug reports folder shows where they are.</li>
+        <li>File → Open frames and bug reports folder shows where they are. Each report folder also holds <code>debug.log</code>, the last 30 minutes of the tracker's own debug log (decisions and numbers, no chat and no names). <b>Clean-up at start:</b> rename a report folder to end in <code>-checked</code> (for example <code>report-2026-11-04T20-46-57-checked</code>) once it is diagnosed, and the tracker deletes it the next time it starts. Reports it saved by itself (<code>-auto</code>) that nobody marked keep to 1 GB in total, oldest deleted first (<code>autoReportCapMb</code> in settings.json). Reports from the Bug button are never deleted by the tracker.</li>
+        <li>The debug log is written all the time to <code>debug</code> inside the tracker's data folder (%APPDATA%\MS Classic Grind Tracker), one text line per decision (map reads, KPQ clock reads, pauses, capture size, settings changed, errors), 50 MB at most (<code>debugLogMb</code> in settings.json), oldest files dropped. It stays on this PC and is never uploaded; only a bug report you send copies its last 30 minutes.</li>
       </ul></details>
       <details><summary>Updates</summary><ul>
         <li>Updates download by themselves and install when you close the app.</li>
@@ -806,7 +807,7 @@
       <label class="chk" title="How long a bag tab stays green after it was read. Yellow after that, orange after 30 s, red and glowing at 2 min."><span>Bag tab stays fresh for</span> <input type="number" id="bagEvery" min="1" max="30" step="1" style="width:52px" aria-label="Bag check minutes"> <span>min</span></label>
       <label class="chk" title="Starts a run by itself on the first EXP gain and saves it after 2 minutes with no EXP. Start and Stop still work, and a run you start by hand is never ended for you. Reads the game window slowly while no run is going (Windows shows its capture border)."><input type="checkbox" id="autoRun"> <span>Always on: start a run on the first EXP gain, end it after 2 minutes with no EXP</span></label>
       <label class="chk"><input type="checkbox" id="autoPause"> <span>Pause when the game screen is gone (Cash Shop, changing channel)</span></label>
-      <label class="chk" title="The #frames button's bulk captures pile up in Pictures\MS Classic Tracker frames. Entries older than this are deleted the next time the tracker starts. Bug reports (report-*) are never deleted."><input type="checkbox" id="pruneFrames"> <span>Delete old sample frames after <input type="number" id="pruneFramesDays" min="1" max="365" style="width:52px" aria-label="Sample frames kept, in days"> days (bug reports are never deleted)</span></label>
+      <label class="chk" title="The #frames button's bulk captures pile up in Pictures\MS Classic Tracker frames. Entries older than this are deleted the next time the tracker starts. Bug reports are handled separately: only folders renamed to end in -checked, and unmarked automatic ones past 1 GB, are deleted."><input type="checkbox" id="pruneFrames"> <span>Delete old sample frames after <input type="number" id="pruneFramesDays" min="1" max="365" style="width:52px" aria-label="Sample frames kept, in days"> days (reports: see Help)</span></label>
     </div>
     <div class="card" data-nav="Journey log"><h3>Journey log</h3>
       <p class="note">A timestamped text log of what the tracker sees on screen: login, map changes, combat starting and ending, EXP, level-ups, deaths, mesos, pickups, potions used, inventory changes. Screen reading only. Off by default; the file never leaves your PC.</p>
@@ -918,6 +919,7 @@
   <script src="../core/readstats.js"></script>
   <script src="../core/bagstale.js"></script>
   <script src="../core/combatlog.js"></script>
+  <script src="../core/debuglog.js"></script>
   <script src="../core/perfwatch.js"></script>
   <script src="../core/bufpool.js"></script>
   <script src="../core/chatlines.js"></script>
@@ -945,6 +947,7 @@
   <script src="renderer-range.js"></script>
   <script src="renderer-dummy.js"></script>
   <script src="renderer-perf.js"></script>
+  <script src="../core/replay.js"></script>
   <script src="renderer-replay.js"></script>
 </body>
 </html>

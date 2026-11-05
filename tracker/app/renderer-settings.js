@@ -420,8 +420,9 @@ $("#updGo").onclick = async () => {
   $("#guide").classList.toggle("hidden", !!settings.guideDone);
   recoverCheck().catch(() => {});   // a run left by a crash or power cut (its autosave)
   // frames-folder pruning (0.3.41, Danny): the #frames button's bulk captures pile up (2.4 GB here). At start, once,
-  // entries older than settings.pruneFramesDays (default 30) go; bug reports (report-*) are never deleted.
-  if (host.pruneFrames) host.pruneFrames().then(r => { if (r && r.removed) note(`Freed ${r.bytes ? (r.bytes / 1048576).toFixed(1) + " MB" : r.removed + " entries"}: ${r.removed} old sample-frame ${r.removed === 1 ? "entry" : "entries"} deleted (older than ${r.days} days). Bug reports are never deleted.`, "app") }).catch(() => {});
+  // entries older than settings.pruneFramesDays (default 30) go. 0.3.43: report folders renamed to end in -checked go too, and
+  // unmarked automatic ones past autoReportCapMb; the manual ones stay. One note says what was freed.
+  if (host.pruneFrames) host.pruneFrames().then(r => { const m = freedNote(r); if (m) note(m, "app") }).catch(() => {});
   const found = await host.gameFound(true);
   $("#status").textContent = found ? "MapleStory window found." : "Start MapleStory, then press Start.";
 })().catch(e => {
@@ -431,3 +432,13 @@ $("#updGo").onclick = async () => {
   console.error("settings boot failed:", e);
   $("#status").textContent = "Settings couldn't load — defaults are in use. Restart the tracker to retry.";
 });
+// the one "freed" note the start-up clean-up prints (null when nothing was deleted)
+function freedNote(r){
+  const rp = r?.reports || {}, n = (r?.removed || 0) + (rp.checked || 0) + (rp.auto || 0);
+  if (!n) return null;
+  const bytes = (r.bytes || 0) + (rp.bytes || 0), parts = [];
+  if (r.removed) parts.push(`${r.removed} old sample-frame ${r.removed === 1 ? "entry" : "entries"} (older than ${r.days} days)`);
+  if (rp.checked) parts.push(`${rp.checked} bug report${rp.checked === 1 ? "" : "s"} marked -checked`);
+  if (rp.auto) parts.push(`${rp.auto} automatic report${rp.auto === 1 ? "" : "s"} over the size limit`);
+  return `Freed ${bytes ? (bytes / 1048576).toFixed(1) + " MB" : n + (n === 1 ? " entry" : " entries")}: deleted ${parts.join(", ")}. Reports you saved with the Bug button are never deleted.`;
+}

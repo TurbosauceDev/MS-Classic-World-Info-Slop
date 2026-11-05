@@ -11,8 +11,11 @@ const r = spawnSync(electron, [path.join(__dirname, "launch-entry.js")], {
   env: {...process.env, MSCT_LAUNCH_USERDATA: path.join(dir, "userData"), MSCT_LAUNCH_OUT: out, ELECTRON_ENABLE_LOGGING: "0"}});
 let R = null;
 try { R = JSON.parse(fs.readFileSync(out, "utf8")) } catch {}
+// 0.3.43: the real main process wrote its debug log (userData/debug): app start with the versions, and the stop line
+let dbgText = ""; try { const dd = path.join(dir, "userData", "debug"); dbgText = fs.readdirSync(dd).map(n => fs.readFileSync(path.join(dd, n), "utf8")).join("") } catch {}   // no debug folder = the check below fails
 fs.rmSync(dir, {recursive: true, force: true});
 const fails = [];
+if (!/  APP_START  version=\S+ electron=\d+\.\S+ chrome=\S+ os=/.test(dbgText)) fails.push("the debug log has no APP_START line: " + JSON.stringify(dbgText.slice(0, 200)));
 // the replay window (0.3.42) on the real Electron: a throwaway report folder built from four of Danny's real frames, opened with
 // --replay exactly as `MS Classic Grind Tracker.exe --replay <folder>` does; its preload, IPC and page must work end to end
 {
@@ -37,11 +40,14 @@ const fails = [];
       for (const exp of [18572, 18757, 19803, 19894]) if (!x.bars.includes(exp)) rf.push("replay never read EXP " + exp + ": " + JSON.stringify(x.bars));
     }
   }
+  if (RR && !(RR.pictures && path.resolve(RR.pictures).startsWith(path.resolve(rdir)))) rf.push(`the replay test app used a real Pictures folder (${RR.pictures})`);
   for (const f of rf) fails.push(f);
   if (!rf.length) console.log("replay window passed on the real Electron (4 pictures, EXP bars read)");
 }
 if (!R) fails.push(`no result: exit ${r.status} signal ${r.signal}${r.error ? " " + r.error.message : ""}\n${(r.stderr || "").slice(-1500)}`);
 else {
+  // the app must never see the real Pictures folder: its boot clean-up deletes report folders there (2026-11-05)
+  if (!R.pictures || !path.resolve(R.pictures).startsWith(path.resolve(dir))) fails.push(`the test app used a real Pictures folder (${R.pictures})`);
   if (!R.windows.length) fails.push("no window finished loading");
   if (!R.sources || !(R.sources.screen > 0)) fails.push(`desktopCapturer found no screen to capture (${JSON.stringify(R.sources)})`);
   for (const e of R.errors) fails.push(e);

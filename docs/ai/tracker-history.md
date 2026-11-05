@@ -216,3 +216,7 @@ Dated notes per tracker feature, moved out of `docs/ai/tracker.md` so the area d
 - `app/renderer-live.js` KPQ share: `date` and `hour` are both UTC now (`toISOString().slice(0,10)` + getUTCHours) — the server's merge key is [group, date, hour] and mixing calendars split rounds around local midnight.
 - Traps: when adding a field to the reader event shape, check the pause filter's regex and the band/engine contract (`band: null` is load-bearing); snapshots own their frame buffer only until the finally — don't stash `f.d` past it.
 
+
+## 0.3.43 measurements (2026-11-05)
+- WebP vs PNG, Electron 45.2.1 / Chromium 156, 24 real report frames (1280x720 and 2560x1440), canvas.toBlob re-encode: PNG 72.9 MB, WebP q1 46.3 MB (-37%), WebP q0.99 16.8 MB but 24/24 frames differ (max channel error 247). q1 decoded byte-identical on 24/24. Encode time per frame: 720p 25 -> 40 ms, 1440p 110 -> 600 ms (async, off the UI thread, one frame per 3 s).
+- Debug log volume, 34 real 300-line LOG windows (4.9 h): 2040 lines and ~0.16 MB per hour before, ~2070 and ~0.19 MB after (no KPQ in those windows; a KPQ clock read adds one ~110 B line each, worst case about +0.8 MB/h at one read per second, still far under the 5 MB/h budget).

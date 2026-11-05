@@ -866,7 +866,7 @@ console.log("kpq score ok");
   assert.strictEqual(P.label("hand"), "Paused: by you");
   assert.strictEqual(P.label("gone"), "Paused: the game screen is gone");
   assert.strictEqual(P.label("kpq"), "Paused: between KPQ rounds");
-  assert.strictEqual(P.label("idle"), "Idle break: no EXP counted");
+  assert.strictEqual(P.label("idle"), "Idle: time not counted");
   assert.strictEqual(P.label("nonsense"), "Paused");
   const now = 1e12;
   assert.strictEqual(P.current({held: true, kpqHold: true, paused: true}), "hand", "a hand pause wins: only Go on lifts it");
@@ -901,6 +901,77 @@ console.log("kpq score ok");
   assert.ok(fs.existsSync(path.join(dir, "log.json")), "unknown files are never deleted");
   assert.deepStrictEqual(pruneFrames(path.join(dir, "nope"), 30, now), {removed: 0, bytes: 0}, "a missing folder is nothing to do");
   fs.rmSync(dir, {recursive: true, force: true});
+}
+
+// report-folder clean-up (0.3.43, Danny 11-05): "-checked" folders go at any age; unchecked "-auto" reports keep to a cap, oldest
+// first; unchecked manual reports are never deleted
+{ const fs = require("fs"), os = require("os"), path = require("path"), {planReports, pruneReports} = require("../core/prune.js");
+  const MB = 1048576, E = (name, mb, dir) => ({name, size: mb * MB, dir});
+  const ents = [E("report-2026-10-01T10-00-00-checked", 5), E("report-2026-11-04T10-00-00-auto-checked", 9), E("report-2026-10-02T10-00-00", 50),
+    E("report-2026-11-01T10-00-00-auto", 400), E("report-2026-11-02T10-00-00-auto", 400), E("report-2026-11-03T10-00-00-auto", 400), E("frame-000.png", 1, false), E("log.json", 1, false), E("report-2026-11-05T10-00-00-checked.zip", 3)];
+  let p = planReports(ents, 1024 * MB);
+  assert.deepStrictEqual(p.checked, ["report-2026-10-01T10-00-00-checked", "report-2026-11-04T10-00-00-auto-checked"], "both checked shapes (manual and auto) go, whatever the age");
+  assert.deepStrictEqual(p.auto, ["report-2026-11-01T10-00-00-auto"], "1200 MB of auto reports over a 1024 MB cap: the oldest goes (800 left)");
+  assert.deepStrictEqual(planReports(ents, 1200 * MB).auto, [], "exactly at the cap keeps everything");
+  assert.deepStrictEqual(planReports(ents, 1199 * MB).auto, ["report-2026-11-01T10-00-00-auto"], "one MB over: the oldest goes");
+  assert.deepStrictEqual(planReports(ents, 400 * MB).auto, ["report-2026-11-01T10-00-00-auto", "report-2026-11-02T10-00-00-auto"], "tight cap: oldest first until under");
+  assert.deepStrictEqual(planReports(ents, 0).auto, ["report-2026-11-01T10-00-00-auto", "report-2026-11-02T10-00-00-auto", "report-2026-11-03T10-00-00-auto"], "cap 0: every unchecked auto report");
+  assert.ok(![...p.checked, ...planReports(ents, 0).auto].includes("report-2026-10-02T10-00-00"), "an unchecked manual report is never named");
+  assert.ok(![...p.checked].some(n => /\.zip$|frame-|log\.json/.test(n)), "files and look-alikes are never named");
+  // the real thing, on a temp dir: sizes measured from the files
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "reports-"));
+  const mk = (n, bytes) => { fs.mkdirSync(path.join(dir, n)); fs.writeFileSync(path.join(dir, n, "frame-0-000000.webp"), Buffer.alloc(bytes)); fs.mkdirSync(path.join(dir, n, "sub")); fs.writeFileSync(path.join(dir, n, "sub", "log.json"), "{}") };
+  mk("report-2026-10-01T10-00-00-checked", 1000); mk("report-2026-10-02T10-00-00", 5000); mk("report-2026-11-01T10-00-00-auto", 3000); mk("report-2026-11-02T10-00-00-auto", 3000); mk("report-2026-11-03T10-00-00-auto", 3000);
+  fs.writeFileSync(path.join(dir, "frame-000.png"), "x"); fs.utimesSync(path.join(dir, "frame-000.png"), new Date(0), new Date(0));
+  const r = pruneReports(dir, 7000 / MB);   // 9006 B of auto reports, cap 7000 B: the oldest auto goes
+  assert.deepStrictEqual([r.checked, r.auto, r.bytes], [1, 1, 1002 + 3002], "one checked + the oldest auto deleted, bytes counted");
+  const left = fs.readdirSync(dir).sort();
+  assert.deepStrictEqual(left, ["frame-000.png", "report-2026-10-02T10-00-00", "report-2026-11-02T10-00-00-auto", "report-2026-11-03T10-00-00-auto"], "manual report, newer auto reports and the frame file stay");
+  assert.deepStrictEqual(pruneReports(dir, 1024), {checked: 0, auto: 0, bytes: 0}, "under the cap: nothing to do");
+  assert.deepStrictEqual(pruneReports(path.join(dir, "nope"), 1024), {checked: 0, auto: 0, bytes: 0}, "a missing folder is nothing to do");
+  fs.rmSync(dir, {recursive: true, force: true});
+}
+
+// debug log (0.3.43, core/debuglog.js + core/debugfile.js): line format, names kept out, rolling cap, tail for bug reports
+{ const fs = require("fs"), os = require("os"), path = require("path"), D = require("../core/debuglog.js"), {createWriter} = require("../core/debugfile.js");
+  const t = Date.UTC(2026, 10, 5, 16, 30, 0, 123);
+  assert.strictEqual(D.format(t, "map", {text: "Kerning City", id: "10003000", fp: false, ms: 12.34567}), '2026-11-05T16:30:00.123Z  MAP  text="Kerning City" id=10003000 fp=0 ms=12.3457', "timestamp, upper-case kind, key=value, strings quoted when needed");
+  assert.strictEqual(D.format(t, "x", {t: 5, kind: "y", a: null, b: undefined, c: 'say "hi"\nnow'}), '2026-11-05T16:30:00.123Z  X  c="say ""hi"" now"', "t/kind/null skipped, quotes doubled, newlines flattened");
+  assert.strictEqual(D.parseTime(D.format(t, "a", {})), t, "the time parses back");
+  assert.ok(Number.isNaN(D.parseTime("garbage")), "a non-line has no time");
+  const hid = D.format(t, "status", {text: "Welcome TurboNinja, party snails42 ready"}, ["turboninja", "snails42", "x"]);
+  assert.ok(!/turboninja|snails42/i.test(hid) && hid.includes("<hidden>"), "character name and party code are blanked wherever they appear (case-insensitive)");
+  assert.ok(!/danny/i.test(D.format(t, "error", {stack: "at f (C:\\Users\\danny\\AppData\\x.js:1:2) | at g (c:/users/Danny/y.js)"})), "the Windows account name in a stack trace is blanked");
+  assert.ok(D.format(t, "big", {s: "y".repeat(5000), o: {a: [1, 2, 3]}}).length <= D.MAX_LINE + 3, "a line is capped");
+  assert.ok(D.format(t, "o", {o: {a: [1, 2]}}).includes('o="{""a"":[1,2]}"'), "objects go in as compact JSON");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dbg-"));
+  const tb = Date.now() - 6 * 3600e3;   // real recent times: the writer compares file mtimes with the window
+  let clock = tb; const w = createWriter(dir, {maxFile: 1000, maxBytes: 3500, now: () => clock});
+  assert.strictEqual(w.append(["junk", 5, "a\nb", D.format(clock, "ok", {n: 1})]), 1, "only well-formed single lines are written");
+  for (let i = 0; i < 200; i++){ clock += 60e3; w.append([D.format(clock, "tick", {n: i, pad: "p".repeat(40)})]) }
+  const info = w.info();
+  assert.ok(info.bytes <= 3500 + 1000 && info.bytes > 1000, "rolling: stays near the cap (" + info.bytes + " B in " + info.files + " files)");
+  assert.ok(w.list().every(f => f.size <= 1000 + 200), "each file stays near maxFile");
+  const all = w.tail(0, 1e9).trim().split("\n");
+  assert.ok(D.parseTime(all[0]) > tb && all.at(-1).includes("n=199"), "the oldest files were dropped, the newest line is there");
+  const n30 = w.tail(clock - 30 * 60e3, 100).trim().split("\n");
+  assert.ok(n30.length >= 30 && n30.length <= 32 && n30.every(l => D.parseTime(l) >= clock - 30 * 60e3), "tail(30 min) = the lines of the last 30 minutes (" + n30.length + ")");
+  const small = fs.mkdtempSync(path.join(os.tmpdir(), "dbg-")), w2 = createWriter(small);
+  w2.append([D.format(tb, "a", {}), D.format(tb + 3600e3, "b", {})]);
+  assert.strictEqual(w2.tail(tb + 1800e3).trim().split("\n").length, 2, "a small file set comes back whole, older lines too");
+  assert.strictEqual(w2.tail(tb + 1800e3, 10).trim().split("\n").length, 1, "past the small limit only the window comes back");
+  assert.strictEqual(createWriter(path.join(small, "nope")).tail(0), "", "no folder, no text");
+  // a bug report's copy: the last 30 minutes land in <report>/debug.log, older lines do not (set past the small limit)
+  { const rep = fs.mkdtempSync(path.join(os.tmpdir(), "rep-")), w3 = createWriter(path.join(small, "big")), nowMs = Date.now();
+    const old = Array.from({length: 40}, (_, i) => D.format(nowMs - 3 * 3600e3 + i * 1e3, "old", {i, pad: "z".repeat(120)}));
+    const recent = Array.from({length: 25}, (_, i) => D.format(nowMs - 20 * 60e3 + i * 1e3, "recent", {i}));
+    w3.append([...old, ...recent]);
+    assert.strictEqual(w3.saveTail(rep, 30, nowMs), 65, "a small log comes whole (65 lines)");
+    assert.strictEqual(w3.saveTail(rep, 30, nowMs, 100), 25, "past the small limit: only the 25 lines of the last 30 minutes");
+    const txt = fs.readFileSync(path.join(rep, "debug.log"), "utf8");
+    assert.ok(/RECENT/.test(txt) && !/OLD/.test(txt) && txt.trim().split("\n").every(l => D.parseTime(l) >= nowMs - 30 * 60e3), "the report's debug.log holds the last 30 minutes and nothing older");
+    fs.rmSync(rep, {recursive: true, force: true}); }
+  fs.rmSync(dir, {recursive: true, force: true}); fs.rmSync(small, {recursive: true, force: true});
 }
 
 // flight recorder (0.3.42, core/flight.js): the report's "now" block, the confusion detector, the ring picks
@@ -989,5 +1060,17 @@ console.log("flight recorder ok");
   assert.deepStrictEqual(old.map(f => f.t), [Date.UTC(2026, 10, 3, 23, 59, 50), Date.UTC(2026, 10, 3, 23, 59, 53), Date.UTC(2026, 10, 4, 0, 0, 10)], "across midnight");
   assert.deepStrictEqual(R.planFrames(["frame-0-x.png", "frame-0-101010.png", "frame-1-101013.png"], null, NaN).map(f => f.t), [0, 3000], "no saved time: 3 s apart from 0");
   assert.deepStrictEqual(R.planFrames(null, null, 0), []);
+  // 0.3.43: pictures are lossless WebP now; the replay reads their size from the header like the PNG's
+  const png = new Uint8Array(33); png.set([0x89, 0x50, 0x4e, 0x47], 0); png.set([0, 0, 5, 0], 16); png.set([0, 0, 2, 0xd0], 20);
+  assert.deepStrictEqual(R.imageSize(png), {w: 1280, h: 720}, "PNG size from IHDR");
+  const riff = (b, tag) => { b.set([0x52, 0x49, 0x46, 0x46], 0); b.set([0x57, 0x45, 0x42, 0x50], 8); b.set([...tag].map(c => c.charCodeAt(0)), 12) };
+  const l = new Uint8Array(40); riff(l, "VP8L"); l[20] = 0x2f; { const v = (1280 - 1) | ((720 - 1) << 14); l[21] = v & 255; l[22] = (v >> 8) & 255; l[23] = (v >> 16) & 255; l[24] = (v >>> 24) & 255 }
+  assert.deepStrictEqual(R.imageSize(l), {w: 1280, h: 720}, "lossless WebP (VP8L) size from the bit-packed header");
+  const x = new Uint8Array(40); riff(x, "VP8X"); x.set([0xff, 0x09, 0x00], 24); x.set([0xff, 0x05, 0x00], 27);
+  assert.deepStrictEqual(R.imageSize(x), {w: 2560, h: 1536}, "extended WebP (VP8X) size");
+  const y = new Uint8Array(40); riff(y, "VP8 "); y.set([0x9d, 0x01, 0x2a], 23); y.set([0x00, 0x05, 0xd0, 0x02], 26);
+  assert.deepStrictEqual(R.imageSize(y), {w: 1280, h: 720}, "lossy WebP (VP8) size");
+  assert.strictEqual(R.imageSize(new Uint8Array(40)), null, "anything else has no size"); assert.strictEqual(R.imageSize(null), null);
+  assert.deepStrictEqual(R.planFrames(["frame-0-100000.webp", "frame-1-100003.png", "frame-2-100006.webp"], null, NaN).map(f => f.name), ["frame-0-100000.webp", "frame-1-100003.png", "frame-2-100006.webp"], "the replay plan takes .webp and .png pictures, in order");
 }
 console.log("replay planning ok");
