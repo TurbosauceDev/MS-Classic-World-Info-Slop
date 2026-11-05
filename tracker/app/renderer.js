@@ -256,17 +256,18 @@ function renderTiles(s){
 for (const [id, on] of [["#tPer", false], ["#tTot", true]]) $(id).onclick = () => { settings.tileTotal = on; host.settings({tileTotal: on}).then(x => settings = x); renderTiles(session?.stats()) };
 function render(){
   const s = session.stats();
+  const rateWait = s.rateWait && s.activeMin > 0;   // some play, under a minute of it: no rate yet ("0" stays for no play at all)
   $("#killsHr").textContent = fmt(s.killsHr);
-  $("#expHr").textContent = fmt(s.expHr);
+  $("#expHr").textContent = rateWait ? "-" : fmt(s.expHr);
   $("#expHr5").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5);
   $("#killsEst").textContent = s.killsEstHr == null ? "" : "~" + fmt(s.killsEstHr) + " with missed lines (est.)";
   $("#ttl").textContent = s.toLevelHrs == null ? "-" : s.toLevelHrs < 1 ? Math.round(s.toLevelHrs * 60) + " min" : s.toLevelHrs.toFixed(1) + " h";
   $("#mesosHr").innerHTML = mz(s.mesosHr);
   renderTiles(s);
   renderRespawns();
-  $("#miniExp").textContent = fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent; $("#miniMeso").innerHTML = mz(s.mesosHr);
+  $("#miniExp").textContent = rateWait ? "-" : fmt(s.expHr); $("#miniTtl").textContent = $("#ttl").textContent; $("#miniMeso").innerHTML = mz(s.mesosHr);
   $("#miniNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
-  $("#fzExp").textContent = fmt(s.expHr); $("#fzTtl").textContent = $("#ttl").textContent; $("#fzMeso").innerHTML = mz(s.mesosHr);
+  $("#fzExp").textContent = rateWait ? "-" : fmt(s.expHr); $("#fzTtl").textContent = $("#ttl").textContent; $("#fzMeso").innerHTML = mz(s.mesosHr);
   $("#fzNote").textContent = s.expHr5 == null ? "" : "last 5 min: " + fmt(s.expHr5) + " EXP/hr";
   $("#lootHr").innerHTML = mz(s.lootHr);
   const anyUsed = s.used.some(u => u.n);

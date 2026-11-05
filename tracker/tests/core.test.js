@@ -195,7 +195,7 @@ for (const [t, exp] of [[0, 5000], [10, 5200], [20, 4700], [30, 4700], [40, 4650
 assert.strictEqual(s.stats().deaths, 2); assert.strictEqual(s.state.deathMaps["42"], 2);
 // goal level: rest of this level plus the next ones at the current rate
 s = createSession(G, {goalLevel: 24});
-s.add({t: sec(0), type: "bar", exp: 0, pct: 0.01, level: 22}); s.add({t: sec(30), type: "bar", exp: 1000, pct: 1000 / G.exp[22] * 100, level: 22});
+s.add({t: sec(0), type: "bar", exp: 0, pct: 0.01, level: 22}); for (const [t, exp] of [[40, 400], [80, 800], [100, 1000]]) s.add({t: sec(t), type: "bar", exp, pct: exp / G.exp[22] * 100, level: 22});   // 100 s: past the 60 s under which no rate is shown
 // a misread EXP number whose % reads right (Danny's KPQ run: "1 [68.01%]" between good reads): no death, no fake EXP
 { const m = createSession(G), at = p => ({exp: Math.round(p / 100 * G.exp[25]), pct: p, level: 25});
   m.add({t: sec(0), type: "bar", ...at(68)}); m.add({t: sec(5), type: "bar", exp: 1, pct: 68.01, level: 25}); m.add({t: sec(10), type: "bar", ...at(68.1)});
@@ -337,7 +337,25 @@ assert.strictEqual(Math.round(st.usedCostHr), 4 * G.buy["2000002"] * 2, "half an
 // pickup line with two letters drawn as one unread glyph: "Emerald Sta?" is the Emerald Staff (Danny's report, 2026-10-19)
 { const R = require("../app/readers.js"); R.createReaders(G);
   assert.deepStrictEqual(R.itemByName("Emerald Sta?", "Equip", true), ["1382002"]);
-  assert.deepStrictEqual(R.itemByName("Biue Potion", "Use", true), ["2000003"]) }
+  assert.deepStrictEqual(R.itemByName("Biue Potion", "Use", true), ["2000003"]) 
+  // a cut name (15 letters + "...") with one letter misread, or glyphs unread over a stretch of it, still finds its item when only
+  // one item name in the category fits (Danny's reports 2026-10-18 04-18-20 "Hornv Mushroo...", 04-25-06 "Horn??hroo...": Horny Mushroom Cap)
+  assert.deepStrictEqual(R.itemByName("Hornv Mushroo...", "Etc", true), ["4000019"], "one wrong letter");
+  assert.deepStrictEqual(R.itemByName("Horn??hroo...", "Etc", true), ["4000019"], "two unread glyphs over \"y Mus\"");
+  assert.deepStrictEqual(R.itemByName("Horny Mushroo...", "Etc", true), ["4000019"], "clean line unchanged");
+  assert.deepStrictEqual(R.itemByName("Hxxxx Mushroo...", "Etc", true), [], "too many wrong letters: no guess");
+  assert.deepStrictEqual(R.itemByName("Green Mushroo...", "Etc", true), ["4000013"]); assert.deepStrictEqual(R.itemByName("Bluv Mushroo...", "Etc", true), ["4000016"]); }
+// EXP/hr from a few seconds of play (Danny's report 2026-10-18 07-14-22: 5 s of active time with 935 EXP showed 670,651 EXP/hr): no
+// rate under 60 s of active time (the same line recentExpHr and the EXP/min lines use), the real one from there on
+{ const mk = (secs) => { const s = createSession(G); s.add({t: sec(0), type: "map", id: 42}); s.add({t: sec(0), type: "bar", exp: 100, level: 10});
+    for (let i = 0; i <= secs; i++) s.add({t: sec(i), type: "exp", gain: 187}); return s.stats() };
+  const a = mk(5);
+  assert.ok(a.activeMin < 1 && a.exp > 0, "short session: " + a.activeMin);
+  assert.strictEqual(a.expHr, 0, "no EXP/hr from 5 s"); assert.strictEqual(a.killsHr, 0); assert.strictEqual(a.rateWait, true);
+  assert.strictEqual(a.toLevelHrs, null, "no time-to-level from nothing");
+  const b = mk(120);
+  assert.ok(b.activeMin >= 1 && b.expHr > 0 && b.rateWait === false, "two minutes: a rate, " + b.expHr);
+  assert.ok(Math.abs(b.expHr - b.exp / (b.activeMin / 60)) < 1, "and it is exp over active hours") }
 // an item gone from the Use tab while a slot didn't read: not all used (Danny's 75 Lemons, 2026-10-18; 13 really eaten)
 { const s = createSession(G);
   s.add({t: sec(0), type: "inv", tab: "use", items: {"2010005": 75, "2010003": 75}, unknown: 0});

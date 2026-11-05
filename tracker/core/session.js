@@ -24,7 +24,9 @@
      {t, type: "pause"} / {t, type: "resume"}  the game screen is gone (Cash Shop, changing channel): that time isn't farming; hold: paused by hand, only "resume" ends it
    Rates use active time only: any gap of more than IDLE_MS with no EXP, meso or item event is left out. */
 (function (root){
-  const IDLE_MS = 60000, RECENT_MS = 5 * 60e3;
+  // under this much active time no per-hour rate is shown: 5 s of play with 935 EXP read as 670,651 EXP/hr (Danny's report 2026-10-18).
+  // 60 s is what the rest of the tracker already uses as "too little to say": recentExpHr's guard and the EXP/min active lines
+  const IDLE_MS = 60000, RECENT_MS = 5 * 60e3, RATE_MIN_MS = 60e3;
   // the player's own calendar day (toISOString alone is UTC: an evening in America would land on tomorrow)
   const localDate = t => { const d = new Date(t); return new Date(t - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
   function createSession(G, opts = {}){
@@ -230,7 +232,7 @@
     }
 
     function stats(){
-      const hrs = S.activeMs / 3.6e6, per = v => hrs > 0 ? v / hrs : 0;
+      const hrs = S.activeMs / 3.6e6, rateWait = S.activeMs < RATE_MIN_MS, per = v => hrs > 0 && !rateWait ? v / hrs : 0;
       // EXP/hr: from the EXP bar when it's being read (counts every source), else the EXP messages
       const exp = S.barExp || S.msgExp;
       const expHr = per(exp);
@@ -277,7 +279,7 @@
       if (pmKeys.length){ const k0 = Math.floor(S.start / 6e4), k1 = Math.max(...pmKeys, Math.floor((S.last ?? S.start) / 6e4)); for (let k = Math.max(k0, k1 - 1439); k <= k1; k++) perMin.push([k * 6e4, pmSrc[k] || 0]) }   // last 24 h at most
       return {activeMin: S.activeMs / 6e4, perMin, bestMin: perMin.length ? Math.max(...perMin.map(p => p[1])) : 0, firstBar: S.firstBar, bar: S.bar && S.bar.level ? {level: S.bar.level, pct: S.bar.pct, t: S.bar.t} : null,
         map: top ? top.map : S.map, mapName: top ? top.name : nowName, nowMap: S.map, nowMapName: nowName, maps, party: S.party, procs: S.procs, procAt: S.procAt,
-        job: S.job, level: S.level, kills: S.kills, unknownKills: S.unknownKills, killsHr: per(S.kills), exp, expHr, toLevelHrs, otherExp: S.otherExp,
+        job: S.job, level: S.level, kills: S.kills, unknownKills: S.unknownKills, killsHr: per(S.kills), exp, expHr, rateWait, toLevelHrs, otherExp: S.otherExp,
         // share of the bar's EXP that showed up as readable messages: below ~70%, kills/mesos/drops are undercounted
         readShare: S.barExp > 0 ? Math.min(1, S.msgExp / S.barExp) : null,
         // kills if the missed lines were kills at the same rate as the ones read (an estimate; only from 20% read up)

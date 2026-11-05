@@ -210,6 +210,16 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - Running tests locally: `npm run data` first (core.test.js needs app/gamedata.json, not committed).
 - findInventory picks the open tab by the most pink/rose/pale pixels per tab (not the first hit), and finds the red line's
   top row away from the open tab's break. inventory.test.js isn't in CI (needs Chromium): run it after touching readers.
+- Inventory reader (0.3.44, Danny's reports of 2026-10-18; cases in tracker/tests/cv.test.js, frames-inv): a count that fails the exact
+  colour bands is re-read once with wider bands (`loose` in readCounts) and never becomes a "1" that way (every HUD edge would); next to
+  the selected slot's border (orange or blue) the first digit's tinted left column counts as "anything". A count that did not read no
+  longer takes the picture with it (the stack keeps its picture, count null), and a stack whose picture is part-covered by the pointer is
+  matched again against the pictures already matched in the window (`slotIcon` trim 1, then 2). A slot with no count that is mostly
+  item-tooltip navy, or only the pointer hand's pixels, comes back in `covered` (not `unknown`, no phantom missed slot).
+- Pickup names: `itemByName` allows one misread letter in a cut name (`Hornv Mushroo...`) when exactly one item name in the category fits,
+  and an unread glyph in a cut name stands for 1-3 letters. Map title: `mapTextRect` looks for white lettering with the panel's blue-grey
+  beside it first (bright scenery next to the minimap used to win), the white-only look is the fallback. EXP/hr and the other per-hour
+  rates show nothing under 60 s of active time (`rateWait` in core/session.js stats; the window shows "-"); History rows still divide.
 - Boxes: a Companion's Magic Box leaving the Use tab triggers chat OCR (checkBox, renderer-live.js); boxFromText takes the
   "earned" lines above "...Box xN has been lost" as rewards, items with src "box" (never a monster's drop).
 - KPQ timeline: saved runs carry kpq.timeline (per round: start clock, [stage, start, sec], clear, total, end Exit/left/

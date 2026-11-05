@@ -66,6 +66,16 @@ EXP-bar crops at other window sizes; all read 68,601 [71.68%].
 | etc-pulse-tab.png | 220x250 | Etc tab caught mid-pulse | tab still found |
 | use-arrows-kpq.png | 220x250 | Use tab, arrow stacks 592/800/800/583 | arrows total 2,775; a missed stack keeps its last read |
 | use-pointer-on-tabs.png | 225x300 | mouse hand over the red line | tab "use" |
+| use-792-201-selected.png | 211x273 | Use tab, selected (blue border) first stack over the quiver; crop of the 1280 frame at (909,269) (report 2026-10-18 09-22-44); tracker/tests/cv.test.js | slot 0 = 792, slot 6 = 201, arrows 4,993 (the reader said 4,000) |
+| use-215-hover-2x.png | 422x546 | Use tab at 2x (native 1440), `215` and `550` stacks, pointer on the wallet; crop at (1900,384) of a 2560x1440 frame (07-08-35); cv.test.js | slot 5 = 215, arrows 6,823 |
+| etc-37-stack.png | 211x273 | Etc tab, Bronze Ore `37`; crop at (848,235) (07-44-11); cv.test.js | slot 1 = 4010000 x37 |
+| etc-selected-89.png | 211x273 | Etc tab, selected (orange border) Horny Mushroom Cap; crop at (836,295) (09-37-53); cv.test.js | slot 5 = 4000019 x89 (the triage's "39" was a by-eye guess; the pixels are an 8) |
+| etc-selected-ticket-2.png | 211x273 | Etc tab, selected ticket `2`; crop at (951,194) (06-44-06); cv.test.js | slot 18 = 4001001 x2 |
+| use-arrows-11601-selected-668.png | 211x273 | Use tab, 16 arrow stacks, selected first = 668; crop at (894,293) (04-12-12; read right before too); cv.test.js | arrows 11,601 |
+| use-pointer-on-arrow-2x.png | 422x546 | Use tab at 2x, the pointer hand over the top of arrow stack 3; crop at (654,648) of 2560x1440 (08-52-13); cv.test.js | slot 3 = 800, arrows 5,334 (was 4,534), unknown 0 |
+| use-tooltip-box-hand.png | 211x273 | Use tab, Magic Box under the pointer hand, item tooltip over the empty slots below; crop at (909,269) (09-19-09); cv.test.js | slot 19 = 2430000 x1, `covered` = 22,23,24,27,28,29, unknown 0 |
+| equip-pointer-on-empty.png | 211x273 | Equip tab, empty, pointer hand over slot 1; crop at (327,312) (08-52-13); cv.test.js | covered [1], unknown 0 |
+| etc-pointer-on-empty.png | 211x273 | Etc tab, 4 ores, pointer hand over empty slot 4; crop at (327,312) (08-52-13); cv.test.js | 4 stacks, covered [4], unknown 0 |
 | meso-2700.png, meso-3210.png, meso-3510.png, meso-3560.png, meso-3571.png, meso-3590.png | ~300x90 | meso total strip, un-doubled | the number in the file name |
 | party-hp-bar.png | 80x26 | one party member's HP bar | stacked 1/2/3 copies -> no party / 2 / 3 |
 | party-4-out-of-range.png | 380x160 | 1440p party window, 3 of 4 out of range (grey, empty bars), drawn at (0,420) on 2560x1440 | 4 |
@@ -84,6 +94,7 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 | timer-2219.png (2x), timer-2216.png, timer-2546.png (1x frames, upscaled 2x nearest) | 460x200 | same; the real 6 and 9 shapes (the old guesses read null) |
 | bar-1601.png | 700x80 | EXP bar "1,601 [2.51%]" (a 1 before a comma used to read 601) |
 | minimap-1st-stage.png | 600x160 | top-left of a 1280x720 frame (bug report 2026-11-04), used by tracker/tests/cv.test.js | title rect pairs both lines, x1 > 230; a stale narrow rect re-fits to it |
+| minimap-victoria-sand.png, minimap-victoria-sky-a.png, minimap-victoria-sky-b.png | 400x140 | top-left of 1280x720 frames (report 2026-10-24 22-58-10): the minimap panel (Victoria Road / East Rocky Mountain IV) beside bright sand and sky, used by tracker/tests/cv.test.js | title rect x1 <= 195, 150+ px wide, y 26-60 (was 398 wide or none) |
 
 ## On Danny's device (folder tools, already approved; not in the repo)
 - `C:\Users\danny\Pictures\MS Classic Tracker frames`: debug and bug-report frames. New fixtures come from here.
