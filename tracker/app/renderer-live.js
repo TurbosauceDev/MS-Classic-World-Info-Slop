@@ -662,7 +662,8 @@ async function snap(which, f = null, hand = true){
     try {
       const c = document.createElement("canvas"); c.width = f.w; c.height = f.h; c.getContext("2d").putImageData(new ImageData(f.d, f.w, f.h), 0, 0);
       const blob = await new Promise(r => c.toBlob(r, "image/png"));
-      await host.saveFrame(`snap-${which}-${new Date(sn.t).toISOString().slice(0, 19).replace(/:/g, "-")}.png`, new Uint8Array(await blob.arrayBuffer()));
+      // 0.3.45: snapshot pictures live in the runs folder (not the pruned frames folder), like the run-summary picture
+      await host.saveFrame(`snap-${which}-${new Date(sn.t).toISOString().slice(0, 19).replace(/:/g, "-")}.png`, new Uint8Array(await blob.arrayBuffer()), "runs");
       sn.file = true;
     } catch {}
     if (hand) $("#status").textContent = bar ? `Snapshot (${which}): Lv ${level ?? "?"}, ${bar.pct}%.` : `Snapshot (${which}) taken, but the EXP bar didn't read: type the level and % in by hand.`;

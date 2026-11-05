@@ -74,7 +74,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
 - `tests/frames/` Danny's 2560x1440 captures (playfield blanked), `frames-inv/` inventory, `frames-kpq/` KPQ clock,
   `frames-beanguri/` (MIT, from beanguri's overlay). Every misread from real use becomes a fixture + expected value.
 - Danny's device (folder tools, already approved): `C:\Users\danny\Pictures\MS Classic Tracker frames` (debug/report
-  frames), `C:\Users\danny\AppData\Roaming\MS Classic Grind Tracker` (sessions).
+  frames; snap-* snapshots moved 0.3.45 to `...\MS Classic Tracker runs`, never pruned), `C:\Users\danny\AppData\Roaming\MS Classic Grind Tracker` (sessions).
 
 ## Facts that cost time to rediscover
 - Danny plays native 1440, UI "Ideal Ratio" (UI 2x, world not). Captured video shifts colors: match color ranges.

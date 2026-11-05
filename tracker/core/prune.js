@@ -1,6 +1,8 @@
 // Frames-folder pruning (0.3.41): Pictures\MS Classic Tracker frames collects the #frames button's bulk captures
 // (frame-000.png … and, from older builds, frame-* folders) — 2.4 GB on Danny's PC. At tracker start the entries
 // older than N days (settings.pruneFramesDays, default 30; settings.pruneFrames off by unchecking) are deleted.
+// 0.3.45: the snap-* snapshot pictures moved to the runs folder (Pictures\MS Classic Tracker runs) and are never
+// pruned - planFrames still only names frame-* entries, and the runs folder is not pruned at all.
 // Frame pruning never touches report-* (bug reports); those have their own rules below (0.3.43, Danny 11-05): a folder
 // Hermes renamed with the suffix "-checked" (diagnosed, evidence moved into the repo) is deleted at start whatever its age;
 // unchecked AUTO reports ("-auto") are capped at settings.autoReportCapMb (default 1024) in total, oldest first; unchecked

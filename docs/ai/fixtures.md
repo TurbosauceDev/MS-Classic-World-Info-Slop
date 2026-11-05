@@ -98,6 +98,8 @@ Top-middle crops of KPQ frames (2560x1440 at 2x), pasted back at their spot on a
 
 ## On Danny's device (folder tools, already approved; not in the repo)
 - `C:\Users\danny\Pictures\MS Classic Tracker frames`: debug and bug-report frames. New fixtures come from here.
+- `C:\Users\danny\Pictures\MS Classic Tracker runs`: run-summary and snap-* snapshot pictures (0.3.45 moved the snaps
+  here from the frames folder). Not pruned; new fixtures can come from here too.
 - `C:\Users\danny\AppData\Roaming\MS Classic Grind Tracker`: saved sessions.
 | `tests/fixtures/questlog-completed.webm` | 510x816, 49 s, VP9 (from Danny's 10-21 mp4) | QUEST window, Completed tab, each category opened and scrolled: 59 lines (list in tests/questlog.js TRUTH) | tests/questlog.js |
 | `tracker/tests/frames-quest/questlog-progress.png` | 515x818 | copy of the site's In Progress shot: the tracker's shared quest core (app/questread.js) must read the same 8 quests the site does | tests/quest.test.js |
