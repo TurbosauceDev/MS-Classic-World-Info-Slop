@@ -47,6 +47,10 @@ const boxGaps = require("./boxgaps");
         vmid: Math.round((a.top + a.bottom) / 2 - (w.top + w.bottom) / 2) } });
     check(stack.stack === "column" && stack.vmid === 0 && stack.airtl >= 8 && stack.airfr >= 8,
       `the byline stack centres on the avatar with air on both sides (${JSON.stringify(stack)})`) }
+  // Danny 11-05: no fully-round pills on the feed - tags, filter pills and Home's feed buttons all wear 4px corners
+  { const rr = await p.evaluate(() => [".jtag", ".jfpill", ".feedlinks .btn"].map(s => { const l = [...document.querySelectorAll(s)];
+      return [s, l.length, [...new Set(l.map(e => getComputedStyle(e).borderRadius))].join("|")] }));
+    check(rr.every(([, n, r]) => n > 0 && r === "4px"), `feed tags, filter pills and feed buttons all have 4px corners (${JSON.stringify(rr)})`) }
   // Turbozo 11-04 layout round: the update cards wear the shared site-update banner, the avatar grew, the byline
   // chip's text lines up with the text above it, and the feed head / filter pills / day divider center.
   check(await p.$$eval("#feed .jupd .jimg img", l => l.length === 6 && l.every(i => i.src.startsWith("data:image/") && i.naturalWidth > 0)),

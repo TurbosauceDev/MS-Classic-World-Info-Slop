@@ -304,6 +304,7 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-11-05 (Danny): KPQ rounds segment from the round clock's epoch (each read pins the round start at t + left - 1800, since the clock always starts a round at 30:00); round and stage times are measured against it, so the slow minimap OCR can't stretch them. The minimap stays the stage namer and the fallback round counter when no clock is seen. A round that ends warped back to Kerning City (Bonus timeout, or the NPC talked to) is not a clear; clear stays 1st stage to the Last stage. (Hermes)
 - 2026-11-05 (Danny): releases are gated on green CI only, no beta test round, until a dev branch exists (no users yet).
 - 2026-11-05 (Danny): sample frames auto-prune after 30 days (settings: days and off switch); bug reports (report-*) are never pruned. (Hermes)
+- 2026-11-05 (Danny): the feed's filter pills, tags and Home's feed buttons use the same 4px corners as the category tag (no fully-round pills on the feed). Dots, counters and map markers stay round. Provisional 24h. (Hermes)
 ## Open decisions (pending Danny)
 
 Each entry blocks something. When Danny calls it, transcribe above with the date and note the resolution here.
