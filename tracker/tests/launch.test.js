@@ -40,11 +40,14 @@ if (!/  APP_START  version=\S+ electron=\d+\.\S+ chrome=\S+ os=/.test(dbgText)) 
       for (const exp of [18572, 18757, 19803, 19894]) if (!x.bars.includes(exp)) rf.push("replay never read EXP " + exp + ": " + JSON.stringify(x.bars));
     }
   }
+  if (RR && !(RR.pictures && path.resolve(RR.pictures).startsWith(path.resolve(rdir)))) rf.push(`the replay test app used a real Pictures folder (${RR.pictures})`);
   for (const f of rf) fails.push(f);
   if (!rf.length) console.log("replay window passed on the real Electron (4 pictures, EXP bars read)");
 }
 if (!R) fails.push(`no result: exit ${r.status} signal ${r.signal}${r.error ? " " + r.error.message : ""}\n${(r.stderr || "").slice(-1500)}`);
 else {
+  // the app must never see the real Pictures folder: its boot clean-up deletes report folders there (2026-11-05)
+  if (!R.pictures || !path.resolve(R.pictures).startsWith(path.resolve(dir))) fails.push(`the test app used a real Pictures folder (${R.pictures})`);
   if (!R.windows.length) fails.push("no window finished loading");
   if (!R.sources || !(R.sources.screen > 0)) fails.push(`desktopCapturer found no screen to capture (${JSON.stringify(R.sources)})`);
   for (const e of R.errors) fails.push(e);

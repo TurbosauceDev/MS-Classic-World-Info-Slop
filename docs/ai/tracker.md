@@ -225,6 +225,7 @@ Per-image index with expected values: [fixtures.md](fixtures.md). Add a row with
   (value from low-data prices); the Loot table marks rough prices "?" and shows the range under Total (2026-10-19).
 
 ### Still-true traps promoted from tracker-history.md (Hermes 2026-11-02)
+- Any test that runs the REAL app/main.js on a dev PC (tests/launch-entry.js) must redirect BOTH userData and pictures: the boot clean-up (core/prune.js, prune-frames IPC) deletes in Pictures/MS Classic Tracker frames. Before the fix, local launch-test runs deleted 21 of Danny's real `-checked` report folders on 2026-11-05 (all approved-for-deletion ones, by luck). launch.test.js now fails if the app's pictures path is outside its temp dir. Never prove such a fix red by running the old code against the real folder (that is how 17 of the 21 went).
 - Pop-ups are inset over a blurred backdrop and never call host.mini/winSize or change the page height.
 - Esc handlers that consume the key must `preventDefault()` (drag cancel and toolbox close do), or Settings opens behind them.
 - Overlay card ids are `kind` or `kind_N` (`_` because the id lands in a CSS selector). Keep-apart is display only: saved widget x/y are never rewritten.
