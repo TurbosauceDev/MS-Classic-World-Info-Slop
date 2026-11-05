@@ -264,7 +264,7 @@ $("#frames").onclick = async () => {
 
 // "Report a bug": the last frames and log lines into one folder, opened for sending. The popup (Ctrl+Shift+B from the game,
 // the Bug button, the menu) grabs the frames the moment it opens, so typing the note doesn't push the problem out of them
-const frameName = (f, i) => `frame-${i}-${new Date(f.t).toISOString().slice(11, 19).replace(/:/g, "")}.png`;
+const frameName = (f, i) => `frame-${i}-${new Date(f.t).toISOString().slice(11, 19).replace(/:/g, "")}.${f.ext === "webp" ? "webp" : "png"}`;
 // the compact "what state was it in" block at the top of every report's log.json (core/flight.js stateBlock; main.js adds the
 // version and the settings that differ from the defaults, minus anything that identifies the player)
 function reportNow(auto){
@@ -276,6 +276,7 @@ function reportNow(auto){
 async function saveReport(frames, text, opt = {}){
   const s = session?.stats();
   try {
+    await dbgFlush();   // the debug log's pending lines reach the disk before main copies its last 30 minutes into the folder
     const dir = await host.saveReport(frames.map((f, i) => ({name: frameName(f, i), bytes: f.bytes})),
       {note: text.trim().slice(0, 2000), running: timer != null, fps: FPS, check, stats: s && {...s, mobs: s.mobs.length, items: s.items.length}, now: reportNow(opt.auto), auto: opt.auto || undefined,
         frames: frames.map((f, i) => ({name: frameName(f, i), t: f.t})), log: LOG.slice()});

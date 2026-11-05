@@ -167,14 +167,30 @@ function runClockMs(){
   const end = wrap ? wrap.t : held && session?.state?.pausedAt != null ? session.state.pausedAt : Date.now();
   return Math.max(0, end - runT0);
 }
-function log(kind, data){ LOG.push({t: Date.now(), kind, ...data}); if (LOG.length > LOG_MAX) LOG.shift() }
+function log(kind, data){ LOG.push({t: Date.now(), kind, ...data}); if (LOG.length > LOG_MAX) LOG.shift(); dbgPush(kind, data) }
+// debug log (0.3.43): every log() entry is also one text line (core/debuglog.js), sent to main in batches (every 2 s or 100 lines) and
+// kept in userData/debug, rolling, never uploaded. The character name, nick, party code and alias are blanked wherever they would appear.
+// The replay window writes nothing (its preload has no debugWrite).
+const DBGBUF = [], DBG_ON = !/[?&]replay=/.test(location.search);
+function dbgPush(kind, data){
+  if (!DBG_ON) return;
+  try { DBGBUF.push(GrindDebugLog.format(Date.now(), kind, data, [typeof charName === "string" ? charName : "", settings?.nick, settings?.partyCode, settings?.alias])); if (DBGBUF.length >= 100) dbgFlush() }
+  catch {}   // the debug log must never break tracking
+}
+async function dbgFlush(){ if (!DBGBUF.length) return; const b = DBGBUF.splice(0); try { await host.debugWrite?.(b) } catch {} }   // no main process to take them: dropped
+setInterval(dbgFlush, 2000); addEventListener("beforeunload", dbgFlush);
+const stackOf = e => String(e?.stack || "").split("\n").slice(0, 6).join(" | ");
+addEventListener("error", e => log("error", {where: "window", msg: e.message, at: String(e.filename || "").split("/").pop() + ":" + e.lineno + ":" + e.colno, stack: stackOf(e.error)}));
+addEventListener("unhandledrejection", e => log("error", {where: "promise", msg: String(e.reason?.message ?? e.reason), stack: stackOf(e.reason)}));
 new MutationObserver(() => { const text = $("#status").textContent; if (LOG.findLast(l => l.kind === "status")?.text !== text) log("status", {text}) }).observe($("#status"), {childList: true, characterData: true, subtree: true});
 let lastKeep = 0;
 function keepFrame(t, f){
   if (t - lastKeep < 3000) return;
   lastKeep = t;
   if (video.pump){ canvas.width = f.w; canvas.height = f.h; g.putImageData(new ImageData(f.d, f.w, f.h), 0, 0) }   // f is the frame just grabbed, copied in before it goes to the reader
-  canvas.toBlob(async b => { if (!b) return; RECENT.push({t, bytes: new Uint8Array(await b.arrayBuffer())}); while (RECENT.length > GrindFlight.RING_MAX) RECENT.shift() }, "image/png");
+  // 0.3.43: lossless WebP (quality 1 = lossless in Chromium 156/Electron 45; measured pixel-identical to the PNG on 24 of Danny's real frames, ~37% smaller);
+  // an engine that can't encode WebP hands back a PNG and the picture is named .png
+  canvas.toBlob(async b => { if (!b) return; RECENT.push({t, ext: b.type === "image/webp" ? "webp" : "png", bytes: new Uint8Array(await b.arrayBuffer())}); while (RECENT.length > GrindFlight.RING_MAX) RECENT.shift() }, "image/webp", 1);
 }
 
 // self-check: for the first 8 s after Start, which readers work right now (8, not 5: the first map read loads the OCR)

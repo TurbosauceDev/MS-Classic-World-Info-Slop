@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld("host", {
   gameFound: nope, wholeScreen: async on => !!on,
   settings: async s => { await settingsNow(); if (s) mem = {...mem, ...s, share: false, partyCode: "", autoReport: false}; return mem },
   saveSession: nope, autosave: nope, journalWrite: async () => 0, journalInfo: async () => ({files: 0, bytes: 0}), journalOpen: nope,
-  openExternal: nope, autosaveGet: none, saveFrame: none, saveImage: none, saveReport: none, pruneFrames: async () => ({removed: 0, bytes: 0, days: 30}),
+  openExternal: nope, autosaveGet: none, saveFrame: none, debugWrite: none, debugOpen: nope, saveImage: none, saveReport: none, pruneFrames: async () => ({removed: 0, bytes: 0, days: 30}),
   openFolder: nope,
   ocr: (png, opt) => ipcRenderer.invoke("ocr", png, opt),
   shareRun: nope, shareShop: nope, spotShare: nope, spotsGet: async () => ({spots: []}), forgetShared: async () => ({ok: true, removed: 0}),

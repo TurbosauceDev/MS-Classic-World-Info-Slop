@@ -450,6 +450,21 @@ const path = require("path"), {chromium} = require("playwright");
   const rep = await page.evaluate(() => [window.report, window.opened]);
   if (!rep[0] || rep[0].frames < 1 || rep[0].info.note !== "map read wrong" || !rep[0].info.log.some(l => l.kind === "event") || !rep[0].info.log.some(l => l.kind === "status")
     || !rep[0].info.check || rep[1] !== "report-2026-10-17T20-00-00") throw new Error("report: " + JSON.stringify(rep).slice(0, 300));
+  // debug log (0.3.43): the window's log() entries reach host.debugWrite as text lines, flushed before a report is saved, with
+  // the character name and party code blanked; the report's pictures are lossless WebP when the engine can encode it
+  const dbgOk = await page.evaluate(async () => {
+    const keep = settings; charName = "Turbow"; settings = {...settings, partyCode: "snails42", nick: "Nickname"};
+    log("status", {text: "Turbow joined party snails42 as nickname"}); log("error", {where: "test", stack: "at f (C:/Users/danny/app.js:1:1)"}); await dbgFlush(); charName = null; settings = keep;
+    const L = window.debugLines || [];
+    return {n: L.length, bad: L.filter(l => !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z  [A-Z_]+/.test(l)).slice(0, 3), kinds: [...new Set(L.map(l => l.split("  ")[1]))],
+      names: L.filter(l => /turbow|snails42|nickname|users.danny/i.test(l)).slice(0, 3), hidden: L.some(l => /STATUS  text="<hidden> joined party <hidden> as <hidden>"/.test(l)), webp: window.RECENT_EXT || RECENT.map(r => r.ext)};
+  });
+  if (dbgOk.n < 5 || dbgOk.bad.length || dbgOk.names.length || !dbgOk.hidden || !["START", "MAP", "STATUS", "EVENT", "ERROR"].every(k => dbgOk.kinds.includes(k))) throw new Error("debug log: " + JSON.stringify(dbgOk));
+  if (rep[0].debugBefore < 3) throw new Error("the debug lines were not flushed before the report was saved: " + rep[0].debugBefore);
+  if (!rep[0].names.every(n => /^frame-\d+-\d{6}\.(webp|png)$/.test(n)) || dbgOk.webp.some(e => e !== (dbgOk.webp[0]))) throw new Error("report picture names: " + rep[0].names.join());
+  // start-up clean-up note (0.3.43): one line for frames + reports, null when nothing went
+  const fn = await page.evaluate(() => [freedNote({removed: 0, bytes: 0, days: 30}), freedNote({removed: 2, bytes: 1048576, days: 30, reports: {checked: 1, auto: 3, bytes: 3 * 1048576}}), freedNote({removed: 0, bytes: 0, days: 30, reports: {checked: 1, auto: 0, bytes: 0}})]);
+  if (fn[0] !== null || !/^Freed 4\.0 MB: deleted 2 old sample-frame entries \(older than 30 days\), 1 bug report marked -checked, 3 automatic reports over the size limit\./.test(fn[1]) || !/^Freed 1 entry: deleted 1 bug report marked -checked/.test(fn[2])) throw new Error("freed note: " + JSON.stringify(fn));
   // death check: a bar drop, then the chat OCR finds "lost 4,721 EXP for dying" (Danny's screenshot line)
   const dn = await page.evaluate(async () => { const ocr = host.ocr; host.ocr = async () => "[00:15] You have lost 4,721 EXP for dying\n"; deathSeen = session.state.deaths; session.state.deaths++;
     const t0 = Date.now(); while (!deaths.confirmed && Date.now() - t0 < 4000) await new Promise(r => setTimeout(r, 100));

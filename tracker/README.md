@@ -112,7 +112,7 @@ npm start           # run it (Windows, Electron)
 - Auto-pause: EXP bar and minimap both gone for 3 s (Cash Shop, channel change) = paused; that time is left out of
   active time and of 15-minute runs. All the ways the tracker stops counting share one state pill above the status
   message, and it names the reason: "Paused: by you" (only Go on lifts it), "Paused: the game screen is gone",
-  "Paused: between KPQ rounds", or "Idle break: no EXP counted". Paused time never counts toward EXP/hr or shared runs.
+  "Paused: between KPQ rounds", or "Idle: time not counted" (a long quiet stretch: EXP that arrives still counts, the quiet time stays out of your rates). Paused time never counts toward EXP/hr or shared runs.
   Level-ups are logged with the farming time each level took (History).
 - Window spot (v0.2.23): position and size saved to settings.winBounds on move/resize/close (full height while mini); reopens there if the title bar is still on a monitor, else 360x600 default.
 - Inventory (v0.2.24): readers.js findInventory (red line under the tabs + pink open tab, Danny's Use tab 2026-10-18) and

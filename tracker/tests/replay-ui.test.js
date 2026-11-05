@@ -15,7 +15,15 @@ const frames = ["frame-000.png", "frame-006.png", "frame-042.png", "frame-046.pn
     const bytes = b => Uint8Array.from(atob(b), c => c.charCodeAt(0));
     window.host.replay = {load: async () => ({dir: "report-2026-11-04T18-00-12", log: {version: "0.3.41", saved: "Wed Nov 04 2026 10:00:12 GMT-0800", note: "auto: test", settings: {share: false}, lines: [{t: fx.frames[0].t, kind: "status", text: "as it happened live"}],
       now: {state: "paused", pause: {reason: "kpq", label: "Paused: between KPQ rounds"}, kpq: {on: true, hold: true}, map: {now: "10003000"}}, auto: {reason: "the KPQ clock was on screen for 12 s"}},
-      frames: fx.frames.map(f => ({name: f.name, t: f.t, bytes: bytes(f.b64)}))}) };
+      frames: await Promise.all(fx.frames.map(async (f, i) => {
+        let b = bytes(f.b64), name = f.name;
+        if (i % 2){   // every second picture as lossless WebP (what reports save since 0.3.43): the replay must read the same EXP bars from it
+          const bm = await createImageBitmap(new Blob([b])), c = document.createElement("canvas"); c.width = bm.width; c.height = bm.height; c.getContext("2d").drawImage(bm, 0, 0);
+          const blob = await new Promise(r => c.toBlob(r, "image/webp", 1));
+          if (blob.type === "image/webp"){ b = new Uint8Array(await blob.arrayBuffer()); name = name.replace(/\.png$/, ".webp"); (window.webpUsed ||= []).push(name) }
+        }
+        return {name, t: f.t, bytes: b};
+      }))}) };
     window.host.settings = async x => (window.st = {...(window.st || {share: false, idleSec: 60, guideDone: true, autoReport: false}), ...(x || {})});
   }, {frames});
   await page.goto("file://" + path.join(__dirname, "../app/index.html") + "?replay=1");
@@ -28,6 +36,7 @@ const frames = ["frame-000.png", "frame-006.png", "frame-042.png", "frame-046.pn
     wrote: Object.entries({saved: window.saved, report: window.report instanceof Element ? null : window.report, shared: window.shared, shopShared: window.shopShared, spotsShared: window.spotsShared}).filter(e => e[1]).map(e => e[0] + "=" + JSON.stringify(e[1]).slice(0, 80)), now: Date.now(), running: timer != null}));
   if (r.st.error) throw new Error("replay error: " + r.st.error);
   if (r.st.idx !== 3) throw new Error("replay stopped at picture " + r.st.idx + " of 4");
+  if ((await page.evaluate(() => window.webpUsed || [])).length !== 2) throw new Error("two of the four pictures should have gone through WebP");
   for (const exp of [18572, 18757, 19803, 19894]) if (!r.bars.includes(exp)) throw new Error("the replay never read EXP " + exp + ": " + JSON.stringify(r.bars));
   if (!r.kinds.includes("meso") || !r.kinds.includes("exp")) throw new Error("pickup/EXP events missing: " + r.kinds);
   if (r.times.some(t => t < T0 - 3000 || t > T0 + 12000 + 5000)) throw new Error("events outside the recorded time span (virtual clock): " + r.times.join());

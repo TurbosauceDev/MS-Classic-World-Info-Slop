@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld("host", {
   journalOpen: () => ipcRenderer.invoke("journal-open"),
   openExternal: url => ipcRenderer.invoke("open-external", url),
   autosaveGet: () => ipcRenderer.invoke("autosave-get"),
+  debugWrite: lines => ipcRenderer.invoke("debug-write", lines),
+  debugOpen: () => ipcRenderer.invoke("debug-open"),
   saveFrame: (name, bytes) => ipcRenderer.invoke("save-frame", name, bytes),
   saveImage: (name, bytes, quiet) => ipcRenderer.invoke("save-image", name, bytes, quiet),
   saveReport: (frames, info) => ipcRenderer.invoke("save-report", frames, info),

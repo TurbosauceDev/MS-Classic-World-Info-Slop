@@ -11,8 +11,11 @@ const r = spawnSync(electron, [path.join(__dirname, "launch-entry.js")], {
   env: {...process.env, MSCT_LAUNCH_USERDATA: path.join(dir, "userData"), MSCT_LAUNCH_OUT: out, ELECTRON_ENABLE_LOGGING: "0"}});
 let R = null;
 try { R = JSON.parse(fs.readFileSync(out, "utf8")) } catch {}
+// 0.3.43: the real main process wrote its debug log (userData/debug): app start with the versions, and the stop line
+let dbgText = ""; try { const dd = path.join(dir, "userData", "debug"); dbgText = fs.readdirSync(dd).map(n => fs.readFileSync(path.join(dd, n), "utf8")).join("") } catch {}   // no debug folder = the check below fails
 fs.rmSync(dir, {recursive: true, force: true});
 const fails = [];
+if (!/  APP_START  version=\S+ electron=\d+\.\S+ chrome=\S+ os=/.test(dbgText)) fails.push("the debug log has no APP_START line: " + JSON.stringify(dbgText.slice(0, 200)));
 // the replay window (0.3.42) on the real Electron: a throwaway report folder built from four of Danny's real frames, opened with
 // --replay exactly as `MS Classic Grind Tracker.exe --replay <folder>` does; its preload, IPC and page must work end to end
 {

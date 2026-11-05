@@ -6,7 +6,7 @@
     hand: "Paused: by you",
     gone: "Paused: the game screen is gone",
     kpq: "Paused: between KPQ rounds",
-    idle: "Idle break: no EXP counted"
+    idle: "Idle: time not counted"
   };
   const GrindPauses = {
     LABELS,
