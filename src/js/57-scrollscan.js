@@ -134,7 +134,9 @@ function readFrame(img, C, cache, near){
    a new frame placed where every shared row agrees (the tooltip covers slots, so "?" fits anything) ---- */
 const tok = s => s.ids[0] + "x" + s.n;
 function frameRows(read, filled){
-  const by = Object.fromEntries(read.slots.map(s => [s.i, tok(s)])), out = [];
+  // a stack whose picture matched but whose count did not read (the tooltip over its digits) is "?" too: it cannot
+  // disagree with a row read earlier (tracker 0.3.44 started keeping those stacks instead of dropping them)
+  const by = Object.fromEntries(read.slots.map(s => [s.i, s.n == null ? "?" : tok(s)])), out = [];
   for (let r = 0; r < 6; r++) out.push([0, 1, 2, 3, 4].map(c => by[r * 5 + c] || (filled.includes(r * 5 + c) ? "?" : "")));
   return out;
 }
