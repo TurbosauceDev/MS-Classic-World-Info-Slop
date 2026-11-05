@@ -128,6 +128,7 @@ const path = require("path"), {chromium} = require("playwright");
   const gl = await page.evaluate(() => { const t = Date.now() - 200e3; session.add({t, type: "bar", exp: 5000, pct: 5000 / GAMEDATA.exp[22] * 100, level: 22});
     session.add({t: t + 10e3, type: "bar", exp: 6000, pct: 6000 / GAMEDATA.exp[22] * 100, level: 22}); session.add({t: t + 20e3, type: "bar", exp: 5500, pct: 5500 / GAMEDATA.exp[22] * 100, level: 22});
     session.state.lastExpT = Date.now() - 130e3;   // last EXP over 2 minutes ago
+    session.state.activeMs = Math.max(session.state.activeMs, 90e3);   // 90 s of play: a rate (and so a time to goal) shows from 60 s
     render(); alertsTick(); return [document.querySelector("#deaths").textContent, document.querySelector("#goalK").textContent, document.querySelector("#goalV").textContent, document.querySelector("#status").textContent] });
   if (gl[0] !== "1" || gl[1] !== "Level 23 in" || !/h|min/.test(gl[2]) || !/No EXP for 2 min/.test(gl[3])) throw new Error("goal/deaths/stop: " + gl);
   // Next level (the default) and Off

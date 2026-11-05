@@ -526,13 +526,23 @@
   // frame whose band hunt fails can re-cut the LAST good rect (the title doesn't move while the minimap stays put) —
   // that's what keeps the name on the cards when the background under the text changes but nothing is actually covered
   // (Danny 10-29: "the tracker loses the minimap name even when it's never covered").
-  function mapTextRect(img){
+  /* The minimap panel's title is white on the panel's own blue-grey (152,188,204; video shifts it a little). Bright scenery
+     beside the panel (sand, clouds: Danny's Victoria Road frames, 2026-10-24, the title rect came back 398 px wide, or not at
+     all, on 7 of 8) is also "white", but no letter of it has the panel blue right next to it: onPanel = that colour within 2
+     pixels either side. Tried first; the old white-only look still runs when it finds nothing (another minimap skin). */
+  const panelBlue = (d, i) => d[i + 2] - d[i] >= 35 && d[i] >= 120 && d[i] <= 185 && d[i + 1] >= 165 && d[i + 1] <= 215 && d[i + 2] >= 185 && d[i + 2] <= 232;
+  const onPanel = (img, x, y) => { for (const k of [-2, -1, 1, 2]) if (x + k >= 0 && x + k < img.w && panelBlue(img.d, (y * img.w + x + k) * 4)) return true; return false };
+  function mapTextRect(img){ const r = mapTextRectAs(img, true); return r && r.x1 - r.x0 >= 30 ? r : mapTextRectAs(img, false) }
+  function mapTextRectAs(img, strict){
     const X = Math.floor(img.w * 0.4), Y = Math.floor(img.h * 0.3), d = img.d, ink = i => Math.min(d[i], d[i + 1], d[i + 2]) > 190;
     // per row, white in short runs only (letters); long runs are bars and frames (the "MINI MAP" title, the map's border)
     const cnt = [];
     for (let y = 0; y < Y; y++){
-      let n = 0, long = 0;
-      for (let x = 0; x < X;){ if (!ink((y * img.w + x) * 4)){ x++; continue } const s = x; while (x < X && ink((y * img.w + x) * 4)) x++; if (x - s <= 30) n += x - s; else long = Math.max(long, x - s) }
+      let n = 0, long = 0, lim = X;
+      // strict: nothing right of the row's last panel-blue pixel counts (the panel's white outline runs on into bright sky)
+      if (strict){ lim = 0; for (let x = X - 1; x >= 0; x--) if (panelBlue(d, (y * img.w + x) * 4)){ lim = Math.min(X, x + 3); break } }
+      for (let x = 0; x < lim;){ if (!ink((y * img.w + x) * 4)){ x++; continue } const s = x; while (x < lim && ink((y * img.w + x) * 4)) x++;
+        if (x - s <= 30){ if (!strict || onPanel(img, s, y) || onPanel(img, x - 1, y)) n += x - s } else long = Math.max(long, x - s) }
       cnt.push(long > 60 ? -1 : n);   // a row inside a white bar
     }
     // text lines: rows with 12+ such pixels, bridging gaps of up to 3 rows (thin parts of letters)
@@ -583,11 +593,12 @@
   }
   // left to right: from the first column with ink to the end of the inkiest stretch of columns (gaps under 24 px): the
   // game scene or the minimap's right border further right isn't text
-  function mapCols(img, y0, y1){
+  function mapCols(img, y0, y1, strict = true){
     const X = Math.floor(img.w * 0.4), d = img.d, ink = i => Math.min(d[i], d[i + 1], d[i + 2]) > 190;
-    const colN = x => { let n = 0; for (let y = y0; y < y1; y++) if (ink((y * img.w + x) * 4)) n++; return n };
+    // strict: only ink with the panel blue beside it (scenery next to the panel isn't text); none found: any white
+    const colN = x => { let n = 0; for (let y = y0; y < y1; y++) if (ink((y * img.w + x) * 4) && (!strict || onPanel(img, x, y))) n++; return n };
     const runs = []; for (let x = 0, gap = 99; x < X; x++){ const n = colN(x); if (!n){ gap++; continue } if (gap >= 24) runs.push({a: x, b: x, n: 0}); const r = runs[runs.length - 1]; r.b = x; r.n += n; gap = 0 }
-    if (!runs.length) return null;
+    if (!runs.length) return strict ? mapCols(img, y0, y1, false) : null;
     const x0 = runs[0].a, x1 = runs.reduce((p, q) => q.n > p.n ? q : p).b;
     if (x1 <= x0) return null;
     return {x0, x1};
@@ -809,12 +820,23 @@
   function itemByName(name, cat, all = false){
     if (!ITEMS) return all ? [] : null;
     const cut = /\.\.\.$/.test(name), core = name.replace(/\.\.\.$/, "");
-    const re = new RegExp("^" + core.split("").map(c => c === "?" ? ".{1,2}" : "ilI1".includes(c) ? "[ilI1]" : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + (cut ? "" : "$"));
+    // the pattern for core: each unread glyph "?" is 1-2 letters (1-3 in a cut name, where \"y M\" and the like come out as one glyph);
+    // wrong = the index of one letter allowed to be any letter (a misread, \"Hornv\")
+    const pat = (wrong = -1) => new RegExp("^" + core.split("").map((c, i) => i === wrong ? "." : c === "?" ? (cut ? ".{1,3}" : ".{1,2}") : "ilI1".includes(c) ? "[ilI1]" : c.replace(/[.*+^${}()|[\]\\]/g, "\\$&")).join("") + (cut ? "" : "$"));
+    const re = pat();
     const tab = {Etc: ["Etc"], Use: ["Consumable", "Scroll"], Equip: ["Equipment"], Setup: ["Setup"]};
     const catRe = new RegExp("^" + cat.replace(/\?/g, ".") + "$"), cats = Object.keys(tab).filter(k => catRe.test(k)).flatMap(k => tab[k]);
     // l and i look alike in the pickup font ("Biue Potion", Danny's report 2026-10-18): either matches either. An unread "?"
     // may be two letters drawn as one glyph ("Emerald Sta?" = Staff, Danny's report 2026-10-19)
     let hits = ITEMS.filter(([id, it]) => re.test(it.n) && (!cats.length || cats.includes(it.c)));
+    /* a cut name (the game keeps 15 letters + "...") that matches nothing may have one letter read wrong ("Hornv Mushroo...",
+       Danny's report 2026-10-18: y read as v): one letter free, taken only when that leaves exactly one item name in the category */
+    if (!hits.length && cut && core.replace(/\?/g, "").length >= 8){
+      const alt = new Map();
+      for (let i = 0; i < core.length; i++){ if (core[i] === "?") continue; const r2 = pat(i); for (const h of ITEMS) if (r2.test(h[1].n) && (!cats.length || cats.includes(h[1].c)) && !alt.has(h[0])) alt.set(h[0], h) }
+      const names = new Set([...alt.values()].map(h => h[1].n));
+      if (names.size === 1) hits = [...alt.values()];
+    }
     // the same name twice in the game data (Red Potion 2000000 / 2000007): the first one, which the shops sell
     if (hits.length > 1 && hits.every(h => h[1].n === hits[0][1].n)) hits = [hits[0]];
     return all ? hits.map(h => h[0]) : hits.length === 1 ? hits[0][0] : null;
@@ -837,7 +859,12 @@
   function readCounts(img, area = null){
     // red channel per row (white fades to light blue going down); the video's blur shifts each row toward its neighbors
     const RED = [, , , , [215, 250], [185, 230], [165, 200], [150, 185], [140, 175]];
-    const {w, h, d} = img, blue = (i, r) => d[i + 2] >= 225 && d[i] >= RED[r][0] && d[i] <= RED[r][1] && d[i + 1] - d[i] >= 6 && d[i + 2] - d[i] >= 4;
+    // the same bands 6 wider and the blue lead 2 instead of 4: only for re-reading a glyph that didn't match (see glyphsIn2).
+    // Video noise moves single pixels out of the exact bands (f6fdf9 on a 2's row 4, c9dae8 on a 7's row 6: Danny's 792 / 215 /
+    // 201 / 37 stacks never read, 2026-10-18); used for the whole scan these bands also pick up HUD bars and icon edges
+    const RED_L = [, , , , [209, 255], [179, 236], [159, 206], [144, 191], [134, 181]];
+    let loose = false;
+    const {w, h, d} = img, blue = (i, r) => { const b = loose ? RED_L[r] : RED[r]; return d[i + 2] >= 225 && d[i] >= b[0] && d[i] <= b[1] && d[i + 1] - d[i] >= 6 && d[i + 2] - d[i] >= (loose ? 2 : 4) };
     // (the top rows' white may take a little of the icon's colour behind it: blue down to 235, Danny's Lemon "98" read
     // fffff1 on the 8's corner, 2026-10-18)
     const is = (x, y, r) => { const i = (y * w + x) * 4; return r < 4 ? d[i] >= 235 && d[i + 1] >= 253 && d[i + 2] >= 235 : blue(i, r) };
@@ -848,7 +875,7 @@
        ink inside a digit or joins columns onto it (Danny's Etc tab, 2026-10-18: "131" and "100" didn't read): then each digit
        is taken from the left where all its ink is there and at most 3 extra pixels are, and what's left after a digit is the
        icon, not a digit */
-    function glyphsIn(c, y){
+    function glyphsIn(c, y, wild = -1){
       const key = keyOf(c, y);
       if (CDIG[key] !== undefined) return [{x0: c[0], x1: c.at(-1), key, dg: CDIG[key]}];
       const out = []; let pos = 0;
@@ -858,6 +885,7 @@
           if (pos + t.w > c.length) continue;
           let extra = 0, ok = true;
           for (let r = 0; r <= 8 && ok; r++) for (let i = 0; i < t.w; i++){
+            if (c[pos + i] === wild) continue;   // the column the selection border tinted: unknown, not a miss
             const ink = is(c[pos + i], y - 8 + r, r), want = t.rows[r][i] === "#";
             if (want && !ink){ ok = false; break } if (!want && ink) extra++;
           }
@@ -870,6 +898,27 @@
       }
       return out;
     }
+    /* The selected slot's border (orange on Etc, blue on Use) tints the first digit's left column: the video blends it into
+       the digit's lower-left pixels, so that column drops out of the ink and the digit is one column short (Danny's reports
+       2026-10-18: the selected "39" and ticket "2" never read). When a count right beside a border doesn't match as is, try
+       it again with the column between the border and the first ink counted as "anything" */
+    const edge = (x, y) => { if (x < 0) return false; const j = (y * w + x) * 4; return d[j] >= 225 && d[j + 1] >= 120 && d[j + 2] < 90 || d[j] < 40 && d[j + 2] >= 100 && d[j + 2] - d[j] >= 90 };
+    function glyphsIn2(c, y){
+      const g = glyphsIn(c, y), ok = a => a.length > 0 && a.every(x => x.dg !== undefined);
+      if (ok(g)) return g;
+      // a re-read never makes a "1": every vertical bar on screen (HUD edges, icon outlines) would turn into one
+      const ok2 = a => ok(a) && a.every(x => x.dg !== 1);
+      loose = true;
+      try {
+        const g2 = glyphsIn(c, y);
+        if (ok2(g2)) return g2;
+        if (c[0] >= 2 && edge(c[0] - 2, y - 4) && edge(c[0] - 2, y - 2) && edge(c[0] - 2, y)){
+          const g3 = glyphsIn([c[0] - 1, ...c], y, c[0] - 1);
+          if (ok2(g3)) return g3;
+        }
+      } finally { loose = false }
+      return g;
+    }
     const X0 = area ? Math.max(0, area.x0) : 0, X1 = area ? Math.min(w, area.x1) : w;
     for (let y = area ? Math.max(8, area.y0) : 8, Y1 = area ? Math.min(h, area.y1) : h; y < Y1; y++){
       // quick test first: a row with the bottom color somewhere
@@ -881,7 +930,7 @@
       for (const x of cols){ if (cur && x === cur.at(-1) + 1) cur.push(x); else { cur = [x]; cl.push(cur) } }
       // digits less than 6 columns apart are one number; an unknown glyph touching a number spoils it (half covered)
       let num = null, lastEnd = -99;
-      for (const c of cl) for (const g of glyphsIn(c, y)){
+      for (const c of cl) for (const g of glyphsIn2(c, y)){
         const key = g.key;
         // light-blue bits with no white above them are icon edges or the selected slot's frame, not digits: skip
         // them instead of letting them spoil the count next to them
@@ -1022,11 +1071,30 @@
   }
   // the best icon for a slot, stopping early on any candidate already clearly worse than the best (fast enough for the
   // 1,200 equips). Same rules as iconAt: centered on the slot, bottom 3 px under the count row, count digits left out
-  function slotIcon(img, sx, cy, end, cands){
+  const TRIM_H = new Int32Array(64);
+  function slotIcon(img, sx, cy, end, cands, trim = false){
     let best = null, second = Infinity;
     for (const ic of cands){
       const x0 = sx + 16 - (ic.w >> 1), y0 = cy + 3 - ic.h;
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){
+        if (trim){
+          /* a mouse pointer over part of the picture: score without the worst 30 % of the pixels, so the covered part doesn't
+             count. Only asked about the pictures already matched in this window (readInventory), for a slot whose count read */
+          TRIM_H.fill(0); let k = 0;
+          for (let y = 0; y < ic.h; y++) for (let x = 0; x < ic.w; x++){
+            const j = (y * ic.w + x) * 4; if (ic.d[j + 3] < 250) continue;
+            const X = x0 + dx + x, Y = y0 + dy + y; if (Y > cy - 10 && X <= end + 2 || X < 0 || Y < 0 || X >= img.w || Y >= img.h) continue;
+            const i = (Y * img.w + X) * 4;
+            TRIM_H[Math.min(63, (Math.abs(img.d[i] - ic.d[j]) + Math.abs(img.d[i + 1] - ic.d[j + 1]) + Math.abs(img.d[i + 2] - ic.d[j + 2])) >> 4)]++; k++;
+          }
+          if (k <= 40) continue;
+          let keep = Math.floor(k * 0.7), sum = 0, kept = 0;
+          for (let b = 0; b < 64 && kept < keep; b++){ const n = Math.min(TRIM_H[b], keep - kept); sum += n * (b * 16 + 8); kept += n }
+          const sc = sum / kept;
+          if (!best || sc < best.sc){ if (best && best.ic !== ic) second = Math.min(second, best.sc); best = {ic, sc} }
+          else if (best.ic !== ic) second = Math.min(second, sc);
+          continue;
+        }
         const cut = Math.min(80, best ? best.sc : 80) * 1.5 * ic.n;
         let s = 0, k = 0;
         for (let y = 0; y < ic.h && s <= cut; y++) for (let x = 0; x < ic.w; x++){
@@ -1041,19 +1109,24 @@
         else if (best.ic !== ic) second = Math.min(second, sc);
       }
     }
+    if (trim === 1) return best && best.sc < 25 && second > best.sc * 1.15 ? best.ic : null;   // among the pictures matched in this window
     return best && best.sc < 80 && second > best.sc * 1.5 ? best.ic : null;
   }
   // every slot on the open tab: [{i (slot 0-29), ids (one picture can be several items), n (null: count not read)}],
   // unknown = filled slots whose item didn't match. Equips show no count (1 each).
   function readInventory(img, inv, cands, cache = null){
     const {w, d} = img, nums = readCounts(img, {x0: inv.x, x1: inv.x + 190, y0: inv.y + 28, y1: inv.y + 37 + 34 * 5 + 2});
-    const slots = [], missed = []; let unknown = 0;
+    const slots = [], missed = [], covered = [], pending = []; let unknown = 0;
     for (let r = 0; r < 6; r++) for (let c = 0; c < 5; c++){
       const sx = inv.x + 5 + 36 * c, cy = inv.y + 37 + 34 * r;
       if (cy + 4 >= img.h || sx + 32 >= w) continue;
-      let off = 0, sig = 0;
+      let off = 0, sig = 0, tip = 0, glove = 0;
       for (let y = cy - 28; y <= cy; y++) for (let x = sx + 1; x < sx + 31; x++){
-        const i = (y * w + x) * 4; if (Math.abs(d[i] - 225) + Math.abs(d[i + 1] - 223) + Math.abs(d[i + 2] - 213) > 40){ off++; sig = (sig * 31 + (d[i] >> 5) * 64 + (d[i + 1] >> 5) * 8 + (d[i + 2] >> 5)) | 0 }
+        const i = (y * w + x) * 4, r0 = d[i], g0 = d[i + 1], b0 = d[i + 2];
+        if (Math.abs(r0 - 225) + Math.abs(g0 - 223) + Math.abs(b0 - 213) > 40){ off++; sig = (sig * 31 + (r0 >> 5) * 64 + (g0 >> 5) * 8 + (b0 >> 5)) | 0;
+          // the item tooltip's navy (74,76,119), and the pointer hand's white / pale blue-grey glove with its black outline
+          if (r0 < 112 && g0 < 112 && b0 >= 90 && b0 <= 160 && b0 - r0 >= 25) tip++;
+          else if (r0 >= 195 && g0 >= 195 && b0 >= 195 || r0 + g0 + b0 < 150 || r0 >= 120 && b0 >= 150 && b0 - r0 >= 12) glove++ }
       }
       if (off < 30) continue;   // empty
       // the picture above the count, coarsely (6 patches' mean colours): "same item still there" when a read misses
@@ -1065,11 +1138,32 @@
       // the picture is matched again only when the slot changed (beyond video noise: colors in 32-shade steps)
       const key = inv.tab + "," + sx + "," + cy + "," + (num ? num.end : "") + "," + sig;
       let ic = cache?.get(key);
-      if (ic === undefined){ ic = slotIcon(img, sx, cy, num ? num.end : sx - 12, cands); if (cache){ if (cache.size > 400) cache.clear(); cache.set(key, ic) } }
-      if (!ic){ unknown++; missed.push({i: r * 5 + c, pic}); continue }
+      // no count read on a tab that shows counts: the digits (and the selection border's tint) sit somewhere in the bottom rows,
+      // so the whole count band is left out of the picture match, not only the part left of the slot (the stack was dropped when
+      // 792 and 201 didn't read, Danny's report 2026-10-18)
+      const endX = num ? num.end : inv.tab === "equip" ? sx - 12 : sx + 31;
+      if (ic === undefined){
+        ic = slotIcon(img, sx, cy, endX, cands);
+        if (cache){ if (cache.size > 400) cache.clear(); cache.set(key, ic) } }
+      // a stack whose count read but whose picture didn't (the pointer hand on part of it): tried again below, against the
+      // pictures that did match in this window
+      if (!ic && num && inv.tab !== "equip"){ pending.push({i: r * 5 + c, sx, cy, end: endX, n: num.n, pic}); continue }
+      if (!ic){
+        // nothing readable and the slot is mostly an item tooltip, or only a pointer hand's pixels: covered, not an item we
+        // failed to know (these made phantom "unknown" slots, Danny's reports 2026-10-18 09-19-09 and 08-52-13)
+        if (!num && (tip >= off * 0.35 || off < 260 && glove >= off * 0.9)){ covered.push(r * 5 + c); continue }
+        unknown++; missed.push({i: r * 5 + c, pic}); continue }
       slots.push({i: r * 5 + c, ids: ic.ids, n: num ? num.n : inv.tab === "equip" ? 1 : null, pic});
     }
-    return {tab: inv.tab, slots, unknown, missed};
+    if (pending.length){
+      const seen = new Set(), prior = []; for (const sl of slots){ const ic = cands.find(x => x.ids === sl.ids); if (ic && !seen.has(ic)){ seen.add(ic); prior.push(ic) } }
+      for (const p of pending){
+        const ic = (prior.length ? slotIcon(img, p.sx, p.cy, p.end, prior, 1) : null) || slotIcon(img, p.sx, p.cy, p.end, cands, 2);
+        if (ic) slots.push({i: p.i, ids: ic.ids, n: p.n, pic: p.pic}); else { unknown++; missed.push({i: p.i, pic: p.pic}) }
+      }
+      slots.sort((a, b) => a.i - b.i);
+    }
+    return {tab: inv.tab, slots, unknown, missed, covered};
   }
 
   /* Dirty-region check (T-13, Danny 10-29: "every little improvement"). A reader that looks at one fixed rectangle gives the

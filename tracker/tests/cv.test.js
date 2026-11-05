@@ -251,4 +251,71 @@ const crop = (w, h, f) => { const d = new Uint8ClampedArray(w * h * 4); for (let
       assert.deepStrictEqual(ev.map(e => e.type).sort(), ["exp", "meso"], "each recovered line reads once");
       console.log("    (split wins " + R.lineStats().wins + " of " + R.lineStats().tries + " tries)") }
     console.log("line reread ok (wins " + R.lineStats().wins + " of " + R.lineStats().tries + " tries)") }
+  // Inventory counts and pictures read from Danny's bug-report frames (2026-10-18), each pasted back where it was on a blank
+  // frame. Before: counts "792", "201", "215", "37", the selected slot's "89" and ticket "2" never read (video noise moved one
+  // pixel out of the colour bands; the selection border tinted the first digit's left column), a stack whose count didn't read
+  // lost its picture too, the pointer hand on part of an arrow stack dropped it (5,334 arrows read as 4,534), and the tooltip
+  // / the hand over empty slots made phantom "unknown" slots. Each case is checked on its own so a red run names them all.
+  { const R = require("../app/readers.js"), G = require("../app/gamedata.json"), readPng = require("./cv_util.js"), byTab = readPng.invIcons(G);
+    const dir = path.join(__dirname, "frames-inv"), bad = [];
+    const chk = (name, fn) => { try { fn() } catch (e) { bad.push(name + ": " + String(e.message).split("\n")[0]) } };
+    // file, canvas size, where the crop's top-left sat in the original frame
+    const read = (file, W, H, ox, oy, blank) => {
+      const src = readPng(path.join(dir, file)), d = new Uint8ClampedArray(W * H * 4);
+      for (let i = 3; i < d.length; i += 4) d[i] = 255;
+      for (let y = 0; y < src.h; y++) d.set(src.d.subarray(y * src.w * 4, (y + 1) * src.w * 4), ((oy + y) * W + ox) * 4);
+      const img = R.native({w: W, h: H, d}), inv = R.findInventory(img);
+      assert.ok(inv, file + ": inventory found");
+      if (blank) blank(img, inv);
+      return R.readInventory(img, inv, byTab[inv.tab]);
+    };
+    const slot = (rd, i) => rd.slots.find(s => s.i === i);
+    const total = (rd, id) => rd.slots.filter(s => s.ids[0] === id && s.n !== null).reduce((a, s) => a + s.n, 0);
+    // A: counts that did not read (arrows 4,000 of 4,993 before: 792 selected + 201)
+    chk("A 792 + 201 (09-22-44)", () => { const rd = read("use-792-201-selected.png", 1280, 720, 909, 269);
+      assert.strictEqual(slot(rd, 0)?.n, 792, "selected 792"); assert.strictEqual(slot(rd, 6)?.n, 201, "201");
+      assert.strictEqual(total(rd, "2060001"), 4993, "arrows 4,993"); assert.strictEqual(rd.unknown, 0, "unknown"); assert.strictEqual(rd.missed.length, 0, "missed") });
+    chk("A 215 (07-08-35, 2x capture)", () => { const rd = read("use-215-hover-2x.png", 2560, 1440, 1900, 384);   // pointer on the wallet
+      assert.strictEqual(slot(rd, 5)?.n, 215, "215"); assert.strictEqual(total(rd, "2060001"), 6823, "arrows 6,823"); assert.strictEqual(rd.unknown, 0, "unknown") });
+    chk("A 37 (07-44-11)", () => { const rd = read("etc-37-stack.png", 1280, 720, 848, 235);
+      assert.strictEqual(slot(rd, 1)?.n, 37, "Bronze Ore 37"); assert.strictEqual(slot(rd, 1)?.ids[0], "4010000"); assert.strictEqual(rd.unknown, 0, "unknown") });
+    // the selected Horny Mushroom Cap stack (orange border over the first digit): 89. The triage called it "39" by eye; the
+    // first digit has its left side closed top and bottom and the mid bar, which a 3 does not
+    chk("A selected 89 (09-37-53)", () => { const rd = read("etc-selected-89.png", 1280, 720, 836, 295);
+      assert.strictEqual(slot(rd, 5)?.n, 89, "selected Horny Mushroom Cap 89"); assert.strictEqual(slot(rd, 5)?.ids[0], "4000019");
+      assert.strictEqual(slot(rd, 4)?.n, 60, "its neighbour still reads"); assert.strictEqual(rd.unknown, 0, "unknown") });
+    chk("A selected ticket x2 (06-44-06)", () => { const rd = read("etc-selected-ticket-2.png", 1280, 720, 951, 194);
+      assert.strictEqual(slot(rd, 18)?.n, 2, "selected ticket x2"); assert.strictEqual(slot(rd, 18)?.ids[0], "4001001"); assert.strictEqual(rd.unknown, 0, "unknown") });
+    // regression (this one read right already, 04-12-12): the selected first stack counts, 668 of 11,601
+    chk("A regression 11,601 (04-12-12)", () => { const rd = read("use-arrows-11601-selected-668.png", 1280, 720, 894, 293);
+      assert.strictEqual(slot(rd, 0)?.n, 668, "selected 668"); assert.strictEqual(total(rd, "2060001"), 11601, "arrows 11,601"); assert.strictEqual(rd.unknown, 0, "unknown") });
+    // B: a count that cannot be read (digits painted out) leaves the picture matched: the stack is there, its number unknown
+    chk("B picture matches with no count", () => { const rd = read("use-792-201-selected.png", 1280, 720, 909, 269, (img, inv) => {
+        const sx = inv.x + 5, cy = inv.y + 37;
+        for (let y = cy - 8; y <= cy; y++) for (let x = sx + 1; x < sx + 24; x++){ const i = (y * img.w + x) * 4; img.d[i] = img.d[i + 1] = img.d[i + 2] = 0 } });
+      assert.strictEqual(slot(rd, 0)?.ids[0], "2060001", "picture"); assert.strictEqual(slot(rd, 0)?.n, null, "count unknown, not guessed"); assert.strictEqual(rd.missed.length, 0, "missed") });
+    // C: the pointer hand on part of an arrow stack (2x capture): 6 x 800 + 534 = 5,334, was 4,534 with the stack dropped
+    chk("C hand on an arrow stack (08-52-13)", () => { const rd = read("use-pointer-on-arrow-2x.png", 2560, 1440, 654, 648);
+      assert.strictEqual(slot(rd, 3)?.n, 800, "hand-covered stack"); assert.strictEqual(total(rd, "2060001"), 5334, "arrows 5,334"); assert.strictEqual(rd.unknown, 0, "unknown") });
+    // C: an item tooltip over the empty slots below was 6 phantom unknown slots; they are covered. The Magic Box under the hand matches
+    chk("C tooltip over empty slots (09-19-09)", () => { const rd = read("use-tooltip-box-hand.png", 1280, 720, 909, 269);
+      assert.strictEqual(rd.unknown, 0, "phantom unknown"); assert.deepStrictEqual(rd.covered, [22, 23, 24, 27, 28, 29], "covered");
+      assert.strictEqual(slot(rd, 19)?.ids[0], "2430000", "box"); assert.strictEqual(slot(rd, 19)?.n, 1, "box x1"); assert.strictEqual(slot(rd, 0)?.n, 631, "631") });
+    // C: the pointer over an empty slot is not an item we failed to know (Equip tab, Etc tab)
+    chk("C hand on an empty equip slot (08-52-13)", () => { const rd = read("equip-pointer-on-empty.png", 1280, 720, 327, 312);
+      assert.strictEqual(rd.unknown, 0, "unknown"); assert.deepStrictEqual(rd.covered, [1], "covered"); assert.strictEqual(rd.slots.length, 0, "no items") });
+    chk("C hand on an empty etc slot (08-52-13)", () => { const rd = read("etc-pointer-on-empty.png", 1280, 720, 327, 312);
+      assert.strictEqual(rd.unknown, 0, "unknown"); assert.deepStrictEqual(rd.covered, [4], "covered"); assert.strictEqual(rd.slots.length, 4, "4 stacks") });
+    // E: the minimap title on bright scenery (Victoria Road, 2026-10-24): the rect was 398 px wide or missing on 7 of 8 frames
+    const fp = require("../core/mapfp.js");
+    for (const f of ["minimap-victoria-sand.png", "minimap-victoria-sky-a.png", "minimap-victoria-sky-b.png"]) chk("E title rect " + f + " (10-24 22-58-10)", () => {
+      const src = readPng(path.join(__dirname, "frames-kpq", f)), d = new Uint8ClampedArray(1280 * 720 * 4);
+      for (let i = 3; i < d.length; i += 4) d[i] = 255;
+      for (let y = 0; y < src.h; y++) d.set(src.d.subarray(y * src.w * 4, (y + 1) * src.w * 4), y * 1280 * 4);
+      const c = R.mapTextCrop(R.native({w: 1280, h: 720, d}));
+      assert.ok(c, "title found");
+      assert.ok(c.rect.x1 <= 195 && c.rect.x1 - c.rect.x0 >= 150 && c.rect.y0 >= 26 && c.rect.y1 <= 60, "rect is the panel's title, got " + JSON.stringify(c.rect));
+      assert.ok(fp.sig(c), "fingerprint cut") });
+    if (bad.length){ console.error(bad.length + " reader cases failed:\n  " + bad.join("\n  ")); process.exit(1) }
+    console.log("inventory counts, covered slots, map title on bright scenery ok") }
 })().catch(e => { console.error(e); process.exit(1) });
