@@ -51,10 +51,15 @@ jobs:
       - run: npm test
       # starts the real app on this Electron with a throwaway profile; fails on any startup error (Hermes 2026-11-03, #57)
       - run: node tests/launch.test.js
+      # a draft release first, so electron-builder 26's two racing publishers both upload into it instead of each
+      # creating a release (0.3.40-0.3.42 lost their installer that way; scripts/release-gh.js, Hermes 2026-11-05)
+      - if: startsWith(github.ref, 'refs/tags/') || inputs.release == true
+        run: node scripts/prepare-release.js
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
       - run: npm run ${{ (startsWith(github.ref, 'refs/tags/') || inputs.release) && 'release' || 'dist' }}
         env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
-      # electron-publish 25.1.8 creates the release with no body (createRelease() never sends one),
-      # so the notes that npm run release generated from changelog.js are put on the release here
+      # notes from changelog.js go on, every asset is checked, and only then is the draft published
+      # (electron-publish never sends a body, and a half-uploaded release must not reach the updater)
       - if: startsWith(github.ref, 'refs/tags/') || inputs.release == true
         run: node scripts/publish-release-notes.js
         env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
