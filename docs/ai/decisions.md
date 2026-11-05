@@ -13,6 +13,7 @@ above as a dated line and note the resolution date in its place.
 
 ## Process
 - 2026-10-06 Data comes from the OSMS game-file export; Classic World only, launch content only (no Orbis, El Nath, Forgotten Hollow, 3rd job unless asked).
+- 2026-11-05 (Hermes, Danny's mockup-v2 approval): the newsfeed byline wears the approved option D - category tag above the title (4px corners, sentence case, tinted; not the fully-rounded pill), author/version/date stacked and centred; on >=1600px screens the sidebar keeps the 1600px margin and the title centres over the feed. Provisional 24h.
 - 2026-10-07 Pushing to the default branch is production; needs his in-thread "push" (he OK'd direct pushes 10-07, a guard may still ask). [superseded 2026-10-19: standing push permission]
 - 2026-10-18 Terse replies, no filler; push back when wrong. Token-hungry asks (audits, rewrites, broad research) get a cheaper alternative first.
 - 2026-10-18 One feature per thread, close it when shipped; a new tracker feature gets a fresh thread.

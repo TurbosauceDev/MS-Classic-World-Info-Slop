@@ -26,6 +26,18 @@ no longer on the feed cards. Every article also gets a real static page `scripts
 feed gained a tag filter (`tags:` front matter; canonical list in `scripts/posts.py` TAGS, default Blog Post) and
 a featured hero (`featured: true` puts the newest featured post up top).
 
+Turbozo, 2026-11-05 (mockup-v2 round, his pick of the byline options): the category tag moves ABOVE the title as
+its own row (`.jcatrow`, written by `jcatrow()` in `77-journal.js`; the hero wears it too) - 4px corners, sentence
+case, soft accent tint, no underline, and the old `margin-left:-10px` pull (which clipped the tag inside
+`.jpost .jmeta` overflow:hidden) is gone with the tag itself. The byline stack is author / version / date, centred
+on the title line (`.jpost .cardhead` is a grid; `.jfold` keeps a gap); on phones the byline drops under the title.
+In the sidebar **Home**'s hover/open wear the same rounded box as the page links (the old top-row underline rule
+was hitting it). Wide screens (>=1600px): the sidebar keeps the ~80px left margin on every width, page size
+applies to the content column, and the title centres over the feed, not the window. Update articles lost their
+second "Everything in the changelog" footer link (Turbozo 11-05: the tag row + the feed's Full changelog button
+cover it; the #87 remainder). smoke pins: tag above the title unclipped, stack centre/air, article footer has no
+`[data-go="log"]`.
+
 Turbozo, 2026-11-04 (the layout round, off his screenshots): the byline's text lines up flush - the tag chip's
 words sit under the author/version/date text (`.jmeta .jtag` pulls the chip left by its own padding) - the avatar
 grew to 48px, and opening an article no longer moves the avatar spot: the article's byline keeps its place on the
