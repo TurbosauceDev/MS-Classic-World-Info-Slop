@@ -587,6 +587,15 @@ const boxGaps = require("./boxgaps");
     const wide = await p.evaluate(() => [...document.querySelectorAll(".tblwrap")].filter(w => w.offsetParent && w.scrollWidth > w.clientWidth + 1)
       .map(w => (w.closest("[id]") || {}).id + " " + w.scrollWidth + "/" + w.clientWidth));
     check(!wide.length, `${id} at 1300px: tables fit their card${wide.length ? " (" + wide.slice(0, 3).join(" | ") + ")" : ""}`);
+    // early warning (Danny 11-05): price feeds change column widths with no code change (t-mci went 914/910 on 11-01 data),
+    // so warn - not fail - when a fitting table has under 8px left before it would scroll. Slack = card width minus the table's
+    // min-content width (the narrowest the auto layout can squeeze it).
+    const tight = await p.evaluate(() => [...document.querySelectorAll(".tblwrap")].filter(w => w.offsetParent && w.scrollWidth <= w.clientWidth + 1)
+      .flatMap(w => { const t = w.querySelector("table"); if (!t) return []; const keep = t.style.width; t.style.width = "min-content";
+        const min = t.getBoundingClientRect().width; t.style.width = keep; const slack = Math.floor(w.clientWidth - min);
+        return slack < 8 ? [(w.closest("[id]") || {}).id + " " + slack + "px"] : [] }));
+    for (const t of tight) console.log((process.env.GITHUB_ACTIONS ? "::warning title=table nearly too wide::" : "WARN ") +
+      `${id} at 1300px: ${t} spare before the table scrolls sideways; widen headroom before a price refresh tips it over`);
   }
   // every page at phone width: no sideways scroll, no NaN/undefined text
   await p.setViewportSize({width: 390, height: 800});
