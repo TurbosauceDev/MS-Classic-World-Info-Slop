@@ -10,7 +10,7 @@
    COUNTERS drives both sides: the renderer keeps these cumulative, main stores whatever arrives. */
 (function (root){
   const COUNTERS = ["looks", "reads", "skipExact", "skipTol", "readMs", "tickMs", "ocrRuns", "ocrMs", "cacheHits",
-    "tolHits", "memoHits", "chatLooks", "chatNew", "chatGaps", "chatOcrMs", "evExp", "evMeso", "evBonus", "evItems",
+    "tolHits", "fpHits", "memoHits", "chatLooks", "chatNew", "chatGaps", "chatOcrMs", "evExp", "evMeso", "evBonus", "evItems",
     "reTries", "reWins"];
   const stamp = t => { const d = new Date(t), p = n => String(n).padStart(2, "0"); return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) };
   function record(t, cur, prev){

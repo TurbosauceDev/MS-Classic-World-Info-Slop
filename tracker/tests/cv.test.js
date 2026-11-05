@@ -106,6 +106,59 @@ const crop = (w, h, f) => { const d = new Uint8ClampedArray(w * h * 4); for (let
     assert.strictEqual(await t.run("map", cc(0xff808020), fl), "ok"); assert.strictEqual(t.stats.tolHits, 2, "jitter hits counted");
     console.log("tolcache ok") }
 
+
+  // map-title fingerprint (core/mapfp.js): a remembered title answers with no Tesseract run, a 1-2 px rect jitter stays
+  // under the Hamming cap, a different title and a cut rect (the 2026-11-04 "1st Accompa" class) never do
+  { const F = require("../core/mapfp.js"), R = require("../app/readers.js"), readPng = require("./cv_util.js");
+    const bonus = R.mapTextCrop(R.native(readPng(path.join(__dirname, "frames", "frame-000.png"))));   // 1st Accompaniment <Bonus>
+    const src = readPng(path.join(__dirname, "frames-kpq", "minimap-1st-stage.png"));                   // 1st Accompaniment <1st Stage>
+    const img = {w: 1280, h: 720, d: new Uint8ClampedArray(1280 * 720 * 4)};
+    for (let y = 0; y < src.h; y++) img.d.set(src.d.subarray(y * src.w * 4, (y + 1) * src.w * 4), y * 1280 * 4);
+    const stage1 = R.mapTextCrop(img);
+    assert.ok(bonus && stage1, "both titles cut");
+    // the rect jitter the audit measured (1-2 px): the ink shifts inside the crop's padding, the fingerprint holds
+    const shift = (c, dx, dy) => { const out = new Uint8ClampedArray(c.d.length).fill(255);
+      for (let y = 0; y < c.h; y++) for (let x = 0; x < c.w; x++){ const s = (y * c.w + x) * 4, t = ((y + dy) * c.w + x + dx) * 4;
+        if (y + dy >= 0 && y + dy < c.h && x + dx >= 0 && x + dx < c.w){ out[t] = out[t + 1] = out[t + 2] = c.d[s]; out[t + 3] = 255 } }
+      return {w: c.w, h: c.h, d: out} };
+    const s0 = F.sig(bonus);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [1, 1], [-1, -1], [2, -1]])
+      assert.ok(F.dist(s0, F.sig(shift(bonus, dx, dy))) <= F.FP_MAX_DIST, `jitter ${dx},${dy} stays under the cap`);
+    const cross = F.dist(s0, F.sig(stage1));
+    assert.ok(cross > F.FP_MAX_DIST, "two different titles never share a fingerprint: " + cross);
+    // a rect cut mid-name takes whole cells of ink away: over the cap, so the cut crop is re-OCRed, never answered
+    const blankRight = (c, frac) => { const o = new Uint8ClampedArray(c.d);
+      for (let y = 0; y < c.h; y++) for (let x = Math.floor(c.w * (1 - frac)); x < c.w; x++){ const t = (y * c.w + x) * 4; o[t] = o[t + 1] = o[t + 2] = 255 } return {w: c.w, h: c.h, d: o} };
+    for (const f of [0.15, 0.3, 0.5]) assert.ok(F.dist(s0, F.sig(blankRight(bonus, f))) > F.FP_MAX_DIST, "a cut rect is re-OCRed (" + f + ")");
+    // the read loop's contract: OCR only until the read is accepted twice running, then no run at all on a hit
+    const store = F.createStore();
+    let ocrRuns = 0; const ocr = async (c, id, name) => (ocrRuns++, {id, name});   // the stand-in for the real OCR: it answers what the title says
+    let lastKey = null, saved = null;
+    const read = async (c, id, name) => { const s = F.sig(c), e = s && store.find(s);
+      if (e){ lastKey = e.id; return {m: e, hit: true} }   // a hit answers the map and counts as a read, like mapSeen does
+      const m = await ocr(c, id, name); if (m.id === lastKey && store.offer(s, m)) saved = {v: 1, fps: store.entries()};
+      lastKey = m.id; return {m, hit: false} };
+    await read(shift(bonus, 0, 0), 80000500, "1st Accompaniment <Bonus>"); await read(shift(bonus, 1, 0), 80000500, "1st Accompaniment <Bonus>");
+    assert.ok(store.size() === 1 && saved, "stored after the read was accepted twice running");
+    const before = ocrRuns;
+    const hit = await read(shift(bonus, -2, 1), 80000500, "1st Accompaniment <Bonus>");
+    assert.ok(hit.hit && hit.m.id === 80000500 && hit.m.name === "1st Accompaniment <Bonus>" && ocrRuns === before, "fingerprint hit: the map with no OCR run");
+    assert.ok(!(await read(stage1, 80000000, "1st Accompaniment <1st Stage>")).hit, "a different title is not served from the table (it OCRs)");
+    await read(stage1, 80000000, "1st Accompaniment <1st Stage>");   // read twice running: it earns its own entry
+    const again = await read(shift(bonus, 0, 0), 80000500, "1st Accompaniment <Bonus>");
+    assert.ok(again.hit && again.m.id === 80000500, "the bonus title still answers from its own entry after the other map stored its fingerprint");
+    assert.ok(store.size() === 2, "each title keeps its own entry");
+    // persist/load round-trip (settings.mapfps), junk and old versions dropped, LRU cap holds
+    const back = F.createStore(); assert.strictEqual(F.load(back, saved), 2);
+    assert.strictEqual(back.find(F.sig(shift(bonus, 2, -1))).id, 80000500, "a hit after reload");
+    assert.strictEqual(F.load(back, saved), 0, "the same table loads once (near-duplicates skipped)");
+    assert.strictEqual(F.load(back, {v: 2, fps: saved.fps}), 0, "a future version is dropped, not half-read");
+    assert.strictEqual(F.load(back, null), 0);
+    const cap = F.createStore(2); cap.offer(F.sig(bonus), {id: 1, name: "a"}); cap.offer(F.sig(stage1), {id: 2, name: "b"});
+    cap.offer(F.sig(blankRight(bonus, 0.5)), {id: 3, name: "c"});
+    assert.strictEqual(cap.size(), 2, "LRU cap");
+    assert.strictEqual(cap.find(F.sig(bonus)), null, "the oldest entry went first");
+    console.log("mapfp ok (cross-title dist " + cross + ", cap " + F.FP_MAX_DIST + ")") }
   // read pacing from observed content (the customclassic-chat port): busy chat lines raise the floor, a missed box hurries
   { const {create} = require("../core/readpace.js"), p = create(); const t = 1e6;
     assert.strictEqual(p.floor(t), 0, "nothing seen: no floor");
