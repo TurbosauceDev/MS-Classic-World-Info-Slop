@@ -95,7 +95,7 @@ const path = require("path"), {chromium} = require("playwright");
   const ps = await page.evaluate(() => [document.querySelector("#stateText").textContent, document.querySelector("#pauseBtn").textContent, session.state.pausedAt !== null]);
   await page.click("#pauseBtn"); await page.waitForTimeout(100);
   const ps2 = await page.evaluate(() => [document.querySelector("#pauseBtn").textContent, session.state.pausedAt === null]);
-  if (ps.join() !== "Paused by you,Go on,true" || ps2.join() !== "Pause,true") throw new Error("pause: " + JSON.stringify({ps, ps2}));
+  if (ps.join() !== "Paused: by you,Go on,true" || ps2.join() !== "Pause,true") throw new Error("pause: " + JSON.stringify({ps, ps2}));
   
   if (!await page.isVisible("#mobsEmpty") || !await page.isVisible("#itemsEmpty")) throw new Error("session and loot boxes in one layout");
   // Help: the ? button opens it as a pop-up over the layout, ✕ closes it; F1 opens it too
@@ -192,7 +192,8 @@ const path = require("path"), {chromium} = require("playwright");
   const kq = await page.evaluate(() => { const t = Date.now() + 2e4, f = false;
     kpqMap("104000000", t); const off = kpq.on;
     kpqMap("80000000", t + 100); kpqMap("80000100", t + 200); kpqMap("80000600", t + 300); const r1 = kpq.rounds;
-    kpqMap("10003000", t + 400); const held = session.state.pausedAt !== null;
+    kpqMap("10003000", t + 400); const held = session.state.pausedAt !== null; render();
+    const pill = [document.querySelector("#state").dataset.pause, document.querySelector("#stateText").textContent];   // one pause model: the pill names the reason
     autoPause(f, {bar: true}, t + 900); const stillHeld = session.state.pausedAt !== null;
     session.add({t: t + 950, type: "bar", level: 22, pct: 10}); autoPause(f, {bar: true}, t + 1000); const reheld = session.state.pausedAt !== null;
     kpqMap("80000000", t + 5000); const back = session.state.pausedAt === null;
@@ -201,8 +202,9 @@ const path = require("path"), {chromium} = require("playwright");
     const times = [...kpq.times], st = kpq.stageTimes["80000000"]; render();
     // the saved timeline (Danny, 2026-10-19: rounds and the Bonus readable off the saved run): 2 rounds, each to Exit
     const tl = kpqTimeline(t + 126000).map(r => [r.n, r.end, r.stages.map(x => x[0] + " " + x[2]).join(", "), r.total]);
-    return {tl, times, st, off, r1, held, stillHeld, reheld, back, rounds: kpq.rounds, note: document.querySelector("#kpqNote").textContent, where: document.querySelector("#where").textContent} });
+    return {tl, times, st, off, r1, pill, held, stillHeld, reheld, back, rounds: kpq.rounds, note: document.querySelector("#kpqNote").textContent, where: document.querySelector("#where").textContent} });
   if (JSON.stringify(kq.tl) !== JSON.stringify([[1, "Exit", "1st 0, 2nd 0", 0], [2, "Exit", "1st 60, 2nd 60", 120]])) throw new Error("kpq timeline: " + JSON.stringify(kq.tl));
+  if (kq.pill.join() !== "kpq,Paused: between KPQ rounds") throw new Error("pause pill: " + JSON.stringify(kq.pill));
   if (kq.off || kq.r1 !== 1 || !kq.held || !kq.stillHeld || !kq.reheld || !kq.back || kq.rounds !== 2 || !/^KPQ [\w ,-]+: 2 rounds/.test(kq.note) || !/^KPQ \(Rush\)/.test(kq.where) || kq.times.at(-1) !== 120 || kq.st?.at(-1) !== 60 || !/best round /.test(kq.note)) throw new Error("kpq: " + JSON.stringify(kq));
   // Grinding picked: KPQ stages don't turn it on
   const kg = await page.evaluate(async () => { const keep = kpq; settings = await host.settings({kpqAct: "grind"}); kpqReset(); kpqMap("80000000", Date.now() + 3e4); const on = kpq.on;
@@ -248,6 +250,35 @@ const path = require("path"), {chromium} = require("playwright");
     ({kpq, session, slicer} = keep); return out });
   if (!kh.heldInKerning || !kh.stillHeld || kh.off.join() !== "false,false,true,idle,false" || !/Left KPQ/.test(kh.st) || !kh.stillRunning || !kh.active || kh.hist !== "left"
     || kh.again.join() !== "true,true,2,true" || kh.clockAgain.join() !== "true,true" || kh.direct.join() !== "false,false,true,left") throw new Error("kpq leave: " + JSON.stringify(kh));
+  // clock-driven rounds (0.3.41): the clock pins the round's start in wall time (epoch = t + left - 1800), so stage
+  // and round times don't depend on the slow minimap OCR; the minimap still names the stages. And a round that ends
+  // warped back to Kerning City (Bonus timeout, or the NPC talked to) ends as "left": a clear only if the Last stage
+  // was beaten, shared only then (kpqShare: startStage 1st, clear = 1st..Last).
+  const kcq = await page.evaluate(async () => { const keep = {kpq, session, slicer}, t = Date.now() + 12e5, out = {};
+    session = GrindSession.createSession(G); slicer = {add(){}}; kpqReset();
+    const sh = settings.share; settings = await host.settings({share: true});
+    kpqTime(1800, t); kpqTime(1795, t + 5e3);   // two in-step reads: in a round; the epoch is t (30:00 at t)
+    kpqMap("80000000", t + 10e3);               // the minimap names the 1st stage 10 s late — the round still starts at t
+    out.epoch = kpq.epoch === t;
+    kpqMap("80000400", t + 300e3);              // Last stage read 5 min in
+    out.st1 = kpq.stageTimes["80000000"]?.at(-1);   // the 1st stage ran 300 s on the clock, not 290 on the late map read
+    kpqMap("80000500", t + 330e3);              // Bonus: clear = 1st stage to here
+    out.clear = kpq.round?.clear;
+    kpqMap("10003000", t + 360e3);              // Bonus timed out: warped to Kerning City — the round ends here
+    const r1 = kpq.history.at(-1);
+    out.r1 = [r1.end, r1.clear, r1.sent];
+    out.shared = (window.shared || []).at(-1);
+    // round 2: the round clock runs out mid-dungeon, warped to Kerning City: NOT a clear, not shared
+    kpqTime(1800, t + 4e5); kpqTime(1795, t + 405e3); kpqMap("80000200", t + 41e4); kpqTime(1500, t + 49e4); kpqTime(1495, t + 495e3);
+    kpqMap("10003000", t + 5e5);
+    const r2 = kpq.history.at(-1);
+    out.r2 = [r2.end, r2.clear, r2.sent];
+    render();
+    out.pill = [document.querySelector("#state").dataset.pause, document.querySelector("#stateText").textContent];
+    settings = await host.settings({share: sh});
+    ({kpq, session, slicer} = keep); return out });
+  if (!kcq.epoch || kcq.st1 !== 300 || kcq.clear !== 330 || kcq.r1.join() !== "left,330,sent" || kcq.shared?.clear !== 330 || kcq.shared?.clock !== true
+    || kcq.r2.join() !== "left,,Last stage not cleared" || kcq.pill.join() !== "kpq,Paused: between KPQ rounds") throw new Error("kpq clock rounds: " + JSON.stringify(kb));
   // the bug-report log (audit 2026-11-04): a hold re-pausing every tick logs its pause once, not once per bar read, and the log keeps 500 lines
   const lg = await page.evaluate(() => { const keep = {kpq, session, slicer}, t = Date.now() + 9e5, n = () => LOG.filter(l => l.kind === "event" && l.type === "pause").length;
     session = GrindSession.createSession(G); slicer = {add(){}}; kpqReset(); session.add({t, type: "bar", exp: 100, level: 30, pct: 5});

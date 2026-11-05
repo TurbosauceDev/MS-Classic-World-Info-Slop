@@ -297,6 +297,9 @@ Use case: Week-over-week trend baselines without depending on git clone depth. F
 - 2026-11-05 (Danny): "Let's restart prices, I'd like to recollect new data." All five price poll workflows re-enabled (classicmarket, meowdb market, mesoindex, shopscans, meso.watch) and `config/prices.json` `paused_since` set to null, so the site's pills go back to stale-on-cadence. meso.watch had been off since 11-02 (bot wall); if its runs still fail, the watchdog files it again. [supersedes 2026-11-03] (Hermes)
 - 2026-11-05 (Danny: "if a source is up and running you can re-enable it"): meso.watch re-disabled after its 02:33Z run failed (CI got a 403 HTML page instead of JSON; its endpoints still answer a full browser session). The other four polls (classicmarket, meowdb market, mesoindex, shopscans) stay on, each green on 11-05. Its feeds now carry a notice that the data is not licensed for copying or redistribution, so a new approach is Danny's call (11-02 "we will make a new approach"). (Hermes)
 
+- 2026-11-05 (Danny): KPQ rounds segment from the round clock's epoch (each read pins the round start at t + left - 1800, since the clock always starts a round at 30:00); round and stage times are measured against it, so the slow minimap OCR can't stretch them. The minimap stays the stage namer and the fallback round counter when no clock is seen. A round that ends warped back to Kerning City (Bonus timeout, or the NPC talked to) is not a clear; clear stays 1st stage to the Last stage. (Hermes)
+- 2026-11-05 (Danny): releases are gated on green CI only, no beta test round, until a dev branch exists (no users yet).
+- 2026-11-05 (Danny): sample frames auto-prune after 30 days (settings: days and off switch); bug reports (report-*) are never pruned. (Hermes)
 ## Open decisions (pending Danny)
 
 Each entry blocks something. When Danny calls it, transcribe above with the date and note the resolution here.

@@ -110,7 +110,10 @@ npm start           # run it (Windows, Electron)
     or as soon as they're gone. The any-scale EXP bar reader does the same with its rows.
   - A frame identical to the last one is skipped, at most 4 in a row (2 s).
 - Auto-pause: EXP bar and minimap both gone for 3 s (Cash Shop, channel change) = paused; that time is left out of
-  active time and of 15-minute runs. Level-ups are logged with the farming time each level took (History).
+  active time and of 15-minute runs. All the ways the tracker stops counting share one state pill above the status
+  message, and it names the reason: "Paused: by you" (only Go on lifts it), "Paused: the game screen is gone",
+  "Paused: between KPQ rounds", or "Idle break: no EXP counted". Paused time never counts toward EXP/hr or shared runs.
+  Level-ups are logged with the farming time each level took (History).
 - Window spot (v0.2.23): position and size saved to settings.winBounds on move/resize/close (full height while mini); reopens there if the title bar is still on a monitor, else 360x600 default.
 - Inventory (v0.2.24): readers.js findInventory (red line under the tabs + pink open tab, Danny's Use tab 2026-10-18) and
   readInventory (5x6 slots; picture vs every Equip/Use/Etc item icon, G.iicons, decoded in the worker; counts via readCounts).
@@ -125,8 +128,12 @@ npm start           # run it (Windows, Electron)
 - KPQ: Session tab "Doing" Auto / Grinding / KPQ, plus Mode Bonus / Rush (a label). Auto turns KPQ on at the first map
   in `G.kpq` (80000000-80000600: 1st Accompaniment stages 1-4, Last Stage, Bonus, Exit; from the site's D.kpq). While on,
   any other known map (Kerning City 10003000 between rounds) pauses the session and the bar can't resume it; the next
-  stage does. A round = entering a stage from outside. Saved as `kpq: {mode, rounds}`; History's EXP/hr for it uses
+  stage does. A round = entering a stage from outside. The KPQ clock (30:00 at each round's start) times the rounds and
+  stages, so the minimap reading slowly can't stretch them. Saved as `kpq: {mode, rounds}`; History's EXP/hr for it uses
   stage time only. No 15-minute farming runs while KPQ is on; rounds go to the KPQ leaderboard instead (v0.2.40).
+- Sample frames: the "Save sample frames" button writes raw captures to `Pictures\MS Classic Tracker frames`; at
+  tracker start, frame-* entries older than 30 days are deleted automatically (Settings: change the days or turn it
+  off). Bug reports (report-*) are never deleted, and the log says how much was freed.
 - Runs carry the UTC hour they started; the server's summary has "times" (best time to farm per map, each run against
   the same player's usual speed there, 3-hour blocks with 3+ players).
 - Shared numbers count one player per home network: the server joins installs that sent runs from the same connection

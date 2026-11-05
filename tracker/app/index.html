@@ -748,7 +748,10 @@
         <li>Nothing to pick: Kerning City tells the tracker KPQ is likely, the 1st stage starts the <b>Rush</b> recording, and
           the first kill in the Bonus map starts the <b>Bonus</b> recording. The KPQ box only shows where it is.</li>
         <li>During KPQ the session pauses on any map that isn't a KPQ stage (Kerning City between rounds) and picks back up
-          on the next stage. Each trip into the stages is one round.</li>
+          on the next stage; the state pill says "Paused: between KPQ rounds". The KPQ clock (starts each round at 30:00)
+          times the rounds, so a minimap that reads slow can't stretch them — the minimap still names the stages. Each
+          trip into the stages is one round; a round that ends warped back to Kerning City (Bonus timeout, or you talked
+          to the NPC) is not a clear.</li>
         <li>Each round is scored: Rush from stage speed against the recorded average (none yet = provisional), Bonus from EXP,
           mesos and drops at their NPC sell price, plus small bonuses per item type and a big one for a Pan Lid. The site's KPQ page lists the weights and the five boards.</li>
         <li>KPQ rounds don't count as farming runs. With sharing on, each round cleared from the 1st stage goes to the KPQ leaderboard on the site instead (clear time, party size, level, job and your character name, unless you turn the name off in Settings).</li>
@@ -761,7 +764,7 @@
         <li><b>Loot value</b>: Etc monster drops (caps, teeth, shells) count at the NPC sell price, since players don't buy them; ores, jewels, crafting materials, equipment and scrolls at the player-shop price from meso.watch.</li>
         <li>The window stays on top of the game. Turn that off in Settings → Window and sharing.</li>
         <li>Ctrl + and Ctrl - make the text bigger or smaller.</li>
-        <li><b>Pause</b> (next to Start while tracking) stops the clock for a break; nothing picked up counts until you press <b>Go on</b>.</li>
+        <li><b>Pause</b> (next to Start while tracking) stops the clock for a break; nothing picked up counts until you press <b>Go on</b>. All the ways the tracker stops counting share one state line: the pill above the status message names the reason — "Paused: by you", "Paused: the game screen is gone", "Paused: between KPQ rounds", or "Idle break: no EXP counted" (a long quiet stretch; nothing is counted, and it ends by itself).</li>
       </ul></details>
       <details><summary>Shortcuts and themes</summary><ul>
         <li>Shortcuts work with the game in front: Ctrl+Shift+T keep on top, Ctrl+Shift+S Start/Stop, P Pause, M Simple Mode, F Focus Mode, O Overlay Mode, E edit the overlay's layout, K Modules toolbox (also in View), H hide/show, I read the open inventory tab, B report a bug,
@@ -802,6 +805,7 @@
       <label class="chk" title="How long a bag tab stays green after it was read. Yellow after that, orange after 30 s, red and glowing at 2 min."><span>Bag tab stays fresh for</span> <input type="number" id="bagEvery" min="1" max="30" step="1" style="width:52px" aria-label="Bag check minutes"> <span>min</span></label>
       <label class="chk" title="Starts a run by itself on the first EXP gain and saves it after 2 minutes with no EXP. Start and Stop still work, and a run you start by hand is never ended for you. Reads the game window slowly while no run is going (Windows shows its capture border)."><input type="checkbox" id="autoRun"> <span>Always on: start a run on the first EXP gain, end it after 2 minutes with no EXP</span></label>
       <label class="chk"><input type="checkbox" id="autoPause"> <span>Pause when the game screen is gone (Cash Shop, changing channel)</span></label>
+      <label class="chk" title="The #frames button's bulk captures pile up in Pictures\MS Classic Tracker frames. Entries older than this are deleted the next time the tracker starts. Bug reports (report-*) are never deleted."><input type="checkbox" id="pruneFrames"> <span>Delete old sample frames after <input type="number" id="pruneFramesDays" min="1" max="365" style="width:52px" aria-label="Sample frames kept, in days"> days (bug reports are never deleted)</span></label>
     </div>
     <div class="card" data-nav="Journey log"><h3>Journey log</h3>
       <p class="note">A timestamped text log of what the tracker sees on screen: login, map changes, combat starting and ending, EXP, level-ups, deaths, mesos, pickups, potions used, inventory changes. Screen reading only. Off by default; the file never leaves your PC.</p>
@@ -894,6 +898,7 @@
   <script src="gamedata.js"></script>
   <script src="shot.js"></script>
   <script src="../core/session.js"></script>
+  <script src="../core/pauses.js"></script>
   <script src="../core/feed.js"></script>
   <script src="../core/history.js"></script>
   <script src="../core/alerts.js"></script>

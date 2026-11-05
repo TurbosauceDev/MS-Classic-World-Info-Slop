@@ -162,11 +162,21 @@ $("#pauseBtn").onclick = () => {
 };
 // quiet: the hold re-pausing after a counted read lifted it (every bar read in Kerning City) isn't logged again, or it fills the bug report's log
 function pauseAt(t, quiet){ const e = {t: Math.max(t, session.state.last || 0), type: "pause"}; session.add(e); slicer.add(e); if (!quiet) log("event", e) }
-function kpqReset(){ kpq = {on: false, phase: "idle", hold: false, inside: false, rounds: 0, left: null, leftT: 0, clk: null, pend: null, stage: null, round: null, times: [], stageTimes: {}, stageExp: {}, history: [], last: null}; kpqRefresh() }
+// Clock-driven rounds (0.3.41, Danny): the KPQ clock starts every round at 30:00, so a steady read fixes the
+// round's start in wall time — the epoch, t + left - 1800. Round and stage times are measured against the epoch
+// (clamped to a round's 30 minutes), so a slow or missed minimap OCR can't stretch them; the minimap still names
+// the stages and still counts rounds when no clock is seen (the old PC-clock fallback).
+function kpqReset(){ kpq = {on: false, phase: "idle", hold: false, inside: false, rounds: 0, left: null, leftT: 0, clk: null, pend: null, epoch: null, stage: null, round: null, times: [], stageTimes: {}, stageExp: {}, history: [], last: null}; kpqRefresh() }
 // stage and round times: from the KPQ clock ("Time Left", top middle) when it reads, else the PC clock
 const KPQ_STAGE = {"80000000": "1st", "80000100": "2nd", "80000200": "3rd", "80000300": "4th", "80000400": "Last", "80000500": "Bonus"};
 const kpqLeftAt = t => kpq.left === null ? null : kpq.left - (t - kpq.leftT) / 1000;
-const kpqSince = (p, t) => p.left0 !== null && kpq.left !== null ? p.left0 - kpqLeftAt(t) : (t - p.t0) / 1000;
+const kpqElapsed = t => kpq.epoch === null ? null : Math.min(1800, Math.max(0, (t - kpq.epoch) / 1000));   // seconds into the round, from the clock's epoch
+const kpqSince = (p, t) => {
+  if (p.e0 != null && kpq.epoch !== null){ const e = kpqElapsed(t); if (e !== null && e >= p.e0) return e - p.e0 }   // clock-anchored
+  return p.left0 !== null && kpq.left !== null ? p.left0 - kpqLeftAt(t) : (t - p.t0) / 1000;
+};
+// where a point (stage/round/bonus start) sits on the clock: left and clock-elapsed seconds into the round
+const kpqAt = t => { const l = kpqLeftAt(t); if (l !== null) return {left0: l, e0: Math.max(0, 1800 - l)}; const e = kpqElapsed(t); return e !== null ? {left0: 1800 - e, e0: e} : {left0: null, e0: null} };
 const mss = sec => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0") };
 // round sections: Rush = 1st stage to the Bonus map (or the round's end), Bonus = Bonus map to the Exit. The tracker keeps a
 // snapshot (EXP, mesos, item counts) at each border; the section's gain is the difference (core/kpqscore.js scores it)
@@ -202,15 +212,23 @@ function kpqTime(left, t){
   const c = kpq.clk, steady = !!c && t - c.t <= 15e3 && Math.abs(c.left - (t - c.t) / 1000 - left) <= 3, was = kpqLeftAt(t);
   kpq.clk = {left, t};
   let jumpTo = null;   // the stage the new round starts on when the minimap map didn't change (no map event will open it)
-  if (steady && was !== null && left > was + 30){ if (kpq.inside){ jumpTo = kpq.stage?.id || (KPQ_STAGE[mapNow] ? mapNow : null); kpqEnd(t, true, "left") } kpq.inside = false; kpq.left = null; note("KPQ clock started over: a new round", "kpq") }
+  if (steady && was !== null && left > was + 30){
+    if (kpq.inside){ jumpTo = kpq.stage?.id || (KPQ_STAGE[mapNow] ? mapNow : null); kpqEnd(t, true, "left") }
+    kpq.inside = false; kpq.left = null;
+    if (left >= 0 && left <= 1800) kpq.epoch = t + left * 1000 - 18e5;   // the new round's epoch: it started left-seconds before this read
+    note("KPQ clock started over: a new round", "kpq");
+  }
   if (kpq.left === null || steady || Math.abs(left - kpqLeftAt(t)) <= 3){
     kpq.left = left; kpq.leftT = t;
-    for (const p of [kpq.stage, kpq.round]) if (p && p.left0 === null) p.left0 = left + (t - p.t0) / 1000;   // clock first seen mid-stage
+    // anchor the round's epoch from any accepted clock read (the clock starts each round at 30:00); while a round is
+    // open, only small corrections are taken so one bad read can't shift the times already recorded
+    if (left >= 0 && left <= 1800 && (kpq.epoch === null || !kpq.round || Math.abs(t + left * 1000 - 18e5 - kpq.epoch) <= 5e3)) kpq.epoch = t + left * 1000 - 18e5;
+    for (const p of [kpq.stage, kpq.round]) if (p && p.left0 === null){ p.left0 = left + (t - p.t0) / 1000; if (p.e0 == null) p.e0 = Math.max(0, 1800 - p.left0) }   // clock first seen mid-stage
   }
   if (!steady || wrap) return;
   if (!kpq.on && settings.kpqAct !== "grind"){ kpq.on = true; kpq.phase = "rush"; kpqRefresh(); $("#status").textContent = "KPQ clock on screen: KPQ run spotted." }
   if (!kpq.on) return;
-  if (!kpq.inside && !kpq.pend){ const st = session?.stats(); kpq.pend = {t: c.t, left: c.left, exp: st?.exp || 0, mesos: st?.mesos || 0, snap: kpqSnap()} }
+  if (!kpq.inside && !kpq.pend){ const st = session?.stats(); kpq.pend = {t: c.t, left: c.left, e0: Math.max(0, 1800 - c.left), exp: st?.exp || 0, mesos: st?.mesos || 0, snap: kpqSnap()} }
   if (jumpTo && !kpq.inside) kpqMap(jumpTo, t);   // the new round's 1st stage starts at the clock's first read of it
   if (kpq.hold && !held){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ clock on screen: tracking again." }
 }
@@ -238,8 +256,9 @@ function kpqMap(id, t){
       kpqEnd(t, String(id) === "80000600", "Exit");
       // pd: the KPQ clock showed the round before the minimap named a stage (kpqTime): the round and its first stage start there
       const pd = !kpq.round && kpq.pend; kpq.pend = null;
-      if (KPQ_STAGE[id]){ const p = {id: String(id), t0: pd ? pd.t : t, left0: pd ? pd.left : kpqLeftAt(t), exp0: pd ? pd.exp : session?.stats().exp || 0}; kpq.stage = p; if (!kpq.round){ const st = session?.stats(); kpq.round = {n: kpq.rounds, t0: p.t0, left0: p.left0, exp0: pd ? pd.exp : st?.exp || 0, mesos0: pd ? pd.mesos : st?.mesos || 0, startStage: String(id), stages: {}, list: [], snap0: pd ? pd.snap : kpqSnap(), bonus: null} }
-        if (String(id) === BONUS_MAP && kpq.round && !kpq.round.bonus){ kpq.round.bonus = {t0: t, left0: p.left0, snap: kpqSnap(), fought: false}; kpq.phase = "bonusWait" }
+      const at = pd ? {left0: pd.left, e0: Math.max(0, 1800 - pd.left)} : kpqAt(t);   // the clock's view of this moment (kpqAt), else the pend read
+      if (KPQ_STAGE[id]){ const p = {id: String(id), t0: pd ? pd.t : t, left0: at.left0, e0: at.e0, exp0: pd ? pd.exp : session?.stats().exp || 0}; kpq.stage = p; if (!kpq.round){ const st = session?.stats(); kpq.round = {n: kpq.rounds, t0: p.t0, left0: at.left0, e0: at.e0, exp0: pd ? pd.exp : st?.exp || 0, mesos0: pd ? pd.mesos : st?.mesos || 0, startStage: String(id), stages: {}, list: [], snap0: pd ? pd.snap : kpqSnap(), bonus: null} }
+        if (String(id) === BONUS_MAP && kpq.round && !kpq.round.bonus){ kpq.round.bonus = {t0: t, left0: at.left0, e0: at.e0, snap: kpqSnap(), fought: false}; kpq.phase = "bonusWait" }
         else if (String(id) !== BONUS_MAP) kpq.phase = "rush" }
       if (KPQ_STAGE[id] && kpq.round) kpq.round.stages[String(id)] = 1;
       if (KPQ_STAGE[id]) note(`KPQ round ${kpq.rounds}: ${KPQ_STAGE[id]} stage` + (kpq.round && kpq.round.clear != null && String(id) === "80000500" ? ` (cleared in ${mss(kpq.round.clear)})` : ""), "kpq");
@@ -248,6 +267,9 @@ function kpqMap(id, t){
     // "round" = one KPQ attempt, 1st stage to Exit; the stage is named so "round 2" isn't read as the 2nd stage (Danny 11-04)
     if (kpq.hold && !held){ kpq.hold = false; const e = {t, type: "resume"}; session.add(e); slicer.add(e); log("event", e); $("#status").textContent = "KPQ round " + kpq.rounds + (KPQ_STAGE[id] ? ", " + KPQ_STAGE[id] + " stage" : "") + ": tracking again." }
   } else {
+    // bonus stage timed out or the NPC talked to: warped to Kerning City. The round ends HERE (end "left") — it is
+    // not a clear unless the Last stage was beaten (clear is only set at the Last → Bonus/Exit read). A round that
+    // never saw the Exit and never beat the Last stage stays unsent ("Last stage not cleared").
     kpqEnd(t, true, "left");
     kpq.inside = false; kpq.pend = null;
     if (String(id) === KERNING){

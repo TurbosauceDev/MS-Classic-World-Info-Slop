@@ -364,6 +364,8 @@ async function saveNumbers(){
 }
 const muteSet = on => host.settings({muted: !!on}).then(x => { settings = x; $("#muted").checked = !!on; $("#status").textContent = on ? "Sounds muted." : "Sounds on." });
 $("#muted").onchange = e => muteSet(e.target.checked);
+$("#pruneFrames").onchange = e => host.settings({pruneFrames: e.target.checked}).then(x => settings = x);
+$("#pruneFramesDays").onchange = e => host.settings({pruneFramesDays: Math.max(1, Math.round(+e.target.value) || 30)}).then(x => { settings = x; $("#pruneFramesDays").value = x.pruneFramesDays });
 $("#shopWatch").onchange = e => host.settings({shopWatch: e.target.checked}).then(x => { settings = x; $("#status").textContent = x.shopWatch === false ? "Shop watch off: shops are only read when you press the shortcut." : "Shop watch on: shops are read automatically while you browse." });
 $("#questWatch").onchange = e => host.settings({questWatch: e.target.checked}).then(x => { settings = x; $("#status").textContent = x.questWatch === false ? "Quest watch off: the quest window is only read when you press the button." : "Quest watch on: the QUEST window is read automatically while you play." });
 // the update channel (0.2.82): beta = pre-release builds reach this copy (main.js applies allowPrerelease on save)
@@ -408,11 +410,16 @@ $("#updGo").onclick = async () => {
   $("#bagMain").checked = bagCfg().main; $("#bagEvery").value = bagCfg().every;
   $("#autoRun").checked = settings.autoRun !== false;
   $("#autoPause").checked = settings.autoPause !== false;   // on unless turned off   // on unless turned off
+  $("#pruneFrames").checked = settings.pruneFrames !== false;   // on unless turned off: old sample frames go at start
+  $("#pruneFramesDays").value = settings.pruneFramesDays > 0 ? settings.pruneFramesDays : 30;
   goalUi(); meatUi(); jrUi();
   $("#pcode").value = settings.partyCode || "";
   $("#nick").value = settings.nick || "";
   $("#guide").classList.toggle("hidden", !!settings.guideDone);
   recoverCheck().catch(() => {});   // a run left by a crash or power cut (its autosave)
+  // frames-folder pruning (0.3.41, Danny): the #frames button's bulk captures pile up (2.4 GB here). At start, once,
+  // entries older than settings.pruneFramesDays (default 30) go; bug reports (report-*) are never deleted.
+  if (host.pruneFrames) host.pruneFrames().then(r => { if (r && r.removed) note(`Freed ${r.bytes ? (r.bytes / 1048576).toFixed(1) + " MB" : r.removed + " entries"}: ${r.removed} old sample-frame ${r.removed === 1 ? "entry" : "entries"} deleted (older than ${r.days} days). Bug reports are never deleted.`, "app") }).catch(() => {});
   const found = await host.gameFound(true);
   $("#status").textContent = found ? "MapleStory window found." : "Start MapleStory, then press Start.";
 })().catch(e => {
