@@ -1099,6 +1099,10 @@ console.log("replay planning ok");
   assert.strictEqual(isTown(G, "10003000"), true, "Kerning City = town");
   assert.strictEqual(isTown(G, "42"), false, "Snail Hunting Ground III has monsters: not a town");
   assert.strictEqual(isTown(G, "80000000"), false, "KPQ stages are never towns");
+  for (const id of ["30", "10001002", "10003100", "10003106", "10003112", "10005105"]) assert.strictEqual(isTown(G, id), false, id + ": monsters spawn there per the game database (mobdb), not a town");
+  for (const id of ["10001008", "10001052", "10007000", "10005080", "10002004"]) assert.strictEqual(isTown(G, id), true, id + ": no monster spawns = town");
+  assert.ok(Array.isArray(G.towns) && G.towns.length > 40 && G.towns.every(id => G.mapnames[id] && !G.maps[id]), "G.towns: named, no spawns");
+  console.log("G.towns count:", G.towns.length);
   assert.strictEqual(isTown(G, null), false, "unread map: not a town");
   assert.strictEqual(isTown(G, "999999"), false, "map our data doesn't have: not a town");
 }

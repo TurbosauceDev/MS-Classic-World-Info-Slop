@@ -4,12 +4,19 @@
   function toGamedata(D){
     const items = {};
     for (const [id, it] of Object.entries(D.items)) items[id] = {n: it.n, p: it.p || 0, c: it.c};
+    // towns (0.3.47, Danny 2026-11-05): a map the game database names but never spawns a monster on. D.maps misses some grind
+    // maps (30, 10001002, B1/B3 <Area 1>...), so D.mobdb's spawn maps count too. Computed before the KPQ/timed additions below
+    const spawn = new Set(Object.keys(D.maps));
+    for (const m of Object.values(D.mobdb || {})){ for (const r of m.maps || []) spawn.add(String(r[0])); for (const k of Object.keys(m.sp || {})) spawn.add(String(k)) }
+    const kpqIds = new Set((D.kpq || []).map(k => String(k.id)));
+    const towns = Object.keys(D.mapnames).filter(id => !spawn.has(id) && !kpqIds.has(id)).sort((x, y) => x - y);
     const G = {
       mobs: Object.fromEntries(Object.entries(D.mobs).map(([id, m]) => [id, m.slice(0, 4)])),   // [name, level, hp, exp]
       maps: D.maps, mapnames: D.mapnames, exp: D.exp, items, pw: D.pw?.it || {}, pwRead: D.pw?.read || null,
     };
     // KPQ stages aren't in D.maps (the site's grind maps): every stage's name is known (the minimap OCR matches it: KPQ runs
     // are spotted by these ids, G.kpq), and the ones with monsters are added as maps, e.g. the bonus stage players grind
+    G.towns = towns;
     G.kpq = (D.kpq || []).map(k => k.id);
     for (const k of D.kpq || []) G.mapnames = {...G.mapnames, [k.id]: k.name};
     for (const k of D.kpq || []){

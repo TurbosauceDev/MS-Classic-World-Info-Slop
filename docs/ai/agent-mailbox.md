@@ -150,6 +150,8 @@ yourself to this list — don't reuse `claude (chat-CLI)` or `claude
 
 ## Open
 
+[CLAIM] Hermes 2026-11-05 22:10Z — lease 24h: tracker 0.3.47 town definition fix (maps where monsters spawn are never towns), branch hermes/town-spawns
+
 ---
 
 ## FYI
