@@ -19,6 +19,7 @@ onboarding; this INDEX is the topic → file map for working. Keep both honest w
 | Site: pages, cards, internals, history | `docs/ai/site.md`, `docs/ai/site-history.md`, `docs/ai/design.md` (visual law), `tests/features.js` + `tests/pages.js` (executable spec) |
 | Outside sites investigated (MesoLens etc.) | `docs/ai/external-sites.md` |
 | Roll back a bad push, restore the database | `docs/ai/runbook-recovery.md` |
+| Server admin tool: the admin key, how to call `/api/admin/*`, rotation | `docs/ai/server-admin.md` |
 | Tracker: modules, readers, releases | `docs/ai/tracker.md`, `docs/ai/tracker-history.md` (dated feature notes), `tracker/app/changelog.js`, `tracker/tests/core.test.js` |
 | Digest: shape, routing, runbook | `docs/ai/digest-contract.md`, `docs/ai/discord-digest-runbook.md`, `config/digest.json` |
 | Data: sources, pollers, cadence, watchdog | `docs/ai/state-of-the-pipeline.md`, `data/sources/` read stamps, `tests/data_quality_test.py`, `scripts/price_blacklist.py` |
