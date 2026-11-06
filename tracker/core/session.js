@@ -32,7 +32,9 @@
   /* town (0.3.46, Danny 2026-11-05): a map with no monsters in the game data — towns, shops, houses, the pharmacy. There
      is no town flag in the game files; "no monster map" is the whole definition. KPQ maps are never towns (the middle
      stages have no monsters either, but waiting there is play time). Unknown or unread map: not a town. */
+  const TOWN_SETS = new WeakMap();   // G -> Set of G.towns, built once
   const isTown = (G, id) => { if (id == null) return false; id = String(id);
+    if (G.towns) return (TOWN_SETS.get(G) || TOWN_SETS.set(G, new Set(G.towns.map(String))).get(G)).has(id);   // 0.3.47: built from the game database (core/gamedata.js)
     return !!G.mapnames?.[id] && !G.maps?.[id] && !(G.kpq || []).includes(id) };
   function createSession(G, opts = {}){
     const idleMs = opts.idleMs || IDLE_MS;
