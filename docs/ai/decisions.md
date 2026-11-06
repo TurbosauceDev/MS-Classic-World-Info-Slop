@@ -324,6 +324,8 @@ WebP / 8 JPEG). Measured sizes on Danny's real frames: PNG 10.5 MB, lossless Web
 1.30 MB. If report size ever matters again, the fix is tolerance-based readers, not a lossy format. (Hermes)
 - 2026-11-05 (Danny): time on no-monster maps (towns, shops, houses — there is no town flag in the game data, so "no monsters" is the whole definition) never counts, and the tracker ARMS after Start: it waits (pill "Waiting: starts when you start farming") until a KPQ round begins or 5 monster-EXP gains land within 60 s (tunable: settings.armRule/armKills/armWindowSec), back-dated to the first gain so no farming is lost. A snail or two on the walk must not wake it. Kerning between KPQ rounds and the Exit map count nothing either. Shared-run "minutes" are active minutes from now on.
 - 2026-11-05 (Danny): the KPQ Exit map (80000600) marks the end of a round, cleared or not — the tracker already ends the round there with end "Exit"; keep that. (Hermes)- 2026-11-05 (Danny): a town = a map where no monster spawns per the game database (maps + mobdb spawns), never KPQ. (Hermes)
+- 2026-11-05 (Danny): the KPQ Exit map (80000600) marks the end of a round, cleared or not — the tracker already ends the round there with end "Exit"; keep that. (Hermes)
+- 2026-11-05 (Danny): admin key lives only on Danny's PC (C:/Users/danny/.ms-classic-world/admin.key); the Worker holds only its SHA-256 (wrangler.toml var); agents may use it; deletes still need Danny's OK.
 
 ## Open decisions (pending Danny)
 

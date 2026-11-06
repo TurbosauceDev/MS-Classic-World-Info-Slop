@@ -7,3 +7,8 @@ compatibility_date = "2026-09-01"
 binding = "DB"
 database_name = "ms-classic-runs"
 database_id = "FILLED_IN_BY_DEPLOY"
+
+# SHA-256 (hex) of the admin key. The key itself lives only on Danny's PC and is never committed or set as a secret;
+# a 256-bit random key can't be recovered from this hash. Rotate: new key file, new hash here (docs/ai/server-admin.md).
+[vars]
+ADMIN_KEY_SHA256 = "a330034949b3fb07b9b2e4ed095bc91ebbcbcbb583d062fc000fb522dccc6aa5"

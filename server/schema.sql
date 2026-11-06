@@ -169,3 +169,9 @@ CREATE TABLE IF NOT EXISTS ipday_ledger (
   installs INTEGER NOT NULL DEFAULT 0,    -- distinct tracker IDs seen today, ever (high-water mark)
   updated  TEXT NOT NULL
 );
+
+-- Admin audit log (2026-11-05): one row per authenticated /api/admin/* call. args = JSON with row ids only (never the key,
+-- never a full install id); net = salted one-way hash of the caller's network (the salt() helper), equality only. Failed
+-- key attempts are NOT rows here: they are counted per network-day in ipday_ledger (src/index.js adminAuth) and age out with it.
+CREATE TABLE IF NOT EXISTS admin_log (id INTEGER PRIMARY KEY, ts TEXT NOT NULL, action TEXT NOT NULL, args TEXT, net TEXT, ok INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS admin_log_ts ON admin_log (ts);

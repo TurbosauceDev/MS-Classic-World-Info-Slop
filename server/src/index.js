@@ -11,7 +11,9 @@
                      not, each with ok and why — the runs-side twin of /api/kpq/recent
    GET  /admin       the owner panel in a browser: KPQ inbox (each round's ok + why), shared-runs inbox, feedback inbox,
                      public summary. The page itself carries no data; the key is asked once and kept in the browser
-                     (localStorage fbkey) */
+                     (localStorage fbkey)
+   /api/admin/*      the admin tool (ADMIN_KEY_SHA256, see the block above adminAuth): stats, installs, log (GET); runs/delete, kpq/delete, purge,
+                     summary/rebuild (POST). Deletes need {confirm: "delete"}; every call is logged in admin_log */
 import G from "./gamedata.json" with {type: "json"};
 import {cleanRun, cleanKpq, cleanShop, cleanSpot, median, KPQ_MIN, mapCeiling} from "./check.js";
 import Kpq from "../../tracker/core/kpqscore.js";   // the same scoring the tracker previews with
@@ -400,17 +402,22 @@ async function postFeedback(req, env){
 }
 // constant-time compare so the key can't be guessed a character at a time
 const sameKey = (a, b) => { if (!b || a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0 };
-function fbAdmin(req, env){
-  if (!env.FEEDBACK_KEY) return json({error: "no key set on the server"}, 503);
-  return sameKey((req.headers.get("authorization") || "").replace(/^Bearer /, ""), env.FEEDBACK_KEY) ? null : json({error: "wrong key"}, 401);
+const bearer = req => (req.headers.get("authorization") || "").replace(/^Bearer /, "");
+// The inbox routes open with FEEDBACK_KEY or the admin key. The admin key is checked by its SHA-256 (adminAuth below), so the
+// Worker never holds it; FEEDBACK_KEY never unlocks /api/admin/*.
+async function fbAdmin(req, env){
+  if (!env.FEEDBACK_KEY && !env.ADMIN_KEY_SHA256) return json({error: "no key set on the server"}, 503);
+  if (env.FEEDBACK_KEY && sameKey(bearer(req), env.FEEDBACK_KEY)) return null;
+  if (env.ADMIN_KEY_SHA256) return adminAuth(req, env);
+  return json({error: "wrong key"}, 401);
 }
 async function getFeedback(req, env){
-  const no = fbAdmin(req, env); if (no) return no;
+  const no = await fbAdmin(req, env); if (no) return no;
   const {results} = await env.DB.prepare("SELECT id, received, kind, msg, contact, page, ver, done FROM feedback ORDER BY id DESC LIMIT 500").all();
   return json({notes: results});
 }
 async function doneFeedback(req, env){
-  const no = fbAdmin(req, env); if (no) return no;
+  const no = await fbAdmin(req, env); if (no) return no;
   let body; try { body = await req.json() } catch { return json({error: "bad json"}, 400) }
   const id = Number(body?.id);
   if (!Number.isInteger(id)) return json({error: "bad id"}, 400);
@@ -424,7 +431,7 @@ async function doneFeedback(req, env){
 // answers it with each round's ok and why. Same key as the feedback inbox; read-only; no install or IP data, names only.
 // Backs the owner panel at GET /admin, which asks for the key once and lists these in a browser (no curl needed)
 async function getKpqRecent(req, env){
-  const no = fbAdmin(req, env); if (no) return no;
+  const no = await fbAdmin(req, env); if (no) return no;
   // Math.trunc: a fractional limit ("?limit=2.5") reached SQLite's LIMIT as a REAL and 500'd (round 3)
   const n = Math.min(500, Math.max(1, Math.trunc(Number(new URL(req.url).searchParams.get("limit"))) || 100));
   const {results} = await env.DB.prepare(`SELECT k.id, k.received, k.date, k.hour, k.mode, k.party, k.level, k.job, k.clear, k.total, k.clock, k.exp, k.mesos, k.ok, k.why, k.stages, n.name, x.src
@@ -438,7 +445,7 @@ async function getKpqRecent(req, env){
 // ok and why. Same key as the feedback inbox; read-only; no install or IP data. The per-run mobs/items JSON is reduced
 // to counts here so the inbox stays light — the public summary is what turns the counted ones into the site's tables.
 async function getRunsRecent(req, env){
-  const no = fbAdmin(req, env); if (no) return no;
+  const no = await fbAdmin(req, env); if (no) return no;
   const n = Math.min(500, Math.max(1, Math.trunc(Number(new URL(req.url).searchParams.get("limit"))) || 100));
   const {results} = await env.DB.prepare(`SELECT r.id, r.received, r.date, r.map, r.map_name, r.level, r.job, r.party, r.minutes, r.exp, r.kills, r.mesos, r.ok, r.why, r.mobs, x.deaths, x.hour, x.used_cost
     FROM runs r LEFT JOIN run_extra x ON x.run_id = r.id ORDER BY r.id DESC LIMIT ?`).bind(n).all();
@@ -452,14 +459,120 @@ async function getRunsRecent(req, env){
 }
 
 
+/* ---------- the admin tool (2026-11-05, Danny: "an admin tool if we could properly and securely implement one") ----------
+   /api/admin/* opens with ONE key that lives only on Danny's PC (C:/Users/danny/.ms-classic-world/admin.key). The Worker holds
+   just its SHA-256, the ADMIN_KEY_SHA256 var in wrangler.toml (a 256-bit random key can't be recovered from its hash, so the
+   hash is safe in the repo; docs/ai/server-admin.md has the how-to). FEEDBACK_KEY never opens these routes. Wrong keys
+   are counted per network and day (ipday_ledger, a prefixed hash): past ADMIN_FAILS_PER_DAY the network gets 429. Every call
+   that passes auth leaves a row in admin_log (ids only, never the key). Responses are no-store and carry no CORS headers, so a
+   page on another origin can't read them. */
+export const ADMIN_FAILS_PER_DAY = 20;
+const ADMIN_MAX_IDS = 100;   // D1 allows 100 bound parameters per statement
+const aj = (v, status = 200) => new Response(JSON.stringify(v), {status, headers: {"content-type": "application/json", "cache-control": "no-store"}});
+async function sha256hex(s){ return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, "0")).join("") }
+// null = the bearer token is the admin key; otherwise the Response to send. `out` picks the reply shape (the old inboxes keep their CORS headers)
+async function adminAuth(req, env, out = json){
+  if (!env.ADMIN_KEY_SHA256) return out({error: "no admin key set on the server"}, 503);
+  const tok = bearer(req);
+  if (!tok) return out({error: "unauthorized"}, 401);
+  // the owner's other key is a real credential, not a guess: refused the same way, but it does not burn the failure budget
+  if (env.FEEDBACK_KEY && sameKey(tok, env.FEEDBACK_KEY)) return out({error: "unauthorized"}, 401);
+  const day = new Date().toISOString().slice(0, 10), fk = await sha("adminfail:" + netKey(req.headers.get("cf-connecting-ip") || "") + day + await salt(env));
+  if ((await ledgerPeak(env.DB, fk)).posts >= ADMIN_FAILS_PER_DAY) return out({error: "too many tries"}, 429);
+  if (sameKey(await sha256hex(tok), String(env.ADMIN_KEY_SHA256).trim().toLowerCase())) return null;
+  await env.DB.prepare(`INSERT INTO ipday_ledger (ipday, day, posts, installs, updated) VALUES (?, ?, 1, 0, ?)
+    ON CONFLICT(ipday) DO UPDATE SET posts = posts + 1, updated = excluded.updated`).bind(fk, day, new Date().toISOString()).run();
+  return out({error: "unauthorized"}, 401);
+}
+const ADMIN_COUNTED = ["runs", "runs_archive", "kpq_rounds", "kpq_rounds_archive", "feedback", "shop_obs", "boss_spots", "party_live", "ipday_ledger", "admin_log"];
+const adminIds = v => Array.isArray(v) && v.length >= 1 && v.length <= ADMIN_MAX_IDS && v.every(x => Number.isInteger(x) && x > 0) ? [...new Set(v)] : null;
+async function adminRoute(req, env, url){
+  const no = await adminAuth(req, env, aj); if (no) return no;
+  const route = url.pathname.slice("/api/admin/".length), db = env.DB;
+  const reads = ["stats", "installs", "log"], writes = ["runs/delete", "kpq/delete", "purge", "summary/rebuild"];
+  if (!reads.includes(route) && !writes.includes(route)) return aj({error: "not found"}, 404);
+  if (!(req.method === "GET" ? reads : req.method === "POST" ? writes : []).includes(route)) return aj({error: "method not allowed"}, 405);
+  const net = await sha("adminnet:" + netKey(req.headers.get("cf-connecting-ip") || "") + await salt(env));
+  const log = (action, args, ok) => db.prepare("INSERT INTO admin_log (ts, action, args, net, ok) VALUES (?, ?, ?, ?, ?)").bind(new Date().toISOString(), action, JSON.stringify(args), net, ok ? 1 : 0).run();
+  let body = {};
+  if (req.method === "POST"){ try { body = (await req.json()) || {} } catch { await log(route, {}, false); return aj({error: "bad json"}, 400) } }
+  const bust = () => db.prepare("DELETE FROM meta WHERE k IN ('summary', 'shop_summary', 'ladder')").run();   // the cached public numbers rebuild without the rows
+  const del = async (sql, ids) => (await db.prepare(sql.replace("(?)", "(" + ids.map(() => "?").join(", ") + ")")).bind(...ids).run()).meta?.changes ?? 0;
+  try {
+    if (route === "stats"){
+      const counts = {}, newest = {};
+      for (const t of ADMIN_COUNTED) counts[t] = (await db.prepare(`SELECT COUNT(*) n FROM ${t}`).first()).n;
+      for (const t of ["runs", "kpq_rounds", "feedback", "shop_obs", "boss_spots"]) newest[t] = (await db.prepare(`SELECT MAX(received) t FROM ${t}`).first()).t;
+      const sm = await db.prepare("SELECT LENGTH(v) bytes, v FROM meta WHERE k = 'summary'").first();
+      let updated = null; try { updated = sm?.v ? JSON.parse(sm.v).updated || null : null } catch (e) { console.error("admin stats: stored summary does not parse", e) }
+      const latest = async t => (await db.prepare(`SELECT id, received, ok FROM ${t} ORDER BY id DESC LIMIT 5`).all()).results;
+      await log(route, {}, true);
+      return aj({counts, newest, summary: {bytes: sm?.bytes ?? 0, updated, ageSeconds: updated ? Math.round((Date.now() - Date.parse(updated)) / 1e3) : null},
+        latest: {runs: await latest("runs"), kpq_rounds: await latest("kpq_rounds")}});
+    }
+    if (route === "installs"){   // purge targets: the tracker copies that sent the most recent rows (the inboxes hide install ids on purpose)
+      const {results} = await db.prepare(`SELECT install, SUM(r) runs, SUM(k) kpq, MAX(last) last FROM (
+        SELECT install, COUNT(*) r, 0 k, MAX(received) last FROM runs GROUP BY install UNION ALL
+        SELECT install, 0, COUNT(*), MAX(received) FROM kpq_rounds GROUP BY install) GROUP BY install ORDER BY last DESC LIMIT 100`).all();
+      await log(route, {}, true);
+      return aj({installs: results});
+    }
+    if (route === "log"){
+      const {results} = await db.prepare("SELECT id, ts, action, args, net, ok FROM admin_log ORDER BY id DESC LIMIT 200").all();
+      await log(route, {}, true);   // reading the log is itself logged (after the read, so it shows up next time)
+      return aj({log: results});
+    }
+    if (route === "summary/rebuild"){
+      const out = await buildSummary(env, false);
+      await log(route, {}, out != null);
+      return out == null ? aj({ok: false, busy: true}, 409) : aj({ok: true, bytes: out.length});
+    }
+    // everything below deletes real data: typed confirmation required, ids only in the log
+    if (body.confirm !== "delete"){ await log(route, {}, false); return aj({error: "send confirm: \"delete\""}, 400) }
+    if (route === "runs/delete" || route === "kpq/delete"){
+      const ids = adminIds(body.ids);
+      if (!ids){ await log(route, {}, false); return aj({error: "ids: 1-" + ADMIN_MAX_IDS + " positive integers"}, 400) }
+      const n = {};
+      if (route === "runs/delete"){
+        for (const t of ["run_extra", "run_groups", "run_names"]) n[t] = await del(`DELETE FROM ${t} WHERE run_id IN (?)`, ids);
+        n.runs = await del("DELETE FROM runs WHERE id IN (?)", ids); n.runs_archive = await del("DELETE FROM runs_archive WHERE id IN (?)", ids);
+      } else {
+        for (const t of ["kpq_names", "kpq_src", "kpq_raw"]) n[t] = await del(`DELETE FROM ${t} WHERE kpq_id IN (?)`, ids);
+        n.kpq_rounds = await del("DELETE FROM kpq_rounds WHERE id IN (?)", ids); n.kpq_rounds_archive = await del("DELETE FROM kpq_rounds_archive WHERE id IN (?)", ids);
+      }
+      const removed = route === "runs/delete" ? n.runs + n.runs_archive : n.kpq_rounds + n.kpq_rounds_archive;
+      if (removed > 0) await bust();
+      await log(route, {ids}, true);
+      return aj({ok: true, removed, detail: n});
+    }
+    if (route === "purge"){   // runs carry the tracker copy's random install id, so a whole install can go (the same sweep as "Delete what I shared")
+      if (typeof body.install !== "string" || !INSTALL_RE.test(body.install)){ await log(route, {}, false); return aj({error: "install id"}, 400) }
+      const removed = await forgetInstall(db, body.install);
+      await log(route, {install: body.install.slice(0, 8) + "…"}, true);   // the id is a bearer secret for "forget": the log keeps only a stub
+      return aj({ok: true, removed});
+    }
+  } catch (e){
+    console.error("admin " + route + " failed", e);
+    try { await log(route, {}, false) } catch (e2) { console.error("admin log write failed", e2) }
+    return aj({error: "failed"}, 500);
+  }
+  return aj({error: "not found"}, 404);
+}
+
+
 // Shop prices (tracker renderer-shop.js, Danny 2026-10-31): rows read off merchant shops. Same limits idea as runs: rows per
 // install per hour, rows per IP per day, installs per IP per day (one home network = one player).
 // "Delete what I shared" (tracker Settings, blind-spot report A2): removes everything one install ever sent. The install ID is a random
 // secret only that tracker copy knows, so knowing it is the proof; nothing else is needed and nothing is returned but counts.
+const INSTALL_RE = /^[a-z0-9-]{16,40}$/i;
 async function postForget(req, env){
   let b; try { b = await req.json() } catch { return json({error: "bad json"}, 400) }
-  if (!b || typeof b.install !== "string" || !/^[a-z0-9-]{16,40}$/i.test(b.install)) return json({error: "install id"}, 400);
-  const db = env.DB, i = b.install, n = {};
+  if (!b || typeof b.install !== "string" || !INSTALL_RE.test(b.install)) return json({error: "install id"}, 400);
+  return json({ok: true, removed: await forgetInstall(env.DB, b.install)});
+}
+// everything one install ever sent, gone (the tracker's "Delete what I shared" and the admin purge share this)
+async function forgetInstall(db, i){
+  const n = {};
   const one = async (k, sql) => { n[k] = (await db.prepare(sql).bind(i).run()).meta?.changes ?? 0 };
   // the archive keeps no extras/groups/names columns: a run that already moved there leaves its side rows behind, so the
   // forget reads both tables (the runs themselves go further down, while the subqueries can still see them)
@@ -485,7 +598,7 @@ async function postForget(req, env){
   // force full table scans). Nothing to remove: the caches stay, the rebuild keeps serving its copy.
   if (removed > 0) await db.prepare("DELETE FROM meta WHERE k IN ('summary', 'shop_summary', 'ladder')").run();   // the cached public numbers rebuild without it
   else console.log("forget: unknown install, nothing removed, caches left alone");
-  return json({ok: true, removed});
+  return removed;
 }
 const SHOP_PER_HOUR = 240, SHOP_PER_IP_DAY = 1500, SHOP_KEEP_DAYS = 14, SHOP_MIN_INSTALLS = 3;
 async function postShop(req, env){
@@ -719,6 +832,28 @@ async function waitOrServe(env){
   return null;
 }
 
+// one rebuild of the stored summary, under the single-flight claim (the GET /api/summary route and the admin rebuild share it):
+// null = another request holds a live claim and force is off
+async function buildSummary(env, force){
+  // only an EXPIRED claim is cleared (force=true steals a live one). 0.3.42 review: an unconditional DELETE here let
+  // a second request delete the first one's fresh claim between its own check and insert, so both rebuilt
+  if (force) await env.DB.prepare("DELETE FROM meta WHERE k = 'summary_lock'").run();
+  else await env.DB.prepare("DELETE FROM meta WHERE k = 'summary_lock' AND CAST(v AS INTEGER) < ?").bind(Date.now() - 60e3).run();
+  // INSERT OR IGNORE is atomic on its own: exactly one concurrent GET wins the rebuild
+  const claim = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('summary_lock', ?)").bind(String(Date.now())).run();
+  if (!claim?.meta?.changes && !force) return null;
+  // rows past the window leave the hot tables first, so this rebuild already reads the shrunken ones
+  const archived = await archiveOld(env.DB);
+  const s = await summary(env.DB);
+  s.archived = archived;
+  // D1 rows max out at 2 MB: trimSummary gives back KPQ rounds (newest kept) until the copy stores; past that it
+  // is served fresh and left unstored rather than half-emptied on every request
+  const out = trimSummary(s);
+  if (out.length < 1.5e6) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").bind(out).run();
+  await env.DB.prepare("DELETE FROM meta WHERE k = 'summary_lock'").run();   // released: the next stale GET may rebuild
+  return out;
+}
+
 async function route(req, env){
   const url = new URL(req.url);
   if (req.method === "OPTIONS") return new Response(null, {headers: CORS});
@@ -736,6 +871,7 @@ async function route(req, env){
   if (url.pathname === "/api/kpq/recent" && req.method === "GET") return getKpqRecent(req, env);
   if (url.pathname === "/api/runs/recent" && req.method === "GET") return getRunsRecent(req, env);
   if (url.pathname === "/api/feedback/done" && req.method === "POST") return doneFeedback(req, env);
+  if (url.pathname.startsWith("/api/admin/")) return adminRoute(req, env, url);
   // the owner panel: a static page, no data on it — every data route it calls stays behind the key
   if (url.pathname === "/admin" && req.method === "GET")
     return new Response(ADMIN_HTML, {headers: {"content-type": "text/html; charset=utf-8", "cache-control": "no-store"}});
@@ -748,25 +884,7 @@ async function route(req, env){
     // one rebuild at a time, whatever shape the cache is in — including no copy at all. The old code skipped the
     // lock when the row was missing or unparseable, so a fake-ID forget (which used to clear the row) followed by
     // three concurrent GETs ran three full rebuilds, 45 queries (audit 2026-11-05).
-    const build = async force => {
-      // only an EXPIRED claim is cleared (force=true steals a live one). 0.3.42 review: an unconditional DELETE here let
-      // a second request delete the first one's fresh claim between its own check and insert, so both rebuilt
-      if (force) await env.DB.prepare("DELETE FROM meta WHERE k = 'summary_lock'").run();
-      else await env.DB.prepare("DELETE FROM meta WHERE k = 'summary_lock' AND CAST(v AS INTEGER) < ?").bind(Date.now() - 60e3).run();
-      // INSERT OR IGNORE is atomic on its own: exactly one concurrent GET wins the rebuild
-      const claim = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('summary_lock', ?)").bind(String(Date.now())).run();
-      if (!claim?.meta?.changes && !force) return null;
-      // rows past the window leave the hot tables first, so this rebuild already reads the shrunken ones
-      const archived = await archiveOld(env.DB);
-      const s = await summary(env.DB);
-      s.archived = archived;
-      // D1 rows max out at 2 MB: trimSummary gives back KPQ rounds (newest kept) until the copy stores; past that it
-      // is served fresh and left unstored rather than half-emptied on every request
-      const out = trimSummary(s);
-      if (out.length < 1.5e6) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary', ?)").bind(out).run();
-      await env.DB.prepare("DELETE FROM meta WHERE k = 'summary_lock'").run();   // released: the next stale GET may rebuild
-      return out;
-    };
+    const build = force => buildSummary(env, force);
     if (fresh) body = row.v;
     else {
       const lockRow = await env.DB.prepare("SELECT v FROM meta WHERE k = 'summary_lock'").first();

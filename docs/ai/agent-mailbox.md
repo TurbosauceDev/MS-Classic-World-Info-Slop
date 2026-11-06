@@ -151,6 +151,13 @@ yourself to this list — don't reuse `claude (chat-CLI)` or `claude
 ## Open
 
 [CLAIM] Hermes 2026-11-05 22:10Z — lease 24h: tracker 0.3.47 town definition fix (maps where monsters spawn are never towns), branch hermes/town-spawns
+### Server admin tool (Hermes, 2026-11-06)
+
+Danny asked for a properly secured admin tool: separate admin key on his PC, Worker checks its SHA-256, view and purge data, audit log. Built on `hermes/admin-key`, PR open, not merged. How to use it once merged: `docs/ai/server-admin.md`.
+
+[CLAIM] Hermes 2026-11-06 05:50Z — lease 24h
+
+— Hermes
 
 ---
 

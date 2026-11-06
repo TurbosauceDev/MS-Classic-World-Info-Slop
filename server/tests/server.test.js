@@ -2,7 +2,7 @@
 import assert from "assert";
 import {readFileSync} from "fs";
 import {DatabaseSync} from "node:sqlite";
-import worker, {ARCHIVE_DAYS} from "../src/index.js";
+import worker, {ARCHIVE_DAYS, ADMIN_FAILS_PER_DAY} from "../src/index.js";
 
 const sql = new DatabaseSync(":memory:");
 sql.exec(readFileSync(new URL("../schema.sql", import.meta.url), "utf8"));
@@ -773,6 +773,121 @@ assert.ok(!r.runs.some(x => x.id === archId) && r.total === sql.prepare("SELECT 
     assert.ok(bodies.every(b => b.updated), "every slow GET got a summary");
     assert.strictEqual(slow.stores, 1, `four concurrent GETs during a slow rebuild store ONE summary (${slow.stores})`);
   }
+}
+
+// ---- the admin tool (2026-11-05): separate key checked by SHA-256, audit log, typed-confirm deletes, failure rate limit ----
+{
+  const crypto = await import("node:crypto");
+  const ADMIN_KEY = "test-only-admin-key-" + "q".repeat(23), FB = "f".repeat(32);
+  const A = {DB, FEEDBACK_KEY: FB, ADMIN_KEY_SHA256: crypto.createHash("sha256").update(ADMIN_KEY).digest("hex"), IP_SALT: "admin-test-salt"};
+  const adm = async (path, {key = ADMIN_KEY, method = "GET", body, ip = "10.55.0.1", e = A} = {}) => {
+    const r = await worker.fetch(new Request("https://x" + path, {method, headers: {...(key ? {authorization: "Bearer " + key} : {}), "cf-connecting-ip": ip}, body: body === undefined ? undefined : JSON.stringify(body)}), e);
+    return {status: r.status, headers: r.headers, body: await r.json().catch(() => null)};
+  };
+  const count = (t, w = "1") => sql.prepare(`SELECT COUNT(*) n FROM ${t} WHERE ${w}`).get().n;
+
+  // auth: 503 without the var, 401 for a wrong/missing key (generic body), FEEDBACK_KEY never opens admin routes
+  assert.strictEqual((await adm("/api/admin/stats", {e: {DB, FEEDBACK_KEY: FB}})).status, 503, "no ADMIN_KEY_SHA256 on the server: admin closed");
+  let x = await adm("/api/admin/stats", {key: "wrong"});
+  assert.strictEqual(x.status, 401); assert.deepStrictEqual(x.body, {error: "unauthorized"}, "generic body: no hint which part was wrong");
+  assert.strictEqual((await adm("/api/admin/stats", {key: ""})).status, 401, "no key");
+  assert.strictEqual((await adm("/api/admin/stats", {key: FB})).status, 401, "FEEDBACK_KEY must not unlock admin routes");
+  assert.strictEqual((await adm("/api/admin/stats", {key: ADMIN_KEY.slice(0, -1)})).status, 401, "a prefix of the key is wrong");
+  for (let i = 0; i < 25; i++) await adm("/api/admin/stats", {key: FB, ip: "10.55.0.2"});
+  assert.strictEqual((await adm("/api/admin/stats", {ip: "10.55.0.2"})).status, 200, "the owner's other key doesn't burn the failure budget");
+
+  // the admin key is also good wherever FEEDBACK_KEY is; FEEDBACK_KEY keeps working there; a wrong key doesn't
+  for (const p of ["/api/kpq/recent", "/api/runs/recent", "/api/feedback"]) {
+    assert.strictEqual((await adm(p)).status, 200, "admin key opens " + p);
+    assert.strictEqual((await adm(p, {key: FB})).status, 200, "FEEDBACK_KEY still opens " + p);
+    assert.strictEqual((await adm(p, {key: "nope"})).status, 401, "wrong key on " + p);
+  }
+  assert.strictEqual((await adm("/api/kpq/recent", {e: {DB, ADMIN_KEY_SHA256: A.ADMIN_KEY_SHA256}})).status, 200, "admin key alone (no FEEDBACK_KEY set) opens the inbox");
+
+  // stats: counts, summary size/age, no-store, no CORS
+  x = await adm("/api/admin/stats");
+  assert.strictEqual(x.status, 200);
+  assert.strictEqual(x.body.counts.runs, count("runs")); assert.ok("kpq_rounds" in x.body.counts && "admin_log" in x.body.counts && x.body.summary && "bytes" in x.body.summary);
+  assert.strictEqual(x.headers.get("cache-control"), "no-store", "admin responses are no-store");
+  assert.strictEqual(x.headers.get("access-control-allow-origin"), null, "no CORS on admin responses: other origins can't read them");
+  assert.strictEqual((await adm("/api/admin/stats", {key: "bad"})).headers.get("cache-control"), "no-store", "failures are no-store too");
+
+  // runs/delete: needs the typed confirmation, deletes the rows (and their side rows), writes admin_log with ids only
+  await post(run("adminpurge00000001", 1000, {name: "Gone"}), "10.77.0.1"); await post(run("adminpurge00000001", 1100), "10.77.0.1"); await post(run("adminkeep000000001", 1200), "10.77.0.2");
+  const mine = sql.prepare("SELECT id FROM runs WHERE install = 'adminpurge00000001' ORDER BY id").all().map(r => r.id), keep = sql.prepare("SELECT id FROM runs WHERE install = 'adminkeep000000001'").get().id;
+  assert.strictEqual(mine.length, 2);
+  const before = count("admin_log");
+  x = await adm("/api/admin/runs/delete", {method: "POST", body: {ids: [mine[0]]}});
+  assert.strictEqual(x.status, 400, "delete without confirm"); assert.strictEqual(count("runs", "id = " + mine[0]), 1, "nothing was deleted");
+  x = await adm("/api/admin/runs/delete", {method: "POST", body: {ids: [mine[0]], confirm: "yes"}});
+  assert.strictEqual(x.status, 400, "confirm must be exactly \"delete\"");
+  assert.strictEqual((await adm("/api/admin/runs/delete", {method: "POST", body: {ids: [], confirm: "delete"}})).status, 400, "empty ids");
+  assert.strictEqual((await adm("/api/admin/runs/delete", {method: "POST", body: {ids: ["1 OR 1=1"], confirm: "delete"}})).status, 400, "non-integer id");
+  assert.strictEqual((await adm("/api/admin/runs/delete", {method: "POST", body: {ids: Array.from({length: 101}, (_, i) => i + 1), confirm: "delete"}})).status, 400, "more than 100 ids");
+  assert.strictEqual(count("admin_log"), before + 5, "refused calls are logged too");
+  x = await adm("/api/admin/runs/delete", {method: "POST", body: {ids: [mine[0]], confirm: "delete"}});
+  assert.strictEqual(x.status, 200); assert.strictEqual(x.body.removed, 1);
+  assert.strictEqual(count("runs", "id = " + mine[0]), 0); assert.strictEqual(count("run_names", "run_id = " + mine[0]), 0, "side rows go with the run");
+  assert.strictEqual(count("runs", "id = " + keep), 1, "other rows untouched");
+  let lg = sql.prepare("SELECT * FROM admin_log ORDER BY id DESC LIMIT 1").get();
+  assert.strictEqual(lg.action, "runs/delete"); assert.strictEqual(lg.ok, 1); assert.deepStrictEqual(JSON.parse(lg.args), {ids: [mine[0]]});
+  assert.ok(lg.net && lg.net !== "10.77.0.1" && lg.net.length === 32, "network is a salted hash, not an IP");
+  assert.ok(!JSON.stringify(sql.prepare("SELECT * FROM admin_log").all()).includes(ADMIN_KEY), "the key is never in the log");
+
+  // kpq/delete
+  const kq = (inst) => Number(sql.prepare("INSERT INTO kpq_rounds (install, ipday, received, date, mode, party, clear, ok) VALUES (?, 'x', ?, '2026-11-05', 'Rush', 1, 300, 1)").run(inst, new Date().toISOString()).lastInsertRowid);
+  const k1 = kq("adminkpq000000001"), k2 = kq("adminkpq000000001");
+  sql.prepare("INSERT INTO kpq_names (kpq_id, name) VALUES (?, 'Zed')").run(k1);
+  assert.strictEqual((await adm("/api/admin/kpq/delete", {method: "POST", body: {ids: [k1]}})).status, 400, "kpq delete without confirm");
+  x = await adm("/api/admin/kpq/delete", {method: "POST", body: {ids: [k1], confirm: "delete"}});
+  assert.strictEqual(x.body.removed, 1); assert.strictEqual(count("kpq_rounds", "id = " + k1), 0); assert.strictEqual(count("kpq_names", "kpq_id = " + k1), 0); assert.strictEqual(count("kpq_rounds", "id = " + k2), 1);
+  assert.strictEqual(JSON.parse(sql.prepare("SELECT args FROM admin_log ORDER BY id DESC LIMIT 1").get().args).ids[0], k1);
+
+  // installs + purge: runs DO carry an install id, so a whole install can go; the log keeps only a stub of it
+  x = await adm("/api/admin/installs");
+  assert.ok(x.body.installs.some(i => i.install === "adminpurge00000001" && i.runs === 1));
+  assert.strictEqual((await adm("/api/admin/purge", {method: "POST", body: {install: "adminpurge00000001"}})).status, 400, "purge without confirm");
+  assert.strictEqual((await adm("/api/admin/purge", {method: "POST", body: {install: "short", confirm: "delete"}})).status, 400, "bad install id");
+  x = await adm("/api/admin/purge", {method: "POST", body: {install: "adminpurge00000001", confirm: "delete"}});
+  assert.strictEqual(x.status, 200); assert.ok(x.body.removed >= 1); assert.strictEqual(count("runs", "install = 'adminpurge00000001'"), 0); assert.strictEqual(count("runs", "install = 'adminkeep000000001'"), 1);
+  lg = sql.prepare("SELECT args FROM admin_log ORDER BY id DESC LIMIT 1").get();
+  assert.ok(!lg.args.includes("adminpurge00000001") && lg.args.includes("adminpur"), "purge logs a stub, not the whole install id");
+
+  // rebuild reuses the single-flight lock: a live claim means 409, not a second rebuild
+  x = await adm("/api/admin/summary/rebuild", {method: "POST", body: {}});
+  assert.strictEqual(x.status, 200); assert.ok(sql.prepare("SELECT v FROM meta WHERE k = 'summary'").get()?.v, "summary stored");
+  sql.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('summary_lock', ?)").run(String(Date.now()));
+  assert.strictEqual((await adm("/api/admin/summary/rebuild", {method: "POST", body: {}})).status, 409, "a live claim: no second rebuild");
+  sql.exec("DELETE FROM meta WHERE k = 'summary_lock'");
+  assert.strictEqual((await adm("/api/admin/summary/rebuild")).status, 405, "GET on a POST route"); assert.strictEqual((await adm("/api/admin/nothing")).status, 404);
+  assert.strictEqual((await adm("/api/admin/runs/delete", {method: "GET"})).status, 405, "a delete can't be a GET");
+
+  // log: last 200, newest first
+  for (let i = 0; i < 3; i++) await adm("/api/admin/stats");
+  x = await adm("/api/admin/log");
+  assert.strictEqual(x.status, 200); assert.ok(x.body.log.length > 0 && x.body.log.length <= 200); assert.ok(x.body.log[0].id > x.body.log[1].id);
+  for (let i = 0; i < 210; i++) sql.prepare("INSERT INTO admin_log (ts, action, args, net, ok) VALUES ('2026-11-05T00:00:00Z', 'fill', '{}', 'n', 1)").run();
+  assert.strictEqual((await adm("/api/admin/log")).body.log.length, 200, "capped at 200");
+
+  // failed-auth rate limit, per network: ADMIN_FAILS_PER_DAY wrong keys, then 429 (even for the right key from that network)
+  const fails = ADMIN_FAILS_PER_DAY;
+  for (let i = 0; i < fails; i++) assert.strictEqual((await adm("/api/admin/stats", {key: "guess" + i, ip: "10.99.0.1"})).status, 401, "guess " + i);
+  assert.strictEqual((await adm("/api/admin/stats", {key: "guess-more", ip: "10.99.0.1"})).status, 429, "over the failure budget");
+  assert.strictEqual((await adm("/api/admin/stats", {ip: "10.99.0.1"})).status, 429, "the whole network is held, even with the right key");
+  assert.strictEqual((await adm("/api/kpq/recent", {key: "guess", ip: "10.99.0.1"})).status, 429, "the old inbox routes share the budget");
+  assert.strictEqual((await adm("/api/admin/stats", {ip: "10.99.0.2"})).status, 200, "another network is unaffected");
+  assert.ok(!JSON.stringify(sql.prepare("SELECT * FROM ipday_ledger").all()).includes("10.99.0.1"), "the budget is kept under a salted hash");
+
+  // the panel page carries no data, no key and no hash; the admin key is sessionStorage-only
+  const page = await (await worker.fetch(new Request("https://x/admin"), A)).text();
+  assert.ok(!page.includes(ADMIN_KEY) && !page.includes(A.ADMIN_KEY_SHA256) && !page.includes(FB), "panel HTML carries no key or hash");
+  assert.ok(!/[0-9a-f]{64}/.test(page), "no hex digest in the panel HTML");
+  assert.ok(page.includes("id=\"t-adm\"") && page.includes("sessionStorage") && page.includes("\"adminkey\"") && page.includes("/api/admin/purge") && page.includes("Type delete to confirm"), "Admin tab, session-only key, typed confirmation");
+  assert.ok(!/location\.(search|hash)|URLSearchParams/.test(page), "the key is never read from or put in the URL");
+  assert.strictEqual((await worker.fetch(new Request("https://x/admin"), A)).headers.get("cache-control"), "no-store");
+  // the repo carries the HASH of the admin key (wrangler var), never a key-shaped secret
+  const toml = readFileSync(new URL("../wrangler.toml", import.meta.url), "utf8");
+  assert.ok(/^ADMIN_KEY_SHA256 = "[0-9a-f]{64}"/m.test(toml), "wrangler.toml holds the admin key's SHA-256");
 }
 
 console.log("server tests passed");

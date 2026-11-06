@@ -1,4 +1,6 @@
-// The owner panel: a single static page served at GET /admin. The data routes
+// The owner panel: a single static page served at GET /admin. It carries no data, no key and no key hash. With the admin key
+// (src/index.js adminAuth) an Admin tab opens; that key lives in sessionStorage only (gone when the tab closes), never in
+// localStorage and never in a URL. The data routes
 // (/api/kpq/recent, /api/feedback, /api/feedback/done) stay key-protected; the
 // page asks for the key once and keeps it in the browser (localStorage fbkey,
 // the same spot the site's Feedback admin uses). Design tokens mirror the
@@ -46,7 +48,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 button.mini{font-size:13px;padding:4px 10px;border-radius:6px}
 button.danger:hover{border-color:var(--bad);color:var(--bad)}
 button:disabled{opacity:.5;cursor:default}
-input[type=password]{font:500 16px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px 11px;width:min(360px,100%)}
+input[type=password],input[type=text]{font:500 16px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px 11px;width:min(360px,100%)}
 label.chk{display:flex;gap:8px;align-items:center;font:500 15px var(--f-body);cursor:pointer}
 .seg{display:flex;flex-wrap:wrap;gap:6px;margin:20px 0 14px}
 .seg button{border-radius:999px;padding:8px 16px;background:var(--panel)}
@@ -103,7 +105,7 @@ h2.sect{font:800 20px/1.25 var(--f-display);margin:26px 0 8px}
 
   <div class="gate" id="gate">
     <h2>Owner key</h2>
-    <p>Same key as the site's Feedback inbox (the repo's FEEDBACK_KEY). It never leaves this browser except in the request header.</p>
+    <p>The site's Feedback key opens the inboxes. The admin key (it lives only on Danny's PC) also opens an Admin tab. Either one never leaves this browser except in the request header; the admin key is forgotten when the tab closes.</p>
     <input type="password" id="key" placeholder="paste the key" autocomplete="off">
     <div class="row">
       <label class="chk"><input type="checkbox" id="remember" checked>remember on this device</label>
@@ -118,6 +120,7 @@ h2.sect{font:800 20px/1.25 var(--f-display);margin:26px 0 8px}
       <button role="tab" id="t-runs" aria-pressed="false">Shared runs</button>
       <button role="tab" id="t-fb" aria-pressed="false">Feedback</button>
       <button role="tab" id="t-sum" aria-pressed="false">Public summary</button>
+      <button role="tab" id="t-adm" aria-pressed="false" hidden>Admin</button>
     </div>
 
     <section id="s-kpq">
@@ -155,6 +158,25 @@ h2.sect{font:800 20px/1.25 var(--f-display);margin:26px 0 8px}
       <div class="tblwrap" id="sbonus"><div class="empty">loading…</div></div>
       <p class="note">What the public site shows: the anonymous summary this server serves, which the daily build bakes into the pages. Compare it with the KPQ tab — a round can be on file here and still be missing there when it was not counted.</p>
     </section>
+
+    <section id="s-adm" hidden>
+      <div class="facts" id="afacts"></div>
+      <h2 class="sect">Actions</h2>
+      <div class="controls">
+        <button class="mini" id="a-rebuild">Rebuild public summary</button>
+        <span class="sub" id="a-msg" role="status"></span>
+      </div>
+      <div class="controls">
+        <input type="text" id="a-ids" placeholder="row ids, e.g. 12, 13, 40 (up to 100)" autocomplete="off" aria-label="row ids">
+        <button class="mini danger" id="a-delruns">Delete these runs</button>
+        <button class="mini danger" id="a-delkpq">Delete these KPQ rounds</button>
+      </div>
+      <p class="note">Row ids are the "run #" / "round #" shown when you open a row in the Shared runs and KPQ tabs. Deletes are real and ask you to type <b>delete</b>; every action lands in the audit log below.</p>
+      <h2 class="sect">Tracker installs (newest first) — purge one</h2>
+      <div class="tblwrap" id="ainst"><div class="empty">loading…</div></div>
+      <h2 class="sect">Audit log (last 200)</h2>
+      <div class="tblwrap" id="alog"><div class="empty">loading…</div></div>
+    </section>
   </div>
 </div>
 
@@ -164,7 +186,11 @@ const $ = s => document.querySelector(s);
 const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const ls = { get(){ try { return localStorage.getItem("fbkey") || "" } catch { return "" } },
              set(v){ try { v ? localStorage.setItem("fbkey", v) : localStorage.removeItem("fbkey") } catch {} } };
-let KEY = ls.get(), TAB = "kpq", timer = null, lastKpq = null, lastRuns = null, runsTotal = "…";
+// the admin key is kept for this tab only: sessionStorage, never localStorage, never the URL
+const ss = { get(){ try { return sessionStorage.getItem("adminkey") || "" } catch { return "" } },
+             set(v){ try { v ? sessionStorage.setItem("adminkey", v) : sessionStorage.removeItem("adminkey") } catch {} } };   // storage blocked: the key just lasts until reload
+let ADMIN = !!ss.get();
+let KEY = ss.get() || ls.get(), TAB = "kpq", timer = null, lastKpq = null, lastRuns = null, runsTotal = "…";
 
 const PT = new Intl.DateTimeFormat("en-CA", {timeZone: "America/Los_Angeles"});
 const ptDay = iso => iso ? PT.format(new Date(iso)) : "";
@@ -189,7 +215,7 @@ async function api(path, opt = {}){
 }
 
 function lock(msg){
-  KEY = ""; ls.set(""); clearInterval(timer); timer = null;
+  KEY = ""; ls.set(""); ss.set(""); ADMIN = false; $("#t-adm").hidden = true; clearInterval(timer); timer = null;
   $("#panel").hidden = true; $("#gate").hidden = false;
   for (const id of ["refresh","autowrap","forget"]) $("#" + id).hidden = true;
   $("#hstate").textContent = "locked"; $("#hstate").className = "pill p-mut";
@@ -199,10 +225,12 @@ function lock(msg){
 function unlock(){
   $("#gate").hidden = true; $("#panel").hidden = false;
   for (const id of ["refresh","autowrap","forget"]) $("#" + id).hidden = false;
-  $("#hstate").textContent = "open"; $("#hstate").className = "pill p-good";
+  $("#hstate").textContent = ADMIN ? "admin" : "open"; $("#hstate").className = "pill p-good";
+  $("#t-adm").hidden = !ADMIN;
+  if (!ADMIN && TAB === "adm") TAB = "kpq";
   show(TAB);
   clearInterval(timer);
-  timer = setInterval(() => { if ($("#auto").checked && document.visibilityState === "visible" && TAB !== "sum") show(TAB, true) }, 30000);
+  timer = setInterval(() => { if ($("#auto").checked && document.visibilityState === "visible" && TAB !== "sum" && TAB !== "adm") show(TAB, true) }, 30000);
 }
 
 /* ---------- KPQ rounds ---------- */
@@ -366,10 +394,48 @@ async function loadSum(){
   } catch { $("#srush").innerHTML = '<div class="err">could not reach the server</div>' }
 }
 
+/* ---------- Admin (needs the admin key) ---------- */
+const typed = what => prompt(what + "\\n\\nThis deletes real data and cannot be undone. Type delete to confirm:") === "delete";
+const say = t => { $("#a-msg").textContent = t };
+const logArgs = a => { try { const v = JSON.parse(a || "{}"); return v.ids ? "ids " + v.ids.join(", ") : v.install ? "install " + v.install : "" } catch { return "" } };
+async function loadAdm(){
+  say("");
+  try {
+    const [st, inst, lg] = await Promise.all([api("/api/admin/stats"), api("/api/admin/installs"), api("/api/admin/log")]);
+    const card = (h, v, s) => '<div class="fact"><h3>' + h + '</h3><p><span class="num">' + v + "</span></p>" + (s ? '<div class="sub">' + s + "</div>" : "") + "</div>";
+    const c = st.counts, sm = st.summary;
+    $("#afacts").innerHTML = card("Runs", nfmt(c.runs), nfmt(c.runs_archive) + " archived") + card("KPQ rounds", nfmt(c.kpq_rounds), nfmt(c.kpq_rounds_archive) + " archived") +
+      card("Feedback", nfmt(c.feedback)) + card("Shop rows", nfmt(c.shop_obs)) + card("Boss spots", nfmt(c.boss_spots)) +
+      card("Stored summary", sm.updated ? Math.round(sm.bytes / 1024) + " KB" : "none", sm.updated ? ago(sm.updated) : "");
+    $("#ainst").innerHTML = !inst.installs.length ? '<div class="empty">no installs on file</div>' :
+      "<table><thead><tr><th>Install</th><th>Runs</th><th>KPQ</th><th>Last seen</th><th></th></tr></thead><tbody>" +
+      inst.installs.map(i => '<tr><td class="mono">' + esc(i.install.slice(0, 8)) + '…</td><td class="num">' + nfmt(i.runs) + '</td><td class="num">' + nfmt(i.kpq) +
+        "</td><td>" + ago(i.last) + '</td><td><button class="mini danger" data-purge="' + esc(i.install) + '">purge</button></td></tr>').join("") + "</tbody></table>";
+    $("#alog").innerHTML = !lg.log.length ? '<div class="empty">nothing logged yet</div>' :
+      "<table><thead><tr><th>When (UTC)</th><th>Action</th><th>Args</th><th>Network</th><th>Result</th></tr></thead><tbody>" +
+      lg.log.map(l => '<tr><td class="mono">' + esc(l.ts.slice(0, 19).replace("T", " ")) + "</td><td>" + esc(l.action) + '</td><td class="mono">' + esc(logArgs(l.args)) +
+        '</td><td class="mono">' + esc((l.net || "").slice(0, 8)) + "</td><td>" + (l.ok ? '<span class="pill p-good">ok</span>' : '<span class="pill p-bad">refused</span>') + "</td></tr>").join("") + "</tbody></table>";
+  } catch (e){ if (e.message !== "401") say("couldn't reach the server: " + e.message) }
+}
+async function admPost(path, body, done){
+  try { const r = await api(path, {method: "POST", body: JSON.stringify(body)}); say(done(r)); loadAdm() }
+  catch (e){ if (e.message !== "401") say("failed: " + e.message) }
+}
+const parseIds = () => $("#a-ids").value.split(/[, ]+/).filter(Boolean).map(Number);
+const delIds = (path, what) => {
+  const ids = parseIds();
+  if (!ids.length || ids.length > 100 || !ids.every(n => Number.isInteger(n) && n > 0)){ say("Enter 1-100 row ids (positive whole numbers)."); return }
+  if (!typed("Delete " + ids.length + " " + what + " (" + ids.join(", ") + ")?")) { say("Cancelled."); return }
+  admPost(path, {ids, confirm: "delete"}, r => "Removed " + r.removed + " row(s).");
+};
+$("#a-delruns").onclick = () => delIds("/api/admin/runs/delete", "run(s)");
+$("#a-delkpq").onclick = () => delIds("/api/admin/kpq/delete", "KPQ round(s)");
+$("#a-rebuild").onclick = () => admPost("/api/admin/summary/rebuild", {}, r => "Summary rebuilt (" + Math.round(r.bytes / 1024) + " KB).");
+
 /* ---------- tabs + events ---------- */
 function show(tab, quiet){
   TAB = tab;
-  for (const [t, s] of [["kpq","s-kpq"],["runs","s-runs"],["fb","s-fb"],["sum","s-sum"]]){
+  for (const [t, s] of [["kpq","s-kpq"],["runs","s-runs"],["fb","s-fb"],["sum","s-sum"],["adm","s-adm"]]){
     $("#t-" + t).setAttribute("aria-pressed", String(t === tab));
     $("#" + s).hidden = t !== tab;
   }
@@ -377,8 +443,9 @@ function show(tab, quiet){
   if (tab === "runs") loadRuns(quiet);
   if (tab === "fb") loadFb(quiet);
   if (tab === "sum") loadSum();
+  if (tab === "adm") loadAdm();
 }
-for (const [id, tab] of [["t-kpq","kpq"],["t-runs","runs"],["t-fb","fb"],["t-sum","sum"]]) $("#" + id).onclick = () => show(tab);
+for (const [id, tab] of [["t-kpq","kpq"],["t-runs","runs"],["t-fb","fb"],["t-sum","sum"],["t-adm","adm"]]) $("#" + id).onclick = () => show(tab);
 
 $("#open").onclick = tryKey;
 $("#key").addEventListener("keydown", e => { if (e.key === "Enter") tryKey() });
@@ -389,7 +456,10 @@ async function tryKey(){
   KEY = k;
   try { await api("/api/kpq/recent?limit=10") }
   catch (e){ if (e.message === "401") return; if ($("#gatewhy")) $("#gatewhy").textContent = e.message; return }
-  if ($("#remember").checked) ls.set(KEY);
+  // is it the admin key? (the feedback key is refused here without costing the admin failure budget)
+  ADMIN = (await fetch("/api/admin/stats", {headers: {authorization: "Bearer " + KEY}}).catch(() => ({ok: false}))).ok;
+  if (ADMIN){ ss.set(KEY); ls.set("") }   // the admin key never goes near localStorage
+  else if ($("#remember").checked) ls.set(KEY);
   $("#key").value = "";
   unlock();
 }
@@ -400,6 +470,12 @@ $("#rtoday").onchange = () => { if (lastRuns){ $("#rwrap").innerHTML = runsTable
 
 $("#panel").addEventListener("click", e => {
   const b = e.target.closest("button");
+  if (b && b.dataset.purge){
+    if (typed("Purge EVERYTHING install " + b.dataset.purge.slice(0, 8) + "… ever sent (runs, KPQ rounds, shop rows, spots, party)?"))
+      admPost("/api/admin/purge", {install: b.dataset.purge, confirm: "delete"}, r => "Purged " + r.removed + " row(s).");
+    else say("Cancelled.");
+    return;
+  }
   if (b && b.dataset.del != null){
     if (b.dataset.arm){ api("/api/feedback/done", {method: "POST", body: JSON.stringify({id: +b.dataset.del, delete: true})}).then(loadFb).catch(() => {}) }
     else { b.dataset.arm = "1"; b.textContent = "sure?"; setTimeout(() => { b.dataset.arm = ""; b.textContent = "delete" }, 2500) }
@@ -413,7 +489,7 @@ $("#panel").addEventListener("click", e => {
   if (tr){ const sub = $("#" + tr.dataset.x); if (sub) sub.hidden = !sub.hidden }
 });
 
-// a key remembered from last visit: validate it quietly, otherwise sit on the gate
+// a key remembered from last visit (the admin key only survives in this tab's sessionStorage): validate it quietly, otherwise sit on the gate
 if (KEY) api("/api/kpq/recent?limit=10").then(unlock).catch(() => {});
 </script>
 </body>
