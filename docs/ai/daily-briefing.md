@@ -1,12 +1,12 @@
 # Daily briefing
 
-last-verified: 2026-11-07 by Hermes
+last-verified: 2026-11-08 by Hermes
 
 Agent-facing, overwritten daily by Hermes (took over from Glorg [z.ai] on Danny's 11-02 call). Danny's own digest is not in the repo: it posts to Discord #daily-updates and stays on his machine.
 
 TL;DR:
-- Site `0.24.5` live, tracker `v0.3.47` latest release (11-06 05:55 UTC, installer + blockmap + latest.yml all on it, not a draft). Head is `e05982e` (shopscans price commit, read 12:50 UTC 11-07); its pages run passed. Re-check with `git log` before naming head.
-- One open PR: #115 (docs: repair `docs/ai/decisions.md` splice from #109, branch `glorg/decisions-splice-fix`, checks green, mergeable). Nothing else merged since the last briefing except #114 (the 11-06 briefing).
+- Site `0.24.5` live, tracker `v0.3.47` latest release (11-06 05:55 UTC, installer + blockmap + latest.yml all on it, not a draft). Head is `9332a48` (mesoindex price commit, read 12:55 UTC 11-08); its pages run passed. Re-check with `git log` before naming head.
+- One open PR: #115 (docs: repair `docs/ai/decisions.md` splice from #109, branch `glorg/decisions-splice-fix`, checks green; mergeable state reported UNKNOWN at read time). Nothing else merged since the last briefing except #116 (the 11-07 briefing).
 - **Towns** (#111, #112): time on a map with no monster spawn in the game data (maps + mobdb) never counts, and the tracker arms after Start (waits for a KPQ round or 5 monster-EXP gains in 60 s). There is no town flag in the game data; do not add a hand-kept town list.
 - **Bug reports** (#107, #110): a `report-*` folder renamed `-checked` is deleted at tracker start; automatic reports cap at 1 GB; report pictures stay lossless (the lossy spike failed reader tests). Snapshot `snap-*` pictures live in the runs folder and are never pruned.
 - **Server admin tool** (#113): `/api/admin/*` behind a key checked by SHA-256; the key lives only on Danny's PC. How to use it: `docs/ai/server-admin.md`. Every admin delete is real data and needs Danny's OK per action. Never print or commit the key.
@@ -14,7 +14,7 @@ TL;DR:
 - `main` is PR-only: required checks `docs`, `test (core|pages|edge)`, `tracker ok`, squash-merge, no admin bypass. Use `gh pr merge --auto --squash`. Never write the skip-ci marker in your own commit message.
 
 Waiting on Danny:
-- Issue #93 (watchdog): the maplestory.watch half of `scripts/fetch_shopscans.py` fails behind a challenge wall and its data was 178 h old at the 11-06 07:56 UTC check (not re-checked 11-07); the poll stays green because mesoarbitrage still fetches. Danny decides whether to turn that source off. Do not disable it before he says so.
+- Issue #93 (watchdog): the maplestory.watch half of `scripts/fetch_shopscans.py` fails behind a challenge wall and its data was 178 h old at the 11-06 07:56 UTC check (not re-checked since); the poll stays green because mesoarbitrage still fetches. Danny decides whether to turn that source off. Do not disable it before he says so.
 - Old tokens and Glorg's old webhooks: Danny does one cleanup pass himself. Do not ask him daily.
 
 Watch out:
