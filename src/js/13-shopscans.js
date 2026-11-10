@@ -21,7 +21,7 @@ PRICE_SRC.push(id => { const m = MA[id]; if (!m || !(m[0] || m[2])) return null;
     n: sold ? ssN(m[1], "sale") : ssN(m[3], "listing"), few: !sold || m[1] < 5,
     detail: [m[2] && sold ? `asks from ${fmt(m[2])}` : "", m[5] ? `last 72 h: ${fmt(m[4])} (${ssN(m[5], "sale")})` : ""].filter(Boolean).join(" · "),
     when: m[6] ? "last seen " + ssAgo(m[6]) + " (shown 2 h late)" : ""} });
-PRICE_SRC.push(id => { const w = MW_RAW[id]; if (!w || !(w[0] || w[2])) return null;
+PRICE_SRC.push(id => { const w = MW[id] || MW_RAW[id]; if (!w || !(w[0] || w[2])) return null;
   const sold = w[1] > 0;
   return {src: "maplestory.watch", kind: sold ? "typical price, shop scans (14 days)" : "asked, none sold yet", v: w[0] || w[2],
     n: sold ? ssN(w[1], "sale") : ssN(w[3], "listing"), few: !sold || w[1] < 5,
