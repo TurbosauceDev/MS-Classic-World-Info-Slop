@@ -3,7 +3,12 @@
 // MA: mesoarbitrage.com {itemId: [soldMedian, soldN, askMin, listingsSeen, sold72Median, sold72N, lastSeenUnixMin]}, D.ma.read UTC.
 // MW: maplestory.watch {itemId: [typical, unitsSold14d, lowest, listedNow, dayAgo, lastSeenUnixMin]}, D.mw.read UTC;
 // MWLS: its open shops seen in the last day {itemId: [[priceEach, bundle, channel|null, fmRoom|null, seller, shopTitle, seenUnixMin]]}.
-const MA = D.ma?.it || {}, MW = D.mw?.it || {}, MWLS = D.mw?.ls || {};
+// Issue #93: maplestory.watch froze behind a challenge wall on 10-29 and a failed fetch keeps the old file, so 12-day-old
+// typicals kept feeding the headline consensus, the fallback chain, Movers, MCI and search. MW is the FRESH map only: past
+// the stale-pill cadence (2 days, pxSrcStale) it is empty. MW_RAW keeps the frozen rows for the Prices box, where the row
+// still shows with its stale pill. When the poll recovers, read moves and everything comes back with no code change.
+const MW_RAW = D.mw?.it || {}, MW_FRESH = (Date.now() - pxTsMs(D.mw?.read)) / 6e4 <= 2880;
+const MA = D.ma?.it || {}, MW = MW_FRESH ? MW_RAW : {}, MWLS = D.mw?.ls || {};
 const ssAgo = min => agoMin(Date.now() / 6e4 - min);
 const ssN = (n, w) => `${fmt(n)} ${w}${n === 1 ? "" : "s"}`;
 // typical now vs a day ago, as the ▲/▼ pill meso.watch rows use
@@ -16,7 +21,7 @@ PRICE_SRC.push(id => { const m = MA[id]; if (!m || !(m[0] || m[2])) return null;
     n: sold ? ssN(m[1], "sale") : ssN(m[3], "listing"), few: !sold || m[1] < 5,
     detail: [m[2] && sold ? `asks from ${fmt(m[2])}` : "", m[5] ? `last 72 h: ${fmt(m[4])} (${ssN(m[5], "sale")})` : ""].filter(Boolean).join(" · "),
     when: m[6] ? "last seen " + ssAgo(m[6]) + " (shown 2 h late)" : ""} });
-PRICE_SRC.push(id => { const w = MW[id]; if (!w || !(w[0] || w[2])) return null;
+PRICE_SRC.push(id => { const w = MW_RAW[id]; if (!w || !(w[0] || w[2])) return null;
   const sold = w[1] > 0;
   return {src: "maplestory.watch", kind: sold ? "typical price, shop scans (14 days)" : "asked, none sold yet", v: w[0] || w[2],
     n: sold ? ssN(w[1], "sale") : ssN(w[3], "listing"), few: !sold || w[1] < 5,
