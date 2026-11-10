@@ -285,3 +285,4 @@ See `docs/ai/agent-mailbox.md` § Open for full text. Summary:
 ---
 
 **End of state-of-the-pipeline.** Refresh this doc whenever the schema grows, a new source is added, an external API is integrated, or a critical bug is found. The canonical handoff `docs/ai/mesowatch-sync.md` is for plumbing reference; this doc is for "what's true right now".
+- **(2026-11-10, claude)** A red `pages` run whose deploy log ends in `Timeout reached, aborting!` after minutes of `syncing_files`/`updating_pages` is GitHub's Pages backend stalling, not our build (11-05, 11-07, 11-10; median deploy is ~7 s, same ~10.7 MB artifact). `actions/deploy-pages` clamps its wait to 10 min, so raising `timeout` does nothing: `pages.yml` now retries the deploy once (`dep2`) inside a 30-min job, guarded by `tests/pages_deploy_test.js`. A run that still goes red self-heals on the next poll-triggered deploy (the gate compares against the last successful run).
