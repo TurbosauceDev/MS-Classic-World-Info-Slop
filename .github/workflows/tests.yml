@@ -23,7 +23,7 @@ jobs:
         include:
           - shard: core
             tests: >-
-              node:tests/cron.test.js node:tests/cadence_test.js python3:tests/canary_test.py python3:tests/name_fix_test.py
+              node:tests/cron.test.js node:tests/cadence_test.js node:tests/pages_deploy_test.js python3:tests/canary_test.py python3:tests/name_fix_test.py
               python3:tests/pages_gen_test.py python3:tests/routes_test.py node:tests/sw_test.js python3:tests/posts_test.py
               python3:tests/deal_life_test.py python3:tests/watchdog_test.py python3:tests/classicmarket_test.py
               python3:tests/shopscans_test.py python3:tests/mesoindex_test.py python3:tests/meowdb_test.py
