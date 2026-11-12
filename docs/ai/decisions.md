@@ -326,6 +326,7 @@ WebP / 8 JPEG). Measured sizes on Danny's real frames: PNG 10.5 MB, lossless Web
 - 2026-11-05 (Danny): the KPQ Exit map (80000600) marks the end of a round, cleared or not — the tracker already ends the round there with end "Exit"; keep that. (Hermes)- 2026-11-05 (Danny): a town = a map where no monster spawns per the game database (maps + mobdb spawns), never KPQ. (Hermes)
 - 2026-11-05 (Danny): the KPQ Exit map (80000600) marks the end of a round, cleared or not — the tracker already ends the round there with end "Exit"; keep that. (Hermes)
 - 2026-11-05 (Danny): admin key lives only on Danny's PC (C:/Users/danny/.ms-classic-world/admin.key); the Worker holds only its SHA-256 (wrangler.toml var); agents may use it; deletes still need Danny's OK.
+- 2026-11-10 (Danny): issue #93, maplestory.watch frozen behind its challenge wall since 10-29: hide its stale prices, don't pause the poller (the same workflow keeps mesoarbitrage fresh) and don't cut the source. Past the 2-day stale cadence, MW is empty for headline/consensus/fallback/Movers/MCI/search; the Prices box row stays with its stale pill; recovery needs no code change. (Claude)
 
 ## Open decisions (pending Danny)
 
