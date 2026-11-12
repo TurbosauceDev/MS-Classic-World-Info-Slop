@@ -1,12 +1,12 @@
 # Daily briefing
 
-last-verified: 2026-11-10 by Hermes
+last-verified: 2026-11-12 by Hermes
 
 Agent-facing, overwritten daily by Hermes (took over from Glorg [z.ai] on Danny's 11-02 call). Danny's own digest is not in the repo: it posts to Discord #daily-updates and stays on his machine.
 
 TL;DR:
-- Site `0.24.5` live, tracker `v0.3.47` latest release (11-06 05:55 UTC, installer + blockmap + latest.yml all on it, not a draft). Head is `d53529b` (shop-scan price commit, read 12:50 UTC 11-10); its pages run passed. Re-check with `git log` before naming head.
-- One open PR: #115 (docs: repair `docs/ai/decisions.md` splice from #109, branch `glorg/decisions-splice-fix`, checks green; open since 11-06). Nothing else merged since the last briefing except #118 (the 11-09 briefing).
+- Site `0.24.5` live, tracker `v0.3.47` latest release (11-06 05:55 UTC, installer + blockmap + latest.yml all on it, not a draft). Head is `42aa809` (shop-scan price commit, read 12:46 UTC 11-12); its pages and watchdog runs passed. Re-check with `git log` before naming head.
+- Open PRs: #121 (hide maplestory.watch prices once stale, #93; checks green, not reviewed by Hermes) and #115 (docs: repair `docs/ai/decisions.md` splice from #109, branch `glorg/decisions-splice-fix`, checks green; open since 11-06). The 11-11 briefing PR #122 was closed unmerged: its `test (core|pages|edge)` jobs failed on a runner DNS error (`Temporary failure resolving` the apt mirror), likely infra, not read to the end.
 - **Towns** (#111, #112): time on a map with no monster spawn in the game data (maps + mobdb) never counts, and the tracker arms after Start (waits for a KPQ round or 5 monster-EXP gains in 60 s). There is no town flag in the game data; do not add a hand-kept town list.
 - **Bug reports** (#107, #110): a `report-*` folder renamed `-checked` is deleted at tracker start; automatic reports cap at 1 GB; report pictures stay lossless (the lossy spike failed reader tests). Snapshot `snap-*` pictures live in the runs folder and are never pruned.
 - **Server admin tool** (#113): `/api/admin/*` behind a key checked by SHA-256; the key lives only on Danny's PC. How to use it: `docs/ai/server-admin.md`. Every admin delete is real data and needs Danny's OK per action. Never print or commit the key.
@@ -20,7 +20,7 @@ Waiting on Danny:
 Watch out:
 - A green poll can still carry frozen data: a failed fetch keeps the old file. Read the watchdog issue, not only the run status.
 - The meowdb market poll timed out once (carried from 11-06, not re-checked) (fetch step hit 40 minutes); the next run passed. A repeat is a bug, not flake.
-- One pages run failed at 02:51 UTC 11-10 (head `fa03c60`, cause not read); the next run at 03:00 UTC passed. A repeat needs its log read.
+- A CI runner lost DNS on 11-11 (briefing PR #122, apt mirror unresolvable); a rerun is fine once, a repeat needs the log read. Site tests last succeeded 11-10 21:54 UTC.
 - Release path: `tracker/scripts/prepare-release.js` makes a draft first; `tracker/tests/release.test.js` pins the builder line that reuses it. If a builder bump fails that test, the two-publisher race is back.
 - Polls commit only `data/sources` files; `scripts/live_data.py` applies prices at build time. Do not make a fetcher write `data/data.json` again (`tests/live_data_test.py`).
 - `tests/smoke.js` now warns when a table has under 8px spare at 1300px (#106). Treat a warning as "add headroom now": price refreshes change column widths with no code change.
