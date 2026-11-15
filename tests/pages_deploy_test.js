@@ -1,5 +1,6 @@
 // pages.yml must survive a stalled GitHub Pages backend: deploy-pages clamps its wait to 10 min and fails the run
-// (11-05, 11-07, 11-10 all died in syncing_files/updating_pages). Guard the one retry and a job timeout that fits it.
+// (11-05, 11-07, 11-10 all died in syncing_files/updating_pages). Guard the one retry, the wait before it, and a job
+// timeout that fits them.
 const fs = require('fs'), path = require('path');
 const src = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'pages.yml'), 'utf8');
 const job = src.slice(src.indexOf('\n  deploy:'));
@@ -13,6 +14,10 @@ if (!/id:\s*dep2\s*\n\s*if:\s*steps\.dep\.outcome\s*==\s*'failure'/.test(job))
   fail("retry (id: dep2) must run only when steps.dep.outcome == 'failure'");
 if (!/steps\.dep\.outputs\.page_url\s*\|\|\s*steps\.dep2\.outputs\.page_url/.test(job))
   fail('environment url must fall back to the retry step');
+if (!/name:\s*Wait before retrying the deploy\s*\n\s*if:\s*steps\.dep\.outcome\s*==\s*'failure'\s*\n\s*run:\s*sleep\s+[3-9]\d/.test(job))
+  fail('a wait of 30 s or more must run before the retry (11-11: artifact not visible yet, retry failed the same way 0 s later)');
+if (job.indexOf('Wait before retrying the deploy') > job.indexOf('id: dep2'))
+  fail('the wait must come before the retry (dep2)');
 const t = +(job.match(/timeout-minutes:\s*(\d+)/) || [])[1];
 if (!(t >= 25)) fail(`deploy job timeout-minutes ${t} leaves no room for two 10-min deploy waits after the build`);
 if (bad) process.exit(1);

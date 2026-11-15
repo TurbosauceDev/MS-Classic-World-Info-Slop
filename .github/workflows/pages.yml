@@ -45,7 +45,7 @@ jobs:
     needs: gate
     if: needs.gate.outputs.go == 'true'
     runs-on: ubuntu-24.04   # not -latest: it became 26.04, which Playwright 1.56.1 refuses (2026-10-31)
-    # 30, not 15: the deploy step below may run twice (2 x deploy-pages' hard 10-min cap) after ~3 min of build + smoke
+    # 30, not 15: the deploy step below may run twice (2 x deploy-pages' hard 10-min cap + a 1-min wait) after ~3 min of build + smoke
     timeout-minutes: 30
     environment: { name: github-pages, url: "${{ steps.dep.outputs.page_url || steps.dep2.outputs.page_url }}" }
     steps:
@@ -82,6 +82,11 @@ jobs:
       - id: dep
         uses: actions/deploy-pages@v4
         continue-on-error: true
+      # wait before the retry: 11-11 the upload step had just finished, deploy-pages found 0 artifacts named github-pages
+      # (metadata not visible yet), and the retry hit the same error 0 s later, so the run went red on a good artifact.
+      - name: Wait before retrying the deploy
+        if: steps.dep.outcome == 'failure'
+        run: sleep 60
       - id: dep2
         if: steps.dep.outcome == 'failure'
         uses: actions/deploy-pages@v4
