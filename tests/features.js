@@ -218,7 +218,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       if (kh) PWH[id] = kh; else delete PWH[id]; return out });
     check(JSON.stringify(c) === '[true,"meso.watch","classicmarket.kr market 65","meowdb 55","classicmarket.kr asks 45","classicmarket.kr buy orders","mesoarbitrage.com 24000","mesoarbitrage.com 300","maplestory.watch 25000","mesoindex.com 26000","none"]', `prices: source rows + fallback order (${c})`);
     // P3 + P4 (Danny 2026-10-26): a source row past its cadence gets a stale pill; the Usual tile carries a sources range + agreement pill
-    const q = await p.evaluate(() => { const id = "2000000", keep = [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id], D.cmp.read, D.mdb.read, PWH[id], D.pw?.generated];
+    const q = await p.evaluate(() => { const id = "2000000", keep = [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id], D.cmp.read, D.mdb.read, PWH[id], D.pw?.generated, MW_RAW[id]];
       // fresh/old timestamps relative to now: hardcoding a date broke at UTC midnight when it crossed the 48 h staleness line (10-28)
       // D.mdb.read is faked fresh too: the meowdb ROW's pill rides the REAL embedded read, which ages while the test runs and
       // crossed its own 48 h line on CI at 14:29 UTC 10-28 (meowdb upstream frozen since 10-26 14:23) - the flake e44555e fixed
@@ -227,6 +227,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       // line the same way, and its row's honest stale pill would fail assert 4.
       const fresh = new Date(Date.now() - 36e5).toISOString().slice(0, 16).replace("T", " "), old = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 16).replace("T", " ");
       delete PWH[id]; delete MA[id]; delete MW[id]; delete MI[id]; delete CM[id];   // PWH: real history must not outvote the fakes
+      delete MW_RAW[id];   // #93: a frozen maplestory.watch row still shows in the Prices box from MW_RAW, with its own stale pill
       // asserts 1-4 are the live mode: the shipped config/prices.json pause switch (Danny 11-03) would turn every row "paused"
       const pause = D.pxpause; delete D.pxpause;
       D.mdb.read = fresh;
@@ -245,7 +246,7 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
       out.push(/>paused</.test(priceBox(id)) && !/stale \d/.test(priceBox(id)));
       if (pause) D.pxpause = pause; else delete D.pxpause;
       [PW[id], CMP[id], MDB[id], CM[id], MA[id], MW[id], MI[id]] = keep; D.cmp.read = keep[7]; D.mdb.read = keep[8];
-      D.pw.generated = keep[10];
+      D.pw.generated = keep[10]; if (keep[11]) MW_RAW[id] = keep[11];
       if (keep[9]) PWH[id] = keep[9]; else delete PWH[id]; return out });
     check(JSON.stringify(q) === "[true,true,true,true,true]", `prices: stale pill + sources context, paused while polls are paused (${q})`);
     // P13-P16 accuracy (audit 2026-10-28): the weighted headline weights TODAY heaviest (the old code applied
@@ -347,6 +348,11 @@ const check = (ok, msg) => { if (ok) console.log("ok  " + msg); else { fails++; 
         rows.some(r => r.src === "maplestory.watch" && r.v === 40 && r.n === "20 sales" && /▼11%/.test(r.trend)),
         ls.length === 1 && ls[0].who === "Tomatos" && ls[0].room === "FM 1" && ls[0].qty === 100 && pxWhere(ls[0]).includes("&lt;b&gt;")] });
     check(JSON.stringify(ss) === "[true,true,true]", `prices: mesoarbitrage + maplestory.watch rows and listings (${ss})`);
+    // #93 (Danny 2026-11-10): maplestory.watch past its 2-day stale line feeds no price math (MW empty), but its frozen rows
+    // stay in MW_RAW for the Prices box row and its stale pill; fresh data means MW is MW_RAW itself
+    const mwg = await p.evaluate(() => { const age = (Date.now() - pxTsMs(D.mw?.read)) / 6e4, raw = Object.keys(MW_RAW).length;
+      return age > 2880 ? Object.keys(MW).length === 0 && raw > 0 && MW !== MW_RAW : MW === MW_RAW });
+    check(mwg, `prices: stale maplestory.watch feeds no price math, fresh feeds all (${mwg})`);
     await ctx.close() }
 
   // classicrank.com "Load by IGN" (59-crlookup.js), API mocked: every job in GET /api/v1/jobs (2026-10-21) maps to a builder
