@@ -23,8 +23,8 @@ above as a dated line and note the resolution date in its place.
 - 2026-10-18 Hand-off: threads read CLAUDE.md, their area page and this file first, and leave 2-3 lines on the area page plus dated decisions here in the same push.
 - 2026-10-18 Prediction-vs-real-runs check for Where to train: later, not until there are users.
 - 2026-10-18 Don't ask again unless he raises it: mapleexp leaderboard export, 2nd job Bowman stat window, scroll odds calculator (not interested).
-- 2026-10-26 Danny: reply in English on Discord surfaces, always.
-- 2026-11-05 (Danny, Discord DM to Glorg [z.ai]): docs cold-start audit approved; its fixes ship as one docs-only PR: the surface handoff (docs/ai/handoff-discord-glorg.md) rewritten to post-handover reality, the Glorg [z.ai] registry row corrected, 2 decisions-test prose warnings cleared (trigger words without a real tag pair). Glorg [z.ai] holds no durable sandbox state; push credentials arrive per-session from Danny. Trigger: a model-availability error line ("please try again later") went out in Chinese under the bot's name; he flagged it. Applies to every agent posting to his channels, error fallbacks included.
+- 2026-10-26 Danny: reply in English on Discord surfaces, always. Trigger: a model-availability error line ("please try again later") went out in Chinese under the bot's name; he flagged it. Applies to every agent posting to his channels, error fallbacks included.
+- 2026-11-05 (Danny, Discord DM to Glorg [z.ai]): docs cold-start audit approved; its fixes ship as one docs-only PR: the surface handoff (docs/ai/handoff-discord-glorg.md) rewritten to post-handover reality, the Glorg [z.ai] registry row corrected, 2 decisions-test prose warnings cleared (trigger words without a real tag pair). Glorg [z.ai] holds no durable sandbox state; push credentials arrive per-session from Danny. Trigger: Danny's "approved" in DM on 2026-11-05, after the read-only cold-start audit (docs test 744 paths green, 2 prose warnings found).
 
 ## Data and sources
 - 2026-10-06 Quest-item drop rate assumption 30% per kill (15% "cautious"); no real drop rates exist anywhere.
